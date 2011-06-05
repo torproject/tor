@@ -1030,6 +1030,8 @@ signewnym_impl(time_t now)
   rend_client_purge_state();
   time_of_last_signewnym = now;
   signewnym_is_pending = 0;
+
+  control_event_signal(SIGNEWNYM);
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -1887,7 +1889,6 @@ process_signal(uintptr_t sig)
             (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
       } else {
         signewnym_impl(now);
-        control_event_signal(sig);
       }
       break;
     }
