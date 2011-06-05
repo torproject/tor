@@ -1,3 +1,100 @@
+Changes in version 0.2.2.28-beta - 2011-06-04
+  Tor 0.2.2.28-beta makes great progress towards a new stable release: we
+  fixed a big bug in whether relays stay in the consensus consistently,
+  we moved closer to handling bridges and hidden services correctly,
+  and we started the process of better handling the dreaded "my Vidalia
+  died, and now my Tor demands a password when I try to reconnect to it"
+  usability issue.
+
+  o Major bugfixes:
+    - Don't decide to make a new descriptor when receiving a HUP signal.
+      This bug has caused a lot of 0.2.2.x relays to disappear from the
+      consensus periodically. Fixes the most common case of triggering
+      bug 1810; bugfix on 0.2.2.7-alpha.
+    - Actually allow nameservers with IPv6 addresses. Fixes bug 2574.
+    - Don't try to build descriptors if "ORPort auto" is set and we
+      don't know our actual ORPort yet. Fix for bug 3216; bugfix on
+      0.2.2.26-beta.
+    - Resolve a crash that occurred when setting BridgeRelay to 1 with
+      accounting enabled. Fixes bug 3228; bugfix on 0.2.2.18-alpha.
+    - Apply circuit timeouts to opened hidden-service-related circuits
+      based on the correct start time. Previously, we would apply the
+      circuit build timeout based on time since the circuit's creation;
+      it was supposed to be applied based on time since the circuit
+      entered its current state. Bugfix on 0.0.6; fixes part of bug 1297.
+    - Use the same circuit timeout for client-side introduction
+      circuits as for other four-hop circuits, rather than the timeout
+      for single-hop directory-fetch circuits; the shorter timeout may
+      have been appropriate with the static circuit build timeout in
+      0.2.1.x and earlier, but caused many hidden service access attempts
+      to fail with the adaptive CBT introduced in 0.2.2.2-alpha. Bugfix
+      on 0.2.2.2-alpha; fixes another part of bug 1297.
+    - In ticket 2511 we fixed a case where you could use an unconfigured
+      bridge if you had configured it as a bridge the last time you ran
+      Tor. Now fix another edge case: if you had configured it as a bridge
+      but then switched to a different bridge via the controller, you
+      would still be willing to use the old one. Bugfix on 0.2.0.1-alpha;
+      fixes bug 3321.
+
+  o Major features:
+    - Add an __OwningControllerProcess configuration option and a
+      TAKEOWNERSHIP control-port command. Now a Tor controller can ensure
+      that when it exits, Tor will shut down. Implements feature 3049.
+    - If "UseBridges 1" is set and no bridges are configured, Tor will
+      now refuse to build any circuits until some bridges are set.
+      If "UseBridges auto" is set, Tor will use bridges if they are
+      configured and we are not running as a server, but otherwise will
+      make circuits as usual. The new default is "auto". Patch by anonym,
+      so the Tails LiveCD can stop automatically revealing you as a Tor
+      user on startup.
+
+  o Minor bugfixes:
+    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
+    - Remove a trailing asterisk from "exit-policy/default" in the
+      output of the control port command "GETINFO info/names". Bugfix
+      on 0.1.2.5-alpha.
+    - Use a wide type to hold sockets when built for 64-bit Windows builds.
+      Fixes bug 3270.
+    - Warn when the user configures two HiddenServiceDir lines that point
+      to the same directory. Bugfix on 0.0.6 (the version introducing
+      HiddenServiceDir); fixes bug 3289.
+    - Remove dead code from rend_cache_lookup_v2_desc_as_dir. Fixes
+      part of bug 2748; bugfix on 0.2.0.10-alpha.
+    - Log malformed requests for rendezvous descriptors as protocol
+      warnings, not warnings. Also, use a more informative log message
+      in case someone sees it at log level warning without prior
+      info-level messages. Fixes the other part of bug 2748; bugfix
+      on 0.2.0.10-alpha.
+    - Clear the table recording the time of the last request for each
+      hidden service descriptor from each HS directory on SIGNAL NEWNYM.
+      Previously, we would clear our HS descriptor cache on SIGNAL
+      NEWNYM, but if we had previously retrieved a descriptor (or tried
+      to) from every directory responsible for it, we would refuse to
+      fetch it again for up to 15 minutes. Bugfix on 0.2.2.25-alpha;
+      fixes bug 3309.
+    - Fix a log message that said "bits" while displaying a value in
+      bytes. Found by wanoskarnet. Fixes bug 3318; bugfix on
+      0.2.0.1-alpha.
+    - When checking for 1024-bit keys, check for 1024 bits, not 128
+      bytes. This allows Tor to correctly discard keys of length 1017
+      through 1023. Bugfix on 0.0.9pre5.
+
+  o Minor features:
+    - Relays now log the reason for publishing a new relay descriptor,
+      so we have a better chance of hunting down instances of bug 1810.
+      Resolves ticket 3252.
+    - Revise most log messages that refer to nodes by nickname to
+      instead use the "$key=nickname at address" format. This should be
+      more useful, especially since nicknames are less and less likely
+      to be unique. Resolves ticket 3045.
+    - Log (at info level) when purging pieces of hidden-service-client
+      state because of SIGNAL NEWNYM.
+
+  o Removed options:
+    - Remove undocumented option "-F" from tor-resolve: it hasn't done
+      anything since 0.2.1.16-rc.
+
+
 Changes in version 0.2.2.27-beta - 2011-05-18
   Tor 0.2.2.27-beta fixes a bridge-related stability bug in the previous
   release, and also adds a few more general bugfixes.
