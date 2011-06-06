@@ -679,7 +679,15 @@ circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
     log_notice(LD_CIRC, "The number of circuit times that this Tor version "
                "uses to calculate build times is less than the number stored "
                "in your state file. Decreasing the circuit time history from "
-               "%d to %d.", num_times, CBT_NCIRCUITS_TO_OBSERVE);
+               "%lu to %d.", (unsigned long)num_times,
+               CBT_NCIRCUITS_TO_OBSERVE);
+  }
+
+  if (n > INT_MAX-1) {
+    log_warn(LD_CIRC, "For some insane reasons, you had %lu circuit build "
+             "observations in your state file. That's far too many; probably "
+             "there's a bug here.", (unsigned long)n);
+    n = INT_MAX-1;
   }
 
   /* This code can only be run on a compact array */

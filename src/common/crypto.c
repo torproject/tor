@@ -2145,13 +2145,14 @@ crypto_rand(char *to, size_t n)
 }
 
 /** Return a pseudorandom integer, chosen uniformly from the values
- * between 0 and <b>max</b>-1. */
+ * between 0 and <b>max</b>-1 inclusive.  <b>max</b> must be between 1 and
+ * INT_MAX+1, inclusive. */
 int
 crypto_rand_int(unsigned int max)
 {
   unsigned int val;
   unsigned int cutoff;
-  tor_assert(max < UINT_MAX);
+  tor_assert(max <= ((unsigned int)INT_MAX)+1);
   tor_assert(max > 0); /* don't div by 0 */
 
   /* We ignore any values that are >= 'cutoff,' to avoid biasing the
