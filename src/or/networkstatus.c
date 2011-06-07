@@ -1814,7 +1814,7 @@ networkstatus_set_current_consensus(const char *consensus,
  * valid-after time, declare that our clock is skewed. */
 #define EARLY_CONSENSUS_NOTICE_SKEW 60
 
-  if (now < current_consensus->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
+  if (now < c->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[64];
     long delta = now - c->valid_after;

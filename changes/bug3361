@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Fix a crash bug that could occur when setting a consensus in a
+      non-used flavor without having a current consensus set. Fixes bug
+      3361; bugfix on 0.2.3.1-alpha.
