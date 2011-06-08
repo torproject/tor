@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Remove some dead code as indicated by coverity.
+

@@ -2401,8 +2401,7 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
   stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
   stat->processed_cells = orcirc->processed_cells;
   /* 1000.0 for s -> ms; 2.0 because of app-ward and exit-ward queues */
-  stat->mean_num_cells_in_queue = interval_length == 0 ? 0.0 :
-      (double) orcirc->total_cell_waiting_time /
+  stat->mean_num_cells_in_queue = (double) orcirc->total_cell_waiting_time /
       (double) interval_length / 1000.0 / 2.0;
   stat->mean_time_cells_in_queue =
       (double) orcirc->total_cell_waiting_time /
