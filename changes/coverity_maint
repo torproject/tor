@@ -4,4 +4,5 @@
   o Minor bugfixes:
     - Add some forgotten return value checks during unit tests. Found
       by coverity.
+    - Don't use 1-bit wide signed bit fields. Found by coverity.
 
