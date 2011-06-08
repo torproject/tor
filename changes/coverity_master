@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Prevent using negative indices during unit test runs when read_all()
+      fails. Spotted by coverity. Bugfix on 0.2.3.1.
+

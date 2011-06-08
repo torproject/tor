@@ -1397,6 +1397,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stdout */
   pos = read_all(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1, 0);
+  tor_assert(pos >= 0);
   stdout_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_out));
   tt_str_op(stdout_buf, ==, expected_out);
@@ -1411,6 +1412,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stderr */
   pos = read_all(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1, 0);
+  tor_assert(pos >= 0);
   stderr_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_err));
   tt_str_op(stderr_buf, ==, expected_err);
