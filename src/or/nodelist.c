@@ -342,10 +342,12 @@ nodelist_assert_ok(void)
 {
   routerlist_t *rl = router_get_routerlist();
   networkstatus_t *ns = networkstatus_get_latest_consensus();
-  digestmap_t *dm = digestmap_new();
+  digestmap_t *dm;
 
   if (!the_nodelist)
     return;
+
+  dm = digestmap_new();
 
   /* every routerinfo in rl->routers should be in the nodelist. */
   if (rl) {
