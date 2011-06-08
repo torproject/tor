@@ -84,7 +84,6 @@ log_heartbeat(time_t now)
   char *bw_rcvd = NULL;
   char *uptime = NULL;
   const routerinfo_t *me;
-  const node_t *myself;
 
   or_options_t *options = get_options();
   (void)now;
@@ -94,7 +93,7 @@ log_heartbeat(time_t now)
     if (!(me = router_get_my_routerinfo()))
       return -1; /* Something stinks, we won't even attempt this. */
     else
-      if (!(myself = node_get_by_id(me->cache_info.identity_digest)))
+      if (!node_get_by_id(me->cache_info.identity_digest))
         log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: It seems like we are not "
                "in the cached consensus.");
   }
