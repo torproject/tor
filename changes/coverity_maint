@@ -1,5 +1,6 @@
   o Code simplifications and refactoring:
     - Remove some dead code as indicated by coverity.
+    - Remove a few dead assignments during router parsing. Found by coverity.
   o Minor bugfixes:
     - Add some forgotten return value checks during unit tests. Found
       by coverity.
