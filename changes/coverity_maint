@@ -5,4 +5,5 @@
     - Add some forgotten return value checks during unit tests. Found
       by coverity.
     - Don't use 1-bit wide signed bit fields. Found by coverity.
+    - Fix a rare memory leak during stats writing. Found by coverity.
 

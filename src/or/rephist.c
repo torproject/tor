@@ -2451,14 +2451,16 @@ rep_hist_buffer_stats_write(time_t now)
   int processed_cells[SHARES], circs_in_share[SHARES],
       number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
-  smartlist_t *str_build = smartlist_create();
-  char *str = NULL, *buf=NULL;
+  smartlist_t *str_build = NULL;
+  char *str = NULL, *buf = NULL;
   circuit_t *circ;
 
   if (!start_of_buffer_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write */
+
+  str_build = smartlist_create();
 
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
