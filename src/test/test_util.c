@@ -376,7 +376,7 @@ test_util_strmisc(void)
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
-    tor_assert(!tor_memmem(haystack, 5, "ef", 2));
+    tt_assert(!tor_memmem(haystack, 5, "ef", 2));
     test_eq_ptr(tor_memmem(haystack, 5, "cd", 2), haystack + 2);
     test_eq_ptr(tor_memmem(haystack, 5, "cde", 3), haystack + 2);
     haystack = "ababcad";
@@ -640,26 +640,26 @@ test_util_gzip(void)
     tor_strdup("String with low redundancy that won't be compressed much.");
   test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
-  tor_assert(len1>16);
+  tt_assert(len1>16);
   /* when we allow an incomplete string, we should succeed.*/
-  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
+  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                   ZLIB_METHOD, 0, LOG_INFO));
   buf3[len2]='\0';
-  tor_assert(len2 > 5);
-  tor_assert(!strcmpstart(buf1, buf3));
+  tt_assert(len2 > 5);
+  tt_assert(!strcmpstart(buf1, buf3));
 
   /* when we demand a complete string, this must fail. */
   tor_free(buf3);
-  tor_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
+  tt_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                  ZLIB_METHOD, 1, LOG_INFO));
-  tor_assert(!buf3);
+  tt_assert(!buf3);
 
   /* Now, try streaming compression. */
   tor_free(buf1);
   tor_free(buf2);
   tor_free(buf3);
   state = tor_zlib_new(1, ZLIB_METHOD);
-  tor_assert(state);
+  tt_assert(state);
   cp1 = buf1 = tor_malloc(1024);
   len1 = 1024;
   ccp2 = "ABCDEFGHIJABCDEFGHIJ";
@@ -676,7 +676,7 @@ test_util_gzip(void)
   test_eq(len2, 0);
   test_assert(cp1 > cp2); /* Make sure we really added something. */
 
-  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
+  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
   test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
 
@@ -1397,7 +1397,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stdout */
   pos = read_all(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1, 0);
-  tor_assert(pos >= 0);
+  tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_out));
   tt_str_op(stdout_buf, ==, expected_out);
@@ -1412,7 +1412,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stderr */
   pos = read_all(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1, 0);
-  tor_assert(pos >= 0);
+  tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_err));
   tt_str_op(stderr_buf, ==, expected_err);

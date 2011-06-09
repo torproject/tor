@@ -1169,10 +1169,10 @@ test_dir_v3_networkstatus(void)
 
     /* Extract a detached signature from con3. */
     detached_text1 = get_detached_sigs(con3, con_md3);
-    tor_assert(detached_text1);
+    tt_assert(detached_text1);
     /* Try to parse it. */
     dsig1 = networkstatus_parse_detached_signatures(detached_text1, NULL);
-    tor_assert(dsig1);
+    tt_assert(dsig1);
 
     /* Are parsed values as expected? */
     test_eq(dsig1->valid_after, con3->valid_after);

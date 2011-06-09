@@ -630,7 +630,7 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 4095);
-  tor_assert(encrypted_size > 0); /* This is obviously true, since 4111 is
+  tt_assert(encrypted_size > 0); /* This is obviously true, since 4111 is
                                    * greater than 0, but its truth is not
                                    * obvious to all analysis tools. */
   cipher = crypto_create_init_cipher(key1, 0);
@@ -639,7 +639,7 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(decrypted_size, 4095);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain, decrypted1, 4095);
   /* Encrypt a second time (with a new random initialization vector). */
   cipher = crypto_create_init_cipher(key1, 1);
@@ -648,14 +648,14 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 4095);
-  tor_assert(encrypted_size > 0);
+  tt_assert(encrypted_size > 0);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
                                              encrypted2, encrypted_size);
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(decrypted_size, 4095);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain, decrypted2, 4095);
   test_memneq(encrypted1, encrypted2, encrypted_size);
   /* Decrypt with the wrong key. */
@@ -680,14 +680,14 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 1);
-  tor_assert(encrypted_size > 0);
+  tt_assert(encrypted_size > 0);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(decrypted_size, 1);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain_1, decrypted1, 1);
   /* Special length case: 15. */
   cipher = crypto_create_init_cipher(key1, 1);
@@ -696,14 +696,14 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 15);
-  tor_assert(encrypted_size > 0);
+  tt_assert(encrypted_size > 0);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 15,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(decrypted_size, 15);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain_15, decrypted1, 15);
   /* Special length case: 16. */
   cipher = crypto_create_init_cipher(key1, 1);
@@ -712,14 +712,14 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 16);
-  tor_assert(encrypted_size > 0);
+  tt_assert(encrypted_size > 0);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 16,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(decrypted_size, 16);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain_16, decrypted1, 16);
   /* Special length case: 17. */
   cipher = crypto_create_init_cipher(key1, 1);
@@ -728,12 +728,12 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 17);
-  tor_assert(encrypted_size > 0);
+  tt_assert(encrypted_size > 0);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 17,
                                              encrypted1, encrypted_size);
   test_eq(decrypted_size, 17);
-  tor_assert(decrypted_size > 0);
+  tt_assert(decrypted_size > 0);
   test_memeq(plain_17, decrypted1, 17);
 
  done:
