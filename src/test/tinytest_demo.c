@@ -1,4 +1,4 @@
-/* tinytest_demo.c -- Copyright 2009 Nick Mathewson
+/* tinytest_demo.c -- Copyright 2009-2010 Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,7 @@ test_strcmp(void *data)
 	}
 
 	/* Pretty often, calling tt_abort_msg to indicate failure is more
-	   heavy-weight than you want.  Instead, just say: */
+	   heavy-weight than you want.	Instead, just say: */
 	tt_assert(strcmp("testcase", "testcase") == 0);
 
 	/* Occasionally, you don't want to stop the current testcase just
@@ -91,7 +91,7 @@ test_strcmp(void *data)
 /* First you declare a type to hold the environment info, and functions to
    set it up and tear it down. */
 struct data_buffer {
-	/* We're just going to have couple of character buffer.  Using
+	/* We're just going to have couple of character buffer.	 Using
 	   setup/teardown functions is probably overkill for this case.
 
 	   You could also do file descriptors, complicated handles, temporary
@@ -164,7 +164,7 @@ test_memcpy(void *ptr)
 
 /* ============================================================ */
 
-/* Now we need to make sure that our tests get invoked.   First, you take
+/* Now we need to make sure that our tests get invoked.	  First, you take
    a bunch of related tests and put them into an array of struct testcase_t.
 */
 
@@ -189,15 +189,15 @@ struct testgroup_t groups[] = {
 	/* Every group has a 'prefix', and an array of tests.  That's it. */
 	{ "demo/", demo_tests },
 
-        END_OF_GROUPS
+	END_OF_GROUPS
 };
 
 
 int
 main(int c, const char **v)
 {
-	/* Finally, just call tinytest_main().  It lets you specify verbose
-	   or quiet output with --verbose and --quiet.  You can list
+	/* Finally, just call tinytest_main().	It lets you specify verbose
+	   or quiet output with --verbose and --quiet.	You can list
 	   specific tests:
 
 	       tinytest-demo demo/memcpy

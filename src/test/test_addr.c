@@ -74,7 +74,9 @@ test_addr_basic(void)
         cp += 2;                                                 \
         if (i != 15) *cp++ = ':';                                \
       }                                                          \
-    }, { tor_free(_print); }                                     \
+    },                                                           \
+    { tor_free(_print); },                                       \
+    TT_EXIT_TEST_FUNCTION                                        \
   );                                                             \
   STMT_END
 

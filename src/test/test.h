@@ -45,7 +45,8 @@
                             _print = tor_malloc(printlen);              \
                             base16_encode(_print, printlen, _value,     \
                                           (len)); },                    \
-                          { tor_free(_print); }                         \
+                          { tor_free(_print); },                        \
+                          TT_EXIT_TEST_FUNCTION                         \
                           );
 
 #define test_memeq(expr1, expr2, len) test_mem_op((expr1), ==, (expr2), len)

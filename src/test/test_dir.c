@@ -298,7 +298,7 @@ test_dir_versions(void)
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
-                      (_val1 op _val2),"%d")
+                      (_val1 op _val2),"%d",TT_EXIT_TEST_FUNCTION)
 #define test_v_i_o(val, ver, lst)                                       \
   tt_versionstatus_op(val, ==, tor_version_is_obsolete(ver, lst))
 

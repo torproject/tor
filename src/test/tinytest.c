@@ -28,7 +28,11 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifdef TINYTEST_LOCAL
+#include "tinytest_local.h"
+#endif
+
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/types.h>
@@ -40,9 +44,6 @@
 #define __attribute__(x)
 #endif
 
-#ifdef TINYTEST_LOCAL
-#include "tinytest_local.h"
-#endif
 #include "tinytest.h"
 #include "tinytest_macros.h"
 
@@ -64,7 +65,7 @@ const char *cur_test_prefix = NULL; /**< prefix of the current test group */
 /** Name of the current test, if we haven't logged is yet. Used for --quiet */
 const char *cur_test_name = NULL;
 
-#ifdef WIN32
+#ifdef _WIN32
 /** Pointer to argv[0] for win32. */
 static const char *commandname = NULL;
 #endif
@@ -103,7 +104,7 @@ static enum outcome
 _testcase_run_forked(const struct testgroup_t *group,
 		     const struct testcase_t *testcase)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	/* Fork? On Win32?  How primitive!  We'll do what the smart kids do:
 	   we'll invoke our own exe (whose name we recall from the command
 	   line) with a command line that tells it to run just the test we
@@ -174,6 +175,7 @@ _testcase_run_forked(const struct testgroup_t *group,
 			exit(1);
 		}
 		exit(0);
+		return FAIL; /* unreachable */
 	} else {
 		/* parent */
 		int status, r;
@@ -239,6 +241,7 @@ testcase_run_one(const struct testgroup_t *group,
 
 	if (opt_forked) {
 		exit(outcome==OK ? 0 : (outcome==SKIP?MAGIC_EXITCODE : 1));
+		return 1; /* unreachable */
 	} else {
 		return (int)outcome;
 	}
@@ -287,7 +290,7 @@ tinytest_main(int c, const char **v, struct testgroup_t *groups)
 {
 	int i, j, n=0;
 
-#ifdef WIN32
+#ifdef _WIN32
 	commandname = v[0];
 #endif
 	for (i=1; i<c; ++i) {
