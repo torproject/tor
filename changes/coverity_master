@@ -1,6 +1,6 @@
   o Minor bugfixes:
     - Prevent using negative indices during unit test runs when read_all()
-      fails. Spotted by coverity. Bugfix on 0.2.3.1-alppa.
+      fails. Spotted by coverity. Bugfix on 0.2.3.1-alpha.
     - Fix a rare memory leak when checking the nodelist without it being
       present. Found by coverity. Bugfix on 0.2.3.1-alpha.
   o Code simplifications and refactoring:
