@@ -326,6 +326,9 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       bidirectional use of connections to disk every 24 hours.
     - Add a GeoIP file digest to the extra-info descriptor. Implements
       enhancement 1883.
+    - The NodeFamily option -- which let you declare that you want to
+      consider nodes to be part of a family whether they list themselves
+      that way or not -- now allows IP address ranges and country codes.
     - Add a new 'Heartbeat' log message type to periodically log a message
       describing Tor's status at level Notice. This feature is meant for
       operators who log at notice, and want to make sure that their Tor
