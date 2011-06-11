@@ -2660,6 +2660,8 @@ typedef struct {
 
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
+  config_line_t *ClientTransportPlugin; /**< List of client transport plugins. */
+
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the
                     * future. */
