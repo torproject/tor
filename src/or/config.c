@@ -1208,6 +1208,7 @@ options_act(or_options_t *old_options)
     return -1;
 
   if (options->ClientTransportPlugin) {
+    clear_transport_list();
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
       if (parse_transport_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
@@ -1228,6 +1229,13 @@ options_act(or_options_t *old_options)
       }
     }
     sweep_bridge_list();
+  }
+
+  /** Okay, we have Bridges and we have ClientTransportPlugins. Let's
+      match them together. */
+  if (options->Bridges && options->ClientTransportPlugin) {
+    if (match_bridges_with_transports() < 0)
+      return -1;
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -4629,7 +4637,7 @@ parse_bridge_line(const char *line, int validate_only)
               fmt_addr(&addr), (int)port, transport_name,
               fingerprint ? fingerprint : "no key listed");
     bridge_add_from_config(&addr, port, 
-                           fingerprint ? digest : NULL/*, transport_name*/);
+                           fingerprint ? digest : NULL, transport_name);
   }
 
   r = 0;
@@ -4702,8 +4710,8 @@ parse_transport_line(const char *line, int validate_only)
   if (!validate_only) {
     log_warn(LD_DIR, "Transport %s at %s:%d", name,
               fmt_addr(&addr), (int)port);
-    /*    transport_add_from_config(&addr, port, 
-          fingerprint ? digest : NULL, transport); */
+    transport_add_from_config(&addr, port, name,
+                              socks_ver);
   }
 
   r = 0;
