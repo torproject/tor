@@ -100,6 +100,7 @@ static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
+static void transport_free(transport_info_t *transport);
 
 /**
  * This function decides if CBT learning should be disabled. It returns
@@ -4800,6 +4801,26 @@ find_bridge_by_digest(const char *digest)
       if (tor_memeq(bridge->identity, digest, DIGEST_LEN))
         return bridge;
     });
+  return NULL;
+}
+
+/** If <b>addr</b> and <b>port</b> match one of our known bridges,
+ *  returns it's transport protocol if it has one, else returns NULL.
+ */
+transport_info_t *
+find_bridge_transport_by_addrport(const tor_addr_t *addr, uint16_t port)
+{
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
+    {
+      if (tor_addr_eq(&bridge->addr, addr) &&
+          (bridge->port == port)) {
+        if (bridge->transport) {
+          log_debug(LD_GENERAL, "Found matching bridge!\n");
+          return bridge->transport;
+        } else /* bridge found, but it had no transport */
+          return NULL;
+      }
+    } SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
 

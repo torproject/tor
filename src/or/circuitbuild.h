@@ -148,5 +148,8 @@ void clear_transport_list(void);
 int match_bridges_with_transports(void);
 void transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
+transport_info_t *
+find_bridge_transport_by_addrport(const tor_addr_t *addr, uint16_t port);
+
 #endif
 

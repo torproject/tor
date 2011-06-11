@@ -335,6 +335,14 @@ connection_or_finished_connecting(or_connection_t *or_conn)
     proxy_type = PROXY_SOCKS4;
   else if (get_options()->Socks5Proxy)
     proxy_type = PROXY_SOCKS5;
+  else if (get_options()->UseBridges) {
+    transport_info_t *transport;
+    transport = find_bridge_transport_by_addrport(&conn->addr,conn->port);
+    if (transport) { /* this bridge supports transports. use proxy. */
+      log_warn(LD_GENERAL, "Setting up pluggable transport plugin proxy type!\n");
+      proxy_type = transport->socks_version;
+    }
+  }
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */
@@ -861,6 +869,16 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     using_proxy = 1;
     tor_addr_copy(&addr, &options->Socks5ProxyAddr);
     port = options->Socks5ProxyPort;
+  } else if (options->ClientTransportPlugin) {
+    transport_info_t *transport;
+    transport = find_bridge_transport_by_addrport(&addr, port);
+    if (transport) {
+      log_warn(LD_GENERAL, "Our bridge uses a pluggable transport plugin. "
+               "Setting up proxying!");
+      using_proxy = 1;
+      tor_addr_copy(&addr, &transport->addr);
+      port = transport->port;
+    }
   }
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
