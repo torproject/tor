@@ -12,19 +12,21 @@
 # part of the source distribution, so that people without asciidoc can
 # just use the .1 and .html files.
 
+regular_mans = tor tor-gencert tor-resolve torify
+all_mans = $(regular_mans) tor-fw-helper
+
 if USE_ASCIIDOC
 if USE_FW_HELPER
-asciidoc_files = tor tor-gencert tor-resolve torify tor-fw-helper
+nodist_man_MANS = $(all_mans:=.1)
+doc_DATA = $(all_mans:=.html)
 else
-asciidoc_files = tor tor-gencert tor-resolve torify
+nodist_man_MANS = $(regular_mans:=.1)
+doc_DATA = $(regular_mans:=.html)
 endif
-html_in = $(asciidoc_files:=.html.in)
-man_in = $(asciidoc_files:=.1.in)
-txt_in = $(asciidoc_files:=.1.txt)
-nodist_man_MANS = $(asciidoc_files:=.1)
-doc_DATA = $(asciidoc_files:=.html)
+html_in = $(all_mans:=.html.in)
+man_in = $(all_mans:=.1.in)
+txt_in = $(all_mans:=.1.txt)
 else
-asciidoc_files =
 html_in =
 man_in =
 txt_in =
