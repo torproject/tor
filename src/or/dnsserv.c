@@ -95,8 +95,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   }
   if (!q) {
     log_info(LD_APP, "None of the questions we got were ones we're willing "
-             "to support. Sending NODATA.");
-    evdns_server_request_respond(req, DNS_ERR_NONE);
+             "to support. Sending NOTIMPL.");
+    evdns_server_request_respond(req, DNS_ERR_NOTIMPL);
     return;
   }
   if (q->type != EVDNS_TYPE_A) {
