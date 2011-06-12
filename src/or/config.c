@@ -205,7 +205,7 @@ static config_var_t _option_vars[] = {
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
-  VAR("ClientTransportPlugin",   LINELIST, ClientTransportPlugin,  NULL),  
+  VAR("ClientTransportPlugin",   LINELIST, ClientTransportPlugin,  NULL),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
@@ -571,7 +571,7 @@ static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
-static int parse_transport_line(const char *line, int validate_only);
+static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -1210,7 +1210,7 @@ options_act(or_options_t *old_options)
   if (options->ClientTransportPlugin) {
     clear_transport_list();
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_transport_line(cl->value, 0)<0) {
+      if (parse_client_transport_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
                  "Previously validated ClientTransportPlugin line "
                  "could not be added!");
@@ -1218,7 +1218,7 @@ options_act(or_options_t *old_options)
       }
     }
   }
-  
+
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
@@ -1234,6 +1234,7 @@ options_act(or_options_t *old_options)
   /** Okay, we have Bridges and we have ClientTransportPlugins. Let's
       match them together. */
   if (options->Bridges && options->ClientTransportPlugin) {
+    assert(!server_mode(options));
     if (match_bridges_with_transports() < 0)
       return -1;
   }
@@ -3688,8 +3689,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->ClientTransportPlugin) {
     if (!options->Bridges)
       REJECT("ClientTransportPlugin found without any bridges.");
+    if (server_mode(options))
+      REJECT("ClientTransportPlugin found but we are a server.");
+
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_transport_line(cl->value, 1)<0)
+      if (parse_client_transport_line(cl->value, 1)<0)
         REJECT("Transport line did not parse. See logs for details.");
     }
   }
@@ -4633,10 +4637,10 @@ parse_bridge_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-    log_warn(LD_DIR, "Bridge at %s:%d with transport %s (%s)", 
+    log_debug(LD_DIR, "Bridge at %s:%d with transport %s (%s)",
               fmt_addr(&addr), (int)port, transport_name,
               fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(&addr, port, 
+    bridge_add_from_config(&addr, port,
                            fingerprint ? digest : NULL, transport_name);
   }
 
@@ -4655,8 +4659,14 @@ parse_bridge_line(const char *line, int validate_only)
   return r;
 }
 
+/** Read the contents of a ClientTransportPlugin line from
+ * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't. If <b>validate_only</b> is 0, and the line is well-formed,
+ * then add the transport described in the line to our internal
+ * transport list.
+*/
 static int
-parse_transport_line(const char *line, int validate_only)
+parse_client_transport_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -4665,24 +4675,24 @@ parse_transport_line(const char *line, int validate_only)
   char *addrport=NULL;
   int socks_ver;
   tor_addr_t addr;
-  uint16_t port = 0;  
+  uint16_t port = 0;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
-        
+
   if (smartlist_len(items) < 3) {
-    log_warn(LD_CONFIG, "parse_transport_line(): "
+    log_warn(LD_CONFIG, "parse_client_transport_line(): "
               "Too few arguments on ClientTransportPlugin line.");
     goto err;
   }
-        
+
   name = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
-        
+
   socks_ver_str = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
-        
+
   if (!strcmp(socks_ver_str,"socks4"))
     socks_ver = PROXY_SOCKS4;
   else if (!strcmp(socks_ver_str,"socks5"))
@@ -4706,9 +4716,9 @@ parse_transport_line(const char *line, int validate_only)
               "Transport address '%s' has no port.", addrport);
     goto err;
   }
-        
+
   if (!validate_only) {
-    log_warn(LD_DIR, "Transport %s at %s:%d", name,
+    log_debug(LD_DIR, "Transport %s found at %s:%d", name,
               fmt_addr(&addr), (int)port);
     transport_add_from_config(&addr, port, name,
                               socks_ver);
@@ -4727,7 +4737,7 @@ parse_transport_line(const char *line, int validate_only)
   tor_free(name);
   tor_free(addrport);
   return r;
-}  
+}
 
 /** Read the contents of a DirServer line from <b>line</b>. If
  * <b>validate_only</b> is 0, and the line is well-formed, and it

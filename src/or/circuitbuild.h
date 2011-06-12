@@ -17,13 +17,10 @@
 typedef struct {
   /* SOCKS version */
   int socks_version;
-
   /* Name of pluggable transport protocol */
   char *name;
-
   /* Address of proxy */
   tor_addr_t addr;
-
   /* Port of proxy */
   uint16_t port;
 } transport_info_t;
@@ -86,7 +83,7 @@ int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
                              const char *digest);
 void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
-                            const char *digest, 
+                            const char *digest,
                             const char *transport_name);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
 void fetch_bridge_descriptors(or_options_t *options, time_t now);
@@ -143,13 +140,12 @@ void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
 int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 
-
 void clear_transport_list(void);
 int match_bridges_with_transports(void);
 void transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
 transport_info_t *
-find_bridge_transport_by_addrport(const tor_addr_t *addr, uint16_t port);
+find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port);
 
 #endif
 
