@@ -858,6 +858,20 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
                              if_modified_since, NULL);
 }
 
+/** Return non-zero iff a directory connection with purpose
+ * <b>dir_purpose</b> reveals sensitive information about a Tor
+ * instance's client activities.  (Such connections must be performed
+ * through normal three-hop Tor circuits.) */
+static int
+is_sensitive_dir_purpose(uint8_t dir_purpose)
+{
+  return ((dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) ||
+          (dir_purpose == DIR_PURPOSE_HAS_FETCHED_RENDDESC) ||
+          (dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC) ||
+          (dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) ||
+          (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC_V2));
+}
+
 /** Same as directory_initiate_command(), but accepts rendezvous data to
  * fetch a hidden service descriptor. */
 static void
@@ -891,6 +905,9 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
             anonymized_connection, use_begindir);
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
+
+  tor_assert(!(is_sensitive_dir_purpose(dir_purpose) &&
+               !anonymized_connection));
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
