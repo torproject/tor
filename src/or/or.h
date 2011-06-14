@@ -230,6 +230,8 @@ typedef enum {
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
+/* pluggable transports proxy type */
+#define PROXY_PLUGGABLE 4
 
 /* Proxy client handshake states */
 /* We use a proxy but we haven't even connected to it yet. */ 

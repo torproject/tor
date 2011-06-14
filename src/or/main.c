@@ -761,11 +761,8 @@ conn_close_if_marked(int i)
   /* If the connection we are about to close was trying to connect to
   a proxy server and failed, the client won't be able to use that
   proxy. We should warn him about this. */
-  if (conn->proxy_state == PROXY_INFANT) {
-    log_warn(LD_NET,
-             "The connection to a configured proxy server just failed. "
-             "Make sure that the proxy server is up and running.");  
-  }
+  if (conn->proxy_state == PROXY_INFANT)
+    log_failed_proxy_connection(conn);
 
   IF_HAS_BUFFEREVENT(conn, goto unlink);
   if ((SOCKET_OK(conn->s) || conn->linked_conn) &&

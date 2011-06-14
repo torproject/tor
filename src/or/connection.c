@@ -66,6 +66,8 @@ static void set_constrained_socket_buffers(tor_socket_t sock, int size);
 static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
+static const char *proxy_type_to_string(int proxy_type);
+
 
 /** The last IPv4 address that our network interface seemed to have been
  * binding to, in host order.  We use this to detect when our IP changes. */
@@ -3936,7 +3938,7 @@ connection_dump_buffer_mem_stats(int severity)
         U64_PRINTF_ARG(used_by_type[i]), U64_PRINTF_ARG(alloc_by_type[i]));
   }
 }
-
+    
 /** Verify that connection <b>conn</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
@@ -4099,3 +4101,54 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
 }
 
+void
+log_failed_proxy_connection(connection_t *conn)
+{
+  or_options_t *options = get_options();
+  int proxy_type;
+  tor_addr_t proxy_addr;
+  int proxy_port;
+
+  if (options->HTTPSProxy) {
+    tor_addr_copy(&proxy_addr, &options->HTTPSProxyAddr);
+    proxy_port = options->HTTPSProxyPort;
+    proxy_type = PROXY_CONNECT;
+  } else if (options->Socks4Proxy) {
+    tor_addr_copy(&proxy_addr, &options->Socks4ProxyAddr);
+    proxy_port = options->Socks4ProxyPort;
+    proxy_type = PROXY_SOCKS4;
+  } else if (options->Socks5Proxy) {
+    tor_addr_copy(&proxy_addr, &options->Socks5ProxyAddr);
+    proxy_port = options->Socks5ProxyPort;
+    proxy_type = PROXY_SOCKS5;
+  } else if (options->ClientTransportPlugin) {
+    transport_info_t *transport;
+    transport = find_transport_by_bridge_addrport(&conn->addr, conn->port);
+    if (transport) {
+      tor_addr_copy(&proxy_addr, &transport->addr);
+      proxy_port = transport->port;
+      proxy_type = PROXY_PLUGGABLE;
+    } else
+      return;
+  } else
+    tor_assert(0);
+  
+  log_warn(LD_NET,
+           "The connection to the %s proxy server at %s:%u just failed. "
+           "Make sure that the proxy server is up and running.",
+           proxy_type_to_string(proxy_type), fmt_addr(&proxy_addr), 
+           proxy_port);  
+}
+
+static const char *
+proxy_type_to_string(int proxy_type)
+{
+  switch (proxy_type) {
+  case PROXY_CONNECT:   return "HTTP";
+  case PROXY_SOCKS4:    return "SOCKS4";
+  case PROXY_SOCKS5:    return "SOCKS5";
+  case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
+  case PROXY_NONE:      return "NULL"; /* probably a bug */
+  default:              tor_assert(0); 
+  }
+}
