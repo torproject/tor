@@ -1047,7 +1047,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
 
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory,
-                        running_tor ? CPD_CREATE : CPD_CHECK)<0) {
+                        running_tor ? CPD_CREATE : CPD_CHECK,
+                        options->User)<0) {
     tor_asprintf(msg,
               "Couldn't access/create private data directory \"%s\"",
               options->DataDirectory);
@@ -1060,7 +1061,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
     char *fn = tor_malloc(len);
     tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
                  options->DataDirectory);
-    if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK) < 0) {
+    if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK,
+                          options->User) < 0) {
       tor_asprintf(msg,
                 "Couldn't access/create private data directory \"%s\"", fn);
       tor_free(fn);

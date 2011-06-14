@@ -46,7 +46,7 @@ typedef struct policy_summary_item_t {
     uint16_t prt_max; /**< Highest port number to accept/reject. */
     uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
                                 this port range. */
-    int accepted:1; /** Has this port already been accepted */
+    unsigned int accepted:1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
 /** Private networks.  This list is used in two places, once to expand the

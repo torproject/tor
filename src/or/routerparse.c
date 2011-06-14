@@ -1534,10 +1534,10 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_opt_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
+  if (find_opt_by_keyword(tokens, K_CACHES_EXTRA_INFO))
     router->caches_extra_info = 1;
 
-  if ((tok = find_opt_by_keyword(tokens, K_ALLOW_SINGLE_HOP_EXITS)))
+  if (find_opt_by_keyword(tokens, K_ALLOW_SINGLE_HOP_EXITS))
     router->allow_single_hop_exits = 1;
 
   if ((tok = find_opt_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
@@ -1550,7 +1550,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_opt_by_keyword(tokens, K_HIDDEN_SERVICE_DIR))) {
+  if (find_opt_by_keyword(tokens, K_HIDDEN_SERVICE_DIR)) {
     router->wants_to_be_hs_dir = 1;
   }
 
