@@ -860,14 +860,17 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
+  /* If we are using a proxy server, find it and use it. */
   proxy_type = get_proxy_type();
   r = get_proxy_addrport(proxy_type, &proxy_addr, &proxy_port, TO_CONN(conn));
   if (r == 1) { /* proxy found. */
     addr = proxy_addr;
     port = proxy_port;
     conn->_base.proxy_state = PROXY_INFANT;
-  } else if (r < 0)
+  } else if (r < 0) {
+    log_info(LD_PROTOCOL, "Failed on getting proxy addrport.");
     return NULL;
+  }
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
                              &addr, port, &socket_error)) {

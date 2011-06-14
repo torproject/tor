@@ -82,7 +82,7 @@ int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
                              const char *digest);
-void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
+int bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                             const char *digest,
                             const char *transport_name);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
@@ -142,7 +142,7 @@ int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 
 void clear_transport_list(void);
 int match_bridges_with_transports(void);
-void transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
 transport_info_t *
 find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port);

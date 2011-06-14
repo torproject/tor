@@ -4104,8 +4104,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 /**
    Fills <b>addr</b> and <b>port</b> with the details of the proxy
    server of type 'proxy_type' we are using.
-   'conn' contains a connection_t and is used for finding pluggable
-   transports proxies.
+   'conn' contains the connection_t we are using the proxy for.
    
    Returns 1 if we were successfull, 0 if we are not using a proxy
    server and -1 if something went wrong.
@@ -4186,7 +4185,7 @@ log_failed_proxy_connection(connection_t *conn)
 }
 
 /**
-   Transforms 'proxy_type' to it's string representation/
+   Return string representation of <b>proxy_type</b>.
 */
 static const char *
 proxy_type_to_string(int proxy_type)

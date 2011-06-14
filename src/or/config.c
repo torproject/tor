@@ -570,7 +570,8 @@ static int options_transition_affects_descriptor(or_options_t *old_options,
 static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(or_options_t *options);
 
-static int parse_bridge_line(const char *line, int validate_only);
+static int parse_bridge_line(const char *line, int validate_only,
+                             or_options_t *options);
 static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
@@ -1222,7 +1223,7 @@ options_act(or_options_t *old_options)
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
-      if (parse_bridge_line(cl->value, 0)<0) {
+      if (parse_bridge_line(cl->value, 0, options)<0) {
         log_warn(LD_BUG,
                  "Previously validated Bridge line could not be added!");
         return -1;
@@ -3709,7 +3710,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->Bridges) {
     for (cl = options->Bridges; cl; cl = cl->next) {
-      if (parse_bridge_line(cl->value, 1)<0)
+      if (parse_bridge_line(cl->value, 1, options)<0)
         REJECT("Bridge line did not parse. See logs for details.");
     }
   }
@@ -4592,7 +4593,8 @@ options_init_logs(or_options_t *options, int validate_only)
  * <b>validate_only</b> is 0, and the line is well-formed, then add
  * the bridge described in the line to our internal bridge list. */
 static int
-parse_bridge_line(const char *line, int validate_only)
+parse_bridge_line(const char *line, int validate_only, 
+                  or_options_t *options)
 {
   smartlist_t *items = NULL;
   int r;
@@ -4616,6 +4618,12 @@ parse_bridge_line(const char *line, int validate_only)
   smartlist_del_keeporder(items, 0);
 
   if (!strstr(field1, ".")) { /* new-style bridge line */
+    if (!options->ClientTransportPlugin) {
+      log_warn(LD_CONFIG, "Pluggable transports protocol found "
+               "in bridge line, but no ClientTransportPlugin lines found.");
+      goto err;
+    }
+
     transport_name = field1;
     addrport = smartlist_get(items, 0);
     smartlist_del_keeporder(items, 0);
@@ -4649,8 +4657,10 @@ parse_bridge_line(const char *line, int validate_only)
     log_debug(LD_DIR, "Bridge at %s:%d with transport %s (%s)",
               fmt_addr(&addr), (int)port, transport_name,
               fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(&addr, port,
-                           fingerprint ? digest : NULL, transport_name);
+
+    if (bridge_add_from_config(&addr, port,
+                               fingerprint ? digest : NULL,transport_name) < 0)
+      goto err;
   }
 
   r = 0;
@@ -4729,8 +4739,10 @@ parse_client_transport_line(const char *line, int validate_only)
   if (!validate_only) {
     log_debug(LD_DIR, "Transport %s found at %s:%d", name,
               fmt_addr(&addr), (int)port);
-    transport_add_from_config(&addr, port, name,
-                              socks_ver);
+
+    if (transport_add_from_config(&addr, port, name,
+                                  socks_ver) < 0)
+      goto err;
   }
 
   r = 0;

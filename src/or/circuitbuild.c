@@ -4594,21 +4594,39 @@ transport_free(transport_info_t *transport)
 /** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
     <b>name</b> is set to the name of the protocol this proxy uses.
     <b>socks_ver</b> is set to the SOCKS version of the proxy.
+
+    Returns 1 on success, -1 on fail.
 */
-void
+int
 transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                           const char *name, int socks_ver)
 {
   transport_info_t *t = tor_malloc_zero(sizeof(transport_info_t));
 
+  if (transport_list) { /*check out for duplicate transport names*/
+    SMARTLIST_FOREACH_BEGIN(transport_list, transport_info_t *, transport) {
+      if (!strcmp(transport->name, name)) {
+        log_notice(LD_CONFIG, "More than one transports have '%s' as "
+                 "their name.", transport->name);
+        goto err;
+      }
+    } SMARTLIST_FOREACH_END(transport);
+  }
+
   tor_addr_copy(&t->addr, addr);
   t->port = port;
   t->name = tor_strdup(name);
+
   t->socks_version = socks_ver;
   if (!transport_list)
     transport_list = smartlist_create();
 
   smartlist_add(transport_list, t);
+  return 1;
+
+ err:
+  tor_free(t);
+  return -1;
 }
 
 /**
@@ -4645,9 +4663,8 @@ match_bridges_with_transports(void)
             found_match=1;
             n_matches++;
             b->transport = t;
-            tor_free(b->transport_name_config);
             log_warn(LD_CONFIG, "Matched transport '%s'", t->name);
-            continue;
+            break;
           }
         } SMARTLIST_FOREACH_END(t);
       if (!found_match) {
@@ -4666,6 +4683,10 @@ match_bridges_with_transports(void)
              "managed to match %d of them!\n", n_transports, n_matches);
     return -1;
   }
+
+  /* clear the method names taken from the config, we no longer need them. */
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, 
+                    tor_free(b->transport_name_config));
 
   return 1;
 }
@@ -4751,8 +4772,10 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
  * bridge in our list, unmark it, and don't actually add anything new.
  * If <b>transport_name</b> is non-NULL - the bridge is associated with a
  * pluggable transport - we assign the transport to the bridge.
+ *
+ * Returns 1 on success, -1 on fail.
  */
-void
+int
 bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                        const char *digest, const char *transport_name)
 {
@@ -4760,7 +4783,7 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
 
   if ((b = get_configured_bridge_by_addr_port_digest(addr, port, digest))) {
     b->marked_for_removal = 0;
-    return;
+    return 1;
   }
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
@@ -4768,13 +4791,28 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
   b->port = port;
   if (digest)
     memcpy(b->identity, digest, DIGEST_LEN);
-  if (transport_name)
+  if (transport_name) {
+    if (bridge_list) { /*check out for duplicate transport names*/
+      SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
+        if (!strcmp(bridge->transport_name_config, transport_name)) {
+          log_notice(LD_CONFIG, "More than one bridges have '%s' as "
+                   "their transport name.", transport_name);
+          goto err;
+        }
+      } SMARTLIST_FOREACH_END(bridge);
+    }
     b->transport_name_config = strdup(transport_name);
+  }
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
   if (!bridge_list)
     bridge_list = smartlist_create();
 
   smartlist_add(bridge_list, b);
+  return 1;
+
+ err:
+  tor_free(b);
+  return -1;
 }
 
 /** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
