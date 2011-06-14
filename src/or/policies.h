@@ -29,9 +29,9 @@ int authdir_policy_valid_address(uint32_t addr, uint16_t port);
 int authdir_policy_baddir_address(uint32_t addr, uint16_t port);
 int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
-int validate_addr_policies(or_options_t *options, char **msg);
+int validate_addr_policies(const or_options_t *options, char **msg);
 void policy_expand_private(smartlist_t **policy);
-int policies_parse_from_options(or_options_t *options);
+int policies_parse_from_options(const or_options_t *options);
 
 addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
 int cmp_addr_policies(smartlist_t *a, smartlist_t *b);

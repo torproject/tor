@@ -27,7 +27,7 @@ int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
 int connection_or_digest_is_known_relay(const char *id_digest);
 void connection_or_update_token_buckets(smartlist_t *conns,
-                                        or_options_t *options);
+                                        const or_options_t *options);
 
 void connection_or_connect_failed(or_connection_t *conn,
                                   int reason, const char *msg);

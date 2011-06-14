@@ -171,7 +171,7 @@ nodelist_add_microdesc(microdesc_t *md)
 void
 nodelist_set_consensus(networkstatus_t *ns)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   init_nodelist();
 

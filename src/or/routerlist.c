@@ -57,7 +57,7 @@ static const char *signed_descriptor_get_body_impl(
 static void list_pending_downloads(digestmap_t *result,
                                    int purpose, const char *prefix);
 static void launch_dummy_descriptor_download_as_needed(time_t now,
-                                                       or_options_t *options);
+                                   const or_options_t *options);
 
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
@@ -1077,7 +1077,7 @@ router_pick_trusteddirserver(dirinfo_type_t type, int flags)
 static const routerstatus_t *
 router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const node_t *result;
   smartlist_t *direct, *tunnel;
   smartlist_t *trusted_direct, *trusted_tunnel;
@@ -1200,7 +1200,7 @@ static const routerstatus_t *
 router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   const routerinfo_t *me = router_get_my_routerinfo();
@@ -1367,7 +1367,7 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
   /* XXXX MOVE */
   const smartlist_t *all_nodes = nodelist_get_list();
   const smartlist_t *declared_family;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(node);
 
@@ -1456,7 +1456,7 @@ int
 nodes_in_same_family(const node_t *node1, const node_t *node2)
 {
   /* XXXX MOVE */
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* Are they in the same family because of their addresses? */
   if (options->EnforceDistinctSubnets) {
@@ -1565,7 +1565,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
   uint32_t addr;
   struct in_addr in;
   tor_addr_t a;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (!tor_inet_aton(address, &in))
     return NULL; /* it's not an IP already */
@@ -3267,7 +3267,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
   const char *id_digest;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int authdir = authdir_mode_handles_descs(options, router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
@@ -4294,7 +4294,8 @@ initiate_descriptor_downloads(const routerstatus_t *source,
  * running, or otherwise not a descriptor that we would make any
  * use of even if we had it. Else return 1. */
 static INLINE int
-client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
+client_would_use_router(const routerstatus_t *rs, time_t now,
+                        const or_options_t *options)
 {
   if (!rs->is_flagged_running && !options->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
@@ -4347,7 +4348,7 @@ launch_descriptor_downloads(int purpose,
                             const routerstatus_t *source, time_t now)
 {
   int should_delay = 0, n_downloadable;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const char *descname;
 
   tor_assert(purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
@@ -4451,7 +4452,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
   digestmap_t *map; /* Which descs are in progress, or assigned? */
   int i, j, n;
   int n_download;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
   if (! directory_fetches_dir_info_early(options)) {
@@ -4593,7 +4594,7 @@ void
 update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                              networkstatus_t *consensus)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   digestmap_t *map = NULL;
   smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
@@ -4723,7 +4724,8 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 /** As needed, launch a dummy router descriptor fetch to see if our
  * address has changed. */
 static void
-launch_dummy_descriptor_download_as_needed(time_t now, or_options_t *options)
+launch_dummy_descriptor_download_as_needed(time_t now,
+                                           const or_options_t *options)
 {
   static time_t last_dummy_download = 0;
   /* XXXX023 we could be smarter here; see notes on bug 652. */
@@ -4745,7 +4747,7 @@ launch_dummy_descriptor_download_as_needed(time_t now, or_options_t *options)
 void
 update_router_descriptor_downloads(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
   if (!we_fetch_router_descriptors(options))
@@ -4762,7 +4764,7 @@ update_router_descriptor_downloads(time_t now)
 void
 update_extrainfo_downloads(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   routerlist_t *rl;
   smartlist_t *wanted;
   digestmap_t *pending;
@@ -4884,7 +4886,7 @@ get_dir_info_status_string(void)
 static void
 count_usable_descriptors(int *num_present, int *num_usable,
                          const networkstatus_t *consensus,
-                         or_options_t *options, time_t now,
+                         const or_options_t *options, time_t now,
                          routerset_t *in_set)
 {
   const int md = (consensus->flavor == FLAV_MICRODESC);
@@ -4950,7 +4952,7 @@ update_router_have_minimum_dir_info(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   int res;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
 
@@ -5497,7 +5499,7 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
 void
 refresh_all_country_info(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (options->EntryNodes)
     routerset_refresh_countries(options->EntryNodes);

@@ -619,7 +619,7 @@ connection_about_to_close_connection(connection_t *conn)
         circuit_n_conn_done(TO_OR_CONN(conn), 0);
         /* now mark things down as needed */
         if (connection_or_nonopen_was_started_here(or_conn)) {
-          or_options_t *options = get_options();
+          const or_options_t *options = get_options();
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
           entry_guard_register_connect_status(or_conn->identity_digest,0,
                                               !options->HTTPSProxy, now);
@@ -899,7 +899,7 @@ warn_too_many_conns(void)
 /** Check whether we should be willing to open an AF_UNIX socket in
  * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
 static int
-check_location_for_unix_socket(or_options_t *options, const char *path)
+check_location_for_unix_socket(const or_options_t *options, const char *path)
 {
   int r = -1;
   char *p = tor_strdup(path);
@@ -1186,7 +1186,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   struct sockaddr *remote = (struct sockaddr*)addrbuf;
   /* length of the remote address. Must be whatever accept() needs. */
   socklen_t remotelen = (socklen_t)sizeof(addrbuf);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
@@ -1366,7 +1366,7 @@ connection_connect(connection_t *conn, const char *address,
   char addrbuf[256];
   struct sockaddr *dest_addr;
   int dest_addr_len;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int protocol_family;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
@@ -1489,7 +1489,7 @@ connection_proxy_state_to_string(int state)
 int
 connection_proxy_connect(connection_t *conn, int type)
 {
-  or_options_t *options;
+  const or_options_t *options;
 
   tor_assert(conn);
 
@@ -2005,7 +2005,7 @@ int
 retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int retval = 0;
   const uint16_t old_or_port = router_get_advertised_or_port(options);
   const uint16_t old_dir_port = router_get_advertised_dir_port(options, 0);
@@ -2071,7 +2071,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
 static int
 connection_is_rate_limited(connection_t *conn)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (conn->linked)
     return 0; /* Internal connection */
   else if (! options->CountPrivateBandwidth &&
@@ -2269,7 +2269,7 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
-    or_options_t *options = get_options();
+    const or_options_t *options = get_options();
     int64_t can_write = (int64_t)smaller_bucket
       + 2*(options->RelayBandwidthRate ? options->RelayBandwidthRate :
                                          options->BandwidthRate);
@@ -2387,7 +2387,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
 void
 connection_bucket_init(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   /* start it at max traffic */
   global_read_bucket = (int)options->BandwidthBurst;
   global_write_bucket = (int)options->BandwidthBurst;
@@ -2432,7 +2432,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
 void
 connection_bucket_refill(int seconds_elapsed, time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
   int relayrate, relayburst;
 
@@ -2552,7 +2552,7 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
 void
 connection_bucket_init(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const struct timeval *tick = tor_libevent_get_one_tick_timeout();
   struct ev_token_bucket_cfg *bucket_cfg;
 

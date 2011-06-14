@@ -523,7 +523,7 @@ control_ports_write_to_file(void)
 {
   smartlist_t *lines;
   char *joined = NULL;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (!options->ControlPortWriteToFile)
     return;
@@ -827,7 +827,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   smartlist_t *unrecognized = smartlist_create();
   char *msg = NULL;
   size_t msg_len;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int i, len;
 
   (void) body_len; /* body is NUL-terminated; so we can ignore len. */
@@ -1070,7 +1070,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
                             const char *body)
 {
   int used_quoted_string = 0;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const char *errstr = NULL;
   char *password;
   size_t password_len;
@@ -2849,7 +2849,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
       connection_mark_for_close(TO_CONN(conn));
     goto done;
   } else {
-    or_options_t *options = get_options();
+    const or_options_t *options = get_options();
     int cookies = options->CookieAuthentication;
     char *cfile = get_cookie_file();
     char *esc_cfile = esc_for_log(cfile);
@@ -4021,7 +4021,7 @@ control_event_guard(const char *nickname, const char *digest,
 static char *
 get_cookie_file(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (options->CookieAuthFile && strlen(options->CookieAuthFile)) {
     return tor_strdup(options->CookieAuthFile);
   } else {

@@ -50,7 +50,8 @@ int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                                   crypt_path_t *cpath);
 int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 
-int hostname_in_track_host_exits(or_options_t *options, const char *address);
+int hostname_in_track_host_exits(const or_options_t *options,
+                                 const char *address);
 
 #endif
 

@@ -380,7 +380,7 @@ connection_or_digest_is_known_relay(const char *id_digest)
  */
 static void
 connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
-                                          or_options_t *options)
+                                          const or_options_t *options)
 {
   int rate, burst; /* per-connection rate limiting params */
   if (connection_or_digest_is_known_relay(conn->identity_digest)) {
@@ -436,7 +436,8 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
  * Go through all the OR connections and update their token buckets to make
  * sure they don't exceed their maximum values. */
 void
-connection_or_update_token_buckets(smartlist_t *conns, or_options_t *options)
+connection_or_update_token_buckets(smartlist_t *conns,
+                                   const or_options_t *options)
 {
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
@@ -827,7 +828,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
                       const char *id_digest)
 {
   or_connection_t *conn;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int socket_error = 0;
   int using_proxy = 0;
   tor_addr_t addr;
@@ -1144,7 +1145,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                         char *digest_rcvd_out)
 {
   crypto_pk_env_t *identity_rcvd=NULL;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
   const char *safe_address =
     started_here ? conn->_base.address :

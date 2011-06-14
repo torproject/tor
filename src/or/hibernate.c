@@ -134,7 +134,7 @@ static void accounting_set_wakeup_time(void);
  * options->AccountingStart.  Return 0 on success, -1 on failure. If
  * <b>validate_only</b> is true, do not change the current settings. */
 int
-accounting_parse_options(or_options_t *options, int validate_only)
+accounting_parse_options(const or_options_t *options, int validate_only)
 {
   time_unit_t unit;
   int ok, idx;
@@ -249,7 +249,7 @@ accounting_parse_options(or_options_t *options, int validate_only)
  * hibernate, return 1, else return 0.
  */
 int
-accounting_is_enabled(or_options_t *options)
+accounting_is_enabled(const or_options_t *options)
 {
   if (options->AccountingMax)
     return 1;
@@ -411,7 +411,7 @@ static void
 update_expected_bandwidth(void)
 {
   uint64_t expected;
-  or_options_t *options= get_options();
+  const or_options_t *options= get_options();
   uint64_t max_configured = (options->RelayBandwidthRate > 0 ?
                              options->RelayBandwidthRate :
                              options->BandwidthRate) * 60;
@@ -750,7 +750,7 @@ static void
 hibernate_begin(hibernate_state_t new_state, time_t now)
 {
   connection_t *conn;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (new_state == HIBERNATE_STATE_EXITING &&
       hibernate_state != HIBERNATE_STATE_LIVE) {

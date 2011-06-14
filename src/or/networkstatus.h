@@ -67,7 +67,7 @@ int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code,
                                              const char *flavname);
 void update_consensus_networkstatus_fetch_time(time_t now);
-int should_delay_dir_fetches(or_options_t *options);
+int should_delay_dir_fetches(const or_options_t *options);
 void update_networkstatus_downloads(time_t now);
 void update_certificate_downloads(time_t now);
 int consensus_is_waiting_for_certs(void);
@@ -96,7 +96,8 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(const routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
-int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
+int32_t networkstatus_get_param(const networkstatus_t *ns,
+                                const char *param_name,
                                 int32_t default_val, int32_t min_val,
                                 int32_t max_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,

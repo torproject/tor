@@ -56,7 +56,7 @@ test_md_cache(void *data)
   char *fn = NULL, *s = NULL;
   (void)data;
 
-  options = get_options();
+  options = get_options_mutable();
   tt_assert(options);
 
   time1 = time(NULL);

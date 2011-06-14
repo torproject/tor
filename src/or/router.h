@@ -39,27 +39,27 @@ void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
 
-int authdir_mode(or_options_t *options);
-int authdir_mode_v1(or_options_t *options);
-int authdir_mode_v2(or_options_t *options);
-int authdir_mode_v3(or_options_t *options);
-int authdir_mode_any_main(or_options_t *options);
-int authdir_mode_any_nonhidserv(or_options_t *options);
-int authdir_mode_handles_descs(or_options_t *options, int purpose);
-int authdir_mode_publishes_statuses(or_options_t *options);
-int authdir_mode_tests_reachability(or_options_t *options);
-int authdir_mode_bridge(or_options_t *options);
+int authdir_mode(const or_options_t *options);
+int authdir_mode_v1(const or_options_t *options);
+int authdir_mode_v2(const or_options_t *options);
+int authdir_mode_v3(const or_options_t *options);
+int authdir_mode_any_main(const or_options_t *options);
+int authdir_mode_any_nonhidserv(const or_options_t *options);
+int authdir_mode_handles_descs(const or_options_t *options, int purpose);
+int authdir_mode_publishes_statuses(const or_options_t *options);
+int authdir_mode_tests_reachability(const or_options_t *options);
+int authdir_mode_bridge(const or_options_t *options);
 
-uint16_t router_get_advertised_or_port(or_options_t *options);
-uint16_t router_get_advertised_dir_port(or_options_t *options,
+uint16_t router_get_advertised_or_port(const or_options_t *options);
+uint16_t router_get_advertised_dir_port(const or_options_t *options,
                                         uint16_t dirport);
 
-int server_mode(or_options_t *options);
-int public_server_mode(or_options_t *options);
+int server_mode(const or_options_t *options);
+int public_server_mode(const or_options_t *options);
 int advertised_server_mode(void);
-int proxy_mode(or_options_t *options);
+int proxy_mode(const or_options_t *options);
 void consider_publishable_server(int force);
-int should_refuse_unknown_exits(or_options_t *options);
+int should_refuse_unknown_exits(const or_options_t *options);
 
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_older_than(time_t when);
@@ -77,7 +77,7 @@ int router_digest_is_me(const char *digest);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);
-int router_pick_published_address(or_options_t *options, uint32_t *addr);
+int router_pick_published_address(const or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);

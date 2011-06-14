@@ -162,7 +162,7 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
 /** Return 1 if we should collect geoip stats on bridge users, and
  * include them in our extrainfo descriptor. Else return 0. */
 int
-should_record_bridge_info(or_options_t *options)
+should_record_bridge_info(const or_options_t *options)
 {
   return options->BridgeRelay && options->BridgeRecordUsageByCountry;
 }
@@ -199,7 +199,7 @@ init_geoip_countries(void)
  * with '#' (comments).
  */
 int
-geoip_load_file(const char *filename, or_options_t *options)
+geoip_load_file(const char *filename, const or_options_t *options)
 {
   FILE *f;
   const char *msg = "";
@@ -424,7 +424,7 @@ void
 geoip_note_client_seen(geoip_client_action_t action,
                        uint32_t addr, time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
   if (action == GEOIP_CLIENT_CONNECT) {
     /* Only remember statistics as entry guard or as bridge. */

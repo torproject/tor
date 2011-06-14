@@ -979,7 +979,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
   int internal = (flags & CIRCLAUNCH_IS_INTERNAL) != 0;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* Make sure we're not trying to create a onehop circ by
    * cannibalization. */
@@ -1098,7 +1098,7 @@ void
 circuit_expire_all_dirty_circs(void)
 {
   circuit_t *circ;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&

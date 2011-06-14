@@ -1074,8 +1074,8 @@ test_geoip(void)
   test_streq("??", NAMEFOR(2000));
 #undef NAMEFOR
 
-  get_options()->BridgeRelay = 1;
-  get_options()->BridgeRecordUsageByCountry = 1;
+  get_options_mutable()->BridgeRelay = 1;
+  get_options_mutable()->BridgeRecordUsageByCountry = 1;
   /* Put 9 observations in AB... */
   for (i=32; i < 40; ++i)
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, i, now-7200);

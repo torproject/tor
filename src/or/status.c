@@ -85,7 +85,7 @@ log_heartbeat(time_t now)
   char *uptime = NULL;
   const routerinfo_t *me;
 
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   (void)now;
 
   if (public_server_mode(options)) {

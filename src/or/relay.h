@@ -60,8 +60,8 @@ const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
                                         const uint8_t *payload,
                                         int payload_len);
 unsigned cell_ewma_get_tick(void);
-void cell_ewma_set_scale_factor(or_options_t *options,
-                                networkstatus_t *consensus);
+void cell_ewma_set_scale_factor(const or_options_t *options,
+                                const networkstatus_t *consensus);
 void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
 void tor_gettimeofday_cache_clear(void);

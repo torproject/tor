@@ -51,11 +51,11 @@ void extend_info_free(extend_info_t *info);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
-void entry_guards_compute_status(or_options_t *options, time_t now);
+void entry_guards_compute_status(const or_options_t *options, time_t now);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         int mark_relay_status, time_t now);
 void entry_nodes_should_be_added(void);
-int entry_list_is_constrained(or_options_t *options);
+int entry_list_is_constrained(const or_options_t *options);
 const node_t *choose_random_entry(cpath_build_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
@@ -72,12 +72,12 @@ void learned_router_identity(const tor_addr_t *addr, uint16_t port,
 void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                             const char *digest);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
-void fetch_bridge_descriptors(or_options_t *options, time_t now);
+void fetch_bridge_descriptors(const or_options_t *options, time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
 int any_bridge_descriptors_known(void);
 int any_pending_bridge_descriptor_fetches(void);
-int entries_known_but_down(or_options_t *options);
-void entries_retry_all(or_options_t *options);
+int entries_known_but_down(const or_options_t *options);
+void entries_retry_all(const or_options_t *options);
 
 void entry_guards_free_all(void);
 

@@ -867,7 +867,7 @@ directory_all_unreachable(time_t now)
 void
 directory_info_has_arrived(time_t now, int from_cache)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (!router_have_minimum_dir_info()) {
     int quiet = directory_too_idle_to_fetch_descriptors(options, now);
@@ -912,7 +912,7 @@ run_connection_housekeeping(int i, time_t now)
 {
   cell_t cell;
   connection_t *conn = smartlist_get(connection_array, i);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   or_connection_t *or_conn;
   int past_keepalive =
     now >= conn->timestamp_lastwritten + options->KeepalivePeriod;
@@ -1018,7 +1018,7 @@ run_connection_housekeeping(int i, time_t now)
 static void
 signewnym_impl(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (!proxy_mode(options)) {
     log_info(LD_CONTROL, "Ignoring SIGNAL NEWNYM because client functionality "
              "is disabled.");
@@ -1060,7 +1060,7 @@ run_scheduled_events(time_t now)
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
   static time_t time_to_next_heartbeat = 0;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int is_server = server_mode(options);
   int i;
   int have_dir_info;
@@ -1487,7 +1487,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 #ifdef USE_BUFFEREVENTS
   uint64_t cur_read,cur_written;
 #endif
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   (void)timer;
   (void)arg;
 
@@ -1630,7 +1630,7 @@ dns_servers_relaunch_checks(void)
 static int
 do_hup(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
@@ -2172,7 +2172,7 @@ static tor_lockfile_t *lockfile = NULL;
  * return -1 if we can't get the lockfile.  Return 0 on success.
  */
 int
-try_locking(or_options_t *options, int err_if_locked)
+try_locking(const or_options_t *options, int err_if_locked)
 {
   if (lockfile)
     return 0;
@@ -2286,7 +2286,7 @@ tor_free_all(int postfork)
 void
 tor_cleanup(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (options->command == CMD_RUN_TOR) {
     time_t now = time(NULL);
     /* Remove our pid file. We don't care if there was an error when we

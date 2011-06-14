@@ -495,7 +495,7 @@ init_keys(void)
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
   char *cp;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   dirinfo_type_t type;
   time_t now = time(NULL);
   trusted_dir_server_t *ds;
@@ -763,7 +763,7 @@ router_reset_reachability(void)
 int
 check_whether_orport_reachable(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   return options->AssumeReachable ||
          can_reach_or_port;
 }
@@ -772,7 +772,7 @@ check_whether_orport_reachable(void)
 int
 check_whether_dirport_reachable(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   return !options->DirPort ||
          options->AssumeReachable ||
          we_are_hibernating() ||
@@ -787,7 +787,7 @@ check_whether_dirport_reachable(void)
  * a DirPort.
  */
 static int
-decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
+decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 {
   static int advertising=1; /* start out assuming we will advertise */
   int new_choice=1;
@@ -855,7 +855,7 @@ consider_testing_reachability(int test_or, int test_dir)
   const routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
   tor_addr_t addr;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (!me)
     return;
 
@@ -973,7 +973,7 @@ router_perform_bandwidth_test(int num_circs, time_t now)
  * directory server.
  */
 int
-authdir_mode(or_options_t *options)
+authdir_mode(const or_options_t *options)
 {
   return options->AuthoritativeDir != 0;
 }
@@ -981,7 +981,7 @@ authdir_mode(or_options_t *options)
  * directory server.
  */
 int
-authdir_mode_v1(or_options_t *options)
+authdir_mode_v1(const or_options_t *options)
 {
   return authdir_mode(options) && options->V1AuthoritativeDir != 0;
 }
@@ -989,7 +989,7 @@ authdir_mode_v1(or_options_t *options)
  * directory server.
  */
 int
-authdir_mode_v2(or_options_t *options)
+authdir_mode_v2(const or_options_t *options)
 {
   return authdir_mode(options) && options->V2AuthoritativeDir != 0;
 }
@@ -997,13 +997,13 @@ authdir_mode_v2(or_options_t *options)
  * directory server.
  */
 int
-authdir_mode_v3(or_options_t *options)
+authdir_mode_v3(const or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
 /** Return true iff we are a v1, v2, or v3 directory authority. */
 int
-authdir_mode_any_main(or_options_t *options)
+authdir_mode_any_main(const or_options_t *options)
 {
   return options->V1AuthoritativeDir ||
          options->V2AuthoritativeDir ||
@@ -1012,7 +1012,7 @@ authdir_mode_any_main(or_options_t *options)
 /** Return true if we believe ourselves to be any kind of
  * authoritative directory beyond just a hidserv authority. */
 int
-authdir_mode_any_nonhidserv(or_options_t *options)
+authdir_mode_any_nonhidserv(const or_options_t *options)
 {
   return options->BridgeAuthoritativeDir ||
          authdir_mode_any_main(options);
@@ -1021,7 +1021,7 @@ authdir_mode_any_nonhidserv(or_options_t *options)
  * authoritative about receiving and serving descriptors of type
  * <b>purpose</b> its dirport.  Use -1 for "any purpose". */
 int
-authdir_mode_handles_descs(or_options_t *options, int purpose)
+authdir_mode_handles_descs(const or_options_t *options, int purpose)
 {
   if (purpose < 0)
     return authdir_mode_any_nonhidserv(options);
@@ -1036,7 +1036,7 @@ authdir_mode_handles_descs(or_options_t *options, int purpose)
  * publishes its own network statuses.
  */
 int
-authdir_mode_publishes_statuses(or_options_t *options)
+authdir_mode_publishes_statuses(const or_options_t *options)
 {
   if (authdir_mode_bridge(options))
     return 0;
@@ -1046,7 +1046,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
  * tests reachability of the descriptors it learns about.
  */
 int
-authdir_mode_tests_reachability(or_options_t *options)
+authdir_mode_tests_reachability(const or_options_t *options)
 {
   return authdir_mode_handles_descs(options, -1);
 }
@@ -1054,7 +1054,7 @@ authdir_mode_tests_reachability(or_options_t *options)
  * directory server.
  */
 int
-authdir_mode_bridge(or_options_t *options)
+authdir_mode_bridge(const or_options_t *options)
 {
   return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
 }
@@ -1062,7 +1062,7 @@ authdir_mode_bridge(or_options_t *options)
 /** Return true iff we are trying to be a server.
  */
 int
-server_mode(or_options_t *options)
+server_mode(const or_options_t *options)
 {
   if (options->ClientOnly) return 0;
   return (options->ORPort != 0 || options->ORListenAddress);
@@ -1071,7 +1071,7 @@ server_mode(or_options_t *options)
 /** Return true iff we are trying to be a non-bridge server.
  */
 int
-public_server_mode(or_options_t *options)
+public_server_mode(const or_options_t *options)
 {
   if (!server_mode(options)) return 0;
   return (!options->BridgeRelay);
@@ -1081,7 +1081,7 @@ public_server_mode(or_options_t *options)
  * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */
 int
-should_refuse_unknown_exits(or_options_t *options)
+should_refuse_unknown_exits(const or_options_t *options)
 {
   if (options->RefuseUnknownExits != -1) {
     return options->RefuseUnknownExits;
@@ -1113,7 +1113,7 @@ set_server_advertised(int s)
 
 /** Return true iff we are trying to be a socks proxy. */
 int
-proxy_mode(or_options_t *options)
+proxy_mode(const or_options_t *options)
 {
   return (options->SocksPort != 0 ||
           options->TransPort != 0 ||
@@ -1134,7 +1134,7 @@ proxy_mode(or_options_t *options)
 static int
 decide_if_publishable_server(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (options->ClientOnly)
     return 0;
@@ -1179,7 +1179,7 @@ consider_publishable_server(int force)
  * the one configured in the ORPort option, or the one we actually bound to
  * if ORPort is "auto". */
 uint16_t
-router_get_advertised_or_port(or_options_t *options)
+router_get_advertised_or_port(const or_options_t *options)
 {
   if (options->ORPort == CFG_AUTO_PORT) {
     connection_t *c = connection_get_by_type(CONN_TYPE_OR_LISTENER);
@@ -1196,7 +1196,7 @@ router_get_advertised_or_port(or_options_t *options)
  * the one configured in the DirPort option,
  * or the one we actually bound to if DirPort is "auto". */
 uint16_t
-router_get_advertised_dir_port(or_options_t *options, uint16_t dirport)
+router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 {
   if (!options->DirPort)
     return dirport;
@@ -1397,7 +1397,7 @@ static int router_guess_address_from_dir_headers(uint32_t *guess);
  * dirserver headers. Place the answer in *<b>addr</b> and return
  * 0 on success, else return -1 if we have no guess. */
 int
-router_pick_published_address(or_options_t *options, uint32_t *addr)
+router_pick_published_address(const or_options_t *options, uint32_t *addr)
 {
   if (resolve_my_address(LOG_INFO, options, addr, NULL) < 0) {
     log_info(LD_CONFIG, "Could not determine our address locally. "
@@ -1424,7 +1424,7 @@ router_rebuild_descriptor(int force)
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
     return 0;
@@ -1686,7 +1686,7 @@ void
 check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   (void) now;
 
   if (!desc_routerinfo)
@@ -1718,7 +1718,7 @@ router_new_address_suggestion(const char *suggestion,
 {
   uint32_t addr, cur = 0;
   struct in_addr in;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* first, learn what the IP address actually is */
   if (!tor_inet_aton(suggestion, &in)) {
@@ -1817,7 +1817,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   int result=0;
   addr_policy_t *tmpe;
   char *family_line;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
@@ -2059,7 +2059,7 @@ int
 extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                          crypto_pk_env_t *ident_key)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   char identity[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];

@@ -164,7 +164,7 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
 static int
 parse_reachable_addresses(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int ret = 0;
 
   if (options->ReachableDirAddresses &&
@@ -356,7 +356,7 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
  * options in <b>options</b>, return -1 and set <b>msg</b> to a newly
  * allocated description of the error. Else return 0. */
 int
-validate_addr_policies(or_options_t *options, char **msg)
+validate_addr_policies(const or_options_t *options, char **msg)
 {
   /* XXXX Maybe merge this into parse_policies_from_options, to make sure
    * that the two can't go out of sync. */
@@ -440,7 +440,7 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
 /** Set all policies based on <b>options</b>, which should have been validated
  * first by validate_addr_policies. */
 int
-policies_parse_from_options(or_options_t *options)
+policies_parse_from_options(const or_options_t *options)
 {
   int ret = 0;
   if (load_policy_from_option(options->SocksPolicy, &socks_policy, -1) < 0)

@@ -44,9 +44,9 @@ void update_microdesc_downloads(time_t now);
 void update_microdescs_from_networkstatus(time_t now);
 
 int usable_consensus_flavor(void);
-int we_fetch_microdescriptors(or_options_t *options);
-int we_fetch_router_descriptors(or_options_t *options);
-int we_use_microdescriptors_for_circuits(or_options_t *options);
+int we_fetch_microdescriptors(const or_options_t *options);
+int we_fetch_router_descriptors(const or_options_t *options);
+int we_use_microdescriptors_for_circuits(const or_options_t *options);
 
 #endif
 

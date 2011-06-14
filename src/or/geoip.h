@@ -15,8 +15,8 @@
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
 #endif
-int should_record_bridge_info(or_options_t *options);
-int geoip_load_file(const char *filename, or_options_t *options);
+int should_record_bridge_info(const or_options_t *options);
+int geoip_load_file(const char *filename, const or_options_t *options);
 int geoip_get_country_by_ip(uint32_t ipaddr);
 int geoip_get_n_countries(void);
 const char *geoip_get_country_name(country_t num);

@@ -1479,7 +1479,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 {
   char *cp = buf;
   int i, n;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   uint64_t cutoff;
 
   if (b->num_maxes_set <= b->next_max_idx) {

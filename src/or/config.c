@@ -422,7 +422,7 @@ static config_var_t _option_vars[] = {
 
 /** Override default values with these if the user sets the TestingTorNetwork
  * option. */
-static config_var_t testing_tor_network_defaults[] = {
+static const config_var_t testing_tor_network_defaults[] = {
   V(ServerDNSAllowBrokenConfig,  BOOL,  "1"),
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
   V(EnforceDistinctSubnets,      BOOL,     "0"),
@@ -546,39 +546,43 @@ static char *get_windows_conf_root(void);
 #endif
 static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
-static void option_clear(config_format_t *fmt, or_options_t *options,
-                         config_var_t *var);
-static void option_reset(config_format_t *fmt, or_options_t *options,
-                         config_var_t *var, int use_defaults);
-static void config_free(config_format_t *fmt, void *options);
+static void option_clear(const config_format_t *fmt, or_options_t *options,
+                         const config_var_t *var);
+static void option_reset(const config_format_t *fmt, or_options_t *options,
+                         const config_var_t *var, int use_defaults);
+static void config_free(const config_format_t *fmt, void *options);
 static int config_lines_eq(config_line_t *a, config_line_t *b);
-static int option_is_same(config_format_t *fmt,
-                          or_options_t *o1, or_options_t *o2,
+static int option_is_same(const config_format_t *fmt,
+                          const or_options_t *o1, const or_options_t *o2,
                           const char *name);
-static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
-static int options_validate(or_options_t *old_options, or_options_t *options,
+static or_options_t *options_dup(const config_format_t *fmt,
+                                 const or_options_t *old);
+static int options_validate(or_options_t *old_options,
+                            or_options_t *options,
                             int from_setconf, char **msg);
-static int options_act_reversible(or_options_t *old_options, char **msg);
-static int options_act(or_options_t *old_options);
-static int options_transition_allowed(or_options_t *old, or_options_t *new,
+static int options_act_reversible(const or_options_t *old_options, char **msg);
+static int options_act(const or_options_t *old_options);
+static int options_transition_allowed(const or_options_t *old,
+                                      const or_options_t *new,
                                       char **msg);
-static int options_transition_affects_workers(or_options_t *old_options,
-                                              or_options_t *new_options);
-static int options_transition_affects_descriptor(or_options_t *old_options,
-                                                 or_options_t *new_options);
+static int options_transition_affects_workers(
+      const or_options_t *old_options, const or_options_t *new_options);
+static int options_transition_affects_descriptor(
+      const or_options_t *old_options, const or_options_t *new_options);
 static int check_nickname_list(const char *lst, const char *name, char **msg);
-static void config_register_addressmaps(or_options_t *options);
+static void config_register_addressmaps(const or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
 static int validate_data_directory(or_options_t *options);
-static int write_configuration_file(const char *fname, or_options_t *options);
-static config_line_t *get_assigned_option(config_format_t *fmt,
-                                          void *options, const char *key,
-                                          int escape_val);
-static void config_init(config_format_t *fmt, void *options);
+static int write_configuration_file(const char *fname,
+                                    const or_options_t *options);
+static config_line_t *get_assigned_option(const config_format_t *fmt,
+                                        const void *options, const char *key,
+                                        int escape_val);
+static void config_init(const config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
                              int from_setconf, char **msg);
 static int or_state_load(void);
@@ -617,7 +621,7 @@ static config_var_t state_extra_var = {
 };
 
 /** Configuration format for or_state_t. */
-static config_format_t state_format = {
+static const config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
   STRUCT_OFFSET(or_state_t, _magic),
@@ -651,7 +655,7 @@ get_dirportfrontpage(void)
 
 /** Allocate an empty configuration object of a given format type. */
 static void *
-config_alloc(config_format_t *fmt)
+config_alloc(const config_format_t *fmt)
 {
   void *opts = tor_malloc_zero(fmt->size);
   *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
@@ -661,10 +665,17 @@ config_alloc(config_format_t *fmt)
 
 /** Return the currently configured options. */
 or_options_t *
-get_options(void)
+get_options_mutable(void)
 {
   tor_assert(global_options);
   return global_options;
+}
+
+/** Returns the currently configured options */
+const or_options_t *
+get_options(void)
+{
+  return get_options_mutable();
 }
 
 /** Change the current global options to contain <b>new_val</b> instead of
@@ -903,8 +914,8 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
  * as appropriate.
  */
 static int
-consider_adding_dir_authorities(or_options_t *options,
-                                or_options_t *old_options)
+consider_adding_dir_authorities(const or_options_t *options,
+                                const or_options_t *old_options)
 {
   config_line_t *cl;
   int need_to_update =
@@ -958,12 +969,12 @@ consider_adding_dir_authorities(or_options_t *options,
  * Return 0 if all goes well, return -1 if things went badly.
  */
 static int
-options_act_reversible(or_options_t *old_options, char **msg)
+options_act_reversible(const or_options_t *old_options, char **msg)
 {
   smartlist_t *new_listeners = smartlist_create();
   smartlist_t *replaced_listeners = smartlist_create();
   static int libevent_initialized = 0;
-  or_options_t *options = get_options();
+  or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
   int r = -1;
@@ -1056,7 +1067,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
   }
 
- if (directory_caches_v2_dir_info(options)) {
+  if (directory_caches_v2_dir_info(options)) {
     size_t len = strlen(options->DataDirectory)+32;
     char *fn = tor_malloc(len);
     tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
@@ -1132,7 +1143,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
 /** If we need to have a GEOIP ip-to-country map to run with our configured
  * options, return 1 and set *<b>reason_out</b> to a description of why. */
 int
-options_need_geoip_info(or_options_t *options, const char **reason_out)
+options_need_geoip_info(const or_options_t *options, const char **reason_out)
 {
   int bridge_usage =
     options->BridgeRelay && options->BridgeRecordUsageByCountry;
@@ -1157,7 +1168,7 @@ options_need_geoip_info(or_options_t *options, const char **reason_out)
 /** Return the bandwidthrate that we are going to report to the authorities
  * based on the config options. */
 uint32_t
-get_effective_bwrate(or_options_t *options)
+get_effective_bwrate(const or_options_t *options)
 {
   uint64_t bw = options->BandwidthRate;
   if (bw > options->MaxAdvertisedBandwidth)
@@ -1171,7 +1182,7 @@ get_effective_bwrate(or_options_t *options)
 /** Return the bandwidthburst that we are going to report to the authorities
  * based on the config options. */
 uint32_t
-get_effective_bwburst(or_options_t *options)
+get_effective_bwburst(const or_options_t *options)
 {
   uint64_t bw = options->BandwidthBurst;
   if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
@@ -1190,10 +1201,10 @@ get_effective_bwburst(or_options_t *options)
  * here yet.  Some is still in do_hup() and other places.
  */
 static int
-options_act(or_options_t *old_options)
+options_act(const or_options_t *old_options)
 {
   config_line_t *cl;
-  or_options_t *options = get_options();
+  or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
   const int transition_affects_workers =
@@ -1550,7 +1561,7 @@ options_act(or_options_t *old_options)
  * apply abbreviations that work for the config file and the command line.
  * If <b>warn_obsolete</b> is set, warn about deprecated names. */
 static const char *
-expand_abbrev(config_format_t *fmt, const char *option, int command_line,
+expand_abbrev(const config_format_t *fmt, const char *option, int command_line,
               int warn_obsolete)
 {
   int i;
@@ -1710,12 +1721,9 @@ config_free_lines(config_line_t *front)
   }
 }
 
-/** If <b>key</b> is a configuration option, return the corresponding
- * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
- * warn, and return the corresponding config_var_t.  Otherwise return NULL.
- */
+/** As config_find_option, but return a non-const pointer. */
 static config_var_t *
-config_find_option(config_format_t *fmt, const char *key)
+config_find_option_mutable(config_format_t *fmt, const char *key)
 {
   int i;
   size_t keylen = strlen(key);
@@ -1740,9 +1748,20 @@ config_find_option(config_format_t *fmt, const char *key)
   return NULL;
 }
 
+/** If <b>key</b> is a configuration option, return the corresponding const
+ * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
+ * warn, and return the corresponding const config_var_t.  Otherwise return
+ * NULL.
+ */
+static const config_var_t *
+config_find_option(const config_format_t *fmt, const char *key)
+{
+  return config_find_option_mutable((config_format_t*)fmt, key);
+}
+
 /** Return the number of option entries in <b>fmt</b>. */
 static int
-config_count_options(config_format_t *fmt)
+config_count_options(const config_format_t *fmt)
 {
   int i;
   for (i=0; fmt->vars[i].name; ++i)
@@ -1760,11 +1779,11 @@ config_count_options(config_format_t *fmt)
  * Called from config_assign_line() and option_reset().
  */
 static int
-config_assign_value(config_format_t *fmt, or_options_t *options,
+config_assign_value(const config_format_t *fmt, or_options_t *options,
                     config_line_t *c, char **msg)
 {
   int i, ok;
-  config_var_t *var;
+  const config_var_t *var;
   void *lvalue;
 
   CHECK(fmt, options);
@@ -1926,11 +1945,11 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
  * Called from config_assign().
  */
 static int
-config_assign_line(config_format_t *fmt, or_options_t *options,
+config_assign_line(const config_format_t *fmt, or_options_t *options,
                    config_line_t *c, int use_defaults,
                    int clear_first, bitarray_t *options_seen, char **msg)
 {
-  config_var_t *var;
+  const config_var_t *var;
 
   CHECK(fmt, options);
 
@@ -1991,10 +2010,10 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
 /** Restore the option named <b>key</b> in options to its default value.
  * Called from config_assign(). */
 static void
-config_reset_line(config_format_t *fmt, or_options_t *options,
+config_reset_line(const config_format_t *fmt, or_options_t *options,
                   const char *key, int use_defaults)
 {
-  config_var_t *var;
+  const config_var_t *var;
 
   CHECK(fmt, options);
 
@@ -2009,7 +2028,7 @@ config_reset_line(config_format_t *fmt, or_options_t *options,
 int
 option_is_recognized(const char *key)
 {
-  config_var_t *var = config_find_option(&options_format, key);
+  const config_var_t *var = config_find_option(&options_format, key);
   return (var != NULL);
 }
 
@@ -2018,14 +2037,14 @@ option_is_recognized(const char *key)
 const char *
 option_get_canonical_name(const char *key)
 {
-  config_var_t *var = config_find_option(&options_format, key);
+  const config_var_t *var = config_find_option(&options_format, key);
   return var ? var->name : NULL;
 }
 
 /** Return a canonical list of the options assigned for key.
  */
 config_line_t *
-option_get_assignment(or_options_t *options, const char *key)
+option_get_assignment(const or_options_t *options, const char *key)
 {
   return get_assigned_option(&options_format, options, key, 1);
 }
@@ -2078,10 +2097,10 @@ config_lines_dup(const config_line_t *inp)
  * value needs to be quoted before it's put in a config file, quote and
  * escape that value. Return NULL if no such key exists. */
 static config_line_t *
-get_assigned_option(config_format_t *fmt, void *options,
+get_assigned_option(const config_format_t *fmt, const void *options,
                     const char *key, int escape_val)
 {
-  config_var_t *var;
+  const config_var_t *var;
   const void *value;
   config_line_t *result;
   tor_assert(options && key);
@@ -2263,7 +2282,7 @@ options_trial_assign() calls config_assign(1, 1)
     returns.
 */
 static int
-config_assign(config_format_t *fmt, void *options, config_line_t *list,
+config_assign(const config_format_t *fmt, void *options, config_line_t *list,
               int use_defaults, int clear_first, char **msg)
 {
   config_line_t *p;
@@ -2325,7 +2344,7 @@ options_trial_assign(config_line_t *list, int use_defaults,
     return r;
   }
 
-  if (options_validate(get_options(), trial_options, 1, msg) < 0) {
+  if (options_validate(get_options_mutable(), trial_options, 1, msg) < 0) {
     config_free(&options_format, trial_options);
     return SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
   }
@@ -2347,7 +2366,8 @@ options_trial_assign(config_line_t *list, int use_defaults,
 /** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
  * Called from option_reset() and config_free(). */
 static void
-option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
+option_clear(const config_format_t *fmt, or_options_t *options,
+             const const config_var_t *var)
 {
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
   (void)fmt; /* unused */
@@ -2405,8 +2425,8 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
  * <b>use_defaults</b>, set it to its default value.
  * Called by config_init() and option_reset_line() and option_assign_line(). */
 static void
-option_reset(config_format_t *fmt, or_options_t *options,
-             config_var_t *var, int use_defaults)
+option_reset(const config_format_t *fmt, or_options_t *options,
+             const config_var_t *var, int use_defaults)
 {
   config_line_t *c;
   char *msg = NULL;
@@ -2446,7 +2466,7 @@ list_torrc_options(void)
   int i;
   smartlist_t *lines = smartlist_create();
   for (i = 0; _option_vars[i].name; ++i) {
-    config_var_t *var = &_option_vars[i];
+    const config_var_t *var = &_option_vars[i];
     if (var->type == CONFIG_TYPE_OBSOLETE ||
         var->type == CONFIG_TYPE_LINELIST_V)
       continue;
@@ -2465,7 +2485,7 @@ static uint32_t last_resolved_addr = 0;
  * public IP address.
  */
 int
-resolve_my_address(int warn_severity, or_options_t *options,
+resolve_my_address(int warn_severity, const or_options_t *options,
                    uint32_t *addr_out, char **hostname_out)
 {
   struct in_addr in;
@@ -2641,7 +2661,7 @@ is_local_addr(const tor_addr_t *addr)
 
 /** Release storage held by <b>options</b>. */
 static void
-config_free(config_format_t *fmt, void *options)
+config_free(const config_format_t *fmt, void *options)
 {
   int i;
 
@@ -2680,8 +2700,9 @@ config_lines_eq(config_line_t *a, config_line_t *b)
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 static int
-option_is_same(config_format_t *fmt,
-               or_options_t *o1, or_options_t *o2, const char *name)
+option_is_same(const config_format_t *fmt,
+               const or_options_t *o1, const or_options_t *o2,
+               const char *name)
 {
   config_line_t *c1, *c2;
   int r = 1;
@@ -2698,7 +2719,7 @@ option_is_same(config_format_t *fmt,
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 static or_options_t *
-options_dup(config_format_t *fmt, or_options_t *old)
+options_dup(const config_format_t *fmt, const or_options_t *old)
 {
   or_options_t *newopts;
   int i;
@@ -2774,10 +2795,10 @@ is_listening_on_low_port(int port_option,
 /** Set all vars in the configuration object <b>options</b> to their default
  * values. */
 static void
-config_init(config_format_t *fmt, void *options)
+config_init(const config_format_t *fmt, void *options)
 {
   int i;
-  config_var_t *var;
+  const config_var_t *var;
   CHECK(fmt, options);
 
   for (i=0; fmt->vars[i].name; ++i) {
@@ -2793,7 +2814,7 @@ config_init(config_format_t *fmt, void *options)
  * Else, if comment_defaults, write default values as comments.
  */
 static char *
-config_dump(config_format_t *fmt, void *options, int minimal,
+config_dump(const config_format_t *fmt, const void *options, int minimal,
             int comment_defaults)
 {
   smartlist_t *elements;
@@ -2861,7 +2882,7 @@ config_dump(config_format_t *fmt, void *options, int minimal,
  * include options that are the same as Tor's defaults.
  */
 char *
-options_dump(or_options_t *options, int minimal)
+options_dump(const or_options_t *options, int minimal)
 {
   return config_dump(&options_format, options, minimal, 0);
 }
@@ -3862,7 +3883,8 @@ opt_streq(const char *s1, const char *s2)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(or_options_t *old, or_options_t *new_val,
+options_transition_allowed(const or_options_t *old,
+                           const or_options_t *new_val,
                            char **msg)
 {
   if (!old)
@@ -3918,8 +3940,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
 /** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
  * will require us to rotate the CPU and DNS workers; else return 0. */
 static int
-options_transition_affects_workers(or_options_t *old_options,
-                                   or_options_t *new_options)
+options_transition_affects_workers(const or_options_t *old_options,
+                                   const or_options_t *new_options)
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCPUs != new_options->NumCPUs ||
@@ -3942,8 +3964,8 @@ options_transition_affects_workers(or_options_t *old_options,
 /** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
  * will require us to generate a new descriptor; else return 0. */
 static int
-options_transition_affects_descriptor(or_options_t *old_options,
-                                      or_options_t *new_options)
+options_transition_affects_descriptor(const or_options_t *old_options,
+                                      const or_options_t *new_options)
 {
   /* XXX We can be smarter here. If your DirPort isn't being
    * published and you just turned it off, no need to republish. Etc. */
@@ -4309,9 +4331,9 @@ options_init_from_string(const char *cf,
     /* Change defaults. */
     int i;
     for (i = 0; testing_tor_network_defaults[i].name; ++i) {
-      config_var_t *new_var = &testing_tor_network_defaults[i];
+      const config_var_t *new_var = &testing_tor_network_defaults[i];
       config_var_t *old_var =
-          config_find_option(&options_format, new_var->name);
+          config_find_option_mutable(&options_format, new_var->name);
       tor_assert(new_var);
       tor_assert(old_var);
       old_var->initvalue = new_var->initvalue;
@@ -4388,7 +4410,7 @@ get_torrc_fname(void)
  * configuration <b>options</b>
  */
 static void
-config_register_addressmaps(or_options_t *options)
+config_register_addressmaps(const or_options_t *options)
 {
   smartlist_t *elts;
   config_line_t *opt;
@@ -4818,7 +4840,7 @@ validate_data_directory(or_options_t *options)
  * doesn't begin with GENERATED_FILE_PREFIX, rename it.  Otherwise
  * replace it.  Return 0 on success, -1 on failure. */
 static int
-write_configuration_file(const char *fname, or_options_t *options)
+write_configuration_file(const char *fname, const or_options_t *options)
 {
   char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
@@ -5155,7 +5177,7 @@ get_or_state(void)
  * Note: Consider using the get_datadir_fname* macros in or.h.
  */
 char *
-options_get_datadir_fname2_suffix(or_options_t *options,
+options_get_datadir_fname2_suffix(const or_options_t *options,
                                   const char *sub1, const char *sub2,
                                   const char *suffix)
 {
@@ -5472,7 +5494,7 @@ getinfo_helper_config(control_connection_t *conn,
     smartlist_t *sl = smartlist_create();
     int i;
     for (i = 0; _option_vars[i].name; ++i) {
-      config_var_t *var = &_option_vars[i];
+      const config_var_t *var = &_option_vars[i];
       const char *type;
       char *line;
       switch (var->type) {

@@ -213,7 +213,7 @@ router_reload_consensus_networkstatus(void)
   char *filename;
   char *s;
   struct stat st;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
   int flav;
 
@@ -1175,7 +1175,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
 
 /** DOCDOC */
 static int
-we_want_to_fetch_flavor(or_options_t *options, int flavor)
+we_want_to_fetch_flavor(const or_options_t *options, int flavor)
 {
   if (flavor < 0 || flavor > N_CONSENSUS_FLAVORS) {
     /* This flavor is crazy; we don't want it */
@@ -1204,7 +1204,7 @@ static void
 update_consensus_networkstatus_downloads(time_t now)
 {
   int i;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (!networkstatus_get_live_consensus(now))
     time_to_download_next_consensus = now; /* No live consensus? Get one now!*/
@@ -1274,7 +1274,7 @@ networkstatus_consensus_download_failed(int status_code, const char *flavname)
 void
 update_consensus_networkstatus_fetch_time(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   networkstatus_t *c = networkstatus_get_live_consensus(now);
   if (c) {
     long dl_interval;
@@ -1348,7 +1348,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
  * fetches yet (e.g. we demand bridges and none are yet known).
  * Else return 0. */
 int
-should_delay_dir_fetches(or_options_t *options)
+should_delay_dir_fetches(const or_options_t *options)
 {
   if (options->UseBridges && !any_bridge_descriptors_known()) {
     log_info(LD_DIR, "delaying dir fetches (no running bridges known)");
@@ -1362,7 +1362,7 @@ should_delay_dir_fetches(or_options_t *options)
 void
 update_networkstatus_downloads(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
   if (authdir_mode_any_main(options) || options->FetchV2Networkstatus)
@@ -1585,7 +1585,7 @@ networkstatus_set_current_consensus(const char *consensus,
   networkstatus_t *c=NULL;
   int r, result = -1;
   time_t now = time(NULL);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   char *unverified_fname = NULL, *consensus_fname = NULL;
   int flav = networkstatus_parse_flavor_name(flavor);
   const unsigned from_cache = flags & NSSET_FROM_CACHE;
@@ -1991,7 +1991,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
 {
   trusted_dir_server_t *ds;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   networkstatus_t *ns = current_consensus;
   if (!ns || !smartlist_len(ns->routerstatus_list))
@@ -2151,7 +2151,7 @@ void
 networkstatus_dump_bridge_status_to_file(time_t now)
 {
   char *status = networkstatus_getinfo_by_purpose("bridge", now);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   size_t len = strlen(options->DataDirectory) + 32;
   char *fname = tor_malloc(len);
   tor_snprintf(fname, len, "%s"PATH_SEPARATOR"networkstatus-bridges",
@@ -2205,7 +2205,7 @@ get_net_param_from_list(smartlist_t *net_params, const char *param_name,
  * <b>min_val</b> and at most <b>max_val</b> and raise/cap the parsed value
  * if necessary. */
 int32_t
-networkstatus_get_param(networkstatus_t *ns, const char *param_name,
+networkstatus_get_param(const networkstatus_t *ns, const char *param_name,
                         int32_t default_val, int32_t min_val, int32_t max_val)
 {
   if (!ns) /* if they pass in null, go find it ourselves */

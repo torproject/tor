@@ -2504,7 +2504,7 @@ authority_cert_dup(authority_cert_t *cert)
 void
 dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(timing_out);
 
@@ -2578,7 +2578,7 @@ static struct {
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
 void
-dirvote_recalculate_timing(or_options_t *options, time_t now)
+dirvote_recalculate_timing(const or_options_t *options, time_t now)
 {
   int interval, vote_delay, dist_delay;
   time_t start;
@@ -2629,7 +2629,7 @@ dirvote_recalculate_timing(or_options_t *options, time_t now)
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
 void
-dirvote_act(or_options_t *options, time_t now)
+dirvote_act(const or_options_t *options, time_t now)
 {
   if (!authdir_mode_v3(options))
     return;

@@ -252,7 +252,7 @@ int
 directories_have_accepted_server_descriptor(void)
 {
   smartlist_t *servers = router_get_trusted_dir_servers();
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
     if ((d->type & options->_PublishServerDescriptor) &&
         d->has_accepted_serverdesc) {
@@ -285,7 +285,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                              const char *payload,
                              size_t payload_len, size_t extrainfo_len)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int post_via_tor;
   smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
@@ -352,7 +352,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                              const char *resource, int pds_flags)
 {
   const routerstatus_t *rs = NULL;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   dirinfo_type_t type;
@@ -548,7 +548,7 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                              time_t if_modified_since,
                                              const rend_data_t *rend_query)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const node_t *node;
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
@@ -817,7 +817,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
  * 3) Else yes.
  */
 static int
-directory_command_should_use_begindir(or_options_t *options,
+directory_command_should_use_begindir(const or_options_t *options,
                                       const tor_addr_t *addr,
                                       int or_port, uint8_t router_purpose,
                                       int anonymized_connection)
@@ -873,7 +873,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                                 const rend_data_t *rend_query)
 {
   dir_connection_t *conn;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int socket_error = 0;
   int use_begindir = supports_begindir &&
                      directory_command_should_use_begindir(options, _addr,
@@ -2579,7 +2579,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 {
   size_t dlen;
   char *url, *url_mem, *header;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   time_t if_modified_since = 0;
   int compressed;
   size_t url_len;
@@ -3295,7 +3295,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
                               const char *body, size_t body_len)
 {
   char *url = NULL;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   log_debug(LD_DIRSERV,"Received POST command.");
 

@@ -13,7 +13,7 @@
 #define _TOR_RENDSERVICE_H
 
 int num_rend_services(void);
-int rend_config_services(or_options_t *options, int validate_only);
+int rend_config_services(const or_options_t *options, int validate_only);
 int rend_service_load_keys(void);
 void rend_services_introduce(void);
 void rend_consider_services_upload(time_t now);

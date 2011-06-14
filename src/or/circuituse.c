@@ -635,7 +635,7 @@ void
 circuit_build_needed_circs(time_t now)
 {
   static time_t time_to_new_circuit = 0;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* launch a new circ for any pending streams that need one */
   connection_ap_attach_pending();
@@ -1207,7 +1207,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   int check_exit_policy;
   int need_uptime, need_internal;
   int want_onehop;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(circp);
@@ -1470,7 +1470,7 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
 /** Return true iff <b>address</b> is matched by one of the entries in
  * TrackHostExits. */
 int
-hostname_in_track_host_exits(or_options_t *options, const char *address)
+hostname_in_track_host_exits(const or_options_t *options, const char *address)
 {
   if (!options->TrackHostExits)
     return 0;
@@ -1494,7 +1494,7 @@ hostname_in_track_host_exits(or_options_t *options, const char *address)
 static void
 consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   char *new_address = NULL;
   char fp[HEX_DIGEST_LEN+1];
 

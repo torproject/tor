@@ -292,7 +292,7 @@ parse_port_config(const char *string)
  * normal, but don't actually change the configured services.)
  */
 int
-rend_config_services(or_options_t *options, int validate_only)
+rend_config_services(const or_options_t *options, int validate_only)
 {
   config_line_t *line;
   rend_service_t *service = NULL;
@@ -903,7 +903,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t now = time(NULL);
   char diffie_hellman_hash[DIGEST_LEN];
   time_t *access_time;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(circuit->rend_data);
 
@@ -1377,7 +1377,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending. */
   if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
-    or_options_t *options = get_options();
+    const or_options_t *options = get_options();
     if (options->ExcludeNodes) {
       /* XXXX in some future version, we can test whether the transition is
          allowed or not given the actual nodes in the circuit.  But for now,
@@ -1817,7 +1817,7 @@ rend_services_introduce(void)
   int changed, prev_intro_nodes;
   smartlist_t *intro_nodes;
   time_t now;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   intro_nodes = smartlist_create();
   now = time(NULL);

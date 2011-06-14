@@ -56,7 +56,7 @@ long get_uptime(void);
 void handle_signals(int is_parent);
 void process_signal(uintptr_t sig);
 
-int try_locking(or_options_t *options, int err_if_locked);
+int try_locking(const or_options_t *options, int err_if_locked);
 int have_lockfile(void);
 void release_lockfile(void);
 

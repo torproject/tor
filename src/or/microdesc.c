@@ -595,7 +595,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
 void
 update_microdesc_downloads(time_t now)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   networkstatus_t *consensus;
   smartlist_t *missing;
   digestmap_t *pending;
@@ -654,7 +654,7 @@ update_microdescs_from_networkstatus(time_t now)
 /** Return true iff we should prefer to use microdescriptors rather than
  * routerdescs for building circuits. */
 int
-we_use_microdescriptors_for_circuits(or_options_t *options)
+we_use_microdescriptors_for_circuits(const or_options_t *options)
 {
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
@@ -673,7 +673,7 @@ we_use_microdescriptors_for_circuits(or_options_t *options)
 
 /** Return true iff we should try to download microdescriptors at all. */
 int
-we_fetch_microdescriptors(or_options_t *options)
+we_fetch_microdescriptors(const or_options_t *options)
 {
   if (directory_caches_dir_info(options))
     return 1;
@@ -682,7 +682,7 @@ we_fetch_microdescriptors(or_options_t *options)
 
 /** Return true iff we should try to download router descriptors at all. */
 int
-we_fetch_router_descriptors(or_options_t *options)
+we_fetch_router_descriptors(const or_options_t *options)
 {
   if (directory_caches_dir_info(options))
     return 1;

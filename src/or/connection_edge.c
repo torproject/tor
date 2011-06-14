@@ -439,7 +439,7 @@ connection_ap_expire_beginning(void)
   edge_connection_t *conn;
   circuit_t *circ;
   time_t now = time(NULL);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int severity;
   int cutoff;
   int seconds_idle, seconds_since_born;
@@ -813,7 +813,7 @@ clear_trackexithost_mappings(const char *exitname)
  * host is unknown or no longer allowed, or for which the source address
  * is no longer in trackexithosts. */
 void
-addressmap_clear_excluded_trackexithosts(or_options_t *options)
+addressmap_clear_excluded_trackexithosts(const or_options_t *options)
 {
   const routerset_t *allow_nodes = options->ExitNodes;
   const routerset_t *exclude_nodes = options->_ExcludeExitNodesUnion;
@@ -866,7 +866,7 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
  * no longer allowed by AutomapHostsOnResolve, or for which the
  * target address is no longer in the virtual network. */
 void
-addressmap_clear_invalid_automaps(or_options_t *options)
+addressmap_clear_invalid_automaps(const or_options_t *options)
 {
   int clear_all = !options->AutomapHostsOnResolve;
   const smartlist_t *suffixes = options->AutomapHostsSuffixes;
@@ -1520,7 +1520,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 static int
 consider_plaintext_ports(edge_connection_t *conn, uint16_t port)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int reject = smartlist_string_num_isin(options->RejectPlaintextPorts, port);
 
   if (smartlist_string_num_isin(options->WarnPlaintextPorts, port)) {
@@ -1557,7 +1557,7 @@ connection_ap_rewrite_and_attach_if_allowed(edge_connection_t *conn,
                                             origin_circuit_t *circ,
                                             crypt_path_t *cpath)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (options->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
@@ -1588,7 +1588,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 {
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   struct in_addr addr_tmp;
   /* We set this to true if this is an address we should automatically
    * remap to a local address in VirtualAddrNetwork */
@@ -2079,7 +2079,7 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
 {
   socks_request_t *socks;
   int sockshere;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
@@ -2703,7 +2703,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   char *address=NULL;
   uint16_t port;
   or_circuit_t *or_circ = NULL;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   assert_circuit_ok(circ);
   if (!CIRCUIT_IS_ORIGIN(circ))
@@ -3104,7 +3104,7 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
 int
 connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);

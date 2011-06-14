@@ -1459,7 +1459,7 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
 {
   static ratelim_t socks_ratelim = RATELIM_INIT(SOCKS_WARN_INTERVAL);
 
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   char *m = NULL;
   if (! options->WarnUnsafeSocks)
     return;

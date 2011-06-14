@@ -2010,7 +2010,8 @@ static int ewma_enabled = 0;
 
 /** Adjust the global cell scale factor based on <b>options</b> */
 void
-cell_ewma_set_scale_factor(or_options_t *options, networkstatus_t *consensus)
+cell_ewma_set_scale_factor(const or_options_t *options,
+                           const networkstatus_t *consensus)
 {
   int32_t halflife_ms;
   double halflife;

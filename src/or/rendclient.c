@@ -903,7 +903,7 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
   int i;
 
   rend_intro_point_t *intro;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   smartlist_t *usable_nodes;
   int n_excluded = 0;
 
@@ -1010,7 +1010,8 @@ rend_service_authorization_free_all(void)
  * service and add it to the local map of hidden service authorizations.
  * Return 0 for success and -1 for failure. */
 int
-rend_parse_service_authorization(or_options_t *options, int validate_only)
+rend_parse_service_authorization(const or_options_t *options,
+                                 int validate_only)
 {
   config_line_t *line;
   int res = -1;

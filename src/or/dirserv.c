@@ -212,7 +212,7 @@ dirserv_load_fingerprint_file(void)
   authdir_config_t *fingerprint_list_new;
   int result;
   config_line_t *front=NULL, *list;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   fname = get_datadir_fname("approved-routers");
   log_info(LD_GENERAL,
@@ -1032,7 +1032,7 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   smartlist_t *rs_entries;
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   /* We include v2 dir auths here too, because they need to answer
    * controllers. Eventually we'll deprecate this whole function;
    * see also networkstatus_getinfo_by_purpose(). */
@@ -1199,7 +1199,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 /** Return 1 if we fetch our directory material directly from the
  * authorities, rather than from a mirror. */
 int
-directory_fetches_from_authorities(or_options_t *options)
+directory_fetches_from_authorities(const or_options_t *options)
 {
   const routerinfo_t *me;
   uint32_t addr;
@@ -1226,7 +1226,7 @@ directory_fetches_from_authorities(or_options_t *options)
  * on the "mirror" schedule rather than the "client" schedule.
  */
 int
-directory_fetches_dir_info_early(or_options_t *options)
+directory_fetches_dir_info_early(const or_options_t *options)
 {
   return directory_fetches_from_authorities(options);
 }
@@ -1238,7 +1238,7 @@ directory_fetches_dir_info_early(or_options_t *options)
  * client as a directory guard.
  */
 int
-directory_fetches_dir_info_later(or_options_t *options)
+directory_fetches_dir_info_later(const or_options_t *options)
 {
   return options->UseBridges != 0;
 }
@@ -1246,7 +1246,7 @@ directory_fetches_dir_info_later(or_options_t *options)
 /** Return 1 if we want to cache v2 dir info (each status file).
  */
 int
-directory_caches_v2_dir_info(or_options_t *options)
+directory_caches_v2_dir_info(const or_options_t *options)
 {
   return options->DirPort != 0;
 }
@@ -1255,7 +1255,7 @@ directory_caches_v2_dir_info(or_options_t *options)
  * and we're willing to serve them to others. Else return 0.
  */
 int
-directory_caches_dir_info(or_options_t *options)
+directory_caches_dir_info(const or_options_t *options)
 {
   if (options->BridgeRelay || options->DirPort)
     return 1;
@@ -1271,7 +1271,7 @@ directory_caches_dir_info(or_options_t *options)
  * requests via the "begin_dir" interface, which doesn't require
  * having any separate port open. */
 int
-directory_permits_begindir_requests(or_options_t *options)
+directory_permits_begindir_requests(const or_options_t *options)
 {
   return options->BridgeRelay != 0 || options->DirPort != 0;
 }
@@ -1280,7 +1280,7 @@ directory_permits_begindir_requests(or_options_t *options)
  * requests via the controller interface, which doesn't require
  * having any separate port open. */
 int
-directory_permits_controller_requests(or_options_t *options)
+directory_permits_controller_requests(const or_options_t *options)
 {
   return options->DirPort != 0;
 }
@@ -1290,7 +1290,8 @@ directory_permits_controller_requests(or_options_t *options)
  * lately.
  */
 int
-directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
+directory_too_idle_to_fetch_descriptors(const or_options_t *options,
+                                        time_t now)
 {
   return !directory_caches_dir_info(options) &&
          !options->FetchUselessDescriptors &&
@@ -1560,7 +1561,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             const char *name,
                             dirinfo_type_t auth_type)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   int authority = (auth_type == V1_DIRINFO && authdir_mode_v1(options)) ||
                   (auth_type == V2_DIRINFO && authdir_mode_v2(options));
 
@@ -2251,7 +2252,7 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 static digestmap_t *
 get_possible_sybil_list(const smartlist_t *routers)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   digestmap_t *omit_as_sybil;
   smartlist_t *routers_by_ip = smartlist_create();
   uint32_t last_addr;
@@ -2551,7 +2552,7 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   networkstatus_t *v3_out = NULL;
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
@@ -2766,7 +2767,7 @@ generate_v2_networkstatus_opinion(void)
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,
     *identity_pkey = NULL, *hostname = NULL;
   char *outp, *endp;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];

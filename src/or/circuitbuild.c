@@ -1948,7 +1948,7 @@ inform_testing_reachability(void)
 static INLINE int
 should_use_create_fast_for_circuit(origin_circuit_t *circ)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   tor_assert(circ->cpath);
   tor_assert(circ->cpath->extend_info);
 
@@ -2083,7 +2083,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       if (circ->build_state->onehop_tunnel)
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
-        or_options_t *options = get_options();
+        const or_options_t *options = get_options();
         can_complete_circuit=1;
         /* FFFF Log a count of known routers here */
         log_notice(LD_GENERAL,
@@ -2650,7 +2650,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   smartlist_t *connections;
   int best_support = -1;
   int n_best_support=0;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   const smartlist_t *the_nodes;
   const node_t *node=NULL;
 
@@ -2851,7 +2851,7 @@ static const node_t *
 choose_good_exit_server(uint8_t purpose,
                         int need_uptime, int need_capacity, int is_internal)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_DESC;
   if (need_uptime)
     flags |= CRN_NEED_UPTIME;
@@ -2881,7 +2881,7 @@ choose_good_exit_server(uint8_t purpose,
 static void
 warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   routerset_t *rs = options->ExcludeNodes;
   const char *description;
   uint8_t purpose = circ->_base.purpose;
@@ -3095,7 +3095,7 @@ choose_good_middle_server(uint8_t purpose,
   const node_t *r, *choice;
   crypt_path_t *cpath;
   smartlist_t *excluded;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_DESC;
   tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
              purpose <= _CIRCUIT_PURPOSE_MAX);
@@ -3137,7 +3137,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 {
   const node_t *choice;
   smartlist_t *excluded;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC;
   const node_t *node;
 
@@ -3388,7 +3388,8 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  */
 static int
 entry_guard_set_status(entry_guard_t *e, const node_t *node,
-                       time_t now, or_options_t *options, const char **reason)
+                       time_t now, const or_options_t *options,
+                       const char **reason)
 {
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
@@ -3471,7 +3472,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
               int assume_reachable, const char **msg)
 {
   const node_t *node;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   tor_assert(msg);
 
   if (e->bad_since) {
@@ -3597,7 +3598,7 @@ control_event_guard_deferred(void)
 #if 0
   int n = 0;
   const char *msg;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   if (!entry_guards)
     return;
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
@@ -3665,7 +3666,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status)
 /** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
-pick_entry_guards(or_options_t *options)
+pick_entry_guards(const or_options_t *options)
 {
   int changed = 0;
 
@@ -3798,7 +3799,7 @@ remove_dead_entry_guards(time_t now)
  * think that things are unlisted.
  */
 void
-entry_guards_compute_status(or_options_t *options, time_t now)
+entry_guards_compute_status(const or_options_t *options, time_t now)
 {
   int changed = 0;
   digestmap_t *reasons;
@@ -3988,7 +3989,7 @@ entry_nodes_should_be_added(void)
 /** Add all nodes in EntryNodes that aren't currently guard nodes to the list
  * of guard nodes, at the front. */
 static void
-entry_guards_prepend_from_config(or_options_t *options)
+entry_guards_prepend_from_config(const or_options_t *options)
 {
   smartlist_t *entry_nodes, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
@@ -4067,7 +4068,7 @@ entry_guards_prepend_from_config(or_options_t *options)
  * list already and we must stick to it.
  */
 int
-entry_list_is_constrained(or_options_t *options)
+entry_list_is_constrained(const or_options_t *options)
 {
   if (options->EntryNodes)
     return 1;
@@ -4084,7 +4085,7 @@ entry_list_is_constrained(or_options_t *options)
 const node_t *
 choose_random_entry(cpath_build_state_t *state)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_create();
   smartlist_t *exit_family = smartlist_create();
   const node_t *chosen_exit =
@@ -4694,7 +4695,7 @@ static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
   char *address;
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (connection_get_by_type_addr_port_purpose(
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
@@ -4735,7 +4736,7 @@ retry_bridge_descriptor_fetch_directly(const char *digest)
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
 void
-fetch_bridge_descriptors(or_options_t *options, time_t now)
+fetch_bridge_descriptors(const or_options_t *options, time_t now)
 {
   int num_bridge_auths = get_n_authorities(BRIDGE_DIRINFO);
   int ask_bridge_directly;
@@ -4929,7 +4930,7 @@ any_pending_bridge_descriptor_fetches(void)
  * down. Else return 0. If <b>act</b> is 1, then mark the down guards
  * up; else just observe and report. */
 static int
-entries_retry_helper(or_options_t *options, int act)
+entries_retry_helper(const or_options_t *options, int act)
 {
   const node_t *node;
   int any_known = 0;
@@ -4968,7 +4969,7 @@ entries_retry_helper(or_options_t *options, int act)
 /** Do we know any descriptors for our bridges / entrynodes, and are
  * all the ones we have descriptors for down? */
 int
-entries_known_but_down(or_options_t *options)
+entries_known_but_down(const or_options_t *options)
 {
   tor_assert(entry_list_is_constrained(options));
   return entries_retry_helper(options, 0);
@@ -4976,7 +4977,7 @@ entries_known_but_down(or_options_t *options)
 
 /** Mark all down known bridges / entrynodes up. */
 void
-entries_retry_all(or_options_t *options)
+entries_retry_all(const or_options_t *options)
 {
   tor_assert(entry_list_is_constrained(options));
   entries_retry_helper(options, 1);
