@@ -1461,6 +1461,7 @@ connection_proxy_state_to_string(int state)
   static const char *unknown = "???";
   static const char *states[] = {
     "PROXY_NONE",
+    "PROXY_INFANT",
     "PROXY_HTTPS_WANT_CONNECT_OK",
     "PROXY_SOCKS4_WANT_CONNECT_OK",
     "PROXY_SOCKS5_WANT_AUTH_METHOD_NONE",

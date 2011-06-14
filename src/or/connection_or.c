@@ -837,7 +837,6 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   or_connection_t *conn;
   or_options_t *options = get_options();
   int socket_error = 0;
-  int using_proxy = 0;
   tor_addr_t addr;
 
   tor_assert(_addr);
@@ -858,15 +857,15 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
 
   /* use a proxy server if available */
   if (options->HTTPSProxy) {
-    using_proxy = 1;
+    conn->_base.proxy_state = PROXY_INFANT;
     tor_addr_copy(&addr, &options->HTTPSProxyAddr);
     port = options->HTTPSProxyPort;
   } else if (options->Socks4Proxy) {
-    using_proxy = 1;
+    conn->_base.proxy_state = PROXY_INFANT;
     tor_addr_copy(&addr, &options->Socks4ProxyAddr);
     port = options->Socks4ProxyPort;
   } else if (options->Socks5Proxy) {
-    using_proxy = 1;
+    conn->_base.proxy_state = PROXY_INFANT;
     tor_addr_copy(&addr, &options->Socks5ProxyAddr);
     port = options->Socks5ProxyPort;
   } else if (options->ClientTransportPlugin) {
@@ -874,7 +873,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     transport = find_transport_by_bridge_addrport(&addr, port);
     if (transport) {
       log_debug(LD_GENERAL, "Found transport. Setting up proxying!");
-      using_proxy = 1;
+      conn->_base.proxy_state = PROXY_INFANT;
       tor_addr_copy(&addr, &transport->addr);
       port = transport->port;
     }
@@ -885,7 +884,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     case -1:
       /* If the connection failed immediately, and we're using
        * a proxy, our proxy is down. Don't blame the Tor server. */
-      if (!using_proxy)
+      if (conn->_base.proxy_state == PROXY_INFANT)
         entry_guard_register_connect_status(conn->identity_digest,
                                             0, 1, time(NULL));
       connection_or_connect_failed(conn,

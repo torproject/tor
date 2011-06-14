@@ -3565,8 +3565,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->Socks4Proxy && options->Socks5Proxy)
-    REJECT("You cannot specify both Socks4Proxy and SOCKS5Proxy");
+  /* Check if more than one proxy type has been enabled. This looks REALLY ugly! */
+  if ((options->Socks4Proxy && (options->Socks5Proxy || options->HTTPSProxy
+                                || options->ClientTransportPlugin)) ||
+      (options->Socks5Proxy && (options->Socks4Proxy || options->HTTPSProxy
+                                || options->ClientTransportPlugin)) ||
+      (options->HTTPSProxy && (options->Socks4Proxy || options->Socks5Proxy
+                               || options->ClientTransportPlugin)) ||
+      (options->ClientTransportPlugin && (options->Socks4Proxy
+                                          || options->Socks5Proxy || options->HTTPSProxy)))
+    REJECT("You have configured more than one proxy types. "
+           "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
 
   if (options->Socks5ProxyUsername) {
     size_t len;
