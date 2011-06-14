@@ -970,7 +970,7 @@ geoip_dirreq_stats_write(time_t now)
   geoip_remove_old_clients(start_of_dirreq_stats_interval);
 
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "dirreq-stats");
   data_v2 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
@@ -1209,7 +1209,7 @@ geoip_bridge_stats_write(time_t now)
 
   /* Write it to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "bridge-stats");
 
@@ -1304,7 +1304,7 @@ geoip_entry_stats_write(time_t now)
   geoip_remove_old_clients(start_of_entry_stats_interval);
 
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "entry-stats");
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);

@@ -569,7 +569,7 @@ rend_service_load_keys(void)
              s->directory);
 
     /* Check/create directory */
-    if (check_private_dir(s->directory, CPD_CREATE) < 0)
+    if (check_private_dir(s->directory, CPD_CREATE, get_options()->User) < 0)
       return -1;
 
     /* Load key */

@@ -2307,7 +2307,7 @@ rep_hist_exit_stats_write(time_t now)
 
   /* Try to write to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0) {
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
     log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
   }
@@ -2497,7 +2497,7 @@ rep_hist_buffer_stats_write(time_t now)
   smartlist_clear(circuits_for_buffer_stats);
   /* write to file */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "buffer-stats");
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
