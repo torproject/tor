@@ -1,0 +1,9 @@
+  o Minor bugfixes:
+    - Report a SIGNAL event to controllers when acting on a delayed
+      SIGNAL NEWNYM command.  Previously, we would report a SIGNAL
+      event to the controller if we acted on a SIGNAL NEWNYM command
+      immediately, and otherwise not report a SIGNAL event for the
+      command at all.  Bugfix on 0.2.3.1-alpha; fixes bug 3349.
+
+
+
