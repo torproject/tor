@@ -4101,37 +4101,82 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
 }
 
-void
-log_failed_proxy_connection(connection_t *conn)
+/**
+   Fills <b>addr</b> and <b>port</b> with the details of the proxy
+   server of type 'proxy_type' we are using.
+   'conn' contains a connection_t and is used for finding pluggable
+   transports proxies.
+   
+   Returns 1 if we were successfull, 0 if we are not using a proxy
+   server and -1 if something went wrong.
+*/
+int
+get_proxy_addrport(int proxy_type, tor_addr_t *addr, uint16_t *port, 
+                   connection_t *conn)
 {
-  or_options_t *options = get_options();
-  int proxy_type;
-  tor_addr_t proxy_addr;
-  int proxy_port;
+  or_options_t *options;
 
-  if (options->HTTPSProxy) {
-    tor_addr_copy(&proxy_addr, &options->HTTPSProxyAddr);
-    proxy_port = options->HTTPSProxyPort;
-    proxy_type = PROXY_CONNECT;
-  } else if (options->Socks4Proxy) {
-    tor_addr_copy(&proxy_addr, &options->Socks4ProxyAddr);
-    proxy_port = options->Socks4ProxyPort;
-    proxy_type = PROXY_SOCKS4;
-  } else if (options->Socks5Proxy) {
-    tor_addr_copy(&proxy_addr, &options->Socks5ProxyAddr);
-    proxy_port = options->Socks5ProxyPort;
-    proxy_type = PROXY_SOCKS5;
-  } else if (options->ClientTransportPlugin) {
+  if (proxy_type == PROXY_NONE)
+    return 0;
+
+  options = get_options();
+
+  if (proxy_type == PROXY_CONNECT) {
+    tor_addr_copy(addr, &options->HTTPSProxyAddr);
+    *port = options->HTTPSProxyPort;
+  } else if (proxy_type == PROXY_SOCKS4) {
+    tor_addr_copy(addr, &options->Socks4ProxyAddr);
+    *port = options->Socks4ProxyPort;
+  } else if (proxy_type == PROXY_SOCKS5) {
+    tor_addr_copy(addr, &options->Socks5ProxyAddr);
+    *port = options->Socks5ProxyPort;
+  } else if (proxy_type == PROXY_PLUGGABLE) {
     transport_info_t *transport;
     transport = find_transport_by_bridge_addrport(&conn->addr, conn->port);
     if (transport) {
-      tor_addr_copy(&proxy_addr, &transport->addr);
-      proxy_port = transport->port;
-      proxy_type = PROXY_PLUGGABLE;
+      tor_addr_copy(addr, &transport->addr);
+      *port = transport->port;
     } else
-      return;
+      return -1;
   } else
-    tor_assert(0);
+    return -1;
+
+  return 1;
+}  
+
+/**
+   Returns the proxy type used by tor.
+*/
+int
+get_proxy_type(void)
+{
+  or_options_t *options = get_options();
+
+  if (options->HTTPSProxy)
+    return PROXY_CONNECT;
+  else if (options->Socks4Proxy)
+    return PROXY_SOCKS4;
+  else if (options->Socks5Proxy)
+    return PROXY_SOCKS5;
+  else if (options->ClientTransportPlugin)
+    return PROXY_PLUGGABLE;
+  else
+    return PROXY_NONE;
+}
+  
+/**
+   Log a failed connection to a proxy server.
+*/
+void
+log_failed_proxy_connection(connection_t *conn)
+{
+  int proxy_type;
+  tor_addr_t proxy_addr;
+  uint16_t proxy_port;
+
+  proxy_type = get_proxy_type();
+  if (get_proxy_addrport(proxy_type, &proxy_addr, &proxy_port, conn) <= 0)
+    return;
   
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s:%u just failed. "
@@ -4140,6 +4185,9 @@ log_failed_proxy_connection(connection_t *conn)
            proxy_port);  
 }
 
+/**
+   Transforms 'proxy_type' to it's string representation/
+*/
 static const char *
 proxy_type_to_string(int proxy_type)
 {

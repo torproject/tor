@@ -839,6 +839,11 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   int socket_error = 0;
   tor_addr_t addr;
 
+  int r;
+  int proxy_type;
+  tor_addr_t proxy_addr;
+  uint16_t proxy_port;
+
   tor_assert(_addr);
   tor_assert(id_digest);
   tor_addr_copy(&addr, _addr);
@@ -855,29 +860,14 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
-  /* use a proxy server if available */
-  if (options->HTTPSProxy) {
+  proxy_type = get_proxy_type();
+  r = get_proxy_addrport(proxy_type, &proxy_addr, &proxy_port, TO_CONN(conn));
+  if (r == 1) { /* proxy found. */
+    addr = proxy_addr;
+    port = proxy_port;
     conn->_base.proxy_state = PROXY_INFANT;
-    tor_addr_copy(&addr, &options->HTTPSProxyAddr);
-    port = options->HTTPSProxyPort;
-  } else if (options->Socks4Proxy) {
-    conn->_base.proxy_state = PROXY_INFANT;
-    tor_addr_copy(&addr, &options->Socks4ProxyAddr);
-    port = options->Socks4ProxyPort;
-  } else if (options->Socks5Proxy) {
-    conn->_base.proxy_state = PROXY_INFANT;
-    tor_addr_copy(&addr, &options->Socks5ProxyAddr);
-    port = options->Socks5ProxyPort;
-  } else if (options->ClientTransportPlugin) {
-    transport_info_t *transport;
-    transport = find_transport_by_bridge_addrport(&addr, port);
-    if (transport) {
-      log_debug(LD_GENERAL, "Found transport. Setting up proxying!");
-      conn->_base.proxy_state = PROXY_INFANT;
-      tor_addr_copy(&addr, &transport->addr);
-      port = transport->port;
-    }
-  }
+  } else if (r < 0)
+    return NULL;
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
                              &addr, port, &socket_error)) {
