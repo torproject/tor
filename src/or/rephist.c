@@ -2758,7 +2758,7 @@ rep_hist_conn_stats_write(time_t now)
 
   /* Try to write to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0) {
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
     log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
   }
