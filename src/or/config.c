@@ -3524,6 +3524,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
+  if (options->Tor2webMode && options->LearnCircuitBuildTimeout) {
+    /* LearnCircuitBuildTimeout and Tor2webMode are incompatible in
+     * two ways:
+     *
+     * - LearnCircuitBuildTimeout results in a low CBT, which
+     *   Tor2webMode's use of one-hop rendezvous circuits lowers
+     *   much further, producing *far* too many timeouts.
+     *
+     * - The adaptive CBT code does not update its timeout estimate
+     *   using build times for single-hop circuits.
+     *
+     * If we fix both of these issues someday, we should test
+     * Tor2webMode with LearnCircuitBuildTimeout on again. */
+    log_notice(LD_CONFIG,"Tor2webMode is enabled; turning "
+               "LearnCircuitBuildTimeout off.");
+    options->LearnCircuitBuildTimeout = 0;
+  }
+
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
     log_warn(LD_CONFIG, "MaxCircuitDirtiness option is too short; "
              "raising to %d seconds.", MIN_MAX_CIRCUIT_DIRTINESS);
