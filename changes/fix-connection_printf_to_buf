@@ -1,0 +1,10 @@
+  * Code simplifications and refactoring:
+
+    - Make connection_printf_to_buf's behaviour sane.  Its callers
+      expect it to emit a CRLF iff the format string ends with CRLF;
+      it actually emits a CRLF iff (a) the format string ends with
+      CRLF or (b) the resulting string is over 1023 characters long or
+      (c) the format string does not end with CRLF ''and'' the
+      resulting string is 1021 characters long or longer.  Bugfix on
+      0.1.1.9-alpha; fixes bug 3407.
+

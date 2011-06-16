@@ -481,33 +481,26 @@ decode_escaped_string(const char *start, size_t in_len_max,
 }
 
 /** Acts like sprintf, but writes its formatted string to the end of
- * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
- * but it will always end with a CRLF sequence.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending CR LF NUL ("\\r\\n\\0"). */
+ * <b>conn</b>-\>outbuf. */
 static void
 connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
 {
-#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
   va_list ap;
-  char buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE];
-  int r;
-  size_t len;
+  char *buf = NULL;
+  int len;
+
   va_start(ap,format);
-  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
+  len = tor_vasprintf(&buf, format, ap);
   va_end(ap);
-  if (r<0) {
+
+  if (len < 0) {
     log_warn(LD_BUG, "Unable to format string for controller.");
     return;
   }
-  len = strlen(buf);
-  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
-  }
-  connection_write_to_buf(buf, len, TO_CONN(conn));
+
+  connection_write_to_buf(buf, (size_t)len, TO_CONN(conn));
+
+  tor_free(buf);
 }
 
 /** Write all of the open control ports to ControlPortWriteToFile */
