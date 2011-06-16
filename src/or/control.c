@@ -98,7 +98,7 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 /** If authentication_cookie_is_set, a secret cookie that we've stored to disk
  * and which we're using to authenticate controllers.  (If the controller can
- * read it off disk, it has permission to connect. */
+ * read it off disk, it has permission to connect.) */
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 /** A sufficiently large size to record the last bootstrap phase string. */
