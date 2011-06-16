@@ -6,5 +6,10 @@
       CRLF or (b) the resulting string is over 1023 characters long or
       (c) the format string does not end with CRLF ''and'' the
       resulting string is 1021 characters long or longer.  Bugfix on
-      0.1.1.9-alpha; fixes bug 3407.
+      0.1.1.9-alpha; fixes part of bug 3407.
+
+    - Make send_control_event_impl's behaviour sane.  Its callers
+      expect it to always emit a CRLF at the end of the string; it
+      might emit extra control characters as well.  Bugfix on
+      0.1.1.9-alpha; fixes another part of bug 3407.
 

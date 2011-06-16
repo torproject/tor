@@ -602,43 +602,28 @@ send_control_event_string(uint16_t event, event_format_t which,
 /** Helper for send_control_event and control_event_status:
  * Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * Currently the length of the message is limited to 10064 (including the
- * ending \\r\\n\\0). */
+ * <b>format</b>, and other arguments as provided. */
 static void
 send_control_event_impl(uint16_t event, event_format_t which,
                          const char *format, va_list ap)
 {
-  /* This is just a little longer than the longest allowed log message */
-#define SEND_CONTROL1_EVENT_BUFFERSIZE 10064
-  int r;
-  char buf[SEND_CONTROL1_EVENT_BUFFERSIZE];
-  size_t len;
+  char *buf = NULL;
+  int len;
 
-  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
-  if (r<0) {
+  len = tor_vasprintf(&buf, format, ap);
+  if (len < 0) {
     log_warn(LD_BUG, "Unable to format event for controller.");
     return;
   }
 
-  len = strlen(buf);
-  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
-    /* if it is not properly terminated, do it now */
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-1] = '\0';
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-2] = '\n';
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
-  }
-
   send_control_event_string(event, which|ALL_FORMATS, buf);
+
+  tor_free(buf);
 }
 
 /** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * Currently the length of the message is limited to 10064 (including the
- * ending \\n\\r\\0. */
+ * <b>format</b>, and other arguments as provided. */
 static void
 send_control_event(uint16_t event, event_format_t which,
                    const char *format, ...)
