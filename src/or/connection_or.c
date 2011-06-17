@@ -997,13 +997,16 @@ connection_tls_continue_handshake(or_connection_t *conn)
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-            // log_notice(LD_OR,"Done. state was TLS_HANDSHAKING.");
+            log_debug(LD_OR, "Done with initial SSL handshake (client-side). "
+                             "Requesting renegotiation.");
             conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
             goto again;
           }
           // log_notice(LD_OR,"Done. state was %d.", conn->_base.state);
         } else {
           /* improved handshake, but not a client. */
+          log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
+                           "Expecting renegotiation.");
           tor_tls_set_renegotiate_callback(conn->tls,
                                            connection_or_tls_renegotiated_cb,
                                            conn);
