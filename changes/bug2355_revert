@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Revert the UseBridges option to its behavior before 0.2.2.28-beta.
+      When we changed the default behavior to "use bridges if any are
+      listed in the torrc", we broke a number of Vidalia users.
+      Partial resolution for bug 3354.
+
