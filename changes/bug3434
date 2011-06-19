@@ -1,0 +1,2 @@
+  o Minor bugfixes:
+    - Update tor-fw-helper to support libnatpmp-20110618; fixes 3434.

@@ -55,7 +55,7 @@ tor_natpmp_init(tor_fw_options_t *tor_fw_options, void *backend_state)
   if (tor_fw_options->verbose)
     fprintf(stdout, "V: natpmp init...\n");
 
-  r = initnatpmp(&(state->natpmp));
+  r = initnatpmp(&(state->natpmp), 0, 0);
   if (r == 0) {
     state->init = 1;
     fprintf(stdout, "tor-fw-helper: natpmp initialized...\n");

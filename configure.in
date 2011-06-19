@@ -545,7 +545,7 @@ if test "$natpmp" = "true"; then
         [   int r;
             natpmp_t natpmp;
             natpmpresp_t response;
-            r = initnatpmp(&natpmp);],
+            r = initnatpmp(&natpmp, 0, 0);],
             [printf("initnatpmp() returned %d (%s)\n", r, r?"FAILED":"SUCCESS");
             exit(0);],
         [--with-libnatpmp-dir],
