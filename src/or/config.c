@@ -310,7 +310,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("LogFile"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(LongLivedPorts,              CSV,
-                         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
+        "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
