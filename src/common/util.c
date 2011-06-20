@@ -1677,11 +1677,12 @@ file_status(const char *fname)
  * is group-readable, but in all cases we create the directory mode 0700.
  * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
  * if they are too permissive: we just return -1.
- * When effective_user is not NULL, check permissions against the given user and
- * its primary group.
+ * When effective_user is not NULL, check permissions against the given user
+ * and its primary group.
  */
 int
-check_private_dir(const char *dirname, cpd_check_t check, const char *effective_user)
+check_private_dir(const char *dirname, cpd_check_t check,
+                  const char *effective_user)
 {
   int r;
   struct stat st;
@@ -1730,10 +1731,12 @@ check_private_dir(const char *dirname, cpd_check_t check, const char *effective_
   }
 #ifndef MS_WINDOWS
   if (effective_user) {
-    /* Lookup the user and group information, if we have a problem, bail out. */
+    /* Look up the user and group information.
+     * If we have a problem, bail out. */
     pw = getpwnam(effective_user);
     if (pw == NULL) {
-      log_warn(LD_CONFIG, "Error setting configured user: %s not found", effective_user);
+      log_warn(LD_CONFIG, "Error setting configured user: %s not found",
+               effective_user);
       return -1;
     }
     running_uid = pw->pw_uid;
