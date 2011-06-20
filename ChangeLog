@@ -1,3 +1,59 @@
+Changes in version 0.2.2.29-beta - 2011-06-20
+  o Major bugfixes:
+    - Revert the UseBridges option to its behavior before 0.2.2.28-beta.
+      When we changed the default behavior to "use bridges if any
+      are listed in the torrc", we surprised users who had bridges
+      in their torrc files but who didn't actually want to use them.
+      Partial resolution for bug 3354.
+
+  o Privacy fixes:
+    - Don't attach new streams to old rendezvous circuits after SIGNAL
+      NEWNYM. Previously, we would keep using an existing rendezvous
+      circuit if it remained open (i.e. if it were kept open by a
+      long-lived stream, or if a new stream were attached to it before
+      Tor could notice that it was old and no longer in use). Bugfix on
+      0.1.1.15-rc; fixes bug 3375.
+
+  o Minor bugfixes:
+    - Fix a bug when using ControlSocketsGroupWritable with User. The
+      directory's group would be checked against the current group, not
+      the configured group. Patch by Jérémy Bobbio. Fixes bug3393; bugfix
+      on Tor 0.2.2.26-beta.
+    - Make connection_printf_to_buf()'s behaviour sane. Its callers
+      expect it to emit a CRLF iff the format string ends with CRLF;
+      it actually emitted a CRLF iff (a) the format string ended with
+      CRLF or (b) the resulting string was over 1023 characters long or
+      (c) the format string did not end with CRLF ''and'' the resulting
+      string was 1021 characters long or longer. Bugfix on 0.1.1.9-alpha;
+      fixes part of bug 3407.
+    - Make send_control_event_impl()'s behaviour sane. Its callers
+      expect it to always emit a CRLF at the end of the string; it
+      might have emitted extra control characters as well. Bugfix on
+      0.1.1.9-alpha; fixes another part of bug 3407.
+    - Make crypto_rand_int() check the value of its input correctly.
+      Previously, it accepted values up to UINT_MAX, but could return a
+      negative number if given a value above INT_MAX+1. Found by George
+      Kadianakis. Fixes bug 3306; bugfix on 0.2.2pre14.
+    - Avoid a segfault when reading a malformed circuit build state
+      with more than INT_MAX entries. Found by wanoskarnet. Bugfix on
+      0.2.2.4-alpha.
+    - When asked about a DNS record type we don't support via a
+      client DNSPort, reply with NOTIMPL rather than an empty
+      reply. Patch by intrigeri. Fixes bug 3369; bugfix on 2.0.1-alpha.
+    - Fix a rare memory leak during stats writing. Found by coverity.
+
+  o Minor features:
+    - Update to the June 1 2011 Maxmind GeoLite Country database.
+
+  o Code simplifications and refactoring:
+    - Remove some dead code as indicated by coverity.
+    - Remove a few dead assignments during router parsing. Found by
+      coverity.
+    - Add some forgotten return value checks during unit tests. Found
+      by coverity.
+    - Don't use 1-bit wide signed bit fields. Found by coverity.
+
+
 Changes in version 0.2.2.28-beta - 2011-06-04
   Tor 0.2.2.28-beta makes great progress towards a new stable release: we
   fixed a big bug in whether relays stay in the consensus consistently,

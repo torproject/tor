@@ -1,5 +1,0 @@
- o Minor bugfixes:
-   - Fix a bug when using ControlSocketsGroupWritable with User. The
-     directory's group would be checked against the current group, not
-     the configured group. Patch by Jérémy Bobbio. Fixes bug3393; bugfix
-     on Tor 0.2.2.26-beta.
