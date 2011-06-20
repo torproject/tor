@@ -1,0 +1,3 @@
+  o Minor features:
+    - Add port 6523 (Gobby) to LongLivedPorts. Patch by intrigeri;
+      implements ticket 3439.
