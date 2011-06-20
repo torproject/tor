@@ -73,7 +73,8 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
       return 0;
   }
 
-  if (purpose == CIRCUIT_PURPOSE_C_GENERAL)
+  if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+      purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
     if (circ->timestamp_dirty &&
        circ->timestamp_dirty+get_options()->MaxCircuitDirtiness <= now)
       return 0;

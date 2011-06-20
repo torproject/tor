@@ -775,8 +775,8 @@ circuit_get_by_circid_orconn_impl(circid_t circ_id, or_connection_t *conn)
     return found->circuit;
 
   return NULL;
-
   /* The rest of this checks for bugs. Disabled by default. */
+  /* We comment it out because coverity complains otherwise.
   {
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -795,7 +795,7 @@ circuit_get_by_circid_orconn_impl(circid_t circ_id, or_connection_t *conn)
       }
     }
     return NULL;
-  }
+  } */
 }
 
 /** Return a circ such that:

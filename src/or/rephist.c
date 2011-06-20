@@ -2307,7 +2307,7 @@ rep_hist_exit_stats_write(time_t now)
 
   /* Try to write to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0) {
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
     log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
   }
@@ -2401,8 +2401,7 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
   stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
   stat->processed_cells = orcirc->processed_cells;
   /* 1000.0 for s -> ms; 2.0 because of app-ward and exit-ward queues */
-  stat->mean_num_cells_in_queue = interval_length == 0 ? 0.0 :
-      (double) orcirc->total_cell_waiting_time /
+  stat->mean_num_cells_in_queue = (double) orcirc->total_cell_waiting_time /
       (double) interval_length / 1000.0 / 2.0;
   stat->mean_time_cells_in_queue =
       (double) orcirc->total_cell_waiting_time /
@@ -2452,14 +2451,16 @@ rep_hist_buffer_stats_write(time_t now)
   int processed_cells[SHARES], circs_in_share[SHARES],
       number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
-  smartlist_t *str_build = smartlist_create();
-  char *str = NULL, *buf=NULL;
+  smartlist_t *str_build = NULL;
+  char *str = NULL, *buf = NULL;
   circuit_t *circ;
 
   if (!start_of_buffer_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write */
+
+  str_build = smartlist_create();
 
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
@@ -2496,7 +2497,7 @@ rep_hist_buffer_stats_write(time_t now)
   smartlist_clear(circuits_for_buffer_stats);
   /* write to file */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "buffer-stats");
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,

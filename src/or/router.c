@@ -533,12 +533,12 @@ init_keys(void)
     return 0;
   }
   /* Make sure DataDirectory exists, and is private. */
-  if (check_private_dir(options->DataDirectory, CPD_CREATE)) {
+  if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
     return -1;
   }
   /* Check the key directory. */
   keydir = get_datadir_fname("keys");
-  if (check_private_dir(keydir, CPD_CREATE)) {
+  if (check_private_dir(keydir, CPD_CREATE, options->User)) {
     tor_free(keydir);
     return -1;
   }

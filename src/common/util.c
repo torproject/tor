@@ -1677,15 +1677,20 @@ file_status(const char *fname)
  * is group-readable, but in all cases we create the directory mode 0700.
  * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
  * if they are too permissive: we just return -1.
+ * When effective_user is not NULL, check permissions against the given user and
+ * its primary group.
  */
 int
-check_private_dir(const char *dirname, cpd_check_t check)
+check_private_dir(const char *dirname, cpd_check_t check, const char *effective_user)
 {
   int r;
   struct stat st;
   char *f;
 #ifndef MS_WINDOWS
   int mask;
+  struct passwd *pw = NULL;
+  uid_t running_uid;
+  gid_t running_gid;
 #endif
 
   tor_assert(dirname);
@@ -1724,33 +1729,47 @@ check_private_dir(const char *dirname, cpd_check_t check)
     return -1;
   }
 #ifndef MS_WINDOWS
-  if (st.st_uid != getuid()) {
+  if (effective_user) {
+    /* Lookup the user and group information, if we have a problem, bail out. */
+    pw = getpwnam(effective_user);
+    if (pw == NULL) {
+      log_warn(LD_CONFIG, "Error setting configured user: %s not found", effective_user);
+      return -1;
+    }
+    running_uid = pw->pw_uid;
+    running_gid = pw->pw_gid;
+  } else {
+    running_uid = getuid();
+    running_gid = getgid();
+  }
+
+  if (st.st_uid != running_uid) {
     struct passwd *pw = NULL;
     char *process_ownername = NULL;
 
-    pw = getpwuid(getuid());
+    pw = getpwuid(running_uid);
     process_ownername = pw ? tor_strdup(pw->pw_name) : tor_strdup("<unknown>");
 
     pw = getpwuid(st.st_uid);
 
     log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
         "%s (%d). Perhaps you are running Tor as the wrong user?",
-                         dirname, process_ownername, (int)getuid(),
+                         dirname, process_ownername, (int)running_uid,
                          pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
 
     tor_free(process_ownername);
     return -1;
   }
-  if ((check & CPD_GROUP_OK) && st.st_gid != getgid()) {
+  if ((check & CPD_GROUP_OK) && st.st_gid != running_gid) {
     struct group *gr;
     char *process_groupname = NULL;
-    gr = getgrgid(getgid());
+    gr = getgrgid(running_gid);
     process_groupname = gr ? tor_strdup(gr->gr_name) : tor_strdup("<unknown>");
     gr = getgrgid(st.st_gid);
 
     log_warn(LD_FS, "%s is not owned by this group (%s, %d) but by group "
              "%s (%d).  Are you running Tor as the wrong user?",
-             dirname, process_groupname, (int)getgid(),
+             dirname, process_groupname, (int)running_gid,
              gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
 
     tor_free(process_groupname);

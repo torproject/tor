@@ -436,13 +436,16 @@ test_addr_ip6_helpers(void)
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,
                              0, 0, 0, 0x0000000f, 17, 47, 95);
+  test_streq(p1, "::f");
   //test_addr_parse("[::fefe:4.1.1.7/120]:999-1000");
   //test_addr_parse_check("::fefe:401:107", 120, 999, 1000);
   test_addr_mask_ports_parse("[::ffff:4.1.1.7]/120:443", AF_INET6,
                              0, 0, 0x0000ffff, 0x04010107, 120, 443, 443);
+  test_streq(p1, "::ffff:4.1.1.7");
   test_addr_mask_ports_parse("[abcd:2::44a:0]:2-65000", AF_INET6,
                              0xabcd0002, 0, 0, 0x044a0000, 128, 2, 65000);
 
+  test_streq(p1, "abcd:2::44a:0");
   r=tor_addr_parse_mask_ports("[fefef::]/112", &t1, NULL, NULL, NULL);
   test_assert(r == -1);
   r=tor_addr_parse_mask_ports("efef::/112", &t1, NULL, NULL, NULL);

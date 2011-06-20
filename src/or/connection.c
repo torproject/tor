@@ -867,7 +867,7 @@ check_location_for_unix_socket(or_options_t *options, const char *path)
   if (options->ControlSocketsGroupWritable)
     flags |= CPD_GROUP_OK;
 
-  if (check_private_dir(p, flags) < 0) {
+  if (check_private_dir(p, flags, options->User) < 0) {
     char *escpath, *escdir;
     escpath = esc_for_log(path);
     escdir = esc_for_log(p);

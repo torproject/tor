@@ -98,7 +98,7 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 /** If authentication_cookie_is_set, a secret cookie that we've stored to disk
  * and which we're using to authenticate controllers.  (If the controller can
- * read it off disk, it has permission to connect. */
+ * read it off disk, it has permission to connect.) */
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 /** A sufficiently large size to record the last bootstrap phase string. */
@@ -481,33 +481,26 @@ decode_escaped_string(const char *start, size_t in_len_max,
 }
 
 /** Acts like sprintf, but writes its formatted string to the end of
- * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
- * but it will always end with a CRLF sequence.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending CR LF NUL ("\\r\\n\\0"). */
+ * <b>conn</b>-\>outbuf. */
 static void
 connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
 {
-#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
   va_list ap;
-  char buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE];
-  int r;
-  size_t len;
+  char *buf = NULL;
+  int len;
+
   va_start(ap,format);
-  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
+  len = tor_vasprintf(&buf, format, ap);
   va_end(ap);
-  if (r<0) {
+
+  if (len < 0) {
     log_warn(LD_BUG, "Unable to format string for controller.");
     return;
   }
-  len = strlen(buf);
-  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
-    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
-  }
-  connection_write_to_buf(buf, len, TO_CONN(conn));
+
+  connection_write_to_buf(buf, (size_t)len, TO_CONN(conn));
+
+  tor_free(buf);
 }
 
 /** Write all of the open control ports to ControlPortWriteToFile */
@@ -606,46 +599,31 @@ send_control_event_string(uint16_t event, event_format_t which,
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** Helper for send_control1_event and send_control1_event_extended:
+/** Helper for send_control_event and control_event_status:
  * Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending \\r\\n\\0). */
+ * <b>format</b>, and other arguments as provided. */
 static void
 send_control_event_impl(uint16_t event, event_format_t which,
                          const char *format, va_list ap)
 {
-  /* This is just a little longer than the longest allowed log message */
-#define SEND_CONTROL1_EVENT_BUFFERSIZE 10064
-  int r;
-  char buf[SEND_CONTROL1_EVENT_BUFFERSIZE];
-  size_t len;
+  char *buf = NULL;
+  int len;
 
-  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
-  if (r<0) {
+  len = tor_vasprintf(&buf, format, ap);
+  if (len < 0) {
     log_warn(LD_BUG, "Unable to format event for controller.");
     return;
   }
 
-  len = strlen(buf);
-  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
-    /* if it is not properly terminated, do it now */
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-1] = '\0';
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-2] = '\n';
-    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
-  }
-
   send_control_event_string(event, which|ALL_FORMATS, buf);
+
+  tor_free(buf);
 }
 
 /** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending \\n\\r\\0. */
+ * <b>format</b>, and other arguments as provided. */
 static void
 send_control_event(uint16_t event, event_format_t which,
                    const char *format, ...)

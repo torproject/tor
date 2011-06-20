@@ -1,0 +1,9 @@
+  o Code simplifications and refactoring:
+    - Remove some dead code as indicated by coverity.
+    - Remove a few dead assignments during router parsing. Found by coverity.
+  o Minor bugfixes:
+    - Add some forgotten return value checks during unit tests. Found
+      by coverity.
+    - Don't use 1-bit wide signed bit fields. Found by coverity.
+    - Fix a rare memory leak during stats writing. Found by coverity.
+
