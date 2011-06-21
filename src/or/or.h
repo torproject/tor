@@ -234,7 +234,7 @@ typedef enum {
 #define PROXY_PLUGGABLE 4
 
 /* Proxy client handshake states */
-/* We use a proxy but we haven't even connected to it yet. */ 
+/* We use a proxy but we haven't even connected to it yet. */
 #define PROXY_INFANT 1
 /* We use an HTTP proxy and we've sent the CONNECT command. */
 #define PROXY_HTTPS_WANT_CONNECT_OK 2

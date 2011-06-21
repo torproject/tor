@@ -1208,8 +1208,8 @@ options_act(or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
+  clear_transport_list();
   if (options->ClientTransportPlugin) {
-    clear_transport_list();
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
       if (parse_client_transport_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
@@ -1230,14 +1230,6 @@ options_act(or_options_t *old_options)
       }
     }
     sweep_bridge_list();
-  }
-
-  /** Okay, we have Bridges and we have ClientTransportPlugins. Let's
-      match them together. */
-  if (options->Bridges && options->ClientTransportPlugin) {
-    assert(!server_mode(options));
-    if (match_bridges_with_transports() < 0)
-      return -1;
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -3566,15 +3558,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  /* Check if more than one proxy type has been enabled. This looks REALLY ugly! */
-  if ((options->Socks4Proxy && (options->Socks5Proxy || options->HTTPSProxy
-                                || options->ClientTransportPlugin)) ||
-      (options->Socks5Proxy && (options->Socks4Proxy || options->HTTPSProxy
-                                || options->ClientTransportPlugin)) ||
-      (options->HTTPSProxy && (options->Socks4Proxy || options->Socks5Proxy
-                               || options->ClientTransportPlugin)) ||
-      (options->ClientTransportPlugin && (options->Socks4Proxy
-                                          || options->Socks5Proxy || options->HTTPSProxy)))
+  /* Check if more than one proxy type has been enabled. */
+  if (!!options->Socks4Proxy + !!options->Socks5Proxy +
+      !!options->HTTPSProxy + !!options->ClientTransportPlugin > 1)
     REJECT("You have configured more than one proxy types. "
            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
 
@@ -4593,7 +4579,7 @@ options_init_logs(or_options_t *options, int validate_only)
  * <b>validate_only</b> is 0, and the line is well-formed, then add
  * the bridge described in the line to our internal bridge list. */
 static int
-parse_bridge_line(const char *line, int validate_only, 
+parse_bridge_line(const char *line, int validate_only,
                   or_options_t *options)
 {
   smartlist_t *items = NULL;
@@ -4654,13 +4640,12 @@ parse_bridge_line(const char *line, int validate_only,
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Bridge at %s:%d with transport %s (%s)",
-              fmt_addr(&addr), (int)port, transport_name,
-              fingerprint ? fingerprint : "no key listed");
-
-    if (bridge_add_from_config(&addr, port,
-                               fingerprint ? digest : NULL,transport_name) < 0)
-      goto err;
+      log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
+                fmt_addr(&addr), (int)port,
+                transport_name ? transport_name : "no transport",
+                fingerprint ? fingerprint : "no key listed");
+      bridge_add_from_config(&addr, port,
+                             fingerprint ? digest : NULL,transport_name);
   }
 
   r = 0;
