@@ -1,4 +1,9 @@
 Changes in version 0.2.2.29-beta - 2011-06-20
+  Tor 0.2.2.29-beta reverts an accidental behavior change for users who
+  have bridge lines in their torrc but don't want to use them; gets
+  us closer to having the control socket feature working on Debian;
+  and fixes a variety of smaller bugs.
+
   o Major bugfixes:
     - Revert the UseBridges option to its behavior before 0.2.2.28-beta.
       When we changed the default behavior to "use bridges if any
@@ -17,13 +22,13 @@ Changes in version 0.2.2.29-beta - 2011-06-20
   o Minor bugfixes:
     - Fix a bug when using ControlSocketsGroupWritable with User. The
       directory's group would be checked against the current group, not
-      the configured group. Patch by Jérémy Bobbio. Fixes bug3393; bugfix
-      on Tor 0.2.2.26-beta.
+      the configured group. Patch by Jérémy Bobbio. Fixes bug 3393;
+      bugfix on 0.2.2.26-beta.
     - Make connection_printf_to_buf()'s behaviour sane. Its callers
       expect it to emit a CRLF iff the format string ends with CRLF;
       it actually emitted a CRLF iff (a) the format string ended with
       CRLF or (b) the resulting string was over 1023 characters long or
-      (c) the format string did not end with CRLF ''and'' the resulting
+      (c) the format string did not end with CRLF *and* the resulting
       string was 1021 characters long or longer. Bugfix on 0.1.1.9-alpha;
       fixes part of bug 3407.
     - Make send_control_event_impl()'s behaviour sane. Its callers
