@@ -1,0 +1,4 @@
+  o Minor bugfixes
+    - Fix a crash when handling the SIGNAL controller command or
+      reporting ERR-level status events with bufferevents enabled. Found
+      by Robert Ransom. Fixes bug 3367; bugfix on 0.2.3.1-alpha.
