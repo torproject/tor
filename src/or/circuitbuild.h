@@ -12,8 +12,7 @@
 #ifndef _TOR_CIRCUITBUILD_H
 #define _TOR_CIRCUITBUILD_H
 
-/**
-   Represents a pluggable transport proxy used by a bridge. */
+/** Represents a pluggable transport proxy used by a bridge. */
 typedef struct {
   /* SOCKS version */
   int socks_version;
@@ -23,7 +22,7 @@ typedef struct {
   tor_addr_t addr;
   /* Port of proxy */
   uint16_t port;
-} transport_info_t;
+} transport_t;
 
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);
@@ -82,7 +81,7 @@ int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
                              const char *digest);
-int bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
+void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                             const char *digest,
                             const char *transport_name);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
@@ -141,10 +140,9 @@ void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 
 void clear_transport_list(void);
-int match_bridges_with_transports(void);
 int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
-transport_info_t *
+transport_t *
 find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port);
 
 #endif

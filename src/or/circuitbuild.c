@@ -79,6 +79,28 @@ typedef struct {
                           * at which we last failed to connect to it. */
 } entry_guard_t;
 
+/** Information about a configured bridge. Currently this just matches the
+ * ones in the torrc file, but one day we may be able to learn about new
+ * bridges on our own, and remember them in the state file. */
+typedef struct {
+  /** Address of the bridge. */
+  tor_addr_t addr;
+  /** TLS port for the bridge. */
+  uint16_t port;
+  /** Boolean: We are re-parsing our bridge list, and we are going to remove
+   * this one if we don't find it in the list of configured bridges. */
+  unsigned marked_for_removal : 1;
+  /** Expected identity digest, or all zero bytes if we don't know what the
+   * digest should be. */
+  char identity[DIGEST_LEN];
+
+  /** Name of pluggable transport protocol taken from its config line. */
+  char *transport_name;
+
+  /** When should we next try to fetch a descriptor for this bridge? */
+  download_status_t fetch_status;
+} bridge_info_t;
+
 /** A list of our chosen entry guards. */
 static smartlist_t *entry_guards = NULL;
 /** A value of 1 means that the entry_guards list has changed
@@ -100,7 +122,10 @@ static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
-static void transport_free(transport_info_t *transport);
+
+static transport_t *transport_get_by_name(const char *name);
+static void transport_free(transport_t *transport);
+static void bridge_free(bridge_info_t *bridge);
 
 /**
  * This function decides if CBT learning should be disabled. It returns
@@ -4498,33 +4523,6 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
-/** Information about a configured bridge. Currently this just matches the
- * ones in the torrc file, but one day we may be able to learn about new
- * bridges on our own, and remember them in the state file. */
-typedef struct {
-  /** Address of the bridge. */
-  tor_addr_t addr;
-  /** TLS port for the bridge. */
-  uint16_t port;
-  /** Boolean: We are re-parsing our bridge list, and we are going to remove
-   * this one if we don't find it in the list of configured bridges. */
-  unsigned marked_for_removal : 1;
-  /** Expected identity digest, or all zero bytes if we don't know what the
-   * digest should be. */
-  char identity[DIGEST_LEN];
-
-  /** Name of pluggable transport protocol taken from its config line.
-      Free'd when we match the bridge with a transport at
-      match_bridges_with_transports(). */
-  char *transport_name_config;
-
-  /** Pluggable transport proxy this bridge uses. */
-  transport_info_t *transport;
-
-  /** When should we next try to fetch a descriptor for this bridge? */
-  download_status_t fetch_status;
-} bridge_info_t;
-
 /** A list of configured bridges. Whenever we actually get a descriptor
  * for one, we add it as an entry guard.  Note that the order of bridges
  * in this list does not necessarily correspond to the order of bridges
@@ -4552,7 +4550,7 @@ sweep_bridge_list(void)
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
     if (b->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(bridge_list, b);
-      tor_free(b);
+      bridge_free(b);
     }
   } SMARTLIST_FOREACH_END(b);
 }
@@ -4563,54 +4561,80 @@ clear_bridge_list(void)
 {
   if (!bridge_list)
     bridge_list = smartlist_create();
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, tor_free(b));
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, bridge_free(b));
   smartlist_clear(bridge_list);
+}
+
+/** Free the transport_t <b>transport</b>. */
+static void
+bridge_free(bridge_info_t *bridge)
+{
+  if (!bridge)
+    return;
+
+  tor_free(bridge->transport_name);
+  tor_free(bridge);
 }
 
 /** A list of pluggable transports found in torrc. */
 static smartlist_t *transport_list = NULL;
 
 /** Initialize the pluggable transports list to empty, creating it if
-    needed. */
+ *  needed. */
 void
 clear_transport_list(void)
 {
   if (!transport_list)
     transport_list = smartlist_create();
-  SMARTLIST_FOREACH(transport_list, transport_info_t *, t, transport_free(t));
+  SMARTLIST_FOREACH(transport_list, transport_t *, t, transport_free(t));
   smartlist_clear(transport_list);
 }
 
-/**
-   Free the transport_info_t <b>transport</b>.
-*/
+/** Free the transport_t <b>transport</b>. */
 static void
-transport_free(transport_info_t *transport)
+transport_free(transport_t *transport)
 {
+  if (!transport)
+    return;
+
   tor_free(transport->name);
   tor_free(transport);
 }
 
-/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
-    <b>name</b> is set to the name of the protocol this proxy uses.
-    <b>socks_ver</b> is set to the SOCKS version of the proxy.
+/** Returns the transport in our transport list that has the name <b>name</b>.
+ *  Else returns NULL. */
+static transport_t *
+transport_get_by_name(const char *name)
+{
+  tor_assert(name);
+  if (transport_list) {
+    SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
+      if (!strcmp(transport->name, name))
+        return transport;
+    } SMARTLIST_FOREACH_END(transport);
+  }
 
-    Returns 1 on success, -1 on fail.
-*/
+  log_notice(LD_GENERAL, "We were asked to match '%s' to a pluggable "
+             "transport, and we failed. If you didn't expect this, please "
+             "check your configuration.", name);
+  return NULL;
+}
+
+/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
+ *  <b>name</b> is set to the name of the protocol this proxy uses.
+ *  <b>socks_ver</b> is set to the SOCKS version of the proxy.
+ *
+ *  Returns 0 on success, -1 on fail. */
 int
 transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                           const char *name, int socks_ver)
 {
-  transport_info_t *t = tor_malloc_zero(sizeof(transport_info_t));
+  transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
-  if (transport_list) { /*check out for duplicate transport names*/
-    SMARTLIST_FOREACH_BEGIN(transport_list, transport_info_t *, transport) {
-      if (!strcmp(transport->name, name)) {
-        log_notice(LD_CONFIG, "More than one transports have '%s' as "
-                 "their name.", transport->name);
-        goto err;
-      }
-    } SMARTLIST_FOREACH_END(transport);
+  if (transport_get_by_name(name)) { /* check for duplicate names */
+    log_notice(LD_CONFIG, "More than one transports have '%s' as "
+               "their name.", name);
+    goto err;
   }
 
   tor_addr_copy(&t->addr, addr);
@@ -4622,73 +4646,11 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
     transport_list = smartlist_create();
 
   smartlist_add(transport_list, t);
-  return 1;
+  return 0;
 
  err:
   tor_free(t);
   return -1;
-}
-
-/**
-   Attempts to map every transport found on torrc to it's
-   corresponding bridge.
-   Returns 1 on a succesfull bijective map, otherwise it returns -1.
-*/
-int
-match_bridges_with_transports(void)
-{
-  /* Used to check if a transport was finally found for a bridge */
-  int found_match=0;
-  /* Number of matches. */
-  int n_matches=0;
-  /* Number of transports. */
-  int n_transports=0;
-
-  tor_assert(transport_list);
-  tor_assert(bridge_list);
-
-  /* Iterate bridges */
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b)
-    {
-      /* Skip bridges without transports. */
-      if (!b->transport_name_config)
-        continue;
-      found_match=0;
-      /* Iterate transports */
-      SMARTLIST_FOREACH_BEGIN(transport_list, transport_info_t *, t)
-        {
-          /* If the transport name of the transport is the same as the
-             transport name of the bridge, we have a match. */
-          if (!strcmp(b->transport_name_config, t->name)) {
-            found_match=1;
-            n_matches++;
-            b->transport = t;
-            log_warn(LD_CONFIG, "Matched transport '%s'", t->name);
-            break;
-          }
-        } SMARTLIST_FOREACH_END(t);
-      if (!found_match) {
-        log_warn(LD_CONFIG, "Couldn't find transport "
-                 "match for %s!\n", b->transport_name_config);
-        /* tor_free(b->transport_name_config); */
-        return -1;
-      }
-    }  SMARTLIST_FOREACH_END(b);
-
-  /* Count number of transports to make sure that all transports got
-     matched to bridges. */
-  SMARTLIST_FOREACH(transport_list, transport_info_t *, t, n_transports++);
-  if (n_transports != n_matches) {
-    log_warn(LD_CONFIG, "You have %d transports but we only "
-             "managed to match %d of them!\n", n_transports, n_matches);
-    return -1;
-  }
-
-  /* clear the method names taken from the config, we no longer need them. */
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, 
-                    tor_free(b->transport_name_config));
-
-  return 1;
 }
 
 /** Return a bridge pointer if <b>ri</b> is one of our known bridges
@@ -4771,11 +4733,8 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
  * is set, it tells us the identity key too.  If we already had the
  * bridge in our list, unmark it, and don't actually add anything new.
  * If <b>transport_name</b> is non-NULL - the bridge is associated with a
- * pluggable transport - we assign the transport to the bridge.
- *
- * Returns 1 on success, -1 on fail.
- */
-int
+ * pluggable transport - we assign the transport to the bridge. */
+void
 bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                        const char *digest, const char *transport_name)
 {
@@ -4783,7 +4742,7 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
 
   if ((b = get_configured_bridge_by_addr_port_digest(addr, port, digest))) {
     b->marked_for_removal = 0;
-    return 1;
+    return;
   }
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
@@ -4791,28 +4750,13 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
   b->port = port;
   if (digest)
     memcpy(b->identity, digest, DIGEST_LEN);
-  if (transport_name) {
-    if (bridge_list) { /*check out for duplicate transport names*/
-      SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
-        if (!strcmp(bridge->transport_name_config, transport_name)) {
-          log_notice(LD_CONFIG, "More than one bridges have '%s' as "
-                   "their transport name.", transport_name);
-          goto err;
-        }
-      } SMARTLIST_FOREACH_END(bridge);
-    }
-    b->transport_name_config = strdup(transport_name);
-  }
+  if (transport_name)
+    b->transport_name = tor_strdup(transport_name);
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
   if (!bridge_list)
     bridge_list = smartlist_create();
 
   smartlist_add(bridge_list, b);
-  return 1;
-
- err:
-  tor_free(b);
-  return -1;
 }
 
 /** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
@@ -4846,23 +4790,22 @@ find_bridge_by_digest(const char *digest)
 }
 
 /** If <b>addr</b> and <b>port</b> match one of our known bridges,
- *  returns its transport protocol if it has one, else returns NULL.
- */
-transport_info_t *
+ *  returns its transport protocol if it has one, else returns NULL. */
+transport_t *
 find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 {
-  assert(bridge_list);
+  tor_assert(bridge_list);
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       if (tor_addr_eq(&bridge->addr, addr) &&
           (bridge->port == port)) {
-        if (bridge->transport) {
-          log_debug(LD_GENERAL, "Found matching bridge!\n");
-          return bridge->transport;
+        if (bridge->transport_name) {
+          return transport_get_by_name(bridge->transport_name);
         } else /* bridge found, but it had no transport */
-          return NULL;
+          break;
       }
     } SMARTLIST_FOREACH_END(bridge);
+
   return NULL;
 }
 
