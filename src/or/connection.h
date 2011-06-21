@@ -79,6 +79,8 @@ int connection_fetch_from_buf_http(connection_t *conn,
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn, int force);
+int connection_flush(connection_t *conn);
+
 void _connection_write_to_buf_impl(const char *string, size_t len,
                                    connection_t *conn, int zlib);
 static void connection_write_to_buf(const char *string, size_t len,

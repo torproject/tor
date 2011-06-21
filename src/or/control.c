@@ -600,7 +600,7 @@ send_control_event_string(uint16_t event, event_format_t which,
         else if (event == EVENT_STATUS_SERVER)
           is_err = !strcmpstart(msg, "STATUS_SERVER ERR ");
         if (is_err)
-          connection_handle_write(TO_CONN(control_conn), 1);
+          connection_flush(TO_CONN(control_conn));
       }
     }
   } SMARTLIST_FOREACH_END(conn);
@@ -1257,7 +1257,7 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   send_control_done(conn);
   /* Flush the "done" first if the signal might make us shut down. */
   if (sig == SIGTERM || sig == SIGINT)
-    connection_handle_write(TO_CONN(conn), 1);
+    connection_flush(TO_CONN(conn));
 
   process_signal(sig);
 

@@ -3314,6 +3314,25 @@ connection_handle_write(connection_t *conn, int force)
     return res;
 }
 
+/**
+ * Try to flush data that's waiting for a write on <b>conn</b>.  Return
+ * -1 on failure, 0 on success.
+ *
+ * Don't use this function for regular writing; the buffers/bufferevents
+ * system should be good enough at scheduling writes there.  Instead, this
+ * function is for cases when we're about to exit or something and we want
+ * to report it right away.
+ */
+int
+connection_flush(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+      int r = bufferevent_flush(conn->bufev, EV_WRITE, BEV_FLUSH);
+      return (r < 0) ? -1 : 0;
+  });
+  return connection_handle_write(conn, 1);
+}
+
 /** OpenSSL TLS record size is 16383; this is close. The goal here is to
  * push data out as soon as we know there's enough for a TLS record, so
  * during periods of high load we won't read entire megabytes from
