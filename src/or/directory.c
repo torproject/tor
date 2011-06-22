@@ -645,7 +645,7 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
  * server due to a network error: Mark the router as down and try again if
  * possible.
  */
-void
+static void
 connection_dir_request_failed(dir_connection_t *conn)
 {
   if (directory_conn_is_self_reachability_test(conn)) {
