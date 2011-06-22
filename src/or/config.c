@@ -1232,6 +1232,11 @@ options_act(or_options_t *old_options)
     sweep_bridge_list();
   }
 
+  /* If we have pluggable transport related options enabled, see if we
+     should warn the user about potential configuration problems. */
+  if (options->Bridges || options->ClientTransportPlugin)
+    validate_pluggable_transports_config();
+
   if (running_tor && rend_config_services(options, 0)<0) {
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
@@ -3683,11 +3688,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TunnelDirConns set to 0 only works with UseBridges set to 0");
 
   if (options->ClientTransportPlugin) {
-    if (!options->Bridges)
-      REJECT("ClientTransportPlugin found without any bridges.");
-    if (server_mode(options))
-      REJECT("ClientTransportPlugin found but we are a server.");
-
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
       if (parse_client_transport_line(cl->value, 1)<0)
         REJECT("Transport line did not parse. See logs for details.");
@@ -4604,12 +4604,6 @@ parse_bridge_line(const char *line, int validate_only,
   smartlist_del_keeporder(items, 0);
 
   if (!strstr(field1, ".")) { /* new-style bridge line */
-    if (!options->ClientTransportPlugin) {
-      log_warn(LD_CONFIG, "Pluggable transports protocol found "
-               "in bridge line, but no ClientTransportPlugin lines found.");
-      goto err;
-    }
-
     transport_name = field1;
     addrport = smartlist_get(items, 0);
     smartlist_del_keeporder(items, 0);

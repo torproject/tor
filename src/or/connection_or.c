@@ -336,11 +336,15 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   else if (get_options()->Socks5Proxy)
     proxy_type = PROXY_SOCKS5;
   else if (get_options()->ClientTransportPlugin) {
-    transport_t *transport;
-    transport = find_transport_by_bridge_addrport(&conn->addr,conn->port);
-    if (transport) { /* this bridge supports transports. use proxy. */
+    transport_t *transport=NULL;
+    int r;
+    r = find_transport_by_bridge_addrport(&conn->addr,conn->port,&transport);
+    if (r == 0) {
+      tor_assert(transport);
       log_debug(LD_GENERAL, "Found transport. Setting proxy type!\n");
       proxy_type = transport->socks_version;
+    } else if (r == -1) {
+      return -1;
     }
   }
 
@@ -840,7 +844,6 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   tor_addr_t addr;
 
   int r;
-  int proxy_type;
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
 
@@ -861,12 +864,16 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
   /* If we are using a proxy server, find it and use it. */
-  proxy_type = get_proxy_type();
-  r = get_proxy_addrport(proxy_type, &proxy_addr, &proxy_port, TO_CONN(conn));
+  r = get_proxy_addrport(&proxy_addr, &proxy_port, TO_CONN(conn));
   if (r == 0) { /* proxy found. */
     tor_addr_copy(&addr, &proxy_addr);
     port = proxy_port;
     conn->_base.proxy_state = PROXY_INFANT;
+  } else if (r == -1) { /* proxy could not be found. */
+    log_warn(LD_GENERAL, "Tried to connect through proxy, but proxy address "
+             "could not be found.");
+    connection_free(TO_CONN(conn));
+    return NULL;
   }
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
