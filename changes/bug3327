@@ -1,0 +1,8 @@
+  o Major features:
+    - Relays now try regenerating and uploading their descriptor more
+      frequently if they are not listed in the consensus, or if the
+      version of their descriptor listed in the consensus is too
+      old. This fix should prevent situations where a server declines
+      to re-publish itself because it has done so too recently, even
+      though the authorities decided not to list its recent-enough
+      descriptor. Fix for bug 3327.

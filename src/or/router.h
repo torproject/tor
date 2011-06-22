@@ -62,7 +62,7 @@ void consider_publishable_server(int force);
 int should_refuse_unknown_exits(const or_options_t *options);
 
 void router_upload_dir_desc_to_dirservers(int force);
-void mark_my_descriptor_dirty_if_older_than(time_t when);
+void mark_my_descriptor_dirty_if_too_old(time_t now);
 void mark_my_descriptor_dirty(const char *reason);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
