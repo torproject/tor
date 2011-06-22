@@ -563,7 +563,9 @@ connection_free_all(void)
   }
 }
 
-/** Do any cleanup needed:
+/**
+ * Called when we're about to finally unlink and free a connection:
+ * perform necessary accounting and cleanup
  *   - Directory conns that failed to fetch a rendezvous descriptor
  *     need to inform pending rendezvous streams.
  *   - OR conns need to call rep_hist_note_*() to record status.
@@ -576,114 +578,20 @@ connection_free_all(void)
 void
 connection_about_to_close_connection(connection_t *conn)
 {
-  circuit_t *circ;
-  dir_connection_t *dir_conn;
-  or_connection_t *or_conn;
-  edge_connection_t *edge_conn;
-  time_t now = time(NULL);
-
   tor_assert(conn->marked_for_close);
-
-  if (CONN_IS_EDGE(conn)) {
-    edge_conn = TO_EDGE_CONN(conn);
-    if (!edge_conn->edge_has_sent_end) {
-      log_warn(LD_BUG, "(Harmless.) Edge connection (marked at %s:%d) "
-               "hasn't sent end yet?",
-               conn->marked_for_close_file, conn->marked_for_close);
-      tor_fragile_assert();
-    }
-  }
 
   switch (conn->type) {
     case CONN_TYPE_DIR:
-      dir_conn = TO_DIR_CONN(conn);
-      if (conn->state < DIR_CONN_STATE_CLIENT_FINISHED) {
-        /* It's a directory connection and connecting or fetching
-         * failed: forget about this router, and maybe try again. */
-        connection_dir_request_failed(dir_conn);
-      }
-      /* If we were trying to fetch a v2 rend desc and did not succeed,
-       * retry as needed. (If a fetch is successful, the connection state
-       * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC to mark that
-       * refetching is unnecessary.) */
-      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
-          dir_conn->rend_data &&
-          strlen(dir_conn->rend_data->onion_address) ==
-              REND_SERVICE_ID_LEN_BASE32)
-        rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+      connection_dir_about_to_close(TO_DIR_CONN(conn));
       break;
     case CONN_TYPE_OR:
-      or_conn = TO_OR_CONN(conn);
-      /* Remember why we're closing this connection. */
-      if (conn->state != OR_CONN_STATE_OPEN) {
-        /* Inform any pending (not attached) circs that they should
-         * give up. */
-        circuit_n_conn_done(TO_OR_CONN(conn), 0);
-        /* now mark things down as needed */
-        if (connection_or_nonopen_was_started_here(or_conn)) {
-          const or_options_t *options = get_options();
-          rep_hist_note_connect_failed(or_conn->identity_digest, now);
-          entry_guard_register_connect_status(or_conn->identity_digest,0,
-                                              !options->HTTPSProxy, now);
-          if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
-            int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
-            control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
-                                         reason);
-            if (!authdir_mode_tests_reachability(options))
-              control_event_bootstrap_problem(
-                orconn_end_reason_to_control_string(reason), reason);
-          }
-        }
-      } else if (conn->hold_open_until_flushed) {
-        /* We only set hold_open_until_flushed when we're intentionally
-         * closing a connection. */
-        rep_hist_note_disconnect(or_conn->identity_digest, now);
-        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
-                tls_error_to_orconn_end_reason(or_conn->tls_error));
-      } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
-        rep_hist_note_connection_died(or_conn->identity_digest, now);
-        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
-                tls_error_to_orconn_end_reason(or_conn->tls_error));
-      }
-      /* Now close all the attached circuits on it. */
-      circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
-                                      END_CIRC_REASON_OR_CONN_CLOSED);
+      connection_or_about_to_close(TO_OR_CONN(conn));
       break;
     case CONN_TYPE_AP:
-      edge_conn = TO_EDGE_CONN(conn);
-      if (edge_conn->socks_request->has_finished == 0) {
-        /* since conn gets removed right after this function finishes,
-         * there's no point trying to send back a reply at this point. */
-        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without sending"
-                 " back a socks reply.",
-                 conn->marked_for_close_file, conn->marked_for_close);
-      }
-      if (!edge_conn->end_reason) {
-        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
-                 " set end_reason.",
-                 conn->marked_for_close_file, conn->marked_for_close);
-      }
-      if (edge_conn->dns_server_request) {
-        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
-                 " replied to DNS request.",
-                 conn->marked_for_close_file, conn->marked_for_close);
-        dnsserv_reject_request(edge_conn);
-      }
-      control_event_stream_bandwidth(edge_conn);
-      control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
-                                  edge_conn->end_reason);
-      circ = circuit_get_by_edge_conn(edge_conn);
-      if (circ)
-        circuit_detach_stream(circ, edge_conn);
+      connection_ap_about_to_close(TO_EDGE_CONN(conn));
       break;
     case CONN_TYPE_EXIT:
-      edge_conn = TO_EDGE_CONN(conn);
-      circ = circuit_get_by_edge_conn(edge_conn);
-      if (circ)
-        circuit_detach_stream(circ, edge_conn);
-      if (conn->state == EXIT_CONN_STATE_RESOLVING) {
-        connection_dns_remove(edge_conn);
-      }
+      connection_exit_about_to_close(TO_EDGE_CONN(conn));
       break;
   }
 }

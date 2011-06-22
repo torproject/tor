@@ -27,6 +27,9 @@ int connection_edge_flushed_some(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
 
+void connection_ap_about_to_close(edge_connection_t *edge_conn);
+void connection_exit_about_to_close(edge_connection_t *edge_conn);
+
 int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 

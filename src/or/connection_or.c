@@ -13,6 +13,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "command.h"
 #include "config.h"
 #include "connection.h"
@@ -345,6 +346,50 @@ connection_or_finished_connecting(or_connection_t *or_conn)
     return -1;
   }
   return 0;
+}
+
+/* Called when we're about to finally unlink and free an OR connection:
+ * perform necessary accounting and cleanup */
+void
+connection_or_about_to_close(or_connection_t *or_conn)
+{
+  time_t now = time(NULL);
+  connection_t *conn = TO_CONN(or_conn);
+
+  /* Remember why we're closing this connection. */
+  if (conn->state != OR_CONN_STATE_OPEN) {
+    /* Inform any pending (not attached) circs that they should
+     * give up. */
+    circuit_n_conn_done(TO_OR_CONN(conn), 0);
+    /* now mark things down as needed */
+    if (connection_or_nonopen_was_started_here(or_conn)) {
+      const or_options_t *options = get_options();
+      rep_hist_note_connect_failed(or_conn->identity_digest, now);
+      entry_guard_register_connect_status(or_conn->identity_digest,0,
+                                          !options->HTTPSProxy, now);
+      if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
+        int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
+                                     reason);
+        if (!authdir_mode_tests_reachability(options))
+          control_event_bootstrap_problem(
+                orconn_end_reason_to_control_string(reason), reason);
+      }
+    }
+  } else if (conn->hold_open_until_flushed) {
+    /* We only set hold_open_until_flushed when we're intentionally
+     * closing a connection. */
+    rep_hist_note_disconnect(or_conn->identity_digest, now);
+    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
+  } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
+    rep_hist_note_connection_died(or_conn->identity_digest, now);
+    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
+  }
+  /* Now close all the attached circuits on it. */
+  circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
+                                  END_CIRC_REASON_OR_CONN_CLOSED);
 }
 
 /** Return 1 if identity digest <b>id_digest</b> is known to be a

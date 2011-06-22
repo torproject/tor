@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Split connection_about_to_close into separate functions for each
+      connection type.

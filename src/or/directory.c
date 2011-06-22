@@ -2301,6 +2301,28 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   return 0;
 }
 
+/** Called when we're about to finally unlink and free a directory connection:
+ * perform necessary accounting and cleanup */
+void
+connection_dir_about_to_close(dir_connection_t *dir_conn)
+{
+  connection_t *conn = TO_CONN(dir_conn);
+
+  if (conn->state < DIR_CONN_STATE_CLIENT_FINISHED) {
+    /* It's a directory connection and connecting or fetching
+     * failed: forget about this router, and maybe try again. */
+    connection_dir_request_failed(dir_conn);
+  }
+  /* If we were trying to fetch a v2 rend desc and did not succeed,
+   * retry as needed. (If a fetch is successful, the connection state
+   * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC to mark that
+   * refetching is unnecessary.) */
+  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
+      dir_conn->rend_data &&
+      strlen(dir_conn->rend_data->onion_address) == REND_SERVICE_ID_LEN_BASE32)
+    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
+}
+
 /** Create an http response for the client <b>conn</b> out of
  * <b>status</b> and <b>reason_phrase</b>. Write it to <b>conn</b>.
  */

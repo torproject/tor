@@ -408,6 +408,71 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   return connection_edge_process_inbuf(edge_conn, 1);
 }
 
+/** Common code to connection_(ap|exit)_about_to_close. */
+static void
+connection_edge_about_to_close(edge_connection_t *edge_conn)
+{
+  if (!edge_conn->edge_has_sent_end) {
+    connection_t *conn = TO_CONN(edge_conn);
+    log_warn(LD_BUG, "(Harmless.) Edge connection (marked at %s:%d) "
+             "hasn't sent end yet?",
+             conn->marked_for_close_file, conn->marked_for_close);
+    tor_fragile_assert();
+  }
+}
+
+/* Called when we're about to finally unlink and free an AP (client)
+ * connection: perform necessary accounting and cleanup */
+void
+connection_ap_about_to_close(edge_connection_t *edge_conn)
+{
+  circuit_t *circ;
+  connection_t *conn = TO_CONN(edge_conn);
+
+  if (edge_conn->socks_request->has_finished == 0) {
+    /* since conn gets removed right after this function finishes,
+     * there's no point trying to send back a reply at this point. */
+    log_warn(LD_BUG,"Closing stream (marked at %s:%d) without sending"
+             " back a socks reply.",
+             conn->marked_for_close_file, conn->marked_for_close);
+  }
+  if (!edge_conn->end_reason) {
+    log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
+             " set end_reason.",
+             conn->marked_for_close_file, conn->marked_for_close);
+  }
+  if (edge_conn->dns_server_request) {
+    log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
+             " replied to DNS request.",
+             conn->marked_for_close_file, conn->marked_for_close);
+    dnsserv_reject_request(edge_conn);
+  }
+  control_event_stream_bandwidth(edge_conn);
+  control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
+                              edge_conn->end_reason);
+  circ = circuit_get_by_edge_conn(edge_conn);
+  if (circ)
+    circuit_detach_stream(circ, edge_conn);
+}
+
+/* Called when we're about to finally unlink and free an exit
+ * connection: perform necessary accounting and cleanup */
+void
+connection_exit_about_to_close(edge_connection_t *edge_conn)
+{
+  circuit_t *circ;
+  connection_t *conn = TO_CONN(edge_conn);
+
+  connection_edge_about_to_close(edge_conn);
+
+  circ = circuit_get_by_edge_conn(edge_conn);
+  if (circ)
+    circuit_detach_stream(circ, edge_conn);
+  if (conn->state == EXIT_CONN_STATE_RESOLVING) {
+    connection_dns_remove(edge_conn);
+  }
+}
+
 /** Define a schedule for how long to wait between retrying
  * application connections. Rather than waiting a fixed amount of
  * time between each retry, we wait 10 seconds each for the first
