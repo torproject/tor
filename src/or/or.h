@@ -2483,14 +2483,14 @@ typedef struct or_circuit_t {
   cell_ewma_t p_cell_ewma;
 } or_circuit_t;
 
-/** Convert a circuit subtype to a circuit_t.*/
+/** Convert a circuit subtype to a circuit_t. */
 #define TO_CIRCUIT(x)  (&((x)->_base))
 
-/** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Asserts
+/** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
 static or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
 /** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
- * Asserts if the cast is impossible. */
+ * Assert if the cast is impossible. */
 static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
 
 static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)

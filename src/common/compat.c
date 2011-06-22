@@ -444,7 +444,7 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
  *
  * This function is <em>not</em> timing-safe.
  *
- * Requires that nlen be greater than zero.
+ * Requires that <b>nlen</b> be greater than zero.
  */
 const void *
 tor_memmem(const void *_haystack, size_t hlen,

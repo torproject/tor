@@ -8,7 +8,7 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 	-I"$(top_srcdir)/src/or"
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
-# This seems to matter nowhere but on windows, but I assure you that it
+# This seems to matter nowhere but on Windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
 test_SOURCES = \
