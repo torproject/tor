@@ -14,6 +14,7 @@
 
 void connection_or_remove_from_identity_map(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
+void clear_broken_connection_map(void);
 or_connection_t *connection_or_get_for_extend(const char *digest,
                                               const tor_addr_t *target_addr,
                                               const char **msg_out,
@@ -34,6 +35,8 @@ void connection_or_connect_failed(or_connection_t *conn,
                                   int reason, const char *msg);
 or_connection_t *connection_or_connect(const tor_addr_t *addr, uint16_t port,
                                        const char *id_digest);
+
+void connection_or_report_broken_states(int severity, int domain);
 
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);

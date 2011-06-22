@@ -554,6 +554,9 @@ connection_free_all(void)
   /* Unlink everything from the identity map. */
   connection_or_clear_identity_map();
 
+  /* Clear out our list of broken connections */
+  clear_broken_connection_map();
+
   SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
 
   if (outgoing_addrs) {

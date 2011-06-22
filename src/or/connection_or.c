@@ -150,6 +150,111 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 #endif
 }
 
+/**************************************************************/
+
+/** DOCDOC */
+static strmap_t *broken_connection_counts;
+
+/** DOCDOC */
+static void
+note_broken_connection(const char *state)
+{
+  void *ptr;
+  intptr_t val;
+  if (!broken_connection_counts)
+    broken_connection_counts = strmap_new();
+
+  ptr = strmap_get(broken_connection_counts, state);
+  val = (intptr_t)ptr;
+  val++;
+  ptr = (void*)val;
+  strmap_set(broken_connection_counts, state, ptr);
+}
+
+/** DOCDOC */
+void
+clear_broken_connection_map(void)
+{
+  if (broken_connection_counts)
+    strmap_free(broken_connection_counts, NULL);
+  broken_connection_counts = NULL;
+}
+
+/** DOCDOC */
+static void
+connection_or_get_state_description(or_connection_t *orconn,
+                                    char *buf, size_t buflen)
+{
+  connection_t *conn = TO_CONN(orconn);
+  const char *conn_state;
+  char tls_state[256];
+
+  tor_assert(conn->type == CONN_TYPE_OR);
+
+  conn_state = conn_state_to_string(conn->type, conn->state);
+  tor_tls_get_state_description(orconn->tls, tls_state, sizeof(tls_state));
+
+  tor_snprintf(buf, buflen, "%s with SSL state %s", conn_state, tls_state);
+}
+
+/** DOCDOC */
+static void
+connection_or_note_state_when_broken(or_connection_t *orconn)
+{
+  char buf[256];
+  connection_or_get_state_description(orconn, buf, sizeof(buf));
+  log_info(LD_HANDSHAKE,"Connection died in state '%s'", buf);
+  note_broken_connection(buf);
+}
+
+/** DOCDOC */
+typedef struct broken_state_count_t {
+  intptr_t count;
+  const char *state;
+} broken_state_count_t;
+
+/** DOCDOC */
+static int
+broken_state_count_compare(const void **a_ptr, const void **b_ptr)
+{
+  const broken_state_count_t *a = *a_ptr, *b = *b_ptr;
+  return a->count - b->count;
+}
+
+/** DOCDOC */
+void
+connection_or_report_broken_states(int severity, int domain)
+{
+  int total = 0;
+  smartlist_t *items;
+
+  if (!broken_connection_counts) {
+    log(severity, domain, "No broken connections reported");
+    return;
+  }
+  items = smartlist_create();
+  STRMAP_FOREACH(broken_connection_counts, state, void *, countptr) {
+    broken_state_count_t *c = tor_malloc(sizeof(broken_state_count_t));
+    total += c->count = (intptr_t)countptr;
+    c->state = state;
+    smartlist_add(items, c);
+  } STRMAP_FOREACH_END;
+
+  smartlist_sort(items, broken_state_count_compare);
+
+  log(severity, domain, "%d connections have failed:", total);
+
+  SMARTLIST_FOREACH_BEGIN(items, const broken_state_count_t *, c) {
+    log(severity, domain,
+        " %d connections died in state %s", (int)c->count, c->state);
+  } SMARTLIST_FOREACH_END(c);
+
+  SMARTLIST_FOREACH(items, broken_state_count_t *, c, tor_free(c));
+  smartlist_free(items);
+}
+
+/**************************************************************/
+
 /** Pack the cell_t host-order structure <b>src</b> into network-order
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
@@ -364,6 +469,7 @@ connection_or_about_to_close(or_connection_t *or_conn)
     /* now mark things down as needed */
     if (connection_or_nonopen_was_started_here(or_conn)) {
       const or_options_t *options = get_options();
+      connection_or_note_state_when_broken(or_conn);
       rep_hist_note_connect_failed(or_conn->identity_digest, now);
       entry_guard_register_connect_status(or_conn->identity_digest,0,
                                           !options->HTTPSProxy, now);

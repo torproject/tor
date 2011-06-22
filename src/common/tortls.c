@@ -222,6 +222,37 @@ ssl_state_to_string(int ssl_state)
   return buf;
 }
 
+/** DOCDOC 3116 */
+void
+tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
+{
+  const char *ssl_state;
+  const char *tortls_state;
+
+  if (PREDICT_UNLIKELY(!tls || !tls->ssl)) {
+    strlcpy(buf, "(No SSL object)", sz);
+    return;
+  }
+
+  ssl_state = ssl_state_to_string(tls->ssl->state);
+  switch (tls->state) {
+#define CASE(st) case TOR_TLS_ST_##st: tortls_state = #st ; break
+    CASE(HANDSHAKE);
+    CASE(OPEN);
+    CASE(GOTCLOSE);
+    CASE(SENTCLOSE);
+    CASE(CLOSED);
+    CASE(RENEGOTIATE);
+    CASE(BUFFEREVENT);
+#undef CASE
+  default:
+    tortls_state = "unknown";
+    break;
+  }
+
+  tor_snprintf(buf, sz, "%s in %s", ssl_state, tortls_state);
+}
+
 void
 tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                   int severity, int domain, const char *doing)

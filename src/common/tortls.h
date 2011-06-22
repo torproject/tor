@@ -48,6 +48,7 @@ typedef struct tor_tls_t tor_tls_t;
 
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 const char *tor_tls_err_to_string(int err);
+void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
 
 void tor_tls_free_all(void);
 int tor_tls_context_init(int is_public_server,
