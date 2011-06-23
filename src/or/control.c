@@ -503,8 +503,8 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   va_end(ap);
 
   if (len < 0) {
-    log_warn(LD_BUG, "Unable to format string for controller.");
-    return;
+    log_err(LD_BUG, "Unable to format string for controller.");
+    tor_assert(0);
   }
 
   connection_write_to_buf(buf, (size_t)len, TO_CONN(conn));
