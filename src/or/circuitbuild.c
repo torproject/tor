@@ -1501,7 +1501,7 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
 }
 
 /** If <b>verbose</b> is false, allocate and return a comma-separated list of
- * the currently built elements of circuit_t.  If <b>verbose</b> is true, also
+ * the currently built elements of <b>circ</b>.  If <b>verbose</b> is true, also
  * list information about link status in a more verbose format using spaces.
  * If <b>verbose_names</b> is false, give nicknames for Named routers and hex
  * digests for others; if <b>verbose_names</b> is true, use $DIGEST=Name style
@@ -1590,7 +1590,7 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
 }
 
 /** If <b>verbose</b> is false, allocate and return a comma-separated
- * list of the currently built elements of circuit_t.  If
+ * list of the currently built elements of <b>circ</b>.  If
  * <b>verbose</b> is true, also list information about link status in
  * a more verbose format using spaces.
  */
@@ -1601,7 +1601,7 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
 }
 
 /** Allocate and return a comma-separated list of the currently built elements
- * of circuit_t, giving each as a verbose nickname.
+ * of <b>circ</b>, giving each as a verbose nickname.
  */
 char *
 circuit_list_path_for_controller(origin_circuit_t *circ)
@@ -1610,7 +1610,7 @@ circuit_list_path_for_controller(origin_circuit_t *circ)
 }
 
 /** Log, at severity <b>severity</b>, the nicknames of each router in
- * circ's cpath. Also log the length of the cpath, and the intended
+ * <b>circ</b>'s cpath. Also log the length of the cpath, and the intended
  * exit point.
  */
 void
@@ -1622,7 +1622,7 @@ circuit_log_path(int severity, unsigned int domain, origin_circuit_t *circ)
 }
 
 /** Tell the rep(utation)hist(ory) module about the status of the links
- * in circ.  Hops that have become OPEN are marked as successfully
+ * in <b>circ</b>.  Hops that have become OPEN are marked as successfully
  * extended; the _first_ hop that isn't open (if any) is marked as
  * unable to extend.
  */
