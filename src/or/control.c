@@ -1795,6 +1795,34 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   }
 
   {
+    char *buildflags = NULL;
+    cpath_build_state_t *build_state = circ->build_state;
+    smartlist_t *flaglist = smartlist_create();
+    char *flaglist_joined;
+
+    if (build_state->onehop_tunnel)
+      smartlist_add(flaglist, (void *)"ONEHOP_TUNNEL");
+    if (build_state->is_internal)
+      smartlist_add(flaglist, (void *)"IS_INTERNAL");
+    if (build_state->need_capacity)
+      smartlist_add(flaglist, (void *)"NEED_CAPACITY");
+    if (build_state->need_uptime)
+      smartlist_add(flaglist, (void *)"NEED_UPTIME");
+
+    /* Only emit a BUILD_FLAGS argument if it will have a non-empty value. */
+    if (smartlist_len(flaglist)) {
+      flaglist_joined = smartlist_join_strings(flaglist, ",", 0, NULL);
+
+      tor_asprintf(&buildflags, "BUILD_FLAGS=%s", flaglist_joined);
+      smartlist_add(descparts, buildflags);
+
+      tor_free(flaglist_joined);
+    }
+
+    smartlist_free(flaglist);
+  }
+
+  {
     char *purpose = NULL;
     tor_asprintf(&purpose, "PURPOSE=%s",
                  circuit_purpose_to_controller_string(circ->_base.purpose));

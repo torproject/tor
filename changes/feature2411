@@ -1,0 +1,7 @@
+  o Minor features:
+
+    - Report flags that control a circuit's path selection to
+      controllers in CIRC events and in replies to 'GETINFO
+      circuit-status'.  Implements part of ticket 2411.
+
+
