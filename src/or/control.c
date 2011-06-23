@@ -1846,29 +1846,30 @@ getinfo_helper_events(control_connection_t *control_conn,
 {
   (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
-    circuit_t *circ;
+    circuit_t *circ_;
     smartlist_t *status = smartlist_create();
-    for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+    for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
+      origin_circuit_t *circ;
       char *s, *circdesc;
       size_t slen;
       const char *state;
-      if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
+      if (! CIRCUIT_IS_ORIGIN(circ_) || circ_->marked_for_close)
         continue;
+      circ = TO_ORIGIN_CIRCUIT(circ_);
 
-      if (circ->state == CIRCUIT_STATE_OPEN)
+      if (circ->_base.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
-      else if (TO_ORIGIN_CIRCUIT(circ)->cpath)
+      else if (circ->cpath)
         state = "EXTENDED";
       else
         state = "LAUNCHED";
 
-      circdesc = circuit_describe_status_for_controller(
-        TO_ORIGIN_CIRCUIT(circ));
+      circdesc = circuit_describe_status_for_controller(circ);
 
       slen = strlen(circdesc)+strlen(state)+30;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s%s%s",
-                   (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                   (unsigned long)circ->global_identifier,
                    state, *circdesc ? " " : "", circdesc);
       smartlist_add(status, s);
       tor_free(circdesc);
