@@ -1777,6 +1777,38 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
+/** Allocate and return a description of <b>circ</b>'s current status,
+ * including its path (if any). */
+static char *
+circuit_describe_status_for_controller(origin_circuit_t *circ)
+{
+  char *rv;
+  smartlist_t *descparts = smartlist_create();
+
+  {
+    char *vpath = circuit_list_path_for_controller(circ);
+    if (*vpath) {
+      smartlist_add(descparts, vpath);
+    } else {
+      tor_free(vpath); /* empty path; don't put an extra space in the result */
+    }
+  }
+
+  {
+    char *purpose = NULL;
+    tor_asprintf(&purpose, "PURPOSE=%s",
+                 circuit_purpose_to_controller_string(circ->_base.purpose));
+    smartlist_add(descparts, purpose);
+  }
+
+  rv = smartlist_join_strings(descparts, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
+  smartlist_free(descparts);
+
+  return rv;
+}
+
 /** Implementation helper for GETINFO: knows how to generate summaries of the
  * current states of things we send events about. */
 static int
@@ -3233,7 +3265,6 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
 {
   const char *status;
-  char purpose[32];
   char reasons[64] = "";
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
@@ -3251,16 +3282,12 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       return 0;
     }
 
-  tor_snprintf(purpose, sizeof(purpose), "PURPOSE=%s",
-               circuit_purpose_to_controller_string(circ->_base.purpose));
-
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
-    char *reason = NULL;
+    char unk_reason_buf[16];
     if (!reason_str) {
-      reason = tor_malloc(16);
-      tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);
-      reason_str = reason;
+      tor_snprintf(unk_reason_buf, 16, "UNKNOWN_%d", reason_code);
+      reason_str = unk_reason_buf;
     }
     if (reason_code > 0 && reason_code & END_CIRC_REASON_FLAG_REMOTE) {
       tor_snprintf(reasons, sizeof(reasons),
@@ -3269,19 +3296,18 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       tor_snprintf(reasons, sizeof(reasons),
                    " REASON=%s", reason_str);
     }
-    tor_free(reason);
   }
 
   {
-    char *vpath = circuit_list_path_for_controller(circ);
-    const char *sp = strlen(vpath) ? " " : "";
+    char *circdesc = circuit_describe_status_for_controller(circ);
+    const char *sp = strlen(circdesc) ? " " : "";
     send_control_event(EVENT_CIRCUIT_STATUS, ALL_FORMATS,
-                                "650 CIRC %lu %s%s%s %s%s\r\n",
+                                "650 CIRC %lu %s%s%s%s\r\n",
                                 (unsigned long)circ->global_identifier,
-                                status, sp, vpath,
-                                purpose,
+                                status, sp,
+                                circdesc,
                                 reasons);
-    tor_free(vpath);
+    tor_free(circdesc);
   }
 
   return 0;
