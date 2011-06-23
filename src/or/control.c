@@ -3233,7 +3233,8 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
 {
   const char *status;
-  char extended_buf[96];
+  char purpose[32];
+  char reasons[64] = "";
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
@@ -3250,23 +3251,22 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       return 0;
     }
 
-  tor_snprintf(extended_buf, sizeof(extended_buf), "PURPOSE=%s",
+  tor_snprintf(purpose, sizeof(purpose), "PURPOSE=%s",
                circuit_purpose_to_controller_string(circ->_base.purpose));
 
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
     char *reason = NULL;
-    size_t n=strlen(extended_buf);
     if (!reason_str) {
       reason = tor_malloc(16);
       tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);
       reason_str = reason;
     }
     if (reason_code > 0 && reason_code & END_CIRC_REASON_FLAG_REMOTE) {
-      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+      tor_snprintf(reasons, sizeof(reasons),
                    " REASON=DESTROYED REMOTE_REASON=%s", reason_str);
     } else {
-      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+      tor_snprintf(reasons, sizeof(reasons),
                    " REASON=%s", reason_str);
     }
     tor_free(reason);
@@ -3276,9 +3276,11 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     char *vpath = circuit_list_path_for_controller(circ);
     const char *sp = strlen(vpath) ? " " : "";
     send_control_event(EVENT_CIRCUIT_STATUS, ALL_FORMATS,
-                                "650 CIRC %lu %s%s%s %s\r\n",
+                                "650 CIRC %lu %s%s%s %s%s\r\n",
                                 (unsigned long)circ->global_identifier,
-                                status, sp, vpath, extended_buf);
+                                status, sp, vpath,
+                                purpose,
+                                reasons);
     tor_free(vpath);
   }
 
