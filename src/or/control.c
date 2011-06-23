@@ -1849,30 +1849,29 @@ getinfo_helper_events(control_connection_t *control_conn,
     circuit_t *circ;
     smartlist_t *status = smartlist_create();
     for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
-      char *s, *path;
+      char *s, *circdesc;
       size_t slen;
       const char *state;
-      const char *purpose;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
 
-      path = circuit_list_path_for_controller(TO_ORIGIN_CIRCUIT(circ));
-
       if (circ->state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
-      else if (strlen(path))
+      else if (TO_ORIGIN_CIRCUIT(circ)->cpath)
         state = "EXTENDED";
       else
         state = "LAUNCHED";
 
-      purpose = circuit_purpose_to_controller_string(circ->purpose);
-      slen = strlen(path)+strlen(state)+strlen(purpose)+30;
+      circdesc = circuit_describe_status_for_controller(
+        TO_ORIGIN_CIRCUIT(circ));
+
+      slen = strlen(circdesc)+strlen(state)+30;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s%s%s PURPOSE=%s",
+      tor_snprintf(s, slen, "%lu %s%s%s",
                    (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                   state, *path ? " " : "", path, purpose);
+                   state, *circdesc ? " " : "", circdesc);
       smartlist_add(status, s);
-      tor_free(path);
+      tor_free(circdesc);
     }
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
