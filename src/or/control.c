@@ -1842,6 +1842,15 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     }
   }
 
+  if (circ->rend_data != NULL) {
+    char *rend_query_arg = NULL;
+
+    tor_asprintf(&rend_query_arg, "REND_QUERY=%s",
+                 circ->rend_data->onion_address);
+
+    smartlist_add(descparts, rend_query_arg);
+  }
+
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
