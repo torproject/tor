@@ -2197,8 +2197,8 @@ typedef struct {
   unsigned int need_capacity : 1;
   /** Whether the last hop was picked with exiting in mind. */
   unsigned int is_internal : 1;
-  /** Did we pick this as a one-hop tunnel (not safe for other conns)?
-   * These are for encrypted connections that exit to this router, not
+  /** Did we pick this as a one-hop tunnel (not safe for other streams)?
+   * These are for encrypted dir conns that exit to this router, not
    * for arbitrary exits from the circuit. */
   unsigned int onehop_tunnel : 1;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
