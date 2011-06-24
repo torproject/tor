@@ -1220,9 +1220,14 @@ router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 static routerinfo_t *desc_routerinfo = NULL;
 /** My extrainfo */
 static extrainfo_t *desc_extrainfo = NULL;
+/** Why did we most recently decide to regenerate our descriptor?  Used to
+ * tell the authorities why we're sending it to them. */
+static const char *desc_gen_reason = NULL;
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
 static time_t desc_clean_since = 0;
+/** Why did we mark the descriptor dirty? */
+static const char *desc_dirty_reason = NULL;
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
@@ -1387,6 +1392,14 @@ router_get_my_extrainfo(void)
   if (router_rebuild_descriptor(0))
     return NULL;
   return desc_extrainfo;
+}
+
+/** Return a human-readable string describing what triggered us to generate
+ * our current descriptor, or NULL if we don't know. */
+const char *
+router_get_descriptor_gen_reason(void)
+{
+  return desc_gen_reason;
 }
 
 /** A list of nicknames that we've warned about including in our family
@@ -1606,6 +1619,8 @@ router_rebuild_descriptor(int force)
 
   desc_clean_since = time(NULL);
   desc_needs_upload = 1;
+  desc_gen_reason = desc_dirty_reason;
+  desc_dirty_reason = NULL;
   control_event_my_descriptor_changed();
   return 0;
 }
@@ -1662,6 +1677,8 @@ mark_my_descriptor_dirty(const char *reason)
 {
   desc_clean_since = 0;
   log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
+  if (!desc_dirty_reason)
+    desc_dirty_reason = reason;
 }
 
 /** How frequently will we republish our descriptor because of large (factor

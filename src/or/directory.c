@@ -1228,12 +1228,18 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "GET";
       tor_asprintf(&url, "/tor/micro/%s", resource);
       break;
-    case DIR_PURPOSE_UPLOAD_DIR:
+    case DIR_PURPOSE_UPLOAD_DIR: {
+      const char *why = router_get_descriptor_gen_reason();
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
       url = tor_strdup("/tor/");
+      if (why) {
+        tor_asprintf(&header, "X-Desc-Gen-Reason: %s\r\n", why);
+        smartlist_add(headers, header);
+      }
       break;
+    }
     case DIR_PURPOSE_UPLOAD_VOTE:
       tor_assert(!resource);
       tor_assert(payload);

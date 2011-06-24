@@ -73,6 +73,7 @@ int router_my_exit_policy_is_reject_star(void);
 const routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
+const char *router_get_descriptor_gen_reason(void);
 int router_digest_is_me(const char *digest);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
