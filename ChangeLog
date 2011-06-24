@@ -366,9 +366,9 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       by downloading microdescriptors instead of router descriptors.
 
   o Minor features:
-    - Make logging resolution configurable with a new LogGranularity
-      option, and change the default from 1 millisecond to 1
-      second. Implements enhancement 1668.
+    - Make logging resolution configurable with a new LogTimeGranularity
+      option, and change the default from 1 millisecond to 1 second.
+      Implements enhancement 1668.
     - We log which torrc file we're using on startup. Implements ticket
       2444.
     - Ordinarily, Tor does not count traffic from private addresses (like
