@@ -2192,15 +2192,15 @@ typedef struct {
   /** How to extend to the planned exit node. */
   extend_info_t *chosen_exit;
   /** Whether every node in the circ must have adequate uptime. */
-  int need_uptime;
+  unsigned int need_uptime : 1;
   /** Whether every node in the circ must have adequate capacity. */
-  int need_capacity;
+  unsigned int need_capacity : 1;
   /** Whether the last hop was picked with exiting in mind. */
-  int is_internal;
+  unsigned int is_internal : 1;
   /** Did we pick this as a one-hop tunnel (not safe for other conns)?
    * These are for encrypted connections that exit to this router, not
    * for arbitrary exits from the circuit. */
-  int onehop_tunnel;
+  unsigned int onehop_tunnel : 1;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
