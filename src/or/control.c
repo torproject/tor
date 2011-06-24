@@ -1829,6 +1829,19 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_add(descparts, purpose);
   }
 
+  {
+    char *hs_state_arg = NULL;
+    const char *hs_state =
+      circuit_purpose_to_controller_hs_state_string(circ->_base.purpose);
+
+    if (hs_state != NULL) {
+      tor_asprintf(&hs_state_arg, "HS_STATE=%s",
+                   hs_state);
+
+      smartlist_add(descparts, hs_state_arg);
+    }
+  }
+
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
