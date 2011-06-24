@@ -866,7 +866,7 @@ circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
 }
 
 /** Return a circ such that:
- *  - circ-\>rend_data-\>query is equal to <b>rend_query</b>, and
+ *  - circ-\>rend_data-\>onion_address is equal to <b>rend_query</b>, and
  *  - circ-\>purpose is equal to <b>purpose</b>.
  *
  * Return NULL if no such circuit exists.
