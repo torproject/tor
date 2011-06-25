@@ -1380,7 +1380,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_strdup("CIRC STREAM ORCONN BW DEBUG INFO NOTICE WARN ERR "
                          "NEWDESC ADDRMAP AUTHDIR_NEWDESCS DESCCHANGED "
                          "NS STATUS_GENERAL STATUS_CLIENT STATUS_SERVER "
-                         "GUARD STREAM_BW CLIENTS_SEEN NEWCONSENSUS");
+                         "GUARD STREAM_BW CLIENTS_SEEN NEWCONSENSUS "
+                         "BUILDTIMEOUT_SET");
   } else if (!strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {
