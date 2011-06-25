@@ -3755,6 +3755,7 @@ typedef enum circuit_status_event_t {
  * The various types are defined in control-spec.txt . */
 typedef enum circuit_status_2_event_t {
   CIRC2_EVENT_PURPOSE_CHANGED           = 0,
+  CIRC2_EVENT_CANNIBALIZED              = 1,
 } circuit_status_2_event_t;
 
 /** Used to indicate the type of a stream event passed to the controller.

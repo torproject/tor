@@ -1215,14 +1215,23 @@ circuit_launch_by_extend_info(uint8_t purpose,
      * internal circs rather than exit circs? -RD */
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
+      uint8_t old_purpose = circ->_base.purpose;
+      struct timeval old_timestamp_created;
+
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
+
       circuit_change_purpose(TO_CIRCUIT(circ), purpose);
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
        * began. */
       tor_gettimeofday(&circ->_base.timestamp_created);
+
+      control_event_circuit_status_2(circ, CIRC2_EVENT_CANNIBALIZED,
+                                     (int)old_purpose,
+                                     &old_timestamp_created);
+
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:

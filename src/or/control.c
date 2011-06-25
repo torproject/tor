@@ -3372,12 +3372,10 @@ control_event_circuit_status_2(origin_circuit_t *circ,
                                int arg1, const void *arg2)
 {
   const char *event_desc;
-  char event_tail[96] = "";
+  char event_tail[160] = "";
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_2))
     return 0;
   tor_assert(circ);
-
-  (void)arg2; /* currently unused */
 
   switch (e)
     {
@@ -3386,6 +3384,7 @@ control_event_circuit_status_2(origin_circuit_t *circ,
       event_desc = "PURPOSE_CHANGED";
 
       {
+        /* event_tail can currently be up to 68 chars long */
         const char *hs_state_str =
           circuit_purpose_to_controller_hs_state_string(arg1);
         tor_snprintf(event_tail, sizeof(event_tail),
@@ -3393,6 +3392,26 @@ control_event_circuit_status_2(origin_circuit_t *circ,
                      circuit_purpose_to_controller_string(arg1),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
                      (hs_state_str != NULL) ? hs_state_str : "");
+      }
+
+      break;
+    case CIRC2_EVENT_CANNIBALIZED:
+      /* arg1 is the previous purpose of the circuit. */
+      event_desc = "CANNIBALIZED";
+
+      {
+        /* event_tail can currently be up to 130 chars long */
+        const char *hs_state_str =
+          circuit_purpose_to_controller_hs_state_string(arg1);
+        const struct timeval *old_timestamp_created = arg2;
+
+        tor_snprintf(event_tail, sizeof(event_tail),
+                     " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%ld,%ld",
+                     circuit_purpose_to_controller_string(arg1),
+                     (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
+                     (hs_state_str != NULL) ? hs_state_str : "",
+                     old_timestamp_created->tv_sec,
+                     old_timestamp_created->tv_usec);
       }
 
       break;
