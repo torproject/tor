@@ -1851,6 +1851,16 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_add(descparts, rend_query_arg);
   }
 
+  {
+    char *time_created_arg = NULL;
+
+    tor_asprintf(&time_created_arg, "TIME_CREATED=%ld,%ld",
+                 circ->_base.timestamp_created.tv_sec,
+                 circ->_base.timestamp_created.tv_usec);
+
+    smartlist_add(descparts, time_created_arg);
+  }
+
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));

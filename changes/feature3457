@@ -6,4 +6,7 @@
       circuit is cannibalized or its purpose is changed.  Implements
       part of ticket 3457.
 
+    - Include the creation time of a circuit in CIRC and CIRC2
+      control-port events and the list produced by the 'GETINFO
+      circuit-status' control-port command.
 
