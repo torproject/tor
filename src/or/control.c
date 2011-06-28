@@ -18,6 +18,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
@@ -4268,6 +4269,7 @@ control_event_bootstrap_problem(const char *warn, int reason)
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
+  int severity;
 
   /* bootstrap_percent must not be in "undefined" state here. */
   tor_assert(status >= 0);
@@ -4292,12 +4294,17 @@ control_event_bootstrap_problem(const char *warn, int reason)
     status--; /* find a recognized status string based on current progress */
   status = bootstrap_percent; /* set status back to the actual number */
 
-  log_fn(!strcmp(recommendation, "warn") ? LOG_WARN : LOG_INFO,
+  severity = !strcmp(recommendation, "warn") ? LOG_WARN : LOG_INFO;
+
+  log_fn(severity,
          LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
          "count %d; recommendation %s)",
          status, summary, warn,
          orconn_end_reason_to_control_string(reason),
          bootstrap_problems, recommendation);
+
+  connection_or_report_broken_states(severity, LD_HANDSHAKE);
+
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
       "COUNT=%d RECOMMENDATION=%s",
