@@ -222,7 +222,8 @@ ssl_state_to_string(int ssl_state)
   return buf;
 }
 
-/** DOCDOC 3116 */
+/** Write a description of the current state of <b>tls</b> into the
+ * <b>sz</b>-byte buffer at <b>buf</b>. */
 void
 tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
 {
@@ -236,21 +237,23 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
 
   ssl_state = ssl_state_to_string(tls->ssl->state);
   switch (tls->state) {
-#define CASE(st) case TOR_TLS_ST_##st: tortls_state = #st ; break
+#define CASE(st) case TOR_TLS_ST_##st: tortls_state = " in "#st ; break
     CASE(HANDSHAKE);
     CASE(OPEN);
     CASE(GOTCLOSE);
     CASE(SENTCLOSE);
     CASE(CLOSED);
     CASE(RENEGOTIATE);
-    CASE(BUFFEREVENT);
 #undef CASE
+  case TOR_TLS_ST_BUFFEREVENT:
+    tortls_state = "";
+    break;
   default:
-    tortls_state = "unknown";
+    tortls_state = " in unknown TLS state";
     break;
   }
 
-  tor_snprintf(buf, sz, "%s in %s", ssl_state, tortls_state);
+  tor_snprintf(buf, sz, "%s%s", ssl_state, tortls_state);
 }
 
 void

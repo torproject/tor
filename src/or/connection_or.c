@@ -152,10 +152,13 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 
 /**************************************************************/
 
-/** DOCDOC */
+/** Map from a string describing what a non-open OR connection was doing when
+ * failed, to an intptr_t describing the count of connections that failed that
+ * way.  Note that the count is stored _as_ the pointer.
+ */
 static strmap_t *broken_connection_counts;
 
-/** DOCDOC */
+/** Record that an OR connection failed in <b>state</b>. */
 static void
 note_broken_connection(const char *state)
 {
@@ -171,7 +174,7 @@ note_broken_connection(const char *state)
   strmap_set(broken_connection_counts, state, ptr);
 }
 
-/** DOCDOC */
+/** Forget all recorded states for failed connections. */
 void
 clear_broken_connection_map(void)
 {
@@ -180,7 +183,10 @@ clear_broken_connection_map(void)
   broken_connection_counts = NULL;
 }
 
-/** DOCDOC */
+/** Write a detailed description the state of <b>orconn</b> into the
+ * <b>buflen</b>-byte buffer at <b>buf</b>.  This description includes not
+ * only the OR-conn level state but also the TLS state.  It's useful for
+ * diagnosing broken handshakes. */
 static void
 connection_or_get_state_description(or_connection_t *orconn,
                                     char *buf, size_t buflen)
@@ -197,7 +203,8 @@ connection_or_get_state_description(or_connection_t *orconn,
   tor_snprintf(buf, buflen, "%s with SSL state %s", conn_state, tls_state);
 }
 
-/** DOCDOC */
+/** Record the current state of <b>orconn</b> as the state of a broken
+ * connection. */
 static void
 connection_or_note_state_when_broken(or_connection_t *orconn)
 {
@@ -207,34 +214,35 @@ connection_or_note_state_when_broken(or_connection_t *orconn)
   note_broken_connection(buf);
 }
 
-/** DOCDOC */
+/** Helper type used to sort connection states and find the most frequent. */
 typedef struct broken_state_count_t {
   intptr_t count;
   const char *state;
 } broken_state_count_t;
 
-/** DOCDOC */
+/** Helper function used to sort broken_state_count_t by frequency. */
 static int
 broken_state_count_compare(const void **a_ptr, const void **b_ptr)
 {
   const broken_state_count_t *a = *a_ptr, *b = *b_ptr;
-  return a->count - b->count;
+  return b->count - a->count;
 }
 
-/** DOCDOC */
+/** Upper limit on the number of different states to report for connection
+ * failure. */
 #define MAX_REASONS_TO_REPORT 10
 
-/** DOCDOC */
+/** Report a list of the top states for failed OR connections at log level
+ * <b>severity</b>, in log domain <b>domain</b>. */
 void
 connection_or_report_broken_states(int severity, int domain)
 {
   int total = 0;
   smartlist_t *items;
 
-  if (!broken_connection_counts) {
-    log(severity, domain, "No broken connections reported");
+  if (!broken_connection_counts)
     return;
-  }
+
   items = smartlist_create();
   STRMAP_FOREACH(broken_connection_counts, state, void *, countptr) {
     broken_state_count_t *c = tor_malloc(sizeof(broken_state_count_t));
