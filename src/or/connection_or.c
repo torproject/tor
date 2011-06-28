@@ -222,6 +222,9 @@ broken_state_count_compare(const void **a_ptr, const void **b_ptr)
 }
 
 /** DOCDOC */
+#define MAX_REASONS_TO_REPORT 10
+
+/** DOCDOC */
 void
 connection_or_report_broken_states(int severity, int domain)
 {
@@ -242,9 +245,12 @@ connection_or_report_broken_states(int severity, int domain)
 
   smartlist_sort(items, broken_state_count_compare);
 
-  log(severity, domain, "%d connections have failed:", total);
+  log(severity, domain, "%d connections have failed%s", total,
+      smartlist_len(items) > MAX_REASONS_TO_REPORT ? ". Top reasons:" : ":");
 
   SMARTLIST_FOREACH_BEGIN(items, const broken_state_count_t *, c) {
+    if (c_sl_idx > MAX_REASONS_TO_REPORT)
+      break;
     log(severity, domain,
         " %d connections died in state %s", (int)c->count, c->state);
   } SMARTLIST_FOREACH_END(c);
