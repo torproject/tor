@@ -4680,8 +4680,7 @@ parse_client_transport_line(const char *line, int validate_only)
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
   if (smartlist_len(items) < 3) {
-    log_warn(LD_CONFIG, "parse_client_transport_line(): "
-              "Too few arguments on ClientTransportPlugin line.");
+    log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
     goto err;
   }
 
@@ -4696,7 +4695,8 @@ parse_client_transport_line(const char *line, int validate_only)
   else if (!strcmp(socks_ver_str,"socks5"))
     socks_ver = PROXY_SOCKS5;
   else {
-    log_warn(LD_CONFIG, "Strange transport proxy type.");
+    log_warn(LD_CONFIG, "Strange ClientTransportPlugin proxy type '%s'.",
+             socks_ver_str);
     goto err;
   }
 

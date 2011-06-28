@@ -4101,11 +4101,14 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
 }
 
-/** Fills <b>addr</b> and <b>port</b> with the details of the proxy
- *  server of type <b>proxy_type</b> we are using.
- *  <b>conn</b> contains the connection_t we are using the proxy for.
- *  Returns 0 if we were successfull, 1 if we are not using
- *  a proxy, -1 if we are using a proxy but his addrport could not be
+/** Fills <b>addr</b> and <b>port</b> with the details of the global
+ *  proxy server we are using.
+ *  <b>conn</b> contains the connection we are using the proxy for.
+ *
+ *  Returns:
+ *  0: if we were successfull
+ *  1: if we are not using a proxy
+ *  -1: if we are using a proxy but its addrport could not be
  *  found. */
 int
 get_proxy_addrport(tor_addr_t *addr, uint16_t *port,
@@ -4131,19 +4134,22 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port,
     int r;
     r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
     if (r == 0) { /* transport found */
+      tor_assert(transport);
       tor_addr_copy(addr, &transport->addr);
       *port = transport->port;
+      goto done;
+    } else {
+      return r;
     }
-    return r;
   }
 
   return 1;
 
- done:
+ done: /* proxy found */
   return 0;
 }
 
-/** Returns the proxy type used by tor. */
+/** Returns the global proxy type used by tor. */
 static int
 get_proxy_type(void)
 {
@@ -4170,7 +4176,7 @@ log_failed_proxy_connection(connection_t *conn)
   uint16_t proxy_port;
 
   if (get_proxy_addrport(&proxy_addr, &proxy_port, conn) != 0)
-    return; /* if we have no proxy set up leave this function. */
+    return; /* if we have no proxy set up, leave this function. */
 
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s:%u just failed. "
@@ -4188,7 +4194,7 @@ proxy_type_to_string(int proxy_type)
   case PROXY_SOCKS4:    return "SOCKS4";
   case PROXY_SOCKS5:    return "SOCKS5";
   case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
-  case PROXY_NONE:      return "NULL"; /* probably a bug */
+  case PROXY_NONE:      return "NULL";
   default:              tor_assert(0);
   }
 }

@@ -4565,7 +4565,7 @@ clear_bridge_list(void)
   smartlist_clear(bridge_list);
 }
 
-/** Free the transport_t <b>transport</b>. */
+/** Free the bridge <b>bridge</b>. */
 static void
 bridge_free(bridge_info_t *bridge)
 {
@@ -4590,7 +4590,7 @@ clear_transport_list(void)
   smartlist_clear(transport_list);
 }
 
-/** Free the transport_t <b>transport</b>. */
+/** Free the pluggable transport struct <b>transport</b>. */
 static void
 transport_free(transport_t *transport)
 {
@@ -4639,8 +4639,8 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
   tor_addr_copy(&t->addr, addr);
   t->port = port;
   t->name = tor_strdup(name);
-
   t->socks_version = socks_ver;
+
   if (!transport_list)
     transport_list = smartlist_create();
 
@@ -4662,13 +4662,14 @@ validate_pluggable_transports_config(void)
         /* Skip bridges without transports. */
         if (!b->transport_name)
           continue;
-        /* See if the user has Bridges that specify nonexistent 
+        /* See if the user has Bridges that specify nonexistent
            pluggable transports. We should warn the user in such case,
            since it's probably misconfiguration. */
         if (!transport_get_by_name(b->transport_name))
           log_warn(LD_CONFIG, "You have a Bridge line using the %s "
                    "pluggable transport, but there doesn't seem to be a "
-                   "corresponding ClientTransportPlugin line.", b->transport_name);
+                   "corresponding ClientTransportPlugin line.",
+                   b->transport_name);
       }  SMARTLIST_FOREACH_END(b);
   }
 }
@@ -4812,7 +4813,7 @@ find_bridge_by_digest(const char *digest)
 /** If <b>addr</b> and <b>port</b> match the address and port of a
  * bridge of ours that uses pluggable transports, place it's transport
  * in <b>transport</b>.
- *  
+ *
  * Return:
  * 0: if transport was found successfully.
  * 1: if <b>addr</b>:<b>port</b> did not match a bridge,
@@ -4820,7 +4821,7 @@ find_bridge_by_digest(const char *digest)
  * -1: if we should be using a transport, but the transport could not be found.
  */
 int
-find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port, 
+find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                   transport_t **transport)
 {
   if (!bridge_list)

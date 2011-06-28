@@ -760,7 +760,7 @@ conn_close_if_marked(int i)
 
   /* If the connection we are about to close was trying to connect to
   a proxy server and failed, the client won't be able to use that
-  proxy. We should warn him about this. */
+  proxy. We should warn the user about this. */
   if (conn->proxy_state == PROXY_INFANT)
     log_failed_proxy_connection(conn);
 
