@@ -1716,6 +1716,11 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
         return r;
       }
+      if (req->auth_type != SOCKS_NO_AUTH && !req->got_auth) {
+        log_warn(LD_APP,
+                 "socks5: negotiated authentication, but none provided");
+        return -1;
+      }
       /* we know the method; read in the request */
       log_debug(LD_APP,"socks5: checking request");
       if (datalen < 8) {/* basic info plus >=2 for addr plus 2 for port */
