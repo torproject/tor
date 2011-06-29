@@ -1648,14 +1648,19 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
                  "authentication negotiated. Rejecting.");
         return -1;
       }
+      /* Format is: authversion [1 byte] == 1
+                    usernamelen [1 byte]
+                    username    [usernamelen bytes]
+                    passlen     [1 byte]
+                    password    [passlen bytes] */
       usernamelen = (unsigned char)*(data + 1);
-      if (datalen < 2u + usernamelen) {
-        *want_length_out = 2u+usernamelen;
+      if (datalen < 2u + usernamelen + 1u) {
+        *want_length_out = 2u + usernamelen + 1u;
         return 0;
       }
       passlen = (unsigned char)*(data + 2u + usernamelen);
       if (datalen < 2u + usernamelen + 1u + passlen) {
-        *want_length_out = 2u+usernamelen;
+        *want_length_out = 2u + usernamelen + 1u + passlen;
         return 0;
       }
       req->replylen = 2; /* 2 bytes of response */
