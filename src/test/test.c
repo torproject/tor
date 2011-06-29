@@ -210,7 +210,7 @@ test_buffers_socks4_unsupported_commands_helper(const char *cp, buf_t *buf,
   test_eq(4, socks->socks_version);
   test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
 
-done:
+ done:
   ;
 }
 
@@ -248,7 +248,7 @@ test_buffers_socks4_supported_commands_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
   test_streq("tor.org", socks->address);
 
-done:
+ done:
   ;
 }
 
@@ -279,7 +279,7 @@ test_buffers_socks5_unsupported_commands_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->reply[1]); /* XXX: shouldn't tor reply 'command
                                   not supported' [07]? */
 
-done:
+ done:
   ;
 }
 
@@ -334,7 +334,7 @@ test_buffers_socks5_supported_commands_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->reply[1]);
   test_streq("2.2.2.2", socks->address);
 
-done:
+ done:
   ;
 }
 
@@ -364,7 +364,7 @@ test_buffers_socks5_no_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
-done:
+ done:
   ;
 }
 
@@ -394,7 +394,7 @@ test_buffers_socks5_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
-done:
+ done:
   ;
 }
 
@@ -434,7 +434,7 @@ test_buffers_socks5_authenticate_with_data_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->reply[1]);
   test_streq("2.2.2.2", socks->address);
   test_eq(4369, socks->port);
-done:
+ done:
   ;
 }
 
@@ -454,7 +454,7 @@ test_buffers_socks5_auth_before_negotiation_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
-done:
+ done:
   ;
 }
 
