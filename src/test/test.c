@@ -197,14 +197,59 @@ free_pregenerated_keys(void)
   }
 }
 
-/** Helper: Perform supported SOCKS 4 commands */
-static void
-test_buffers_socks4_unsupported_commands_helper(const char *cp, buf_t *buf,
-                                                socks_request_t *socks)
+typedef struct socks_test_data_t {
+  socks_request_t *req;
+  buf_t *buf;
+} socks_test_data_t;
+
+static void *
+socks_test_setup(const struct testcase_t *testcase)
 {
+  socks_test_data_t *data = tor_malloc(sizeof(socks_test_data_t));
+  (void)testcase;
+  data->buf = buf_new_with_capacity(256);
+  data->req = socks_request_new();
+  config_register_addressmaps(get_options());
+  return data;
+}
+static int
+socks_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  socks_test_data_t *data = ptr;
+  (void)testcase;
+  buf_free(data->buf);
+  socks_request_free(data->req);
+  tor_free(data);
+  return 1;
+}
+
+const struct testcase_setup_t socks_setup = {
+  socks_test_setup, socks_test_cleanup
+};
+
+#define SOCKS_TEST_INIT()                       \
+  socks_test_data_t *testdata = ptr;            \
+  buf_t *buf = testdata->buf;                   \
+  socks_request_t *socks = testdata->req;
+#define ADD_DATA(buf, s)                                        \
+  write_to_buf(s, sizeof(s)-1, buf)
+
+static void
+socks_request_clear(socks_request_t *socks)
+{
+  tor_free(socks->username);
+  tor_free(socks->password);
+  memset(socks, 0, sizeof(socks_request_t));
+}
+
+/** Perform unsupported SOCKS 4 commands */
+static void
+test_socks_4_unsupported_commands(void *ptr)
+{
+  SOCKS_TEST_INIT();
+
   /* SOCKS 4 Send BIND [02] to IP address 2.2.2.2:4369 */
-  cp = "\x04\x02\x11\x11\x02\x02\x02\x02\x00";
-  write_to_buf(cp, 9, buf);
+  ADD_DATA(buf, "\x04\x02\x11\x11\x02\x02\x02\x02\x00");
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == -1);
   test_eq(4, socks->socks_version);
@@ -214,138 +259,186 @@ test_buffers_socks4_unsupported_commands_helper(const char *cp, buf_t *buf,
   ;
 }
 
-/** Helper: Perform supported SOCKS 4 commands */
+/** Perform supported SOCKS 4 commands */
 static void
-test_buffers_socks4_supported_commands_helper(const char *cp, buf_t *buf,
-                                              socks_request_t *socks)
+test_socks_4_supported_commands(void *ptr)
 {
-  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  cp = "\x04\x01\x11\x11\x02\x02\x02\x02\x00";
-  write_to_buf(cp, 9, buf);
+  SOCKS_TEST_INIT();
+
+  test_eq(0, buf_datalen(buf));
+
+  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4370 */
+  ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x03\x00");
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(4, socks->socks_version);
   test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_streq("2.2.2.2", socks->address);
-  test_eq(4369, socks->port);
+  test_eq(SOCKS_COMMAND_CONNECT, socks->command);
+  test_streq("2.2.2.3", socks->address);
+  test_eq(4370, socks->port);
+  test_assert(socks->got_auth == 0);
+  test_assert(! socks->username);
+
+  test_eq(0, buf_datalen(buf));
+  socks_request_clear(socks);
 
   /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
-  cp = "\x04\x01\x11\x11\x02\x02\x02\x02\x02me\x00";
-  write_to_buf(cp, 12, buf);
+  ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x04me\x00");
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(4, socks->socks_version);
   test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_streq("2.2.2.2", socks->address);
-  test_eq(4369, socks->port);
+  test_eq(SOCKS_COMMAND_CONNECT, socks->command);
+  test_streq("2.2.2.4", socks->address);
+  test_eq(4370, socks->port);
+  test_assert(socks->got_auth == 1);
+  test_assert(socks->username);
+  test_eq(2, socks->usernamelen);
+  test_memeq("me", socks->username, 2);
 
-  /* SOCKS 4a Send RESOLVE [F0] request for torproject.org:4369 */
-  cp = "\x04\xF0\x01\x01\x00\x00\x00\x02\x02me\x00tor.org\x00";
-  write_to_buf(cp, 20, buf);
+  test_eq(0, buf_datalen(buf));
+  socks_request_clear(socks);
+
+  /* SOCKS 4a Send RESOLVE [F0] request for torproject.org */
+  ADD_DATA(buf, "\x04\xF0\x01\x01\x00\x00\x00\x02me\x00torproject.org\x00");
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks));
+                                   get_options()->SafeSocks) == 1);
   test_eq(4, socks->socks_version);
   test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_streq("tor.org", socks->address);
+  test_streq("torproject.org", socks->address);
+
+  test_eq(0, buf_datalen(buf));
 
  done:
   ;
 }
 
-/** Helper: Perform supported SOCKS 5 commands */
+/**  Perform unsupported SOCKS 5 commands */
 static void
-test_buffers_socks5_unsupported_commands_helper(const char *cp, buf_t *buf,
-                                                socks_request_t *socks)
+test_socks_5_unsupported_commands(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /* SOCKS 5 Send unsupported BIND [02] command */
-  cp = "\x05\x02\x00\x01\x02\x02\x02\x02\x01\x01";
-  write_to_buf(cp, 10, buf);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == -1);
+  ADD_DATA(buf, "\x05\x02\x00\x01");
+
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                               get_options()->SafeSocks), 0);
+  test_eq(0, buf_datalen(buf));
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]); /* XXX: shouldn't tor reply 'command
-                                  not supported' [07]? */
+  test_eq(0, socks->reply[1]);
+  ADD_DATA(buf, "\x05\x02\x00\x01\x02\x02\x02\x01\x01\x01");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                               get_options()->SafeSocks), -1);
+  /* XXX: shouldn't tor reply 'command not supported' [07]? */
+
+  buf_clear(buf);
+  socks_request_clear(socks);
 
   /* SOCKS 5 Send unsupported UDP_ASSOCIATE [03] command */
-  cp = "\x05\x03\x00\x01\x02\x02\x02\x02\x01\x01";
-  write_to_buf(cp, 10, buf);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == -1);
+  ADD_DATA(buf, "\x05\x03\x00\x01\x02");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                               get_options()->SafeSocks), 0);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]); /* XXX: shouldn't tor reply 'command
-                                  not supported' [07]? */
+  test_eq(0, socks->reply[1]);
+  ADD_DATA(buf, "\x05\x03\x00\x01\x02\x02\x02\x01\x01\x01");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                               get_options()->SafeSocks), -1);
+  /* XXX: shouldn't tor reply 'command not supported' [07]? */
 
  done:
   ;
 }
 
-/** Helper: Perform supported SOCKS 5 commands */
+/** Perform supported SOCKS 5 commands */
 static void
-test_buffers_socks5_supported_commands_helper(const char *cp, buf_t *buf,
-                                        socks_request_t *socks)
+test_socks_5_supported_commands(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  cp = "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11";
-  write_to_buf(cp, 10, buf);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
+  ADD_DATA(buf, "\x05\x01\x00");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks), 0);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
+
+  ADD_DATA(buf, "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks), 1);
   test_streq("2.2.2.2", socks->address);
   test_eq(4369, socks->port);
+
+  test_eq(0, buf_datalen(buf));
+  socks_request_clear(socks);
 
   /* SOCKS 5 Send CONNECT [01] to FQDN torproject.org:4369 */
-  cp = "\x05\x01\x00\x03\x07tor.org\x11\x11";
-  write_to_buf(cp, 14, buf);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks));
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\x01\x00\x03\x0Etorproject.org\x11\x11");
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks), 0);
+  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks), 1);
+
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
-  test_streq("tor.org", socks->address);
+  test_streq("torproject.org", socks->address);
   test_eq(4369, socks->port);
 
-  /* SOCKS 5 Send RESOLVE [F0] request for torproject.org:4369 */
-  cp = "\x05\xF0\x00\x03\x07tor.org";
-  write_to_buf(cp, 14, buf);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks));
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-  test_streq("tor.org", socks->address);
+  test_eq(0, buf_datalen(buf));
+  socks_request_clear(socks);
 
-  /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.2 */
-  cp = "\x05\xF1\x00\x01\x02\x02\x02\x02";
-  write_to_buf(cp, 10, buf);
+  /* SOCKS 5 Send RESOLVE [F0] request for torproject.org:4369 */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\xF0\x00\x03\x0Etorproject.org\x01\x02");
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 0);
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
-  test_streq("2.2.2.2", socks->address);
+  test_streq("torproject.org", socks->address);
+
+  test_eq(0, buf_datalen(buf));
+  socks_request_clear(socks);
+
+  /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\xF1\x00\x01\x02\x02\x02\x05\x01\x03");
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 0);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("2.2.2.5", socks->address);
+
+  test_eq(0, buf_datalen(buf));
 
  done:
   ;
 }
 
-/** Helper: Perform SOCKS 5 authentication */
+/**  Perform SOCKS 5 authentication */
 static void
-test_buffers_socks5_no_authenticate_helper(const char *cp, buf_t *buf,
-                                        socks_request_t *socks)
+test_socks_5_no_authenticate(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /*SOCKS 5 No Authentication */
-  cp = "\x05\x01\x00";
-  write_to_buf(cp, 3, buf);
+  ADD_DATA(buf,"\x05\x01\x00");
   test_assert(!fetch_from_buf_socks(buf, socks,
                                     get_options()->TestSocks,
                                     get_options()->SafeSocks));
@@ -353,9 +446,10 @@ test_buffers_socks5_no_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(5, socks->reply[0]);
   test_eq(SOCKS_NO_AUTH, socks->reply[1]);
 
+  test_eq(0, buf_datalen(buf));
+
   /*SOCKS 5 Send username/password anyway - pretend to be broken */
-  cp = "\x01\x02\x01\x01\x02\x01\x01";
-  write_to_buf(cp, 7, buf);
+  ADD_DATA(buf,"\x01\x02\x01\x01\x02\x01\x01");
   test_assert(!fetch_from_buf_socks(buf, socks,
                                     get_options()->TestSocks,
                                     get_options()->SafeSocks));
@@ -364,18 +458,25 @@ test_buffers_socks5_no_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
+  test_eq(2, socks->usernamelen);
+  test_eq(2, socks->passwordlen);
+
+  test_memeq("\x01\x01", socks->username, 2);
+  test_memeq("\x01\x01", socks->password, 2);
+
  done:
   ;
 }
 
-/** Helper: Perform SOCKS 5 authentication */
+/** Perform SOCKS 5 authentication */
 static void
-test_buffers_socks5_authenticate_helper(const char *cp, buf_t *buf,
-                                        socks_request_t *socks)
+test_socks_5_authenticate(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /* SOCKS 5 Negotiate username/password authentication */
-  cp = "\x05\x01\x02";
-  write_to_buf(cp, 3, buf);
+  ADD_DATA(buf, "\x05\x01\x02");
+
   test_assert(!fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
                                    get_options()->SafeSocks));
@@ -384,9 +485,10 @@ test_buffers_socks5_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(SOCKS_USER_PASS, socks->reply[1]);
   test_eq(5, socks->socks_version);
 
+  test_eq(0, buf_datalen(buf));
+
   /* SOCKS 5 Send username/password */
-  cp = "\x01\x02me\x02me";
-  write_to_buf(cp, 7, buf);
+  ADD_DATA(buf, "\x01\x02me\x08mypasswd");
   test_assert(!fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
                                    get_options()->SafeSocks));
@@ -394,18 +496,26 @@ test_buffers_socks5_authenticate_helper(const char *cp, buf_t *buf,
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
+
+  test_eq(2, socks->usernamelen);
+  test_eq(8, socks->passwordlen);
+
+  test_memeq("me", socks->username, 2);
+  test_memeq("mypasswd", socks->password, 8);
+
  done:
   ;
 }
 
-/** Helper: Perform SOCKS 5 authentication and send data all in one go */
+/** Perform SOCKS 5 authentication and send data all in one go */
 static void
-test_buffers_socks5_authenticate_with_data_helper(const char *cp, buf_t *buf,
-                                                  socks_request_t *socks)
+test_socks_5_authenticate_with_data(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /* SOCKS 5 Negotiate username/password authentication */
-  cp = "\x05\x01\x02";
-  write_to_buf(cp, 3, buf);
+  ADD_DATA(buf, "\x05\x01\x02");
+
   test_assert(!fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
                                    get_options()->SafeSocks));
@@ -414,10 +524,11 @@ test_buffers_socks5_authenticate_with_data_helper(const char *cp, buf_t *buf,
   test_eq(SOCKS_USER_PASS, socks->reply[1]);
   test_eq(5, socks->socks_version);
 
+  test_eq(0, buf_datalen(buf));
+
   /* SOCKS 5 Send username/password */
   /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  cp = "\x01\x02me\x02me\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11";
-  write_to_buf(cp, 17, buf);
+  ADD_DATA(buf, "\x01\x02me\x02me\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
   test_assert(!fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
                                    get_options()->SafeSocks));
@@ -434,18 +545,19 @@ test_buffers_socks5_authenticate_with_data_helper(const char *cp, buf_t *buf,
   test_eq(0, socks->reply[1]);
   test_streq("2.2.2.2", socks->address);
   test_eq(4369, socks->port);
+
  done:
   ;
 }
 
-/** Helper: Perform SOCKS 5 authentication before method negotiated */
+/** Perform SOCKS 5 authentication before method negotiated */
 static void
-test_buffers_socks5_auth_before_negotiation_helper(const char *cp, buf_t *buf,
-                                        socks_request_t *socks)
+test_socks_5_auth_before_negotiation(void *ptr)
 {
+  SOCKS_TEST_INIT();
+
   /* SOCKS 5 Send username/password */
-  cp = "\x01\x02me\x02me";
-  write_to_buf(cp, 7, buf);
+  ADD_DATA(buf, "\x01\x02me\x02me");
   test_assert(fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
                                    get_options()->SafeSocks) == -1);
@@ -467,7 +579,6 @@ test_buffers(void)
 
   buf_t *buf = NULL, *buf2 = NULL;
   const char *cp;
-  socks_request_t *socks;
 
   int j;
   size_t r;
@@ -622,59 +733,6 @@ test_buffers(void)
   test_eq(-1, buf_find_string_offset(buf, "shrdlu", 6));
   test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
   test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
-  buf_free(buf);
-  buf = NULL;
-
-  /* Test fetch_from_buf_socks() */
-  buf = buf_new_with_capacity(256);
-  socks = socks_request_new();
-  config_register_addressmaps(get_options());
-
-  /* Sending auth credentials before we've negotiated a method */
-  test_buffers_socks5_auth_before_negotiation_helper(cp, buf, socks);
-
-  socks_request_free(socks);
-  buf_free(buf);
-  buf = NULL;
-  buf = buf_new_with_capacity(256);
-  socks = socks_request_new();
-
-  /* A SOCKS 5 client that only supports authentication  */
-  test_buffers_socks5_authenticate_helper(cp, buf, socks);
-  test_buffers_socks5_supported_commands_helper(cp, buf, socks);
-  test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
-
-  socks_request_free(socks);
-  buf_free(buf);
-  buf = NULL;
-  buf = buf_new_with_capacity(256);
-  socks = socks_request_new();
-
-  /* A SOCKS 5 client that sends credentials and data in one go  */
-  test_buffers_socks5_authenticate_with_data_helper(cp, buf, socks);
-
-  socks_request_free(socks);
-  buf_free(buf);
-  buf = NULL;
-  buf = buf_new_with_capacity(256);
-  socks = socks_request_new();
-
-  /* A SOCKS 5 client that doesn't want authentication  */
-  test_buffers_socks5_no_authenticate_helper(cp, buf, socks);
-  test_buffers_socks5_supported_commands_helper(cp, buf, socks);
-  test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
-
-  socks_request_free(socks);
-  buf_free(buf);
-  buf = NULL;
-  buf = buf_new_with_capacity(256);
-  socks = socks_request_new();
-
-  /* A SOCKS 4(a) client  */
-  test_buffers_socks4_supported_commands_helper(cp, buf, socks);
-  test_buffers_socks4_unsupported_commands_helper(cp, buf, socks);
-
-  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
 
@@ -1564,6 +1622,23 @@ static struct testcase_t test_array[] = {
   END_OF_TESTCASES
 };
 
+#define SOCKSENT(name)                                  \
+  { #name, test_socks_##name, TT_FORK, &socks_setup, NULL }
+
+static struct testcase_t socks_tests[] = {
+  SOCKSENT(4_unsupported_commands),
+  SOCKSENT(4_supported_commands),
+
+  SOCKSENT(5_unsupported_commands),
+  SOCKSENT(5_supported_commands),
+  SOCKSENT(5_no_authenticate),
+  SOCKSENT(5_auth_before_negotiation),
+  SOCKSENT(5_authenticate),
+  SOCKSENT(5_authenticate_with_data),
+
+  END_OF_TESTCASES
+};
+
 extern struct testcase_t addr_tests[];
 extern struct testcase_t crypto_tests[];
 extern struct testcase_t container_tests[];
@@ -1573,6 +1648,7 @@ extern struct testcase_t microdesc_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
+  { "socks/", socks_tests },
   { "addr/", addr_tests },
   { "crypto/", crypto_tests },
   { "container/", container_tests },
