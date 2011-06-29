@@ -246,7 +246,7 @@ edge_connection_new(int type, int socket_family)
   tor_assert(type == CONN_TYPE_EXIT || type == CONN_TYPE_AP);
   connection_init(time(NULL), TO_CONN(edge_conn), type, socket_family);
   if (type == CONN_TYPE_AP)
-    edge_conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
+    edge_conn->socks_request = socks_request_new();
   return edge_conn;
 }
 
@@ -440,10 +440,8 @@ _connection_free(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     tor_free(edge_conn->chosen_exit_name);
-    if (edge_conn->socks_request) {
-      memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
-      tor_free(edge_conn->socks_request);
-    }
+    if (edge_conn->socks_request)
+      socks_request_free(edge_conn->socks_request);
 
     rend_data_free(edge_conn->rend_data);
   }

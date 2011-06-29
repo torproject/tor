@@ -41,6 +41,8 @@ int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen,
                         int force_complete);
+socks_request_t *socks_request_new(void);
+void socks_request_free(socks_request_t *req);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                          int log_sockstype, int safe_socks);
 int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);

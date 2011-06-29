@@ -627,54 +627,54 @@ test_buffers(void)
 
   /* Test fetch_from_buf_socks() */
   buf = buf_new_with_capacity(256);
-  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  socks = socks_request_new();
   config_register_addressmaps(get_options());
 
   /* Sending auth credentials before we've negotiated a method */
   test_buffers_socks5_auth_before_negotiation_helper(cp, buf, socks);
 
-  tor_free(socks);
+  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
   buf = buf_new_with_capacity(256);
-  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  socks = socks_request_new();
 
   /* A SOCKS 5 client that only supports authentication  */
   test_buffers_socks5_authenticate_helper(cp, buf, socks);
   test_buffers_socks5_supported_commands_helper(cp, buf, socks);
   test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
 
-  tor_free(socks);
+  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
   buf = buf_new_with_capacity(256);
-  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  socks = socks_request_new();
 
   /* A SOCKS 5 client that sends credentials and data in one go  */
   test_buffers_socks5_authenticate_with_data_helper(cp, buf, socks);
 
-  tor_free(socks);
+  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
   buf = buf_new_with_capacity(256);
-  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  socks = socks_request_new();
 
   /* A SOCKS 5 client that doesn't want authentication  */
   test_buffers_socks5_no_authenticate_helper(cp, buf, socks);
   test_buffers_socks5_supported_commands_helper(cp, buf, socks);
   test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
 
-  tor_free(socks);
+  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
   buf = buf_new_with_capacity(256);
-  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  socks = socks_request_new();
 
   /* A SOCKS 4(a) client  */
   test_buffers_socks4_supported_commands_helper(cp, buf, socks);
   test_buffers_socks4_unsupported_commands_helper(cp, buf, socks);
 
-  tor_free(socks);
+  socks_request_free(socks);
   buf_free(buf);
   buf = NULL;
 

@@ -1475,6 +1475,25 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
                               socks_protocol, address, (int)port);
 }
 
+/** Return a new socks_request_t. */
+socks_request_t *
+socks_request_new(void)
+{
+  return tor_malloc_zero(sizeof(socks_request_t));
+}
+
+/** Free all storage held in the socks_request_t <b>req</b>. */
+void
+socks_request_free(socks_request_t *req)
+{
+  if (!req)
+    return;
+  tor_free(req->username);
+  tor_free(req->password);
+  memset(req, 0xCC, sizeof(socks_request_t));
+  tor_free(req);
+}
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -1631,7 +1650,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   tor_addr_t destaddr;
   uint32_t destip;
   uint8_t socksver;
-  enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
   unsigned char usernamelen, passlen;
   struct in_addr in;
@@ -1662,6 +1680,14 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       req->reply[1] = 0; /* authentication successful */
       log_debug(LD_APP,
                "socks5: Accepted username/password without checking.");
+      if (usernamelen) {
+        req->username = tor_memdup(data+2u, usernamelen);
+        req->usernamelen = usernamelen;
+      }
+      if (passlen) {
+        req->password = tor_memdup(data+3u+usernamelen, passlen);
+        req->passwordlen = passlen;
+      }
       *drain_out = 2u + usernamelen + 1u + passlen;
       req->got_auth = 1;
       return 0;
@@ -1813,7 +1839,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
       }
       tor_assert(0);
-    case 4: /* socks4 */
+    case 4: { /* socks4 */
+      enum {socks4, socks4a} socks4_prot = socks4a;
+      const char *authstart, *authend;
       /* http://ss5.sourceforge.net/socks4.protocol.txt */
       /* http://ss5.sourceforge.net/socks4A.protocol.txt */
 
@@ -1854,7 +1882,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         socks4_prot = socks4;
       }
 
-      next = memchr(data+SOCKS4_NETWORK_LEN, 0,
+      authstart = data + SOCKS4_NETWORK_LEN;
+      next = memchr(authstart, 0,
                     datalen-SOCKS4_NETWORK_LEN);
       if (!next) {
         if (datalen >= 1024) {
@@ -1865,6 +1894,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         *want_length_out = datalen+1024; /* ???? */
         return 0;
       }
+      authend = next;
       tor_assert(next < data+datalen);
 
       startaddr = NULL;
@@ -1914,10 +1944,15 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
                  req->port, escaped(req->address));
         return -1;
       }
+      if (authend != authstart) {
+        req->got_auth = 1;
+        req->usernamelen = authend - authstart;
+        req->username = tor_memdup(authstart, authend - authstart);
+      }
       /* next points to the final \0 on inbuf */
       *drain_out = next - data + 1;
       return 1;
-
+    }
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */

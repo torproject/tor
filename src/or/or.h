@@ -3109,6 +3109,18 @@ struct socks_request_t {
                               * make sure we send back a socks reply for
                               * every connection. */
   unsigned int got_auth : 1; /**< Have we received any authentication data? */
+
+  /** Number of bytes in username; 0 if username is NULL */
+  uint8_t usernamelen;
+  /** Number of bytes in password; 0 if password is NULL */
+  uint8_t passwordlen;
+  /** The negotiated username value if any (for socks5), or the entire
+   * authentication string (for socks4).  This value is NOT nul-terminated;
+   * see usernamelen for its length. */
+  char *username;
+  /** The negotiated password value if any (for socks5). This value is NOT
+   * nul-terminated; see usernamelen for its length. */
+  char *password;
 };
 
 /********************************* circuitbuild.c **********************/
