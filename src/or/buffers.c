@@ -1736,9 +1736,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->reply[1] = '\xFF'; /* reject all methods */
           r=-1;
         }
-        /* remove packet from buf. also remove any other extraneous
-         * bytes, to support broken socks clients. */
-        *drain_out = -1;
+        /* Remove packet from buf. Some SOCKS clients will have sent extra
+         * junk at this point; let's hope it's an authentication message. */
+        *drain_out = 2u + nummethods;
 
         return r;
       }
