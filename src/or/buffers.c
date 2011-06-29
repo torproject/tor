@@ -1636,18 +1636,12 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   unsigned char usernamelen, passlen;
   struct in_addr in;
 
-  socksver = *data;
-
-  switch (socksver) { /* which version of socks? */
-
-    case 1: /* socks5: username/password authentication request */
-
-      if (req->socks_version != 5) {
-        log_warn(LD_APP,
-                 "socks5: Received authentication attempt before "
-                 "authentication negotiated. Rejecting.");
-        return -1;
-      }
+  if (req->socks_version == 5 && !req->got_auth) {
+    /* See if we have received authentication.  Strictly speaking, we should
+       also check whether we actually negotiated username/password
+       authentication.  But some broken clients will send us authentication
+       even if we negotiated SOCKS_NO_AUTH. */
+    if (*data == 1) { /* username/pass version 1 */
       /* Format is: authversion [1 byte] == 1
                     usernamelen [1 byte]
                     username    [usernamelen bytes]
@@ -1669,8 +1663,19 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       log_debug(LD_APP,
                "socks5: Accepted username/password without checking.");
       *drain_out = 2u + usernamelen + 1u + passlen;
+      req->got_auth = 1;
       return 0;
+    } else if (req->auth_type == SOCKS_USER_PASS) {
+      /* unknown version byte */
+      log_warn(LD_APP, "Socks5 username/password version %d not recognized; "
+               "rejecting.", (int)*data);
+      return -1;
+    }
+  }
 
+  socksver = *data;
+
+  switch (socksver) { /* which version of socks? */
     case 5: /* socks5 */
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
@@ -1691,7 +1696,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->socks_version = 5; /* remember we've already negotiated auth */
           log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
           r=0;
-        } else if (memchr(data+2, SOCKS_USER_PASS,nummethods)) {
+        } else if (memchr(data+2, SOCKS_USER_PASS, nummethods)) {
+          req->auth_type = SOCKS_USER_PASS;
           req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
                                               auth method */
           req->socks_version = 5; /* remember we've already negotiated auth */
@@ -1911,7 +1917,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
     case 'H': /* head */
     case 'P': /* put/post */
     case 'C': /* connect */
-      strlcpy(req->reply,
+      strlcpy((char*)req->reply,
 "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
 "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
 "<html>\n"
@@ -1937,7 +1943,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 "</body>\n"
 "</html>\n"
              , MAX_SOCKS_REPLY_LEN);
-      req->replylen = strlen(req->reply)+1;
+      req->replylen = strlen((char*)req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,
