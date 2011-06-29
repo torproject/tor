@@ -1883,6 +1883,7 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
   socks_request_t *socks;
   int sockshere;
   or_options_t *options = get_options();
+  int had_reply = 0;
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
@@ -1900,22 +1901,18 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     sockshere = fetch_from_buf_socks(conn->_base.inbuf, socks,
                                      options->TestSocks, options->SafeSocks);
   };
+
+  if (socks->replylen) {
+    had_reply = 1;
+    connection_write_to_buf(socks->reply, socks->replylen, TO_CONN(conn));
+    socks->replylen = 0;
+  }
+
   if (sockshere == 0) {
-    if (socks->replylen) {
-      connection_write_to_buf(socks->reply, socks->replylen, TO_CONN(conn));
-      /* zero it out so we can do another round of negotiation */
-      socks->replylen = 0;
-    } else {
-      log_debug(LD_APP,"socks handshake not all here yet.");
-    }
+    log_debug(LD_APP,"socks handshake not all here yet.");
     return 0;
   } else if (sockshere == -1) {
-    if (socks->replylen) { /* we should send reply back */
-      log_debug(LD_APP,"reply is already set for us. Using it.");
-      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
-                                          END_STREAM_REASON_SOCKSPROTOCOL);
-
-    } else {
+    if (!had_reply) {
       log_warn(LD_APP,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0,
                                           END_STREAM_REASON_SOCKSPROTOCOL);

@@ -382,8 +382,6 @@ test_socks_5_supported_commands(void *ptr)
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\x01\x00\x03\x0Etorproject.org\x11\x11");
   test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks), 0);
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks), 1);
 
   test_eq(5, socks->socks_version);
@@ -400,8 +398,6 @@ test_socks_5_supported_commands(void *ptr)
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF0\x00\x03\x0Etorproject.org\x01\x02");
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 0);
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
@@ -415,8 +411,6 @@ test_socks_5_supported_commands(void *ptr)
   /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF1\x00\x01\x02\x02\x02\x05\x01\x03");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 0);
   test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
@@ -528,23 +522,22 @@ test_socks_5_authenticate_with_data(void *ptr)
 
   /* SOCKS 5 Send username/password */
   /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  ADD_DATA(buf, "\x01\x02me\x02me\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
-  test_assert(!fetch_from_buf_socks(buf, socks,
+  ADD_DATA(buf, "\x01\x02me\x03you\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
+  test_assert(fetch_from_buf_socks(buf, socks,
                                    get_options()->TestSocks,
-                                   get_options()->SafeSocks));
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
   test_eq(0, socks->reply[1]);
+
   test_streq("2.2.2.2", socks->address);
   test_eq(4369, socks->port);
+
+  test_eq(2, socks->usernamelen);
+  test_eq(3, socks->passwordlen);
+  test_memeq("me", socks->username, 2);
+  test_memeq("you", socks->password, 3);
 
  done:
   ;

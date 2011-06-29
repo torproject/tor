@@ -1544,9 +1544,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     else if (n_drain > 0)
       buf_remove_from_front(buf, n_drain);
 
-  } while (res == 0 && buf->head &&
-           buf->datalen > buf->head->datalen &&
-           want_length < buf->head->datalen);
+  } while (res == 0 && buf->head && want_length < buf->datalen);
 
   return res;
 }
@@ -1690,6 +1688,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       *drain_out = 2u + usernamelen + 1u + passlen;
       req->got_auth = 1;
+      *want_length_out = 7; /* Minimal socks5 sommand. */
       return 0;
     } else if (req->auth_type == SOCKS_USER_PASS) {
       /* unknown version byte */
@@ -1749,8 +1748,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       /* we know the method; read in the request */
       log_debug(LD_APP,"socks5: checking request");
-      if (datalen < 8) {/* basic info plus >=2 for addr plus 2 for port */
-        *want_length_out = 8;
+      if (datalen < 7) {/* basic info plus >=1 for addr plus 2 for port */
+        *want_length_out = 7;
         return 0; /* not yet */
       }
       req->command = (unsigned char) *(data+1);
@@ -1891,7 +1890,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
         }
         log_debug(LD_APP,"socks4: Username not here yet.");
-        *want_length_out = datalen+1024; /* ???? */
+        *want_length_out = datalen+1024; /* More than we need, but safe */
         return 0;
       }
       authend = next;
@@ -1919,7 +1918,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
             return -1;
           }
           log_debug(LD_APP,"socks4: Destaddr not all here yet.");
-          *want_length_out = datalen + 1024;
+          *want_length_out = datalen + 1024; /* More than we need, but safe */
           return 0;
         }
         if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
