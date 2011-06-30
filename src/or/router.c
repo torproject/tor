@@ -1116,14 +1116,12 @@ set_server_advertised(int s)
   server_is_advertised = s;
 }
 
-/** Return true iff we are trying to be a socks proxy. */
+/** Return true iff we are trying to proxy client connections. */
 int
 proxy_mode(const or_options_t *options)
 {
-  return (options->SocksPort != 0 ||
-          options->TransPort != 0 ||
-          options->NATDPort != 0 ||
-          options->DNSPort != 0);
+  (void)options;
+  return smartlist_len(get_configured_client_ports()) > 0;
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:

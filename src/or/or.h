@@ -2542,6 +2542,47 @@ typedef enum invalid_router_usage_t {
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
 #define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
 
+/** @name Isolation flags
+
+    Ways to isolate client streams
+
+    @{
+*/
+/** Isolate based on destination port */
+#define ISO_DESTPORT    (1u<<0)
+/** Isolate based on destination address */
+#define ISO_DESTADDR    (1u<<1)
+/** Isolate based on SOCKS authentication */
+#define ISO_SOCKSAUTH   (1u<<2)
+/** Isolate based on client protocol choice */
+#define ISO_CLIENTPROTO (1u<<3)
+/** Isolate based on client address */
+#define ISO_CLIENTADDR  (1u<<4)
+/** Isolate based on session group (always on). */
+#define ISO_SESSIONGRP  (1u<<5)
+/**@}*/
+
+/** Default isolation level for ports. */
+#define ISO_DEFAULT (ISO_CLIENTADDR|ISO_SOCKSAUTH|ISO_SESSIONGRP)
+
+/** Configuration for a single port that we're listening on. */
+typedef struct port_cfg_t {
+  tor_addr_t addr; /**< The configured address to listen on. */
+  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
+             * own port. */
+  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
+  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
+
+  /* Client port types (socks, dns, trans, natd) only: */
+  uint8_t isolate; /**< Zero or more isolation flags */
+  int sessiongroup; /**< A session group, or -1 if this port is not in a
+                     * session group. */
+
+  /* Unix sockets only: */
+  /** Path for an AF_UNIX address */
+  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
+} port_cfg_t;
+
 /** A linked list of lines in a config file. */
 typedef struct config_line_t {
   char *key;
@@ -2637,16 +2678,17 @@ typedef struct {
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   int ORPort; /**< Port to listen on for OR connections. */
-  int SocksPort; /**< Port to listen on for SOCKS connections. */
-  /** Port to listen on for transparent pf/netfilter connections. */
-  int TransPort;
-  int NATDPort; /**< Port to listen on for transparent natd connections. */
+  config_line_t *SocksPort; /**< Ports to listen on for SOCKS connections. */
+  /** Ports to listen on for transparent pf/netfilter connections. */
+  config_line_t *TransPort;
+  config_line_t *NATDPort; /**< Ports to listen on for transparent natd
+                            * connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
   int DirPort; /**< Port to listen on for directory connections. */
-  int DNSPort; /**< Port to listen on for DNS requests. */
+  config_line_t *DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory

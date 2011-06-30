@@ -1,0 +1,11 @@
+  o Minor features:
+    - There's a new syntax for specifying multiple client ports (such as
+      SOCKSPort, TransPort, DNSPort, NATDPort): you can now just declare
+      multiple ...Port entries with full addr:port syntax on each.
+      The old ...ListenAddress format is still supported, but you can't
+      mix it with the new SOCKSPort syntax.
+
+  o Code simplifications and refactoring:
+    - Rewrote the listener-selection logic so that parsing which ports
+      we want to listen on is now separate form binding to the ports
+      we want.
