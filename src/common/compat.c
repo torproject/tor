@@ -1225,7 +1225,8 @@ log_credential_status(void)
   /* Read, effective and saved GIDs */
   gid_t rgid, egid, sgid;
   /* Supplementary groups */
-  gid_t sup_gids[NGROUPS_MAX + 1];
+  gid_t *sup_gids = NULL;
+  int sup_gids_size;
   /* Number of supplementary groups */
   int ngids;
 
@@ -1271,9 +1272,19 @@ log_credential_status(void)
 #endif
 
   /* log supplementary groups */
-  if ((ngids = getgroups(NGROUPS_MAX + 1, sup_gids)) < 0) {
+  sup_gids_size = 64;
+  sup_gids = tor_malloc(sizeof(gid_t) * 64);
+  while ((ngids = getgroups(sup_gids_size, sup_gids)) < 0 &&
+         errno == EINVAL &&
+         sup_gids_size < NGROUPS_MAX) {
+    sup_gids_size *= 2;
+    sup_gids = tor_realloc(sup_gids, sizeof(gid_t) * sup_gids_size);
+  }
+
+  if (ngids < 0) {
     log_warn(LD_GENERAL, "Error getting supplementary GIDs: %s",
              strerror(errno));
+    tor_free(sup_gids);
     return -1;
   } else {
     int i, retval = 0;
@@ -1303,6 +1314,7 @@ log_credential_status(void)
       tor_free(cp);
     });
     smartlist_free(elts);
+    tor_free(sup_gids);
 
     return retval;
   }
