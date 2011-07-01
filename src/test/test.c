@@ -1318,7 +1318,10 @@ main(int c, const char **v)
   }
 
   options->command = CMD_RUN_UNITTESTS;
-  crypto_global_init(0, NULL, NULL);
+  if (crypto_global_init(0, NULL, NULL)) {
+    printf("Can't initialize crypto subsystem; exiting.\n");
+    return 1;
+  }
   rep_hist_init();
   network_init();
   setup_directory();
