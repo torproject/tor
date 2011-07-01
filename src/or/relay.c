@@ -2337,13 +2337,13 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 
     /* Calculate the exact time that this cell has spent in the queue. */
     if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
-      struct timeval now;
+      struct timeval tvnow;
       uint32_t flushed;
       uint32_t cell_waiting_time;
       insertion_time_queue_t *it_queue = queue->insertion_times;
-      tor_gettimeofday_cached(&now);
-      flushed = (uint32_t)((now.tv_sec % SECONDS_IN_A_DAY) * 100L +
-                 (uint32_t)now.tv_usec / (uint32_t)10000L);
+      tor_gettimeofday_cached(&tvnow);
+      flushed = (uint32_t)((tvnow.tv_sec % SECONDS_IN_A_DAY) * 100L +
+                 (uint32_t)tvnow.tv_usec / (uint32_t)10000L);
       if (!it_queue || !it_queue->first) {
         log_info(LD_GENERAL, "Cannot determine insertion time of cell. "
                              "Looks like the CellStatistics option was "

@@ -2274,6 +2274,8 @@ hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
     return 0;
 
   if (nn_char == '=' || nn_char == '~') {
+    if (!nickname)
+      return 0;
     if (strcasecmp(nn_buf, nickname))
       return 0;
     if (nn_char == '=' && !is_named)
