@@ -2367,7 +2367,7 @@ options_trial_assign(config_line_t *list, int use_defaults,
  * Called from option_reset() and config_free(). */
 static void
 option_clear(const config_format_t *fmt, or_options_t *options,
-             const const config_var_t *var)
+             const config_var_t *var)
 {
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
   (void)fmt; /* unused */
