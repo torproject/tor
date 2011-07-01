@@ -2592,7 +2592,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
  * Always return 0. */
 static int
 directory_handle_command_get(dir_connection_t *conn, const char *headers,
-                             const char *body, size_t body_len)
+                             const char *req_body, size_t req_body_len)
 {
   size_t dlen;
   char *url, *url_mem, *header;
@@ -2602,8 +2602,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   size_t url_len;
 
   /* We ignore the body of a GET request. */
-  (void)body;
-  (void)body_len;
+  (void)req_body;
+  (void)req_body_len;
 
   log_debug(LD_DIRSERV,"Received GET command.");
 

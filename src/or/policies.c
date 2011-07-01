@@ -83,15 +83,15 @@ policy_expand_private(smartlist_t **policy)
        continue;
      }
      for (i = 0; private_nets[i]; ++i) {
-       addr_policy_t policy;
-       memcpy(&policy, p, sizeof(addr_policy_t));
-       policy.is_private = 0;
-       policy.is_canonical = 0;
-       if (tor_addr_parse_mask_ports(private_nets[i], &policy.addr,
-                                  &policy.maskbits, &port_min, &port_max)<0) {
+       addr_policy_t newpolicy;
+       memcpy(&newpolicy, p, sizeof(addr_policy_t));
+       newpolicy.is_private = 0;
+       newpolicy.is_canonical = 0;
+       if (tor_addr_parse_mask_ports(private_nets[i], &newpolicy.addr,
+                               &newpolicy.maskbits, &port_min, &port_max)<0) {
          tor_assert(0);
        }
-       smartlist_add(tmp, addr_policy_get_canonical_entry(&policy));
+       smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
      }
      addr_policy_free(p);
   });

@@ -1831,8 +1831,8 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	r = sendto(port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
 	if (r<0) {
-		int err = last_error(port->socket);
-		if (! error_is_eagain(err))
+		int error = last_error(port->socket);
+		if (! error_is_eagain(error))
 			return -1;
 
 		if (port->pending_replies) {

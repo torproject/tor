@@ -3512,10 +3512,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
 
     siglist = detached_get_signatures(sigs, flavor);
     is_duplicate = 0;
-    SMARTLIST_FOREACH(siglist, document_signature_t *, s, {
-      if (s->alg == alg &&
-          tor_memeq(id_digest, s->identity_digest, DIGEST_LEN) &&
-          tor_memeq(sk_digest, s->signing_key_digest, DIGEST_LEN)) {
+    SMARTLIST_FOREACH(siglist, document_signature_t *, dsig, {
+      if (dsig->alg == alg &&
+          tor_memeq(id_digest, dsig->identity_digest, DIGEST_LEN) &&
+          tor_memeq(sk_digest, dsig->signing_key_digest, DIGEST_LEN)) {
         is_duplicate = 1;
       }
     });
