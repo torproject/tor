@@ -854,7 +854,13 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
 
   sockaddr = tor_malloc_zero(sizeof(struct sockaddr_un));
   sockaddr->sun_family = AF_UNIX;
-  strncpy(sockaddr->sun_path, listenaddress, sizeof(sockaddr->sun_path));
+  if (strlcpy(sockaddr->sun_path, listenaddress, sizeof(sockaddr->sun_path))
+      >= sizeof(sockaddr->sun_path)) {
+    log_warn(LD_CONFIG, "Unix socket path '%s' is too long to fit.",
+             escaped(listenaddress));
+    tor_free(sockaddr);
+    return NULL;
+  }
 
   if (readable_address)
     *readable_address = tor_strdup(listenaddress);

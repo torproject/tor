@@ -2440,7 +2440,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
         tor_free(line);
         return -1;
       }
-      strncpy(out->node_hex, cp, sizeof(out->node_hex));
+      strlcpy(out->node_hex, cp, sizeof(out->node_hex));
       got_node_id=1;
     }
   } while ((cp = tor_strtok_r(NULL, " \t", &strtok_state)));
