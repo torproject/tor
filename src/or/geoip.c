@@ -116,10 +116,10 @@ geoip_parse_entry(const char *line)
     ++line;
   if (*line == '#')
     return 0;
-  if (sscanf(line,"%u,%u,%2s", &low, &high, b) == 3) {
+  if (tor_sscanf(line,"%u,%u,%2s", &low, &high, b) == 3) {
     geoip_add_entry(low, high, b);
     return 0;
-  } else if (sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
+  } else if (tor_sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
     geoip_add_entry(low, high, b);
     return 0;
   } else {

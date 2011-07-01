@@ -264,7 +264,7 @@ tor_decode_libevent_version(const char *v)
 
   /* Try the new preferred "1.4.11-stable" format.
    * Also accept "1.4.14b-stable". */
-  fields = sscanf(v, "%u.%u.%u%c%c", &major, &minor, &patchlevel, &c, &e);
+  fields = tor_sscanf(v, "%u.%u.%u%c%c", &major, &minor, &patchlevel, &c, &e);
   if (fields == 3 ||
       ((fields == 4 || fields == 5 ) && (c == '-' || c == '_')) ||
       (fields == 5 && TOR_ISALPHA(c) && (e == '-' || e == '_'))) {
@@ -272,7 +272,7 @@ tor_decode_libevent_version(const char *v)
   }
 
   /* Try the old "1.3e" format. */
-  fields = sscanf(v, "%u.%u%c%c", &major, &minor, &c, &extra);
+  fields = tor_sscanf(v, "%u.%u%c%c", &major, &minor, &c, &extra);
   if (fields == 3 && TOR_ISALPHA(c)) {
     return V_OLD(major, minor, c);
   } else if (fields == 2) {
