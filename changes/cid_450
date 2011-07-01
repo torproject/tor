@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Don't stack-allocate the list of supplementary GIDs when we're
+      about to log them. Stack-allocating NGROUPS_MAX gid_t elements
+      could take up to 256K, which is way too much stack.  Found by
+      Coverity; CID #450. Bugfix on 0.2.1.7-alpha.
