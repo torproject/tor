@@ -4105,47 +4105,45 @@ assert_connection_ok(connection_t *conn, time_t now)
  *  proxy server we are using.
  *  <b>conn</b> contains the connection we are using the proxy for.
  *
- *  Returns:
- *  0: if we were successfull
- *  1: if we are not using a proxy
- *  -1: if we are using a proxy but its addrport could not be
- *  found. */
+ *  Return 0 on success, -1 on failure.
+ */
 int
-get_proxy_addrport(tor_addr_t *addr, uint16_t *port,
-                   connection_t *conn)
+get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
+                   const connection_t *conn)
 {
   or_options_t *options = get_options();
 
   if (options->HTTPSProxy) {
     tor_addr_copy(addr, &options->HTTPSProxyAddr);
     *port = options->HTTPSProxyPort;
-    goto done;
+    *proxy_type = PROXY_CONNECT;
+    return 0;
   } else if (options->Socks4Proxy) {
     tor_addr_copy(addr, &options->Socks4ProxyAddr);
     *port = options->Socks4ProxyPort;
-    goto done;
+    *proxy_type = PROXY_SOCKS4;
+    return 0;
   } else if (options->Socks5Proxy) {
     tor_addr_copy(addr, &options->Socks5ProxyAddr);
     *port = options->Socks5ProxyPort;
-    goto done;
+    *proxy_type = PROXY_SOCKS5;
+    return 0;
   } else if (options->ClientTransportPlugin ||
              options->Bridges) {
-    const transport_t *transport=NULL;
+    const transport_t *transport = NULL;
     int r;
     r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
-    if (r == 0) { /* transport found */
-      tor_assert(transport);
+    if (r<0)
+      return -1;
+    if (transport) { /* transport found */
       tor_addr_copy(addr, &transport->addr);
       *port = transport->port;
-      goto done;
-    } else {
-      return r;
+      *proxy_type = transport->socks_version;
+      return 0;
     }
   }
 
-  return 1;
-
- done: /* proxy found */
+  *proxy_type = PROXY_NONE;
   return 0;
 }
 
@@ -4174,8 +4172,9 @@ log_failed_proxy_connection(connection_t *conn)
 {
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
+  int proxy_type;
 
-  if (get_proxy_addrport(&proxy_addr, &proxy_port, conn) != 0)
+  if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, conn) != 0)
     return; /* if we have no proxy set up, leave this function. */
 
   log_warn(LD_NET,

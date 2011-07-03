@@ -230,6 +230,8 @@ typedef enum {
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
+/* !!!! If there is ever a PROXY_* type over 2, we must grow the proxy_type
+ * field in or_connection_t */
 /* pluggable transports proxy type */
 #define PROXY_PLUGGABLE 4
 
@@ -1097,6 +1099,7 @@ typedef struct or_connection_t {
    * router itself has a problem.
    */
   unsigned int is_bad_for_new_circs:1;
+  unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   circid_t next_circ_id; /**< Which circ_id do we try to use next on

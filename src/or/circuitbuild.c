@@ -4810,18 +4810,17 @@ find_bridge_by_digest(const char *digest)
  * bridge of ours that uses pluggable transports, place its transport
  * in <b>transport</b>.
  *
- * Return:
- * 0: if transport was found successfully.
- * 1: if <b>addr</b>:<b>port</b> did not match a bridge,
- *    or if matched bridge was not using transports.
- * -1: if we should be using a transport, but the transport could not be found.
+ * Return 0 on success (found a transport, or found a bridge with no
+ * transport, or found no bridge); return -1 if we should be using a
+ * transport, but the transport could not be found.
  */
 int
 find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                   const transport_t **transport)
 {
+  *transport = NULL;
   if (!bridge_list)
-    return 1;
+    return 0;
 
   SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
     if (tor_addr_eq(&bridge->addr, addr) &&
@@ -4839,7 +4838,8 @@ find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
     }
   } SMARTLIST_FOREACH_END(bridge);
 
-  return 1;
+  *transport = NULL;
+  return 0;
 }
 
 /** We need to ask <b>bridge</b> for its server descriptor. */

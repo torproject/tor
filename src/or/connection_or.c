@@ -317,7 +317,7 @@ connection_or_finished_flushing(or_connection_t *conn)
 int
 connection_or_finished_connecting(or_connection_t *or_conn)
 {
-  int proxy_type;
+  const int proxy_type = or_conn->proxy_type;
   connection_t *conn;
   tor_assert(or_conn);
   conn = TO_CONN(or_conn);
@@ -326,27 +326,6 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
   control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
-
-  proxy_type = PROXY_NONE;
-
-  if (get_options()->HTTPSProxy)
-    proxy_type = PROXY_CONNECT;
-  else if (get_options()->Socks4Proxy)
-    proxy_type = PROXY_SOCKS4;
-  else if (get_options()->Socks5Proxy)
-    proxy_type = PROXY_SOCKS5;
-  else if (get_options()->ClientTransportPlugin) {
-    const transport_t *transport=NULL;
-    int r;
-    r = find_transport_by_bridge_addrport(&conn->addr,conn->port,&transport);
-    if (r == 0) {
-      tor_assert(transport);
-      log_debug(LD_GENERAL, "Found transport. Setting proxy type!\n");
-      proxy_type = transport->socks_version;
-    } else if (r == -1) {
-      return -1;
-    }
-  }
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */
@@ -846,6 +825,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   int r;
   tor_addr_t proxy_addr;
   uint16_t proxy_port;
+  int proxy_type;
 
   tor_assert(_addr);
   tor_assert(id_digest);
@@ -864,12 +844,15 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
   /* If we are using a proxy server, find it and use it. */
-  r = get_proxy_addrport(&proxy_addr, &proxy_port, TO_CONN(conn));
-  if (r == 0) { /* proxy found. */
-    tor_addr_copy(&addr, &proxy_addr);
-    port = proxy_port;
-    conn->_base.proxy_state = PROXY_INFANT;
-  } else if (r == -1) { /* proxy could not be found. */
+  r = get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, TO_CONN(conn));
+  if (r == 0) {
+    conn->proxy_type = proxy_type;
+    if (proxy_type != PROXY_NONE) {
+      tor_addr_copy(&addr, &proxy_addr);
+      port = proxy_port;
+      conn->_base.proxy_state = PROXY_INFANT;
+    }
+  } else {
     log_warn(LD_GENERAL, "Tried to connect through proxy, but proxy address "
              "could not be found.");
     connection_free(TO_CONN(conn));
