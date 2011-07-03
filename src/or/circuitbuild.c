@@ -4611,7 +4611,7 @@ transport_get_by_name(const char *name)
   if (!transport_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
+  SMARTLIST_FOREACH_BEGIN(transport_list, const transport_t *, transport) {
     if (!strcmp(transport->name, name))
       return transport;
   } SMARTLIST_FOREACH_END(transport);
@@ -4628,14 +4628,15 @@ int
 transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                           const char *name, int socks_ver)
 {
-  transport_t *t = tor_malloc_zero(sizeof(transport_t));
+  transport_t *t;
 
   if (transport_get_by_name(name)) { /* check for duplicate names */
-    log_notice(LD_CONFIG, "More than one transports have '%s' as "
-               "their name.", name);
-    goto err;
+    log_warn(LD_CONFIG, "More than one transport has '%s' as "
+             "its name.", name);
+    return -1;
   }
 
+  t = tor_malloc_zero(sizeof(transport_t));
   tor_addr_copy(&t->addr, addr);
   t->port = port;
   t->name = tor_strdup(name);
@@ -4646,10 +4647,6 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
 
   smartlist_add(transport_list, t);
   return 0;
-
- err:
-  tor_free(t);
-  return -1;
 }
 
 /** Warns the user of possible pluggable transport misconfiguration. */
@@ -4657,20 +4654,19 @@ void
 validate_pluggable_transports_config(void)
 {
   if (bridge_list) {
-    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b)
-      {
-        /* Skip bridges without transports. */
-        if (!b->transport_name)
-          continue;
-        /* See if the user has Bridges that specify nonexistent
-           pluggable transports. We should warn the user in such case,
-           since it's probably misconfiguration. */
-        if (!transport_get_by_name(b->transport_name))
-          log_warn(LD_CONFIG, "You have a Bridge line using the %s "
-                   "pluggable transport, but there doesn't seem to be a "
-                   "corresponding ClientTransportPlugin line.",
-                   b->transport_name);
-      }  SMARTLIST_FOREACH_END(b);
+    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+      /* Skip bridges without transports. */
+      if (!b->transport_name)
+        continue;
+      /* See if the user has Bridges that specify nonexistent
+         pluggable transports. We should warn the user in such case,
+         since it's probably misconfiguration. */
+      if (!transport_get_by_name(b->transport_name))
+        log_warn(LD_CONFIG, "You have a Bridge line using the %s "
+                 "pluggable transport, but there doesn't seem to be a "
+                 "corresponding ClientTransportPlugin line.",
+                 b->transport_name);
+    } SMARTLIST_FOREACH_END(b);
   }
 }
 
@@ -4811,7 +4807,7 @@ find_bridge_by_digest(const char *digest)
 }
 
 /** If <b>addr</b> and <b>port</b> match the address and port of a
- * bridge of ours that uses pluggable transports, place it's transport
+ * bridge of ours that uses pluggable transports, place its transport
  * in <b>transport</b>.
  *
  * Return:
@@ -4827,22 +4823,21 @@ find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
   if (!bridge_list)
     return 1;
 
-  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
-    {
-      if (tor_addr_eq(&bridge->addr, addr) &&
-          (bridge->port == port)) { /* bridge matched */
-        if (bridge->transport_name) { /* it also uses pluggable transports */
-          *transport = transport_get_by_name(bridge->transport_name);
-          if (*transport == NULL) { /* it uses pluggable transports, but
-                                       the transport could not be found! */
-            return -1;
-          }
-          return 0;
-        } else { /* bridge matched, but it doesn't use transports. */
-          break;
+  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
+    if (tor_addr_eq(&bridge->addr, addr) &&
+        (bridge->port == port)) { /* bridge matched */
+      if (bridge->transport_name) { /* it also uses pluggable transports */
+        *transport = transport_get_by_name(bridge->transport_name);
+        if (*transport == NULL) { /* it uses pluggable transports, but
+                                     the transport could not be found! */
+          return -1;
         }
+        return 0;
+      } else { /* bridge matched, but it doesn't use transports. */
+        break;
       }
-    } SMARTLIST_FOREACH_END(bridge);
+    }
+  } SMARTLIST_FOREACH_END(bridge);
 
   return 1;
 }

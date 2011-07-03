@@ -205,7 +205,7 @@ static config_var_t _option_vars[] = {
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
-  VAR("ClientTransportPlugin",   LINELIST, ClientTransportPlugin,  NULL),
+  V(ClientTransportPlugin,       LINELIST, NULL),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
@@ -3565,7 +3565,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* Check if more than one proxy type has been enabled. */
   if (!!options->Socks4Proxy + !!options->Socks5Proxy +
       !!options->HTTPSProxy + !!options->ClientTransportPlugin > 1)
-    REJECT("You have configured more than one proxy types. "
+    REJECT("You have configured more than one proxy type. "
            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
 
   if (options->Socks5ProxyUsername) {
@@ -3686,18 +3686,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("TunnelDirConns set to 0 only works with UseBridges set to 0");
 
-  if (options->ClientTransportPlugin) {
-    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_client_transport_line(cl->value, 1)<0)
-        REJECT("Transport line did not parse. See logs for details.");
-    }
+  for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+    if (parse_client_transport_line(cl->value, 1)<0)
+      REJECT("Transport line did not parse. See logs for details.");
   }
 
-  if (options->Bridges) {
-    for (cl = options->Bridges; cl; cl = cl->next) {
-      if (parse_bridge_line(cl->value, 1)<0)
-        REJECT("Bridge line did not parse. See logs for details.");
-    }
+  for (cl = options->Bridges; cl; cl = cl->next) {
+    if (parse_bridge_line(cl->value, 1)<0)
+      REJECT("Bridge line did not parse. See logs for details.");
   }
 
   if (options->ConstrainedSockets) {
@@ -4605,8 +4601,9 @@ parse_bridge_line(const char *line, int validate_only)
     transport_name = field1;
     addrport = smartlist_get(items, 0);
     smartlist_del_keeporder(items, 0);
-  } else
+  } else {
     addrport = field1;
+  }
 
   if (tor_addr_port_parse(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
@@ -4632,21 +4629,21 @@ parse_bridge_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-      log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
-                fmt_addr(&addr), (int)port,
-                transport_name ? transport_name : "no transport",
-                fingerprint ? fingerprint : "no key listed");
-      bridge_add_from_config(&addr, port,
-                             fingerprint ? digest : NULL,transport_name);
+    log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
+              fmt_addr(&addr), (int)port,
+              transport_name ? transport_name : "no transport",
+              fingerprint ? fingerprint : "no key listed");
+    bridge_add_from_config(&addr, port,
+                           fingerprint ? digest : NULL, transport_name);
   }
 
   r = 0;
   goto done;
 
-  err:
+ err:
   r = -1;
 
-  done:
+ done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);

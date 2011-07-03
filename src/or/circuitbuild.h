@@ -14,13 +14,13 @@
 
 /** Represents a pluggable transport proxy used by a bridge. */
 typedef struct {
-  /* SOCKS version */
+  /** SOCKS version: One of PROXY_SOCKS4, PROXY_SOCKS5. */
   int socks_version;
-  /* Name of pluggable transport protocol */
+  /** Name of pluggable transport protocol */
   char *name;
-  /* Address of proxy */
+  /** Address of proxy */
   tor_addr_t addr;
-  /* Port of proxy */
+  /** Port of proxy */
   uint16_t port;
 } transport_t;
 
