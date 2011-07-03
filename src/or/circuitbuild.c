@@ -123,7 +123,7 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
 
-static transport_t *transport_get_by_name(const char *name);
+static const transport_t *transport_get_by_name(const char *name);
 static void transport_free(transport_t *transport);
 static void bridge_free(bridge_info_t *bridge);
 
@@ -4603,7 +4603,7 @@ transport_free(transport_t *transport)
 
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
-static transport_t *
+static const transport_t *
 transport_get_by_name(const char *name)
 {
   tor_assert(name);
@@ -4822,7 +4822,7 @@ find_bridge_by_digest(const char *digest)
  */
 int
 find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                  transport_t **transport)
+                                  const transport_t **transport)
 {
   if (!bridge_list)
     return 1;

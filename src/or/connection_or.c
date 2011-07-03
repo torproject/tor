@@ -336,7 +336,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   else if (get_options()->Socks5Proxy)
     proxy_type = PROXY_SOCKS5;
   else if (get_options()->ClientTransportPlugin) {
-    transport_t *transport=NULL;
+    const transport_t *transport=NULL;
     int r;
     r = find_transport_by_bridge_addrport(&conn->addr,conn->port,&transport);
     if (r == 0) {

@@ -4130,7 +4130,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port,
     goto done;
   } else if (options->ClientTransportPlugin ||
              options->Bridges) {
-    transport_t *transport=NULL;
+    const transport_t *transport=NULL;
     int r;
     r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
     if (r == 0) { /* transport found */
@@ -4197,5 +4197,6 @@ proxy_type_to_string(int proxy_type)
   case PROXY_NONE:      return "NULL";
   default:              tor_assert(0);
   }
+  return NULL; /*Unreached*/
 }
 

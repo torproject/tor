@@ -143,7 +143,7 @@ void clear_transport_list(void);
 int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                      transport_t **transport);
+                                      const transport_t **transport);
 void validate_pluggable_transports_config(void);
 
 #endif
