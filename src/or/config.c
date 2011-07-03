@@ -4597,8 +4597,13 @@ parse_bridge_line(const char *line, int validate_only)
   field1 = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
 
-  if (!strstr(field1, ".")) { /* new-style bridge line */
+  if (!(strstr(field1, ".") || strstr(field1, ":"))) {
+    /* new-style bridge line */
     transport_name = field1;
+    if (smartlist_len(items) < 1) {
+      log_warn(LD_CONFIG, "Too few items to Bridge line.");
+      goto err;
+    }
     addrport = smartlist_get(items, 0);
     smartlist_del_keeporder(items, 0);
   } else {
