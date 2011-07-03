@@ -4680,10 +4680,8 @@ parse_client_transport_line(const char *line, int validate_only)
   }
 
   name = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
 
-  socks_ver_str = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
+  socks_ver_str = smartlist_get(items, 1);
 
   if (!strcmp(socks_ver_str,"socks4"))
     socks_ver = PROXY_SOCKS4;
@@ -4695,8 +4693,7 @@ parse_client_transport_line(const char *line, int validate_only)
     goto err;
   }
 
-  addrport = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
+  addrport = smartlist_get(items, 2);
 
   if (tor_addr_port_parse(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing transport "
@@ -4714,8 +4711,7 @@ parse_client_transport_line(const char *line, int validate_only)
     log_debug(LD_DIR, "Transport %s found at %s:%d", name,
               fmt_addr(&addr), (int)port);
 
-    if (transport_add_from_config(&addr, port, name,
-                                  socks_ver) < 0)
+    if (transport_add_from_config(&addr, port, name, socks_ver) < 0)
       goto err;
   }
 
@@ -4728,9 +4724,6 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  tor_free(socks_ver_str);
-  tor_free(name);
-  tor_free(addrport);
   return r;
 }
 
