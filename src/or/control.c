@@ -917,13 +917,44 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+struct control_event_t {
+  uint16_t event_code;
+  const char *event_name;
+};
+static const struct control_event_t control_event_table[] = {
+  { EVENT_CIRCUIT_STATUS, "CIRC" },
+  { EVENT_STREAM_STATUS, "STREAM" },
+  { EVENT_OR_CONN_STATUS, "ORCONN" },
+  { EVENT_BANDWIDTH_USED, "BW" },
+  { EVENT_DEBUG_MSG, "DEBUG" },
+  { EVENT_INFO_MSG, "INFO" },
+  { EVENT_NOTICE_MSG, "NOTICE" },
+  { EVENT_WARN_MSG, "WARN" },
+  { EVENT_ERR_MSG, "ERR" },
+  { EVENT_NEW_DESC, "NEWDESC" },
+  { EVENT_ADDRMAP, "ADDRMAP" },
+  { EVENT_AUTHDIR_NEWDESCS, "AUTHDIR_NEWDESCS" },
+  { EVENT_DESCCHANGED, "DESCCHANGED" },
+  { EVENT_NS, "NS" },
+  { EVENT_STATUS_GENERAL, "STATUS_GENERAL" },
+  { EVENT_STATUS_CLIENT, "STATUS_CLIENT" },
+  { EVENT_STATUS_SERVER, "STATUS_SERVER" },
+  { EVENT_GUARD, "GUARD" },
+  { EVENT_STREAM_BANDWIDTH_USED, "STREAM_BW" },
+  { EVENT_CLIENTS_SEEN, "CLIENTS_SEEN" },
+  { EVENT_NEWCONSENSUS, "NEWCONSENSUS" },
+  { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
+  { EVENT_SIGNAL, "SIGNAL" },
+  { 0, NULL },
+};
+
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
 static int
 handle_control_setevents(control_connection_t *conn, uint32_t len,
                          const char *body)
 {
-  uint16_t event_code;
+  int event_code = -1;
   uint32_t event_mask = 0;
   smartlist_t *events = smartlist_create();
 
@@ -935,58 +966,22 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
     {
       if (!strcasecmp(ev, "EXTENDED")) {
         continue;
-      } else if (!strcasecmp(ev, "CIRC"))
-        event_code = EVENT_CIRCUIT_STATUS;
-      else if (!strcasecmp(ev, "STREAM"))
-        event_code = EVENT_STREAM_STATUS;
-      else if (!strcasecmp(ev, "ORCONN"))
-        event_code = EVENT_OR_CONN_STATUS;
-      else if (!strcasecmp(ev, "BW"))
-        event_code = EVENT_BANDWIDTH_USED;
-      else if (!strcasecmp(ev, "DEBUG"))
-        event_code = EVENT_DEBUG_MSG;
-      else if (!strcasecmp(ev, "INFO"))
-        event_code = EVENT_INFO_MSG;
-      else if (!strcasecmp(ev, "NOTICE"))
-        event_code = EVENT_NOTICE_MSG;
-      else if (!strcasecmp(ev, "WARN"))
-        event_code = EVENT_WARN_MSG;
-      else if (!strcasecmp(ev, "ERR"))
-        event_code = EVENT_ERR_MSG;
-      else if (!strcasecmp(ev, "NEWDESC"))
-        event_code = EVENT_NEW_DESC;
-      else if (!strcasecmp(ev, "ADDRMAP"))
-        event_code = EVENT_ADDRMAP;
-      else if (!strcasecmp(ev, "AUTHDIR_NEWDESCS"))
-        event_code = EVENT_AUTHDIR_NEWDESCS;
-      else if (!strcasecmp(ev, "DESCCHANGED"))
-        event_code = EVENT_DESCCHANGED;
-      else if (!strcasecmp(ev, "NS"))
-        event_code = EVENT_NS;
-      else if (!strcasecmp(ev, "STATUS_GENERAL"))
-        event_code = EVENT_STATUS_GENERAL;
-      else if (!strcasecmp(ev, "STATUS_CLIENT"))
-        event_code = EVENT_STATUS_CLIENT;
-      else if (!strcasecmp(ev, "STATUS_SERVER"))
-        event_code = EVENT_STATUS_SERVER;
-      else if (!strcasecmp(ev, "GUARD"))
-        event_code = EVENT_GUARD;
-      else if (!strcasecmp(ev, "STREAM_BW"))
-        event_code = EVENT_STREAM_BANDWIDTH_USED;
-      else if (!strcasecmp(ev, "CLIENTS_SEEN"))
-        event_code = EVENT_CLIENTS_SEEN;
-      else if (!strcasecmp(ev, "NEWCONSENSUS"))
-        event_code = EVENT_NEWCONSENSUS;
-      else if (!strcasecmp(ev, "BUILDTIMEOUT_SET"))
-        event_code = EVENT_BUILDTIMEOUT_SET;
-      else if (!strcasecmp(ev, "SIGNAL"))
-        event_code = EVENT_SIGNAL;
-      else {
-        connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
-                                 ev);
-        SMARTLIST_FOREACH(events, char *, e, tor_free(e));
-        smartlist_free(events);
-        return 0;
+      } else {
+        int i;
+        for (i = 0; control_event_table[i].event_name != NULL; ++i) {
+          if (!strcasecmp(ev, control_event_table[i].event_name)) {
+            event_code = control_event_table[i].event_code;
+            break;
+          }
+        }
+
+        if (event_code == -1) {
+          connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
+                                   ev);
+          SMARTLIST_FOREACH(events, char *, e, tor_free(e));
+          smartlist_free(events);
+          return 0;
+        }
       }
       event_mask |= (1 << event_code);
     }
@@ -1386,10 +1381,16 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
   } else if (!strcmp(question, "events/names")) {
-    *answer = tor_strdup("CIRC STREAM ORCONN BW DEBUG INFO NOTICE WARN ERR "
-                         "NEWDESC ADDRMAP AUTHDIR_NEWDESCS DESCCHANGED "
-                         "NS STATUS_GENERAL STATUS_CLIENT STATUS_SERVER "
-                         "GUARD STREAM_BW CLIENTS_SEEN NEWCONSENSUS");
+    int i;
+    smartlist_t *event_names = smartlist_create();
+
+    for (i = 0; control_event_table[i].event_name != NULL; ++i) {
+      smartlist_add(event_names, (char *)control_event_table[i].event_name);
+    }
+
+    *answer = smartlist_join_strings(event_names, " ", 0, NULL);
+
+    smartlist_free(event_names);
   } else if (!strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {

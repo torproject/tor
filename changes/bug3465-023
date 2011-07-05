@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+
+    - Add SIGNAL to the list returned by the 'GETINFO events/names'
+      control-port command.  Bugfix on 0.2.3.1-alpha; fixes part of
+      bug 3465.
+
