@@ -76,6 +76,15 @@ static uint32_t last_interface_ip = 0;
  * Used to detect IP address changes. */
 static smartlist_t *outgoing_addrs = NULL;
 
+#define CASE_ANY_LISTENER_TYPE \
+    case CONN_TYPE_OR_LISTENER: \
+    case CONN_TYPE_AP_LISTENER: \
+    case CONN_TYPE_DIR_LISTENER: \
+    case CONN_TYPE_CONTROL_LISTENER: \
+    case CONN_TYPE_AP_TRANS_LISTENER: \
+    case CONN_TYPE_AP_NATD_LISTENER: \
+    case CONN_TYPE_AP_DNS_LISTENER
+
 /**************************************************************/
 
 /**
@@ -116,13 +125,7 @@ conn_state_to_string(int type, int state)
 {
   static char buf[96];
   switch (type) {
-    case CONN_TYPE_OR_LISTENER:
-    case CONN_TYPE_AP_LISTENER:
-    case CONN_TYPE_AP_TRANS_LISTENER:
-    case CONN_TYPE_AP_NATD_LISTENER:
-    case CONN_TYPE_AP_DNS_LISTENER:
-    case CONN_TYPE_DIR_LISTENER:
-    case CONN_TYPE_CONTROL_LISTENER:
+    CASE_ANY_LISTENER_TYPE:
       if (state == LISTENER_STATE_READY)
         return "ready";
       break;
@@ -265,6 +268,17 @@ control_connection_new(int socket_family)
   return control_conn;
 }
 
+/** Allocate and return a new listener_connection_t, initialized as by
+ * connection_init(). */
+listener_connection_t *
+listener_connection_new(int type, int socket_family)
+{
+  listener_connection_t *listener_conn =
+    tor_malloc_zero(sizeof(listener_connection_t));
+  connection_init(time(NULL), TO_CONN(listener_conn), type, socket_family);
+  return listener_conn;
+}
+
 /** Allocate, initialize, and return a new connection_t subtype of <b>type</b>
  * to make or receive connections of address family <b>socket_family</b>.  The
  * type should be one of the CONN_TYPE_* constants. */
@@ -284,6 +298,9 @@ connection_new(int type, int socket_family)
 
     case CONN_TYPE_CONTROL:
       return TO_CONN(control_connection_new(socket_family));
+
+    CASE_ANY_LISTENER_TYPE:
+      return TO_CONN(listener_connection_new(type, socket_family));
 
     default: {
       connection_t *conn = tor_malloc_zero(sizeof(connection_t));
@@ -325,6 +342,8 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
     case CONN_TYPE_CONTROL:
       conn->magic = CONTROL_CONNECTION_MAGIC;
       break;
+    CASE_ANY_LISTENER_TYPE:
+      conn->magic = LISTENER_CONNECTION_MAGIC;
     default:
       conn->magic = BASE_CONNECTION_MAGIC;
       break;
@@ -395,6 +414,11 @@ _connection_free(connection_t *conn)
       tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
       mem = TO_CONTROL_CONN(conn);
       memlen = sizeof(control_connection_t);
+      break;
+    CASE_ANY_LISTENER_TYPE:
+      tor_assert(conn->magic == LISTENER_CONNECTION_MAGIC);
+      mem = TO_LISTENER_CONN(conn);
+      memlen = sizeof(listener_connection_t);
       break;
     default:
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
@@ -3970,13 +3994,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   switch (conn->type)
     {
-    case CONN_TYPE_OR_LISTENER:
-    case CONN_TYPE_AP_LISTENER:
-    case CONN_TYPE_AP_TRANS_LISTENER:
-    case CONN_TYPE_AP_NATD_LISTENER:
-    case CONN_TYPE_DIR_LISTENER:
-    case CONN_TYPE_CONTROL_LISTENER:
-    case CONN_TYPE_AP_DNS_LISTENER:
+    CASE_ANY_LISTENER_TYPE:
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:

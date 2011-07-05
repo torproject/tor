@@ -938,6 +938,7 @@ typedef struct socks_request_t socks_request_t;
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
+#define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
 
 /** Description of a connection to another host or process, and associated
  * data.
@@ -1043,15 +1044,18 @@ typedef struct connection_t {
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /* XXXX023 move this field, and all the listener-only fields (just
-     socket_family, I think), into a new listener_connection_t subtype. */
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t dirreq_id;
+} connection_t;
+
+typedef struct listener_connection_t {
+  connection_t _base;
+
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port it uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-  /** Unique ID for measuring tunneled network status requests. */
-  uint64_t dirreq_id;
-} connection_t;
+} listener_connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
@@ -1321,6 +1325,9 @@ static edge_connection_t *TO_EDGE_CONN(connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
 static control_connection_t *TO_CONTROL_CONN(connection_t *);
+/** Convert a connection_t* to an listener_connection_t*; assert if the cast is
+ * invalid. */
+static listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 static INLINE or_connection_t *TO_OR_CONN(connection_t *c)
 {
@@ -1341,6 +1348,11 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
+}
+static INLINE listener_connection_t *TO_LISTENER_CONN(connection_t *c)
+{
+  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
+  return DOWNCAST(listener_connection_t, c);
 }
 
 /* Conditional macros to help write code that works whether bufferevents are

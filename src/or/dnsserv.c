@@ -305,11 +305,13 @@ dnsserv_resolved(edge_connection_t *conn,
 void
 dnsserv_configure_listener(connection_t *conn)
 {
+  listener_connection_t *listener_conn;
   tor_assert(conn);
   tor_assert(SOCKET_OK(conn->s));
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
-  conn->dns_server_port =
+  listener_conn = TO_LISTENER_CONN(conn);
+  listener_conn->dns_server_port =
     tor_evdns_add_server_port(conn->s, 0, evdns_server_callback, NULL);
 }
 
@@ -318,12 +320,15 @@ dnsserv_configure_listener(connection_t *conn)
 void
 dnsserv_close_listener(connection_t *conn)
 {
+  listener_connection_t *listener_conn;
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
-  if (conn->dns_server_port) {
-    evdns_close_server_port(conn->dns_server_port);
-    conn->dns_server_port = NULL;
+  listener_conn = TO_LISTENER_CONN(conn);
+
+  if (listener_conn->dns_server_port) {
+    evdns_close_server_port(listener_conn->dns_server_port);
+    listener_conn->dns_server_port = NULL;
   }
 }
 

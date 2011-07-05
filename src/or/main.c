@@ -290,7 +290,7 @@ connection_unregister_events(connection_t *conn)
     conn->bufev = NULL;
   }
 #endif
-  if (conn->dns_server_port) {
+  if (conn->type == CONN_TYPE_AP_DNS_LISTENER) {
     dnsserv_close_listener(conn);
   }
 }
