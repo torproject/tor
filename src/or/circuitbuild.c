@@ -1502,7 +1502,7 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
 }
 
 /** If <b>verbose</b> is false, allocate and return a comma-separated list of
- * the currently built elements of <b>circ</b>.  If <b>verbose</b> is true, also
+ * the currently built elements of <b>circ</b>. If <b>verbose</b> is true, also
  * list information about link status in a more verbose format using spaces.
  * If <b>verbose_names</b> is false, give nicknames for Named routers and hex
  * digests for others; if <b>verbose_names</b> is true, use $DIGEST=Name style
