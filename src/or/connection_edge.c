@@ -3166,7 +3166,7 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * resolved.)
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
+connection_ap_can_use_exit(const edge_connection_t *conn, const node_t *exit)
 {
   const or_options_t *options = get_options();
 

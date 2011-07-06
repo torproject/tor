@@ -39,19 +39,19 @@ static void circuit_increment_failure_count(void);
  * Else return 0.
  */
 static int
-circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
+circuit_is_acceptable(const origin_circuit_t *origin_circ,
+                      const edge_connection_t *conn,
                       int must_be_open, uint8_t purpose,
                       int need_uptime, int need_internal,
                       time_t now)
 {
+  const circuit_t *circ = TO_CIRCUIT(origin_circ);
   const node_t *exitnode;
   cpath_build_state_t *build_state;
   tor_assert(circ);
   tor_assert(conn);
   tor_assert(conn->socks_request);
 
-  if (!CIRCUIT_IS_ORIGIN(circ))
-    return 0; /* this circ doesn't start at us */
   if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
     return 0; /* ignore non-open circs */
   if (circ->marked_for_close)
@@ -86,7 +86,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
    * circuit, it's the magical extra bob hop. so just check the nickname
    * of the one we meant to finish at.
    */
-  build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+  build_state = origin_circ->build_state;
   exitnode = build_state_get_exit_node(build_state);
 
   if (need_uptime && !build_state->need_uptime)
@@ -134,12 +134,11 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
       return 0;
     }
   } else { /* not general */
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if ((conn->rend_data && !ocirc->rend_data) ||
-        (!conn->rend_data && ocirc->rend_data) ||
-        (conn->rend_data && ocirc->rend_data &&
+    if ((conn->rend_data && !origin_circ->rend_data) ||
+        (!conn->rend_data && origin_circ->rend_data) ||
+        (conn->rend_data && origin_circ->rend_data &&
          rend_cmp_service_ids(conn->rend_data->onion_address,
-                              ocirc->rend_data->onion_address))) {
+                              origin_circ->rend_data->onion_address))) {
       /* this circ is not for this conn */
       return 0;
     }
@@ -151,8 +150,12 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
  * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
  */
 static int
-circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
+circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
+                  uint8_t purpose)
 {
+  const circuit_t *a = TO_CIRCUIT(oa);
+  const circuit_t *b = TO_CIRCUIT(ob);
+
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* if it's used but less dirty it's best;
@@ -166,8 +169,7 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
         if (a->timestamp_dirty ||
             timercmp(&a->timestamp_created, &b->timestamp_created, >))
           return 1;
-        if (CIRCUIT_IS_ORIGIN(b) &&
-            TO_ORIGIN_CIRCUIT(b)->build_state->is_internal)
+        if (ob->build_state->is_internal)
           /* XXX023 what the heck is this internal thing doing here. I
            * think we can get rid of it. circuit_is_acceptable() already
            * makes sure that is_internal is exactly what we need it to
@@ -206,10 +208,12 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
  * closest introduce-purposed circuit that you can find.
  */
 static origin_circuit_t *
-circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
+circuit_get_best(const edge_connection_t *conn,
+                 int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
-  circuit_t *circ, *best=NULL;
+  circuit_t *circ;
+  origin_circuit_t *best=NULL;
   struct timeval now;
   int intro_going_on_but_too_old = 0;
 
@@ -222,7 +226,11 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
   tor_gettimeofday(&now);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
+    origin_circuit_t *origin_circ;
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (!circuit_is_acceptable(origin_circ,conn,must_be_open,purpose,
                                need_uptime,need_internal,now.tv_sec))
       continue;
 
@@ -236,8 +244,8 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
     /* now this is an acceptable circ to hand back. but that doesn't
      * mean it's the *best* circ to hand back. try to decide.
      */
-    if (!best || circuit_is_better(circ,best,purpose))
-      best = circ;
+    if (!best || circuit_is_better(origin_circ,best,purpose))
+      best = origin_circ;
   }
 
   if (!best && intro_going_on_but_too_old)
@@ -245,7 +253,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
              "right now, but it has already taken quite a while. Starting "
              "one in parallel.");
 
-  return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
+  return best;
 }
 
 #if 0
@@ -1495,7 +1503,8 @@ hostname_in_track_host_exits(const or_options_t *options, const char *address)
  * <b>conn</b>'s destination.
  */
 static void
-consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
+consider_recording_trackhost(const edge_connection_t *conn,
+                             const origin_circuit_t *circ)
 {
   const or_options_t *options = get_options();
   char *new_address = NULL;
