@@ -577,6 +577,7 @@ static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
+static void port_cfg_free(port_cfg_t *port);
 static int parse_client_ports(const or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out);
 static int validate_data_directory(or_options_t *options);
@@ -4846,6 +4847,13 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   return r;
 }
 
+/** Free all storage held in <b>port</b> */
+static void
+port_cfg_free(port_cfg_t *port)
+{
+  tor_free(port);
+}
+
 /** Warn for every port in <b>ports</b> that is not on a loopback address. */
 static void
 warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
@@ -4955,8 +4963,8 @@ parse_client_port_config(smartlist_t *out,
        cfg->type = listener_type;
        cfg->port = port ? port : defaultport;
        tor_addr_copy(&cfg->addr, &addr);
-       cfg->sessiongroup = -1;
-       cfg->isolate = ISO_DEFAULT;
+       cfg->session_group = -1;
+       cfg->isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
      }
    }
@@ -4974,8 +4982,8 @@ parse_client_port_config(smartlist_t *out,
        cfg->type = listener_type;
        cfg->port = defaultport;
        tor_addr_from_str(&cfg->addr, defaultaddr);
-       cfg->sessiongroup = -1;
-       cfg->isolate = ISO_DEFAULT;
+       cfg->session_group = -1;
+       cfg->isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
     }
     return 0;
@@ -5094,8 +5102,8 @@ parse_client_port_config(smartlist_t *out,
       cfg->type = listener_type;
       cfg->port = port;
       tor_addr_copy(&cfg->addr, &addr);
-      cfg->sessiongroup = sessiongroup;
-      cfg->isolate = isolation;
+      cfg->session_group = sessiongroup;
+      cfg->isolation_flags = isolation;
       smartlist_add(out, cfg);
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
@@ -5169,7 +5177,7 @@ parse_client_ports(const or_options_t *options, int validate_only,
   if (!validate_only) {
     if (configured_client_ports) {
       SMARTLIST_FOREACH(configured_client_ports,
-                        port_cfg_t *, p, tor_free(p));
+                        port_cfg_t *, p, port_cfg_free(p));
       smartlist_free(configured_client_ports);
     }
     configured_client_ports = ports;
@@ -5179,7 +5187,7 @@ parse_client_ports(const or_options_t *options, int validate_only,
   retval = 0;
  err:
   if (ports) {
-    SMARTLIST_FOREACH(ports, port_cfg_t *, p, tor_free(p));
+    SMARTLIST_FOREACH(ports, port_cfg_t *, p, port_cfg_free(p));
     smartlist_free(ports);
   }
   return retval;

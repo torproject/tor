@@ -29,8 +29,9 @@
  * DNSPort.  We need to eventually answer the request <b>req</b>.
  */
 static void
-evdns_server_callback(struct evdns_server_request *req, void *_data)
+evdns_server_callback(struct evdns_server_request *req, void *data_)
 {
+  const listener_connection_t *listener = data_;
   edge_connection_t *conn;
   int i = 0;
   struct evdns_server_question *q = NULL;
@@ -43,7 +44,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   char *q_name;
 
   tor_assert(req);
-  tor_assert(_data == NULL);
+
   log_info(LD_APP, "Got a new DNS request!");
 
   req->flags |= 0x80; /* set RA */
@@ -131,6 +132,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
           sizeof(conn->socks_request->address));
 
   conn->dns_server_request = req;
+  conn->isolation_flags = listener->isolation_flags;
+  conn->session_group = listener->session_group;
 
   if (connection_add(TO_CONN(conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for DNS request");
@@ -312,7 +315,8 @@ dnsserv_configure_listener(connection_t *conn)
 
   listener_conn = TO_LISTENER_CONN(conn);
   listener_conn->dns_server_port =
-    tor_evdns_add_server_port(conn->s, 0, evdns_server_callback, NULL);
+    tor_evdns_add_server_port(conn->s, 0, evdns_server_callback,
+                              listener_conn);
 }
 
 /** Free the evdns server port for <b>conn</b>, which must be an

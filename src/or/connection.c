@@ -43,11 +43,12 @@
 static connection_t *connection_create_listener(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
-                               char* address);
+                               const char *address,
+                               const port_cfg_t *portcfg);
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
 static int connection_init_accepted_conn(connection_t *conn,
-                                         uint8_t listener_type);
+                          const listener_connection_t *listener);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 #ifndef USE_BUFFEREVENTS
 static int connection_bucket_should_increase(int bucket,
@@ -859,12 +860,15 @@ make_socket_reuseable(tor_socket_t sock)
 static connection_t *
 connection_create_listener(const struct sockaddr *listensockaddr,
                            socklen_t socklen,
-                           int type, char* address)
+                           int type, const char *address,
+                           const port_cfg_t *port_cfg)
 {
+  listener_connection_t *lis_conn;
   connection_t *conn;
   tor_socket_t s; /* the socket we're going to make */
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
+  static int global_next_session_group = -2;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     warn_too_many_conns();
@@ -981,11 +985,22 @@ connection_create_listener(const struct sockaddr *listensockaddr,
 
   set_socket_nonblocking(s);
 
-  conn = connection_new(type, listensockaddr->sa_family);
+  lis_conn = listener_connection_new(type, listensockaddr->sa_family);
+  conn = TO_CONN(lis_conn);
   conn->socket_family = listensockaddr->sa_family;
   conn->s = s;
   conn->address = tor_strdup(address);
   conn->port = gotPort;
+
+  if (port_cfg->isolation_flags) {
+    lis_conn->isolation_flags = port_cfg->isolation_flags;
+    if (port_cfg->session_group >= 0) {
+      lis_conn->session_group = port_cfg->session_group;
+    } else {
+      /* XXXX023 This can wrap after ~INT_MAX ports are opened. */
+      lis_conn->session_group = global_next_session_group--;
+    }
+  }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1199,7 +1214,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     return 0; /* no need to tear down the parent */
   }
 
-  if (connection_init_accepted_conn(newconn, conn->type) < 0) {
+  if (connection_init_accepted_conn(newconn, TO_LISTENER_CONN(conn)) < 0) {
     if (! newconn->marked_for_close)
       connection_mark_for_close(newconn);
     return 0;
@@ -1213,7 +1228,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
  * and place it in circuit_wait.
  */
 static int
-connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
+connection_init_accepted_conn(connection_t *conn,
+                              const listener_connection_t *listener)
 {
   connection_start_reading(conn);
 
@@ -1222,7 +1238,9 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
-      switch (listener_type) {
+      TO_EDGE_CONN(conn)->isolation_flags = listener->isolation_flags;
+      TO_EDGE_CONN(conn)->session_group = listener->session_group;
+      switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
@@ -1808,7 +1826,7 @@ retry_listener_ports(smartlist_t *old_conns,
 
     if (listensockaddr) {
       conn = connection_create_listener(listensockaddr, listensocklen,
-                                        port->type, address);
+                                        port->type, address, port);
       tor_free(listensockaddr);
       tor_free(address);
     } else {

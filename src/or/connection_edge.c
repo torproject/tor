@@ -3266,3 +3266,144 @@ parse_extended_hostname(char *address, int allowdotexit)
     return BAD_HOSTNAME;
 }
 
+/** Return true iff <b>a</b> and <b>b</b> have isolation rules and fields that
+ * make it permissible to put them on the same circuit.*/
+int
+connection_edge_streams_are_compatible(const edge_connection_t *a,
+                                       const edge_connection_t *b)
+{
+  const uint8_t iso = a->isolation_flags | b->isolation_flags;
+
+  if ((iso & ISO_DESTPORT) && a->socks_request->port != b->socks_request->port)
+    return 0;
+  /* XXXX023 Not quite right: we care about addresses that resolve to the same
+     place */
+  if ((iso & ISO_DESTADDR) &&
+      strcasecmp(a->socks_request->address, b->socks_request->address))
+    return 0;
+  /* XXXX023 Waititing for ticket #1666 */
+  /*
+  if ((iso & ISO_SOCKSAUTH) &&
+      strcasecmp(a->socks_request->auth, b->socks_request->auth))
+    return 0;
+  */
+  if ((iso & ISO_CLIENTPROTO) &&
+      (TO_CONN(a)->type != TO_CONN(b)->type ||
+       a->socks_request->socks_version != b->socks_request->socks_version))
+    return 0;
+  if ((iso & ISO_CLIENTADDR) &&
+      !tor_addr_eq(&TO_CONN(a)->addr, &TO_CONN(b)->addr))
+    return 0;
+  if ((iso & ISO_SESSIONGRP) && a->session_group != b->session_group)
+    return 0;
+
+  return 1;
+}
+
+/**
+ * Return true iff none of the isolation flags and fields in <b>conn</b>
+ * should prevent it from being attached to <b>circ</b>.
+ */
+int
+connection_edge_compatible_with_circuit(const edge_connection_t *conn,
+                                        const origin_circuit_t *circ)
+{
+  const uint8_t iso = conn->isolation_flags;
+
+  /* If circ has never been used for an isolated connection, we can
+   * totally use it for this one. */
+  if (!circ->isolation_values_set)
+    return 1;
+
+  /* If circ has been used for connections having more than one value
+   * for some field f, it will have the corresponding bit set in
+   * isolation_flags_mixed.  If isolation_flags_mixed has any bits
+   * in common with iso, then conn must be isolated from at least
+   * one stream that has been attached to circ. */
+  if ((iso & circ->isolation_flags_mixed) != 0) {
+    /* For at least one field where conn is isolated, the circuit
+     * already has mixed streams. */
+    return 0;
+  }
+
+  if ((iso & ISO_DESTPORT) && conn->socks_request->port != circ->dest_port)
+    return 0;
+  /* XXXX023 Not quite right: we care about addresses that resolve to the same
+     place */
+  if ((iso & ISO_DESTADDR) &&
+      strcasecmp(conn->socks_request->address, circ->dest_address))
+    return 0;
+  /* XXXX023 Waititing for ticket #1666 */
+  /*
+  if ((iso & ISO_SOCKSAUTH) &&
+      strcasecmp(a->socks_request->auth, b->socks_request->auth))
+    return 0;
+  */
+  if ((iso & ISO_CLIENTPROTO) &&
+      (TO_CONN(conn)->type != circ->client_proto_type ||
+       conn->socks_request->socks_version != circ->client_proto_socksver))
+    return 0;
+  if ((iso & ISO_CLIENTADDR) &&
+      !tor_addr_eq(&TO_CONN(conn)->addr, &circ->client_addr))
+    return 0;
+  if ((iso & ISO_SESSIONGRP) && conn->session_group != circ->session_group)
+    return 0;
+
+  return 1;
+}
+
+/**
+ * If <b>dry_run</b> is false, update <b>circ</b>'s isolation flags and fields
+ * to reflect having had <b>conn</b> attached to it, and return 0.  Otherwise,
+ * if <b>dry_run</b> is true, then make no changes to <b>circ</b>, and return
+ * a bitfield of isolation flags that we would have to set in
+ * isolation_flags_mixed to add <b>conn</b> to <b>circ</b>, or -1 if
+ * <b>circ</b> has had no streams attached to it.
+ */
+int
+connection_edge_update_circuit_isolation(const edge_connection_t *conn,
+                                         origin_circuit_t *circ,
+                                         int dry_run)
+{
+  if (!circ->isolation_values_set) {
+    if (dry_run)
+      return -1;
+    circ->dest_port = conn->socks_request->port;
+    circ->dest_address = tor_strdup(conn->socks_request->address);
+    circ->client_proto_type = TO_CONN(conn)->type;
+    circ->client_proto_socksver = conn->socks_request->socks_version;
+    tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
+    circ->session_group = conn->session_group;
+    /* XXXX023 auth too, once #1666 is in. */
+
+    circ->isolation_values_set = 1;
+    return 0;
+  } else {
+    uint8_t mixed = 0;
+    if (conn->socks_request->port != circ->dest_port)
+      mixed |= ISO_DESTPORT;
+    /* XXXX023 Not quite right: we care about addresses that resolve to the
+       same place */
+    if (strcasecmp(conn->socks_request->address, circ->dest_address))
+      mixed |= ISO_DESTADDR;
+    /* XXXX023 auth too, once #1666 is in. */
+    if ((TO_CONN(conn)->type != circ->client_proto_type ||
+         conn->socks_request->socks_version != circ->client_proto_socksver))
+      mixed |= ISO_CLIENTPROTO;
+    if (!tor_addr_eq(&TO_CONN(conn)->addr, &circ->client_addr))
+      mixed |= ISO_CLIENTADDR;
+    if (conn->session_group != circ->session_group)
+      mixed |= ISO_SESSIONGRP;
+
+    if (dry_run)
+      return mixed;
+
+    if ((mixed & conn->isolation_flags) != 0) {
+      log_warn(LD_BUG, "Updating a circuit with seemingly incomaptible "
+               "isolation flags.");
+    }
+    circ->isolation_flags_mixed |= mixed;
+    return 0;
+  }
+}
+

@@ -550,6 +550,8 @@ circuit_free(circuit_t *circ)
 
     crypto_free_pk_env(ocirc->intro_key);
     rend_data_free(ocirc->rend_data);
+
+    tor_free(ocirc->dest_address);
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     /* Remember cell statistics for this circuit before deallocating. */

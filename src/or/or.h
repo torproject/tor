@@ -1055,6 +1055,19 @@ typedef struct listener_connection_t {
    * to the evdns_server_port it uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
+  /** @name Isolation parameters
+   *
+   * For an AP listener, these fields describe how to isolate streams that
+   * arrive on the listener.
+   *
+   * @{
+   */
+  /** The session group for this listener. */
+  int session_group;
+  /** One or more ISO_ flags to describe how to isolate streams. */
+  uint8_t isolation_flags;
+  /**@}*/
+
 } listener_connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
@@ -1193,6 +1206,16 @@ typedef struct edge_connection_t {
 
   /** What rendezvous service are we querying for? (AP only) */
   rend_data_t *rend_data;
+
+  /* === Isolation related, AP only. === */
+  /** AP only: based on which factors do we isolate this stream? */
+  uint8_t isolation_flags;
+  /** AP only: what session group is this stream in? */
+  int session_group;
+  /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
+     ClientProtocol is a combination of type and socks_request->
+     socks_version.  SocksAuth will be added to socks_request by ticket
+     #1666. DestAddr and DestPort are in socks_request->address. */
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
@@ -2436,6 +2459,32 @@ typedef struct origin_circuit_t {
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
+  /** True if we have attached at least one stream to this circuit, thereby
+   * setting the isolation paramaters for this circuit. */
+  unsigned int isolation_values_set : 1;
+  /** A bitfield of ISO_* flags for every isolation field such that this
+   * circuit has had streams with more than one value for that field
+   * attached to it. */
+  uint8_t isolation_flags_mixed;
+
+  /** @name Isolation parameters
+   *
+   * If any streams have been attached to this circuit (isolation_values_set
+   * == 1), and all streams attached to the circuit have had the same value
+   * for some field ((isolation_flags_mixed & ISO_FOO) == 0), then these
+   * elements hold the value for that field.
+   *
+   * @{
+   */
+  uint8_t client_proto_type;
+  uint8_t client_proto_socksver;
+  uint16_t dest_port;
+  tor_addr_t client_addr;
+  char *dest_address;
+  int session_group;
+  /* XXXX023 do auth once #1666 is merged */
+  /**@}*/
+
 } origin_circuit_t;
 
 /** An or_circuit_t holds information needed to implement a circuit at an
@@ -2579,16 +2628,16 @@ typedef enum invalid_router_usage_t {
 
 /** Configuration for a single port that we're listening on. */
 typedef struct port_cfg_t {
-  tor_addr_t addr; /**< The configured address to listen on. */
+  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
   int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
              * own port. */
   uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
   unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
 
   /* Client port types (socks, dns, trans, natd) only: */
-  uint8_t isolate; /**< Zero or more isolation flags */
-  int sessiongroup; /**< A session group, or -1 if this port is not in a
-                     * session group. */
+  uint8_t isolation_flags; /**< Zero or more isolation flags */
+  int session_group; /**< A session group, or -1 if this port is not in a
+                      * session group. */
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
