@@ -1,3 +1,14 @@
+  o Major features:
+    - You can now configure Tor so that streams from different
+      applications are isolated on different circuits, to prevent an
+      attacker who sees your streams leaving an exit node from linking
+      your sessions to one another.  To do this, choose some way to
+      distinguish the applications -- have them connect to different
+      SocksPorts, or have one of them use SOCKS4 while the other uses
+      SOCKS5, or have them pass different authentication strings to
+      the SOCKS proxy.  Then use the new SocksPort syntax to configure
+      the degree of isolation you need. This implements Proposal 171.
+
   o Minor features:
     - There's a new syntax for specifying multiple client ports (such as
       SOCKSPort, TransPort, DNSPort, NATDPort): you can now just declare

@@ -143,18 +143,27 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       return 0;
     }
   }
+
+  if (!connection_edge_compatible_with_circuit(conn, origin_circ)) {
+    /* conn needs to be isolated from other conns that have already used
+     * origin_circ */
+    return 0;
+  }
+
   return 1;
 }
 
 /** Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
- * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
+ * <b>conn</b>, and return 0 otherwise. Used by circuit_get_best.
  */
 static int
 circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
-                  uint8_t purpose)
+                  const edge_connection_t *conn)
 {
   const circuit_t *a = TO_CIRCUIT(oa);
   const circuit_t *b = TO_CIRCUIT(ob);
+  const uint8_t purpose = conn->_base.purpose;
+  int a_bits, b_bits;
 
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -188,6 +197,29 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
         return 1;
       break;
   }
+
+  /* XXXX023 Maybe this check should get a higher priority to avoid
+   *   using up circuits too rapidly. */
+
+  a_bits = connection_edge_update_circuit_isolation(conn,
+                                                    (origin_circuit_t*)oa, 1);
+  b_bits = connection_edge_update_circuit_isolation(conn,
+                                                    (origin_circuit_t*)ob, 1);
+  /* if x_bits < 0, then we have not used x for anything; better not to dirty
+   * a connection if we can help it. */
+  if (a_bits < 0) {
+    return 0;
+  } else if (b_bits < 0) {
+    return 1;
+  }
+  a_bits &= ~ oa->isolation_flags_mixed;
+  a_bits &= ~ ob->isolation_flags_mixed;
+  if (n_bits_set_u8(a_bits) < n_bits_set_u8(b_bits)) {
+    /* The fewer new restrictions we need to make on a circuit for stream
+     * isolation, the better. */
+    return 1;
+  }
+
   return 0;
 }
 
@@ -244,7 +276,7 @@ circuit_get_best(const edge_connection_t *conn,
     /* now this is an acceptable circ to hand back. but that doesn't
      * mean it's the *best* circ to hand back. try to decide.
      */
-    if (!best || circuit_is_better(origin_circ,best,purpose))
+    if (!best || circuit_is_better(origin_circ,best,conn))
       best = origin_circ;
   }
 
@@ -1476,6 +1508,8 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
     tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
     apconn->cpath_layer = circ->cpath->prev;
   }
+
+  connection_edge_update_circuit_isolation(apconn, circ, 0);
 }
 
 /** Return true iff <b>address</b> is matched by one of the entries in

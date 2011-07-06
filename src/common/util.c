@@ -412,6 +412,32 @@ round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
   return number;
 }
 
+/** Return the number of bits set in <b>v</b>. */
+int
+n_bits_set_u8(uint8_t v)
+{
+  static const int nybble_table[] = {
+    0, /* 0000 */
+    1, /* 0001 */
+    1, /* 0010 */
+    2, /* 0011 */
+    1, /* 0100 */
+    2, /* 0101 */
+    2, /* 0110 */
+    3, /* 0111 */
+    1, /* 1000 */
+    2, /* 1001 */
+    2, /* 1010 */
+    3, /* 1011 */
+    2, /* 1100 */
+    3, /* 1101 */
+    3, /* 1110 */
+    4, /* 1111 */
+  };
+
+  return nybble_table[v & 15] + nybble_table[v>>4];
+}
+
 /* =====
  * String manipulation
  * ===== */
