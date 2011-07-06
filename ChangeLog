@@ -1,3 +1,21 @@
+Changes in version 0.2.2.30-rc - 2011-07-06
+  o Minor bugfixes:
+    - Always NUL-terminate the sun_path field of a sockaddr_un before
+      passing it to the kernel. (Not a security issue: kernels are
+      smart enough to reject bad sockaddr_uns.) Found by Coverity;
+      CID #428. Bugfix on Tor 0.2.0.3-alpha.
+    - Don't stack-allocate the list of supplementary GIDs when we're
+      about to log them. Stack-allocating NGROUPS_MAX gid_t elements
+      could take up to 256K, which is way too much stack. Found by
+      Coverity; CID #450. Bugfix on 0.2.1.7-alpha.
+    - Add BUILDTIMEOUT_SET to the list returned by the 'GETINFO
+      events/names' control-port command. Bugfix on 0.2.2.9-alpha;
+      fixes part of bug 3465.
+    - Fix a memory leak when receiving a descriptor for a hidden
+      service we didn't ask for. Found by Coverity; CID #30. Bugfix
+      on 0.2.2.26-beta.
+
+
 Changes in version 0.2.2.29-beta - 2011-06-20
   Tor 0.2.2.29-beta reverts an accidental behavior change for users who
   have bridge lines in their torrc but don't want to use them; gets
