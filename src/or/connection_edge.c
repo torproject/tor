@@ -3296,6 +3296,8 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
     return 0;
   if ((iso & ISO_SESSIONGRP) && a->session_group != b->session_group)
     return 0;
+  if ((iso & ISO_NYM_EPOCH) && a->nym_epoch != b->nym_epoch)
+    return 0;
 
   return 1;
 }
@@ -3348,6 +3350,8 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
     return 0;
   if ((iso & ISO_SESSIONGRP) && conn->session_group != circ->session_group)
     return 0;
+  if ((iso & ISO_NYM_EPOCH) && conn->nym_epoch != circ->nym_epoch)
+    return 0;
 
   return 1;
 }
@@ -3374,6 +3378,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
     circ->client_proto_socksver = conn->socks_request->socks_version;
     tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
     circ->session_group = conn->session_group;
+    circ->nym_epoch = conn->nym_epoch;
     /* XXXX023 auth too, once #1666 is in. */
 
     circ->isolation_values_set = 1;
@@ -3394,6 +3399,8 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
       mixed |= ISO_CLIENTADDR;
     if (conn->session_group != circ->session_group)
       mixed |= ISO_SESSIONGRP;
+    if (conn->nym_epoch != circ->nym_epoch)
+      mixed |= ISO_NYM_EPOCH;
 
     if (dry_run)
       return mixed;

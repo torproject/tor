@@ -1240,6 +1240,7 @@ connection_init_accepted_conn(connection_t *conn,
     case CONN_TYPE_AP:
       TO_EDGE_CONN(conn)->isolation_flags = listener->isolation_flags;
       TO_EDGE_CONN(conn)->session_group = listener->session_group;
+      TO_EDGE_CONN(conn)->nym_epoch = get_signewnym_epoch();
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;

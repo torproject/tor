@@ -134,6 +134,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   conn->dns_server_request = req;
   conn->isolation_flags = listener->isolation_flags;
   conn->session_group = listener->session_group;
+  conn->nym_epoch = get_signewnym_epoch();
 
   if (connection_add(TO_CONN(conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for DNS request");

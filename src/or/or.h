@@ -1212,6 +1212,8 @@ typedef struct edge_connection_t {
   uint8_t isolation_flags;
   /** AP only: what session group is this stream in? */
   int session_group;
+  /** AP only: The newnym epoch in which we created this connection. */
+  unsigned nym_epoch;
   /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
      ClientProtocol is a combination of type and socks_request->
      socks_version.  SocksAuth will be added to socks_request by ticket
@@ -2482,6 +2484,7 @@ typedef struct origin_circuit_t {
   tor_addr_t client_addr;
   char *dest_address;
   int session_group;
+  unsigned nym_epoch;
   /* XXXX023 do auth once #1666 is merged */
   /**@}*/
 
@@ -2621,10 +2624,12 @@ typedef enum invalid_router_usage_t {
 #define ISO_CLIENTADDR  (1u<<4)
 /** Isolate based on session group (always on). */
 #define ISO_SESSIONGRP  (1u<<5)
+/** Isolate based on newnym epoch (always on). */
+#define ISO_NYM_EPOCH   (1u<<6)
 /**@}*/
 
 /** Default isolation level for ports. */
-#define ISO_DEFAULT (ISO_CLIENTADDR|ISO_SOCKSAUTH|ISO_SESSIONGRP)
+#define ISO_DEFAULT (ISO_CLIENTADDR|ISO_SOCKSAUTH|ISO_SESSIONGRP|ISO_NYM_EPOCH)
 
 /** Configuration for a single port that we're listening on. */
 typedef struct port_cfg_t {
