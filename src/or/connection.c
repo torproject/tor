@@ -811,7 +811,13 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
 
   sockaddr = tor_malloc_zero(sizeof(struct sockaddr_un));
   sockaddr->sun_family = AF_UNIX;
-  strncpy(sockaddr->sun_path, listenaddress, sizeof(sockaddr->sun_path));
+  if (strlcpy(sockaddr->sun_path, listenaddress, sizeof(sockaddr->sun_path))
+      >= sizeof(sockaddr->sun_path)) {
+    log_warn(LD_CONFIG, "Unix socket path '%s' is too long to fit.",
+             escaped(listenaddress));
+    tor_free(sockaddr);
+    return NULL;
+  }
 
   if (readable_address)
     *readable_address = tor_strdup(listenaddress);
@@ -2751,15 +2757,15 @@ connection_outbuf_too_full(connection_t *conn)
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-/** Try to flush more bytes onto conn-\>s.
+/** Try to flush more bytes onto <b>conn</b>-\>s.
  *
  * This function gets called either from conn_write() in main.c
  * when poll() has declared that conn wants to write, or below
  * from connection_write_to_buf() when an entire TLS record is ready.
  *
- * Update conn-\>timestamp_lastwritten to now, and call flush_buf
+ * Update <b>conn</b>-\>timestamp_lastwritten to now, and call flush_buf
  * or flush_buf_tls appropriately. If it succeeds and there are no more
- * more bytes on conn->outbuf, then call connection_finished_flushing
+ * more bytes on <b>conn</b>-\>outbuf, then call connection_finished_flushing
  * on it too.
  *
  * If <b>force</b>, then write as many bytes as possible, ignoring bandwidth
