@@ -2240,7 +2240,6 @@ write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
   int over = 0, n;
   struct evbuffer_iovec vec[1];
   do {
-    int need_new_chunk = 0;
     {
       size_t cap = data_len / 4;
       if (cap < 128)
@@ -2269,7 +2268,6 @@ write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
         if (avail) {
           /* Zlib says we need more room (ZLIB_BUF_FULL).  Start a new chunk
            * automatically, whether were going to or not. */
-          need_new_chunk = 1;
         }
         break;
     }
