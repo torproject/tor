@@ -1,4 +1,8 @@
 Changes in version 0.2.2.30-rc - 2011-07-07
+  Tor 0.2.2.30-rc is the first release candidate for the Tor 0.2.2.x
+  series. It fixes a few smaller bugs, but generally appears stable.
+  Please test it and let us know whether it is!
+
   o Minor bugfixes:
     - Send a SUCCEEDED stream event to the controller when a reverse
       resolve succeeded. Fixes bug 3536; bugfix on 0.0.8pre1. Issue
