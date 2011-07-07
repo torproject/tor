@@ -288,6 +288,27 @@ circuit_get_best(const edge_connection_t *conn,
   return best;
 }
 
+/** Return the number of not-yet-open general-purpose origin circuits. */
+static int
+count_pending_general_client_circuits(void)
+{
+  const circuit_t *circ;
+
+  int count = 0;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (circ->marked_for_close ||
+        circ->state == CIRCUIT_STATE_OPEN ||
+        circ->purpose != CIRCUIT_PURPOSE_C_GENERAL ||
+        !CIRCUIT_IS_ORIGIN(circ))
+      continue;
+
+    ++count;
+  }
+
+  return count;
+}
+
 #if 0
 /** Check whether, according to the policies in <b>options</b>, the
  * circuit <b>circ</b> makes sense. */
@@ -1347,6 +1368,20 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   if (!circ) {
     extend_info_t *extend_info=NULL;
     uint8_t new_circ_purpose;
+    const int n_pending = count_pending_general_client_circuits();
+
+    if (n_pending >= options->MaxClientCircuitsPending) {
+      static ratelim_t delay_limit = RATELIM_INIT(10*60);
+      char *m;
+      if ((m = rate_limit_log(&delay_limit, approx_time()))) {
+        log_notice(LD_APP, "We'd like to launch a circuit to handle a "
+                   "connection, but we already have %d general-purpose client "
+                   "circuits pending. Waiting until some finish.",
+                   n_pending);
+        tor_free(m);
+      }
+      return 0;
+    }
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */

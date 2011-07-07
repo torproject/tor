@@ -315,6 +315,7 @@ static config_var_t _option_vars[] = {
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
+  V(MaxClientCircuitsPending,    UINT,     "32"),
   V(MaxOnionsPending,            UINT,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
@@ -3212,6 +3213,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     tor_asprintf(msg,
         "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
+    return -1;
+  }
+
+  if (options->MaxClientCircuitsPending <= 0 ||
+      options->MaxClientCircuitsPending > MAX_MAX_CLIENT_CIRCUITS_PENDING) {
+    tor_asprintf(msg,
+                 "MaxClientCircuitsPending must be between 1 and %d, but "
+                 "was set to %d", MAX_MAX_CLIENT_CIRCUITS_PENDING,
+                 options->MaxClientCircuitsPending);
     return -1;
   }
 

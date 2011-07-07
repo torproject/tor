@@ -3230,6 +3230,11 @@ typedef struct {
   /** Should that file be group-readable? */
   int ControlPortFileGroupReadable;
 
+#define MAX_MAX_CLIENT_CIRCUITS_PENDING 1024
+  /** Maximum number of non-open general-purpose origin circuits to allow at
+   * once. */
+  int MaxClientCircuitsPending;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
