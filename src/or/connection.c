@@ -2957,9 +2957,11 @@ connection_handle_read_cb(struct bufferevent *bufev, void *arg)
 {
   connection_t *conn = arg;
   (void) bufev;
-  if (!conn->marked_for_close)
+  if (!conn->marked_for_close) {
     if (connection_process_inbuf(conn, 1)<0) /* XXXX Always 1? */
-      connection_mark_for_close(conn);
+      if (!conn->marked_for_close)
+        connection_mark_for_close(conn);
+  }
 }
 
 /** Callback: invoked whenever a bufferevent has written data. */
@@ -2969,7 +2971,8 @@ connection_handle_write_cb(struct bufferevent *bufev, void *arg)
   connection_t *conn = arg;
   struct evbuffer *output;
   if (connection_flushed_some(conn)<0) {
-    connection_mark_for_close(conn);
+    if (!conn->marked_for_close)
+      connection_mark_for_close(conn);
     return;
   }
 

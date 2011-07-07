@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix a class of double-mark-for-close bugs when bufferevents
+      are enabled. Fixes bug 3404; bugfix on 0.2.3.1-alpha.
