@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Send a SUCCEEDED stream event to the controller when a reverse
+      resolve succeeded. Fixes bug 3536; bugfix on 0.0.8pre1. Issue
+      discovered by katmagic.
+
