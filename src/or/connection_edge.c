@@ -2611,7 +2611,8 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   }
   connection_ap_handshake_socks_reply(conn, buf, replylen,
           (answer_type == RESOLVED_TYPE_IPV4 ||
-           answer_type == RESOLVED_TYPE_IPV6) ?
+           answer_type == RESOLVED_TYPE_IPV6 ||
+           answer_type == RESOLVED_TYPE_HOSTNAME) ?
                                       0 : END_STREAM_REASON_RESOLVEFAILED);
 }
 
