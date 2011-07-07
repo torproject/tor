@@ -3980,7 +3980,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
-      old_options->AccountingMax != new_options->AccountingMax)
+      old_options->AccountingMax != new_options->AccountingMax ||
+      public_server_mode(old_options) != public_server_mode(new_options))
     return 1;
 
   return 0;

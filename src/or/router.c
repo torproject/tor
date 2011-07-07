@@ -84,6 +84,11 @@ static authority_cert_t *legacy_key_certificate = NULL;
 static void
 set_onion_key(crypto_pk_env_t *k)
 {
+  if (onionkey && !crypto_pk_cmp_keys(onionkey, k)) {
+    /* k is already our onion key; free it and return */
+    crypto_free_pk_env(k);
+    return;
+  }
   tor_mutex_acquire(key_lock);
   crypto_free_pk_env(onionkey);
   onionkey = k;
