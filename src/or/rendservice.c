@@ -1079,7 +1079,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   }
 
   /* Check if we'd refuse to talk to this router */
-  if (options->ExcludeNodes && options->StrictNodes &&
+  if (options->StrictNodes &&
       routerset_contains_extendinfo(options->ExcludeNodes, extend_info)) {
     log_warn(LD_REND, "Client asked to rendezvous at a relay that we "
              "exclude, and StrictNodes is set. Refusing service.");

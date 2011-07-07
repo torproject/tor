@@ -948,7 +948,7 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
     intro->extend_info = extend_info_from_node(node);
   }
   /* Check if we should refuse to talk to this router. */
-  if (options->ExcludeNodes && strict &&
+  if (strict &&
       routerset_contains_extendinfo(options->ExcludeNodes,
                                     intro->extend_info)) {
     n_excluded++;
