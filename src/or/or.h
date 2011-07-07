@@ -2461,9 +2461,19 @@ typedef struct origin_circuit_t {
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
-  /** True if we have attached at least one stream to this circuit, thereby
-   * setting the isolation paramaters for this circuit. */
+  /** True if we have associated one stream to this circuit, thereby setting
+   * the isolation paramaters for this circuit.  Note that this doesn't
+   * necessarily mean that we've <em>attached</em> any streams to the circuit:
+   * we may only have marked up this circuit during the launch process.
+   */
   unsigned int isolation_values_set : 1;
+  /** True iff any stream has <em>ever</em> been attached to this circuit.
+   *
+   * In a better world we could use timestamp_dirty for this, but
+   * timestamp_dirty is far too overloaded at the moment.
+   */
+  unsigned int isolation_any_streams_attached : 1;
+
   /** A bitfield of ISO_* flags for every isolation field such that this
    * circuit has had streams with more than one value for that field
    * attached to it. */
@@ -2471,10 +2481,14 @@ typedef struct origin_circuit_t {
 
   /** @name Isolation parameters
    *
-   * If any streams have been attached to this circuit (isolation_values_set
-   * == 1), and all streams attached to the circuit have had the same value
-   * for some field ((isolation_flags_mixed & ISO_FOO) == 0), then these
+   * If any streams have been associated with this circ (isolation_values_set
+   * == 1), and all streams associated with the circuit have had the same
+   * value for some field ((isolation_flags_mixed & ISO_FOO) == 0), then these
    * elements hold the value for that field.
+   *
+   * Note again that "associated" is not the same as "attached": we
+   * preliminarily associate streams with a circuit while the circuit is being
+   * launched, so that we can tell whether we need to launch more circuits.
    *
    * @{
    */

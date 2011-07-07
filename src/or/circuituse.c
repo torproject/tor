@@ -1457,12 +1457,20 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
           rend_client_rendcirc_has_opened(circ);
       }
     }
-  }
-  if (!circ)
+  } /* endif (!circ) */
+  if (circ) {
+    /* Mark the circuit with the isolation fields for this connection.
+     * When the circuit arrives, we'll clear these flags: this is
+     * just some internal bookkeeping to make sure that we have
+     * launched enough circuits.
+     */
+    connection_edge_update_circuit_isolation(conn, circ, 0);
+  } else {
     log_info(LD_APP,
              "No safe circuit (purpose %d) ready for edge "
              "connection; delaying.",
              desired_circuit_purpose);
+  }
   *circp = circ;
   return 0;
 }
@@ -1509,6 +1517,7 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
     apconn->cpath_layer = circ->cpath->prev;
   }
 
+  circ->isolation_any_streams_attached = 1;
   connection_edge_update_circuit_isolation(apconn, circ, 0);
 }
 

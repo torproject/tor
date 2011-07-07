@@ -110,6 +110,7 @@ int connection_edge_compatible_with_circuit(const edge_connection_t *conn,
 int connection_edge_update_circuit_isolation(const edge_connection_t *conn,
                                              origin_circuit_t *circ,
                                              int dry_run);
+void circuit_clear_isolation(origin_circuit_t *circ);
 
 #endif
 

@@ -3414,3 +3414,38 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
   }
 }
 
+/**
+ * Clear the isolation settings on <b>circ</b>.
+ *
+ * This only works on an open circuit that has never had a stream attached to
+ * it, and whose isolation settings are hypothetical.  (We set hypothetical
+ * isolation settings on circuits as we're launching them, so that we
+ * know whether they can handle more streams or whether we need to launch
+ * even more circuits.  We clear the flags once the circuits are open,
+ * in case the streams that made us launch the circuits have closed
+ * since we began launching the circuits.)
+ */
+void
+circuit_clear_isolation(origin_circuit_t *circ)
+{
+  if (circ->isolation_any_streams_attached) {
+    log_warn(LD_BUG, "Tried to clear the isolation status of a dirty circuit");
+    return;
+  }
+  if (TO_CIRCUIT(circ)->state != CIRCUIT_STATE_OPEN) {
+    log_warn(LD_BUG, "Tried to clear the isolation status of a non-open "
+             "circuit");
+    return;
+  }
+
+  circ->isolation_values_set = 0;
+  circ->isolation_flags_mixed = 0;
+  circ->client_proto_type = 0;
+  circ->client_proto_socksver = 0;
+  circ->dest_port = 0;
+  tor_addr_make_unspec(&circ->client_addr);
+  tor_free(circ->dest_address);
+  circ->session_group = -1;
+  circ->nym_epoch = 0;
+}
+
