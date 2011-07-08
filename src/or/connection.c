@@ -868,7 +868,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   tor_socket_t s; /* the socket we're going to make */
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
-  static int global_next_session_group = -2;
+  static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     warn_too_many_conns();

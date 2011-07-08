@@ -4973,7 +4973,7 @@ parse_client_port_config(smartlist_t *out,
        cfg->type = listener_type;
        cfg->port = port ? port : defaultport;
        tor_addr_copy(&cfg->addr, &addr);
-       cfg->session_group = -1;
+       cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
      }
@@ -4992,7 +4992,7 @@ parse_client_port_config(smartlist_t *out,
        cfg->type = listener_type;
        cfg->port = defaultport;
        tor_addr_from_str(&cfg->addr, defaultaddr);
-       cfg->session_group = -1;
+       cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
     }
@@ -5006,7 +5006,7 @@ parse_client_port_config(smartlist_t *out,
   for (; ports; ports = ports->next) {
     tor_addr_t addr;
     int port;
-    int sessiongroup = -1;
+    int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
 
     char *addrport;

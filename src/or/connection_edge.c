@@ -2497,7 +2497,9 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 edge_connection_t *
 connection_ap_make_link(connection_t *partner,
                         char *address, uint16_t port,
-                        const char *digest, int use_begindir, int want_onehop)
+                        const char *digest,
+                        int session_group, int isolation_flags,
+                        int use_begindir, int want_onehop)
 {
   edge_connection_t *conn;
 
@@ -2515,7 +2517,6 @@ connection_ap_make_link(connection_t *partner,
   conn->socks_request->has_finished = 0; /* waiting for 'connected' */
   strlcpy(conn->socks_request->address, address,
           sizeof(conn->socks_request->address));
-  conn->original_dest_address = tor_strdup(address);
   conn->socks_request->port = port;
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
   conn->want_onehop = want_onehop;
@@ -2527,6 +2528,11 @@ connection_ap_make_link(connection_t *partner,
     base16_encode(conn->chosen_exit_name+1,HEX_DIGEST_LEN+1,
                   digest, DIGEST_LEN);
   }
+
+  /* Populate isolation fields. */
+  conn->original_dest_address = tor_strdup(address);
+  conn->session_group = session_group;
+  conn->isolation_flags = isolation_flags;
 
   conn->_base.address = tor_strdup("(Tor_internal)");
   tor_addr_make_unspec(&conn->_base.addr);
@@ -3291,6 +3297,9 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
       tor_strdup(a->socks_request->address);
   }
 
+  if (iso & ISO_STREAM)
+    return 0;
+
   if ((iso & ISO_DESTPORT) && a->socks_request->port != b->socks_request->port)
     return 0;
   if ((iso & ISO_DESTADDR) &&
@@ -3349,6 +3358,11 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
     ((edge_connection_t*)conn)->original_dest_address =
       tor_strdup(conn->socks_request->address);
   }
+
+  /* If isolation_values_set, then the circuit is not compatible with
+   * any new ISO_STREAM stream. */
+  if (iso & ISO_STREAM)
+    return 0;
 
   if ((iso & ISO_DESTPORT) && conn->socks_request->port != circ->dest_port)
     return 0;

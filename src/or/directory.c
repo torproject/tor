@@ -973,6 +973,10 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     }
   } else { /* we want to connect via a tor connection */
     edge_connection_t *linked_conn;
+    /* Anonymized tunneled connections can never share a circuit.
+     * One-hop directory connections can share circuits with each other
+     * but nothing else. */
+    int iso_flags = anonymized_connection ? ISO_STREAM : ISO_SESSIONGRP;
 
     /* If it's an anonymized connection, remember the fact that we
      * wanted it for later: maybe we'll want it again soon. */
@@ -988,7 +992,9 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     linked_conn =
       connection_ap_make_link(TO_CONN(conn),
                               conn->_base.address, conn->_base.port,
-                              digest, use_begindir, conn->dirconn_direct);
+                              digest,
+                              SESSION_GROUP_DIRCONN, iso_flags,
+                              use_begindir, conn->dirconn_direct);
     if (!linked_conn) {
       log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));

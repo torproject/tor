@@ -2642,10 +2642,19 @@ typedef enum invalid_router_usage_t {
 #define ISO_SESSIONGRP  (1u<<5)
 /** Isolate based on newnym epoch (always on). */
 #define ISO_NYM_EPOCH   (1u<<6)
+/** Isolate all streams (Internal only). */
+#define ISO_STREAM      (1u<<7)
 /**@}*/
 
 /** Default isolation level for ports. */
 #define ISO_DEFAULT (ISO_CLIENTADDR|ISO_SOCKSAUTH|ISO_SESSIONGRP|ISO_NYM_EPOCH)
+
+/** Indicates that we haven't yet set a session group on a port_cfg_t. */
+#define SESSION_GROUP_UNSET -1
+/** Session group reserved for directory connections */
+#define SESSION_GROUP_DIRCONN -2
+/** First automatically allocated session group number */
+#define SESSION_GROUP_FIRST_AUTO -3
 
 /** Configuration for a single port that we're listening on. */
 typedef struct port_cfg_t {
