@@ -1490,7 +1490,7 @@ compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
 
   if (node->ri)
     return compare_tor_addr_to_addr_policy(addr, port, node->ri->exit_policy);
-  else if (node->md && node->md) {
+  else if (node->md) {
     if (node->md->exit_policy == NULL)
       return ADDR_POLICY_REJECTED;
     else
