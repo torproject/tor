@@ -184,6 +184,7 @@ dnsserv_launch_request(const char *name, int reverse)
 
   strlcpy(conn->socks_request->address, name,
           sizeof(conn->socks_request->address));
+  conn->original_dest_address = tor_strdup(name);
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");

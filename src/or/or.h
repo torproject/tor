@@ -1214,10 +1214,12 @@ typedef struct edge_connection_t {
   int session_group;
   /** AP only: The newnym epoch in which we created this connection. */
   unsigned nym_epoch;
+  /** AP only: The original requested address before we rewrote it. */
+  char *original_dest_address;
   /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
      ClientProtocol is a combination of type and socks_request->
      socks_version.  SocksAuth will be added to socks_request by ticket
-     #1666. DestAddr and DestPort are in socks_request->address. */
+     #1666. DestAddr is in socks_request->address. */
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've

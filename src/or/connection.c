@@ -467,9 +467,9 @@ _connection_free(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     tor_free(edge_conn->chosen_exit_name);
+    tor_free(edge_conn->original_dest_address);
     if (edge_conn->socks_request)
       socks_request_free(edge_conn->socks_request);
-
     rend_data_free(edge_conn->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {

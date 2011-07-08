@@ -1671,6 +1671,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
             safe_str_client(socks->address),
             socks->port);
 
+  if (! conn->original_dest_address)
+    conn->original_dest_address = tor_strdup(conn->socks_request->address);
+
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
       !tor_inet_aton(socks->address, &addr_tmp) &&
       options->AutomapHostsOnResolve && options->AutomapHostsSuffixes) {
@@ -2512,6 +2515,7 @@ connection_ap_make_link(connection_t *partner,
   conn->socks_request->has_finished = 0; /* waiting for 'connected' */
   strlcpy(conn->socks_request->address, address,
           sizeof(conn->socks_request->address));
+  conn->original_dest_address = tor_strdup(address);
   conn->socks_request->port = port;
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
   conn->want_onehop = want_onehop;
@@ -3274,12 +3278,23 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
 {
   const uint8_t iso = a->isolation_flags | b->isolation_flags;
 
+  if (! a->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
+             "having set a->original_dest_address");
+    ((edge_connection_t*)a)->original_dest_address =
+      tor_strdup(a->socks_request->address);
+  }
+  if (! b->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
+             "having set b->original_dest_address");
+    ((edge_connection_t*)b)->original_dest_address =
+      tor_strdup(a->socks_request->address);
+  }
+
   if ((iso & ISO_DESTPORT) && a->socks_request->port != b->socks_request->port)
     return 0;
-  /* XXXX023 Not quite right: we care about addresses that resolve to the same
-     place */
   if ((iso & ISO_DESTADDR) &&
-      strcasecmp(a->socks_request->address, b->socks_request->address))
+      strcasecmp(a->original_dest_address, b->original_dest_address))
     return 0;
   /* XXXX023 Waititing for ticket #1666 */
   /*
@@ -3328,12 +3343,17 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
     return 0;
   }
 
+  if (! conn->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_compatible_with_circuit without "
+             "having set conn->original_dest_address");
+    ((edge_connection_t*)conn)->original_dest_address =
+      tor_strdup(conn->socks_request->address);
+  }
+
   if ((iso & ISO_DESTPORT) && conn->socks_request->port != circ->dest_port)
     return 0;
-  /* XXXX023 Not quite right: we care about addresses that resolve to the same
-     place */
   if ((iso & ISO_DESTADDR) &&
-      strcasecmp(conn->socks_request->address, circ->dest_address))
+      strcasecmp(conn->original_dest_address, circ->dest_address))
     return 0;
   /* XXXX023 Waititing for ticket #1666 */
   /*
@@ -3369,11 +3389,18 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
                                          origin_circuit_t *circ,
                                          int dry_run)
 {
+  if (! conn->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_update_circuit_isolation without "
+             "having set conn->original_dest_address");
+    ((edge_connection_t*)conn)->original_dest_address =
+      tor_strdup(conn->socks_request->address);
+  }
+
   if (!circ->isolation_values_set) {
     if (dry_run)
       return -1;
     circ->dest_port = conn->socks_request->port;
-    circ->dest_address = tor_strdup(conn->socks_request->address);
+    circ->dest_address = tor_strdup(conn->original_dest_address);
     circ->client_proto_type = TO_CONN(conn)->type;
     circ->client_proto_socksver = conn->socks_request->socks_version;
     tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
@@ -3387,9 +3414,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
     uint8_t mixed = 0;
     if (conn->socks_request->port != circ->dest_port)
       mixed |= ISO_DESTPORT;
-    /* XXXX023 Not quite right: we care about addresses that resolve to the
-       same place */
-    if (strcasecmp(conn->socks_request->address, circ->dest_address))
+    if (strcasecmp(conn->original_dest_address, circ->dest_address))
       mixed |= ISO_DESTADDR;
     /* XXXX023 auth too, once #1666 is in. */
     if ((TO_CONN(conn)->type != circ->client_proto_type ||
