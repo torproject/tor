@@ -2653,8 +2653,10 @@ typedef enum invalid_router_usage_t {
 #define SESSION_GROUP_UNSET -1
 /** Session group reserved for directory connections */
 #define SESSION_GROUP_DIRCONN -2
+/** Session group reserved for resolve requests launched by a controller */
+#define SESSION_GROUP_CONTROL_RESOLVE -3
 /** First automatically allocated session group number */
-#define SESSION_GROUP_FIRST_AUTO -3
+#define SESSION_GROUP_FIRST_AUTO -4
 
 /** Configuration for a single port that we're listening on. */
 typedef struct port_cfg_t {
