@@ -1357,12 +1357,17 @@ addrs_in_same_network_family(const tor_addr_t *a1,
   return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
 }
 
-/** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
- * This is used to make sure we don't pick siblings in a single path,
- * or pick more than one relay from a family for our entry guard list.
+/**
+ * Add all the family of <b>node</b>, including <b>node</b> itself, to
+ * the smartlist <b>sl</b>.
+ *
+ * This is used to make sure we don't pick siblings in a single path, or
+ * pick more than one relay from a family for our entry guard list.
+ * Note that a node may be added to <b>sl</b> more than once if it is
+ * part of <b>node</b>'s family for more than one reason.
  */
 void
-nodelist_add_node_family(smartlist_t *sl, const node_t *node)
+nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
 {
   /* XXXX MOVE */
   const smartlist_t *all_nodes = nodelist_get_list();
@@ -1372,6 +1377,13 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
   tor_assert(node);
 
   declared_family = node_get_declared_family(node);
+
+  /* Let's make sure that we have the node itself, if it's a real node. */
+  {
+    const node_t *real_node = node_get_by_id(node->identity);
+    if (real_node)
+      smartlist_add(sl, (node_t*)real_node);
+  }
 
   /* First, add any nodes with similar network addresses. */
   if (options->EnforceDistinctSubnets) {
@@ -1417,13 +1429,14 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
   }
 }
 
-/** Given a <b>router</b>, add every node_t in its family to <b>sl</b>.
+/** Given a <b>router</b>, add every node_t in its family (including the
+ * node itself</b>) to <b>sl</b>.
  *
  * Note the type mismatch: This function takes a routerinfo, but adds nodes
  * to the smartlist!
  */
 static void
-routerlist_add_nodes_in_family(smartlist_t *sl, const routerinfo_t *router)
+routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
 {
   /* XXXX MOVE ? */
   node_t fake_node;
@@ -1434,7 +1447,7 @@ routerlist_add_nodes_in_family(smartlist_t *sl, const routerinfo_t *router)
     memcpy(fake_node.identity, router->cache_info.identity_digest, DIGEST_LEN);
     node = &fake_node;
   }
-  nodelist_add_node_family(sl, node);
+  nodelist_add_node_and_family(sl, node);
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
@@ -2171,12 +2184,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
       });
   }
 
-  if ((r = routerlist_find_my_routerinfo())) {
-    const node_t *me = node_get_by_id(r->cache_info.identity_digest);
-    if (me)
-      smartlist_add(excludednodes, (void *)me);
-    routerlist_add_nodes_in_family(excludednodes, r);
-  }
+  if ((r = routerlist_find_my_routerinfo()))
+    routerlist_add_node_and_family(excludednodes, r);
 
   router_add_running_nodes_to_smartlist(sl, allow_invalid,
                                         need_uptime, need_capacity,
