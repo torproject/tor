@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Major bugfixes:
     - When configuring a large set of nodes in EntryNodes (as with
       'EntryNodes {cc}' or 'EntryNodes 1.1.1.1/16'), choose only a
       random subset to be guards, and choose them in random

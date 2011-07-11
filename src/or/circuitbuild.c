@@ -3984,10 +3984,10 @@ entry_nodes_should_be_added(void)
   should_add_entry_nodes = 1;
 }
 
-/** Add all nodes in EntryNodes that aren't currently guard nodes to the list
- * of guard nodes, at the front. */
+/** Adjust the entry guards list so that it only contains entries from
+ * EntryNodes, adding new entries from EntryNodes to the list as needed. */
 static void
-entry_guards_prepend_from_config(const or_options_t *options)
+entry_guards_set_from_config(const or_options_t *options)
 {
   smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
@@ -4017,12 +4017,6 @@ entry_guards_prepend_from_config(const or_options_t *options)
 
   /* Split entry guards into those on the list and those not. */
 
-  /* XXXX023 Now that we allow countries and IP ranges in EntryNodes, this is
-   *  potentially an enormous list. For now, we disable such values for
-   *  EntryNodes in options_validate(); really, this wants a better solution.
-   *  Perhaps we should do this calculation once whenever the list of routers
-   *  changes or the entrynodes setting changes.
-   */
   routerset_get_all_nodes(entry_nodes, options->EntryNodes,
                           options->ExcludeNodes, 0);
   SMARTLIST_FOREACH(entry_nodes, const node_t *,node,
@@ -4036,17 +4030,15 @@ entry_guards_prepend_from_config(const or_options_t *options)
   });
 
   /* Remove all currently configured guard nodes, excluded nodes, unreachable
-   * nodes, or non-Guard nodes from entry_routers. */
+   * nodes, or non-Guard nodes from entry_nodes. */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
     if (is_an_entry_guard(node->identity)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (routerset_contains_node(options->ExcludeNodes, node)) {
-      log_notice(LD_GENERAL, "Dropping node: excluded");
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (!fascist_firewall_allows_node(node)) {
-      log_notice(LD_GENERAL, "Dropping node: fascist firewall");
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (! node->is_possible_guard) {
@@ -4059,7 +4051,7 @@ entry_guards_prepend_from_config(const or_options_t *options)
   smartlist_clear(entry_guards);
   /* First, the previously configured guards that are in EntryNodes. */
   smartlist_add_all(entry_guards, old_entry_guards_on_list);
-  /* Next, scramble the reset of EntryNodes, putting the guards first. */
+  /* Next, scramble the rest of EntryNodes, putting the guards first. */
   smartlist_shuffle(entry_nodes);
   smartlist_shuffle(worse_entry_nodes);
   smartlist_add_all(entry_nodes, worse_entry_nodes);
@@ -4125,7 +4117,7 @@ choose_random_entry(cpath_build_state_t *state)
     entry_guards = smartlist_create();
 
   if (should_add_entry_nodes)
-    entry_guards_prepend_from_config(options);
+    entry_guards_set_from_config(options);
 
   if (!entry_list_is_constrained(options) &&
       smartlist_len(entry_guards) < options->NumEntryGuards)
@@ -4150,7 +4142,7 @@ choose_random_entry(cpath_build_state_t *state)
           goto choose_and_finish; /* only choose from the ones we like */
         if (options->StrictNodes) {
           /* in theory this case should never happen, since
-           * entry_guards_prepend_from_config() drops unwanted relays */
+           * entry_guards_set_from_config() drops unwanted relays */
           tor_fragile_assert();
         } else {
           log_info(LD_CIRC,
