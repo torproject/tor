@@ -3119,7 +3119,7 @@ struct socks_request_t {
    * see usernamelen for its length. */
   char *username;
   /** The negotiated password value if any (for socks5). This value is NOT
-   * nul-terminated; see usernamelen for its length. */
+   * nul-terminated; see passwordlen for its length. */
   char *password;
 };
 
