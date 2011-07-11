@@ -158,12 +158,18 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
  */
 static strmap_t *broken_connection_counts;
 
+/** If true, do not record information in <b>broken_connection_counts</b>. */
+static int disable_broken_connection_counts = 0;
+
 /** Record that an OR connection failed in <b>state</b>. */
 static void
 note_broken_connection(const char *state)
 {
   void *ptr;
   intptr_t val;
+  if (disable_broken_connection_counts)
+    return;
+
   if (!broken_connection_counts)
     broken_connection_counts = strmap_new();
 
@@ -174,13 +180,16 @@ note_broken_connection(const char *state)
   strmap_set(broken_connection_counts, state, ptr);
 }
 
-/** Forget all recorded states for failed connections. */
+/** Forget all recorded states for failed connections.  If
+ * <b>stop_recording</b> is true, don't record any more. */
 void
-clear_broken_connection_map(void)
+clear_broken_connection_map(int stop_recording)
 {
   if (broken_connection_counts)
     strmap_free(broken_connection_counts, NULL);
   broken_connection_counts = NULL;
+  if (stop_recording)
+    disable_broken_connection_counts = 1;
 }
 
 /** Write a detailed description the state of <b>orconn</b> into the
@@ -209,6 +218,8 @@ static void
 connection_or_note_state_when_broken(or_connection_t *orconn)
 {
   char buf[256];
+  if (disable_broken_connection_counts)
+    return;
   connection_or_get_state_description(orconn, buf, sizeof(buf));
   log_info(LD_HANDSHAKE,"Connection died in state '%s'", buf);
   note_broken_connection(buf);
@@ -240,7 +251,7 @@ connection_or_report_broken_states(int severity, int domain)
   int total = 0;
   smartlist_t *items;
 
-  if (!broken_connection_counts)
+  if (!broken_connection_counts || disable_broken_connection_counts)
     return;
 
   items = smartlist_create();

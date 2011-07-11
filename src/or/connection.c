@@ -555,7 +555,7 @@ connection_free_all(void)
   connection_or_clear_identity_map();
 
   /* Clear out our list of broken connections */
-  clear_broken_connection_map();
+  clear_broken_connection_map(0);
 
   SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
 
