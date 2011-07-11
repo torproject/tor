@@ -53,7 +53,7 @@ smartlist_t *nodelist_get_list(void);
 /* XXXX These need to move out of routerlist.c */
 void nodelist_refresh_countries(void);
 void node_set_country(node_t *node);
-void nodelist_add_node_family(smartlist_t *nodes, const node_t *node);
+void nodelist_add_node_and_family(smartlist_t *nodes, const node_t *node);
 int nodes_in_same_family(const node_t *node1, const node_t *node2);
 
 #endif

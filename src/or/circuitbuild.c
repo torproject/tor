@@ -3102,13 +3102,11 @@ choose_good_middle_server(uint8_t purpose,
   log_debug(LD_CIRC, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_create();
   if ((r = build_state_get_exit_node(state))) {
-    smartlist_add(excluded, (void*) r);
-    nodelist_add_node_family(excluded, r);
+    nodelist_add_node_and_family(excluded, r);
   }
   for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
     if ((r = node_get_by_id(cpath->extend_info->identity_digest))) {
-      smartlist_add(excluded, (void*)r);
-      nodelist_add_node_family(excluded, r);
+      nodelist_add_node_and_family(excluded, r);
     }
   }
 
@@ -3152,8 +3150,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   if (state && (node = build_state_get_exit_node(state))) {
     /* Exclude the exit node from the state, if we have one.  Also exclude its
      * family. */
-    smartlist_add(excluded, (void*)node);
-    nodelist_add_node_family(excluded, node);
+    nodelist_add_node_and_family(excluded, node);
   }
   if (firewall_is_fascist_or()) {
     /* Exclude all ORs that we can't reach through our firewall */
@@ -3168,8 +3165,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
       {
         if ((node = node_get_by_id(entry->identity))) {
-          smartlist_add(excluded, (void*)node);
-          nodelist_add_node_family(excluded, node);
+          nodelist_add_node_and_family(excluded, node);
         }
       });
   }
@@ -4094,7 +4090,7 @@ choose_random_entry(cpath_build_state_t *state)
   int preferred_min, consider_exit_family = 0;
 
   if (chosen_exit) {
-    nodelist_add_node_family(exit_family, chosen_exit);
+    nodelist_add_node_and_family(exit_family, chosen_exit);
     consider_exit_family = 1;
   }
 
