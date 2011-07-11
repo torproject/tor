@@ -1,0 +1,10 @@
+  o Major bugfixes:
+    - When configuring a large set of nodes in EntryNodes (as with
+      'EntryNodes {cc}' or 'EntryNodes 1.1.1.1/16'), choose only a
+      random subset to be guards, and choose them in random
+      order. Bugfix on 0.2.3.1-alpha; fixes bug 2798.
+
+  o Minor features:
+    - When configuring a large set of nodes in EntryNodes, and there are
+      enough of them listed as Guard so that we don't need to consider
+      the non-guard entries, prefer the ones listed with the Guard flag.
