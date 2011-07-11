@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Do not free all general-purposes regular descriptors just
+      because microdescriptor use is enabled. Fixes bug 3113;
+      bugfix on 0.2.3.1-alpha.

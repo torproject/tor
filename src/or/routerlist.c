@@ -3273,7 +3273,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir = authdir_mode_handles_descs(options, router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
-  networkstatus_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_t *consensus =
+    networkstatus_get_latest_consensus_by_flavor(FLAV_NS);
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
   int in_consensus = 0;
 
