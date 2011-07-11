@@ -390,7 +390,7 @@ static config_var_t _option_vars[] = {
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
   V(UseEntryGuards,              BOOL,     "1"),
-  V(UseMicrodescriptors,         AUTOBOOL, "0"),
+  V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   V(User,                        STRING,   NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
