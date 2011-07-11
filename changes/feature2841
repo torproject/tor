@@ -1,0 +1,6 @@
+  o Major features:
+    - Tor clients using bridges can now be configured to use a
+      separate 'transport' proxy for each bridge. This helps to resist
+      censorship by allowing bridges to use protocol obfuxcation
+      plugins. It implements part of proposal 180.
+
