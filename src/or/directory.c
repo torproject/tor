@@ -306,7 +306,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       if (exclude_self && router_digest_is_me(ds->digest))
         continue;
 
-      if (options->ExcludeNodes && options->StrictNodes &&
+      if (options->StrictNodes &&
           routerset_contains_routerstatus(options->ExcludeNodes, rs, -1)) {
         log_warn(LD_DIR, "Wanted to contact authority '%s' for %s, but "
                  "it's in our ExcludedNodes list and StrictNodes is set. "

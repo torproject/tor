@@ -1132,7 +1132,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     if ((type & MICRODESC_DIRINFO) && !is_trusted &&
         !node->rs->version_supports_microdesc_cache)
       continue;
-    if (try_excluding && options->ExcludeNodes &&
+    if (try_excluding &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
                                         country)) {
       ++n_excluded;
@@ -1237,7 +1237,7 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
-      if (try_excluding && options->ExcludeNodes &&
+      if (try_excluding &&
           routerset_contains_routerstatus(options->ExcludeNodes,
                                           &d->fake_status, -1)) {
         ++n_excluded;
@@ -5567,7 +5567,8 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
                    const char *nickname, const char *id_digest,
                    country_t country)
 {
-  if (!set || !set->list) return 0;
+  if (!set || !set->list)
+    return 0;
   if (nickname && strmap_get_lc(set->names, nickname))
     return 4;
   if (id_digest && digestmap_get(set->digests, id_digest))

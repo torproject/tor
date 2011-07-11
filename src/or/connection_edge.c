@@ -3146,8 +3146,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
     if (!conn->chosen_exit_name && node_exit_policy_rejects_all(exit))
       return 0;
   }
-  if (options->_ExcludeExitNodesUnion &&
-      routerset_contains_node(options->_ExcludeExitNodesUnion, exit)) {
+  if (routerset_contains_node(options->_ExcludeExitNodesUnion, exit)) {
     /* Not a suitable exit. Refuse it. */
     return 0;
   }

@@ -2693,8 +2693,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
     }
-    if (options->_ExcludeExitNodesUnion &&
-        routerset_contains_node(options->_ExcludeExitNodesUnion, node)) {
+    if (routerset_contains_node(options->_ExcludeExitNodesUnion, node)) {
       n_supported[i] = -1;
       continue; /* user asked us not to use it, no matter what */
     }
@@ -3505,8 +3504,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
       return NULL;
     }
   }
-  if (options->EntryNodes &&
-      routerset_contains_node(options->EntryNodes, node)) {
+  if (routerset_contains_node(options->EntryNodes, node)) {
     /* they asked for it, they get it */
     need_uptime = need_capacity = 0;
   }
