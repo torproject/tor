@@ -3619,7 +3619,7 @@ control_event_guard_deferred(void)
  * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
 static const node_t *
-add_an_entry_guard(const node_t *chosen, int reset_status)
+add_an_entry_guard(const node_t *chosen, int reset_status, int prepend)
 {
   const node_t *node;
   entry_guard_t *entry;
@@ -3651,9 +3651,9 @@ add_an_entry_guard(const node_t *chosen, int reset_status)
    * this guard. For details, see the Jan 2010 or-dev thread. */
   entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
   entry->chosen_by_version = tor_strdup(VERSION);
-  if (chosen) /* prepend */
+  if (prepend)
     smartlist_insert(entry_guards, 0, entry);
-  else /* append */
+  else
     smartlist_add(entry_guards, entry);
   control_event_guard(entry->nickname, entry->identity, "NEW");
   control_event_guard_deferred();
@@ -3671,7 +3671,7 @@ pick_entry_guards(const or_options_t *options)
   tor_assert(entry_guards);
 
   while (num_live_entry_guards() < options->NumEntryGuards) {
-    if (!add_an_entry_guard(NULL, 0))
+    if (!add_an_entry_guard(NULL, 0, 0))
       break;
     changed = 1;
   }
@@ -3989,7 +3989,7 @@ entry_nodes_should_be_added(void)
 static void
 entry_guards_prepend_from_config(const or_options_t *options)
 {
-  smartlist_t *entry_nodes, *entry_fps;
+  smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
   tor_assert(entry_guards);
 
@@ -4010,6 +4010,7 @@ entry_guards_prepend_from_config(const or_options_t *options)
   }
 
   entry_nodes = smartlist_create();
+  worse_entry_nodes = smartlist_create();
   entry_fps = smartlist_create();
   old_entry_guards_on_list = smartlist_create();
   old_entry_guards_not_on_list = smartlist_create();
@@ -4034,27 +4035,49 @@ entry_guards_prepend_from_config(const or_options_t *options)
       smartlist_add(old_entry_guards_not_on_list, e);
   });
 
-  /* Remove all currently configured entry guards from entry_routers. */
-  SMARTLIST_FOREACH(entry_nodes, const node_t *, node, {
+  /* Remove all currently configured guard nodes, excluded nodes, unreachable
+   * nodes, or non-Guard nodes from entry_routers. */
+  SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
     if (is_an_entry_guard(node->identity)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
+      continue;
+    } else if (routerset_contains_node(options->ExcludeNodes, node)) {
+      log_notice(LD_GENERAL, "Dropping node: excluded");
+      SMARTLIST_DEL_CURRENT(entry_nodes, node);
+      continue;
+    } else if (!fascist_firewall_allows_node(node)) {
+      log_notice(LD_GENERAL, "Dropping node: fascist firewall");
+      SMARTLIST_DEL_CURRENT(entry_nodes, node);
+      continue;
+    } else if (! node->is_possible_guard) {
+      smartlist_add(worse_entry_nodes, (node_t*)node);
+      SMARTLIST_DEL_CURRENT(entry_nodes, node);
     }
-  });
+  } SMARTLIST_FOREACH_END(node);
 
   /* Now build the new entry_guards list. */
   smartlist_clear(entry_guards);
   /* First, the previously configured guards that are in EntryNodes. */
   smartlist_add_all(entry_guards, old_entry_guards_on_list);
+  /* Next, scramble the reset of EntryNodes, putting the guards first. */
+  smartlist_shuffle(entry_nodes);
+  smartlist_shuffle(worse_entry_nodes);
+  smartlist_add_all(entry_nodes, worse_entry_nodes);
+
   /* Next, the rest of EntryNodes */
-  SMARTLIST_FOREACH(entry_nodes, const node_t *, node, {
-    add_an_entry_guard(node, 0);
-  });
+  SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
+    add_an_entry_guard(node, 0, 0);
+    if (smartlist_len(entry_guards) > options->NumEntryGuards * 10)
+      break;
+  } SMARTLIST_FOREACH_END(node);
+  log_notice(LD_GENERAL, "%d entries in guards", smartlist_len(entry_guards));
   /* Finally, free the remaining previously configured guards that are not in
    * EntryNodes. */
   SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                     entry_guard_free(e));
 
   smartlist_free(entry_nodes);
+  smartlist_free(worse_entry_nodes);
   smartlist_free(entry_fps);
   smartlist_free(old_entry_guards_on_list);
   smartlist_free(old_entry_guards_not_on_list);
@@ -4165,7 +4188,7 @@ choose_random_entry(cpath_build_state_t *state)
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
        * be a long time til we get it. -RD */
-      node = add_an_entry_guard(NULL, 0);
+      node = add_an_entry_guard(NULL, 0, 0);
       if (node) {
         entry_guards_changed();
         /* XXX we start over here in case the new node we added shares
@@ -4874,7 +4897,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       tor_assert(node);
       rewrite_node_address_for_bridge(bridge, node);
-      add_an_entry_guard(node, 1);
+      add_an_entry_guard(node, 1, 1);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
                  from_cache ? "cached" : "fresh");
