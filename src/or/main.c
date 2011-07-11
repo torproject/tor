@@ -757,6 +757,13 @@ conn_close_if_marked(int i)
 #endif
 
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
+
+  /* If the connection we are about to close was trying to connect to
+  a proxy server and failed, the client won't be able to use that
+  proxy. We should warn the user about this. */
+  if (conn->proxy_state == PROXY_INFANT)
+    log_failed_proxy_connection(conn);
+
   IF_HAS_BUFFEREVENT(conn, goto unlink);
   if ((SOCKET_OK(conn->s) || conn->linked_conn) &&
       connection_wants_to_flush(conn)) {

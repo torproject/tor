@@ -203,8 +203,9 @@ static config_var_t _option_vars[] = {
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
-  V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientOnly,                  BOOL,     "0"),
+  V(ClientRejectInternalAddresses, BOOL,   "1"),
+  V(ClientTransportPlugin,       LINELIST, NULL),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
@@ -573,6 +574,7 @@ static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(const or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
+static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -1218,6 +1220,18 @@ options_act(const or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
+  clear_transport_list();
+  if (options->ClientTransportPlugin) {
+    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+      if (parse_client_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ClientTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
+  }
+
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
@@ -1229,6 +1243,11 @@ options_act(const or_options_t *old_options)
     }
     sweep_bridge_list();
   }
+
+  /* If we have pluggable transport related options enabled, see if we
+     should warn the user about potential configuration problems. */
+  if (options->Bridges || options->ClientTransportPlugin)
+    validate_pluggable_transports_config();
 
   if (running_tor && rend_config_services(options, 0)<0) {
     log_warn(LD_BUG,
@@ -3558,8 +3577,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->Socks4Proxy && options->Socks5Proxy)
-    REJECT("You cannot specify both Socks4Proxy and SOCKS5Proxy");
+  /* Check if more than one proxy type has been enabled. */
+  if (!!options->Socks4Proxy + !!options->Socks5Proxy +
+      !!options->HTTPSProxy + !!options->ClientTransportPlugin > 1)
+    REJECT("You have configured more than one proxy type. "
+           "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
 
   if (options->Socks5ProxyUsername) {
     size_t len;
@@ -3680,11 +3702,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If you set UseBridges, you must specify at least one bridge.");
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("If you set UseBridges, you must set TunnelDirConns.");
-  if (options->Bridges) {
-    for (cl = options->Bridges; cl; cl = cl->next) {
-      if (parse_bridge_line(cl->value, 1)<0)
-        REJECT("Bridge line did not parse. See logs for details.");
-    }
+
+  for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+    if (parse_client_transport_line(cl->value, 1)<0)
+      REJECT("Transport line did not parse. See logs for details.");
+  }
+
+  for (cl = options->Bridges; cl; cl = cl->next) {
+    if (parse_bridge_line(cl->value, 1)<0)
+      REJECT("Bridge line did not parse. See logs for details.");
   }
 
   if (options->ConstrainedSockets) {
@@ -4572,6 +4598,8 @@ parse_bridge_line(const char *line, int validate_only)
   smartlist_t *items = NULL;
   int r;
   char *addrport=NULL, *fingerprint=NULL;
+  char *transport_name=NULL;
+  char *field1=NULL;
   tor_addr_t addr;
   uint16_t port = 0;
   char digest[DIGEST_LEN];
@@ -4583,8 +4611,24 @@ parse_bridge_line(const char *line, int validate_only)
     log_warn(LD_CONFIG, "Too few arguments to Bridge line.");
     goto err;
   }
-  addrport = smartlist_get(items, 0);
+
+  /* field1 is either a transport name or addrport */
+  field1 = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
+
+  if (!(strstr(field1, ".") || strstr(field1, ":"))) {
+    /* new-style bridge line */
+    transport_name = field1;
+    if (smartlist_len(items) < 1) {
+      log_warn(LD_CONFIG, "Too few items to Bridge line.");
+      goto err;
+    }
+    addrport = smartlist_get(items, 0);
+    smartlist_del_keeporder(items, 0);
+  } else {
+    addrport = field1;
+  }
+
   if (tor_addr_port_parse(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
@@ -4609,23 +4653,101 @@ parse_bridge_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Bridge at %s:%d (%s)", fmt_addr(&addr),
-              (int)port,
+    log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
+              fmt_addr(&addr), (int)port,
+              transport_name ? transport_name : "no transport",
               fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(&addr, port, fingerprint ? digest : NULL);
+    bridge_add_from_config(&addr, port,
+                           fingerprint ? digest : NULL, transport_name);
   }
 
   r = 0;
   goto done;
 
-  err:
+ err:
   r = -1;
 
-  done:
+ done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
   tor_free(fingerprint);
+  tor_free(transport_name);
+  return r;
+}
+
+/** Read the contents of a ClientTransportPlugin line from
+ * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't. If <b>validate_only</b> is 0, and the line is well-formed,
+ * then add the transport described in the line to our internal
+ * transport list.
+*/
+static int
+parse_client_transport_line(const char *line, int validate_only)
+{
+  smartlist_t *items = NULL;
+  int r;
+  char *socks_ver_str=NULL;
+  char *name=NULL;
+  char *addrport=NULL;
+  int socks_ver;
+  tor_addr_t addr;
+  uint16_t port = 0;
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(items) < 3) {
+    log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
+    goto err;
+  }
+
+  name = smartlist_get(items, 0);
+
+  socks_ver_str = smartlist_get(items, 1);
+
+  if (!strcmp(socks_ver_str,"socks4"))
+    socks_ver = PROXY_SOCKS4;
+  else if (!strcmp(socks_ver_str,"socks5"))
+    socks_ver = PROXY_SOCKS5;
+  else {
+    log_warn(LD_CONFIG, "Strange ClientTransportPlugin proxy type '%s'.",
+             socks_ver_str);
+    goto err;
+  }
+
+  addrport = smartlist_get(items, 2);
+
+  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+    log_warn(LD_CONFIG, "Error parsing transport "
+              "address '%s'", addrport);
+    goto err;
+  }
+
+  if (!port) {
+    log_warn(LD_CONFIG,
+              "Transport address '%s' has no port.", addrport);
+    goto err;
+  }
+
+  if (!validate_only) {
+    log_debug(LD_DIR, "Transport %s found at %s:%d", name,
+              fmt_addr(&addr), (int)port);
+
+    if (transport_add_from_config(&addr, port, name, socks_ver) < 0)
+      goto err;
+  }
+
+  r = 0;
+  goto done;
+
+ err:
+  r = -1;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
   return r;
 }
 

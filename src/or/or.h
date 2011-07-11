@@ -230,15 +230,30 @@ typedef enum {
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
+/* !!!! If there is ever a PROXY_* type over 2, we must grow the proxy_type
+ * field in or_connection_t */
+/* pluggable transports proxy type */
+#define PROXY_PLUGGABLE 4
 
 /* Proxy client handshake states */
-#define PROXY_HTTPS_WANT_CONNECT_OK 1
-#define PROXY_SOCKS4_WANT_CONNECT_OK 2
-#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 3
-#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 4
-#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 5
-#define PROXY_SOCKS5_WANT_CONNECT_OK 6
-#define PROXY_CONNECTED 7
+/* We use a proxy but we haven't even connected to it yet. */
+#define PROXY_INFANT 1
+/* We use an HTTP proxy and we've sent the CONNECT command. */
+#define PROXY_HTTPS_WANT_CONNECT_OK 2
+/* We use a SOCKS4 proxy and we've sent the CONNECT command. */
+#define PROXY_SOCKS4_WANT_CONNECT_OK 3
+/* We use a SOCKS5 proxy and we try to negotiate without
+   any authentication . */
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 4
+/* We use a SOCKS5 proxy and we try to negotiate with
+   Username/Password authentication . */
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 5
+/* We use a SOCKS5 proxy and we just sent our credentials. */
+#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 6
+/* We use a SOCKS5 proxy and we just sent our CONNECT command. */
+#define PROXY_SOCKS5_WANT_CONNECT_OK 7
+/* We use a proxy and we CONNECTed successfully!. */
+#define PROXY_CONNECTED 8
 
 /** True iff <b>x</b> is an edge connection. */
 #define CONN_IS_EDGE(x) \
@@ -1084,6 +1099,7 @@ typedef struct or_connection_t {
    * router itself has a problem.
    */
   unsigned int is_bad_for_new_circs:1;
+  unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   circid_t next_circ_id; /**< Which circ_id do we try to use next on
@@ -2653,6 +2669,9 @@ typedef struct {
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
+
+  config_line_t *ClientTransportPlugin; /**< List of client
+                                           transport plugins. */
 
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the

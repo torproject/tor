@@ -66,6 +66,8 @@ static void set_constrained_socket_buffers(tor_socket_t sock, int size);
 static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
+static const char *proxy_type_to_string(int proxy_type);
+static int get_proxy_type(void);
 
 /** The last IPv4 address that our network interface seemed to have been
  * binding to, in host order.  We use this to detect when our IP changes. */
@@ -1467,6 +1469,7 @@ connection_proxy_state_to_string(int state)
   static const char *unknown = "???";
   static const char *states[] = {
     "PROXY_NONE",
+    "PROXY_INFANT",
     "PROXY_HTTPS_WANT_CONNECT_OK",
     "PROXY_SOCKS4_WANT_CONNECT_OK",
     "PROXY_SOCKS5_WANT_AUTH_METHOD_NONE",
@@ -4124,5 +4127,103 @@ assert_connection_ok(connection_t *conn, time_t now)
     default:
       tor_assert(0);
   }
+}
+
+/** Fills <b>addr</b> and <b>port</b> with the details of the global
+ *  proxy server we are using.
+ *  <b>conn</b> contains the connection we are using the proxy for.
+ *
+ *  Return 0 on success, -1 on failure.
+ */
+int
+get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
+                   const connection_t *conn)
+{
+  or_options_t *options = get_options();
+
+  if (options->HTTPSProxy) {
+    tor_addr_copy(addr, &options->HTTPSProxyAddr);
+    *port = options->HTTPSProxyPort;
+    *proxy_type = PROXY_CONNECT;
+    return 0;
+  } else if (options->Socks4Proxy) {
+    tor_addr_copy(addr, &options->Socks4ProxyAddr);
+    *port = options->Socks4ProxyPort;
+    *proxy_type = PROXY_SOCKS4;
+    return 0;
+  } else if (options->Socks5Proxy) {
+    tor_addr_copy(addr, &options->Socks5ProxyAddr);
+    *port = options->Socks5ProxyPort;
+    *proxy_type = PROXY_SOCKS5;
+    return 0;
+  } else if (options->ClientTransportPlugin ||
+             options->Bridges) {
+    const transport_t *transport = NULL;
+    int r;
+    r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    if (r<0)
+      return -1;
+    if (transport) { /* transport found */
+      tor_addr_copy(addr, &transport->addr);
+      *port = transport->port;
+      *proxy_type = transport->socks_version;
+      return 0;
+    }
+  }
+
+  *proxy_type = PROXY_NONE;
+  return 0;
+}
+
+/** Returns the global proxy type used by tor. */
+static int
+get_proxy_type(void)
+{
+  or_options_t *options = get_options();
+
+  if (options->HTTPSProxy)
+    return PROXY_CONNECT;
+  else if (options->Socks4Proxy)
+    return PROXY_SOCKS4;
+  else if (options->Socks5Proxy)
+    return PROXY_SOCKS5;
+  else if (options->ClientTransportPlugin)
+    return PROXY_PLUGGABLE;
+  else
+    return PROXY_NONE;
+}
+
+/** Log a failed connection to a proxy server.
+ *  <b>conn</b> is the connection we use the proxy server for. */
+void
+log_failed_proxy_connection(connection_t *conn)
+{
+  tor_addr_t proxy_addr;
+  uint16_t proxy_port;
+  int proxy_type;
+
+  if (get_proxy_addrport(&proxy_addr, &proxy_port, &proxy_type, conn) != 0)
+    return; /* if we have no proxy set up, leave this function. */
+
+  log_warn(LD_NET,
+           "The connection to the %s proxy server at %s:%u just failed. "
+           "Make sure that the proxy server is up and running.",
+           proxy_type_to_string(get_proxy_type()), fmt_addr(&proxy_addr),
+           proxy_port);
+}
+
+/** Return string representation of <b>proxy_type</b>. */
+static const char *
+proxy_type_to_string(int proxy_type)
+{
+  switch (proxy_type) {
+  case PROXY_CONNECT:   return "HTTP";
+  case PROXY_SOCKS4:    return "SOCKS4";
+  case PROXY_SOCKS5:    return "SOCKS5";
+  case PROXY_PLUGGABLE: return "pluggable transports SOCKS";
+  case PROXY_NONE:      return "NULL";
+  default:              tor_assert(0);
+  }
+  return NULL; /*Unreached*/
 }
 
