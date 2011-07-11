@@ -1,0 +1,5 @@
+  o Major features:
+    - While we're trying to bootstrap, record how many TLS connections
+      fail in each state, and report which states saw the most failures
+      in response to any bootstrap failures. This feature may speed up
+      diagnosis of censorship events.

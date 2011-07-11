@@ -14,6 +14,7 @@
 
 void connection_or_remove_from_identity_map(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
+void clear_broken_connection_map(int disable);
 or_connection_t *connection_or_get_for_extend(const char *digest,
                                               const tor_addr_t *target_addr,
                                               const char **msg_out,
@@ -25,6 +26,7 @@ int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
+void connection_or_about_to_close(or_connection_t *conn);
 int connection_or_digest_is_known_relay(const char *id_digest);
 void connection_or_update_token_buckets(smartlist_t *conns,
                                         const or_options_t *options);
@@ -33,6 +35,8 @@ void connection_or_connect_failed(or_connection_t *conn,
                                   int reason, const char *msg);
 or_connection_t *connection_or_connect(const tor_addr_t *addr, uint16_t port,
                                        const char *id_digest);
+
+void connection_or_report_broken_states(int severity, int domain);
 
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);

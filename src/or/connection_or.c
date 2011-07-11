@@ -13,6 +13,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "command.h"
 #include "config.h"
 #include "connection.h"
@@ -148,6 +149,136 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
   }
 #endif
 }
+
+/**************************************************************/
+
+/** Map from a string describing what a non-open OR connection was doing when
+ * failed, to an intptr_t describing the count of connections that failed that
+ * way.  Note that the count is stored _as_ the pointer.
+ */
+static strmap_t *broken_connection_counts;
+
+/** If true, do not record information in <b>broken_connection_counts</b>. */
+static int disable_broken_connection_counts = 0;
+
+/** Record that an OR connection failed in <b>state</b>. */
+static void
+note_broken_connection(const char *state)
+{
+  void *ptr;
+  intptr_t val;
+  if (disable_broken_connection_counts)
+    return;
+
+  if (!broken_connection_counts)
+    broken_connection_counts = strmap_new();
+
+  ptr = strmap_get(broken_connection_counts, state);
+  val = (intptr_t)ptr;
+  val++;
+  ptr = (void*)val;
+  strmap_set(broken_connection_counts, state, ptr);
+}
+
+/** Forget all recorded states for failed connections.  If
+ * <b>stop_recording</b> is true, don't record any more. */
+void
+clear_broken_connection_map(int stop_recording)
+{
+  if (broken_connection_counts)
+    strmap_free(broken_connection_counts, NULL);
+  broken_connection_counts = NULL;
+  if (stop_recording)
+    disable_broken_connection_counts = 1;
+}
+
+/** Write a detailed description the state of <b>orconn</b> into the
+ * <b>buflen</b>-byte buffer at <b>buf</b>.  This description includes not
+ * only the OR-conn level state but also the TLS state.  It's useful for
+ * diagnosing broken handshakes. */
+static void
+connection_or_get_state_description(or_connection_t *orconn,
+                                    char *buf, size_t buflen)
+{
+  connection_t *conn = TO_CONN(orconn);
+  const char *conn_state;
+  char tls_state[256];
+
+  tor_assert(conn->type == CONN_TYPE_OR);
+
+  conn_state = conn_state_to_string(conn->type, conn->state);
+  tor_tls_get_state_description(orconn->tls, tls_state, sizeof(tls_state));
+
+  tor_snprintf(buf, buflen, "%s with SSL state %s", conn_state, tls_state);
+}
+
+/** Record the current state of <b>orconn</b> as the state of a broken
+ * connection. */
+static void
+connection_or_note_state_when_broken(or_connection_t *orconn)
+{
+  char buf[256];
+  if (disable_broken_connection_counts)
+    return;
+  connection_or_get_state_description(orconn, buf, sizeof(buf));
+  log_info(LD_HANDSHAKE,"Connection died in state '%s'", buf);
+  note_broken_connection(buf);
+}
+
+/** Helper type used to sort connection states and find the most frequent. */
+typedef struct broken_state_count_t {
+  intptr_t count;
+  const char *state;
+} broken_state_count_t;
+
+/** Helper function used to sort broken_state_count_t by frequency. */
+static int
+broken_state_count_compare(const void **a_ptr, const void **b_ptr)
+{
+  const broken_state_count_t *a = *a_ptr, *b = *b_ptr;
+  return b->count - a->count;
+}
+
+/** Upper limit on the number of different states to report for connection
+ * failure. */
+#define MAX_REASONS_TO_REPORT 10
+
+/** Report a list of the top states for failed OR connections at log level
+ * <b>severity</b>, in log domain <b>domain</b>. */
+void
+connection_or_report_broken_states(int severity, int domain)
+{
+  int total = 0;
+  smartlist_t *items;
+
+  if (!broken_connection_counts || disable_broken_connection_counts)
+    return;
+
+  items = smartlist_create();
+  STRMAP_FOREACH(broken_connection_counts, state, void *, countptr) {
+    broken_state_count_t *c = tor_malloc(sizeof(broken_state_count_t));
+    total += c->count = (intptr_t)countptr;
+    c->state = state;
+    smartlist_add(items, c);
+  } STRMAP_FOREACH_END;
+
+  smartlist_sort(items, broken_state_count_compare);
+
+  log(severity, domain, "%d connections have failed%s", total,
+      smartlist_len(items) > MAX_REASONS_TO_REPORT ? ". Top reasons:" : ":");
+
+  SMARTLIST_FOREACH_BEGIN(items, const broken_state_count_t *, c) {
+    if (c_sl_idx > MAX_REASONS_TO_REPORT)
+      break;
+    log(severity, domain,
+        " %d connections died in state %s", (int)c->count, c->state);
+  } SMARTLIST_FOREACH_END(c);
+
+  SMARTLIST_FOREACH(items, broken_state_count_t *, c, tor_free(c));
+  smartlist_free(items);
+}
+
+/**************************************************************/
 
 /** Pack the cell_t host-order structure <b>src</b> into network-order
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
@@ -345,6 +476,51 @@ connection_or_finished_connecting(or_connection_t *or_conn)
     return -1;
   }
   return 0;
+}
+
+/* Called when we're about to finally unlink and free an OR connection:
+ * perform necessary accounting and cleanup */
+void
+connection_or_about_to_close(or_connection_t *or_conn)
+{
+  time_t now = time(NULL);
+  connection_t *conn = TO_CONN(or_conn);
+
+  /* Remember why we're closing this connection. */
+  if (conn->state != OR_CONN_STATE_OPEN) {
+    /* Inform any pending (not attached) circs that they should
+     * give up. */
+    circuit_n_conn_done(TO_OR_CONN(conn), 0);
+    /* now mark things down as needed */
+    if (connection_or_nonopen_was_started_here(or_conn)) {
+      const or_options_t *options = get_options();
+      connection_or_note_state_when_broken(or_conn);
+      rep_hist_note_connect_failed(or_conn->identity_digest, now);
+      entry_guard_register_connect_status(or_conn->identity_digest,0,
+                                          !options->HTTPSProxy, now);
+      if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
+        int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
+                                     reason);
+        if (!authdir_mode_tests_reachability(options))
+          control_event_bootstrap_problem(
+                orconn_end_reason_to_control_string(reason), reason);
+      }
+    }
+  } else if (conn->hold_open_until_flushed) {
+    /* We only set hold_open_until_flushed when we're intentionally
+     * closing a connection. */
+    rep_hist_note_disconnect(or_conn->identity_digest, now);
+    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
+  } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
+    rep_hist_note_connection_died(or_conn->identity_digest, now);
+    control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
+  }
+  /* Now close all the attached circuits on it. */
+  circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
+                                  END_CIRC_REASON_OR_CONN_CLOSED);
 }
 
 /** Return 1 if identity digest <b>id_digest</b> is known to be a
