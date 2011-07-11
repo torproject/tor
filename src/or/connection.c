@@ -4139,7 +4139,7 @@ int
 get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
                    const connection_t *conn)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (options->HTTPSProxy) {
     tor_addr_copy(addr, &options->HTTPSProxyAddr);
@@ -4179,7 +4179,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
 static int
 get_proxy_type(void)
 {
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   if (options->HTTPSProxy)
     return PROXY_CONNECT;
