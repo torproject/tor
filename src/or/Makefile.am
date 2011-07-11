@@ -137,11 +137,13 @@ micro-revision.i: FORCE
 	  mv micro-revision.tmp micro-revision.i;			\
 	fi; true
 
-or_sha1.i: $(tor_SOURCES)
+or_sha1.i: $(tor_SOURCES) $(libtor_a_SOURCES)
 	if test "@SHA1SUM@" != none; then \
-	  @SHA1SUM@ $(tor_SOURCES) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
+	  @SHA1SUM@ $(tor_SOURCES) $(libtor_a_SOURCES) | \
+	  @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  @OPENSSL@ sha1 $(tor_SOURCES) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
+	  @OPENSSL@ sha1 $(tor_SOURCES) $(libtor_a_SOURCES) | \
+	  @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
 	else \
 	  rm or_sha1.i; \
 	  touch or_sha1.i; \
