@@ -236,7 +236,12 @@ static int
 broken_state_count_compare(const void **a_ptr, const void **b_ptr)
 {
   const broken_state_count_t *a = *a_ptr, *b = *b_ptr;
-  return b->count - a->count;
+  if (b->count < a->count)
+    return -1;
+  else if (b->count == a->count)
+    return 0;
+  else
+    return 1;
 }
 
 /** Upper limit on the number of different states to report for connection
