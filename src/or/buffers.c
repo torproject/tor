@@ -1544,7 +1544,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     else if (n_drain > 0)
       buf_remove_from_front(buf, n_drain);
 
-  } while (res == 0 && buf->head && want_length < buf->datalen);
+  } while (res == 0 && buf->head && want_length < buf->datalen &&
+           buf->datalen >= 2);
 
   return res;
 }
@@ -1595,12 +1596,14 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
    * will need more data than we currently have. */
 
   /* Loop while we have more data that we haven't given parse_socks() yet. */
-  while (evbuffer_get_length(buf) > datalen) {
+  do {
     int free_data = 0;
+    const size_t last_wanted = want_length;
     n_drain = 0;
     data = NULL;
     datalen = inspect_evbuffer(buf, &data, want_length, &free_data, NULL);
 
+    want_length = 0;
     res = parse_socks(data, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
 
@@ -1612,20 +1615,16 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     else if (n_drain > 0)
       evbuffer_drain(buf, n_drain);
 
-    if (res) /* If res is nonzero, parse_socks() made up its mind. */
-      return res;
-
-    /* If parse_socks says that we want less data than we actually tried to
-       give it, we've got some kind of weird situation; just exit the loop for
-       now.
-    */
-    if (want_length <= datalen)
+    if (res == 0 && n_drain == 0 && want_length <= last_wanted) {
+      /* If we drained nothing, and we didn't ask for more than last time,
+       * we're stuck in a loop. That's bad. It shouldn't be possible, but
+       * let's make sure. */
+      log_warn(LD_BUG, "We seem to be caught in a parse loop; breaking out");
       break;
-    /* Otherwise, it wants more data than we gave it.  If we can provide more
-     * data than we gave it, we'll try to do so in the next iteration of the
-     * loop. If we can't, the while loop will exit.  It's okay if it asked for
-     * more than we have total; maybe it doesn't really need so much. */
-  }
+    }
+
+    buflen = evbuffer_get_length(buf);
+  } while (res == 0 && want_length <= buflen && buflen >= 2);
 
   return res;
 }
@@ -1651,6 +1650,12 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   char *next, *startaddr;
   unsigned char usernamelen, passlen;
   struct in_addr in;
+
+  if (datalen < 2) {
+    /* We always need at least 2 bytes. */
+    *want_length_out = 2;
+    return 0;
+  }
 
   if (req->socks_version == 5 && !req->got_auth) {
     /* See if we have received authentication.  Strictly speaking, we should
