@@ -19,6 +19,7 @@ test_SOURCES = \
 	test_data.c \
 	test_dir.c \
 	test_microdesc.c \
+	test_pt.c \
 	test_util.c \
 	tinytest.c
 
