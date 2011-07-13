@@ -1486,6 +1486,25 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
  * actually significantly higher than the longest possible socks message. */
 #define MAX_SOCKS_MESSAGE_LEN 512
 
+/** Return a new socks_request_t. */
+socks_request_t *
+socks_request_new(void)
+{
+  return tor_malloc_zero(sizeof(socks_request_t));
+}
+
+/** Free all storage held in the socks_request_t <b>req</b>. */
+void
+socks_request_free(socks_request_t *req)
+{
+  if (!req)
+    return;
+  tor_free(req->username);
+  tor_free(req->password);
+  memset(req, 0xCC, sizeof(socks_request_t));
+  tor_free(req);
+}
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -1536,9 +1555,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     else if (n_drain > 0)
       buf_remove_from_front(buf, n_drain);
 
-  } while (res == 0 && buf->head &&
-           buf->datalen > buf->head->datalen &&
-           want_length < buf->head->datalen);
+  } while (res == 0 && buf->head && want_length < buf->datalen &&
+           buf->datalen >= 2);
 
   return res;
 }
@@ -1589,12 +1607,14 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
    * will need more data than we currently have. */
 
   /* Loop while we have more data that we haven't given parse_socks() yet. */
-  while (evbuffer_get_length(buf) > datalen) {
+  do {
     int free_data = 0;
+    const size_t last_wanted = want_length;
     n_drain = 0;
     data = NULL;
     datalen = inspect_evbuffer(buf, &data, want_length, &free_data, NULL);
 
+    want_length = 0;
     res = parse_socks(data, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
 
@@ -1606,20 +1626,16 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     else if (n_drain > 0)
       evbuffer_drain(buf, n_drain);
 
-    if (res) /* If res is nonzero, parse_socks() made up its mind. */
-      return res;
-
-    /* If parse_socks says that we want less data than we actually tried to
-       give it, we've got some kind of weird situation; just exit the loop for
-       now.
-    */
-    if (want_length <= datalen)
+    if (res == 0 && n_drain == 0 && want_length <= last_wanted) {
+      /* If we drained nothing, and we didn't ask for more than last time,
+       * we're stuck in a loop. That's bad. It shouldn't be possible, but
+       * let's make sure. */
+      log_warn(LD_BUG, "We seem to be caught in a parse loop; breaking out");
       break;
-    /* Otherwise, it wants more data than we gave it.  If we can provide more
-     * data than we gave it, we'll try to do so in the next iteration of the
-     * loop. If we can't, the while loop will exit.  It's okay if it asked for
-     * more than we have total; maybe it doesn't really need so much. */
-  }
+    }
+
+    buflen = evbuffer_get_length(buf);
+  } while (res == 0 && want_length <= buflen && buflen >= 2);
 
   return res;
 }
@@ -1642,47 +1658,114 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   tor_addr_t destaddr;
   uint32_t destip;
   uint8_t socksver;
-  enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
+  unsigned char usernamelen, passlen;
   struct in_addr in;
+
+  if (datalen < 2) {
+    /* We always need at least 2 bytes. */
+    *want_length_out = 2;
+    return 0;
+  }
+
+  if (req->socks_version == 5 && !req->got_auth) {
+    /* See if we have received authentication.  Strictly speaking, we should
+       also check whether we actually negotiated username/password
+       authentication.  But some broken clients will send us authentication
+       even if we negotiated SOCKS_NO_AUTH. */
+    if (*data == 1) { /* username/pass version 1 */
+      /* Format is: authversion [1 byte] == 1
+                    usernamelen [1 byte]
+                    username    [usernamelen bytes]
+                    passlen     [1 byte]
+                    password    [passlen bytes] */
+      usernamelen = (unsigned char)*(data + 1);
+      if (datalen < 2u + usernamelen + 1u) {
+        *want_length_out = 2u + usernamelen + 1u;
+        return 0;
+      }
+      passlen = (unsigned char)*(data + 2u + usernamelen);
+      if (datalen < 2u + usernamelen + 1u + passlen) {
+        *want_length_out = 2u + usernamelen + 1u + passlen;
+        return 0;
+      }
+      req->replylen = 2; /* 2 bytes of response */
+      req->reply[0] = 5;
+      req->reply[1] = 0; /* authentication successful */
+      log_debug(LD_APP,
+               "socks5: Accepted username/password without checking.");
+      if (usernamelen) {
+        req->username = tor_memdup(data+2u, usernamelen);
+        req->usernamelen = usernamelen;
+      }
+      if (passlen) {
+        req->password = tor_memdup(data+3u+usernamelen, passlen);
+        req->passwordlen = passlen;
+      }
+      *drain_out = 2u + usernamelen + 1u + passlen;
+      req->got_auth = 1;
+      *want_length_out = 7; /* Minimal socks5 sommand. */
+      return 0;
+    } else if (req->auth_type == SOCKS_USER_PASS) {
+      /* unknown version byte */
+      log_warn(LD_APP, "Socks5 username/password version %d not recognized; "
+               "rejecting.", (int)*data);
+      return -1;
+    }
+  }
 
   socksver = *data;
 
   switch (socksver) { /* which version of socks? */
-
     case 5: /* socks5 */
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(data+1);
+        int r=0;
         tor_assert(!req->socks_version);
         if (datalen < 2u+nummethods) {
           *want_length_out = 2u+nummethods;
           return 0;
         }
-        if (!nummethods || !memchr(data+2, 0, nummethods)) {
-          log_warn(LD_APP,
-                   "socks5: offered methods don't include 'no auth'. "
-                   "Rejecting.");
-          req->replylen = 2; /* 2 bytes of response */
-          req->reply[0] = 5;
-          req->reply[1] = '\xFF'; /* reject all methods */
+        if (!nummethods)
           return -1;
-        }
-        /* remove packet from buf. also remove any other extraneous
-         * bytes, to support broken socks clients. */
-        *drain_out = -1;
-
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        req->reply[1] = 0; /* tell client to use "none" auth method */
-        req->socks_version = 5; /* remember we've already negotiated auth */
-        log_debug(LD_APP,"socks5: accepted method 0");
-        return 0;
+        if (memchr(data+2, SOCKS_NO_AUTH, nummethods)) {
+          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
+                                            method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
+          r=0;
+        } else if (memchr(data+2, SOCKS_USER_PASS, nummethods)) {
+          req->auth_type = SOCKS_USER_PASS;
+          req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
+                                              auth method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+          r=0;
+        } else {
+          log_warn(LD_APP,
+                    "socks5: offered methods don't include 'no auth' or "
+                    "username/password. Rejecting.");
+          req->reply[1] = '\xFF'; /* reject all methods */
+          r=-1;
+        }
+        /* Remove packet from buf. Some SOCKS clients will have sent extra
+         * junk at this point; let's hope it's an authentication message. */
+        *drain_out = 2u + nummethods;
+
+        return r;
+      }
+      if (req->auth_type != SOCKS_NO_AUTH && !req->got_auth) {
+        log_warn(LD_APP,
+                 "socks5: negotiated authentication, but none provided");
+        return -1;
       }
       /* we know the method; read in the request */
       log_debug(LD_APP,"socks5: checking request");
-      if (datalen < 8) {/* basic info plus >=2 for addr plus 2 for port */
-        *want_length_out = 8;
+      if (datalen < 7) {/* basic info plus >=1 for addr plus 2 for port */
+        *want_length_out = 7;
         return 0; /* not yet */
       }
       req->command = (unsigned char) *(data+1);
@@ -1771,9 +1854,11 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
       }
       tor_assert(0);
-    case 4: /* socks4 */
-      /* http://archive.socks.permeo.com/protocol/socks4.protocol */
-      /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
+    case 4: { /* socks4 */
+      enum {socks4, socks4a} socks4_prot = socks4a;
+      const char *authstart, *authend;
+      /* http://ss5.sourceforge.net/socks4.protocol.txt */
+      /* http://ss5.sourceforge.net/socks4A.protocol.txt */
 
       req->socks_version = 4;
       if (datalen < SOCKS4_NETWORK_LEN) {/* basic info available? */
@@ -1812,7 +1897,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         socks4_prot = socks4;
       }
 
-      next = memchr(data+SOCKS4_NETWORK_LEN, 0,
+      authstart = data + SOCKS4_NETWORK_LEN;
+      next = memchr(authstart, 0,
                     datalen-SOCKS4_NETWORK_LEN);
       if (!next) {
         if (datalen >= 1024) {
@@ -1820,9 +1906,10 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
         }
         log_debug(LD_APP,"socks4: Username not here yet.");
-        *want_length_out = datalen+1024; /* ???? */
+        *want_length_out = datalen+1024; /* More than we need, but safe */
         return 0;
       }
+      authend = next;
       tor_assert(next < data+datalen);
 
       startaddr = NULL;
@@ -1847,7 +1934,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
             return -1;
           }
           log_debug(LD_APP,"socks4: Destaddr not all here yet.");
-          *want_length_out = datalen + 1024;
+          *want_length_out = datalen + 1024; /* More than we need, but safe */
           return 0;
         }
         if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
@@ -1872,15 +1959,20 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
                  req->port, escaped(req->address));
         return -1;
       }
+      if (authend != authstart) {
+        req->got_auth = 1;
+        req->usernamelen = authend - authstart;
+        req->username = tor_memdup(authstart, authend - authstart);
+      }
       /* next points to the final \0 on inbuf */
       *drain_out = next - data + 1;
       return 1;
-
+    }
     case 'G': /* get */
     case 'H': /* head */
     case 'P': /* put/post */
     case 'C': /* connect */
-      strlcpy(req->reply,
+      strlcpy((char*)req->reply,
 "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
 "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
 "<html>\n"
@@ -1906,7 +1998,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 "</body>\n"
 "</html>\n"
              , MAX_SOCKS_REPLY_LEN);
-      req->replylen = strlen(req->reply)+1;
+      req->replylen = strlen((char*)req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,

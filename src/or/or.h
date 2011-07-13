@@ -3182,6 +3182,8 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
+#define SOCKS_NO_AUTH 0x00
+#define SOCKS_USER_PASS 0x02
 
 /** Please open a TCP connection to this addr:port. */
 #define SOCKS_COMMAND_CONNECT       0x01
@@ -3201,10 +3203,15 @@ struct socks_request_t {
   /** Which version of SOCKS did the client use? One of "0, 4, 5" -- where
    * 0 means that no socks handshake ever took place, and this is just a
    * stub connection (e.g. see connection_ap_make_link()). */
-  char socks_version;
-  int command; /**< What is this stream's goal? One from the above list. */
+  uint8_t socks_version;
+  /** If using socks5 authentication, which authentication type did we
+   * negotiate?  currently we support 0 (no authentication) and 2
+   * (username/password). */
+  uint8_t auth_type;
+  /** What is this stream's goal? One of the SOCKS_COMMAND_* values */
+  uint8_t command;
   size_t replylen; /**< Length of <b>reply</b>. */
-  char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
+  uint8_t reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
                                     * rather than using the default socks4 or
                                     * socks5 socks reply. We use this for the
@@ -3216,6 +3223,19 @@ struct socks_request_t {
   unsigned int has_finished : 1; /**< Has the SOCKS handshake finished? Used to
                               * make sure we send back a socks reply for
                               * every connection. */
+  unsigned int got_auth : 1; /**< Have we received any authentication data? */
+
+  /** Number of bytes in username; 0 if username is NULL */
+  uint8_t usernamelen;
+  /** Number of bytes in password; 0 if password is NULL */
+  uint8_t passwordlen;
+  /** The negotiated username value if any (for socks5), or the entire
+   * authentication string (for socks4).  This value is NOT nul-terminated;
+   * see usernamelen for its length. */
+  char *username;
+  /** The negotiated password value if any (for socks5). This value is NOT
+   * nul-terminated; see passwordlen for its length. */
+  char *password;
 };
 
 /********************************* circuitbuild.c **********************/

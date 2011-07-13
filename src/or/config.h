@@ -79,5 +79,7 @@ uint32_t get_effective_bwburst(const or_options_t *options);
 or_options_t *options_new(void);
 #endif
 
+void config_register_addressmaps(const or_options_t *options);
+
 #endif
 

@@ -1,0 +1,4 @@
+  o Minor features:
+    - Accept attempts to include a password authenticator in the handshake, as
+      supported by SOCKS5. This handles SOCKS clients that don't know how to
+      omit the password when authenticating. Resolves bug 1666.
