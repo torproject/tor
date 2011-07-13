@@ -39,6 +39,7 @@ libtor_a_SOURCES = \
 	networkstatus.c				\
 	nodelist.c				\
 	onion.c					\
+	pluggable_transports.c  \
 	policies.c				\
 	reasons.c				\
 	relay.c					\
@@ -104,6 +105,7 @@ noinst_HEADERS = \
 	ntmain.h				\
 	onion.h					\
 	or.h					\
+	pluggable_transports.h  \
 	policies.h				\
 	reasons.h				\
 	relay.h					\
