@@ -2068,15 +2068,20 @@ retry_all_listeners(smartlist_t *replaced_conns,
   return retval;
 }
 
-/** Return 1 if we should apply rate limiting to <b>conn</b>,
- * and 0 otherwise. Right now this just checks if it's an internal
- * IP address or an internal connection. */
+/** Return 1 if we should apply rate limiting to <b>conn</b>, and 0
+ * otherwise.
+ * Right now this just checks if it's an internal IP address or an
+ * internal connection. We also check if the connection uses pluggable
+ * transports, since we should then limit it even if it comes from an
+ * internal IP address. */
 static int
 connection_is_rate_limited(connection_t *conn)
 {
   or_options_t *options = get_options();
   if (conn->linked)
     return 0; /* Internal connection */
+  else if (connection_uses_transport(conn)) /* pluggable transport proxy */
+    return 1;
   else if (! options->CountPrivateBandwidth &&
            (tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
             tor_addr_is_internal(&conn->addr, 0)))
@@ -4145,6 +4150,19 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
 
   *proxy_type = PROXY_NONE;
   return 0;
+}
+
+/** Returns true if connection <b>conn</b> is using a pluggable
+ *  transports proxy server. */
+int
+connection_uses_transport(connection_t *conn)
+{
+  const transport_t *transport=NULL;
+  if (find_transport_by_bridge_addrport(&conn->addr,
+                                        conn->port,&transport) == 0)
+    return 1;
+  else
+    return 0;
 }
 
 /** Returns the global proxy type used by tor. */

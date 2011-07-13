@@ -142,6 +142,11 @@ int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 void clear_transport_list(void);
 int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
+int transport_add(transport_t *t);
+void transport_free(transport_t *transport);
+transport_t *transport_create(const tor_addr_t *addr, uint16_t port,
+                                      const char *name, int socks_ver);
+
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const transport_t **transport);
 void validate_pluggable_transports_config(void);

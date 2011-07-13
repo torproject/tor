@@ -26,6 +26,7 @@
 #include "nodelist.h"
 #include "onion.h"
 #include "policies.h"
+#include "pluggable_transports.h"
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
@@ -124,7 +125,6 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static void entry_guards_changed(void);
 
 static const transport_t *transport_get_by_name(const char *name);
-static void transport_free(transport_t *transport);
 static void bridge_free(bridge_info_t *bridge);
 
 /**
@@ -4591,7 +4591,7 @@ clear_transport_list(void)
 }
 
 /** Free the pluggable transport struct <b>transport</b>. */
-static void
+void
 transport_free(transport_t *transport)
 {
   if (!transport)
@@ -4619,34 +4619,57 @@ transport_get_by_name(const char *name)
   return NULL;
 }
 
-/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
- *  <b>name</b> is set to the name of the protocol this proxy uses.
- *  <b>socks_ver</b> is set to the SOCKS version of the proxy.
- *
- *  Returns 0 on success, -1 on fail. */
-int
-transport_add_from_config(const tor_addr_t *addr, uint16_t port,
-                          const char *name, int socks_ver)
+/** Returns a transport_t struct for a transport proxy supporting the
+    protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
+    SOCKS version <b>socks_ver</b>. */
+transport_t *
+transport_create(const tor_addr_t *addr, uint16_t port,
+                 const char *name, int socks_ver)
 {
-  transport_t *t;
+  transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
-  if (transport_get_by_name(name)) { /* check for duplicate names */
-    log_warn(LD_CONFIG, "More than one transport has '%s' as "
-             "its name.", name);
-    return -1;
-  }
-
-  t = tor_malloc_zero(sizeof(transport_t));
   tor_addr_copy(&t->addr, addr);
   t->port = port;
   t->name = tor_strdup(name);
   t->socks_version = socks_ver;
+
+  return t;
+}
+
+/** Adds transport <b>t</b> to the internal list of pluggable transports. */
+int
+transport_add(transport_t *t)
+{
+  assert(t);
+
+  if (transport_get_by_name(t->name)) { /* check for duplicate names */
+    log_notice(LD_CONFIG, "More than one transports have '%s' as "
+               "their name.", t->name);
+    return -1;
+  }
 
   if (!transport_list)
     transport_list = smartlist_create();
 
   smartlist_add(transport_list, t);
   return 0;
+}
+
+/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
+ *  <b>name</b> is set to the name of the protocol this proxy uses.
+ *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
+int
+transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+                          const char *name, int socks_ver)
+{
+  transport_t *t = transport_create(addr, port, name, socks_ver);
+
+  if (transport_add(t) < 0) {
+    transport_free(t);
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
 /** Warns the user of possible pluggable transport misconfiguration. */
@@ -4895,6 +4918,12 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
   int can_use_bridge_authority;
 
   if (!bridge_list)
+    return;
+
+  /* ASN Should we move this to launch_direct_bridge_descriptor_fetch() ? */
+  /* If we still have unconfigured managed proxies, don't go and
+     connect to a bridge. */
+  if (pt_proxies_configuration_pending())
     return;
 
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)

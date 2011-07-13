@@ -37,6 +37,7 @@
 #include "ntmain.h"
 #include "onion.h"
 #include "policies.h"
+#include "pluggable_transports.h"
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -1447,7 +1448,7 @@ run_scheduled_events(time_t now)
     }
   }
 
-  /** 10b. write bridge networkstatus file to disk */
+  /** 10. write bridge networkstatus file to disk */
   if (options->BridgeAuthoritativeDir &&
       time_to_write_bridge_status_file < now) {
     networkstatus_dump_bridge_status_to_file(now);
@@ -1455,6 +1456,7 @@ run_scheduled_events(time_t now)
     time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
   }
 
+  /** 11. check the port forwarding app */
   if (time_to_check_port_forwarding < now &&
       options->PortForwarding &&
       is_server) {
@@ -1466,7 +1468,11 @@ run_scheduled_events(time_t now)
     time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }
 
-  /** 11. write the heartbeat message */
+  /** 11b. check pending unconfigured managed proxies */
+  if (pt_proxies_configuration_pending())
+    pt_configure_remaining_proxies();
+
+  /** 12. write the heartbeat message */
   if (options->HeartbeatPeriod &&
       time_to_next_heartbeat < now) {
     log_heartbeat(now);
@@ -2258,6 +2264,7 @@ tor_free_all(int postfork)
   clear_pending_onions();
   circuit_free_all();
   entry_guards_free_all();
+  pt_free_all();
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
