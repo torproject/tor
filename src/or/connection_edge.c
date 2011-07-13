@@ -2166,7 +2166,8 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
 
   if (socks->replylen) {
     had_reply = 1;
-    connection_write_to_buf(socks->reply, socks->replylen, TO_CONN(conn));
+    connection_write_to_buf((const char*)socks->reply, socks->replylen,
+                            TO_CONN(conn));
     socks->replylen = 0;
   }
 
