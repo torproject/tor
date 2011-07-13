@@ -2958,7 +2958,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  */
 int
 tor_spawn_background(const char *const filename, int *stdout_read,
-                     int *stderr_read, const char **argv)
+                     int *stderr_read, const char **argv, const char **envp)
 {
 #ifdef MS_WINDOWS
   (void) filename; (void) stdout_read; (void) stderr_read; (void) argv;
@@ -3068,7 +3068,10 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     /* Call the requested program. We need the cast because
        execvp doesn't define argv as const, even though it
        does not modify the arguments */
-    execvp(filename, (char *const *) argv);
+    if (envp)
+      execve(filename, (char *const *) argv, (char*const*)envp);
+    else
+      execvp(filename, (char *const *) argv);
 
     /* If we got here, the exec or open(/dev/null) failed */
 
@@ -3126,6 +3129,57 @@ tor_spawn_background(const char *const filename, int *stdout_read,
 
   return pid;
 #endif
+}
+
+/** Reads from <b>stream</b> and stores input in <b>buf_out</b> making
+ *  sure it's below <b>count</b> bytes.
+ *  If the string has a trailing newline, we strip it off.
+ *
+ * This function is specifically created to handle input from managed
+ * proxies, according to the pluggable transports spec. Make sure it
+ * fits your needs before using it.
+ *
+ * Returns:
+ * ST_CLOSED: If the stream is closed.
+ * ST_EAGAIN: If there is nothing to read and we should check back later.
+ * ST_TERM: If something is wrong with the stream.
+ * ST_OKAY: If everything went okay and we got a string in <b>buf_out</b>. */
+enum stream_status
+get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
+{
+  char *retval;
+  size_t len;
+
+  retval = fgets(buf_out, count, stream);
+
+  if (!retval) {
+    if (feof(stream)) {
+      /* Program has closed stream (probably it exited) */
+      /* TODO: check error */
+      return ST_CLOSED;
+    } else {
+      if (EAGAIN == errno) {
+        /* Nothing more to read, try again next time */
+        return ST_EAGAIN;
+      } else {
+        /* There was a problem, abandon this child process */
+        return ST_TERM;
+      }
+    }
+  } else {
+    len = strlen(buf_out);
+    tor_assert(len>0);
+
+    if (buf_out[len - 1] == '\n') {
+      /* Remove the trailing newline */
+      buf_out[len - 1] = '\0';
+    }
+
+    return ST_OKAY;
+  }
+
+  /* We should never get here */
+  return ST_TERM;
 }
 
 /** Read from stream, and send lines to log at the specified log level.
@@ -3254,7 +3308,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
 
-    child_pid = tor_spawn_background(filename, &fd_out, &fd_err, argv);
+    child_pid = tor_spawn_background(filename, &fd_out, &fd_err, argv, NULL);
     if (child_pid < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);

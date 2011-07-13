@@ -279,6 +279,16 @@ char *rate_limit_log(ratelim_t *lim, time_t now);
 ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
 ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
 
+/** Status of an I/O stream. */
+enum stream_status {
+  ST_OKAY,
+  ST_EAGAIN,
+  ST_TERM,
+  ST_CLOSED
+};
+
+enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
+
 /** Return values from file_status(); see that function's documentation
  * for details. */
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR } file_status_t;
@@ -340,14 +350,16 @@ void write_pidfile(char *filename);
 void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
+int tor_spawn_background(const char *const filename, int *stdout_read,
+                         int *stderr_read, const char **argv,
+                         const char **envp);
+
 #ifdef MS_WINDOWS
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
-int tor_spawn_background(const char *const filename, int *stdout_read,
-                         int *stderr_read, const char **argv);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 

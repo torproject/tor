@@ -1389,7 +1389,8 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   char stdout_buf[100], stderr_buf[100];
 
   /* Start the program */
-  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe, argv);
+  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe,
+                                argv, NULL);
   tt_int_op(retval, >, 0);
   tt_int_op(stdout_pipe, >, 0);
   tt_int_op(stderr_pipe, >, 0);
