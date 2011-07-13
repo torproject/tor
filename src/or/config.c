@@ -1224,7 +1224,6 @@ options_act(or_options_t *old_options)
     }
   }
 
-  clear_transport_list();
   if (options->ServerTransportPlugin) {
     for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
       if (parse_server_transport_line(cl->value, 0)<0) {
@@ -4732,26 +4731,10 @@ parse_client_transport_line(const char *line, int validate_only)
     goto err;
   }
 
-  if (!is_managed) {
-    addrport = smartlist_get(items, 0);
-    smartlist_del_keeporder(items, 0);
-
-    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
-      goto err;
-    }
-    if (!port) {
-      log_warn(LD_CONFIG,
-               "Transport address '%s' has no port.", addrport);
-      goto err;
-    }
-  }
-
-  if (!validate_only) {
-    if (is_managed) { /* if it's managed, and we are planning on
-                         launching the proxy, use the rest of the line
-                         as the argv. */
+  if (is_managed) { /* managed */
+    if (!validate_only) {  /* if we are not just validating, use the
+                             rest of the line as the argv of the proxy
+                             to be launched */
       char **tmp;
       char *tmp_arg;
       proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
@@ -4769,12 +4752,29 @@ parse_client_transport_line(const char *line, int validate_only)
                  proxy_argv[0]);
         goto err;
       }
-    } else { /* external */
+    }
+  } else { /* external */
+    addrport = smartlist_get(items, 0);
+    smartlist_del_keeporder(items, 0);
+
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
+
+    if (!validate_only) {
       if (transport_add_from_config(&addr, port, name,
                                     socks_ver) < 0) {
         goto err;
       }
-      log_debug(LD_DIR, "Transport %s found at %s:%d", name,
+
+      log_debug(LD_DIR, "Transport '%s' found at %s:%d", name,
                 fmt_addr(&addr), (int)port);
     }
   }
@@ -4805,7 +4805,7 @@ parse_server_transport_line(const char *line, int validate_only)
   smartlist_t *items = NULL;
   int r;
   char *name=NULL;
-  char *field2=NULL;
+  char *type=NULL;
   char *addrport=NULL;
   tor_addr_t addr;
   uint16_t port = 0;
@@ -4826,38 +4826,20 @@ parse_server_transport_line(const char *line, int validate_only)
   name = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
 
-  /* field2 is either <addr:port> or "exec" */
-  field2 = smartlist_get(items, 0);
+  type = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
 
-  if (!(strstr(field2, ".") || strstr(field2, ":"))) { /* managed proxy */
-    if (strcmp(field2, "exec")) {
-      log_warn(LD_CONFIG, "Unrecognizable field '%s' in "
-               "ServerTransportPlugin line", field2);
-      goto err;
-    }
+  if (!strcmp(type, "exec")) {
     is_managed=1;
+  } else if (!strcmp(type, "proxy")) {
+    is_managed=0;
+  } else {
+    log_warn(LD_CONFIG, "Strange ServerTransportPlugin type '%s'", type);
+    goto err;
   }
 
-  if (!is_managed) {
-    addrport = field2;
-
-    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
-      goto err;
-    }
-    if (!port) {
-      log_warn(LD_CONFIG,
-               "Transport address '%s' has no port.", addrport);
-      goto err;
-    }
-  }
-
-  if (!validate_only) {
-    if (is_managed) { /* if it's managed, and we are planning on
-                         launching the proxy, use the rest of the line
-                         as the argv. */
+  if (is_managed) { /* managed */
+    if (!validate_only) {
       char **tmp;
       char *tmp_arg;
       proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
@@ -4870,13 +4852,29 @@ parse_server_transport_line(const char *line, int validate_only)
       }
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
-      if (pt_managed_launch_server_proxy(name, proxy_argv) < 0) {
+      if (pt_managed_launch_server_proxy(name, proxy_argv) < 0) { /* launch it! */
         log_warn(LD_CONFIG, "Error while launching managed proxy at '%s'",
                  proxy_argv[0]);
         goto err;
       }
-    } else {
-      log_warn(LD_DIR, "Transport %s at %s:%d", name,
+    }
+  } else { /* external */
+    addrport = smartlist_get(items, 0);
+    smartlist_del_keeporder(items, 0);
+
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
+
+    if (!validate_only) {
+      log_warn(LD_DIR, "Transport '%s' at %s:%d.", name,
                fmt_addr(&addr), (int)port);
     }
   }
@@ -4891,7 +4889,7 @@ parse_server_transport_line(const char *line, int validate_only)
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(name);
-  tor_free(field2);
+  tor_free(type);
   return r;
 }
 

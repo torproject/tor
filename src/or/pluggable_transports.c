@@ -565,10 +565,10 @@ set_environ(char ***envp, const char *method, int is_server)
   tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
   if (is_server) {
     /* ASN check for ORPort values, should we be here if it's 0? */
-    tor_asprintf(tmp++, "TOR_PT_ORPORT=%d", options->ORPort);
+    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* temp */
     tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=127.0.0.1:0");
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", method);
-    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=4200");
+    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* temp*/
   } else {
     tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", method);
   }
