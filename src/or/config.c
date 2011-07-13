@@ -33,7 +33,9 @@
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
+#include "util.h"
 #include "routerlist.h"
+#include "pluggable_transports.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif
@@ -298,6 +300,7 @@ static config_var_t _option_vars[] = {
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
+  VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
@@ -572,6 +575,8 @@ static void config_register_addressmaps(or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
 static int parse_client_transport_line(const char *line, int validate_only);
+
+static int parse_server_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -1213,6 +1218,18 @@ options_act(or_options_t *old_options)
       if (parse_client_transport_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
                  "Previously validated ClientTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
+  }
+
+  clear_transport_list();
+  if (options->ServerTransportPlugin) {
+    for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+      if (parse_server_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ServerTransportPlugin line "
                  "could not be added!");
         return -1;
       }
@@ -3686,14 +3703,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("TunnelDirConns set to 0 only works with UseBridges set to 0");
 
+  for (cl = options->Bridges; cl; cl = cl->next) {
+    if (parse_bridge_line(cl->value, 1)<0)
+      REJECT("Bridge line did not parse. See logs for details.");
+  }
+
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
     if (parse_client_transport_line(cl->value, 1)<0)
       REJECT("Transport line did not parse. See logs for details.");
   }
 
-  for (cl = options->Bridges; cl; cl = cl->next) {
-    if (parse_bridge_line(cl->value, 1)<0)
-      REJECT("Bridge line did not parse. See logs for details.");
+  for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+    if (parse_server_transport_line(cl->value, 1)<0)
+      REJECT("Server transport line did not parse. See logs for details.");
   }
 
   if (options->ConstrainedSockets) {
@@ -4652,28 +4674,35 @@ parse_bridge_line(const char *line, int validate_only)
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
-  tor_free(fingerprint);
   tor_free(transport_name);
+  tor_free(fingerprint);
   return r;
 }
 
 /** Read the contents of a ClientTransportPlugin line from
  * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't. If <b>validate_only</b> is 0, and the line is well-formed,
- * then add the transport described in the line to our internal
- * transport list.
-*/
+ * isn't.
+ *
+ * If <b>validate_only</b> is 0, and the line is well-formed:
+ * - If it's an external proxy line, add the transport described in the line to
+ * our internal transport list.
+ * - If it's a managed proxy line, launch the managed proxy. */
 static int
 parse_client_transport_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
-  char *socks_ver_str=NULL;
+  char *field2=NULL;
+
   char *name=NULL;
   char *addrport=NULL;
-  int socks_ver;
   tor_addr_t addr;
   uint16_t port = 0;
+  int socks_ver=PROXY_NONE;
+
+  /* managed proxy options */
+  int is_managed=0;
+  char **proxy_argv=NULL;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -4685,39 +4714,69 @@ parse_client_transport_line(const char *line, int validate_only)
   }
 
   name = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
 
-  socks_ver_str = smartlist_get(items, 1);
+  /* field2 is either a SOCKS version or "exec" */
+  field2 = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
 
-  if (!strcmp(socks_ver_str,"socks4"))
+  if (!strcmp(field2,"socks4")) {
     socks_ver = PROXY_SOCKS4;
-  else if (!strcmp(socks_ver_str,"socks5"))
+  } else if (!strcmp(field2,"socks5")) {
     socks_ver = PROXY_SOCKS5;
-  else {
-    log_warn(LD_CONFIG, "Strange ClientTransportPlugin proxy type '%s'.",
-             socks_ver_str);
+  } else if (!strcmp(field2,"exec")) {
+    is_managed=1;
+  } else {
+    log_warn(LD_CONFIG, "Strange ClientTransportPlugin field '%s'.",
+             field2);
     goto err;
   }
 
-  addrport = smartlist_get(items, 2);
+  if (!is_managed) {
+    addrport = smartlist_get(items, 0);
+    smartlist_del_keeporder(items, 0);
 
-  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
-    log_warn(LD_CONFIG, "Error parsing transport "
-              "address '%s'", addrport);
-    goto err;
-  }
-
-  if (!port) {
-    log_warn(LD_CONFIG,
-              "Transport address '%s' has no port.", addrport);
-    goto err;
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Transport %s found at %s:%d", name,
-              fmt_addr(&addr), (int)port);
+    if (is_managed) { /* if it's managed, and we are planning on
+                         launching the proxy, use the rest of the line
+                         as the argv. */
+      char **tmp;
+      char *tmp_arg;
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
+      tmp = proxy_argv;
+      while (smartlist_len(items)) {
+        tmp_arg = smartlist_get(items, 0);
+        smartlist_del_keeporder(items, 0);
+        *tmp++ = tor_strdup(tmp_arg);
+        tor_free(tmp_arg);
+      }
+      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
-    if (transport_add_from_config(&addr, port, name, socks_ver) < 0)
-      goto err;
+      if (pt_managed_launch_client_proxy(name, proxy_argv) < 0) {
+        log_warn(LD_CONFIG, "Error while launching managed proxy at '%s'",
+                 proxy_argv[0]);
+        goto err;
+      }
+    } else { /* external */
+      if (transport_add_from_config(&addr, port, name,
+                                    socks_ver) < 0) {
+        goto err;
+      }
+      log_debug(LD_DIR, "Transport %s found at %s:%d", name,
+                fmt_addr(&addr), (int)port);
+    }
   }
 
   r = 0;
@@ -4729,6 +4788,110 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  tor_free(name);
+  tor_free(field2);
+  tor_free(addrport);
+  return r;
+}
+
+/** Read the contents of a ServerTransportPlugin line from
+ * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't.
+ * If <b>validate_only</b> is 0, the line is well-formed, and it's a
+ * managed proxy line, launch the managed proxy. */
+static int
+parse_server_transport_line(const char *line, int validate_only)
+{
+  smartlist_t *items = NULL;
+  int r;
+  char *name=NULL;
+  char *field2=NULL;
+  char *addrport=NULL;
+  tor_addr_t addr;
+  uint16_t port = 0;
+
+  /* managed proxy options */
+  int is_managed=0;
+  char **proxy_argv=NULL;
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(items) < 3) {
+    log_warn(LD_CONFIG, "Too few arguments on ServerTransportPlugin line.");
+    goto err;
+  }
+
+  name = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
+
+  /* field2 is either <addr:port> or "exec" */
+  field2 = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
+
+  if (!(strstr(field2, ".") || strstr(field2, ":"))) { /* managed proxy */
+    if (strcmp(field2, "exec")) {
+      log_warn(LD_CONFIG, "Unrecognizable field '%s' in "
+               "ServerTransportPlugin line", field2);
+      goto err;
+    }
+    is_managed=1;
+  }
+
+  if (!is_managed) {
+    addrport = field2;
+
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
+  }
+
+  if (!validate_only) {
+    if (is_managed) { /* if it's managed, and we are planning on
+                         launching the proxy, use the rest of the line
+                         as the argv. */
+      char **tmp;
+      char *tmp_arg;
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
+      tmp = proxy_argv;
+      while (smartlist_len(items)) {
+        tmp_arg = smartlist_get(items, 0);
+        smartlist_del_keeporder(items, 0);
+        *tmp++ = tor_strdup(tmp_arg);
+        tor_free(tmp_arg);
+      }
+      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
+
+      if (pt_managed_launch_server_proxy(name, proxy_argv) < 0) {
+        log_warn(LD_CONFIG, "Error while launching managed proxy at '%s'",
+                 proxy_argv[0]);
+        goto err;
+      }
+    } else {
+      log_warn(LD_DIR, "Transport %s at %s:%d", name,
+               fmt_addr(&addr), (int)port);
+    }
+  }
+
+  r = 0;
+  goto done;
+
+ err:
+  r = -1;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  tor_free(name);
+  tor_free(field2);
   return r;
 }
 
