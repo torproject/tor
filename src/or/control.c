@@ -1396,7 +1396,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "fingerprint")) {
     crypto_pk_env_t *server_key;
     if (!server_mode(get_options())) {
-      *errmsg = "No routerdesc known; am I really a server?";
+      *errmsg = "Not running in server mode";
       return -1;
     }
     server_key = get_server_identity_key();
