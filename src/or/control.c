@@ -1459,14 +1459,14 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
-    const routerinfo_t *me = router_get_my_routerinfo();
-    if (!me) {
-      *errmsg = "No routerdesc known; am I really a server?";
+    crypto_pk_env_t *server_key;
+    if (!server_mode(get_options())) {
+      *errmsg = "Not running in server mode";
       return -1;
     }
+    server_key = get_server_identity_key();
     *answer = tor_malloc(HEX_DIGEST_LEN+1);
-    base16_encode(*answer, HEX_DIGEST_LEN+1, me->cache_info.identity_digest,
-                  DIGEST_LEN);
+    crypto_pk_get_fingerprint(server_key, *answer, 0);
   }
   return 0;
 }
