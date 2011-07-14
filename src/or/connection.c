@@ -2080,8 +2080,6 @@ connection_is_rate_limited(connection_t *conn)
   or_options_t *options = get_options();
   if (conn->linked)
     return 0; /* Internal connection */
-  else if (connection_uses_transport(conn)) /* pluggable transport proxy */
-    return 1;
   else if (! options->CountPrivateBandwidth &&
            (tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
             tor_addr_is_internal(&conn->addr, 0)))
@@ -4158,11 +4156,9 @@ int
 connection_uses_transport(connection_t *conn)
 {
   const transport_t *transport=NULL;
-  if (find_transport_by_bridge_addrport(&conn->addr,
-                                        conn->port,&transport) == 0)
-    return 1;
-  else
-    return 0;
+  find_transport_by_bridge_addrport(&conn->addr,
+                                    conn->port,&transport);
+  return transport ? 1 : 0;
 }
 
 /** Returns the global proxy type used by tor. */
