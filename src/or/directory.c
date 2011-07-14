@@ -379,11 +379,13 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
       type = V3_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
-    case DIR_PURPOSE_FETCH_CERTIFICATE:
       type = V3_DIRINFO;
+      if (resource && !strcmp(resource,"microdesc"))
+        type |= MICRODESC_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_MICRODESC:
       type = MICRODESC_DIRINFO;
