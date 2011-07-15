@@ -1,0 +1,4 @@
+  o Build changes:
+    - On Windows, we now define the _WIN32_WINNT macros only if they
+      are not already defined. This lets the person building Tor decide,
+      if they want, to require a later version of Windows.

@@ -9,8 +9,12 @@
 #include "orconfig.h"
 #include "torint.h"
 #ifdef MS_WINDOWS
+#ifndef WIN32_WINNT
 #define WIN32_WINNT 0x400
+#endif
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x400
+#endif
 #define WIN32_LEAN_AND_MEAN
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 #include <winsock.h>

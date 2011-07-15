@@ -23,8 +23,12 @@
 #endif
 
 #ifdef MS_WINDOWS
+#ifndef WIN32_WINNT
 #define WIN32_WINNT 0x400
+#endif
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x400
+#endif
 #define WIN32_LEAN_AND_MEAN
 #endif
 
