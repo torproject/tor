@@ -38,8 +38,6 @@ int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
 addr_policy_result_t compare_tor_addr_to_addr_policy(const tor_addr_t *addr,
                               uint16_t port, const smartlist_t *policy);
 
-addr_policy_result_t compare_addr_to_node_policy(uint32_t addr,
-                              uint16_t port, const node_t *node);
 addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
                               uint16_t port, const node_t *node);
 

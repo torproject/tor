@@ -4028,7 +4028,7 @@ routerlist_retry_directory_downloads(time_t now)
 /** Return 1 if all running sufficiently-stable routers we can use will reject
  * addr:port, return 0 if any might accept it. */
 int
-router_exit_policy_all_nodes_reject(uint32_t addr, uint16_t port,
+router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                     int need_uptime)
 { /* XXXX MOVE */
   addr_policy_result_t r;
@@ -4037,7 +4037,7 @@ router_exit_policy_all_nodes_reject(uint32_t addr, uint16_t port,
     if (node->is_running &&
         !node_is_unreliable(node, need_uptime, 0, 0)) {
 
-      r = compare_addr_to_node_policy(addr, port, node);
+      r = compare_tor_addr_to_node_policy(addr, port, node);
 
       if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
         return 0; /* this one could be ok. good enough. */

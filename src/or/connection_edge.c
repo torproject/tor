@@ -3193,11 +3193,13 @@ connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
       !conn->use_begindir) {
     struct in_addr in;
-    uint32_t addr = 0;
+    tor_addr_t addr, *addrp = NULL;
     addr_policy_result_t r;
-    if (tor_inet_aton(conn->socks_request->address, &in))
-      addr = ntohl(in.s_addr);
-    r = compare_addr_to_node_policy(addr, conn->socks_request->port, exit);
+    if (tor_inet_aton(conn->socks_request->address, &in)) {
+      tor_addr_from_in(&addr, &in);
+      addrp = &addr;
+    }
+    r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port, exit);
     if (r == ADDR_POLICY_REJECTED)
       return 0; /* We know the address, and the exit policy rejects it. */
     if (r == ADDR_POLICY_PROBABLY_REJECTED && !conn->chosen_exit_name)

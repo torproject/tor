@@ -2634,7 +2634,7 @@ node_handles_some_port(const node_t *node, smartlist_t *needed_ports)
     port = *(uint16_t *)smartlist_get(needed_ports, i);
     tor_assert(port);
     if (node)
-      r = compare_addr_to_node_policy(0, port, node);
+      r = compare_tor_addr_to_node_policy(NULL, port, node);
     else
       continue;
     if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)

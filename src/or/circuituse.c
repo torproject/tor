@@ -509,7 +509,7 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
           ok = connection_ap_can_use_exit(conn, exitnode);
         } else {
           addr_policy_result_t r;
-          r = compare_addr_to_node_policy(0, port, exitnode);
+          r = compare_tor_addr_to_node_policy(NULL, port, exitnode);
           ok = r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED;
         }
         if (ok) {
@@ -1262,10 +1262,12 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   if (check_exit_policy) {
     if (!conn->chosen_exit_name) {
       struct in_addr in;
-      uint32_t addr = 0;
-      if (tor_inet_aton(conn->socks_request->address, &in))
-        addr = ntohl(in.s_addr);
-      if (router_exit_policy_all_nodes_reject(addr,
+      tor_addr_t addr, *addrp=NULL;
+      if (tor_inet_aton(conn->socks_request->address, &in)) {
+        tor_addr_from_in(&addr, &in);
+        addrp = &addr;
+      }
+      if (router_exit_policy_all_nodes_reject(addrp,
                                               conn->socks_request->port,
                                               need_uptime)) {
         log_notice(LD_APP,

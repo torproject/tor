@@ -129,7 +129,7 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        int descriptor_digests);
 
 void routerlist_retry_directory_downloads(time_t now);
-int router_exit_policy_all_nodes_reject(uint32_t addr, uint16_t port,
+int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                         int need_uptime);
 
 int router_exit_policy_rejects_all(const routerinfo_t *router);
