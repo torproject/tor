@@ -4967,6 +4967,7 @@ update_router_have_minimum_dir_info(void)
   const or_options_t *options = get_options();
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
+  int using_md;
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
@@ -4987,19 +4988,22 @@ update_router_have_minimum_dir_info(void)
     goto done;
   }
 
+  using_md = consensus->flavor == FLAV_MICRODESC;
+
   count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
                            NULL);
 
   if (num_present < num_usable/4) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
-            "We have only %d/%d usable descriptors.", num_present, num_usable);
+                 "We have only %d/%d usable %sdescriptors.",
+                 num_present, num_usable, using_md ? "micro" : "");
     res = 0;
     control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
     goto done;
   } else if (num_present < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d descriptor%s here and believed reachable!",
-                 num_present, num_present ? "" : "s");
+                 "Only %d %sdescriptor%s here and believed reachable!",
+                 num_present, using_md ? "micro" : "", num_present ? "" : "s");
     res = 0;
     goto done;
   }
@@ -5011,8 +5015,8 @@ update_router_have_minimum_dir_info(void)
 
     if (!num_usable || !num_present) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                   "We have only %d/%d usable entry node descriptors.",
-                   num_present, num_usable);
+                   "We have only %d/%d usable entry node %sdescriptors.",
+                   num_present, num_usable, using_md?"micro":"");
       res = 0;
       goto done;
     }
