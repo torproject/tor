@@ -262,7 +262,8 @@ connection_or_report_broken_states(int severity, int domain)
   items = smartlist_create();
   STRMAP_FOREACH(broken_connection_counts, state, void *, countptr) {
     broken_state_count_t *c = tor_malloc(sizeof(broken_state_count_t));
-    total += c->count = (intptr_t)countptr;
+    c->count = (intptr_t)countptr;
+    total += (int)c->count;
     c->state = state;
     smartlist_add(items, c);
   } STRMAP_FOREACH_END;
