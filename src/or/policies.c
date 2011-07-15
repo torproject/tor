@@ -570,18 +570,6 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
   return found->policy;
 }
 
-/** As compare_tor_addr_to_addr_policy, but instead of a tor_addr_t, takes
- * in host order. */
-addr_policy_result_t
-compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                            const smartlist_t *policy)
-{
-  /*XXXX deprecate this function when possible. */
-  tor_addr_t a;
-  tor_addr_from_ipv4h(&a, addr);
-  return compare_tor_addr_to_addr_policy(&a, port, policy);
-}
-
 /** Helper for compare_tor_addr_to_addr_policy.  Implements the case where
  * addr and port are both known. */
 static addr_policy_result_t

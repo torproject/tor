@@ -998,12 +998,15 @@ test_policies(void)
 
   smartlist_add(policy, p);
 
+  tor_addr_from_ipv4h(&tar, 0x01020304u);
   test_assert(ADDR_POLICY_ACCEPTED ==
-          compare_addr_to_addr_policy(0x01020304u, 2, policy));
+          compare_tor_addr_to_addr_policy(&tar, 2, policy));
+  tor_addr_make_unspec(&tar);
   test_assert(ADDR_POLICY_PROBABLY_ACCEPTED ==
-          compare_addr_to_addr_policy(0, 2, policy));
+          compare_tor_addr_to_addr_policy(&tar, 2, policy));
+  tor_addr_from_ipv4h(&tar, 0xc0a80102);
   test_assert(ADDR_POLICY_REJECTED ==
-          compare_addr_to_addr_policy(0xc0a80102, 2, policy));
+          compare_tor_addr_to_addr_policy(&tar, 2, policy));
 
   test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL, 1));
   test_assert(policy2);
