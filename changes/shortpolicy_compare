@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Fix a bug where comparing an unknown address to a microdescriptor's
+      shortened exit policy would always seem to give a "rejected" result.
+      Bugfix on 0.2.3.1-alpha. Fixes bug 3599.

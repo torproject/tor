@@ -1415,8 +1415,10 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
 
   tor_assert(port != 0);
 
+  if (addr && tor_addr_is_null(addr))
+    addr = NULL; /* Unspec means 'no address at all,' in this context. */
+
   if (addr && (tor_addr_is_internal(addr, 0) ||
-               tor_addr_is_null(addr) ||
                tor_addr_is_loopback(addr)))
     return ADDR_POLICY_REJECTED;
 
