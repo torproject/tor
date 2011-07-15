@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Using microdescriptors no longer prevents Tor from uploading and
+      downloading hidden service descriptors. Fixes bug 3601; bugfix
+      on 0.2.3.1-alpha.

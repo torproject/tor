@@ -1632,12 +1632,14 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
     for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       char *hs_dir_ip;
+      const node_t *node;
       hs_dir = smartlist_get(responsible_dirs, j);
       if (smartlist_digest_isin(renddesc->successful_uploads,
                                 hs_dir->identity_digest))
         /* Don't upload descriptor if we succeeded in doing so last time. */
         continue;
-      if (!router_get_by_id_digest(hs_dir->identity_digest)) {
+      node = node_get_by_id(hs_dir->identity_digest);
+      if (!node || !node_has_descriptor(node)) {
         log_info(LD_REND, "Not sending publish request for v2 descriptor to "
                           "hidden service directory %s; we don't have its "
                           "router descriptor. Queuing for later upload.",

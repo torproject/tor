@@ -510,10 +510,11 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_clean_last_hid_serv_requests(now);
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-    if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
-            REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
-        !router_get_by_id_digest(dir->identity_digest))
-      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+      time_t last = lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0);
+      const node_t *node = node_get_by_id(dir->identity_digest);
+      if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
+          !node || !node_has_descriptor(node))
+        SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
   });
 
   hs_dir = smartlist_choose(responsible_dirs);
