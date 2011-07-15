@@ -3199,7 +3199,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
       tor_addr_from_in(&addr, &in);
       addrp = &addr;
     }
-    r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port, exit);
+    r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port,exit);
     if (r == ADDR_POLICY_REJECTED)
       return 0; /* We know the address, and the exit policy rejects it. */
     if (r == ADDR_POLICY_PROBABLY_REJECTED && !conn->chosen_exit_name)
