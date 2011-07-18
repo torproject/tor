@@ -254,7 +254,7 @@ proxy_configuration_finished(managed_proxy_t *mp)
 void
 handle_proxy_line(char *line, managed_proxy_t *mp)
 {
-  printf("Judging line: %s\n", line);
+  log_debug(LD_CONFIG, "Judging line: %s\n", line);
 
   if (strlen(line) < SMALLEST_MANAGED_LINE_SIZE) {
     log_warn(LD_GENERAL, "Managed proxy configuration line is too small. "
