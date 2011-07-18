@@ -1237,10 +1237,19 @@ typedef struct edge_connection_t {
    * NATd connection */
   unsigned int is_transparent_ap:1;
 
-  /** Set if this connection's target exit node allows optimistic data.
-   * (That is, data sent on this stream before the exit has sent a
-   * CONNECTED cell.)*/
+  /** For AP connections only: Set if this connection's target exit node
+   * allows optimistic data.  (That is, data sent on this stream before
+   * the exit has sent a CONNECTED cell.)*/
   unsigned int exit_allows_optimistic_data : 1;
+
+  /** For AP connections only: buffer for data that we have sent
+   * optimistically, which we might need to re-send if we have to
+   * retry this connection. */
+  generic_buffer_t *pending_optimistic_data;
+  /* For AP connections only: buffer for data that we previously sent
+  * optimistically which we are currently re-sending as we retry this
+  * connection. */
+  generic_buffer_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */

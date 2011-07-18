@@ -738,6 +738,12 @@ connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
   conn->_base.timestamp_lastread = time(NULL);
+
+  if (conn->pending_optimistic_data) {
+    generic_buffer_set_to_copy(&conn->sending_optimistic_data,
+                               conn->pending_optimistic_data);
+  }
+
   if (!get_options()->LeaveStreamsUnattached || conn->use_begindir) {
     /* If we're attaching streams ourself, or if this connection is
      * a tunneled directory connection, then just attach it. */
@@ -2429,7 +2435,8 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
   /* If there's queued-up data, send it now */
-  if (connection_get_inbuf_len(TO_CONN(ap_conn)) &&
+  if ((connection_get_inbuf_len(TO_CONN(ap_conn)) ||
+       ap_conn->sending_optimistic_data) &&
       connection_ap_supports_optimistic_data(ap_conn)) {
     log_info(LD_APP, "Sending up to %ld bytes of queued-up data",
              connection_get_inbuf_len(TO_CONN(ap_conn)));
