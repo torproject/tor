@@ -4,12 +4,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file pluggable_transpots.h
- * \brief Headers for pluggable_transpots.c
+ * \file transports.h
+ * \brief Headers for transports.c
  **/
 
-#ifndef TOR_PLUGGABLE_TRANSPORTS_H
-#define TOR_PLUGGABLE_TRANSPORTS_H
+#ifndef TOR_TRANSPORTS_H
+#define TOR_TRANSPORTS_H
 
 int pt_managed_launch_proxy(const char *method,
                          char **proxy_argv, int is_server);

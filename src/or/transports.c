@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file pluggable_transports.c
+ * \file transports.c
  * \brief Pluggable Transports related code.
  **/
 
@@ -10,7 +10,7 @@
 #include "or.h"
 #include "config.h"
 #include "circuitbuild.h"
-#include "pluggable_transports.h"
+#include "transports.h"
 
 /* ASN TIDY THESE UP*/
 static void set_environ(char ***envp, const char *method,

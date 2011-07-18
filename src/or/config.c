@@ -35,7 +35,7 @@
 #include "router.h"
 #include "util.h"
 #include "routerlist.h"
-#include "pluggable_transports.h"
+#include "transports.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif

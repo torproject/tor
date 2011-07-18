@@ -26,7 +26,7 @@
 #include "nodelist.h"
 #include "onion.h"
 #include "policies.h"
-#include "pluggable_transports.h"
+#include "transports.h"
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"

@@ -37,7 +37,7 @@
 #include "ntmain.h"
 #include "onion.h"
 #include "policies.h"
-#include "pluggable_transports.h"
+#include "transports.h"
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"

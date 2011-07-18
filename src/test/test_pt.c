@@ -6,7 +6,7 @@
 #include "orconfig.h"
 #define PT_PRIVATE
 #include "or.h"
-#include "pluggable_transports.h"
+#include "transports.h"
 #include "circuitbuild.h"
 #include "test.h"
 
