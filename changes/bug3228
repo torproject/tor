@@ -1,3 +1,0 @@
-  o Major bugfixes:
-    - Resolve a crash that occured when setting BridgeRelay to 1 with
-      accounting enabled. Fixes bug 3228; bugfix on 0.2.2.18-alpha.

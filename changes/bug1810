@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Don't decide to make a new descriptor when receiving a HUP signal.
-      This bug has caused a lot of relays to disappear from the consensus
-      periodically. Fixes the most common case of triggering bug 1810;
-      bugfix on 0.2.2.7-alpha.
-

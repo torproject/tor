@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When asked about a DNS record type we don't support via a
-      client DNSPort, reply with NOTIMPL rather than an empty
-      reply. Patch by intrigeri. Fixes bug 3369; bugfix on 2.0.1-alpha.

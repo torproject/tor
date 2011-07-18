@@ -1,4 +1,0 @@
-  o Minor features
-    - Rate-limit a warning about failures to download v2 networkstatus
-      documents.  Resolves part of bug 1352.
-

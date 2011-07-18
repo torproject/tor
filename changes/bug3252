@@ -1,4 +1,0 @@
-  o Minor features:
-    - Relays now log the reason for publishing a new relay descriptor,
-      so we have a better chance of hunting down the root cause of bug
-      1810. Resolves ticket 3252.

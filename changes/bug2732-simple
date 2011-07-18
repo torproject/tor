@@ -1,7 +1,0 @@
-  o Minor bugfixes
-    - Do not reject hidden service descriptors simply because we don't
-      think we have not been assigned the HSDir flag.  Clients and
-      hidden services can have a more up-to-date view of the network
-      consensus, and if they think that the directory authorities
-      list us a HSDir, we might actually be one.  Related to bug 2732;
-      bugfix on 0.2.0.10-alpha.

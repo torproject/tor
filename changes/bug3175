@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - Resolve an untriggerable issue in smartlist_string_num_isin(),
-      where if the function had ever in the future been used to check
-      for the presence of a too-large number, it would have given an
-      incorrect result.  (Fortunately, we only used it for 16-bit
-      values.)  Fixes bug 3175; bugfix on Tor 0.1.0.1-rc.
-

@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Fix a crash bug when changing bridges in a running Tor process.
-      Fixes bug 3213; bugfix on 0.2.2.26-beta.
-

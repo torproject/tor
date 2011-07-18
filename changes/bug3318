@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - Fix a log message that said "bits" while displaying a value in
-      bytes. Found by wanoskarnet. Fixes bug 3318; bugfix on
-      0.2.0.1-alpha.
-    - When checking for 1024-bit keys, check for 1024 bits, not 128
-      bytes. This allows Tor to correctly discard keys of length
-      1017 through 1023. Bugfix on 0.0.9pre5.

@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Remove a trailing asterisk from "exit-policy/default" in the
-      output of the control port command "GETINFO info/names".  Bugfix
-      on 0.1.2.5-alpha.
-

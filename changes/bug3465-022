@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-
-    - Add BUILDTIMEOUT_SET to the list returned by the 'GETINFO
-      events/names' control-port command.  Bugfix on 0.2.2.9-alpha;
-      fixes part of bug 3465.
-

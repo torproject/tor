@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a memory leak when receiving a descriptor for a hidden
-      service we didn't ask for. Found by Coverity; CID#30. Bugfix on
-      0.2.2.26-beta.
