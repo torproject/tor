@@ -1,3 +1,118 @@
+Changes in version 0.2.3.2-alpha - 2011-07-18
+  o Major features:
+    - Clients can now use microdescriptors instead of regular descriptors
+      to build circuits. Microdescriptors are authority-generated and
+      authority-authenticated summaries of regular descriptors' contents,
+      designed to change very rarely (see proposal 158 for details). This
+      feature is designed to save bandwidth, especially for clients on
+      slow internet connections. It's off by default for now, since
+      nearly no caches support it, but it will be on-by-default for
+      clients in a future version. You can use the UseMicrodescriptors
+      option to turn it on.
+    - Tor clients using bridges can now be configured to use a separate
+      'transport' proxy for each bridge. This approach helps to resist
+      censorship by allowing bridges to use protocol obfuscation
+      plugins. It implements part of proposal 180. Implements ticket 2841.
+    - While we're trying to bootstrap, record how many TLS connections
+      fail in each state, and report which states saw the most failures
+      in response to any bootstrap failures. This feature may speed up
+      diagnosis of censorship events. Implements ticket 3116.
+
+  o Major bugfixes (on 0.2.3.1-alpha):
+    - When configuring a large set of nodes in EntryNodes (as with
+      'EntryNodes {cc}' or 'EntryNodes 1.1.1.1/16'), choose only a
+      random subset to be guards, and choose them in random
+      order. Fixes bug 2798.
+    - Fix a crash bug that could occur when setting a consensus in a
+      non-used consensus flavor without having a current consensus set.
+      Fixes bug 3361.
+    - Fix a bug where comparing an unknown address to a microdescriptor's
+      shortened exit policy would always seem to give a "rejected" result.
+      Fixes bug 3599.
+    - Using microdescriptors no longer prevents Tor from uploading and
+      downloading hidden service descriptors. Fixes bug 3601.
+
+  o Minor features:
+    - Allow nameservers with IPv6 address. Resolves bug 2574.
+    - Accept attempts to include a password authenticator in the
+      handshake, as supported by SOCKS5. This handles SOCKS clients that
+      don't know how to omit a password when authenticating. Resolves
+      bug 1666.
+    - When configuring a large set of nodes in EntryNodes, and there are
+      enough of them listed as Guard so that we don't need to consider
+      the non-guard entries, prefer the ones listed with the Guard flag.
+    - Check for and recover from inconsistency in the microdescriptor
+      cache. This will make it harder for us to accidentally free a
+      microdescriptor without removing it from the appropriate data
+      structures. Fixes issue 3135; issue noted by "wanoskarnet".
+    - Log SSL state transitions at log level DEBUG, log domain
+      HANDSHAKE. This can be useful for debugging censorship events.
+      Implements ticket 3264.
+    - Add port 6523 (Gobby) to LongLivedPorts. Patch by intrigeri;
+      implements ticket 3439.
+
+  o Minor bugfixes (on 0.2.3.1-alpha):
+    - Do not free all general-purpose regular descriptors just
+      because microdescriptor use is enabled. Fixes bug 3113.
+    - Correctly link libevent_openssl when --enable-static-libevent
+      is passed to configure. Fixes bug 3118.
+    - Bridges should not complain that they are unlisted in the consensus:
+      that's more or less the point of being a bridge. Fixes bug 3183.
+    - Report a SIGNAL event to controllers when acting on a delayed
+      SIGNAL NEWNYM command.  Previously, we would report a SIGNAL
+      event to the controller if we acted on a SIGNAL NEWNYM command
+      immediately, and otherwise not report a SIGNAL event for the
+      command at all. Fixes bug 3349.
+    - Fix a crash when handling the SIGNAL controller command or
+      reporting ERR-level status events with bufferevents enabled. Found
+      by Robert Ransom. Fixes bug 3367.
+    - Always ship the tor-fw-helper manpage in our release tarballs.
+      Fixes bug 3389. Reported by Stephen Walker.
+    - Fix a class of double-mark-for-close bugs when bufferevents
+      are enabled. Fixes bug 3403.
+    - Update tor-fw-helper to support libnatpmp-20110618; fixes 3434.
+    - Add SIGNAL to the list returned by the 'GETINFO events/names'
+      control-port command. Fixes part of bug 3465.
+    - Prevent using negative indices during unit test runs when read_all()
+      fails. Spotted by coverity.
+    - Fix a rare memory leak when checking the nodelist without it being
+      present. Found by coverity.
+    - Only try to download a microdescriptor-flavored consensus from
+      a directory cache that provides them.
+
+  o Minor bugfixes (on 0.2.2.x and earlier):
+    - Assert that hidden-service-related operations are not performed
+      using single-hop circuits. Previously, Tor would assert that
+      client-side streams are not attached to single-hop circuits,
+      but not that other sensitive operations on the client and service
+      side are not performed using single-hop circuits. Fixes bug 3332;
+      bugfix on 0.0.6.
+    - Don't publish a new relay descriptor when we reload our onion key,
+      unless the onion key has actually changed. Fixes bug 3263 and
+      resolves another cause of bug 1810. Bugfix on 0.1.1.11-alpha.
+    - Allow GETINFO fingerprint to return a fingerprint even when
+      we have not yet built a router descriptor. Fixes bug 3577;
+      bugfix on 0.2.0.1-alpha.
+    - Make 'tor --digests' list hashes of all Tor source files.
+      Bugfix on 0.2.2.4-alpha; fixes bug 3427.
+
+  o Code simplification and refactoring:
+    - Use tor_sscanf() in place of scanf() in more places through the
+      code. This makes us a little more locale-independent, and
+      should help shut up code-analysis tools that can't tell
+      a safe sscanf string from a dangerous one.
+    - Use tt_assert(), not tor_assert(), for checking for test failures.
+      This makes the unit tests more able to go on in the event that
+      one of them fails.
+    - Split connection_about_to_close() into separate functions for each
+      connection type.
+
+  o Build changes:
+    - On Windows, we now define the _WIN32_WINNT macros only if they
+      are not already defined. This lets the person building Tor decide,
+      if they want, to require a later version of Windows.
+
+
 Changes in version 0.2.2.30-rc - 2011-07-07
   Tor 0.2.2.30-rc is the first release candidate for the Tor 0.2.2.x
   series. It fixes a few smaller bugs, but generally appears stable.

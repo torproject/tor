@@ -1,4 +1,0 @@
-  * Minor bugfixes:
-    - Make 'tor --digests' list hashes of all Tor source files.
-      Bugfix on 0.2.2.4-alpha; fixes bug 3427.
-

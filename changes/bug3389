@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Always ship the tor-fw-helper manpage in our release tarballs. Bugfix
-      on 0.2.3.1-alpha; fixes bug 3389. Reported by Stephen Walker.
-

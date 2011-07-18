@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Assert that hidden-service-related operations are not performed
-      using single-hop circuits.  Previously, Tor would assert that
-      client-side streams are not attached to single-hop circuits, but
-      not that other sensitive operations on the client and service
-      side are not performed using single-hop circuits.  Fixes bug
-      3332; bugfix on 0.0.6.
-
-

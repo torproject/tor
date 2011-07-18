@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Use tor_sscanf in place of scanf in more places through the
-      code. This makes us a little more locale-independent, and
-      should help shut up code-analysis tools that can't tell
-      a safe sscanf string from a dangerous one.

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Only try to download a microdescriptor-flavored consensus from
-      a directory cache that provides those. Bugfix on 0.2.3.1-alpha.

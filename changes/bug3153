@@ -1,5 +1,0 @@
-  o Minor features:
-    - Check for and recover from inconsistency in the microdescriptor
-      cache.  This will make it harder for us to accidentally free a
-      microdescriptor without removing it from the appropriate data
-      structures.  Fixes issue 3135; issue noted by wanoskarnet.
