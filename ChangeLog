@@ -1,14 +1,17 @@
 Changes in version 0.2.3.2-alpha - 2011-07-18
+  Tor 0.2.3.2-alpha introduces two new experimental features:
+  microdescriptors and pluggable transports. It also continues cleaning
+  up a variety of recently introduced features.
+
   o Major features:
     - Clients can now use microdescriptors instead of regular descriptors
-      to build circuits. Microdescriptors are authority-generated and
-      authority-authenticated summaries of regular descriptors' contents,
-      designed to change very rarely (see proposal 158 for details). This
-      feature is designed to save bandwidth, especially for clients on
-      slow internet connections. It's off by default for now, since
-      nearly no caches support it, but it will be on-by-default for
-      clients in a future version. You can use the UseMicrodescriptors
-      option to turn it on.
+      to build circuits. Microdescriptors are authority-generated
+      summaries of regular descriptors' contents, designed to change
+      very rarely (see proposal 158 for details). This feature is
+      designed to save bandwidth, especially for clients on slow internet
+      connections. It's off by default for now, since nearly no caches
+      support it, but it will be on-by-default for clients in a future
+      version. You can use the UseMicrodescriptors option to turn it on.
     - Tor clients using bridges can now be configured to use a separate
       'transport' proxy for each bridge. This approach helps to resist
       censorship by allowing bridges to use protocol obfuscation
@@ -23,14 +26,13 @@ Changes in version 0.2.3.2-alpha - 2011-07-18
       'EntryNodes {cc}' or 'EntryNodes 1.1.1.1/16'), choose only a
       random subset to be guards, and choose them in random
       order. Fixes bug 2798.
-    - Fix a crash bug that could occur when setting a consensus in a
-      non-used consensus flavor without having a current consensus set.
-      Fixes bug 3361.
-    - Fix a bug where comparing an unknown address to a microdescriptor's
-      shortened exit policy would always seem to give a "rejected" result.
-      Fixes bug 3599.
-    - Using microdescriptors no longer prevents Tor from uploading and
-      downloading hidden service descriptors. Fixes bug 3601.
+    - Tor could crash when remembering a consensus in a non-used consensus
+      flavor without having a current consensus set. Fixes bug 3361.
+    - Comparing an unknown address to a microdescriptor's shortened exit
+      policy would always give a "rejected" result. Fixes bug 3599.
+    - Using microdescriptors as a client no longer prevents Tor from
+      uploading and downloading hidden service descriptors. Fixes
+      bug 3601.
 
   o Minor features:
     - Allow nameservers with IPv6 address. Resolves bug 2574.
@@ -56,10 +58,11 @@ Changes in version 0.2.3.2-alpha - 2011-07-18
       because microdescriptor use is enabled. Fixes bug 3113.
     - Correctly link libevent_openssl when --enable-static-libevent
       is passed to configure. Fixes bug 3118.
-    - Bridges should not complain that they are unlisted in the consensus:
-      that's more or less the point of being a bridge. Fixes bug 3183.
+    - Bridges should not complain during their heartbeat log messages that
+      they are unlisted in the consensus: that's more or less the point
+      of being a bridge. Fixes bug 3183.
     - Report a SIGNAL event to controllers when acting on a delayed
-      SIGNAL NEWNYM command.  Previously, we would report a SIGNAL
+      SIGNAL NEWNYM command. Previously, we would report a SIGNAL
       event to the controller if we acted on a SIGNAL NEWNYM command
       immediately, and otherwise not report a SIGNAL event for the
       command at all. Fixes bug 3349.
@@ -70,7 +73,7 @@ Changes in version 0.2.3.2-alpha - 2011-07-18
       Fixes bug 3389. Reported by Stephen Walker.
     - Fix a class of double-mark-for-close bugs when bufferevents
       are enabled. Fixes bug 3403.
-    - Update tor-fw-helper to support libnatpmp-20110618; fixes 3434.
+    - Update tor-fw-helper to support libnatpmp-20110618. Fixes bug 3434.
     - Add SIGNAL to the list returned by the 'GETINFO events/names'
       control-port command. Fixes part of bug 3465.
     - Prevent using negative indices during unit test runs when read_all()
@@ -93,8 +96,8 @@ Changes in version 0.2.3.2-alpha - 2011-07-18
     - Allow GETINFO fingerprint to return a fingerprint even when
       we have not yet built a router descriptor. Fixes bug 3577;
       bugfix on 0.2.0.1-alpha.
-    - Make 'tor --digests' list hashes of all Tor source files.
-      Bugfix on 0.2.2.4-alpha; fixes bug 3427.
+    - Make 'tor --digests' list hashes of all Tor source files. Bugfix
+      on 0.2.2.4-alpha; fixes bug 3427.
 
   o Code simplification and refactoring:
     - Use tor_sscanf() in place of scanf() in more places through the
