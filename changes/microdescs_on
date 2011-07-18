@@ -1,0 +1,5 @@
+  o Major features:
+    - The microdescriptor system is now on by default for clients. This
+      allows clients to use Tor while downloading a much smaller amount
+      of directory information. To disable it, set "UseMicrodescriptors 0"
+      in your torrc file.
