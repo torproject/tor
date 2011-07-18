@@ -106,7 +106,6 @@ pt_managed_launch_proxy(const char *method,
 
   /* free the memory allocated for the execve() */
   free_execve_args(envp);
-  free_execve_args(proxy_argv);
 
   /* Set stdout/stderr pipes to be non-blocking */
   fcntl(stdout_pipe, F_SETFL, O_NONBLOCK);

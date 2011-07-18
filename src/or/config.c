@@ -4702,22 +4702,25 @@ parse_client_transport_line(const char *line, int validate_only)
   /* managed proxy options */
   int is_managed=0;
   char **proxy_argv=NULL;
+  char **tmp=NULL;
+  int proxy_argc,i;
+
+  int line_length;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
-  if (smartlist_len(items) < 3) {
+  line_length =  smartlist_len(items);
+  if (line_length < 3) {
     log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
     goto err;
   }
 
   name = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
 
   /* field2 is either a SOCKS version or "exec" */
-  field2 = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
+  field2 = smartlist_get(items, 1);
 
   if (!strcmp(field2,"socks4")) {
     socks_ver = PROXY_SOCKS4;
@@ -4735,16 +4738,12 @@ parse_client_transport_line(const char *line, int validate_only)
     if (!validate_only) {  /* if we are not just validating, use the
                              rest of the line as the argv of the proxy
                              to be launched */
-      char **tmp;
-      char *tmp_arg;
-      proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
+      proxy_argc = line_length-2;
+      tor_assert(proxy_argc > 0);
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
       tmp = proxy_argv;
-      while (smartlist_len(items)) {
-        tmp_arg = smartlist_get(items, 0);
-        smartlist_del_keeporder(items, 0);
-        *tmp++ = tor_strdup(tmp_arg);
-        tor_free(tmp_arg);
-      }
+      for (i=0;i<proxy_argc;i++) /* store arguments */
+        *tmp++ = smartlist_get(items, 2+i);
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
       if (pt_managed_launch_client_proxy(name, proxy_argv) < 0) {
@@ -4754,8 +4753,7 @@ parse_client_transport_line(const char *line, int validate_only)
       }
     }
   } else { /* external */
-    addrport = smartlist_get(items, 0);
-    smartlist_del_keeporder(items, 0);
+    addrport = smartlist_get(items, 2);
 
     if (tor_addr_port_parse(addrport, &addr, &port)<0) {
       log_warn(LD_CONFIG, "Error parsing transport "
@@ -4788,9 +4786,7 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  tor_free(name);
-  tor_free(field2);
-  tor_free(addrport);
+  tor_free(proxy_argv);
   return r;
 }
 
@@ -4813,21 +4809,24 @@ parse_server_transport_line(const char *line, int validate_only)
   /* managed proxy options */
   int is_managed=0;
   char **proxy_argv=NULL;
+  char **tmp=NULL;
+  int proxy_argc,i;
+
+  int line_length;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
-  if (smartlist_len(items) < 3) {
+  line_length =  smartlist_len(items);
+  if (line_length < 3) {
     log_warn(LD_CONFIG, "Too few arguments on ServerTransportPlugin line.");
     goto err;
   }
 
   name = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
 
-  type = smartlist_get(items, 0);
-  smartlist_del_keeporder(items, 0);
+  type = smartlist_get(items, 1);
 
   if (!strcmp(type, "exec")) {
     is_managed=1;
@@ -4840,16 +4839,13 @@ parse_server_transport_line(const char *line, int validate_only)
 
   if (is_managed) { /* managed */
     if (!validate_only) {
-      char **tmp;
-      char *tmp_arg;
-      proxy_argv = tor_malloc_zero(sizeof(char*)*(smartlist_len(items)+1));
+      proxy_argc = line_length-2;
+      tor_assert(proxy_argc > 0);
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
       tmp = proxy_argv;
-      while (smartlist_len(items)) {
-        tmp_arg = smartlist_get(items, 0);
-        smartlist_del_keeporder(items, 0);
-        *tmp++ = tor_strdup(tmp_arg);
-        tor_free(tmp_arg);
-      }
+
+      for (i=0;i<proxy_argc;i++) /* store arguments */
+        *tmp++ = smartlist_get(items, 2+i);
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
       if (pt_managed_launch_server_proxy(name, proxy_argv) < 0) { /* launch it! */
@@ -4859,8 +4855,7 @@ parse_server_transport_line(const char *line, int validate_only)
       }
     }
   } else { /* external */
-    addrport = smartlist_get(items, 0);
-    smartlist_del_keeporder(items, 0);
+    addrport = smartlist_get(items, 2);
 
     if (tor_addr_port_parse(addrport, &addr, &port)<0) {
       log_warn(LD_CONFIG, "Error parsing transport "
@@ -4888,8 +4883,7 @@ parse_server_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  tor_free(name);
-  tor_free(type);
+  tor_free(proxy_argv);
   return r;
 }
 
