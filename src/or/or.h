@@ -930,6 +930,11 @@ typedef struct {
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
+#ifdef USE_BUFFEREVENTS
+#define generic_buffer_t struct evbuffer
+#else
+#define generic_buffer_t buf_t
+#endif
 
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
 * connection_t to foo_connection_t) are safe. */

@@ -557,6 +557,39 @@ buf_free(buf_t *buf)
   tor_free(buf);
 }
 
+/** Return a new copy of <b>in_chunk</b> */
+static chunk_t *
+chunk_copy(const chunk_t *in_chunk)
+{
+  chunk_t *newch = tor_memdup(in_chunk, CHUNK_ALLOC_SIZE(in_chunk->memlen));
+  newch->next = NULL;
+  if (in_chunk->data) {
+    off_t offset = in_chunk->data - in_chunk->mem;
+    newch->data = newch->mem + offset;
+  }
+  return newch;
+}
+
+/** Return a new copy of <b>buf</b> */
+buf_t *
+buf_copy(const buf_t *buf)
+{
+  chunk_t *ch;
+  buf_t *out = buf_new();
+  out->default_chunk_size = buf->default_chunk_size;
+  for (ch = buf->head; ch; ch = ch->next) {
+    chunk_t *newch = chunk_copy(ch);
+    if (out->tail) {
+      out->tail->next = newch;
+      out->tail = newch;
+    } else {
+      out->head = out->tail = newch;
+    }
+  }
+  out->datalen = buf->datalen;
+  return out;
+}
+
 /** Append a new chunk with enough capacity to hold <b>capacity</b> bytes to
  * the tail of <b>buf</b>.  If <b>capped</b>, don't allocate a chunk bigger
  * than MAX_CHUNK_ALLOC. */
@@ -2373,6 +2406,43 @@ write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
   return 0;
 }
 #endif
+
+/** Set *<b>output</b> to contain a copy of the data in *<b>input</b> */
+int
+generic_buffer_set_to_copy(generic_buffer_t **output,
+                           const generic_buffer_t *input)
+{
+#ifdef USE_BUFFEREVENTS
+  struct evbuffer_ptr ptr;
+  size_t remaining = evbuffer_get_length(input);
+  if (*output) {
+    evbuffer_drain(*output, evbuffer_get_length(*output));
+  } else {
+    if (!(*output = evbuffer_new()))
+      return -1;
+  }
+  evbuffer_ptr_set((struct evbuffer*)input, &ptr, 0, EVBUFFER_PTR_SET);
+  while (remaining) {
+    struct evbuffer_iovec v[4];
+    int n_used, i;
+    n_used = evbuffer_peek((struct evbuffer*)input, -1, &ptr, v, 4);
+    if (n_used < 0)
+      return -1;
+    for (i=0;i<n_used;++i) {
+      evbuffer_add(*output, v[i].iov_base, v[i].iov_len);
+      tor_assert(v[i].iov_len <= remaining);
+      remaining -= v[i].iov_len;
+      evbuffer_ptr_set((struct evbuffer*)input,
+                       &ptr, v[i].iov_len, EVBUFFER_PTR_ADD);
+    }
+  }
+#else
+  if (*output)
+    buf_free(*output);
+  *output = buf_copy(input);
+#endif
+  return 0;
+}
 
 /** Log an error and exit if <b>buf</b> is corrupted.
  */
