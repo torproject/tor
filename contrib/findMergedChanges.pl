@@ -36,18 +36,22 @@ Suggested application:
 EOF
 }
 
+my $target_branch = "origin/release-0.2.2";
+
 while (@ARGV and $ARGV[0] =~ /^--/) {
     my $flag = shift @ARGV;
     if ($flag =~ /^--(weird|merged|unmerged|list)/) {
 	$look_for_type = $1;
+    } elsif ($flag =~ /^--branch=(\S+)/) {
+        $target_branch = $1;
     } else {
 	die "Unrecognized flag $flag";
     }
 }
 
 for my $changefile (@ARGV) {
-    my $n_merged = nChanges("origin/release-0.2.2", $changefile);
-    my $n_postmerged = nChanges("origin/release-0.2.2..origin/master", $changefile);
+    my $n_merged = nChanges($target_branch, $changefile);
+    my $n_postmerged = nChanges("${target_branch}..origin/master", $changefile);
     my $type;
 
     if ($n_merged != 0 and $n_postmerged == 0) {
