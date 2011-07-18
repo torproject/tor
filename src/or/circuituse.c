@@ -677,6 +677,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_assert(conn);
 
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
+  conn->exit_allows_optimistic_data = 0;
   conn->on_circuit = NULL;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -1449,6 +1450,8 @@ static void
 link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
                     crypt_path_t *cpath)
 {
+  const node_t *exitnode;
+
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
             circ->_base.n_circ_id);
@@ -1467,6 +1470,24 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
     tor_assert(circ->cpath->prev);
     tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
     apconn->cpath_layer = circ->cpath->prev;
+  }
+
+  /* See if we can use optimistic data on this circuit */
+  if (apconn->cpath_layer->extend_info &&
+      (exitnode = node_get_by_id(
+                     apconn->cpath_layer->extend_info->identity_digest)) &&
+      exitnode->rs) {
+    /* Okay; we know what exit node this is. */
+    if (circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        exitnode->rs->version_supports_optimistic_data)
+      apconn->exit_allows_optimistic_data = 1;
+    else
+      apconn->exit_allows_optimistic_data = 0;
+    log_info(LD_APP, "Looks like completed circuit to %s %s allow "
+             "optimistic data for connection to %s",
+             safe_str_client(node_describe(exitnode)),
+             apconn->exit_allows_optimistic_data ? "does" : "doesn't",
+             safe_str_client(apconn->socks_request->address));
   }
 }
 

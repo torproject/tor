@@ -57,6 +57,7 @@ static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int address_is_in_virtual_range(const char *addr);
 static int consider_plaintext_ports(edge_connection_t *conn, uint16_t port);
 static void clear_trackexithost_mappings(const char *exitname);
+static int connection_ap_supports_optimistic_data(const edge_connection_t *);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -154,6 +155,22 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
         return -1;
       }
       return 0;
+    case AP_CONN_STATE_CONNECT_WAIT:
+      if (connection_ap_supports_optimistic_data(conn)) {
+        log_info(LD_EDGE,
+                 "data from edge while in '%s' state. Sending it anyway. "
+                 "package_partial=%d, buflen=%ld",
+                 conn_state_to_string(conn->_base.type, conn->_base.state),
+                 package_partial, connection_get_inbuf_len(TO_CONN(conn)));
+        if (connection_edge_package_raw_inbuf(conn, package_partial, NULL)<0) {
+          /* (We already sent an end cell if possible) */
+          connection_mark_for_close(TO_CONN(conn));
+          return -1;
+        }
+        return 0;
+      }
+      /* Fall through if the connection is on a circuit without optimistic
+       * data support. */
     case EXIT_CONN_STATE_CONNECTING:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
@@ -162,18 +179,6 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       log_info(LD_EDGE,
                "data from edge while in '%s' state. Leaving it on buffer.",
                conn_state_to_string(conn->_base.type, conn->_base.state));
-      return 0;
-    case AP_CONN_STATE_CONNECT_WAIT:
-      log_info(LD_EDGE,
-               "data from edge while in '%s' state. Sending it anyway. "
-               "package_partial=%d, buflen=%ld",
-               conn_state_to_string(conn->_base.type, conn->_base.state),
-               package_partial, connection_get_inbuf_len(TO_CONN(conn)));
-      if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
-        /* (We already sent an end cell if possible) */
-        connection_mark_for_close(TO_CONN(conn));
-        return -1;
-      }
       return 0;
   }
   log_warn(LD_BUG,"Got unexpected state %d. Closing.",conn->_base.state);
@@ -2345,6 +2350,22 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   return test_stream_id;
 }
 
+/** Return true iff <b>conn</b> is linked to a circuit and configured to use
+ * an exit that supports optimistic data. */
+static int
+connection_ap_supports_optimistic_data(const edge_connection_t *conn)
+{
+  tor_assert(conn->_base.type == CONN_TYPE_AP);
+  /* We can only send optimistic data if we're connected to an open
+     general circuit. */
+  if (conn->on_circuit == NULL ||
+      conn->on_circuit->state != CIRCUIT_STATE_OPEN ||
+      conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+    return 0;
+
+  return conn->exit_allows_optimistic_data;
+}
+
 /** Write a relay begin cell, using destaddr and destport from ap_conn's
  * socks_request field, and send it down circ.
  *
@@ -2408,10 +2429,13 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
   /* If there's queued-up data, send it now */
-  log_info(LD_APP, "Possibly sending queued-up data: %ld",
-           connection_get_inbuf_len(TO_CONN(ap_conn)));
-  if (connection_edge_package_raw_inbuf(ap_conn, 1, NULL) < 0) {
-    connection_mark_for_close(TO_CONN(ap_conn));
+  if (connection_get_inbuf_len(TO_CONN(ap_conn)) &&
+      connection_ap_supports_optimistic_data(ap_conn)) {
+    log_info(LD_APP, "Sending up to %ld bytes of queued-up data",
+             connection_get_inbuf_len(TO_CONN(ap_conn)));
+    if (connection_edge_package_raw_inbuf(ap_conn, 1, NULL) < 0) {
+      connection_mark_for_close(TO_CONN(ap_conn));
+    }
   }
 
   return 0;

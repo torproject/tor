@@ -1232,6 +1232,11 @@ typedef struct edge_connection_t {
    * NATd connection */
   unsigned int is_transparent_ap:1;
 
+  /** Set if this connection's target exit node allows optimistic data.
+   * (That is, data sent on this stream before the exit has sent a
+   * CONNECTED cell.)*/
+  unsigned int exit_allows_optimistic_data : 1;
+
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
@@ -1667,6 +1672,9 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that, if it caches directory info,
    * we can get microdescriptors from. */
   unsigned int version_supports_microdesc_cache:1;
+  /** True iff this router is a version that allows DATA cells to arrive on
+   * a stream before it has sent a CONNECTED cell. */
+  unsigned int version_supports_optimistic_data:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
