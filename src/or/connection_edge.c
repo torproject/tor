@@ -165,8 +165,10 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       return 0;
     case AP_CONN_STATE_CONNECT_WAIT:
       log_info(LD_EDGE,
-               "data from edge while in '%s' state. Sending it anyway. package_partial=%d, buflen=%d",
-               conn_state_to_string(conn->_base.type, conn->_base.state), package_partial, buf_datalen(TO_CONN(conn)->inbuf));
+               "data from edge while in '%s' state. Sending it anyway. "
+               "package_partial=%d, buflen=%ld",
+               conn_state_to_string(conn->_base.type, conn->_base.state),
+               package_partial, connection_get_inbuf_len(TO_CONN(conn)));
       if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
         connection_mark_for_close(TO_CONN(conn));
@@ -2406,7 +2408,8 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
   /* If there's queued-up data, send it now */
-  log_warn(LD_APP, "Possibly sending queued-up data: %d", buf_datalen(TO_CONN(ap_conn)->inbuf));
+  log_info(LD_APP, "Possibly sending queued-up data: %ld",
+           connection_get_inbuf_len(TO_CONN(ap_conn)));
   if (connection_edge_package_raw_inbuf(ap_conn, 1, NULL) < 0) {
     connection_mark_for_close(TO_CONN(ap_conn));
   }
