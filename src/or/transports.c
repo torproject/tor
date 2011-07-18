@@ -157,8 +157,6 @@ configure_proxy(managed_proxy_t *mp)
   char stdout_buf[200];
 
   while (1) {
-    memset(stdout_buf, 0, sizeof(stdout_buf));
-
     r = get_string_from_pipe(mp->stdout, stdout_buf,
                              sizeof(stdout_buf) - 1);
 
