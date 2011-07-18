@@ -281,10 +281,10 @@ ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
 
 /** Status of an I/O stream. */
 enum stream_status {
-  ST_OKAY,
-  ST_EAGAIN,
-  ST_TERM,
-  ST_CLOSED
+  IO_STREAM_OKAY,
+  IO_STREAM_EAGAIN,
+  IO_STREAM_TERM,
+  IO_STREAM_CLOSED
 };
 
 enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);

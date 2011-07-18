@@ -163,14 +163,14 @@ configure_proxy(managed_proxy_t *mp)
     r = get_string_from_pipe(mp->stdout, stdout_buf,
                              sizeof(stdout_buf) - 1);
 
-    if (r == ST_CLOSED || r == ST_TERM) {
+    if (r == IO_STREAM_CLOSED || r == IO_STREAM_TERM) {
       log_warn(LD_GENERAL, "Managed proxy stream closed. "
                "Most probably application stopped running");
       mp->conf_state = PT_PROTO_BROKEN;
-    } else if (r == ST_EAGAIN) {
+    } else if (r == IO_STREAM_EAGAIN) {
       return;
     } else {
-      tor_assert(r == ST_OKAY);
+      tor_assert(r == IO_STREAM_OKAY);
       handle_proxy_line(stdout_buf, mp);
     }
 

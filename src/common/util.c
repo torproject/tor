@@ -3140,10 +3140,10 @@ tor_spawn_background(const char *const filename, int *stdout_read,
  * fits your needs before using it.
  *
  * Returns:
- * ST_CLOSED: If the stream is closed.
- * ST_EAGAIN: If there is nothing to read and we should check back later.
- * ST_TERM: If something is wrong with the stream.
- * ST_OKAY: If everything went okay and we got a string in <b>buf_out</b>. */
+ * IO_STREAM_CLOSED: If the stream is closed.
+ * IO_STREAM_EAGAIN: If there is nothing to read and we should check back later.
+ * IO_STREAM_TERM: If something is wrong with the stream.
+ * IO_STREAM_OKAY: If everything went okay and we got a string in <b>buf_out</b>. */
 enum stream_status
 get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
 {
@@ -3156,14 +3156,14 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
     if (feof(stream)) {
       /* Program has closed stream (probably it exited) */
       /* TODO: check error */
-      return ST_CLOSED;
+      return IO_STREAM_CLOSED;
     } else {
       if (EAGAIN == errno) {
         /* Nothing more to read, try again next time */
-        return ST_EAGAIN;
+        return IO_STREAM_EAGAIN;
       } else {
         /* There was a problem, abandon this child process */
-        return ST_TERM;
+        return IO_STREAM_TERM;
       }
     }
   } else {
@@ -3175,11 +3175,11 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
       buf_out[len - 1] = '\0';
     }
 
-    return ST_OKAY;
+    return IO_STREAM_OKAY;
   }
 
   /* We should never get here */
-  return ST_TERM;
+  return IO_STREAM_TERM;
 }
 
 /** Read from stream, and send lines to log at the specified log level.
