@@ -1809,7 +1809,7 @@ retry_listener_ports(smartlist_t *old_conns,
   SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, port) {
     struct sockaddr *listensockaddr;
     socklen_t listensocklen = 0;
-    char *address;
+    char *address=NULL;
     connection_t *conn;
 
     if (port->is_unix_addr) {

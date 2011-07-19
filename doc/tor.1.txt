@@ -700,7 +700,6 @@ The following options are useful only for clients (that is, if
         Don't share a circuits with streams for which different
         SOCKS authentication was provided. (On by default;
         you can disable it with **NoIsolateSOCKSAuth**.)
-        [NOT YET IMPLEMENTED.]
     **IsolateClientProtocol**;;
         Don't share circuits with streams using a different protocol.
         (SOCKS 4, SOCKS 5, TransPort connections, NATDPort connections,

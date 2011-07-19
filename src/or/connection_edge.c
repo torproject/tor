@@ -3305,12 +3305,10 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
   if ((iso & ISO_DESTADDR) &&
       strcasecmp(a->original_dest_address, b->original_dest_address))
     return 0;
-  /* XXXX023 Waititing for ticket #1666 */
-  /*
   if ((iso & ISO_SOCKSAUTH) &&
-      strcasecmp(a->socks_request->auth, b->socks_request->auth))
+      (strcmp_opt(a->socks_request->username, b->socks_request->username) ||
+       strcmp_opt(a->socks_request->password, b->socks_request->password)))
     return 0;
-  */
   if ((iso & ISO_CLIENTPROTO) &&
       (TO_CONN(a)->type != TO_CONN(b)->type ||
        a->socks_request->socks_version != b->socks_request->socks_version))
@@ -3369,12 +3367,10 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
   if ((iso & ISO_DESTADDR) &&
       strcasecmp(conn->original_dest_address, circ->dest_address))
     return 0;
-  /* XXXX023 Waititing for ticket #1666 */
-  /*
   if ((iso & ISO_SOCKSAUTH) &&
-      strcasecmp(a->socks_request->auth, b->socks_request->auth))
+      (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
+       strcmp_opt(conn->socks_request->password, circ->socks_password)))
     return 0;
-  */
   if ((iso & ISO_CLIENTPROTO) &&
       (TO_CONN(conn)->type != circ->client_proto_type ||
        conn->socks_request->socks_version != circ->client_proto_socksver))
@@ -3420,7 +3416,10 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
     tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
     circ->session_group = conn->session_group;
     circ->nym_epoch = conn->nym_epoch;
-    /* XXXX023 auth too, once #1666 is in. */
+    circ->socks_username = conn->socks_request->username ?
+      tor_strdup(conn->socks_request->username) : NULL;
+    circ->socks_password = conn->socks_request->password ?
+      tor_strdup(conn->socks_request->password) : NULL;
 
     circ->isolation_values_set = 1;
     return 0;
@@ -3430,7 +3429,9 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
       mixed |= ISO_DESTPORT;
     if (strcasecmp(conn->original_dest_address, circ->dest_address))
       mixed |= ISO_DESTADDR;
-    /* XXXX023 auth too, once #1666 is in. */
+    if (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
+        strcmp_opt(conn->socks_request->password, circ->socks_password))
+      mixed |= ISO_SOCKSAUTH;
     if ((TO_CONN(conn)->type != circ->client_proto_type ||
          conn->socks_request->socks_version != circ->client_proto_socksver))
       mixed |= ISO_CLIENTPROTO;
@@ -3486,5 +3487,7 @@ circuit_clear_isolation(origin_circuit_t *circ)
   tor_free(circ->dest_address);
   circ->session_group = -1;
   circ->nym_epoch = 0;
+  tor_free(circ->socks_username);
+  tor_free(circ->socks_password);
 }
 

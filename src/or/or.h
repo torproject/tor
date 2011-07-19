@@ -1218,8 +1218,8 @@ typedef struct edge_connection_t {
   char *original_dest_address;
   /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
      ClientProtocol is a combination of type and socks_request->
-     socks_version.  SocksAuth will be added to socks_request by ticket
-     #1666. DestAddr is in socks_request->address. */
+     socks_version.  SocksAuth is socks_request->username/password.
+     DestAddr is in socks_request->address. */
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
@@ -2501,7 +2501,8 @@ typedef struct origin_circuit_t {
   char *dest_address;
   int session_group;
   unsigned nym_epoch;
-  /* XXXX023 do auth once #1666 is merged */
+  char *socks_username;
+  char *socks_password;
   /**@}*/
 
 } origin_circuit_t;
