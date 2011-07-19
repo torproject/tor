@@ -521,6 +521,23 @@ tor_strisnonupper(const char *s)
   return 1;
 }
 
+/** As strcmp, except that either string may be NULL.  The NULL string is
+ * considered to be before any non-NULL string. */
+int
+strcmp_opt(const char *s1, const char *s2)
+{
+  if (!s1) {
+    if (!s2)
+      return 0;
+    else
+      return -1;
+  } else if (!s2) {
+    return 1;
+  } else {
+    return strcmp(s1, s2);
+  }
+}
+
 /** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */

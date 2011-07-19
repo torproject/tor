@@ -3864,12 +3864,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 static int
 opt_streq(const char *s1, const char *s2)
 {
-  if (!s1 && !s2)
-    return 1;
-  else if (s1 && s2 && !strcmp(s1,s2))
-    return 1;
-  else
-    return 0;
+  return 0 == strcmp_opt(s1, s2);
 }
 
 /** Check if any of the previous options have changed but aren't allowed to. */
