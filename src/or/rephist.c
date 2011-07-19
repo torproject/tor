@@ -2500,7 +2500,7 @@ rep_hist_buffer_stats_write(time_t now)
   if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "buffer-stats");
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND | O_TEXT,
                                     0600, &open_file);
   if (!out)
     goto done;

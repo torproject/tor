@@ -264,7 +264,7 @@ load_identity_key(void)
     }
 
     if (!(f = start_writing_to_stdio_file(identity_key_file,
-                                          OPEN_FLAGS_REPLACE, 0400,
+                                          OPEN_FLAGS_REPLACE | O_TEXT, 0400,
                                           &open_file)))
       return 1;
 
@@ -349,7 +349,7 @@ generate_signing_key(void)
   }
 
   if (!(f = start_writing_to_stdio_file(signing_key_file,
-                                        OPEN_FLAGS_REPLACE, 0600,
+                                        OPEN_FLAGS_REPLACE | O_TEXT, 0600,
                                         &open_file)))
     return 1;
 
