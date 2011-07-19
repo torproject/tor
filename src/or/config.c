@@ -5057,8 +5057,8 @@ parse_client_port_config(smartlist_t *out,
       if (elt_sl_idx == 0)
         continue; /* Skip addr:port */
       if (!strcasecmpstart(elt, "SessionGroup=")) {
-        int group = tor_parse_long(elt+strlen("SessionGroup="),
-                                   10, 0, INT_MAX, &ok, NULL);
+        int group = (int)tor_parse_long(elt+strlen("SessionGroup="),
+                                        10, 0, INT_MAX, &ok, NULL);
         if (!ok) {
           log_warn(LD_CONFIG, "Invalid %sPort option '%s'",
                    portname, escaped(elt));
