@@ -3461,9 +3461,9 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
  * it, and whose isolation settings are hypothetical.  (We set hypothetical
  * isolation settings on circuits as we're launching them, so that we
  * know whether they can handle more streams or whether we need to launch
- * even more circuits.  We clear the flags once the circuits are open,
- * in case the streams that made us launch the circuits have closed
- * since we began launching the circuits.)
+ * even more circuits.  Once the circuit is open, if it turns out that
+ * we no longer have any streams to attach to it, we clear the isolation flags
+ * and data so that other streams can have a chance.)
  */
 void
 circuit_clear_isolation(origin_circuit_t *circ)

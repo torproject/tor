@@ -998,6 +998,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
+  int can_try_clearing_isolation = 0, tried_clearing_isolation = 0;
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
@@ -1005,9 +1006,12 @@ circuit_has_opened(origin_circuit_t *circ)
    * to consider its build time. */
   circ->has_opened = 1;
 
+ again:
+
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
+      can_try_clearing_isolation = 1;
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
@@ -1016,6 +1020,7 @@ circuit_has_opened(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
+      can_try_clearing_isolation = 1;
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
@@ -1032,6 +1037,17 @@ circuit_has_opened(origin_circuit_t *circ)
     /* default:
      * This won't happen in normal operation, but might happen if the
      * controller did it. Just let it slide. */
+  }
+
+  if (can_try_clearing_isolation && !tried_clearing_isolation &&
+      circ->isolation_values_set &&
+      !circ->isolation_any_streams_attached) {
+    /* If we have any isolation information set on this circuit, and
+     * we didn't manage to attach any streams to it, then we can
+     * and should clear it and try again. */
+    circuit_clear_isolation(circ);
+    tried_clearing_isolation = 1;
+    goto again;
   }
 }
 

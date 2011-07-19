@@ -210,23 +210,9 @@ circuit_set_state(circuit_t *circ, uint8_t state)
     /* add to waiting-circuit list. */
     smartlist_add(circuits_pending_or_conns, circ);
   }
-
-  circ->state = state;
-
-  if (state == CIRCUIT_STATE_OPEN) {
+  if (state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_conn_onionskin);
-    if (CIRCUIT_IS_ORIGIN(circ)) {
-      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
-      if (origin_circ->isolation_values_set &&
-          !origin_circ->isolation_any_streams_attached) {
-        /* If we have any isolation information set on this circuit,
-         * but we never attached any streams to it, then all of the
-         * isolation information was hypothetical.  Clear it.
-         */
-        circuit_clear_isolation(origin_circ);
-      }
-    }
-  }
+  circ->state = state;
 }
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
