@@ -1269,9 +1269,10 @@ typedef struct edge_connection_t {
   unsigned int is_transparent_ap:1;
 
   /** For AP connections only: Set if this connection's target exit node
-   * allows optimistic data.  (That is, data sent on this stream before
-   * the exit has sent a CONNECTED cell.)*/
-  unsigned int exit_allows_optimistic_data : 1;
+   * allows optimistic data (that is, data sent on this stream before
+   * the exit has sent a CONNECTED cell) and we have chosen to use it.
+   */
+  unsigned int may_use_optimistic_data : 1;
 
   /** For AP connections only: buffer for data that we have sent
    * optimistically, which we might need to re-send if we have to

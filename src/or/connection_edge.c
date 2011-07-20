@@ -2372,7 +2372,7 @@ connection_ap_supports_optimistic_data(const edge_connection_t *conn)
       conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL)
     return 0;
 
-  return conn->exit_allows_optimistic_data;
+  return conn->may_use_optimistic_data;
 }
 
 /** Write a relay begin cell, using destaddr and destport from ap_conn's

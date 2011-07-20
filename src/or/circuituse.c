@@ -739,7 +739,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_assert(conn);
 
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
-  conn->exit_allows_optimistic_data = 0;
+  conn->may_use_optimistic_data = 0;
   conn->on_circuit = NULL;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -1597,13 +1597,13 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
     if (optimistic_data_enabled() &&
         circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         exitnode->rs->version_supports_optimistic_data)
-      apconn->exit_allows_optimistic_data = 1;
+      apconn->may_use_optimistic_data = 1;
     else
-      apconn->exit_allows_optimistic_data = 0;
+      apconn->may_use_optimistic_data = 0;
     log_info(LD_APP, "Looks like completed circuit to %s %s allow "
              "optimistic data for connection to %s",
              safe_str_client(node_describe(exitnode)),
-             apconn->exit_allows_optimistic_data ? "does" : "doesn't",
+             apconn->may_use_optimistic_data ? "does" : "doesn't",
              safe_str_client(apconn->socks_request->address));
   }
 }
