@@ -243,16 +243,26 @@ or_connection_new(int socket_family)
   return or_conn;
 }
 
+/** Allocate and return a new entry_connection_t, initialized as by
+ * connection_init(). */
+entry_connection_t *
+entry_connection_new(int type, int socket_family)
+{
+  entry_connection_t *entry_conn = tor_malloc_zero(sizeof(entry_connection_t));
+  tor_assert(type == CONN_TYPE_AP);
+  connection_init(time(NULL), ENTRY_TO_CONN(entry_conn), type, socket_family);
+  entry_conn->_edge.socks_request = socks_request_new();
+  return entry_conn;
+}
+
 /** Allocate and return a new edge_connection_t, initialized as by
  * connection_init(). */
 edge_connection_t *
 edge_connection_new(int type, int socket_family)
 {
   edge_connection_t *edge_conn = tor_malloc_zero(sizeof(edge_connection_t));
-  tor_assert(type == CONN_TYPE_EXIT || type == CONN_TYPE_AP);
+  tor_assert(type == CONN_TYPE_EXIT);
   connection_init(time(NULL), TO_CONN(edge_conn), type, socket_family);
-  if (type == CONN_TYPE_AP)
-    edge_conn->socks_request = socks_request_new();
   return edge_conn;
 }
 
@@ -291,8 +301,10 @@ connection_new(int type, int socket_family)
       return TO_CONN(or_connection_new(socket_family));
 
     case CONN_TYPE_EXIT:
-    case CONN_TYPE_AP:
       return TO_CONN(edge_connection_new(type, socket_family));
+
+    case CONN_TYPE_AP:
+      return ENTRY_TO_CONN(entry_connection_new(type, socket_family));
 
     case CONN_TYPE_DIR:
       return TO_CONN(dir_connection_new(socket_family));
@@ -334,6 +346,8 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
       conn->magic = OR_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_EXIT:
+      conn->magic = ENTRY_CONNECTION_MAGIC;
+      break;
     case CONN_TYPE_AP:
       conn->magic = EDGE_CONNECTION_MAGIC;
       break;
@@ -402,6 +416,10 @@ _connection_free(connection_t *conn)
       memlen = sizeof(or_connection_t);
       break;
     case CONN_TYPE_AP:
+      tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
+      mem = TO_ENTRY_CONN(conn);
+      memlen = sizeof(entry_connection_t);
+      break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
       mem = TO_EDGE_CONN(conn);
@@ -3930,6 +3948,8 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       break;
     case CONN_TYPE_AP:
+      tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
+      break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
       break;

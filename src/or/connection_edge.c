@@ -2553,13 +2553,15 @@ connection_ap_make_link(connection_t *partner,
                         int session_group, int isolation_flags,
                         int use_begindir, int want_onehop)
 {
+  entry_connection_t *entry_conn;
   edge_connection_t *conn;
 
   log_info(LD_APP,"Making internal %s tunnel to %s:%d ...",
            want_onehop ? "direct" : "anonymized",
            safe_str_client(address), port);
 
-  conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
+  entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  conn = ENTRY_TO_EDGE_CONN(entry_conn);
   conn->_base.linked = 1; /* so that we can add it safely below. */
 
   /* populate conn->socks_request */

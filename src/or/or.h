@@ -941,6 +941,7 @@ typedef struct socks_request_t socks_request_t;
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
 #define OR_CONNECTION_MAGIC 0x7D31FF03u
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
+#define ENTRY_CONNECTION_MAGIC 0xbb4a5703
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 #define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
@@ -1173,7 +1174,7 @@ typedef struct or_connection_t {
                                               * identity digest as this one. */
 } or_connection_t;
 
-/** Subtype of connection_t for an "edge connection" -- that is, a socks (ap)
+/** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
  * connection, or an exit. */
 typedef struct edge_connection_t {
   connection_t _base;
@@ -1289,6 +1290,13 @@ typedef struct edge_connection_t {
 
 } edge_connection_t;
 
+/** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
+ * connection, a DNS request, a TransPort connection or a NATD connection */
+typedef struct entry_connection_t {
+  edge_connection_t _edge;
+
+} entry_connection_t;
+
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
 typedef struct dir_connection_t {
@@ -1360,6 +1368,11 @@ typedef struct control_connection_t {
 /** Helper macro: Given a pointer to to._base, of type from*, return &to. */
 #define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, _base))
 
+/** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
+#define ENTRY_TO_EDGE_CONN(c) (&(((c))->_edge))
+/** Cast a entry_connection_t subtype pointer to a connection_t **/
+#define ENTRY_TO_CONN(c) (TO_CONN(ENTRY_TO_EDGE_CONN(c)))
+
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
 static or_connection_t *TO_OR_CONN(connection_t *);
@@ -1369,6 +1382,9 @@ static dir_connection_t *TO_DIR_CONN(connection_t *);
 /** Convert a connection_t* to an edge_connection_t*; assert if the cast is
  * invalid. */
 static edge_connection_t *TO_EDGE_CONN(connection_t *);
+/** Convert a connection_t* to an entry_connection_t*; assert if the cast is
+ * invalid. */
+static entry_connection_t *TO_ENTRY_CONN(connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
 static control_connection_t *TO_CONTROL_CONN(connection_t *);
@@ -1388,8 +1404,14 @@ static INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
 }
 static INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
 {
-  tor_assert(c->magic == EDGE_CONNECTION_MAGIC);
+  tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
+             c->magic == ENTRY_CONNECTION_MAGIC);
   return DOWNCAST(edge_connection_t, c);
+}
+static INLINE entry_connection_t *TO_ENTRY_CONN(connection_t *c)
+{
+  tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, _edge._base);
 }
 static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
