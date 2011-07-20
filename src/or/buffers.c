@@ -1581,12 +1581,12 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
      */
     struct evbuffer_iovec v;
     int i;
-    want_length = evbuffer_get_contiguous_space(buf);
     n_drain = 0;
-    i = evbuffer_peek(buf, want_length, NULL, &v, 1);
+    i = evbuffer_peek(buf, -1, NULL, &v, 1);
     tor_assert(i == 1);
     data = v.iov_base;
     datalen = v.iov_len;
+    want_length = 0;
 
     res = parse_socks(data, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);

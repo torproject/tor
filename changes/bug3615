@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix a spurious warning when parsing SOCKS requests with
+      bufferevents enabled. Fixes bug 3615; bugfix on 0.2.3.2-alpha.
