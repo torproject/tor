@@ -176,7 +176,7 @@ static int handle_control_resolve(control_connection_t *conn, uint32_t len,
 static int handle_control_usefeature(control_connection_t *conn,
                                      uint32_t len,
                                      const char *body);
-static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
+static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(char *buf, size_t len,
                                    or_connection_t *conn);
@@ -655,7 +655,7 @@ get_circ(const char *id)
 }
 
 /** Given a text stream <b>id</b>, return the corresponding AP connection. */
-static edge_connection_t *
+static entry_connection_t *
 get_stream(const char *id)
 {
   uint64_t n_id;
@@ -667,7 +667,7 @@ get_stream(const char *id)
   conn = connection_get_by_global_id(n_id);
   if (!conn || conn->type != CONN_TYPE_AP || conn->marked_for_close)
     return NULL;
-  return TO_EDGE_CONN(conn);
+  return TO_ENTRY_CONN(conn);
 }
 
 /** Helper for setconf and resetconf. Acts like setconf, except
@@ -1800,7 +1800,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     char buf[256];
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
-      edge_connection_t *conn;
+      entry_connection_t *conn;
       char *s;
       size_t slen;
       circuit_t *circ;
@@ -1810,8 +1810,8 @@ getinfo_helper_events(control_connection_t *control_conn,
           base_conn->state == AP_CONN_STATE_SOCKS_WAIT ||
           base_conn->state == AP_CONN_STATE_NATD_WAIT)
         continue;
-      conn = TO_EDGE_CONN(base_conn);
-      switch (conn->_base.state)
+      conn = TO_ENTRY_CONN(base_conn);
+      switch (base_conn->state)
         {
         case AP_CONN_STATE_CONTROLLER_WAIT:
         case AP_CONN_STATE_CIRCUIT_WAIT:
@@ -1830,17 +1830,17 @@ getinfo_helper_events(control_connection_t *control_conn,
           state = "SUCCEEDED"; break;
         default:
           log_warn(LD_BUG, "Asked for stream in unknown state %d",
-                   conn->_base.state);
+                   base_conn->state);
           continue;
         }
-      circ = circuit_get_by_edge_conn(conn);
+      circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
       if (circ && CIRCUIT_IS_ORIGIN(circ))
         origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
       slen = strlen(buf)+strlen(state)+32;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %lu %s",
-                   (unsigned long) conn->_base.global_identifier,state,
+                   (unsigned long) base_conn->global_identifier,state,
                    origin_circ?
                          (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
@@ -2460,7 +2460,7 @@ static int
 handle_control_attachstream(control_connection_t *conn, uint32_t len,
                             const char *body)
 {
-  edge_connection_t *ap_conn = NULL;
+  entry_connection_t *ap_conn = NULL;
   origin_circuit_t *circ = NULL;
   int zero_circ;
   smartlist_t *args;
@@ -2496,9 +2496,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   if (!ap_conn || (!zero_circ && !circ) || !hop_line_ok)
     return 0;
 
-  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT &&
-      ap_conn->_base.state != AP_CONN_STATE_CONNECT_WAIT &&
-      ap_conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
+  if (ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_CONTROLLER_WAIT &&
+      ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_CONNECT_WAIT &&
+      ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_RESOLVE_WAIT) {
     connection_write_str_to_buf(
                     "555 Connection is not managed by controller.\r\n",
                     conn);
@@ -2506,15 +2506,16 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
 
   /* Do we need to detach it first? */
-  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT) {
-    circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
-    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT);
+  if (ENTRY_TO_CONN(ap_conn)->state != AP_CONN_STATE_CONTROLLER_WAIT) {
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(ap_conn);
+    circuit_t *tmpcirc = circuit_get_by_edge_conn(edge_conn);
+    connection_edge_end(edge_conn, END_STREAM_REASON_TIMEOUT);
     /* Un-mark it as ending, since we're going to reuse it. */
-    ap_conn->edge_has_sent_end = 0;
-    ap_conn->end_reason = 0;
+    edge_conn->edge_has_sent_end = 0;
+    edge_conn->end_reason = 0;
     if (tmpcirc)
-      circuit_detach_stream(tmpcirc,ap_conn);
-    ap_conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
+      circuit_detach_stream(tmpcirc, edge_conn);
+    TO_CONN(edge_conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
   if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
@@ -2636,7 +2637,7 @@ static int
 handle_control_redirectstream(control_connection_t *conn, uint32_t len,
                               const char *body)
 {
-  edge_connection_t *ap_conn = NULL;
+  entry_connection_t *ap_conn = NULL;
   char *new_addr = NULL;
   uint16_t new_port = 0;
   smartlist_t *args;
@@ -2684,7 +2685,7 @@ static int
 handle_control_closestream(control_connection_t *conn, uint32_t len,
                            const char *body)
 {
-  edge_connection_t *ap_conn=NULL;
+  entry_connection_t *ap_conn=NULL;
   uint8_t reason=0;
   smartlist_t *args;
   int ok;
@@ -3264,7 +3265,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
  * <b>conn</b>, and write it to <b>buf</b>.  Return 0 on success, -1 on
  * failure. */
 static int
-write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
+write_stream_target_to_buf(entry_connection_t *conn, char *buf, size_t len)
 {
   char buf2[256];
   if (conn->chosen_exit_name)
@@ -3275,8 +3276,8 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
   if (tor_snprintf(buf, len, "%s%s%s:%d",
                conn->socks_request->address,
                conn->chosen_exit_name ? buf2 : "",
-               !conn->chosen_exit_name &&
-                 connection_edge_is_rendezvous_stream(conn) ? ".onion" : "",
+               !conn->chosen_exit_name && connection_edge_is_rendezvous_stream(
+                                     ENTRY_TO_EDGE_CONN(conn)) ? ".onion" : "",
                conn->socks_request->port)<0)
     return -1;
   return 0;
@@ -3285,7 +3286,7 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
 /** Something has happened to the stream associated with AP connection
  * <b>conn</b>: tell any interested control connections. */
 int
-control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
+control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
                             int reason_code)
 {
   char reason_buf[64];
@@ -3357,7 +3358,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
 
   if (tp == STREAM_EVENT_NEW) {
     tor_snprintf(addrport_buf,sizeof(addrport_buf), " SOURCE_ADDR=%s:%d",
-                 TO_CONN(conn)->address, TO_CONN(conn)->port );
+                 ENTRY_TO_CONN(conn)->address, ENTRY_TO_CONN(conn)->port);
   } else {
     addrport_buf[0] = '\0';
   }
@@ -3365,12 +3366,12 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   if (tp == STREAM_EVENT_NEW_RESOLVE) {
     purpose = " PURPOSE=DNS_REQUEST";
   } else if (tp == STREAM_EVENT_NEW) {
-    if (conn->is_dns_request ||
+    if (ENTRY_TO_EDGE_CONN(conn)->is_dns_request ||
         (conn->socks_request &&
          SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)))
       purpose = " PURPOSE=DNS_REQUEST";
     else if (conn->use_begindir) {
-      connection_t *linked = TO_CONN(conn)->linked_conn;
+      connection_t *linked = ENTRY_TO_CONN(conn)->linked_conn;
       int linked_dir_purpose = -1;
       if (linked && linked->type == CONN_TYPE_DIR)
         linked_dir_purpose = linked->purpose;
@@ -3382,12 +3383,13 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
       purpose = " PURPOSE=USER";
   }
 
-  circ = circuit_get_by_edge_conn(conn);
+  circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   send_control_event(EVENT_STREAM_STATUS, ALL_FORMATS,
                         "650 STREAM "U64_FORMAT" %s %lu %s%s%s%s\r\n",
-                        U64_PRINTF_ARG(conn->_base.global_identifier), status,
+                     U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
+                     status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
                         buf, reason_buf, addrport_buf, purpose);

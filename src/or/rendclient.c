@@ -824,40 +824,42 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
 void
 rend_client_desc_trynow(const char *query)
 {
-  edge_connection_t *conn;
+  entry_connection_t *conn;
   rend_cache_entry_t *entry;
+  const rend_data_t *rend_data;
   time_t now = time(NULL);
 
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, _conn) {
-    if (_conn->type != CONN_TYPE_AP ||
-        _conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
-        _conn->marked_for_close)
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    if (base_conn->type != CONN_TYPE_AP ||
+        base_conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
+        base_conn->marked_for_close)
       continue;
-    conn = TO_EDGE_CONN(_conn);
-    if (!conn->rend_data)
+    conn = TO_ENTRY_CONN(base_conn);
+    rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data;
+    if (!rend_data)
       continue;
-    if (rend_cmp_service_ids(query, conn->rend_data->onion_address))
+    if (rend_cmp_service_ids(query, rend_data->onion_address))
       continue;
-    assert_connection_ok(TO_CONN(conn), now);
-    if (rend_cache_lookup_entry(conn->rend_data->onion_address, -1,
+    assert_connection_ok(base_conn, now);
+    if (rend_cache_lookup_entry(rend_data->onion_address, -1,
                                 &entry) == 1 &&
         rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
       log_info(LD_REND,"Rend desc is usable. Launching circuits.");
-      conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
+      base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 
       /* restart their timeout values, so they get a fair shake at
        * connecting to the hidden service. */
-      conn->_base.timestamp_created = now;
-      conn->_base.timestamp_lastread = now;
-      conn->_base.timestamp_lastwritten = now;
+      base_conn->timestamp_created = now;
+      base_conn->timestamp_lastread = now;
+      base_conn->timestamp_lastwritten = now;
 
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_warn(LD_REND,"Rendezvous attempt failed. Closing.");
-        if (!conn->_base.marked_for_close)
+        if (!base_conn->marked_for_close)
           connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
     } else { /* 404, or fetch didn't get that far */
@@ -866,7 +868,7 @@ rend_client_desc_trynow(const char *query)
                  safe_str_client(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
     }
-  } SMARTLIST_FOREACH_END(_conn);
+  } SMARTLIST_FOREACH_END(base_conn);
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction

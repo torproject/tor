@@ -856,7 +856,7 @@ hibernate_go_dormant(time_t now)
       connection_edge_end(TO_EDGE_CONN(conn), END_STREAM_REASON_HIBERNATING);
     log_info(LD_NET,"Closing conn type %d", conn->type);
     if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
-      connection_mark_unattached_ap(TO_EDGE_CONN(conn),
+      connection_mark_unattached_ap(TO_ENTRY_CONN(conn),
                                     END_STREAM_REASON_HIBERNATING);
     else
       connection_mark_for_close(conn);

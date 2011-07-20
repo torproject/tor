@@ -859,13 +859,13 @@ directory_all_unreachable(time_t now)
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
     log_notice(LD_NET,
                "Is your network connection down? "
                "Failing connection to '%s:%d'.",
-               safe_str_client(edge_conn->socks_request->address),
-               edge_conn->socks_request->port);
-    connection_mark_unattached_ap(edge_conn,
+               safe_str_client(entry_conn->socks_request->address),
+               entry_conn->socks_request->port);
+    connection_mark_unattached_ap(entry_conn,
                                   END_STREAM_REASON_NET_UNREACHABLE);
   }
   control_event_general_status(LOG_ERR, "DIR_ALL_UNREACHABLE");
