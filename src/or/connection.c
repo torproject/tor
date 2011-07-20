@@ -3939,6 +3939,9 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_CONTROL:
       tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
       break;
+    CASE_ANY_LISTENER_TYPE:
+      tor_assert(conn->magic == LISTENER_CONNECTION_MAGIC);
+      break;
     default:
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       break;
