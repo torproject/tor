@@ -876,6 +876,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
+  tor_addr_t addr;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     warn_too_many_conns();
@@ -883,7 +884,6 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   }
 
   if (listensockaddr->sa_family == AF_INET) {
-    tor_addr_t addr;
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_tcp)
       start_reading = 1;
@@ -951,6 +951,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     log_notice(LD_NET, "Opening %s on %s",
                conn_type_to_string(type), address);
 
+    tor_addr_make_unspec(&addr);
+
     if (unlink(address) < 0 && errno != ENOENT) {
       log_warn(LD_NET, "Could not unlink %s: %s", address,
                        strerror(errno));
@@ -998,6 +1000,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   conn->s = s;
   conn->address = tor_strdup(address);
   conn->port = gotPort;
+  tor_addr_copy(&conn->addr, &addr);
 
   if (port_cfg->isolation_flags) {
     lis_conn->isolation_flags = port_cfg->isolation_flags;
@@ -1804,8 +1807,8 @@ retry_listener_ports(smartlist_t *old_conns,
 
     if (found_port) {
       /* This listener is already running; we don't need to launch it. */
-//      log_debug(LD_NET, "Already have %s on %s:%d",
-//                conn_type_to_string(type), conn->address, conn->port);
+      //log_debug(LD_NET, "Already have %s on %s:%d",
+      //    conn_type_to_string(found_port->type), conn->address, conn->port);
       smartlist_remove(launch, found_port);
       /* And we can remove the connection from old_conns too. */
       SMARTLIST_DEL_CURRENT(old_conns, conn);
