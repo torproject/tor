@@ -114,6 +114,8 @@ static time_t time_to_check_for_correct_dns = 0;
 static time_t time_of_last_signewnym = 0;
 /** Is there a signewnym request we're currently waiting to handle? */
 static int signewnym_is_pending = 0;
+/** How many times have we called newnym? */
+static unsigned newnym_epoch = 0;
 
 /** Smartlist of all open connections. */
 static smartlist_t *connection_array = NULL;
@@ -290,7 +292,7 @@ connection_unregister_events(connection_t *conn)
     conn->bufev = NULL;
   }
 #endif
-  if (conn->dns_server_port) {
+  if (conn->type == CONN_TYPE_AP_DNS_LISTENER) {
     dnsserv_close_listener(conn);
   }
 }
@@ -1038,7 +1040,16 @@ signewnym_impl(time_t now)
   time_of_last_signewnym = now;
   signewnym_is_pending = 0;
 
+  ++newnym_epoch;
+
   control_event_signal(SIGNEWNYM);
+}
+
+/** Return the number of times that signewnym has been called. */
+unsigned
+get_signewnym_epoch(void)
+{
+  return newnym_epoch;
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per

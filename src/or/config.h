@@ -64,6 +64,8 @@ or_state_t *get_or_state(void);
 int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
+const smartlist_t *get_configured_client_ports(void);
+
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,

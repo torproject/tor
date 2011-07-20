@@ -1671,6 +1671,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
             safe_str_client(socks->address),
             socks->port);
 
+  if (! conn->original_dest_address)
+    conn->original_dest_address = tor_strdup(conn->socks_request->address);
+
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
       !tor_inet_aton(socks->address, &addr_tmp) &&
       options->AutomapHostsOnResolve && options->AutomapHostsSuffixes) {
@@ -2494,7 +2497,9 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 edge_connection_t *
 connection_ap_make_link(connection_t *partner,
                         char *address, uint16_t port,
-                        const char *digest, int use_begindir, int want_onehop)
+                        const char *digest,
+                        int session_group, int isolation_flags,
+                        int use_begindir, int want_onehop)
 {
   edge_connection_t *conn;
 
@@ -2523,6 +2528,11 @@ connection_ap_make_link(connection_t *partner,
     base16_encode(conn->chosen_exit_name+1,HEX_DIGEST_LEN+1,
                   digest, DIGEST_LEN);
   }
+
+  /* Populate isolation fields. */
+  conn->original_dest_address = tor_strdup(address);
+  conn->session_group = session_group;
+  conn->isolation_flags = isolation_flags;
 
   conn->_base.address = tor_strdup("(Tor_internal)");
   tor_addr_make_unspec(&conn->_base.addr);
@@ -3166,7 +3176,7 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * resolved.)
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
+connection_ap_can_use_exit(const edge_connection_t *conn, const node_t *exit)
 {
   const or_options_t *options = get_options();
 
@@ -3264,5 +3274,220 @@ parse_extended_hostname(char *address, int allowdotexit)
     /* otherwise, return to previous state and return 0 */
     *s = '.';
     return BAD_HOSTNAME;
+}
+
+/** Return true iff <b>a</b> and <b>b</b> have isolation rules and fields that
+ * make it permissible to put them on the same circuit.*/
+int
+connection_edge_streams_are_compatible(const edge_connection_t *a,
+                                       const edge_connection_t *b)
+{
+  const uint8_t iso = a->isolation_flags | b->isolation_flags;
+
+  if (! a->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
+             "having set a->original_dest_address");
+    ((edge_connection_t*)a)->original_dest_address =
+      tor_strdup(a->socks_request->address);
+  }
+  if (! b->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
+             "having set b->original_dest_address");
+    ((edge_connection_t*)b)->original_dest_address =
+      tor_strdup(a->socks_request->address);
+  }
+
+  if (iso & ISO_STREAM)
+    return 0;
+
+  if ((iso & ISO_DESTPORT) && a->socks_request->port != b->socks_request->port)
+    return 0;
+  if ((iso & ISO_DESTADDR) &&
+      strcasecmp(a->original_dest_address, b->original_dest_address))
+    return 0;
+  if ((iso & ISO_SOCKSAUTH) &&
+      (strcmp_opt(a->socks_request->username, b->socks_request->username) ||
+       strcmp_opt(a->socks_request->password, b->socks_request->password)))
+    return 0;
+  if ((iso & ISO_CLIENTPROTO) &&
+      (TO_CONN(a)->type != TO_CONN(b)->type ||
+       a->socks_request->socks_version != b->socks_request->socks_version))
+    return 0;
+  if ((iso & ISO_CLIENTADDR) &&
+      !tor_addr_eq(&TO_CONN(a)->addr, &TO_CONN(b)->addr))
+    return 0;
+  if ((iso & ISO_SESSIONGRP) && a->session_group != b->session_group)
+    return 0;
+  if ((iso & ISO_NYM_EPOCH) && a->nym_epoch != b->nym_epoch)
+    return 0;
+
+  return 1;
+}
+
+/**
+ * Return true iff none of the isolation flags and fields in <b>conn</b>
+ * should prevent it from being attached to <b>circ</b>.
+ */
+int
+connection_edge_compatible_with_circuit(const edge_connection_t *conn,
+                                        const origin_circuit_t *circ)
+{
+  const uint8_t iso = conn->isolation_flags;
+
+  /* If circ has never been used for an isolated connection, we can
+   * totally use it for this one. */
+  if (!circ->isolation_values_set)
+    return 1;
+
+  /* If circ has been used for connections having more than one value
+   * for some field f, it will have the corresponding bit set in
+   * isolation_flags_mixed.  If isolation_flags_mixed has any bits
+   * in common with iso, then conn must be isolated from at least
+   * one stream that has been attached to circ. */
+  if ((iso & circ->isolation_flags_mixed) != 0) {
+    /* For at least one field where conn is isolated, the circuit
+     * already has mixed streams. */
+    return 0;
+  }
+
+  if (! conn->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_edge_compatible_with_circuit without "
+             "having set conn->original_dest_address");
+    ((edge_connection_t*)conn)->original_dest_address =
+      tor_strdup(conn->socks_request->address);
+  }
+
+  /* If isolation_values_set, then the circuit is not compatible with
+   * any new ISO_STREAM stream. */
+  if (iso & ISO_STREAM)
+    return 0;
+
+  if ((iso & ISO_DESTPORT) && conn->socks_request->port != circ->dest_port)
+    return 0;
+  if ((iso & ISO_DESTADDR) &&
+      strcasecmp(conn->original_dest_address, circ->dest_address))
+    return 0;
+  if ((iso & ISO_SOCKSAUTH) &&
+      (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
+       strcmp_opt(conn->socks_request->password, circ->socks_password)))
+    return 0;
+  if ((iso & ISO_CLIENTPROTO) &&
+      (TO_CONN(conn)->type != circ->client_proto_type ||
+       conn->socks_request->socks_version != circ->client_proto_socksver))
+    return 0;
+  if ((iso & ISO_CLIENTADDR) &&
+      !tor_addr_eq(&TO_CONN(conn)->addr, &circ->client_addr))
+    return 0;
+  if ((iso & ISO_SESSIONGRP) && conn->session_group != circ->session_group)
+    return 0;
+  if ((iso & ISO_NYM_EPOCH) && conn->nym_epoch != circ->nym_epoch)
+    return 0;
+
+  return 1;
+}
+
+/**
+ * If <b>dry_run</b> is false, update <b>circ</b>'s isolation flags and fields
+ * to reflect having had <b>conn</b> attached to it, and return 0.  Otherwise,
+ * if <b>dry_run</b> is true, then make no changes to <b>circ</b>, and return
+ * a bitfield of isolation flags that we would have to set in
+ * isolation_flags_mixed to add <b>conn</b> to <b>circ</b>, or -1 if
+ * <b>circ</b> has had no streams attached to it.
+ */
+int
+connection_edge_update_circuit_isolation(const edge_connection_t *conn,
+                                         origin_circuit_t *circ,
+                                         int dry_run)
+{
+  if (! conn->original_dest_address) {
+    log_warn(LD_BUG, "Reached connection_update_circuit_isolation without "
+             "having set conn->original_dest_address");
+    ((edge_connection_t*)conn)->original_dest_address =
+      tor_strdup(conn->socks_request->address);
+  }
+
+  if (!circ->isolation_values_set) {
+    if (dry_run)
+      return -1;
+    circ->dest_port = conn->socks_request->port;
+    circ->dest_address = tor_strdup(conn->original_dest_address);
+    circ->client_proto_type = TO_CONN(conn)->type;
+    circ->client_proto_socksver = conn->socks_request->socks_version;
+    tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
+    circ->session_group = conn->session_group;
+    circ->nym_epoch = conn->nym_epoch;
+    circ->socks_username = conn->socks_request->username ?
+      tor_strdup(conn->socks_request->username) : NULL;
+    circ->socks_password = conn->socks_request->password ?
+      tor_strdup(conn->socks_request->password) : NULL;
+
+    circ->isolation_values_set = 1;
+    return 0;
+  } else {
+    uint8_t mixed = 0;
+    if (conn->socks_request->port != circ->dest_port)
+      mixed |= ISO_DESTPORT;
+    if (strcasecmp(conn->original_dest_address, circ->dest_address))
+      mixed |= ISO_DESTADDR;
+    if (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
+        strcmp_opt(conn->socks_request->password, circ->socks_password))
+      mixed |= ISO_SOCKSAUTH;
+    if ((TO_CONN(conn)->type != circ->client_proto_type ||
+         conn->socks_request->socks_version != circ->client_proto_socksver))
+      mixed |= ISO_CLIENTPROTO;
+    if (!tor_addr_eq(&TO_CONN(conn)->addr, &circ->client_addr))
+      mixed |= ISO_CLIENTADDR;
+    if (conn->session_group != circ->session_group)
+      mixed |= ISO_SESSIONGRP;
+    if (conn->nym_epoch != circ->nym_epoch)
+      mixed |= ISO_NYM_EPOCH;
+
+    if (dry_run)
+      return mixed;
+
+    if ((mixed & conn->isolation_flags) != 0) {
+      log_warn(LD_BUG, "Updating a circuit with seemingly incomaptible "
+               "isolation flags.");
+    }
+    circ->isolation_flags_mixed |= mixed;
+    return 0;
+  }
+}
+
+/**
+ * Clear the isolation settings on <b>circ</b>.
+ *
+ * This only works on an open circuit that has never had a stream attached to
+ * it, and whose isolation settings are hypothetical.  (We set hypothetical
+ * isolation settings on circuits as we're launching them, so that we
+ * know whether they can handle more streams or whether we need to launch
+ * even more circuits.  Once the circuit is open, if it turns out that
+ * we no longer have any streams to attach to it, we clear the isolation flags
+ * and data so that other streams can have a chance.)
+ */
+void
+circuit_clear_isolation(origin_circuit_t *circ)
+{
+  if (circ->isolation_any_streams_attached) {
+    log_warn(LD_BUG, "Tried to clear the isolation status of a dirty circuit");
+    return;
+  }
+  if (TO_CIRCUIT(circ)->state != CIRCUIT_STATE_OPEN) {
+    log_warn(LD_BUG, "Tried to clear the isolation status of a non-open "
+             "circuit");
+    return;
+  }
+
+  circ->isolation_values_set = 0;
+  circ->isolation_flags_mixed = 0;
+  circ->client_proto_type = 0;
+  circ->client_proto_socksver = 0;
+  circ->dest_port = 0;
+  tor_addr_make_unspec(&circ->client_addr);
+  tor_free(circ->dest_address);
+  circ->session_group = -1;
+  circ->nym_epoch = 0;
+  tor_free(circ->socks_username);
+  tor_free(circ->socks_password);
 }
 

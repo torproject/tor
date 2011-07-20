@@ -464,7 +464,7 @@ CLIENT OPTIONS
 --------------
 
 The following options are useful only for clients (that is, if
-**SocksPort** is non-zero):
+**SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
 
 **AllowInvalidNodes** **entry**|**exit**|**middle**|**introduction**|**rendezvous**|**...**::
     If some Tor servers are obviously not working right, the directory
@@ -682,17 +682,49 @@ The following options are useful only for clients (that is, if
     the same circuit. Currently, two addresses are "too close" if they lie in
     the same /16 range. (Default: 1)
 
-**SocksPort** __PORT__|**auto**::
-    Advertise this port to listen for connections from Socks-speaking
+**SOCKSPort** \['address':]__port__|**auto** [_isolation flags_]::
+    Open this port to listen for connections from SOCKS-speaking
     applications. Set this to 0 if you don't want to allow application
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
-    you. (Default: 9050)
+    you. This directive can be specified multiple times to bind
+    to multiple addresses/ports. (Default: 9050) +
+ +
+    The _isolation flags_ arguments give Tor rules for which streams
+    received on this SOCKSPort are allowed to share circuits with one
+    another.  Recognized isolation flags are:
+    **IsolateClientAddr**;;
+        Don't share a circuits with streams from a different
+        client address.  (On by default and strongly recommended;
+        you can disable it with **NoIsolateClientAddr**.)
+    **IsolateSOCKSAuth**;;
+        Don't share a circuits with streams for which different
+        SOCKS authentication was provided. (On by default;
+        you can disable it with **NoIsolateSOCKSAuth**.)
+    **IsolateClientProtocol**;;
+        Don't share circuits with streams using a different protocol.
+        (SOCKS 4, SOCKS 5, TransPort connections, NATDPort connections,
+        and DNSPort requests are all considered to be different protocols.)
+    **IsolateDestPort**;;
+        Don't share a circuits with streams targetting a different
+        destination port.
+    **IsolateDestAddr**;;
+        Don't share a circuits with streams targetting a different
+        destination address.
+    **SessionGroup=**__INT__;;
+        If no other isolation rules would prevent it, allow streams
+        on this port to share circuits with streams from every other
+        port with the same session group.  (By default, streams received
+        on different ports are always isolated from one another.)
 
-**SocksListenAddress** __IP__[:__PORT__]::
+**SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
     applications. (Default: 127.0.0.1) You can also specify a port (e.g.
     192.168.0.1:9100). This directive can be specified multiple times to bind
-    to multiple addresses/ports.
+    to multiple addresses/ports.  (DEPRECATED: As of 0.2.3.x-alpha, you can
+    now use multiple SOCKSPort entries, and provide addresses for SOCKSPort
+    entries, so SOCKSListenAddress no longer has a purpose.  For backward
+    compatibility, SOCKSListenAddress is only allowed when SOCKSPort is just
+    a port number.)
 
 **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
@@ -795,28 +827,44 @@ The following options are useful only for clients (that is, if
     operating as a relay, and it will never use the public key step if it
     doesn't yet know the onion key of the first hop. (Default: 1)
 
-**TransPort** __PORT__|**auto**::
-    If non-zero, enables transparent proxy support on __PORT__ (by convention,
-    9040). Requires OS support for transparent proxies, such as BSDs' pf or
+**TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
+    Open this port to listen for transparent proxy connections.  Set this to
+    0 if you don't want to allow transparent proxy connections.  Set the port
+    to "auto" to have Tor pick a port for you. This directive can be
+    specified multiple times to bind to multiple addresses/ports.  See 
+    SOCKSPort for an explanation of isolation flags. +
+ +
+    TransPort requires OS support for transparent proxies, such as BSDs' pf or
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
     a network, you'll want to examine and change VirtualAddrNetwork from the
     default setting. You'll also want to set the TransListenAddress option for
-    the network you'd like to proxy.  Set it to "auto" to have Tor pick a
-    port for you.  (Default: 0).
+    the network you'd like to proxy. (Default: 0).
 
 **TransListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for transparent proxy connections. (Default:
     127.0.0.1). This is useful for exporting a transparent proxy server to an
-    entire network.
+    entire network. (DEPRECATED: As of 0.2.3.x-alpha, you can
+    now use multiple TransPort entries, and provide addresses for TransPort
+    entries, so TransListenAddress no longer has a purpose.  For backward
+    compatibility, TransListenAddress is only allowed when TransPort is just
+    a port number.)
 
-**NATDPort** __PORT__|**auto**::
-    Allow old versions of ipfw (as included in old versions of FreeBSD, etc.)
-    to send connections through Tor using the NATD protocol. This option is
-    only for people who cannot use TransPort.  Set it to "auto" to have Tor
-    pick a port for you. (Default: 0)
+**NATDPort** \['address':]__port__|**auto** [_isolation flags_]::
+    Open this port to listen for connections from old versions of ipfw (as
+    included in old versions of FreeBSD, etc) using the NATD protocol.
+    Use 0 if you don't want to allow NATD connections.  Set the port
+    to "auto" to have Tor pick a port for you. This directive can be
+    specified multiple times to bind to multiple addresses/ports.  See
+    SOCKSPort for an explanation of isolation flags. +
+ +
+    This option is only for people who cannot use TransPort. (Default: 0)
 
 **NATDListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for NATD connections. (Default: 127.0.0.1).
+    Bind to this address to listen for NATD connections. (DEPRECATED: As of
+    0.2.3.x-alpha, you can now use multiple NATDPort entries, and provide
+    addresses for NATDPort entries, so NATDListenAddress no longer has a
+    purpose.  For backward compatibility, NATDListenAddress is only allowed
+    when NATDPort is just a port number.)
 
 **AutomapHostsOnResolve** **0**|**1**::
     When this option is enabled, and we get a request to resolve an address
@@ -829,13 +877,19 @@ The following options are useful only for clients (that is, if
     A comma-separated list of suffixes to use with **AutomapHostsOnResolve**.
     The "." suffix is equivalent to "all addresses." (Default: .exit,.onion).
 
-**DNSPort** __PORT__|**auto**::
-    If non-zero, Tor listens for UDP DNS requests on this port and resolves
-    them anonymously.  Set it to "auto" to have Tor pick a port for
-    you. (Default: 0).
+**DNSPort** \['address':]__port__|**auto** [_isolation flags_]::
+    If non-zero, open this port to listen for UDP DNS requests, and resolve
+    them anonymously.  Set the port to "auto" to have Tor pick a port for
+    you. This directive can be specified multiple times to bind to multiple
+    addresses/ports. See SOCKSPort for an explanation of isolation
+    flags. (Default: 0).
 
 **DNSListenAddress** __IP__[:__PORT__]::
-    Bind to this address to listen for DNS connections. (Default: 127.0.0.1).
+    Bind to this address to listen for DNS connections. (DEPRECATED: As of
+    0.2.3.x-alpha, you can now use multiple DNSPort entries, and provide
+    addresses for DNSPort entries, so DNSListenAddress no longer has a
+    purpose.  For backward compatibility, DNSListenAddress is only allowed
+    when DNSPort is just a port number.)
 
 **ClientDNSRejectInternalAddresses** **0**|**1**::
     If true, Tor does not believe any anonymously retrieved DNS answer that

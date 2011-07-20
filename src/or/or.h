@@ -938,6 +938,7 @@ typedef struct socks_request_t socks_request_t;
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
+#define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
 
 /** Description of a connection to another host or process, and associated
  * data.
@@ -1043,15 +1044,31 @@ typedef struct connection_t {
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /* XXXX023 move this field, and all the listener-only fields (just
-     socket_family, I think), into a new listener_connection_t subtype. */
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t dirreq_id;
+} connection_t;
+
+typedef struct listener_connection_t {
+  connection_t _base;
+
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port it uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-  /** Unique ID for measuring tunneled network status requests. */
-  uint64_t dirreq_id;
-} connection_t;
+  /** @name Isolation parameters
+   *
+   * For an AP listener, these fields describe how to isolate streams that
+   * arrive on the listener.
+   *
+   * @{
+   */
+  /** The session group for this listener. */
+  int session_group;
+  /** One or more ISO_ flags to describe how to isolate streams. */
+  uint8_t isolation_flags;
+  /**@}*/
+
+} listener_connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
@@ -1190,6 +1207,20 @@ typedef struct edge_connection_t {
   /** What rendezvous service are we querying for? (AP only) */
   rend_data_t *rend_data;
 
+  /* === Isolation related, AP only. === */
+  /** AP only: based on which factors do we isolate this stream? */
+  uint8_t isolation_flags;
+  /** AP only: what session group is this stream in? */
+  int session_group;
+  /** AP only: The newnym epoch in which we created this connection. */
+  unsigned nym_epoch;
+  /** AP only: The original requested address before we rewrote it. */
+  char *original_dest_address;
+  /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
+     ClientProtocol is a combination of type and socks_request->
+     socks_version.  SocksAuth is socks_request->username/password.
+     DestAddr is in socks_request->address. */
+
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
    * already retried several times. */
@@ -1321,6 +1352,9 @@ static edge_connection_t *TO_EDGE_CONN(connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
 static control_connection_t *TO_CONTROL_CONN(connection_t *);
+/** Convert a connection_t* to an listener_connection_t*; assert if the cast is
+ * invalid. */
+static listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 static INLINE or_connection_t *TO_OR_CONN(connection_t *c)
 {
@@ -1341,6 +1375,11 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
+}
+static INLINE listener_connection_t *TO_LISTENER_CONN(connection_t *c)
+{
+  tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
+  return DOWNCAST(listener_connection_t, c);
 }
 
 /* Conditional macros to help write code that works whether bufferevents are
@@ -2424,6 +2463,48 @@ typedef struct origin_circuit_t {
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
+  /** True if we have associated one stream to this circuit, thereby setting
+   * the isolation paramaters for this circuit.  Note that this doesn't
+   * necessarily mean that we've <em>attached</em> any streams to the circuit:
+   * we may only have marked up this circuit during the launch process.
+   */
+  unsigned int isolation_values_set : 1;
+  /** True iff any stream has <em>ever</em> been attached to this circuit.
+   *
+   * In a better world we could use timestamp_dirty for this, but
+   * timestamp_dirty is far too overloaded at the moment.
+   */
+  unsigned int isolation_any_streams_attached : 1;
+
+  /** A bitfield of ISO_* flags for every isolation field such that this
+   * circuit has had streams with more than one value for that field
+   * attached to it. */
+  uint8_t isolation_flags_mixed;
+
+  /** @name Isolation parameters
+   *
+   * If any streams have been associated with this circ (isolation_values_set
+   * == 1), and all streams associated with the circuit have had the same
+   * value for some field ((isolation_flags_mixed & ISO_FOO) == 0), then these
+   * elements hold the value for that field.
+   *
+   * Note again that "associated" is not the same as "attached": we
+   * preliminarily associate streams with a circuit while the circuit is being
+   * launched, so that we can tell whether we need to launch more circuits.
+   *
+   * @{
+   */
+  uint8_t client_proto_type;
+  uint8_t client_proto_socksver;
+  uint16_t dest_port;
+  tor_addr_t client_addr;
+  char *dest_address;
+  int session_group;
+  unsigned nym_epoch;
+  char *socks_username;
+  char *socks_password;
+  /**@}*/
+
 } origin_circuit_t;
 
 /** An or_circuit_t holds information needed to implement a circuit at an
@@ -2542,6 +2623,60 @@ typedef enum invalid_router_usage_t {
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
 #define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
 
+/** @name Isolation flags
+
+    Ways to isolate client streams
+
+    @{
+*/
+/** Isolate based on destination port */
+#define ISO_DESTPORT    (1u<<0)
+/** Isolate based on destination address */
+#define ISO_DESTADDR    (1u<<1)
+/** Isolate based on SOCKS authentication */
+#define ISO_SOCKSAUTH   (1u<<2)
+/** Isolate based on client protocol choice */
+#define ISO_CLIENTPROTO (1u<<3)
+/** Isolate based on client address */
+#define ISO_CLIENTADDR  (1u<<4)
+/** Isolate based on session group (always on). */
+#define ISO_SESSIONGRP  (1u<<5)
+/** Isolate based on newnym epoch (always on). */
+#define ISO_NYM_EPOCH   (1u<<6)
+/** Isolate all streams (Internal only). */
+#define ISO_STREAM      (1u<<7)
+/**@}*/
+
+/** Default isolation level for ports. */
+#define ISO_DEFAULT (ISO_CLIENTADDR|ISO_SOCKSAUTH|ISO_SESSIONGRP|ISO_NYM_EPOCH)
+
+/** Indicates that we haven't yet set a session group on a port_cfg_t. */
+#define SESSION_GROUP_UNSET -1
+/** Session group reserved for directory connections */
+#define SESSION_GROUP_DIRCONN -2
+/** Session group reserved for resolve requests launched by a controller */
+#define SESSION_GROUP_CONTROL_RESOLVE -3
+/** First automatically allocated session group number */
+#define SESSION_GROUP_FIRST_AUTO -4
+
+/** Configuration for a single port that we're listening on. */
+typedef struct port_cfg_t {
+  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
+  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
+             * own port. */
+  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
+  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
+
+  /* Client port types (socks, dns, trans, natd) only: */
+  uint8_t isolation_flags; /**< Zero or more isolation flags */
+  int session_group; /**< A session group, or -1 if this port is not in a
+                      * session group. */
+
+  /* Unix sockets only: */
+  /** Path for an AF_UNIX address */
+  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
+} port_cfg_t;
+
 /** A linked list of lines in a config file. */
 typedef struct config_line_t {
   char *key;
@@ -2637,16 +2772,17 @@ typedef struct {
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   int ORPort; /**< Port to listen on for OR connections. */
-  int SocksPort; /**< Port to listen on for SOCKS connections. */
-  /** Port to listen on for transparent pf/netfilter connections. */
-  int TransPort;
-  int NATDPort; /**< Port to listen on for transparent natd connections. */
+  config_line_t *SocksPort; /**< Ports to listen on for SOCKS connections. */
+  /** Ports to listen on for transparent pf/netfilter connections. */
+  config_line_t *TransPort;
+  config_line_t *NATDPort; /**< Ports to listen on for transparent natd
+                            * connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
   int DirPort; /**< Port to listen on for directory connections. */
-  int DNSPort; /**< Port to listen on for DNS requests. */
+  config_line_t *DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
@@ -3107,6 +3243,11 @@ typedef struct {
   char *ControlPortWriteToFile;
   /** Should that file be group-readable? */
   int ControlPortFileGroupReadable;
+
+#define MAX_MAX_CLIENT_CIRCUITS_PENDING 1024
+  /** Maximum number of non-open general-purpose origin circuits to allow at
+   * once. */
+  int MaxClientCircuitsPending;
 
 } or_options_t;
 

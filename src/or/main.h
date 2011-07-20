@@ -52,6 +52,7 @@ void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 
 long get_uptime(void);
+unsigned get_signewnym_epoch(void);
 
 void handle_signals(int is_parent);
 void process_signal(uintptr_t sig);
