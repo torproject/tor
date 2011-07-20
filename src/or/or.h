@@ -3271,6 +3271,10 @@ typedef struct {
    * once. */
   int MaxClientCircuitsPending;
 
+  /** If 1, we always send optimistic data when it's supported.  If 0, we
+   * never use it.  If -1, we do what the consensus says. */
+  int OptimisticData;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

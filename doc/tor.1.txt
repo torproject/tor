@@ -930,6 +930,16 @@ The following options are useful only for clients (that is, if
     that have the **AllowSingleHopExits** option turned on to build
     one-hop Tor connections.  (Default: 0)
 
+**OptimisticData** **0**|**1**|**auto**::
+    When this option is set, and Tor is using an exit node that supports
+    the feature, it will try optimistically to send data to the exit node
+    without waiting for the exit node to report whether the connection
+    succeeded.  This can save a round-trip time for protocols like HTTP
+    where the client talks first.  If OptimisticData is set to **auto**,
+    Tor will look at the UseOptimisticData parameter in the networkstatus.
+    (Default: auto)
+
+
 SERVER OPTIONS
 --------------
 

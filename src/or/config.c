@@ -337,6 +337,7 @@ static config_var_t _option_vars[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V(PidFile,                     STRING,   NULL),
   V(TestingTorNetwork,           BOOL,     "0"),
+  V(OptimisticData,              AUTOBOOL, "auto"),
   V(PortForwarding,              BOOL,     "0"),
   V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
   V(PreferTunneledDirConns,      BOOL,     "1"),
