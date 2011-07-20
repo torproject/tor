@@ -944,6 +944,12 @@ connection_edge_process_relay_cell_not_open(
           break;
       }
     }
+    /* This is definitely a success, so forget about any pending data we
+     * had sent. */
+    if (conn->pending_optimistic_data) {
+      generic_buffer_free(conn->pending_optimistic_data);
+      conn->pending_optimistic_data = NULL;
+    }
 
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
@@ -1343,6 +1349,10 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
   unsigned domain = conn->cpath_layer ? LD_APP : LD_EXIT;
+  int sending_from_optimistic = 0;
+  const int sending_optimistically =
+    conn->_base.type == CONN_TYPE_AP &&
+    conn->_base.state != AP_CONN_STATE_OPEN;
 
   tor_assert(conn);
 
@@ -1375,7 +1385,18 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return 0;
   }
 
-  amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
+  sending_from_optimistic = conn->sending_optimistic_data != NULL;
+
+  if (PREDICT_UNLIKELY(sending_from_optimistic)) {
+    amount_to_process = generic_buffer_len(conn->sending_optimistic_data);
+    if (PREDICT_UNLIKELY(!amount_to_process)) {
+      log_warn(LD_BUG, "sending_optimistic_data was non-NULL but empty");
+      amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
+      sending_from_optimistic = 0;
+    }
+  } else {
+    amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
+  }
 
   if (!amount_to_process)
     return 0;
@@ -1391,10 +1412,29 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;
 
-  connection_fetch_from_buf(payload, length, TO_CONN(conn));
+  if (PREDICT_UNLIKELY(sending_from_optimistic)) {
+    /* XXX023 We could be more efficient here by sometimes packing
+     * previously-sent optimistic data in the same cell with data
+     * from the inbuf. */
+    generic_buffer_get(conn->sending_optimistic_data, payload, length);
+    if (!generic_buffer_len(conn->sending_optimistic_data)) {
+        generic_buffer_free(conn->sending_optimistic_data);
+        conn->sending_optimistic_data = NULL;
+    }
+  } else {
+    connection_fetch_from_buf(payload, length, TO_CONN(conn));
+  }
 
   log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->_base.s,
             (int)length, (int)connection_get_inbuf_len(TO_CONN(conn)));
+
+  if (sending_optimistically && !sending_from_optimistic) {
+    /* This is new optimistic data; remember it in case we need to detach and
+       retry */
+    if (!conn->pending_optimistic_data)
+      conn->pending_optimistic_data = generic_buffer_new();
+    generic_buffer_add(conn->pending_optimistic_data, payload, length);
+  }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
                                    payload, length) < 0 )

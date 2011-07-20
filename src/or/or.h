@@ -930,6 +930,11 @@ typedef struct {
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
+#ifdef USE_BUFFEREVENTS
+#define generic_buffer_t struct evbuffer
+#else
+#define generic_buffer_t buf_t
+#endif
 
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
 * connection_t to foo_connection_t) are safe. */
@@ -1262,6 +1267,20 @@ typedef struct edge_connection_t {
   /** True iff this is an AP connection that came from a transparent or
    * NATd connection */
   unsigned int is_transparent_ap:1;
+
+  /** For AP connections only: Set if this connection's target exit node
+   * allows optimistic data.  (That is, data sent on this stream before
+   * the exit has sent a CONNECTED cell.)*/
+  unsigned int exit_allows_optimistic_data : 1;
+
+  /** For AP connections only: buffer for data that we have sent
+   * optimistically, which we might need to re-send if we have to
+   * retry this connection. */
+  generic_buffer_t *pending_optimistic_data;
+  /* For AP connections only: buffer for data that we previously sent
+  * optimistically which we are currently re-sending as we retry this
+  * connection. */
+  generic_buffer_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
@@ -1706,6 +1725,9 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that, if it caches directory info,
    * we can get microdescriptors from. */
   unsigned int version_supports_microdesc_cache:1;
+  /** True iff this router is a version that allows DATA cells to arrive on
+   * a stream before it has sent a CONNECTED cell. */
+  unsigned int version_supports_optimistic_data:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */

@@ -470,6 +470,12 @@ _connection_free(connection_t *conn)
     tor_free(edge_conn->original_dest_address);
     if (edge_conn->socks_request)
       socks_request_free(edge_conn->socks_request);
+    if (edge_conn->pending_optimistic_data) {
+      generic_buffer_free(edge_conn->pending_optimistic_data);
+    }
+    if (edge_conn->sending_optimistic_data) {
+      generic_buffer_free(edge_conn->sending_optimistic_data);
+    }
     rend_data_free(edge_conn->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {

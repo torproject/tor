@@ -16,6 +16,7 @@ buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
 void buf_clear(buf_t *buf);
+buf_t *buf_copy(const buf_t *buf);
 void buf_shrink(buf_t *buf);
 void buf_shrink_freelists(int free_all);
 void buf_dump_freelist_sizes(int severity);
@@ -66,6 +67,24 @@ int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
                            const char *data, size_t data_len,
                            int done);
 #endif
+
+#ifdef USE_BUFFEREVENTS
+#define generic_buffer_new() evbuffer_new()
+#define generic_buffer_len(b) evbuffer_get_length((b))
+#define generic_buffer_add(b,dat,len) evbuffer_add((b),(dat),(len))
+#define generic_buffer_get(b,buf,buflen) evbuffer_remove((b),(buf),(buflen))
+#define generic_buffer_clear(b) evbuffer_drain((b), evbuffer_get_length((b)))
+#define generic_buffer_free(b) evbuffer_free((b))
+#else
+#define generic_buffer_new() buf_new()
+#define generic_buffer_len(b) buf_datalen((b))
+#define generic_buffer_add(b,dat,len) write_to_buf((dat),(len),(b))
+#define generic_buffer_get(b,buf,buflen) fetch_from_buf((buf),(buflen),(b))
+#define generic_buffer_clear(b) buf_clear((b))
+#define generic_buffer_free(b) buf_free((b))
+#endif
+int generic_buffer_set_to_copy(generic_buffer_t **output,
+                               const generic_buffer_t *input);
 
 void assert_buf_ok(buf_t *buf);
 
