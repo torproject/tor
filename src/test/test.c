@@ -569,6 +569,71 @@ test_socks_5_auth_before_negotiation(void *ptr)
   ;
 }
 
+static void
+test_buffer_copy(void *arg)
+{
+  generic_buffer_t *buf=NULL, *buf2=NULL;
+  const char *s;
+  size_t len;
+  char b[256];
+  int i;
+  (void)arg;
+
+  buf = generic_buffer_new();
+  tt_assert(buf);
+
+  /* Copy an empty buffer. */
+  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
+  tt_assert(buf2);
+  tt_int_op(0, ==, generic_buffer_len(buf2));
+
+  /* Now try with a short buffer. */
+  s = "And now comes an act of enormous enormance!";
+  len = strlen(s);
+  generic_buffer_add(buf, s, len);
+  tt_int_op(len, ==, generic_buffer_len(buf));
+  /* Add junk to buf2 so we can test replacing.*/
+  generic_buffer_add(buf2, "BLARG", 5);
+  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(len, ==, generic_buffer_len(buf2));
+  generic_buffer_get(buf2, b, len);
+  test_mem_op(b, ==, s, len);
+  /* Now free buf2 and retry so we can test allocating */
+  generic_buffer_free(buf2);
+  buf2 = NULL;
+  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(len, ==, generic_buffer_len(buf2));
+  generic_buffer_get(buf2, b, len);
+  test_mem_op(b, ==, s, len);
+  /* Clear buf for next test */
+  generic_buffer_get(buf, b, len);
+  tt_int_op(generic_buffer_len(buf),==,0);
+
+  /* Okay, now let's try a bigger buffer. */
+  s = "Quis autem vel eum iure reprehenderit qui in ea voluptate velit "
+    "esse quam nihil molestiae consequatur, vel illum qui dolorem eum "
+    "fugiat quo voluptas nulla pariatur?";
+  len = strlen(s);
+  for (i = 0; i < 256; ++i) {
+    b[0]=i;
+    generic_buffer_add(buf, b, 1);
+    generic_buffer_add(buf, s, len);
+  }
+  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(generic_buffer_len(buf2), ==, generic_buffer_len(buf));
+  for (i = 0; i < 256; ++i) {
+    generic_buffer_get(buf2, b, len+1);
+    tt_int_op((unsigned char)b[0],==,i);
+    test_mem_op(b+1, ==, s, len);
+  }
+
+ done:
+  if (buf)
+    generic_buffer_free(buf);
+  if (buf2)
+    generic_buffer_free(buf2);
+}
+
 /** Run unit tests for buffers.c */
 static void
 test_buffers(void)
@@ -1612,6 +1677,7 @@ const struct testcase_setup_t legacy_setup = {
 
 static struct testcase_t test_array[] = {
   ENT(buffers),
+  { "buffer_copy", test_buffer_copy, 0, NULL, NULL },
   ENT(onion_handshake),
   ENT(circuit_timeout),
   ENT(policies),
