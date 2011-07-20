@@ -5039,20 +5039,23 @@ parse_client_port_config(smartlist_t *out,
         tor_free(addrtmp);
         goto err;
       }
-    } else if (tor_addr_port_parse(addrport, &addr, &ptmp) == 0) {
-      if (ptmp == 0) {
-        log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
-        goto err;
-      }
-      port = ptmp;
     } else {
+      /* Try parsing integer port before address, because, who knows?
+         "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
-      if (!ok) {
+      if (ok) {
+        tor_addr_from_str(&addr, defaultaddr);
+      } else if (tor_addr_port_parse(addrport, &addr, &ptmp) == 0) {
+        if (ptmp == 0) {
+          log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
+          goto err;
+        }
+        port = ptmp;
+      } else {
         log_warn(LD_CONFIG, "Couldn't parse address '%s' for %sPort",
                  escaped(addrport), portname);
         goto err;
       }
-      tor_addr_from_str(&addr, defaultaddr);
     }
 
     /* Now parse the rest of the options, if any. */
