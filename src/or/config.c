@@ -1017,6 +1017,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 #endif
 
   if (running_tor) {
+    int n_client_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
     if (set_max_file_descriptors((unsigned)options->ConnLimit,
                                  &options->_ConnLimit) < 0) {
@@ -1031,6 +1032,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       init_libevent(options);
       libevent_initialized = 1;
     }
+
+    /* Adjust the client port configuration so we can launch listeners. */
+    if (parse_client_ports(options, 0, msg, &n_client_ports))
+      return -1;
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
      * ports under 1024.)  We don't want to rebind if we're hibernating. */
