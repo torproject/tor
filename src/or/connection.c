@@ -345,6 +345,7 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
       break;
     CASE_ANY_LISTENER_TYPE:
       conn->magic = LISTENER_CONNECTION_MAGIC;
+      break;
     default:
       conn->magic = BASE_CONNECTION_MAGIC;
       break;
