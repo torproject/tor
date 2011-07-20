@@ -1005,7 +1005,8 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal) &&
           circ->remaining_relay_early_cells &&
-          !circ->build_state->onehop_tunnel) {
+          !circ->build_state->onehop_tunnel &&
+          !circ->isolation_values_set) {
         if (info) {
           /* need to make sure we don't duplicate hops */
           crypt_path_t *hop = circ->cpath;
