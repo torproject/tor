@@ -2441,8 +2441,10 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   if ((connection_get_inbuf_len(TO_CONN(ap_conn)) ||
        ap_conn->sending_optimistic_data) &&
       connection_ap_supports_optimistic_data(ap_conn)) {
-    log_info(LD_APP, "Sending up to %ld bytes of queued-up data",
-             connection_get_inbuf_len(TO_CONN(ap_conn)));
+    log_info(LD_APP, "Sending up to %ld + %ld bytes of queued-up data",
+             connection_get_inbuf_len(TO_CONN(ap_conn)),
+	     ap_conn->sending_optimistic_data ?
+		generic_buffer_len(ap_conn->sending_optimistic_data) : 0);
     if (connection_edge_package_raw_inbuf(ap_conn, 1, NULL) < 0) {
       connection_mark_for_close(TO_CONN(ap_conn));
     }
