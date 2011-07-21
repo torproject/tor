@@ -1376,42 +1376,38 @@ test_util_fgets_eagain(void *ptr)
 }
 #endif
 
-#ifndef MS_WINDOWS
 /** Helper function for testing tor_spawn_background */
 static void
 run_util_spawn_background(const char *argv[], const char *expected_out,
                           const char *expected_err, int expected_exit)
 {
-  int stdout_pipe=-1, stderr_pipe=-1;
-  int retval, stat_loc;
-  pid_t pid;
+  int retval;
   ssize_t pos;
+  process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
 
   /* Start the program */
-  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe, argv);
-  tt_int_op(retval, >, 0);
-  tt_int_op(stdout_pipe, >, 0);
-  tt_int_op(stderr_pipe, >, 0);
-  pid = retval;
+  process_handle = tor_spawn_background(argv[0], argv);
+
+  tt_int_op(process_handle.status, ==, 0);
+  tt_int_op(process_handle.stdout_pipe, >, 0);
+  tt_int_op(process_handle.stderr_pipe, >, 0);
 
   /* Check stdout */
-  pos = read_all(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1, 0);
+  pos = tor_read_all_from_process_stdin(process_handle, stdout_buf,
+		                        sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_out));
   tt_str_op(stdout_buf, ==, expected_out);
 
   /* Check it terminated correctly */
-  retval = waitpid(pid, &stat_loc, 0);
-  tt_int_op(retval, ==, pid);
-  tt_assert(WIFEXITED(stat_loc));
-  tt_int_op(WEXITSTATUS(stat_loc), ==, expected_exit);
-  tt_assert(!WIFSIGNALED(stat_loc));
-  tt_assert(!WIFSTOPPED(stat_loc));
+  retval = tor_get_exit_code(process_handle);
+  tt_int_op(retval, ==, expected_exit);
 
   /* Check stderr */
-  pos = read_all(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1, 0);
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+		                         sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
   tt_int_op(pos, ==, strlen(expected_err));
@@ -1447,7 +1443,6 @@ test_util_spawn_background_fail(void *ptr)
 
   run_util_spawn_background(argv, expected_out, expected_err, 255);
 }
-#endif
 
 static void
 test_util_di_ops(void)
@@ -1533,9 +1528,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(exit_status, 0),
 #ifndef MS_WINDOWS
   UTIL_TEST(fgets_eagain, TT_SKIP),
+#endif
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
-#endif
   END_OF_TESTCASES
 };
 

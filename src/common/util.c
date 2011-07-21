@@ -2978,14 +2978,15 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  * -1.  Some parts of this code are based on the POSIX subprocess module from
  * Python.
  */
-int
-tor_spawn_background(const char *const filename, int *stdout_read,
-                     int *stderr_read, const char **argv)
+process_handle_t
+tor_spawn_background(const char *const filename, const char **argv)
 {
+  process_handle_t process_handle;
 #ifdef MS_WINDOWS
-  (void) filename; (void) stdout_read; (void) stderr_read; (void) argv;
+  (void) filename; (void) argv;
   log_warn(LD_BUG, "not yet implemented on Windows.");
-  return -1;
+  process_handle.status = -1;
+  return process_handle;
 #else
   pid_t pid;
   int stdout_pipe[2];
@@ -3016,7 +3017,8 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stdout communication with child process: %s",
        strerror(errno));
-    return -1;
+    process_handle.status = -1;
+    return process_handle;
   }
 
   retval = pipe(stderr_pipe);
@@ -3024,7 +3026,8 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
-    return -1;
+    process_handle.status = -1;
+    return process_handle;
   }
 
   child_state = CHILD_STATE_MAXFD;
@@ -3109,7 +3112,8 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     (void) nbytes;
 
     _exit(255);
-    return -1; /* Never reached, but avoids compiler warning */
+    process_handle.status = -1;
+    return process_handle; /* Never reached, but avoids compiler warning */
   }
 
   /* In parent */
@@ -3120,11 +3124,12 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
     close(stderr_pipe[1]);
-    return -1;
+    process_handle.status = -1;
+    return process_handle;
   }
 
   /* Return read end of the pipes to caller, and close write end */
-  *stdout_read = stdout_pipe[0];
+  process_handle.stdout_pipe = stdout_pipe[0];
   retval = close(stdout_pipe[1]);
 
   if (-1 == retval) {
@@ -3135,7 +3140,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
        needs to know about the pid in order to reap it later */
   }
 
-  *stderr_read = stderr_pipe[0];
+  process_handle.stderr_pipe = stderr_pipe[0];
   retval = close(stderr_pipe[1]);
 
   if (-1 == retval) {
@@ -3146,7 +3151,56 @@ tor_spawn_background(const char *const filename, int *stdout_read,
        needs to know about the pid in order to reap it later */
   }
 
-  return pid;
+  process_handle.status = 0;
+  process_handle.pid = pid;
+  return process_handle;
+#endif
+}
+
+int
+tor_get_exit_code(const process_handle_t process_handle)
+{
+#ifdef MS_WINDOWS
+  log_warn(LD_BUG, "not yet implemented on Windows.");
+  return -1;
+#else
+  int stat_loc;
+
+  retval = waitpid(process_handle.pid, &stat_loc, 0);
+  if (retval != process_handle.pid) {
+    log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s", process_handle.pid,
+             sterror(errno));
+    return -1;
+  }
+
+  if (!WIFEXITED(stat_loc)) {
+    log_warn(LD_GENERAL, "Process %d did not exit normally", process_handle.pid);
+    return -1;
+  }
+
+  return WEXITSTATUS(stat_loc);
+#endif // MS_WINDOWS
+}
+
+ssize_t
+tor_read_all_from_process_stdin(const process_handle_t process_handle,
+                                char *buf, size_t count)
+{
+#ifdef MS_WINDOWS
+  return -1;
+#else
+  return read_all(process_handle.stdin_pipe, buf, count, 0);
+#endif
+}
+  
+ssize_t
+tor_read_all_from_process_stderr(const process_handle_t process_handle,
+                                 char *buf, size_t count)
+{
+#ifdef MS_WINDOWS
+  return -1;
+#else
+  return read_all(process_handle.stderr_pipe, buf, count, 0);
 #endif
 }
 

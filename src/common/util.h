@@ -347,8 +347,27 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
-int tor_spawn_background(const char *const filename, int *stdout_read,
-                         int *stderr_read, const char **argv);
+
+typedef struct process_handle_s {
+  int status;
+#ifdef MS_WINDOWS
+  HANDLE stdout_pipe;
+  HANDLE stderr_pipe;
+  HANDLE pid;
+#else
+  int stdout_pipe;
+  int stderr_pipe;
+  int pid;
+#endif // MS_WINDOWS
+} process_handle_t;
+
+process_handle_t tor_spawn_background(const char *const filename,
+                                      const char **argv);
+int tor_get_exit_code(const process_handle_t pid);
+ssize_t tor_read_all_from_process_stdin(const process_handle_t process_handle,
+                                        char *buf, size_t count);
+ssize_t tor_read_all_from_process_stderr(const process_handle_t process_handle,
+                                         char *buf, size_t count);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 
