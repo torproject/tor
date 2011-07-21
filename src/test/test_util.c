@@ -1394,24 +1394,25 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(process_handle.stderr_pipe, >, 0);
 
   /* Check stdout */
-  pos = tor_read_all_from_process_stdin(process_handle, stdout_buf,
+  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
 		                        sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
-  tt_int_op(pos, ==, strlen(expected_out));
   tt_str_op(stdout_buf, ==, expected_out);
+  tt_int_op(pos, ==, strlen(expected_out));
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle);
   tt_int_op(retval, ==, expected_exit);
+  // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
 		                         sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  tt_int_op(pos, ==, strlen(expected_err));
   tt_str_op(stderr_buf, ==, expected_err);
+  tt_int_op(pos, ==, strlen(expected_err));
 
  done:
   ;
@@ -1421,9 +1422,16 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
+#ifdef MS_WINDOWS
+  // TODO: Under MSYS, BUILDDIR in orconfig.h needs to be tweaked
+  const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
+  const char *expected_out = "OUT\r\n--test\r\nDONE\r\n";
+  const char *expected_err = "ERR\r\n";
+#else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
   const char *expected_out = "OUT\n--test\nDONE\n";
   const char *expected_err = "ERR\n";
+#endif
 
   (void)ptr;
 

@@ -2976,18 +2976,107 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  * and stderr, respectively, output of the child program can be read, and the
  * stdin of the child process shall be set to /dev/null.  Otherwise returns
  * -1.  Some parts of this code are based on the POSIX subprocess module from
- * Python.
+ * Python, and example code from
+ * http://msdn.microsoft.com/en-us/library/ms682499%28v=vs.85%29.aspx.
  */
 process_handle_t
 tor_spawn_background(const char *const filename, const char **argv)
 {
   process_handle_t process_handle;
 #ifdef MS_WINDOWS
-  (void) filename; (void) argv;
-  log_warn(LD_BUG, "not yet implemented on Windows.");
+  HANDLE stdout_pipe_read = NULL;
+  HANDLE stdout_pipe_write = NULL;
+  HANDLE stderr_pipe_read = NULL;
+  HANDLE stderr_pipe_write = NULL;
+
+  SECURITY_ATTRIBUTES saAttr;
+  smartlist_t *argv_list;
+  char *joined_argv;
+  int i;
+ 
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
+  saAttr.bInheritHandle = TRUE; 
+  saAttr.lpSecurityDescriptor = NULL; 
+
   process_handle.status = -1;
+
+  /* Set up pipe for stdout */
+  if (!CreatePipe(&stdout_pipe_read, &stdout_pipe_write, &saAttr, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to create pipe for stdout communication with child process: %s",
+      format_win32_error(GetLastError()));
+    return process_handle;
+  }
+  if (!SetHandleInformation(stdout_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to configure pipe for stdout communication with child process: %s",
+      format_win32_error(GetLastError()));
+  }
+
+  /* Set up pipe for stderr */
+  if (!CreatePipe(&stderr_pipe_read, &stderr_pipe_write, &saAttr, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to create pipe for stderr communication with child process: %s",
+      format_win32_error(GetLastError()));
+    return process_handle;
+  }
+  if (!SetHandleInformation(stderr_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to configure pipe for stderr communication with child process: %s",
+      format_win32_error(GetLastError()));
+  }
+
+  /* Create the child process */
+
+  /* Windows expects argv to be a whitespace delimited string, so join argv up */
+  argv_list = smartlist_create();
+  for (i=0; argv[i] != NULL; i++) {
+    smartlist_add(argv_list, (void *)argv[i]);
+  }
+
+  joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
+
+  STARTUPINFO siStartInfo;
+  BOOL retval = FALSE; 
+ 
+  ZeroMemory(&process_handle.pid, sizeof(PROCESS_INFORMATION));
+  ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+  siStartInfo.cb = sizeof(STARTUPINFO); 
+  siStartInfo.hStdError = stderr_pipe_write;
+  siStartInfo.hStdOutput = stdout_pipe_write;
+  siStartInfo.hStdInput = NULL;
+  siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+ 
+  /* Create the child process */
+
+  retval = CreateProcess(filename,       // module name
+                         joined_argv,    // command line 
+                         NULL,          // process security attributes 
+                         NULL,          // primary thread security attributes 
+                         TRUE,          // handles are inherited 
+                         0,             // creation flags (TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess() work?)
+                         NULL,          // use parent's environment 
+                         NULL,          // use parent's current directory 
+                         &siStartInfo,  // STARTUPINFO pointer 
+                         &process_handle.pid);  // receives PROCESS_INFORMATION
+
+  tor_free(joined_argv); 
+   
+  if (!retval) {
+    log_warn(LD_GENERAL,
+      "Failed to create child process %s: %s", filename,
+      format_win32_error(GetLastError()));
+  } else  {
+    // TODO: Close hProcess and hThread in process_handle.pid?
+    process_handle.stdout_pipe = stdout_pipe_read;
+    process_handle.stderr_pipe = stderr_pipe_read;
+    process_handle.status = 0;
+  }
+
+  // TODO: Close pipes on exit
+
   return process_handle;
-#else
+#else // MS_WINDOWS
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
@@ -3154,15 +3243,25 @@ tor_spawn_background(const char *const filename, const char **argv)
   process_handle.status = 0;
   process_handle.pid = pid;
   return process_handle;
-#endif
+#endif // MS_WINDOWS
 }
 
 int
 tor_get_exit_code(const process_handle_t process_handle)
 {
 #ifdef MS_WINDOWS
-  log_warn(LD_BUG, "not yet implemented on Windows.");
-  return -1;
+  DWORD exit_code;
+  BOOL retval;
+  WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
+  retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
+
+  if (!retval) {
+    log_warn(LD_GENERAL, "GetExitCodeProcess() failed: %s",
+             format_win32_error(GetLastError()));
+    return -1;
+  } else {
+    return exit_code;
+  }
 #else
   int stat_loc;
 
@@ -3183,13 +3282,23 @@ tor_get_exit_code(const process_handle_t process_handle)
 }
 
 ssize_t
-tor_read_all_from_process_stdin(const process_handle_t process_handle,
+tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return -1;
+  BOOL retval;
+  DWORD bytes_read;
+  retval = ReadFile(process_handle.stdout_pipe, buf, count, &bytes_read, NULL);
+  if (!retval) {
+    log_warn(LD_GENERAL,
+      "Failed to read from stdin pipe: %s",
+      format_win32_error(GetLastError()));
+    return -1;
+  } else {
+    return bytes_read;
+  }
 #else
-  return read_all(process_handle.stdin_pipe, buf, count, 0);
+  return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
 }
   
@@ -3198,7 +3307,17 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return -1;
+  BOOL retval;
+  DWORD bytes_read;
+  retval = ReadFile(process_handle.stderr_pipe, buf, count, &bytes_read, NULL);
+  if (!retval) {
+    log_warn(LD_GENERAL,
+      "Failed to read from stderr pipe: %s",
+      format_win32_error(GetLastError()));
+    return -1;
+  } else {
+    return bytes_read;
+  }
 #else
   return read_all(process_handle.stderr_pipe, buf, count, 0);
 #endif

@@ -353,7 +353,7 @@ typedef struct process_handle_s {
 #ifdef MS_WINDOWS
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
-  HANDLE pid;
+  PROCESS_INFORMATION pid;
 #else
   int stdout_pipe;
   int stderr_pipe;
@@ -364,7 +364,7 @@ typedef struct process_handle_s {
 process_handle_t tor_spawn_background(const char *const filename,
                                       const char **argv);
 int tor_get_exit_code(const process_handle_t pid);
-ssize_t tor_read_all_from_process_stdin(const process_handle_t process_handle,
+ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                         char *buf, size_t count);
 ssize_t tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                          char *buf, size_t count);
