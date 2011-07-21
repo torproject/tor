@@ -1041,8 +1041,15 @@ circuit_has_opened(origin_circuit_t *circ)
      * controller did it. Just let it slide. */
   }
 
-  if (can_try_clearing_isolation && !tried_clearing_isolation &&
+  if (/* The circuit may have become non-open if it was cannibalized.*/
+      circ->_base.state == CIRCUIT_STATE_OPEN &&
+      /* Only if the purpose is clearable, and only if we haven't tried
+       * to clear isolation yet, do we try. */
+      can_try_clearing_isolation && !tried_clearing_isolation &&
+      /* If !isolation_values_set, there is nothing to clear. */
       circ->isolation_values_set &&
+      /* It's not legal to clear a circuit's isolation info if it's ever had
+       * streams attached */
       !circ->isolation_any_streams_attached) {
     /* If we have any isolation information set on this circuit, and
      * we didn't manage to attach any streams to it, then we can
