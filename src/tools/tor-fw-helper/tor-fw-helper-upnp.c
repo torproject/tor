@@ -9,6 +9,7 @@
 
 #include "orconfig.h"
 #ifdef MINIUPNPC
+#define STATICLIB
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
