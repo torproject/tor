@@ -1379,7 +1379,8 @@ test_util_fgets_eagain(void *ptr)
 /** Helper function for testing tor_spawn_background */
 static void
 run_util_spawn_background(const char *argv[], const char *expected_out,
-                          const char *expected_err, int expected_exit)
+                          const char *expected_err, int expected_exit,
+                          int expected_status)
 {
   int retval;
   ssize_t pos;
@@ -1389,7 +1390,12 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   /* Start the program */
   process_handle = tor_spawn_background(argv[0], argv);
 
-  tt_int_op(process_handle.status, ==, 0);
+  tt_int_op(process_handle.status, ==, expected_status);
+  
+  /* If the process failed to start, don't bother continuing */
+  if (process_handle.status == -1)
+    return;
+
   tt_int_op(process_handle.stdout_pipe, >, 0);
   tt_int_op(process_handle.stderr_pipe, >, 0);
 
@@ -1435,21 +1441,31 @@ test_util_spawn_background_ok(void *ptr)
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 0);
+  run_util_spawn_background(argv, expected_out, expected_err, 0, 0);
 }
 
 /** Check that failing to find the executable works as expected */
 static void
 test_util_spawn_background_fail(void *ptr)
 {
+#ifdef MS_WINDOWS
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_out = "ERR: Failed to spawn background process "
                              "- code          9/2\n";
   const char *expected_err = "";
+  const int expected_status = -1;
+#else
+  const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
+  const char *expected_out = "ERR: Failed to spawn background process "
+                             "- code          9/2\n";
+  const char *expected_err = "";
+  // TODO: Once we can signal failure to exec, set this to be -1;
+  const int expected_status = 0;
+#endif
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 255);
+  run_util_spawn_background(argv, expected_out, expected_err, 255, expected_status);
 }
 
 static void

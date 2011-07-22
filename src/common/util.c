@@ -3195,6 +3195,7 @@ tor_spawn_background(const char *const filename, const char **argv)
 
     /* Write the error message. GCC requires that we check the return
        value, but there is nothing we can do if it fails */
+    // TODO: Don't use STDOUT, use a pipe set up just for this purpose
     nbytes = write(STDOUT_FILENO, error_message, error_message_length);
     nbytes = write(STDOUT_FILENO, hex_errno, sizeof(hex_errno));
 
@@ -3216,6 +3217,8 @@ tor_spawn_background(const char *const filename, const char **argv)
     process_handle.status = -1;
     return process_handle;
   }
+
+  // TODO: If the child process forked but failed to exec, waitpid it
 
   /* Return read end of the pipes to caller, and close write end */
   process_handle.stdout_pipe = stdout_pipe[0];
@@ -3281,22 +3284,41 @@ tor_get_exit_code(const process_handle_t process_handle)
 #endif // MS_WINDOWS
 }
 
+#ifdef MS_WINDOWS
+/* Windows equivalent of read_all */
+static ssize_t
+read_all_handle(HANDLE h, char *buf, size_t count)
+{
+  size_t numread = 0;
+  BOOL retval;
+  DWORD bytes_read;
+
+  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+    return -1;
+
+  while (numread != count) {
+    retval = ReadFile(h, buf+numread, count-numread, &bytes_read, NULL);
+    if (!retval) {
+      log_warn(LD_GENERAL,
+        "Failed to read from stdin pipe: %s",
+        format_win32_error(GetLastError()));
+      return -1;
+    } else if (0 == bytes_read) {
+      /* End of file */
+      return bytes_read;
+    }
+    numread += bytes_read;
+  }
+  return (ssize_t)numread;
+}
+#endif
+
 ssize_t
 tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  BOOL retval;
-  DWORD bytes_read;
-  retval = ReadFile(process_handle.stdout_pipe, buf, count, &bytes_read, NULL);
-  if (!retval) {
-    log_warn(LD_GENERAL,
-      "Failed to read from stdin pipe: %s",
-      format_win32_error(GetLastError()));
-    return -1;
-  } else {
-    return bytes_read;
-  }
+  return read_all_handle(process_handle.stdout_pipe, buf, count);
 #else
   return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
@@ -3307,17 +3329,7 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  BOOL retval;
-  DWORD bytes_read;
-  retval = ReadFile(process_handle.stderr_pipe, buf, count, &bytes_read, NULL);
-  if (!retval) {
-    log_warn(LD_GENERAL,
-      "Failed to read from stderr pipe: %s",
-      format_win32_error(GetLastError()));
-    return -1;
-  } else {
-    return bytes_read;
-  }
+  return read_all_handle(process_handle.stderr_pipe, buf, count);
 #else
   return read_all(process_handle.stderr_pipe, buf, count, 0);
 #endif
