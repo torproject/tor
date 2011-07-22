@@ -1431,11 +1431,11 @@ test_util_spawn_background_ok(void *ptr)
 #ifdef MS_WINDOWS
   // TODO: Under MSYS, BUILDDIR in orconfig.h needs to be tweaked
   const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
-  const char *expected_out = "OUT\r\n--test\r\nDONE\r\n";
+  const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
   const char *expected_err = "ERR\r\n";
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\n--test\nDONE\n";
+  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
   const char *expected_err = "ERR\n";
 #endif
 

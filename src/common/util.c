@@ -3287,27 +3287,55 @@ tor_get_exit_code(const process_handle_t process_handle)
 #ifdef MS_WINDOWS
 /* Windows equivalent of read_all */
 static ssize_t
-read_all_handle(HANDLE h, char *buf, size_t count)
+read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
 {
   size_t numread = 0;
   BOOL retval;
-  DWORD bytes_read;
+  DWORD byte_count;
+  BOOL process_exited = FALSE;
 
   if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
     return -1;
 
   while (numread != count) {
-    retval = ReadFile(h, buf+numread, count-numread, &bytes_read, NULL);
+    retval = PeekNamedPipe(h, NULL, 0, NULL, &byte_count, NULL);
     if (!retval) {
       log_warn(LD_GENERAL,
-        "Failed to read from stdin pipe: %s",
+        "Failed to peek from handle: %s",
         format_win32_error(GetLastError()));
       return -1;
-    } else if (0 == bytes_read) {
-      /* End of file */
-      return bytes_read;
+    } else if (0 == byte_count) {
+      /* Nothing available: process exited or it is busy */
+
+      /* Keep on reading if we don't know whether the process is running */
+      if (NULL == hProcess)
+        continue;
+
+      /* The process exited and there's nothing left to read from it */
+      if (process_exited)
+        break;
+
+      /* If process is not running, check for output one more time in case
+         it wrote something after the peek was performed. Otherwise keep on
+         waiting for output */
+      byte_count = WaitForSingleObject(hProcess, 0);
+      if (WAIT_TIMEOUT != byte_count)
+        process_exited = TRUE;
+
+      continue;
     }
-    numread += bytes_read;
+
+    retval = ReadFile(h, buf+numread, count-numread, &byte_count, NULL);
+    if (!retval) {
+      log_warn(LD_GENERAL,
+        "Failed to read from handle: %s",
+        format_win32_error(GetLastError()));
+      return -1;
+    } else if (0 == byte_count) {
+      /* End of file */
+      break;
+    }
+    numread += byte_count;
   }
   return (ssize_t)numread;
 }
@@ -3318,7 +3346,8 @@ tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return read_all_handle(process_handle.stdout_pipe, buf, count);
+  return read_all_handle(process_handle.stdout_pipe, buf, count,
+                         process_handle.pid.hProcess);
 #else
   return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
@@ -3329,7 +3358,8 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return read_all_handle(process_handle.stderr_pipe, buf, count);
+  return read_all_handle(process_handle.stderr_pipe, buf, count,
+                         process_handle.pid.hProcess);
 #else
   return read_all(process_handle.stderr_pipe, buf, count, 0);
 #endif
