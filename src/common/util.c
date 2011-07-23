@@ -3304,12 +3304,12 @@ read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
         "Failed to peek from handle: %s",
         format_win32_error(GetLastError()));
       return -1;
-    } else if (0 == byte_count) {
+    } else if (0 == byte_count) 
       /* Nothing available: process exited or it is busy */
 
-      /* Keep on reading if we don't know whether the process is running */
+      /* Exit if we don't know whether the process is running */
       if (NULL == hProcess)
-        continue;
+        break;
 
       /* The process exited and there's nothing left to read from it */
       if (process_exited)
