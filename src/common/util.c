@@ -3094,6 +3094,11 @@ tor_spawn_background(const char *const filename, const char **argv)
 
   static int max_fd = -1;
 
+  // XXX
+  process_handle.pid = 0;
+  process_handle.stderr_pipe = 0;
+  process_handle.stdout_pipe = 0;
+
   /* We do the strlen here because strlen() is not signal handler safe,
      and we are not allowed to use unsafe functions between fork and exec */
   error_message_length = strlen(error_message);
@@ -3267,11 +3272,12 @@ tor_get_exit_code(const process_handle_t process_handle)
   }
 #else
   int stat_loc;
+  int retval;
 
   retval = waitpid(process_handle.pid, &stat_loc, 0);
   if (retval != process_handle.pid) {
     log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s", process_handle.pid,
-             sterror(errno));
+             strerror(errno));
     return -1;
   }
 
@@ -3457,7 +3463,9 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 /* When fw-helper fails, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
+  // XXX: remove
   static int child_pid = -1;
+  static process_handle_t child_handle = {0, 0, 0, 0};
   static FILE *stdout_read = NULL;
   static FILE *stderr_read = NULL;
   static time_t time_to_run_helper = 0;
@@ -3491,7 +3499,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
 
-    child_pid = tor_spawn_background(filename, &fd_out, &fd_err, argv);
+    child_handle = tor_spawn_background(filename, argv);
     if (child_pid < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
