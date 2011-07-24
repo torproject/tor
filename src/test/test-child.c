@@ -19,6 +19,10 @@ main(int argc, char **argv)
   for (i = 1; i < argc; i++)
     fprintf(stdout, "%s\n", argv[i]);
   fprintf(stdout, "SLEEPING\n");
+  /* We need to flush stdout so that test_util_spawn_background_partial_read()
+     succeed. Otherwise ReadFile() will get the entire output in one */
+  // XXX: Can we make stdio flush on newline?
+  fflush(stdout);
 #ifdef MS_WINDOWS
   Sleep(1000);
 #else

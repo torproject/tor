@@ -3292,8 +3292,8 @@ tor_get_exit_code(const process_handle_t process_handle)
 
 #ifdef MS_WINDOWS
 /* Windows equivalent of read_all */
-static ssize_t
-read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
+ssize_t
+tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
 {
   size_t numread = 0;
   BOOL retval;
@@ -3310,7 +3310,7 @@ read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
         "Failed to peek from handle: %s",
         format_win32_error(GetLastError()));
       return -1;
-    } else if (0 == byte_count) 
+    } else if (0 == byte_count) {
       /* Nothing available: process exited or it is busy */
 
       /* Exit if we don't know whether the process is running */
@@ -3352,8 +3352,8 @@ tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return read_all_handle(process_handle.stdout_pipe, buf, count,
-                         process_handle.pid.hProcess);
+  return tor_read_all_handle(process_handle.stdout_pipe, buf, count,
+                             process_handle.pid.hProcess);
 #else
   return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
@@ -3364,8 +3364,8 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return read_all_handle(process_handle.stderr_pipe, buf, count,
-                         process_handle.pid.hProcess);
+  return tor_read_all_handle(process_handle.stderr_pipe, buf, count,
+                             process_handle.pid.hProcess);
 #else
   return read_all(process_handle.stderr_pipe, buf, count, 0);
 #endif

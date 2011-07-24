@@ -1468,6 +1468,83 @@ test_util_spawn_background_fail(void *ptr)
   run_util_spawn_background(argv, expected_out, expected_err, 255, expected_status);
 }
 
+/** Helper function for testing tor_spawn_background */
+static void
+test_util_spawn_background_partial_read(void *ptr)
+{
+#ifdef MS_WINDOWS
+  // TODO: Under MSYS, BUILDDIR in orconfig.h needs to be tweaked
+  const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
+  const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
+                                 "DONE\r\n",
+                                 NULL };
+  const char *expected_err = "ERR\r\n";
+  int expected_out_ctr;
+#else
+  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
+  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
+  const char *expected_err = "ERR\r\n";
+#endif
+  const int expected_exit = 0;
+  const int expected_status = 0;
+
+  int retval;
+  ssize_t pos;
+  process_handle_t process_handle;
+  char stdout_buf[100], stderr_buf[100];
+
+  /* Start the program */
+  process_handle = tor_spawn_background(argv[0], argv);
+  tt_int_op(process_handle.status, ==, expected_status);
+
+  /* Check stdout */
+#ifdef MS_WINDOWS
+  for (expected_out_ctr =0; expected_out[expected_out_ctr] != NULL;) {
+    pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+                              sizeof(stdout_buf) - 1, NULL);
+    log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
+
+    /* We would have blocked, keep on trying */
+    if (0 == pos)
+      continue;
+
+    tt_assert(pos >= 0);
+    stdout_buf[pos] = '\0';
+    tt_str_op(stdout_buf, ==, expected_out[expected_out_ctr]);
+    tt_int_op(pos, ==, strlen(expected_out[expected_out_ctr]));
+    expected_out_ctr++;
+  }
+  /* The process should have exited without writing more */
+  pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+                            sizeof(stdout_buf) - 1,
+                            process_handle.pid.hProcess);
+  tt_int_op(pos, ==, 0);
+#else
+  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
+                                         sizeof(stdout_buf) - 1);
+  tt_assert(pos >= 0);
+  stdout_buf[pos] = '\0';
+  tt_str_op(stdout_buf, ==, expected_out);
+  tt_int_op(pos, ==, strlen(expected_out));
+#endif
+
+  /* Check it terminated correctly */
+  retval = tor_get_exit_code(process_handle);
+  tt_int_op(retval, ==, expected_exit);
+  // TODO: Make test-child exit with something other than 0
+
+  /* Check stderr */
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+                                         sizeof(stderr_buf) - 1);
+  tt_assert(pos >= 0);
+  stderr_buf[pos] = '\0';
+  tt_str_op(stderr_buf, ==, expected_err);
+  tt_int_op(pos, ==, strlen(expected_err));
+
+ done:
+  ;
+}
+
 static void
 test_util_di_ops(void)
 {
@@ -1555,6 +1632,7 @@ struct testcase_t util_tests[] = {
 #endif
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
+  UTIL_TEST(spawn_background_partial_read, 0),
   END_OF_TESTCASES
 };
 
