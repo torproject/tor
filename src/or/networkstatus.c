@@ -2006,13 +2006,6 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                          tor_memcmp(rs->identity_digest,
                                router->cache_info.identity_digest, DIGEST_LEN),
   {
-#if 0
-    /* We have no routerstatus for this router. Clear flags and skip it. */
-    if (!authdir) {
-      if (router->purpose == ROUTER_PURPOSE_GENERAL)
-        router_clear_status_flags(router);
-    }
-#endif
   }) {
     /* We have a routerstatus for this router. */
     const char *digest = router->cache_info.identity_digest;

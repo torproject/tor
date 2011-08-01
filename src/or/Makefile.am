@@ -7,7 +7,7 @@ else
 tor_platform_source=
 endif
 
-EXTRA_DIST=ntmain.c or_sha1.i
+EXTRA_DIST=ntmain.c or_sha1.i Makefile.nmake
 
 if USE_EXTERNAL_EVDNS
 evdns_source=

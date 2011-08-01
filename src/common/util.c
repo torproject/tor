@@ -14,6 +14,9 @@
 #define _GNU_SOURCE
 
 #include "orconfig.h"
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
 #define UTIL_PRIVATE
 #include "util.h"
 #include "torlog.h"
@@ -67,9 +70,6 @@
 #endif
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
 #endif
 #ifdef HAVE_TIME_H
 #include <time.h>

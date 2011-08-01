@@ -1,7 +1,7 @@
 
 noinst_LIBRARIES = libor.a libor-crypto.a libor-event.a
 
-EXTRA_DIST = common_sha1.i sha256.c
+EXTRA_DIST = common_sha1.i sha256.c Makefile.nmake
 
 #CFLAGS  = -Wall -Wpointer-arith -O2
 

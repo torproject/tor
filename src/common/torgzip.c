@@ -43,11 +43,7 @@
 #define off64_t int64_t
 #endif
 
-#ifdef _MSC_VER
-#include "..\..\contrib\zlib\zlib.h"
-#else
 #include <zlib.h>
-#endif
 
 /** Set to 1 if zlib is a version that supports gzip; set to 0 if it doesn't;
  * set to -1 if we haven't checked yet. */
