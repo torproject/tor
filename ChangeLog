@@ -391,7 +391,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
     - Authorities now clean their microdesc cache periodically and when
       reading from disk initially, not only when adding new descriptors.
       This prevents a bug where we could lose microdescriptors. Bugfix
-      on 0.2.2.6-alpha. 2230
+      on 0.2.2.6-alpha. Fixes bug 2230.
     - Do not crash when our configuration file becomes unreadable, for
       example due to a permissions change, between when we start up
       and when a controller calls SAVECONF. Fixes bug 3135; bugfix
@@ -2679,8 +2679,9 @@ Changes in version 0.2.2.5-alpha - 2009-10-11
   o Major bugfixes:
     - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
 
-  o New directory authorities:
-    - Move dizum to an alternate IP address.
+  o Directory authorities:
+    - Temporarily (just for this release) move dizum to an alternate
+      IP address.
 
 
 Changes in version 0.2.2.4-alpha - 2009-10-10
