@@ -2582,6 +2582,7 @@ connection_ap_make_link(connection_t *partner,
   }
 
   /* Populate isolation fields. */
+  conn->socks_request->listener_type = CONN_TYPE_DIR_LISTENER;
   conn->original_dest_address = tor_strdup(address);
   conn->session_group = session_group;
   conn->isolation_flags = isolation_flags;
@@ -3362,7 +3363,7 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
        strcmp_opt(a->socks_request->password, b->socks_request->password)))
     return 0;
   if ((iso & ISO_CLIENTPROTO) &&
-      (TO_CONN(a)->type != TO_CONN(b)->type ||
+      (a->socks_request->listener_type != b->socks_request->listener_type ||
        a->socks_request->socks_version != b->socks_request->socks_version))
     return 0;
   if ((iso & ISO_CLIENTADDR) &&
@@ -3424,7 +3425,7 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
        strcmp_opt(conn->socks_request->password, circ->socks_password)))
     return 0;
   if ((iso & ISO_CLIENTPROTO) &&
-      (TO_CONN(conn)->type != circ->client_proto_type ||
+      (conn->socks_request->listener_type != circ->client_proto_type ||
        conn->socks_request->socks_version != circ->client_proto_socksver))
     return 0;
   if ((iso & ISO_CLIENTADDR) &&
@@ -3463,7 +3464,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
       return -1;
     circ->dest_port = conn->socks_request->port;
     circ->dest_address = tor_strdup(conn->original_dest_address);
-    circ->client_proto_type = TO_CONN(conn)->type;
+    circ->client_proto_type = conn->socks_request->listener_type;
     circ->client_proto_socksver = conn->socks_request->socks_version;
     tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
     circ->session_group = conn->session_group;
@@ -3484,7 +3485,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
     if (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
         strcmp_opt(conn->socks_request->password, circ->socks_password))
       mixed |= ISO_SOCKSAUTH;
-    if ((TO_CONN(conn)->type != circ->client_proto_type ||
+    if ((conn->socks_request->listener_type != circ->client_proto_type ||
          conn->socks_request->socks_version != circ->client_proto_socksver))
       mixed |= ISO_CLIENTPROTO;
     if (!tor_addr_eq(&TO_CONN(conn)->addr, &circ->client_addr))

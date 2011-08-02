@@ -131,6 +131,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   strlcpy(conn->socks_request->address, q->name,
           sizeof(conn->socks_request->address));
 
+  conn->socks_request->listener_type = listener->_base.type;
   conn->dns_server_request = req;
   conn->isolation_flags = listener->isolation_flags;
   conn->session_group = listener->session_group;
@@ -185,6 +186,7 @@ dnsserv_launch_request(const char *name, int reverse)
   strlcpy(conn->socks_request->address, name,
           sizeof(conn->socks_request->address));
 
+  conn->socks_request->listener_type = CONN_TYPE_CONTROL_LISTENER;
   conn->original_dest_address = tor_strdup(name);
   conn->session_group = SESSION_GROUP_CONTROL_RESOLVE;
   conn->nym_epoch = get_signewnym_epoch();

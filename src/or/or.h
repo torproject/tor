@@ -3382,6 +3382,8 @@ struct socks_request_t {
   uint8_t auth_type;
   /** What is this stream's goal? One of the SOCKS_COMMAND_* values */
   uint8_t command;
+  /** Which kind of listener created this stream? */
+  uint8_t listener_type;
   size_t replylen; /**< Length of <b>reply</b>. */
   uint8_t reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
