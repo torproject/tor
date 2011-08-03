@@ -2364,23 +2364,41 @@ typedef struct circ_buffer_stats_t {
 /** List of circ_buffer_stats_t. */
 static smartlist_t *circuits_for_buffer_stats = NULL;
 
+/** Remember cell statistics <b>mean_num_cells_in_queue</b>,
+ * <b>mean_time_cells_in_queue</b>, and <b>processed_cells</b> of a
+ * circuit. */
+void
+rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
+    double mean_time_cells_in_queue, uint32_t processed_cells)
+{
+  circ_buffer_stats_t *stat;
+  if (!start_of_buffer_stats_interval)
+    return; /* Not initialized. */
+  stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
+  stat->mean_num_cells_in_queue = mean_num_cells_in_queue;
+  stat->mean_time_cells_in_queue = mean_time_cells_in_queue;
+  stat->processed_cells = processed_cells;
+  if (!circuits_for_buffer_stats)
+    circuits_for_buffer_stats = smartlist_create();
+  smartlist_add(circuits_for_buffer_stats, stat);
+}
+
 /** Remember cell statistics for circuit <b>circ</b> at time
  * <b>end_of_interval</b> and reset cell counters in case the circuit
  * remains open in the next measurement interval. */
 void
 rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
 {
-  circ_buffer_stats_t *stat;
   time_t start_of_interval;
   int interval_length;
   or_circuit_t *orcirc;
+  double mean_num_cells_in_queue, mean_time_cells_in_queue;
+  uint32_t processed_cells;
   if (CIRCUIT_IS_ORIGIN(circ))
     return;
   orcirc = TO_OR_CIRCUIT(circ);
   if (!orcirc->processed_cells)
     return;
-  if (!circuits_for_buffer_stats)
-    circuits_for_buffer_stats = smartlist_create();
   start_of_interval = (circ->timestamp_created.tv_sec >
                        start_of_buffer_stats_interval) ?
         circ->timestamp_created.tv_sec :
@@ -2388,17 +2406,18 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
   interval_length = (int) (end_of_interval - start_of_interval);
   if (interval_length <= 0)
     return;
-  stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
-  stat->processed_cells = orcirc->processed_cells;
+  processed_cells = orcirc->processed_cells;
   /* 1000.0 for s -> ms; 2.0 because of app-ward and exit-ward queues */
-  stat->mean_num_cells_in_queue = (double) orcirc->total_cell_waiting_time /
+  mean_num_cells_in_queue = (double) orcirc->total_cell_waiting_time /
       (double) interval_length / 1000.0 / 2.0;
-  stat->mean_time_cells_in_queue =
+  mean_time_cells_in_queue =
       (double) orcirc->total_cell_waiting_time /
       (double) orcirc->processed_cells;
-  smartlist_add(circuits_for_buffer_stats, stat);
   orcirc->total_cell_waiting_time = 0;
   orcirc->processed_cells = 0;
+  rep_hist_add_buffer_stats(mean_num_cells_in_queue,
+                            mean_time_cells_in_queue,
+                            processed_cells);
 }
 
 /** Sorting helper: return -1, 1, or 0 based on comparison of two

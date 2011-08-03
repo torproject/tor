@@ -1635,6 +1635,61 @@ test_stats(void)
   rep_hist_reset_conn_stats(now);
   s = rep_hist_format_conn_stats(now + 86400);
   test_streq("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n", s);
+  tor_free(s);
+
+  /* Continue with testing buffer statistics; we shouldn't collect buffer
+   * stats without initializing them. */
+  rep_hist_add_buffer_stats(2.0, 2.0, 20);
+  s = rep_hist_format_buffer_stats(now + 86400);
+  test_assert(!s);
+
+  /* Initialize stats, add statistics for a single circuit, and generate
+   * the history string. */
+  rep_hist_buffer_stats_init(now);
+  rep_hist_add_buffer_stats(2.0, 2.0, 20);
+  s = rep_hist_format_buffer_stats(now + 86400);
+  test_streq("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "cell-processed-cells 20,0,0,0,0,0,0,0,0,0\n"
+             "cell-queued-cells 2.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
+                               "0.00,0.00\n"
+             "cell-time-in-queue 2,0,0,0,0,0,0,0,0,0\n"
+             "cell-circuits-per-decile 1\n", s);
+  tor_free(s);
+
+  /* Add nineteen more circuit statistics to the one that's already in the
+   * history to see that the math works correctly. */
+  for (i = 21; i < 30; i++)
+    rep_hist_add_buffer_stats(2.0, 2.0, i);
+  for (i = 20; i < 30; i++)
+    rep_hist_add_buffer_stats(3.5, 3.5, i);
+  s = rep_hist_format_buffer_stats(now + 86400);
+  test_streq("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "cell-processed-cells 29,28,27,26,25,24,23,22,21,20\n"
+             "cell-queued-cells 2.75,2.75,2.75,2.75,2.75,2.75,2.75,2.75,"
+                               "2.75,2.75\n"
+             "cell-time-in-queue 3,3,3,3,3,3,3,3,3,3\n"
+             "cell-circuits-per-decile 2\n", s);
+  tor_free(s);
+
+  /* Stop collecting stats, add statistics for one circuit, and ensure we
+   * don't generate a history string. */
+  rep_hist_buffer_stats_term();
+  rep_hist_add_buffer_stats(2.0, 2.0, 20);
+  s = rep_hist_format_buffer_stats(now + 86400);
+  test_assert(!s);
+
+  /* Re-start stats, add statistics for one circuit, reset stats, and make
+   * sure that the history has all zeros. */
+  rep_hist_buffer_stats_init(now);
+  rep_hist_add_buffer_stats(2.0, 2.0, 20);
+  rep_hist_reset_buffer_stats(now);
+  s = rep_hist_format_buffer_stats(now + 86400);
+  test_streq("cell-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "cell-processed-cells 0,0,0,0,0,0,0,0,0,0\n"
+             "cell-queued-cells 0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,"
+                               "0.00,0.00\n"
+             "cell-time-in-queue 0,0,0,0,0,0,0,0,0,0\n"
+             "cell-circuits-per-decile 0\n", s);
 
  done:
   tor_free(s);

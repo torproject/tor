@@ -77,6 +77,8 @@ void rep_hist_buffer_stats_add_circ(circuit_t *circ,
                                     time_t end_of_interval);
 time_t rep_hist_buffer_stats_write(time_t now);
 void rep_hist_buffer_stats_term(void);
+void rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
+     double mean_time_cells_in_queue, uint32_t processed_cells);
 char *rep_hist_format_buffer_stats(time_t now);
 void rep_hist_reset_buffer_stats(time_t now);
 
