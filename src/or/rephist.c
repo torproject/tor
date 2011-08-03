@@ -2455,32 +2455,31 @@ rep_hist_buffer_stats_write(time_t now)
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
     rep_hist_buffer_stats_add_circ(circ, now);
-  /* calculate deciles */
+
+  /* Calculate deciles if we saw at least one circuit. */
   memset(processed_cells, 0, SHARES * sizeof(int));
   memset(circs_in_share, 0, SHARES * sizeof(int));
   memset(queued_cells, 0, SHARES * sizeof(double));
   memset(time_in_queue, 0, SHARES * sizeof(double));
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_create();
-  smartlist_sort(circuits_for_buffer_stats,
-                 _buffer_stats_compare_entries);
   number_of_circuits = smartlist_len(circuits_for_buffer_stats);
-  if (number_of_circuits < 1) {
-    log_info(LD_HIST, "Attempt to write cell statistics to disk failed. "
-             "We haven't seen a single circuit to report about.");
-    goto done;
+  if (number_of_circuits > 0) {
+    smartlist_sort(circuits_for_buffer_stats,
+                   _buffer_stats_compare_entries);
+    i = 0;
+    SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
+                            circ_buffer_stats_t *, stat)
+    {
+      int share = i++ * SHARES / number_of_circuits;
+      processed_cells[share] += stat->processed_cells;
+      queued_cells[share] += stat->mean_num_cells_in_queue;
+      time_in_queue[share] += stat->mean_time_cells_in_queue;
+      circs_in_share[share]++;
+    }
+    SMARTLIST_FOREACH_END(stat);
   }
-  i = 0;
-  SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
-                          circ_buffer_stats_t *, stat)
-  {
-    int share = i++ * SHARES / number_of_circuits;
-    processed_cells[share] += stat->processed_cells;
-    queued_cells[share] += stat->mean_num_cells_in_queue;
-    time_in_queue[share] += stat->mean_time_cells_in_queue;
-    circs_in_share[share]++;
-  }
-  SMARTLIST_FOREACH_END(stat);
+
   /* clear buffer stats history */
   SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
       stat, tor_free(stat));
