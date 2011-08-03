@@ -2434,23 +2434,24 @@ time_t
 rep_hist_buffer_stats_write(time_t now)
 {
   char *statsdir = NULL, *filename = NULL;
-  char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   FILE *out;
 #define SHARES 10
   int processed_cells[SHARES], circs_in_share[SHARES],
       number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
-  smartlist_t *str_build = NULL;
-  char *str = NULL, *buf = NULL;
+  char *buf = NULL;
   circuit_t *circ;
+  smartlist_t *processed_cells_strings, *queued_cells_strings,
+              *time_in_queue_strings;
+  char *processed_cells_string, *queued_cells_string,
+       *time_in_queue_string;
+  char t[ISO_TIME_LEN+1];
 
   if (!start_of_buffer_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write */
-
-  str_build = smartlist_create();
 
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
@@ -2484,7 +2485,42 @@ rep_hist_buffer_stats_write(time_t now)
   SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
       stat, tor_free(stat));
   smartlist_clear(circuits_for_buffer_stats);
-  /* write to file */
+
+  /* Write deciles to strings. */
+  processed_cells_strings = smartlist_create();
+  queued_cells_strings = smartlist_create();
+  time_in_queue_strings = smartlist_create();
+  for (i = 0; i < SHARES; i++) {
+    tor_asprintf(&buf,"%d", !circs_in_share[i] ? 0 :
+                 processed_cells[i] / circs_in_share[i]);
+    smartlist_add(processed_cells_strings, buf);
+  }
+  for (i = 0; i < SHARES; i++) {
+    tor_asprintf(&buf, "%.2f", circs_in_share[i] == 0 ? 0.0 :
+                 queued_cells[i] / (double) circs_in_share[i]);
+    smartlist_add(queued_cells_strings, buf);
+  }
+  for (i = 0; i < SHARES; i++) {
+    tor_asprintf(&buf, "%.0f", circs_in_share[i] == 0 ? 0.0 :
+                 time_in_queue[i] / (double) circs_in_share[i]);
+    smartlist_add(time_in_queue_strings, buf);
+  }
+
+  /* Join all observations in single strings. */
+  processed_cells_string = smartlist_join_strings(processed_cells_strings,
+                                                  ",", 0, NULL);
+  queued_cells_string = smartlist_join_strings(queued_cells_strings,
+                                               ",", 0, NULL);
+  time_in_queue_string = smartlist_join_strings(time_in_queue_strings,
+                                                ",", 0, NULL);
+  SMARTLIST_FOREACH(processed_cells_strings, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(queued_cells_strings, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(time_in_queue_strings, char *, cp, tor_free(cp));
+  smartlist_free(processed_cells_strings);
+  smartlist_free(queued_cells_strings);
+  smartlist_free(time_in_queue_strings);
+
+  /* Write everything to disk. */
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
     goto done;
@@ -2493,44 +2529,17 @@ rep_hist_buffer_stats_write(time_t now)
                                     0600, &open_file);
   if (!out)
     goto done;
-  format_iso_time(written, now);
-  if (fprintf(out, "cell-stats-end %s (%d s)\n", written,
+  format_iso_time(t, now);
+  if (fprintf(out, "cell-stats-end %s (%d s)\n", t,
               (unsigned) (now - start_of_buffer_stats_interval)) < 0)
     goto done;
-  for (i = 0; i < SHARES; i++) {
-    tor_asprintf(&buf,"%d", !circs_in_share[i] ? 0 :
-                 processed_cells[i] / circs_in_share[i]);
-    smartlist_add(str_build, buf);
-  }
-  str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "cell-processed-cells %s\n", str) < 0)
+  if (fprintf(out, "cell-processed-cells %s\n", processed_cells_string)
+      < 0)
     goto done;
-  tor_free(str);
-  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
-  smartlist_clear(str_build);
-  for (i = 0; i < SHARES; i++) {
-    tor_asprintf(&buf, "%.2f", circs_in_share[i] == 0 ? 0.0 :
-                 queued_cells[i] / (double) circs_in_share[i]);
-    smartlist_add(str_build, buf);
-  }
-  str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "cell-queued-cells %s\n", str) < 0)
+  if (fprintf(out, "cell-queued-cells %s\n", queued_cells_string) < 0)
     goto done;
-  tor_free(str);
-  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
-  smartlist_clear(str_build);
-  for (i = 0; i < SHARES; i++) {
-    tor_asprintf(&buf, "%.0f", circs_in_share[i] == 0 ? 0.0 :
-                 time_in_queue[i] / (double) circs_in_share[i]);
-    smartlist_add(str_build, buf);
-  }
-  str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "cell-time-in-queue %s\n", str) < 0)
+  if (fprintf(out, "cell-time-in-queue %s\n", time_in_queue_string) < 0)
     goto done;
-  tor_free(str);
-  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
-  smartlist_free(str_build);
-  str_build = NULL;
   if (fprintf(out, "cell-circuits-per-decile %d\n",
               (number_of_circuits + SHARES - 1) / SHARES) < 0)
     goto done;
@@ -2542,11 +2551,9 @@ rep_hist_buffer_stats_write(time_t now)
     abort_writing_to_file(open_file);
   tor_free(filename);
   tor_free(statsdir);
-  if (str_build) {
-    SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
-    smartlist_free(str_build);
-  }
-  tor_free(str);
+  tor_free(processed_cells_string);
+  tor_free(queued_cells_string);
+  tor_free(time_in_queue_string);
 #undef SHARES
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
