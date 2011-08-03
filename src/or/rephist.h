@@ -77,6 +77,8 @@ void rep_hist_buffer_stats_add_circ(circuit_t *circ,
                                     time_t end_of_interval);
 time_t rep_hist_buffer_stats_write(time_t now);
 void rep_hist_buffer_stats_term(void);
+char *rep_hist_format_buffer_stats(time_t now);
+void rep_hist_reset_buffer_stats(time_t now);
 
 void rep_hist_conn_stats_init(time_t now);
 void rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,

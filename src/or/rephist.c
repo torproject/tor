@@ -2420,42 +2420,41 @@ _buffer_stats_compare_entries(const void **_a, const void **_b)
 void
 rep_hist_buffer_stats_term(void)
 {
-  start_of_buffer_stats_interval = 0;
+  rep_hist_reset_buffer_stats(0);
+}
+
+/** Clear history of circuit statistics and set the measurement interval
+ * start to <b>now</b>. */
+void
+rep_hist_reset_buffer_stats(time_t now)
+{
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_create();
   SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
       stat, tor_free(stat));
   smartlist_clear(circuits_for_buffer_stats);
+  start_of_buffer_stats_interval = now;
 }
 
-/** Write buffer statistics to $DATADIR/stats/buffer-stats and return when
- * we would next want to write exit stats. */
-time_t
-rep_hist_buffer_stats_write(time_t now)
+/** Return a newly allocated string containing the buffer statistics until
+ * <b>now</b>, or NULL if we're not collecting buffer stats. */
+char *
+rep_hist_format_buffer_stats(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL;
-  open_file_t *open_file = NULL;
-  FILE *out;
 #define SHARES 10
   int processed_cells[SHARES], circs_in_share[SHARES],
       number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
   char *buf = NULL;
-  circuit_t *circ;
   smartlist_t *processed_cells_strings, *queued_cells_strings,
               *time_in_queue_strings;
   char *processed_cells_string, *queued_cells_string,
        *time_in_queue_string;
   char t[ISO_TIME_LEN+1];
+  char *result;
 
   if (!start_of_buffer_stats_interval)
-    return 0; /* Not initialized. */
-  if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
-    goto done; /* Not ready to write */
-
-  /* add current circuits to stats */
-  for (circ = _circuit_get_global_list(); circ; circ = circ->next)
-    rep_hist_buffer_stats_add_circ(circ, now);
+    return NULL; /* Not initialized. */
 
   /* Calculate deciles if we saw at least one circuit. */
   memset(processed_cells, 0, SHARES * sizeof(int));
@@ -2480,11 +2479,6 @@ rep_hist_buffer_stats_write(time_t now)
     }
     SMARTLIST_FOREACH_END(stat);
   }
-
-  /* clear buffer stats history */
-  SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
-      stat, tor_free(stat));
-  smartlist_clear(circuits_for_buffer_stats);
 
   /* Write deciles to strings. */
   processed_cells_strings = smartlist_create();
@@ -2520,41 +2514,66 @@ rep_hist_buffer_stats_write(time_t now)
   smartlist_free(queued_cells_strings);
   smartlist_free(time_in_queue_strings);
 
-  /* Write everything to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
-    goto done;
-  filename = get_datadir_fname2("stats", "buffer-stats");
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE | O_TEXT,
-                                    0600, &open_file);
-  if (!out)
-    goto done;
+  /* Put everything together. */
   format_iso_time(t, now);
-  if (fprintf(out, "cell-stats-end %s (%d s)\n", t,
-              (unsigned) (now - start_of_buffer_stats_interval)) < 0)
-    goto done;
-  if (fprintf(out, "cell-processed-cells %s\n", processed_cells_string)
-      < 0)
-    goto done;
-  if (fprintf(out, "cell-queued-cells %s\n", queued_cells_string) < 0)
-    goto done;
-  if (fprintf(out, "cell-time-in-queue %s\n", time_in_queue_string) < 0)
-    goto done;
-  if (fprintf(out, "cell-circuits-per-decile %d\n",
-              (number_of_circuits + SHARES - 1) / SHARES) < 0)
-    goto done;
-  finish_writing_to_file(open_file);
-  open_file = NULL;
-  start_of_buffer_stats_interval = now;
- done:
-  if (open_file)
-    abort_writing_to_file(open_file);
-  tor_free(filename);
-  tor_free(statsdir);
+  tor_asprintf(&result, "cell-stats-end %s (%d s)\n"
+               "cell-processed-cells %s\n"
+               "cell-queued-cells %s\n"
+               "cell-time-in-queue %s\n"
+               "cell-circuits-per-decile %d\n",
+               t, (unsigned) (now - start_of_buffer_stats_interval),
+               processed_cells_string,
+               queued_cells_string,
+               time_in_queue_string,
+               (number_of_circuits + SHARES - 1) / SHARES);
   tor_free(processed_cells_string);
   tor_free(queued_cells_string);
   tor_free(time_in_queue_string);
+  return result;
 #undef SHARES
+}
+
+/** If 24 hours have passed since the beginning of the current buffer
+ * stats period, write buffer stats to $DATADIR/stats/buffer-stats
+ * (possibly overwriting an existing file) and reset counters.  Return
+ * when we would next want to write buffer stats or 0 if we never want to
+ * write. */
+time_t
+rep_hist_buffer_stats_write(time_t now)
+{
+  circuit_t *circ;
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
+
+  if (!start_of_buffer_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write */
+
+  /* Add open circuits to the history. */
+  for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+    rep_hist_buffer_stats_add_circ(circ, now);
+  }
+
+  /* Generate history string. */
+  str = rep_hist_format_buffer_stats(now);
+
+  /* Reset both buffer history and counters of open circuits. */
+  rep_hist_reset_buffer_stats(now);
+
+  /* Try to write to disk. */
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
+    goto done;
+  }
+  filename = get_datadir_fname2("stats", "buffer-stats");
+  if (write_str_to_file(filename, str, 0) < 0)
+    log_warn(LD_HIST, "Unable to write buffer stats to disk!");
+
+ done:
+  tor_free(str);
+  tor_free(filename);
+  tor_free(statsdir);
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
 
