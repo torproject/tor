@@ -1483,7 +1483,10 @@ test_geoip(void)
   int i, j;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   char *s = NULL;
-  const char *dirreq_stats_1 =
+  const char *bridge_stats_1 =
+      "bridge-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "bridge-ips zz=24,xy=8\n",
+  *dirreq_stats_1 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips ab=8\n"
       "dirreq-v2-ips \n"
@@ -1593,6 +1596,24 @@ test_geoip(void)
   s = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   test_assert(s);
   test_streq("zz=24,xy=8", s);
+
+  /* Start testing bridge statistics by making sure that we don't output
+   * bridge stats without initializing them. */
+  s = geoip_format_bridge_stats(now + 86400);
+  test_assert(!s);
+
+  /* Initialize stats and generate the bridge-stats history string out of
+   * the connecting clients added above. */
+  geoip_bridge_stats_init(now);
+  s = geoip_format_bridge_stats(now + 86400);
+  test_streq(bridge_stats_1, s);
+  tor_free(s);
+
+  /* Stop collecting bridge stats and make sure we don't write a history
+   * string anymore. */
+  geoip_bridge_stats_term();
+  s = geoip_format_bridge_stats(now + 86400);
+  test_assert(!s);
 
   /* Stop being a bridge and start being a directory mirror that gathers
    * directory request statistics. */

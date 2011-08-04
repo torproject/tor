@@ -1197,8 +1197,8 @@ static char *bridge_stats_extrainfo = NULL;
 /** Return a newly allocated string holding our bridge usage stats by country
  * in a format suitable for inclusion in an extrainfo document. Return NULL on
  * failure.  */
-static char *
-format_bridge_stats_extrainfo(time_t now)
+char *
+geoip_format_bridge_stats(time_t now)
 {
   char *out = NULL, *data = NULL;
   long duration = now - start_of_bridge_stats_interval;
@@ -1206,6 +1206,8 @@ format_bridge_stats_extrainfo(time_t now)
 
   if (duration < 0)
     return NULL;
+  if (!start_of_bridge_stats_interval)
+    return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
@@ -1255,7 +1257,7 @@ geoip_bridge_stats_write(time_t now)
   geoip_remove_old_clients(start_of_bridge_stats_interval);
 
   /* Generate formatted string */
-  val = format_bridge_stats_extrainfo(now);
+  val = geoip_format_bridge_stats(now);
   if (val == NULL)
     goto done;
 

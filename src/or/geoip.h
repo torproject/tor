@@ -53,6 +53,7 @@ void geoip_entry_stats_term(void);
 void geoip_reset_entry_stats(time_t now);
 char *geoip_format_entry_stats(time_t now);
 void geoip_bridge_stats_init(time_t now);
+char *geoip_format_bridge_stats(time_t now);
 time_t geoip_bridge_stats_write(time_t now);
 void geoip_bridge_stats_term(void);
 const char *geoip_get_bridge_stats_extrainfo(time_t);
