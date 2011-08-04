@@ -40,6 +40,9 @@
 
 #include "procmon.h"
 
+/* From main.c */
+extern int quiet_level;
+
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
@@ -3095,8 +3098,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "misconfigured or something else goes wrong.");
 
   /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !options->RunAsDaemon && !from_setconf)
-    config_line_append(&options->Logs, "Log", "notice stdout");
+  if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
+    if (quiet_level == 0)
+        config_line_append(&options->Logs, "Log", "notice stdout");
+    else if (quiet_level == 1)
+        config_line_append(&options->Logs, "Log", "warn stdout");
+  }
 
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
     REJECT("Failed to validate Log options. See logs for details.");
