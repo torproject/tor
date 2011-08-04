@@ -996,7 +996,7 @@ geoip_dirreq_stats_write(time_t now)
   data_v2 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS);
   format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND | O_TEXT,
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE | O_TEXT,
                                     0600, &open_file);
   if (!out)
     goto done;
@@ -1329,7 +1329,7 @@ geoip_entry_stats_write(time_t now)
   filename = get_datadir_fname2("stats", "entry-stats");
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND | O_TEXT,
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE | O_TEXT,
                                     0600, &open_file);
   if (!out)
     goto done;
