@@ -2524,6 +2524,10 @@ typedef struct origin_circuit_t {
   char *dest_address;
   int session_group;
   unsigned nym_epoch;
+  uint8_t socks_username_len;
+  uint8_t socks_password_len;
+  /* Note that the next two values are NOT NUL-terminated; see
+     socks_username_len and socks_password_len for their lengths. */
   char *socks_username;
   char *socks_password;
   /**@}*/

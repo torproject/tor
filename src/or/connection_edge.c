@@ -3329,6 +3329,23 @@ parse_extended_hostname(char *address, int allowdotexit)
     return BAD_HOSTNAME;
 }
 
+/** Return true iff the (possibly NULL) <b>alen</b>-byte chunk of memory at
+ * <b>a</b> is equal to the (possibly NULL) <b>blen</b>-byte chunk of memory
+ * at <b>b</b>. */
+static int
+memeq_opt(const char *a, size_t alen, const char *b, size_t blen)
+{
+  if (a == NULL) {
+    return (b == NULL);
+  } else if (b == NULL) {
+    return 0;
+  } else if (alen != blen) {
+    return 0;
+  } else {
+    return tor_memeq(a, b, alen);
+  }
+}
+
 /** Return true iff <b>a</b> and <b>b</b> have isolation rules and fields that
  * make it permissible to put them on the same circuit.*/
 int
@@ -3336,6 +3353,8 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
                                        const edge_connection_t *b)
 {
   const uint8_t iso = a->isolation_flags | b->isolation_flags;
+  const socks_request_t *a_sr = a->socks_request;
+  const socks_request_t *b_sr = b->socks_request;
 
   if (! a->original_dest_address) {
     log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
@@ -3359,8 +3378,10 @@ connection_edge_streams_are_compatible(const edge_connection_t *a,
       strcasecmp(a->original_dest_address, b->original_dest_address))
     return 0;
   if ((iso & ISO_SOCKSAUTH) &&
-      (strcmp_opt(a->socks_request->username, b->socks_request->username) ||
-       strcmp_opt(a->socks_request->password, b->socks_request->password)))
+      (! memeq_opt(a_sr->username, a_sr->usernamelen,
+                   b_sr->username, b_sr->usernamelen) ||
+       ! memeq_opt(a_sr->password, a_sr->passwordlen,
+                   b_sr->password, b_sr->passwordlen)))
     return 0;
   if ((iso & ISO_CLIENTPROTO) &&
       (a->socks_request->listener_type != b->socks_request->listener_type ||
@@ -3386,6 +3407,7 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
                                         const origin_circuit_t *circ)
 {
   const uint8_t iso = conn->isolation_flags;
+  const socks_request_t *sr = conn->socks_request;
 
   /* If circ has never been used for an isolated connection, we can
    * totally use it for this one. */
@@ -3421,8 +3443,10 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
       strcasecmp(conn->original_dest_address, circ->dest_address))
     return 0;
   if ((iso & ISO_SOCKSAUTH) &&
-      (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
-       strcmp_opt(conn->socks_request->password, circ->socks_password)))
+      (! memeq_opt(sr->username, sr->usernamelen,
+                   circ->socks_username, circ->socks_username_len) ||
+       ! memeq_opt(sr->password, sr->passwordlen,
+                   circ->socks_password, circ->socks_password_len)))
     return 0;
   if ((iso & ISO_CLIENTPROTO) &&
       (conn->socks_request->listener_type != circ->client_proto_type ||
@@ -3452,6 +3476,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
                                          origin_circuit_t *circ,
                                          int dry_run)
 {
+  const socks_request_t *sr = conn->socks_request;
   if (! conn->original_dest_address) {
     log_warn(LD_BUG, "Reached connection_update_circuit_isolation without "
              "having set conn->original_dest_address");
@@ -3469,10 +3494,12 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
     tor_addr_copy(&circ->client_addr, &TO_CONN(conn)->addr);
     circ->session_group = conn->session_group;
     circ->nym_epoch = conn->nym_epoch;
-    circ->socks_username = conn->socks_request->username ?
-      tor_strdup(conn->socks_request->username) : NULL;
-    circ->socks_password = conn->socks_request->password ?
-      tor_strdup(conn->socks_request->password) : NULL;
+    circ->socks_username = sr->username ?
+      tor_memdup(sr->username, sr->usernamelen) : NULL;
+    circ->socks_password = sr->password ?
+      tor_memdup(sr->password, sr->passwordlen) : NULL;
+    circ->socks_username_len = sr->usernamelen;
+    circ->socks_password_len = sr->passwordlen;
 
     circ->isolation_values_set = 1;
     return 0;
@@ -3482,8 +3509,10 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
       mixed |= ISO_DESTPORT;
     if (strcasecmp(conn->original_dest_address, circ->dest_address))
       mixed |= ISO_DESTADDR;
-    if (strcmp_opt(conn->socks_request->username, circ->socks_username) ||
-        strcmp_opt(conn->socks_request->password, circ->socks_password))
+    if (!memeq_opt(sr->username, sr->usernamelen,
+                   circ->socks_username, circ->socks_username_len) ||
+        !memeq_opt(sr->password, sr->passwordlen,
+                   circ->socks_password, circ->socks_password_len))
       mixed |= ISO_SOCKSAUTH;
     if ((conn->socks_request->listener_type != circ->client_proto_type ||
          conn->socks_request->socks_version != circ->client_proto_socksver))
@@ -3542,5 +3571,6 @@ circuit_clear_isolation(origin_circuit_t *circ)
   circ->nym_epoch = 0;
   tor_free(circ->socks_username);
   tor_free(circ->socks_password);
+  circ->socks_username_len = circ->socks_password_len = 0;
 }
 
