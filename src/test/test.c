@@ -1481,8 +1481,64 @@ static void
 test_geoip(void)
 {
   int i, j;
-  time_t now = time(NULL);
+  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   char *s = NULL;
+  const char *dirreq_stats_1 =
+      "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "dirreq-v3-ips ab=8\n"
+      "dirreq-v2-ips \n"
+      "dirreq-v3-reqs ab=8\n"
+      "dirreq-v2-reqs \n"
+      "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
+          "not-modified=0,busy=0\n"
+      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
+          "busy=0\n"
+      "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+  *dirreq_stats_2 =
+      "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "dirreq-v3-ips \n"
+      "dirreq-v2-ips \n"
+      "dirreq-v3-reqs \n"
+      "dirreq-v2-reqs \n"
+      "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
+          "not-modified=0,busy=0\n"
+      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
+          "busy=0\n"
+      "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+  *dirreq_stats_3 =
+      "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "dirreq-v3-ips \n"
+      "dirreq-v2-ips \n"
+      "dirreq-v3-reqs \n"
+      "dirreq-v2-reqs \n"
+      "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
+          "not-modified=0,busy=0\n"
+      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
+          "busy=0\n"
+      "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+  *dirreq_stats_4 =
+      "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "dirreq-v3-ips \n"
+      "dirreq-v2-ips \n"
+      "dirreq-v3-reqs \n"
+      "dirreq-v2-reqs \n"
+      "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
+          "not-modified=0,busy=0\n"
+      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
+          "busy=0\n"
+      "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=4\n"
+      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n";
 
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
@@ -1531,6 +1587,55 @@ test_geoip(void)
   s = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   test_assert(s);
   test_streq("zz=24,xy=8", s);
+
+  /* Stop being a bridge and start being a directory mirror that gathers
+   * directory request statistics. */
+  get_options_mutable()->BridgeRelay = 0;
+  get_options_mutable()->BridgeRecordUsageByCountry = 0;
+  get_options_mutable()->DirReqStatistics = 1;
+
+  /* Start testing dirreq statistics by making sure that we don't collect
+   * dirreq stats without initializing them. */
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, 100, now);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_assert(!s);
+
+  /* Initialize stats, note one connecting client, and generate the
+   * dirreq-stats history string. */
+  geoip_dirreq_stats_init(now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, 100, now);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_streq(dirreq_stats_1, s);
+  tor_free(s);
+
+  /* Stop collecting stats, add another connecting client, and ensure we
+   * don't generate a history string. */
+  geoip_dirreq_stats_term();
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, 101, now);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_assert(!s);
+
+  /* Re-start stats, add a connecting client, reset stats, and make sure
+   * that we get an all empty history string. */
+  geoip_dirreq_stats_init(now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, 100, now);
+  geoip_reset_dirreq_stats(now);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_streq(dirreq_stats_2, s);
+  tor_free(s);
+
+  /* Note a successful network status response and make sure that it
+   * appears in the history string. */
+  geoip_note_ns_response(GEOIP_CLIENT_NETWORKSTATUS, GEOIP_SUCCESS);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_streq(dirreq_stats_3, s);
+  tor_free(s);
+
+  /* Start a tunneled directory request. */
+  geoip_start_dirreq((uint64_t) 1, 1024, GEOIP_CLIENT_NETWORKSTATUS,
+                     DIRREQ_TUNNELED);
+  s = geoip_format_dirreq_stats(now + 86400);
+  test_streq(dirreq_stats_4, s);
 
  done:
   tor_free(s);

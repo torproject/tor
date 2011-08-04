@@ -43,6 +43,8 @@ void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                                dirreq_state_t new_state);
 
 void geoip_dirreq_stats_init(time_t now);
+void geoip_reset_dirreq_stats(time_t now);
+char *geoip_format_dirreq_stats(time_t now);
 time_t geoip_dirreq_stats_write(time_t now);
 void geoip_dirreq_stats_term(void);
 void geoip_entry_stats_init(time_t now);
