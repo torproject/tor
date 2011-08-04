@@ -1538,7 +1538,13 @@ test_geoip(void)
       "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
       "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
       "dirreq-v3-tunneled-dl complete=0,timeout=0,running=4\n"
-      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n";
+      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+  *entry_stats_1 =
+      "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "entry-ips ab=8\n",
+  *entry_stats_2 =
+      "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+      "entry-ips \n";
 
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
@@ -1590,6 +1596,7 @@ test_geoip(void)
 
   /* Stop being a bridge and start being a directory mirror that gathers
    * directory request statistics. */
+  geoip_bridge_stats_term();
   get_options_mutable()->BridgeRelay = 0;
   get_options_mutable()->BridgeRecordUsageByCountry = 0;
   get_options_mutable()->DirReqStatistics = 1;
@@ -1636,6 +1643,46 @@ test_geoip(void)
                      DIRREQ_TUNNELED);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_4, s);
+
+  /* Stop collecting directory request statistics and start gathering
+   * entry stats. */
+  geoip_dirreq_stats_term();
+  get_options_mutable()->DirReqStatistics = 0;
+  get_options_mutable()->EntryStatistics = 1;
+
+  /* Start testing entry statistics by making sure that we don't collect
+   * anything without initializing entry stats. */
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, 100, now);
+  s = geoip_format_entry_stats(now + 86400);
+  test_assert(!s);
+
+  /* Initialize stats, note one connecting client, and generate the
+   * entry-stats history string. */
+  geoip_entry_stats_init(now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, 100, now);
+  s = geoip_format_entry_stats(now + 86400);
+  test_streq(entry_stats_1, s);
+  tor_free(s);
+
+  /* Stop collecting stats, add another connecting client, and ensure we
+   * don't generate a history string. */
+  geoip_entry_stats_term();
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, 101, now);
+  s = geoip_format_entry_stats(now + 86400);
+  test_assert(!s);
+
+  /* Re-start stats, add a connecting client, reset stats, and make sure
+   * that we get an all empty history string. */
+  geoip_entry_stats_init(now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, 100, now);
+  geoip_reset_entry_stats(now);
+  s = geoip_format_entry_stats(now + 86400);
+  test_streq(entry_stats_2, s);
+  tor_free(s);
+
+  /* Stop collecting entry statistics. */
+  geoip_entry_stats_term();
+  get_options_mutable()->EntryStatistics = 0;
 
  done:
   tor_free(s);

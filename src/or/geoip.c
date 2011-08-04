@@ -1332,25 +1332,51 @@ geoip_entry_stats_init(time_t now)
   start_of_entry_stats_interval = now;
 }
 
+/** Reset counters for entry stats. */
+void
+geoip_reset_entry_stats(time_t now)
+{
+  client_history_clear();
+  start_of_entry_stats_interval = now;
+}
+
 /** Stop collecting entry stats in a way that we can re-start doing so in
  * geoip_entry_stats_init(). */
 void
 geoip_entry_stats_term(void)
 {
-  client_history_clear();
-  start_of_entry_stats_interval = 0;
+  geoip_reset_entry_stats(0);
 }
 
-/** Write entry statistics to $DATADIR/stats/entry-stats and return time
- * when we would next want to write. */
+/** Return a newly allocated string containing the entry statistics
+ * until <b>now</b>, or NULL if we're not collecting entry stats. */
+char *
+geoip_format_entry_stats(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  char *data = NULL;
+  char *result;
+
+  if (!start_of_entry_stats_interval)
+    return NULL; /* Not initialized. */
+
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
+  format_iso_time(t, now);
+  tor_asprintf(&result, "entry-stats-end %s (%u s)\nentry-ips %s\n",
+              t, (unsigned) (now - start_of_entry_stats_interval),
+              data ? data : "");
+  tor_free(data);
+  return result;
+}
+
+/** If 24 hours have passed since the beginning of the current entry stats
+ * period, write entry stats to $DATADIR/stats/entry-stats (possibly
+ * overwriting an existing file) and reset counters.  Return when we would
+ * next want to write entry stats or 0 if we never want to write. */
 time_t
 geoip_entry_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL;
-  char *data = NULL;
-  char written[ISO_TIME_LEN+1];
-  open_file_t *open_file = NULL;
-  FILE *out;
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
 
   if (!start_of_entry_stats_interval)
     return 0; /* Not initialized. */
@@ -1360,31 +1386,26 @@ geoip_entry_stats_write(time_t now)
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_entry_stats_interval);
 
+  /* Generate history string .*/
+  str = geoip_format_entry_stats(now);
+
+  /* Write entry-stats string to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
+  }
   filename = get_datadir_fname2("stats", "entry-stats");
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
-  format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE | O_TEXT,
-                                    0600, &open_file);
-  if (!out)
-    goto done;
-  if (fprintf(out, "entry-stats-end %s (%u s)\nentry-ips %s\n",
-              written, (unsigned) (now - start_of_entry_stats_interval),
-              data ? data : "") < 0)
-    goto done;
+  if (write_str_to_file(filename, str, 0) < 0)
+    log_warn(LD_HIST, "Unable to write entry statistics to disk!");
 
-  start_of_entry_stats_interval = now;
+  /* Reset measurement interval start. */
+  geoip_reset_entry_stats(now);
 
-  finish_writing_to_file(open_file);
-  open_file = NULL;
  done:
-  if (open_file)
-    abort_writing_to_file(open_file);
-  tor_free(filename);
   tor_free(statsdir);
-  tor_free(data);
+  tor_free(filename);
+  tor_free(str);
   return start_of_entry_stats_interval + WRITE_STATS_INTERVAL;
 }
 
