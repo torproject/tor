@@ -3569,8 +3569,14 @@ circuit_clear_isolation(origin_circuit_t *circ)
   tor_free(circ->dest_address);
   circ->session_group = -1;
   circ->nym_epoch = 0;
-  tor_free(circ->socks_username);
-  tor_free(circ->socks_password);
+  if (circ->socks_username) {
+    memset(circ->socks_username, 0x11, circ->socks_username_len);
+    tor_free(circ->socks_username);
+  }
+  if (circ->socks_password) {
+    memset(circ->socks_password, 0x05, circ->socks_password_len);
+    tor_free(circ->socks_password);
+  }
   circ->socks_username_len = circ->socks_password_len = 0;
 }
 
