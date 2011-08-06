@@ -105,8 +105,6 @@ hostname_type_t parse_extended_hostname(char *address, int allowdotexit);
 int get_pf_socket(void);
 #endif
 
-int connection_edge_streams_are_compatible(const edge_connection_t *a,
-                                           const edge_connection_t *b);
 int connection_edge_compatible_with_circuit(const edge_connection_t *conn,
                                             const origin_circuit_t *circ);
 int connection_edge_update_circuit_isolation(const edge_connection_t *conn,

@@ -3346,58 +3346,6 @@ memeq_opt(const char *a, size_t alen, const char *b, size_t blen)
   }
 }
 
-/** Return true iff <b>a</b> and <b>b</b> have isolation rules and fields that
- * make it permissible to put them on the same circuit.*/
-int
-connection_edge_streams_are_compatible(const edge_connection_t *a,
-                                       const edge_connection_t *b)
-{
-  const uint8_t iso = a->isolation_flags | b->isolation_flags;
-  const socks_request_t *a_sr = a->socks_request;
-  const socks_request_t *b_sr = b->socks_request;
-
-  if (! a->original_dest_address) {
-    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
-             "having set a->original_dest_address");
-    ((edge_connection_t*)a)->original_dest_address =
-      tor_strdup(a->socks_request->address);
-  }
-  if (! b->original_dest_address) {
-    log_warn(LD_BUG, "Reached connection_edge_streams_are_compatible without "
-             "having set b->original_dest_address");
-    ((edge_connection_t*)b)->original_dest_address =
-      tor_strdup(a->socks_request->address);
-  }
-
-  if (iso & ISO_STREAM)
-    return 0;
-
-  if ((iso & ISO_DESTPORT) && a->socks_request->port != b->socks_request->port)
-    return 0;
-  if ((iso & ISO_DESTADDR) &&
-      strcasecmp(a->original_dest_address, b->original_dest_address))
-    return 0;
-  if ((iso & ISO_SOCKSAUTH) &&
-      (! memeq_opt(a_sr->username, a_sr->usernamelen,
-                   b_sr->username, b_sr->usernamelen) ||
-       ! memeq_opt(a_sr->password, a_sr->passwordlen,
-                   b_sr->password, b_sr->passwordlen)))
-    return 0;
-  if ((iso & ISO_CLIENTPROTO) &&
-      (a->socks_request->listener_type != b->socks_request->listener_type ||
-       a->socks_request->socks_version != b->socks_request->socks_version))
-    return 0;
-  if ((iso & ISO_CLIENTADDR) &&
-      !tor_addr_eq(&TO_CONN(a)->addr, &TO_CONN(b)->addr))
-    return 0;
-  if ((iso & ISO_SESSIONGRP) && a->session_group != b->session_group)
-    return 0;
-  if ((iso & ISO_NYM_EPOCH) && a->nym_epoch != b->nym_epoch)
-    return 0;
-
-  return 1;
-}
-
 /**
  * Return true iff none of the isolation flags and fields in <b>conn</b>
  * should prevent it from being attached to <b>circ</b>.
