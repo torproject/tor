@@ -2524,6 +2524,10 @@ typedef struct origin_circuit_t {
   char *dest_address;
   int session_group;
   unsigned nym_epoch;
+  size_t socks_username_len;
+  uint8_t socks_password_len;
+  /* Note that the next two values are NOT NUL-terminated; see
+     socks_username_len and socks_password_len for their lengths. */
   char *socks_username;
   char *socks_password;
   /**@}*/
@@ -3400,7 +3404,7 @@ struct socks_request_t {
   unsigned int got_auth : 1; /**< Have we received any authentication data? */
 
   /** Number of bytes in username; 0 if username is NULL */
-  uint8_t usernamelen;
+  size_t usernamelen;
   /** Number of bytes in password; 0 if password is NULL */
   uint8_t passwordlen;
   /** The negotiated username value if any (for socks5), or the entire

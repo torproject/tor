@@ -552,8 +552,14 @@ circuit_free(circuit_t *circ)
     rend_data_free(ocirc->rend_data);
 
     tor_free(ocirc->dest_address);
-    tor_free(ocirc->socks_username);
-    tor_free(ocirc->socks_password);
+    if (ocirc->socks_username) {
+      memset(ocirc->socks_username, 0x12, ocirc->socks_username_len);
+      tor_free(ocirc->socks_username);
+    }
+    if (ocirc->socks_password) {
+      memset(ocirc->socks_password, 0x06, ocirc->socks_password_len);
+      tor_free(ocirc->socks_password);
+    }
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     /* Remember cell statistics for this circuit before deallocating. */
