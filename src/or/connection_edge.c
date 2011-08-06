@@ -3528,7 +3528,7 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
       return mixed;
 
     if ((mixed & conn->isolation_flags) != 0) {
-      log_warn(LD_BUG, "Updating a circuit with seemingly incomaptible "
+      log_warn(LD_BUG, "Updating a circuit with seemingly incompatible "
                "isolation flags.");
     }
     circ->isolation_flags_mixed |= mixed;
