@@ -2530,6 +2530,9 @@ typedef struct origin_circuit_t {
      socks_username_len and socks_password_len for their lengths. */
   char *socks_username;
   char *socks_password;
+  /** Global identifier for the first stream attached here; used by
+   * ISO_STREAM. */
+  uint64_t associated_isolated_stream_global_id;
   /**@}*/
 
 } origin_circuit_t;

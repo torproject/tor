@@ -3432,9 +3432,9 @@ connection_edge_compatible_with_circuit(const edge_connection_t *conn,
       tor_strdup(conn->socks_request->address);
   }
 
-  /* If isolation_values_set, then the circuit is not compatible with
-   * any new ISO_STREAM stream. */
-  if (iso & ISO_STREAM)
+  if ((iso & ISO_STREAM) &&
+      (circ->associated_isolated_stream_global_id !=
+       TO_CONN(conn)->global_identifier))
     return 0;
 
   if ((iso & ISO_DESTPORT) && conn->socks_request->port != circ->dest_port)
@@ -3487,6 +3487,8 @@ connection_edge_update_circuit_isolation(const edge_connection_t *conn,
   if (!circ->isolation_values_set) {
     if (dry_run)
       return -1;
+    circ->associated_isolated_stream_global_id =
+      TO_CONN(conn)->global_identifier;
     circ->dest_port = conn->socks_request->port;
     circ->dest_address = tor_strdup(conn->original_dest_address);
     circ->client_proto_type = conn->socks_request->listener_type;
@@ -3562,6 +3564,7 @@ circuit_clear_isolation(origin_circuit_t *circ)
 
   circ->isolation_values_set = 0;
   circ->isolation_flags_mixed = 0;
+  circ->associated_isolated_stream_global_id = 0;
   circ->client_proto_type = 0;
   circ->client_proto_socksver = 0;
   circ->dest_port = 0;
