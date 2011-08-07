@@ -3139,6 +3139,8 @@ typedef struct {
   /** A list of Entry Guard-related configuration lines. */
   config_line_t *EntryGuards;
 
+  config_line_t *TransportProxies;
+
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the
    * bandwidth usage. The "Interval" fields hold the granularity, in seconds,

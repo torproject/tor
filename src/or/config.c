@@ -473,6 +473,9 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
   V(EntryGuards,                 LINELIST_V,  NULL),
 
+  VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
+  V(TransportProxies,                 LINELIST_V, NULL),
+
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
   V(BWHistoryReadInterval,            UINT,     "900"),
   V(BWHistoryReadValues,              CSV,      ""),
@@ -499,7 +502,6 @@ static config_var_t _state_vars[] = {
   V(CircuitBuildAbandonedCount,       UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
-
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -1212,29 +1214,6 @@ options_act(or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
-  clear_transport_list();
-  if (options->ClientTransportPlugin) {
-    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_client_transport_line(cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated ClientTransportPlugin line "
-                 "could not be added!");
-        return -1;
-      }
-    }
-  }
-
-  if (options->ServerTransportPlugin) {
-    for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-      if (parse_server_transport_line(cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated ServerTransportPlugin line "
-                 "could not be added!");
-        return -1;
-      }
-    }
-  }
-
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
@@ -1269,6 +1248,30 @@ options_act(or_options_t *old_options)
     if (or_state_load())
       return -1;
     rep_hist_load_mtbf_data(time(NULL));
+  }
+
+
+  clear_transport_list();
+  if (options->ClientTransportPlugin) {
+    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+      if (parse_client_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ClientTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
+  }
+
+  if (options->ServerTransportPlugin) {
+    for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+      if (parse_server_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ServerTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
   }
 
   /* Bail out at this point if we're not going to be a client or server:
@@ -5465,6 +5468,74 @@ options_get_datadir_fname2_suffix(or_options_t *options,
   return fname;
 }
 
+/** Return true if <b>line</b> is a valid state TransportProxy line.
+ *  Return false otherwise. */
+static int
+state_transport_line_is_valid(char *line)
+{
+  smartlist_t *items = NULL;
+  char *addrport=NULL;
+  tor_addr_t addr;
+  uint16_t port = 0;
+  int r;
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(items) != 2) {
+    log_warn(LD_CONFIG, "state: Not enough arguments in TransportProxy line.");
+    goto err;
+  }
+
+  addrport = smartlist_get(items, 1);
+  if (tor_addr_port_parse(addrport, &addr, &port) < 0) {
+    log_warn(LD_CONFIG, "state: Could not parse addrport.");
+    goto err;
+  }
+
+  if (!port) {
+    log_warn(LD_CONFIG, "state: Transport line did not contain port.");
+    goto err;
+  }
+
+  r = 1;
+  goto done;
+
+ err:
+  r = 0;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  return r;
+}
+
+/** Return 0 if all TransportProxy lines in <b>state</b> are well
+ *  formed. Otherwise, return -1. */
+static int
+validate_transports_in_state(or_state_t *state)
+{
+  int broken = 0;
+
+  config_var_t *var = config_find_option(&state_format,"TransportProxies");
+  if (!var)
+    return 0;
+
+  config_line_t **value = STRUCT_VAR_P(state, var->var_offset);
+  config_line_t *search = NULL;
+
+  for (search = *value ; search ; search = search->next) {
+    if (!state_transport_line_is_valid(search->value)<0)
+      broken = 1;
+  }
+
+  if (broken)
+    log_warn(LD_CONFIG, "state: State file seems to be broken.");
+
+  return 0;
+}
+
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -5481,6 +5552,9 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   (void) old_state;
 
   if (entry_guards_parse_state(state, 0, msg)<0)
+    return -1;
+
+  if (validate_transports_in_state(state)<0)
     return -1;
 
   return 0;
@@ -5715,6 +5789,118 @@ or_state_save(time_t now)
   return 0;
 }
 
+/** Return the config line for transport <b>transport</b> in the current state.
+ *  Return NULL if there is no config line for <b>transport</b>. */
+static config_line_t *
+get_transport_in_state_by_name(const char *transport)
+{
+  config_var_t *var = config_find_option(&state_format,"TransportProxies");
+  if (!var)
+    return NULL;
+
+  config_line_t **value = STRUCT_VAR_P(get_or_state(), var->var_offset);
+  config_line_t *search = *value;
+
+  while (search) {
+    if (!strcmpstart(search->value, transport))
+      return search;
+
+    search = search->next;
+  }
+  return NULL;
+}
+
+/** Return string containing the address:port part of the
+ *  TransportProxy <b>line</b> for transport <b>transport</b>.  If the
+ *  line is corrupted, return NULL. */
+const char *
+get_transport_bindaddr(const char *line, const char *transport)
+{
+  if (strlen(line) < strlen(transport) + 2)
+    return NULL;
+  else
+    return (line+strlen(transport)+1);
+}
+
+/** Return a string containing the address:port that <b>transport</b>
+ *  should use. */
+const char *
+get_bindaddr_for_transport(const char *transport)
+{
+  static const char default_addrport[] = "127.0.0.1:0";
+  const char *bindaddr = NULL;
+
+  config_line_t *line = get_transport_in_state_by_name(transport);
+  if (!line)
+    return default_addrport;
+
+  bindaddr = get_transport_bindaddr(line->value, transport);
+
+  return bindaddr ? bindaddr : default_addrport;
+}
+
+/** Save <b>transport</b> listening at <b>addr</b>:<b>port</b> to
+ *  state */
+void
+save_transport_to_state(const char *transport,
+                        tor_addr_t *addr, uint16_t port)
+{
+  or_state_t *state = get_or_state();
+
+  char *transport_addrport=NULL;
+
+  /** find where to write on the state */
+  config_line_t **next, *line;
+
+  /* see if this transport is already stored in state */
+  config_line_t *transport_line =
+    get_transport_in_state_by_name(transport);
+
+  if (transport_line) { /* if transport_exists_in_state() */
+    const char *prev_bindaddr = /* get addrport stored in state */
+      get_transport_bindaddr(transport_line->value, transport);
+    tor_asprintf(&transport_addrport, "%s:%d", fmt_addr(addr), (int)port);
+
+    /* if transport in state has the same address as this one, life is good */
+    if (!strcmp(prev_bindaddr, transport_addrport)) {
+      log_warn(LD_CONFIG, "Transport seems to have spawned on its usual address:port.");
+      goto done;
+    } else { /* addrport in state is different than the one we got */
+      log_warn(LD_CONFIG, "Transport seems to have spawned on different address:port."
+                "Let's update the state file with the new address:port");
+      tor_free(transport_line->value); /* free the old line */
+      tor_asprintf(&transport_line->value, "%s %s:%d", transport,
+                   fmt_addr(addr),
+                   (int) port); /* replace old addrport line with new line */
+    }
+  } else { /* never seen this one before; save it in state for next time */
+    log_warn(LD_CONFIG, "It's the first time we see this transport. "
+             "Let's save its address:port");
+    next = &state->TransportProxies;
+    /* find the last TransportProxy line in the state and point 'next'
+       right after it  */
+    line = state->TransportProxies;
+    while (line) {
+      next = &(line->next);
+      line = line->next;
+    }
+
+    /* allocate space for the new line and fill it in */
+    *next = line = tor_malloc_zero(sizeof(config_line_t));
+    line->key = tor_strdup("TransportProxy");
+    tor_asprintf(&line->value, "%s %s:%d", transport,
+                 fmt_addr(addr), (int) port);
+
+    next = &(line->next);
+  }
+
+  if (!get_options()->AvoidDiskWrites)
+    or_state_mark_dirty(state, 0);
+
+ done:
+  tor_free(transport_addrport);
+}
+
 /** Given a file name check to see whether the file exists but has not been
  * modified for a very long time.  If so, remove it. */
 void
@@ -5782,4 +5968,3 @@ getinfo_helper_config(control_connection_t *conn,
   }
   return 0;
 }
-

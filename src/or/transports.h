@@ -40,10 +40,12 @@ typedef struct {
   enum pt_proto_state conf_state; /* the current configuration state */
   int conf_protocol; /* the configuration protocol version used */
 
+  int is_server; /* is it a server proxy? */
+
   FILE *stdout; /* a stream to its stdout
                    (closed in managed_proxy_destroy()) */
 
-  smartlist_t *transports; /* list of transports this proxy spawns */
+  smartlist_t *transports; /* list of transport_t this proxy spawns */
 } managed_proxy_t;
 
 int parse_cmethod_line(char *line, managed_proxy_t *mp);

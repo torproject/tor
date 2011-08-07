@@ -19,9 +19,10 @@ static INLINE int proxy_configuration_finished(managed_proxy_t *mp);
 
 static void managed_proxy_destroy(managed_proxy_t *mp,
                                   int also_free_transports);
-static void register_proxy_transports(managed_proxy_t *mp);
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void configure_proxy(managed_proxy_t *mp);
+
+static void register_server_proxy(managed_proxy_t *mp);
 
 static void parse_method_error(char *line, int is_server_method);
 #define parse_server_method_error(l) parse_method_error(l, 1)
@@ -119,6 +120,7 @@ pt_managed_launch_proxy(const char *method,
   mp->conf_state = PT_PROTO_INFANT;
   mp->stdout = stdout_read;
   mp->transports = smartlist_create();
+  mp->is_server = is_server;
 
   /* register the managed proxy */
   if (!unconfigured_proxy_list)
@@ -179,6 +181,42 @@ configure_proxy(managed_proxy_t *mp)
   }
 }
 
+/** Register server managed proxy <b>mp</b> transports to state */
+static void
+register_server_proxy(managed_proxy_t *mp)
+{
+  if (mp->is_server) {
+    SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
+      save_transport_to_state(t->name,&t->addr,t->port); /* pass tor_addr_t? */
+    } SMARTLIST_FOREACH_END(t);
+  }
+}
+
+/** Register all the transports supported by client managed proxy
+ *  <b>mp</b> to the bridge subsystem. */
+static void
+register_client_proxy(managed_proxy_t *mp)
+{
+  SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
+    if (transport_add(t)<0) {
+      log_warn(LD_GENERAL, "Could not add transport %s. Skipping.", t->name);
+      transport_free(t);
+    } else {
+      log_warn(LD_GENERAL, "Succesfully registered transport %s", t->name);
+    }
+  } SMARTLIST_FOREACH_END(t);
+}
+
+/** Register the transports of managed proxy <b>mp</b>. */
+static INLINE void
+register_proxy(managed_proxy_t *mp)
+{
+  if (mp->is_server)
+    register_server_proxy(mp);
+  else
+    register_client_proxy(mp);
+}
+
 /** Handle a configured or broken managed proxy <b>mp</b>. */
 static void
 handle_finished_proxy(managed_proxy_t *mp)
@@ -188,7 +226,7 @@ handle_finished_proxy(managed_proxy_t *mp)
     managed_proxy_destroy(mp, 1); /* destroy it and all its transports */
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
-    register_proxy_transports(mp); /* register all its transports, */
+    register_proxy(mp); /* register transports */
     mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed, */
     managed_proxy_destroy(mp, 0); /* destroy the managed proxy struct,
                                      keeping the transports intact */
@@ -201,20 +239,6 @@ handle_finished_proxy(managed_proxy_t *mp)
 
   n_unconfigured_proxies--;
   tor_assert(n_unconfigured_proxies >= 0);
-}
-
-/** Register all the transports supported by managed proxy <b>mp</b>. */
-static void
-register_proxy_transports(managed_proxy_t *mp)
-{
-  SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-    if (transport_add(t)<0) {
-      log_warn(LD_GENERAL, "Could not add transport %s. Skipping.", t->name);
-      transport_free(t);
-    } else {
-      log_warn(LD_GENERAL, "Succesfully registered transport %s", t->name);
-    }
-  } SMARTLIST_FOREACH_END(t);
 }
 
 /** Free memory allocated by managed proxy <b>mp</b>.
@@ -254,8 +278,6 @@ proxy_configuration_finished(managed_proxy_t *mp)
 void
 handle_proxy_line(char *line, managed_proxy_t *mp)
 {
-  log_debug(LD_CONFIG, "Judging line: %s\n", line);
-
   if (strlen(line) < SMALLEST_MANAGED_LINE_SIZE) {
     log_warn(LD_GENERAL, "Managed proxy configuration line is too small. "
              "Discarding");
@@ -401,7 +423,8 @@ parse_method_error(char *line, int is_server)
            line+strlen(error)+1);
 }
 
-/** Parses an SMETHOD <b>line</b>. */
+/** Parses an SMETHOD <b>line</b> and if well-formed it registers the
+ *  new transport in <b>mp</b>. */
 int
 parse_smethod_line(char *line, managed_proxy_t *mp)
 {
@@ -413,6 +436,8 @@ parse_smethod_line(char *line, managed_proxy_t *mp)
   char *addrport=NULL;
   tor_addr_t addr;
   uint16_t port = 0;
+
+  transport_t *transport=NULL;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -439,6 +464,12 @@ parse_smethod_line(char *line, managed_proxy_t *mp)
              "Transport address '%s' has no port.", addrport);
     goto err;
   }
+
+  transport = transport_create(&addr, port, method_name, PROXY_NONE);
+  if (!transport)
+    goto err;
+
+  smartlist_add(mp->transports, transport);
 
   /* For now, notify the user so that he knows where the server
      transport is listening. */
@@ -553,23 +584,26 @@ set_environ(char ***envp, const char *method, int is_server)
   *envp = tor_malloc(sizeof(char*)*(n_envs+1));
   tmp = *envp;
 
+  state_loc = get_datadir_fname("pt_state/");
+
   /* these should all be customizable */
   tor_asprintf(tmp++, "HOME=%s", getenv("HOME"));
   tor_asprintf(tmp++, "PATH=%s", getenv("PATH"));
-  state_loc = get_datadir_fname("pt_state/");
   tor_asprintf(tmp++, "TOR_PT_STATE_LOCATION=%s", state_loc);
-  tor_free(state_loc);
   tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
   if (is_server) {
     /* ASN check for ORPort values, should we be here if it's 0? */
     tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* temp */
-    tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=127.0.0.1:0");
+    tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s",
+                 get_bindaddr_for_transport(method));
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", method);
     tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* temp*/
   } else {
     tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", method);
   }
   *tmp = NULL;
+
+  tor_free(state_loc);
 }
 
 /* ASN is this too ugly/stupid? */

@@ -4610,7 +4610,7 @@ transport_get_by_name(const char *name)
 
   if (!transport_list)
     return NULL;
-  
+
   SMARTLIST_FOREACH_BEGIN(transport_list, const transport_t *, transport) {
     if (!strcmp(transport->name, name))
       return transport;
