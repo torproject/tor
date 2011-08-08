@@ -3999,8 +3999,9 @@ control_event_guard(const char *nickname, const char *digest,
 }
 
 /** Called when a configuration option changes. This is generally triggered
- * by SETCONF requests and RELOAD/SIGHUP signals. The <b>values</b> are the
- * keyword/value pairs for the configuration changes tor is using. */
+ * by SETCONF requests and RELOAD/SIGHUP signals. The <b>elements</b> is
+ * a smartlist_t containing (key, value, ...) pairs in sequence.
+ * <b>value</b> can be NULL. */
 int
 control_event_conf_changed(smartlist_t *elements)
 {
