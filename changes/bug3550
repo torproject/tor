@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - The "--quiet" and "--hush" options now apply not only to Tor's
+      behavior before user-configured logs are added, but also to
+      Tor's behavior in the absense of configured logs. Fixes bug
+      3550; bugfix on 0.2.0.10-alpha.

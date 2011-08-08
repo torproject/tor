@@ -154,6 +154,12 @@ int can_complete_circuit=0;
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT (60)
 
+/** Decides our behavior when no logs are configured/before any
+ * logs have been configured.  For 0, we log notice to stdout as normal.
+ * For 1, we log warnings only.  For 2, we log nothing.
+ */
+int quiet_level = 0;
+
 /********* END VARIABLES ************/
 
 /****************************************************************************
@@ -2148,6 +2154,7 @@ tor_init(int argc, char *argv[])
     default:
       add_temp_log(LOG_NOTICE);
   }
+  quiet_level = quiet;
 
   log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
       "Do not rely on it for strong anonymity. (Running on %s)",get_version(),
