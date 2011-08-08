@@ -4015,15 +4015,13 @@ control_event_conf_changed(smartlist_t *elements)
   for (i = 0; i < smartlist_len(elements); i += 2) {
     char *k = smartlist_get(elements, i);
     char *v = smartlist_get(elements, i+1);
+    char *tmp;
     if (v == NULL) {
-      char *tmp;
       tor_asprintf(&tmp, "650-%s", k);
-      smartlist_add(lines, tmp);
     } else {
-      char *tmp;
       tor_asprintf(&tmp, "650-%s=%s", k, v);
-      smartlist_add(lines, tmp);
     }
+    smartlist_add(lines, tmp);
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
   send_control_event(EVENT_CONF_CHANGED, 0,
