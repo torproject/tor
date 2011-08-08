@@ -4002,12 +4002,34 @@ control_event_guard(const char *nickname, const char *digest,
  * by SETCONF requests and RELOAD/SIGHUP signals. The <b>values</b> are the
  * keyword/value pairs for the configuration changes tor is using. */
 int
-control_event_conf_changed(const char *values)
+control_event_conf_changed(smartlist_t *elements)
 {
-  if(strlen(values) > 0) {
-    send_control_event(EVENT_CONF_CHANGED, 0,
-      "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", values);
+  int i;
+  char *result;
+  smartlist_t *lines;
+  if (smartlist_len(elements) == 0) {
+    return 0;
   }
+  lines = smartlist_create();
+  for (i = 0; i < smartlist_len(elements); i += 2) {
+    char *k = smartlist_get(elements, i);
+    char *v = smartlist_get(elements, i+1);
+    if (v == NULL) {
+      char *tmp;
+      tor_asprintf(&tmp, "650-%s", k);
+      smartlist_add(lines, tmp);
+    } else {
+      char *tmp;
+      tor_asprintf(&tmp, "650-%s=%s", k, v);
+      smartlist_add(lines, tmp);
+    }
+  }
+  result = smartlist_join_strings(lines, "\r\n", 0, NULL);
+  send_control_event(EVENT_CONF_CHANGED, 0,
+    "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", result);
+  tor_free(result);
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
   return 0;
 }
 

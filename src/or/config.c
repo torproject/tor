@@ -10,7 +10,6 @@
  **/
 
 #define CONFIG_PRIVATE
-#define CONTROL_PRIVATE
 
 #include "or.h"
 #include "circuitbuild.h"
@@ -695,7 +694,6 @@ int
 set_options(or_options_t *new_val, char **msg)
 {
   int i;
-  char *result;
   smartlist_t *elements;
   config_line_t *line;
   or_options_t *old_options = global_options;
@@ -724,21 +722,16 @@ set_options(or_options_t *new_val, char **msg)
 
         if (line) {
           for (; line; line = line->next) {
-            char *tmp;
-            tor_asprintf(&tmp, "650-%s=%s", line->key, line->value);
-            smartlist_add(elements, tmp);
+            smartlist_add(elements, line->key);
+            smartlist_add(elements, line->value);
           }
         } else {
-          char *tmp;
-          tor_asprintf(&tmp, "650-%s", options_format.vars[i].name);
-          smartlist_add(elements, tmp);
+          smartlist_add(elements, options_format.vars[i].name);
+          smartlist_add(elements, NULL);
         }
       }
     }
-    result = smartlist_join_strings(elements, "\r\n", 0, NULL);
-    control_event_conf_changed(result);
-    tor_free(result);
-    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+    control_event_conf_changed(elements);
     smartlist_free(elements);
   }
   config_free(&options_format, old_options);
