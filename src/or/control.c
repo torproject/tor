@@ -4008,7 +4008,7 @@ control_event_conf_changed(smartlist_t *elements)
   int i;
   char *result;
   smartlist_t *lines;
-  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) && smartlist_len(elements) == 0) {
+  if (!EVENT_IS_INTERESTING(EVENT_CONF_CHANGED) || smartlist_len(elements) == 0) {
     return 0;
   }
   lines = smartlist_create();
