@@ -718,7 +718,7 @@ set_options(or_options_t *new_val, char **msg)
       if (!option_is_same(&options_format, new_val, old_options,
         options_format.vars[i].name)) {
         line = get_assigned_option(&options_format, new_val,
-        options_format.vars[i].name, 0);
+        options_format.vars[i].name, 1);
 
         if (line) {
           for (; line; line = line->next) {
