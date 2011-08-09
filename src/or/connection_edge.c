@@ -161,7 +161,8 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
                  "data from edge while in '%s' state. Sending it anyway. "
                  "package_partial=%d, buflen=%ld",
                  conn_state_to_string(conn->_base.type, conn->_base.state),
-                 package_partial, connection_get_inbuf_len(TO_CONN(conn)));
+                 package_partial,
+                 (long)connection_get_inbuf_len(TO_CONN(conn)));
         if (connection_edge_package_raw_inbuf(conn, package_partial, NULL)<0) {
           /* (We already sent an end cell if possible) */
           connection_mark_for_close(TO_CONN(conn));
@@ -2442,9 +2443,10 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
        ap_conn->sending_optimistic_data) &&
       connection_ap_supports_optimistic_data(ap_conn)) {
     log_info(LD_APP, "Sending up to %ld + %ld bytes of queued-up data",
-             connection_get_inbuf_len(TO_CONN(ap_conn)),
-	     ap_conn->sending_optimistic_data ?
-		generic_buffer_len(ap_conn->sending_optimistic_data) : 0);
+             (long)connection_get_inbuf_len(TO_CONN(ap_conn)),
+             ap_conn->sending_optimistic_data ?
+                 (long)generic_buffer_len(ap_conn->sending_optimistic_data) :
+                 0);
     if (connection_edge_package_raw_inbuf(ap_conn, 1, NULL) < 0) {
       connection_mark_for_close(TO_CONN(ap_conn));
     }
