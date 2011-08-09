@@ -5118,7 +5118,7 @@ parse_client_port_config(smartlist_t *out,
       }
     } SMARTLIST_FOREACH_END(elt);
 
-    if (out) {
+    if (out && port) {
       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
       cfg->type = listener_type;
       cfg->port = port;
