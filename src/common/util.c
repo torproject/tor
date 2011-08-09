@@ -1698,6 +1698,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
   struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
+#else
+  (void)effective_user;
 #endif
 
   tor_assert(dirname);
