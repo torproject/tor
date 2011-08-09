@@ -396,7 +396,7 @@ typedef int socklen_t;
 
 #ifdef MS_WINDOWS
 #define tor_socket_t intptr_t
-#define SOCKET_OK(s) ((s) != INVALID_SOCKET)
+#define SOCKET_OK(s) ((unsigned)(s) != INVALID_SOCKET)
 #else
 #define tor_socket_t int
 #define SOCKET_OK(s) ((s) >= 0)
