@@ -696,6 +696,9 @@ get_options(void)
 int
 set_options(or_options_t *new_val, char **msg)
 {
+  int i;
+  smartlist_t *elements;
+  config_line_t *line;
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
@@ -710,7 +713,30 @@ set_options(or_options_t *new_val, char **msg)
             "Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
+  /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
+   * just starting up then the old_options will be undefined. */
+  if (old_options) {
+    elements = smartlist_create();
+    for (i=0; options_format.vars[i].name; ++i) {
+      if (!option_is_same(&options_format, new_val, old_options,
+        options_format.vars[i].name)) {
+        line = get_assigned_option(&options_format, new_val,
+        options_format.vars[i].name, 1);
 
+        if (line) {
+          for (; line; line = line->next) {
+            smartlist_add(elements, line->key);
+            smartlist_add(elements, line->value);
+          }
+        } else {
+          smartlist_add(elements, options_format.vars[i].name);
+          smartlist_add(elements, NULL);
+        }
+      }
+    }
+    control_event_conf_changed(elements);
+    smartlist_free(elements);
+  }
   config_free(&options_format, old_options);
 
   return 0;

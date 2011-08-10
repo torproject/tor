@@ -1,0 +1,5 @@
+  o Minor features:
+    - CONF_CHANGED event is provided so that controllers can be notified
+      of any configuration changes made by other controllers/SETCONF/HUP.
+      Implements #1692.
+
