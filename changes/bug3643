@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Selectively disable deprecation warnings on OS X because Lion started
+      deprecating the shipped copy of openssl. Fixes bug 3643.
+
