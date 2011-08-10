@@ -729,7 +729,7 @@ set_options(or_options_t *new_val, char **msg)
             smartlist_add(elements, line->value);
           }
         } else {
-          smartlist_add(elements, options_format.vars[i].name);
+          smartlist_add(elements, (char*)options_format.vars[i].name);
           smartlist_add(elements, NULL);
         }
       }
