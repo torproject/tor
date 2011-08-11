@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Get rid of a harmless warning that could happen on relays running
+      with bufferevents. The warning was caused by someone doing an http
+      request to a relay's orport. Also don't warn for a few related
+      non-errors. Fixes bug 3700; bugfix on 0.2.3.1-alpha.
+
