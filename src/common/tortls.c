@@ -273,6 +273,22 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
 
   addr = tls ? tls->address : NULL;
 
+  /* Some errors are known-benign, meaning they are the fault of the other
+   * side of the connection. The caller doesn't know this, so override the
+   * priority for those cases. */
+  switch (ERR_GET_REASON(err)) {
+    case SSL_R_HTTP_REQUEST:
+    case SSL_R_HTTPS_PROXY_REQUEST:
+    case SSL_R_RECORD_LENGTH_MISMATCH:
+    case SSL_R_RECORD_TOO_LARGE:
+    case SSL_R_UNKNOWN_PROTOCOL:
+    case SSL_R_UNSUPPORTED_PROTOCOL:
+      severity = LOG_INFO;
+      break;
+    default:
+      break;
+  }
+
   msg = (const char*)ERR_reason_error_string(err);
   lib = (const char*)ERR_lib_error_string(err);
   func = (const char*)ERR_func_error_string(err);
