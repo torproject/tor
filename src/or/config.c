@@ -1228,7 +1228,7 @@ options_act(or_options_t *old_options)
 
   /* If we have pluggable transport related options enabled, see if we
      should warn the user about potential configuration problems. */
-  if (options->Bridges || options->ClientTransportPlugin)
+  if (options->Bridges || options->ClientTransportPlugin || options->ServerTransportPlugin)
     validate_pluggable_transports_config();
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -4745,15 +4745,14 @@ parse_client_transport_line(const char *line, int validate_only)
       tor_assert(proxy_argc > 0);
       proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
       tmp = proxy_argv;
-      for (i=0;i<proxy_argc;i++) /* store arguments */
-        *tmp++ = smartlist_get(items, 2+i);
+      for (i=0;i<proxy_argc;i++) { /* store arguments */
+        *tmp++ = smartlist_get(items, 2);
+        smartlist_del_keeporder(items, 2);
+      }
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
-      if (pt_managed_launch_client_proxy(name, proxy_argv) < 0) {
-        log_warn(LD_CONFIG, "Error while launching managed proxy at '%s'",
-                 proxy_argv[0]);
-        goto err;
-      }
+      /* kickstart the thing */
+      pt_kickstart_client_proxy(name, proxy_argv);
     }
   } else { /* external */
     addrport = smartlist_get(items, 2);
@@ -4789,7 +4788,6 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  tor_free(proxy_argv);
   return r;
 }
 
@@ -4847,15 +4845,14 @@ parse_server_transport_line(const char *line, int validate_only)
       proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
       tmp = proxy_argv;
 
-      for (i=0;i<proxy_argc;i++) /* store arguments */
-        *tmp++ = smartlist_get(items, 2+i);
+      for (i=0;i<proxy_argc;i++) { /* store arguments */
+        *tmp++ = smartlist_get(items, 2);
+        smartlist_del_keeporder(items, 2);
+      }
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
-      if (pt_managed_launch_server_proxy(name, proxy_argv) < 0) { /* launch it! */
-        log_warn(LD_CONFIG, "Error while launching managed proxy at '%s'",
-                 proxy_argv[0]);
-        goto err;
-      }
+      /* kickstart the thing */
+      pt_kickstart_server_proxy(name, proxy_argv);
     }
   } else { /* external */
     addrport = smartlist_get(items, 2);
@@ -4886,7 +4883,6 @@ parse_server_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  tor_free(proxy_argv);
   return r;
 }
 
@@ -5811,8 +5807,8 @@ get_transport_in_state_by_name(const char *transport)
 }
 
 /** Return string containing the address:port part of the
- *  TransportProxy <b>line</b> for transport <b>transport</b>.  If the
- *  line is corrupted, return NULL. */
+ *  TransportProxy <b>line</b> for transport <b>transport</b>.
+ *  If the line is corrupted, return NULL. */
 const char *
 get_transport_bindaddr(const char *line, const char *transport)
 {
@@ -5822,8 +5818,8 @@ get_transport_bindaddr(const char *line, const char *transport)
     return (line+strlen(transport)+1);
 }
 
-/** Return a string containing the address:port that <b>transport</b>
- *  should use. */
+/** Return a static string containing the address:port a proxy
+ *  transport should bind on. */
 const char *
 get_bindaddr_for_transport(const char *transport)
 {
@@ -5839,8 +5835,8 @@ get_bindaddr_for_transport(const char *transport)
   return bindaddr ? bindaddr : default_addrport;
 }
 
-/** Save <b>transport</b> listening at <b>addr</b>:<b>port</b> to
- *  state */
+/** Save <b>transport</b> listening on <b>addr</b>:<b>port</b> to
+    state */
 void
 save_transport_to_state(const char *transport,
                         tor_addr_t *addr, uint16_t port)

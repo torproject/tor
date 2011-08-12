@@ -13,8 +13,7 @@
 #include "transports.h"
 
 /* ASN TIDY THESE UP*/
-static void set_environ(char ***envp, const char *method,
-                        int is_server);
+static void set_environ(char ***envp, managed_proxy_t *mp);
 static INLINE int proxy_configuration_finished(managed_proxy_t *mp);
 
 static void managed_proxy_destroy(managed_proxy_t *mp,
@@ -82,11 +81,55 @@ pt_proxies_configuration_pending(void)
   return !!n_unconfigured_proxies;
 }
 
-/** Launch a proxy for <b>method</b> using <b>proxy_argv</b> as its
- *  arguments. If <b>is_server</b>, launch a server proxy. */
-int
-pt_managed_launch_proxy(const char *method,
-                        char **proxy_argv, int is_server)
+/** Return true if <b>mp</b> has the same argv as <b>proxy_argv</b> */
+static int
+managed_proxy_has_argv(managed_proxy_t *mp, char **proxy_argv)
+{
+  char **tmp1=proxy_argv;
+  char **tmp2=mp->argv;
+
+  tor_assert(tmp1);
+  tor_assert(tmp2);
+
+  while (*tmp1 && *tmp2) {
+    if (strcmp(*tmp1++, *tmp2++))
+      return 0;
+  }
+
+  if (!*tmp1 && !*tmp2)
+    return 1;
+
+  return 0;
+}
+
+/** Return a managed proxy with the same argv as <b>proxy_argv</b>.
+ *  If no such managed proxy exists, return NULL. */
+static managed_proxy_t *
+get_managed_proxy_by_argv(char **proxy_argv)
+{
+  if (!unconfigured_proxy_list)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list,  managed_proxy_t *, mp) {
+    if (managed_proxy_has_argv(mp, proxy_argv))
+      return mp;
+  } SMARTLIST_FOREACH_END(mp);
+
+  return NULL;
+}
+
+/** Add <b>transport</b> to managed proxy <b>mp</b>. */
+static void
+add_transport_to_proxy(char *transport, managed_proxy_t *mp)
+{
+  tor_assert(mp->transports_to_launch);
+  if (!smartlist_string_isin(mp->transports_to_launch, transport))
+    smartlist_add(mp->transports_to_launch, tor_strdup(transport));
+}
+
+/** Launch managed proxy <b>mp</b>. */
+static int
+launch_managed_proxy(managed_proxy_t *mp)
 {
   char **envp=NULL;
   int retval;
@@ -94,11 +137,16 @@ pt_managed_launch_proxy(const char *method,
   int stdout_pipe=-1, stderr_pipe=-1;
 
   /* prepare the environment variables for the managed proxy */
-  set_environ(&envp, method, is_server);
+  set_environ(&envp, mp);
+
+  char **tmp = envp;
+  printf("PRINTING ENVP\n");
+  while (*tmp)
+    printf("%s\n", *tmp++);
 
   /* ASN we should probably check if proxy_argv[0] is executable by our user */
-  retval = tor_spawn_background(proxy_argv[0], &stdout_pipe,
-                                &stderr_pipe, (const char **)proxy_argv,
+  retval = tor_spawn_background(mp->argv[0], &stdout_pipe,
+                                &stderr_pipe, (const char **)mp->argv,
                                 (const char **)envp);
   if (retval < 0) {
     log_warn(LD_GENERAL, "Spawn failed");
@@ -115,20 +163,8 @@ pt_managed_launch_proxy(const char *method,
 
   log_warn(LD_CONFIG, "The spawn is alive (%d)!", retval);
 
-  /* create a managed proxy */
-  managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
-  mp->conf_state = PT_PROTO_INFANT;
+  mp->conf_state = PT_PROTO_LAUNCHED;
   mp->stdout = stdout_read;
-  mp->transports = smartlist_create();
-  mp->is_server = is_server;
-
-  /* register the managed proxy */
-  if (!unconfigured_proxy_list)
-    unconfigured_proxy_list = smartlist_create();
-  smartlist_add(unconfigured_proxy_list, mp);
-
-  n_unconfigured_proxies++; /* ASN should we care about overflows here?
-                               I say no. */
 
   return 0;
 }
@@ -150,13 +186,20 @@ pt_configure_remaining_proxies(void)
   } SMARTLIST_FOREACH_END(mp);
 }
 
-/** Receive input from the managed proxy <b>mp</b> to get closer to
- *  finally configuring it. */
+/** Attempt to continue configuring managed proxy <b>mp</b>. */
 static void
 configure_proxy(managed_proxy_t *mp)
 {
   enum stream_status r;
   char stdout_buf[200];
+
+  /* if we haven't launched the proxy yet, do it now */
+  if (mp->conf_state == PT_PROTO_INFANT) {
+    launch_managed_proxy(mp);
+    return;
+  }
+
+  tor_assert(mp->conf_state != PT_PROTO_INFANT);
 
   while (1) {
     r = get_string_from_pipe(mp->stdout, stdout_buf,
@@ -255,11 +298,20 @@ managed_proxy_destroy(managed_proxy_t *mp, int also_free_transports)
   smartlist_clear(mp->transports);
   smartlist_free(mp->transports);
 
+  SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
+
+  /* free the transports smartlist */
+  smartlist_clear(mp->transports_to_launch);
+  smartlist_free(mp->transports_to_launch);
+
   /* remove it from the list of managed proxies */
   smartlist_remove(unconfigured_proxy_list, mp);
 
   /* close its stdout stream */
   fclose(mp->stdout);
+
+  /* free the argv */
+  free_execve_args(mp->argv);
 
   tor_free(mp);
 }
@@ -278,6 +330,8 @@ proxy_configuration_finished(managed_proxy_t *mp)
 void
 handle_proxy_line(char *line, managed_proxy_t *mp)
 {
+  printf("Judging line: %s\n", line);
+
   if (strlen(line) < SMALLEST_MANAGED_LINE_SIZE) {
     log_warn(LD_GENERAL, "Managed proxy configuration line is too small. "
              "Discarding");
@@ -285,13 +339,13 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
   }
 
   if (!strncmp(line, PROTO_ENV_ERROR, strlen(PROTO_ENV_ERROR))) {
-    if (mp->conf_state != PT_PROTO_INFANT)
+    if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
     parse_env_error(line);
     goto err;
   } else if (!strncmp(line, PROTO_NEG_FAIL, strlen(PROTO_NEG_FAIL))) {
-    if (mp->conf_state != PT_PROTO_INFANT)
+    if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
     log_warn(LD_CONFIG, "Managed proxy could not pick a "
@@ -299,7 +353,7 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
     goto err;
   } else if (!strncmp(line, PROTO_NEG_SUCCESS,
                       strlen(PROTO_NEG_SUCCESS))) {
-    if (mp->conf_state != PT_PROTO_INFANT)
+    if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
     if (parse_version(line,mp) < 0)
@@ -567,46 +621,104 @@ parse_cmethod_line(char *line, managed_proxy_t *mp)
   return r;
 }
 
-/** Prepares the <b>envp</b> of a pluggable transport managed proxy
- *
- *  <b>method</b> is a line with transport methods to be launched.
- *  If <b>is_server</b> is set, prepare a server proxy <b>envp</b>. */
+/** Return a string containing the address:port that <b>transport</b>
+ *  should use. */
+static char *
+get_bindaddr_for_proxy(managed_proxy_t *mp)
+{
+  char *bindaddr = NULL;
+  smartlist_t *string_tmp = smartlist_create();
+
+  tor_assert(mp->is_server);
+
+  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t) {
+    tor_asprintf(&bindaddr, "%s-%s", t, get_bindaddr_for_transport(t));
+    smartlist_add(string_tmp, bindaddr);
+  } SMARTLIST_FOREACH_END(t);
+
+  bindaddr = smartlist_join_strings(string_tmp, ",", 0, NULL);
+
+  SMARTLIST_FOREACH(string_tmp, char *, t, tor_free(t));
+  smartlist_free(string_tmp);
+
+  return bindaddr;
+}
+
+/** Prepare the <b>envp</b> of managed proxy <b>mp</b> */
 static void
-set_environ(char ***envp, const char *method, int is_server)
+set_environ(char ***envp, managed_proxy_t *mp)
 {
   or_options_t *options = get_options();
   char **tmp=NULL;
   char *state_loc=NULL;
+  char *transports_to_launch=NULL;
+  char *bindaddr=NULL;
 
-  int n_envs = is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
+  int n_envs = mp->is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
 
   /* allocate enough space for our env. vars and a NULL pointer */
   *envp = tor_malloc(sizeof(char*)*(n_envs+1));
   tmp = *envp;
 
   state_loc = get_datadir_fname("pt_state/");
+  transports_to_launch =
+    smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
 
-  /* these should all be customizable */
   tor_asprintf(tmp++, "HOME=%s", getenv("HOME"));
   tor_asprintf(tmp++, "PATH=%s", getenv("PATH"));
   tor_asprintf(tmp++, "TOR_PT_STATE_LOCATION=%s", state_loc);
   tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
-  if (is_server) {
-    /* ASN check for ORPort values, should we be here if it's 0? */
+  if (mp->is_server) {
+    bindaddr = get_bindaddr_for_proxy(mp);
+
     tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* temp */
-    tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s",
-                 get_bindaddr_for_transport(method));
-    tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", method);
+    tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
+    tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
     tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* temp*/
   } else {
-    tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", method);
+    tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", transports_to_launch);
   }
   *tmp = NULL;
 
   tor_free(state_loc);
+  tor_free(transports_to_launch);
+  tor_free(bindaddr);
 }
 
-/* ASN is this too ugly/stupid? */
+/** Register <b>transport</b> using proxy with <b>proxy_argv</b> to
+ *  the managed proxy subsystem.
+ *  If <b>is_server</b> is true, then the proxy is a server proxy. */
+void
+pt_kickstart_proxy(char *transport, char **proxy_argv, int is_server)
+{
+  managed_proxy_t *mp=NULL;
+
+  mp = get_managed_proxy_by_argv(proxy_argv);
+
+  if (!mp) { /* we haven't seen this proxy before */
+    /* create a managed proxy */
+    managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
+    mp->conf_state = PT_PROTO_INFANT;
+    mp->is_server = is_server;
+    mp->argv = proxy_argv;
+    mp->transports = smartlist_create();
+
+    mp->transports_to_launch = smartlist_create();
+    add_transport_to_proxy(transport, mp);
+
+    /* register the managed proxy */
+    if (!unconfigured_proxy_list)
+      unconfigured_proxy_list = smartlist_create();
+    smartlist_add(unconfigured_proxy_list, mp);
+
+    n_unconfigured_proxies++; /* ASN should we care about overflows here?
+                                 I say no. */
+  } else { /* known proxy. just add transport to its transport list */
+    add_transport_to_proxy(transport, mp);
+    free_execve_args(proxy_argv);
+  }
+}
+
 /** Frees the array of pointers in <b>arg</b> used as arguments to
     execve. */
 static INLINE void

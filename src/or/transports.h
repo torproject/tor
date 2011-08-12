@@ -11,13 +11,13 @@
 #ifndef TOR_TRANSPORTS_H
 #define TOR_TRANSPORTS_H
 
-int pt_managed_launch_proxy(const char *method,
-                         char **proxy_argv, int is_server);
+void pt_kickstart_proxy(char *method, char **proxy_argv,
+                        int is_server);
 
-#define pt_managed_launch_client_proxy(m, pa)  \
-  pt_managed_launch_proxy(m, pa, 0)
-#define pt_managed_launch_server_proxy(m, pa) \
-  pt_managed_launch_proxy(m, pa, 1)
+#define pt_kickstart_client_proxy(m, pa)  \
+  pt_kickstart_proxy(m, pa, 0)
+#define pt_kickstart_server_proxy(m, pa) \
+  pt_kickstart_proxy(m, pa, 1)
 
 void pt_configure_remaining_proxies(void);
 
@@ -29,6 +29,7 @@ void pt_free_all(void);
 /** State of the managed proxy configuration protocol. */
 enum pt_proto_state {
   PT_PROTO_INFANT, /* was just born */
+  PT_PROTO_LAUNCHED, /* was just launched */
   PT_PROTO_ACCEPTING_METHODS, /* accepting methods */
   PT_PROTO_CONFIGURED, /* configured successfully */
   PT_PROTO_COMPLETED, /* configure and registered its transports */
@@ -38,6 +39,7 @@ enum pt_proto_state {
 /** Structure containing information of a managed proxy. */
 typedef struct {
   enum pt_proto_state conf_state; /* the current configuration state */
+  char **argv; /* the cli arguments of this proxy */
   int conf_protocol; /* the configuration protocol version used */
 
   int is_server; /* is it a server proxy? */
@@ -45,7 +47,8 @@ typedef struct {
   FILE *stdout; /* a stream to its stdout
                    (closed in managed_proxy_destroy()) */
 
-  smartlist_t *transports; /* list of transport_t this proxy spawns */
+  smartlist_t *transports_to_launch; /* transports to-be-launched by this proxy */
+  smartlist_t *transports; /* list of transport_t this proxy spawned */
 } managed_proxy_t;
 
 int parse_cmethod_line(char *line, managed_proxy_t *mp);
