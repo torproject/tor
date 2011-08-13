@@ -4161,4 +4161,9 @@ connection_free_all(void)
     smartlist_free(outgoing_addrs);
     outgoing_addrs = NULL;
   }
+
+#ifdef USE_BUFFEREVENTS
+  if (global_rate_limit)
+    bufferevent_rate_limit_group_free(global_rate_limit);
+#endif
 }
