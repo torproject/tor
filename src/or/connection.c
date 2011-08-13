@@ -561,41 +561,6 @@ connection_free(connection_t *conn)
   _connection_free(conn);
 }
 
-/** Call _connection_free() on every connection in our array, and release all
- * storage held by connection.c. This is used by cpuworkers and dnsworkers
- * when they fork, so they don't keep resources held open (especially
- * sockets).
- *
- * Don't do the checks in connection_free(), because they will
- * fail.
- */
-void
-connection_free_all(void)
-{
-  smartlist_t *conns = get_connection_array();
-
-  /* We don't want to log any messages to controllers. */
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-    if (conn->type == CONN_TYPE_CONTROL)
-      TO_CONTROL_CONN(conn)->event_mask = 0);
-
-  control_update_global_event_mask();
-
-  /* Unlink everything from the identity map. */
-  connection_or_clear_identity_map();
-
-  /* Clear out our list of broken connections */
-  clear_broken_connection_map(0);
-
-  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
-
-  if (outgoing_addrs) {
-    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
-    smartlist_free(outgoing_addrs);
-    outgoing_addrs = NULL;
-  }
-}
-
 /**
  * Called when we're about to finally unlink and free a connection:
  * perform necessary accounting and cleanup
@@ -4163,3 +4128,37 @@ proxy_type_to_string(int proxy_type)
   return NULL; /*Unreached*/
 }
 
+/** Call _connection_free() on every connection in our array, and release all
+ * storage held by connection.c. This is used by cpuworkers and dnsworkers
+ * when they fork, so they don't keep resources held open (especially
+ * sockets).
+ *
+ * Don't do the checks in connection_free(), because they will
+ * fail.
+ */
+void
+connection_free_all(void)
+{
+  smartlist_t *conns = get_connection_array();
+
+  /* We don't want to log any messages to controllers. */
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+    if (conn->type == CONN_TYPE_CONTROL)
+      TO_CONTROL_CONN(conn)->event_mask = 0);
+
+  control_update_global_event_mask();
+
+  /* Unlink everything from the identity map. */
+  connection_or_clear_identity_map();
+
+  /* Clear out our list of broken connections */
+  clear_broken_connection_map(0);
+
+  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
+
+  if (outgoing_addrs) {
+    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
+    smartlist_free(outgoing_addrs);
+    outgoing_addrs = NULL;
+  }
+}
