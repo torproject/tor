@@ -1228,7 +1228,7 @@ options_act(or_options_t *old_options)
 
   /* If we have pluggable transport related options enabled, see if we
      should warn the user about potential configuration problems. */
-  if (options->Bridges || options->ClientTransportPlugin || options->ServerTransportPlugin)
+  if (options->Bridges || options->ClientTransportPlugin)
     validate_pluggable_transports_config();
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -4696,7 +4696,7 @@ parse_client_transport_line(const char *line, int validate_only)
   int r;
   char *field2=NULL;
 
-  char *name=NULL;
+  const char *name=NULL;
   char *addrport=NULL;
   tor_addr_t addr;
   uint16_t port = 0;
@@ -4801,7 +4801,7 @@ parse_server_transport_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
-  char *name=NULL;
+  const char *name=NULL;
   char *type=NULL;
   char *addrport=NULL;
   tor_addr_t addr;
@@ -5839,7 +5839,7 @@ get_bindaddr_for_transport(const char *transport)
     state */
 void
 save_transport_to_state(const char *transport,
-                        tor_addr_t *addr, uint16_t port)
+                        const tor_addr_t *addr, uint16_t port)
 {
   or_state_t *state = get_or_state();
 

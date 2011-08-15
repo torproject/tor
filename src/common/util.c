@@ -2941,8 +2941,6 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 #define CHILD_STATE_EXEC 8
 #define CHILD_STATE_FAILEXEC 9
 
-#define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
-
 /** Start a program in the background. If <b>filename</b> contains a '/',
  * then it will be treated as an absolute or relative path.  Otherwise the
  * system path will be searched for <b>filename</b>. The strings in

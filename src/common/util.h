@@ -353,6 +353,7 @@ void tor_check_port_forwarding(const char *filename,
 int tor_spawn_background(const char *const filename, int *stdout_read,
                          int *stderr_read, const char **argv,
                          const char **envp);
+#define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
 #ifdef MS_WINDOWS
 HANDLE load_windows_system_library(const TCHAR *library_name);

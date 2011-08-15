@@ -11,7 +11,7 @@
 #ifndef TOR_TRANSPORTS_H
 #define TOR_TRANSPORTS_H
 
-void pt_kickstart_proxy(char *method, char **proxy_argv,
+void pt_kickstart_proxy(const char *method, char **proxy_argv,
                         int is_server);
 
 #define pt_kickstart_client_proxy(m, pa)  \
@@ -51,12 +51,12 @@ typedef struct {
   smartlist_t *transports; /* list of transport_t this proxy spawned */
 } managed_proxy_t;
 
-int parse_cmethod_line(char *line, managed_proxy_t *mp);
-int parse_smethod_line(char *line, managed_proxy_t *mp);
+int parse_cmethod_line(const char *line, managed_proxy_t *mp);
+int parse_smethod_line(const char *line, managed_proxy_t *mp);
 
-int parse_version(char *line, managed_proxy_t *mp);
-void parse_env_error(char *line);
-void handle_proxy_line(char *line, managed_proxy_t *mp);
+int parse_version(const char *line, managed_proxy_t *mp);
+void parse_env_error(const char *line);
+void handle_proxy_line(const char *line, managed_proxy_t *mp);
 
 #endif
 

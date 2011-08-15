@@ -64,7 +64,7 @@ int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
 void save_transport_to_state(const char *transport_name,
-                             tor_addr_t *addr, uint16_t port);
+                             const tor_addr_t *addr, uint16_t port);
 const char *get_bindaddr_for_transport(const char *transport);
 
 int options_need_geoip_info(or_options_t *options, const char **reason_out);

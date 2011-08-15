@@ -11,19 +11,21 @@
 #include "config.h"
 #include "circuitbuild.h"
 #include "transports.h"
+#include "util.h"
 
 /* ASN TIDY THESE UP*/
-static void set_environ(char ***envp, managed_proxy_t *mp);
-static INLINE int proxy_configuration_finished(managed_proxy_t *mp);
+static void set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp);
+static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
-static void managed_proxy_destroy(managed_proxy_t *mp,
-                                  int also_free_transports);
+static void managed_proxy_destroy_impl(managed_proxy_t *mp,
+                                       int also_free_transports);
+#define managed_proxy_destroy(mp) managed_proxy_destroy_impl(mp, 0)
+#define managed_proxy_destroy_with_transports(mp) managed_proxy_destroy_impl(mp, 1)
+
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void configure_proxy(managed_proxy_t *mp);
 
-static void register_server_proxy(managed_proxy_t *mp);
-
-static void parse_method_error(char *line, int is_server_method);
+static void parse_method_error(const char *line, int is_server_method);
 #define parse_server_method_error(l) parse_method_error(l, 1)
 #define parse_client_method_error(l) parse_method_error(l, 0)
 
@@ -54,20 +56,19 @@ static INLINE void free_execve_args(char **arg);
 
 /** List of unconfigured managed proxies. */
 static smartlist_t *unconfigured_proxy_list = NULL;
-/** Number of unconfigured managed proxies. */
-static int n_unconfigured_proxies = 0;
 
-/*  The main idea is:
+/*  The main idea here is:
 
     A managed proxy is represented by a managed_proxy_t struct and can
     spawn multiple transports.
 
     unconfigured_proxy_list is a list of all the unconfigured managed
-    proxies; everytime we spawn a managed proxy we add it in that
-    list.
-    In every run_scheduled_event() tick, we attempt to configure each
-    managed proxy further, using the configuration protocol defined in
-    the 180_pluggable_transport.txt proposal.
+    proxies; everytime we find a managed proxy in torrc we add it in
+    that list.
+    In every run_scheduled_event() tick, we attempt to launch and then
+    configure each managed proxy, using the configuration protocol
+    defined in the 180_pluggable_transport.txt proposal. A managed
+    proxy might need several ticks to get fully configured.
 
     When a managed proxy is fully configured, we register all its
     transports to the circuitbuild.c subsystem - like we do with
@@ -78,7 +79,8 @@ static int n_unconfigured_proxies = 0;
 int
 pt_proxies_configuration_pending(void)
 {
-  return !!n_unconfigured_proxies;
+  if (!unconfigured_proxy_list) return 0;
+  return !!smartlist_len(unconfigured_proxy_list);
 }
 
 /** Return true if <b>mp</b> has the same argv as <b>proxy_argv</b> */
@@ -120,7 +122,7 @@ get_managed_proxy_by_argv(char **proxy_argv)
 
 /** Add <b>transport</b> to managed proxy <b>mp</b>. */
 static void
-add_transport_to_proxy(char *transport, managed_proxy_t *mp)
+add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
 {
   tor_assert(mp->transports_to_launch);
   if (!smartlist_string_isin(mp->transports_to_launch, transport))
@@ -137,14 +139,8 @@ launch_managed_proxy(managed_proxy_t *mp)
   int stdout_pipe=-1, stderr_pipe=-1;
 
   /* prepare the environment variables for the managed proxy */
-  set_environ(&envp, mp);
+  set_managed_proxy_environment(&envp, mp);
 
-  char **tmp = envp;
-  printf("PRINTING ENVP\n");
-  while (*tmp)
-    printf("%s\n", *tmp++);
-
-  /* ASN we should probably check if proxy_argv[0] is executable by our user */
   retval = tor_spawn_background(mp->argv[0], &stdout_pipe,
                                 &stderr_pipe, (const char **)mp->argv,
                                 (const char **)envp);
@@ -153,7 +149,7 @@ launch_managed_proxy(managed_proxy_t *mp)
     return -1;
   }
 
-  /* free the memory allocated for the execve() */
+  /* free the memory allocated by set_managed_proxy_environment(). */
   free_execve_args(envp);
 
   /* Set stdout/stderr pipes to be non-blocking */
@@ -177,8 +173,8 @@ pt_configure_remaining_proxies(void)
 {
   log_warn(LD_CONFIG, "We start configuring remaining managed proxies!");
   SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list,  managed_proxy_t *, mp) {
-    if (proxy_configuration_finished(mp)) /* finished managed proxies
-                                             shouldn't be here */
+    /* configured proxies shouldn't be in unconfigured_proxy_list. */
+    if (proxy_configuration_finished(mp))
       assert(0);
 
     configure_proxy(mp);
@@ -205,15 +201,16 @@ configure_proxy(managed_proxy_t *mp)
     r = get_string_from_pipe(mp->stdout, stdout_buf,
                              sizeof(stdout_buf) - 1);
 
-    if (r == IO_STREAM_CLOSED || r == IO_STREAM_TERM) {
+    if (r  == IO_STREAM_OKAY) { /* got a line; handle it! */
+      handle_proxy_line((const char *)stdout_buf, mp);
+    } else if (r == IO_STREAM_EAGAIN) { /* check back later */
+      return;
+    } else if (r == IO_STREAM_CLOSED || r == IO_STREAM_TERM) { /* snap! */
       log_warn(LD_GENERAL, "Managed proxy stream closed. "
                "Most probably application stopped running");
       mp->conf_state = PT_PROTO_BROKEN;
-    } else if (r == IO_STREAM_EAGAIN) {
-      return;
-    } else {
-      tor_assert(r == IO_STREAM_OKAY);
-      handle_proxy_line(stdout_buf, mp);
+    } else { /* unknown stream status */
+      log_warn(LD_GENERAL, "Unknown stream status while configuring proxy.");
     }
 
     /* if the proxy finished configuring, exit the loop. */
@@ -226,7 +223,7 @@ configure_proxy(managed_proxy_t *mp)
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
-register_server_proxy(managed_proxy_t *mp)
+register_server_proxy(const managed_proxy_t *mp)
 {
   if (mp->is_server) {
     SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
@@ -238,7 +235,7 @@ register_server_proxy(managed_proxy_t *mp)
 /** Register all the transports supported by client managed proxy
  *  <b>mp</b> to the bridge subsystem. */
 static void
-register_client_proxy(managed_proxy_t *mp)
+register_client_proxy(const managed_proxy_t *mp)
 {
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     if (transport_add(t)<0) {
@@ -252,7 +249,7 @@ register_client_proxy(managed_proxy_t *mp)
 
 /** Register the transports of managed proxy <b>mp</b>. */
 static INLINE void
-register_proxy(managed_proxy_t *mp)
+register_proxy(const managed_proxy_t *mp)
 {
   if (mp->is_server)
     register_server_proxy(mp);
@@ -260,35 +257,11 @@ register_proxy(managed_proxy_t *mp)
     register_client_proxy(mp);
 }
 
-/** Handle a configured or broken managed proxy <b>mp</b>. */
-static void
-handle_finished_proxy(managed_proxy_t *mp)
-{
-  switch (mp->conf_state) {
-  case PT_PROTO_BROKEN: /* if broken: */
-    managed_proxy_destroy(mp, 1); /* destroy it and all its transports */
-    break;
-  case PT_PROTO_CONFIGURED: /* if configured correctly: */
-    register_proxy(mp); /* register transports */
-    mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed, */
-    managed_proxy_destroy(mp, 0); /* destroy the managed proxy struct,
-                                     keeping the transports intact */
-    break;
-  default:
-    log_warn(LD_CONFIG, "Unfinished managed proxy in "
-             "handle_finished_proxy().");
-    assert(0);
-  }
-
-  n_unconfigured_proxies--;
-  tor_assert(n_unconfigured_proxies >= 0);
-}
-
 /** Free memory allocated by managed proxy <b>mp</b>.
  * If <b>also_free_transports</b> is set, also free the transports
  * associated with this managed proxy. */
 static void
-managed_proxy_destroy(managed_proxy_t *mp, int also_free_transports)
+managed_proxy_destroy_impl(managed_proxy_t *mp, int also_free_transports)
 {
   /* transport_free() all its transports */
   if (also_free_transports)
@@ -316,19 +289,59 @@ managed_proxy_destroy(managed_proxy_t *mp, int also_free_transports)
   tor_free(mp);
 }
 
+
+/** Handle a configured or broken managed proxy <b>mp</b>. */
+static void
+handle_finished_proxy(managed_proxy_t *mp)
+{
+  switch (mp->conf_state) {
+  case PT_PROTO_BROKEN: /* if broken: */
+    managed_proxy_destroy_with_transports(mp); /* destroy it and all its transports */
+    break;
+  case PT_PROTO_CONFIGURED: /* if configured correctly: */
+    register_proxy(mp); /* register transports */
+    mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed, */
+    managed_proxy_destroy(mp); /* destroy the managed proxy struct,
+                                     keeping the transports intact */
+    break;
+  default:
+    log_warn(LD_CONFIG, "Unfinished managed proxy in "
+             "handle_finished_proxy().");
+    assert(0);
+  }
+
+  tor_assert(smartlist_len(unconfigured_proxy_list) >= 0);
+}
+
 /** Return true if the configuration of the managed proxy <b>mp</b> is
     finished. */
 static INLINE int
-proxy_configuration_finished(managed_proxy_t *mp)
+proxy_configuration_finished(const managed_proxy_t *mp)
 {
   return (mp->conf_state == PT_PROTO_CONFIGURED ||
           mp->conf_state == PT_PROTO_BROKEN);
 }
 
+
+/** This function is called when a proxy sends an {S,C}METHODS DONE message,
+ */
+static void
+handle_methods_done(const managed_proxy_t *mp)
+{
+  tor_assert(mp->transports);
+
+  if (smartlist_len(mp->transports) == 0)
+    log_warn(LD_GENERAL, "Proxy was spawned successfully, "
+             "but it didn't laucn any pluggable transport listeners!");
+
+  log_warn(LD_CONFIG, "%s managed proxy configuration completed!",
+           mp->is_server ? "Server" : "Client");
+}
+
 /** Handle a configuration protocol <b>line</b> received from a
  *  managed proxy <b>mp</b>. */
 void
-handle_proxy_line(char *line, managed_proxy_t *mp)
+handle_proxy_line(const char *line, managed_proxy_t *mp)
 {
   printf("Judging line: %s\n", line);
 
@@ -338,21 +351,20 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  if (!strncmp(line, PROTO_ENV_ERROR, strlen(PROTO_ENV_ERROR))) {
+  if (!strcmpstart(line, PROTO_ENV_ERROR)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
     parse_env_error(line);
     goto err;
-  } else if (!strncmp(line, PROTO_NEG_FAIL, strlen(PROTO_NEG_FAIL))) {
+  } else if (!strcmpstart(line, PROTO_NEG_FAIL)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
     log_warn(LD_CONFIG, "Managed proxy could not pick a "
              "configuration protocol version.");
     goto err;
-  } else if (!strncmp(line, PROTO_NEG_SUCCESS,
-                      strlen(PROTO_NEG_SUCCESS))) {
+  } else if (!strcmpstart(line, PROTO_NEG_SUCCESS)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
 
@@ -362,37 +374,35 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
     tor_assert(mp->conf_protocol != 0);
     mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
     return;
-  } else if (!strncmp(line, PROTO_CMETHODS_DONE,
-                      strlen(PROTO_CMETHODS_DONE))) {
+  } else if (!strcmpstart(line, PROTO_CMETHODS_DONE)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
-    log_warn(LD_CONFIG, "Client managed proxy configuration completed!");
+    handle_methods_done(mp);
+
     mp->conf_state = PT_PROTO_CONFIGURED;
     return;
-  } else if (!strncmp(line, PROTO_SMETHODS_DONE,
-                      strlen(PROTO_SMETHODS_DONE))) {
+  } else if (!strcmpstart(line, PROTO_SMETHODS_DONE)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
-    log_warn(LD_CONFIG, "Server managed proxy configuration completed!");
+    handle_methods_done(mp);
+
     mp->conf_state = PT_PROTO_CONFIGURED;
     return;
-  } else if (!strncmp(line, PROTO_CMETHOD_ERROR,
-                      strlen(PROTO_CMETHOD_ERROR))) {
+  } else if (!strcmpstart(line, PROTO_CMETHOD_ERROR)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
     parse_client_method_error(line);
     goto err;
-  } else if (!strncmp(line, PROTO_SMETHOD_ERROR,
-                      strlen(PROTO_SMETHOD_ERROR))) {
+  } else if (!strcmpstart(line, PROTO_SMETHOD_ERROR)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
     parse_server_method_error(line);
     goto err;
-  } else if (!strncmp(line, PROTO_CMETHOD, strlen(PROTO_CMETHOD))) {
+  } else if (!strcmpstart(line, PROTO_CMETHOD)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
@@ -400,7 +410,7 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
       goto err;
 
     return;
-  } else if (!strncmp(line, PROTO_SMETHOD, strlen(PROTO_SMETHOD))) {
+  } else if (!strcmpstart(line, PROTO_SMETHOD)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
@@ -408,6 +418,9 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
       goto err;
 
     return;
+  } else if (!strcmpstart(line, SPAWN_ERROR_MESSAGE)) {
+    log_warn(LD_GENERAL, "Could not launch managed proxy executable!");
+    goto err;
   }
 
   log_warn(LD_CONFIG, "Unknown line received by managed proxy. (%s)", line);
@@ -419,10 +432,8 @@ handle_proxy_line(char *line, managed_proxy_t *mp)
 
 /** Parses an ENV-ERROR <b>line</b> and warns the user accordingly. */
 void
-parse_env_error(char *line)
+parse_env_error(const char *line)
 {
-  tor_assert(!strncmp(line, PROTO_ENV_ERROR, strlen(PROTO_ENV_ERROR)));
-
   /* (Length of the protocol string) plus (a space) and (the first char of
      the error message) */
   if (strlen(line) < (strlen(PROTO_ENV_ERROR) + 2))
@@ -437,10 +448,8 @@ parse_env_error(char *line)
 /** Handles a VERSION <b>line</b>. Updates the configuration protocol
  *  version in <b>mp</b>. */
 int
-parse_version(char *line, managed_proxy_t *mp)
+parse_version(const char *line, managed_proxy_t *mp)
 {
- tor_assert(!strncmp(line, PROTO_NEG_SUCCESS, strlen(PROTO_NEG_SUCCESS)));
-
   if (strlen(line) < (strlen(PROTO_NEG_SUCCESS) + 2)) {
     log_warn(LD_CONFIG, "Managed proxy sent us malformed %s line.",
              PROTO_NEG_SUCCESS);
@@ -461,7 +470,7 @@ parse_version(char *line, managed_proxy_t *mp)
  *  accordingly.  If <b>is_server</b> it is an SMETHOD-ERROR,
  *  otherwise it is a CMETHOD-ERROR. */
 static void
-parse_method_error(char *line, int is_server)
+parse_method_error(const char *line, int is_server)
 {
   const char* error = is_server ?
     PROTO_SMETHOD_ERROR : PROTO_CMETHOD_ERROR;
@@ -480,7 +489,7 @@ parse_method_error(char *line, int is_server)
 /** Parses an SMETHOD <b>line</b> and if well-formed it registers the
  *  new transport in <b>mp</b>. */
 int
-parse_smethod_line(char *line, managed_proxy_t *mp)
+parse_smethod_line(const char *line, managed_proxy_t *mp)
 {
   int r;
   smartlist_t *items = NULL;
@@ -545,7 +554,7 @@ parse_smethod_line(char *line, managed_proxy_t *mp)
 /** Parses a CMETHOD <b>line</b>, and if well-formed it registers
  *  the new transport in <b>mp</b>. */
 int
-parse_cmethod_line(char *line, managed_proxy_t *mp)
+parse_cmethod_line(const char *line, managed_proxy_t *mp)
 {
   int r;
   smartlist_t *items = NULL;
@@ -622,9 +631,10 @@ parse_cmethod_line(char *line, managed_proxy_t *mp)
 }
 
 /** Return a string containing the address:port that <b>transport</b>
- *  should use. */
+ *  should use. It's the responsibility of the caller to free() the
+ *  received string. */
 static char *
-get_bindaddr_for_proxy(managed_proxy_t *mp)
+get_bindaddr_for_proxy(const managed_proxy_t *mp)
 {
   char *bindaddr = NULL;
   smartlist_t *string_tmp = smartlist_create();
@@ -646,7 +656,7 @@ get_bindaddr_for_proxy(managed_proxy_t *mp)
 
 /** Prepare the <b>envp</b> of managed proxy <b>mp</b> */
 static void
-set_environ(char ***envp, managed_proxy_t *mp)
+set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
 {
   or_options_t *options = get_options();
   char **tmp=NULL;
@@ -660,7 +670,7 @@ set_environ(char ***envp, managed_proxy_t *mp)
   *envp = tor_malloc(sizeof(char*)*(n_envs+1));
   tmp = *envp;
 
-  state_loc = get_datadir_fname("pt_state/");
+  state_loc = get_datadir_fname("pt_state/"); /* XXX temp */
   transports_to_launch =
     smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
 
@@ -671,10 +681,10 @@ set_environ(char ***envp, managed_proxy_t *mp)
   if (mp->is_server) {
     bindaddr = get_bindaddr_for_proxy(mp);
 
-    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* temp */
+    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* XXX temp */
     tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
-    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* temp*/
+    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* XXX temp*/
   } else {
     tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", transports_to_launch);
   }
@@ -689,7 +699,7 @@ set_environ(char ***envp, managed_proxy_t *mp)
  *  the managed proxy subsystem.
  *  If <b>is_server</b> is true, then the proxy is a server proxy. */
 void
-pt_kickstart_proxy(char *transport, char **proxy_argv, int is_server)
+pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp=NULL;
 
@@ -710,9 +720,6 @@ pt_kickstart_proxy(char *transport, char **proxy_argv, int is_server)
     if (!unconfigured_proxy_list)
       unconfigured_proxy_list = smartlist_create();
     smartlist_add(unconfigured_proxy_list, mp);
-
-    n_unconfigured_proxies++; /* ASN should we care about overflows here?
-                                 I say no. */
   } else { /* known proxy. just add transport to its transport list */
     add_transport_to_proxy(transport, mp);
     free_execve_args(proxy_argv);
@@ -743,9 +750,9 @@ pt_free_all(void)
        and we should free them here. */
     SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list, managed_proxy_t *, mp) {
       if (mp->conf_state == PT_PROTO_COMPLETED)
-        managed_proxy_destroy(mp,0);
+        managed_proxy_destroy(mp);
       else
-        managed_proxy_destroy(mp,1);
+        managed_proxy_destroy_with_transports(mp);
     } SMARTLIST_FOREACH_END(mp);
 
     smartlist_clear(unconfigured_proxy_list);
