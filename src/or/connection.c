@@ -1787,6 +1787,8 @@ retry_listener_ports(smartlist_t *old_conns,
     socklen_t listensocklen = 0;
     char *address=NULL;
     connection_t *conn;
+    int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
+    tor_assert(real_port <= UINT16_MAX);
 
     if (port->is_unix_addr) {
       listensockaddr = (struct sockaddr *)
@@ -1795,7 +1797,7 @@ retry_listener_ports(smartlist_t *old_conns,
     } else {
       listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
       listensocklen = tor_addr_to_sockaddr(&port->addr,
-                                           port->port,
+                                           real_port,
                                            listensockaddr,
                                            sizeof(struct sockaddr_storage));
       address = tor_dup_addr(&port->addr);
