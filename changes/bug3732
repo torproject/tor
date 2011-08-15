@@ -1,0 +1,7 @@
+  o Major bugfixes:
+
+    - Remove an extra pair of quotation marks around the error
+      message in control-port STATUS_GENERAL BUG events.  Bugfix on
+      0.1.2.6-alpha; fixes bug 3732.
+
+
