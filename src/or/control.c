@@ -3480,7 +3480,7 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
       severity <= LOG_NOTICE) {
     char *esc = esc_for_log(msg);
     ++disable_log_messages;
-    control_event_general_status(severity, "BUG REASON=\"%s\"", esc);
+    control_event_general_status(severity, "BUG REASON=%s", esc);
     --disable_log_messages;
     tor_free(esc);
   }
