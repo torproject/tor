@@ -635,13 +635,15 @@ rend_service_load_keys(void)
       }
 
       /* Prepare client_keys and hostname files. */
-      if (!(cfile = start_writing_to_stdio_file(cfname, OPEN_FLAGS_REPLACE,
+      if (!(cfile = start_writing_to_stdio_file(cfname,
+                                                OPEN_FLAGS_REPLACE | O_TEXT,
                                                 0600, &open_cfile))) {
         log_warn(LD_CONFIG, "Could not open client_keys file %s",
                  escaped(cfname));
         goto err;
       }
-      if (!(hfile = start_writing_to_stdio_file(fname, OPEN_FLAGS_REPLACE,
+      if (!(hfile = start_writing_to_stdio_file(fname,
+                                                OPEN_FLAGS_REPLACE | O_TEXT,
                                                 0600, &open_hfile))) {
         log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(fname));
         goto err;

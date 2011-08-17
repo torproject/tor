@@ -958,8 +958,10 @@ fmt_addr(const tor_addr_t *addr)
 {
   static char buf[TOR_ADDR_BUF_LEN];
   if (!addr) return "<null>";
-  tor_addr_to_str(buf, addr, sizeof(buf), 0);
-  return buf;
+  if (tor_addr_to_str(buf, addr, sizeof(buf), 0))
+    return buf;
+  else
+    return "???";
 }
 
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string

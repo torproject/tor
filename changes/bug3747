@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Write control ports to disk only after switching UID and
+      creating the data directory. This way, we don't fail when
+      starting up with a nonexistant DataDirectory and a
+      ControlPortWriteToFile setting based on that directory. Fixes
+      bug 3747; bugfix on Tor 0.2.2.26-beta.

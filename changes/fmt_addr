@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When unable to format an address as a string, report its value
+      as "???" rather than reusing the last formatted address. Bugfix
+      on 0.2.1.5-alpha.

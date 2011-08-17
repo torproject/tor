@@ -1,0 +1,15 @@
+  o Minor bugfixes:
+
+    - Write several files in text mode, on OSes that distinguish text
+      mode from binary mode (namely, Windows).  These files are:
+      buffer-stats, dirreq-stats, and entry-stats on relays that collect
+      those statistics; client_keys and hostname files for hidden
+      services that use authentication; and (in the tor-gencert utility)
+      newly generated identity and signing keys.  Previously, we
+      wouldn't specify text mode or binary mode, leading to an assertion
+      failure.  Fixes bug 3607.  Bugfix on 0.2.1.1-alpha (when the
+      DirRecordUsageByCountry option which would have triggered the
+      assertion failure was added), although this assertion failure
+      would have occurred in tor-gencert on Windows in 0.2.0.1-alpha.
+
+
