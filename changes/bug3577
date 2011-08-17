@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Allow GETINFO fingerprint to return a fingerprint even when
-      we have not yet built a router descriptor. Fixes bug 3577;
-      bugfix on 0.2.0.1-alpha.
