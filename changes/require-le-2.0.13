@@ -1,0 +1,7 @@
+  o Build changes:
+    - Building Tor with bufferevent support now requires Libevent
+      2.0.13-stable or later. Previous versions of Libevent had bugs
+      in SSL-related bufferevents and related issues that would make
+      Tor work badly with bufferevents. Requiring 2.0.13-stable also
+      means that Tor with bufferevents can take advantage of Libevent
+      APIs introduced after 2.0.8-rc.

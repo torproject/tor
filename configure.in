@@ -438,7 +438,7 @@ int x = 1;
       AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <event2/event.h>
-#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000800
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000d00
 #error
 int x = y(zz);
 #else
@@ -446,7 +446,7 @@ int x = 1;
 #endif
    ])], [ AC_MSG_RESULT([yes]) ],
       [ AC_MSG_RESULT([no])
-        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.8-rc or later]) ] )
+        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.13-stable or later]) ] )
     fi
   fi
 fi
