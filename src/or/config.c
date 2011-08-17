@@ -591,8 +591,6 @@ static int write_configuration_file(const char *fname,
 static config_line_t *get_assigned_option(const config_format_t *fmt,
                                         const void *options, const char *key,
                                         int escape_val);
-static const config_var_t *config_find_option(const config_format_t *fmt,
-                                        const char *key);
 static void config_init(const config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
                              int from_setconf, char **msg);
@@ -701,7 +699,6 @@ set_options(or_options_t *new_val, char **msg)
   int i;
   smartlist_t *elements;
   config_line_t *line;
-  config_var_t *var;
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
@@ -721,16 +718,14 @@ set_options(or_options_t *new_val, char **msg)
   if (old_options) {
     elements = smartlist_create();
     for (i=0; options_format.vars[i].name; ++i) {
-      var = config_find_option(&options_format,
-                               options_format.vars[i].name);
+      const config_var_t *var = &options_format.vars[i];
+      const char *var_name = var->name;
       if (var->type == CONFIG_TYPE_LINELIST_S ||
           var->type == CONFIG_TYPE_OBSOLETE) {
         continue;
       }
-      if (!option_is_same(&options_format, new_val, old_options,
-        options_format.vars[i].name)) {
-        line = get_assigned_option(&options_format, new_val,
-        options_format.vars[i].name, 1);
+      if (!option_is_same(&options_format, new_val, old_options, var_name)) {
+        line = get_assigned_option(&options_format, new_val, var_name, 1);
 
         if (line) {
           for (; line; line = line->next) {
