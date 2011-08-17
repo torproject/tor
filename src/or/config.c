@@ -1120,6 +1120,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
   }
 
+  /* Write control ports to disk as appropriate */
+  control_ports_write_to_file();
+
   if (directory_caches_v2_dir_info(options)) {
     size_t len = strlen(options->DataDirectory)+32;
     char *fn = tor_malloc(len);
