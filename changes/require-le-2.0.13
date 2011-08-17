@@ -5,3 +5,8 @@
       Tor work badly with bufferevents. Requiring 2.0.13-stable also
       means that Tor with bufferevents can take advantage of Libevent
       APIs introduced after 2.0.8-rc.
+
+  o Minor bugfixes:
+    - Use evbuffer_copyout() in inspect_evbuffer(). This fixes a memory
+      leak, and lets Libevent worry about how to best copy data out
+      of a buffer.

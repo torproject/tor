@@ -1054,13 +1054,13 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 #ifdef USE_BUFFEREVENTS
 /** Try to read <b>n</b> bytes from <b>buf</b> at <b>pos</b> (which may be
  * NULL for the start of the buffer), copying the data only if necessary.  Set
- * *<b>data</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
+ * *<b>data_out</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
  * if we needed to malloc *<b>data</b> because the original bytes were
  * noncontiguous; 0 otherwise.  Return the number of bytes actually available
- * at <b>data</b>.
+ * at *<b>data_out</b>.
  */
 static ssize_t
-inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
+inspect_evbuffer(struct evbuffer *buf, char **data_out, size_t n, int *free_out,
                  struct evbuffer_ptr *pos)
 {
   int n_vecs, i;
@@ -1075,25 +1075,15 @@ inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
     struct evbuffer_iovec v;
     i = evbuffer_peek(buf, n, pos, &v, 1);
     tor_assert(i == 1);
-    *data = v.iov_base;
+    *data_out = v.iov_base;
     *free_out = 0;
     return v.iov_len;
   } else {
-    struct evbuffer_iovec *vecs =
-      tor_malloc(sizeof(struct evbuffer_iovec)*n_vecs);
-    size_t copied = 0;
-    i = evbuffer_peek(buf, n, NULL, vecs, n_vecs);
-    tor_assert(i == n_vecs);
-    *data = tor_malloc(n);
-    for (i=0; i < n_vecs; ++i) {
-      size_t copy = n - copied;
-      if (copy > vecs[i].iov_len)
-        copy = vecs[i].iov_len;
-      tor_assert(copied+copy <= n);
-      memcpy(data+copied, vecs[i].iov_base, copy);
-      copied += copy;
-    }
+    ev_ssize_t copied;
+    *data_out = tor_malloc(n);
     *free_out = 1;
+    copied = evbuffer_copyout(buf, *data_out, n);
+    tor_assert(copied >= 0 && (size_t)copied == n);
     return copied;
   }
 }
