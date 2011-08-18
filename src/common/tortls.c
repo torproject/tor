@@ -1892,7 +1892,7 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
   const enum bufferevent_ssl_state state = receiving ?
     BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING;
 
-  if (filter) {
+  if (filter || tor_libevent_using_iocp_bufferevents()) {
     /* Grab an extra reference to the SSL, since BEV_OPT_CLOSE_ON_FREE
        means that the SSL will get freed too.
 

@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - The IOCP backend now works even when the user has not specified
+      the (internal, debbuging-only) _UseFilteringSSLBufferevents option.
+      Fixes part of bug 3752; bugfix on 0.2.3.1-alpha.
+

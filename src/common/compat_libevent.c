@@ -164,6 +164,16 @@ struct event_base *the_event_base = NULL;
 #endif
 #endif
 
+#ifdef USE_BUFFEREVENTS
+static int using_iocp_bufferevents = 0;
+
+int
+tor_libevent_using_iocp_bufferevents(void)
+{
+  return using_iocp_bufferevents;
+}
+#endif
+
 /** Initialize the Libevent library and set up the event base. */
 void
 tor_libevent_initialize(tor_libevent_cfg *torcfg)
@@ -187,6 +197,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     if (! torcfg->disable_iocp) {
       evthread_use_windows_threads();
       event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
+      using_iocp_bufferevents = 1;
     }
 #endif
 
