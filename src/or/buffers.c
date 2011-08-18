@@ -1657,9 +1657,9 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
 
     if (res == 0 && n_drain == 0 && want_length <= last_wanted) {
       /* If we drained nothing, and we didn't ask for more than last time,
-       * we're stuck in a loop. That's bad. It shouldn't be possible, but
-       * let's make sure. */
-      log_warn(LD_BUG, "We seem to be caught in a parse loop; breaking out");
+       * then we probably wanted more data than the buffer actually had,
+       * and we're finding out that we're not satisified with it. It's
+       * time to break until we have more data. */
       break;
     }
 
