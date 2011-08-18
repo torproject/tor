@@ -1,4 +1,7 @@
 Changes in version 0.2.2.31-rc - 2011-08-17
+  Tor 0.2.2.31-rc is the second and hopefully final release candidate
+  for the Tor 0.2.2.x series.
+
   o Major bugfixes:
     - Remove an extra pair of quotation marks around the error
       message in control-port STATUS_GENERAL BUG events. Bugfix on
