@@ -1,0 +1,28 @@
+all: tor.exe
+
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common
+
+LIBS = ..\..\..\build-alpha\lib\libevent.a \
+ ..\..\..\build-alpha\lib\libcrypto.a \
+ ..\..\..\build-alpha\lib\libssl.a \
+ ..\..\..\build-alpha\lib\libz.a \
+ ws2_32.lib advapi32.lib shell32.lib
+
+LIBTOR_OBJECTS = buffers.obj circuitbuild.obj circuitlist.obj circuituse.obj \
+	command.obj config.obj connection.obj connection_edge.obj \
+	connection_or.obj control.obj cpuworker.obj directory.obj \
+	dirserv.obj dirvote.obj dns.obj dnsserv.obj geoip.obj \
+	hibernate.obj main.obj microdesc.obj networkstatus.obj \
+	nodelist.obj onion.obj policies.obj reasons.obj relay.obj \
+	rendclient.obj rendcommon.obj rendmid.obj rendservice.obj \
+	rephist.obj router.obj routerlist.obj routerparse.obj status.obj \
+	config_codedigest.obj ntmain.obj
+
+libtor.lib: $(LIBTOR_OBJECTS)
+	lib $(LIBTOR_OBJECTS) /out:libtor.lib
+
+tor.exe: libtor.lib tor_main.obj
+	$(CC) $(CFLAGS) $(LIBS) libtor.lib ..\common\*.lib tor_main.obj
+
+clean:
+	del $(LIBTOR_OBJECTS) *.lib tor.exe

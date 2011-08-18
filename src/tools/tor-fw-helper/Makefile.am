@@ -34,5 +34,5 @@ miniupnpc_cppflags =
 endif
 
 tor_fw_helper_LDFLAGS = $(nat_pmp_ldflags) $(miniupnpc_ldflags)
-tor_fw_helper_LDADD = $(nat_pmp_ldadd) $(miniupnpc_ldadd) ../../common/libor.a @TOR_LIB_WS32@
+tor_fw_helper_LDADD = ../../common/libor.a $(nat_pmp_ldadd) $(miniupnpc_ldadd) @TOR_LIB_WS32@
 tor_fw_helper_CPPFLAGS = $(nat_pmp_cppflags) $(miniupnpc_cppflags)

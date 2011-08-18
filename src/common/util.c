@@ -14,6 +14,9 @@
 #define _GNU_SOURCE
 
 #include "orconfig.h"
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
 #define UTIL_PRIVATE
 #include "util.h"
 #include "torlog.h"
@@ -67,9 +70,6 @@
 #endif
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
 #endif
 #ifdef HAVE_TIME_H
 #include <time.h>
@@ -412,6 +412,32 @@ round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
   return number;
 }
 
+/** Return the number of bits set in <b>v</b>. */
+int
+n_bits_set_u8(uint8_t v)
+{
+  static const int nybble_table[] = {
+    0, /* 0000 */
+    1, /* 0001 */
+    1, /* 0010 */
+    2, /* 0011 */
+    1, /* 0100 */
+    2, /* 0101 */
+    2, /* 0110 */
+    3, /* 0111 */
+    1, /* 1000 */
+    2, /* 1001 */
+    2, /* 1010 */
+    3, /* 1011 */
+    2, /* 1100 */
+    3, /* 1101 */
+    3, /* 1110 */
+    4, /* 1111 */
+  };
+
+  return nybble_table[v & 15] + nybble_table[v>>4];
+}
+
 /* =====
  * String manipulation
  * ===== */
@@ -493,6 +519,23 @@ tor_strisnonupper(const char *s)
     s++;
   }
   return 1;
+}
+
+/** As strcmp, except that either string may be NULL.  The NULL string is
+ * considered to be before any non-NULL string. */
+int
+strcmp_opt(const char *s1, const char *s2)
+{
+  if (!s1) {
+    if (!s2)
+      return 0;
+    else
+      return -1;
+  } else if (!s2) {
+    return 1;
+  } else {
+    return strcmp(s1, s2);
+  }
 }
 
 /** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
@@ -1693,6 +1736,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
   struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
+#else
+  (void)effective_user;
 #endif
 
   tor_assert(dirname);
@@ -2634,6 +2679,30 @@ tor_sscanf(const char *buf, const char *pattern, ...)
   r = tor_vsscanf(buf, pattern, ap);
   va_end(ap);
   return r;
+}
+
+/** Append the string produced by tor_asprintf(<b>pattern</b>, <b>...</b>)
+ * to <b>sl</b>. */
+void
+smartlist_asprintf_add(struct smartlist_t *sl, const char *pattern, ...)
+{
+  va_list ap;
+  va_start(ap, pattern);
+  smartlist_vasprintf_add(sl, pattern, ap);
+  va_end(ap);
+}
+
+/** va_list-based backend of smartlist_asprintf_add. */
+void
+smartlist_vasprintf_add(struct smartlist_t *sl, const char *pattern,
+                        va_list args)
+{
+  char *str = NULL;
+
+  tor_vasprintf(&str, pattern, args);
+  tor_assert(str != NULL);
+
+  smartlist_add(sl, str);
 }
 
 /** Return a new list containing the filenames in the directory <b>dirname</b>.

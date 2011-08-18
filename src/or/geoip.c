@@ -930,10 +930,9 @@ geoip_dirreq_stats_init(time_t now)
   start_of_dirreq_stats_interval = now;
 }
 
-/** Stop collecting directory request stats in a way that we can re-start
- * doing so in geoip_dirreq_stats_init(). */
+/** Reset counters for dirreq stats. */
 void
-geoip_dirreq_stats_term(void)
+geoip_reset_dirreq_stats(time_t now)
 {
   SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
       c->n_v2_ns_requests = c->n_v3_ns_requests = 0;
@@ -965,21 +964,131 @@ geoip_dirreq_stats_term(void)
       tor_free(this);
     }
   }
-  start_of_dirreq_stats_interval = 0;
+  start_of_dirreq_stats_interval = now;
 }
 
-/** Write dirreq statistics to $DATADIR/stats/dirreq-stats and return when
- * we would next want to write. */
+/** Stop collecting directory request stats in a way that we can re-start
+ * doing so in geoip_dirreq_stats_init(). */
+void
+geoip_dirreq_stats_term(void)
+{
+  geoip_reset_dirreq_stats(0);
+}
+
+/** Return a newly allocated string containing the dirreq statistics
+ * until <b>now</b>, or NULL if we're not collecting dirreq stats. */
+char *
+geoip_format_dirreq_stats(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  double v2_share = 0.0, v3_share = 0.0;
+  int i;
+  char *v3_ips_string, *v2_ips_string, *v3_reqs_string, *v2_reqs_string,
+       *v2_share_string = NULL, *v3_share_string = NULL,
+       *v3_direct_dl_string, *v2_direct_dl_string,
+       *v3_tunneled_dl_string, *v2_tunneled_dl_string;
+  char *result;
+
+  if (!start_of_dirreq_stats_interval)
+    return NULL; /* Not initialized. */
+
+  format_iso_time(t, now);
+  v2_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
+  v3_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS);
+  v2_reqs_string = geoip_get_request_history(
+                   GEOIP_CLIENT_NETWORKSTATUS_V2);
+  v3_reqs_string = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
+
+#define RESPONSE_GRANULARITY 8
+  for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
+    ns_v2_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v2_responses[i], RESPONSE_GRANULARITY);
+    ns_v3_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v3_responses[i], RESPONSE_GRANULARITY);
+  }
+#undef RESPONSE_GRANULARITY
+
+  if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
+    tor_asprintf(&v2_share_string, "dirreq-v2-share %0.2lf%%\n",
+                 v2_share*100);
+    tor_asprintf(&v3_share_string, "dirreq-v3-share %0.2lf%%\n",
+                 v3_share*100);
+  }
+
+  v2_direct_dl_string = geoip_get_dirreq_history(
+                        GEOIP_CLIENT_NETWORKSTATUS_V2, DIRREQ_DIRECT);
+  v3_direct_dl_string = geoip_get_dirreq_history(
+                        GEOIP_CLIENT_NETWORKSTATUS, DIRREQ_DIRECT);
+
+  v2_tunneled_dl_string = geoip_get_dirreq_history(
+                          GEOIP_CLIENT_NETWORKSTATUS_V2, DIRREQ_TUNNELED);
+  v3_tunneled_dl_string = geoip_get_dirreq_history(
+                          GEOIP_CLIENT_NETWORKSTATUS, DIRREQ_TUNNELED);
+
+  /* Put everything together into a single string. */
+  tor_asprintf(&result, "dirreq-stats-end %s (%d s)\n"
+              "dirreq-v3-ips %s\n"
+              "dirreq-v2-ips %s\n"
+              "dirreq-v3-reqs %s\n"
+              "dirreq-v2-reqs %s\n"
+              "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n"
+              "dirreq-v2-resp ok=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n"
+              "%s"
+              "%s"
+              "dirreq-v3-direct-dl %s\n"
+              "dirreq-v2-direct-dl %s\n"
+              "dirreq-v3-tunneled-dl %s\n"
+              "dirreq-v2-tunneled-dl %s\n",
+              t,
+              (unsigned) (now - start_of_dirreq_stats_interval),
+              v3_ips_string ? v3_ips_string : "",
+              v2_ips_string ? v2_ips_string : "",
+              v3_reqs_string ? v3_reqs_string : "",
+              v2_reqs_string ? v2_reqs_string : "",
+              ns_v3_responses[GEOIP_SUCCESS],
+              ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
+              ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
+              ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
+              ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
+              ns_v3_responses[GEOIP_REJECT_BUSY],
+              ns_v2_responses[GEOIP_SUCCESS],
+              ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
+              ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
+              ns_v2_responses[GEOIP_REJECT_NOT_MODIFIED],
+              ns_v2_responses[GEOIP_REJECT_BUSY],
+              v2_share_string ? v2_share_string : "",
+              v3_share_string ? v3_share_string : "",
+              v3_direct_dl_string ? v3_direct_dl_string : "",
+              v2_direct_dl_string ? v2_direct_dl_string : "",
+              v3_tunneled_dl_string ? v3_tunneled_dl_string : "",
+              v2_tunneled_dl_string ? v2_tunneled_dl_string : "");
+
+  /* Free partial strings. */
+  tor_free(v3_ips_string);
+  tor_free(v2_ips_string);
+  tor_free(v3_reqs_string);
+  tor_free(v2_reqs_string);
+  tor_free(v2_share_string);
+  tor_free(v3_share_string);
+  tor_free(v3_direct_dl_string);
+  tor_free(v2_direct_dl_string);
+  tor_free(v3_tunneled_dl_string);
+  tor_free(v2_tunneled_dl_string);
+
+  return result;
+}
+
+/** If 24 hours have passed since the beginning of the current dirreq
+ * stats period, write dirreq stats to $DATADIR/stats/dirreq-stats
+ * (possibly overwriting an existing file) and reset counters.  Return
+ * when we would next want to write dirreq stats or 0 if we never want to
+ * write. */
 time_t
 geoip_dirreq_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL;
-  char *data_v2 = NULL, *data_v3 = NULL;
-  char written[ISO_TIME_LEN+1];
-  open_file_t *open_file = NULL;
-  double v2_share = 0.0, v3_share = 0.0;
-  FILE *out;
-  int i;
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
 
   if (!start_of_dirreq_stats_interval)
     return 0; /* Not initialized. */
@@ -989,98 +1098,26 @@ geoip_dirreq_stats_write(time_t now)
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_dirreq_stats_interval);
 
+  /* Generate history string .*/
+  str = geoip_format_dirreq_stats(now);
+
+  /* Write dirreq-stats string to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
+  }
   filename = get_datadir_fname2("stats", "dirreq-stats");
-  data_v2 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
-  data_v3 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS);
-  format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND | O_TEXT,
-                                    0600, &open_file);
-  if (!out)
-    goto done;
-  if (fprintf(out, "dirreq-stats-end %s (%d s)\ndirreq-v3-ips %s\n"
-              "dirreq-v2-ips %s\n", written,
-              (unsigned) (now - start_of_dirreq_stats_interval),
-              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
-    goto done;
-  tor_free(data_v2);
-  tor_free(data_v3);
+  if (write_str_to_file(filename, str, 0) < 0)
+    log_warn(LD_HIST, "Unable to write dirreq statistics to disk!");
 
-  data_v2 = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
-  data_v3 = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
-  if (fprintf(out, "dirreq-v3-reqs %s\ndirreq-v2-reqs %s\n",
-              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
-    goto done;
-  tor_free(data_v2);
-  tor_free(data_v3);
-  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-      c->n_v2_ns_requests = c->n_v3_ns_requests = 0;
-  });
-#define RESPONSE_GRANULARITY 8
-  for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
-    ns_v2_responses[i] = round_uint32_to_next_multiple_of(
-                               ns_v2_responses[i], RESPONSE_GRANULARITY);
-    ns_v3_responses[i] = round_uint32_to_next_multiple_of(
-                               ns_v3_responses[i], RESPONSE_GRANULARITY);
-  }
-#undef RESPONSE_GRANULARITY
-  if (fprintf(out, "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
-                   "not-found=%u,not-modified=%u,busy=%u\n",
-                   ns_v3_responses[GEOIP_SUCCESS],
-                   ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
-                   ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
-                   ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
-                   ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
-                   ns_v3_responses[GEOIP_REJECT_BUSY]) < 0)
-    goto done;
-  if (fprintf(out, "dirreq-v2-resp ok=%u,unavailable=%u,"
-                   "not-found=%u,not-modified=%u,busy=%u\n",
-                   ns_v2_responses[GEOIP_SUCCESS],
-                   ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
-                   ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
-                   ns_v2_responses[GEOIP_REJECT_NOT_MODIFIED],
-                   ns_v2_responses[GEOIP_REJECT_BUSY]) < 0)
-    goto done;
-  memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
-  memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
-  if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    if (fprintf(out, "dirreq-v2-share %0.2lf%%\n", v2_share*100) < 0)
-      goto done;
-    if (fprintf(out, "dirreq-v3-share %0.2lf%%\n", v3_share*100) < 0)
-      goto done;
-  }
-
-  data_v2 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
-                                       DIRREQ_DIRECT);
-  data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
-                                       DIRREQ_DIRECT);
-  if (fprintf(out, "dirreq-v3-direct-dl %s\ndirreq-v2-direct-dl %s\n",
-              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
-    goto done;
-  tor_free(data_v2);
-  tor_free(data_v3);
-  data_v2 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
-                                       DIRREQ_TUNNELED);
-  data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
-                                       DIRREQ_TUNNELED);
-  if (fprintf(out, "dirreq-v3-tunneled-dl %s\ndirreq-v2-tunneled-dl %s\n",
-              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
-    goto done;
-
-  finish_writing_to_file(open_file);
-  open_file = NULL;
-
-  start_of_dirreq_stats_interval = now;
+  /* Reset measurement interval start. */
+  geoip_reset_dirreq_stats(now);
 
  done:
-  if (open_file)
-    abort_writing_to_file(open_file);
-  tor_free(filename);
   tor_free(statsdir);
-  tor_free(data_v2);
-  tor_free(data_v3);
+  tor_free(filename);
+  tor_free(str);
   return start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL;
 }
 
@@ -1160,8 +1197,8 @@ static char *bridge_stats_extrainfo = NULL;
 /** Return a newly allocated string holding our bridge usage stats by country
  * in a format suitable for inclusion in an extrainfo document. Return NULL on
  * failure.  */
-static char *
-format_bridge_stats_extrainfo(time_t now)
+char *
+geoip_format_bridge_stats(time_t now)
 {
   char *out = NULL, *data = NULL;
   long duration = now - start_of_bridge_stats_interval;
@@ -1169,6 +1206,8 @@ format_bridge_stats_extrainfo(time_t now)
 
   if (duration < 0)
     return NULL;
+  if (!start_of_bridge_stats_interval)
+    return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
@@ -1218,7 +1257,7 @@ geoip_bridge_stats_write(time_t now)
   geoip_remove_old_clients(start_of_bridge_stats_interval);
 
   /* Generate formatted string */
-  val = format_bridge_stats_extrainfo(now);
+  val = geoip_format_bridge_stats(now);
   if (val == NULL)
     goto done;
 
@@ -1295,25 +1334,51 @@ geoip_entry_stats_init(time_t now)
   start_of_entry_stats_interval = now;
 }
 
+/** Reset counters for entry stats. */
+void
+geoip_reset_entry_stats(time_t now)
+{
+  client_history_clear();
+  start_of_entry_stats_interval = now;
+}
+
 /** Stop collecting entry stats in a way that we can re-start doing so in
  * geoip_entry_stats_init(). */
 void
 geoip_entry_stats_term(void)
 {
-  client_history_clear();
-  start_of_entry_stats_interval = 0;
+  geoip_reset_entry_stats(0);
 }
 
-/** Write entry statistics to $DATADIR/stats/entry-stats and return time
- * when we would next want to write. */
+/** Return a newly allocated string containing the entry statistics
+ * until <b>now</b>, or NULL if we're not collecting entry stats. */
+char *
+geoip_format_entry_stats(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  char *data = NULL;
+  char *result;
+
+  if (!start_of_entry_stats_interval)
+    return NULL; /* Not initialized. */
+
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
+  format_iso_time(t, now);
+  tor_asprintf(&result, "entry-stats-end %s (%u s)\nentry-ips %s\n",
+              t, (unsigned) (now - start_of_entry_stats_interval),
+              data ? data : "");
+  tor_free(data);
+  return result;
+}
+
+/** If 24 hours have passed since the beginning of the current entry stats
+ * period, write entry stats to $DATADIR/stats/entry-stats (possibly
+ * overwriting an existing file) and reset counters.  Return when we would
+ * next want to write entry stats or 0 if we never want to write. */
 time_t
 geoip_entry_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL;
-  char *data = NULL;
-  char written[ISO_TIME_LEN+1];
-  open_file_t *open_file = NULL;
-  FILE *out;
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
 
   if (!start_of_entry_stats_interval)
     return 0; /* Not initialized. */
@@ -1323,31 +1388,26 @@ geoip_entry_stats_write(time_t now)
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_entry_stats_interval);
 
+  /* Generate history string .*/
+  str = geoip_format_entry_stats(now);
+
+  /* Write entry-stats string to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
+  }
   filename = get_datadir_fname2("stats", "entry-stats");
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
-  format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND | O_TEXT,
-                                    0600, &open_file);
-  if (!out)
-    goto done;
-  if (fprintf(out, "entry-stats-end %s (%u s)\nentry-ips %s\n",
-              written, (unsigned) (now - start_of_entry_stats_interval),
-              data ? data : "") < 0)
-    goto done;
+  if (write_str_to_file(filename, str, 0) < 0)
+    log_warn(LD_HIST, "Unable to write entry statistics to disk!");
 
-  start_of_entry_stats_interval = now;
+  /* Reset measurement interval start. */
+  geoip_reset_entry_stats(now);
 
-  finish_writing_to_file(open_file);
-  open_file = NULL;
  done:
-  if (open_file)
-    abort_writing_to_file(open_file);
-  tor_free(filename);
   tor_free(statsdir);
-  tor_free(data);
+  tor_free(filename);
+  tor_free(str);
   return start_of_entry_stats_interval + WRITE_STATS_INTERVAL;
 }
 

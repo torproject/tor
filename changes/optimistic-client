@@ -1,0 +1,9 @@
+  o Major features:
+    - When using an exit nodes running 0.2.3.1-alpha and later,
+      clients can now "optimistically" send data on a stream before
+      the exit node reports that the stream has opened. This can save
+      a round trip when starting connections with protocols where the
+      client speaks first. This behavior is controlled by a (currently
+      disabled) networkstatus consensus parameter. To turn it on or
+      off manually, use the "OptimisticData" torrc option.  Implements
+      proposal 181; code by Ian Goldberg.

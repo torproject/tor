@@ -18,6 +18,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "nodelist.h"
+#include "networkstatus.h"
 #include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -39,19 +40,19 @@ static void circuit_increment_failure_count(void);
  * Else return 0.
  */
 static int
-circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
+circuit_is_acceptable(const origin_circuit_t *origin_circ,
+                      const edge_connection_t *conn,
                       int must_be_open, uint8_t purpose,
                       int need_uptime, int need_internal,
                       time_t now)
 {
+  const circuit_t *circ = TO_CIRCUIT(origin_circ);
   const node_t *exitnode;
   cpath_build_state_t *build_state;
   tor_assert(circ);
   tor_assert(conn);
   tor_assert(conn->socks_request);
 
-  if (!CIRCUIT_IS_ORIGIN(circ))
-    return 0; /* this circ doesn't start at us */
   if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
     return 0; /* ignore non-open circs */
   if (circ->marked_for_close)
@@ -86,7 +87,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
    * circuit, it's the magical extra bob hop. so just check the nickname
    * of the one we meant to finish at.
    */
-  build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+  build_state = origin_circ->build_state;
   exitnode = build_state_get_exit_node(build_state);
 
   if (need_uptime && !build_state->need_uptime)
@@ -134,25 +135,37 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
       return 0;
     }
   } else { /* not general */
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if ((conn->rend_data && !ocirc->rend_data) ||
-        (!conn->rend_data && ocirc->rend_data) ||
-        (conn->rend_data && ocirc->rend_data &&
+    if ((conn->rend_data && !origin_circ->rend_data) ||
+        (!conn->rend_data && origin_circ->rend_data) ||
+        (conn->rend_data && origin_circ->rend_data &&
          rend_cmp_service_ids(conn->rend_data->onion_address,
-                              ocirc->rend_data->onion_address))) {
+                              origin_circ->rend_data->onion_address))) {
       /* this circ is not for this conn */
       return 0;
     }
   }
+
+  if (!connection_edge_compatible_with_circuit(conn, origin_circ)) {
+    /* conn needs to be isolated from other conns that have already used
+     * origin_circ */
+    return 0;
+  }
+
   return 1;
 }
 
 /** Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
- * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
+ * <b>conn</b>, and return 0 otherwise. Used by circuit_get_best.
  */
 static int
-circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
+circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
+                  const edge_connection_t *conn)
 {
+  const circuit_t *a = TO_CIRCUIT(oa);
+  const circuit_t *b = TO_CIRCUIT(ob);
+  const uint8_t purpose = conn->_base.purpose;
+  int a_bits, b_bits;
+
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* if it's used but less dirty it's best;
@@ -166,8 +179,7 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
         if (a->timestamp_dirty ||
             timercmp(&a->timestamp_created, &b->timestamp_created, >))
           return 1;
-        if (CIRCUIT_IS_ORIGIN(b) &&
-            TO_ORIGIN_CIRCUIT(b)->build_state->is_internal)
+        if (ob->build_state->is_internal)
           /* XXX023 what the heck is this internal thing doing here. I
            * think we can get rid of it. circuit_is_acceptable() already
            * makes sure that is_internal is exactly what we need it to
@@ -186,6 +198,29 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
         return 1;
       break;
   }
+
+  /* XXXX023 Maybe this check should get a higher priority to avoid
+   *   using up circuits too rapidly. */
+
+  a_bits = connection_edge_update_circuit_isolation(conn,
+                                                    (origin_circuit_t*)oa, 1);
+  b_bits = connection_edge_update_circuit_isolation(conn,
+                                                    (origin_circuit_t*)ob, 1);
+  /* if x_bits < 0, then we have not used x for anything; better not to dirty
+   * a connection if we can help it. */
+  if (a_bits < 0) {
+    return 0;
+  } else if (b_bits < 0) {
+    return 1;
+  }
+  a_bits &= ~ oa->isolation_flags_mixed;
+  a_bits &= ~ ob->isolation_flags_mixed;
+  if (n_bits_set_u8(a_bits) < n_bits_set_u8(b_bits)) {
+    /* The fewer new restrictions we need to make on a circuit for stream
+     * isolation, the better. */
+    return 1;
+  }
+
   return 0;
 }
 
@@ -206,10 +241,12 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
  * closest introduce-purposed circuit that you can find.
  */
 static origin_circuit_t *
-circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
+circuit_get_best(const edge_connection_t *conn,
+                 int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
-  circuit_t *circ, *best=NULL;
+  circuit_t *circ;
+  origin_circuit_t *best=NULL;
   struct timeval now;
   int intro_going_on_but_too_old = 0;
 
@@ -222,7 +259,11 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
   tor_gettimeofday(&now);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
+    origin_circuit_t *origin_circ;
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (!circuit_is_acceptable(origin_circ,conn,must_be_open,purpose,
                                need_uptime,need_internal,now.tv_sec))
       continue;
 
@@ -236,8 +277,8 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
     /* now this is an acceptable circ to hand back. but that doesn't
      * mean it's the *best* circ to hand back. try to decide.
      */
-    if (!best || circuit_is_better(circ,best,purpose))
-      best = circ;
+    if (!best || circuit_is_better(origin_circ,best,conn))
+      best = origin_circ;
   }
 
   if (!best && intro_going_on_but_too_old)
@@ -245,7 +286,28 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
              "right now, but it has already taken quite a while. Starting "
              "one in parallel.");
 
-  return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
+  return best;
+}
+
+/** Return the number of not-yet-open general-purpose origin circuits. */
+static int
+count_pending_general_client_circuits(void)
+{
+  const circuit_t *circ;
+
+  int count = 0;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (circ->marked_for_close ||
+        circ->state == CIRCUIT_STATE_OPEN ||
+        circ->purpose != CIRCUIT_PURPOSE_C_GENERAL ||
+        !CIRCUIT_IS_ORIGIN(circ))
+      continue;
+
+    ++count;
+  }
+
+  return count;
 }
 
 #if 0
@@ -677,6 +739,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_assert(conn);
 
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
+  conn->may_use_optimistic_data = 0;
   conn->on_circuit = NULL;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -937,6 +1000,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
+  int can_try_clearing_isolation = 0, tried_clearing_isolation = 0;
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
@@ -944,9 +1008,12 @@ circuit_has_opened(origin_circuit_t *circ)
    * to consider its build time. */
   circ->has_opened = 1;
 
+ again:
+
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
+      can_try_clearing_isolation = 1;
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
@@ -955,6 +1022,7 @@ circuit_has_opened(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
+      can_try_clearing_isolation = 1;
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
@@ -971,6 +1039,24 @@ circuit_has_opened(origin_circuit_t *circ)
     /* default:
      * This won't happen in normal operation, but might happen if the
      * controller did it. Just let it slide. */
+  }
+
+  if (/* The circuit may have become non-open if it was cannibalized.*/
+      circ->_base.state == CIRCUIT_STATE_OPEN &&
+      /* Only if the purpose is clearable, and only if we haven't tried
+       * to clear isolation yet, do we try. */
+      can_try_clearing_isolation && !tried_clearing_isolation &&
+      /* If !isolation_values_set, there is nothing to clear. */
+      circ->isolation_values_set &&
+      /* It's not legal to clear a circuit's isolation info if it's ever had
+       * streams attached */
+      !circ->isolation_any_streams_attached) {
+    /* If we have any isolation information set on this circuit, and
+     * we didn't manage to attach any streams to it, then we can
+     * and should clear it and try again. */
+    circuit_clear_isolation(circ);
+    tried_clearing_isolation = 1;
+    goto again;
   }
 }
 
@@ -1307,6 +1393,20 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   if (!circ) {
     extend_info_t *extend_info=NULL;
     uint8_t new_circ_purpose;
+    const int n_pending = count_pending_general_client_circuits();
+
+    if (n_pending >= options->MaxClientCircuitsPending) {
+      static ratelim_t delay_limit = RATELIM_INIT(10*60);
+      char *m;
+      if ((m = rate_limit_log(&delay_limit, approx_time()))) {
+        log_notice(LD_APP, "We'd like to launch a circuit to handle a "
+                   "connection, but we already have %d general-purpose client "
+                   "circuits pending. Waiting until some finish.",
+                   n_pending);
+        tor_free(m);
+      }
+      return 0;
+    }
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
@@ -1417,12 +1517,20 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
           rend_client_rendcirc_has_opened(circ);
       }
     }
-  }
-  if (!circ)
+  } /* endif (!circ) */
+  if (circ) {
+    /* Mark the circuit with the isolation fields for this connection.
+     * When the circuit arrives, we'll clear these flags: this is
+     * just some internal bookkeeping to make sure that we have
+     * launched enough circuits.
+     */
+    connection_edge_update_circuit_isolation(conn, circ, 0);
+  } else {
     log_info(LD_APP,
              "No safe circuit (purpose %d) ready for edge "
              "connection; delaying.",
              desired_circuit_purpose);
+  }
   *circp = circ;
   return 0;
 }
@@ -1441,6 +1549,21 @@ cpath_is_on_circuit(origin_circuit_t *circ, crypt_path_t *crypt_path)
   return 0;
 }
 
+/** Return true iff client-side optimistic data is supported. */
+static int
+optimistic_data_enabled(void)
+{
+  const or_options_t *options = get_options();
+  if (options->OptimisticData < 0) {
+    /* XXX023 consider having auto default to 1 rather than 0 before
+     * the 0.2.3 branch goes stable. See bug 3617. -RD */
+    const int32_t enabled =
+      networkstatus_get_param(NULL, "UseOptimisticData", 0, 0, 1);
+    return (int)enabled;
+  }
+  return options->OptimisticData;
+}
+
 /** Attach the AP stream <b>apconn</b> to circ's linked list of
  * p_streams. Also set apconn's cpath_layer to <b>cpath</b>, or to the last
  * hop in circ's cpath if <b>cpath</b> is NULL.
@@ -1449,6 +1572,8 @@ static void
 link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
                     crypt_path_t *cpath)
 {
+  const node_t *exitnode;
+
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
             circ->_base.n_circ_id);
@@ -1467,6 +1592,28 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
     tor_assert(circ->cpath->prev);
     tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
     apconn->cpath_layer = circ->cpath->prev;
+  }
+
+  circ->isolation_any_streams_attached = 1;
+  connection_edge_update_circuit_isolation(apconn, circ, 0);
+
+  /* See if we can use optimistic data on this circuit */
+  if (apconn->cpath_layer->extend_info &&
+      (exitnode = node_get_by_id(
+                     apconn->cpath_layer->extend_info->identity_digest)) &&
+      exitnode->rs) {
+    /* Okay; we know what exit node this is. */
+    if (optimistic_data_enabled() &&
+        circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        exitnode->rs->version_supports_optimistic_data)
+      apconn->may_use_optimistic_data = 1;
+    else
+      apconn->may_use_optimistic_data = 0;
+    log_info(LD_APP, "Looks like completed circuit to %s %s allow "
+             "optimistic data for connection to %s",
+             safe_str_client(node_describe(exitnode)),
+             apconn->may_use_optimistic_data ? "does" : "doesn't",
+             safe_str_client(apconn->socks_request->address));
   }
 }
 
@@ -1495,7 +1642,8 @@ hostname_in_track_host_exits(const or_options_t *options, const char *address)
  * <b>conn</b>'s destination.
  */
 static void
-consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
+consider_recording_trackhost(const edge_connection_t *conn,
+                             const origin_circuit_t *circ)
 {
   const or_options_t *options = get_options();
   char *new_address = NULL;

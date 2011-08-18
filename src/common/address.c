@@ -958,8 +958,10 @@ fmt_addr(const tor_addr_t *addr)
 {
   static char buf[TOR_ADDR_BUF_LEN];
   if (!addr) return "<null>";
-  tor_addr_to_str(buf, addr, sizeof(buf), 0);
-  return buf;
+  if (tor_addr_to_str(buf, addr, sizeof(buf), 0))
+    return buf;
+  else
+    return "???";
 }
 
 /** Like fmt_addr(), but takes <b>addr</b> as a host-order IPv4

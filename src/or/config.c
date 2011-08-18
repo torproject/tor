@@ -40,6 +40,9 @@
 
 #include "procmon.h"
 
+/* From main.c */
+extern int quiet_level;
+
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
@@ -240,7 +243,7 @@ static config_var_t _option_vars[] = {
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableIOCP,                 BOOL,     "1"),
-  V(DNSPort,                     PORT,     "0"),
+  V(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
@@ -315,13 +318,14 @@ static config_var_t _option_vars[] = {
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
+  V(MaxClientCircuitsPending,    UINT,     "32"),
   V(MaxOnionsPending,            UINT,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   V(NATDListenAddress,           LINELIST, NULL),
-  V(NATDPort,                    PORT,     "0"),
+  V(NATDPort,                    LINELIST, NULL),
   V(Nickname,                    STRING,   NULL),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   OBSOLETE("NoPublish"),
@@ -336,6 +340,7 @@ static config_var_t _option_vars[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V(PidFile,                     STRING,   NULL),
   V(TestingTorNetwork,           BOOL,     "0"),
+  V(OptimisticData,              AUTOBOOL, "auto"),
   V(PortForwarding,              BOOL,     "0"),
   V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
   V(PreferTunneledDirConns,      BOOL,     "1"),
@@ -374,7 +379,7 @@ static config_var_t _option_vars[] = {
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
-  V(SocksPort,                   PORT,     "9050"),
+  V(SocksPort,                   LINELIST, NULL),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
   OBSOLETE("StatusFetchPeriod"),
   V(StrictNodes,                 BOOL,     "0"),
@@ -385,7 +390,7 @@ static config_var_t _option_vars[] = {
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
-  V(TransPort,                   PORT,     "0"),
+  V(TransPort,                   LINELIST, NULL),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
@@ -577,6 +582,9 @@ static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
+static void port_cfg_free(port_cfg_t *port);
+static int parse_client_ports(const or_options_t *options, int validate_only,
+                              char **msg_out, int *n_ports_out);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
@@ -646,6 +654,8 @@ static or_state_t *global_state = NULL;
 static config_line_t *global_cmdline_options = NULL;
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
+/** List of port_cfg_t for client-level (SOCKS, DNS, Trans, NATD) ports. */
+static smartlist_t *configured_client_ports = NULL;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
 const char *
@@ -686,6 +696,9 @@ get_options(void)
 int
 set_options(or_options_t *new_val, char **msg)
 {
+  int i;
+  smartlist_t *elements;
+  config_line_t *line;
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
@@ -700,7 +713,34 @@ set_options(or_options_t *new_val, char **msg)
             "Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
+  /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
+   * just starting up then the old_options will be undefined. */
+  if (old_options) {
+    elements = smartlist_create();
+    for (i=0; options_format.vars[i].name; ++i) {
+      const config_var_t *var = &options_format.vars[i];
+      const char *var_name = var->name;
+      if (var->type == CONFIG_TYPE_LINELIST_S ||
+          var->type == CONFIG_TYPE_OBSOLETE) {
+        continue;
+      }
+      if (!option_is_same(&options_format, new_val, old_options, var_name)) {
+        line = get_assigned_option(&options_format, new_val, var_name, 1);
 
+        if (line) {
+          for (; line; line = line->next) {
+            smartlist_add(elements, line->key);
+            smartlist_add(elements, line->value);
+          }
+        } else {
+          smartlist_add(elements, (char*)options_format.vars[i].name);
+          smartlist_add(elements, NULL);
+        }
+      }
+    }
+    control_event_conf_changed(elements);
+    smartlist_free(elements);
+  }
   config_free(&options_format, old_options);
 
   return 0;
@@ -757,6 +797,13 @@ config_free_all(void)
 
   config_free_lines(global_cmdline_options);
   global_cmdline_options = NULL;
+
+  if (configured_client_ports) {
+    SMARTLIST_FOREACH(configured_client_ports,
+                      port_cfg_t *, p, tor_free(p));
+    smartlist_free(configured_client_ports);
+    configured_client_ports = NULL;
+  }
 
   tor_free(torrc_fname);
   tor_free(_version);
@@ -1004,6 +1051,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 #endif
 
   if (running_tor) {
+    int n_client_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
     if (set_max_file_descriptors((unsigned)options->ConnLimit,
                                  &options->_ConnLimit) < 0) {
@@ -1018,6 +1066,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       init_libevent(options);
       libevent_initialized = 1;
     }
+
+    /* Adjust the client port configuration so we can launch listeners. */
+    if (parse_client_ports(options, 0, msg, &n_client_ports))
+      return -1;
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
      * ports under 1024.)  We don't want to rebind if we're hibernating. */
@@ -1067,6 +1119,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     goto done;
     /* No need to roll back, since you can't change the value. */
   }
+
+  /* Write control ports to disk as appropriate */
+  control_ports_write_to_file();
 
   if (directory_caches_v2_dir_info(options)) {
     size_t len = strlen(options->DataDirectory)+32;
@@ -3027,6 +3082,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   int i;
   config_line_t *cl;
   const char *uname = get_uname();
+  int n_client_ports=0;
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #define COMPLAIN(arg) STMT_BEGIN log(LOG_WARN, LD_CONFIG, arg); STMT_END
@@ -3050,57 +3106,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->DirPort == 0 && options->DirListenAddress != NULL)
     REJECT("DirPort must be defined if DirListenAddress is defined.");
 
-  if (options->DNSPort == 0 && options->DNSListenAddress != NULL)
-    REJECT("DNSPort must be defined if DNSListenAddress is defined.");
-
-  if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
-    REJECT("ControlPort must be defined if ControlListenAddress is defined.");
-
-  if (options->TransPort == 0 && options->TransListenAddress != NULL)
-    REJECT("TransPort must be defined if TransListenAddress is defined.");
-
-  if (options->NATDPort == 0 && options->NATDListenAddress != NULL)
-    REJECT("NATDPort must be defined if NATDListenAddress is defined.");
-
-  /* Don't gripe about SocksPort 0 with SocksListenAddress set; a standard
-   * configuration does this. */
-
-  for (i = 0; i < 3; ++i) {
-    int is_socks = i==0;
-    int is_trans = i==1;
-    config_line_t *line, *opt, *old;
-    const char *tp;
-    if (is_socks) {
-      opt = options->SocksListenAddress;
-      old = old_options ? old_options->SocksListenAddress : NULL;
-      tp = "SOCKS proxy";
-    } else if (is_trans) {
-      opt = options->TransListenAddress;
-      old = old_options ? old_options->TransListenAddress : NULL;
-      tp = "transparent proxy";
-    } else {
-      opt = options->NATDListenAddress;
-      old = old_options ? old_options->NATDListenAddress : NULL;
-      tp = "natd proxy";
-    }
-
-    for (line = opt; line; line = line->next) {
-      char *address = NULL;
-      uint16_t port;
-      uint32_t addr;
-      if (parse_addr_port(LOG_WARN, line->value, &address, &addr, &port)<0)
-        continue; /* We'll warn about this later. */
-      if (!is_internal_IP(addr, 1) &&
-          (!old_options || !config_lines_eq(old, opt))) {
-        log_warn(LD_CONFIG,
-             "You specified a public address '%s' for a %s. Other "
-             "people on the Internet might find your computer and use it as "
-             "an open %s. Please don't allow this unless you have "
-             "a good reason.", address, tp, tp);
-      }
-      tor_free(address);
-    }
-  }
+  if (parse_client_ports(options, 1, msg, &n_client_ports) < 0)
+    return -1;
 
   if (validate_data_directory(options)<0)
     REJECT("Invalid DataDirectory");
@@ -3124,8 +3131,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "misconfigured or something else goes wrong.");
 
   /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !options->RunAsDaemon && !from_setconf)
-    config_line_append(&options->Logs, "Log", "notice stdout");
+  if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
+    if (quiet_level == 0)
+        config_line_append(&options->Logs, "Log", "notice stdout");
+    else if (quiet_level == 1)
+        config_line_append(&options->Logs, "Log", "warn stdout");
+  }
 
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
     REJECT("Failed to validate Log options. See logs for details.");
@@ -3142,9 +3153,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
 #endif
 
-  if (options->SocksPort == 0 && options->TransPort == 0 &&
-      options->NATDPort == 0 && options->ORPort == 0 &&
-      options->DNSPort == 0 && !options->RendConfigLines)
+  if (n_client_ports == 0 && options->ORPort == 0 && !options->RendConfigLines)
     log(LOG_WARN, LD_CONFIG,
         "SocksPort, TransPort, NATDPort, DNSPort, and ORPort are all "
         "undefined, and there aren't any hidden services configured.  "
@@ -3250,6 +3259,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     tor_asprintf(msg,
         "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
+    return -1;
+  }
+
+  if (options->MaxClientCircuitsPending <= 0 ||
+      options->MaxClientCircuitsPending > MAX_MAX_CLIENT_CIRCUITS_PENDING) {
+    tor_asprintf(msg,
+                 "MaxClientCircuitsPending must be between 1 and %d, but "
+                 "was set to %d", MAX_MAX_CLIENT_CIRCUITS_PENDING,
+                 options->MaxClientCircuitsPending);
     return -1;
   }
 
@@ -3892,12 +3910,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 static int
 opt_streq(const char *s1, const char *s2)
 {
-  if (!s1 && !s2)
-    return 1;
-  else if (s1 && s2 && !strcmp(s1,s2))
-    return 1;
-  else
-    return 0;
+  return 0 == strcmp_opt(s1, s2);
 }
 
 /** Check if any of the previous options have changed but aren't allowed to. */
@@ -4883,6 +4896,365 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   tor_free(nickname);
   tor_free(fingerprint);
   return r;
+}
+
+/** Free all storage held in <b>port</b> */
+static void
+port_cfg_free(port_cfg_t *port)
+{
+  tor_free(port);
+}
+
+/** Warn for every port in <b>ports</b> that is not on a loopback address. */
+static void
+warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
+{
+  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+    if (!tor_addr_is_loopback(&port->addr)) {
+      log_warn(LD_CONFIG, "You specified a public address for %sPort. "
+               "Other people on the Internet might find your computer and "
+               "use it as an open proxy. Please don't allow this unless you "
+               "have a good reason.", portname);
+    }
+  } SMARTLIST_FOREACH_END(port);
+}
+
+#define CL_PORT_NO_OPTIONS    (1u<<0)
+#define CL_PORT_WARN_NONLOCAL (1u<<1)
+#define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
+
+/**
+ * Parse port configuration for a single client port type.
+ *
+ * Read entries of the "FooPort" type from the list <b>ports</b>, and
+ * entries of the "FooListenAddress" type from the list
+ * <b>listenaddrs</b>.  Two syntaxes are supported: a legacy syntax
+ * where FooPort is at most a single entry containing a port number and
+ * where FooListenAddress has any number of address:port combinations;
+ * and a new syntax where there are no FooListenAddress entries and
+ * where FooPort can have any number of entries of the format
+ * "[Address:][Port] IsolationOptions".
+ *
+ * In log messages, describe the port type as <b>portname</b>.
+ *
+ * If no address is specified, default to <b>defaultaddr</b>.  If no
+ * FooPort is given, default to defaultport (if 0, there is no default).
+ *
+ * If CL_PORT_NO_OPTIONS is set in <b>flags</b>, do not allow stream
+ * isolation options in the FooPort entries.
+ *
+ * If CL_PORT_WARN_NONLOCAL is set in <b>flags</b>, warn if any of the
+ * ports are not on a local address.
+ *
+ * Unless CL_PORT_ALLOW_EXTRA_LISTENADDR is set in <b>flags</b>, warn
+ * if FooListenAddress is set but FooPort is 0.
+ *
+ * On success, if <b>out</b> is given, add a new port_cfg_t entry to
+ * <b>out</b> for every port that the client should listen on.  Return 0
+ * on success, -1 on failure.
+ */
+static int
+parse_client_port_config(smartlist_t *out,
+                         const config_line_t *ports,
+                         const config_line_t *listenaddrs,
+                         const char *portname,
+                         int listener_type,
+                         const char *defaultaddr,
+                         int defaultport,
+                         unsigned flags)
+{
+  smartlist_t *elts;
+  int retval = -1;
+  const unsigned allow_client_options = !(flags & CL_PORT_NO_OPTIONS);
+  const unsigned warn_nonlocal = flags & CL_PORT_WARN_NONLOCAL;
+  const unsigned allow_spurious_listenaddr =
+    flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
+
+  /* FooListenAddress is deprecated; let's make it work like it used to work,
+   * though. */
+  if (listenaddrs) {
+    int mainport = defaultport;
+
+   if (ports && ports->next) {
+      log_warn(LD_CONFIG, "%sListenAddress can't be used when there are "
+               "multiple %sPort lines", portname, portname);
+      return -1;
+   } else if (ports) {
+     if (!strcmp(ports->value, "auto")) {
+       mainport = CFG_AUTO_PORT;
+     } else {
+       int ok;
+       mainport = (int)tor_parse_long(ports->value, 10, 0, 65535, &ok, NULL);
+       if (!ok) {
+         log_warn(LD_CONFIG, "%sListenAddress can only be used with a single "
+                 "%sPort with value \"auto\" or 1-65535.", portname, portname);
+         return -1;
+       }
+     }
+   }
+
+   if (mainport == 0) {
+     if (allow_spurious_listenaddr)
+       return 1;
+     log_warn(LD_CONFIG, "%sPort must be defined if %sListenAddress is used",
+              portname, portname);
+     return -1;
+   }
+
+   for (; listenaddrs; listenaddrs = listenaddrs->next) {
+     tor_addr_t addr;
+     uint16_t port = 0;
+     if (tor_addr_port_parse(listenaddrs->value, &addr, &port) < 0) {
+       log_warn(LD_CONFIG, "Unable to parse %sListenAddress '%s'",
+                portname, listenaddrs->value);
+       return -1;
+     }
+     if (out) {
+       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+       cfg->type = listener_type;
+       cfg->port = port ? port : defaultport;
+       tor_addr_copy(&cfg->addr, &addr);
+       cfg->session_group = SESSION_GROUP_UNSET;
+       cfg->isolation_flags = ISO_DEFAULT;
+       smartlist_add(out, cfg);
+     }
+   }
+
+   if (warn_nonlocal && out)
+     warn_nonlocal_client_ports(out, portname);
+   return 0;
+  } /* end if (listenaddrs) */
+
+  /* No ListenAddress lines. If there's no FooPort, then maybe make a default
+   * one. */
+  if (! ports) {
+    if (defaultport && out) {
+       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+       cfg->type = listener_type;
+       cfg->port = defaultport;
+       tor_addr_from_str(&cfg->addr, defaultaddr);
+       cfg->session_group = SESSION_GROUP_UNSET;
+       cfg->isolation_flags = ISO_DEFAULT;
+       smartlist_add(out, cfg);
+    }
+    return 0;
+  }
+
+  /* At last we can actually parse the FooPort lines.  The syntax is:
+   * [Addr:](Port|auto) [Options].*/
+  elts = smartlist_create();
+
+  for (; ports; ports = ports->next) {
+    tor_addr_t addr;
+    int port;
+    int sessiongroup = SESSION_GROUP_UNSET;
+    unsigned isolation = ISO_DEFAULT;
+
+    char *addrport;
+    uint16_t ptmp=0;
+    int ok;
+
+    smartlist_split_string(elts, ports->value, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(elts) == 0) {
+      log_warn(LD_CONFIG, "Invalid %sPort line with no value", portname);
+      goto err;
+    }
+
+    if (!allow_client_options && smartlist_len(elts) > 1) {
+      log_warn(LD_CONFIG, "Too many options on %sPort line", portname);
+      goto err;
+    }
+
+    /* Now parse the addr/port value */
+    addrport = smartlist_get(elts, 0);
+    if (!strcmp(addrport, "auto")) {
+      port = CFG_AUTO_PORT;
+      tor_addr_from_str(&addr, defaultaddr);
+    } else if (!strcasecmpend(addrport, ":auto")) {
+      char *addrtmp = tor_strndup(addrport, strlen(addrport)-5);
+      port = CFG_AUTO_PORT;
+      if (tor_addr_port_parse(addrtmp, &addr, &ptmp)<0 || ptmp) {
+        log_warn(LD_CONFIG, "Invalid address '%s' for %sPort",
+                 escaped(addrport), portname);
+        tor_free(addrtmp);
+        goto err;
+      }
+    } else {
+      /* Try parsing integer port before address, because, who knows?
+         "9050" might be a valid address. */
+      port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
+      if (ok) {
+        tor_addr_from_str(&addr, defaultaddr);
+      } else if (tor_addr_port_parse(addrport, &addr, &ptmp) == 0) {
+        if (ptmp == 0) {
+          log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
+          goto err;
+        }
+        port = ptmp;
+      } else {
+        log_warn(LD_CONFIG, "Couldn't parse address '%s' for %sPort",
+                 escaped(addrport), portname);
+        goto err;
+      }
+    }
+
+    /* Now parse the rest of the options, if any. */
+    SMARTLIST_FOREACH_BEGIN(elts, char *, elt) {
+      int no = 0, isoflag = 0;
+      const char *elt_orig = elt;
+      if (elt_sl_idx == 0)
+        continue; /* Skip addr:port */
+      if (!strcasecmpstart(elt, "SessionGroup=")) {
+        int group = (int)tor_parse_long(elt+strlen("SessionGroup="),
+                                        10, 0, INT_MAX, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_CONFIG, "Invalid %sPort option '%s'",
+                   portname, escaped(elt));
+          goto err;
+        }
+        if (sessiongroup >= 0) {
+          log_warn(LD_CONFIG, "Multiple SessionGroup options on %sPort",
+                   portname);
+          goto err;
+        }
+        sessiongroup = group;
+        continue;
+      }
+
+      if (!strcasecmpstart(elt, "No")) {
+        no = 1;
+        elt += 2;
+      }
+      if (!strcasecmpend(elt, "s"))
+        elt[strlen(elt)-1] = '\0'; /* kill plurals. */
+
+      if (!strcasecmp(elt, "IsolateDestPort")) {
+        isoflag = ISO_DESTPORT;
+      } else if (!strcasecmp(elt, "IsolateDestAddr")) {
+        isoflag = ISO_DESTADDR;
+      } else if (!strcasecmp(elt, "IsolateSOCKSAuth")) {
+        isoflag = ISO_SOCKSAUTH;
+      } else if (!strcasecmp(elt, "IsolateClientProtocol")) {
+        isoflag = ISO_CLIENTPROTO;
+      } else if (!strcasecmp(elt, "IsolateClientAddr")) {
+        isoflag = ISO_CLIENTADDR;
+      } else {
+        log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
+                 portname, escaped(elt_orig));
+      }
+
+      if (no) {
+        isolation &= ~isoflag;
+      } else {
+        isolation |= isoflag;
+      }
+    } SMARTLIST_FOREACH_END(elt);
+
+    if (out && port) {
+      port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+      cfg->type = listener_type;
+      cfg->port = port;
+      tor_addr_copy(&cfg->addr, &addr);
+      cfg->session_group = sessiongroup;
+      cfg->isolation_flags = isolation;
+      smartlist_add(out, cfg);
+    }
+    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+    smartlist_clear(elts);
+  }
+
+  if (warn_nonlocal && out)
+    warn_nonlocal_client_ports(out, portname);
+
+  retval = 0;
+ err:
+  SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+  smartlist_free(elts);
+  return retval;
+}
+
+/** Parse all client port types (Socks, DNS, Trans, NATD) from
+ * <b>options</b>. On success, set *<b>n_ports_out</b> to the number of
+ * ports that are listed and return 0.  On failure, set *<b>msg</b> to a
+ * description of the problem and return -1.
+ *
+ * If <b>validate_only</b> is false, set configured_client_ports to the
+ * new list of ports parsed from <b>options</b>.
+ **/
+static int
+parse_client_ports(const or_options_t *options, int validate_only,
+                   char **msg, int *n_ports_out)
+{
+  smartlist_t *ports;
+  int retval = -1;
+
+  ports = smartlist_create();
+
+  *n_ports_out = 0;
+
+  if (parse_client_port_config(ports,
+             options->SocksPort, options->SocksListenAddress,
+             "Socks", CONN_TYPE_AP_LISTENER,
+             "127.0.0.1", 9050,
+             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR) < 0) {
+    *msg = tor_strdup("Invalid SocksPort/SocksListenAddress configuration");
+    goto err;
+  }
+  if (parse_client_port_config(ports,
+                               options->DNSPort, options->DNSListenAddress,
+                               "DNS", CONN_TYPE_AP_DNS_LISTENER,
+                               "127.0.0.1", 0,
+                               CL_PORT_WARN_NONLOCAL) < 0) {
+    *msg = tor_strdup("Invalid DNSPort/DNSListenAddress configuration");
+    goto err;
+  }
+  if (parse_client_port_config(ports,
+                               options->TransPort, options->TransListenAddress,
+                               "Trans", CONN_TYPE_AP_TRANS_LISTENER,
+                               "127.0.0.1", 0,
+                               CL_PORT_WARN_NONLOCAL) < 0) {
+    *msg = tor_strdup("Invalid TransPort/TransListenAddress configuration");
+    goto err;
+  }
+  if (parse_client_port_config(ports,
+                               options->NATDPort, options->NATDListenAddress,
+                               "NATD", CONN_TYPE_AP_NATD_LISTENER,
+                               "127.0.0.1", 0,
+                               CL_PORT_WARN_NONLOCAL) < 0) {
+    *msg = tor_strdup("Invalid NatdPort/NatdListenAddress configuration");
+    goto err;
+  }
+
+  *n_ports_out = smartlist_len(ports);
+
+  if (!validate_only) {
+    if (configured_client_ports) {
+      SMARTLIST_FOREACH(configured_client_ports,
+                        port_cfg_t *, p, port_cfg_free(p));
+      smartlist_free(configured_client_ports);
+    }
+    configured_client_ports = ports;
+    ports = NULL; /* prevent free below. */
+  }
+
+  retval = 0;
+ err:
+  if (ports) {
+    SMARTLIST_FOREACH(ports, port_cfg_t *, p, port_cfg_free(p));
+    smartlist_free(ports);
+  }
+  return retval;
+}
+
+/** Return a list of port_cfg_t for client ports parsed from the
+ * options. */
+const smartlist_t *
+get_configured_client_ports(void)
+{
+  if (!configured_client_ports)
+    configured_client_ports = smartlist_create();
+  return configured_client_ports;
 }
 
 /** Adjust the value of options->DataDirectory, or fill it in if it's

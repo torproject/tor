@@ -19,6 +19,7 @@
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
+#include <event2/thread.h>
 #else
 #include <event.h>
 #endif
@@ -183,8 +184,10 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     struct event_config *cfg = event_config_new();
 
 #if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
-    if (! torcfg->disable_iocp)
+    if (! torcfg->disable_iocp) {
+      evthread_use_windows_threads();
       event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
+    }
 #endif
 
 #if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,0,7)

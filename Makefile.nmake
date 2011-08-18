@@ -1,0 +1,5 @@
+all:
+	cd src/common
+	$(MAKE) /F Makefile.nmake
+	cd ../../src/or
+	$(MAKE) /F Makefile.nmake

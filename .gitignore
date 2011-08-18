@@ -146,6 +146,8 @@
 /src/test/Makefile.in
 /src/test/test
 /src/test/test-child
+/src/test/test.exe
+/src/test/test-child.exe
 
 
 # /src/tools/

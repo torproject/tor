@@ -114,6 +114,8 @@ static time_t time_to_check_for_correct_dns = 0;
 static time_t time_of_last_signewnym = 0;
 /** Is there a signewnym request we're currently waiting to handle? */
 static int signewnym_is_pending = 0;
+/** How many times have we called newnym? */
+static unsigned newnym_epoch = 0;
 
 /** Smartlist of all open connections. */
 static smartlist_t *connection_array = NULL;
@@ -151,6 +153,12 @@ int can_complete_circuit=0;
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT (60)
+
+/** Decides our behavior when no logs are configured/before any
+ * logs have been configured.  For 0, we log notice to stdout as normal.
+ * For 1, we log warnings only.  For 2, we log nothing.
+ */
+int quiet_level = 0;
 
 /********* END VARIABLES ************/
 
@@ -290,7 +298,7 @@ connection_unregister_events(connection_t *conn)
     conn->bufev = NULL;
   }
 #endif
-  if (conn->dns_server_port) {
+  if (conn->type == CONN_TYPE_AP_DNS_LISTENER) {
     dnsserv_close_listener(conn);
   }
 }
@@ -1038,7 +1046,16 @@ signewnym_impl(time_t now)
   time_of_last_signewnym = now;
   signewnym_is_pending = 0;
 
+  ++newnym_epoch;
+
   control_event_signal(SIGNEWNYM);
+}
+
+/** Return the number of times that signewnym has been called. */
+unsigned
+get_signewnym_epoch(void)
+{
+  return newnym_epoch;
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -2137,6 +2154,7 @@ tor_init(int argc, char *argv[])
     default:
       add_temp_log(LOG_NOTICE);
   }
+  quiet_level = quiet;
 
   log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
       "Do not rely on it for strong anonymity. (Running on %s)",get_version(),

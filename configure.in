@@ -438,7 +438,7 @@ int x = 1;
       AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <event2/event.h>
-#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000800
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000d00
 #error
 int x = y(zz);
 #else
@@ -446,7 +446,7 @@ int x = 1;
 #endif
    ])], [ AC_MSG_RESULT([yes]) ],
       [ AC_MSG_RESULT([no])
-        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.8-rc or later]) ] )
+        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.13-stable or later]) ] )
     fi
   fi
 fi
@@ -1122,6 +1122,15 @@ else
   enable_gcc_warnings=no
   enable_gcc_warnings_advisory=no
 fi
+
+# OS X Lion started deprecating the system openssl. Let's just disable
+# all deprecation warnings on OS X.
+case "$host_os" in
+
+ darwin*)
+    CFLAGS="$CFLAGS -Wno-deprecated-declarations"
+    ;;
+esac
 
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)

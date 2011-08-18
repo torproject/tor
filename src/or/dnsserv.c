@@ -29,8 +29,9 @@
  * DNSPort.  We need to eventually answer the request <b>req</b>.
  */
 static void
-evdns_server_callback(struct evdns_server_request *req, void *_data)
+evdns_server_callback(struct evdns_server_request *req, void *data_)
 {
+  const listener_connection_t *listener = data_;
   edge_connection_t *conn;
   int i = 0;
   struct evdns_server_question *q = NULL;
@@ -43,7 +44,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   char *q_name;
 
   tor_assert(req);
-  tor_assert(_data == NULL);
+
   log_info(LD_APP, "Got a new DNS request!");
 
   req->flags |= 0x80; /* set RA */
@@ -130,7 +131,11 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   strlcpy(conn->socks_request->address, q->name,
           sizeof(conn->socks_request->address));
 
+  conn->socks_request->listener_type = listener->_base.type;
   conn->dns_server_request = req;
+  conn->isolation_flags = listener->isolation_flags;
+  conn->session_group = listener->session_group;
+  conn->nym_epoch = get_signewnym_epoch();
 
   if (connection_add(TO_CONN(conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for DNS request");
@@ -180,6 +185,12 @@ dnsserv_launch_request(const char *name, int reverse)
 
   strlcpy(conn->socks_request->address, name,
           sizeof(conn->socks_request->address));
+
+  conn->socks_request->listener_type = CONN_TYPE_CONTROL_LISTENER;
+  conn->original_dest_address = tor_strdup(name);
+  conn->session_group = SESSION_GROUP_CONTROL_RESOLVE;
+  conn->nym_epoch = get_signewnym_epoch();
+  conn->isolation_flags = ISO_DEFAULT;
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
@@ -305,12 +316,15 @@ dnsserv_resolved(edge_connection_t *conn,
 void
 dnsserv_configure_listener(connection_t *conn)
 {
+  listener_connection_t *listener_conn;
   tor_assert(conn);
   tor_assert(SOCKET_OK(conn->s));
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
-  conn->dns_server_port =
-    tor_evdns_add_server_port(conn->s, 0, evdns_server_callback, NULL);
+  listener_conn = TO_LISTENER_CONN(conn);
+  listener_conn->dns_server_port =
+    tor_evdns_add_server_port(conn->s, 0, evdns_server_callback,
+                              listener_conn);
 }
 
 /** Free the evdns server port for <b>conn</b>, which must be an
@@ -318,12 +332,15 @@ dnsserv_configure_listener(connection_t *conn)
 void
 dnsserv_close_listener(connection_t *conn)
 {
+  listener_connection_t *listener_conn;
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
-  if (conn->dns_server_port) {
-    evdns_close_server_port(conn->dns_server_port);
-    conn->dns_server_port = NULL;
+  listener_conn = TO_LISTENER_CONN(conn);
+
+  if (listener_conn->dns_server_port) {
+    evdns_close_server_port(listener_conn->dns_server_port);
+    listener_conn->dns_server_port = NULL;
   }
 }
 

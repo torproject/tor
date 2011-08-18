@@ -111,6 +111,15 @@ typedef signed int int32_t;
 typedef unsigned int uint32_t;
 #define HAVE_UINT32_T
 #endif
+#ifndef UINT16_MAX
+#define UINT16_MAX 0xffffu
+#endif
+#ifndef INT16_MAX
+#define INT16_MAX 0x7fff
+#endif
+#ifndef INT16_MIN
+#define INT16_MIN (-INT16_MAX-1)
+#endif
 #ifndef UINT32_MAX
 #define UINT32_MAX 0xffffffffu
 #endif

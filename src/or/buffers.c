@@ -557,6 +557,39 @@ buf_free(buf_t *buf)
   tor_free(buf);
 }
 
+/** Return a new copy of <b>in_chunk</b> */
+static chunk_t *
+chunk_copy(const chunk_t *in_chunk)
+{
+  chunk_t *newch = tor_memdup(in_chunk, CHUNK_ALLOC_SIZE(in_chunk->memlen));
+  newch->next = NULL;
+  if (in_chunk->data) {
+    off_t offset = in_chunk->data - in_chunk->mem;
+    newch->data = newch->mem + offset;
+  }
+  return newch;
+}
+
+/** Return a new copy of <b>buf</b> */
+buf_t *
+buf_copy(const buf_t *buf)
+{
+  chunk_t *ch;
+  buf_t *out = buf_new();
+  out->default_chunk_size = buf->default_chunk_size;
+  for (ch = buf->head; ch; ch = ch->next) {
+    chunk_t *newch = chunk_copy(ch);
+    if (out->tail) {
+      out->tail->next = newch;
+      out->tail = newch;
+    } else {
+      out->head = out->tail = newch;
+    }
+  }
+  out->datalen = buf->datalen;
+  return out;
+}
+
 /** Append a new chunk with enough capacity to hold <b>capacity</b> bytes to
  * the tail of <b>buf</b>.  If <b>capped</b>, don't allocate a chunk bigger
  * than MAX_CHUNK_ALLOC. */
@@ -1021,13 +1054,13 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 #ifdef USE_BUFFEREVENTS
 /** Try to read <b>n</b> bytes from <b>buf</b> at <b>pos</b> (which may be
  * NULL for the start of the buffer), copying the data only if necessary.  Set
- * *<b>data</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
+ * *<b>data_out</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
  * if we needed to malloc *<b>data</b> because the original bytes were
  * noncontiguous; 0 otherwise.  Return the number of bytes actually available
- * at <b>data</b>.
+ * at *<b>data_out</b>.
  */
 static ssize_t
-inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
+inspect_evbuffer(struct evbuffer *buf, char **data_out, size_t n, int *free_out,
                  struct evbuffer_ptr *pos)
 {
   int n_vecs, i;
@@ -1042,25 +1075,15 @@ inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
     struct evbuffer_iovec v;
     i = evbuffer_peek(buf, n, pos, &v, 1);
     tor_assert(i == 1);
-    *data = v.iov_base;
+    *data_out = v.iov_base;
     *free_out = 0;
     return v.iov_len;
   } else {
-    struct evbuffer_iovec *vecs =
-      tor_malloc(sizeof(struct evbuffer_iovec)*n_vecs);
-    size_t copied = 0;
-    i = evbuffer_peek(buf, n, NULL, vecs, n_vecs);
-    tor_assert(i == n_vecs);
-    *data = tor_malloc(n);
-    for (i=0; i < n_vecs; ++i) {
-      size_t copy = n - copied;
-      if (copy > vecs[i].iov_len)
-        copy = vecs[i].iov_len;
-      tor_assert(copied+copy <= n);
-      memcpy(data+copied, vecs[i].iov_base, copy);
-      copied += copy;
-    }
+    ev_ssize_t copied;
+    *data_out = tor_malloc(n);
     *free_out = 1;
+    copied = evbuffer_copyout(buf, *data_out, n);
+    tor_assert(copied >= 0 && (size_t)copied == n);
     return copied;
   }
 }
@@ -1499,8 +1522,14 @@ socks_request_free(socks_request_t *req)
 {
   if (!req)
     return;
-  tor_free(req->username);
-  tor_free(req->password);
+  if (req->username) {
+    memset(req->username, 0x10, req->usernamelen);
+    tor_free(req->username);
+  }
+  if (req->password) {
+    memset(req->password, 0x04, req->passwordlen);
+    tor_free(req->password);
+  }
   memset(req, 0xCC, sizeof(socks_request_t));
   tor_free(req);
 }
@@ -1581,12 +1610,12 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
      */
     struct evbuffer_iovec v;
     int i;
-    want_length = evbuffer_get_contiguous_space(buf);
     n_drain = 0;
-    i = evbuffer_peek(buf, want_length, NULL, &v, 1);
+    i = evbuffer_peek(buf, -1, NULL, &v, 1);
     tor_assert(i == 1);
     data = v.iov_base;
     datalen = v.iov_len;
+    want_length = 0;
 
     res = parse_socks(data, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
@@ -2373,6 +2402,43 @@ write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
   return 0;
 }
 #endif
+
+/** Set *<b>output</b> to contain a copy of the data in *<b>input</b> */
+int
+generic_buffer_set_to_copy(generic_buffer_t **output,
+                           const generic_buffer_t *input)
+{
+#ifdef USE_BUFFEREVENTS
+  struct evbuffer_ptr ptr;
+  size_t remaining = evbuffer_get_length(input);
+  if (*output) {
+    evbuffer_drain(*output, evbuffer_get_length(*output));
+  } else {
+    if (!(*output = evbuffer_new()))
+      return -1;
+  }
+  evbuffer_ptr_set((struct evbuffer*)input, &ptr, 0, EVBUFFER_PTR_SET);
+  while (remaining) {
+    struct evbuffer_iovec v[4];
+    int n_used, i;
+    n_used = evbuffer_peek((struct evbuffer*)input, -1, &ptr, v, 4);
+    if (n_used < 0)
+      return -1;
+    for (i=0;i<n_used;++i) {
+      evbuffer_add(*output, v[i].iov_base, v[i].iov_len);
+      tor_assert(v[i].iov_len <= remaining);
+      remaining -= v[i].iov_len;
+      evbuffer_ptr_set((struct evbuffer*)input,
+                       &ptr, v[i].iov_len, EVBUFFER_PTR_ADD);
+    }
+  }
+#else
+  if (*output)
+    buf_free(*output);
+  *output = buf_copy(input);
+#endif
+  return 0;
+}
 
 /** Log an error and exit if <b>buf</b> is corrupted.
  */

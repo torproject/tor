@@ -160,6 +160,7 @@ uint64_t round_to_power_of_2(uint64_t u64);
 unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
 uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
 uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
+int n_bits_set_u8(uint8_t v);
 
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
  * and positive <b>b</b>.  Works on integer types only. Not defined if a+b can
@@ -174,6 +175,7 @@ void tor_strlower(char *s) ATTR_NONNULL((1));
 void tor_strupper(char *s) ATTR_NONNULL((1));
 int tor_strisprint(const char *s) ATTR_PURE ATTR_NONNULL((1));
 int tor_strisnonupper(const char *s) ATTR_PURE ATTR_NONNULL((1));
+int strcmp_opt(const char *s1, const char *s2) ATTR_PURE;
 int strcmpstart(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
 int strcmp_len(const char *s1, const char *s2, size_t len)
   ATTR_PURE ATTR_NONNULL((1,2));
@@ -217,6 +219,11 @@ int tor_sscanf(const char *buf, const char *pattern, ...)
   __attribute__((format(scanf, 2, 3)))
 #endif
   ;
+
+void smartlist_asprintf_add(struct smartlist_t *sl, const char *pattern, ...)
+  CHECK_PRINTF(2, 3);
+void smartlist_vasprintf_add(struct smartlist_t *sl, const char *pattern,
+                             va_list args);
 
 int hex_decode_digit(char c);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);

@@ -391,7 +391,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
     - Authorities now clean their microdesc cache periodically and when
       reading from disk initially, not only when adding new descriptors.
       This prevents a bug where we could lose microdescriptors. Bugfix
-      on 0.2.2.6-alpha. 2230
+      on 0.2.2.6-alpha. Fixes bug 2230.
     - Do not crash when our configuration file becomes unreadable, for
       example due to a permissions change, between when we start up
       and when a controller calls SAVECONF. Fixes bug 3135; bugfix
@@ -1017,6 +1017,57 @@ Changes in version 0.2.2.23-alpha - 2011-03-08
     - Stop shipping the Tor specs files and development proposal documents
       in the tarball. They are now in a separate git repository at
       git://git.torproject.org/torspec.git
+
+
+Changes in version 0.2.1.30 - 2011-02-23
+  Tor 0.2.1.30 fixes a variety of less critical bugs. The main other
+  change is a slight tweak to Tor's TLS handshake that makes relays
+  and bridges that run this new version reachable from Iran again.
+  We don't expect this tweak will win the arms race long-term, but it
+  buys us time until we roll out a better solution.
+
+  o Major bugfixes:
+    - Stop sending a CLOCK_SKEW controller status event whenever
+      we fetch directory information from a relay that has a wrong clock.
+      Instead, only inform the controller when it's a trusted authority
+      that claims our clock is wrong. Bugfix on 0.1.2.6-alpha; fixes
+      the rest of bug 1074.
+    - Fix a bounds-checking error that could allow an attacker to
+      remotely crash a directory authority. Bugfix on 0.2.1.5-alpha.
+      Found by "piebeer".
+    - If relays set RelayBandwidthBurst but not RelayBandwidthRate,
+      Tor would ignore their RelayBandwidthBurst setting,
+      potentially using more bandwidth than expected. Bugfix on
+      0.2.0.1-alpha. Reported by Paul Wouters. Fixes bug 2470.
+    - Ignore and warn if the user mistakenly sets "PublishServerDescriptor
+      hidserv" in her torrc. The 'hidserv' argument never controlled
+      publication of hidden service descriptors. Bugfix on 0.2.0.1-alpha.
+
+  o Minor features:
+    - Adjust our TLS Diffie-Hellman parameters to match those used by
+      Apache's mod_ssl.
+    - Update to the February 1 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes:
+    - Check for and reject overly long directory certificates and
+      directory tokens before they have a chance to hit any assertions.
+      Bugfix on 0.2.1.28. Found by "doorss".
+    - Bring the logic that gathers routerinfos and assesses the
+      acceptability of circuits into line. This prevents a Tor OP from
+      getting locked in a cycle of choosing its local OR as an exit for a
+      path (due to a .exit request) and then rejecting the circuit because
+      its OR is not listed yet. It also prevents Tor clients from using an
+      OR running in the same instance as an exit (due to a .exit request)
+      if the OR does not meet the same requirements expected of an OR
+      running elsewhere. Fixes bug 1859; bugfix on 0.1.0.1-rc.
+
+  o Packaging changes:
+    - Stop shipping the Tor specs files and development proposal documents
+      in the tarball. They are now in a separate git repository at
+      git://git.torproject.org/torspec.git
+    - Do not include Git version tags as though they are SVN tags when
+      generating a tarball from inside a repository that has switched
+      between branches. Bugfix on 0.2.1.15-rc; fixes bug 2402.
 
 
 Changes in version 0.2.2.22-alpha - 2011-01-25
@@ -2679,8 +2730,9 @@ Changes in version 0.2.2.5-alpha - 2009-10-11
   o Major bugfixes:
     - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
 
-  o New directory authorities:
-    - Move dizum to an alternate IP address.
+  o Directory authorities:
+    - Temporarily (just for this release) move dizum to an alternate
+      IP address.
 
 
 Changes in version 0.2.2.4-alpha - 2009-10-10

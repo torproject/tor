@@ -15,6 +15,7 @@ EXTRA_DIST = \
 	ChangeLog					\
 	INSTALL						\
 	LICENSE						\
+	Makefile.nmake					\
 	README						\
 	ReleaseNotes					\
 	tor.spec					\

@@ -1,0 +1,3 @@
+  o Major bugfixes (IOCP):
+    - When using IOCP on windows, we need to enable Libevent windows threading
+      support. Bugfix on 0.2.3.1-alpha.

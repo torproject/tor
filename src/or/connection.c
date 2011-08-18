@@ -43,11 +43,12 @@
 static connection_t *connection_create_listener(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
-                               char* address);
+                               const char *address,
+                               const port_cfg_t *portcfg);
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
 static int connection_init_accepted_conn(connection_t *conn,
-                                         uint8_t listener_type);
+                          const listener_connection_t *listener);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 #ifndef USE_BUFFEREVENTS
 static int connection_bucket_should_increase(int bucket,
@@ -75,6 +76,15 @@ static uint32_t last_interface_ip = 0;
 /** A list of uint32_ts for addresses we've used in outgoing connections.
  * Used to detect IP address changes. */
 static smartlist_t *outgoing_addrs = NULL;
+
+#define CASE_ANY_LISTENER_TYPE \
+    case CONN_TYPE_OR_LISTENER: \
+    case CONN_TYPE_AP_LISTENER: \
+    case CONN_TYPE_DIR_LISTENER: \
+    case CONN_TYPE_CONTROL_LISTENER: \
+    case CONN_TYPE_AP_TRANS_LISTENER: \
+    case CONN_TYPE_AP_NATD_LISTENER: \
+    case CONN_TYPE_AP_DNS_LISTENER
 
 /**************************************************************/
 
@@ -116,13 +126,7 @@ conn_state_to_string(int type, int state)
 {
   static char buf[96];
   switch (type) {
-    case CONN_TYPE_OR_LISTENER:
-    case CONN_TYPE_AP_LISTENER:
-    case CONN_TYPE_AP_TRANS_LISTENER:
-    case CONN_TYPE_AP_NATD_LISTENER:
-    case CONN_TYPE_AP_DNS_LISTENER:
-    case CONN_TYPE_DIR_LISTENER:
-    case CONN_TYPE_CONTROL_LISTENER:
+    CASE_ANY_LISTENER_TYPE:
       if (state == LISTENER_STATE_READY)
         return "ready";
       break;
@@ -265,6 +269,17 @@ control_connection_new(int socket_family)
   return control_conn;
 }
 
+/** Allocate and return a new listener_connection_t, initialized as by
+ * connection_init(). */
+listener_connection_t *
+listener_connection_new(int type, int socket_family)
+{
+  listener_connection_t *listener_conn =
+    tor_malloc_zero(sizeof(listener_connection_t));
+  connection_init(time(NULL), TO_CONN(listener_conn), type, socket_family);
+  return listener_conn;
+}
+
 /** Allocate, initialize, and return a new connection_t subtype of <b>type</b>
  * to make or receive connections of address family <b>socket_family</b>.  The
  * type should be one of the CONN_TYPE_* constants. */
@@ -284,6 +299,9 @@ connection_new(int type, int socket_family)
 
     case CONN_TYPE_CONTROL:
       return TO_CONN(control_connection_new(socket_family));
+
+    CASE_ANY_LISTENER_TYPE:
+      return TO_CONN(listener_connection_new(type, socket_family));
 
     default: {
       connection_t *conn = tor_malloc_zero(sizeof(connection_t));
@@ -324,6 +342,9 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
       break;
     case CONN_TYPE_CONTROL:
       conn->magic = CONTROL_CONNECTION_MAGIC;
+      break;
+    CASE_ANY_LISTENER_TYPE:
+      conn->magic = LISTENER_CONNECTION_MAGIC;
       break;
     default:
       conn->magic = BASE_CONNECTION_MAGIC;
@@ -396,6 +417,11 @@ _connection_free(connection_t *conn)
       mem = TO_CONTROL_CONN(conn);
       memlen = sizeof(control_connection_t);
       break;
+    CASE_ANY_LISTENER_TYPE:
+      tor_assert(conn->magic == LISTENER_CONNECTION_MAGIC);
+      mem = TO_LISTENER_CONN(conn);
+      memlen = sizeof(listener_connection_t);
+      break;
     default:
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       mem = conn;
@@ -442,9 +468,15 @@ _connection_free(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     tor_free(edge_conn->chosen_exit_name);
+    tor_free(edge_conn->original_dest_address);
     if (edge_conn->socks_request)
       socks_request_free(edge_conn->socks_request);
-
+    if (edge_conn->pending_optimistic_data) {
+      generic_buffer_free(edge_conn->pending_optimistic_data);
+    }
+    if (edge_conn->sending_optimistic_data) {
+      generic_buffer_free(edge_conn->sending_optimistic_data);
+    }
     rend_data_free(edge_conn->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
@@ -527,41 +559,6 @@ connection_free(connection_t *conn)
   }
   connection_unregister_events(conn);
   _connection_free(conn);
-}
-
-/** Call _connection_free() on every connection in our array, and release all
- * storage held by connection.c. This is used by cpuworkers and dnsworkers
- * when they fork, so they don't keep resources held open (especially
- * sockets).
- *
- * Don't do the checks in connection_free(), because they will
- * fail.
- */
-void
-connection_free_all(void)
-{
-  smartlist_t *conns = get_connection_array();
-
-  /* We don't want to log any messages to controllers. */
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-    if (conn->type == CONN_TYPE_CONTROL)
-      TO_CONTROL_CONN(conn)->event_mask = 0);
-
-  control_update_global_event_mask();
-
-  /* Unlink everything from the identity map. */
-  connection_or_clear_identity_map();
-
-  /* Clear out our list of broken connections */
-  clear_broken_connection_map(0);
-
-  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
-
-  if (outgoing_addrs) {
-    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
-    smartlist_free(outgoing_addrs);
-    outgoing_addrs = NULL;
-  }
 }
 
 /**
@@ -701,48 +698,6 @@ connection_expire_held_open(void)
   });
 }
 
-/** Create an AF_INET listenaddr struct.
- * <b>listenaddress</b> provides the host and optionally the port information
- * for the new structure.  If no port is provided in <b>listenaddress</b> then
- * <b>listenport</b> is used.
- *
- * If not NULL <b>readable_address</b> will contain a copy of the host part of
- * <b>listenaddress</b>.
- *
- * The listenaddr struct has to be freed by the caller.
- */
-static struct sockaddr_in *
-create_inet_sockaddr(const char *listenaddress, int listenport,
-                     char **readable_address, socklen_t *socklen_out) {
-  struct sockaddr_in *listenaddr = NULL;
-  uint32_t addr;
-  uint16_t usePort = 0;
-
-  if (parse_addr_port(LOG_WARN,
-                      listenaddress, readable_address, &addr, &usePort)<0) {
-    log_warn(LD_CONFIG,
-             "Error parsing/resolving ListenAddress %s", listenaddress);
-    goto err;
-  }
-  if (usePort==0) {
-    if (listenport != CFG_AUTO_PORT)
-      usePort = listenport;
-  }
-
-  listenaddr = tor_malloc_zero(sizeof(struct sockaddr_in));
-  listenaddr->sin_addr.s_addr = htonl(addr);
-  listenaddr->sin_family = AF_INET;
-  listenaddr->sin_port = htons((uint16_t) usePort);
-
-  *socklen_out = sizeof(struct sockaddr_in);
-
-  return listenaddr;
-
- err:
-  tor_free(listenaddr);
-  return NULL;
-}
-
 #ifdef HAVE_SYS_UN_H
 /** Create an AF_UNIX listenaddr struct.
  * <b>listenaddress</b> provides the path to the Unix socket.
@@ -877,12 +832,16 @@ make_socket_reuseable(tor_socket_t sock)
 static connection_t *
 connection_create_listener(const struct sockaddr *listensockaddr,
                            socklen_t socklen,
-                           int type, char* address)
+                           int type, const char *address,
+                           const port_cfg_t *port_cfg)
 {
+  listener_connection_t *lis_conn;
   connection_t *conn;
   tor_socket_t s; /* the socket we're going to make */
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
+  static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
+  tor_addr_t addr;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     warn_too_many_conns();
@@ -890,7 +849,6 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   }
 
   if (listensockaddr->sa_family == AF_INET) {
-    tor_addr_t addr;
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_tcp)
       start_reading = 1;
@@ -958,6 +916,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     log_notice(LD_NET, "Opening %s on %s",
                conn_type_to_string(type), address);
 
+    tor_addr_make_unspec(&addr);
+
     if (unlink(address) < 0 && errno != ENOENT) {
       log_warn(LD_NET, "Could not unlink %s: %s", address,
                        strerror(errno));
@@ -999,11 +959,23 @@ connection_create_listener(const struct sockaddr *listensockaddr,
 
   set_socket_nonblocking(s);
 
-  conn = connection_new(type, listensockaddr->sa_family);
+  lis_conn = listener_connection_new(type, listensockaddr->sa_family);
+  conn = TO_CONN(lis_conn);
   conn->socket_family = listensockaddr->sa_family;
   conn->s = s;
   conn->address = tor_strdup(address);
   conn->port = gotPort;
+  tor_addr_copy(&conn->addr, &addr);
+
+  if (port_cfg->isolation_flags) {
+    lis_conn->isolation_flags = port_cfg->isolation_flags;
+    if (port_cfg->session_group >= 0) {
+      lis_conn->session_group = port_cfg->session_group;
+    } else {
+      /* XXXX023 This can wrap after ~INT_MAX ports are opened. */
+      lis_conn->session_group = global_next_session_group--;
+    }
+  }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1014,9 +986,6 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   log_fn(usePort==gotPort ? LOG_DEBUG : LOG_NOTICE, LD_NET,
          "%s listening on port %u.",
          conn_type_to_string(type), gotPort);
-
-  if (type == CONN_TYPE_CONTROL_LISTENER)
-    control_ports_write_to_file();
 
   conn->state = LISTENER_STATE_READY;
   if (start_reading) {
@@ -1217,7 +1186,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     return 0; /* no need to tear down the parent */
   }
 
-  if (connection_init_accepted_conn(newconn, conn->type) < 0) {
+  if (connection_init_accepted_conn(newconn, TO_LISTENER_CONN(conn)) < 0) {
     if (! newconn->marked_for_close)
       connection_mark_for_close(newconn);
     return 0;
@@ -1231,7 +1200,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
  * and place it in circuit_wait.
  */
 static int
-connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
+connection_init_accepted_conn(connection_t *conn,
+                              const listener_connection_t *listener)
 {
   connection_start_reading(conn);
 
@@ -1240,7 +1210,11 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
-      switch (listener_type) {
+      TO_EDGE_CONN(conn)->isolation_flags = listener->isolation_flags;
+      TO_EDGE_CONN(conn)->session_group = listener->session_group;
+      TO_EDGE_CONN(conn)->nym_epoch = get_signewnym_epoch();
+      TO_EDGE_CONN(conn)->socks_request->listener_type = listener->_base.type;
+      switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
@@ -1741,6 +1715,113 @@ connection_read_proxy_handshake(connection_t *conn)
   return ret;
 }
 
+/** Given a list of listener connections in <b>old_conns</b>, and list of
+ * port_cfg_t entries in <b>ports</b>, open a new listener for every port in
+ * <b>ports</b> that does not already have a listener in <b>old_conns</b>.
+ *
+ * Remove from <b>old_conns</b> every connection that has a corresponding
+ * entry in <b>ports</b>.  Add to <b>new_conns</b> new every connection we
+ * launch.
+ *
+ * Return 0 on success, -1 on failure.
+ **/
+static int
+retry_listener_ports(smartlist_t *old_conns,
+                     const smartlist_t *ports,
+                     smartlist_t *new_conns)
+{
+  smartlist_t *launch = smartlist_create();
+  int r = 0;
+
+  smartlist_add_all(launch, ports);
+
+  /* Iterate through old_conns, comparing it to launch: remove from both lists
+   * each pair of elements that corresponds to the same port. */
+  SMARTLIST_FOREACH_BEGIN(old_conns, connection_t *, conn) {
+    const port_cfg_t *found_port = NULL;
+
+    /* Okay, so this is a listener.  Is it configured? */
+    SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, wanted) {
+      if (conn->type != wanted->type)
+        continue;
+      if ((conn->socket_family != AF_UNIX && wanted->is_unix_addr) ||
+          (conn->socket_family == AF_UNIX && ! wanted->is_unix_addr))
+        continue;
+
+      if (wanted->is_unix_addr) {
+        if (conn->socket_family == AF_UNIX &&
+            !strcmp(wanted->unix_addr, conn->address)) {
+          found_port = wanted;
+          break;
+        }
+      } else {
+        int port_matches;
+        if (wanted->port == CFG_AUTO_PORT) {
+          port_matches = 1;
+        } else {
+          port_matches = (wanted->port == conn->port);
+        }
+        if (port_matches && tor_addr_eq(&wanted->addr, &conn->addr)) {
+          found_port = wanted;
+          break;
+        }
+      }
+    } SMARTLIST_FOREACH_END(wanted);
+
+    if (found_port) {
+      /* This listener is already running; we don't need to launch it. */
+      //log_debug(LD_NET, "Already have %s on %s:%d",
+      //    conn_type_to_string(found_port->type), conn->address, conn->port);
+      smartlist_remove(launch, found_port);
+      /* And we can remove the connection from old_conns too. */
+      SMARTLIST_DEL_CURRENT(old_conns, conn);
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  /* Now open all the listeners that are configured but not opened. */
+  SMARTLIST_FOREACH_BEGIN(launch, const port_cfg_t *, port) {
+    struct sockaddr *listensockaddr;
+    socklen_t listensocklen = 0;
+    char *address=NULL;
+    connection_t *conn;
+    int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
+    tor_assert(real_port <= UINT16_MAX);
+
+    if (port->is_unix_addr) {
+      listensockaddr = (struct sockaddr *)
+        create_unix_sockaddr(port->unix_addr,
+                             &address, &listensocklen);
+    } else {
+      listensockaddr = tor_malloc(sizeof(struct sockaddr_storage));
+      listensocklen = tor_addr_to_sockaddr(&port->addr,
+                                           real_port,
+                                           listensockaddr,
+                                           sizeof(struct sockaddr_storage));
+      address = tor_dup_addr(&port->addr);
+    }
+
+    if (listensockaddr) {
+      conn = connection_create_listener(listensockaddr, listensocklen,
+                                        port->type, address, port);
+      tor_free(listensockaddr);
+      tor_free(address);
+    } else {
+      conn = NULL;
+    }
+
+    if (!conn) {
+      r = -1;
+    } else {
+      if (new_conns)
+        smartlist_add(new_conns, conn);
+    }
+  } SMARTLIST_FOREACH_END(port);
+
+  smartlist_free(launch);
+
+  return r;
+}
+
 /**
  * Launch any configured listener connections of type <b>type</b>.  (A
  * listener is configured if <b>port_option</b> is non-zero.  If any
@@ -1748,168 +1829,73 @@ connection_read_proxy_handshake(connection_t *conn)
  * connection binding to each one.  Otherwise, create a single
  * connection binding to the address <b>default_addr</b>.)
  *
- * Only launch the listeners of this type that are not already open, and
- * only close listeners that are no longer wanted.  Existing listeners
- * that are still configured are not touched.
+ * We assume that we're starting with a list of existing listener connection_t
+ * pointers in <b>old_conns</b>: we do not launch listeners that are already
+ * in that list.  Instead, we just remove them from the list.
  *
- * If <b>disable_all_conns</b> is set, then never open new conns, and
- * close the existing ones.
- *
- * Add all old conns that should be closed to <b>replaced_conns</b>.
- * Add all new connections to <b>new_conns</b>.
+ * All new connections we launch are added to <b>new_conns</b>.
  */
 static int
-retry_listeners(int type, config_line_t *cfg,
+retry_listeners(smartlist_t *old_conns,
+                int type, const config_line_t *cfg,
                 int port_option, const char *default_addr,
-                smartlist_t *replaced_conns,
                 smartlist_t *new_conns,
-                int disable_all_conns,
-                int socket_family)
+                int is_sockaddr_un)
 {
-  smartlist_t *launch = smartlist_create(), *conns;
-  int free_launch_elts = 1;
-  int r;
-  config_line_t *c;
-  connection_t *conn;
-  config_line_t *line;
+  smartlist_t *ports = smartlist_create();
+  tor_addr_t dflt_addr;
+  int retval = 0;
 
-  tor_assert(socket_family == AF_INET || socket_family == AF_UNIX);
-
-  if (cfg && port_option) {
-    for (c = cfg; c; c = c->next) {
-      smartlist_add(launch, c);
-    }
-    free_launch_elts = 0;
-  } else if (port_option) {
-    line = tor_malloc_zero(sizeof(config_line_t));
-    line->key = tor_strdup("");
-    line->value = tor_strdup(default_addr);
-    smartlist_add(launch, line);
+  if (default_addr) {
+    tor_addr_from_str(&dflt_addr, default_addr);
+  } else {
+    tor_addr_make_unspec(&dflt_addr);
   }
 
-  /*
-  SMARTLIST_FOREACH(launch, config_line_t *, l,
-                    log_fn(LOG_NOTICE, "#%s#%s", l->key, l->value));
-  */
-
-  conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type != type ||
-        conn->socket_family != socket_family ||
-        conn->marked_for_close)
-      continue;
-    /* Okay, so this is a listener.  Is it configured? */
-    line = NULL;
-    SMARTLIST_FOREACH(launch, config_line_t *, wanted,
-      {
-        char *address=NULL;
-        uint16_t port;
-        switch (socket_family) {
-          case AF_INET:
-            if (!parse_addr_port(LOG_WARN,
-                                 wanted->value, &address, NULL, &port)) {
-              int addr_matches = !strcasecmp(address, conn->address);
-              int port_matches;
-              tor_free(address);
-              if (port) {
-                /* The Listener line has a port */
-                port_matches = (port == conn->port);
-              } else if (port_option == CFG_AUTO_PORT) {
-                /* The Listener line has no port, and the Port line is "auto".
-                 * "auto" matches anything; transitions from any port to
-                 * "auto" succeed. */
-                port_matches = 1;
-              } else {
-                /*  The Listener line has no port, and the Port line is "auto".
-                 * "auto" matches anything; transitions from any port to
-                 * "auto" succeed. */
-                port_matches = (port_option == conn->port);
-              }
-              if (port_matches  && addr_matches) {
-                line = wanted;
-                break;
-              }
-            }
-            break;
-          case AF_UNIX:
-            if (!strcasecmp(wanted->value, conn->address)) {
-              line = wanted;
-              break;
-            }
-            break;
-          default:
-            tor_assert(0);
-        }
-      });
-    if (!line || disable_all_conns) {
-      /* This one isn't configured. Close it. */
-      log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
-                 conn_type_to_string(type), conn->address, conn->port);
-      if (replaced_conns) {
-        smartlist_add(replaced_conns, conn);
-      } else {
-        connection_close_immediate(conn);
-        connection_mark_for_close(conn);
-      }
+  if (port_option) {
+    if (!cfg) {
+      port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t));
+      tor_addr_copy(&port->addr, &dflt_addr);
+      port->port = port_option;
+      port->type = type;
+      smartlist_add(ports, port);
     } else {
-      /* It's configured; we don't need to launch it. */
-//      log_debug(LD_NET, "Already have %s on %s:%d",
-//                conn_type_to_string(type), conn->address, conn->port);
-      smartlist_remove(launch, line);
-      if (free_launch_elts)
-        config_free_lines(line);
-    }
-  });
-
-  /* Now open all the listeners that are configured but not opened. */
-  r = 0;
-  if (!disable_all_conns) {
-    SMARTLIST_FOREACH_BEGIN(launch, config_line_t *, cfg_line) {
-        char *address = NULL;
-        struct sockaddr *listensockaddr;
-        socklen_t listensocklen = 0;
-
-        switch (socket_family) {
-          case AF_INET:
-            listensockaddr = (struct sockaddr *)
-                             create_inet_sockaddr(cfg_line->value,
-                                                  port_option,
-                                                  &address, &listensocklen);
-            break;
-          case AF_UNIX:
-            listensockaddr = (struct sockaddr *)
-                             create_unix_sockaddr(cfg_line->value,
-                                                  &address, &listensocklen);
-            break;
-          default:
-            tor_assert(0);
-        }
-
-        if (listensockaddr) {
-          conn = connection_create_listener(listensockaddr, listensocklen,
-                                            type, address);
-          tor_free(listensockaddr);
-          tor_free(address);
-        } else
-          conn = NULL;
-
-        if (!conn) {
-          r = -1;
+      const config_line_t *c;
+      for (c = cfg; c; c = c->next) {
+        port_cfg_t *port;
+        tor_addr_t addr;
+        uint16_t portval = 0;
+        if (is_sockaddr_un) {
+          size_t len = strlen(c->value);
+          port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
+          port->is_unix_addr = 1;
+          memcpy(port->unix_addr, c->value, len+1);
         } else {
-          if (new_conns)
-            smartlist_add(new_conns, conn);
+          if (tor_addr_port_parse(c->value, &addr, &portval) < 0) {
+            log_warn(LD_CONFIG, "Can't parse/resolve %s %s",
+                     c->key, c->value);
+            retval = -1;
+            continue;
+          }
+          port = tor_malloc_zero(sizeof(port_cfg_t));
+          tor_addr_copy(&port->addr, &addr);
         }
-    } SMARTLIST_FOREACH_END(cfg_line);
+        port->type = type;
+        port->port = portval ? portval : port_option;
+        smartlist_add(ports, port);
+      }
+    }
   }
 
-  if (free_launch_elts) {
-    SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
-                      config_free_lines(cfg_line));
-  }
-  smartlist_free(launch);
+  if (retval == -1)
+    goto cleanup;
 
-  return r;
+  retval = retry_listener_ports(old_conns, ports, new_conns);
+
+ cleanup:
+  SMARTLIST_FOREACH(ports, port_cfg_t *, p, tor_free(p));
+  smartlist_free(ports);
+  return retval;
 }
 
 /** Launch listeners for each port you should have open.  Only launch
@@ -1923,53 +1909,61 @@ int
 retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
+  smartlist_t *listeners = smartlist_create();
   const or_options_t *options = get_options();
   int retval = 0;
   const uint16_t old_or_port = router_get_advertised_or_port(options);
   const uint16_t old_dir_port = router_get_advertised_dir_port(options, 0);
 
-  if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
-                      options->ORPort, "0.0.0.0",
-                      replaced_conns, new_conns, options->ClientOnly,
-                      AF_INET)<0)
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    if (connection_is_listener(conn) && !conn->marked_for_close)
+      smartlist_add(listeners, conn);
+  } SMARTLIST_FOREACH_END(conn);
+
+  if (! options->ClientOnly) {
+    if (retry_listeners(listeners,
+                        CONN_TYPE_OR_LISTENER, options->ORListenAddress,
+                        options->ORPort, "0.0.0.0",
+                        new_conns, 0) < 0)
+      retval = -1;
+    if (retry_listeners(listeners,
+                        CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
+                        options->DirPort, "0.0.0.0",
+                        new_conns, 0) < 0)
+      retval = -1;
+  }
+
+  if (retry_listener_ports(listeners,
+                           get_configured_client_ports(),
+                           new_conns) < 0)
     retval = -1;
-  if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
-                      options->DirPort, "0.0.0.0",
-                      replaced_conns, new_conns, options->ClientOnly,
-                      AF_INET)<0)
-    retval = -1;
-  if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
-                      options->SocksPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0,
-                      AF_INET)<0)
-    retval = -1;
-  if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
-                      options->TransPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0,
-                      AF_INET)<0)
-    retval = -1;
-  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NATDListenAddress,
-                      options->NATDPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0,
-                      AF_INET)<0)
-    retval = -1;
-  if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
-                      options->DNSPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0,
-                      AF_INET)<0)
-    retval = -1;
-  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
+  if (retry_listeners(listeners,
+                      CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0,
-                      AF_INET)<0)
+                      new_conns, 0) < 0)
     return -1;
-  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
+  if (retry_listeners(listeners,
+                      CONN_TYPE_CONTROL_LISTENER,
                       options->ControlSocket,
                       options->ControlSocket ? 1 : 0, NULL,
-                      replaced_conns, new_conns, 0,
-                      AF_UNIX)<0)
+                      new_conns, 1) < 0)
     return -1;
+
+  /* Any members that were still in 'listeners' don't correspond to
+   * any configured port.  Kill 'em. */
+  SMARTLIST_FOREACH_BEGIN(listeners, connection_t *, conn) {
+    log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
+               conn_type_to_string(conn->type), conn->address, conn->port);
+    if (replaced_conns) {
+      smartlist_add(replaced_conns, conn);
+    } else {
+      connection_close_immediate(conn);
+      connection_mark_for_close(conn);
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  smartlist_free(listeners);
 
   if (old_or_port != router_get_advertised_or_port(options) ||
       old_dir_port != router_get_advertised_dir_port(options, 0)) {
@@ -3910,6 +3904,9 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_CONTROL:
       tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
       break;
+    CASE_ANY_LISTENER_TYPE:
+      tor_assert(conn->magic == LISTENER_CONNECTION_MAGIC);
+      break;
     default:
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       break;
@@ -3994,13 +3991,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   switch (conn->type)
     {
-    case CONN_TYPE_OR_LISTENER:
-    case CONN_TYPE_AP_LISTENER:
-    case CONN_TYPE_AP_TRANS_LISTENER:
-    case CONN_TYPE_AP_NATD_LISTENER:
-    case CONN_TYPE_DIR_LISTENER:
-    case CONN_TYPE_CONTROL_LISTENER:
-    case CONN_TYPE_AP_DNS_LISTENER:
+    CASE_ANY_LISTENER_TYPE:
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:
@@ -4136,3 +4127,42 @@ proxy_type_to_string(int proxy_type)
   return NULL; /*Unreached*/
 }
 
+/** Call _connection_free() on every connection in our array, and release all
+ * storage held by connection.c. This is used by cpuworkers and dnsworkers
+ * when they fork, so they don't keep resources held open (especially
+ * sockets).
+ *
+ * Don't do the checks in connection_free(), because they will
+ * fail.
+ */
+void
+connection_free_all(void)
+{
+  smartlist_t *conns = get_connection_array();
+
+  /* We don't want to log any messages to controllers. */
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+    if (conn->type == CONN_TYPE_CONTROL)
+      TO_CONTROL_CONN(conn)->event_mask = 0);
+
+  control_update_global_event_mask();
+
+  /* Unlink everything from the identity map. */
+  connection_or_clear_identity_map();
+
+  /* Clear out our list of broken connections */
+  clear_broken_connection_map(0);
+
+  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
+
+  if (outgoing_addrs) {
+    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
+    smartlist_free(outgoing_addrs);
+    outgoing_addrs = NULL;
+  }
+
+#ifdef USE_BUFFEREVENTS
+  if (global_rate_limit)
+    bufferevent_rate_limit_group_free(global_rate_limit);
+#endif
+}
