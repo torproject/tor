@@ -1408,7 +1408,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(pos, ==, strlen(expected_out));
 
   /* Check it terminated correctly */
-  retval = tor_get_exit_code(process_handle);
+  retval = tor_get_exit_code(process_handle, 1);
   tt_int_op(retval, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 
@@ -1529,7 +1529,7 @@ test_util_spawn_background_partial_read(void *ptr)
 #endif
 
   /* Check it terminated correctly */
-  retval = tor_get_exit_code(process_handle);
+  retval = tor_get_exit_code(process_handle, 1);
   tt_int_op(retval, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 

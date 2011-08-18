@@ -3070,7 +3070,7 @@ tor_spawn_background(const char *const filename, const char **argv)
     // TODO: Close hProcess and hThread in process_handle.pid?
     process_handle.stdout_pipe = stdout_pipe_read;
     process_handle.stderr_pipe = stderr_pipe_read;
-    process_handle.status = 0;
+    process_handle.status = 1;
   }
 
   // TODO: Close pipes on exit
@@ -3248,20 +3248,36 @@ tor_spawn_background(const char *const filename, const char **argv)
        needs to know about the pid in order to reap it later */
   }
 
-  process_handle.status = 0;
+  process_handle.status = 1;
   process_handle.pid = pid;
+  /* Set stdout/stderr pipes to be non-blocking */
+  fcntl(process_handle.stdout_pipe, F_SETFL, O_NONBLOCK);
+  fcntl(process_handle.stderr_pipe, F_SETFL, O_NONBLOCK);
+  /* Open the buffered IO streams */
+  process_handle.stdout_handle = fdopen(process_handle.stdout_pipe, "r");
+  process_handle.stderr_handle = fdopen(process_handle.stderr_pipe, "r");
+
   return process_handle;
 #endif // MS_WINDOWS
 }
 
 int
-tor_get_exit_code(const process_handle_t process_handle)
+tor_get_exit_code(const process_handle_t process_handle, int block)
 {
 #ifdef MS_WINDOWS
   DWORD exit_code;
   BOOL retval;
-  WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
-  retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
+  if (block) {
+    exit_code = WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
+    retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
+  } else {
+    exit_code = WaitForSingleObject(process_handle.pid.hProcess, 0);
+    if (WAIT_TIMEOUT == exit_code) {
+      // Process has not exited
+      return -2;
+    }
+    retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
+  }
 
   if (!retval) {
     log_warn(LD_GENERAL, "GetExitCodeProcess() failed: %s",
@@ -3371,6 +3387,55 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
 #endif
 }
 
+#ifdef MS_WINDOWS
+static int
+log_from_handle(HANDLE *pipe, int severity)
+{
+  char buf[256];
+  int pos;
+  int start, cur, next;
+
+  pos = tor_read_all_handle(pipe, buf, sizeof(buf) - 1, NULL);
+  if (pos < 0) {
+    // Error
+    log_warn(LD_GENERAL, "Failed to read data from subprocess");
+    return -1;
+  }
+
+  if (0 == pos) {
+    // There's nothing to read (process is busy or has exited)
+    log_debug(LD_GENERAL, "Subprocess had nothing to say");
+    return 0;
+  }
+
+  // End with a null even if there isn't a \r\n at the end
+  // TODO: What if this is a partial line?
+  buf[pos] = '\0';
+  log_debug(LD_GENERAL, "Subprocess had %d bytes to say", pos);
+
+  next = 0; // Start of the next line
+  while (next < pos) {
+    start = next; // Look for the end of this line
+    for (cur=start; cur<pos; cur++) {
+      if ('\r' == buf[cur]) {
+        buf[cur] = '\0';
+	next = cur + 1;
+        if ((cur + 1) < pos && buf[cur+1] < pos) {
+	  buf[cur + 1] = '\0';
+          next = cur + 2;
+	}
+	// Line starts at start and ends with a null (was \r\n)
+	break;
+      }
+      // Line starts at start and ends at the end of a string
+      // but we already added a null in earlier
+    }
+    log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf+start);
+  }
+  return pos;
+}    
+
+#else
 /** Read from stream, and send lines to log at the specified log level.
  * Returns 1 if stream is closed normally, -1 if there is a error reading, and
  * 0 otherwise. Handles lines from tor-fw-helper and
@@ -3446,28 +3511,23 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
   /* We should never get here */
   return -1;
 }
+#endif
 
 void
 tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
                           time_t now)
 {
-#ifdef MS_WINDOWS
-  (void) filename; (void) dir_port; (void) or_port; (void) now;
-  (void) tor_spawn_background;
-  (void) log_from_pipe;
-  log_warn(LD_GENERAL, "Sorry, port forwarding is not yet supported "
-           "on windows.");
-#else
 /* When fw-helper succeeds, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_SUCCESS 300
 /* When fw-helper fails, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
-  // XXX: remove
-  static int child_pid = -1;
-  static process_handle_t child_handle = {0, 0, 0, 0};
-  static FILE *stdout_read = NULL;
-  static FILE *stderr_read = NULL;
+#ifdef MS_WINDOWS
+  static process_handle_t child_handle = {0, NULL, NULL, {NULL}};
+#else
+  static process_handle_t child_handle;
+#endif
+
   static time_t time_to_run_helper = 0;
   int stdout_status, stderr_status, retval;
   const char *argv[10];
@@ -3492,37 +3552,40 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
   argv[9] = NULL;
 
   /* Start the child, if it is not already running */
-  if (-1 == child_pid &&
-      time_to_run_helper < now) {
-    int fd_out=-1, fd_err=-1;
-
+  if (child_handle.status <= 0 && time_to_run_helper < now) {
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
 
     child_handle = tor_spawn_background(filename, argv);
-    if (child_pid < 0) {
+    if (child_handle.status < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
-      child_pid = -1;
       return;
     }
-    /* Set stdout/stderr pipes to be non-blocking */
-    fcntl(fd_out, F_SETFL, O_NONBLOCK);
-    fcntl(fd_err, F_SETFL, O_NONBLOCK);
-    /* Open the buffered IO streams */
-    stdout_read = fdopen(fd_out, "r");
-    stderr_read = fdopen(fd_err, "r");
-
+#ifdef MS_WINDOWS
+    log_info(LD_GENERAL,
+      "Started port forwarding helper (%s)", filename);
+#else
     log_info(LD_GENERAL,
       "Started port forwarding helper (%s) with pid %d", filename, child_pid);
+#endif
   }
 
   /* If child is running, read from its stdout and stderr) */
-  if (child_pid > 0) {
+  if (child_handle.status > 0) {
     /* Read from stdout/stderr and log result */
     retval = 0;
-    stdout_status = log_from_pipe(stdout_read, LOG_INFO, filename, &retval);
-    stderr_status = log_from_pipe(stderr_read, LOG_WARN, filename, &retval);
+#ifdef MS_WINDOWS
+    stdout_status = log_from_handle(child_handle.stdout_pipe, LOG_INFO);
+    stderr_status = log_from_handle(child_handle.stderr_pipe, LOG_WARN);
+    // If we got this far (on Windows), the process started
+    retval = 0;
+#else
+    stdout_status = log_from_pipe(child_handle.stdout_handle,
+		    LOG_INFO, filename, &retval);
+    stderr_status = log_from_pipe(child_handle.stderr_handle,
+		    LOG_WARN, filename, &retval);
+#endif
     if (retval) {
       /* There was a problem in the child process */
       time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
@@ -3532,9 +3595,16 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (-1 == stdout_status || -1 == stderr_status)
       /* There was a failure */
       retval = -1;
+#ifdef MS_WINDOWS
+    else if (tor_get_exit_code(child_handle, 0) >= 0) {
+      /* process has exited */
+      retval = 1;
+    }
+#else
     else if (1 == stdout_status || 1 == stderr_status)
       /* stdout or stderr was closed */
       retval = 1;
+#endif
     else
       /* Both are fine */
       retval = 0;
@@ -3549,9 +3619,8 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 
       /* TODO: The child might not actually be finished (maybe it failed or
          closed stdout/stderr), so maybe we shouldn't start another? */
-      child_pid = -1;
+      child_handle.status = -1;
     }
   }
-#endif
 }
 

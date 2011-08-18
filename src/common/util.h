@@ -349,7 +349,7 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 /* Prototypes for private functions only used by util.c (and unit tests) */
 
 typedef struct process_handle_s {
-  int status;
+  int status; // 0: not running; 1: running; -1: error
 #ifdef MS_WINDOWS
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
@@ -357,13 +357,15 @@ typedef struct process_handle_s {
 #else
   int stdout_pipe;
   int stderr_pipe;
+  FILE *stdout_handle;
+  FILE *stderr_handle;
   int pid;
 #endif // MS_WINDOWS
 } process_handle_t;
 
 process_handle_t tor_spawn_background(const char *const filename,
                                       const char **argv);
-int tor_get_exit_code(const process_handle_t pid);
+int tor_get_exit_code(const process_handle_t pid, int block);
 ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess);
 ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                         char *buf, size_t count);
