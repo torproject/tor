@@ -3966,6 +3966,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (old->DisableIOCP != new_val->DisableIOCP) {
+    *msg = tor_strdup("While Tor is running, changing DisableIOCP "
+                      "is not allowed.");
+    return -1;
+  }
+
   return 0;
 }
 
