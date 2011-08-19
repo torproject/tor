@@ -13,6 +13,7 @@
  * later date.
  */
 
+#include "orconfig.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -20,7 +21,10 @@
 #include <time.h>
 #include <string.h>
 
-#include "orconfig.h"
+#ifdef MS_WINDOWS
+#include <winsock2.h>
+#endif
+
 #include "tor-fw-helper.h"
 #ifdef NAT_PMP
 #include "tor-fw-helper-natpmp.h"
@@ -219,6 +223,29 @@ tor_fw_add_dir_port(tor_fw_options_t *tor_fw_options,
   }
 }
 
+/** Called before we make any calls to network-related functions.
+ * (Some operating systems require their network libraries to be
+ * initialized.) (from common/compat.c) */
+static int
+network_init(void)
+{
+#ifdef MS_WINDOWS
+  /* This silly exercise is necessary before windows will allow
+   * gethostbyname to work. */
+  WSADATA WSAData;
+  int r;
+  r = WSAStartup(0x101, &WSAData);
+  if (r) {
+    fprintf(stderr, "E: Error initializing Windows network layer - code was %d", r);
+    return -1;
+  }
+  /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
+   * We might use it to complain if we're trying to be a server but have
+   * too few sockets available. */
+#endif
+  return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -229,6 +256,7 @@ main(int argc, char **argv)
   backends_t backend_state;
 
   memset(&tor_fw_options, 0, sizeof(tor_fw_options));
+  memset(&backend_state, 0, sizeof(backend_state));
 
   while (1) {
     int option_index = 0;
@@ -328,6 +356,10 @@ main(int argc, char **argv)
             tor_fw_options.private_dir_port,
             tor_fw_options.public_dir_port);
   }
+
+  // Initialize networking
+  if (network_init())
+    exit(1);
 
   // Initalize the various fw-helper backend helpers
   r = init_backends(&tor_fw_options, &backend_state);

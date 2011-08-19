@@ -559,7 +559,7 @@ dnl There are no packages for Debian or Redhat as of this patch
 
 if test "$upnp" = "true"; then
     AC_DEFINE(MINIUPNPC, 1, [Define to 1 if we are building with UPnP.])
-    TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc],
+    TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc -lws2_32 -liphlpapi],
         [#include <miniupnpc/miniwget.h>
          #include <miniupnpc/miniupnpc.h>
          #include <miniupnpc/upnpcommands.h>],

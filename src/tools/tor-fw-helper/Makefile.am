@@ -25,7 +25,7 @@ endif
 
 if MINIUPNPC
 miniupnpc_ldflags = @TOR_LDFLAGS_libminiupnpc@
-miniupnpc_ldadd = -lminiupnpc -lm
+miniupnpc_ldadd = -lminiupnpc -lm -liphlpapi
 miniupnpc_cppflags = @TOR_CPPFLAGS_libminiupnpc@
 else
 miniupnpc_ldflags =
