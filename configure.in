@@ -325,7 +325,7 @@ dnl Where do you live, libevent?  And how do we call you?
 
 if test "$bwin32" = true; then
   TOR_LIB_WS32=-lws2_32
-  TOR_LIB_IPHLAPI=-liphlapi
+  TOR_LIB_IPHLPAPI=-liphlpapi
   # Some of the cargo-cults recommend -lwsock32 as well, but I don't
   # think it's actually necessary.
   TOR_LIB_GDI=-lgdi32
@@ -335,7 +335,7 @@ else
 fi
 AC_SUBST(TOR_LIB_WS32)
 AC_SUBST(TOR_LIB_GDI)
-AC_SUBST(TOR_LIB_IPHLAPI)
+AC_SUBST(TOR_LIB_IPHLPAPI)
 
 dnl We need to do this before we try our disgusting hack below.
 AC_CHECK_HEADERS([sys/types.h])
@@ -561,7 +561,7 @@ dnl There are no packages for Debian or Redhat as of this patch
 
 if test "$upnp" = "true"; then
     AC_DEFINE(MINIUPNPC, 1, [Define to 1 if we are building with UPnP.])
-    TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLAPI],
+    TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
         [#include <miniupnpc/miniwget.h>
          #include <miniupnpc/miniupnpc.h>
          #include <miniupnpc/upnpcommands.h>],
