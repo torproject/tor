@@ -569,7 +569,7 @@ if test "$upnp" = "true"; then
          const char * minissdpdsock, int sameport);],
         [upnpDiscover(1, 0, 0, 0); exit(0);],
         [--with-libminiupnpc-dir],
-        [/local/lib/])
+        [/usr/lib/])
 fi
 
 AC_SYS_LARGEFILE
