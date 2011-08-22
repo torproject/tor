@@ -1429,11 +1429,20 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
+  char *filename=NULL;
 #ifdef MS_WINDOWS
-  // TODO: Under MSYS, BUILDDIR in orconfig.h needs to be tweaked
   const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
   const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
   const char *expected_err = "ERR\r\n";
+
+  if (argv[0][0] == '/') {
+    /* We have a fake path, e.g. /c/foo, make it c:/foo */
+    filename = tor_strdup(argv[0]);
+    filename[0] = filename[1];
+    filename[1] = ':';
+    argv[0] = filename;
+    log_warn(LD_GENERAL, "%s", argv[0]);
+  }
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
   const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
@@ -1442,7 +1451,8 @@ test_util_spawn_background_ok(void *ptr)
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 0, 0);
+  run_util_spawn_background(argv, expected_out, expected_err, 0, 1);
+  tor_free(filename);
 }
 
 /** Check that failing to find the executable works as expected */
@@ -1461,7 +1471,7 @@ test_util_spawn_background_fail(void *ptr)
                              "- code          9/2\n";
   const char *expected_err = "";
   // TODO: Once we can signal failure to exec, set this to be -1;
-  const int expected_status = 0;
+  const int expected_status = 1;
 #endif
 
   (void)ptr;
@@ -1473,32 +1483,41 @@ test_util_spawn_background_fail(void *ptr)
 static void
 test_util_spawn_background_partial_read(void *ptr)
 {
+  char *filename=NULL;
+  const int expected_exit = 0;
+  const int expected_status = 1;
+
+  int retval, exit_code;
+  ssize_t pos;
+  process_handle_t process_handle;
+  char stdout_buf[100], stderr_buf[100];
 #ifdef MS_WINDOWS
-  // TODO: Under MSYS, BUILDDIR in orconfig.h needs to be tweaked
   const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
   const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
                                  "DONE\r\n",
                                  NULL };
   const char *expected_err = "ERR\r\n";
   int expected_out_ctr;
+
+  if (argv[0][0] == '/') {
+    /* We have a fake path, e.g. /c/foo, make it c:/foo */
+    filename = tor_strdup(argv[0]);
+    filename[0] = filename[1];
+    filename[1] = ':';
+    argv[0] = filename;
+    log_warn(LD_GENERAL, "%s", argv[0]);
+  }
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
   const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
   const char *expected_err = "ERR\r\n";
 #endif
-  const int expected_exit = 0;
-  const int expected_status = 0;
-
-  int retval, exit_code;
-  ssize_t pos;
-  process_handle_t process_handle;
-  char stdout_buf[100], stderr_buf[100];
-
   (void)ptr;
 
   /* Start the program */
   process_handle = tor_spawn_background(argv[0], argv);
   tt_int_op(process_handle.status, ==, expected_status);
+  tor_free(filename);
 
   /* Check stdout */
 #ifdef MS_WINDOWS
