@@ -1382,7 +1382,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
                           const char *expected_err, int expected_exit,
                           int expected_status)
 {
-  int retval;
+  int retval, exit_code;
   ssize_t pos;
   process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
@@ -1408,8 +1408,9 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(pos, ==, strlen(expected_out));
 
   /* Check it terminated correctly */
-  retval = tor_get_exit_code(process_handle, 1);
-  tt_int_op(retval, ==, expected_exit);
+  retval = tor_get_exit_code(process_handle, 1, &exit_code);
+  tt_int_op(retval, ==, 0);
+  tt_int_op(exit_code, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
@@ -1488,7 +1489,7 @@ test_util_spawn_background_partial_read(void *ptr)
   const int expected_exit = 0;
   const int expected_status = 0;
 
-  int retval;
+  int retval, exit_code;
   ssize_t pos;
   process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
@@ -1531,8 +1532,9 @@ test_util_spawn_background_partial_read(void *ptr)
 #endif
 
   /* Check it terminated correctly */
-  retval = tor_get_exit_code(process_handle, 1);
-  tt_int_op(retval, ==, expected_exit);
+  retval = tor_get_exit_code(process_handle, 1, &exit_code);
+  tt_int_op(retval, ==, 0);
+  tt_int_op(exit_code, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */

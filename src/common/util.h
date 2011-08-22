@@ -372,7 +372,8 @@ typedef struct process_handle_s {
 
 process_handle_t tor_spawn_background(const char *const filename,
                                       const char **argv);
-int tor_get_exit_code(const process_handle_t pid, int block);
+int tor_get_exit_code(const process_handle_t process_handle,
+                      int block, int *exit_code);
 ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess);
 ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                         char *buf, size_t count);

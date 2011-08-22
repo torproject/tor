@@ -3070,6 +3070,7 @@ tor_spawn_background(const char *const filename, const char **argv)
   saAttr.bInheritHandle = TRUE; 
   saAttr.lpSecurityDescriptor = NULL; 
 
+  /* Assume failure to start process */
   process_handle.status = -1;
 
   /* Set up pipe for stdout */
@@ -3083,6 +3084,7 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to configure pipe for stdout communication with child process: %s",
       format_win32_error(GetLastError()));
+    return process_handle;
   }
 
   /* Set up pipe for stderr */
@@ -3096,6 +3098,7 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to configure pipe for stderr communication with child process: %s",
       format_win32_error(GetLastError()));
+    return process_handle;
   }
 
   /* Create the child process */
@@ -3163,10 +3166,8 @@ tor_spawn_background(const char *const filename, const char **argv)
 
   static int max_fd = -1;
 
-  // XXX
-  process_handle.pid = 0;
-  process_handle.stderr_pipe = 0;
-  process_handle.stdout_pipe = 0;
+  /* Assume failure to start */
+  process_handle.status = -1;
 
   /* We do the strlen here because strlen() is not signal handler safe,
      and we are not allowed to use unsafe functions between fork and exec */
@@ -3180,7 +3181,6 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stdout communication with child process: %s",
        strerror(errno));
-    process_handle.status = -1;
     return process_handle;
   }
 
@@ -3189,7 +3189,6 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
-    process_handle.status = -1;
     return process_handle;
   }
 
@@ -3276,7 +3275,6 @@ tor_spawn_background(const char *const filename, const char **argv)
     (void) nbytes;
 
     _exit(255);
-    process_handle.status = -1;
     return process_handle; /* Never reached, but avoids compiler warning */
   }
 
@@ -3288,7 +3286,6 @@ tor_spawn_background(const char *const filename, const char **argv)
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
     close(stderr_pipe[1]);
-    process_handle.status = -1;
     return process_handle;
   }
 
@@ -3330,37 +3327,64 @@ tor_spawn_background(const char *const filename, const char **argv)
 #endif // MS_WINDOWS
 }
 
+/* Get the exit code of a process specified by <b>process_handle</b> and
+ * store it in <b>exit_code</b>, if set to a non-NULL value.  If
+ * <b>block</b> is set to true, the call will block until the process has
+ * exited.  Otherwise if the process is still running, the function will
+ * return -2, and exit_code will be left unchanged. Returns 0 if the
+ * process did exit. If there is a failure, -1 will be returned and the
+ * contents of exit_code (if non-NULL) will be undefined. N.B. Under *nix
+ * operating systems, this will probably not work in Tor, because
+ * waitpid() is called in main.c to reap any terminated child
+ * processes.*/
 int
-tor_get_exit_code(const process_handle_t process_handle, int block)
+tor_get_exit_code(const process_handle_t process_handle,
+                  int block, int *exit_code)
 {
 #ifdef MS_WINDOWS
-  DWORD exit_code;
-  BOOL retval;
+  DWORD retval;
+  BOOL success;
+
   if (block) {
-    exit_code = WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
-    retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
-  } else {
-    exit_code = WaitForSingleObject(process_handle.pid.hProcess, 0);
-    if (WAIT_TIMEOUT == exit_code) {
-      // Process has not exited
-      return -2;
+    /* Wait for the process to exit */
+    retval = WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
+    if (retval != WAIT_OBJECT_0) {
+      log_warn(LD_GENERAL, "WaitForSingleObject() failed (%d): %s",
+	      (int)retval, format_win32_error(GetLastError()));
+      return -1;
     }
-    retval = GetExitCodeProcess(process_handle.pid.hProcess, &exit_code);
+  } else {
+    retval = WaitForSingleObject(process_handle.pid.hProcess, 0);
+    if (WAIT_TIMEOUT == retval) {
+      /* Process has not exited */
+      return -2;
+    } else if (retval != WAIT_OBJECT_0) {
+      log_warn(LD_GENERAL, "WaitForSingleObject() failed (%d): %s",
+               (int)retval, format_win32_error(GetLastError()));
+      return -1;
+    }
+  }
+    
+  if (exit_code != NULL) {
+    success = GetExitCodeProcess(process_handle.pid.hProcess,
+                                 (PDWORD)exit_code);
+    if (!success) {
+      log_warn(LD_GENERAL, "GetExitCodeProcess() failed: %s",
+               format_win32_error(GetLastError()));
+      return -1;
+    }
   }
 
-  if (!retval) {
-    log_warn(LD_GENERAL, "GetExitCodeProcess() failed: %s",
-             format_win32_error(GetLastError()));
-    return -1;
-  } else {
-    return exit_code;
-  }
+  return 0;
 #else
   int stat_loc;
   int retval;
 
-  retval = waitpid(process_handle.pid, &stat_loc, 0);
-  if (retval != process_handle.pid) {
+  retval = waitpid(process_handle.pid, &stat_loc, block?0:WNOHANG);
+  if (!block && 0 == retval) {
+    /* Process has not exited */
+    return -2;
+  } else if (retval != process_handle.pid) {
     log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s", process_handle.pid,
              strerror(errno));
     return -1;
@@ -3371,7 +3395,8 @@ tor_get_exit_code(const process_handle_t process_handle, int block)
     return -1;
   }
 
-  return WEXITSTATUS(stat_loc);
+  if (exit_code != NULL)
+    *exit_code = WEXITSTATUS(stat_loc);
 #endif // MS_WINDOWS
 }
 
@@ -3457,6 +3482,9 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
 }
 
 #ifdef MS_WINDOWS
+/** Read from stream, and send lines to log at the specified log level.
+ * Returns -1 if there is a error reading, and 0 otherwise.
+ */
 static int
 log_from_handle(HANDLE *pipe, int severity)
 {
@@ -3501,7 +3529,7 @@ log_from_handle(HANDLE *pipe, int severity)
     }
     log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf+start);
   }
-  return pos;
+  return 0;
 }    
 
 #else
@@ -3588,11 +3616,13 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 {
 /* When fw-helper succeeds, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_SUCCESS 300
-/* When fw-helper fails, how long do we wait until running it again */
+/* When fw-helper failed to start, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
+  /* Static variables are initialized to zero, so child_handle.status=0
+   * which corresponds to it not running on startup */
 #ifdef MS_WINDOWS
-  static process_handle_t child_handle = {0, NULL, NULL, {NULL, NULL, 0, 0}};
+  static process_handle_t child_handle;
 #else
   static process_handle_t child_handle;
 #endif
@@ -3629,6 +3659,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (child_handle.status < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
+      time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
       return;
     }
 #ifdef MS_WINDOWS
@@ -3647,7 +3678,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 #ifdef MS_WINDOWS
     stdout_status = log_from_handle(child_handle.stdout_pipe, LOG_INFO);
     stderr_status = log_from_handle(child_handle.stderr_pipe, LOG_WARN);
-    // If we got this far (on Windows), the process started
+    /* If we got this far (on Windows), the process started */
     retval = 0;
 #else
     stdout_status = log_from_pipe(child_handle.stdout_handle,
@@ -3665,13 +3696,18 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       /* There was a failure */
       retval = -1;
 #ifdef MS_WINDOWS
-    else if (tor_get_exit_code(child_handle, 0) >= 0) {
+    else if (tor_get_exit_code(child_handle, 0, NULL) >= 0) {
       /* process has exited */
+      /* TODO: Do something with the process return value */
+      /* TODO: What if the process output something since
+       * between log_from_handle and tor_get_exit_code? */
       retval = 1;
     }
 #else
     else if (1 == stdout_status || 1 == stderr_status)
-      /* stdout or stderr was closed */
+      /* stdout or stderr was closed, the process probably
+       * exited. It will be reaped by waitpid() in main.c */
+      /* TODO: Do something with the process return value */
       retval = 1;
 #endif
     else
@@ -3682,13 +3718,14 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (0 != retval) {
       if (1 == retval) {
         log_info(LD_GENERAL, "Port forwarding helper terminated");
+        child_handle.status = 0;
       } else {
         log_warn(LD_GENERAL, "Failed to read from port forwarding helper");
+        child_handle.status = -1;
       }
 
       /* TODO: The child might not actually be finished (maybe it failed or
          closed stdout/stderr), so maybe we shouldn't start another? */
-      child_handle.status = -1;
     }
   }
 }
