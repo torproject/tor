@@ -236,7 +236,8 @@ network_init(void)
   int r;
   r = WSAStartup(0x101, &WSAData);
   if (r) {
-    fprintf(stderr, "E: Error initializing Windows network layer - code was %d", r);
+    fprintf(stderr, "E: Error initializing Windows network layer "
+            "- code was %d", r);
     return -1;
   }
   /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
@@ -256,6 +257,7 @@ main(int argc, char **argv)
   backends_t backend_state;
 
   memset(&tor_fw_options, 0, sizeof(tor_fw_options));
+  memset(&backend_state, 0, sizeof(backend_state));
 
   while (1) {
     int option_index = 0;

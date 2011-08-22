@@ -1054,14 +1054,14 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 #ifdef USE_BUFFEREVENTS
 /** Try to read <b>n</b> bytes from <b>buf</b> at <b>pos</b> (which may be
  * NULL for the start of the buffer), copying the data only if necessary.  Set
- * *<b>data_out</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
- * if we needed to malloc *<b>data</b> because the original bytes were
+ * *<b>data_out</b> to a pointer to the desired bytes.  Set <b>free_out</b>
+ * to 1 if we needed to malloc *<b>data</b> because the original bytes were
  * noncontiguous; 0 otherwise.  Return the number of bytes actually available
  * at *<b>data_out</b>.
  */
 static ssize_t
-inspect_evbuffer(struct evbuffer *buf, char **data_out, size_t n, int *free_out,
-                 struct evbuffer_ptr *pos)
+inspect_evbuffer(struct evbuffer *buf, char **data_out, size_t n,
+                 int *free_out, struct evbuffer_ptr *pos)
 {
   int n_vecs, i;
 
@@ -1657,9 +1657,9 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
 
     if (res == 0 && n_drain == 0 && want_length <= last_wanted) {
       /* If we drained nothing, and we didn't ask for more than last time,
-       * we're stuck in a loop. That's bad. It shouldn't be possible, but
-       * let's make sure. */
-      log_warn(LD_BUG, "We seem to be caught in a parse loop; breaking out");
+       * then we probably wanted more data than the buffer actually had,
+       * and we're finding out that we're not satisified with it. It's
+       * time to break until we have more data. */
       break;
     }
 
