@@ -3058,6 +3058,9 @@ tor_spawn_background(const char *const filename, const char **argv)
   HANDLE stderr_pipe_read = NULL;
   HANDLE stderr_pipe_write = NULL;
 
+  STARTUPINFO siStartInfo;
+  BOOL retval = FALSE; 
+ 
   SECURITY_ATTRIBUTES saAttr;
   smartlist_t *argv_list;
   char *joined_argv;
@@ -3105,9 +3108,6 @@ tor_spawn_background(const char *const filename, const char **argv)
 
   joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
 
-  STARTUPINFO siStartInfo;
-  BOOL retval = FALSE; 
- 
   ZeroMemory(&process_handle.pid, sizeof(PROCESS_INFORMATION));
   ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
   siStartInfo.cb = sizeof(STARTUPINFO); 
@@ -3592,7 +3592,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
 #ifdef MS_WINDOWS
-  static process_handle_t child_handle = {0, NULL, NULL, {NULL}};
+  static process_handle_t child_handle = {0, NULL, NULL, {NULL, NULL, 0, 0}};
 #else
   static process_handle_t child_handle;
 #endif

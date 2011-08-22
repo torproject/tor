@@ -1493,6 +1493,8 @@ test_util_spawn_background_partial_read(void *ptr)
   process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
 
+  (void)ptr;
+
   /* Start the program */
   process_handle = tor_spawn_background(argv[0], argv);
   tt_int_op(process_handle.status, ==, expected_status);
