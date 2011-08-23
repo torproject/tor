@@ -3071,6 +3071,7 @@ tor_spawn_background(const char *const filename, const char **argv)
   saAttr.lpSecurityDescriptor = NULL; 
 
   /* Assume failure to start process */
+  memset(&process_handle, 0, sizeof(process_handle));
   process_handle.status = -1;
 
   /* Set up pipe for stdout */
@@ -3167,6 +3168,7 @@ tor_spawn_background(const char *const filename, const char **argv)
   static int max_fd = -1;
 
   /* Assume failure to start */
+  memset(&process_handle, 0, sizeof(process_handle));
   process_handle.status = -1;
 
   /* We do the strlen here because strlen() is not signal handler safe,
@@ -3374,8 +3376,6 @@ tor_get_exit_code(const process_handle_t process_handle,
       return -1;
     }
   }
-
-  return 0;
 #else
   int stat_loc;
   int retval;
@@ -3398,6 +3398,8 @@ tor_get_exit_code(const process_handle_t process_handle,
   if (exit_code != NULL)
     *exit_code = WEXITSTATUS(stat_loc);
 #endif // MS_WINDOWS
+
+  return 0;
 }
 
 #ifdef MS_WINDOWS
@@ -3667,7 +3669,8 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       "Started port forwarding helper (%s)", filename);
 #else
     log_info(LD_GENERAL,
-      "Started port forwarding helper (%s) with pid %d", filename, child_pid);
+      "Started port forwarding helper (%s) with pid %d", filename,
+      child_handle.pid);
 #endif
   }
 
