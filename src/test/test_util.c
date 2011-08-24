@@ -1395,7 +1395,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 #endif
 
   tt_int_op(process_handle.status, ==, expected_status);
-  
+
   /* If the process failed to start, don't bother continuing */
   if (process_handle.status == -1)
     return;
@@ -1405,7 +1405,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stdout */
   pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
-		                        sizeof(stdout_buf) - 1);
+                                        sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
   tt_str_op(stdout_buf, ==, expected_out);
@@ -1419,7 +1419,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
-		                         sizeof(stderr_buf) - 1);
+                                         sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
   tt_str_op(stderr_buf, ==, expected_err);
@@ -1469,7 +1469,8 @@ test_util_spawn_background_fail(void *ptr)
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 255, expected_status);
+  run_util_spawn_background(argv, expected_out, expected_err, 255,
+                            expected_status);
 }
 
 /** Helper function for testing tor_spawn_background */

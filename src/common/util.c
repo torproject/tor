@@ -3063,16 +3063,16 @@ tor_spawn_background(const char *const filename, const char **argv)
   HANDLE stderr_pipe_write = NULL;
 
   STARTUPINFO siStartInfo;
-  BOOL retval = FALSE; 
- 
+  BOOL retval = FALSE;
+
   SECURITY_ATTRIBUTES saAttr;
   smartlist_t *argv_list;
   char *joined_argv;
   int i;
- 
-  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
-  saAttr.bInheritHandle = TRUE; 
-  saAttr.lpSecurityDescriptor = NULL; 
+
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+  saAttr.bInheritHandle = TRUE;
+  saAttr.lpSecurityDescriptor = NULL;
 
   /* Assume failure to start process */
   memset(&process_handle, 0, sizeof(process_handle));
@@ -3087,8 +3087,8 @@ tor_spawn_background(const char *const filename, const char **argv)
   }
   if (!SetHandleInformation(stdout_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
     log_warn(LD_GENERAL,
-      "Failed to configure pipe for stdout communication with child process: %s",
-      format_win32_error(GetLastError()));
+      "Failed to configure pipe for stdout communication with child "
+      "process: %s", format_win32_error(GetLastError()));
     return process_handle;
   }
 
@@ -3101,14 +3101,15 @@ tor_spawn_background(const char *const filename, const char **argv)
   }
   if (!SetHandleInformation(stderr_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
     log_warn(LD_GENERAL,
-      "Failed to configure pipe for stderr communication with child process: %s",
-      format_win32_error(GetLastError()));
+      "Failed to configure pipe for stderr communication with child "
+      "process: %s", format_win32_error(GetLastError()));
     return process_handle;
   }
 
   /* Create the child process */
 
-  /* Windows expects argv to be a whitespace delimited string, so join argv up */
+  /* Windows expects argv to be a whitespace delimited string, so join argv up
+   */
   argv_list = smartlist_create();
   for (i=0; argv[i] != NULL; i++) {
     smartlist_add(argv_list, (void *)argv[i]);
@@ -3118,39 +3119,41 @@ tor_spawn_background(const char *const filename, const char **argv)
 
   ZeroMemory(&process_handle.pid, sizeof(PROCESS_INFORMATION));
   ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
-  siStartInfo.cb = sizeof(STARTUPINFO); 
+  siStartInfo.cb = sizeof(STARTUPINFO);
   siStartInfo.hStdError = stderr_pipe_write;
   siStartInfo.hStdOutput = stdout_pipe_write;
   siStartInfo.hStdInput = NULL;
   siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
- 
+
   /* Create the child process */
 
   retval = CreateProcess(filename,      // module name
-                         joined_argv,   // command line 
-                         NULL,          // process security attributes 
-                         NULL,          // primary thread security attributes 
-                         TRUE,          // handles are inherited 
-                         0,             // creation flags (TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess() work?)
-                         NULL,          // use parent's environment 
-                         NULL,          // use parent's current directory 
-                         &siStartInfo,  // STARTUPINFO pointer 
+                         joined_argv,   // command line
+                         NULL,          // process security attributes
+                         NULL,          // primary thread security attributes
+                         TRUE,          // handles are inherited
+  /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
+   * work?) */
+                         0,             // creation flags
+                         NULL,          // use parent's environment
+                         NULL,          // use parent's current directory
+                         &siStartInfo,  // STARTUPINFO pointer
                          &process_handle.pid);  // receives PROCESS_INFORMATION
 
-  tor_free(joined_argv); 
-   
+  tor_free(joined_argv);
+
   if (!retval) {
     log_warn(LD_GENERAL,
       "Failed to create child process %s: %s", filename?filename:argv[0],
       format_win32_error(GetLastError()));
   } else  {
-    // TODO: Close hProcess and hThread in process_handle.pid?
+    /* TODO: Close hProcess and hThread in process_handle.pid? */
     process_handle.stdout_pipe = stdout_pipe_read;
     process_handle.stderr_pipe = stderr_pipe_read;
     process_handle.status = 1;
   }
 
-  // TODO: Close pipes on exit
+  /* TODO: Close pipes on exit */
 
   return process_handle;
 #else // MS_WINDOWS
@@ -3353,7 +3356,7 @@ tor_get_exit_code(const process_handle_t process_handle,
     retval = WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
     if (retval != WAIT_OBJECT_0) {
       log_warn(LD_GENERAL, "WaitForSingleObject() failed (%d): %s",
-	      (int)retval, format_win32_error(GetLastError()));
+              (int)retval, format_win32_error(GetLastError()));
       return -1;
     }
   } else {
@@ -3367,7 +3370,7 @@ tor_get_exit_code(const process_handle_t process_handle,
       return -1;
     }
   }
-    
+
   if (exit_code != NULL) {
     success = GetExitCodeProcess(process_handle.pid.hProcess,
                                  (PDWORD)exit_code);
@@ -3392,7 +3395,8 @@ tor_get_exit_code(const process_handle_t process_handle,
   }
 
   if (!WIFEXITED(stat_loc)) {
-    log_warn(LD_GENERAL, "Process %d did not exit normally", process_handle.pid);
+    log_warn(LD_GENERAL, "Process %d did not exit normally",
+             process_handle.pid);
     return -1;
   }
 
@@ -3478,7 +3482,7 @@ tor_read_all_from_process_stdout(const process_handle_t process_handle,
   return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
 }
-  
+
 /* Read from stdout of a process until the process exits. */
 ssize_t
 tor_read_all_from_process_stderr(const process_handle_t process_handle,
@@ -3529,14 +3533,14 @@ log_from_handle(HANDLE *pipe, int severity)
       /* On Windows \r means end of line */
       if ('\r' == buf[cur]) {
         buf[cur] = '\0';
-	next = cur + 1;
-	/* If \n follows, remove it too */
+        next = cur + 1;
+        /* If \n follows, remove it too */
         if ((cur + 1) < pos && '\n' == buf[cur+1]) {
-	  buf[cur + 1] = '\0';
+          buf[cur + 1] = '\0';
           next = cur + 2;
-	}
-	/* Line starts at start and ends with a null (was \r\n) */
-	break;
+        }
+        /* Line starts at start and ends with a null (was \r\n) */
+        break;
       }
       /* Line starts at start and ends at the end of a string
          but we already added a null in earlier */
@@ -3544,7 +3548,7 @@ log_from_handle(HANDLE *pipe, int severity)
     log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf+start);
   }
   return 0;
-}    
+}
 
 #else
 /** Read from stream, and send lines to log at the specified log level.
@@ -3630,7 +3634,8 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 {
 /* When fw-helper succeeds, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_SUCCESS 300
-/* When fw-helper failed to start, how long do we wait until running it again */
+/* When fw-helper failed to start, how long do we wait until running it again
+ */
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
   /* Static variables are initialized to zero, so child_handle.status=0
@@ -3702,9 +3707,9 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     retval = 0;
 #else
     stdout_status = log_from_pipe(child_handle.stdout_handle,
-		    LOG_INFO, filename, &retval);
+                    LOG_INFO, filename, &retval);
     stderr_status = log_from_pipe(child_handle.stderr_handle,
-		    LOG_WARN, filename, &retval);
+                    LOG_WARN, filename, &retval);
 #endif
     if (retval) {
       /* There was a problem in the child process */
