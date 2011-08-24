@@ -335,7 +335,11 @@ tor_mathlog(double d)
 long
 tor_lround(double d)
 {
+#ifdef _MSC_VER
+  return (long)(d > 0 ? d + 0.5 : ceil(d - 0.5));
+#else
   return lround(d);
+#endif
 }
 
 /** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */
