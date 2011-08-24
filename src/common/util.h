@@ -366,7 +366,7 @@ typedef struct process_handle_s {
   int stderr_pipe;
   FILE *stdout_handle;
   FILE *stderr_handle;
-  int pid;
+  pid_t pid;
 #endif // MS_WINDOWS
 } process_handle_t;
 

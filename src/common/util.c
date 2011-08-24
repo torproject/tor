@@ -3034,20 +3034,24 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
-/** Start a program in the background. If <b>filename</b> contains a '/',
- * then it will be treated as an absolute or relative path.  Otherwise the
- * system path will be searched for <b>filename</b>. The strings in
- * <b>argv</b> will be passed as the command line arguments of the child
- * program (following convention, argv[0] should normally be the filename of
- * the executable). The last element of argv must be NULL. If the child
- * program is launched, the PID will be returned and <b>stdout_read</b> and
- * <b>stdout_err</b> will be set to file descriptors from which the stdout
- * and stderr, respectively, output of the child program can be read, and the
- * stdin of the child process shall be set to /dev/null.  Otherwise returns
- * -1.  Some parts of this code are based on the POSIX subprocess module from
+/** Start a program in the background. If <b>filename</b> contains a '/', then
+ * it will be treated as an absolute or relative path.  Otherwise, on
+ * non-Windows systems, the system path will be searched for <b>filename</b>.
+ * On Windows, only the current directory will be searched. Here, to search the
+ * system path (as well as the application directory, current working
+ * directory, and system directories), set filename to NULL.
+ *
+ * The strings in <b>argv</b> will be passed as the command line arguments of
+ * the child program (following convention, argv[0] should normally be the
+ * filename of the executable, and this must be the case if <b>filename</b> is
+ * NULL). The last element of argv must be NULL. If the child program is
+ * launched, a handle to it will be returned.
+ *
+ * Some parts of this code are based on the POSIX subprocess module from
  * Python, and example code from
  * http://msdn.microsoft.com/en-us/library/ms682499%28v=vs.85%29.aspx.
  */
+
 process_handle_t
 tor_spawn_background(const char *const filename, const char **argv)
 {
@@ -3122,8 +3126,8 @@ tor_spawn_background(const char *const filename, const char **argv)
  
   /* Create the child process */
 
-  retval = CreateProcess(filename,       // module name
-                         joined_argv,    // command line 
+  retval = CreateProcess(filename,      // module name
+                         joined_argv,   // command line 
                          NULL,          // process security attributes 
                          NULL,          // primary thread security attributes 
                          TRUE,          // handles are inherited 
@@ -3270,7 +3274,7 @@ tor_spawn_background(const char *const filename, const char **argv)
 
     /* Write the error message. GCC requires that we check the return
        value, but there is nothing we can do if it fails */
-    // TODO: Don't use STDOUT, use a pipe set up just for this purpose
+    /* TODO: Don't use STDOUT, use a pipe set up just for this purpose */
     nbytes = write(STDOUT_FILENO, error_message, error_message_length);
     nbytes = write(STDOUT_FILENO, hex_errno, sizeof(hex_errno));
 
@@ -3291,7 +3295,9 @@ tor_spawn_background(const char *const filename, const char **argv)
     return process_handle;
   }
 
-  // TODO: If the child process forked but failed to exec, waitpid it
+  process_handle.pid = pid;
+
+  /* TODO: If the child process forked but failed to exec, waitpid it */
 
   /* Return read end of the pipes to caller, and close write end */
   process_handle.stdout_pipe = stdout_pipe[0];
@@ -3301,8 +3307,6 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
             "Failed to close write end of stdout pipe in parent process: %s",
             strerror(errno));
-    /* Do not return -1, because the child is running, so the parent
-       needs to know about the pid in order to reap it later */
   }
 
   process_handle.stderr_pipe = stderr_pipe[0];
@@ -3312,12 +3316,9 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
             "Failed to close write end of stderr pipe in parent process: %s",
             strerror(errno));
-    /* Do not return -1, because the child is running, so the parent
-       needs to know about the pid in order to reap it later */
   }
 
   process_handle.status = 1;
-  process_handle.pid = pid;
   /* Set stdout/stderr pipes to be non-blocking */
   fcntl(process_handle.stdout_pipe, F_SETFL, O_NONBLOCK);
   fcntl(process_handle.stderr_pipe, F_SETFL, O_NONBLOCK);
@@ -3403,7 +3404,12 @@ tor_get_exit_code(const process_handle_t process_handle,
 }
 
 #ifdef MS_WINDOWS
-/* Windows equivalent of read_all */
+/** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
+ * <b>hProcess</b> is NULL, the function will return immediately if there is
+ * nothing more to read. Otherwise <b>hProcess</b> should be set to the handle
+ * to the process owning the <b>h</b>. In this case, the function will exit
+ * only once the process has exited, or <b>count</b> bytes are read. Returns
+ * the number of bytes read, or -1 on error. */
 ssize_t
 tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
 {
@@ -3416,6 +3422,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
     return -1;
 
   while (numread != count) {
+    /* Check if there is anything to read */
     retval = PeekNamedPipe(h, NULL, 0, NULL, &byte_count, NULL);
     if (!retval) {
       log_warn(LD_GENERAL,
@@ -3459,6 +3466,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
 }
 #endif
 
+/* Read from stdout of a process until the process exits. */
 ssize_t
 tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
@@ -3471,6 +3479,7 @@ tor_read_all_from_process_stdout(const process_handle_t process_handle,
 #endif
 }
   
+/* Read from stdout of a process until the process exits. */
 ssize_t
 tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
@@ -3496,38 +3505,41 @@ log_from_handle(HANDLE *pipe, int severity)
 
   pos = tor_read_all_handle(pipe, buf, sizeof(buf) - 1, NULL);
   if (pos < 0) {
-    // Error
+    /* Error */
     log_warn(LD_GENERAL, "Failed to read data from subprocess");
     return -1;
   }
 
   if (0 == pos) {
-    // There's nothing to read (process is busy or has exited)
+    /* There's nothing to read (process is busy or has exited) */
     log_debug(LD_GENERAL, "Subprocess had nothing to say");
     return 0;
   }
 
-  // End with a null even if there isn't a \r\n at the end
-  // TODO: What if this is a partial line?
+  /* End with a null even if there isn't a \r\n at the end */
+  /* TODO: What if this is a partial line? */
   buf[pos] = '\0';
   log_debug(LD_GENERAL, "Subprocess had %d bytes to say", pos);
 
+  /* Split buf into lines and log each one */
   next = 0; // Start of the next line
   while (next < pos) {
     start = next; // Look for the end of this line
     for (cur=start; cur<pos; cur++) {
+      /* On Windows \r means end of line */
       if ('\r' == buf[cur]) {
         buf[cur] = '\0';
 	next = cur + 1;
-        if ((cur + 1) < pos && buf[cur+1] < pos) {
+	/* If \n follows, remove it too */
+        if ((cur + 1) < pos && '\n' == buf[cur+1]) {
 	  buf[cur + 1] = '\0';
           next = cur + 2;
 	}
-	// Line starts at start and ends with a null (was \r\n)
+	/* Line starts at start and ends with a null (was \r\n) */
 	break;
       }
-      // Line starts at start and ends at the end of a string
-      // but we already added a null in earlier
+      /* Line starts at start and ends at the end of a string
+         but we already added a null in earlier */
     }
     log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf+start);
   }
