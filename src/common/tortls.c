@@ -51,6 +51,7 @@
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
 #include <event2/buffer.h>
+#include <event2/event.h>
 #include "compat_libevent.h"
 #endif
 
@@ -1905,6 +1906,10 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
                                          state,
                                          BEV_OPT_DEFER_CALLBACKS|
                                          BEV_OPT_CLOSE_ON_FREE);
+    /* Tell the underlying bufferevent when to accept more data from the SSL
+       filter (only when it's got less than 32K to write), and when to notify
+       the SSL filter that it could write more (when it drops under 24K). */
+    bufferevent_setwatermark(bufev_in, EV_WRITE, 24*1024, 32*1024);
   } else {
     if (bufev_in) {
       evutil_socket_t s = bufferevent_getfd(bufev_in);

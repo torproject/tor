@@ -20,6 +20,9 @@
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
 #include <event2/thread.h>
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#endif
 #else
 #include <event.h>
 #endif
@@ -613,6 +616,29 @@ tor_libevent_get_one_tick_timeout(void)
     one_tick = event_base_init_common_timeout(base, &tv);
   }
   return one_tick;
+}
+
+static struct bufferevent *
+tor_get_root_bufferevent(struct bufferevent *bev)
+{
+  struct bufferevent *u;
+  while ((u = bufferevent_get_underlying(bev)) != NULL)
+    bev = u;
+  return bev;
+}
+
+int
+tor_set_bufferevent_rate_limit(struct bufferevent *bev,
+                               struct ev_token_bucket_cfg *cfg)
+{
+  return bufferevent_set_rate_limit(tor_get_root_bufferevent(bev), cfg);
+}
+
+int
+tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
+                                        struct bufferevent_rate_limit_group *g)
+{
+  return bufferevent_add_to_rate_limit_group(tor_get_root_bufferevent(bev), g);
 }
 #endif
 

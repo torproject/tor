@@ -1,0 +1,9 @@
+  o Major bugfixes (bufferevents):
+    - Apply rate-limiting only at the bottom of a chain of filtering
+      bufferevents. This prevents us from filling up internal read
+      buffers and violating rate-limits when filtering bufferevents
+      are enabled. Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
+    - Add high-watermarks to the output buffers for filtered
+      bufferevents. This prevents us from filling up internal write
+      buffers and wasting CPU cycles when filtering bufferevents are
+      enabled.  Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
