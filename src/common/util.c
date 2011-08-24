@@ -3137,7 +3137,7 @@ tor_spawn_background(const char *const filename, const char **argv)
    
   if (!retval) {
     log_warn(LD_GENERAL,
-      "Failed to create child process %s: %s", filename,
+      "Failed to create child process %s: %s", filename?filename:argv[0],
       format_win32_error(GetLastError()));
   } else  {
     // TODO: Close hProcess and hThread in process_handle.pid?
@@ -3657,7 +3657,12 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
 
+#ifdef MS_WINDOWS
+    /* Passing NULL as lpApplicationName makes Windows search for the .exe */
+    child_handle = tor_spawn_background(NULL, argv);
+#else
     child_handle = tor_spawn_background(filename, argv);
+#endif
     if (child_handle.status < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
