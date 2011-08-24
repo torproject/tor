@@ -585,7 +585,7 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
                                   burst, tick);
     old_cfg = conn->bucket_cfg;
     if (conn->_base.bufev)
-      bufferevent_set_rate_limit(conn->_base.bufev, cfg);
+      tor_set_bufferevent_rate_limit(conn->_base.bufev, cfg);
     if (old_cfg)
       ev_token_bucket_cfg_free(old_cfg);
     conn->bucket_cfg = cfg;
@@ -1102,7 +1102,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
     }
     conn->_base.bufev = b;
     if (conn->bucket_cfg)
-      bufferevent_set_rate_limit(conn->_base.bufev, conn->bucket_cfg);
+      tor_set_bufferevent_rate_limit(conn->_base.bufev, conn->bucket_cfg);
     connection_enable_rate_limiting(TO_CONN(conn));
 
     connection_configure_bufferevent_callbacks(TO_CONN(conn));

@@ -1,0 +1,4 @@
+  o Major bugfixes (bufferevents):
+    - Apply rate-limiting only at the bottom of a chain of filtering
+      bufferevents. This prevents us from filling up internal memory
+      buffers. Bugfix on 0.2.3.1-alpha; fixes bug 3804.

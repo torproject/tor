@@ -2509,7 +2509,7 @@ connection_enable_rate_limiting(connection_t *conn)
   if (conn->bufev) {
     if (!global_rate_limit)
       connection_bucket_init();
-    bufferevent_add_to_rate_limit_group(conn->bufev, global_rate_limit);
+    tor_add_bufferevent_to_rate_limit_group(conn->bufev, global_rate_limit);
   }
 }
 

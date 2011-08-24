@@ -10,6 +10,8 @@ struct event;
 struct event_base;
 #ifdef USE_BUFFEREVENTS
 struct bufferevent;
+struct ev_token_bucket_cfg;
+struct bufferevent_rate_limit_group;
 #endif
 
 #ifdef HAVE_EVENT2_EVENT_H
@@ -74,6 +76,10 @@ const char *tor_libevent_get_version_str(void);
 #define TOR_LIBEVENT_TICKS_PER_SECOND 3
 const struct timeval *tor_libevent_get_one_tick_timeout(void);
 int tor_libevent_using_iocp_bufferevents(void);
+int tor_set_bufferevent_rate_limit(struct bufferevent *bev,
+                                   struct ev_token_bucket_cfg *cfg);
+int tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
+                                   struct bufferevent_rate_limit_group *g);
 #endif
 
 #endif
