@@ -1425,24 +1425,55 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   ;
 }
 
+static char*
+get_windows_path(const char *process_name, const char **dest)
+{
+#ifdef MS_WINDOWS
+  char fn[MAX_PATH];
+  DWORD retval;
+  char *new_fn = NULL;
+  int i;
+
+  /* Get the file name of the current module */
+  retval = GetModuleFileName(NULL, fn, sizeof(fn));
+  if (retval >= sizeof(fn)) {
+    log_warn(LD_GENERAL, "Executable path name was longer than maximum (%d)", sizeof(fn));
+    return NULL;
+  }
+
+  /* Remove the filename component */
+  for (i = retval - 1; i >= 0; i--) {
+    /* \0 terminate at first path separator from end */
+    if ('\\' == fn[i] || '/' == fn[i]) { 
+      fn[i] = '\0';
+      break;
+    }
+  }
+
+  tor_asprintf(&new_fn, "%s\\%s", fn, process_name);
+  *dest = new_fn;
+  return new_fn;
+#else
+  (void)process_name;
+  (void)dest;
+  return NULL;
+#endif
+}
+
 /** Check that we can launch a process and read the output */
 static void
 test_util_spawn_background_ok(void *ptr)
 {
-  char *filename=NULL;
 #ifdef MS_WINDOWS
-  const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
+  const char *argv[] = {NULL, "--test", NULL};
   const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
   const char *expected_err = "ERR\r\n";
+  char *filename;
 
-  if (argv[0][0] == '/') {
-    /* We have a fake path, e.g. /c/foo, make it c:/foo */
-    filename = tor_strdup(argv[0]);
-    filename[0] = filename[1];
-    filename[1] = ':';
-    argv[0] = filename;
-    log_warn(LD_GENERAL, "%s", argv[0]);
-  }
+  /* Find path to test-child.exe (same directory as this executable */
+  filename = get_windows_path("test-child.exe", argv);
+  tt_assert(filename != NULL);
+  log_warn(LD_GENERAL, "Using %s as path", filename);
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
   const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
@@ -1452,7 +1483,12 @@ test_util_spawn_background_ok(void *ptr)
   (void)ptr;
 
   run_util_spawn_background(argv, expected_out, expected_err, 0, 1);
+ done:
+#ifdef MS_WINDOWS
   tor_free(filename);
+#else
+  ;
+#endif
 }
 
 /** Check that failing to find the executable works as expected */
@@ -1483,7 +1519,6 @@ test_util_spawn_background_fail(void *ptr)
 static void
 test_util_spawn_background_partial_read(void *ptr)
 {
-  char *filename=NULL;
   const int expected_exit = 0;
   const int expected_status = 1;
 
@@ -1492,21 +1527,18 @@ test_util_spawn_background_partial_read(void *ptr)
   process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
 #ifdef MS_WINDOWS
-  const char *argv[] = {BUILDDIR "/src/test/test-child.exe", "--test", NULL};
+  const char *argv[] = {NULL, "--test", NULL};
   const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
                                  "DONE\r\n",
                                  NULL };
   const char *expected_err = "ERR\r\n";
   int expected_out_ctr;
+  char *filename;
 
-  if (argv[0][0] == '/') {
-    /* We have a fake path, e.g. /c/foo, make it c:/foo */
-    filename = tor_strdup(argv[0]);
-    filename[0] = filename[1];
-    filename[1] = ':';
-    argv[0] = filename;
-    log_warn(LD_GENERAL, "%s", argv[0]);
-  }
+  /* Find path to test-child.exe (same directory as this executable */
+  filename = get_windows_path("test-child.exe", argv);
+  tt_assert(filename != NULL);
+  log_warn(LD_GENERAL, "Using %s as path", filename);
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
   const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
@@ -1565,7 +1597,11 @@ test_util_spawn_background_partial_read(void *ptr)
   tt_int_op(pos, ==, strlen(expected_err));
 
  done:
+#ifdef MS_WINDOWS
+  tor_free(filename);
+#else
   ;
+#endif
 }
 
 static void
