@@ -2947,6 +2947,11 @@ connection_configure_bufferevent_callbacks(connection_t *conn)
                     connection_handle_write_cb,
                     connection_handle_event_cb,
                     conn);
+  /* Set a fairly high write low-watermark so that we get the write callback
+     called whenever data is written to bring us under 128K.  Leave the
+     high-watermark at 0.
+  */
+  bufferevent_setwatermark(bufev, EV_WRITE, 128*1024, 0);
 
   input = bufferevent_get_input(bufev);
   output = bufferevent_get_output(bufev);
