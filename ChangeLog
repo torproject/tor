@@ -630,7 +630,7 @@ Changes in version 0.2.2.24-alpha - 2011-04-08
     - Directory authorities now log the source of a rejected POSTed v3
       networkstatus vote.
     - Make compilation with clang possible when using
-      --enable-gcc-warnings by removing two warning optionss that clang
+      --enable-gcc-warnings by removing two warning options that clang
       hasn't implemented yet and by fixing a few warnings. Implements
       ticket 2696.
     - When expiring circuits, use microsecond timers rather than
@@ -1740,9 +1740,10 @@ Changes in version 0.2.2.14-alpha - 2010-07-12
 
   o Minor features:
     - New config option "WarnUnsafeSocks 0" disables the warning that
-      occurs whenever Tor receives only an IP address instead of a
-      hostname. Setups that do DNS locally over Tor are fine, and we
-      shouldn't spam the logs in that case.
+      occurs whenever Tor receives a socks handshake using a version of
+      the socks protocol that can only provide an IP address (rather
+      than a hostname). Setups that do DNS locally over Tor are fine,
+      and we shouldn't spam the logs in that case.
     - Convert the HACKING file to asciidoc, and add a few new sections
       to it, explaining how we use Git, how we make changelogs, and
       what should go in a patch.
@@ -2675,8 +2676,8 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
       oldest-bug prize.
 
   o New options for gathering stats safely:
-    - Directories that set "DirReqStatistics 1" write statistics on
-      directory request to disk every 24 hours. As compared to the
+    - Directory mirrors that set "DirReqStatistics 1" write statistics
+      about directory requests to disk every 24 hours. As compared to the
       --enable-geoip-stats flag in 0.2.1.x, there are a few improvements:
       1) stats are written to disk exactly every 24 hours; 2) estimated
       shares of v2 and v3 requests are determined as mean values, not at
@@ -2714,9 +2715,9 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
       the git commit (when we're building from a git checkout).
 
   o Minor bugfixes:
-    - If any the v3 certs we download are unparseable, we should actually
-      notice the failure so we don't retry indefinitely. Bugfix on
-      0.2.0.x; reported by "rotator".
+    - If any of the v3 certs we download are unparseable, we should
+      actually notice the failure so we don't retry indefinitely. Bugfix
+      on 0.2.0.x; reported by "rotator".
     - If the cached cert file is unparseable, warn but don't exit.
     - Fix possible segmentation fault on directory authorities. Bugfix on
       0.2.1.14-rc.
