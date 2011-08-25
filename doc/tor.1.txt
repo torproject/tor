@@ -1339,7 +1339,7 @@ The following options are used to configure a hidden service.
 **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
     must have a separate directory. You may use this option  multiple times to
-    specify multiple services.
+    specify multiple services. DIRECTORY must be an existing directory.
 
 **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
     Configure a virtual port VIRTPORT for a hidden service. You may use this
