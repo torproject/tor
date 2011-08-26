@@ -3,7 +3,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.2.32 - 2011-08-xx
+Changes in version 0.2.2.32 - 2011-08-26
   Tor 0.2.2.32, the first stable release in the 0.2.2 branch, is finally
   ready. More than two years in the making, this release features
   improved client performance and hidden service reliability, better
