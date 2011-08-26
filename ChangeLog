@@ -1,4 +1,14 @@
 Changes in version 0.2.2.32 - 2011-08-26
+  The Tor 0.2.2 release series is dedicated to the memory of Andreas
+  Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
+  a founder of the PETS community, a leader in our field, a mentor,
+  and a friend. He left us with these words: "I had the possibility
+  to contribute to this world that is not as it should be. I hope I
+  could help in some areas to make the world a better place, and that
+  I could also encourage other people to be engaged in improving the
+  world. Please, stay engaged. This world needs you, your love, your
+  initiative. Now I cannot be part of that anymore."
+
   Tor 0.2.2.32, the first stable release in the 0.2.2 branch, is finally
   ready. More than two years in the making, this release features improved
   client performance and hidden service reliability, better compatibility
@@ -6,11 +16,6 @@ Changes in version 0.2.2.32 - 2011-08-26
   one address, more extensible and flexible directory object handling,
   better reporting of network statistics, improved code security, and
   many many other features and bugfixes.
-
-  The Tor 0.2.2 release series is dedicated to the memory of Andreas
-  Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
-  a founder of the PETS community, a leader in our field, a mentor,
-  and a friend. He will be sorely missed.
 
 
 Changes in version 0.2.2.31-rc - 2011-08-17
