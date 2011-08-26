@@ -3545,8 +3545,21 @@ connection_dir_finished_flushing(dir_connection_t *conn)
       conn->_base.state = DIR_CONN_STATE_CLIENT_READING;
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
-      log_debug(LD_DIRSERV,"Finished writing server response. Closing.");
-      connection_mark_for_close(TO_CONN(conn));
+      if (conn->dir_spool_src != DIR_SPOOL_NONE) {
+#ifdef USE_BUFFEREVENTS
+        /* This can happen with paired bufferevents, since a paired connection
+         * can flush immediately when you write to it, making the subsequent
+         * check in connection_handle_write_cb() decide that the connection
+         * is flushed. */
+        log_debug(LD_DIRSERV, "Emptied a dirserv buffer, but still spooling.");
+#else
+        log_warn(LD_BUG, "Emptied a dirserv buffer, but it's still spooling!");
+        connection_mark_for_close(TO_CONN(conn));
+#endif
+      } else {
+        log_debug(LD_DIRSERV, "Finished writing server response. Closing.");
+        connection_mark_for_close(TO_CONN(conn));
+      }
       return 0;
     default:
       log_warn(LD_BUG,"called in unexpected state %d.",
