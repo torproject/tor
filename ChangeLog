@@ -1,3 +1,62 @@
+Changes in version 0.2.2.32 - 2011-08-26
+  The Tor 0.2.2 release series is dedicated to the memory of Andreas
+  Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
+  a founder of the PETS community, a leader in our field, a mentor,
+  and a friend. He left us with these words: "I had the possibility
+  to contribute to this world that is not as it should be. I hope I
+  could help in some areas to make the world a better place, and that
+  I could also encourage other people to be engaged in improving the
+  world. Please, stay engaged. This world needs you, your love, your
+  initiative. Now I cannot be part of that anymore."
+
+  Tor 0.2.2.32, the first stable release in the 0.2.2 branch, is finally
+  ready. More than two years in the making, this release features improved
+  client performance and hidden service reliability, better compatibility
+  for Android, correct behavior for bridges that listen on more than
+  one address, more extensible and flexible directory object handling,
+  better reporting of network statistics, improved code security, and
+  many many other features and bugfixes.
+
+
+Changes in version 0.2.2.31-rc - 2011-08-17
+  Tor 0.2.2.31-rc is the second and hopefully final release candidate
+  for the Tor 0.2.2.x series.
+
+  o Major bugfixes:
+    - Remove an extra pair of quotation marks around the error
+      message in control-port STATUS_GENERAL BUG events. Bugfix on
+      0.1.2.6-alpha; fixes bug 3732.
+    - If we're configured to write our ControlPorts to disk, only write
+      them after switching UID and creating the data directory. This way,
+      we don't fail when starting up with a nonexistent DataDirectory
+      and a ControlPortWriteToFile setting based on that directory. Fixes
+      bug 3747; bugfix on Tor 0.2.2.26-beta.
+
+  o Minor features:
+    - Update to the August 2 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes:
+    - Allow GETINFO fingerprint to return a fingerprint even when
+      we have not yet built a router descriptor. Fixes bug 3577;
+      bugfix on 0.2.0.1-alpha.
+    - Write several files in text mode, on OSes that distinguish text
+      mode from binary mode (namely, Windows). These files are:
+      'buffer-stats', 'dirreq-stats', and 'entry-stats' on relays
+      that collect those statistics; 'client_keys' and 'hostname' for
+      hidden services that use authentication; and (in the tor-gencert
+      utility) newly generated identity and signing keys. Previously,
+      we wouldn't specify text mode or binary mode, leading to an
+      assertion failure. Fixes bug 3607. Bugfix on 0.2.1.1-alpha (when
+      the DirRecordUsageByCountry option which would have triggered
+      the assertion failure was added), although this assertion failure
+      would have occurred in tor-gencert on Windows in 0.2.0.1-alpha.
+    - Selectively disable deprecation warnings on OS X because Lion
+      started deprecating the shipped copy of openssl. Fixes bug 3643.
+    - When unable to format an address as a string, report its value
+      as "???" rather than reusing the last formatted address. Bugfix
+      on 0.2.1.5-alpha.
+
+
 Changes in version 0.2.3.2-alpha - 2011-07-18
   Tor 0.2.3.2-alpha introduces two new experimental features:
   microdescriptors and pluggable transports. It also continues cleaning

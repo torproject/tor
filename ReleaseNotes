@@ -3,19 +3,24 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.2.32 - 2011-08-xx
-  Tor 0.2.2.32, the first stable release in the 0.2.2 branch, is finally
-  ready. More than two years in the making, this release features
-  improved client performance and hidden service reliability, better
-  compatibility for Android and Windows CE, correct behavior for bridges
-  that listen on more than one address, more extensible and flexible
-  directory object handling, better reporting of network statistics,
-  improved code security, and many many other features and bugfixes.
-
+Changes in version 0.2.2.32 - 2011-08-26
   The Tor 0.2.2 release series is dedicated to the memory of Andreas
   Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
   a founder of the PETS community, a leader in our field, a mentor,
-  and a friend. He will be sorely missed.
+  and a friend. He left us with these words: "I had the possibility
+  to contribute to this world that is not as it should be. I hope I
+  could help in some areas to make the world a better place, and that
+  I could also encourage other people to be engaged in improving the
+  world. Please, stay engaged. This world needs you, your love, your
+  initiative. Now I cannot be part of that anymore."
+
+  Tor 0.2.2.32, the first stable release in the 0.2.2 branch, is finally
+  ready. More than two years in the making, this release features improved
+  client performance and hidden service reliability, better compatibility
+  for Android, correct behavior for bridges that listen on more than
+  one address, more extensible and flexible directory object handling,
+  better reporting of network statistics, improved code security, and
+  many many other features and bugfixes.
 
   o Major features (client performance):
     - When choosing which cells to relay first, relays now favor circuits
@@ -117,12 +122,6 @@ Changes in version 0.2.2.32 - 2011-08-xx
       part of the consensus process. This is designed to help set
       network-wide parameters. Implements proposal 167.
 
-  o Major features (portability):
-    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
-      to help Tor build correctly for Android phones.
-    - Port Tor to build and run correctly on Windows CE systems, using
-      the wcecompat library. Contributed by Valerio Lupi.
-
   o Major features and bugfixes (node selection):
     - Revise and reconcile the meaning of the ExitNodes, EntryNodes,
       ExcludeEntryNodes, ExcludeExitNodes, ExcludeNodes, and Strict*Nodes
@@ -189,6 +188,8 @@ Changes in version 0.2.2.32 - 2011-08-xx
     - Improve log messages related to excluded nodes.
 
   o Major features (misc):
+    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
+      to help Tor build correctly for Android phones.
     - The options SocksPort, ControlPort, and so on now all accept a
       value "auto" that opens a socket on an OS-selected port. A
       new ControlPortWriteToFile option tells Tor to write its
@@ -3177,6 +3178,8 @@ Changes in version 0.2.0.30 - 2008-07-15
       warning "-Wshorten-64-to-32" is available.
     - Support compilation to target iPhone; patch from cjacker huang.
       To build for iPhone, pass the --enable-iphone option to configure.
+    - Port Tor to build and run correctly on Windows CE systems, using
+      the wcecompat library. Contributed by Valerio Lupi.
     - Detect non-ASCII platforms (if any still exist) and refuse to
       build there: some of our code assumes that 'A' is 65 and so on.
     - Clear up some MIPSPro compiler warnings.
