@@ -103,7 +103,7 @@ log_heartbeat(time_t now)
   bw_sent = bytes_to_usage(get_bytes_written());
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
-         "circuits open. I've pushed %s and received %s.",
+         "circuits open. I've sent %s and received %s.",
          uptime, count_circuits(),bw_sent,bw_rcvd);
 
   tor_free(uptime);
