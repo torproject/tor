@@ -370,8 +370,8 @@ typedef struct process_handle_s {
 #endif // MS_WINDOWS
 } process_handle_t;
 
-process_handle_t tor_spawn_background(const char *const filename,
-                                      const char **argv);
+int tor_spawn_background(const char *const filename, const char **argv,
+                         process_handle_t *process_handle);
 int tor_get_exit_code(const process_handle_t process_handle,
                       int block, int *exit_code);
 #ifdef MS_WINDOWS

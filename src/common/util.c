@@ -3044,18 +3044,20 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  * The strings in <b>argv</b> will be passed as the command line arguments of
  * the child program (following convention, argv[0] should normally be the
  * filename of the executable, and this must be the case if <b>filename</b> is
- * NULL). The last element of argv must be NULL. If the child program is
- * launched, a handle to it will be returned.
+ * NULL). The last element of argv must be NULL. A handle to the child process
+ * will be returned in process_handle (which must be non-NULL). Read
+ * process_handle.status to find out if the process was successfully launched.
+ * For convenience, process_handle.status is returned by this function.
  *
  * Some parts of this code are based on the POSIX subprocess module from
  * Python, and example code from
  * http://msdn.microsoft.com/en-us/library/ms682499%28v=vs.85%29.aspx.
  */
 
-process_handle_t
-tor_spawn_background(const char *const filename, const char **argv)
+int
+tor_spawn_background(const char *const filename, const char **argv,
+                     process_handle_t *process_handle)
 {
-  process_handle_t process_handle;
 #ifdef MS_WINDOWS
   HANDLE stdout_pipe_read = NULL;
   HANDLE stdout_pipe_write = NULL;
@@ -3070,26 +3072,30 @@ tor_spawn_background(const char *const filename, const char **argv)
   char *joined_argv;
   int i;
 
+  /* process_handle must not be NULL */
+  tor_assert(process_handle != NULL);
+
   saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
   saAttr.bInheritHandle = TRUE;
+  /* TODO: should we set explicit security attributes? (#2046, comment 5) */
   saAttr.lpSecurityDescriptor = NULL;
 
   /* Assume failure to start process */
-  memset(&process_handle, 0, sizeof(process_handle));
-  process_handle.status = -1;
+  memset(process_handle, 0, sizeof(process_handle_t));
+  process_handle->status = -1;
 
   /* Set up pipe for stdout */
   if (!CreatePipe(&stdout_pipe_read, &stdout_pipe_write, &saAttr, 0)) {
     log_warn(LD_GENERAL,
       "Failed to create pipe for stdout communication with child process: %s",
       format_win32_error(GetLastError()));
-    return process_handle;
+    return process_handle->status;
   }
   if (!SetHandleInformation(stdout_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
     log_warn(LD_GENERAL,
       "Failed to configure pipe for stdout communication with child "
       "process: %s", format_win32_error(GetLastError()));
-    return process_handle;
+    return process_handle->status;
   }
 
   /* Set up pipe for stderr */
@@ -3097,13 +3103,13 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to create pipe for stderr communication with child process: %s",
       format_win32_error(GetLastError()));
-    return process_handle;
+    return process_handle->status;
   }
   if (!SetHandleInformation(stderr_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
     log_warn(LD_GENERAL,
       "Failed to configure pipe for stderr communication with child "
       "process: %s", format_win32_error(GetLastError()));
-    return process_handle;
+    return process_handle->status;
   }
 
   /* Create the child process */
@@ -3117,7 +3123,7 @@ tor_spawn_background(const char *const filename, const char **argv)
 
   joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
 
-  ZeroMemory(&process_handle.pid, sizeof(PROCESS_INFORMATION));
+  ZeroMemory(&(process_handle->pid), sizeof(PROCESS_INFORMATION));
   ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
   siStartInfo.cb = sizeof(STARTUPINFO);
   siStartInfo.hStdError = stderr_pipe_write;
@@ -3128,17 +3134,18 @@ tor_spawn_background(const char *const filename, const char **argv)
   /* Create the child process */
 
   retval = CreateProcess(filename,      // module name
-                         joined_argv,   // command line
-                         NULL,          // process security attributes
-                         NULL,          // primary thread security attributes
-                         TRUE,          // handles are inherited
+                 joined_argv,   // command line
+  /* TODO: should we set explicit security attributes? (#2046, comment 5) */
+                 NULL,          // process security attributes
+                 NULL,          // primary thread security attributes
+                 TRUE,          // handles are inherited
   /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
    * work?) */
-                         0,             // creation flags
-                         NULL,          // use parent's environment
-                         NULL,          // use parent's current directory
-                         &siStartInfo,  // STARTUPINFO pointer
-                         &process_handle.pid);  // receives PROCESS_INFORMATION
+                 0,             // creation flags
+                 NULL,          // use parent's environment
+                 NULL,          // use parent's current directory
+                 &siStartInfo,  // STARTUPINFO pointer
+                 &(process_handle->pid));  // receives PROCESS_INFORMATION
 
   tor_free(joined_argv);
 
@@ -3147,15 +3154,15 @@ tor_spawn_background(const char *const filename, const char **argv)
       "Failed to create child process %s: %s", filename?filename:argv[0],
       format_win32_error(GetLastError()));
   } else  {
-    /* TODO: Close hProcess and hThread in process_handle.pid? */
-    process_handle.stdout_pipe = stdout_pipe_read;
-    process_handle.stderr_pipe = stderr_pipe_read;
-    process_handle.status = 1;
+    /* TODO: Close hProcess and hThread in process_handle->pid? */
+    process_handle->stdout_pipe = stdout_pipe_read;
+    process_handle->stderr_pipe = stderr_pipe_read;
+    process_handle->status = 1;
   }
 
   /* TODO: Close pipes on exit */
 
-  return process_handle;
+  return process_handle->status;
 #else // MS_WINDOWS
   pid_t pid;
   int stdout_pipe[2];
@@ -3175,8 +3182,8 @@ tor_spawn_background(const char *const filename, const char **argv)
   static int max_fd = -1;
 
   /* Assume failure to start */
-  memset(&process_handle, 0, sizeof(process_handle));
-  process_handle.status = -1;
+  memset(process_handle, 0, sizeof(process_handle_t));
+  process_handle->status = -1;
 
   /* We do the strlen here because strlen() is not signal handler safe,
      and we are not allowed to use unsafe functions between fork and exec */
@@ -3190,7 +3197,7 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stdout communication with child process: %s",
        strerror(errno));
-    return process_handle;
+    return process_handle->status;
   }
 
   retval = pipe(stderr_pipe);
@@ -3198,7 +3205,7 @@ tor_spawn_background(const char *const filename, const char **argv)
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
-    return process_handle;
+    return process_handle->status;
   }
 
   child_state = CHILD_STATE_MAXFD;
@@ -3284,7 +3291,8 @@ tor_spawn_background(const char *const filename, const char **argv)
     (void) nbytes;
 
     _exit(255);
-    return process_handle; /* Never reached, but avoids compiler warning */
+    /* Never reached, but avoids compiler warning */
+    return process_handle->status;
   }
 
   /* In parent */
@@ -3295,15 +3303,15 @@ tor_spawn_background(const char *const filename, const char **argv)
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
     close(stderr_pipe[1]);
-    return process_handle;
+    return process_handle->status;
   }
 
-  process_handle.pid = pid;
+  process_handle->pid = pid;
 
   /* TODO: If the child process forked but failed to exec, waitpid it */
 
   /* Return read end of the pipes to caller, and close write end */
-  process_handle.stdout_pipe = stdout_pipe[0];
+  process_handle->stdout_pipe = stdout_pipe[0];
   retval = close(stdout_pipe[1]);
 
   if (-1 == retval) {
@@ -3312,7 +3320,7 @@ tor_spawn_background(const char *const filename, const char **argv)
             strerror(errno));
   }
 
-  process_handle.stderr_pipe = stderr_pipe[0];
+  process_handle->stderr_pipe = stderr_pipe[0];
   retval = close(stderr_pipe[1]);
 
   if (-1 == retval) {
@@ -3321,15 +3329,15 @@ tor_spawn_background(const char *const filename, const char **argv)
             strerror(errno));
   }
 
-  process_handle.status = 1;
+  process_handle->status = 1;
   /* Set stdout/stderr pipes to be non-blocking */
-  fcntl(process_handle.stdout_pipe, F_SETFL, O_NONBLOCK);
-  fcntl(process_handle.stderr_pipe, F_SETFL, O_NONBLOCK);
+  fcntl(process_handle->stdout_pipe, F_SETFL, O_NONBLOCK);
+  fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK);
   /* Open the buffered IO streams */
-  process_handle.stdout_handle = fdopen(process_handle.stdout_pipe, "r");
-  process_handle.stderr_handle = fdopen(process_handle.stderr_pipe, "r");
+  process_handle->stdout_handle = fdopen(process_handle->stdout_pipe, "r");
+  process_handle->stderr_handle = fdopen(process_handle->stderr_pipe, "r");
 
-  return process_handle;
+  return process_handle->status;
 #endif // MS_WINDOWS
 }
 
@@ -3676,9 +3684,9 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 
 #ifdef MS_WINDOWS
     /* Passing NULL as lpApplicationName makes Windows search for the .exe */
-    child_handle = tor_spawn_background(NULL, argv);
+    tor_spawn_background(NULL, argv, &child_handle);
 #else
-    child_handle = tor_spawn_background(filename, argv);
+    tor_spawn_background(filename, argv, &child_handle);
 #endif
     if (child_handle.status < 0) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",

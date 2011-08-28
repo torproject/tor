@@ -1389,9 +1389,9 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Start the program */
 #ifdef MS_WINDOWS
-  process_handle = tor_spawn_background(NULL, argv);
+  tor_spawn_background(NULL, argv, &process_handle);
 #else
-  process_handle = tor_spawn_background(argv[0], argv);
+  tor_spawn_background(argv[0], argv, &process_handle);
 #endif
 
   tt_int_op(process_handle.status, ==, expected_status);
@@ -1473,7 +1473,8 @@ test_util_spawn_background_fail(void *ptr)
                             expected_status);
 }
 
-/** Helper function for testing tor_spawn_background */
+/** Test that reading from a handle returns a partial read rather than
+ * blocking */
 static void
 test_util_spawn_background_partial_read(void *ptr)
 {
@@ -1499,7 +1500,7 @@ test_util_spawn_background_partial_read(void *ptr)
   (void)ptr;
 
   /* Start the program */
-  process_handle = tor_spawn_background(NULL, argv);
+  tor_spawn_background(NULL, argv, &process_handle);
   tt_int_op(process_handle.status, ==, expected_status);
 
   /* Check stdout */
