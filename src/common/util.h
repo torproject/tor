@@ -355,8 +355,14 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
 
+/* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
+ * 0 because tor_check_port_forwarding depends on this being the initial
+ * statue of the static instance of process_handle_t */
+#define PROCESS_STATUS_NOTRUNNING 0
+#define PROCESS_STATUS_RUNNING 1
+#define PROCESS_STATUS_ERROR -1
 typedef struct process_handle_s {
-  int status; // 0: not running; 1: running; -1: error
+  int status;
 #ifdef MS_WINDOWS
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
@@ -372,6 +378,11 @@ typedef struct process_handle_s {
 
 int tor_spawn_background(const char *const filename, const char **argv,
                          process_handle_t *process_handle);
+
+/* Return values of tor_get_exit_code() */
+#define PROCESS_EXIT_RUNNING 1
+#define PROCESS_EXIT_EXITED 0
+#define PROCESS_EXIT_ERROR -1
 int tor_get_exit_code(const process_handle_t process_handle,
                       int block, int *exit_code);
 #ifdef MS_WINDOWS

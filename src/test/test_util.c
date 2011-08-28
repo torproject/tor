@@ -1397,7 +1397,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(process_handle.status, ==, expected_status);
 
   /* If the process failed to start, don't bother continuing */
-  if (process_handle.status == -1)
+  if (process_handle.status == PROCESS_STATUS_ERROR)
     return;
 
   tt_int_op(process_handle.stdout_pipe, >, 0);
@@ -1413,7 +1413,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
   tt_int_op(exit_code, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 
@@ -1445,7 +1445,8 @@ test_util_spawn_background_ok(void *ptr)
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 0, 1);
+  run_util_spawn_background(argv, expected_out, expected_err, 0,
+                            PROCESS_STATUS_RUNNING);
 }
 
 /** Check that failing to find the executable works as expected */
@@ -1457,14 +1458,15 @@ test_util_spawn_background_fail(void *ptr)
   const char *expected_out = "ERR: Failed to spawn background process "
                              "- code          9/2\n";
   const char *expected_err = "";
-  const int expected_status = -1;
+  const int expected_status = PROCESS_STATUS_ERROR;
 #else
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_out = "ERR: Failed to spawn background process "
                              "- code          9/2\n";
   const char *expected_err = "";
-  // TODO: Once we can signal failure to exec, set this to be -1;
-  const int expected_status = 1;
+  /* TODO: Once we can signal failure to exec, set this to be
+   * PROCESS_STATUS_ERROR */
+  const int expected_status = PROCESS_STATUS_RUNNING;
 #endif
 
   (void)ptr;
@@ -1479,7 +1481,7 @@ static void
 test_util_spawn_background_partial_read(void *ptr)
 {
   const int expected_exit = 0;
-  const int expected_status = 1;
+  const int expected_status = PROCESS_STATUS_RUNNING;
 
   int retval, exit_code;
   ssize_t pos;
@@ -1536,7 +1538,7 @@ test_util_spawn_background_partial_read(void *ptr)
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  tt_int_op(retval, ==, 0);
+  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
   tt_int_op(exit_code, ==, expected_exit);
   // TODO: Make test-child exit with something other than 0
 
