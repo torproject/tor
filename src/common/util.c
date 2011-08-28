@@ -3462,10 +3462,11 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
       continue;
     }
 
+    /* There is data to read; read it */
     retval = ReadFile(h, buf+numread, count-numread, &byte_count, NULL);
+    tor_assert(byte_count + numread <= count);
     if (!retval) {
-      log_warn(LD_GENERAL,
-        "Failed to read from handle: %s",
+      log_warn(LD_GENERAL, "Failed to read from handle: %s",
         format_win32_error(GetLastError()));
       return -1;
     } else if (0 == byte_count) {
