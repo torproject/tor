@@ -426,10 +426,10 @@ interesting and understandable.
       first entry or two and the last entry most interesting: they're
       the ones that skimmers tend to read.
 
-   2.4) Clean them up
+   2.4) Clean them up:
 
    Standard idioms:
-     "Fixes bug 9999; Bugfix on 0.3.3.3-alpha."
+     "Fixes bug 9999; bugfix on 0.3.3.3-alpha."
 
    One period after a space.
 
@@ -445,6 +445,11 @@ interesting and understandable.
    Avoid starting lines with open-paren
 
    Present and imperative tense: not past.
+
+   Try not to let any given section be longer than about a page. Break up
+   long sections into subsections by some sort of common subtopic. This
+   guideline is especially important when organizing Release Notes for
+   new stable releases.
 
    If a given changes stanza showed up in a different release (e.g.
    maint-0.2.1), be sure to make the stanzas identical (so people can
