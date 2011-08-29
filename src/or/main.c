@@ -2156,8 +2156,13 @@ tor_init(int argc, char *argv[])
   }
   quiet_level = quiet;
 
-  log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
-      "Do not rely on it for strong anonymity. (Running on %s)",get_version(),
+  log(LOG_NOTICE, LD_GENERAL, "Tor v%s%s. This is experimental software. "
+      "Do not rely on it for strong anonymity. (Running on %s)", get_version(),
+#ifdef USE_BUFFEREVENTS
+      " (with bufferevents)",
+#else
+      "",
+#endif
       get_uname());
 
   if (network_init()<0) {
