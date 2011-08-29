@@ -393,6 +393,7 @@ ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                         char *buf, size_t count);
 ssize_t tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                          char *buf, size_t count);
+char *tor_join_cmdline(const char *argv[]);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 

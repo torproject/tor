@@ -1555,6 +1555,54 @@ test_util_spawn_background_partial_read(void *ptr)
 }
 
 static void
+test_util_join_cmdline(void *ptr)
+{
+  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in MSDN
+   * but we don't exercise all quoting rules because tor_join_cmdline will try
+   * to only generate simple cases for the child process to parse; i.e. we
+   * never embed quoted strings in arguments. */
+
+  const char *argvs[][4] = {
+    {"a", "bb", "CCC", NULL}, // Normal
+    {NULL, NULL, NULL, NULL}, // Empty argument list
+    {"", NULL, NULL, NULL}, // Empty argument
+    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
+    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
+    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
+    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
+    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
+    {} // Terminator
+  };
+
+  const char *cmdlines[] = {
+    "a bb CCC",
+    "",
+    "\"\"",
+    "\\\"a b\\\"b CCC\\\"",
+    "\"a\tbc\" \"dd  dd\" E",
+    "a\\\\\\b \"de fg\" H",
+    "a\\\\\\\"b \\c D\\",
+    "\"a\\\\b c\" d E",
+    NULL // Terminator
+  };
+
+  int i;
+  char *joined_argv;
+
+  (void)ptr;
+
+  for (i=0; cmdlines[i]!=NULL; i++) {
+    log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
+    joined_argv = tor_join_cmdline(argvs[i]);
+    tt_str_op(joined_argv, ==, cmdlines[i]);
+    tor_free(joined_argv);
+  }
+
+ done:
+  ;
+}
+
+static void
 test_util_di_ops(void)
 {
 #define LT -1
@@ -1642,6 +1690,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
+  UTIL_TEST(join_cmdline, 0),
   END_OF_TESTCASES
 };
 
