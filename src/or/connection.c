@@ -2223,6 +2223,7 @@ record_num_bytes_transferred_impl(connection_t *conn,
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);
 }
 
+#ifdef USE_BUFFEREVENTS
 /** DOCDOC */
 static void
 record_num_bytes_transferred(connection_t *conn,
@@ -2242,6 +2243,7 @@ record_num_bytes_transferred(connection_t *conn,
 
   record_num_bytes_transferred_impl(conn,now,num_read,num_written);
 }
+#endif
 
 #ifndef USE_BUFFEREVENTS
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
@@ -2261,7 +2263,7 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     tor_fragile_assert();
   }
 
-  record_num_bytes_transferred_(conn, now, num_read, num_written);
+  record_num_bytes_transferred_impl(conn, now, num_read, num_written);
 
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
