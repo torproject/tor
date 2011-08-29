@@ -1187,6 +1187,10 @@ we_want_to_fetch_flavor(const or_options_t *options, int flavor)
      * it ourselves. */
     return 1;
   }
+  if (options->FetchUselessDescriptors) {
+    /* In order to get all descriptors, we need to fetch all consensuses. */
+    return 1;
+  }
   /* Otherwise, we want the flavor only if we want to use it to build
    * circuits. */
   return flavor == usable_consensus_flavor();

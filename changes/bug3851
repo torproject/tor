@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Make 'FetchUselessDescriptors' cause all descriptor types and
+      all consensus types get fetched. Fixes bug 3851; bugfix on
+      0.2.3.1-alpha.

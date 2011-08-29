@@ -698,8 +698,9 @@ we_use_microdescriptors_for_circuits(const or_options_t *options)
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
     /* UseMicrodescriptors is "auto"; we need to decide: */
-    /* So we decide that we'll use microdescriptors iff we are not a server */
-    ret = ! server_mode(options);
+    /* So we decide that we'll use microdescriptors iff we are not a server,
+     * and we're not autofetching everything. */
+    ret = !server_mode(options) && !options->FetchUselessDescriptors;
   }
   return ret;
 }
@@ -710,6 +711,8 @@ we_fetch_microdescriptors(const or_options_t *options)
 {
   if (directory_caches_dir_info(options))
     return 1;
+  if (options->FetchUselessDescriptors)
+    return 1;
   return we_use_microdescriptors_for_circuits(options);
 }
 
@@ -718,6 +721,8 @@ int
 we_fetch_router_descriptors(const or_options_t *options)
 {
   if (directory_caches_dir_info(options))
+    return 1;
+  if (options->FetchUselessDescriptors)
     return 1;
   return ! we_use_microdescriptors_for_circuits(options);
 }
