@@ -2193,24 +2193,11 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   return 0;
 }
 
-#ifndef USE_BUFFEREVENTS
-/** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
- * onto <b>conn</b>. Decrement buckets appropriately. */
+/** DOCDOC */
 static void
-connection_buckets_decrement(connection_t *conn, time_t now,
-                             size_t num_read, size_t num_written)
+record_num_bytes_transferred_impl(connection_t *conn,
+                             time_t now, size_t num_read, size_t num_written)
 {
-  if (num_written >= INT_MAX || num_read >= INT_MAX) {
-    log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
-             "connection type=%s, state=%s",
-             (unsigned long)num_read, (unsigned long)num_written,
-             conn_type_to_string(conn->type),
-             conn_state_to_string(conn->type, conn->state));
-    if (num_written >= INT_MAX) num_written = 1;
-    if (num_read >= INT_MAX) num_read = 1;
-    tor_fragile_assert();
-  }
-
   /* Count bytes of answering direct and tunneled directory requests */
   if (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER) {
     if (num_read > 0)
@@ -2234,6 +2221,50 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   }
   if (conn->type == CONN_TYPE_EXIT)
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);
+}
+
+/** DOCDOC */
+static void
+record_num_bytes_transferred(connection_t *conn,
+                             time_t now, size_t num_read, size_t num_written)
+{
+  /* XXX023 check if this is necessary */
+  if (num_written >= INT_MAX || num_read >= INT_MAX) {
+    log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
+             "connection type=%s, state=%s",
+             (unsigned long)num_read, (unsigned long)num_written,
+             conn_type_to_string(conn->type),
+             conn_state_to_string(conn->type, conn->state));
+    if (num_written >= INT_MAX) num_written = 1;
+    if (num_read >= INT_MAX) num_read = 1;
+    tor_fragile_assert();
+  }
+
+  record_num_bytes_transferred_impl(conn,now,num_read,num_written);
+}
+
+#ifndef USE_BUFFEREVENTS
+/** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
+ * onto <b>conn</b>. Decrement buckets appropriately. */
+static void
+connection_buckets_decrement(connection_t *conn, time_t now,
+                             size_t num_read, size_t num_written)
+{
+  if (num_written >= INT_MAX || num_read >= INT_MAX) {
+    log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
+             "connection type=%s, state=%s",
+             (unsigned long)num_read, (unsigned long)num_written,
+             conn_type_to_string(conn->type),
+             conn_state_to_string(conn->type, conn->state));
+    if (num_written >= INT_MAX) num_written = 1;
+    if (num_read >= INT_MAX) num_read = 1;
+    tor_fragile_assert();
+  }
+
+  record_num_bytes_transferred_(conn, now, num_read, num_written);
+
+  if (!connection_is_rate_limited(conn))
+    return; /* local IPs are free */
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= (int)num_read;
@@ -2443,7 +2474,6 @@ connection_bucket_should_increase(int bucket, or_connection_t *conn)
   return 1;
 }
 #else
-
 static void
 connection_buckets_decrement(connection_t *conn, time_t now,
                              size_t num_read, size_t num_written)
@@ -2454,6 +2484,7 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   (void) num_written;
   /* Libevent does this for us. */
 }
+
 void
 connection_bucket_refill(int seconds_elapsed, time_t now)
 {
@@ -2826,7 +2857,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
   if (info->n_added) {
     time_t now = approx_time();
     conn->timestamp_lastread = now;
-    connection_buckets_decrement(conn, now, info->n_added, 0);
+    record_num_bytes_transferred(conn, now, info->n_added, 0);
     connection_consider_empty_read_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
@@ -2847,7 +2878,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
   if (info->n_deleted) {
     time_t now = approx_time();
     conn->timestamp_lastwritten = now;
-    connection_buckets_decrement(conn, now, 0, info->n_deleted);
+    record_num_bytes_transferred(conn, now, 0, info->n_deleted);
     connection_consider_empty_write_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
