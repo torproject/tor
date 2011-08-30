@@ -2957,6 +2957,105 @@ load_windows_system_library(const TCHAR *library_name)
 }
 #endif
 
+/* Format a single argument for being put on a Windows command line.
+ * Returns a newly allocated string */
+static char *
+format_cmdline_argument(const char *arg)
+{
+  char *formatted_arg;
+  char need_quotes;
+  const char *c;
+  int i;
+  int bs_counter = 0;
+  /* Backslash we can point to when one is inserted into the string */
+  const char backslash = '\\';
+
+  /* Smartlist of *char */
+  smartlist_t *arg_chars;
+  arg_chars = smartlist_create();
+
+  /* Quote string if it contains whitespace or is empty */
+  need_quotes = (strchr(arg, ' ') || strchr(arg, '\t') || '\0' == arg[0]);
+
+  /* Build up smartlist of *chars */
+  for (c=arg; *c != '\0'; c++) {
+    if ('"' == *c) {
+      /* Double up backslashes preceding a quote */
+      for (i=0; i<(bs_counter*2); i++)
+        smartlist_add(arg_chars, (void*)&backslash);
+      bs_counter = 0;
+      /* Escape the quote */
+      smartlist_add(arg_chars, (void*)&backslash);
+      smartlist_add(arg_chars, (void*)c);
+    } else if ('\\' == *c) {
+      /* Count backslashes until we know whether to double up */
+      bs_counter++;
+    } else {
+      /* Don't double up slashes preceding a non-quote */
+      for (i=0; i<bs_counter; i++)
+        smartlist_add(arg_chars, (void*)&backslash);
+      bs_counter = 0;
+      smartlist_add(arg_chars, (void*)c);
+    }
+  }
+  /* Don't double up trailing backslashes */
+  for (i=0; i<bs_counter; i++)
+    smartlist_add(arg_chars, (void*)&backslash);
+
+  /* Allocate space for argument, quotes (if needed), and terminator */
+  formatted_arg = tor_malloc(sizeof(char) *
+      (smartlist_len(arg_chars) + (need_quotes?2:0) + 1));
+
+  /* Add leading quote */
+  i=0;
+  if (need_quotes)
+    formatted_arg[i++] = '"';
+
+  /* Add characters */
+  SMARTLIST_FOREACH(arg_chars, char*, c,
+  {
+    formatted_arg[i++] = *c;
+  });
+
+  /* Add trailing quote */
+  if (need_quotes)
+    formatted_arg[i++] = '"';
+  formatted_arg[i] = '\0';
+
+  smartlist_free(arg_chars);
+  return formatted_arg;
+}
+
+/* Format a command line for use on Windows, which takes the command as a
+ * string rather than string array. Follows the rules from "Parsing C++
+ * Command-Line Arguments" in MSDN. Algorithm based on list2cmdline in the
+ * Python subprocess module. Returns a newly allocated string */
+char *
+tor_join_cmdline(const char *argv[])
+{
+  smartlist_t *argv_list;
+  char *joined_argv;
+  int i;
+
+  /* Format each argument and put the result in a smartlist */
+  argv_list = smartlist_create();
+  for (i=0; argv[i] != NULL; i++) {
+    smartlist_add(argv_list, (void *)format_cmdline_argument(argv[i]));
+  }
+
+  /* Join the arguments with whitespace */
+  joined_argv = smartlist_join_strings(argv_list, " ", 0, NULL);
+
+  /* Free the newly allocated arguments, and the smartlist */
+  SMARTLIST_FOREACH(argv_list, char *, arg,
+  {
+    tor_free(arg);
+  });
+  smartlist_free(argv_list);
+
+  return joined_argv;
+}
+
 /** Format <b>child_state</b> and <b>saved_errno</b> as a hex string placed in
  * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler
  * safe.
@@ -3038,28 +3137,129 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
-/** Start a program in the background. If <b>filename</b> contains a '/',
- * then it will be treated as an absolute or relative path.  Otherwise the
- * system path will be searched for <b>filename</b>. The strings in
- * <b>argv</b> will be passed as the command line arguments of the child
- * program (following convention, argv[0] should normally be the filename of
- * the executable). The last element of argv must be NULL. If the child
- * program is launched, the PID will be returned and <b>stdout_read</b> and
- * <b>stdout_err</b> will be set to file descriptors from which the stdout
- * and stderr, respectively, output of the child program can be read, and the
- * stdin of the child process shall be set to /dev/null.  Otherwise returns
- * -1.  Some parts of this code are based on the POSIX subprocess module from
- * Python.
+/** Start a program in the background. If <b>filename</b> contains a '/', then
+ * it will be treated as an absolute or relative path.  Otherwise, on
+ * non-Windows systems, the system path will be searched for <b>filename</b>.
+ * On Windows, only the current directory will be searched. Here, to search the
+ * system path (as well as the application directory, current working
+ * directory, and system directories), set filename to NULL.
+ *
+ * The strings in <b>argv</b> will be passed as the command line arguments of
+ * the child program (following convention, argv[0] should normally be the
+ * filename of the executable, and this must be the case if <b>filename</b> is
+ * NULL). The last element of argv must be NULL. A handle to the child process
+ * will be returned in process_handle (which must be non-NULL). Read
+ * process_handle.status to find out if the process was successfully launched.
+ * For convenience, process_handle.status is returned by this function.
+ *
+ * Some parts of this code are based on the POSIX subprocess module from
+ * Python, and example code from
+ * http://msdn.microsoft.com/en-us/library/ms682499%28v=vs.85%29.aspx.
  */
+
 int
-tor_spawn_background(const char *const filename, int *stdout_read,
-                     int *stderr_read, const char **argv)
+tor_spawn_background(const char *const filename, const char **argv,
+                     process_handle_t *process_handle)
 {
 #ifdef MS_WINDOWS
-  (void) filename; (void) stdout_read; (void) stderr_read; (void) argv;
-  log_warn(LD_BUG, "not yet implemented on Windows.");
-  return -1;
-#else
+  HANDLE stdout_pipe_read = NULL;
+  HANDLE stdout_pipe_write = NULL;
+  HANDLE stderr_pipe_read = NULL;
+  HANDLE stderr_pipe_write = NULL;
+
+  STARTUPINFO siStartInfo;
+  BOOL retval = FALSE;
+
+  SECURITY_ATTRIBUTES saAttr;
+  char *joined_argv;
+
+  /* process_handle must not be NULL */
+  tor_assert(process_handle != NULL);
+
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+  saAttr.bInheritHandle = TRUE;
+  /* TODO: should we set explicit security attributes? (#2046, comment 5) */
+  saAttr.lpSecurityDescriptor = NULL;
+
+  /* Assume failure to start process */
+  memset(process_handle, 0, sizeof(process_handle_t));
+  process_handle->status = PROCESS_STATUS_ERROR;
+
+  /* Set up pipe for stdout */
+  if (!CreatePipe(&stdout_pipe_read, &stdout_pipe_write, &saAttr, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to create pipe for stdout communication with child process: %s",
+      format_win32_error(GetLastError()));
+    return process_handle->status;
+  }
+  if (!SetHandleInformation(stdout_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to configure pipe for stdout communication with child "
+      "process: %s", format_win32_error(GetLastError()));
+    return process_handle->status;
+  }
+
+  /* Set up pipe for stderr */
+  if (!CreatePipe(&stderr_pipe_read, &stderr_pipe_write, &saAttr, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to create pipe for stderr communication with child process: %s",
+      format_win32_error(GetLastError()));
+    return process_handle->status;
+  }
+  if (!SetHandleInformation(stderr_pipe_read, HANDLE_FLAG_INHERIT, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to configure pipe for stderr communication with child "
+      "process: %s", format_win32_error(GetLastError()));
+    return process_handle->status;
+  }
+
+  /* Create the child process */
+
+  /* Windows expects argv to be a whitespace delimited string, so join argv up
+   */
+  joined_argv = tor_join_cmdline(argv);
+
+  ZeroMemory(&(process_handle->pid), sizeof(PROCESS_INFORMATION));
+  ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+  siStartInfo.cb = sizeof(STARTUPINFO);
+  siStartInfo.hStdError = stderr_pipe_write;
+  siStartInfo.hStdOutput = stdout_pipe_write;
+  siStartInfo.hStdInput = NULL;
+  siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  /* Create the child process */
+
+  retval = CreateProcess(filename,      // module name
+                 joined_argv,   // command line
+  /* TODO: should we set explicit security attributes? (#2046, comment 5) */
+                 NULL,          // process security attributes
+                 NULL,          // primary thread security attributes
+                 TRUE,          // handles are inherited
+  /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
+   * work?) */
+                 0,             // creation flags
+                 NULL,          // use parent's environment
+                 NULL,          // use parent's current directory
+                 &siStartInfo,  // STARTUPINFO pointer
+                 &(process_handle->pid));  // receives PROCESS_INFORMATION
+
+  tor_free(joined_argv);
+
+  if (!retval) {
+    log_warn(LD_GENERAL,
+      "Failed to create child process %s: %s", filename?filename:argv[0],
+      format_win32_error(GetLastError()));
+  } else  {
+    /* TODO: Close hProcess and hThread in process_handle->pid? */
+    process_handle->stdout_pipe = stdout_pipe_read;
+    process_handle->stderr_pipe = stderr_pipe_read;
+    process_handle->status = PROCESS_STATUS_RUNNING;
+  }
+
+  /* TODO: Close pipes on exit */
+
+  return process_handle->status;
+#else // MS_WINDOWS
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
@@ -3077,6 +3277,10 @@ tor_spawn_background(const char *const filename, int *stdout_read,
 
   static int max_fd = -1;
 
+  /* Assume failure to start */
+  memset(process_handle, 0, sizeof(process_handle_t));
+  process_handle->status = PROCESS_STATUS_ERROR;
+
   /* We do the strlen here because strlen() is not signal handler safe,
      and we are not allowed to use unsafe functions between fork and exec */
   error_message_length = strlen(error_message);
@@ -3089,7 +3293,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stdout communication with child process: %s",
        strerror(errno));
-    return -1;
+    return process_handle->status;
   }
 
   retval = pipe(stderr_pipe);
@@ -3097,7 +3301,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
-    return -1;
+    return process_handle->status;
   }
 
   child_state = CHILD_STATE_MAXFD;
@@ -3176,13 +3380,15 @@ tor_spawn_background(const char *const filename, int *stdout_read,
 
     /* Write the error message. GCC requires that we check the return
        value, but there is nothing we can do if it fails */
+    /* TODO: Don't use STDOUT, use a pipe set up just for this purpose */
     nbytes = write(STDOUT_FILENO, error_message, error_message_length);
     nbytes = write(STDOUT_FILENO, hex_errno, sizeof(hex_errno));
 
     (void) nbytes;
 
     _exit(255);
-    return -1; /* Never reached, but avoids compiler warning */
+    /* Never reached, but avoids compiler warning */
+    return process_handle->status;
   }
 
   /* In parent */
@@ -3193,36 +3399,309 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
     close(stderr_pipe[1]);
-    return -1;
+    return process_handle->status;
   }
 
+  process_handle->pid = pid;
+
+  /* TODO: If the child process forked but failed to exec, waitpid it */
+
   /* Return read end of the pipes to caller, and close write end */
-  *stdout_read = stdout_pipe[0];
+  process_handle->stdout_pipe = stdout_pipe[0];
   retval = close(stdout_pipe[1]);
 
   if (-1 == retval) {
     log_warn(LD_GENERAL,
             "Failed to close write end of stdout pipe in parent process: %s",
             strerror(errno));
-    /* Do not return -1, because the child is running, so the parent
-       needs to know about the pid in order to reap it later */
   }
 
-  *stderr_read = stderr_pipe[0];
+  process_handle->stderr_pipe = stderr_pipe[0];
   retval = close(stderr_pipe[1]);
 
   if (-1 == retval) {
     log_warn(LD_GENERAL,
             "Failed to close write end of stderr pipe in parent process: %s",
             strerror(errno));
-    /* Do not return -1, because the child is running, so the parent
-       needs to know about the pid in order to reap it later */
   }
 
-  return pid;
+  process_handle->status = PROCESS_STATUS_RUNNING;
+  /* Set stdout/stderr pipes to be non-blocking */
+  fcntl(process_handle->stdout_pipe, F_SETFL, O_NONBLOCK);
+  fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK);
+  /* Open the buffered IO streams */
+  process_handle->stdout_handle = fdopen(process_handle->stdout_pipe, "r");
+  process_handle->stderr_handle = fdopen(process_handle->stderr_pipe, "r");
+
+  return process_handle->status;
+#endif // MS_WINDOWS
+}
+
+/* Get the exit code of a process specified by <b>process_handle</b> and store
+ * it in <b>exit_code</b>, if set to a non-NULL value.  If <b>block</b> is set
+ * to true, the call will block until the process has exited.  Otherwise if
+ * the process is still running, the function will return
+ * PROCESS_EXIT_RUNNING, and exit_code will be left unchanged. Returns
+ * PROCESS_EXIT_EXITED if the process did exit. If there is a failure,
+ * PROCESS_EXIT_ERROR will be returned and the contents of exit_code (if
+ * non-NULL) will be undefined. N.B. Under *nix operating systems, this will
+ * probably not work in Tor, because waitpid() is called in main.c to reap any
+ * terminated child processes.*/
+int
+tor_get_exit_code(const process_handle_t process_handle,
+                  int block, int *exit_code)
+{
+#ifdef MS_WINDOWS
+  DWORD retval;
+  BOOL success;
+
+  if (block) {
+    /* Wait for the process to exit */
+    retval = WaitForSingleObject(process_handle.pid.hProcess, INFINITE);
+    if (retval != WAIT_OBJECT_0) {
+      log_warn(LD_GENERAL, "WaitForSingleObject() failed (%d): %s",
+              (int)retval, format_win32_error(GetLastError()));
+      return PROCESS_EXIT_ERROR;
+    }
+  } else {
+    retval = WaitForSingleObject(process_handle.pid.hProcess, 0);
+    if (WAIT_TIMEOUT == retval) {
+      /* Process has not exited */
+      return PROCESS_EXIT_RUNNING;
+    } else if (retval != WAIT_OBJECT_0) {
+      log_warn(LD_GENERAL, "WaitForSingleObject() failed (%d): %s",
+               (int)retval, format_win32_error(GetLastError()));
+      return PROCESS_EXIT_ERROR;
+    }
+  }
+
+  if (exit_code != NULL) {
+    success = GetExitCodeProcess(process_handle.pid.hProcess,
+                                 (PDWORD)exit_code);
+    if (!success) {
+      log_warn(LD_GENERAL, "GetExitCodeProcess() failed: %s",
+               format_win32_error(GetLastError()));
+      return PROCESS_EXIT_ERROR;
+    }
+  }
+#else
+  int stat_loc;
+  int retval;
+
+  retval = waitpid(process_handle.pid, &stat_loc, block?0:WNOHANG);
+  if (!block && 0 == retval) {
+    /* Process has not exited */
+    return PROCESS_EXIT_RUNNING;
+  } else if (retval != process_handle.pid) {
+    log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s", process_handle.pid,
+             strerror(errno));
+    return PROCESS_EXIT_ERROR;
+  }
+
+  if (!WIFEXITED(stat_loc)) {
+    log_warn(LD_GENERAL, "Process %d did not exit normally",
+             process_handle.pid);
+    return PROCESS_EXIT_ERROR;
+  }
+
+  if (exit_code != NULL)
+    *exit_code = WEXITSTATUS(stat_loc);
+#endif // MS_WINDOWS
+
+  return PROCESS_EXIT_EXITED;
+}
+
+#ifdef MS_WINDOWS
+/** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
+ * <b>hProcess</b> is NULL, the function will return immediately if there is
+ * nothing more to read. Otherwise <b>hProcess</b> should be set to the handle
+ * to the process owning the <b>h</b>. In this case, the function will exit
+ * only once the process has exited, or <b>count</b> bytes are read. Returns
+ * the number of bytes read, or -1 on error. */
+ssize_t
+tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
+{
+  size_t numread = 0;
+  BOOL retval;
+  DWORD byte_count;
+  BOOL process_exited = FALSE;
+
+  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+    return -1;
+
+  while (numread != count) {
+    /* Check if there is anything to read */
+    retval = PeekNamedPipe(h, NULL, 0, NULL, &byte_count, NULL);
+    if (!retval) {
+      log_warn(LD_GENERAL,
+        "Failed to peek from handle: %s",
+        format_win32_error(GetLastError()));
+      return -1;
+    } else if (0 == byte_count) {
+      /* Nothing available: process exited or it is busy */
+
+      /* Exit if we don't know whether the process is running */
+      if (NULL == hProcess)
+        break;
+
+      /* The process exited and there's nothing left to read from it */
+      if (process_exited)
+        break;
+
+      /* If process is not running, check for output one more time in case
+         it wrote something after the peek was performed. Otherwise keep on
+         waiting for output */
+      byte_count = WaitForSingleObject(hProcess, 0);
+      if (WAIT_TIMEOUT != byte_count)
+        process_exited = TRUE;
+
+      continue;
+    }
+
+    /* There is data to read; read it */
+    retval = ReadFile(h, buf+numread, count-numread, &byte_count, NULL);
+    tor_assert(byte_count + numread <= count);
+    if (!retval) {
+      log_warn(LD_GENERAL, "Failed to read from handle: %s",
+        format_win32_error(GetLastError()));
+      return -1;
+    } else if (0 == byte_count) {
+      /* End of file */
+      break;
+    }
+    numread += byte_count;
+  }
+  return (ssize_t)numread;
+}
+#endif
+
+/* Read from stdout of a process until the process exits. */
+ssize_t
+tor_read_all_from_process_stdout(const process_handle_t process_handle,
+                                char *buf, size_t count)
+{
+#ifdef MS_WINDOWS
+  return tor_read_all_handle(process_handle.stdout_pipe, buf, count,
+                             process_handle.pid.hProcess);
+#else
+  return read_all(process_handle.stdout_pipe, buf, count, 0);
 #endif
 }
 
+/* Read from stdout of a process until the process exits. */
+ssize_t
+tor_read_all_from_process_stderr(const process_handle_t process_handle,
+                                 char *buf, size_t count)
+{
+#ifdef MS_WINDOWS
+  return tor_read_all_handle(process_handle.stderr_pipe, buf, count,
+                             process_handle.pid.hProcess);
+#else
+  return read_all(process_handle.stderr_pipe, buf, count, 0);
+#endif
+}
+
+/* Split buf into lines, and add to smartlist. The buffer <b>buf</b> will be
+ * modified. The resulting smartlist will consist of pointers to buf, so there
+ * is no need to free the contents of sl. <b>buf</b> must be a NULL terminated
+ * string. <b>len</b> should be set to the length of the buffer excluding the
+ * NULL. Non-printable characters (including NULL) will be replaced with "." */
+
+int
+tor_split_lines(smartlist_t *sl, char *buf, int len)
+{
+  /* Index in buf of the start of the current line */
+  int start = 0;
+  /* Index in buf of the current character being processed */
+  int cur = 0;
+  /* Are we currently in a line */
+  char in_line = 0;
+
+  /* Loop over string */
+  while (cur < len) {
+    /* Loop until end of line or end of string */
+    for (; cur < len; cur++) {
+      if (in_line) {
+        if ('\r' == buf[cur] || '\n' == buf[cur]) {
+          /* End of line */
+          buf[cur] = '\0';
+          /* Point cur to the next line */
+          cur++;
+          /* Line starts at start and ends with a null */
+          break;
+        } else {
+          if (!TOR_ISPRINT(buf[cur]))
+            buf[cur] = '.';
+        }
+      } else {
+        if ('\r' == buf[cur] || '\n' == buf[cur]) {
+          /* Skip leading vertical space */
+          ;
+        } else {
+          in_line = 1;
+          start = cur;
+          if (!TOR_ISPRINT(buf[cur]))
+            buf[cur] = '.';
+        }
+      }
+    }
+    /* We are at the end of the line or end of string. If in_line is true there
+     * is a line which starts at buf+start and ends at a NULL. cur points to
+     * the character after the NULL. */
+    if (in_line)
+      smartlist_add(sl, (void *)(buf+start));
+    in_line = 0;
+  }
+  return smartlist_len(sl);
+}
+
+#ifdef MS_WINDOWS
+/** Read from stream, and send lines to log at the specified log level.
+ * Returns -1 if there is a error reading, and 0 otherwise.
+ * If the generated stream is flushed more often than on new lines, or
+ * a read exceeds 256 bytes, lines will be truncated. This should be fixed,
+ * along with the corresponding problem on *nix (see bug #2045).
+ */
+static int
+log_from_handle(HANDLE *pipe, int severity)
+{
+  char buf[256];
+  int pos;
+  smartlist_t *lines;
+
+  pos = tor_read_all_handle(pipe, buf, sizeof(buf) - 1, NULL);
+  if (pos < 0) {
+    /* Error */
+    log_warn(LD_GENERAL, "Failed to read data from subprocess");
+    return -1;
+  }
+
+  if (0 == pos) {
+    /* There's nothing to read (process is busy or has exited) */
+    log_debug(LD_GENERAL, "Subprocess had nothing to say");
+    return 0;
+  }
+
+  /* End with a null even if there isn't a \r\n at the end */
+  /* TODO: What if this is a partial line? */
+  buf[pos] = '\0';
+  log_debug(LD_GENERAL, "Subprocess had %d bytes to say", pos);
+
+  /* Split up the buffer */
+  lines = smartlist_create();
+  tor_split_lines(lines, buf, pos);
+
+  /* Log each line */
+  SMARTLIST_FOREACH(lines, char *, line,
+  {
+    log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", line);
+  });
+  smartlist_free(lines);
+
+  return 0;
+}
+
+#else
 /** Read from stream, and send lines to log at the specified log level.
  * Returns 1 if stream is closed normally, -1 if there is a error reading, and
  * 0 otherwise. Handles lines from tor-fw-helper and
@@ -3298,26 +3777,22 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
   /* We should never get here */
   return -1;
 }
+#endif
 
 void
 tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
                           time_t now)
 {
-#ifdef MS_WINDOWS
-  (void) filename; (void) dir_port; (void) or_port; (void) now;
-  (void) tor_spawn_background;
-  (void) log_from_pipe;
-  log_warn(LD_GENERAL, "Sorry, port forwarding is not yet supported "
-           "on windows.");
-#else
 /* When fw-helper succeeds, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_SUCCESS 300
-/* When fw-helper fails, how long do we wait until running it again */
+/* When fw-helper failed to start, how long do we wait until running it again
+ */
 #define TIME_TO_EXEC_FWHELPER_FAIL 60
 
-  static int child_pid = -1;
-  static FILE *stdout_read = NULL;
-  static FILE *stderr_read = NULL;
+  /* Static variables are initialized to zero, so child_handle.status=0
+   * which corresponds to it not running on startup */
+  static process_handle_t child_handle;
+
   static time_t time_to_run_helper = 0;
   int stdout_status, stderr_status, retval;
   const char *argv[10];
@@ -3342,37 +3817,48 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
   argv[9] = NULL;
 
   /* Start the child, if it is not already running */
-  if (-1 == child_pid &&
+  if (child_handle.status != PROCESS_STATUS_RUNNING &&
       time_to_run_helper < now) {
-    int fd_out=-1, fd_err=-1;
-
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
 
-    child_pid = tor_spawn_background(filename, &fd_out, &fd_err, argv);
-    if (child_pid < 0) {
+#ifdef MS_WINDOWS
+    /* Passing NULL as lpApplicationName makes Windows search for the .exe */
+    tor_spawn_background(NULL, argv, &child_handle);
+#else
+    tor_spawn_background(filename, argv, &child_handle);
+#endif
+    if (PROCESS_STATUS_ERROR == child_handle.status) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
-      child_pid = -1;
+      time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
       return;
     }
-    /* Set stdout/stderr pipes to be non-blocking */
-    fcntl(fd_out, F_SETFL, O_NONBLOCK);
-    fcntl(fd_err, F_SETFL, O_NONBLOCK);
-    /* Open the buffered IO streams */
-    stdout_read = fdopen(fd_out, "r");
-    stderr_read = fdopen(fd_err, "r");
-
+#ifdef MS_WINDOWS
     log_info(LD_GENERAL,
-      "Started port forwarding helper (%s) with pid %d", filename, child_pid);
+      "Started port forwarding helper (%s)", filename);
+#else
+    log_info(LD_GENERAL,
+      "Started port forwarding helper (%s) with pid %d", filename,
+      child_handle.pid);
+#endif
   }
 
   /* If child is running, read from its stdout and stderr) */
-  if (child_pid > 0) {
+  if (PROCESS_STATUS_RUNNING == child_handle.status) {
     /* Read from stdout/stderr and log result */
     retval = 0;
-    stdout_status = log_from_pipe(stdout_read, LOG_INFO, filename, &retval);
-    stderr_status = log_from_pipe(stderr_read, LOG_WARN, filename, &retval);
+#ifdef MS_WINDOWS
+    stdout_status = log_from_handle(child_handle.stdout_pipe, LOG_INFO);
+    stderr_status = log_from_handle(child_handle.stderr_pipe, LOG_WARN);
+    /* If we got this far (on Windows), the process started */
+    retval = 0;
+#else
+    stdout_status = log_from_pipe(child_handle.stdout_handle,
+                    LOG_INFO, filename, &retval);
+    stderr_status = log_from_pipe(child_handle.stderr_handle,
+                    LOG_WARN, filename, &retval);
+#endif
     if (retval) {
       /* There was a problem in the child process */
       time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
@@ -3382,9 +3868,22 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (-1 == stdout_status || -1 == stderr_status)
       /* There was a failure */
       retval = -1;
-    else if (1 == stdout_status || 1 == stderr_status)
-      /* stdout or stderr was closed */
+#ifdef MS_WINDOWS
+    else if (tor_get_exit_code(child_handle, 0, NULL) !=
+             PROCESS_EXIT_RUNNING) {
+      /* process has exited or there was an error */
+      /* TODO: Do something with the process return value */
+      /* TODO: What if the process output something since
+       * between log_from_handle and tor_get_exit_code? */
       retval = 1;
+    }
+#else
+    else if (1 == stdout_status || 1 == stderr_status)
+      /* stdout or stderr was closed, the process probably
+       * exited. It will be reaped by waitpid() in main.c */
+      /* TODO: Do something with the process return value */
+      retval = 1;
+#endif
     else
       /* Both are fine */
       retval = 0;
@@ -3393,15 +3892,15 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (0 != retval) {
       if (1 == retval) {
         log_info(LD_GENERAL, "Port forwarding helper terminated");
+        child_handle.status = PROCESS_STATUS_NOTRUNNING;
       } else {
         log_warn(LD_GENERAL, "Failed to read from port forwarding helper");
+        child_handle.status = PROCESS_STATUS_ERROR;
       }
 
       /* TODO: The child might not actually be finished (maybe it failed or
          closed stdout/stderr), so maybe we shouldn't start another? */
-      child_pid = -1;
     }
   }
-#endif
 }
 

@@ -354,8 +354,47 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
-int tor_spawn_background(const char *const filename, int *stdout_read,
-                         int *stderr_read, const char **argv);
+
+/* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
+ * 0 because tor_check_port_forwarding depends on this being the initial
+ * statue of the static instance of process_handle_t */
+#define PROCESS_STATUS_NOTRUNNING 0
+#define PROCESS_STATUS_RUNNING 1
+#define PROCESS_STATUS_ERROR -1
+typedef struct process_handle_s {
+  int status;
+#ifdef MS_WINDOWS
+  HANDLE stdout_pipe;
+  HANDLE stderr_pipe;
+  PROCESS_INFORMATION pid;
+#else
+  int stdout_pipe;
+  int stderr_pipe;
+  FILE *stdout_handle;
+  FILE *stderr_handle;
+  pid_t pid;
+#endif // MS_WINDOWS
+} process_handle_t;
+
+int tor_spawn_background(const char *const filename, const char **argv,
+                         process_handle_t *process_handle);
+
+/* Return values of tor_get_exit_code() */
+#define PROCESS_EXIT_RUNNING 1
+#define PROCESS_EXIT_EXITED 0
+#define PROCESS_EXIT_ERROR -1
+int tor_get_exit_code(const process_handle_t process_handle,
+                      int block, int *exit_code);
+int tor_split_lines(struct smartlist_t *sl, char *buf, int len);
+#ifdef MS_WINDOWS
+ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
+                            HANDLE hProcess);
+#endif
+ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
+                                        char *buf, size_t count);
+ssize_t tor_read_all_from_process_stderr(const process_handle_t process_handle,
+                                         char *buf, size_t count);
+char *tor_join_cmdline(const char *argv[]);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 

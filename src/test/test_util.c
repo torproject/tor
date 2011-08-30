@@ -1376,46 +1376,54 @@ test_util_fgets_eagain(void *ptr)
 }
 #endif
 
-#ifndef MS_WINDOWS
 /** Helper function for testing tor_spawn_background */
 static void
 run_util_spawn_background(const char *argv[], const char *expected_out,
-                          const char *expected_err, int expected_exit)
+                          const char *expected_err, int expected_exit,
+                          int expected_status)
 {
-  int stdout_pipe=-1, stderr_pipe=-1;
-  int retval, stat_loc;
-  pid_t pid;
+  int retval, exit_code;
   ssize_t pos;
+  process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
 
   /* Start the program */
-  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe, argv);
-  tt_int_op(retval, >, 0);
-  tt_int_op(stdout_pipe, >, 0);
-  tt_int_op(stderr_pipe, >, 0);
-  pid = retval;
+#ifdef MS_WINDOWS
+  tor_spawn_background(NULL, argv, &process_handle);
+#else
+  tor_spawn_background(argv[0], argv, &process_handle);
+#endif
+
+  tt_int_op(process_handle.status, ==, expected_status);
+
+  /* If the process failed to start, don't bother continuing */
+  if (process_handle.status == PROCESS_STATUS_ERROR)
+    return;
+
+  tt_int_op(process_handle.stdout_pipe, >, 0);
+  tt_int_op(process_handle.stderr_pipe, >, 0);
 
   /* Check stdout */
-  pos = read_all(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1, 0);
+  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
+                                        sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
-  tt_int_op(pos, ==, strlen(expected_out));
   tt_str_op(stdout_buf, ==, expected_out);
+  tt_int_op(pos, ==, strlen(expected_out));
 
   /* Check it terminated correctly */
-  retval = waitpid(pid, &stat_loc, 0);
-  tt_int_op(retval, ==, pid);
-  tt_assert(WIFEXITED(stat_loc));
-  tt_int_op(WEXITSTATUS(stat_loc), ==, expected_exit);
-  tt_assert(!WIFSIGNALED(stat_loc));
-  tt_assert(!WIFSTOPPED(stat_loc));
+  retval = tor_get_exit_code(process_handle, 1, &exit_code);
+  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
+  tt_int_op(exit_code, ==, expected_exit);
+  // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
-  pos = read_all(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1, 0);
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+                                         sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  tt_int_op(pos, ==, strlen(expected_err));
   tt_str_op(stderr_buf, ==, expected_err);
+  tt_int_op(pos, ==, strlen(expected_err));
 
  done:
   ;
@@ -1425,29 +1433,238 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
+#ifdef MS_WINDOWS
+  const char *argv[] = {"test-child.exe", "--test", NULL};
+  const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
+  const char *expected_err = "ERR\r\n";
+#else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\n--test\nDONE\n";
+  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
   const char *expected_err = "ERR\n";
+#endif
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 0);
+  run_util_spawn_background(argv, expected_out, expected_err, 0,
+                            PROCESS_STATUS_RUNNING);
 }
 
 /** Check that failing to find the executable works as expected */
 static void
 test_util_spawn_background_fail(void *ptr)
 {
+#ifdef MS_WINDOWS
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_out = "ERR: Failed to spawn background process "
                              "- code          9/2\n";
   const char *expected_err = "";
+  const int expected_status = PROCESS_STATUS_ERROR;
+#else
+  const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
+  const char *expected_out = "ERR: Failed to spawn background process "
+                             "- code          9/2\n";
+  const char *expected_err = "";
+  /* TODO: Once we can signal failure to exec, set this to be
+   * PROCESS_STATUS_ERROR */
+  const int expected_status = PROCESS_STATUS_RUNNING;
+#endif
 
   (void)ptr;
 
-  run_util_spawn_background(argv, expected_out, expected_err, 255);
+  run_util_spawn_background(argv, expected_out, expected_err, 255,
+                            expected_status);
 }
+
+/** Test that reading from a handle returns a partial read rather than
+ * blocking */
+static void
+test_util_spawn_background_partial_read(void *ptr)
+{
+  const int expected_exit = 0;
+  const int expected_status = PROCESS_STATUS_RUNNING;
+
+  int retval, exit_code;
+  ssize_t pos;
+  process_handle_t process_handle;
+  char stdout_buf[100], stderr_buf[100];
+#ifdef MS_WINDOWS
+  const char *argv[] = {"test-child.exe", "--test", NULL};
+  const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
+                                 "DONE\r\n",
+                                 NULL };
+  const char *expected_err = "ERR\r\n";
+  int expected_out_ctr;
+#else
+  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
+  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
+  const char *expected_err = "ERR\r\n";
 #endif
+  (void)ptr;
+
+  /* Start the program */
+  tor_spawn_background(NULL, argv, &process_handle);
+  tt_int_op(process_handle.status, ==, expected_status);
+
+  /* Check stdout */
+#ifdef MS_WINDOWS
+  for (expected_out_ctr =0; expected_out[expected_out_ctr] != NULL;) {
+    pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+                              sizeof(stdout_buf) - 1, NULL);
+    log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
+
+    /* We would have blocked, keep on trying */
+    if (0 == pos)
+      continue;
+
+    tt_assert(pos >= 0);
+    stdout_buf[pos] = '\0';
+    tt_str_op(stdout_buf, ==, expected_out[expected_out_ctr]);
+    tt_int_op(pos, ==, strlen(expected_out[expected_out_ctr]));
+    expected_out_ctr++;
+  }
+  /* The process should have exited without writing more */
+  pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+                            sizeof(stdout_buf) - 1,
+                            process_handle.pid.hProcess);
+  tt_int_op(pos, ==, 0);
+#else
+  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
+                                         sizeof(stdout_buf) - 1);
+  tt_assert(pos >= 0);
+  stdout_buf[pos] = '\0';
+  tt_str_op(stdout_buf, ==, expected_out);
+  tt_int_op(pos, ==, strlen(expected_out));
+#endif
+
+  /* Check it terminated correctly */
+  retval = tor_get_exit_code(process_handle, 1, &exit_code);
+  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
+  tt_int_op(exit_code, ==, expected_exit);
+  // TODO: Make test-child exit with something other than 0
+
+  /* Check stderr */
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+                                         sizeof(stderr_buf) - 1);
+  tt_assert(pos >= 0);
+  stderr_buf[pos] = '\0';
+  tt_str_op(stderr_buf, ==, expected_err);
+  tt_int_op(pos, ==, strlen(expected_err));
+
+ done:
+  ;
+}
+
+/**
+ * Test that we can properly format q Windows command line
+ */
+static void
+test_util_join_cmdline(void *ptr)
+{
+  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in MSDN
+   * but we don't exercise all quoting rules because tor_join_cmdline will try
+   * to only generate simple cases for the child process to parse; i.e. we
+   * never embed quoted strings in arguments. */
+
+  const char *argvs[][4] = {
+    {"a", "bb", "CCC", NULL}, // Normal
+    {NULL, NULL, NULL, NULL}, // Empty argument list
+    {"", NULL, NULL, NULL}, // Empty argument
+    {"\"a", "b\"b", "CCC\"", NULL}, // Quotes
+    {"a\tbc", "dd  dd", "E", NULL}, // Whitespace
+    {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
+    {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
+    {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
+    {} // Terminator
+  };
+
+  const char *cmdlines[] = {
+    "a bb CCC",
+    "",
+    "\"\"",
+    "\\\"a b\\\"b CCC\\\"",
+    "\"a\tbc\" \"dd  dd\" E",
+    "a\\\\\\b \"de fg\" H",
+    "a\\\\\\\"b \\c D\\",
+    "\"a\\\\b c\" d E",
+    NULL // Terminator
+  };
+
+  int i;
+  char *joined_argv;
+
+  (void)ptr;
+
+  for (i=0; cmdlines[i]!=NULL; i++) {
+    log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
+    joined_argv = tor_join_cmdline(argvs[i]);
+    tt_str_op(joined_argv, ==, cmdlines[i]);
+    tor_free(joined_argv);
+  }
+
+ done:
+  ;
+}
+
+#define MAX_SPLIT_LINE_COUNT 3
+struct split_lines_test_t {
+  const char *orig_line; // Line to be split (may contain \0's)
+  int orig_length; // Length of orig_line
+  const char *split_line[MAX_SPLIT_LINE_COUNT]; // Split lines
+};
+
+/**
+ * Test that we properly split a buffer into lines
+ */
+static void
+test_util_split_lines(void *ptr)
+{
+  /* Test cases. orig_line of last test case must be NULL.
+   * The last element of split_line[i] must be NULL. */
+  struct split_lines_test_t tests[] = {
+    {"", 0, {NULL}},
+    {"foo", 3, {"foo", NULL}},
+    {"\n\rfoo\n\rbar\r\n", 12, {"foo", "bar", NULL}},
+    {"fo o\r\nb\tar", 10, {"fo o", "b.ar", NULL}},
+    {"\x0f""f\0o\0\n\x01""b\0r\0\r", 12, {".f.o.", ".b.r.", NULL}},
+    {NULL, 0, {}}
+  };
+
+  int i, j;
+  char *orig_line;
+  smartlist_t *sl;
+
+  (void)ptr;
+
+  for (i=0; tests[i].orig_line; i++) {
+    sl = smartlist_create();
+    orig_line = tor_malloc(tests[i].orig_length);
+    memcpy(orig_line, tests[i].orig_line, tests[i].orig_length + 1);
+    tor_split_lines(sl, orig_line, tests[i].orig_length);
+
+    j = 0;
+    log_info(LD_GENERAL, "Splitting test %d of length %d",
+             i, tests[i].orig_length);
+    SMARTLIST_FOREACH(sl, const char *, line,
+    {
+      /* Check we have not got too many lines */
+      tt_int_op(j, <, MAX_SPLIT_LINE_COUNT);
+      /* Check that there actually should be a line here */
+      tt_assert(tests[i].split_line[j] != NULL);
+      log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
+               j, i, tests[i].split_line[j]);
+      /* Check that the line is as expected */
+      tt_str_op(tests[i].split_line[j], ==, line);
+      j++;
+    });
+    /* Check that we didn't miss some lines */
+    tt_assert(tests[i].split_line[j] == NULL);
+    tor_free(orig_line);
+    smartlist_free(sl);
+  }
+
+ done:
+  ;
+}
 
 static void
 test_util_di_ops(void)
@@ -1533,9 +1750,12 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(exit_status, 0),
 #ifndef MS_WINDOWS
   UTIL_TEST(fgets_eagain, TT_SKIP),
+#endif
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
-#endif
+  UTIL_TEST(spawn_background_partial_read, 0),
+  UTIL_TEST(join_cmdline, 0),
+  UTIL_TEST(split_lines, 0),
   END_OF_TESTCASES
 };
 
