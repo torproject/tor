@@ -3597,6 +3597,60 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
 #endif
 }
 
+/* Split buf into lines, and add to smartlist. The buffer <b>buf</b> will be
+ * modified. The resulting smartlist will consist of pointers to buf, so there
+ * is no need to free the contents of sl. <b>buf</b> must be a NULL terminated
+ * string. <b>len</b> should be set to the length of the buffer excluding the
+ * NULL. Non-printable characters (including NULL) will be replaced with "." */
+
+int
+tor_split_lines(smartlist_t *sl, char *buf, int len)
+{
+  /* Index in buf of the start of the current line */
+  int start = 0;
+  /* Index in buf of the current character being processed */
+  int cur = 0;
+  /* Are we currently in a line */
+  char in_line = 0;
+
+  /* Loop over string */
+  while (cur < len) {
+    /* Loop until end of line or end of string */
+    for (; cur < len; cur++) {
+      if (in_line) {
+        if ('\r' == buf[cur] || '\n' == buf[cur]) {
+          /* End of line */
+          buf[cur] = '\0';
+          /* Point cur to the next line */
+          cur++;
+          /* Line starts at start and ends with a null */
+          break;
+        } else {
+          if (!TOR_ISPRINT(buf[cur]))
+            buf[cur] = '.';
+        }
+      } else {
+        if ('\r' == buf[cur] || '\n' == buf[cur]) {
+          /* Skip leading vertical space */
+          ;
+        } else {
+          in_line = 1;
+          start = cur;
+          if (!TOR_ISPRINT(buf[cur]))
+            buf[cur] = '.';
+        }
+      }
+    }
+    /* We are at the end of the line or end of string. If in_line is true there
+     * is a line which starts at buf+start and ends at a NULL. cur points to
+     * the character after the NULL. */
+    if (in_line)
+      smartlist_add(sl, (void *)(buf+start));
+    in_line = 0;
+  }
+  return smartlist_len(sl);
+}
+
 #ifdef MS_WINDOWS
 /** Read from stream, and send lines to log at the specified log level.
  * Returns -1 if there is a error reading, and 0 otherwise.
@@ -3606,7 +3660,7 @@ log_from_handle(HANDLE *pipe, int severity)
 {
   char buf[256];
   int pos;
-  int start, cur, next;
+  smartlist_t *lines;
 
   pos = tor_read_all_handle(pipe, buf, sizeof(buf) - 1, NULL);
   if (pos < 0) {
@@ -3626,28 +3680,17 @@ log_from_handle(HANDLE *pipe, int severity)
   buf[pos] = '\0';
   log_debug(LD_GENERAL, "Subprocess had %d bytes to say", pos);
 
-  /* Split buf into lines and log each one */
-  next = 0; // Start of the next line
-  while (next < pos) {
-    start = next; // Look for the end of this line
-    for (cur=start; cur<pos; cur++) {
-      /* On Windows \r means end of line */
-      if ('\r' == buf[cur]) {
-        buf[cur] = '\0';
-        next = cur + 1;
-        /* If \n follows, remove it too */
-        if ((cur + 1) < pos && '\n' == buf[cur+1]) {
-          buf[cur + 1] = '\0';
-          next = cur + 2;
-        }
-        /* Line starts at start and ends with a null (was \r\n) */
-        break;
-      }
-      /* Line starts at start and ends at the end of a string
-         but we already added a null in earlier */
-    }
-    log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf+start);
-  }
+  /* Split up the buffer */
+  lines = smartlist_create();
+  tor_split_lines(lines, buf, pos);
+
+  /* Log each line */
+  SMARTLIST_FOREACH(lines, char *, line,
+  {
+    log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", line);
+  });
+  smartlist_free(lines);
+
   return 0;
 }
 
