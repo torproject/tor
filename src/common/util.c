@@ -3654,6 +3654,9 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
 #ifdef MS_WINDOWS
 /** Read from stream, and send lines to log at the specified log level.
  * Returns -1 if there is a error reading, and 0 otherwise.
+ * If the generated stream is flushed more often than on new lines, or
+ * a read exceeds 256 bytes, lines will be truncated. This should be fixed,
+ * along with the corresponding problem on *nix (see bug #2045).
  */
 static int
 log_from_handle(HANDLE *pipe, int severity)
