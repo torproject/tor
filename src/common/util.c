@@ -2957,10 +2957,10 @@ load_windows_system_library(const TCHAR *library_name)
 }
 #endif
 
-/* Format a single argument for being put on a Windows command line.
+/** Format a single argument for being put on a Windows command line.
  * Returns a newly allocated string */
 static char *
-format_cmdline_argument(const char *arg)
+format_win_cmdline_argument(const char *arg)
 {
   char *formatted_arg;
   char need_quotes;
@@ -3026,12 +3026,12 @@ format_cmdline_argument(const char *arg)
   return formatted_arg;
 }
 
-/* Format a command line for use on Windows, which takes the command as a
+/** Format a command line for use on Windows, which takes the command as a
  * string rather than string array. Follows the rules from "Parsing C++
  * Command-Line Arguments" in MSDN. Algorithm based on list2cmdline in the
  * Python subprocess module. Returns a newly allocated string */
 char *
-tor_join_cmdline(const char *argv[])
+tor_join_win_cmdline(const char *argv[])
 {
   smartlist_t *argv_list;
   char *joined_argv;
@@ -3040,7 +3040,7 @@ tor_join_cmdline(const char *argv[])
   /* Format each argument and put the result in a smartlist */
   argv_list = smartlist_create();
   for (i=0; argv[i] != NULL; i++) {
-    smartlist_add(argv_list, (void *)format_cmdline_argument(argv[i]));
+    smartlist_add(argv_list, (void *)format_win_cmdline_argument(argv[i]));
   }
 
   /* Join the arguments with whitespace */
@@ -3217,7 +3217,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   /* Windows expects argv to be a whitespace delimited string, so join argv up
    */
-  joined_argv = tor_join_cmdline(argv);
+  joined_argv = tor_join_win_cmdline(argv);
 
   ZeroMemory(&(process_handle->pid), sizeof(PROCESS_INFORMATION));
   ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
@@ -3437,7 +3437,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 #endif // MS_WINDOWS
 }
 
-/* Get the exit code of a process specified by <b>process_handle</b> and store
+/** Get the exit code of a process specified by <b>process_handle</b> and store
  * it in <b>exit_code</b>, if set to a non-NULL value.  If <b>block</b> is set
  * to true, the call will block until the process has exited.  Otherwise if
  * the process is still running, the function will return
@@ -3575,7 +3575,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
 }
 #endif
 
-/* Read from stdout of a process until the process exits. */
+/** Read from stdout of a process until the process exits. */
 ssize_t
 tor_read_all_from_process_stdout(const process_handle_t process_handle,
                                 char *buf, size_t count)
@@ -3588,7 +3588,7 @@ tor_read_all_from_process_stdout(const process_handle_t process_handle,
 #endif
 }
 
-/* Read from stdout of a process until the process exits. */
+/** Read from stdout of a process until the process exits. */
 ssize_t
 tor_read_all_from_process_stderr(const process_handle_t process_handle,
                                  char *buf, size_t count)
@@ -3601,12 +3601,11 @@ tor_read_all_from_process_stderr(const process_handle_t process_handle,
 #endif
 }
 
-/* Split buf into lines, and add to smartlist. The buffer <b>buf</b> will be
+/** Split buf into lines, and add to smartlist. The buffer <b>buf</b> will be
  * modified. The resulting smartlist will consist of pointers to buf, so there
- * is no need to free the contents of sl. <b>buf</b> must be a NULL terminated
+ * is no need to free the contents of sl. <b>buf</b> must be a NUL-terminated
  * string. <b>len</b> should be set to the length of the buffer excluding the
- * NULL. Non-printable characters (including NULL) will be replaced with "." */
-
+ * NUL. Non-printable characters (including NUL) will be replaced with "." */
 int
 tor_split_lines(smartlist_t *sl, char *buf, int len)
 {
@@ -3627,7 +3626,7 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
           buf[cur] = '\0';
           /* Point cur to the next line */
           cur++;
-          /* Line starts at start and ends with a null */
+          /* Line starts at start and ends with a nul */
           break;
         } else {
           if (!TOR_ISPRINT(buf[cur]))
@@ -3646,8 +3645,8 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
       }
     }
     /* We are at the end of the line or end of string. If in_line is true there
-     * is a line which starts at buf+start and ends at a NULL. cur points to
-     * the character after the NULL. */
+     * is a line which starts at buf+start and ends at a NUL. cur points to
+     * the character after the NUL. */
     if (in_line)
       smartlist_add(sl, (void *)(buf+start));
     in_line = 0;

@@ -1558,12 +1558,12 @@ test_util_spawn_background_partial_read(void *ptr)
  * Test that we can properly format q Windows command line
  */
 static void
-test_util_join_cmdline(void *ptr)
+test_util_join_win_cmdline(void *ptr)
 {
-  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in MSDN
-   * but we don't exercise all quoting rules because tor_join_cmdline will try
-   * to only generate simple cases for the child process to parse; i.e. we
-   * never embed quoted strings in arguments. */
+  /* Based on some test cases from "Parsing C++ Command-Line Arguments" in
+   * MSDN but we don't exercise all quoting rules because tor_join_win_cmdline
+   * will try to only generate simple cases for the child process to parse;
+   * i.e. we never embed quoted strings in arguments. */
 
   const char *argvs[][4] = {
     {"a", "bb", "CCC", NULL}, // Normal
@@ -1596,7 +1596,7 @@ test_util_join_cmdline(void *ptr)
 
   for (i=0; cmdlines[i]!=NULL; i++) {
     log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
-    joined_argv = tor_join_cmdline(argvs[i]);
+    joined_argv = tor_join_win_cmdline(argvs[i]);
     tt_str_op(joined_argv, ==, cmdlines[i]);
     tor_free(joined_argv);
   }
@@ -1754,7 +1754,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
-  UTIL_TEST(join_cmdline, 0),
+  UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
   END_OF_TESTCASES
 };
