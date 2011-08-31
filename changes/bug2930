@@ -1,5 +1,0 @@
-  o Minor features:
-    - Replace files in stats/ rather than appending to them.  Now that we
-      include statistics in extra-info descriptors, it makes no sense to
-      keep old statistics forever.  Implements #2930.
-

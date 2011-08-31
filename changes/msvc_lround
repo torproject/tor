@@ -1,4 +1,0 @@
-  o Build fixes:
-    - Provide a substitute implementation of lround() for MSVC, which
-      apparently lacks it.  Patch from Gisle Vanem.
-      

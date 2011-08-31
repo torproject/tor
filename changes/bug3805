@@ -1,5 +1,0 @@
-  o Major bugfixes (bufferevents):
-    - Correctly notice when data has been written from a bufferevent
-      without flushing it completely. Bugfix on 0.2.3.1-alpha; fixes
-      bug 3805.
-

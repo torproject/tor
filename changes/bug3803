@@ -1,4 +1,0 @@
-  o Major bugfixes (bufferevents):
-    - Correctly record the bytes we've read and written when using
-      bufferevents, so that we can include them in our bandwidth history
-      and advertised bandwidth. Fixes bug 3803; bugfix on 0.2.3.1-alpha.

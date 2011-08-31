@@ -1,4 +1,0 @@
-  o Major bugfixes (bufferevents):
-    - Fix a bug where server-side tunneled bufferevent-based directory
-      streams would get closed prematurely. Fixes 3814, bugfix on
-      0.2.3.1-alpha.

@@ -1,3 +1,138 @@
+Changes in version 0.2.3.3-alpha - 2011-0?-??
+  Tor 0.2.3.3-alpha adds a new major "stream isolation" feature to
+  improve Tor's security, and provides client-side support for several
+  the microdescriptor and optimistic data features introduced earlier in
+  the 0.2.3.x series.  Also, it has numerous critical bugfixes in the
+  (optional) bufferevent-based networking backend.
+
+  o Major features:
+    - You can now configure Tor so that streams from different
+      applications are isolated on different circuits, to prevent an
+      attacker who sees your streams leaving an exit node from linking
+      your sessions to one another. To do this, choose some way to
+      distinguish the applications: have them connect to different
+      SocksPorts, or have one of them use SOCKS4 while the other uses
+      SOCKS5, or have them pass different authentication strings to the
+      SOCKS proxy. Then, use the new SocksPort syntax to configure the
+      degree of isolation you need. This implements Proposal 171.
+    - The microdescriptor system is now on by default for clients. This
+      allows clients to download a much smaller amount of directory
+      information. To disable it, set "UseMicrodescriptors 0" in your
+      torrc file.
+    - Tor's firewall-helper feature, introduced in 0.2.3.1-alpha, now
+      supports Windows.
+    - When using an exit nodes running 0.2.3.x, clients can now
+      "optimistically" send data before the exit node reports that the
+      stream has opened. This saves a round trip when starting
+      connections where the client speaks first. This behavior is
+      controlled by a (currently disabled) consensus parameter. To turn
+      it on or off manually, use the "OptimisticData" torrc
+      option. Implements proposal 181; code by Ian Goldberg.
+
+  o Major bugfixes (bufferevents):
+    - When using IOCP on windows, we need to enable Libevent windows
+      threading support. Bugfix on 0.2.3.1-alpha.
+    - The IOCP backend now works even when the user has not specified
+      the (internal, debbuging-only) _UseFilteringSSLBufferevents option.
+      Fixes part of bug 3752; bugfix on 0.2.3.1-alpha.
+    - Correctly record the bytes we've read and written when using
+      bufferevents, so that we can include them in our bandwidth history
+      and advertised bandwidth. Fixes bug 3803; bugfix on 0.2.3.1-alpha.
+    - Apply rate-limiting only at the bottom of a chain of filtering
+      bufferevents. This prevents us from filling up internal read
+      buffers and violating rate-limits when filtering bufferevents
+      are enabled. Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
+    - Add high-watermarks to the output buffers for filtered
+      bufferevents. This prevents us from filling up internal write
+      buffers and wasting CPU cycles when filtering bufferevents are
+      enabled. Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
+    - Correctly notice when data has been written from a bufferevent
+      without flushing it completely. Bugfix on 0.2.3.1-alpha; fixes
+      bug 3805.
+    - Fix a bug where server-side tunneled bufferevent-based directory
+      streams would get closed prematurely. Fixes 3814, bugfix on
+      0.2.3.1-alpha.
+
+  o Major bugfixes (on 0.2.2.x and earlier): [stet]
+    - If we're configured to write our ControlPorts to disk, only write
+      them after switching UID and creating the data directory. This way,
+      we don't fail when starting up with a nonexistent DataDirectory
+      and a ControlPortWriteToFile setting based on that directory. Fixes
+      bug 3747; bugfix on Tor 0.2.2.26-beta.
+
+  o Minor features:
+    - There's a new syntax for specifying multiple client ports (such as
+      SOCKSPort, TransPort, DNSPort, NATDPort): you can now just declare
+      multiple *Port entries with full addr:port syntax on each.
+      The old *ListenAddress format is still supported, but you can't
+      mix it with the new *Port syntax.
+    - Added a new CONF_CHANGED event so that controllers can be notified
+      of any configuration changes made by other controllers, or by the
+      user.  Implements #1692.
+    - Use evbuffer_copyout() in inspect_evbuffer(). This fixes a memory
+      leak when using bufferevents, and lets Libevent worry about how to
+      best copy data out of a buffer.
+    - Replace files in stats/ rather than appending to them. Now that we
+      include statistics in extra-info descriptors, it makes no sense to
+      keep old statistics forever. Implements #2930.
+
+  o Minor features (build compatibility):
+    - Limited, experimental support for building with nmake and MSVC.
+    - Provide a substitute implementation of lround() for MSVC, which
+      apparently lacks it. Patch from Gisle Vanem.
+
+  o Minor features: [stet]
+    - Update to the August 2 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes (on 0.2.3.x-alpha):
+    - Fix a spurious warning when parsing SOCKS requests with
+      bufferevents enabled. Fixes bug 3615; bugfix on 0.2.3.2-alpha.
+    - Get rid of a harmless warning that could happen on relays running
+      with bufferevents. The warning was caused by someone doing an http
+      request to a relay's orport. Also don't warn for a few related
+      non-errors. Fixes bug 3700; bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (on 2.2.x and earlier):
+    - The "--quiet" and "--hush" options now apply not only to Tor's
+      behavior before logs are configured, but also to Tor's behavior in
+      the absense of configured logs. Fixes bug 3550; bugfix on
+      0.2.0.10-alpha.
+
+  o Minor bugfixes (on 2.2.x and earlier): [stet]
+    - Write several files in text mode, on OSes that distinguish text
+      mode from binary mode (namely, Windows). These files are:
+      'buffer-stats', 'dirreq-stats', and 'entry-stats' on relays
+      that collect those statistics; 'client_keys' and 'hostname' for
+      hidden services that use authentication; and (in the tor-gencert
+      utility) newly generated identity and signing keys. Previously,
+      we wouldn't specify text mode or binary mode, leading to an
+      assertion failure. Fixes bug 3607. Bugfix on 0.2.1.1-alpha (when
+      the DirRecordUsageByCountry option which would have triggered
+      the assertion failure was added), although this assertion failure
+      would have occurred in tor-gencert on Windows in 0.2.0.1-alpha.
+    - Selectively disable deprecation warnings on OS X because Lion
+      started deprecating the shipped copy of openssl. Fixes bug 3643.
+    - Remove an extra pair of quotation marks around the error
+      message in control-port STATUS_GENERAL BUG events. Bugfix on
+      0.1.2.6-alpha; fixes bug 3732.
+    - When unable to format an address as a string, report its value
+      as "???" rather than reusing the last formatted address. Bugfix
+      on 0.2.1.5-alpha.
+
+  o Code simplifications and refactoring:
+    - Rewrote the listener-selection logic so that parsing which ports
+      we want to listen on is now separate form binding to the ports
+      we want.
+
+  o Build changes:
+    - Building Tor with bufferevent support now requires Libevent
+      2.0.13-stable or later. Previous versions of Libevent had bugs in
+      SSL-related bufferevents and related issues that would make Tor
+      work badly with bufferevents. Requiring 2.0.13-stable also allows
+      Tor with bufferevents to take advantage of Libevent APIs
+      introduced after 2.0.8-rc.
+
+
 Changes in version 0.2.2.32 - 2011-08-27
   The Tor 0.2.2 release series is dedicated to the memory of Andreas
   Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
