@@ -1637,7 +1637,8 @@ test_util_split_lines(void *ptr)
 
   for (i=0; tests[i].orig_line; i++) {
     sl = smartlist_create();
-    orig_line = tor_malloc(tests[i].orig_length);
+    /* Allocate space for string and trailing NULL */
+    orig_line = tor_malloc(tests[i].orig_length + 1);
     memcpy(orig_line, tests[i].orig_line, tests[i].orig_length + 1);
     tor_split_lines(sl, orig_line, tests[i].orig_length);
 
