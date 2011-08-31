@@ -4095,7 +4095,7 @@ choose_random_entry(cpath_build_state_t *state)
 
  retry:
   smartlist_clear(live_entry_guards);
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
     {
       const char *msg;
       r = entry_is_live(entry, need_uptime, need_capacity, 0, &msg);
@@ -4131,7 +4131,8 @@ choose_random_entry(cpath_build_state_t *state)
       }
       if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
         break; /* we have enough */
-    });
+    }
+  SMARTLIST_FOREACH_END(entry);
 
   if (entry_list_is_constrained(options)) {
     /* If we prefer the entry nodes we've got, and we have at least
