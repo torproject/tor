@@ -88,6 +88,9 @@
 #ifdef HAVE_MALLOC_NP_H
 #include <malloc_np.h>
 #endif
+#ifdef HAVE_SYS_WAIT_H
+#include <sys/wait.h>
+#endif
 
 /* =====
  * Memory management
