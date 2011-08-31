@@ -445,7 +445,7 @@ rep_hist_downrate_old_runs(time_t now)
     alpha *= STABILITY_ALPHA;
   }
 
-  log_info(LD_HIST, "Discounting all old stability info by a factor of %lf",
+  log_info(LD_HIST, "Discounting all old stability info by a factor of %f",
            alpha);
 
   /* Multiply every w_r_l, t_r_w pair by alpha. */
@@ -893,7 +893,7 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
                " weighted-uptime %lu\n"
                "mtbf %0.1lf\n"
                " weighted-run-length %lu\n"
-               " total-run-weights %lf\n",
+               " total-run-weights %f\n",
                up?"uptime-started ":"", up?sor_buf:"", up?" UTC\n":"",
                down?"downtime-started ":"", down?sod_buf:"", down?" UTC\n":"",
                wfu,
