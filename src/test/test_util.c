@@ -1541,14 +1541,18 @@ test_util_spawn_background_partial_read(void *ptr)
   pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
                             &process_handle);
+  tt_int_op(pos, ==, 0);
 #else
-  if (!eof)
+  if (!eof) {
+    /* We should have got all the data, but maybe not the EOF flag */
     pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1,
                               &process_handle, &eof);
-  tt_assert(eof)
+    tt_int_op(pos, ==, 0);
+    tt_assert(eof);
+  }
+  /* Otherwise, we got the EOF on the last read */
 #endif
-  tt_int_op(pos, ==, 0);
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
