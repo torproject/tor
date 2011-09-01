@@ -1,0 +1,4 @@
+  o Minor bugfixes (bufferevents, fix on 0.2.3.1-alpha):
+    - Fix a use-after-free error with per-connection rate-limiting
+      buckets. Fixes bug 3888.
+
