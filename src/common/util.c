@@ -3616,6 +3616,7 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
       }
     }
     tor_assert(retval != NULL);
+    tor_assert(strlen(retval) + numread <= count);
     numread += strlen(retval);
   }
 
