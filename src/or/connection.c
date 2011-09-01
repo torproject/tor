@@ -524,6 +524,7 @@ _connection_free(connection_t *conn)
 #ifdef USE_BUFFEREVENTS
   if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bucket_cfg) {
     ev_token_bucket_cfg_free(TO_OR_CONN(conn)->bucket_cfg);
+    TO_OR_CONN(conn)->bucket_cfg = NULL;
   }
 #endif
 
