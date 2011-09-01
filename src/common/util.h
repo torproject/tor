@@ -391,7 +391,8 @@ ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
                             const process_handle_t *process);
 #else
 ssize_t tor_read_all_handle(FILE *h, char *buf, size_t count,
-                            const process_handle_t *process);
+                            const process_handle_t *process,
+                            int *eof);
 #endif
 ssize_t tor_read_all_from_process_stdout(
     const process_handle_t *process_handle, char *buf, size_t count);

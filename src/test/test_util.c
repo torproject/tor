@@ -1484,7 +1484,7 @@ test_util_spawn_background_partial_read(void *ptr)
   const int expected_status = PROCESS_STATUS_RUNNING;
 
   int retval, exit_code;
-  ssize_t pos;
+  ssize_t pos = -1;
   process_handle_t process_handle;
   char stdout_buf[100], stderr_buf[100];
 #ifdef MS_WINDOWS
@@ -1499,6 +1499,7 @@ test_util_spawn_background_partial_read(void *ptr)
                                  "DONE\n",
                                  NULL };
   const char *expected_err = "ERR\n";
+  int eof = 0;
 #endif
   int expected_out_ctr;
   (void)ptr;
@@ -1517,8 +1518,10 @@ test_util_spawn_background_partial_read(void *ptr)
     pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL);
 #else
+    /* Check that we didn't read the end of file last time */
+    tt_assert(!eof);
     pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
-                              sizeof(stdout_buf) - 1, NULL);
+                              sizeof(stdout_buf) - 1, NULL, &eof);
 #endif
     log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
 
@@ -1526,7 +1529,7 @@ test_util_spawn_background_partial_read(void *ptr)
     if (0 == pos)
       continue;
 
-    tt_int_op(pos, >=, 0);
+    tt_int_op(pos, >, 0);
     stdout_buf[pos] = '\0';
     tt_str_op(stdout_buf, ==, expected_out[expected_out_ctr]);
     tt_int_op(pos, ==, strlen(expected_out[expected_out_ctr]));
@@ -1539,10 +1542,13 @@ test_util_spawn_background_partial_read(void *ptr)
                             sizeof(stdout_buf) - 1,
                             &process_handle);
 #else
-  pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
-                            sizeof(stdout_buf) - 1,
-                            &process_handle);
+  if (!eof)
+    pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
+                              sizeof(stdout_buf) - 1,
+                              &process_handle, &eof);
+  tt_assert(eof)
 #endif
+  tt_int_op(pos, ==, 0);
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);

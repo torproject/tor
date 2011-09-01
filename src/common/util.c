@@ -3583,13 +3583,18 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count,
  * <b>process</b> is NULL, the function will return immediately if there is
  * nothing more to read. Otherwise data will be read until end of file, or
  * <b>count</b> bytes are read.  Returns the number of bytes read, or -1 on
- * error. */
+ * error. Sets <b>eof</b> to true if <b>eof</b> is not NULL and the end of the
+ * file has been reached. */
 ssize_t
 tor_read_all_handle(FILE *h, char *buf, size_t count,
-                    const process_handle_t *process)
+                    const process_handle_t *process,
+                    int *eof)
 {
   size_t numread = 0;
   char *retval;
+
+  if (eof)
+    *eof = 0;
 
   if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
     return -1;
@@ -3599,7 +3604,10 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
     retval = fgets(buf+numread, (int)(count-numread), h);
     if (NULL == retval) {
       if (feof(h)) {
+        log_debug(LD_GENERAL, "fgets() reached end of file");
         fclose(h);
+        if (eof)
+          *eof = 1;
         break;
       } else {
         if (EAGAIN == errno) {
@@ -3620,7 +3628,7 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
     numread += strlen(retval);
   }
 
-  log_debug(LD_GENERAL, "fgets read %d bytes from handle", (int)numread);
+  log_debug(LD_GENERAL, "fgets() read %d bytes from handle", (int)numread);
   return (ssize_t)numread;
 }
 #endif
@@ -3635,7 +3643,7 @@ tor_read_all_from_process_stdout(const process_handle_t *process_handle,
                              process_handle);
 #else
   return tor_read_all_handle(process_handle->stdout_handle, buf, count,
-                             process_handle);
+                             process_handle, NULL);
 #endif
 }
 
@@ -3649,7 +3657,7 @@ tor_read_all_from_process_stderr(const process_handle_t *process_handle,
                              process_handle);
 #else
   return tor_read_all_handle(process_handle->stderr_handle, buf, count,
-                             process_handle);
+                             process_handle, NULL);
 #endif
 }
 
