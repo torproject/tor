@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix an edge case where TestingTorNetwork is set but the authorities
+      and relays all have an uptime of zero, where the private Tor network
+      could briefly lack support for hidden services. Fixes bug 3886;
+      bugfix on 0.2.2.18-alpha.
