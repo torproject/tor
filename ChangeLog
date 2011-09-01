@@ -1,59 +1,64 @@
-Changes in version 0.2.3.3-alpha - 2011-0?-??
-  Tor 0.2.3.3-alpha adds a new major "stream isolation" feature to
-  improve Tor's security, and provides client-side support for several
-  the microdescriptor and optimistic data features introduced earlier in
-  the 0.2.3.x series.  Also, it has numerous critical bugfixes in the
-  (optional) bufferevent-based networking backend.
+Changes in version 0.2.3.3-alpha - 2011-09-01
+  Tor 0.2.3.3-alpha adds a new "stream isolation" feature to improve Tor's
+  security, and provides client-side support for the microdescriptor
+  and optimistic data features introduced earlier in the 0.2.3.x
+  series. It also includes numerous critical bugfixes in the (optional)
+  bufferevent-based networking backend.
 
-  o Major features:
+  o Major features (stream isolation):
     - You can now configure Tor so that streams from different
       applications are isolated on different circuits, to prevent an
-      attacker who sees your streams leaving an exit node from linking
-      your sessions to one another. To do this, choose some way to
-      distinguish the applications: have them connect to different
+      attacker who sees your streams as they leave an exit node from
+      linking your sessions to one another. To do this, choose some way
+      to distinguish the applications: have them connect to different
       SocksPorts, or have one of them use SOCKS4 while the other uses
       SOCKS5, or have them pass different authentication strings to the
       SOCKS proxy. Then, use the new SocksPort syntax to configure the
       degree of isolation you need. This implements Proposal 171.
-    - The microdescriptor system is now on by default for clients. This
-      allows clients to download a much smaller amount of directory
-      information. To disable it, set "UseMicrodescriptors 0" in your
-      torrc file.
-    - Tor's firewall-helper feature, introduced in 0.2.3.1-alpha, now
-      supports Windows.
-    - When using an exit nodes running 0.2.3.x, clients can now
-      "optimistically" send data before the exit node reports that the
-      stream has opened. This saves a round trip when starting
-      connections where the client speaks first. This behavior is
-      controlled by a (currently disabled) consensus parameter. To turn
-      it on or off manually, use the "OptimisticData" torrc
-      option. Implements proposal 181; code by Ian Goldberg.
+    - There's a new syntax for specifying multiple client ports (such as
+      SOCKSPort, TransPort, DNSPort, NATDPort): you can now just declare
+      multiple *Port entries with full addr:port syntax on each.
+      The old *ListenAddress format is still supported, but you can't
+      mix it with the new *Port syntax.
 
-  o Major bugfixes (bufferevents):
-    - When using IOCP on windows, we need to enable Libevent windows
-      threading support. Bugfix on 0.2.3.1-alpha.
+  o Major features (other):
+    - Enable microdescriptor fetching by default for clients. This allows
+      clients to download a much smaller amount of directory information.
+      To disable it (and go back to the old-style consensus and
+      descriptors), set "UseMicrodescriptors 0" in your torrc file.
+    - Tor's firewall-helper feature, introduced in 0.2.3.1-alpha (see the
+      "PortForwarding" config option), now supports Windows.
+    - When using an exit relay running 0.2.3.x, clients can now
+      "optimistically" send data before the exit relay reports that
+      the stream has opened. This saves a round trip when starting
+      connections where the client speaks first (such as web browsing).
+      This behavior is controlled by a consensus parameter (currently
+      disabled). To turn it on or off manually, use the "OptimisticData"
+      torrc option. Implements proposal 181; code by Ian Goldberg.
+
+  o Major bugfixes (bufferevents, fixes on 0.2.3.1-alpha):
+    - When using IOCP on Windows, we need to enable Libevent windows
+      threading support.
     - The IOCP backend now works even when the user has not specified
-      the (internal, debbuging-only) _UseFilteringSSLBufferevents option.
-      Fixes part of bug 3752; bugfix on 0.2.3.1-alpha.
+      the (internal, debugging-only) _UseFilteringSSLBufferevents option.
+      Fixes part of bug 3752.
     - Correctly record the bytes we've read and written when using
       bufferevents, so that we can include them in our bandwidth history
-      and advertised bandwidth. Fixes bug 3803; bugfix on 0.2.3.1-alpha.
+      and advertised bandwidth. Fixes bug 3803.
     - Apply rate-limiting only at the bottom of a chain of filtering
       bufferevents. This prevents us from filling up internal read
       buffers and violating rate-limits when filtering bufferevents
-      are enabled. Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
+      are enabled. Fixes part of bug 3804.
     - Add high-watermarks to the output buffers for filtered
       bufferevents. This prevents us from filling up internal write
       buffers and wasting CPU cycles when filtering bufferevents are
-      enabled. Bugfix on 0.2.3.1-alpha; fixes part of bug 3804.
+      enabled. Fixes part of bug 3804.
     - Correctly notice when data has been written from a bufferevent
-      without flushing it completely. Bugfix on 0.2.3.1-alpha; fixes
-      bug 3805.
+      without flushing it completely. Fixes bug 3805.
     - Fix a bug where server-side tunneled bufferevent-based directory
-      streams would get closed prematurely. Fixes 3814, bugfix on
-      0.2.3.1-alpha.
+      streams would get closed prematurely. Fixes bug 3814.
 
-  o Major bugfixes (on 0.2.2.x and earlier): [stet]
+  o Major bugfixes (also part of 0.2.2.31-rc):
     - If we're configured to write our ControlPorts to disk, only write
       them after switching UID and creating the data directory. This way,
       we don't fail when starting up with a nonexistent DataDirectory
@@ -61,27 +66,22 @@ Changes in version 0.2.3.3-alpha - 2011-0?-??
       bug 3747; bugfix on Tor 0.2.2.26-beta.
 
   o Minor features:
-    - There's a new syntax for specifying multiple client ports (such as
-      SOCKSPort, TransPort, DNSPort, NATDPort): you can now just declare
-      multiple *Port entries with full addr:port syntax on each.
-      The old *ListenAddress format is still supported, but you can't
-      mix it with the new *Port syntax.
     - Added a new CONF_CHANGED event so that controllers can be notified
       of any configuration changes made by other controllers, or by the
-      user.  Implements #1692.
+      user. Implements ticket 1692.
     - Use evbuffer_copyout() in inspect_evbuffer(). This fixes a memory
       leak when using bufferevents, and lets Libevent worry about how to
       best copy data out of a buffer.
     - Replace files in stats/ rather than appending to them. Now that we
       include statistics in extra-info descriptors, it makes no sense to
-      keep old statistics forever. Implements #2930.
+      keep old statistics forever. Implements ticket 2930.
 
   o Minor features (build compatibility):
     - Limited, experimental support for building with nmake and MSVC.
     - Provide a substitute implementation of lround() for MSVC, which
       apparently lacks it. Patch from Gisle Vanem.
 
-  o Minor features: [stet]
+  o Minor features (also part of 0.2.2.31-rc):
     - Update to the August 2 2011 Maxmind GeoLite Country database.
 
   o Minor bugfixes (on 0.2.3.x-alpha):
@@ -98,7 +98,7 @@ Changes in version 0.2.3.3-alpha - 2011-0?-??
       the absense of configured logs. Fixes bug 3550; bugfix on
       0.2.0.10-alpha.
 
-  o Minor bugfixes (on 2.2.x and earlier): [stet]
+  o Minor bugfixes (also part of 0.2.2.31-rc):
     - Write several files in text mode, on OSes that distinguish text
       mode from binary mode (namely, Windows). These files are:
       'buffer-stats', 'dirreq-stats', and 'entry-stats' on relays
@@ -120,8 +120,8 @@ Changes in version 0.2.3.3-alpha - 2011-0?-??
       on 0.2.1.5-alpha.
 
   o Code simplifications and refactoring:
-    - Rewrote the listener-selection logic so that parsing which ports
-      we want to listen on is now separate form binding to the ports
+    - Rewrite the listener-selection logic so that parsing which ports
+      we want to listen on is now separate from binding to the ports
       we want.
 
   o Build changes:
