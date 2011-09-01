@@ -388,12 +388,15 @@ int tor_get_exit_code(const process_handle_t process_handle,
 int tor_split_lines(struct smartlist_t *sl, char *buf, int len);
 #ifdef MS_WINDOWS
 ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
-                            HANDLE hProcess);
+                            const process_handle_t *process);
+#else
+ssize_t tor_read_all_handle(FILE *h, char *buf, size_t count,
+                            const process_handle_t *process);
 #endif
-ssize_t tor_read_all_from_process_stdout(const process_handle_t process_handle,
-                                        char *buf, size_t count);
-ssize_t tor_read_all_from_process_stderr(const process_handle_t process_handle,
-                                         char *buf, size_t count);
+ssize_t tor_read_all_from_process_stdout(
+    const process_handle_t *process_handle, char *buf, size_t count);
+ssize_t tor_read_all_from_process_stderr(
+    const process_handle_t *process_handle, char *buf, size_t count);
 char *tor_join_win_cmdline(const char *argv[]);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);

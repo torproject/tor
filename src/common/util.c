@@ -3522,7 +3522,8 @@ tor_get_exit_code(const process_handle_t process_handle,
  * only once the process has exited, or <b>count</b> bytes are read. Returns
  * the number of bytes read, or -1 on error. */
 ssize_t
-tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
+tor_read_all_handle(HANDLE h, char *buf, size_t count,
+                    const process_handle_t *process)
 {
   size_t numread = 0;
   BOOL retval;
@@ -3544,7 +3545,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
       /* Nothing available: process exited or it is busy */
 
       /* Exit if we don't know whether the process is running */
-      if (NULL == hProcess)
+      if (NULL == process)
         break;
 
       /* The process exited and there's nothing left to read from it */
@@ -3554,7 +3555,8 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
       /* If process is not running, check for output one more time in case
          it wrote something after the peek was performed. Otherwise keep on
          waiting for output */
-      byte_count = WaitForSingleObject(hProcess, 0);
+      tor_assert(process != NULL);
+      byte_count = WaitForSingleObject(process->pid.hProcess, 0);
       if (WAIT_TIMEOUT != byte_count)
         process_exited = TRUE;
 
@@ -3576,31 +3578,77 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count, HANDLE hProcess)
   }
   return (ssize_t)numread;
 }
+#else
+/** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
+ * <b>process</b> is NULL, the function will return immediately if there is
+ * nothing more to read. Otherwise data will be read until end of file, or
+ * <b>count</b> bytes are read.  Returns the number of bytes read, or -1 on
+ * error. */
+ssize_t
+tor_read_all_handle(FILE *h, char *buf, size_t count,
+                    const process_handle_t *process)
+{
+  size_t numread = 0;
+  char *retval;
+
+  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+    return -1;
+
+  while (numread != count) {
+    /* Use fgets because that is what we use in log_from_pipe() */
+    retval = fgets(buf+numread, (int)(count-numread), h);
+    if (NULL == retval) {
+      if (feof(h)) {
+        fclose(h);
+        break;
+      } else {
+        if (EAGAIN == errno) {
+          if (process)
+            continue;
+          else
+            break;
+        } else {
+          log_warn(LD_GENERAL, "fgets() from handle failed: %s",
+                   strerror(errno));
+          fclose(h);
+          return -1;
+        }
+      }
+    }
+    tor_assert(retval != NULL);
+    numread += strlen(retval);
+  }
+
+  log_debug(LD_GENERAL, "fgets read %d bytes from handle", (int)numread);
+  return (ssize_t)numread;
+}
 #endif
 
 /** Read from stdout of a process until the process exits. */
 ssize_t
-tor_read_all_from_process_stdout(const process_handle_t process_handle,
-                                char *buf, size_t count)
+tor_read_all_from_process_stdout(const process_handle_t *process_handle,
+                                 char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return tor_read_all_handle(process_handle.stdout_pipe, buf, count,
-                             process_handle.pid.hProcess);
+  return tor_read_all_handle(process_handle->stdout_pipe, buf, count,
+                             process_handle);
 #else
-  return read_all(process_handle.stdout_pipe, buf, count, 0);
+  return tor_read_all_handle(process_handle->stdout_handle, buf, count,
+                             process_handle);
 #endif
 }
 
 /** Read from stdout of a process until the process exits. */
 ssize_t
-tor_read_all_from_process_stderr(const process_handle_t process_handle,
+tor_read_all_from_process_stderr(const process_handle_t *process_handle,
                                  char *buf, size_t count)
 {
 #ifdef MS_WINDOWS
-  return tor_read_all_handle(process_handle.stderr_pipe, buf, count,
-                             process_handle.pid.hProcess);
+  return tor_read_all_handle(process_handle->stderr_pipe, buf, count,
+                             process_handle);
 #else
-  return read_all(process_handle.stderr_pipe, buf, count, 0);
+  return tor_read_all_handle(process_handle->stderr_handle, buf, count,
+                             process_handle);
 #endif
 }
 

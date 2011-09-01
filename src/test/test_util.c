@@ -1404,8 +1404,8 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(process_handle.stderr_pipe, >, 0);
 
   /* Check stdout */
-  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
-                                        sizeof(stdout_buf) - 1);
+  pos = tor_read_all_from_process_stdout(&process_handle, stdout_buf,
+                                         sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
   tt_str_op(stdout_buf, ==, expected_out);
@@ -1418,7 +1418,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
-  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+  pos = tor_read_all_from_process_stderr(&process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
@@ -1493,57 +1493,66 @@ test_util_spawn_background_partial_read(void *ptr)
                                  "DONE\r\n",
                                  NULL };
   const char *expected_err = "ERR\r\n";
-  int expected_out_ctr;
 #else
   const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
-  const char *expected_err = "ERR\r\n";
+  const char *expected_out[] = { "OUT\n--test\nSLEEPING\n",
+                                 "DONE\n",
+                                 NULL };
+  const char *expected_err = "ERR\n";
 #endif
+  int expected_out_ctr;
   (void)ptr;
 
   /* Start the program */
+#ifdef MS_WINDOWS
   tor_spawn_background(NULL, argv, &process_handle);
+#else
+  tor_spawn_background(argv[0], argv, &process_handle);
+#endif
   tt_int_op(process_handle.status, ==, expected_status);
 
   /* Check stdout */
-#ifdef MS_WINDOWS
   for (expected_out_ctr =0; expected_out[expected_out_ctr] != NULL;) {
+#ifdef MS_WINDOWS
     pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL);
+#else
+    pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
+                              sizeof(stdout_buf) - 1, NULL);
+#endif
     log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
 
     /* We would have blocked, keep on trying */
     if (0 == pos)
       continue;
 
-    tt_assert(pos >= 0);
+    tt_int_op(pos, >=, 0);
     stdout_buf[pos] = '\0';
     tt_str_op(stdout_buf, ==, expected_out[expected_out_ctr]);
     tt_int_op(pos, ==, strlen(expected_out[expected_out_ctr]));
     expected_out_ctr++;
   }
+
   /* The process should have exited without writing more */
+#ifdef MS_WINDOWS
   pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
-                            process_handle.pid.hProcess);
-  tt_int_op(pos, ==, 0);
+                            &process_handle);
 #else
-  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
-                                         sizeof(stdout_buf) - 1);
-  tt_assert(pos >= 0);
-  stdout_buf[pos] = '\0';
-  tt_str_op(stdout_buf, ==, expected_out);
-  tt_int_op(pos, ==, strlen(expected_out));
+  pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
+                            sizeof(stdout_buf) - 1,
+                            &process_handle);
 #endif
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
   tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
   tt_int_op(exit_code, ==, expected_exit);
+
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
-  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
+  pos = tor_read_all_from_process_stderr(&process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
