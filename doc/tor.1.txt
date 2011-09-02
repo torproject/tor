@@ -148,10 +148,11 @@ Other options can be specified either on the command-line (--option
 **ControlPort** __PORT__|**auto**::
     If set, Tor will accept connections on this port and allow those
     connections to control the Tor process using the Tor Control Protocol
-    (described in control-spec.txt). Note: unless you also specify one of
-    **HashedControlPassword** or **CookieAuthentication**, setting this
-    option will
-    cause Tor to allow any process on the local host to control it. This
+    (described in control-spec.txt). Note: unless you also specify one or
+    more of **HashedControlPassword** or **CookieAuthentication**,
+    setting this option will cause Tor to allow any process on the local
+    host to control it. (Setting both authentication methods means either
+    method is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
     Set it to "auto" to have Tor pick a port for you. (Default: 0).
 
@@ -173,15 +174,15 @@ Other options can be specified either on the command-line (--option
     the control socket readable and writable by the default GID. (Default: 0)
 
 **HashedControlPassword** __hashed_password__::
-    Don't allow any connections on the control port except when the other
-    process knows the password whose one-way hash is __hashed_password__. You
+    Allow connections on the control port if they present
+    the password whose one-way hash is __hashed_password__. You
     can compute the hash of a password by running "tor --hash-password
     __password__". You can provide several acceptable passwords by using more
     than one HashedControlPassword line.
 
 **CookieAuthentication** **0**|**1**::
-    If this option is set to 1, don't allow any connections on the control port
-    except when the connecting process knows the contents of a file named
+    If this option is set to 1, allow connections on the control port
+    when the connecting process knows the contents of a file named
     "control_auth_cookie", which Tor will create in its data directory. This
     authentication method should only be used on systems with good filesystem
     security. (Default: 0)
