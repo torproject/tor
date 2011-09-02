@@ -118,6 +118,12 @@ if test "$enable_local_appdata" = "yes"; then
             [Defined if we default to host local appdata paths on Windows])
 fi
 
+dnl check for the correct "ar" when cross-compiling
+AN_MAKEVAR([AR], [AC_PROG_AR])
+AN_PROGRAM([ar], [AC_PROG_AR])
+AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [ar])])
+AC_PROG_AR
+
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
