@@ -95,6 +95,11 @@ Changes in version 0.2.3.3-alpha - 2011-09-01
       non-errors. Fixes bug 3700; bugfix on 0.2.3.1-alpha.
 
   o Minor bugfixes (on 2.2.x and earlier):
+    - Correct the man page to explain that HashedControlPassword and
+      CookieAuthentication can both be set, in which case either method
+      is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
+      when we decided to allow these config options to both be set. Issue
+      raised by bug 3898.
     - The "--quiet" and "--hush" options now apply not only to Tor's
       behavior before logs are configured, but also to Tor's behavior in
       the absense of configured logs. Fixes bug 3550; bugfix on
