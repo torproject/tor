@@ -57,6 +57,8 @@ Changes in version 0.2.3.3-alpha - 2011-09-01
       without flushing it completely. Fixes bug 3805.
     - Fix a bug where server-side tunneled bufferevent-based directory
       streams would get closed prematurely. Fixes bug 3814.
+    - Fix a use-after-free error with per-connection rate-limiting
+      buckets. Fixes bug 3888.
 
   o Major bugfixes (also part of 0.2.2.31-rc):
     - If we're configured to write our ControlPorts to disk, only write
