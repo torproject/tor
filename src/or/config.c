@@ -4980,7 +4980,7 @@ parse_client_port_config(smartlist_t *out,
   /* FooListenAddress is deprecated; let's make it work like it used to work,
    * though. */
   if (listenaddrs) {
-    int mainport = defaultport;
+   int mainport = defaultport;
 
    if (ports && ports->next) {
       log_warn(LD_CONFIG, "%sListenAddress can't be used when there are "
