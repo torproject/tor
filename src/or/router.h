@@ -62,7 +62,7 @@ void consider_publishable_server(int force);
 int should_refuse_unknown_exits(const or_options_t *options);
 
 void router_upload_dir_desc_to_dirservers(int force);
-void mark_my_descriptor_dirty_if_older_than(time_t when);
+void mark_my_descriptor_dirty_if_too_old(time_t now);
 void mark_my_descriptor_dirty(const char *reason);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
@@ -73,6 +73,7 @@ int router_my_exit_policy_is_reject_star(void);
 const routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
+const char *router_get_descriptor_gen_reason(void);
 int router_digest_is_me(const char *digest);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);

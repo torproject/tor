@@ -1326,11 +1326,7 @@ run_scheduled_events(time_t now)
       time_to_check_ipaddress = now + CHECK_IPADDRESS_INTERVAL;
       check_descriptor_ipaddress_changed(now);
     }
-/** If our router descriptor ever goes this long without being regenerated
- * because something changed, we force an immediate regenerate-and-upload. */
-#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
-    mark_my_descriptor_dirty_if_older_than(
-                                  now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
+    mark_my_descriptor_dirty_if_too_old(now);
     consider_publishable_server(0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */

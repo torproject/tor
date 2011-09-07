@@ -1220,9 +1220,14 @@ router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 static routerinfo_t *desc_routerinfo = NULL;
 /** My extrainfo */
 static extrainfo_t *desc_extrainfo = NULL;
+/** Why did we most recently decide to regenerate our descriptor?  Used to
+ * tell the authorities why we're sending it to them. */
+static const char *desc_gen_reason = NULL;
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
 static time_t desc_clean_since = 0;
+/** Why did we mark the descriptor dirty? */
+static const char *desc_dirty_reason = NULL;
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
@@ -1387,6 +1392,14 @@ router_get_my_extrainfo(void)
   if (router_rebuild_descriptor(0))
     return NULL;
   return desc_extrainfo;
+}
+
+/** Return a human-readable string describing what triggered us to generate
+ * our current descriptor, or NULL if we don't know. */
+const char *
+router_get_descriptor_gen_reason(void)
+{
+  return desc_gen_reason;
 }
 
 /** A list of nicknames that we've warned about including in our family
@@ -1606,16 +1619,56 @@ router_rebuild_descriptor(int force)
 
   desc_clean_since = time(NULL);
   desc_needs_upload = 1;
+  desc_gen_reason = desc_dirty_reason;
+  desc_dirty_reason = NULL;
   control_event_my_descriptor_changed();
   return 0;
 }
 
-/** Mark descriptor out of date if it's older than <b>when</b> */
+/** If our router descriptor ever goes this long without being regenerated
+ * because something changed, we force an immediate regenerate-and-upload. */
+#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
+
+/** If our router descriptor seems to be missing or unacceptable according
+ * to the authorities, regenerate and reupload it _this_ often. */
+#define FAST_RETRY_DESCRIPTOR_INTERVAL (90*60)
+
+/** Mark descriptor out of date if it's been "too long" since we last tried
+ * to upload one. */
 void
-mark_my_descriptor_dirty_if_older_than(time_t when)
+mark_my_descriptor_dirty_if_too_old(time_t now)
 {
-  if (desc_clean_since < when)
+  networkstatus_t *ns;
+  routerstatus_t *rs;
+  const char *retry_fast_reason = NULL; /* Set if we should retry frequently */
+  const time_t slow_cutoff = now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL;
+  const time_t fast_cutoff = now - FAST_RETRY_DESCRIPTOR_INTERVAL;
+
+  /* If it's already dirty, don't mark it. */
+  if (! desc_clean_since)
+    return;
+
+  /* If it's older than FORCE_REGENERATE_DESCRIPTOR_INTERVAL, it's always
+   * time to rebuild it. */
+  if (desc_clean_since < slow_cutoff) {
     mark_my_descriptor_dirty("time for new descriptor");
+    return;
+  }
+  /* Now we see whether we want to be retrying frequently or no.  The
+   * rule here is that we'll retry frequently if we aren't listed in the
+   * live consensus we have, or if the publication time of the
+   * descriptor listed for us in the consensus is very old. */
+  ns = networkstatus_get_live_consensus(now);
+  if (ns) {
+    rs = networkstatus_vote_find_entry(ns, server_identitykey_digest);
+    if (rs == NULL)
+      retry_fast_reason = "not listed in consensus";
+    else if (rs->published_on < slow_cutoff)
+      retry_fast_reason = "version listed in consensus is quite old";
+  }
+
+  if (retry_fast_reason && desc_clean_since < fast_cutoff)
+    mark_my_descriptor_dirty(retry_fast_reason);
 }
 
 /** Call when the current descriptor is out of date. */
@@ -1624,6 +1677,8 @@ mark_my_descriptor_dirty(const char *reason)
 {
   desc_clean_since = 0;
   log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
+  if (!desc_dirty_reason)
+    desc_dirty_reason = reason;
 }
 
 /** How frequently will we republish our descriptor because of large (factor
