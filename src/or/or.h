@@ -941,6 +941,7 @@ typedef struct socks_request_t socks_request_t;
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
 #define OR_CONNECTION_MAGIC 0x7D31FF03u
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
+#define ENTRY_CONNECTION_MAGIC 0xbb4a5703
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 #define LISTENER_CONNECTION_MAGIC 0x1a1ac741u
@@ -1173,26 +1174,26 @@ typedef struct or_connection_t {
                                               * identity digest as this one. */
 } or_connection_t;
 
-/** Subtype of connection_t for an "edge connection" -- that is, a socks (ap)
+/** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
  * connection, or an exit. */
 typedef struct edge_connection_t {
   connection_t _base;
 
   struct edge_connection_t *next_stream; /**< Points to the next stream at this
                                           * edge, if any */
-  struct crypt_path_t *cpath_layer; /**< A pointer to which node in the circ
-                                     * this conn exits at. */
   int package_window; /**< How many more relay cells can I send into the
                        * circuit? */
   int deliver_window; /**< How many more relay cells can end at me? */
 
-  /** Nickname of planned exit node -- used with .exit support. */
-  char *chosen_exit_name;
-
-  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
-                                   * only.) */
   struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
                                  * connection is using. */
+
+  /** A pointer to which node in the circ this conn exits at.  Set for AP
+   * connections and for hidden service exit connections. */
+  struct crypt_path_t *cpath_layer;
+  /** What rendezvous service are we querying for (if an AP) or providing (if
+   * an exit)? */
+  rend_data_t *rend_data;
 
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
@@ -1209,8 +1210,29 @@ typedef struct edge_connection_t {
   /** Bytes written since last call to control_event_stream_bandwidth_used() */
   uint32_t n_written;
 
-  /** What rendezvous service are we querying for? (AP only) */
-  rend_data_t *rend_data;
+  /** True iff this connection is for a DNS request only. */
+  unsigned int is_dns_request:1;
+
+  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
+                         * connections.  Set once we've set the stream end,
+                         * and check in connection_about_to_close_connection().
+                         */
+  /** True iff we've blocked reading until the circuit has fewer queued
+   * cells. */
+  unsigned int edge_blocked_on_circ:1;
+
+} edge_connection_t;
+
+/** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
+ * connection, a DNS request, a TransPort connection or a NATD connection */
+typedef struct entry_connection_t {
+  edge_connection_t _edge;
+
+  /** Nickname of planned exit node -- used with .exit support. */
+  char *chosen_exit_name;
+
+  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
+                                   * only.) */
 
   /* === Isolation related, AP only. === */
   /** AP only: based on which factors do we isolate this stream? */
@@ -1231,15 +1253,25 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
+  /** For AP connections only: buffer for data that we have sent
+   * optimistically, which we might need to re-send if we have to
+   * retry this connection. */
+  generic_buffer_t *pending_optimistic_data;
+  /* For AP connections only: buffer for data that we previously sent
+  * optimistically which we are currently re-sending as we retry this
+  * connection. */
+  generic_buffer_t *sending_optimistic_data;
+
+  /** If this is a DNSPort connection, this field holds the pending DNS
+   * request that we're going to try to answer.  */
+  struct evdns_server_request *dns_server_request;
+
 #define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
   /** Number of times we've launched a circuit to handle this stream. If
     * it gets too high, that could indicate an inconsistency between our
     * "launch a circuit to handle this stream" logic and our "attach our
     * stream to one of the available circuits" logic. */
   unsigned int num_circuits_launched:4;
-
-  /** True iff this connection is for a DNS request only. */
-  unsigned int is_dns_request:1;
 
   /** True iff this stream must attach to a one-hop circuit (e.g. for
    * begin_dir). */
@@ -1248,13 +1280,6 @@ typedef struct edge_connection_t {
    * itself rather than BEGIN (either via onehop or via a whole circuit). */
   unsigned int use_begindir:1;
 
-  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
-                         * connections.  Set once we've set the stream end,
-                         * and check in connection_about_to_close_connection().
-                         */
-  /** True iff we've blocked reading until the circuit has fewer queued
-   * cells. */
-  unsigned int edge_blocked_on_circ:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
@@ -1274,20 +1299,7 @@ typedef struct edge_connection_t {
    */
   unsigned int may_use_optimistic_data : 1;
 
-  /** For AP connections only: buffer for data that we have sent
-   * optimistically, which we might need to re-send if we have to
-   * retry this connection. */
-  generic_buffer_t *pending_optimistic_data;
-  /* For AP connections only: buffer for data that we previously sent
-  * optimistically which we are currently re-sending as we retry this
-  * connection. */
-  generic_buffer_t *sending_optimistic_data;
-
-  /** If this is a DNSPort connection, this field holds the pending DNS
-   * request that we're going to try to answer.  */
-  struct evdns_server_request *dns_server_request;
-
-} edge_connection_t;
+} entry_connection_t;
 
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
@@ -1360,6 +1372,11 @@ typedef struct control_connection_t {
 /** Helper macro: Given a pointer to to._base, of type from*, return &to. */
 #define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, _base))
 
+/** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
+#define ENTRY_TO_EDGE_CONN(c) (&(((c))->_edge))
+/** Cast a entry_connection_t subtype pointer to a connection_t **/
+#define ENTRY_TO_CONN(c) (TO_CONN(ENTRY_TO_EDGE_CONN(c)))
+
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
 static or_connection_t *TO_OR_CONN(connection_t *);
@@ -1369,6 +1386,12 @@ static dir_connection_t *TO_DIR_CONN(connection_t *);
 /** Convert a connection_t* to an edge_connection_t*; assert if the cast is
  * invalid. */
 static edge_connection_t *TO_EDGE_CONN(connection_t *);
+/** Convert a connection_t* to an entry_connection_t*; assert if the cast is
+ * invalid. */
+static entry_connection_t *TO_ENTRY_CONN(connection_t *);
+/** Convert a edge_connection_t* to an entry_connection_t*; assert if the cast is
+ * invalid. */
+static entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
 static control_connection_t *TO_CONTROL_CONN(connection_t *);
@@ -1388,8 +1411,19 @@ static INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
 }
 static INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
 {
-  tor_assert(c->magic == EDGE_CONNECTION_MAGIC);
+  tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
+             c->magic == ENTRY_CONNECTION_MAGIC);
   return DOWNCAST(edge_connection_t, c);
+}
+static INLINE entry_connection_t *TO_ENTRY_CONN(connection_t *c)
+{
+  tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, _edge._base);
+}
+static INLINE entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
+{
+  tor_assert(c->_base.magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, _edge);
 }
 static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {

@@ -37,7 +37,7 @@ int control_event_is_interesting(int event);
 
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
-int control_event_stream_status(edge_connection_t *conn,
+int control_event_stream_status(entry_connection_t *conn,
                                 stream_status_event_t e,
                                 int reason);
 int control_event_or_conn_status(or_connection_t *conn,

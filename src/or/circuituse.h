@@ -14,7 +14,7 @@
 
 void circuit_expire_building(void);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);
-int circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port,
+int circuit_stream_is_being_handled(entry_connection_t *conn, uint16_t port,
                                     int min);
 #if 0
 int circuit_conforms_to_options(const origin_circuit_t *circ,
@@ -45,10 +45,10 @@ origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                                 int flags);
 origin_circuit_t *circuit_launch(uint8_t purpose, int flags);
 void circuit_reset_failure_count(int timeout);
-int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
+int connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
                                                   origin_circuit_t *circ,
                                                   crypt_path_t *cpath);
-int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
+int connection_ap_handshake_attach_circuit(entry_connection_t *conn);
 
 int hostname_in_track_host_exits(const or_options_t *options,
                                  const char *address);

@@ -243,16 +243,26 @@ or_connection_new(int socket_family)
   return or_conn;
 }
 
+/** Allocate and return a new entry_connection_t, initialized as by
+ * connection_init(). */
+entry_connection_t *
+entry_connection_new(int type, int socket_family)
+{
+  entry_connection_t *entry_conn = tor_malloc_zero(sizeof(entry_connection_t));
+  tor_assert(type == CONN_TYPE_AP);
+  connection_init(time(NULL), ENTRY_TO_CONN(entry_conn), type, socket_family);
+  entry_conn->socks_request = socks_request_new();
+  return entry_conn;
+}
+
 /** Allocate and return a new edge_connection_t, initialized as by
  * connection_init(). */
 edge_connection_t *
 edge_connection_new(int type, int socket_family)
 {
   edge_connection_t *edge_conn = tor_malloc_zero(sizeof(edge_connection_t));
-  tor_assert(type == CONN_TYPE_EXIT || type == CONN_TYPE_AP);
+  tor_assert(type == CONN_TYPE_EXIT);
   connection_init(time(NULL), TO_CONN(edge_conn), type, socket_family);
-  if (type == CONN_TYPE_AP)
-    edge_conn->socks_request = socks_request_new();
   return edge_conn;
 }
 
@@ -291,8 +301,10 @@ connection_new(int type, int socket_family)
       return TO_CONN(or_connection_new(socket_family));
 
     case CONN_TYPE_EXIT:
-    case CONN_TYPE_AP:
       return TO_CONN(edge_connection_new(type, socket_family));
+
+    case CONN_TYPE_AP:
+      return ENTRY_TO_CONN(entry_connection_new(type, socket_family));
 
     case CONN_TYPE_DIR:
       return TO_CONN(dir_connection_new(socket_family));
@@ -334,8 +346,10 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
       conn->magic = OR_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_EXIT:
-    case CONN_TYPE_AP:
       conn->magic = EDGE_CONNECTION_MAGIC;
+      break;
+    case CONN_TYPE_AP:
+      conn->magic = ENTRY_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_DIR:
       conn->magic = DIR_CONNECTION_MAGIC;
@@ -402,6 +416,10 @@ _connection_free(connection_t *conn)
       memlen = sizeof(or_connection_t);
       break;
     case CONN_TYPE_AP:
+      tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
+      mem = TO_ENTRY_CONN(conn);
+      memlen = sizeof(entry_connection_t);
+      break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
       mem = TO_EDGE_CONN(conn);
@@ -465,19 +483,21 @@ _connection_free(connection_t *conn)
     smartlist_free(or_conn->active_circuit_pqueue);
     tor_free(or_conn->nickname);
   }
+  if (conn->type == CONN_TYPE_AP) {
+    entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
+    tor_free(entry_conn->chosen_exit_name);
+    tor_free(entry_conn->original_dest_address);
+    if (entry_conn->socks_request)
+      socks_request_free(entry_conn->socks_request);
+    if (entry_conn->pending_optimistic_data) {
+      generic_buffer_free(entry_conn->pending_optimistic_data);
+    }
+    if (entry_conn->sending_optimistic_data) {
+      generic_buffer_free(entry_conn->sending_optimistic_data);
+    }
+  }
   if (CONN_IS_EDGE(conn)) {
-    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    tor_free(edge_conn->chosen_exit_name);
-    tor_free(edge_conn->original_dest_address);
-    if (edge_conn->socks_request)
-      socks_request_free(edge_conn->socks_request);
-    if (edge_conn->pending_optimistic_data) {
-      generic_buffer_free(edge_conn->pending_optimistic_data);
-    }
-    if (edge_conn->sending_optimistic_data) {
-      generic_buffer_free(edge_conn->sending_optimistic_data);
-    }
-    rend_data_free(edge_conn->rend_data);
+    rend_data_free(TO_EDGE_CONN(conn)->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
@@ -587,7 +607,7 @@ connection_about_to_close_connection(connection_t *conn)
       connection_or_about_to_close(TO_OR_CONN(conn));
       break;
     case CONN_TYPE_AP:
-      connection_ap_about_to_close(TO_EDGE_CONN(conn));
+      connection_ap_about_to_close(TO_ENTRY_CONN(conn));
       break;
     case CONN_TYPE_EXIT:
       connection_exit_about_to_close(TO_EDGE_CONN(conn));
@@ -1211,20 +1231,20 @@ connection_init_accepted_conn(connection_t *conn,
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
-      TO_EDGE_CONN(conn)->isolation_flags = listener->isolation_flags;
-      TO_EDGE_CONN(conn)->session_group = listener->session_group;
-      TO_EDGE_CONN(conn)->nym_epoch = get_signewnym_epoch();
-      TO_EDGE_CONN(conn)->socks_request->listener_type = listener->_base.type;
+      TO_ENTRY_CONN(conn)->isolation_flags = listener->isolation_flags;
+      TO_ENTRY_CONN(conn)->session_group = listener->session_group;
+      TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
+      TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->_base.type;
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
-          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
+          TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-          return connection_ap_process_transparent(TO_EDGE_CONN(conn));
+          return connection_ap_process_transparent(TO_ENTRY_CONN(conn));
         case CONN_TYPE_AP_NATD_LISTENER:
-          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
+          TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_NATD_WAIT;
           break;
       }
@@ -2616,8 +2636,10 @@ connection_handle_read_impl(connection_t *conn)
     if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
       connection_edge_end_errno(edge_conn);
-      if (edge_conn->socks_request) /* broken, don't send a socks reply back */
-        edge_conn->socks_request->has_finished = 1;
+      if (conn->type == CONN_TYPE_AP && TO_ENTRY_CONN(conn)->socks_request) {
+        /* broken, don't send a socks reply back */
+        TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
+      }
     }
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     connection_mark_for_close(conn);
@@ -2959,8 +2981,10 @@ connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
       if (!edge_conn->edge_has_sent_end)
         connection_edge_end_errno(edge_conn);
-      if (edge_conn->socks_request) /* broken, don't send a socks reply back */
-        edge_conn->socks_request->has_finished = 1;
+      if (conn->type == CONN_TYPE_AP && TO_ENTRY_CONN(conn)->socks_request) {
+        /* broken, don't send a socks reply back */
+        TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
+      }
     }
     connection_close_immediate(conn); /* Connection is dead. */
     if (!conn->marked_for_close)
@@ -3495,8 +3519,7 @@ connection_get_by_type_state_rendquery(int type, int state,
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
   tor_assert(rendquery);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == type &&
         !conn->marked_for_close &&
         (!state || state == conn->state)) {
@@ -3511,7 +3534,7 @@ connection_get_by_type_state_rendquery(int type, int state,
                             TO_EDGE_CONN(conn)->rend_data->onion_address))
         return conn;
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
   return NULL;
 }
 
@@ -3934,6 +3957,8 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       break;
     case CONN_TYPE_AP:
+      tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
+      break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
       break;
@@ -4000,21 +4025,18 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
 
   if (CONN_IS_EDGE(conn)) {
-    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    if (edge_conn->chosen_exit_optional || edge_conn->chosen_exit_retries) {
-      tor_assert(conn->type == CONN_TYPE_AP);
-      tor_assert(edge_conn->chosen_exit_name);
-    }
-
     /* XXX unchecked: package window, deliver window. */
     if (conn->type == CONN_TYPE_AP) {
+      entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
+      if (entry_conn->chosen_exit_optional || entry_conn->chosen_exit_retries)
+        tor_assert(entry_conn->chosen_exit_name);
 
-      tor_assert(edge_conn->socks_request);
+      tor_assert(entry_conn->socks_request);
       if (conn->state == AP_CONN_STATE_OPEN) {
-        tor_assert(edge_conn->socks_request->has_finished);
+        tor_assert(entry_conn->socks_request->has_finished);
         if (!conn->marked_for_close) {
-          tor_assert(edge_conn->cpath_layer);
-          assert_cpath_layer_ok(edge_conn->cpath_layer);
+          tor_assert(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
+          assert_cpath_layer_ok(ENTRY_TO_EDGE_CONN(entry_conn)->cpath_layer);
         }
       }
     }
@@ -4047,7 +4069,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_AP:
       tor_assert(conn->state >= _AP_CONN_STATE_MIN);
       tor_assert(conn->state <= _AP_CONN_STATE_MAX);
-      tor_assert(TO_EDGE_CONN(conn)->socks_request);
+      tor_assert(TO_ENTRY_CONN(conn)->socks_request);
       break;
     case CONN_TYPE_DIR:
       tor_assert(conn->state >= _DIR_CONN_STATE_MIN);

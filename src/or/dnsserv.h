@@ -14,12 +14,12 @@
 
 void dnsserv_configure_listener(connection_t *conn);
 void dnsserv_close_listener(connection_t *conn);
-void dnsserv_resolved(edge_connection_t *conn,
+void dnsserv_resolved(entry_connection_t *conn,
                       int answer_type,
                       size_t answer_len,
                       const char *answer,
                       int ttl);
-void dnsserv_reject_request(edge_connection_t *conn);
+void dnsserv_reject_request(entry_connection_t *conn);
 int dnsserv_launch_request(const char *name, int is_reverse);
 
 #endif

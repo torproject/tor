@@ -649,6 +649,7 @@ connection_edge_send_command(edge_connection_t *fromconn,
 {
   /* XXXX NM Split this function into a separate versions per circuit type? */
   circuit_t *circ;
+  crypt_path_t *cpath_layer = fromconn->cpath_layer;
   tor_assert(fromconn);
   circ = fromconn->on_circuit;
 
@@ -663,7 +664,8 @@ connection_edge_send_command(edge_connection_t *fromconn,
   if (!circ) {
     if (fromconn->_base.type == CONN_TYPE_AP) {
       log_info(LD_APP,"no circ. Closing conn.");
-      connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
+      connection_mark_unattached_ap(EDGE_TO_ENTRY_CONN(fromconn),
+                                    END_STREAM_REASON_INTERNAL);
     } else {
       log_info(LD_EXIT,"no circ. Closing conn.");
       fromconn->edge_has_sent_end = 1; /* no circ to send to */
@@ -675,7 +677,7 @@ connection_edge_send_command(edge_connection_t *fromconn,
 
   return relay_send_command_from_edge(fromconn->stream_id, circ,
                                       relay_command, payload,
-                                      payload_len, fromconn->cpath_layer);
+                                      payload_len, cpath_layer);
 }
 
 /** How many times will I retry a stream that fails due to DNS
@@ -703,16 +705,17 @@ edge_reason_is_retriable(int reason)
 static int
 connection_ap_process_end_not_open(
     relay_header_t *rh, cell_t *cell, origin_circuit_t *circ,
-    edge_connection_t *conn, crypt_path_t *layer_hint)
+    entry_connection_t *conn, crypt_path_t *layer_hint)
 {
   struct in_addr in;
   node_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
   int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
+  edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   (void) layer_hint; /* unused */
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
-      !connection_edge_is_rendezvous_stream(conn)  /* avoid retry if rend */
+      !connection_edge_is_rendezvous_stream(edge_conn) /* avoid retry if rend */
       ) {
     const char *chosen_exit_digest =
       circ->build_state->chosen_exit->identity_digest;
@@ -840,7 +843,7 @@ connection_ap_process_end_not_open(
        stream_end_reason_to_string(rh->length > 0 ? reason : -1));
   circuit_log_path(LOG_INFO,LD_APP,circ);
   /* need to test because of detach_retriable */
-  if (!conn->_base.marked_for_close)
+  if (!ENTRY_TO_CONN(conn)->marked_for_close)
     connection_mark_unattached_ap(conn, control_reason);
   return 0;
 }
@@ -849,7 +852,7 @@ connection_ap_process_end_not_open(
  * dotted-quad representation of <b>new_addr</b> (given in host order),
  * and send an appropriate REMAP event. */
 static void
-remap_event_helper(edge_connection_t *conn, uint32_t new_addr)
+remap_event_helper(entry_connection_t *conn, uint32_t new_addr)
 {
   struct in_addr in;
 
@@ -875,7 +878,8 @@ connection_edge_process_relay_cell_not_open(
   if (rh->command == RELAY_COMMAND_END) {
     if (CIRCUIT_IS_ORIGIN(circ) && conn->_base.type == CONN_TYPE_AP) {
       return connection_ap_process_end_not_open(rh, cell,
-                                                TO_ORIGIN_CIRCUIT(circ), conn,
+                                                TO_ORIGIN_CIRCUIT(circ),
+                                                EDGE_TO_ENTRY_CONN(conn),
                                                 layer_hint);
     } else {
       /* we just got an 'end', don't need to send one */
@@ -889,6 +893,7 @@ connection_edge_process_relay_cell_not_open(
 
   if (conn->_base.type == CONN_TYPE_AP &&
       rh->command == RELAY_COMMAND_CONNECTED) {
+    entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
     tor_assert(CIRCUIT_IS_ORIGIN(circ));
     if (conn->_base.state != AP_CONN_STATE_CONNECT_WAIT) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP,
@@ -906,22 +911,23 @@ connection_edge_process_relay_cell_not_open(
         log_info(LD_APP, "...but it claims the IP address was %s. Closing.",
                  fmt_addr32(addr));
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+        connection_mark_unattached_ap(entry_conn,
+                                      END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
       if (rh->length >= 8)
         ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+4));
       else
         ttl = -1;
-      client_dns_set_addressmap(conn->socks_request->address, addr,
-                                conn->chosen_exit_name, ttl);
+      client_dns_set_addressmap(entry_conn->socks_request->address, addr,
+                                entry_conn->chosen_exit_name, ttl);
 
-      remap_event_helper(conn, addr);
+      remap_event_helper(entry_conn, addr);
     }
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
-    if (!conn->socks_request->has_finished)
-      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+    if (!entry_conn->socks_request->has_finished)
+      connection_ap_handshake_socks_reply(entry_conn, NULL, 0, 0);
 
     /* Was it a linked dir conn? If so, a dir request just started to
      * fetch something; this could be a bootstrap status milestone. */
@@ -946,9 +952,9 @@ connection_edge_process_relay_cell_not_open(
     }
     /* This is definitely a success, so forget about any pending data we
      * had sent. */
-    if (conn->pending_optimistic_data) {
-      generic_buffer_free(conn->pending_optimistic_data);
-      conn->pending_optimistic_data = NULL;
+    if (entry_conn->pending_optimistic_data) {
+      generic_buffer_free(entry_conn->pending_optimistic_data);
+      entry_conn->pending_optimistic_data = NULL;
     }
 
     /* handle anything that might have queued */
@@ -964,17 +970,18 @@ connection_edge_process_relay_cell_not_open(
     int ttl;
     int answer_len;
     uint8_t answer_type;
+    entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
     if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
              "not in state resolve_wait. Dropping.");
       return 0;
     }
-    tor_assert(SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command));
+    tor_assert(SOCKS_COMMAND_IS_RESOLVE(entry_conn->socks_request->command));
     answer_len = cell->payload[RELAY_HEADER_SIZE+1];
     if (rh->length < 2 || answer_len+2>rh->length) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Dropping malformed 'resolved' cell");
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
     answer_type = cell->payload[RELAY_HEADER_SIZE];
@@ -989,14 +996,14 @@ connection_edge_process_relay_cell_not_open(
           is_internal_IP(addr, 0)) {
         log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
                  fmt_addr32(addr));
-        connection_ap_handshake_socks_resolved(conn,
+        connection_ap_handshake_socks_resolved(entry_conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0, NULL, 0, TIME_MAX);
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+        connection_mark_unattached_ap(entry_conn,END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
     }
-    connection_ap_handshake_socks_resolved(conn,
+    connection_ap_handshake_socks_resolved(entry_conn,
                    answer_type,
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
@@ -1004,9 +1011,9 @@ connection_edge_process_relay_cell_not_open(
                    -1);
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
-      remap_event_helper(conn, addr);
+      remap_event_helper(entry_conn, addr);
     }
-    connection_mark_unattached_ap(conn,
+    connection_mark_unattached_ap(entry_conn,
                               END_STREAM_REASON_DONE |
                               END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
     return 0;
@@ -1164,9 +1171,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                conn->_base.s,
                stream_end_reason_to_string(reason),
                conn->stream_id);
-      if (conn->socks_request && !conn->socks_request->has_finished)
-        log_warn(LD_BUG,
-                 "open stream hasn't sent socks answer yet? Closing.");
+      if (conn->_base.type == CONN_TYPE_AP) {
+        entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
+        if (entry_conn->socks_request &&
+            !entry_conn->socks_request->has_finished)
+          log_warn(LD_BUG,
+                   "open stream hasn't sent socks answer yet? Closing.");
+      }
       /* We just *got* an end; no reason to send one. */
       conn->edge_has_sent_end = 1;
       if (!conn->end_reason)
@@ -1348,11 +1359,14 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
-  unsigned domain = conn->cpath_layer ? LD_APP : LD_EXIT;
+  const unsigned domain = conn->_base.type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
   int sending_from_optimistic = 0;
   const int sending_optimistically =
     conn->_base.type == CONN_TYPE_AP &&
     conn->_base.state != AP_CONN_STATE_OPEN;
+  entry_connection_t *entry_conn =
+    conn->_base.type == CONN_TYPE_AP ? EDGE_TO_ENTRY_CONN(conn) : NULL;
+  crypt_path_t *cpath_layer = conn->cpath_layer;
 
   tor_assert(conn);
 
@@ -1375,7 +1389,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return -1;
   }
 
-  if (circuit_consider_stop_edge_reading(circ, conn->cpath_layer))
+  if (circuit_consider_stop_edge_reading(circ, cpath_layer))
     return 0;
 
   if (conn->package_window <= 0) {
@@ -1385,10 +1399,11 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return 0;
   }
 
-  sending_from_optimistic = conn->sending_optimistic_data != NULL;
+  sending_from_optimistic = entry_conn &&
+    entry_conn->sending_optimistic_data != NULL;
 
   if (PREDICT_UNLIKELY(sending_from_optimistic)) {
-    amount_to_process = generic_buffer_len(conn->sending_optimistic_data);
+    amount_to_process = generic_buffer_len(entry_conn->sending_optimistic_data);
     if (PREDICT_UNLIKELY(!amount_to_process)) {
       log_warn(LD_BUG, "sending_optimistic_data was non-NULL but empty");
       amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
@@ -1416,10 +1431,10 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* XXX023 We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
-    generic_buffer_get(conn->sending_optimistic_data, payload, length);
-    if (!generic_buffer_len(conn->sending_optimistic_data)) {
-        generic_buffer_free(conn->sending_optimistic_data);
-        conn->sending_optimistic_data = NULL;
+    generic_buffer_get(entry_conn->sending_optimistic_data, payload, length);
+    if (!generic_buffer_len(entry_conn->sending_optimistic_data)) {
+        generic_buffer_free(entry_conn->sending_optimistic_data);
+        entry_conn->sending_optimistic_data = NULL;
     }
   } else {
     connection_fetch_from_buf(payload, length, TO_CONN(conn));
@@ -1431,9 +1446,9 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   if (sending_optimistically && !sending_from_optimistic) {
     /* This is new optimistic data; remember it in case we need to detach and
        retry */
-    if (!conn->pending_optimistic_data)
-      conn->pending_optimistic_data = generic_buffer_new();
-    generic_buffer_add(conn->pending_optimistic_data, payload, length);
+    if (!entry_conn->pending_optimistic_data)
+      entry_conn->pending_optimistic_data = generic_buffer_new();
+    generic_buffer_add(entry_conn->pending_optimistic_data, payload, length);
   }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
@@ -1441,18 +1456,18 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* circuit got marked for close, don't continue, don't need to mark conn */
     return 0;
 
-  if (!conn->cpath_layer) { /* non-rendezvous exit */
+  if (!cpath_layer) { /* non-rendezvous exit */
     tor_assert(circ->package_window > 0);
     circ->package_window--;
   } else { /* we're an AP, or an exit on a rendezvous circ */
-    tor_assert(conn->cpath_layer->package_window > 0);
-    conn->cpath_layer->package_window--;
+    tor_assert(cpath_layer->package_window > 0);
+    cpath_layer->package_window--;
   }
 
   if (--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(TO_CONN(conn));
     log_debug(domain,"conn->package_window reached 0.");
-    circuit_consider_stop_edge_reading(circ, conn->cpath_layer);
+    circuit_consider_stop_edge_reading(circ, cpath_layer);
     return 0; /* don't process the inbuf any more */
   }
   log_debug(domain,"conn->package_window is now %d",conn->package_window);
@@ -1491,7 +1506,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
   }
 
   while (conn->deliver_window <= STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_debug(conn->cpath_layer?LD_APP:LD_EXIT,
+    log_debug(conn->_base.type == CONN_TYPE_AP ?LD_APP:LD_EXIT,
               "Outbuf %d, Queuing stream sendme.",
               (int)conn->_base.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
@@ -1693,9 +1708,10 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
   if (layer_hint->package_window <= 0) {
     log_debug(domain,"yes, at-origin. stopped.");
     for (conn = TO_ORIGIN_CIRCUIT(circ)->p_streams; conn;
-         conn=conn->next_stream)
+         conn=conn->next_stream) {
       if (conn->cpath_layer == layer_hint)
         connection_stop_reading(TO_CONN(conn));
+    }
     return 1;
   }
   return 0;

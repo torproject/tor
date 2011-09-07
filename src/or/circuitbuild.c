@@ -2648,14 +2648,19 @@ node_handles_some_port(const node_t *node, smartlist_t *needed_ports)
 static int
 ap_stream_wants_exit_attention(connection_t *conn)
 {
+  entry_connection_t *entry;
+  if (conn->type != CONN_TYPE_AP)
+    return 0;
+  entry = TO_ENTRY_CONN(conn);
+
   if (conn->type == CONN_TYPE_AP &&
       conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
       !conn->marked_for_close &&
-      !(TO_EDGE_CONN(conn)->want_onehop) && /* ignore one-hop streams */
-      !(TO_EDGE_CONN(conn)->use_begindir) && /* ignore targeted dir fetches */
-      !(TO_EDGE_CONN(conn)->chosen_exit_name) && /* ignore defined streams */
+      !(entry->want_onehop) && /* ignore one-hop streams */
+      !(entry->use_begindir) && /* ignore targeted dir fetches */
+      !(entry->chosen_exit_name) && /* ignore defined streams */
       !connection_edge_is_rendezvous_stream(TO_EDGE_CONN(conn)) &&
-      !circuit_stream_is_being_handled(TO_EDGE_CONN(conn), 0,
+      !circuit_stream_is_being_handled(TO_ENTRY_CONN(conn), 0,
                                        MIN_CIRCUITS_HANDLING_STREAM))
     return 1;
   return 0;
@@ -2760,7 +2765,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
     SMARTLIST_FOREACH_BEGIN(connections, connection_t *, conn) {
       if (!ap_stream_wants_exit_attention(conn))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), node)) {
+      if (connection_ap_can_use_exit(TO_ENTRY_CONN(conn), node)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);

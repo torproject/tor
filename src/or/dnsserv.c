@@ -32,6 +32,7 @@ static void
 evdns_server_callback(struct evdns_server_request *req, void *data_)
 {
   const listener_connection_t *listener = data_;
+  entry_connection_t *entry_conn;
   edge_connection_t *conn;
   int i = 0;
   struct evdns_server_question *q = NULL;
@@ -115,8 +116,9 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   }
 
   /* Make a new dummy AP connection, and attach the request to it. */
-  conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
-  conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
+  entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  conn = ENTRY_TO_EDGE_CONN(entry_conn);
+  TO_CONN(conn)->state = AP_CONN_STATE_RESOLVE_WAIT;
   conn->is_dns_request = 1;
 
   tor_addr_copy(&TO_CONN(conn)->addr, &tor_addr);
@@ -124,27 +126,27 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   TO_CONN(conn)->address = tor_dup_addr(&tor_addr);
 
   if (q->type == EVDNS_TYPE_A)
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
+    entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
   else
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
+    entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
 
-  strlcpy(conn->socks_request->address, q->name,
-          sizeof(conn->socks_request->address));
+  strlcpy(entry_conn->socks_request->address, q->name,
+          sizeof(entry_conn->socks_request->address));
 
-  conn->socks_request->listener_type = listener->_base.type;
-  conn->dns_server_request = req;
-  conn->isolation_flags = listener->isolation_flags;
-  conn->session_group = listener->session_group;
-  conn->nym_epoch = get_signewnym_epoch();
+  entry_conn->socks_request->listener_type = listener->_base.type;
+  entry_conn->dns_server_request = req;
+  entry_conn->isolation_flags = listener->isolation_flags;
+  entry_conn->session_group = listener->session_group;
+  entry_conn->nym_epoch = get_signewnym_epoch();
 
-  if (connection_add(TO_CONN(conn)) < 0) {
+  if (connection_add(ENTRY_TO_CONN(entry_conn)) < 0) {
     log_warn(LD_APP, "Couldn't register dummy connection for DNS request");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
-    connection_free(TO_CONN(conn));
+    connection_free(ENTRY_TO_CONN(entry_conn));
     return;
   }
 
-  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
+  control_event_stream_status(entry_conn, STREAM_EVENT_NEW, 0);
 
   /* Now, unless a controller asked us to leave streams unattached,
   * throw the connection over to get rewritten (which will
@@ -153,7 +155,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(q->name));
   q_name = tor_strdup(q->name); /* q could be freed in rewrite_and_attach */
-  connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
+  connection_ap_rewrite_and_attach_if_allowed(entry_conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
   log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
@@ -169,28 +171,30 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
 int
 dnsserv_launch_request(const char *name, int reverse)
 {
+  entry_connection_t *entry_conn;
   edge_connection_t *conn;
   char *q_name;
 
   /* Make a new dummy AP connection, and attach the request to it. */
-  conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
+  entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  conn = ENTRY_TO_EDGE_CONN(entry_conn);
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
 
   if (reverse)
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
+    entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
   else
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
+    entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
 
   conn->is_dns_request = 1;
 
-  strlcpy(conn->socks_request->address, name,
-          sizeof(conn->socks_request->address));
+  strlcpy(entry_conn->socks_request->address, name,
+          sizeof(entry_conn->socks_request->address));
 
-  conn->socks_request->listener_type = CONN_TYPE_CONTROL_LISTENER;
-  conn->original_dest_address = tor_strdup(name);
-  conn->session_group = SESSION_GROUP_CONTROL_RESOLVE;
-  conn->nym_epoch = get_signewnym_epoch();
-  conn->isolation_flags = ISO_DEFAULT;
+  entry_conn->socks_request->listener_type = CONN_TYPE_CONTROL_LISTENER;
+  entry_conn->original_dest_address = tor_strdup(name);
+  entry_conn->session_group = SESSION_GROUP_CONTROL_RESOLVE;
+  entry_conn->nym_epoch = get_signewnym_epoch();
+  entry_conn->isolation_flags = ISO_DEFAULT;
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
@@ -205,7 +209,7 @@ dnsserv_launch_request(const char *name, int reverse)
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(name));
   q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
-  connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
+  connection_ap_rewrite_and_attach_if_allowed(entry_conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
   log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
@@ -217,7 +221,7 @@ dnsserv_launch_request(const char *name, int reverse)
 /** If there is a pending request on <b>conn</b> that's waiting for an answer,
  * send back an error and free the request. */
 void
-dnsserv_reject_request(edge_connection_t *conn)
+dnsserv_reject_request(entry_connection_t *conn)
 {
   if (conn->dns_server_request) {
     evdns_server_request_respond(conn->dns_server_request,
@@ -263,7 +267,7 @@ evdns_get_orig_address(const struct evdns_server_request *req,
  * <b>answer_len</b>, in <b>answer</b>, with TTL <b>ttl</b>.  Doesn't do
  * any caching; that's handled elsewhere. */
 void
-dnsserv_resolved(edge_connection_t *conn,
+dnsserv_resolved(entry_connection_t *conn,
                  int answer_type,
                  size_t answer_len,
                  const char *answer,

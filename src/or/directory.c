@@ -972,7 +972,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
            error indicates broken link in windowsland. */
     }
   } else { /* we want to connect via a tor connection */
-    edge_connection_t *linked_conn;
+    entry_connection_t *linked_conn;
     /* Anonymized tunneled connections can never share a circuit.
      * One-hop directory connections can share circuits with each other
      * but nothing else. */
@@ -1014,10 +1014,11 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                            if_modified_since);
 
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
-    IF_HAS_BUFFEREVENT(TO_CONN(linked_conn), {
-      connection_watch_events(TO_CONN(linked_conn), READ_EVENT|WRITE_EVENT);
+    IF_HAS_BUFFEREVENT(ENTRY_TO_CONN(linked_conn), {
+      connection_watch_events(ENTRY_TO_CONN(linked_conn),
+                              READ_EVENT|WRITE_EVENT);
     }) ELSE_IF_NO_BUFFEREVENT
-      connection_start_reading(TO_CONN(linked_conn));
+      connection_start_reading(ENTRY_TO_CONN(linked_conn));
   }
 }
 
