@@ -21,6 +21,7 @@ hibernating, phase 2:
   - close all OR/AP/exit conns)
 */
 
+#define HIBERNATE_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "connection.h"
@@ -28,24 +29,6 @@ hibernating, phase 2:
 #include "hibernate.h"
 #include "main.h"
 #include "router.h"
-
-/** Possible values of hibernate_state */
-typedef enum {
-  /** We are running normally. */
-  HIBERNATE_STATE_LIVE=1,
-  /** We're trying to shut down cleanly, and we'll kill all active connections
-   * at shutdown_time. */
-  HIBERNATE_STATE_EXITING=2,
-  /** We're running low on allocated bandwidth for this period, so we won't
-   * accept any new connections. */
-  HIBERNATE_STATE_LOWBANDWIDTH=3,
-  /** We are hibernating, and we won't wake up till there's more bandwidth to
-   * use. */
-  HIBERNATE_STATE_DORMANT=4,
-  /** We start out in state default, which means we havent decided which state
-   * we're in. */
-  HIBERNATE_STATE_INITIAL=5
-} hibernate_state_t;
 
 extern long stats_n_seconds_working; /* published uptime */
 
@@ -1025,3 +1008,12 @@ getinfo_helper_accounting(control_connection_t *conn,
   return 0;
 }
 
+/**
+ * Manually change the hibernation state.  Private; used only by the unit
+ * tests.
+ */
+void
+hibernate_set_state_for_testing_(hibernate_state_t newstate)
+{
+  hibernate_state = newstate;
+}

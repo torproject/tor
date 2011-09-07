@@ -7,10 +7,12 @@
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
+#define HIBERNATE_PRIVATE
 #include "or.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "hibernate.h"
 #include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
@@ -84,6 +86,8 @@ test_dir_formats(void)
   pk3 = pk_generate(2);
 
   test_assert(pk1 && pk2 && pk3);
+
+  hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
   get_platform_str(platform, sizeof(platform));
   r1 = tor_malloc_zero(sizeof(routerinfo_t));
@@ -1301,7 +1305,7 @@ test_dir_v3_networkstatus(void)
 }
 
 #define DIR_LEGACY(name)                                                   \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_dir_ ## name }
+  { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
 
 #define DIR(name)                               \
   { #name, test_dir_##name, 0, NULL, NULL }
