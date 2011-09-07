@@ -1,0 +1,3 @@
+  o Build fixes:
+    - Search for a platform-specific version of "ar" when cross-compiling.
+      Should fix builds on iOS. Found by Marco Bonetti.
