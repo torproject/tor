@@ -56,9 +56,9 @@ noinst_HEADERS = 				\
 
 common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
 	if test "@SHA1SUM@" != none; then \
-	  @SHA1SUM@ $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > common_sha1.i; \
+	  (cd "$(srcdir)" && @SHA1SUM@ $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > common_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  @OPENSSL@ sha1 $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > common_sha1.i; \
+	  (cd "$(srcdir)" && @OPENSSL@ sha1 $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > common_sha1.i; \
 	else \
 	  rm common_sha1.i; \
 	  touch common_sha1.i; \
