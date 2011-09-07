@@ -1639,7 +1639,7 @@ void
 mark_my_descriptor_dirty_if_too_old(time_t now)
 {
   networkstatus_t *ns;
-  routerstatus_t *rs;
+  const routerstatus_t *rs;
   const char *retry_fast_reason = NULL; /* Set if we should retry frequently */
   const time_t slow_cutoff = now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL;
   const time_t fast_cutoff = now - FAST_RETRY_DESCRIPTOR_INTERVAL;
