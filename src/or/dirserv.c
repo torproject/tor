@@ -2301,7 +2301,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri,
                                  time_t now,
                                  int naming, int listbadexits,
-                                 int listbaddirs)
+                                 int listbaddirs, int vote_on_hsdirs)
 {
   int unstable_version =
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
@@ -2340,10 +2340,11 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   } else {
     rs->is_possible_guard = 0;
   }
+
   rs->is_bad_directory = listbaddirs && node->is_bad_directory;
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
   node->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, node, now);
-  rs->is_hs_dir = node->is_hs_dir;
+  rs->is_hs_dir = vote_on_hsdirs && node->is_hs_dir;
   rs->is_v2_dir = ri->dir_port != 0;
 
   if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
@@ -2563,6 +2564,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   int naming = options->NamingAuthoritativeDir;
   int listbadexits = options->AuthDirListBadExits;
   int listbaddirs = options->AuthDirListBadDirs;
+  int vote_on_hsdirs = options->VoteOnHidServDirectoriesV2;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -2629,7 +2631,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       naming, listbadexits, listbaddirs);
+                                       naming, listbadexits, listbaddirs,
+                                       vote_on_hsdirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);
@@ -2706,7 +2709,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->server_versions = server_versions;
   v3_out->known_flags = smartlist_create();
   smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard HSDir Stable V2Dir Valid",
+                "Authority Exit Fast Guard Stable V2Dir Valid",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add(v3_out->known_flags, tor_strdup("Running"));
@@ -2718,6 +2721,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     smartlist_add(v3_out->known_flags, tor_strdup("Named"));
     smartlist_add(v3_out->known_flags, tor_strdup("Unnamed"));
   }
+  if (vote_on_hsdirs)
+    smartlist_add(v3_out->known_flags, tor_strdup("HSDir"));
   smartlist_sort_strings(v3_out->known_flags);
 
   if (options->ConsensusParams) {
@@ -2780,6 +2785,7 @@ generate_v2_networkstatus_opinion(void)
   int versioning = options->VersioningAuthoritativeDir;
   int listbaddirs = options->AuthDirListBadDirs;
   int listbadexits = options->AuthDirListBadExits;
+  int vote_on_hsdirs = options->VoteOnHidServDirectoriesV2;
   const char *contact;
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
@@ -2874,7 +2880,8 @@ generate_v2_networkstatus_opinion(void)
         continue;
       }
       set_routerstatus_from_routerinfo(&rs, node, ri, now,
-                                       naming, listbadexits, listbaddirs);
+                                       naming, listbadexits, listbaddirs,
+                                       vote_on_hsdirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(&rs);
