@@ -1,0 +1,6 @@
+  o Build fixes:
+    - Properly handle the case where the build-tree is not the same
+      as the source tree when generating src/common/common_sha1.i,
+      src/or/micro-revision.i and src/or/or_sha1.i. Fixes bug 3953;
+      bugfix on 0.2.0.1-alpha.
+
