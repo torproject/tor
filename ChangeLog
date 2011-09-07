@@ -1,3 +1,21 @@
+Changes in version 0.2.2.33 - 2011-09-??
+  o Major bugfies:
+    - Avoid an assertion failure when reloading a configuration with
+      TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
+      3923; bugfix on 0.2.2.25-alpha.
+
+  o Minor bugfixes:
+    - Correct the man page to explain that HashedControlPassword and
+      CookieAuthentication can both be set, in which case either method
+      is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
+      when we decided to allow these config options to both be set. Issue
+      raised by bug 3898.
+
+  o Build fixes:
+    - Provide a substitute implementation of lround() for MSVC, which
+      apparently lacks it. Patch from Gisle Vanem.
+
+
 Changes in version 0.2.2.32 - 2011-08-27
   The Tor 0.2.2 release series is dedicated to the memory of Andreas
   Pfitzmann (1958-2010), a pioneer in anonymity and privacy research,
