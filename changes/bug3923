@@ -1,0 +1,5 @@
+  o Major bugfies:
+    - Avoid an assertion failure when reloading a configuration with
+      TrackExitHosts changes.  Found and fixed by 'laruldan'. Fixes
+      bug 3923; bugfix on 0.2.2.25-alpha.
+
