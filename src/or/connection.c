@@ -40,6 +40,10 @@
 #include <event2/event.h>
 #endif
 
+#ifdef HAVE_PWD_H
+#include <pwd.h>
+#endif
+
 static connection_t *connection_create_listener(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -859,6 +863,10 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   listener_connection_t *lis_conn;
   connection_t *conn;
   tor_socket_t s; /* the socket we're going to make */
+  or_options_t const *options = get_options();
+#if defined(HAVE_PWD_H) && defined(HAVE_SYS_UN_H)
+  struct passwd *pw = NULL;
+#endif
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
@@ -931,7 +939,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
      * and listeners at the same time */
     tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
 
-    if (check_location_for_unix_socket(get_options(), address) < 0)
+    if (check_location_for_unix_socket(options, address) < 0)
       goto err;
 
     log_notice(LD_NET, "Opening %s on %s",
@@ -955,7 +963,19 @@ connection_create_listener(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
-    if (get_options()->ControlSocketsGroupWritable) {
+#ifdef HAVE_PWD_H
+    if (options->User) {
+      pw = getpwnam(options->User);
+      if (pw == NULL) {
+        log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
+                 address, options->User);
+      } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
+        log_warn(LD_NET,"Unable to chown() %s socket: %s.", address, strerror(errno));
+        goto err;
+      }
+    }
+#endif
+    if (options->ControlSocketsGroupWritable) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
       if (chmod(address, 0660) < 0) {

@@ -1,0 +1,6 @@
+  o Minor features:
+    - When starting as root and then changing our UID via the User
+      control option, if we are running with ControlSocket, make sure
+      that the ControlSocket is owned by the same account that Tor will
+      run under. Implements ticket 3421; fix by Jérémy Bobbio.
+
