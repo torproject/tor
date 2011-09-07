@@ -2653,8 +2653,7 @@ ap_stream_wants_exit_attention(connection_t *conn)
     return 0;
   entry = TO_ENTRY_CONN(conn);
 
-  if (conn->type == CONN_TYPE_AP &&
-      conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
+  if (conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
       !conn->marked_for_close &&
       !(entry->want_onehop) && /* ignore one-hop streams */
       !(entry->use_begindir) && /* ignore targeted dir fetches */
