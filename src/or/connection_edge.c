@@ -930,12 +930,10 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
     if (len < 6)
       continue; /* malformed. */
     dot = target + len - 6; /* dot now points to just before .exit */
-    dot = strrchr(dot, '.'); /* dot now points to the . before .exit or NULL */
-    if (!dot) {
-      nodename = tor_strndup(target, len-5);
-    } else {
-      nodename = tor_strndup(dot+1, strlen(dot+1)-5);
-    }
+    while(dot > target && *dot != '.')
+	dot--;
+    if (*dot == '.') dot++;
+    nodename = tor_strndup(dot, len-5-(dot-target));;
     node = node_get_by_nickname(nodename, 0);
     tor_free(nodename);
     if (!node ||
