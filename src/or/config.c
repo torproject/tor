@@ -1383,13 +1383,6 @@ options_act(const or_options_t *old_options)
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-  if (options->TokenBucketRefillInterval < 0
-      || options->TokenBucketRefillInterval > 1000) {
-    log_warn(LD_CONFIG, "Token bucket refill interval must be in the range "
-                        "of [0:1000]");
-    return -1;
-  }
-
 #ifdef USE_BUFFEREVENTS
   /* If we're using the bufferevents implementation and our rate limits
    * changed, we need to tell the rate-limiting system about it. */
@@ -3173,6 +3166,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
+  if (options->TokenBucketRefillInterval <= 0
+      || options->TokenBucketRefillInterval > 1000) {
+    REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
+  }
+
   if (options->AccountingMax &&
       (is_listening_on_low_port(options->ORPort, options->ORListenAddress) ||
        is_listening_on_low_port(options->DirPort, options->DirListenAddress)))
@@ -3972,6 +3970,12 @@ options_transition_allowed(const or_options_t *old,
   if (old->DisableAllSwap != new_val->DisableAllSwap) {
     *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
                       "is not allowed.");
+    return -1;
+  }
+
+  if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
+    *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
+                      "Interval is not allowed");
     return -1;
   }
 
