@@ -737,13 +737,13 @@ The following options are useful only for clients (that is, if
     unattached waiting for an appropriate circuit, before we fail it. (Default:
     2 minutes.)
 
-**TokenBucketRefillInterval** __NUM__::
+**TokenBucketRefillInterval** __NUM__ [**msec**|**second**]::
     Set the refill interval of Tor's token bucket to NUM milliseconds.
-    NUM must be positive and either a divisor or a multiple of 1 second.
-    Note that this option retains the configured bandwidth limits and refills
-    token buckets only in ratio to the interval. This option will be ignored
-    when Tor was built with Libevent's bufferevents enabled. (Default: 1 second)
-
+    NUM must be between 1 and 1000, inclusive.  Note that the configured
+    bandwidth limits are still expressed in bytes per second: this
+    option only affects the frequency with which Tor checks to see whether
+    previously exhausted connections  may read again. This option is
+    if Tor was built with Libevent's bufferevents enabled. (Default: 10 msec.)
 
 **TrackHostExits** __host__,__.domain__,__...__::
     For each value in the comma separated list, Tor will track recent
