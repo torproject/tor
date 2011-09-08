@@ -140,7 +140,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
 
   switch (conn->_base.state) {
     case AP_CONN_STATE_SOCKS_WAIT:
-      if (connection_ap_handshake_process_socks(EDGE_TO_ENTRY_CONN(conn)) < 0) {
+      if (connection_ap_handshake_process_socks(EDGE_TO_ENTRY_CONN(conn)) <0) {
         /* already marked */
         return -1;
       }
@@ -619,7 +619,8 @@ connection_ap_expire_beginning(void)
     if (connection_ap_detach_retriable(entry_conn, TO_ORIGIN_CIRCUIT(circ),
                                        END_STREAM_REASON_TIMEOUT)<0) {
       if (!base_conn->marked_for_close)
-        connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_CANT_ATTACH);
+        connection_mark_unattached_ap(entry_conn,
+                                      END_STREAM_REASON_CANT_ATTACH);
     }
   } SMARTLIST_FOREACH_END(base_conn);
 }
@@ -743,7 +744,8 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
  * Returns -1 on err, 1 on success, 0 on not-yet-sure.
  */
 int
-connection_ap_detach_retriable(entry_connection_t *conn, origin_circuit_t *circ,
+connection_ap_detach_retriable(entry_connection_t *conn,
+                               origin_circuit_t *circ,
                                int reason)
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
@@ -939,8 +941,8 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
     if (len < 6)
       continue; /* malformed. */
     dot = target + len - 6; /* dot now points to just before .exit */
-    while(dot > target && *dot != '.')
-	dot--;
+    while (dot > target && *dot != '.')
+      dot--;
     if (*dot == '.') dot++;
     nodename = tor_strndup(dot, len-5-(dot-target));;
     node = node_get_by_nickname(nodename, 0);
@@ -2455,8 +2457,8 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
       connection_ap_supports_optimistic_data(ap_conn)) {
     log_info(LD_APP, "Sending up to %ld + %ld bytes of queued-up data",
              (long)connection_get_inbuf_len(base_conn),
-	     ap_conn->sending_optimistic_data ?
-               (long)generic_buffer_len(ap_conn->sending_optimistic_data) : 0);
+             ap_conn->sending_optimistic_data ?
+             (long)generic_buffer_len(ap_conn->sending_optimistic_data) : 0);
     if (connection_edge_package_raw_inbuf(edge_conn, 1, NULL) < 0) {
       connection_mark_for_close(base_conn);
     }

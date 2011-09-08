@@ -715,8 +715,8 @@ connection_ap_process_end_not_open(
   (void) layer_hint; /* unused */
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
-      !connection_edge_is_rendezvous_stream(edge_conn) /* avoid retry if rend */
-      ) {
+      /* avoid retry if rend */
+      !connection_edge_is_rendezvous_stream(edge_conn)) {
     const char *chosen_exit_digest =
       circ->build_state->chosen_exit->identity_digest;
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
@@ -999,7 +999,8 @@ connection_edge_process_relay_cell_not_open(
         connection_ap_handshake_socks_resolved(entry_conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0, NULL, 0, TIME_MAX);
-        connection_mark_unattached_ap(entry_conn,END_STREAM_REASON_TORPROTOCOL);
+        connection_mark_unattached_ap(entry_conn,
+                                      END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
     }
@@ -1356,7 +1357,7 @@ int
 connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
                                   int *max_cells)
 {
-  size_t amount_to_process, length;
+  size_t bytes_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
   const unsigned domain = conn->_base.type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
@@ -1403,26 +1404,26 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     entry_conn->sending_optimistic_data != NULL;
 
   if (PREDICT_UNLIKELY(sending_from_optimistic)) {
-    amount_to_process = generic_buffer_len(entry_conn->sending_optimistic_data);
-    if (PREDICT_UNLIKELY(!amount_to_process)) {
+    bytes_to_process = generic_buffer_len(entry_conn->sending_optimistic_data);
+    if (PREDICT_UNLIKELY(!bytes_to_process)) {
       log_warn(LD_BUG, "sending_optimistic_data was non-NULL but empty");
-      amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
+      bytes_to_process = connection_get_inbuf_len(TO_CONN(conn));
       sending_from_optimistic = 0;
     }
   } else {
-    amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
+    bytes_to_process = connection_get_inbuf_len(TO_CONN(conn));
   }
 
-  if (!amount_to_process)
+  if (!bytes_to_process)
     return 0;
 
-  if (!package_partial && amount_to_process < RELAY_PAYLOAD_SIZE)
+  if (!package_partial && bytes_to_process < RELAY_PAYLOAD_SIZE)
     return 0;
 
-  if (amount_to_process > RELAY_PAYLOAD_SIZE) {
+  if (bytes_to_process > RELAY_PAYLOAD_SIZE) {
     length = RELAY_PAYLOAD_SIZE;
   } else {
-    length = amount_to_process;
+    length = bytes_to_process;
   }
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;

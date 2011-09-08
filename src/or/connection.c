@@ -970,7 +970,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
         log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
                  address, options->User);
       } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
-        log_warn(LD_NET,"Unable to chown() %s socket: %s.", address, strerror(errno));
+        log_warn(LD_NET,"Unable to chown() %s socket: %s.",
+                 address, strerror(errno));
         goto err;
       }
     }

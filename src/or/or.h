@@ -1389,8 +1389,8 @@ static edge_connection_t *TO_EDGE_CONN(connection_t *);
 /** Convert a connection_t* to an entry_connection_t*; assert if the cast is
  * invalid. */
 static entry_connection_t *TO_ENTRY_CONN(connection_t *);
-/** Convert a edge_connection_t* to an entry_connection_t*; assert if the cast is
- * invalid. */
+/** Convert a edge_connection_t* to an entry_connection_t*; assert if the cast
+ * is invalid. */
 static entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
