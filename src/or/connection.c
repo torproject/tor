@@ -2389,7 +2389,7 @@ connection_bucket_init(void)
 }
 
 /** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate
- * per millisecond <b>rate</b> and bandwidth burst per refill interval
+ * per second <b>rate</b> and bandwidth burst per refill interval
  * <b>burst</b>, assuming that <b>milliseconds_elapsed</b> milliseconds
  * have passed since the last call. */
 static void
@@ -2398,13 +2398,13 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
                                 const char *name)
 {
   int starting_bucket = *bucket;
-  if (starting_bucket < burst && milliseconds_elapsed) {
-    if (((burst - starting_bucket)/milliseconds_elapsed) < rate) {
+  if (starting_bucket < burst && milliseconds_elapsed > 0) {
+    int64_t incr = (((int64_t)rate) * milliseconds_elapsed) / 1000;
+    if ((burst - starting_bucket) < incr) {
       *bucket = burst;  /* We would overflow the bucket; just set it to
                          * the maximum. */
     } else {
-      int incr = rate*milliseconds_elapsed;
-      *bucket += incr;
+      *bucket += (int)incr;
       if (*bucket > burst || *bucket < starting_bucket) {
         /* If we overflow the burst, or underflow our starting bucket,
          * cap the bucket value to burst. */
@@ -2425,11 +2425,11 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   smartlist_t *conns = get_connection_array();
   int bandwidthrate, bandwidthburst, relayrate, relayburst;
 
-  bandwidthrate = (int)options->BandwidthRate / 1000;
+  bandwidthrate = (int)options->BandwidthRate;
   bandwidthburst = (int)options->BandwidthBurst;
 
   if (options->RelayBandwidthRate) {
-    relayrate = (int)options->RelayBandwidthRate / 1000;
+    relayrate = (int)options->RelayBandwidthRate;
     relayburst = (int)options->RelayBandwidthBurst;
   } else {
     relayrate = bandwidthrate;
@@ -2464,7 +2464,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
-      int orbandwidthrate = or_conn->bandwidthrate / 1000;
+      int orbandwidthrate = or_conn->bandwidthrate;
       int orbandwidthburst = or_conn->bandwidthburst;
       if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->read_bucket,
