@@ -62,6 +62,7 @@ int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
 typedef struct tor_libevent_cfg {
   int disable_iocp;
   int num_cpus;
+  int msec_per_tick;
 } tor_libevent_cfg;
 
 void tor_libevent_initialize(tor_libevent_cfg *cfg);
@@ -73,7 +74,6 @@ void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
 
 #ifdef USE_BUFFEREVENTS
-#define TOR_LIBEVENT_TICKS_PER_SECOND 3
 const struct timeval *tor_libevent_get_one_tick_timeout(void);
 int tor_libevent_using_iocp_bufferevents(void);
 int tor_set_bufferevent_rate_limit(struct bufferevent *bev,

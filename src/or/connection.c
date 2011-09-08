@@ -2561,7 +2561,10 @@ connection_bucket_init(void)
     burst = options->BandwidthBurst;
   }
 
-  rate /= TOR_LIBEVENT_TICKS_PER_SECOND;
+  /* This can't overflow, since TokenBucketRefillInterval <= 1000,
+   * and rate started out less than INT32_MAX. */
+  rate = (rate * options->TokenBucketRefillInterval) / 1000;
+
   bucket_cfg = ev_token_bucket_cfg_new((uint32_t)rate, (uint32_t)burst,
                                        (uint32_t)rate, (uint32_t)burst,
                                        tick);

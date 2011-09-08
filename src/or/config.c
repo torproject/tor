@@ -5645,6 +5645,7 @@ init_libevent(const or_options_t *options)
   memset(&cfg, 0, sizeof(cfg));
   cfg.disable_iocp = options->DisableIOCP;
   cfg.num_cpus = get_num_cpus(options);
+  cfg.msec_per_tick = options->TokenBucketRefillInterval;
 
   tor_libevent_initialize(&cfg);
 
