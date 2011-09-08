@@ -78,7 +78,8 @@ int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out);
 int addressmap_have_mapping(const char *address, int update_timeout);
 
 void addressmap_register(const char *address, char *new_address,
-                         time_t expires, addressmap_entry_source_t source);
+                         time_t expires, addressmap_entry_source_t source,
+                         int address_wildcard, int new_address_wildcard);
 int parse_virtual_addr_network(const char *val, int validate_only,
                                char **msg);
 int client_dns_incr_failures(const char *address);
