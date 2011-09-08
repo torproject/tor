@@ -4477,6 +4477,11 @@ config_register_addressmaps(const or_options_t *options)
       goto cleanup;
     }
 
+    if (!strcmp(to, "*") || !strcmp(from, "*")) {
+      log_warn(LD_CONFIG,"MapAddress '%s' is unsupported - can't remap from "
+               "or to *. Ignoring.",opt->value);
+      goto cleanup;
+    }
     /* Detect asterisks in expressions of type: '*.example.com' */
     if (!strncmp(from,"*.",2)) {
       from += 2;
