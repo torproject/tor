@@ -35,7 +35,7 @@ test_config_addressmap(void)
           "MapAddress 6.6.6.6 www.infiniteloop.org\n"
           , sizeof(buf));
 
-  config_get_lines(buf, &(get_options()->AddressMap));
+  config_get_lines(buf, &(get_options_mutable()->AddressMap));
   config_register_addressmaps(get_options());
 
   /* MapAddress .invalidwildcard.com .torserver.exit  - no match */
@@ -116,7 +116,7 @@ test_config_addressmap(void)
           "MapAddress *.torproject.org 1.1.1.1\n"
           "MapAddress *.net 2.2.2.2\n"
           , sizeof(buf));
-  config_get_lines(buf, &(get_options()->AddressMap));
+  config_get_lines(buf, &(get_options_mutable()->AddressMap));
   config_register_addressmaps(get_options());
 
   strlcpy(address, "www.abc.com", sizeof(address));
@@ -142,7 +142,7 @@ test_config_addressmap(void)
   /* We don't support '*' as a mapping directive */
   addressmap_clear_configured();
   strlcpy(buf, "MapAddress * *.torserver.exit\n", sizeof(buf));
-  config_get_lines(buf, &(get_options()->AddressMap));
+  config_get_lines(buf, &(get_options_mutable()->AddressMap));
   config_register_addressmaps(get_options());
 
   strlcpy(address, "www.abc.com", sizeof(address));
