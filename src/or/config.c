@@ -386,6 +386,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
+  V(TokenBucketRefillInterval,   MSEC_INTERVAL, "10 msec"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -1381,6 +1382,13 @@ options_act(const or_options_t *old_options)
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
+
+  if (options->TokenBucketRefillInterval < 0
+      || options->TokenBucketRefillInterval > 1000) {
+    log_warn(LD_CONFIG, "Token bucket refill interval must be in the range "
+                        "of [0:1000]");
+    return -1;
+  }
 
 #ifdef USE_BUFFEREVENTS
   /* If we're using the bufferevents implementation and our rate limits

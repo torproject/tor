@@ -3107,6 +3107,9 @@ typedef struct {
                   * log whether it was DNS-leaking or not? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
+  /** Token Bucket Refill resolution in milliseconds (ignored when
+   * bufferevents are enabled) */
+  int TokenBucketRefillInterval;
   char *AccelName; /**< Optional hardware acceleration engine name. */
   char *AccelDir; /**< Optional hardware acceleration engine search dir. */
   int UseEntryGuards; /**< Boolean: Do we try to enter from a smallish number
