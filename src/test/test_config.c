@@ -10,11 +10,13 @@
 #include "test.h"
 
 static void
-test_config_addressmap(void)
+test_config_addressmap(void *arg)
 {
   char buf[1024];
   char address[256];
   time_t expires = TIME_MAX;
+  (void)arg;
+
   strlcpy(buf, "MapAddress .invalidwildcard.com *.torserver.exit\n" // invalid
           "MapAddress *invalidasterisk.com *.torserver.exit\n" // invalid
           "MapAddress *.google.com *.torserver.exit\n"
@@ -158,14 +160,11 @@ done:
   ;
 }
 
-#define CONFIG_LEGACY(name)                                               \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_config_ ## name }
-
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
-  CONFIG_LEGACY(addressmap),
+  CONFIG_TEST(addressmap, 0),
   END_OF_TESTCASES
 };
 
