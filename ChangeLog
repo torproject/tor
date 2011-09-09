@@ -4,16 +4,40 @@ Changes in version 0.2.2.33 - 2011-09-??
       TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
       3923; bugfix on 0.2.2.25-alpha.
 
+  o Minor features (security):
+    - Check for replays of the public-key encrypted portion of an
+      INTRODUCE1 cell, in addition to the current check for replays of
+      the g^x value. This prevents a possible class of active attacks
+      by an attacker who controls both an introduction point and a
+      rendezvous point, and who uses the malleability of AES-CTR to
+      alter the encrypted g^x portion of the INTRODUCE1 cell. We think
+      that these attacks is infeasible (requiring the attacker to send
+      on the order of zettabytes of altered cells in a short interval),
+      but we'd rather block them off in case there are any classes of
+      this attack that we missed. Reported by Willem Pinckaers.
+
+  o Minor features:
+    - Add a VoteOnHidServDirectoriesV2 configuration option to allow
+      directory authorities to abstain from voting on assignment of
+      the HSDir consensus flag. Related to bug 2649.
+
   o Minor bugfixes:
     - Correct the man page to explain that HashedControlPassword and
       CookieAuthentication can both be set, in which case either method
       is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
       when we decided to allow these config options to both be set. Issue
       raised by bug 3898.
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir from 24 hours to 25 hours. Bugfix on 0.2.0.10-alpha;
+      fixes bug 2649.
 
   o Build fixes:
     - Provide a substitute implementation of lround() for MSVC, which
       apparently lacks it. Patch from Gisle Vanem.
+    - Clean up some code issues that prevented Tor from building on older
+      BSDs. Fixes bug 3894; reported by "grarpamp".
+    - Search for a platform-specific version of "ar" when cross-compiling.
+      Should fix builds on iOS. Found by Marco Bonetti.
 
 
 Changes in version 0.2.2.32 - 2011-08-27
