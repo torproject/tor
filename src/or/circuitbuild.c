@@ -4640,7 +4640,7 @@ transport_create(const tor_addr_t *addr, uint16_t port,
 int
 transport_add(transport_t *t)
 {
-  assert(t);
+  tor_assert(t);
 
   if (transport_get_by_name(t->name)) { /* check for duplicate names */
     log_notice(LD_CONFIG, "More than one transports have '%s' as "

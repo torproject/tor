@@ -174,8 +174,7 @@ pt_configure_remaining_proxies(void)
   log_warn(LD_CONFIG, "We start configuring remaining managed proxies!");
   SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list,  managed_proxy_t *, mp) {
     /* configured proxies shouldn't be in unconfigured_proxy_list. */
-    if (proxy_configuration_finished(mp))
-      assert(0);
+    tor_assert(!proxy_configuration_finished(mp));
 
     configure_proxy(mp);
 
@@ -307,7 +306,7 @@ handle_finished_proxy(managed_proxy_t *mp)
   default:
     log_warn(LD_CONFIG, "Unfinished managed proxy in "
              "handle_finished_proxy().");
-    assert(0);
+    tor_assert(0);
   }
 
   tor_assert(smartlist_len(unconfigured_proxy_list) >= 0);
