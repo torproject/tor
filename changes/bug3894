@@ -1,0 +1,4 @@
+  o Build fixes:
+    - Clean up some code issues that prevented Tor from building on older
+      BSDs.  Fixes bug 3894; reported by grarpamp.
+      
