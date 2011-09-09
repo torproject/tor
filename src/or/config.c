@@ -401,7 +401,8 @@ static config_var_t _option_vars[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
+  V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
+  V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
   V(_UsingTestNetworkDefaults,   BOOL,     "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }

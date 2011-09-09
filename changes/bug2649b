@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir from 24 hours to 25 hours.  Bugfix on 0.2.0.10-alpha;
+      fixes bug 2649.
+
