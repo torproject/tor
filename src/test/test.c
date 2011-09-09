@@ -455,7 +455,7 @@ test_circuit_timeout(void)
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
                                   CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
     circuit_build_times_set_timeout(&estimate);
-    log_notice(LD_CIRC, "Timeout1 is %lf, Xm is %d", timeout1, estimate.Xm);
+    log_notice(LD_CIRC, "Timeout1 is %f, Xm is %d", timeout1, estimate.Xm);
            /* 2% error */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout1)) > 0.02);
@@ -470,7 +470,7 @@ test_circuit_timeout(void)
                                  CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
 
   circuit_build_times_set_timeout(&final);
-  log_notice(LD_CIRC, "Timeout2 is %lf, Xm is %d", timeout2, final.Xm);
+  log_notice(LD_CIRC, "Timeout2 is %f, Xm is %d", timeout2, final.Xm);
 
   /* 5% here because some accuracy is lost due to histogram conversion */
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -

@@ -1237,7 +1237,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   if (cbt->timeout_ms >= circuit_build_times_get_initial_timeout()) {
     if (cbt->timeout_ms > INT32_MAX/2 || cbt->close_ms > INT32_MAX/2) {
       log_warn(LD_CIRC, "Insanely large circuit build timeout value. "
-              "(timeout = %lfmsec, close = %lfmsec)",
+              "(timeout = %fmsec, close = %fmsec)",
                cbt->timeout_ms, cbt->close_ms);
     } else {
       cbt->timeout_ms *= 2;
@@ -1414,7 +1414,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     return;
 
   if (cbt->timeout_ms < circuit_build_times_min_timeout()) {
-    log_warn(LD_CIRC, "Set buildtimeout to low value %lfms. Setting to %dms",
+    log_warn(LD_CIRC, "Set buildtimeout to low value %fms. Setting to %dms",
              cbt->timeout_ms, circuit_build_times_min_timeout());
     cbt->timeout_ms = circuit_build_times_min_timeout();
     if (cbt->close_ms < cbt->timeout_ms) {
@@ -1436,7 +1436,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
                cbt->total_build_times,
                tor_lround(cbt->timeout_ms/1000));
     log_info(LD_CIRC,
-             "Circuit timeout data: %lfms, %lfms, Xm: %d, a: %lf, r: %lf",
+             "Circuit timeout data: %fms, %fms, Xm: %d, a: %f, r: %f",
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
              timeout_rate);
   } else if (prev_timeout < tor_lround(cbt->timeout_ms/1000)) {
@@ -1447,13 +1447,13 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
                cbt->total_build_times,
                tor_lround(cbt->timeout_ms/1000));
     log_info(LD_CIRC,
-             "Circuit timeout data: %lfms, %lfms, Xm: %d, a: %lf, r: %lf",
+             "Circuit timeout data: %fms, %fms, Xm: %d, a: %f, r: %f",
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
              timeout_rate);
   } else {
     log_info(LD_CIRC,
-             "Set circuit build timeout to %lds (%lfms, %lfms, Xm: %d, a: %lf,"
-             " r: %lf) based on %d circuit times",
+             "Set circuit build timeout to %lds (%fms, %fms, Xm: %d, a: %f,"
+             " r: %f) based on %d circuit times",
              tor_lround(cbt->timeout_ms/1000),
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha, timeout_rate,
              cbt->total_build_times);
@@ -4095,7 +4095,7 @@ choose_random_entry(cpath_build_state_t *state)
 
  retry:
   smartlist_clear(live_entry_guards);
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
     {
       const char *msg;
       r = entry_is_live(entry, need_uptime, need_capacity, 0, &msg);
@@ -4131,7 +4131,8 @@ choose_random_entry(cpath_build_state_t *state)
       }
       if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
         break; /* we have enough */
-    });
+    }
+  SMARTLIST_FOREACH_END(entry);
 
   if (entry_list_is_constrained(options)) {
     /* If we prefer the entry nodes we've got, and we have at least
