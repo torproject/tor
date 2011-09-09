@@ -2101,7 +2101,7 @@ cell_ewma_set_scale_factor(const or_options_t *options,
     ewma_enabled = 1;
     log_info(LD_OR,
              "Enabled cell_ewma algorithm because of value in %s; "
-             "scale factor is %lf per %d seconds",
+             "scale factor is %f per %d seconds",
              source, ewma_scale_factor, EWMA_TICK_LEN);
   }
 }

@@ -3803,8 +3803,8 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
 
   send_control_event(EVENT_BUILDTIMEOUT_SET, ALL_FORMATS,
                      "650 BUILDTIMEOUT_SET %s TOTAL_TIMES=%lu "
-                     "TIMEOUT_MS=%lu XM=%lu ALPHA=%lf CUTOFF_QUANTILE=%lf "
-                     "TIMEOUT_RATE=%lf CLOSE_MS=%lu CLOSE_RATE=%lf\r\n",
+                     "TIMEOUT_MS=%lu XM=%lu ALPHA=%f CUTOFF_QUANTILE=%f "
+                     "TIMEOUT_RATE=%f CLOSE_MS=%lu CLOSE_RATE=%f\r\n",
                      type_string, (unsigned long)cbt->total_build_times,
                      (unsigned long)cbt->timeout_ms,
                      (unsigned long)cbt->Xm, cbt->alpha, qnt,

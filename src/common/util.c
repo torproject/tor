@@ -338,10 +338,12 @@ tor_mathlog(double d)
 long
 tor_lround(double d)
 {
-#ifdef _MSC_VER
-  return (long)(d > 0 ? d + 0.5 : ceil(d - 0.5));
-#else
+#if defined(HAVE_LROUND)
   return lround(d);
+#elif defined(HAVE_RINT)
+  return (long)rint(d);
+#else
+  return (long)(d > 0 ? d + 0.5 : ceil(d - 0.5));
 #endif
 }
 

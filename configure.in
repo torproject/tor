@@ -296,8 +296,10 @@ AC_CHECK_FUNCS(
         gmtime_r \
         inet_aton \
         localtime_r \
+	lround \
         memmem \
         prctl \
+	rint \
         socketpair \
         strlcat \
         strlcpy \

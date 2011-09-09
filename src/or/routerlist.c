@@ -1831,7 +1831,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   sl_last_total_weighted_bw = weighted_bw;
 
   log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
-            "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf",
+            "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
             bandwidth_weight_rule_to_string(rule),
             Wg, Wm, We, Wd, weighted_bw);
 
@@ -1840,7 +1840,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
     /* Don't warn when using bridges/relays not in the consensus */
     if (!have_unknown)
       log_warn(LD_CIRC,
-               "Weighted bandwidth is %lf in node selection for rule %s",
+               "Weighted bandwidth is %f in node selection for rule %s",
                weighted_bw, bandwidth_weight_rule_to_string(rule));
     tor_free(bandwidths);
     return smartlist_choose(sl);
@@ -1865,7 +1865,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
              " which router we chose. Please tell the developers. "
-             "%lf " U64_FORMAT " %lf", tmp, U64_PRINTF_ARG(rand_bw),
+             "%f " U64_FORMAT " %f", tmp, U64_PRINTF_ARG(rand_bw),
              weighted_bw);
   }
   tor_free(bandwidths);
@@ -2070,10 +2070,10 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
             ", exit bw = "U64_FORMAT
-            ", nonexit bw = "U64_FORMAT", exit weight = %lf "
+            ", nonexit bw = "U64_FORMAT", exit weight = %f "
             "(for exit == %d)"
             ", guard bw = "U64_FORMAT
-            ", nonguard bw = "U64_FORMAT", guard weight = %lf "
+            ", nonguard bw = "U64_FORMAT", guard weight = %f "
             "(for guard == %d)",
             U64_PRINTF_ARG(total_bw),
             U64_PRINTF_ARG(total_exit_bw), U64_PRINTF_ARG(total_nonexit_bw),

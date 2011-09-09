@@ -14,11 +14,12 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include "torint.h"
+
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 
-#include "torint.h"
 #include "util.h"
 #include "torlog.h"
 #include "torgzip.h"
