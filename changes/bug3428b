@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Abort if tor_vasprintf fails in connection_printf_to_buf (a
-      utility function used in the control-port code).  This shouldn't
-      ever happen unless Tor is completely out of memory, but if it
-      had happened and Tor somehow recovered from it, Tor could have
-      sent a log message to a control port in the middle of a reply to
-      a controller command.  Fixes part of bug 3428.
-
-

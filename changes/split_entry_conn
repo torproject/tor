@@ -1,5 +1,0 @@
-  o Code refactoring:
-    - Make "entry connection" in to a new internal subtype of "edge
-      connection", to simplify the code and make exit connections
-      smaller.
-

@@ -1,5 +1,0 @@
-  o Minor features:
-    - Add a VoteOnHidServDirectoriesV2 configuration option to allow
-      directory authorities to abstain from voting on assignment of
-      the HSDir consensus flag.  Related to bug 2649.
-
