@@ -1,5 +1,5 @@
 Changes in version 0.2.2.33 - 2011-09-??
-  o Major bugfies:
+  o Major bugfixes:
     - Avoid an assertion failure when reloading a configuration with
       TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
       3923; bugfix on 0.2.2.25-alpha.
