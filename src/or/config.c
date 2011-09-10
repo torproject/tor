@@ -5019,7 +5019,7 @@ parse_client_port_config(smartlist_t *out,
      if (out) {
        port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
        cfg->type = listener_type;
-       cfg->port = port ? port : defaultport;
+       cfg->port = port ? port : mainport;
        tor_addr_copy(&cfg->addr, &addr);
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
