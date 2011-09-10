@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix a bug where the SocksPort option (for example) would get
+      ignored and replaced by the default if a SocksListenAddress option
+      was set. Bugfix on 0.2.3.3-alpha; fixes bug 3936. Fix by Fabian Keil.
+      
