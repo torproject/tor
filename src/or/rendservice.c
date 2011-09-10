@@ -409,7 +409,7 @@ rend_config_services(or_options_t *options, int validate_only)
         if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
           log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
                               "illegal client name: '%s'. Valid "
-                              "characters are [A-Za-z0-9+-_].",
+                              "characters are [A-Za-z0-9+_-].",
                    client_name);
           SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
           smartlist_free(clients);
