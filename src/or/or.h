@@ -3463,7 +3463,8 @@ typedef struct rend_intro_point_t {
                                * key, if this descriptor is V2. */
 } rend_intro_point_t;
 
-/** Information used to connect to a hidden service. */
+/** Information used to connect to a hidden service.  Used on both the
+ * service side and the client side. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
   int version; /**< Version of the descriptor format: 0 or 2. */
