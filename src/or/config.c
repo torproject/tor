@@ -4980,56 +4980,57 @@ parse_client_port_config(smartlist_t *out,
   /* FooListenAddress is deprecated; let's make it work like it used to work,
    * though. */
   if (listenaddrs) {
-   int mainport = defaultport;
+    int mainport = defaultport;
 
-   if (ports && ports->next) {
+    if (ports && ports->next) {
       log_warn(LD_CONFIG, "%sListenAddress can't be used when there are "
                "multiple %sPort lines", portname, portname);
       return -1;
-   } else if (ports) {
-     if (!strcmp(ports->value, "auto")) {
-       mainport = CFG_AUTO_PORT;
-     } else {
-       int ok;
-       mainport = (int)tor_parse_long(ports->value, 10, 0, 65535, &ok, NULL);
-       if (!ok) {
-         log_warn(LD_CONFIG, "%sListenAddress can only be used with a single "
-                 "%sPort with value \"auto\" or 1-65535.", portname, portname);
-         return -1;
-       }
-     }
-   }
+    } else if (ports) {
+      if (!strcmp(ports->value, "auto")) {
+        mainport = CFG_AUTO_PORT;
+      } else {
+        int ok;
+        mainport = (int)tor_parse_long(ports->value, 10, 0, 65535, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_CONFIG, "%sListenAddress can only be used with a single "
+                   "%sPort with value \"auto\" or 1-65535.",
+                   portname, portname);
+          return -1;
+        }
+      }
+    }
 
-   if (mainport == 0) {
-     if (allow_spurious_listenaddr)
-       return 1;
-     log_warn(LD_CONFIG, "%sPort must be defined if %sListenAddress is used",
-              portname, portname);
-     return -1;
-   }
+    if (mainport == 0) {
+      if (allow_spurious_listenaddr)
+        return 1;
+      log_warn(LD_CONFIG, "%sPort must be defined if %sListenAddress is used",
+               portname, portname);
+      return -1;
+    }
 
-   for (; listenaddrs; listenaddrs = listenaddrs->next) {
-     tor_addr_t addr;
-     uint16_t port = 0;
-     if (tor_addr_port_parse(listenaddrs->value, &addr, &port) < 0) {
-       log_warn(LD_CONFIG, "Unable to parse %sListenAddress '%s'",
-                portname, listenaddrs->value);
-       return -1;
-     }
-     if (out) {
-       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
-       cfg->type = listener_type;
-       cfg->port = port ? port : mainport;
-       tor_addr_copy(&cfg->addr, &addr);
-       cfg->session_group = SESSION_GROUP_UNSET;
-       cfg->isolation_flags = ISO_DEFAULT;
-       smartlist_add(out, cfg);
-     }
-   }
+    for (; listenaddrs; listenaddrs = listenaddrs->next) {
+      tor_addr_t addr;
+      uint16_t port = 0;
+      if (tor_addr_port_parse(listenaddrs->value, &addr, &port) < 0) {
+        log_warn(LD_CONFIG, "Unable to parse %sListenAddress '%s'",
+                 portname, listenaddrs->value);
+        return -1;
+      }
+      if (out) {
+        port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+        cfg->type = listener_type;
+        cfg->port = port ? port : mainport;
+        tor_addr_copy(&cfg->addr, &addr);
+        cfg->session_group = SESSION_GROUP_UNSET;
+        cfg->isolation_flags = ISO_DEFAULT;
+        smartlist_add(out, cfg);
+      }
+    }
 
-   if (warn_nonlocal && out)
-     warn_nonlocal_client_ports(out, portname);
-   return 0;
+    if (warn_nonlocal && out)
+      warn_nonlocal_client_ports(out, portname);
+    return 0;
   } /* end if (listenaddrs) */
 
   /* No ListenAddress lines. If there's no FooPort, then maybe make a default
