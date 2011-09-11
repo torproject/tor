@@ -163,13 +163,14 @@ managed_proxy_has_argv(managed_proxy_t *mp, char **proxy_argv)
 /** Return a managed proxy with the same argv as <b>proxy_argv</b>.
  *  If no such managed proxy exists, return NULL. */
 static managed_proxy_t *
-get_managed_proxy_by_argv(char **proxy_argv)
+get_managed_proxy_by_argv_and_type(char **proxy_argv, int is_server)
 {
   if (!managed_proxy_list)
     return NULL;
 
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
-    if (managed_proxy_has_argv(mp, proxy_argv))
+    if (managed_proxy_has_argv(mp, proxy_argv) &&
+        mp->is_server == is_server)
       return mp;
   } SMARTLIST_FOREACH_END(mp);
 
@@ -891,7 +892,7 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp=NULL;
 
-  mp = get_managed_proxy_by_argv(proxy_argv);
+  mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
   if (!mp) { /* we haven't seen this proxy before */
     managed_proxy_create(transport, proxy_argv, is_server);
