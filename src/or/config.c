@@ -5787,13 +5787,34 @@ get_transport_in_state_by_name(const char *transport)
 {
   or_state_t *or_state = get_or_state();
   config_line_t *line;
+  config_line_t *ret = NULL;
+  smartlist_t *items = NULL;
 
   for (line = or_state->TransportProxies ; line ; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
-    if (!strcmpstart(line->value, transport))
-      return line;
+
+    items = smartlist_create();
+    smartlist_split_string(items, line->value, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+    if (smartlist_len(items) != 2) /* broken state */
+      goto done;
+
+    if (!strcmp(smartlist_get(items, 0), transport)) {
+      ret = line;
+      goto done;
+    }
+
+    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    smartlist_free(items);
+    items = NULL;
   }
-  return NULL;
+
+ done:
+  if (items) {
+    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    smartlist_free(items);
+  }
+  return ret;
 }
 
 /** Return string containing the address:port part of the
