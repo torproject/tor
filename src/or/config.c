@@ -5823,10 +5823,24 @@ get_transport_in_state_by_name(const char *transport)
 const char *
 get_transport_bindaddr(const char *line, const char *transport)
 {
-  if (strlen(line) < strlen(transport) + 2)
-    return NULL;
-  else
+  char *line_tmp = NULL;
+
+  if (strlen(line) < strlen(transport) + 2) {
+    goto broken_state;
+  } else {
+    /* line should start with the name of the transport and a space.
+       (for example, "obfs2 127.0.0.1:47245") */
+    tor_asprintf(&line_tmp, "%s ", transport);
+    if (strcmpstart(line, line_tmp))
+      goto broken_state;
+
+    tor_free(line_tmp);
     return (line+strlen(transport)+1);
+  }
+
+ broken_state:
+  tor_free(line_tmp);
+  return NULL;
 }
 
 /** Return a static string containing the address:port a proxy
