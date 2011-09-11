@@ -4150,17 +4150,6 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
   return 0;
 }
 
-/** Returns true if connection <b>conn</b> is using a pluggable
- *  transports proxy server. */
-int
-connection_uses_transport(connection_t *conn)
-{
-  const transport_t *transport=NULL;
-  find_transport_by_bridge_addrport(&conn->addr,
-                                    conn->port,&transport);
-  return transport ? 1 : 0;
-}
-
 /** Returns the global proxy type used by tor. */
 static int
 get_proxy_type(void)
