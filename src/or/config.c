@@ -1251,7 +1251,8 @@ options_act(or_options_t *old_options)
   }
 
 
-  clear_transport_list();
+  mark_transport_list();
+  pt_prepare_proxy_list_for_config_read();
   if (options->ClientTransportPlugin) {
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
       if (parse_client_transport_line(cl->value, 0)<0) {
@@ -1273,6 +1274,8 @@ options_act(or_options_t *old_options)
       }
     }
   }
+  sweep_transport_list();
+  sweep_proxy_list();
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
@@ -4769,10 +4772,7 @@ parse_client_transport_line(const char *line, int validate_only)
     }
 
     if (!validate_only) {
-      if (transport_add_from_config(&addr, port, name,
-                                    socks_ver) < 0) {
-        goto err;
-      }
+      transport_add_from_config(&addr, port, name, socks_ver);
 
       log_debug(LD_DIR, "Transport '%s' found at %s:%d", name,
                 fmt_addr(&addr), (int)port);

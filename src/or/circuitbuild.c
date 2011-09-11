@@ -124,7 +124,6 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
 
-static const transport_t *transport_get_by_name(const char *name);
 static void bridge_free(bridge_info_t *bridge);
 
 /**
@@ -4579,6 +4578,32 @@ bridge_free(bridge_info_t *bridge)
 /** A list of pluggable transports found in torrc. */
 static smartlist_t *transport_list = NULL;
 
+/** Mark every entry of the transport list to be removed on our next call to
+ * sweep_transport_list unless it has first been un-marked. */
+void
+mark_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_create();
+  SMARTLIST_FOREACH(transport_list, transport_t *, t,
+                    t->marked_for_removal = 1);
+}
+
+/** Remove every entry of the transport list that was marked with
+ * mark_transport_list if it has not subsequently been un-marked. */
+void
+sweep_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, t) {
+    if (t->marked_for_removal) {
+      SMARTLIST_DEL_CURRENT(transport_list, t);
+      transport_free(t);
+    }
+  } SMARTLIST_FOREACH_END(t);
+}
+
 /** Initialize the pluggable transports list to empty, creating it if
  *  needed. */
 void
@@ -4603,7 +4628,7 @@ transport_free(transport_t *transport)
 
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
-static const transport_t *
+transport_t *
 transport_get_by_name(const char *name)
 {
   tor_assert(name);
@@ -4611,7 +4636,7 @@ transport_get_by_name(const char *name)
   if (!transport_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(transport_list, const transport_t *, transport) {
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
     if (!strcmp(transport->name, name))
       return transport;
   } SMARTLIST_FOREACH_END(transport);
@@ -4636,23 +4661,81 @@ transport_create(const tor_addr_t *addr, uint16_t port,
   return t;
 }
 
-/** Adds transport <b>t</b> to the internal list of pluggable transports. */
+/** Resolve any conflicts that the insertion of transport <b>t</b>
+ *  might cause.
+ *  Return 0 if <b>t</b> is OK and should be registered, 1 if there is
+ *  a transport identical to <b>t</b> already registered and -1 if
+ *  <b>t</b> cannot be added due to conflicts. */
+static int
+transport_resolve_conflicts(transport_t *t)
+{
+  /* This is how we resolve transport conflicts:
+
+     If there is already a transport with the same name and addrport,
+     we either have duplicate torrc lines OR we are here post-HUP and
+     this transport was here pre-HUP as well. In any case, mark the
+     old transport so that it doesn't get removed and ignore the new
+     one.
+
+     If there is already a transport with the same name but different
+     addrport:
+     * if it's marked for removal, it means that it either has a lower
+     priority than 't' in torrc (otherwise the mark would have been
+     cleared by the paragraph above), or it doesn't exist at all in
+     the post-HUP torrc. We destroy the old transport and register 't'.
+     * if it's *not* marked for removal, it means that it was newly
+     added in the post-HUP torrc or that it's of higher priority, in
+     this case we ignore 't'. */
+  transport_t *t_tmp = transport_get_by_name(t->name);
+  if (t_tmp) { /* same name */
+    if (tor_addr_eq(&t->addr, &t_tmp->addr) && (t->port == t_tmp->port)) {
+      /* same name *and* addrport */
+      t_tmp->marked_for_removal = 0;
+      return 1;
+    } else { /* same name but different addrport */
+      if (t_tmp->marked_for_removal) { /* marked for removal */
+        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' but "
+                 "there was already a transport marked for deletion at '%s:%u'."
+                 "We deleted the old transport and registered the new one.",
+                 t->name, fmt_addr(&t->addr), t->port,
+                 fmt_addr(&t_tmp->addr), t_tmp->port);
+        smartlist_remove(transport_list, t_tmp);
+        transport_free(t_tmp);
+      } else { /* *not* marked for removal */
+        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' which "
+                 "already exists at '%s:%u'. Skipping.", t->name,
+                 fmt_addr(&t->addr), t->port,
+                 fmt_addr(&t_tmp->addr), t_tmp->port);
+        return -1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+/** Add transport <b>t</b> to the internal list of pluggable
+ *  transports.
+ *  Returns 0 if the transport was added correctly, 1 if the same
+ *  transport was already registered (in this case the caller must
+ *  free the transport) and -1 if there was an error.  */
 int
 transport_add(transport_t *t)
 {
   tor_assert(t);
 
-  if (transport_get_by_name(t->name)) { /* check for duplicate names */
-    log_notice(LD_CONFIG, "More than one transports have '%s' as "
-               "their name.", t->name);
-    return -1;
+  int r = transport_resolve_conflicts(t);
+
+  switch (r) {
+  case 0: /* should register transport */
+    if (!transport_list)
+      transport_list = smartlist_create();
+
+    smartlist_add(transport_list, t);
+    return 0;
+  default: /* should let the caller know the return code */
+    return r;
   }
-
-  if (!transport_list)
-    transport_list = smartlist_create();
-
-  smartlist_add(transport_list, t);
-  return 0;
 }
 
 /** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
@@ -4664,10 +4747,23 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
 {
   transport_t *t = transport_create(addr, port, name, socks_ver);
 
-  if (transport_add(t) < 0) {
+  int r = transport_add(t);
+
+  switch (r) {
+  case -1:
+  default:
+    log_warn(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
+             t->name, fmt_addr(&t->addr), t->port);
     transport_free(t);
     return -1;
-  } else {
+  case 1:
+    log_warn(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+     transport_free(t); /* falling */
+     return 0;
+  case 0:
+    log_warn(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
     return 0;
   }
 }
