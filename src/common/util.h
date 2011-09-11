@@ -350,6 +350,7 @@ void write_pidfile(char *filename);
 void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
+int tor_terminate_process(pid_t pid);
 int tor_spawn_background(const char *const filename, int *stdout_read,
                          int *stderr_read, const char **argv,
                          const char **envp);

@@ -28,6 +28,7 @@
 #include <direct.h>
 #include <process.h>
 #include <tchar.h>
+#include <Winbase.h>
 #else
 #include <dirent.h>
 #include <pwd.h>
@@ -43,6 +44,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <signal.h>
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
@@ -2929,6 +2931,30 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
+
+/** Terminate process running at PID <b>pid</b>.
+ *  Code borrowed from Python's os.kill. */
+int
+tor_terminate_process(pid_t pid)
+{
+#ifdef MS_WINDOWS
+  DWORD pid_win = pid;
+  DWORD err;
+  HANDLE handle;
+  /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
+     attempt to open and terminate the process. */
+  handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+  if (handle == NULL)
+    return -1;
+
+  if (TerminateProcess(handle, sig) == 0)
+    return -1;
+  else
+    return 0;
+#else /* *nix */
+  return kill(pid, SIGTERM);
+#endif
+}
 
 #define CHILD_STATE_INIT 0
 #define CHILD_STATE_PIPE 1
