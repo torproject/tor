@@ -56,23 +56,81 @@ static smartlist_t *managed_proxy_list = NULL;
 /** Number of still unconfigured proxies. */
 static int unconfigured_proxies_n = 0;
 
-/*  The main idea here is:
+/** "The main idea is:"
 
-    A managed proxy is represented by a managed_proxy_t struct and can
-    spawn multiple transports.
+    Each managed proxy is represented by a 'managed_proxy_t'.
+    Each managed proxy can support multiple transports.
+    Each managed proxy gets configured through a multistep process.
 
-    managed_proxy_list is a list of all the unconfigured managed
-    proxies; everytime we find a managed proxy in torrc we add it in
-    that list.
+    'managed_proxy_list' contains all the managed proxies this tor
+    instance is supporting.
+    In the 'managed_proxy_list' there are 'unconfigured_proxies_n'
+    managed proxies that are still unconfigured.
+
     In every run_scheduled_event() tick, we attempt to launch and then
-    configure each managed proxy, using the configuration protocol
-    defined in the 180_pluggable_transport.txt proposal. A managed
-    proxy might need several ticks to get fully configured.
+    configure the unconfiged managed proxies, using the configuration
+    protocol defined in the 180_pluggable_transport.txt proposal. A
+    managed proxy might need several ticks to get fully configured.
 
     When a managed proxy is fully configured, we register all its
-    transports to the circuitbuild.c subsystem - like we do with
-    external proxies - and then free the managed proxy struct
-    since it's no longer needed. */
+    transports to the circuitbuild.c subsystem. At that point the
+    transports are owned by the circuitbuild.c subsystem.
+
+    When a managed proxy fails to follow the 180 configuration
+    protocol, it gets marked as broken and gets destroyed.
+
+    "In a little more technical detail:"
+
+    While we are serially parsing torrc, we store all the transports
+    that a proxy should spawn in its 'transports_to_launch' element.
+
+    When we finish reading the torrc, we spawn the managed proxy and
+    expect {S,C}METHOD lines from its output. We add transports
+    described by METHOD lines to its 'transports' element, as
+    'transport_t' structs.
+
+    When the managed proxy stops spitting METHOD lines (signified by a
+    '{S,C}METHODS DONE' message) we register all the transports
+    collected to the circuitbuild.c subsystem. At this point, the
+    'transport_t's can be transformed into dangling pointers at any
+    point by the circuitbuild.c subsystem, and so we replace all
+    'transport_t's with strings describing the transport names.  We
+    can still go from a transport name to a 'transport_t' using the
+    fact that transport names uniquely identify 'transport_t's.
+
+    "In even more technical detail I shall describe what happens when
+    the SIGHUP bell tolls:"
+
+    We immediately destroy all unconfigured proxies (We shouldn't have
+    unconfigured proxies in the first place, except when SIGHUP rings
+    immediately after tor is launched.).
+
+    We mark all managed proxies and transports to signify that they
+    must be removed if they don't contribute by the new torrc. We also
+    mark all managed proxies to signify that they might need to be
+    restarted so that they end up supporting all the transports the
+    new torrc wants them to support.
+    We also clear the 'transports_to_launch' list so that we can put
+    there the transports we need to launch on each proxy according to
+    the new torrc.
+
+    We then start parsing torrc again, everytime we encounter a
+    transport line using a known pre-SIGHUP managed proxy, we cleanse
+    that proxy from the removal mark.
+
+    We also mark it as unconfigured so that on the next scheduled
+    events tick, we investigate whether we need to restart the proxy
+    so that it spawns the new 'transport_to_launch' list. Of course,
+    if the post-SIGHUP 'transports_to_launch' list is identical to the
+    pre-SIGHUP one, it means that no changes were introduced to this
+    proxy during the SIGHUP and no restart has to take place.
+
+    During the post-SIGHUP torrc parsing, we unmark all transports we
+    encounter. This happens in the case that no restart is needed, we
+    can continue using the old transports normally. If we end up
+    restarting the proxy, we destroy and unregister all old transports
+    from the circuitbuild.c subsystem since they become useless.
+*/
 
 /** Return true if there are still unconfigured managed proxies. */
 int
