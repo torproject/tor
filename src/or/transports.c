@@ -17,10 +17,7 @@
 static void set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp);
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
-static void managed_proxy_destroy_impl(managed_proxy_t *mp,
-                                       int also_free_transports);
-#define managed_proxy_destroy(mp) managed_proxy_destroy_impl(mp, 0)
-#define managed_proxy_destroy_with_transports(mp) managed_proxy_destroy_impl(mp, 1)
+static void managed_proxy_destroy(managed_proxy_t *mp);
 
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void configure_proxy(managed_proxy_t *mp);
@@ -55,14 +52,16 @@ static INLINE void free_execve_args(char **arg);
 #define PROTO_VERSION_ONE 1
 
 /** List of unconfigured managed proxies. */
-static smartlist_t *unconfigured_proxy_list = NULL;
+static smartlist_t *managed_proxy_list = NULL;
+/** Number of still unconfigured proxies. */
+static int unconfigured_proxies_n = 0;
 
 /*  The main idea here is:
 
     A managed proxy is represented by a managed_proxy_t struct and can
     spawn multiple transports.
 
-    unconfigured_proxy_list is a list of all the unconfigured managed
+    managed_proxy_list is a list of all the unconfigured managed
     proxies; everytime we find a managed proxy in torrc we add it in
     that list.
     In every run_scheduled_event() tick, we attempt to launch and then
@@ -79,8 +78,7 @@ static smartlist_t *unconfigured_proxy_list = NULL;
 int
 pt_proxies_configuration_pending(void)
 {
-  if (!unconfigured_proxy_list) return 0;
-  return !!smartlist_len(unconfigured_proxy_list);
+  return !! unconfigured_proxies_n;
 }
 
 /** Return true if <b>mp</b> has the same argv as <b>proxy_argv</b> */
@@ -109,10 +107,10 @@ managed_proxy_has_argv(managed_proxy_t *mp, char **proxy_argv)
 static managed_proxy_t *
 get_managed_proxy_by_argv(char **proxy_argv)
 {
-  if (!unconfigured_proxy_list)
+  if (!managed_proxy_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list,  managed_proxy_t *, mp) {
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
     if (managed_proxy_has_argv(mp, proxy_argv))
       return mp;
   } SMARTLIST_FOREACH_END(mp);
@@ -129,22 +127,88 @@ add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
     smartlist_add(mp->transports_to_launch, tor_strdup(transport));
 }
 
+/** Called when a SIGHUP occurs.
+ *  Returns true if managed proxy <b>mp</b> needs to be restarted
+ *  after the SIGHUP based on the new torrc. */
+static int
+proxy_needs_restart(managed_proxy_t *mp)
+{
+  /* mp->transport_to_launch is populated with the names of the
+     transports that must be launched *after* the SIGHUP.
+
+     Since only PT_PROTO_COMPLETED proxies reach this function,
+     mp->transports is populated with strings of the *names of the
+     transports* that were launched *before* the SIGHUP.
+
+     If the two lists contain the same strings, we don't need to
+     restart the proxy, since it already does what we want. */
+
+  tor_assert(smartlist_len(mp->transports_to_launch) > 0);
+  tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
+
+  if (smartlist_len(mp->transports_to_launch) != smartlist_len(mp->transports))
+    goto needs_restart;
+
+  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t_t_l) {
+    if (!smartlist_string_isin(mp->transports, t_t_l))
+      goto needs_restart;
+
+  } SMARTLIST_FOREACH_END(t_t_l);
+
+  return 0;
+
+ needs_restart:
+  return 1;
+}
+
+/** Managed proxy <b>mp</b> must be restarted. Do all the necessary
+ *  preparations and then flag its state so that it will be launched
+ *  in the next tick. */
+static void
+proxy_prepare_for_restart(managed_proxy_t *mp)
+{
+  transport_t *t_tmp = NULL;
+
+  tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
+  tor_assert(mp->pid);
+
+  /* kill the old obfsproxy process */
+  tor_terminate_process(mp->pid);
+  mp->pid = 0;
+  fclose(mp->stdout);
+
+  /* destroy all its old transports. we no longer use them. */
+  SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
+    t_tmp = transport_get_by_name(t_name);
+    if (t_tmp)
+      t_tmp->marked_for_removal = 1;
+  } SMARTLIST_FOREACH_END(t_name);
+  sweep_transport_list();
+
+  /* free the transport names in mp->transports */
+  SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
+  smartlist_clear(mp->transports);
+
+  /* flag it as an infant proxy so that it gets launched on next tick */
+  mp->conf_state = PT_PROTO_INFANT;
+}
+
 /** Launch managed proxy <b>mp</b>. */
 static int
 launch_managed_proxy(managed_proxy_t *mp)
 {
   char **envp=NULL;
-  int retval;
+  int pid;
   FILE *stdout_read = NULL;
   int stdout_pipe=-1, stderr_pipe=-1;
 
   /* prepare the environment variables for the managed proxy */
   set_managed_proxy_environment(&envp, mp);
 
-  retval = tor_spawn_background(mp->argv[0], &stdout_pipe,
-                                &stderr_pipe, (const char **)mp->argv,
-                                (const char **)envp);
-  if (retval < 0) {
+  pid = tor_spawn_background(mp->argv[0], &stdout_pipe,
+                             &stderr_pipe, (const char **)mp->argv,
+                             (const char **)envp);
+  if (pid < 0) {
     log_warn(LD_GENERAL, "Spawn failed");
     return -1;
   }
@@ -157,10 +221,11 @@ launch_managed_proxy(managed_proxy_t *mp)
   /* Open the buffered IO streams */
   stdout_read = fdopen(stdout_pipe, "r");
 
-  log_warn(LD_CONFIG, "The spawn is alive (%d)!", retval);
+  log_warn(LD_CONFIG, "The spawn is alive (%d)!", pid);
 
   mp->conf_state = PT_PROTO_LAUNCHED;
   mp->stdout = stdout_read;
+  mp->pid = pid;
 
   return 0;
 }
@@ -171,12 +236,32 @@ launch_managed_proxy(managed_proxy_t *mp)
 void
 pt_configure_remaining_proxies(void)
 {
-  log_warn(LD_CONFIG, "We start configuring remaining managed proxies!");
-  SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list,  managed_proxy_t *, mp) {
-    /* configured proxies shouldn't be in unconfigured_proxy_list. */
-    tor_assert(!proxy_configuration_finished(mp));
+  log_warn(LD_CONFIG, "We start configuring remaining managed proxies (%d)!",
+           unconfigured_proxies_n);
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
+    tor_assert(mp->conf_state != PT_PROTO_BROKEN);
 
-    configure_proxy(mp);
+    if (mp->got_hup) {
+      mp->got_hup = 0;
+
+    /* This proxy is marked by a SIGHUP. Check whether we need to
+       restart it. */
+      if (proxy_needs_restart(mp)) {
+        proxy_prepare_for_restart(mp);
+        continue;
+      } else { /* it doesn't need to be restarted. */
+        printf("No need for restart; status quo\n");
+        unconfigured_proxies_n--;
+        tor_assert(unconfigured_proxies_n >= 0);
+      }
+
+      continue;
+    }
+
+    /* If the proxy is not fully configured, try to configure it
+       futher. */
+    if (!proxy_configuration_finished(mp))
+      configure_proxy(mp);
 
   } SMARTLIST_FOREACH_END(mp);
 }
@@ -222,33 +307,55 @@ configure_proxy(managed_proxy_t *mp)
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
-register_server_proxy(const managed_proxy_t *mp)
+register_server_proxy(managed_proxy_t *mp)
 {
-  if (mp->is_server) {
-    SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-      save_transport_to_state(t->name,&t->addr,t->port); /* pass tor_addr_t? */
-    } SMARTLIST_FOREACH_END(t);
-  }
+  smartlist_t *sm_tmp = smartlist_create();
+
+  tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
+  SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
+    save_transport_to_state(t->name,&t->addr,t->port); /* pass tor_addr_t? */
+    smartlist_add(sm_tmp, tor_strdup(t->name));
+  } SMARTLIST_FOREACH_END(t);
+
+  smartlist_free(mp->transports);
+  mp->transports = sm_tmp;
 }
 
 /** Register all the transports supported by client managed proxy
  *  <b>mp</b> to the bridge subsystem. */
 static void
-register_client_proxy(const managed_proxy_t *mp)
+register_client_proxy(managed_proxy_t *mp)
 {
+  int r;
+  smartlist_t *sm_tmp = smartlist_create();
+
+  tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-    if (transport_add(t)<0) {
+    r = transport_add(t);
+    switch (r) {
+    case -1:
       log_warn(LD_GENERAL, "Could not add transport %s. Skipping.", t->name);
       transport_free(t);
-    } else {
+      break;
+    case 0:
       log_warn(LD_GENERAL, "Succesfully registered transport %s", t->name);
+      smartlist_add(sm_tmp, tor_strdup(t->name));
+      break;
+    case 1:
+      log_warn(LD_GENERAL, "Succesfully registered transport %s", t->name);
+      smartlist_add(sm_tmp, tor_strdup(t->name));
+      transport_free(t);
+      break;
     }
   } SMARTLIST_FOREACH_END(t);
+
+  smartlist_free(mp->transports);
+  mp->transports = sm_tmp;
 }
 
 /** Register the transports of managed proxy <b>mp</b>. */
 static INLINE void
-register_proxy(const managed_proxy_t *mp)
+register_proxy(managed_proxy_t *mp)
 {
   if (mp->is_server)
     register_server_proxy(mp);
@@ -256,18 +363,17 @@ register_proxy(const managed_proxy_t *mp)
     register_client_proxy(mp);
 }
 
-/** Free memory allocated by managed proxy <b>mp</b>.
- * If <b>also_free_transports</b> is set, also free the transports
- * associated with this managed proxy. */
+/** Free memory allocated by managed proxy <b>mp</b>. */
 static void
-managed_proxy_destroy_impl(managed_proxy_t *mp, int also_free_transports)
+managed_proxy_destroy(managed_proxy_t *mp)
 {
-  /* transport_free() all its transports */
-  if (also_free_transports)
+  printf("Destroying mp %p\n", mp);
+  if (mp->conf_state != PT_PROTO_COMPLETED)
     SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
+  else
+    SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
 
   /* free the transports smartlist */
-  smartlist_clear(mp->transports);
   smartlist_free(mp->transports);
 
   SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
@@ -277,17 +383,20 @@ managed_proxy_destroy_impl(managed_proxy_t *mp, int also_free_transports)
   smartlist_free(mp->transports_to_launch);
 
   /* remove it from the list of managed proxies */
-  smartlist_remove(unconfigured_proxy_list, mp);
+  smartlist_remove(managed_proxy_list, mp);
 
   /* close its stdout stream */
-  fclose(mp->stdout);
+  if (mp->stdout)
+    fclose(mp->stdout);
 
   /* free the argv */
   free_execve_args(mp->argv);
 
+  if (mp->pid)
+    tor_terminate_process(mp->pid);
+
   tor_free(mp);
 }
-
 
 /** Handle a configured or broken managed proxy <b>mp</b>. */
 static void
@@ -295,13 +404,11 @@ handle_finished_proxy(managed_proxy_t *mp)
 {
   switch (mp->conf_state) {
   case PT_PROTO_BROKEN: /* if broken: */
-    managed_proxy_destroy_with_transports(mp); /* destroy it and all its transports */
+    managed_proxy_destroy(mp); /* annihilate it. */
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
     register_proxy(mp); /* register transports */
-    mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed, */
-    managed_proxy_destroy(mp); /* destroy the managed proxy struct,
-                                     keeping the transports intact */
+    mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed. */
     break;
   default:
     log_warn(LD_CONFIG, "Unfinished managed proxy in "
@@ -309,7 +416,8 @@ handle_finished_proxy(managed_proxy_t *mp)
     tor_assert(0);
   }
 
-  tor_assert(smartlist_len(unconfigured_proxy_list) >= 0);
+  unconfigured_proxies_n--;
+  tor_assert(unconfigured_proxies_n >= 0);
 }
 
 /** Return true if the configuration of the managed proxy <b>mp</b> is
@@ -322,8 +430,7 @@ proxy_configuration_finished(const managed_proxy_t *mp)
 }
 
 
-/** This function is called when a proxy sends an {S,C}METHODS DONE message,
- */
+/** This function is called when a proxy sends an {S,C}METHODS DONE message. */
 static void
 handle_methods_done(const managed_proxy_t *mp)
 {
@@ -694,6 +801,30 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   tor_free(bindaddr);
 }
 
+/** Create and return a new managed proxy for <b>transport</b> using
+ *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server
+ *  managed proxy. */
+static managed_proxy_t *
+managed_proxy_create(const char *transport, char **proxy_argv, int is_server)
+{
+  managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
+  mp->conf_state = PT_PROTO_INFANT;
+  mp->is_server = is_server;
+  mp->argv = proxy_argv;
+  mp->transports = smartlist_create();
+
+  mp->transports_to_launch = smartlist_create();
+  add_transport_to_proxy(transport, mp);
+
+  /* register the managed proxy */
+  if (!managed_proxy_list)
+    managed_proxy_list = smartlist_create();
+  smartlist_add(managed_proxy_list, mp);
+  unconfigured_proxies_n++;
+
+  return mp;
+}
+
 /** Register <b>transport</b> using proxy with <b>proxy_argv</b> to
  *  the managed proxy subsystem.
  *  If <b>is_server</b> is true, then the proxy is a server proxy. */
@@ -705,21 +836,28 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
   mp = get_managed_proxy_by_argv(proxy_argv);
 
   if (!mp) { /* we haven't seen this proxy before */
-    /* create a managed proxy */
-    managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
-    mp->conf_state = PT_PROTO_INFANT;
-    mp->is_server = is_server;
-    mp->argv = proxy_argv;
-    mp->transports = smartlist_create();
+    managed_proxy_create(transport, proxy_argv, is_server);
 
-    mp->transports_to_launch = smartlist_create();
-    add_transport_to_proxy(transport, mp);
+  } else { /* known proxy. add its transport to its transport list */
+    if (mp->got_hup) {
+      /* If the managed proxy we found is marked by a SIGHUP, it means
+         that it's not useless and should be kept. If it's marked for
+         removal, unmark it and increase the unconfigured proxies so
+         that we try to restart it if we need to. Afterwards, check if
+         a transport_t for 'transport' used to exist before the SIGHUP
+         and make sure it doesn't get deleted because we might reuse
+         it. */
+      if (mp->marked_for_removal) {
+        mp->marked_for_removal = 0;
+        unconfigured_proxies_n++;
+      }
 
-    /* register the managed proxy */
-    if (!unconfigured_proxy_list)
-      unconfigured_proxy_list = smartlist_create();
-    smartlist_add(unconfigured_proxy_list, mp);
-  } else { /* known proxy. just add transport to its transport list */
+      transport_t *old_transport = NULL;
+      old_transport = transport_get_by_name(transport);
+      if (old_transport)
+        old_transport->marked_for_removal = 0;
+    }
+
     add_transport_to_proxy(transport, mp);
     free_execve_args(proxy_argv);
   }
@@ -738,25 +876,66 @@ free_execve_args(char **arg)
   tor_free(arg);
 }
 
+
+/** Tor will read its config, prepare the managed proxy list so that
+ *  proxies that are not used in the new config will shutdown, and
+ *  proxies that need to spawn more transports will do so. */
+void
+pt_prepare_proxy_list_for_config_read(void)
+{
+  if (!managed_proxy_list)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
+    /* Destroy unconfigured proxies. */
+    if (mp->conf_state != PT_PROTO_COMPLETED) {
+        managed_proxy_destroy(mp);
+        unconfigured_proxies_n--;
+        continue;
+    }
+
+    tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
+
+    mp->marked_for_removal = 1;
+    mp->got_hup = 1;
+    SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
+    smartlist_clear(mp->transports_to_launch);
+  } SMARTLIST_FOREACH_END(mp);
+
+  tor_assert(unconfigured_proxies_n == 0);
+}
+
+/** The tor config was read, destroy all managed proxies that were
+ *  marked by a previous call to prepare_proxy_list_for_config_read()
+ *  and are not used by the new config. */
+void
+sweep_proxy_list(void)
+{
+  if (!managed_proxy_list)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
+    if (mp->marked_for_removal) {
+      SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
+      managed_proxy_destroy(mp);
+    }
+  } SMARTLIST_FOREACH_END(mp);
+}
+
 /** Release all storage held by the pluggable transports subsystem. */
 void
 pt_free_all(void)
 {
-  if (unconfigured_proxy_list) {
+  if (managed_proxy_list) {
     /* If the proxy is in PT_PROTO_COMPLETED, it has registered its
        transports and it's the duty of the circuitbuild.c subsystem to
        free them. Otherwise, it hasn't registered its transports yet
        and we should free them here. */
-    SMARTLIST_FOREACH_BEGIN(unconfigured_proxy_list, managed_proxy_t *, mp) {
-      if (mp->conf_state == PT_PROTO_COMPLETED)
-        managed_proxy_destroy(mp);
-      else
-        managed_proxy_destroy_with_transports(mp);
-    } SMARTLIST_FOREACH_END(mp);
+    SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp,
+                      managed_proxy_destroy(mp));
 
-    smartlist_clear(unconfigured_proxy_list);
-    smartlist_free(unconfigured_proxy_list);
-    unconfigured_proxy_list=NULL;
+    smartlist_free(managed_proxy_list);
+    managed_proxy_list=NULL;
   }
 }
 

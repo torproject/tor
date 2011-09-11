@@ -25,6 +25,9 @@ int pt_proxies_configuration_pending(void);
 
 void pt_free_all(void);
 
+void pt_prepare_proxy_list_for_config_read(void);
+void sweep_proxy_list(void);
+
 #ifdef PT_PRIVATE
 /** State of the managed proxy configuration protocol. */
 enum pt_proto_state {
@@ -47,8 +50,45 @@ typedef struct {
   FILE *stdout; /* a stream to its stdout
                    (closed in managed_proxy_destroy()) */
 
+  int pid; /* The Process ID this managed proxy is using. */
+
+  /** Boolean: We are re-parsing our config, and we are going to
+   * remove this managed proxy if we don't find it any transport
+   * plugins that use it. */
+  unsigned int marked_for_removal : 1;
+
+  /** Boolean: We got a SIGHUP while this proxy was running. We use
+   * this flag to signify that this proxy might need to be restarted
+   * so that it can listen for other transports according to the new
+   * torrc. */
+  unsigned int got_hup : 1;
+
   smartlist_t *transports_to_launch; /* transports to-be-launched by this proxy */
-  smartlist_t *transports; /* list of transport_t this proxy spawned */
+
+  /* The 'transports' list contains all the transports this proxy has
+     launched.
+
+     Before a managed_proxy_t reaches the PT_PROTO_COMPLETED phase,
+     this smartlist contains a 'transport_t' for every transport it
+     has launched.
+
+     When the managed_proxy_t reaches the PT_PROTO_COMPLETED phase, it
+     registers all its transports to the circuitbuild.c subsystem. At
+     that point the 'transport_t's are owned by the circuitbuild.c
+     subsystem.
+
+     To avoid carrying dangling 'transport_t's in this smartlist,
+     right before the managed_proxy_t reaches the PT_PROTO_COMPLETED
+     phase we replace all 'transport_t's with strings of their
+     transport names.
+
+     So, tl;dr:
+     When (conf_state != PT_PROTO_COMPLETED) this list carries
+     (transport_t *).
+     When (conf_state == PT_PROTO_COMPLETED) this list carries
+     (char *).
+   */
+  smartlist_t *transports;
 } managed_proxy_t;
 
 int parse_cmethod_line(const char *line, managed_proxy_t *mp);
