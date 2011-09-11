@@ -1019,7 +1019,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     v3_shift += 4;
     if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
         (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
-      log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
+      /* This is far more likely to mean that a client's clock is
+       * skewed than that a replay attack is in progress. */
+      log_info(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
                (now - ts) < 0 ? "old" : "new");
       return -1;
     }
