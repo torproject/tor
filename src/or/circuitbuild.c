@@ -4694,18 +4694,18 @@ transport_resolve_conflicts(transport_t *t)
       return 1;
     } else { /* same name but different addrport */
       if (t_tmp->marked_for_removal) { /* marked for removal */
-        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' but "
-                 "there was already a transport marked for deletion at "
-                 "'%s:%u'. We deleted the old transport and registered the "
-                 "new one.", t->name, fmt_addr(&t->addr), t->port,
-                 fmt_addr(&t_tmp->addr), t_tmp->port);
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "but there was already a transport marked for deletion at "
+                   "'%s:%u'. We deleted the old transport and registered the "
+                   "new one.", t->name, fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
       } else { /* *not* marked for removal */
-        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
-                 "which already exists at '%s:%u'. Skipping.", t->name,
-                 fmt_addr(&t->addr), t->port,
-                 fmt_addr(&t_tmp->addr), t_tmp->port);
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "which already exists at '%s:%u'. Skipping.", t->name,
+                   fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
         return -1;
       }
     }
@@ -4753,17 +4753,17 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
   switch (r) {
   case -1:
   default:
-    log_warn(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
-             t->name, fmt_addr(&t->addr), t->port);
+    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
+               t->name, fmt_addr(&t->addr), t->port);
     transport_free(t);
     return -1;
   case 1:
-    log_warn(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
              t->name, fmt_addr(&t->addr), t->port);
      transport_free(t); /* falling */
      return 0;
   case 0:
-    log_warn(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
              t->name, fmt_addr(&t->addr), t->port);
     return 0;
   }

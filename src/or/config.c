@@ -4772,8 +4772,8 @@ parse_client_transport_line(const char *line, int validate_only)
     if (!validate_only) {
       transport_add_from_config(&addr, port, name, socks_ver);
 
-      log_debug(LD_DIR, "Transport '%s' found at %s:%d", name,
-                fmt_addr(&addr), (int)port);
+      log_info(LD_DIR, "Transport '%s' found at %s:%d", name,
+               fmt_addr(&addr), (int)port);
     }
   }
 
@@ -4871,7 +4871,7 @@ parse_server_transport_line(const char *line, int validate_only)
     }
 
     if (!validate_only) {
-      log_warn(LD_DIR, "Transport '%s' at %s:%d.", name,
+      log_info(LD_DIR, "Server transport '%s' at %s:%d.", name,
                fmt_addr(&addr), (int)port);
     }
   }
@@ -5886,11 +5886,11 @@ save_transport_to_state(const char *transport,
 
     /* if transport in state has the same address as this one, life is good */
     if (!strcmp(prev_bindaddr, transport_addrport)) {
-      log_warn(LD_CONFIG, "Transport seems to have spawned on its usual "
+      log_info(LD_CONFIG, "Transport seems to have spawned on its usual "
                "address:port.");
       goto done;
     } else { /* addrport in state is different than the one we got */
-      log_warn(LD_CONFIG, "Transport seems to have spawned on different "
+      log_info(LD_CONFIG, "Transport seems to have spawned on different "
                "address:port. Let's update the state file with the new "
                "address:port");
       tor_free(transport_line->value); /* free the old line */
@@ -5899,7 +5899,7 @@ save_transport_to_state(const char *transport,
                    (int) port); /* replace old addrport line with new line */
     }
   } else { /* never seen this one before; save it in state for next time */
-    log_warn(LD_CONFIG, "It's the first time we see this transport. "
+    log_info(LD_CONFIG, "It's the first time we see this transport. "
              "Let's save its address:port");
     next = &state->TransportProxies;
     /* find the last TransportProxy line in the state and point 'next'

@@ -3230,7 +3230,7 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
     } else {
       /* No newline; check whether we overflowed the buffer */
       if (!feof(stream))
-        log_warn(LD_GENERAL,
+        log_info(LD_GENERAL,
                  "Line from stream was truncated: %s", buf_out);
       /* TODO: What to do with this error? */
     }
