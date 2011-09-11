@@ -5513,16 +5513,11 @@ static int
 validate_transports_in_state(or_state_t *state)
 {
   int broken = 0;
+  config_line_t *line;
 
-  config_var_t *var = config_find_option(&state_format,"TransportProxies");
-  if (!var)
-    return 0;
-
-  config_line_t **value = STRUCT_VAR_P(state, var->var_offset);
-  config_line_t *search = NULL;
-
-  for (search = *value ; search ; search = search->next) {
-    if (!state_transport_line_is_valid(search->value)<0)
+  for (line = state->TransportProxies ; line ; line = line->next) {
+    tor_assert(!strcmp(line->key, "TransportProxy"));
+    if (!state_transport_line_is_valid(line->value)<0)
       broken = 1;
   }
 
@@ -5790,18 +5785,13 @@ or_state_save(time_t now)
 static config_line_t *
 get_transport_in_state_by_name(const char *transport)
 {
-  config_var_t *var = config_find_option(&state_format,"TransportProxies");
-  if (!var)
-    return NULL;
+  or_state_t *or_state = get_or_state();
+  config_line_t *line;
 
-  config_line_t **value = STRUCT_VAR_P(get_or_state(), var->var_offset);
-  config_line_t *search = *value;
-
-  while (search) {
-    if (!strcmpstart(search->value, transport))
-      return search;
-
-    search = search->next;
+  for (line = or_state->TransportProxies ; line ; line = line->next) {
+    tor_assert(!strcmp(line->key, "TransportProxy"));
+    if (!strcmpstart(line->value, transport))
+      return line;
   }
   return NULL;
 }
