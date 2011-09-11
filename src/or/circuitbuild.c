@@ -4722,9 +4722,10 @@ transport_resolve_conflicts(transport_t *t)
 int
 transport_add(transport_t *t)
 {
+  int r;
   tor_assert(t);
 
-  int r = transport_resolve_conflicts(t);
+  r = transport_resolve_conflicts(t);
 
   switch (r) {
   case 0: /* should register transport */
@@ -5016,7 +5017,6 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
   if (!bridge_list)
     return;
 
-  /* ASN Should we move this to launch_direct_bridge_descriptor_fetch() ? */
   /* If we still have unconfigured managed proxies, don't go and
      connect to a bridge. */
   if (pt_proxies_configuration_pending())

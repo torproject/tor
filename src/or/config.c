@@ -1226,11 +1226,6 @@ options_act(or_options_t *old_options)
     sweep_bridge_list();
   }
 
-  /* If we have pluggable transport related options enabled, see if we
-     should warn the user about potential configuration problems. */
-  if (options->Bridges || options->ClientTransportPlugin)
-    validate_pluggable_transports_config();
-
   if (running_tor && rend_config_services(options, 0)<0) {
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
@@ -1276,6 +1271,11 @@ options_act(or_options_t *old_options)
   }
   sweep_transport_list();
   sweep_proxy_list();
+
+  /* If we have pluggable transport related options enabled, see if we
+     should warn the user about potential configuration problems. */
+  if (options->Bridges || options->ClientTransportPlugin)
+    validate_pluggable_transports_config();
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
@@ -5820,7 +5820,7 @@ get_transport_in_state_by_name(const char *transport)
 /** Return string containing the address:port part of the
  *  TransportProxy <b>line</b> for transport <b>transport</b>.
  *  If the line is corrupted, return NULL. */
-const char *
+static const char *
 get_transport_bindaddr(const char *line, const char *transport)
 {
   char *line_tmp = NULL;

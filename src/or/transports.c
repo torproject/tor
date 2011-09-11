@@ -13,7 +13,6 @@
 #include "transports.h"
 #include "util.h"
 
-/* ASN TIDY THESE UP*/
 static void set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp);
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
@@ -372,11 +371,16 @@ register_server_proxy(managed_proxy_t *mp)
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-    save_transport_to_state(t->name,&t->addr,t->port); /* pass tor_addr_t? */
+    save_transport_to_state(t->name, &t->addr, t->port);
     smartlist_add(sm_tmp, tor_strdup(t->name));
   } SMARTLIST_FOREACH_END(t);
 
+  /* Since server proxies don't register their transports in the
+     circuitbuild.c subsystem, it's our duty to free them when we
+     switch mp->transports to strings. */
+  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
   smartlist_free(mp->transports);
+
   mp->transports = sm_tmp;
 }
 
@@ -438,7 +442,6 @@ managed_proxy_destroy(managed_proxy_t *mp)
   SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
 
   /* free the transports smartlist */
-  smartlist_clear(mp->transports_to_launch);
   smartlist_free(mp->transports_to_launch);
 
   /* remove it from the list of managed proxies */
@@ -469,8 +472,12 @@ handle_finished_proxy(managed_proxy_t *mp)
     register_proxy(mp); /* register transports */
     mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed. */
     break;
+  case PT_PROTO_INFANT:
+  case PT_PROTO_LAUNCHED:
+  case PT_PROTO_ACCEPTING_METHODS:
+  case PT_PROTO_COMPLETED:
   default:
-    log_warn(LD_CONFIG, "Unfinished managed proxy in "
+    log_warn(LD_CONFIG, "Unexpected managed proxy state in "
              "handle_finished_proxy().");
     tor_assert(0);
   }
@@ -891,6 +898,7 @@ void
 pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp=NULL;
+  transport_t *old_transport = NULL;
 
   mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
@@ -911,7 +919,6 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
         unconfigured_proxies_n++;
       }
 
-      transport_t *old_transport = NULL;
       old_transport = transport_get_by_name(transport);
       if (old_transport)
         old_transport->marked_for_removal = 0;
