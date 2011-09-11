@@ -203,6 +203,8 @@ const char *find_whitespace(const char *s) ATTR_PURE;
 const char *find_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
 const char *find_str_at_start_of_line(const char *haystack, const char *needle)
   ATTR_PURE;
+int string_is_C_identifier(const char *string);
+
 int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
 int tor_digest_is_zero(const char *digest) ATTR_PURE;
 int tor_digest256_is_zero(const char *digest) ATTR_PURE;

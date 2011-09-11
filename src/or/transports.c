@@ -686,6 +686,11 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   tor_assert(!strcmp(smartlist_get(items,0),PROTO_SMETHOD));
 
   method_name = smartlist_get(items,1);
+  if (!string_is_C_identifier(method_name)) {
+    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+             method_name);
+    goto err;
+  }
 
   addrport = smartlist_get(items, 2);
   if (tor_addr_port_parse(addrport, &addr, &port)<0) {
@@ -754,6 +759,11 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   tor_assert(!strcmp(smartlist_get(items,0),PROTO_CMETHOD));
 
   method_name = smartlist_get(items,1);
+  if (!string_is_C_identifier(method_name)) {
+    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+             method_name);
+    goto err;
+  }
 
   socks_ver_str = smartlist_get(items,2);
 

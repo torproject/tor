@@ -719,6 +719,34 @@ find_str_at_start_of_line(const char *haystack, const char *needle)
   return NULL;
 }
 
+/** Returns true if <b>string</b> could be a C identifier.
+    A C identifier must begin with a letter or an underscore and the
+    rest of its characters can be letters, numbers or underscores. No
+    length limit is imposed. */
+int
+string_is_C_identifier(const char *string)
+{
+  size_t iter;
+  size_t length = strlen(string);
+  if (!length)
+    return 0;
+
+  for (iter = 0; iter < length ; iter++) {
+    if (iter == 0) {
+      if (!(TOR_ISALPHA(string[iter]) ||
+            string[iter] == '_'))
+        return 0;
+    } else {
+      if (!(TOR_ISALPHA(string[iter]) ||
+            TOR_ISDIGIT(string[iter]) ||
+            string[iter] == '_'))
+        return 0;
+    }
+  }
+
+  return 1;
+}
+
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
 int
 tor_mem_is_zero(const char *mem, size_t len)

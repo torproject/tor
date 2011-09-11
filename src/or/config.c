@@ -4724,6 +4724,10 @@ parse_client_transport_line(const char *line, int validate_only)
   }
 
   name = smartlist_get(items, 0);
+  if (!string_is_C_identifier(name)) {
+    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).", name);
+    goto err;
+  }
 
   /* field2 is either a SOCKS version or "exec" */
   field2 = smartlist_get(items, 1);
@@ -4826,6 +4830,10 @@ parse_server_transport_line(const char *line, int validate_only)
   }
 
   name = smartlist_get(items, 0);
+  if (!string_is_C_identifier(name)) {
+    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).", name);
+    goto err;
+  }
 
   type = smartlist_get(items, 1);
 
