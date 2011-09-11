@@ -5474,7 +5474,7 @@ options_get_datadir_fname2_suffix(or_options_t *options,
 /** Return true if <b>line</b> is a valid state TransportProxy line.
  *  Return false otherwise. */
 static int
-state_transport_line_is_valid(char *line)
+state_transport_line_is_valid(const char *line)
 {
   smartlist_t *items = NULL;
   char *addrport=NULL;

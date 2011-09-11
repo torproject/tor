@@ -141,7 +141,7 @@ pt_proxies_configuration_pending(void)
 
 /** Return true if <b>mp</b> has the same argv as <b>proxy_argv</b> */
 static int
-managed_proxy_has_argv(managed_proxy_t *mp, char **proxy_argv)
+managed_proxy_has_argv(const managed_proxy_t *mp, char **proxy_argv)
 {
   char **tmp1=proxy_argv;
   char **tmp2=mp->argv;
@@ -190,7 +190,7 @@ add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
  *  Returns true if managed proxy <b>mp</b> needs to be restarted
  *  after the SIGHUP based on the new torrc. */
 static int
-proxy_needs_restart(managed_proxy_t *mp)
+proxy_needs_restart(const managed_proxy_t *mp)
 {
   /* mp->transport_to_launch is populated with the names of the
      transports that must be launched *after* the SIGHUP.
