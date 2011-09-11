@@ -63,7 +63,8 @@ typedef struct {
    * torrc. */
   unsigned int got_hup : 1;
 
-  smartlist_t *transports_to_launch; /* transports to-be-launched by this proxy */
+  /* transports to-be-launched by this proxy */
+  smartlist_t *transports_to_launch;
 
   /* The 'transports' list contains all the transports this proxy has
      launched.

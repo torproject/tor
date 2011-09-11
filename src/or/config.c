@@ -1245,7 +1245,6 @@ options_act(or_options_t *old_options)
     rep_hist_load_mtbf_data(time(NULL));
   }
 
-
   mark_transport_list();
   pt_prepare_proxy_list_for_config_read();
   if (options->ClientTransportPlugin) {
@@ -5892,11 +5891,13 @@ save_transport_to_state(const char *transport,
 
     /* if transport in state has the same address as this one, life is good */
     if (!strcmp(prev_bindaddr, transport_addrport)) {
-      log_warn(LD_CONFIG, "Transport seems to have spawned on its usual address:port.");
+      log_warn(LD_CONFIG, "Transport seems to have spawned on its usual "
+               "address:port.");
       goto done;
     } else { /* addrport in state is different than the one we got */
-      log_warn(LD_CONFIG, "Transport seems to have spawned on different address:port."
-                "Let's update the state file with the new address:port");
+      log_warn(LD_CONFIG, "Transport seems to have spawned on different "
+               "address:port. Let's update the state file with the new "
+               "address:port");
       tor_free(transport_line->value); /* free the old line */
       tor_asprintf(&transport_line->value, "%s %s:%d", transport,
                    fmt_addr(addr),

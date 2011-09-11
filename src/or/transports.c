@@ -13,7 +13,8 @@
 #include "transports.h"
 #include "util.h"
 
-static void set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp);
+static void set_managed_proxy_environment(char ***envp,
+                                          const managed_proxy_t *mp);
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
 static void managed_proxy_destroy(managed_proxy_t *mp);
@@ -495,7 +496,6 @@ proxy_configuration_finished(const managed_proxy_t *mp)
           mp->conf_state == PT_PROTO_BROKEN);
 }
 
-
 /** This function is called when a proxy sends an {S,C}METHODS DONE message. */
 static void
 handle_methods_done(const managed_proxy_t *mp)
@@ -863,10 +863,12 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   if (mp->is_server) {
     bindaddr = get_bindaddr_for_proxy(mp);
 
-    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort); /* XXX temp */
+    /* XXX temp */
+    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort);
     tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
-    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200"); /* XXX temp*/
+    /* XXX temp*/
+    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200");
   } else {
     tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", transports_to_launch);
   }
@@ -951,7 +953,6 @@ free_execve_args(char **arg)
 
   tor_free(arg);
 }
-
 
 /** Tor will read its config, prepare the managed proxy list so that
  *  proxies that are not used in the new config will shutdown, and

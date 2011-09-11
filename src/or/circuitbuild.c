@@ -4695,15 +4695,15 @@ transport_resolve_conflicts(transport_t *t)
     } else { /* same name but different addrport */
       if (t_tmp->marked_for_removal) { /* marked for removal */
         log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' but "
-                 "there was already a transport marked for deletion at '%s:%u'."
-                 "We deleted the old transport and registered the new one.",
-                 t->name, fmt_addr(&t->addr), t->port,
+                 "there was already a transport marked for deletion at "
+                 "'%s:%u'. We deleted the old transport and registered the "
+                 "new one.", t->name, fmt_addr(&t->addr), t->port,
                  fmt_addr(&t_tmp->addr), t_tmp->port);
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
       } else { /* *not* marked for removal */
-        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' which "
-                 "already exists at '%s:%u'. Skipping.", t->name,
+        log_warn(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                 "which already exists at '%s:%u'. Skipping.", t->name,
                  fmt_addr(&t->addr), t->port,
                  fmt_addr(&t_tmp->addr), t_tmp->port);
         return -1;

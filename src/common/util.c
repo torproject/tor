@@ -3193,9 +3193,11 @@ tor_spawn_background(const char *const filename, int *stdout_read,
  *
  * Returns:
  * IO_STREAM_CLOSED: If the stream is closed.
- * IO_STREAM_EAGAIN: If there is nothing to read and we should check back later.
+ * IO_STREAM_EAGAIN: If there is nothing to read and we should check back
+ *  later.
  * IO_STREAM_TERM: If something is wrong with the stream.
- * IO_STREAM_OKAY: If everything went okay and we got a string in <b>buf_out</b>. */
+ * IO_STREAM_OKAY: If everything went okay and we got a string
+ *  in <b>buf_out</b>. */
 enum stream_status
 get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
 {
