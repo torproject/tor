@@ -1271,11 +1271,6 @@ options_act(or_options_t *old_options)
   sweep_transport_list();
   sweep_proxy_list();
 
-  /* If we have pluggable transport related options enabled, see if we
-     should warn the user about potential configuration problems. */
-  if (options->Bridges || options->ClientTransportPlugin)
-    validate_pluggable_transports_config();
-
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
   if (!running_tor)

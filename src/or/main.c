@@ -1068,6 +1068,7 @@ run_scheduled_events(time_t now)
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
   static time_t time_to_next_heartbeat = 0;
+  static int has_validated_pt = 0;
   or_options_t *options = get_options();
   int is_server = server_mode(options);
   int i;
@@ -1471,6 +1472,14 @@ run_scheduled_events(time_t now)
   /** 11b. check pending unconfigured managed proxies */
   if (pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
+
+  /** 11c. validate pluggable transports configuration if we need to */
+  if (!has_validated_pt &&
+      (options->Bridges || options->ClientTransportPlugin)) {
+    if (validate_pluggable_transports_config() == 0) {
+      has_validated_pt = 1;
+    }
+  }
 
   /** 12. write the heartbeat message */
   if (options->HeartbeatPeriod &&

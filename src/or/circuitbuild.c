@@ -4769,11 +4769,14 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
   }
 }
 
-/** Warns the user of possible pluggable transport misconfiguration. */
-void
+/** Warn the user of possible pluggable transport misconfiguration.
+ *  Return 0 if the validation happened, -1 if we should postpone the
+ *  validation. */
+int
 validate_pluggable_transports_config(void)
 {
-  if (bridge_list) {
+  /* Don't validate if managed proxies are not yet fully configured. */
+  if (bridge_list && !pt_proxies_configuration_pending()) {
     SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
       /* Skip bridges without transports. */
       if (!b->transport_name)
@@ -4787,6 +4790,10 @@ validate_pluggable_transports_config(void)
                  "corresponding ClientTransportPlugin line.",
                  b->transport_name);
     } SMARTLIST_FOREACH_END(b);
+
+    return 0;
+  } else {
+    return -1;
   }
 }
 

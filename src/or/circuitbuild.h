@@ -157,7 +157,7 @@ int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const transport_t **transport);
 transport_t *transport_get_by_name(const char *name);
 
-void validate_pluggable_transports_config(void);
+int validate_pluggable_transports_config(void);
 
 #endif
 
