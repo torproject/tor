@@ -20,6 +20,10 @@ Changes in version 0.2.2.33 - 2011-09-??
     - Add a VoteOnHidServDirectoriesV2 configuration option to allow
       directory authorities to abstain from voting on assignment of
       the HSDir consensus flag. Related to bug 2649.
+    - Update to the September 6 2011 Maxmind GeoLite Country database.
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir from 24 hours to 25 hours. Improves on 0.2.0.10-alpha;
+      resolves ticket 2649.
 
   o Minor bugfixes:
     - Correct the man page to explain that HashedControlPassword and
@@ -27,9 +31,20 @@ Changes in version 0.2.2.33 - 2011-09-??
       is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
       when we decided to allow these config options to both be set. Issue
       raised by bug 3898.
-    - Change the default required uptime for a relay to be accepted as
-      a HSDir from 24 hours to 25 hours. Bugfix on 0.2.0.10-alpha;
-      fixes bug 2649.
+    - Demote the 'replay detected' log message emitted when a hidden
+      service receives the same Diffie-Hellman public key in two different
+      INTRODUCE2 cells to info level. A normal Tor client can cause that
+      log message during its normal operation. Bugfix on 0.2.1.6-alpha;
+      fixes part of bug 2442.
+    - Demote the 'INTRODUCE2 cell is too {old,new}' log message to info
+      level. There is nothing that a hidden service's operator can do
+      to fix its clients' clocks. Bugfix on 0.2.1.6-alpha; fixes part
+      of bug 2442.
+    - Clarify a log message specifying the characters permitted in
+      HiddenServiceAuthorizeClient client names. Previously, the log
+      message said that "[A-Za-z0-9+-_]" were permitted; that could have
+      given the impression that every ASCII character between "+" and "_"
+      was permitted. Now we say "[A-Za-z0-9+_-]". Bugfix on 0.2.1.5-alpha.
 
   o Build fixes:
     - Provide a substitute implementation of lround() for MSVC, which

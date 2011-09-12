@@ -1,9 +1,0 @@
-  * Minor bugfixes:
-
-    - Clarify a log message specifying the characters permitted in
-      HiddenServiceAuthorizeClient client names.  Previously, the log
-      message said that "[A-Za-z0-9+-_]" were permitted; that could
-      have given the impression that every ASCII character between "+"
-      and "_" was permitted.  Now we say "[A-Za-z0-9+_-]".  Bugfix on
-      0.2.1.5-alpha.
-

@@ -1,8 +1,0 @@
-  * Minor bugfixes:
-
-    - Demote the 'INTRODUCE2 cell is too {old,new}' log message to
-      info level.  There is nothing that a hidden service's operator
-      can do to fix its clients' clocks.  Bugfix on 0.2.1.6-alpha;
-      fixes part of bug 2442.
-
-
