@@ -3454,14 +3454,17 @@ typedef struct rend_encoded_v2_service_descriptor_t {
   char *desc_str; /**< Descriptor string. */
 } rend_encoded_v2_service_descriptor_t;
 
-/** Introduction point information. */
+/** Introduction point information.  Used both in rend_service_t (on
+ * the service side) and in rend_service_descriptor_t (on both the
+ * client and service side). */
 typedef struct rend_intro_point_t {
   extend_info_t *extend_info; /**< Extend info of this introduction point. */
   crypto_pk_env_t *intro_key; /**< Introduction key that replaces the service
                                * key, if this descriptor is V2. */
 } rend_intro_point_t;
 
-/** Information used to connect to a hidden service. */
+/** Information used to connect to a hidden service.  Used on both the
+ * service side and the client side. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
   int version; /**< Version of the descriptor format: 0 or 2. */

@@ -409,7 +409,7 @@ rend_config_services(or_options_t *options, int validate_only)
         if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
           log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
                               "illegal client name: '%s'. Valid "
-                              "characters are [A-Za-z0-9+-_].",
+                              "characters are [A-Za-z0-9+_-].",
                    client_name);
           SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
           smartlist_free(clients);
@@ -1019,7 +1019,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     v3_shift += 4;
     if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
         (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
-      log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
+      /* This is far more likely to mean that a client's clock is
+       * skewed than that a replay attack is in progress. */
+      log_info(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
                (now - ts) < 0 ? "old" : "new");
       return -1;
     }
@@ -1123,7 +1125,14 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
    * part 1. */
   access_time = digestmap_get(service->accepted_intros, diffie_hellman_hash);
   if (access_time != NULL) {
-    log_warn(LD_REND, "Possible replay detected! We received an "
+    /* A Tor client will send a new INTRODUCE1 cell with the same rend
+     * cookie and DH public key as its previous one if its intro circ
+     * times out while in state CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT .
+     * If we received the first INTRODUCE1 cell (the intro-point relay
+     * converts it into an INTRODUCE2 cell), we are already trying to
+     * connect to that rend point (and may have already succeeded);
+     * drop this cell. */
+    log_info(LD_REND, "We received an "
              "INTRODUCE2 cell with same first part of "
              "Diffie-Hellman handshake %d seconds ago. Dropping "
              "cell.",
