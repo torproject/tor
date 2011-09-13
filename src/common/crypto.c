@@ -1249,6 +1249,32 @@ crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
   return 0;
 }
 
+/** Compute all digests of the DER encoding of <b>pk</b>, and store them
+ * in <b>digests_out</b>.  Return 0 on success, -1 on failure. */
+int
+crypto_pk_get_all_digests(crypto_pk_env_t *pk, digests_t *digests_out)
+{
+  unsigned char *buf, *bufp;
+  int len;
+
+  len = i2d_RSAPublicKey(pk->key, NULL);
+  if (len < 0)
+    return -1;
+  buf = bufp = tor_malloc(len+1);
+  len = i2d_RSAPublicKey(pk->key, &bufp);
+  if (len < 0) {
+    crypto_log_errors(LOG_WARN,"encoding public key");
+    tor_free(buf);
+    return -1;
+  }
+  if (crypto_digest_all(digests_out, (char*)buf, len) < 0) {
+    tor_free(buf);
+    return -1;
+  }
+  tor_free(buf);
+  return 0;
+}
+
 /** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
  * every four spaces. */
 /* static */ void
