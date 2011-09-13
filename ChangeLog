@@ -62,6 +62,69 @@ Changes in version 0.2.3.4-alpha - 2011-09-??
       connection", to simplify the code and make exit connections smaller.
 
 
+Changes in version 0.2.2.33 - 2011-09-13
+  Tor 0.2.2.33 fixes several bugs, and includes a slight tweak to Tor's
+  TLS handshake that makes relays and bridges that run this new version
+  reachable from Iran again.
+
+  o Major bugfixes:
+    - Avoid an assertion failure when reloading a configuration with
+      TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
+      3923; bugfix on 0.2.2.25-alpha.
+
+  o Minor features (security):
+    - Check for replays of the public-key encrypted portion of an
+      INTRODUCE1 cell, in addition to the current check for replays of
+      the g^x value. This prevents a possible class of active attacks
+      by an attacker who controls both an introduction point and a
+      rendezvous point, and who uses the malleability of AES-CTR to
+      alter the encrypted g^x portion of the INTRODUCE1 cell. We think
+      that these attacks are infeasible (requiring the attacker to send
+      on the order of zettabytes of altered cells in a short interval),
+      but we'd rather block them off in case there are any classes of
+      this attack that we missed. Reported by Willem Pinckaers.
+
+  o Minor features:
+    - Adjust the expiration time on our SSL session certificates to
+      better match SSL certs seen in the wild. Resolves ticket 4014.
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir (hidden service directory) from 24 hours to 25 hours.
+      Improves on 0.2.0.10-alpha; resolves ticket 2649.
+    - Add a VoteOnHidServDirectoriesV2 config option to allow directory
+      authorities to abstain from voting on assignment of the HSDir
+      consensus flag. Related to bug 2649.
+    - Update to the September 6 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes (documentation and log messages):
+    - Correct the man page to explain that HashedControlPassword and
+      CookieAuthentication can both be set, in which case either method
+      is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
+      when we decided to allow these config options to both be set. Issue
+      raised by bug 3898.
+    - Demote the 'replay detected' log message emitted when a hidden
+      service receives the same Diffie-Hellman public key in two different
+      INTRODUCE2 cells to info level. A normal Tor client can cause that
+      log message during its normal operation. Bugfix on 0.2.1.6-alpha;
+      fixes part of bug 2442.
+    - Demote the 'INTRODUCE2 cell is too {old,new}' log message to info
+      level. There is nothing that a hidden service's operator can do
+      to fix its clients' clocks. Bugfix on 0.2.1.6-alpha; fixes part
+      of bug 2442.
+    - Clarify a log message specifying the characters permitted in
+      HiddenServiceAuthorizeClient client names. Previously, the log
+      message said that "[A-Za-z0-9+-_]" were permitted; that could have
+      given the impression that every ASCII character between "+" and "_"
+      was permitted. Now we say "[A-Za-z0-9+_-]". Bugfix on 0.2.1.5-alpha.
+
+  o Build fixes:
+    - Provide a substitute implementation of lround() for MSVC, which
+      apparently lacks it. Patch from Gisle Vanem.
+    - Clean up some code issues that prevented Tor from building on older
+      BSDs. Fixes bug 3894; reported by "grarpamp".
+    - Search for a platform-specific version of "ar" when cross-compiling.
+      Should fix builds on iOS. Resolves bug 3909, found by Marco Bonetti.
+
+
 Changes in version 0.2.3.3-alpha - 2011-09-01
   Tor 0.2.3.3-alpha adds a new "stream isolation" feature to improve Tor's
   security, and provides client-side support for the microdescriptor
