@@ -1985,6 +1985,36 @@ tor_tls_server_got_renegotiate(tor_tls_t *tls)
   return tls->got_renegotiate;
 }
 
+/** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
+ * the v3 handshake to prove that the client knows the TLS secrets for the
+ * connection <b>tls</b>.  Return 0 on success, -1 on failure.
+ */
+int
+tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
+{
+#define TLSSECRET_MAGIC "Tor V3 handshake TLS cross-certification"
+  char buf[128];
+  size_t len;
+  tor_assert(tls);
+  tor_assert(tls->ssl);
+  tor_assert(tls->ssl->s3);
+  tor_assert(tls->ssl->session);
+  /*
+    The value is an HMAC, using the TLS master key as the HMAC key, of
+    client_random | server_random | TLSSECRET_MAGIC
+  */
+  memcpy(buf +  0, tls->ssl->s3->client_random, 32);
+  memcpy(buf + 32, tls->ssl->s3->server_random, 32);
+  memcpy(buf + 64, TLSSECRET_MAGIC, strlen(TLSSECRET_MAGIC) + 1);
+  len = 64 + strlen(TLSSECRET_MAGIC) + 1;
+  crypto_hmac_sha256((char*)secrets_out,
+                     (char*)tls->ssl->session->master_key,
+                     tls->ssl->session->master_key_length,
+                     buf, len);
+  memset(buf, 0, sizeof(buf));
+  return 0;
+}
+
 /** Examine the amount of memory used and available for buffers in <b>tls</b>.
  * Set *<b>rbuf_capacity</b> to the amount of storage allocated for the read
  * buffer and *<b>rbuf_bytes</b> to the amount actually used.
