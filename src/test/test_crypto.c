@@ -231,7 +231,7 @@ test_crypto_sha(void)
 {
   crypto_digest_env_t *d1 = NULL, *d2 = NULL;
   int i;
-  char key[80];
+  char key[160];
   char digest[32];
   char data[50];
   char d_out1[DIGEST_LEN], d_out2[DIGEST256_LEN];
@@ -275,6 +275,75 @@ test_crypto_sha(void)
                    54);
   test_streq(hex_str(digest, 20),
              "AA4AE5E15272D00E95705637CE8A3B55ED402112");
+
+  /* Test HMAC-SHA256 with test cases from wikipedia and RFC 4231 */
+
+  /* Case empty (wikipedia) */
+  crypto_hmac_sha256(digest, "", 0, "", 0);
+  test_streq(hex_str(digest, 32),
+           "B613679A0814D9EC772F95D778C35FC5FF1697C493715653C6C712144292C5AD");
+
+  /* Case quick-brown (wikipedia) */
+  crypto_hmac_sha256(digest, "key", 3,
+                     "The quick brown fox jumps over the lazy dog", 43);
+  test_streq(hex_str(digest, 32),
+           "F7BC83F430538424B13298E6AA6FB143EF4D59A14946175997479DBC2D1A3CD8");
+
+  /* "Test Case 1" from RFC 4231 */
+  memset(key, 0x0b, 20);
+  crypto_hmac_sha256(digest, key, 20, "Hi There", 8);
+  test_memeq_hex(digest,
+                 "b0344c61d8db38535ca8afceaf0bf12b"
+                 "881dc200c9833da726e9376c2e32cff7");
+
+  /* "Test Case 2" from RFC 4231 */
+  memset(key, 0x0b, 20);
+  crypto_hmac_sha256(digest, "Jefe", 4, "what do ya want for nothing?", 28);
+  test_memeq_hex(digest,
+                 "5bdcc146bf60754e6a042426089575c7"
+                 "5a003f089d2739839dec58b964ec3843");
+
+  /* "Test case 3" from RFC 4231 */
+  memset(key, 0xaa, 20);
+  memset(data, 0xdd, 50);
+  crypto_hmac_sha256(digest, key, 20, data, 50);
+  test_memeq_hex(digest,
+                 "773ea91e36800e46854db8ebd09181a7"
+                 "2959098b3ef8c122d9635514ced565fe");
+
+  /* "Test case 4" from RFC 4231 */
+  base16_decode(key, 25,
+                "0102030405060708090a0b0c0d0e0f10111213141516171819", 50);
+  memset(data, 0xcd, 50);
+  crypto_hmac_sha256(digest, key, 25, data, 50);
+  test_memeq_hex(digest,
+                 "82558a389a443c0ea4cc819899f2083a"
+                 "85f0faa3e578f8077a2e3ff46729665b");
+
+  /* "Test case 5" from RFC 4231 */
+  memset(key, 0x0c, 20);
+  crypto_hmac_sha256(digest, key, 20, "Test With Truncation", 20);
+  test_memeq_hex(digest,
+                 "a3b6167473100ee06e0c796c2955552b");
+
+  /* "Test case 6" from RFC 4231 */
+  memset(key, 0xaa, 131);
+  crypto_hmac_sha256(digest, key, 131,
+                     "Test Using Larger Than Block-Size Key - Hash Key First",
+                     54);
+  test_memeq_hex(digest,
+                 "60e431591ee0b67f0d8a26aacbf5b77f"
+                 "8e0bc6213728c5140546040f0ee37f54");
+
+  /* "Test case 7" from RFC 4231 */
+  memset(key, 0xaa, 131);
+  crypto_hmac_sha256(digest, key, 131,
+                     "This is a test using a larger than block-size key and a "
+                     "larger than block-size data. The key needs to be hashed "
+                     "before being used by the HMAC algorithm.", 152);
+  test_memeq_hex(digest,
+                 "9b09ffa71b942fcb27635fbcd5b0e944"
+                 "bfdc63644f0713938a7f51535c3a35e2");
 
   /* Incremental digest code. */
   d1 = crypto_new_digest_env();
