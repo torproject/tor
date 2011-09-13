@@ -1740,6 +1740,74 @@ crypto_hmac_sha1(char *hmac_out,
        (unsigned char*)hmac_out, NULL);
 }
 
+/** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
+ * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
+ * in <b>hmac_out</b>.
+ */
+void
+crypto_hmac_sha256(char *hmac_out,
+                   const char *key, size_t key_len,
+                   const char *msg, size_t msg_len)
+{
+#if (OPENSSL_VERSION_NUMBER >= 0x00908000l)
+  /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
+  tor_assert(key_len < INT_MAX);
+  tor_assert(msg_len < INT_MAX);
+  HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
+       (unsigned char*)hmac_out, NULL);
+#else
+  /* OpenSSL doesn't have an EVP implementation for SHA256. We'll need
+     to do HMAC on our own.
+
+     HMAC isn't so hard: To compute HMAC(key, msg):
+      1. If len(key) > blocksize, key = H(key).
+      2. If len(key) < blocksize, right-pad key up to blocksize with 0 bytes.
+      3. let ipad = key xor 0x363636363636....36
+         let opad = key xor 0x5c5c5c5c5c5c....5c
+         The result is H(opad | H( ipad | msg ) )
+  */
+#define BLOCKSIZE 64
+#define DIGESTSIZE 32
+  uint8_t k[BLOCKSIZE];
+  uint8_t pad[BLOCKSIZE];
+  uint8_t d[DIGESTSIZE];
+  int i;
+  SHA256_CTX st;
+
+  tor_assert(key_len < INT_MAX);
+  tor_assert(msg_len < INT_MAX);
+
+  if (key_len <= BLOCKSIZE) {
+    memset(k, 0, sizeof(k));
+    memcpy(k, key, key_len); /* not time invariant in key_len */
+  } else {
+    SHA256((const uint8_t *)key, key_len, k);
+    memset(k+DIGESTSIZE, 0, sizeof(k)-DIGESTSIZE);
+  }
+  for (i = 0; i < BLOCKSIZE; ++i)
+    pad[i] = k[i] ^ 0x36;
+  SHA256_Init(&st);
+  SHA256_Update(&st, pad, BLOCKSIZE);
+  SHA256_Update(&st, (uint8_t*)msg, msg_len);
+  SHA256_Final(d, &st);
+
+  for (i = 0; i < BLOCKSIZE; ++i)
+    pad[i] = k[i] ^ 0x5c;
+  SHA256_Init(&st);
+  SHA256_Update(&st, pad, BLOCKSIZE);
+  SHA256_Update(&st, d, DIGESTSIZE);
+  SHA256_Final((uint8_t*)hmac_out, &st);
+
+  /* Now clear everything. */
+  memset(k, 0, sizeof(k));
+  memset(pad, 0, sizeof(pad));
+  memset(d, 0, sizeof(d));
+  memset(&st, 0, sizeof(st));
+#undef BLOCKSIZE
+#undef DIGESTSIZE
+#endif
+}
+
 /* DH */
 
 /** Shared P parameter for our circuit-crypto DH key exchanges. */

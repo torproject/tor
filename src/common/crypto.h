@@ -196,6 +196,9 @@ void crypto_digest_assign(crypto_digest_env_t *into,
 void crypto_hmac_sha1(char *hmac_out,
                       const char *key, size_t key_len,
                       const char *msg, size_t msg_len);
+void crypto_hmac_sha256(char *hmac_out,
+                        const char *key, size_t key_len,
+                        const char *msg, size_t msg_len);
 
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1
