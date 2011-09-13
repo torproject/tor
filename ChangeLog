@@ -1,19 +1,16 @@
-Changes in version 0.2.3.4-alpha - 2011-09-??
-  o Major bugfixes:
+Changes in version 0.2.3.4-alpha - 2011-09-13
+  Tor 0.2.3.4-alpha includes the fixes from 0.2.2.33, including a slight
+  tweak to Tor's TLS handshake that makes relays and bridges that run
+  this new version reachable from Iran again. It also fixes a few new
+  bugs in 0.2.3.x, and teaches relays to recognize when they're not
+  listed in the network consensus and republish.
+
+  o Major bugfixes (also part of 0.2.2.33):
     - Avoid an assertion failure when reloading a configuration with
       TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
       3923; bugfix on 0.2.2.25-alpha.
 
-  o Major features:
-    - Relays now try regenerating and uploading their descriptor more
-      frequently if they are not listed in the consensus, or if the
-      version of their descriptor listed in the consensus is too
-      old. This fix should prevent situations where a server declines
-      to re-publish itself because it has done so too recently, even
-      though the authorities decided not to list its recent-enough
-      descriptor. Fix for bug 3327.
-
-  o Minor features (security):
+  o Minor features (security, also part of 0.2.2.33):
     - Check for replays of the public-key encrypted portion of an
       INTRODUCE1 cell, in addition to the current check for replays of
       the g^x value. This prevents a possible class of active attacks
@@ -25,37 +22,73 @@ Changes in version 0.2.3.4-alpha - 2011-09-??
       but we'd rather block them off in case there are any classes of
       this attack that we missed. Reported by Willem Pinckaers.
 
+  o Minor features (also part of 0.2.2.33):
+    - Adjust the expiration time on our SSL session certificates to
+      better match SSL certs seen in the wild. Resolves ticket 4014.
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir (hidden service directory) from 24 hours to 25 hours.
+      Improves on 0.2.0.10-alpha; resolves ticket 2649.
+    - Add a VoteOnHidServDirectoriesV2 config option to allow directory
+      authorities to abstain from voting on assignment of the HSDir
+      consensus flag. Related to bug 2649.
+    - Update to the September 6 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes (also in 0.2.2.33):
+    - Demote the 'replay detected' log message emitted when a hidden
+      service receives the same Diffie-Hellman public key in two different
+      INTRODUCE2 cells to info level. A normal Tor client can cause that
+      log message during its normal operation. Bugfix on 0.2.1.6-alpha;
+      fixes part of bug 2442.
+    - Demote the 'INTRODUCE2 cell is too {old,new}' log message to info
+      level. There is nothing that a hidden service's operator can do
+      to fix its clients' clocks. Bugfix on 0.2.1.6-alpha; fixes part
+      of bug 2442.
+    - Clarify a log message specifying the characters permitted in
+      HiddenServiceAuthorizeClient client names. Previously, the log
+      message said that "[A-Za-z0-9+-_]" were permitted; that could have
+      given the impression that every ASCII character between "+" and "_"
+      was permitted. Now we say "[A-Za-z0-9+_-]". Bugfix on 0.2.1.5-alpha.
+
+  o Build fixes (also in 0.2.2.33):
+    - Clean up some code issues that prevented Tor from building on older
+      BSDs. Fixes bug 3894; reported by "grarpamp".
+    - Search for a platform-specific version of "ar" when cross-compiling.
+      Should fix builds on iOS. Resolves bug 3909, found by Marco Bonetti.
+
+  o Major bugfixes:
+    - Fix a bug where the SocksPort option (for example) would get
+      ignored and replaced by the default if a SocksListenAddress
+      option was set. Bugfix on 0.2.3.3-alpha; fixes bug 3936. Fix by
+      Fabian Keil.
+
+  o Major features:
+    - Relays now try regenerating and uploading their descriptor more
+      frequently if they are not listed in the consensus, or if the
+      version of their descriptor listed in the consensus is too
+      old. This fix should prevent situations where a server declines
+      to re-publish itself because it has done so too recently, even
+      though the authorities decided not to list its recent-enough
+      descriptor. Fix for bug 3327.
+
   o Minor features:
-    - Add a VoteOnHidServDirectoriesV2 configuration option to allow
-      directory authorities to abstain from voting on assignment of
-      the HSDir consensus flag. Related to bug 2649.
     - Relays now include a reason for regenerating their descriptors
-      an HTTP header when uploading to the authorities. This will
+      in an HTTP header when uploading to the authorities. This will
       make it easier to debug descriptor-upload issues in the future.
     - When starting as root and then changing our UID via the User
-      control option, if we are running with ControlSocket, make sure
+      control option, and we have a ControlSocket configured, make sure
       that the ControlSocket is owned by the same account that Tor will
       run under. Implements ticket 3421; fix by Jérémy Bobbio.
 
   o Minor bugfixes:
-    - Change the default required uptime for a relay to be accepted as
-      a HSDir from 24 hours to 25 hours. Bugfix on 0.2.0.10-alpha;
-      fixes bug 2649.
     - Abort if tor_vasprintf fails in connection_printf_to_buf (a
       utility function used in the control-port code). This shouldn't
-      ever happen unless Tor is completely out of memory, but if it
-      did happen and Tor somehow recovered from it, Tor could have
-      sent a log message to a control port in the middle of a reply to
-      a controller command. Fixes part of bug 3428.
+      ever happen unless Tor is completely out of memory, but if it did
+      happen and Tor somehow recovered from it, Tor could have sent a log
+      message to a control port in the middle of a reply to a controller
+      command. Fixes part of bug 3428; bugfix on 0.1.2.3-alpha.
     - Make 'FetchUselessDescriptors' cause all descriptor types and
-      all consensus types to get fetched. Fixes bug 3851; bugfix on
-      0.2.3.1-alpha.
-
-  o Build fixes:
-    - Clean up some code issues that prevented Tor from building on older
-      BSDs. Fixes bug 3894; reported by "grarpamp".
-    - Search for a platform-specific version of "ar" when cross-compiling.
-      Should fix builds on iOS. Found by Marco Bonetti.
+      all consensus types (including microdescriptors) to get fetched.
+      Fixes bug 3851; bugfix on 0.2.3.1-alpha.
 
   o Code refactoring:
     - Make a new "entry connection" struct as an internal subtype of "edge

@@ -1,3 +1,0 @@
-  o Minor features:
-    - Adjust the expiration time on our SSL session certificates to
-      better match SSL certs seen in the wild. Resolves ticket 4014.

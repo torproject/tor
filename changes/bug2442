@@ -1,8 +1,0 @@
-  * Minor bugfixes:
-
-    - Demote the 'replay detected' log message emitted when a hidden
-      service receives the same Diffie-Hellman public key in two
-      different INTRODUCE2 cells to info level.  A normal Tor client
-      can cause that log message during its normal operation.  Bugfix
-      on 0.2.1.6-alpha; fixes part of bug 2442.
-
