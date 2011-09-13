@@ -533,7 +533,7 @@ init_keys(void)
     if (tor_tls_context_init(0,
                              get_tlsclient_identity_key(),
                              NULL,
-                             MAX_SSL_KEY_LIFETIME) < 0) {
+                             MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
       return -1;
     }
@@ -629,7 +629,7 @@ init_keys(void)
   if (tor_tls_context_init(public_server_mode(options),
                            get_tlsclient_identity_key(),
                            get_server_identity_key(),
-                           MAX_SSL_KEY_LIFETIME) < 0) {
+                           MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }

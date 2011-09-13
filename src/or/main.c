@@ -1152,15 +1152,16 @@ run_scheduled_events(time_t now)
   if (options->UseBridges)
     fetch_bridge_descriptors(options, now);
 
-  /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
+  /** 1b. Every MAX_SSL_KEY_LIFETIME_INTERNAL seconds, we change our
+   * TLS context. */
   if (!last_rotated_x509_certificate)
     last_rotated_x509_certificate = now;
-  if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME < now) {
+  if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
     if (tor_tls_context_init(public_server_mode(options),
                              get_tlsclient_identity_key(),
                              is_server ? get_server_identity_key() : NULL,
-                             MAX_SSL_KEY_LIFETIME) < 0) {
+                             MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? -RD */
     }
