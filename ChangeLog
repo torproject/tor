@@ -1,4 +1,8 @@
-Changes in version 0.2.2.33 - 2011-09-??
+Changes in version 0.2.2.33 - 2011-09-13
+  Tor 0.2.2.33 fixes several bugs, and includes a slight tweak to Tor's
+  TLS handshake that makes relays and bridges that run this new version
+  reachable from Iran again.
+
   o Major bugfixes:
     - Avoid an assertion failure when reloading a configuration with
       TrackExitHosts changes. Found and fixed by 'laruldan'. Fixes bug
@@ -11,23 +15,23 @@ Changes in version 0.2.2.33 - 2011-09-??
       by an attacker who controls both an introduction point and a
       rendezvous point, and who uses the malleability of AES-CTR to
       alter the encrypted g^x portion of the INTRODUCE1 cell. We think
-      that these attacks is infeasible (requiring the attacker to send
+      that these attacks are infeasible (requiring the attacker to send
       on the order of zettabytes of altered cells in a short interval),
       but we'd rather block them off in case there are any classes of
       this attack that we missed. Reported by Willem Pinckaers.
 
   o Minor features:
-    - Add a VoteOnHidServDirectoriesV2 configuration option to allow
-      directory authorities to abstain from voting on assignment of
-      the HSDir consensus flag. Related to bug 2649.
-    - Update to the September 6 2011 Maxmind GeoLite Country database.
-    - Change the default required uptime for a relay to be accepted as
-      a HSDir from 24 hours to 25 hours. Improves on 0.2.0.10-alpha;
-      resolves ticket 2649.
     - Adjust the expiration time on our SSL session certificates to
       better match SSL certs seen in the wild. Resolves ticket 4014.
+    - Change the default required uptime for a relay to be accepted as
+      a HSDir (hidden service directory) from 24 hours to 25 hours.
+      Improves on 0.2.0.10-alpha; resolves ticket 2649.
+    - Add a VoteOnHidServDirectoriesV2 config option to allow directory
+      authorities to abstain from voting on assignment of the HSDir
+      consensus flag. Related to bug 2649.
+    - Update to the September 6 2011 Maxmind GeoLite Country database.
 
-  o Minor bugfixes:
+  o Minor bugfixes (documentation and log messages):
     - Correct the man page to explain that HashedControlPassword and
       CookieAuthentication can both be set, in which case either method
       is sufficient to authenticate to Tor. Bugfix on 0.2.0.7-alpha,
@@ -54,7 +58,7 @@ Changes in version 0.2.2.33 - 2011-09-??
     - Clean up some code issues that prevented Tor from building on older
       BSDs. Fixes bug 3894; reported by "grarpamp".
     - Search for a platform-specific version of "ar" when cross-compiling.
-      Should fix builds on iOS. Found by Marco Bonetti.
+      Should fix builds on iOS. Resolves bug 3909, found by Marco Bonetti.
 
 
 Changes in version 0.2.2.32 - 2011-08-27
