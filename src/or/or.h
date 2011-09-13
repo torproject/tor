@@ -283,22 +283,27 @@ typedef enum {
 #define OR_CONN_STATE_CONNECTING 1
 /** State for a connection to an OR: waiting for proxy handshake to complete */
 #define OR_CONN_STATE_PROXY_HANDSHAKING 2
-/** State for a connection to an OR or client: SSL is handshaking, not done
+/** State for an OR connection client: SSL is handshaking, not done
  * yet. */
 #define OR_CONN_STATE_TLS_HANDSHAKING 3
 /** State for a connection to an OR: We're doing a second SSL handshake for
- * renegotiation purposes. */
+ * renegotiation purposes. (V2 handshake only.) */
 #define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
 /** State for a connection at an OR: We're waiting for the client to
- * renegotiate. */
+ * renegotiate (to indicate a v2 handshake) or send a versions cell (to
+ * indicate a v3 handshake) */
 #define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
-/** State for a connection to an OR: We're done with our SSL handshake, but we
- * haven't yet negotiated link protocol versions and sent a netinfo cell.
- */
-#define OR_CONN_STATE_OR_HANDSHAKING 6
-/** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 7
-#define _OR_CONN_STATE_MAX 7
+/** State for an OR connection: We're done with our SSL handshake, we've done
+ * renegotiation, but we haven't yet negotiated link protocol versions and
+ * sent a netinfo cell. */
+#define OR_CONN_STATE_OR_HANDSHAKING_V2 6
+/** State for an OR connection: We're done with our SSL handshake, but we
+ * haven't yet negotiated link protocol versions, done a V3 handshake, and
+ * sent a netinfo cell. */
+#define OR_CONN_STATE_OR_HANDSHAKING_V3 7
+/** State for an OR connection:: Ready to send/receive cells. */
+#define OR_CONN_STATE_OPEN 8
+#define _OR_CONN_STATE_MAX 8
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -820,9 +825,10 @@ typedef enum {
 #define CELL_NETINFO 8
 #define CELL_RELAY_EARLY 9
 
-/** True iff the cell command <b>x</b> is one that implies a variable-length
- * cell. */
-#define CELL_COMMAND_IS_VAR_LENGTH(x) ((x) == CELL_VERSIONS)
+#define CELL_VPADDING 128
+#define CELL_CERT 129
+#define CELL_AUTH_CHALLENGE 130
+#define CELL_AUTHENTICATE 131
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)

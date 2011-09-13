@@ -93,7 +93,7 @@ command_time_process_cell(cell_t *cell, or_connection_t *conn, int *time,
 void
 command_process_cell(cell_t *cell, or_connection_t *conn)
 {
-  int handshaking = (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING);
+  int handshaking = (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V2);
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
@@ -207,7 +207,7 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
 #endif
 
   /* reject all when not handshaking. */
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING)
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2)
     return;
 
   switch (cell->command) {
@@ -216,10 +216,9 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
       PROCESS_CELL(versions, cell, conn);
       break;
     default:
-      log_warn(LD_BUG,
+      log_fn(LOG_INFO, LD_PROTOCOL,
                "Variable-length cell of unknown type (%d) received.",
                cell->command);
-      tor_fragile_assert();
       break;
   }
 }
@@ -506,7 +505,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   int highest_supported_version = 0;
   const uint8_t *cp, *end;
   if (conn->link_proto != 0 ||
-      conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING ||
+      conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2 ||
       (conn->handshake_state && conn->handshake_state->received_versions)) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a VERSIONS cell on a connection with its version "
@@ -572,7 +571,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
            conn->link_proto == 0 ? "non-versioned" : "a v1");
     return;
   }
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on non-handshaking connection; dropping.");
     return;

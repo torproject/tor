@@ -387,7 +387,7 @@ connection_or_process_inbuf(or_connection_t *conn)
       /* fall through. */
 #endif
     case OR_CONN_STATE_OPEN:
-    case OR_CONN_STATE_OR_HANDSHAKING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
       return connection_or_process_cells_from_inbuf(conn);
     default:
       return 0; /* don't do anything */
@@ -439,7 +439,7 @@ connection_or_finished_flushing(or_connection_t *conn)
   switch (conn->_base.state) {
     case OR_CONN_STATE_PROXY_HANDSHAKING:
     case OR_CONN_STATE_OPEN:
-    case OR_CONN_STATE_OR_HANDSHAKING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
       break;
     default:
       log_err(LD_BUG,"Called in unexpected state %d.", conn->_base.state);
@@ -1476,7 +1476,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
     tor_tls_block_renegotiation(conn->tls);
     return connection_or_set_state_open(conn);
   } else {
-    conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
+    conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V2;
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     if (!started_here) {
