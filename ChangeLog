@@ -24,6 +24,8 @@ Changes in version 0.2.2.33 - 2011-09-??
     - Change the default required uptime for a relay to be accepted as
       a HSDir from 24 hours to 25 hours. Improves on 0.2.0.10-alpha;
       resolves ticket 2649.
+    - Adjust the expiration time on our SSL session certificates to
+      better match SSL certs seen in the wild. Resolves ticket 4014.
 
   o Minor bugfixes:
     - Correct the man page to explain that HashedControlPassword and
