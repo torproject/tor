@@ -866,12 +866,14 @@ run_scheduled_events(time_t now)
       now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
 
-  /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
+  /** 1b. Every MAX_SSL_KEY_LIFETIME_INTERNAL seconds, we change our
+   * TLS context. */
   if (!last_rotated_x509_certificate)
     last_rotated_x509_certificate = now;
-  if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME < now) {
+  if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(), MAX_SSL_KEY_LIFETIME) < 0) {
+    if (tor_tls_context_new(get_identity_key(),
+                            MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? -RD */
     }
