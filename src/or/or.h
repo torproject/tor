@@ -1084,7 +1084,10 @@ typedef struct listener_connection_t {
 
 } listener_connection_t;
 
-/** Stores flags and information related to the portion of a v2 Tor OR
+/** Minimum length of the random part of an AUTH_CHALLENGE cell. */
+#define OR_AUTH_CHALLENGE_LEN 32
+
+/** Stores flags and information related to the portion of a v2/v3 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
  */
 typedef struct or_handshake_state_t {
@@ -1095,6 +1098,16 @@ typedef struct or_handshake_state_t {
   unsigned int started_here : 1;
   /** True iff we have received and processed a VERSIONS cell. */
   unsigned int received_versions : 1;
+
+  /** Digests of the cells that we have sent or received as part of a V3
+   * handshake.  Used for making and checking AUTHENTICATE cells.
+   *
+   * @{
+   */
+  crypto_digest_env_t *digest_sent;
+  crypto_digest_env_t *digest_received;
+  /** @} */
+
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks

@@ -1761,3 +1761,84 @@ connection_or_send_netinfo(or_connection_t *conn)
   return 0;
 }
 
+/** DOCDOC */
+#define OR_CERT_TYPE_TLS_LINK 1
+#define OR_CERT_TYPE_ID_1024 2
+
+/** Send a CERT cell on the connection <b>conn</b>.  Return 0 on success, -1
+ * on failure. */
+int
+connection_or_send_cert_cell(or_connection_t *conn)
+{
+  const tor_cert_t *link_cert = NULL, *id_cert = NULL;
+  const uint8_t *link_encoded = NULL, *id_encoded = NULL;
+  size_t link_len, id_len;
+  var_cell_t *cell;
+  size_t cell_len;
+  int pos;
+
+  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+
+  if (! conn->handshake_state)
+    return -1;
+  if (tor_tls_get_my_certs(! conn->handshake_state->started_here,
+                           &link_cert, &id_cert) < 0)
+    return -1;
+  tor_cert_get_der(link_cert, &link_encoded, &link_len);
+  tor_cert_get_der(id_cert, &id_encoded, &id_len);
+
+  cell_len = 1 /* 1 octet: num certs in cell */ +
+             2 * ( 1 + 2 ) /* For each cert: 1 octet for type, 2 for length */ +
+             link_len + id_len;
+  cell = var_cell_new(cell_len);
+  cell->command = CELL_CERT;
+  cell->payload[0] = 2;
+  pos = 1;
+
+  cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
+  set_uint16(&cell->payload[pos+1], htons(link_len));
+  memcpy(&cell->payload[pos+3], link_encoded, link_len);
+  pos += 3 + link_len;
+
+  cell->payload[pos] = OR_CERT_TYPE_ID_1024; /* ID cert */
+  set_uint16(&cell->payload[pos+1], htons(id_len));
+  memcpy(&cell->payload[pos+3], id_encoded, id_len);
+  pos += 3 + id_len;
+
+  tor_assert(pos == (int)cell_len); /* Otherwise we just smashed the heap */
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+
+  return 0;
+}
+
+/** Send an AUTH_CHALLENGE cell on the connection <b>conn</b>. Return 0
+ * on success, -1 on failure. */
+int
+connection_or_send_auth_challenge_cell(or_connection_t *conn)
+{
+  var_cell_t *cell;
+  uint8_t *cp;
+  uint8_t challenge[OR_AUTH_CHALLENGE_LEN];
+  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+
+  if (! conn->handshake_state)
+    return -1;
+
+  if (crypto_rand((char*)challenge, OR_AUTH_CHALLENGE_LEN) < 0)
+    return -1;
+  cell = var_cell_new(OR_AUTH_CHALLENGE_LEN + 4);
+  cell->command = CELL_AUTH_CHALLENGE;
+  memcpy(cell->payload, challenge, OR_AUTH_CHALLENGE_LEN);
+  cp = cell->payload + OR_AUTH_CHALLENGE_LEN;
+  set_uint16(cp, htons(1)); /* We recognize one authentication type. */
+  set_uint16(cp+2, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+  memset(challenge, 0, sizeof(challenge));
+
+  return 0;
+}
+

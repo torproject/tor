@@ -50,6 +50,9 @@ void connection_or_write_var_cell_to_buf(const var_cell_t *cell,
 int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
+int connection_or_send_cert_cell(or_connection_t *conn);
+int connection_or_send_auth_challenge_cell(or_connection_t *conn);
+
 int is_or_protocol_version_known(uint16_t version);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
