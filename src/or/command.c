@@ -660,3 +660,281 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 
+/** Process a CERT cell from an OR connection.
+ *
+ * If the other side should not have sent us a CERT cell, or the cell is
+ * malformed, or it is supposed to authenticate the TLS key but it doesn't,
+ * then mark the connection.
+ *
+ * If the cell has a good cert chain and we're doing a v3 handshake, then
+ * store the certificates in or_handshake_state.  If this is the client side
+ * of the connection, we then authenticate the server or mark the connection.
+ * If it's the server side, wait for an AUTHENTICATE cell.
+ */
+static void
+command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
+{
+#define ERR(s)                                                  \
+  do {                                                          \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
+           "Received a bad CERT cell from %s:%d: %s",           \
+           conn->_base.address, conn->_base.port, (s));         \
+    connection_mark_for_close(TO_CONN(conn));                   \
+    goto err;                                                   \
+  } while (0)
+
+  tor_cert_t *link_cert = NULL;
+  tor_cert_t *id_cert = NULL;
+  tor_cert_t *auth_cert = NULL;
+
+  uint8_t *ptr;
+  int n_certs, i;
+
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
+    ERR("We're not doing a v3 handshake!");
+  if (conn->handshake_state->received_cert_cell)
+    ERR("We already got one");
+  if (cell->payload_len < 1)
+    ERR("It had no body");
+  if (cell->circ_id)
+    ERR("It had a nonzero circuit ID");
+
+  n_certs = cell->payload[0];
+  ptr = cell->payload + 1;
+  for (i = 0; i < n_certs; ++i) {
+    uint8_t cert_type;
+    uint16_t cert_len;
+    if (ptr + 3 > cell->payload + cell->payload_len) {
+      goto truncated;
+    }
+    cert_type = *ptr;
+    cert_len = ntohs(get_uint16(ptr+1));
+    if (ptr + 3 + cert_len > cell->payload + cell->payload_len) {
+      goto truncated;
+    }
+    if (cert_type == OR_CERT_TYPE_TLS_LINK ||
+        cert_type == OR_CERT_TYPE_ID_1024 ||
+        cert_type == OR_CERT_TYPE_AUTH_1024) {
+      tor_cert_t *cert = tor_cert_decode(ptr + 3, cert_len);
+      if (!cert) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Received undecodable certificate in CERT cell from %s:%d",
+               conn->_base.address, conn->_base.port);
+      } else {
+        if (cert_type == OR_CERT_TYPE_TLS_LINK && !link_cert)
+          link_cert = cert;
+        else if (cert_type == OR_CERT_TYPE_ID_1024 && !id_cert)
+          id_cert = cert;
+        else if (cert_type == OR_CERT_TYPE_AUTH_1024 && !auth_cert)
+          auth_cert = cert;
+        else
+          tor_cert_free(cert);
+      }
+    }
+    ptr += 3 + cert_len;
+    continue;
+
+  truncated:
+    ERR("It ends in the middle of a certificate");
+  }
+
+  if (conn->handshake_state->started_here) {
+    if (! (id_cert && link_cert))
+      ERR("The certs we wanted were missing");
+    /* Okay. We should be able to check the certificates now. */
+    if (! tor_tls_cert_matches_key(conn->tls, link_cert)) {
+      ERR("The link certificate didn't match the TLS public key");
+    }
+    if (! tor_tls_cert_is_valid(link_cert, id_cert))
+      ERR("The link certificate was not valid");
+    if (! tor_tls_cert_is_valid(id_cert, id_cert))
+      ERR("The ID certificate was not valid");
+
+    /* XXXX  okay, we just got authentication.  Do something about that. */
+
+    conn->handshake_state->id_cert = id_cert;
+    id_cert = NULL;
+  } else {
+    if (! (id_cert && auth_cert))
+      ERR("The certs we wanted were missing");
+
+    /* Remember these certificates so we can check an AUTHENTICATE cell */
+    conn->handshake_state->id_cert = id_cert;
+    conn->handshake_state->auth_cert = auth_cert;
+    if (! tor_tls_cert_is_valid(auth_cert, id_cert))
+      ERR("The authentication certificate was not valid");
+    if (! tor_tls_cert_is_valid(id_cert, id_cert))
+      ERR("The ID certificate was not valid");
+
+    /* XXXX check more stuff? */
+
+    id_cert = auth_cert = NULL;
+  }
+
+  conn->handshake_state->received_cert_cell = 1;
+err:
+  tor_cert_free(id_cert);
+  tor_cert_free(link_cert);
+  tor_cert_free(auth_cert);
+#undef ERR
+}
+
+/** Process an AUTH_CHALLENGE cell from an OR connection.
+ *
+ * If we weren't supposed to get one (for example, because we're not the
+ * originator of the connection), or it's ill-formed, or we aren't doing a v3
+ * handshake, mark the connection.  If the cell is well-formed but we don't
+ * want to authenticate, just drop it.  If the cell is well-formed *and* we
+ * want to authenticate, send an AUTHENTICATE cell. */
+static void
+command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
+{
+  int n_types, i, use_type = -1;
+  uint8_t *cp;
+
+#define ERR(s)                                                  \
+  do {                                                          \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
+           "Received a bad AUTH_CHALLENGE cell from %s:%d: %s", \
+           conn->_base.address, conn->_base.port, (s));         \
+    connection_mark_for_close(TO_CONN(conn));                   \
+    return;                                                     \
+  } while (0)
+
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
+    ERR("We're not currently doing a v3 handshake");
+  if (! conn->handshake_state->started_here)
+    ERR("We didn't originate this connection");
+  if (conn->handshake_state->received_auth_challenge)
+    ERR("We already received one");
+  if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2)
+    ERR("It was too short");
+  if (cell->circ_id)
+    ERR("It had a nonzero circuit ID");
+
+  n_types = ntohs(get_uint16(cell->payload + OR_AUTH_CHALLENGE_LEN));
+  if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2 + 2*n_types)
+    ERR("It looks truncated");
+
+  memcpy(conn->handshake_state->auth_challenge, cell->payload,
+         OR_AUTH_CHALLENGE_LEN);
+
+  /* Now see if there is an authentication type we can use */
+  cp=cell->payload+OR_AUTH_CHALLENGE_LEN+2;
+  for (i=0; i < n_types; ++i, cp += 2) {
+    uint16_t authtype = ntohs(get_uint16(cp));
+    if (authtype == AUTHTYPE_RSA_SHA256_TLSSECRET)
+      use_type = authtype;
+  }
+
+  conn->handshake_state->received_auth_challenge = 1;
+
+  /* Send back authentication if we want, and if use_type is set */
+#undef ERR
+}
+
+/** Process an AUTHENTICATE cell from an OR connection.
+ *
+ * If it's ill-formed or we weren't supposed to get one or we're not doing a
+ * v3 handshake, then mark the connection.  If it does not authenticate the
+ * other side of the connection successfully (because it isn't signed right,
+ * we didn't get a CERT cell, etc) mark the connection.  Otherwise, accept
+ * the identity of the router on the other side of the connection.
+ */
+static void
+command_process_authenticate_cell(or_connection_t *conn, var_cell_t *cell)
+{
+  uint8_t expected[V3_AUTH_FIXED_PART_LEN];
+  const uint8_t *auth;
+  int authlen;
+
+#define ERR(s)                                                  \
+  do {                                                          \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
+           "Received a bad AUTHETNICATE cell from %s:%d: %s",   \
+           conn->_base.address, conn->_base.port, (s));         \
+    connection_mark_for_close(TO_CONN(conn));                   \
+    return;                                                     \
+  } while (0)
+
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
+    ERR("We're not doing a v3 handshake");
+  if (! conn->handshake_state->started_here)
+    ERR("We originated this connection");
+  if (conn->handshake_state->received_authenticate)
+    ERR("We already got one!");
+  if (conn->handshake_state->auth_cert == NULL)
+    ERR("We never got an authentication certificate");
+  if (cell->payload_len < 4)
+    ERR("Cell was way too short");
+
+  auth = cell->payload;
+  {
+    uint16_t type = ntohs(get_uint16(auth));
+    uint16_t len = ntohs(get_uint16(auth+2));
+    if (4 + len > cell->payload_len)
+      ERR("Authenticator was truncated");
+
+    if (type != AUTHTYPE_RSA_SHA256_TLSSECRET)
+      ERR("Authenticator type was not recognized");
+
+    auth += 4;
+    authlen = len;
+  }
+
+  if (authlen < V3_AUTH_BODY_LEN + 1)
+    ERR("Authenticator was too short");
+
+  if (connection_or_compute_authenticate_cell_body(
+                        conn, expected, sizeof(expected), NULL, 1) < 0)
+    ERR("Couldn't compute expected AUTHENTICATE cell body");
+
+  if (tor_memneq(expected, auth, sizeof(expected)))
+    ERR("Some field in the AUTHENTICATE cell body was not as expected");
+
+  {
+    crypto_pk_env_t *pk = tor_tls_cert_get_key(
+                                   conn->handshake_state->auth_cert);
+    char d[DIGEST256_LEN];
+    char *signed_data;
+    size_t keysize;
+    int signed_len;
+
+    crypto_digest256(d, (char*)auth, V3_AUTH_BODY_LEN, DIGEST_SHA256);
+
+    keysize = crypto_pk_keysize(pk);
+    signed_data = tor_malloc(keysize);
+    signed_len = crypto_pk_public_checksig(pk, signed_data, keysize,
+                                           (char*)auth + V3_AUTH_BODY_LEN,
+                                           authlen - V3_AUTH_BODY_LEN);
+    if (signed_len < 0) {
+      tor_free(signed_data);
+      ERR("Signature wasn't valid");
+    }
+    if (signed_len < DIGEST256_LEN) {
+      tor_free(signed_data);
+      ERR("Not enough data was signed");
+    }
+    if (tor_memneq(signed_data, d, DIGEST256_LEN)) {
+      tor_free(signed_data);
+      ERR("Signature did not match data to be signed.");
+    }
+    tor_free(signed_data);
+  }
+
+  /* XXXX we're authenticated.  Now remember the fact, and remember whom we're
+     authenticated to. */
+
+  conn->handshake_state->received_authenticate = 1;
+#undef ERR
+}
+
+
+void dummy_function(void);
+void dummy_function(void)
+{
+  /* this is only here to avoid 'static function isn't used' warnings */
+  command_process_auth_challenge_cell(NULL, NULL);
+  command_process_cert_cell(NULL, NULL);
+  command_process_authenticate_cell(NULL, NULL);
+}

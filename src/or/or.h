@@ -1087,6 +1087,43 @@ typedef struct listener_connection_t {
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
 #define OR_AUTH_CHALLENGE_LEN 32
 
+/**
+ * @name Certificate types for CERT cells.
+ *
+ * These values are defined by the protocol, and affect how an X509
+ * certificate in a CERT cell is interpreted and used.
+ *
+ * @{ */
+/** A certificate that authenticates a TLS link key.  The subject key
+ * must match the key used in the TLS handshake; it must be signed by
+ * the identity key. */
+#define OR_CERT_TYPE_TLS_LINK 1
+/** A self-signed identity certificate. The subject key must be a
+ * 1024-bit RSA key. */
+#define OR_CERT_TYPE_ID_1024 2
+/** A certificate that authenticates a key used in an AUTHENTICATE cell
+ * in the v3 handshake.  The subject key must be a 1024-bit RSA key; it
+ * must be signed by the identity key */
+#define OR_CERT_TYPE_AUTH_1024 3
+/**@}*/
+
+/** The one currently supported type of AUTHENTICATE cell.  It contains
+ * a bunch of structures signed with an RSA1024 key.  The signed
+ * structures include a HMAC using negotiated TLS secrets, and a digest
+ * of all cells sent or received before the AUTHENTICATE cell (including
+ * the random server-generated AUTH_CHALLENGE cell).
+ */
+#define AUTHTYPE_RSA_SHA256_TLSSECRET 1
+
+/** The length of the part of the AUTHENTICATE cell body that the client and
+ * server can generate independently (when using RSA_SHA256_TLSSECRET). It
+ * contains everything except the client's timestamp, the client's randomly
+ * generated nonce, and the signature. */
+#define V3_AUTH_FIXED_PART_LEN (8+(32*6))
+/** The length of the part of the AUTHENTICATE cell body that the client
+ * signs. */
+#define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
+
 /** Stores flags and information related to the portion of a v2/v3 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
  */
@@ -1098,6 +1135,12 @@ typedef struct or_handshake_state_t {
   unsigned int started_here : 1;
   /** True iff we have received and processed a VERSIONS cell. */
   unsigned int received_versions : 1;
+  /** True iff we have received and processed an AUTH_CHALLENGE cell */
+  unsigned int received_auth_challenge : 1;
+  /** True iff we have received and processed a CERT cell. */
+  unsigned int received_cert_cell : 1;
+  /** True iff we have received and processed an AUTHENTICATE cell */
+  unsigned int received_authenticate : 1;
 
   /** Digests of the cells that we have sent or received as part of a V3
    * handshake.  Used for making and checking AUTHENTICATE cells.
@@ -1108,6 +1151,16 @@ typedef struct or_handshake_state_t {
   crypto_digest_env_t *digest_received;
   /** @} */
 
+  /** Certificates that a connection initiator sent us in a CERT cell; we're
+   * holding on to them until we get an AUTHENTICATE cell.
+   *
+   * @{
+   */
+  /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
+  tor_cert_t *auth_cert;
+  /** A self-signed identity certificate */
+  tor_cert_t *id_cert;
+  /**@}*/
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks

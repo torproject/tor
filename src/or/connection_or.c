@@ -1761,10 +1761,6 @@ connection_or_send_netinfo(or_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
-#define OR_CERT_TYPE_TLS_LINK 1
-#define OR_CERT_TYPE_ID_1024 2
-
 /** Send a CERT cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
@@ -1846,23 +1842,17 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
-#define V3_HS_AUTH_FIXED_PART_LEN (8+(32*6))
-#define V3_HS_AUTH_BODY_LEN (V3_HS_AUTH_FIXED_PART_LEN + 8 + 16)
-
-#define AUTHTYPE_RSA_SHA256_TLSSECRET 1
-
 /** Compute the main body of an AUTHENTICATE cell that a client can use
  * to authenticate itself on a v3 handshake for <b>conn</b>.  Write it to the
  * <b>outlen</b>-byte buffer at <b>out</b>.
  *
  * If <b>server</b> is true, only calculate the first
- * V3_HS_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
+ * V3_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
  * determined by the rest of the handshake, and which match the provided value
  * exactly.
  *
  * If <b>server</b> is false and <b>signing_key</b> is NULL, calculate the
- * first V3_HS_AUTH_BODY_LEN bytes of the authenticator (that is, everything
+ * first V3_AUTH_BODY_LEN bytes of the authenticator (that is, everything
  * that should be signed), but don't actually sign it.
  *
  * If <b>server</b> is false and <b>signing_key</b> is provided, calculate the
@@ -1878,8 +1868,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   /* assert state is reasonable XXXX */
 
-  if (outlen < V3_HS_AUTH_FIXED_PART_LEN ||
-      (!server && outlen < V3_HS_AUTH_BODY_LEN))
+  if (outlen < V3_AUTH_FIXED_PART_LEN ||
+      (!server && outlen < V3_AUTH_BODY_LEN))
     return -1;
 
   ptr = out;
@@ -1950,7 +1940,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   tor_tls_get_tlssecrets(conn->tls, ptr);
   ptr += 32;
 
-  tor_assert(ptr - out == V3_HS_AUTH_FIXED_PART_LEN);
+  tor_assert(ptr - out == V3_AUTH_FIXED_PART_LEN);
 
   if (server)
     return ptr-out;
@@ -1969,7 +1959,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   crypto_rand((char*)ptr, 16);
   ptr += 16;
 
-  tor_assert(ptr - out == V3_HS_AUTH_BODY_LEN);
+  tor_assert(ptr - out == V3_AUTH_BODY_LEN);
 
   if (!signing_key)
     return ptr - out;
@@ -2004,7 +1994,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn)
   if (!pk)
     return -1;/*XXXX log*/
   cell_maxlen = 4 + /* overhead */
-    V3_HS_AUTH_BODY_LEN + /* Authentication body */
+    V3_AUTH_BODY_LEN + /* Authentication body */
     crypto_pk_keysize(pk) + /* Max signature length */
     16 /* just in case XXXX */ ;
 
