@@ -17,6 +17,9 @@
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_t tor_tls_t;
 
+/* Opaque structure to hold an X509 certificate. */
+typedef struct tor_cert_t tor_cert_t;
+
 /* Possible return values for most tor_tls_* functions. */
 #define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
@@ -103,6 +106,14 @@ struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
                                       evutil_socket_t socket, int receiving,
                                      int filter);
 #endif
+
+void tor_cert_free(tor_cert_t *cert);
+tor_cert_t *tor_cert_decode(const uint8_t *certificate, size_t certificate_len);
+void tor_cert_get_der(const tor_cert_t *cert,
+                      const uint8_t **encoded_out, size_t *size_out);
+int tor_tls_get_my_certs(int server,
+                         const tor_cert_t **link_cert_out,
+                         const tor_cert_t **id_cert_out);
 
 #endif
 

@@ -97,14 +97,23 @@ static int use_unsafe_renegotiation_op = 0;
  * SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION? */
 static int use_unsafe_renegotiation_flag = 0;
 
+/** Structure that we use for a single certificate. */
+struct tor_cert_t {
+  X509 *cert;
+  uint8_t *encoded;
+  size_t encoded_len;
+  digests_t cert_digests;
+  digests_t pkey_digests;
+};
+
 /** Holds a SSL_CTX object and related state used to configure TLS
  * connections.
  */
 typedef struct tor_tls_context_t {
   int refcnt;
   SSL_CTX *ctx;
-  X509 *my_cert;
-  X509 *my_id_cert;
+  tor_cert_t *my_cert;
+  tor_cert_t *my_id_cert;
   crypto_pk_env_t *key;
 } tor_tls_context_t;
 
@@ -670,6 +679,115 @@ static const int N_CLIENT_CIPHERS =
                              SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #endif
 
+/** Free all storage held in <b>cert</b> */
+void
+tor_cert_free(tor_cert_t *cert)
+{
+  if (! cert)
+    return;
+  if (cert->cert)
+    X509_free(cert->cert);
+  tor_free(cert->encoded);
+  memset(cert, 0x03, sizeof(cert));
+  tor_free(cert);
+}
+
+/**
+ * Allocate a new tor_cert_t to hold the certificate "x509_cert".
+ *
+ * Steals a reference to x509_cert.
+ */
+static tor_cert_t *
+tor_cert_new(X509 *x509_cert)
+{
+  tor_cert_t *cert;
+  EVP_PKEY *pkey;
+  RSA *rsa;
+  int length = i2d_X509(x509_cert, NULL), length2;
+  unsigned char *cp;
+
+  cert = tor_malloc_zero(sizeof(tor_cert_t));
+  if (length <= 0) {
+    tor_free(cert);
+    log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
+    X509_free(x509_cert);
+    return NULL;
+  }
+  cert->encoded_len = (size_t) length;
+  cp = cert->encoded = tor_malloc(length);
+  length2 = i2d_X509(x509_cert, &cp);
+  tor_assert(length2 == length);
+
+  cert->cert = x509_cert;
+
+  crypto_digest_all(&cert->cert_digests,
+                    (char*)cert->encoded, cert->encoded_len);
+
+  if ((pkey = X509_get_pubkey(x509_cert)) &&
+      (rsa = EVP_PKEY_get1_RSA(pkey))) {
+    crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(rsa);
+    crypto_pk_get_all_digests(pk, &cert->pkey_digests);
+    crypto_free_pk_env(pk);
+    EVP_PKEY_free(pkey);
+  }
+
+  return cert;
+}
+
+/** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
+ * from a <b>certificate</b>.  Return a newly allocated tor_cert_t on success
+ * and NULL on failure. */
+tor_cert_t *
+tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
+{
+  X509 *x509;
+  const unsigned char *cp = (const unsigned char *)certificate;
+  tor_cert_t *newcert;
+  tor_assert(certificate);
+
+  if (certificate_len > INT_MAX)
+    return NULL;
+
+#if OPENSSL_VERSION_NUMBER < 0x00908000l
+  /* This ifdef suppresses a type warning.  Take out this case once everybody
+   * is using OpenSSL 0.9.8 or later. */
+  x509 = d2i_X509(NULL, (unsigned char**)&cp, (int)certificate_len);
+#else
+  x509 = d2i_X509(NULL, &cp, (int)certificate_len);
+#endif
+  if (!x509)
+    return NULL; /* Couldn't decode */
+  if (cp - certificate != (int)certificate_len) {
+    X509_free(x509);
+    return NULL; /* Didn't use all the bytes */
+  }
+  newcert = tor_cert_new(x509);
+  if (!newcert) {
+    X509_free(x509);
+    return NULL;
+  }
+  if (newcert->encoded_len != certificate_len ||
+      fast_memneq(newcert->encoded, certificate, certificate_len)) {
+    /* Cert wasn't in DER */
+    tor_cert_free(newcert);
+    return NULL;
+  }
+  return newcert;
+}
+
+/** Set *<b>encoded_out</b> and *<b>size_out/b> to <b>cert</b>'s encoded DER
+ * representation and length, respectively. */
+void
+tor_cert_get_der(const tor_cert_t *cert,
+                 const uint8_t **encoded_out, size_t *size_out)
+{
+  tor_assert(cert);
+  tor_assert(encoded_out);
+  tor_assert(size_out);
+  *encoded_out = cert->encoded;
+  *size_out = cert->encoded_len;
+}
+
 /** Remove a reference to <b>ctx</b>, and free it if it has no more
  * references. */
 static void
@@ -678,11 +796,31 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
   tor_assert(ctx);
   if (--ctx->refcnt == 0) {
     SSL_CTX_free(ctx->ctx);
-    X509_free(ctx->my_cert);
-    X509_free(ctx->my_id_cert);
+    tor_cert_free(ctx->my_cert);
+    tor_cert_free(ctx->my_id_cert);
     crypto_free_pk_env(ctx->key);
     tor_free(ctx);
   }
+}
+
+/** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
+ * and ID certificate that we're currently using for our V3 in-protocol
+ * handshake's certificate chain.  If <b>server</b> is true, provide the certs
+ * that we use in server mode; otherwise, provide the certs that we use in
+ * client mode. */
+int
+tor_tls_get_my_certs(int server,
+                     const tor_cert_t **link_cert_out,
+                     const tor_cert_t **id_cert_out)
+{
+  tor_tls_context_t *ctx = server ? server_tls_context : client_tls_context;
+  if (! ctx)
+    return -1;
+  if (link_cert_out)
+    *link_cert_out = ctx->my_cert;
+  if (id_cert_out)
+    *id_cert_out = ctx->my_id_cert;
+  return 0;
 }
 
 /** Increase the reference count of <b>ctx</b>. */
@@ -813,8 +951,8 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
-  result->my_cert = X509_dup(cert);
-  result->my_id_cert = X509_dup(idcert);
+  result->my_cert = tor_cert_new(X509_dup(cert));
+  result->my_id_cert = tor_cert_new(X509_dup(idcert));
   result->key = crypto_pk_dup_key(rsa);
 
 #ifdef EVERYONE_HAS_AES
