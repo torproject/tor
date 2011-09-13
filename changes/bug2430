@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a bug in configure.in that kept it from building a configure
+      script with autoconf versions earlier than 2.61. Fixes bug 2430;
+      bugfix on 0.2.3.1-alpha.
