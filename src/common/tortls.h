@@ -115,6 +115,9 @@ void tor_cert_get_der(const tor_cert_t *cert,
 int tor_tls_get_my_certs(int server,
                          const tor_cert_t **link_cert_out,
                          const tor_cert_t **id_cert_out);
+int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
+int tor_tls_cert_is_valid(const tor_cert_t *cert,
+                          const tor_cert_t *signing_cert);
 
 #endif
 

@@ -207,6 +207,7 @@ static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     unsigned int key_lifetime);
 static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
                                               unsigned int key_lifetime);
+static int check_cert_lifetime_internal(const X509 *cert, int tolerance);
 
 /** Global TLS contexts. We keep them here because nobody else needs
  * to touch them. */
@@ -821,6 +822,84 @@ tor_tls_get_my_certs(int server,
   if (id_cert_out)
     *id_cert_out = ctx->my_id_cert;
   return 0;
+}
+
+/** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
+static int
+pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
+{
+  /* We'd like to do this, but openssl 0.9.7 doesn't have it:
+     return EVP_PKEY_cmp(a,b) == 1;
+  */
+  unsigned char *a_enc=NULL, *b_enc=NULL, *a_ptr, *b_ptr;
+  int a_len1, b_len1, a_len2, b_len2, result;
+  a_len1 = i2d_PublicKey(a, NULL);
+  b_len1 = i2d_PublicKey(b, NULL);
+  if (a_len1 != b_len1)
+    return 0;
+  a_ptr = a_enc = tor_malloc(a_len1);
+  b_ptr = b_enc = tor_malloc(b_len1);
+  a_len2 = i2d_PublicKey(a, &a_ptr);
+  b_len2 = i2d_PublicKey(b, &b_ptr);
+  tor_assert(a_len2 == a_len1);
+  tor_assert(b_len2 == b_len1);
+  result = tor_memeq(a_enc, b_enc, a_len1);
+  tor_free(a_enc);
+  tor_free(b_enc);
+  return result;
+}
+
+/** Return true iff the other side of <b>tls</b> has authenticated to us, and
+ * the key certified in <b>cert</b> is the same as the key they used to do it.
+ */
+int
+tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
+{
+  X509 *peercert = SSL_get_peer_certificate(tls->ssl);
+  EVP_PKEY *link_key = NULL, *cert_key = NULL;
+  int result;
+
+  if (!peercert)
+    return 0;
+  link_key = X509_get_pubkey(peercert);
+  cert_key = X509_get_pubkey(cert->cert);
+
+  result = link_key && cert_key && pkey_eq(cert_key, link_key);
+
+  X509_free(peercert);
+  if (link_key)
+    EVP_PKEY_free(link_key);
+  if (cert_key)
+    EVP_PKEY_free(cert_key);
+
+  return result;
+}
+
+/** Check wither <b>cert</b> is well-formed, currently live, and correctly
+ * signed by the public key in <b>signing_cert</b>.  Return 0 if the cert is
+ * good, and -1 if it's bad or we couldn't check it. */
+int
+tor_tls_cert_is_valid(const tor_cert_t *cert,
+                      const tor_cert_t *signing_cert)
+{
+  EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
+  int r;
+  if (!signing_key)
+    return 0;
+  r = X509_verify(cert->cert, signing_key);
+  EVP_PKEY_free(signing_key);
+  if (r <= 0)
+    return 0;
+
+  /* okay, the signature checked out right.  Now let's check the check the
+   * lifetime. */
+  /*XXXX tolerance might be iffy here */
+  if (check_cert_lifetime_internal(cert->cert, 60*60) < 0)
+    return 0;
+
+  /* XXXX compare DNs or anything? */
+
+  return -1;
 }
 
 /** Increase the reference count of <b>ctx</b>. */
@@ -1709,7 +1788,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
-log_cert_lifetime(X509 *cert, const char *problem)
+log_cert_lifetime(const X509 *cert, const char *problem)
 {
   BIO *bio = NULL;
   BUF_MEM *buf;
@@ -1856,25 +1935,14 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 int
 tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
 {
-  time_t now, t;
   X509 *cert;
   int r = -1;
-
-  now = time(NULL);
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     goto done;
 
-  t = now + tolerance;
-  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
-    log_cert_lifetime(cert, "not yet valid");
+  if (check_cert_lifetime_internal(cert, tolerance) < 0)
     goto done;
-  }
-  t = now - tolerance;
-  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
-    log_cert_lifetime(cert, "already expired");
-    goto done;
-  }
 
   r = 0;
  done:
@@ -1884,6 +1952,30 @@ tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
   tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
 
   return r;
+}
+
+/** Helper: check whether <b>cert</b> is currently live, give or take
+ * <b>tolerance</b> seconds.  If it is live, return 0.  If it is not live,
+ * log a message and return -1. */
+static int
+check_cert_lifetime_internal(const X509 *cert, int tolerance)
+{
+  time_t now, t;
+
+  now = time(NULL);
+
+  t = now + tolerance;
+  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
+    log_cert_lifetime(cert, "not yet valid");
+    return -1;
+  }
+  t = now - tolerance;
+  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
+    log_cert_lifetime(cert, "already expired");
+    return -1;
+  }
+
+  return 0;
 }
 
 /** Return the number of bytes available for reading from <b>tls</b>.
