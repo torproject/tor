@@ -33,7 +33,7 @@ Changes in version 0.2.3.4-alpha - 2011-09-13
       consensus flag. Related to bug 2649.
     - Update to the September 6 2011 Maxmind GeoLite Country database.
 
-  o Minor bugfixes (also in 0.2.2.33):
+  o Minor bugfixes (also part of 0.2.2.33):
     - Demote the 'replay detected' log message emitted when a hidden
       service receives the same Diffie-Hellman public key in two different
       INTRODUCE2 cells to info level. A normal Tor client can cause that
@@ -49,7 +49,7 @@ Changes in version 0.2.3.4-alpha - 2011-09-13
       given the impression that every ASCII character between "+" and "_"
       was permitted. Now we say "[A-Za-z0-9+_-]". Bugfix on 0.2.1.5-alpha.
 
-  o Build fixes (also in 0.2.2.33):
+  o Build fixes (also part of 0.2.2.33):
     - Clean up some code issues that prevented Tor from building on older
       BSDs. Fixes bug 3894; reported by "grarpamp".
     - Search for a platform-specific version of "ar" when cross-compiling.
