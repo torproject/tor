@@ -1776,13 +1776,14 @@ connection_or_send_cert_cell(or_connection_t *conn)
   var_cell_t *cell;
   size_t cell_len;
   int pos;
+  int server_mode;
 
   tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
-  if (tor_tls_get_my_certs(! conn->handshake_state->started_here,
-                           &link_cert, &id_cert) < 0)
+  server_mode = ! conn->handshake_state->started_here;
+  if (tor_tls_get_my_certs(server_mode, &link_cert, &id_cert) < 0)
     return -1;
   tor_cert_get_der(link_cert, &link_encoded, &link_len);
   tor_cert_get_der(id_cert, &id_encoded, &id_len);
@@ -1795,7 +1796,10 @@ connection_or_send_cert_cell(or_connection_t *conn)
   cell->payload[0] = 2;
   pos = 1;
 
-  cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
+  if (server_mode)
+    cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
+  else
+    cell->payload[pos] = OR_CERT_TYPE_AUTH_1024; /* client authentication */
   set_uint16(&cell->payload[pos+1], htons(link_len));
   memcpy(&cell->payload[pos+3], link_encoded, link_len);
   pos += 3 + link_len;
@@ -1842,3 +1846,188 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   return 0;
 }
 
+/** DOCDOC */
+#define V3_HS_AUTH_FIXED_PART_LEN (8+(32*6))
+#define V3_HS_AUTH_BODY_LEN (V3_HS_AUTH_FIXED_PART_LEN + 8 + 16)
+
+#define AUTHTYPE_RSA_SHA256_TLSSECRET 1
+
+/** Compute the main body of an AUTHENTICATE cell that a client can use
+ * to authenticate itself on a v3 handshake for <b>conn</b>.  Write it to the
+ * <b>outlen</b>-byte buffer at <b>out</b>.
+ *
+ * If <b>server</b> is true, only calculate the first
+ * V3_HS_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
+ * determined by the rest of the handshake, and which match the provided value
+ * exactly.
+ *
+ * If <b>server</b> is false and <b>signing_key</b> is NULL, calculate the
+ * first V3_HS_AUTH_BODY_LEN bytes of the authenticator (that is, everything
+ * that should be signed), but don't actually sign it.
+ *
+ * If <b>server</b> is false and <b>signing_key</b> is provided, calculate the
+ * entire authenticator, signed with <b>signing_key</b>.
+ */
+int
+connection_or_compute_authenticate_cell_body(or_connection_t *conn,
+                                             uint8_t *out, size_t outlen,
+                                             crypto_pk_env_t *signing_key,
+                                             int server)
+{
+  uint8_t *ptr;
+
+  /* assert state is reasonable XXXX */
+
+  if (outlen < V3_HS_AUTH_FIXED_PART_LEN ||
+      (!server && outlen < V3_HS_AUTH_BODY_LEN))
+    return -1;
+
+  ptr = out;
+
+  /* Type: 8 bytes. */
+  memcpy(ptr, "AUTH0001", 8);
+  ptr += 8;
+
+  {
+    const tor_cert_t *id_cert=NULL, *link_cert=NULL;
+    const uint8_t *my_id, *their_id, *client_id, *server_id;
+    if (tor_tls_get_my_certs(0, &link_cert, &id_cert))
+      return -1;
+    my_id = (uint8_t*)tor_cert_get_id_digests(id_cert)->d[DIGEST_SHA256];
+    their_id = (uint8_t*)
+      tor_cert_get_id_digests(conn->handshake_state->id_cert)->d[DIGEST_SHA256];
+    client_id = server ? their_id : my_id;
+    server_id = server ? my_id : their_id;
+
+    /* Client ID digest: 32 octets. */
+    memcpy(ptr, client_id, 32);
+    ptr += 32;
+
+    /* Server ID digest: 32 octets. */
+    memcpy(ptr, server_id, 32);
+    ptr += 32;
+  }
+
+  {
+    crypto_digest_env_t *server_d, *client_d;
+    if (server) {
+      server_d = conn->handshake_state->digest_sent;
+      client_d = conn->handshake_state->digest_received;
+    } else {
+      client_d = conn->handshake_state->digest_sent;
+      server_d = conn->handshake_state->digest_received;
+    }
+
+    /* Server log digest : 32 octets */
+    crypto_digest_get_digest(server_d, (char*)ptr, 32);
+    ptr += 32;
+
+    /* Client log digest : 32 octets */
+    crypto_digest_get_digest(client_d, (char*)ptr, 32);
+    ptr += 32;
+  }
+
+  {
+    /* Digest of cert used on TLS link : 32 octets. */
+    const tor_cert_t *cert = NULL;
+    tor_cert_t *freecert = NULL;
+    if (server) {
+      tor_tls_get_my_certs(1, &cert, NULL);
+    } else {
+      freecert = tor_tls_get_peer_cert(conn->tls);
+      cert = freecert;
+    }
+    if (!cert)
+      return -1;
+    memcpy(ptr, tor_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
+
+    if (freecert)
+      tor_cert_free(freecert);
+    ptr += 32;
+  }
+
+  /* HMAC of clientrandom and serverrandom using master key : 32 octets */
+  tor_tls_get_tlssecrets(conn->tls, ptr);
+  ptr += 32;
+
+  tor_assert(ptr - out == V3_HS_AUTH_FIXED_PART_LEN);
+
+  if (server)
+    return ptr-out;
+
+  /* Time: 8 octets. */
+  {
+    uint64_t now = time(NULL);
+    if ((time_t)now < 0)
+      return -1;
+    set_uint32(ptr, htonl((uint32_t)(now>>32)));
+    set_uint32(ptr+4, htonl((uint32_t)now));
+    ptr += 8;
+  }
+
+  /* Nonce: 16 octets. */
+  crypto_rand((char*)ptr, 16);
+  ptr += 16;
+
+  tor_assert(ptr - out == V3_HS_AUTH_BODY_LEN);
+
+  if (!signing_key)
+    return ptr - out;
+
+  {
+    int siglen;
+    char d[32];
+    crypto_digest256(d, (char*)out, ptr-out, DIGEST_SHA256);
+    siglen = crypto_pk_private_sign(signing_key,
+                                    (char*)ptr, outlen - (ptr-out),
+                                    d, 32);
+    if (siglen < 0)
+      return -1;
+
+    ptr += siglen;
+    tor_assert(ptr <= out+outlen);
+    return ptr - out;
+  }
+}
+
+/** Send an AUTHENTICATE cell on the connection <b>conn</b>.  Return 0 on
+ * success, -1 on failure */
+int
+connection_or_send_authenticate_cell(or_connection_t *conn)
+{
+  var_cell_t *cell;
+  crypto_pk_env_t *pk = tor_tls_get_my_client_auth_key();
+  int authlen;
+  int cell_maxlen;
+  /* XXXX make sure we're actually supposed to send this! */
+
+  if (!pk)
+    return -1;/*XXXX log*/
+  cell_maxlen = 4 + /* overhead */
+    V3_HS_AUTH_BODY_LEN + /* Authentication body */
+    crypto_pk_keysize(pk) + /* Max signature length */
+    16 /* just in case XXXX */ ;
+
+  cell = var_cell_new(cell_maxlen);
+  set_uint16(cell->payload, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
+  /* skip over length ; we don't know that yet. */
+
+  authlen = connection_or_compute_authenticate_cell_body(conn,
+                                                         cell->payload+4,
+                                                         cell_maxlen-4,
+                                                         pk,
+                                                         0 /* not server */);
+  if (authlen < 0) {
+    /* XXXX log */
+    var_cell_free(cell);
+    return -1;
+  }
+  tor_assert(authlen + 4 <= cell->payload_len);
+  set_uint16(cell->payload+2, htons(authlen));
+  cell->payload_len = authlen + 4;
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+
+  return 0;
+}

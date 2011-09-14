@@ -52,6 +52,11 @@ int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
 int connection_or_send_netinfo(or_connection_t *conn);
 int connection_or_send_cert_cell(or_connection_t *conn);
 int connection_or_send_auth_challenge_cell(or_connection_t *conn);
+int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
+                                                 uint8_t *out, size_t outlen,
+                                                 crypto_pk_env_t *signing_key,
+                                                 int server);
+int connection_or_send_authenticate_cell(or_connection_t *conn);
 
 int is_or_protocol_version_known(uint16_t version);
 
