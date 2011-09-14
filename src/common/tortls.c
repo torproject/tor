@@ -789,6 +789,20 @@ tor_cert_get_der(const tor_cert_t *cert,
   *size_out = cert->encoded_len;
 }
 
+/** Return a set of digests for the public key in <b>cert</b>. */
+const digests_t *
+tor_cert_get_id_digests(const tor_cert_t *cert)
+{
+  return &cert->pkey_digests;
+}
+
+/** Return a set of digests for the public key in <b>cert</b>. */
+const digests_t *
+tor_cert_get_cert_digests(const tor_cert_t *cert)
+{
+  return &cert->cert_digests;
+}
+
 /** Remove a reference to <b>ctx</b>, and free it if it has no more
  * references. */
 static void
