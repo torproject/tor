@@ -1,0 +1,4 @@
+  o Minor features (diagnostics):
+    - When the system call to create a listener socket fails, log the
+      error message explaining why. This may help diagnose bug 4027.
+

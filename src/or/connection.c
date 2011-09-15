@@ -891,7 +891,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
                         is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
     if (!SOCKET_OK(s)) {
-      log_warn(LD_NET,"Socket creation failed.");
+      log_warn(LD_NET,"Socket creation failed: %s",
+               tor_socket_strerror(tor_socket_errno(-1)));
       goto err;
     }
 
