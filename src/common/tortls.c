@@ -2075,6 +2075,77 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   return 1;
 }
 
+/** Return true iff <b>name</b> is a DN of a kind that could only
+ * occur in a v3-handshake-indicating certificate */
+static int
+dn_indicates_v3_cert(X509_NAME *name)
+{
+  X509_NAME_ENTRY *entry;
+  int n_entries;
+  ASN1_OBJECT *obj;
+  ASN1_STRING *str;
+  unsigned char *s;
+  int len, r;
+
+  n_entries = X509_NAME_entry_count(name);
+  if (n_entries != 1)
+    return 1; /* More than one entry in the DN. */
+  entry = X509_NAME_get_entry(name, 0);
+
+  obj = X509_NAME_ENTRY_get_object(entry);
+  if (OBJ_obj2nid(obj) != OBJ_txt2nid("commonName"))
+    return 1; /* The entry isn't a commonName. */
+
+  str = X509_NAME_ENTRY_get_data(entry);
+  len = ASN1_STRING_to_UTF8(&s, str);
+  if (len < 0)
+    return 0;
+  r = fast_memneq(s + len - 4, ".net", 4);
+  OPENSSL_free(s);
+  return r;
+}
+
+/** Return true iff the peer certificate we're received on <b>tls</b>
+ * indicates that this connection should use the v3 (in-protocol)
+ * authentication handshake.
+ *
+ * Only the connection initiator should use this, and only once the initial
+ * handshake is done; the responder detects a v1 handshake by cipher types,
+ * and a v3/v2 handshake by Versions cell vs renegotiation.
+ */
+int
+tor_tls_received_v3_certificate(tor_tls_t *tls)
+{
+  X509 *cert = SSL_get_peer_certificate(tls->ssl);
+  EVP_PKEY *key;
+  X509_NAME *issuer_name, *subject_name;
+
+  if (!cert) {
+    log_warn(LD_BUG, "Called on a connection with no peer certificate");
+    return 0;
+  }
+
+  subject_name = X509_get_subject_name(cert);
+  issuer_name = X509_get_issuer_name(cert);
+
+  if (X509_name_cmp(subject_name, issuer_name) == 0)
+    return 1; /* purportedly self signed */
+
+  if (dn_indicates_v3_cert(subject_name) ||
+      dn_indicates_v3_cert(issuer_name))
+    return 1; /* DN is fancy */
+
+  key = X509_get_pubkey(cert);
+  if (EVP_PKEY_bits(key) != 1024 ||
+      EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+    EVP_PKEY_free(key);
+    return 1; /* Key is fancy */
+  }
+
+  EVP_PKEY_free(key);
+  return 0;
+}
+
 /** Return the number of server handshakes that we've noticed doing on
  * <b>tls</b>. */
 int
