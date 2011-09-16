@@ -112,9 +112,11 @@ struct tor_cert_t {
 typedef struct tor_tls_context_t {
   int refcnt;
   SSL_CTX *ctx;
-  tor_cert_t *my_cert;
+  tor_cert_t *my_link_cert;
   tor_cert_t *my_id_cert;
-  crypto_pk_env_t *key;
+  tor_cert_t *my_auth_cert;
+  crypto_pk_env_t *link_key;
+  crypto_pk_env_t *auth_key;
 } tor_tls_context_t;
 
 #define TOR_TLS_MAGIC 0x71571571
@@ -811,9 +813,11 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
   tor_assert(ctx);
   if (--ctx->refcnt == 0) {
     SSL_CTX_free(ctx->ctx);
-    tor_cert_free(ctx->my_cert);
+    tor_cert_free(ctx->my_link_cert);
     tor_cert_free(ctx->my_id_cert);
-    crypto_free_pk_env(ctx->key);
+    tor_cert_free(ctx->my_auth_cert);
+    crypto_free_pk_env(ctx->link_key);
+    crypto_free_pk_env(ctx->auth_key);
     tor_free(ctx);
   }
 }
@@ -832,7 +836,7 @@ tor_tls_get_my_certs(int server,
   if (! ctx)
     return -1;
   if (link_cert_out)
-    *link_cert_out = ctx->my_cert;
+    *link_cert_out = server ? ctx->my_link_cert : ctx->my_auth_cert;
   if (id_cert_out)
     *id_cert_out = ctx->my_id_cert;
   return 0;
@@ -1050,37 +1054,48 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
 static tor_tls_context_t *
 tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
-  crypto_pk_env_t *rsa = NULL;
+  crypto_pk_env_t *rsa = NULL, *rsa_auth = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
-  X509 *cert = NULL, *idcert = NULL;
+  X509 *cert = NULL, *idcert = NULL, *authcert = NULL;
   char *nickname = NULL, *nn2 = NULL;
 
   tor_tls_init();
   nickname = crypto_random_hostname(8, 20, "www.", ".net");
   nn2 = crypto_random_hostname(8, 20, "www.", ".net");
 
-  /* Generate short-term RSA key. */
+  /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_new_pk_env()))
     goto error;
   if (crypto_pk_generate_key(rsa)<0)
     goto error;
-  /* Create certificate signed by identity key. */
+  /* Generate short-term RSA key for use in the in-protocol ("v3")
+   * authentication handshake. */
+  if (!(rsa_auth = crypto_new_pk_env()))
+    goto error;
+  if (crypto_pk_generate_key(rsa_auth)<0)
+    goto error;
+  /* Create a link certificate signed by identity key. */
   cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
                                     key_lifetime);
   /* Create self-signed certificate for identity key. */
   idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
                                       IDENTITY_CERT_LIFETIME);
-  if (!cert || !idcert) {
+  /* Create an authentication certificate signed by identity key. */
+  authcert = tor_tls_create_certificate(rsa_auth, identity, nickname, nn2,
+                                        key_lifetime);
+  if (!cert || !idcert || !authcert) {
     log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
     goto error;
   }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
-  result->my_cert = tor_cert_new(X509_dup(cert));
+  result->my_link_cert = tor_cert_new(X509_dup(cert));
   result->my_id_cert = tor_cert_new(X509_dup(idcert));
-  result->key = crypto_pk_dup_key(rsa);
+  result->my_auth_cert = tor_cert_new(X509_dup(authcert));
+  result->link_key = crypto_pk_dup_key(rsa);
+  result->auth_key = crypto_pk_dup_key(rsa_auth);
 
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
@@ -1146,6 +1161,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
   if (rsa)
     crypto_free_pk_env(rsa);
+  if (rsa_auth)
+    crypto_free_pk_env(rsa_auth);
+  X509_free(authcert);
   tor_free(nickname);
   tor_free(nn2);
   return result;
@@ -1158,12 +1176,16 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     EVP_PKEY_free(pkey);
   if (rsa)
     crypto_free_pk_env(rsa);
+  if (rsa_auth)
+    crypto_free_pk_env(rsa_auth);
   if (result)
     tor_tls_context_decref(result);
   if (cert)
     X509_free(cert);
   if (idcert)
     X509_free(idcert);
+  if (authcert)
+    X509_free(authcert);
   return NULL;
 }
 
