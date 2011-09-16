@@ -1504,8 +1504,72 @@ or_handshake_state_free(or_handshake_state_t *state)
 {
   if (!state)
     return;
+  crypto_free_digest_env(state->digest_sent);
+  crypto_free_digest_env(state->digest_received);
+  tor_cert_free(state->auth_cert);
+  tor_cert_free(state->id_cert);
   memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
+}
+
+/**
+ * Remember that <b>cell</b> has been transmitted (if <b>incoming</b> is
+ * false) or received (if <b>incoming is true) during a V3 handshake using
+ * <b>state</b>.
+ *
+ * (We don't record the cell, but we keep a digest of everything sent or
+ * received during the v3 handshake, and the client signs it in an
+ * authenticate cell.)
+ */
+void
+or_handshake_state_record_cell(or_handshake_state_t *state,
+                               const cell_t *cell,
+                               int incoming)
+{
+  crypto_digest_env_t *d, **dptr;
+  packed_cell_t packed;
+  if (!incoming) {
+    log_warn(LD_BUG, "We shouldn't be sending any non-variable-length cells "
+             "whilemaking a handshake digest.  But we think we are.");
+  }
+  dptr = incoming ? &state->digest_received : &state->digest_sent;
+  if (! *dptr)
+    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+
+  d = *dptr;
+  /* Re-packing like this is a little inefficient, but we don't have to do
+     this very often at all. */
+  cell_pack(&packed, cell);
+  crypto_digest_add_bytes(d, packed.body, sizeof(packed.body));
+  memset(&packed, 0, sizeof(packed));
+}
+
+/** Remember that a variable-length <b>cell</b> has been transmitted (if
+ * <b>incoming</b> is false) or received (if <b>incoming is true) during a V3
+ * handshake using <b>state</b>.
+ *
+ * (We don't record the cell, but we keep a digest of everything sent or
+ * received during the v3 handshake, and the client signs it in an
+ * authenticate cell.)
+ */
+void
+or_handshake_state_record_var_cell(or_handshake_state_t *state,
+                                   const var_cell_t *cell,
+                                   int incoming)
+{
+  crypto_digest_env_t *d, **dptr;
+  char buf[VAR_CELL_HEADER_SIZE];
+  dptr = incoming ? &state->digest_received : &state->digest_sent;
+  if (! *dptr)
+    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+
+  d = *dptr;
+
+  var_cell_pack_header(cell, buf);
+  crypto_digest_add_bytes(d, buf, sizeof(buf));
+  crypto_digest_add_bytes(d, (const char *)cell->payload, cell->payload_len);
+
+  memset(buf, 0, sizeof(buf));
 }
 
 /** Set <b>conn</b>'s state to OR_CONN_STATE_OPEN, and tell other subsystems

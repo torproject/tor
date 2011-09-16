@@ -42,6 +42,13 @@ int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
 void or_handshake_state_free(or_handshake_state_t *state);
+void or_handshake_state_record_cell(or_handshake_state_t *state,
+                                    const cell_t *cell,
+                                    int incoming);
+void or_handshake_state_record_var_cell(or_handshake_state_t *state,
+                                        const var_cell_t *cell,
+                                        int incoming);
+
 int connection_or_set_state_open(or_connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
