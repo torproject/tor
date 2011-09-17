@@ -3463,6 +3463,13 @@ typedef struct rend_intro_point_t {
   extend_info_t *extend_info; /**< Extend info of this introduction point. */
   crypto_pk_env_t *intro_key; /**< Introduction key that replaces the service
                                * key, if this descriptor is V2. */
+
+  /** (Client side only) Flag indicating that a timeout has occurred
+   * after sending an INTRODUCE cell to this intro point.  After a
+   * timeout, an intro point should not be tried again during the same
+   * hidden service connection attempt, but it may be tried again
+   * during a future connection attempt. */
+  unsigned int timed_out : 1;
 } rend_intro_point_t;
 
 /** Information used to connect to a hidden service.  Used on both the

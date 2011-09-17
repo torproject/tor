@@ -22,8 +22,14 @@ int rend_client_introduction_acked(origin_circuit_t *circ,
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 void rend_client_cancel_descriptor_fetches(void);
 void rend_client_purge_last_hid_serv_requests(void);
-int rend_client_remove_intro_point(extend_info_t *failed_intro,
-                                   const rend_data_t *rend_query);
+
+#define INTRO_POINT_FAILURE_GENERIC 0
+#define INTRO_POINT_FAILURE_TIMEOUT 1
+
+int rend_client_report_intro_point_failure(extend_info_t *failed_intro,
+                                           const rend_data_t *rend_query,
+                                           unsigned int failure_type);
+
 int rend_client_rendezvous_acked(origin_circuit_t *circ,
                                  const uint8_t *request,
                                  size_t request_len);

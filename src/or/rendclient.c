@@ -366,8 +366,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     log_info(LD_REND, "Got nack for %s from %s...",
         safe_str_client(circ->rend_data->onion_address),
         safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
-    if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
-                                       circ->rend_data) > 0) {
+    if (rend_client_report_intro_point_failure(circ->build_state->chosen_exit,
+                                               circ->rend_data,
+                                               INTRO_POINT_FAILURE_GENERIC)>0){
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       int result = rend_client_reextend_intro_circuit(circ);
@@ -648,16 +649,26 @@ rend_client_cancel_descriptor_fetches(void)
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** Remove failed_intro from ent. If ent now has no intro points, or
- * service is unrecognized, then launch a new renddesc fetch.
-
+/** Mark <b>failed_intro</b> as a failed introduction point for the
+ * hidden service specified by <b>rend_query</b>. If the HS now has no
+ * usable intro points, or we do not have an HS descriptor for it,
+ * then launch a new renddesc fetch.
  *
- * Return -1 if error, 0 if no intro points remain or service
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_GENERIC, remove the
+ * intro point from (our parsed copy of) the HS descriptor.
+ *
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_TIMEOUT, mark the
+ * intro point as 'timed out'; it will not be retried until the
+ * current hidden service connection attempt has ended or it has
+ * appeared in a newly fetched rendezvous descriptor.
+ *
+ * Return -1 if error, 0 if no usable intro points remain or service
  * unrecognized, 1 if recognized and some intro points remain.
  */
 int
-rend_client_remove_intro_point(extend_info_t *failed_intro,
-                               const rend_data_t *rend_query)
+rend_client_report_intro_point_failure(extend_info_t *failed_intro,
+                                       const rend_data_t *rend_query,
+                                       unsigned int failure_type)
 {
   int i, r;
   rend_cache_entry_t *ent;
@@ -680,8 +691,20 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     rend_intro_point_t *intro = smartlist_get(ent->parsed->intro_nodes, i);
     if (tor_memeq(failed_intro->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN)) {
-      rend_intro_point_free(intro);
-      smartlist_del(ent->parsed->intro_nodes, i);
+      switch (failure_type) {
+      default:
+        log_warn(LD_BUG, "Unknown failure type %u. Removing intro point.",
+                 failure_type);
+        tor_fragile_assert();
+        /* fall through */
+      case INTRO_POINT_FAILURE_GENERIC:
+        rend_intro_point_free(intro);
+        smartlist_del(ent->parsed->intro_nodes, i);
+        break;
+      case INTRO_POINT_FAILURE_TIMEOUT:
+        intro->timed_out = 1;
+        break;
+      }
       break;
     }
   }
@@ -910,6 +933,13 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
    * no nodes are usable.  */
   usable_nodes = smartlist_create();
   smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
+
+  /* Remove the intro points that have timed out during this HS
+   * connection attempt from our list of usable nodes. */
+  SMARTLIST_FOREACH(usable_nodes, rend_intro_point_t *, ip,
+                    if (ip->timed_out) {
+                      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
+                    });
 
  again:
   if (smartlist_len(usable_nodes) == 0) {

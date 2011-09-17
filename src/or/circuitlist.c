@@ -1119,9 +1119,8 @@ circuit_expire_all_dirty_circs(void)
  *   - If circ isn't open yet: call circuit_build_failed() if we're
  *     the origin, and in either case call circuit_rep_hist_note_result()
  *     to note stats.
- *   - If purpose is C_INTRODUCE_ACK_WAIT, remove the intro point we
- *     just tried from our list of intro points for that service
- *     descriptor.
+ *   - If purpose is C_INTRODUCE_ACK_WAIT, report the intro point
+ *     failure we just had to the hidden service client module.
  *   - Send appropriate destroys and edge_destroys for conns and
  *     streams attached to circ.
  *   - If circ->rend_splice is set (we are the midpoint of a joined
@@ -1190,16 +1189,20 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    int timed_out = (reason == END_STREAM_REASON_TIMEOUT);
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(ocirc->build_state->chosen_exit);
     tor_assert(ocirc->rend_data);
     /* treat this like getting a nack from it */
-    log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
-           "Removing from descriptor.",
+    log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
            safe_str_client(ocirc->rend_data->onion_address),
-           safe_str_client(build_state_get_exit_nickname(ocirc->build_state)));
-    rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
-                                   ocirc->rend_data);
+           safe_str_client(build_state_get_exit_nickname(ocirc->build_state)),
+           timed_out ? "Recording timeout." : "Removing from descriptor.");
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           timed_out ?
+                                           INTRO_POINT_FAILURE_TIMEOUT :
+                                           INTRO_POINT_FAILURE_GENERIC);
   }
   if (circ->n_conn) {
     circuit_clear_cell_queue(circ, circ->n_conn);
