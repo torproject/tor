@@ -881,8 +881,31 @@ rend_client_desc_trynow(const char *query)
                  "unavailable (try again later).",
                  safe_str_client(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
+      rend_client_note_connection_attempt_ended(query);
     }
   } SMARTLIST_FOREACH_END(_conn);
+}
+
+/** Clear temporary state used only during an attempt to connect to
+ * the hidden service named <b>onion_address</b>.  Called when a
+ * connection attempt has ended; may be called occasionally at other
+ * times, and should be reasonably harmless. */
+void
+rend_client_note_connection_attempt_ended(const char *onion_address)
+{
+  rend_cache_entry_t *cache_entry = NULL;
+  rend_cache_lookup_entry(onion_address, -1, &cache_entry);
+
+  log_info(LD_REND, "Connection attempt for %s has ended; "
+           "cleaning up temporary state.",
+           safe_str_client(onion_address));
+
+  /* Clear the timed_out flag on all remaining intro points for this HS. */
+  if (cache_entry != NULL) {
+    SMARTLIST_FOREACH(cache_entry->parsed->intro_nodes,
+                      rend_intro_point_t *, ip,
+                      ip->timed_out = 0; );
+  }
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction

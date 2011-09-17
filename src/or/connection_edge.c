@@ -68,6 +68,18 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
   tor_assert(conn->_base.type == CONN_TYPE_AP);
   conn->edge_has_sent_end = 1; /* no circ yet */
 
+  /* If this is a rendezvous stream and it is failing without ever
+   * being attached to a circuit, assume that an attempt to connect to
+   * the destination hidden service has just ended.
+   *
+   * XXX023 This condition doesn't limit to only streams failing
+   * without ever being attached.  That sloppiness should be harmless,
+   * but we should fix it someday anyway. */
+  if ((conn->on_circuit != NULL || conn->edge_has_sent_end) &&
+      connection_edge_is_rendezvous_stream(conn)) {
+    rend_client_note_connection_attempt_ended(conn->rend_data->onion_address);
+  }
+
   if (conn->_base.marked_for_close) {
     /* This call will warn as appropriate. */
     _connection_mark_for_close(TO_CONN(conn), line, file);
