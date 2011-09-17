@@ -1121,6 +1121,9 @@ circuit_expire_all_dirty_circs(void)
  *     to note stats.
  *   - If purpose is C_INTRODUCE_ACK_WAIT, report the intro point
  *     failure we just had to the hidden service client module.
+ *   - If purpose is C_INTRODUCING and <b>reason</b> isn't TIMEOUT,
+ *     report to the hidden service client module that the intro point
+ *     we just tried may be unreachable.
  *   - Send appropriate destroys and edge_destroys for conns and
  *     streams attached to circ.
  *   - If circ->rend_splice is set (we are the midpoint of a joined
@@ -1203,6 +1206,19 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                                            timed_out ?
                                            INTRO_POINT_FAILURE_TIMEOUT :
                                            INTRO_POINT_FAILURE_GENERIC);
+  } else if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
+             reason != END_STREAM_REASON_TIMEOUT) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    tor_assert(ocirc->build_state->chosen_exit);
+    tor_assert(ocirc->rend_data);
+    log_info(LD_REND, "Failed intro circ %s to %s "
+             "(building circuit to intro point). "
+             "Marking intro point as possibly unreachable.",
+             safe_str_client(ocirc->rend_data->onion_address),
+           safe_str_client(build_state_get_exit_nickname(ocirc->build_state)));
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           INTRO_POINT_FAILURE_UNREACHABLE);
   }
   if (circ->n_conn) {
     circuit_clear_cell_queue(circ, circ->n_conn);

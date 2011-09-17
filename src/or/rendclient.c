@@ -662,6 +662,11 @@ rend_client_cancel_descriptor_fetches(void)
  * current hidden service connection attempt has ended or it has
  * appeared in a newly fetched rendezvous descriptor.
  *
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_UNREACHABLE,
+ * increment the intro point's reachability-failure count; if it has
+ * now failed MAX_INTRO_POINT_REACHABILITY_FAILURES or more times,
+ * remove the intro point from (our parsed copy of) the HS descriptor.
+ *
  * Return -1 if error, 0 if no usable intro points remain or service
  * unrecognized, 1 if recognized and some intro points remain.
  */
@@ -703,6 +708,20 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
         break;
       case INTRO_POINT_FAILURE_TIMEOUT:
         intro->timed_out = 1;
+        break;
+      case INTRO_POINT_FAILURE_UNREACHABLE:
+        ++(intro->unreachable_count);
+        {
+          int zap_intro_point =
+            intro->unreachable_count >= MAX_INTRO_POINT_REACHABILITY_FAILURES;
+          log_info(LD_REND, "Failed to reach this intro point %u times.%s",
+                   intro->unreachable_count,
+                   zap_intro_point ? " Removing from descriptor.": "");
+          if (zap_intro_point) {
+            rend_intro_point_free(intro);
+            smartlist_del(ent->parsed->intro_nodes, i);
+          }
+        }
         break;
       }
       break;
