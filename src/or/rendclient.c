@@ -519,7 +519,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
     return 0;
   }
 
-  /* Remember, that we are requesting a descriptor from this hidden service
+  /* Remember that we are requesting a descriptor from this hidden service
    * directory now. */
   lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
 
