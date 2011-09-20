@@ -1236,7 +1236,7 @@ imalloc(size_t size)
 		ptralloc = 1;
 		size = malloc_pagesize;
 	}
-	if ((size + malloc_pagesize) < size) {	/* Check for overflow */
+	if (size > SIZE_MAX - malloc_pagesize) { /* Check for overflow */
 		result = NULL;
 		errno = ENOMEM;
 	} else if (size <= malloc_maxsize)
