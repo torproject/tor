@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Change an integer overflow check in the OpenBSD_Malloc code so
+      that GCC is less likely to eliminate it as impossible. Patch
+      from Mansour Moufid. Fixes bug 4059.
+
