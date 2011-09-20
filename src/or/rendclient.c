@@ -385,9 +385,12 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 #define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
 
 /** Contains the last request times to hidden service directories for
- * certain queries; keys are strings consisting of base32-encoded
- * hidden service directory identities and base32-encoded descriptor IDs;
- * values are pointers to timestamps of the last requests. */
+ * certain queries; each key is a string consisting of the
+ * concatenation of a base32-encoded HS directory identity digest, a
+ * base32-encoded HS descriptor ID, and a hidden service address
+ * (without the ".onion" part); each value is a pointer to a time_t
+ * holding the time of the last request for that descriptor ID to that
+ * HS directory. */
 static strmap_t *last_hid_serv_requests_ = NULL;
 
 /** Returns last_hid_serv_requests_, initializing it to a new strmap if
@@ -400,23 +403,34 @@ get_last_hid_serv_requests(void)
   return last_hid_serv_requests_;
 }
 
+#define LAST_HID_SERV_REQUEST_KEY_LEN (REND_DESC_ID_V2_LEN_BASE32 + \
+                                       REND_DESC_ID_V2_LEN_BASE32 + \
+                                       REND_SERVICE_ID_LEN_BASE32)
+
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
+ * for descriptor ID <b>desc_id_base32</b> for the service specified in
+ * <b>rend_query</b>. If <b>set</b> is non-zero,
  * assign the current time <b>now</b> and return that. Otherwise, return
  * the most recent request time, or 0 if no such request has been sent
  * before. */
 static time_t
 lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                             const char *desc_id_base32, time_t now, int set)
+                             const char *desc_id_base32,
+                             const rend_data_t *rend_query,
+                             time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
+  char hsdir_desc_comb_id[LAST_HID_SERV_REQUEST_KEY_LEN + 1];
   time_t *last_request_ptr;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
-               hsdir_id_base32, desc_id_base32);
+  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s%s",
+               hsdir_id_base32,
+               desc_id_base32,
+               rend_query->onion_address);
+  /* XXX023 tor_assert(strlen(hsdir_desc_comb_id) ==
+                       LAST_HID_SERV_REQUEST_KEY_LEN); */
   if (set) {
     time_t *oldptr;
     last_request_ptr = tor_malloc_zero(sizeof(time_t));
@@ -476,12 +490,11 @@ rend_client_purge_last_hid_serv_requests(void)
 }
 
 /** Determine the responsible hidden service directories for <b>desc_id</b>
- * and fetch the descriptor belonging to that ID from one of them. Only
- * send a request to hidden service directories that we did not try within
- * the last REND_HID_SERV_DIR_REQUERY_PERIOD seconds; on success, return 1,
+ * and fetch the descriptor with that ID from one of them. Only
+ * send a request to a hidden service directory that we have not yet tried
+ * during this attempt to connect to this hidden service; on success, return 1,
  * in the case that no hidden service directory is left to ask for the
- * descriptor, return 0, and in case of a failure -1. <b>query</b> is only
- * passed for pretty log statements. */
+ * descriptor, return 0, and in case of a failure -1.  */
 static int
 directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 {
@@ -504,7 +517,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_clean_last_hid_serv_requests(); /* Clean request history first. */
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-    if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
+      if (lookup_last_hid_serv_request(dir, desc_id_base32, rend_query, 0, 0) +
             REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
         !router_get_by_digest(dir->identity_digest))
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
@@ -521,7 +534,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 
   /* Remember that we are requesting a descriptor from this hidden service
    * directory now. */
-  lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
+  lookup_last_hid_serv_request(hs_dir, desc_id_base32, rend_query, now, 1);
 
   /* Encode descriptor cookie for logging purposes. */
   if (rend_query->auth_type != REND_NO_AUTH) {
