@@ -469,6 +469,33 @@ directory_clean_last_hid_serv_requests(void)
   }
 }
 
+/** Remove all requests related to the hidden service named
+ * <b>onion_address</b> from the history of times of requests to
+ * hidden service directories. */
+static void
+purge_hid_serv_from_last_hid_serv_requests(const char *onion_address)
+{
+  strmap_iter_t *iter;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+  /* XXX023 tor_assert(strlen(onion_address) == REND_SERVICE_ID_LEN_BASE32); */
+  for (iter = strmap_iter_init(last_hid_serv_requests);
+       !strmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    strmap_iter_get(iter, &key, &val);
+    /* XXX023 tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
+    if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
+                  REND_SERVICE_ID_LEN_BASE32,
+                  onion_address,
+                  REND_SERVICE_ID_LEN_BASE32)) {
+      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
+      tor_free(val);
+    } else {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+    }
+  }
+}
+
 /** Purge the history of request times to hidden service directories,
  * so that future lookups of an HS descriptor will not fail because we
  * accessed all of the HSDir relays responsible for the descriptor
@@ -938,6 +965,9 @@ rend_client_note_connection_attempt_ended(const char *onion_address)
                       rend_intro_point_t *, ip,
                       ip->timed_out = 0; );
   }
+
+  /* Remove the HS's entries in last_hid_serv_requests. */
+  purge_hid_serv_from_last_hid_serv_requests(onion_address);
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction
