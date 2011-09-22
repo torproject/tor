@@ -1856,6 +1856,18 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
+/** Return the peer certificate, or NULL if there isn't one. */
+tor_cert_t *
+tor_tls_get_peer_cert(tor_tls_t *tls)
+{
+  X509 *cert;
+  cert = SSL_get_peer_certificate(tls->ssl);
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "getting peer certificate");
+  if (!cert)
+    return NULL;
+  return tor_cert_new(cert);
+}
+
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
 log_cert_lifetime(const X509 *cert, const char *problem)
