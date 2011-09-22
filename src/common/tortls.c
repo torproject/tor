@@ -838,6 +838,40 @@ tor_tls_get_my_certs(int server,
   return 0;
 }
 
+/**
+ * Return the authentication key that we use to authenticate ourselves as a
+ * client in the V3 in-protocol handshake.
+ */
+crypto_pk_env_t *
+tor_tls_get_my_client_auth_key(void)
+{
+  if (! client_tls_context)
+    return NULL;
+  return client_tls_context->auth_key;
+}
+
+/**
+ * Return the public key that a cetificate certifies.  Return NULL if the
+ * cert's key is not RSA.
+ */
+crypto_pk_env_t *
+tor_tls_cert_get_key(tor_cert_t *cert)
+{
+  crypto_pk_env_t *result = NULL;
+  EVP_PKEY *pkey = X509_get_pubkey(cert->cert);
+  RSA *rsa;
+  if (!pkey)
+    return NULL;
+  rsa = EVP_PKEY_get1_RSA(pkey);
+  if (!rsa) {
+    EVP_PKEY_free(pkey);
+    return NULL;
+  }
+  result = _crypto_new_pk_env_rsa(rsa);
+  EVP_PKEY_free(pkey);
+  return result;
+}
+
 /** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
 static int
 pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
