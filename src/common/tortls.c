@@ -928,14 +928,18 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
 }
 
 /** Check wither <b>cert</b> is well-formed, currently live, and correctly
- * signed by the public key in <b>signing_cert</b>.  Return 0 if the cert is
- * good, and -1 if it's bad or we couldn't check it. */
+ * signed by the public key in <b>signing_cert</b>.  If <b>check_rsa_1024</b>,
+ * make sure that it has an RSA key with 1024 bits; otherwise, just check that
+ * the key is long enough. Return 1 if the cert is good, and 0 if it's bad or
+ * we couldn't check it. */
 int
 tor_tls_cert_is_valid(const tor_cert_t *cert,
-                      const tor_cert_t *signing_cert)
+                      const tor_cert_t *signing_cert,
+                      int check_rsa_1024)
 {
+  EVP_PKEY *cert_key;
   EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
-  int r;
+  int r, key_ok = 0;
   if (!signing_key)
     return 0;
   r = X509_verify(cert->cert, signing_key);
@@ -949,9 +953,29 @@ tor_tls_cert_is_valid(const tor_cert_t *cert,
   if (check_cert_lifetime_internal(cert->cert, 60*60) < 0)
     return 0;
 
+  cert_key = X509_get_pubkey(cert->cert);
+  if (check_rsa_1024 && cert_key) {
+    RSA *rsa = EVP_PKEY_get1_RSA(cert_key);
+    if (rsa && BN_num_bits(rsa->n) == 1024)
+      key_ok = 1;
+    if (rsa)
+      RSA_free(rsa);
+  } else if (cert_key) {
+    int min_bits = 1024;
+#ifdef EVP_PKEY_EC
+    if (EVP_PKEY_type(cert_key->type) == EVP_PKEY_EC)
+      min_bits = 128;
+#endif
+    if (EVP_PKEY_bits(cert_key) >= min_bits)
+      key_ok = 1;
+  }
+  EVP_PKEY_free(cert_key);
+  if (!key_ok)
+    return 0;
+
   /* XXXX compare DNs or anything? */
 
-  return -1;
+  return 1;
 }
 
 /** Increase the reference count of <b>ctx</b>. */

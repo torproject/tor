@@ -123,7 +123,8 @@ crypto_pk_env_t *tor_tls_get_my_client_auth_key(void);
 crypto_pk_env_t *tor_tls_cert_get_key(tor_cert_t *cert);
 int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
 int tor_tls_cert_is_valid(const tor_cert_t *cert,
-                          const tor_cert_t *signing_cert);
+                          const tor_cert_t *signing_cert,
+                          int check_rsa_1024);
 
 #endif
 
