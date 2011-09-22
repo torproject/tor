@@ -2388,22 +2388,23 @@ connection_bucket_init(void)
   }
 }
 
-/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate
- * <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
- * <b>seconds_elapsed</b> seconds have passed since the last call.
- **/
+/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate per
+ * second <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
+ * <b>milliseconds_elapsed</b> milliseconds have passed since the last
+ * call. */
 static void
 connection_bucket_refill_helper(int *bucket, int rate, int burst,
-                                int seconds_elapsed, const char *name)
+                                int milliseconds_elapsed,
+                                const char *name)
 {
   int starting_bucket = *bucket;
-  if (starting_bucket < burst && seconds_elapsed) {
-    if (((burst - starting_bucket)/seconds_elapsed) < rate) {
+  if (starting_bucket < burst && milliseconds_elapsed > 0) {
+    int64_t incr = (((int64_t)rate) * milliseconds_elapsed) / 1000;
+    if ((burst - starting_bucket) < incr) {
       *bucket = burst;  /* We would overflow the bucket; just set it to
                          * the maximum. */
     } else {
-      int incr = rate*seconds_elapsed;
-      *bucket += incr;
+      *bucket += (int)incr;
       if (*bucket > burst || *bucket < starting_bucket) {
         /* If we overflow the burst, or underflow our starting bucket,
          * cap the bucket value to burst. */
@@ -2416,41 +2417,46 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
   }
 }
 
-/** A second has rolled over; increment buckets appropriately. */
+/** Time has passed; increment buckets appropriately. */
 void
-connection_bucket_refill(int seconds_elapsed, time_t now)
+connection_bucket_refill(int milliseconds_elapsed, time_t now)
 {
   const or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
-  int relayrate, relayburst;
+  int bandwidthrate, bandwidthburst, relayrate, relayburst;
+
+  bandwidthrate = (int)options->BandwidthRate;
+  bandwidthburst = (int)options->BandwidthBurst;
 
   if (options->RelayBandwidthRate) {
     relayrate = (int)options->RelayBandwidthRate;
     relayburst = (int)options->RelayBandwidthBurst;
   } else {
-    relayrate = (int)options->BandwidthRate;
-    relayburst = (int)options->BandwidthBurst;
+    relayrate = bandwidthrate;
+    relayburst = bandwidthburst;
   }
 
-  tor_assert(seconds_elapsed >= 0);
+  tor_assert(milliseconds_elapsed >= 0);
 
   write_buckets_empty_last_second =
     global_relayed_write_bucket <= 0 || global_write_bucket <= 0;
 
   /* refill the global buckets */
   connection_bucket_refill_helper(&global_read_bucket,
-                                  (int)options->BandwidthRate,
-                                  (int)options->BandwidthBurst,
-                                  seconds_elapsed, "global_read_bucket");
+                                  bandwidthrate, bandwidthburst,
+                                  milliseconds_elapsed,
+                                  "global_read_bucket");
   connection_bucket_refill_helper(&global_write_bucket,
-                                  (int)options->BandwidthRate,
-                                  (int)options->BandwidthBurst,
-                                  seconds_elapsed, "global_write_bucket");
+                                  bandwidthrate, bandwidthburst,
+                                  milliseconds_elapsed,
+                                  "global_write_bucket");
   connection_bucket_refill_helper(&global_relayed_read_bucket,
-                                  relayrate, relayburst, seconds_elapsed,
+                                  relayrate, relayburst,
+                                  milliseconds_elapsed,
                                   "global_relayed_read_bucket");
   connection_bucket_refill_helper(&global_relayed_write_bucket,
-                                  relayrate, relayburst, seconds_elapsed,
+                                  relayrate, relayburst,
+                                  milliseconds_elapsed,
                                   "global_relayed_write_bucket");
 
   /* refill the per-connection buckets */
@@ -2458,18 +2464,20 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
   {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
+      int orbandwidthrate = or_conn->bandwidthrate;
+      int orbandwidthburst = or_conn->bandwidthburst;
       if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->read_bucket,
-                                        or_conn->bandwidthrate,
-                                        or_conn->bandwidthburst,
-                                        seconds_elapsed,
+                                        orbandwidthrate,
+                                        orbandwidthburst,
+                                        milliseconds_elapsed,
                                         "or_conn->read_bucket");
       }
       if (connection_bucket_should_increase(or_conn->write_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->write_bucket,
-                                        or_conn->bandwidthrate,
-                                        or_conn->bandwidthburst,
-                                        seconds_elapsed,
+                                        orbandwidthrate,
+                                        orbandwidthburst,
+                                        milliseconds_elapsed,
                                         "or_conn->write_bucket");
       }
     }
@@ -2553,7 +2561,10 @@ connection_bucket_init(void)
     burst = options->BandwidthBurst;
   }
 
-  rate /= TOR_LIBEVENT_TICKS_PER_SECOND;
+  /* This can't overflow, since TokenBucketRefillInterval <= 1000,
+   * and rate started out less than INT32_MAX. */
+  rate = (rate * options->TokenBucketRefillInterval) / 1000;
+
   bucket_cfg = ev_token_bucket_cfg_new((uint32_t)rate, (uint32_t)burst,
                                        (uint32_t)rate, (uint32_t)burst,
                                        tick);

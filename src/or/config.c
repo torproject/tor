@@ -386,6 +386,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
+  V(TokenBucketRefillInterval,   MSEC_INTERVAL, "10 msec"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -3165,6 +3166,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
+  if (options->TokenBucketRefillInterval <= 0
+      || options->TokenBucketRefillInterval > 1000) {
+    REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
+  }
+
   if (options->AccountingMax &&
       (is_listening_on_low_port(options->ORPort, options->ORListenAddress) ||
        is_listening_on_low_port(options->DirPort, options->DirListenAddress)))
@@ -3964,6 +3970,12 @@ options_transition_allowed(const or_options_t *old,
   if (old->DisableAllSwap != new_val->DisableAllSwap) {
     *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
                       "is not allowed.");
+    return -1;
+  }
+
+  if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
+    *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
+                      "Interval is not allowed");
     return -1;
   }
 
@@ -5633,6 +5645,7 @@ init_libevent(const or_options_t *options)
   memset(&cfg, 0, sizeof(cfg));
   cfg.disable_iocp = options->DisableIOCP;
   cfg.num_cpus = get_num_cpus(options);
+  cfg.msec_per_tick = options->TokenBucketRefillInterval;
 
   tor_libevent_initialize(&cfg);
 

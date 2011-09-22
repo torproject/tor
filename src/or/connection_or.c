@@ -580,7 +580,12 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
   {
     const struct timeval *tick = tor_libevent_get_one_tick_timeout();
     struct ev_token_bucket_cfg *cfg, *old_cfg;
-    int rate_per_tick = rate / TOR_LIBEVENT_TICKS_PER_SECOND;
+    int64_t rate64 = (((int64_t)rate) * options->TokenBucketRefillInterval)
+      / 1000;
+    /* This can't overflow, since TokenBucketRefillInterval <= 1000,
+     * and rate started out less than INT_MAX. */
+    int rate_per_tick = (int) rate64;
+
     cfg = ev_token_bucket_cfg_new(rate_per_tick, burst, rate_per_tick,
                                   burst, tick);
     old_cfg = conn->bucket_cfg;

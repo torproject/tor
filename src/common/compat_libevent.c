@@ -169,6 +169,7 @@ struct event_base *the_event_base = NULL;
 
 #ifdef USE_BUFFEREVENTS
 static int using_iocp_bufferevents = 0;
+static void tor_libevent_set_tick_timeout(int msec_per_tick);
 
 int
 tor_libevent_using_iocp_bufferevents(void)
@@ -235,6 +236,10 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
   log(LOG_WARN, LD_GENERAL,
       "You have a *VERY* old version of libevent.  It is likely to be buggy; "
       "please build Tor with a more recent version.");
+#endif
+
+#ifdef USE_BUFFEREVENTS
+  tor_libevent_set_tick_timeout(torcfg->msec_per_tick);
 #endif
 }
 
@@ -598,24 +603,27 @@ static const struct timeval *one_tick = NULL;
 /**
  * Return a special timeout to be passed whenever libevent's O(1) timeout
  * implementation should be used. Only use this when the timer is supposed
- * to fire after 1 / TOR_LIBEVENT_TICKS_PER_SECOND seconds have passed.
+ * to fire after msec_per_tick ticks have elapsed.
 */
 const struct timeval *
 tor_libevent_get_one_tick_timeout(void)
 {
-  if (PREDICT_UNLIKELY(one_tick == NULL)) {
-    struct event_base *base = tor_libevent_get_base();
-    struct timeval tv;
-    if (TOR_LIBEVENT_TICKS_PER_SECOND == 1) {
-      tv.tv_sec = 1;
-      tv.tv_usec = 0;
-    } else {
-      tv.tv_sec = 0;
-      tv.tv_usec = 1000000 / TOR_LIBEVENT_TICKS_PER_SECOND;
-    }
-    one_tick = event_base_init_common_timeout(base, &tv);
-  }
+  tor_assert(one_tick);
   return one_tick;
+}
+
+/** Initialize the common timeout that we'll use to refill the buckets every
+ * time a tick elapses. */
+static void
+tor_libevent_set_tick_timeout(int msec_per_tick)
+{
+  struct event_base *base = tor_libevent_get_base();
+  struct timeval tv;
+
+  tor_assert(! one_tick);
+  tv.tv_sec = msec_per_tick / 1000;
+  tv.tv_usec = (msec_per_tick % 1000) * 1000;
+  one_tick = event_base_init_common_timeout(base, &tv);
 }
 
 static struct bufferevent *
