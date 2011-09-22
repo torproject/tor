@@ -2388,10 +2388,10 @@ connection_bucket_init(void)
   }
 }
 
-/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate
- * per second <b>rate</b> and bandwidth burst per refill interval
- * <b>burst</b>, assuming that <b>milliseconds_elapsed</b> milliseconds
- * have passed since the last call. */
+/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate per
+ * second <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
+ * <b>milliseconds_elapsed</b> milliseconds have passed since the last
+ * call. */
 static void
 connection_bucket_refill_helper(int *bucket, int rate, int burst,
                                 int milliseconds_elapsed,
@@ -2449,7 +2449,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   connection_bucket_refill_helper(&global_write_bucket,
                                   bandwidthrate, bandwidthburst,
                                   milliseconds_elapsed,
-                                  "global_read_bucket");
+                                  "global_write_bucket");
   connection_bucket_refill_helper(&global_relayed_read_bucket,
                                   relayrate, relayburst,
                                   milliseconds_elapsed,
