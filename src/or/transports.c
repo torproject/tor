@@ -106,30 +106,32 @@ static int unconfigured_proxies_n = 0;
     immediately after tor is launched.).
 
     We mark all managed proxies and transports to signify that they
-    must be removed if they don't contribute by the new torrc. We also
-    mark all managed proxies to signify that they might need to be
-    restarted so that they end up supporting all the transports the
-    new torrc wants them to support.
-    We also clear the 'transports_to_launch' list so that we can put
-    there the transports we need to launch on each proxy according to
-    the new torrc.
+    must be removed if they don't contribute by the new torrc
+    (marked_for_removal).
+    We also mark all managed proxies to signify that they might need
+    to be restarted so that they end up supporting all the transports
+    the new torrc wants them to support (got_hup).
+    We also clear their 'transports_to_launch' list so that we can put
+    there the transports we need to launch according to the new torrc.
 
-    We then start parsing torrc again, everytime we encounter a
-    transport line using a known pre-SIGHUP managed proxy, we cleanse
-    that proxy from the removal mark.
+    We then start parsing torrc again.
+
+    Everytime we encounter a transport line using a known pre-SIGHUP
+    managed proxy, we cleanse that proxy from the removal mark.
 
     We also mark it as unconfigured so that on the next scheduled
     events tick, we investigate whether we need to restart the proxy
-    so that it spawns the new 'transport_to_launch' list. Of course,
-    if the post-SIGHUP 'transports_to_launch' list is identical to the
+    so that it also spawns the new transports.
+    If the post-SIGHUP 'transports_to_launch' list is identical to the
     pre-SIGHUP one, it means that no changes were introduced to this
     proxy during the SIGHUP and no restart has to take place.
 
-    During the post-SIGHUP torrc parsing, we unmark all transports we
-    encounter. This happens in the case that no restart is needed, we
-    can continue using the old transports normally. If we end up
-    restarting the proxy, we destroy and unregister all old transports
-    from the circuitbuild.c subsystem since they become useless.
+    During the post-SIGHUP torrc parsing, we unmark all transports
+    spawned by managed proxies that we find in our torrc.
+    We do that so that if we don't need to restart a managed proxy, we
+    can continue using its old transports normally.
+    If we end up restarting the proxy, we destroy and unregister all
+    old transports from the circuitbuild.c subsystem.
 */
 
 /** Return true if there are still unconfigured managed proxies. */
@@ -186,18 +188,16 @@ add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
     smartlist_add(mp->transports_to_launch, tor_strdup(transport));
 }
 
-/** Called when a SIGHUP occurs.
- *  Returns true if managed proxy <b>mp</b> needs to be restarted
- *  after the SIGHUP based on the new torrc. */
+/** Called when a SIGHUP occurs. Returns true if managed proxy
+ *  <b>mp</b> needs to be restarted after the SIGHUP, based on the new
+ *  torrc. */
 static int
 proxy_needs_restart(const managed_proxy_t *mp)
 {
   /* mp->transport_to_launch is populated with the names of the
      transports that must be launched *after* the SIGHUP.
-
-     Since only PT_PROTO_COMPLETED proxies reach this function,
-     mp->transports is populated with strings of the *names of the
-     transports* that were launched *before* the SIGHUP.
+     mp->transports is populated with the names of the transports that
+     were launched *before* the SIGHUP.
 
      If the two lists contain the same strings, we don't need to
      restart the proxy, since it already does what we want. */
@@ -221,7 +221,7 @@ proxy_needs_restart(const managed_proxy_t *mp)
 }
 
 /** Managed proxy <b>mp</b> must be restarted. Do all the necessary
- *  preparations and then flag its state so that it will be launched
+ *  preparations and then flag its state so that it will be relaunched
  *  in the next tick. */
 static void
 proxy_prepare_for_restart(managed_proxy_t *mp)
@@ -371,6 +371,9 @@ configure_proxy(managed_proxy_t *mp)
 static void
 register_server_proxy(managed_proxy_t *mp)
 {
+  /* After we register this proxy's transports, we switch its
+     mp->transports to a list containing strings of its transport
+     names. (See transports.h) */
   smartlist_t *sm_tmp = smartlist_create();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
@@ -394,6 +397,9 @@ static void
 register_client_proxy(managed_proxy_t *mp)
 {
   int r;
+  /* After we register this proxy's transports, we switch its
+     mp->transports to a list containing strings of its transport
+     names. (See transports.h) */
   smartlist_t *sm_tmp = smartlist_create();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
@@ -442,9 +448,8 @@ managed_proxy_destroy(managed_proxy_t *mp)
   /* free the transports smartlist */
   smartlist_free(mp->transports);
 
+  /* free the transports_to_launch smartlist */
   SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
-
-  /* free the transports smartlist */
   smartlist_free(mp->transports_to_launch);
 
   /* remove it from the list of managed proxies */
@@ -472,8 +477,8 @@ handle_finished_proxy(managed_proxy_t *mp)
     managed_proxy_destroy(mp); /* annihilate it. */
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
-    register_proxy(mp); /* register transports */
-    mp->conf_state = PT_PROTO_COMPLETED; /* mark it as completed. */
+    register_proxy(mp); /* register its transports */
+    mp->conf_state = PT_PROTO_COMPLETED; /* and mark it as completed. */
     break;
   case PT_PROTO_INFANT:
   case PT_PROTO_LAUNCHED:
@@ -944,7 +949,7 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
 }
 
 /** Frees the array of pointers in <b>arg</b> used as arguments to
-    execve. */
+    execve(2). */
 static INLINE void
 free_execve_args(char **arg)
 {
@@ -956,9 +961,10 @@ free_execve_args(char **arg)
   tor_free(arg);
 }
 
-/** Tor will read its config, prepare the managed proxy list so that
- *  proxies that are not used in the new config will shutdown, and
- *  proxies that need to spawn more transports will do so. */
+/** Tor will read its config.
+ *  Prepare the managed proxy list so that proxies not used in the new
+ *  config will shutdown, and proxies that need to spawn different
+ *  transports will do so. */
 void
 pt_prepare_proxy_list_for_config_read(void)
 {
@@ -984,9 +990,10 @@ pt_prepare_proxy_list_for_config_read(void)
   tor_assert(unconfigured_proxies_n == 0);
 }
 
-/** The tor config was read, destroy all managed proxies that were
- *  marked by a previous call to prepare_proxy_list_for_config_read()
- *  and are not used by the new config. */
+/** The tor config was read.
+ *  Destroy all managed proxies that were marked by a previous call to
+ *  prepare_proxy_list_for_config_read() and are not used by the new
+ *  config. */
 void
 sweep_proxy_list(void)
 {

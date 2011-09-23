@@ -5879,8 +5879,8 @@ save_transport_to_state(const char *transport,
   config_line_t *transport_line =
     get_transport_in_state_by_name(transport);
 
-  if (transport_line) { /* if transport_exists_in_state() */
-    const char *prev_bindaddr = /* get addrport stored in state */
+  if (transport_line) { /* if transport already exists in state... */
+    const char *prev_bindaddr = /* get its addrport... */
       get_transport_bindaddr(transport_line->value, transport);
     tor_asprintf(&transport_addrport, "%s:%d", fmt_addr(addr), (int)port);
 
@@ -5889,7 +5889,7 @@ save_transport_to_state(const char *transport,
       log_info(LD_CONFIG, "Transport seems to have spawned on its usual "
                "address:port.");
       goto done;
-    } else { /* addrport in state is different than the one we got */
+    } else { /* if addrport in state is different than the one we got */
       log_info(LD_CONFIG, "Transport seems to have spawned on different "
                "address:port. Let's update the state file with the new "
                "address:port");

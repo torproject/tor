@@ -4675,7 +4675,8 @@ transport_resolve_conflicts(transport_t *t)
      we either have duplicate torrc lines OR we are here post-HUP and
      this transport was here pre-HUP as well. In any case, mark the
      old transport so that it doesn't get removed and ignore the new
-     one.
+     one. Our caller has to free the new transport so we return '1' to
+     signify this.
 
      If there is already a transport with the same name but different
      addrport:
@@ -4703,8 +4704,8 @@ transport_resolve_conflicts(transport_t *t)
         transport_free(t_tmp);
       } else { /* *not* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
-                   "which already exists at '%s:%u'. Skipping.", t->name,
-                   fmt_addr(&t->addr), t->port,
+                   "but the same transport already exists at '%s:%u'. "
+                   "Skipping.", t->name, fmt_addr(&t->addr), t->port,
                    fmt_addr(&t_tmp->addr), t_tmp->port);
         return -1;
       }
@@ -4731,10 +4732,9 @@ transport_add(transport_t *t)
   case 0: /* should register transport */
     if (!transport_list)
       transport_list = smartlist_create();
-
     smartlist_add(transport_list, t);
     return 0;
-  default: /* should let the caller know the return code */
+  default: /* let our caller know the return code */
     return r;
   }
 }
