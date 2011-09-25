@@ -1408,7 +1408,7 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
   cbt->close_ms = MAX(cbt->close_ms, circuit_build_times_initial_timeout());
 
   if (cbt->timeout_ms > max_time) {
-    log_notice(LD_CIRC,
+    log_info(LD_CIRC,
                "Circuit build timeout of %dms is beyond the maximum build "
                "time we have ever observed. Capping it to %dms.",
                (int)cbt->timeout_ms, max_time);
@@ -1456,7 +1456,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   timeout_rate = circuit_build_times_timeout_rate(cbt);
 
   if (prev_timeout > tor_lround(cbt->timeout_ms/1000)) {
-    log_notice(LD_CIRC,
+    log_info(LD_CIRC,
                "Based on %d circuit times, it looks like we don't need to "
                "wait so long for circuits to finish. We will now assume a "
                "circuit is too slow to use after waiting %ld seconds.",
@@ -1467,7 +1467,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
              timeout_rate);
   } else if (prev_timeout < tor_lround(cbt->timeout_ms/1000)) {
-    log_notice(LD_CIRC,
+    log_info(LD_CIRC,
                "Based on %d circuit times, it looks like we need to wait "
                "longer for circuits to finish. We will now assume a "
                "circuit is too slow to use after waiting %ld seconds.",
