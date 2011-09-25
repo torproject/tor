@@ -2319,6 +2319,11 @@ connection_ap_handshake_process_socks(entry_connection_t *conn)
     connection_write_to_buf((const char*)socks->reply, socks->replylen,
                             base_conn);
     socks->replylen = 0;
+    if (sockshere == -1) {
+      /* An invalid request just got a reply, no additional
+       * one is necessary. */
+      socks->has_finished = 1;
+    }
   }
 
   if (sockshere == 0) {
