@@ -843,7 +843,7 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
       continue; /* malformed. */
     dot = target + len - 6; /* dot now points to just before .exit */
     while (dot > target && *dot != '.')
-        dot--;
+      dot--;
     if (*dot == '.') dot++;
     nodename = tor_strndup(dot, len-5-(dot-target));;
     ri = router_get_by_nickname(nodename, 0);
