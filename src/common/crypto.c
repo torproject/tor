@@ -1206,9 +1206,6 @@ crypto_pk_asn1_decode(const char *str, size_t len)
 {
   RSA *rsa;
   unsigned char *buf;
-  /* This ifdef suppresses a type warning.  Take out the first case once
-   * everybody is using OpenSSL 0.9.7 or later.
-   */
   const unsigned char *cp;
   cp = buf = tor_malloc(len);
   memcpy(buf,str,len);
