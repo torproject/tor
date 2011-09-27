@@ -661,7 +661,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
              send_any ? "Sending cells:" : "Waiting for CERTS cell",
              send_versions ? " VERSIONS" : "",
              send_certs ? " CERTS" : "",
-             send_versions ? " AUTH_CHALLENGE" : "",
+             send_chall ? " AUTH_CHALLENGE" : "",
              send_netinfo ? " NETINFO" : "");
 
     if (send_versions) {
