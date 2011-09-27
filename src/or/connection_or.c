@@ -376,8 +376,8 @@ connection_or_process_inbuf(or_connection_t *conn)
       }
 
       return ret;
-#ifdef USE_BUFFEREVENTS
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
+#ifdef USE_BUFFEREVENTS
       if (tor_tls_server_got_renegotiate(conn->tls))
         connection_or_tls_renegotiated_cb(conn->tls, conn);
       if (conn->_base.marked_for_close)
