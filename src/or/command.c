@@ -1055,7 +1055,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     ERR("We're not doing a v3 handshake");
   if (conn->link_proto < 3)
     ERR("We're not using link protocol >= 3");
-  if (! conn->handshake_state->started_here)
+  if (conn->handshake_state->started_here)
     ERR("We originated this connection");
   if (conn->handshake_state->received_authenticate)
     ERR("We already got one!");

@@ -2163,6 +2163,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
     16 /* just in case XXXX */ ;
 
   cell = var_cell_new(cell_maxlen);
+  cell->command = CELL_AUTHENTICATE;
   set_uint16(cell->payload, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
   /* skip over length ; we don't know that yet. */
 
