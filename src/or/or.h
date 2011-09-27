@@ -1142,6 +1142,16 @@ typedef struct or_handshake_state_t {
   /** True iff we have received and processed an AUTHENTICATE cell */
   unsigned int received_authenticate : 1;
 
+  /* True iff we've received valid authentication to some identity. */
+  unsigned int authenticated : 1;
+
+  /** Identity digest that we have received and authenticated for our peer
+   * on this connection. */
+  uint8_t authenticated_peer_id[DIGEST_LEN];
+
+  /** DOCDOC  */
+  uint8_t auth_challenge[OR_AUTH_CHALLENGE_LEN];
+
   /** Digests of the cells that we have sent or received as part of a V3
    * handshake.  Used for making and checking AUTHENTICATE cells.
    *

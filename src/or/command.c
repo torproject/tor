@@ -46,6 +46,15 @@ uint64_t stats_n_versions_cells_processed = 0;
 /** How many CELL_NETINFO cells have we received, ever? */
 uint64_t stats_n_netinfo_cells_processed = 0;
 
+/** How many CELL_VPADDING cells have we received, ever? */
+uint64_t stats_n_vpadding_cells_processed = 0;
+/** How many CELL_CERTS cells have we received, ever? */
+uint64_t stats_n_cert_cells_processed = 0;
+/** How many CELL_AUTH_CHALLENGE cells have we received, ever? */
+uint64_t stats_n_auth_challenge_cells_processed = 0;
+/** How many CELL_AUTHENTICATE cells have we received, ever? */
+uint64_t stats_n_authenticate_cells_processed = 0;
+
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_created_cell(cell_t *cell, or_connection_t *conn);
@@ -54,6 +63,12 @@ static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_versions_cell(var_cell_t *cell,
                                           or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_cert_cell(var_cell_t *cell,
+                                      or_connection_t *conn);
+static void command_process_auth_challenge_cell(var_cell_t *cell,
+                                          or_connection_t *conn);
+static void command_process_authenticate_cell(var_cell_t *cell,
+                                          or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -93,7 +108,7 @@ command_time_process_cell(cell_t *cell, or_connection_t *conn, int *time,
 void
 command_process_cell(cell_t *cell, or_connection_t *conn)
 {
-  int handshaking = (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V2);
+  int handshaking = (conn->_base.state != OR_CONN_STATE_OPEN);
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
@@ -137,6 +152,10 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
   if (handshaking && cell->command != CELL_VERSIONS &&
       cell->command != CELL_NETINFO)
     return;
+  /* XXXX VERSIONS should be impossible; it's variable-length. */
+
+  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
+    or_handshake_state_record_cell(conn->handshake_state, cell, 1);
 
   switch (cell->command) {
     case CELL_PADDING:
@@ -206,14 +225,54 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
   }
 #endif
 
-  /* reject all when not handshaking. */
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2)
-    return;
+  switch (conn->_base.state)
+  {
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+      if (cell->command != CELL_VERSIONS)
+        return;
+      break;
+    case OR_CONN_STATE_TLS_HANDSHAKING:
+      /* If we're using bufferevents, it's entirely possible for us to
+       * notice "hey, data arrived!" before we notice "hey, the handshake
+       * finished!" And we need to be accepting both at once to handle both
+       * the v2 and v3 handshakes. */
+
+      /* fall through */
+    case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
+      if (cell->command != CELL_VERSIONS)
+        return; /*XXXX023 log*/
+      break;
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
+      or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
+      break; /* Everything is allowed */
+    case OR_CONN_STATE_OPEN:
+      if (conn->link_proto < 3)
+        return;
+    default:
+      /*XXXX023 log */
+      return;
+  }
 
   switch (cell->command) {
     case CELL_VERSIONS:
       ++stats_n_versions_cells_processed;
       PROCESS_CELL(versions, cell, conn);
+      break;
+    case CELL_VPADDING:
+      ++stats_n_vpadding_cells_processed;
+      PROCESS_CELL(versions, cell, conn);
+      break;
+    case CELL_CERT:
+      ++stats_n_cert_cells_processed;
+      PROCESS_CELL(cert, cell, conn);
+      break;
+    case CELL_AUTH_CHALLENGE:
+      ++stats_n_auth_challenge_cells_processed;
+      PROCESS_CELL(auth_challenge, cell, conn);
+      break;
+    case CELL_AUTHENTICATE:
+      ++stats_n_authenticate_cells_processed;
+      PROCESS_CELL(authenticate, cell, conn);
       break;
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
@@ -504,14 +563,40 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 {
   int highest_supported_version = 0;
   const uint8_t *cp, *end;
+  const int started_here = connection_or_nonopen_was_started_here(conn);
   if (conn->link_proto != 0 ||
-      conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2 ||
       (conn->handshake_state && conn->handshake_state->received_versions)) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a VERSIONS cell on a connection with its version "
            "already set to %d; dropping", (int) conn->link_proto);
     return;
   }
+  switch (conn->_base.state)
+    {
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+      break;
+    case OR_CONN_STATE_TLS_HANDSHAKING:
+    case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
+      if (started_here) {
+        log_fn(LOG_PROTOCOL_WARN, LD_OR,
+               "Received a versions cell while TLS-handshaking not in "
+               "OR_HANDSHAKING_V3 on a connection we originated.");
+      }
+      conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
+      if (connection_init_or_handshake_state(conn, started_here) < 0) {
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+      or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
+      break;
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
+      break;
+    default:
+      log_fn(LOG_PROTOCOL_WARN, LD_OR,
+             "VERSIONS cell while in unexpected state");
+      return;
+  }
+
   tor_assert(conn->handshake_state);
   end = cell->payload + cell->payload_len;
   for (cp = cell->payload; cp+1 < end; ++cp) {
@@ -533,19 +618,80 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
            "That's crazily non-compliant. Closing connection.");
     connection_mark_for_close(TO_CONN(conn));
     return;
+  } else if (highest_supported_version < 3 &&
+             conn->_base.state ==  OR_CONN_STATE_OR_HANDSHAKING_V3) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Negotiated link protocol 2 or lower after doing a v3 TLS "
+           "handshake. Closing connection.");
+    connection_mark_for_close(TO_CONN(conn));
+    return;
   }
+
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-  log_info(LD_OR, "Negotiated version %d with %s:%d; sending NETINFO.",
-           highest_supported_version,
-           safe_str_client(conn->_base.address),
-           conn->_base.port);
-  tor_assert(conn->link_proto >= 2);
+  if (conn->link_proto == 2) {
+    log_info(LD_OR, "Negotiated version %d with %s:%d; sending NETINFO.",
+             highest_supported_version,
+             safe_str_client(conn->_base.address),
+             conn->_base.port);
 
-  if (connection_or_send_netinfo(conn) < 0) {
-    connection_mark_for_close(TO_CONN(conn));
-    return;
+    if (connection_or_send_netinfo(conn) < 0) {
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+  } else {
+    const int send_versions = !started_here;
+    /* If we want to authenticate, send a CERTS cell */
+    const int send_certs = !started_here || public_server_mode(get_options());
+    /* If we're a relay that got a connection, ask for authentication. */
+    const int send_chall = !started_here && public_server_mode(get_options());
+    /* If our certs cell will authenticate us, or if we have no intention of
+     * authenticating, send a netinfo cell right now. */
+    const int send_netinfo =
+      !(started_here && public_server_mode(get_options()));
+    const int send_any =
+      send_versions || send_certs || send_chall || send_netinfo;
+    tor_assert(conn->link_proto >= 3);
+
+    log_info(LD_OR, "Negotiated version %d with %s:%d; %s%s%s%s%s",
+             highest_supported_version,
+             safe_str_client(conn->_base.address),
+             conn->_base.port,
+             send_any ? "Sending cells:" : "Waiting for CERTS cell",
+             send_versions ? " VERSIONS" : "",
+             send_certs ? " CERTS" : "",
+             send_versions ? " AUTH_CHALLENGE" : "",
+             send_netinfo ? " NETINFO" : "");
+
+    if (send_versions) {
+      if (connection_or_send_versions(conn, 1) < 0) {
+        log_warn(LD_OR, "Couldn't send versions cell");
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    }
+    if (send_certs) {
+      if (connection_or_send_cert_cell(conn) < 0) {
+        log_warn(LD_OR, "Couldn't send cert cell");
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    }
+    if (send_chall) {
+      if (connection_or_send_auth_challenge_cell(conn) < 0) {
+        log_warn(LD_OR, "Couldn't send auth_challenge cell");
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    }
+    if (send_netinfo) {
+      if (connection_or_send_netinfo(conn) < 0) {
+        log_warn(LD_OR, "Couldn't send netinfo cell");
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    }
   }
 }
 
@@ -571,13 +717,26 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
            conn->link_proto == 0 ? "non-versioned" : "a v1");
     return;
   }
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2) {
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V2 &&
+      conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on non-handshaking connection; dropping.");
     return;
   }
   tor_assert(conn->handshake_state &&
              conn->handshake_state->received_versions);
+
+  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3) {
+    tor_assert(conn->link_proto >= 3);
+    if (conn->handshake_state->started_here) {
+      if (!conn->handshake_state->authenticated) {
+        log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got a NETINFO cell from server, "
+               "but no authentication.  Closing the connection.");
+        connection_mark_for_close(TO_CONN(conn));
+      }
+    }
+  }
+
   /* Decode the cell. */
   timestamp = ntohl(get_uint32(cell->payload));
   if (labs(now - conn->handshake_state->sent_versions_at) < 180) {
@@ -692,8 +851,14 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
 
   if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
     ERR("We're not doing a v3 handshake!");
+  if (conn->link_proto < 3)
+    ERR("We're not using link protocol >= 3");
   if (conn->handshake_state->received_cert_cell)
     ERR("We already got one");
+  if (conn->handshake_state->authenticated) {
+    /* Should be unreachable, but let's make sure. */
+    ERR("We're already authenticated!");
+  }
   if (cell->payload_len < 1)
     ERR("It had no body");
   if (cell->circ_id)
@@ -750,7 +915,20 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
-    /* XXXX  okay, we just got authentication.  Do something about that. */
+    conn->handshake_state->authenticated = 1;
+    {
+      crypto_pk_env_t *identity_rcvd = tor_tls_cert_get_key(id_cert);
+      const digests_t *id_digests = tor_cert_get_id_digests(id_cert);
+      memcpy(conn->handshake_state->authenticated_peer_id,
+             id_digests->d[DIGEST_SHA1], DIGEST_LEN);
+      connection_or_set_circid_type(conn, identity_rcvd);
+      crypto_free_pk_env(identity_rcvd);
+    }
+
+    if (connection_or_client_learned_peer_id(conn,
+                      conn->handshake_state->authenticated_peer_id) < 0)
+      ERR("Problem setting or checking peer id");
+
 
     conn->handshake_state->id_cert = id_cert;
     id_cert = NULL;
@@ -803,10 +981,14 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
 
   if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
     ERR("We're not currently doing a v3 handshake");
+  if (conn->link_proto < 3)
+    ERR("We're not using link protocol >= 3");
   if (! conn->handshake_state->started_here)
     ERR("We didn't originate this connection");
   if (conn->handshake_state->received_auth_challenge)
     ERR("We already received one");
+  if (! conn->handshake_state->received_cert_cell)
+    ERR("We haven't gotten a CERTS cell yet");
   if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2)
     ERR("It was too short");
   if (cell->circ_id)
@@ -829,7 +1011,19 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
 
   conn->handshake_state->received_auth_challenge = 1;
 
-  /* Send back authentication if we want, and if use_type is set */
+  if (use_type && public_server_mode(get_options())) {
+    if (connection_or_send_authenticate_cell(conn, use_type) < 0) {
+      log_warn(LD_OR, "Couldn't send authenticate cell");
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+    if (connection_or_send_netinfo(conn) < 0) {
+      log_warn(LD_OR, "Couldn't send netinfo cell");
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+  }
+
 #undef ERR
 }
 
@@ -842,7 +1036,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
  * the identity of the router on the other side of the connection.
  */
 static void
-command_process_authenticate_cell(or_connection_t *conn, var_cell_t *cell)
+command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
 {
   uint8_t expected[V3_AUTH_FIXED_PART_LEN];
   const uint8_t *auth;
@@ -859,12 +1053,22 @@ command_process_authenticate_cell(or_connection_t *conn, var_cell_t *cell)
 
   if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
     ERR("We're not doing a v3 handshake");
+  if (conn->link_proto < 3)
+    ERR("We're not using link protocol >= 3");
   if (! conn->handshake_state->started_here)
     ERR("We originated this connection");
   if (conn->handshake_state->received_authenticate)
     ERR("We already got one!");
+  if (conn->handshake_state->authenticated) {
+    /* Should be impossible given other checks */
+    ERR("The peer is already authenticated");
+  }
+  if (! conn->handshake_state->received_cert_cell)
+    ERR("We never got a cert cell");
   if (conn->handshake_state->auth_cert == NULL)
     ERR("We never got an authentication certificate");
+  if (conn->handshake_state->id_cert == NULL)
+    ERR("We never got an identity certificate");
   if (cell->payload_len < 4)
     ERR("Cell was way too short");
 
@@ -915,6 +1119,8 @@ command_process_authenticate_cell(or_connection_t *conn, var_cell_t *cell)
       tor_free(signed_data);
       ERR("Not enough data was signed");
     }
+    /* Note that we deliberately allow *more* than DIGEST256_LEN bytes here,
+     * in case they're later used to hold a SHA3 digest or something. */
     if (tor_memneq(signed_data, d, DIGEST256_LEN)) {
       tor_free(signed_data);
       ERR("Signature did not match data to be signed.");
@@ -922,19 +1128,28 @@ command_process_authenticate_cell(or_connection_t *conn, var_cell_t *cell)
     tor_free(signed_data);
   }
 
-  /* XXXX we're authenticated.  Now remember the fact, and remember whom we're
-     authenticated to. */
-
+  /* Okay, we are authenticated. */
   conn->handshake_state->received_authenticate = 1;
+  conn->handshake_state->authenticated = 1;
+  {
+    crypto_pk_env_t *identity_rcvd =
+      tor_tls_cert_get_key(conn->handshake_state->id_cert);
+    const digests_t *id_digests =
+      tor_cert_get_id_digests(conn->handshake_state->id_cert);
+
+    memcpy(conn->handshake_state->authenticated_peer_id,
+           id_digests->d[DIGEST_SHA1], DIGEST_LEN);
+
+    connection_or_set_circid_type(conn, identity_rcvd);
+    crypto_free_pk_env(identity_rcvd);
+
+    connection_or_init_conn_from_address(conn,
+                  &conn->_base.addr,
+                  conn->_base.port,
+                  (const char*)conn->handshake_state->authenticated_peer_id,
+                  0);
+  }
+
 #undef ERR
 }
 
-
-void dummy_function(void);
-void dummy_function(void)
-{
-  /* this is only here to avoid 'static function isn't used' warnings */
-  command_process_auth_challenge_cell(NULL, NULL);
-  command_process_cert_cell(NULL, NULL);
-  command_process_authenticate_cell(NULL, NULL);
-}
