@@ -1608,7 +1608,8 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
   packed_cell_t packed;
   if (!incoming) {
     log_warn(LD_BUG, "We shouldn't be sending any non-variable-length cells "
-             "whilemaking a handshake digest.  But we think we are.");
+             "while making a handshake digest.  But we think we are sending "
+             "one with type %d.", (int)cell->command);
   }
   dptr = incoming ? &state->digest_received : &state->digest_sent;
   if (! *dptr)
