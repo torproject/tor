@@ -4186,7 +4186,7 @@ choose_random_entry(cpath_build_state_t *state)
         goto choose_and_finish;
       }
       if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
-        break; /* we have enough */
+        goto choose_and_finish; /* we have enough */
   } SMARTLIST_FOREACH_END(entry);
 
   if (entry_list_is_constrained(options)) {
