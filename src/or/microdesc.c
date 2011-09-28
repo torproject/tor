@@ -522,7 +522,7 @@ microdesc_free(microdesc_t *md)
     }
     tor_fragile_assert();
   }
-  if (md->held_by_node) {
+  if (md->held_by_nodes) {
     int found=0;
     const smartlist_t *nodes = nodelist_get_list();
     SMARTLIST_FOREACH(nodes, node_t *, node, {
@@ -533,15 +533,15 @@ microdesc_free(microdesc_t *md)
       });
     if (found) {
       log_warn(LD_BUG, "microdesc_free() called, but md was still referenced "
-               "%d node(s)", found);
+               "%d node(s); held_by_nodes == %u", found, md->held_by_nodes);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_by_node set, but "
+      log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set, but "
                "md was not refrenced by any nodes");
     }
     tor_fragile_assert();
   }
   //tor_assert(md->held_in_map == 0);
-  //tor_assert(md->held_by_node == 0);
+  //tor_assert(md->held_by_nodes == 0);
 
   if (md->onion_pkey)
     crypto_free_pk_env(md->onion_pkey);

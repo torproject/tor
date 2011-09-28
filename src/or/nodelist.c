@@ -160,9 +160,9 @@ nodelist_add_microdesc(microdesc_t *md)
   node = node_get_mutable_by_id(rs->identity_digest);
   if (node) {
     if (node->md)
-      node->md->held_by_node = 0;
+      node->md->held_by_nodes--;
     node->md = md;
-    md->held_by_node = 1;
+    md->held_by_nodes++;
   }
   return node;
 }
@@ -189,11 +189,11 @@ nodelist_set_consensus(networkstatus_t *ns)
       if (node->md == NULL ||
           tor_memneq(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
         if (node->md)
-          node->md->held_by_node = 0;
+          node->md->held_by_nodes--;
         node->md = microdesc_cache_lookup_by_digest256(NULL,
                                                        rs->descriptor_digest);
         if (node->md)
-          node->md->held_by_node = 1;
+          node->md->held_by_nodes++;
       }
     }
 
@@ -250,7 +250,7 @@ nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md)
   node_t *node = node_get_mutable_by_id(identity_digest);
   if (node && node->md == md) {
     node->md = NULL;
-    md->held_by_node = 0;
+    md->held_by_nodes--;
   }
 }
 
@@ -299,7 +299,7 @@ node_free(node_t *node)
   if (!node)
     return;
   if (node->md)
-    node->md->held_by_node = 0;
+    node->md->held_by_nodes--;
   tor_assert(node->nodelist_idx == -1);
   tor_free(node);
 }
@@ -319,7 +319,7 @@ nodelist_purge(void)
 
     if (node->md && !node->rs) {
       /* An md is only useful if there is an rs. */
-      node->md->held_by_node = 0;
+      node->md->held_by_nodes--;
       node->md = NULL;
     }
 
@@ -394,7 +394,7 @@ nodelist_assert_ok(void)
           microdesc_cache_lookup_by_digest256(NULL, rs->descriptor_digest);
         tor_assert(md == node->md);
         if (md)
-          tor_assert(md->held_by_node == 1);
+          tor_assert(md->held_by_nodes >= 1);
       }
     } SMARTLIST_FOREACH_END(rs);
   }

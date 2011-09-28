@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix a crash bug that could occur when the same microdescriptor was
+      referenced by two node_t objects at once. Fix for bug 4118; bugfix
+      on Tor 0.2.3.1-alpha.
+
