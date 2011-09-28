@@ -1086,7 +1086,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
   tor_tls_init();
   nickname = crypto_random_hostname(8, 20, "www.", ".net");
-  nn2 = crypto_random_hostname(8, 20, "www.", ".net");
+  nn2 = crypto_random_hostname(8, 20, "www.", ".com");
 
   /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_new_pk_env()))
