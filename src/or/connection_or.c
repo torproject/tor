@@ -1573,6 +1573,8 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   or_handshake_state_t *s;
   s = conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
   s->started_here = started_here ? 1 : 0;
+  s->digest_sent_data = 1;
+  s->digest_received_data = 1;
   return 0;
 }
 
@@ -1606,6 +1608,13 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
 {
   crypto_digest_env_t *d, **dptr;
   packed_cell_t packed;
+  if (incoming) {
+    if (!state->digest_received_data)
+      return;
+  } else {
+    if (!state->digest_sent_data)
+      return;
+  }
   if (!incoming) {
     log_warn(LD_BUG, "We shouldn't be sending any non-variable-length cells "
              "while making a handshake digest.  But we think we are sending "
@@ -1638,6 +1647,13 @@ or_handshake_state_record_var_cell(or_handshake_state_t *state,
 {
   crypto_digest_env_t *d, **dptr;
   char buf[VAR_CELL_HEADER_SIZE];
+  if (incoming) {
+    if (!state->digest_received_data)
+      return;
+  } else {
+    if (!state->digest_sent_data)
+      return;
+  }
   dptr = incoming ? &state->digest_received : &state->digest_sent;
   if (! *dptr)
     *dptr = crypto_new_digest256_env(DIGEST_SHA256);
@@ -1891,6 +1907,8 @@ connection_or_send_netinfo(or_connection_t *conn)
   int len;
   uint8_t *out;
 
+  tor_assert(conn->handshake_state);
+
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
@@ -1917,6 +1935,7 @@ connection_or_send_netinfo(or_connection_t *conn)
     *out = 0;
   }
 
+  conn->handshake_state->digest_sent_data = 0;
   connection_or_write_cell_to_buf(&cell, conn);
 
   return 0;

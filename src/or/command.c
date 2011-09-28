@@ -243,7 +243,8 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
         return; /*XXXX023 log*/
       break;
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
-      or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
+      if (cell->command != CELL_AUTHENTICATE)
+        or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
       break; /* Everything is allowed */
     case OR_CONN_STATE_OPEN:
       if (conn->link_proto < 3)
@@ -1131,6 +1132,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
   /* Okay, we are authenticated. */
   conn->handshake_state->received_authenticate = 1;
   conn->handshake_state->authenticated = 1;
+  conn->handshake_state->digest_received_data = 0;
   {
     crypto_pk_env_t *identity_rcvd =
       tor_tls_cert_get_key(conn->handshake_state->id_cert);

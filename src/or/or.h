@@ -1145,6 +1145,19 @@ typedef struct or_handshake_state_t {
   /* True iff we've received valid authentication to some identity. */
   unsigned int authenticated : 1;
 
+  /** True iff we should feed outgoing cells into digest_sent and
+   * digest_received respectively.
+   *
+   * From the server's side of the v3 handshake, we want to capture everything
+   * from the VERSIONS cell through and including the AUTH_CHALLENGE cell.
+   * From the client's, we want to capture everything from the VERSIONS cell
+   * through but *not* including the AUTHENTICATE cell.
+   *
+   * @{ */
+  unsigned int digest_sent_data : 1;
+  unsigned int digest_received_data : 1;
+  /**@}*/
+
   /** Identity digest that we have received and authenticated for our peer
    * on this connection. */
   uint8_t authenticated_peer_id[DIGEST_LEN];
