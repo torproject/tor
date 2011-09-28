@@ -1873,9 +1873,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           }
           if (log_sockstype)
             log_notice(LD_APP,
-                  "Your application (using socks5 to port %d) gave "
-                  "Tor a hostname, which means Tor will do the DNS resolve "
-                  "for you. This is good.", req->port);
+                  "Your application (using socks5 to port %d) instructed "
+                  "Tor to take care of the DNS resolution itself if "
+                  "necessary. This is good.", req->port);
           return 1;
         default: /* unsupported */
           log_warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",
@@ -1974,9 +1974,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
         if (log_sockstype)
           log_notice(LD_APP,
-                     "Your application (using socks4a to port %d) gave "
-                     "Tor a hostname, which means Tor will do the DNS resolve "
-                     "for you. This is good.", req->port);
+                     "Your application (using socks4a to port %d) instructed "
+                     "Tor to take care of the DNS resolution itself if "
+                     "necessary. This is good.", req->port);
       }
       log_debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
