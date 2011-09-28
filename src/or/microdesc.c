@@ -499,6 +499,28 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   return 0;
 }
 
+/** Make sure that the reference count of every microdescriptor in cache is
+ * accurate. */
+void
+microdesc_check_counts(void)
+{
+  microdesc_t **mdp;
+  if (!the_microdesc_cache)
+    return;
+
+  HT_FOREACH(mdp, microdesc_map, &the_microdesc_cache->map) {
+    microdesc_t *md = *mdp;
+    unsigned int found=0;
+    const smartlist_t *nodes = nodelist_get_list();
+    SMARTLIST_FOREACH(nodes, node_t *, node, {
+        if (node->md == md) {
+          ++found;
+        }
+      });
+    tor_assert(found == md->held_by_nodes);
+  }
+}
+
 /** Deallocate a single microdescriptor.  Note: the microdescriptor MUST have
  * previously been removed from the cache if it had ever been inserted. */
 void
@@ -535,8 +557,8 @@ microdesc_free(microdesc_t *md)
       log_warn(LD_BUG, "microdesc_free() called, but md was still referenced "
                "%d node(s); held_by_nodes == %u", found, md->held_by_nodes);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set, but "
-               "md was not refrenced by any nodes");
+      log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set to %u, "
+               "but md was not referenced by any nodes", md->held_by_nodes);
     }
     tor_fragile_assert();
   }

@@ -14,6 +14,8 @@
 
 microdesc_cache_t *get_microdesc_cache(void);
 
+void microdesc_check_counts(void);
+
 smartlist_t *microdescs_add_to_cache(microdesc_cache_t *cache,
                         const char *s, const char *eos, saved_location_t where,
                         int no_save, time_t listed_at,
