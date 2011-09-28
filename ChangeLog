@@ -1,19 +1,23 @@
 Changes in version 0.2.3.5-alpha - 2011-09-28
+  Tor 0.2.3.5-alpha fixes two bugs that make it possible to enumerate
+  bridge relays; fixes an assertion error that many users started hitting
+  today; and adds the ability to refill token buckets more often than
+  once per second, allowing significant performance improvements.
+
   o Security fixes:
     - Bridge relays now do their directory fetches inside Tor TLS
       connections, like all the other clients do, rather than connecting
       directly to the DirPort like public relays do. Removes another
-      avenue for enumerating bridges. Fixes part of bug 4115; bugfix
-      on 0.2.0.35.
+      avenue for enumerating bridges. Fixes bug 4115; bugfix on 0.2.0.35.
     - Bridges relays now build circuits for themselves in a more similar
       way to how clients build them. Removes another avenue for
       enumerating bridges. Fixes bug 4124; bugfix on 0.2.0.3-alpha,
       when bridges were introduced.
 
   o Major bugfixes:
-    - Fix a crash bug that could occur when the same microdescriptor was
-      referenced by two node_t objects at once. Fix for bug 4118; bugfix
-      on Tor 0.2.3.1-alpha.
+    - Fix an "Assertion md->held_by_node == 1 failed" error that could
+      occur when the same microdescriptor was referenced by two node_t
+      objects at once. Fix for bug 4118; bugfix on Tor 0.2.3.1-alpha.
 
   o Major features (networking):
     - Add a new TokenBucketRefillInterval option to refill token buckets
