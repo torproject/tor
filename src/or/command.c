@@ -734,6 +734,21 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
         log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got a NETINFO cell from server, "
                "but no authentication.  Closing the connection.");
         connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    } else {
+      /* we're the server.  If the client never authenticated, we have
+         some housekeeping to do.*/
+      if (!conn->handshake_state->authenticated) {
+        tor_assert(tor_digest_is_zero(
+                  (const char*)conn->handshake_state->authenticated_peer_id));
+        connection_or_set_circid_type(conn, NULL);
+
+        connection_or_init_conn_from_address(conn,
+                  &conn->_base.addr,
+                  conn->_base.port,
+                  (const char*)conn->handshake_state->authenticated_peer_id,
+                  0);
       }
     }
   }
@@ -810,13 +825,19 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
    * trustworthy. */
   (void)my_apparent_addr;
 
-  if (connection_or_set_state_open(conn)<0)
+  if (connection_or_set_state_open(conn)<0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got good NETINFO cell from %s:%d; but "
+           "was unable to make the OR connection become open.",
+           safe_str_client(conn->_base.address),
+           conn->_base.port);
     connection_mark_for_close(TO_CONN(conn));
-  else
+  } else {
     log_info(LD_OR, "Got good NETINFO cell from %s:%d; OR connection is now "
-             "open, using protocol version %d",
+             "open, using protocol version %d. Its ID digest is %s",
              safe_str_client(conn->_base.address),
-             conn->_base.port, (int)conn->link_proto);
+             conn->_base.port, (int)conn->link_proto,
+             hex_str(conn->identity_digest, DIGEST_LEN));
+  }
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 
@@ -930,6 +951,8 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
                       conn->handshake_state->authenticated_peer_id) < 0)
       ERR("Problem setting or checking peer id");
 
+    log_info(LD_OR, "Got some good certifcates from %s:%d: Authenticated it.",
+             conn->_base.address, conn->_base.port);
 
     conn->handshake_state->id_cert = id_cert;
     id_cert = NULL;
@@ -945,6 +968,10 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
+
+    log_info(LD_OR, "Got some good certifcates from %s:%d: "
+             "Waiting for AUTHENTICATE.",
+             conn->_base.address, conn->_base.port);
     /* XXXX check more stuff? */
 
     id_cert = auth_cert = NULL;
@@ -1013,6 +1040,10 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
   conn->handshake_state->received_auth_challenge = 1;
 
   if (use_type && public_server_mode(get_options())) {
+    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Sending "
+             "authentication",
+             conn->_base.address, conn->_base.port);
+
     if (connection_or_send_authenticate_cell(conn, use_type) < 0) {
       log_warn(LD_OR, "Couldn't send authenticate cell");
       connection_mark_for_close(TO_CONN(conn));
@@ -1023,8 +1054,10 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
+  } else {
+    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Not authenticating",
+             conn->_base.address, conn->_base.port);
   }
-
 #undef ERR
 }
 
@@ -1150,6 +1183,9 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
                   conn->_base.port,
                   (const char*)conn->handshake_state->authenticated_peer_id,
                   0);
+
+    log_info(LD_OR, "Got an AUTHENTICATE cell from %s:%d: Looks good.",
+             conn->_base.address, conn->_base.port);
   }
 
 #undef ERR
