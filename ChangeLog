@@ -1,3 +1,33 @@
+Changes in version 0.2.3.5-alpha - 2011-09-28
+  o Major bugfixes:
+    - Fix a crash bug that could occur when the same microdescriptor was
+      referenced by two node_t objects at once. Fix for bug 4118; bugfix
+      on Tor 0.2.3.1-alpha.
+
+  o Major features (networking):
+    - Add a new TokenBucketRefillInterval option to refill token buckets
+      more frequently than once per second. This should improve network
+      performance, alleviate queueing problems, and make traffic less
+      bursty. Implements proposal 183; closes ticket 3630. Design by
+      Florian Tschorsch and Björn Scheuermann; implementation by
+      Florian Tschorsch.
+
+  o Minor bugfixes:
+    - Change an integer overflow check in the OpenBSD_Malloc code so
+      that GCC is less likely to eliminate it as impossible. Patch
+      from Mansour Moufid. Fixes bug 4059.
+
+  o Minor bugfixes (usability):
+    - Downgrade log messages about circuit timeout calibration from
+      "notice" to "info": they don't require or suggest any human
+      intervention. Patch from Tom Lowenthal. Fixes bug 4063;
+      bugfix on 0.2.2.14-alpha.
+
+  o Minor features (diagnostics):
+    - When the system call to create a listener socket fails, log the
+      error message explaining why. This may help diagnose bug 4027.
+
+
 Changes in version 0.2.3.4-alpha - 2011-09-13
   Tor 0.2.3.4-alpha includes the fixes from 0.2.2.33, including a slight
   tweak to Tor's TLS handshake that makes relays and bridges that run

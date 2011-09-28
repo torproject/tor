@@ -1,8 +1,0 @@
-  o Major features (networking):
-    - Add a new TokenBucketRefillInterval option to refill token buckets
-      more frequently than once per second. This should improve network
-      performance, alleviate queueing problems, and make traffic less
-      bursty. Implements proposal 183; closes ticket 3630. Design by
-      Florian Tschorsch and Björn Scheuermann; implementation by
-      Florian Tschorsch.
-
