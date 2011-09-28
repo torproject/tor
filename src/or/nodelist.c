@@ -177,7 +177,10 @@ nodelist_set_consensus(networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+
   init_nodelist();
+  if (ns->flavor == FLAV_MICRODESC)
+    (void) get_microdesc_cache(); /* Make sure it exists first. */
 
   SMARTLIST_FOREACH(the_nodelist->nodes, node_t *, node,
                     node->rs = NULL);
