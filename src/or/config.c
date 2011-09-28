@@ -386,7 +386,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
-  V(TokenBucketRefillInterval,   MSEC_INTERVAL, "10 msec"),
+  V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
