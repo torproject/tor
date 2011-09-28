@@ -1,0 +1,6 @@
+  o Security fixes:
+    - Bridges relays now build circuits for themselves in a more similar
+      way to how clients build them. Removes another avenue for
+      enumerating bridges. Fixes bug 4124; bugfix on 0.2.0.3-alpha,
+      when bridges were introduced.
+

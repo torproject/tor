@@ -1982,9 +1982,10 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
     return 1; /* our hand is forced: only a create_fast will work. */
   if (!options->FastFirstHopPK)
     return 0; /* we prefer to avoid create_fast */
-  if (server_mode(options)) {
+  if (public_server_mode(options)) {
     /* We're a server, and we know an onion key. We can choose.
-     * Prefer to blend in. */
+     * Prefer to blend our circuit into the other circuits we are
+     * creating on behalf of others. */
     return 0;
   }
 
