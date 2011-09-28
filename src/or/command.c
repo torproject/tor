@@ -859,7 +859,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
            "Received a bad CERT cell from %s:%d: %s",           \
-           conn->_base.address, conn->_base.port, (s));         \
+           safe_str(conn->_base.address), conn->_base.port, (s)); \
     connection_mark_for_close(TO_CONN(conn));                   \
     goto err;                                                   \
   } while (0)
@@ -906,7 +906,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       if (!cert) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Received undecodable certificate in CERT cell from %s:%d",
-               conn->_base.address, conn->_base.port);
+               safe_str(conn->_base.address), conn->_base.port);
       } else {
         if (cert_type == OR_CERT_TYPE_TLS_LINK && !link_cert)
           link_cert = cert;
@@ -952,7 +952,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       ERR("Problem setting or checking peer id");
 
     log_info(LD_OR, "Got some good certifcates from %s:%d: Authenticated it.",
-             conn->_base.address, conn->_base.port);
+             safe_str(conn->_base.address), conn->_base.port);
 
     conn->handshake_state->id_cert = id_cert;
     id_cert = NULL;
@@ -971,7 +971,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
 
     log_info(LD_OR, "Got some good certifcates from %s:%d: "
              "Waiting for AUTHENTICATE.",
-             conn->_base.address, conn->_base.port);
+             safe_str(conn->_base.address), conn->_base.port);
     /* XXXX check more stuff? */
 
     id_cert = auth_cert = NULL;
@@ -1002,7 +1002,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
            "Received a bad AUTH_CHALLENGE cell from %s:%d: %s", \
-           conn->_base.address, conn->_base.port, (s));         \
+           safe_str(conn->_base.address), conn->_base.port, (s));       \
     connection_mark_for_close(TO_CONN(conn));                   \
     return;                                                     \
   } while (0)
@@ -1042,7 +1042,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
   if (use_type && public_server_mode(get_options())) {
     log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Sending "
              "authentication",
-             conn->_base.address, conn->_base.port);
+             safe_str(conn->_base.address), conn->_base.port);
 
     if (connection_or_send_authenticate_cell(conn, use_type) < 0) {
       log_warn(LD_OR, "Couldn't send authenticate cell");
@@ -1056,7 +1056,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
     }
   } else {
     log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Not authenticating",
-             conn->_base.address, conn->_base.port);
+             safe_str(conn->_base.address), conn->_base.port);
   }
 #undef ERR
 }
@@ -1080,7 +1080,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
            "Received a bad AUTHETNICATE cell from %s:%d: %s",   \
-           conn->_base.address, conn->_base.port, (s));         \
+           safe_str(conn->_base.address), conn->_base.port, (s));       \
     connection_mark_for_close(TO_CONN(conn));                   \
     return;                                                     \
   } while (0)
@@ -1185,7 +1185,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
                   0);
 
     log_info(LD_OR, "Got an AUTHENTICATE cell from %s:%d: Looks good.",
-             conn->_base.address, conn->_base.port);
+             safe_str(conn->_base.address), conn->_base.port);
   }
 
 #undef ERR
