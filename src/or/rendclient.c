@@ -574,10 +574,11 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
         "service descriptor, but are not fetching service descriptors.");
     return;
   }
-  /* Before fetching, check if we already have the descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0) {
+  /* Before fetching, check if we already have a usable descriptor here. */
+  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0 &&
+      rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
-                      "already have that descriptor here. Not fetching.");
+                      "already have a usable descriptor here. Not fetching.");
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
