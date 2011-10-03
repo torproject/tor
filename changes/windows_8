@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - The next version of Windows will be called Windows 8, and it has a major
+      version of 6, minor version of 2. Correctly identify that version instead
+      of calling it "Very recent version". Fixes bug 4153; reported by funkstar.
+
