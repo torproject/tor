@@ -68,6 +68,7 @@ _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
                                int line, const char *file)
 {
   connection_t *base_conn = ENTRY_TO_CONN(conn);
+  edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   tor_assert(base_conn->type == CONN_TYPE_AP);
   ENTRY_TO_EDGE_CONN(conn)->edge_has_sent_end = 1; /* no circ yet */
 
@@ -78,9 +79,10 @@ _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
    * XXX023 This condition doesn't limit to only streams failing
    * without ever being attached.  That sloppiness should be harmless,
    * but we should fix it someday anyway. */
-  if ((conn->on_circuit != NULL || conn->edge_has_sent_end) &&
-      connection_edge_is_rendezvous_stream(conn)) {
-    rend_client_note_connection_attempt_ended(conn->rend_data->onion_address);
+  if ((edge_conn->on_circuit != NULL || edge_conn->edge_has_sent_end) &&
+      connection_edge_is_rendezvous_stream(edge_conn)) {
+    rend_client_note_connection_attempt_ended(
+                                    edge_conn->rend_data->onion_address);
   }
 
   if (base_conn->marked_for_close) {
