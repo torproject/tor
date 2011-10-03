@@ -1589,6 +1589,13 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = ENTRY_TO_EDGE_CONN(apconn);
 
+  if (connection_edge_is_rendezvous_stream(apconn)) {
+    /* We are attaching a stream to a rendezvous circuit.  That means
+     * that an attempt to connect to a hidden service just
+     * succeeded.  Tell rendclient.c. */
+   rend_client_note_connection_attempt_ended(apconn->rend_data->onion_address);
+  }
+
   if (cpath) { /* we were given one; use it */
     tor_assert(cpath_is_on_circuit(circ, cpath));
   } else {

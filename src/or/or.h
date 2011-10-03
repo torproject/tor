@@ -3902,6 +3902,11 @@ typedef struct rend_encoded_v2_service_descriptor_t {
   char *desc_str; /**< Descriptor string. */
 } rend_encoded_v2_service_descriptor_t;
 
+/** The maximum number of non-circuit-build-timeout failures a hidden
+ * service client will tolerate while trying to build a circuit to an
+ * introduction point.  See also rend_intro_point_t.unreachable_count. */
+#define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
@@ -3909,6 +3914,18 @@ typedef struct rend_intro_point_t {
   extend_info_t *extend_info; /**< Extend info of this introduction point. */
   crypto_pk_env_t *intro_key; /**< Introduction key that replaces the service
                                * key, if this descriptor is V2. */
+
+  /** (Client side only) Flag indicating that a timeout has occurred
+   * after sending an INTRODUCE cell to this intro point.  After a
+   * timeout, an intro point should not be tried again during the same
+   * hidden service connection attempt, but it may be tried again
+   * during a future connection attempt. */
+  unsigned int timed_out : 1;
+
+  /** (Client side only) The number of times we have failed to build a
+   * circuit to this intro point for some reason other than our
+   * circuit-build timeout.  See also MAX_INTRO_POINT_REACHABILITY_FAILURES. */
+  unsigned int unreachable_count : 3;
 } rend_intro_point_t;
 
 /** Information used to connect to a hidden service.  Used on both the

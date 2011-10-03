@@ -371,8 +371,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     log_info(LD_REND, "Got nack for %s from %s...",
         safe_str_client(circ->rend_data->onion_address),
         safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
-    if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
-                                       circ->rend_data) > 0) {
+    if (rend_client_report_intro_point_failure(circ->build_state->chosen_exit,
+                                               circ->rend_data,
+                                               INTRO_POINT_FAILURE_GENERIC)>0){
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       int result = rend_client_reextend_intro_circuit(circ);
@@ -389,9 +390,12 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 #define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
 
 /** Contains the last request times to hidden service directories for
- * certain queries; keys are strings consisting of base32-encoded
- * hidden service directory identities and base32-encoded descriptor IDs;
- * values are pointers to timestamps of the last requests. */
+ * certain queries; each key is a string consisting of the
+ * concatenation of a base32-encoded HS directory identity digest, a
+ * base32-encoded HS descriptor ID, and a hidden service address
+ * (without the ".onion" part); each value is a pointer to a time_t
+ * holding the time of the last request for that descriptor ID to that
+ * HS directory. */
 static strmap_t *last_hid_serv_requests_ = NULL;
 
 /** Returns last_hid_serv_requests_, initializing it to a new strmap if
@@ -404,23 +408,34 @@ get_last_hid_serv_requests(void)
   return last_hid_serv_requests_;
 }
 
+#define LAST_HID_SERV_REQUEST_KEY_LEN (REND_DESC_ID_V2_LEN_BASE32 + \
+                                       REND_DESC_ID_V2_LEN_BASE32 + \
+                                       REND_SERVICE_ID_LEN_BASE32)
+
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
+ * for descriptor ID <b>desc_id_base32</b> for the service specified in
+ * <b>rend_query</b>. If <b>set</b> is non-zero,
  * assign the current time <b>now</b> and return that. Otherwise, return
  * the most recent request time, or 0 if no such request has been sent
  * before. */
 static time_t
 lookup_last_hid_serv_request(routerstatus_t *hs_dir,
-                             const char *desc_id_base32, time_t now, int set)
+                             const char *desc_id_base32,
+                             const rend_data_t *rend_query,
+                             time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
+  char hsdir_desc_comb_id[LAST_HID_SERV_REQUEST_KEY_LEN + 1];
   time_t *last_request_ptr;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
-               hsdir_id_base32, desc_id_base32);
+  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s%s",
+               hsdir_id_base32,
+               desc_id_base32,
+               rend_query->onion_address);
+  /* XXX023 tor_assert(strlen(hsdir_desc_comb_id) ==
+                       LAST_HID_SERV_REQUEST_KEY_LEN); */
   if (set) {
     time_t *oldptr;
     last_request_ptr = tor_malloc_zero(sizeof(time_t));
@@ -459,6 +474,33 @@ directory_clean_last_hid_serv_requests(time_t now)
   }
 }
 
+/** Remove all requests related to the hidden service named
+ * <b>onion_address</b> from the history of times of requests to
+ * hidden service directories. */
+static void
+purge_hid_serv_from_last_hid_serv_requests(const char *onion_address)
+{
+  strmap_iter_t *iter;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
+  /* XXX023 tor_assert(strlen(onion_address) == REND_SERVICE_ID_LEN_BASE32); */
+  for (iter = strmap_iter_init(last_hid_serv_requests);
+       !strmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    strmap_iter_get(iter, &key, &val);
+    /* XXX023 tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
+    if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
+                  REND_SERVICE_ID_LEN_BASE32,
+                  onion_address,
+                  REND_SERVICE_ID_LEN_BASE32)) {
+      iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
+      tor_free(val);
+    } else {
+      iter = strmap_iter_next(last_hid_serv_requests, iter);
+    }
+  }
+}
+
 /** Purge the history of request times to hidden service directories,
  * so that future lookups of an HS descriptor will not fail because we
  * accessed all of the HSDir relays responsible for the descriptor
@@ -480,12 +522,11 @@ rend_client_purge_last_hid_serv_requests(void)
 }
 
 /** Determine the responsible hidden service directories for <b>desc_id</b>
- * and fetch the descriptor belonging to that ID from one of them. Only
- * send a request to hidden service directories that we did not try within
- * the last REND_HID_SERV_DIR_REQUERY_PERIOD seconds; on success, return 1,
+ * and fetch the descriptor with that ID from one of them. Only
+ * send a request to a hidden service directory that we have not yet tried
+ * during this attempt to connect to this hidden service; on success, return 1,
  * in the case that no hidden service directory is left to ask for the
- * descriptor, return 0, and in case of a failure -1. <b>query</b> is only
- * passed for pretty log statements. */
+ * descriptor, return 0, and in case of a failure -1.  */
 static int
 directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 {
@@ -510,11 +551,12 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_clean_last_hid_serv_requests(now);
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-      time_t last = lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0);
+      time_t last = lookup_last_hid_serv_request(
+                            dir, desc_id_base32, rend_query, 0, 0);
       const node_t *node = node_get_by_id(dir->identity_digest);
       if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
           !node || !node_has_descriptor(node))
-        SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
   });
 
   hs_dir = smartlist_choose(responsible_dirs);
@@ -526,9 +568,9 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
     return 0;
   }
 
-  /* Remember, that we are requesting a descriptor from this hidden service
+  /* Remember that we are requesting a descriptor from this hidden service
    * directory now. */
-  lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
+  lookup_last_hid_serv_request(hs_dir, desc_id_base32, rend_query, now, 1);
 
   /* Encode descriptor cookie for logging purposes. */
   if (rend_query->auth_type != REND_NO_AUTH) {
@@ -582,10 +624,11 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
         "service descriptor, but are not fetching service descriptors.");
     return;
   }
-  /* Before fetching, check if we already have the descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0) {
+  /* Before fetching, check if we already have a usable descriptor here. */
+  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0 &&
+      rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
-                      "already have that descriptor here. Not fetching.");
+                      "already have a usable descriptor here. Not fetching.");
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
@@ -655,16 +698,31 @@ rend_client_cancel_descriptor_fetches(void)
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** Remove failed_intro from ent. If ent now has no intro points, or
- * service is unrecognized, then launch a new renddesc fetch.
-
+/** Mark <b>failed_intro</b> as a failed introduction point for the
+ * hidden service specified by <b>rend_query</b>. If the HS now has no
+ * usable intro points, or we do not have an HS descriptor for it,
+ * then launch a new renddesc fetch.
  *
- * Return -1 if error, 0 if no intro points remain or service
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_GENERIC, remove the
+ * intro point from (our parsed copy of) the HS descriptor.
+ *
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_TIMEOUT, mark the
+ * intro point as 'timed out'; it will not be retried until the
+ * current hidden service connection attempt has ended or it has
+ * appeared in a newly fetched rendezvous descriptor.
+ *
+ * If <b>failure_type</b> is INTRO_POINT_FAILURE_UNREACHABLE,
+ * increment the intro point's reachability-failure count; if it has
+ * now failed MAX_INTRO_POINT_REACHABILITY_FAILURES or more times,
+ * remove the intro point from (our parsed copy of) the HS descriptor.
+ *
+ * Return -1 if error, 0 if no usable intro points remain or service
  * unrecognized, 1 if recognized and some intro points remain.
  */
 int
-rend_client_remove_intro_point(extend_info_t *failed_intro,
-                               const rend_data_t *rend_query)
+rend_client_report_intro_point_failure(extend_info_t *failed_intro,
+                                       const rend_data_t *rend_query,
+                                       unsigned int failure_type)
 {
   int i, r;
   rend_cache_entry_t *ent;
@@ -687,8 +745,34 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     rend_intro_point_t *intro = smartlist_get(ent->parsed->intro_nodes, i);
     if (tor_memeq(failed_intro->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN)) {
-      rend_intro_point_free(intro);
-      smartlist_del(ent->parsed->intro_nodes, i);
+      switch (failure_type) {
+      default:
+        log_warn(LD_BUG, "Unknown failure type %u. Removing intro point.",
+                 failure_type);
+        tor_fragile_assert();
+        /* fall through */
+      case INTRO_POINT_FAILURE_GENERIC:
+        rend_intro_point_free(intro);
+        smartlist_del(ent->parsed->intro_nodes, i);
+        break;
+      case INTRO_POINT_FAILURE_TIMEOUT:
+        intro->timed_out = 1;
+        break;
+      case INTRO_POINT_FAILURE_UNREACHABLE:
+        ++(intro->unreachable_count);
+        {
+          int zap_intro_point =
+            intro->unreachable_count >= MAX_INTRO_POINT_REACHABILITY_FAILURES;
+          log_info(LD_REND, "Failed to reach this intro point %u times.%s",
+                   intro->unreachable_count,
+                   zap_intro_point ? " Removing from descriptor.": "");
+          if (zap_intro_point) {
+            rend_intro_point_free(intro);
+            smartlist_del(ent->parsed->intro_nodes, i);
+          }
+        }
+        break;
+      }
       break;
     }
   }
@@ -867,8 +951,34 @@ rend_client_desc_trynow(const char *query)
                  "unavailable (try again later).",
                  safe_str_client(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
+      rend_client_note_connection_attempt_ended(query);
     }
   } SMARTLIST_FOREACH_END(base_conn);
+}
+
+/** Clear temporary state used only during an attempt to connect to
+ * the hidden service named <b>onion_address</b>.  Called when a
+ * connection attempt has ended; may be called occasionally at other
+ * times, and should be reasonably harmless. */
+void
+rend_client_note_connection_attempt_ended(const char *onion_address)
+{
+  rend_cache_entry_t *cache_entry = NULL;
+  rend_cache_lookup_entry(onion_address, -1, &cache_entry);
+
+  log_info(LD_REND, "Connection attempt for %s has ended; "
+           "cleaning up temporary state.",
+           safe_str_client(onion_address));
+
+  /* Clear the timed_out flag on all remaining intro points for this HS. */
+  if (cache_entry != NULL) {
+    SMARTLIST_FOREACH(cache_entry->parsed->intro_nodes,
+                      rend_intro_point_t *, ip,
+                      ip->timed_out = 0; );
+  }
+
+  /* Remove the HS's entries in last_hid_serv_requests. */
+  purge_hid_serv_from_last_hid_serv_requests(onion_address);
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction
@@ -918,6 +1028,13 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
    * no nodes are usable.  */
   usable_nodes = smartlist_create();
   smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
+
+  /* Remove the intro points that have timed out during this HS
+   * connection attempt from our list of usable nodes. */
+  SMARTLIST_FOREACH(usable_nodes, rend_intro_point_t *, ip,
+                    if (ip->timed_out) {
+                      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
+                    });
 
  again:
   if (smartlist_len(usable_nodes) == 0) {
