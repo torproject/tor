@@ -547,7 +547,8 @@ rend_service_update_descriptor(rend_service_t *service)
     if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
       continue;
 
-    /* We have an entirely established intro circuit. */
+    /* We have an entirely established intro circuit.  Publish it in
+     * our descriptor. */
     intro_desc = tor_malloc_zero(sizeof(rend_intro_point_t));
     intro_desc->extend_info = extend_info_dup(intro_svc->extend_info);
     if (intro_svc->intro_key)
