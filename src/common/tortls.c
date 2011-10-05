@@ -706,9 +706,13 @@ tor_cert_new(X509 *x509_cert)
   tor_cert_t *cert;
   EVP_PKEY *pkey;
   RSA *rsa;
-  int length = i2d_X509(x509_cert, NULL), length2;
+  int length, length2;
   unsigned char *cp;
 
+  if (!x509_cert)
+    return NULL;
+
+  length = i2d_X509(x509_cert, NULL);
   cert = tor_malloc_zero(sizeof(tor_cert_t));
   if (length <= 0) {
     tor_free(cert);
@@ -766,7 +770,6 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
   }
   newcert = tor_cert_new(x509);
   if (!newcert) {
-    X509_free(x509);
     return NULL;
   }
   if (newcert->encoded_len != certificate_len ||
@@ -1118,6 +1121,8 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   result->my_link_cert = tor_cert_new(X509_dup(cert));
   result->my_id_cert = tor_cert_new(X509_dup(idcert));
   result->my_auth_cert = tor_cert_new(X509_dup(authcert));
+  if (!result->my_link_cert || !result->my_id_cert || !result->my_auth_cert)
+    goto error;
   result->link_key = crypto_pk_dup_key(rsa);
   result->auth_key = crypto_pk_dup_key(rsa_auth);
 
