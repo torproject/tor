@@ -2060,12 +2060,17 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   {
     const tor_cert_t *id_cert=NULL, *link_cert=NULL;
+    const digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
     if (tor_tls_get_my_certs(0, &link_cert, &id_cert))
       return -1;
-    my_id = (uint8_t*)tor_cert_get_id_digests(id_cert)->d[DIGEST_SHA256];
-    their_id = (uint8_t*)
-      tor_cert_get_id_digests(conn->handshake_state->id_cert)->d[DIGEST_SHA256];
+    my_digests = tor_cert_get_id_digests(id_cert);
+    their_digests = tor_cert_get_id_digests(conn->handshake_state->id_cert);
+    tor_assert(my_digests);
+    tor_assert(their_digests);
+    my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];
+    their_id = (uint8_t*)their_digests->d[DIGEST_SHA256];
+
     client_id = server ? their_id : my_id;
     server_id = server ? my_id : their_id;
 

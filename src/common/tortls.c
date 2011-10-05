@@ -102,6 +102,7 @@ struct tor_cert_t {
   X509 *cert;
   uint8_t *encoded;
   size_t encoded_len;
+  unsigned pkey_digests_set : 1;
   digests_t cert_digests;
   digests_t pkey_digests;
 };
@@ -734,6 +735,7 @@ tor_cert_new(X509 *x509_cert)
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
     crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(rsa);
     crypto_pk_get_all_digests(pk, &cert->pkey_digests);
+    cert->pkey_digests_set = 1;
     crypto_free_pk_env(pk);
     EVP_PKEY_free(pkey);
   }
@@ -794,11 +796,15 @@ tor_cert_get_der(const tor_cert_t *cert,
   *size_out = cert->encoded_len;
 }
 
-/** Return a set of digests for the public key in <b>cert</b>. */
+/** Return a set of digests for the public key in <b>cert</b>, or NULL if this
+ * cert's public key is not one we know how to take the digest of. */
 const digests_t *
 tor_cert_get_id_digests(const tor_cert_t *cert)
 {
-  return &cert->pkey_digests;
+  if (cert->pkey_digests_set)
+    return &cert->pkey_digests;
+  else
+    return NULL;
 }
 
 /** Return a set of digests for the public key in <b>cert</b>. */
