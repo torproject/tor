@@ -945,7 +945,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   service = rend_service_get_by_pk_digest(
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
-    log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
+    log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro "
+             "circ for an unrecognized service %s.",
              escaped(serviceid));
     return -1;
   }
