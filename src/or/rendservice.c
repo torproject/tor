@@ -554,6 +554,13 @@ rend_service_update_descriptor(rend_service_t *service)
     if (intro_svc->intro_key)
       intro_desc->intro_key = crypto_pk_dup_key(intro_svc->intro_key);
     smartlist_add(d->intro_nodes, intro_desc);
+
+    if (intro_svc->time_published == -1) {
+      /* We are publishing this intro point in a descriptor for the
+       * first time -- note the current time in the service's copy of
+       * the intro point. */
+      intro_svc->time_published = time(NULL);
+    }
   }
 }
 
@@ -1952,6 +1959,7 @@ rend_services_introduce(void)
       intro->extend_info = extend_info_from_router(router);
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
+      intro->time_published = -1;
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(router_describe(router)),

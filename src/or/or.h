@@ -3480,6 +3480,11 @@ typedef struct rend_intro_point_t {
    * circuit to this intro point for some reason other than our
    * circuit-build timeout.  See also MAX_INTRO_POINT_REACHABILITY_FAILURES. */
   unsigned int unreachable_count : 3;
+
+  /** (Service side only) The time at which this intro point was first
+   * published, or -1 if this intro point has not yet been
+   * published. */
+  time_t time_published;
 } rend_intro_point_t;
 
 /** Information used to connect to a hidden service.  Used on both the
