@@ -35,8 +35,10 @@ typedef struct rend_service_port_config_t {
   tor_addr_t real_addr;
 } rend_service_port_config_t;
 
-/** Try to maintain this many intro points per service if possible. */
-#define NUM_INTRO_POINTS 3
+/** Try to maintain this many intro points per service by default. */
+#define NUM_INTRO_POINTS_DEFAULT 3
+/** Maintain no more than this many intro points per hidden service. */
+#define NUM_INTRO_POINTS_MAX 10
 
 /** If we can't build our intro circuits, don't retry for this long. */
 #define INTRO_CIRC_RETRY_PERIOD (60*5)
@@ -71,6 +73,8 @@ typedef struct rend_service_t {
                                 * introduction points. */
   int n_intro_circuits_launched; /**< Count of intro circuits we have
                                   * established in this period. */
+  unsigned int n_intro_points_wanted; /**< Number of intro points this
+                                       * service wants to have open. */
   rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
   time_t desc_is_dirty; /**< Time at which changes to the hidden service
                          * descriptor content occurred, or 0 if it's
@@ -315,6 +319,7 @@ rend_config_services(or_options_t *options, int validate_only)
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
       service->intro_period_started = time(NULL);
+      service->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
       continue;
     }
     if (!service) {
@@ -1406,7 +1411,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending. */
-  if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
+  if (count_established_intro_points(serviceid) >
+      (int)service->n_intro_points_wanted) { /* XXX023 remove cast */
     or_options_t *options = get_options();
     if (options->ExcludeNodes) {
       /* XXXX in some future version, we can test whether the transition is
@@ -1845,6 +1851,7 @@ rend_services_introduce(void)
   rend_service_t *service;
   rend_intro_point_t *intro;
   int changed, prev_intro_nodes;
+  unsigned int n_intro_points_to_open;
   smartlist_t *intro_routers;
   time_t now;
   or_options_t *options = get_options();
@@ -1901,7 +1908,8 @@ rend_services_introduce(void)
     /* We have enough intro points, and the intro points we thought we had were
      * all connected.
      */
-    if (!changed && smartlist_len(service->intro_nodes) >= NUM_INTRO_POINTS) {
+    if (!changed && (smartlist_len(service->intro_nodes) >=
+                     (int)service->n_intro_points_wanted)) { /*XXX023 remove cast*/
       /* We have all our intro points! Start a fresh period and reset the
        * circuit count. */
       service->intro_period_started = now;
@@ -1912,18 +1920,18 @@ rend_services_introduce(void)
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
     /* We have enough directory information to start establishing our
-     * intro points. We want to end up with three intro points, but if
-     * we're just starting, we launch five and pick the first three that
-     * complete.
+     * intro points. We want to end up with n_intro_points_wanted
+     * intro points, but if we're just starting, we launch two extra
+     * circuits and use the first n_intro_points_wanted that complete.
      *
      * The ones after the first three will be converted to 'general'
      * internal circuits in rend_service_intro_has_opened(), and then
      * we'll drop them from the list of intro points next time we
      * go through the above "find out which introduction points we have
      * in progress" loop. */
-#define NUM_INTRO_POINTS_INIT (NUM_INTRO_POINTS + 2)
-    for (j=prev_intro_nodes; j < (prev_intro_nodes == 0 ?
-             NUM_INTRO_POINTS_INIT : NUM_INTRO_POINTS); ++j) {
+    n_intro_points_to_open = (service->n_intro_points_wanted +
+                              (prev_intro_nodes == 0 ? 2 : 0));
+    for (j=prev_intro_nodes; j < (int)n_intro_points_to_open; ++j) { /* XXXX remove cast */
       router_crn_flags_t flags = CRN_NEED_UPTIME;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
@@ -1931,8 +1939,10 @@ rend_services_introduce(void)
                                          options->ExcludeNodes, flags);
       if (!router) {
         log_warn(LD_REND,
-                 "Could only establish %d introduction points for %s.",
-                 smartlist_len(service->intro_nodes), service->service_id);
+                 "Could only establish %d introduction points for %s; "
+                 "wanted %u.",
+                 smartlist_len(service->intro_nodes), service->service_id,
+                 n_intro_points_to_open);
         break;
       }
       changed = 1;
