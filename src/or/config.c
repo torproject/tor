@@ -1077,8 +1077,11 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     }
 
     /* Adjust the client port configuration so we can launch listeners. */
-    if (parse_client_ports(options, 0, msg, &n_client_ports))
-      return -1;
+    if (parse_client_ports(options, 0, msg, &n_client_ports)) {
+      if (!*msg)
+        *msg = tor_strdup("Unexpected problem parsing client port config");
+      goto rollback;
+    }
 
     /* Set the hibernation state appropriately.*/
     consider_hibernation(time(NULL));
