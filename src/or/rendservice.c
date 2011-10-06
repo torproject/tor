@@ -25,6 +25,7 @@
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);
+static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -899,6 +900,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
+  rend_intro_point_t *intro_point;
   int r, i, v3_shift = 0;
   size_t len, keylen;
   crypto_dh_env_t *dh = NULL;
@@ -971,6 +973,14 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     return -1;
   }
 
+  intro_point = find_intro_point(circuit);
+  if (intro_point == NULL) {
+    log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro circ "
+             "(for service %s) with no corresponding rend_intro_point_t.",
+             escaped(serviceid));
+    return -1;
+  }
+
   if (!service->accepted_intros)
     service->accepted_intros = digestmap_new();
 
@@ -991,6 +1001,13 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     access_time = tor_malloc(sizeof(time_t));
     *access_time = now;
     digestmap_set(service->accepted_intros, pkpart_digest, access_time);
+  }
+
+  /* Record that we've received another INTRODUCE2 cell through this
+   * intro point. */
+  ++(intro_point->introduction_count);
+  if (intro_point->introduction_count == 0) {
+    --(intro_point->introduction_count);
   }
 
   /* Next N bytes is encrypted with service key */
@@ -1644,6 +1661,35 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
       return circ;
     }
   }
+  return NULL;
+}
+
+/** Return a pointer to the rend_intro_point_t corresponding to the
+ * service-side introduction circuit <b>circ</b>. */
+static rend_intro_point_t *
+find_intro_point(origin_circuit_t *circ)
+{
+  const char *serviceid;
+  rend_service_t *service = NULL;
+
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+             TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+  tor_assert(circ->rend_data);
+  serviceid = circ->rend_data->onion_address;
+
+  SMARTLIST_FOREACH(rend_service_list, rend_service_t *, s,
+    if (tor_memeq(s->service_id, serviceid, REND_SERVICE_ID_LEN_BASE32)) {
+      service = s;
+      break;
+    });
+
+  if (service == NULL) return NULL;
+
+  SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro_point,
+    if (crypto_pk_cmp_keys(intro_point->intro_key, circ->intro_key) == 0) {
+      return intro_point;
+    });
+
   return NULL;
 }
 
