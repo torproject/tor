@@ -2176,15 +2176,20 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   int cell_maxlen;
   /* XXXX make sure we're actually supposed to send this! */
 
-  if (!pk)
-    return -1;/*XXXX log*/
-  if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET)
-    return -1;/*XXXX log*/
+  if (!pk) {
+    log_warn(LD_BUG, "Unable to compute authenticate cell: no client auth key");
+    return -1;
+  }
+  if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET) {
+    log_warn(LD_BUG, "Tried to send authenticate cell with unknown "
+             "authentication type %d", authtype);
+    return -1;
+  }
 
   cell_maxlen = 4 + /* overhead */
     V3_AUTH_BODY_LEN + /* Authentication body */
     crypto_pk_keysize(pk) + /* Max signature length */
-    16 /* just in case XXXX */ ;
+    16 /* add a few extra bytes just in case. */;
 
   cell = var_cell_new(cell_maxlen);
   cell->command = CELL_AUTHENTICATE;
@@ -2197,7 +2202,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
                                                          pk,
                                                          0 /* not server */);
   if (authlen < 0) {
-    /* XXXX log */
+    log_warn(LD_BUG, "Unable to compute authenticate cell!");
     var_cell_free(cell);
     return -1;
   }

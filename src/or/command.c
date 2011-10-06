@@ -149,10 +149,15 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
 #endif
 
   /* Reject all but VERSIONS and NETINFO when handshaking. */
+  /* (VERSIONS should actually be impossible; it's variable-length.) */
   if (handshaking && cell->command != CELL_VERSIONS &&
-      cell->command != CELL_NETINFO)
+      cell->command != CELL_NETINFO) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received unexpected cell command %d in state %s; ignoring it.",
+           (int)cell->command,
+           conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
     return;
-  /* XXXX VERSIONS should be impossible; it's variable-length. */
+  }
 
   if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn->handshake_state, cell, 1);
@@ -239,18 +244,37 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
 
       /* fall through */
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
-      if (cell->command != CELL_VERSIONS)
-        return; /*XXXX023 log*/
+      if (cell->command != CELL_VERSIONS) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Received a non-VERSIONS cell with command %d in state %s; "
+               "ignoring it.",
+               (int)cell->command,
+               conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
+        return;
+      }
       break;
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
       if (cell->command != CELL_AUTHENTICATE)
         or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
       break; /* Everything is allowed */
     case OR_CONN_STATE_OPEN:
-      if (conn->link_proto < 3)
+      if (conn->link_proto < 3) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Received a variable-length cell with command %d in state %s "
+               "with link protocol %d; ignoring it.",
+               (int)cell->command,
+               conn_state_to_string(CONN_TYPE_OR,conn->_base.state),
+               (int)conn->link_proto);
         return;
+      }
+      break;
     default:
-      /*XXXX023 log */
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Received var-length cell with command %d in unexpected state "
+             "%s [%d]; ignoring it.",
+             (int)cell->command,
+             conn_state_to_string(CONN_TYPE_OR,conn->_base.state),
+             (int)conn->_base.state);
       return;
   }
 
