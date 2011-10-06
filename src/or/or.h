@@ -1162,9 +1162,6 @@ typedef struct or_handshake_state_t {
    * on this connection. */
   uint8_t authenticated_peer_id[DIGEST_LEN];
 
-  /** DOCDOC  */
-  uint8_t auth_challenge[OR_AUTH_CHALLENGE_LEN];
-
   /** Digests of the cells that we have sent or received as part of a V3
    * handshake.  Used for making and checking AUTHENTICATE cells.
    *

@@ -1043,9 +1043,6 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
   if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2 + 2*n_types)
     ERR("It looks truncated");
 
-  memcpy(conn->handshake_state->auth_challenge, cell->payload,
-         OR_AUTH_CHALLENGE_LEN);
-
   /* Now see if there is an authentication type we can use */
   cp=cell->payload+OR_AUTH_CHALLENGE_LEN+2;
   for (i=0; i < n_types; ++i, cp += 2) {
