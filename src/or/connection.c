@@ -1988,13 +1988,13 @@ retry_all_listeners(smartlist_t *replaced_conns,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1",
                       new_conns, 0) < 0)
-    return -1;
+    retval = -1;
   if (retry_listeners(listeners,
                       CONN_TYPE_CONTROL_LISTENER,
                       options->ControlSocket,
                       options->ControlSocket ? 1 : 0, NULL,
                       new_conns, 1) < 0)
-    return -1;
+    retval = -1;
 
   /* Any members that were still in 'listeners' don't correspond to
    * any configured port.  Kill 'em. */
