@@ -33,7 +33,9 @@
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
+#include "util.h"
 #include "routerlist.h"
+#include "transports.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif
@@ -301,6 +303,7 @@ static config_var_t _option_vars[] = {
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
+  VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
@@ -477,6 +480,9 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
   V(EntryGuards,                 LINELIST_V,  NULL),
 
+  VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
+  V(TransportProxies,                 LINELIST_V, NULL),
+
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
   V(BWHistoryReadInterval,            UINT,     "900"),
   V(BWHistoryReadValues,              CSV,      ""),
@@ -503,7 +509,6 @@ static config_var_t _state_vars[] = {
   V(CircuitBuildAbandonedCount,       UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
-
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -581,6 +586,8 @@ static int check_nickname_list(const char *lst, const char *name, char **msg);
 
 static int parse_bridge_line(const char *line, int validate_only);
 static int parse_client_transport_line(const char *line, int validate_only);
+
+static int parse_server_transport_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -1276,18 +1283,6 @@ options_act(const or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
-  clear_transport_list();
-  if (options->ClientTransportPlugin) {
-    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_client_transport_line(cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated ClientTransportPlugin line "
-                 "could not be added!");
-        return -1;
-      }
-    }
-  }
-
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
@@ -1299,11 +1294,6 @@ options_act(const or_options_t *old_options)
     }
     sweep_bridge_list();
   }
-
-  /* If we have pluggable transport related options enabled, see if we
-     should warn the user about potential configuration problems. */
-  if (options->Bridges || options->ClientTransportPlugin)
-    validate_pluggable_transports_config();
 
   if (running_tor && rend_config_services(options, 0)<0) {
     log_warn(LD_BUG,
@@ -1323,6 +1313,32 @@ options_act(const or_options_t *old_options)
       return -1;
     rep_hist_load_mtbf_data(time(NULL));
   }
+
+  mark_transport_list();
+  pt_prepare_proxy_list_for_config_read();
+  if (options->ClientTransportPlugin) {
+    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+      if (parse_client_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ClientTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
+  }
+
+  if (options->ServerTransportPlugin) {
+    for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+      if (parse_server_transport_line(cl->value, 0)<0) {
+        log_warn(LD_BUG,
+                 "Previously validated ServerTransportPlugin line "
+                 "could not be added!");
+        return -1;
+      }
+    }
+  }
+  sweep_transport_list();
+  sweep_proxy_list();
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
@@ -3727,14 +3743,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("If you set UseBridges, you must set TunnelDirConns.");
 
+  for (cl = options->Bridges; cl; cl = cl->next) {
+    if (parse_bridge_line(cl->value, 1)<0)
+      REJECT("Bridge line did not parse. See logs for details.");
+  }
+
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
     if (parse_client_transport_line(cl->value, 1)<0)
       REJECT("Transport line did not parse. See logs for details.");
   }
 
-  for (cl = options->Bridges; cl; cl = cl->next) {
-    if (parse_bridge_line(cl->value, 1)<0)
-      REJECT("Bridge line did not parse. See logs for details.");
+  for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+    if (parse_server_transport_line(cl->value, 1)<0)
+      REJECT("Server transport line did not parse. See logs for details.");
   }
 
   if (options->ConstrainedSockets) {
@@ -4702,72 +4723,125 @@ parse_bridge_line(const char *line, int validate_only)
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
-  tor_free(fingerprint);
   tor_free(transport_name);
+  tor_free(fingerprint);
   return r;
 }
 
 /** Read the contents of a ClientTransportPlugin line from
  * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't. If <b>validate_only</b> is 0, and the line is well-formed,
- * then add the transport described in the line to our internal
- * transport list.
-*/
+ * isn't.
+ *
+ * If <b>validate_only</b> is 0, and the line is well-formed:
+ * - If it's an external proxy line, add the transport described in the line to
+ * our internal transport list.
+ * - If it's a managed proxy line, launch the managed proxy. */
 static int
 parse_client_transport_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
-  char *socks_ver_str=NULL;
-  char *name=NULL;
+  char *field2=NULL;
+
+  const char *transports=NULL;
+  smartlist_t *transport_list=NULL;
   char *addrport=NULL;
-  int socks_ver;
   tor_addr_t addr;
   uint16_t port = 0;
+  int socks_ver=PROXY_NONE;
+
+  /* managed proxy options */
+  int is_managed=0;
+  char **proxy_argv=NULL;
+  char **tmp=NULL;
+  int proxy_argc,i;
+
+  int line_length;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
-  if (smartlist_len(items) < 3) {
+  line_length =  smartlist_len(items);
+  if (line_length < 3) {
     log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
     goto err;
   }
 
-  name = smartlist_get(items, 0);
-
-  socks_ver_str = smartlist_get(items, 1);
-
-  if (!strcmp(socks_ver_str,"socks4"))
-    socks_ver = PROXY_SOCKS4;
-  else if (!strcmp(socks_ver_str,"socks5"))
-    socks_ver = PROXY_SOCKS5;
-  else {
-    log_warn(LD_CONFIG, "Strange ClientTransportPlugin proxy type '%s'.",
-             socks_ver_str);
-    goto err;
-  }
-
-  addrport = smartlist_get(items, 2);
-
-  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
-    log_warn(LD_CONFIG, "Error parsing transport "
-              "address '%s'", addrport);
-    goto err;
-  }
-
-  if (!port) {
-    log_warn(LD_CONFIG,
-              "Transport address '%s' has no port.", addrport);
-    goto err;
-  }
-
-  if (!validate_only) {
-    log_debug(LD_DIR, "Transport %s found at %s:%d", name,
-              fmt_addr(&addr), (int)port);
-
-    if (transport_add_from_config(&addr, port, name, socks_ver) < 0)
+  /* Get the first line element, split it to commas into
+     transport_list (in case it's multiple transports) and validate
+     the transport names. */
+  transports = smartlist_get(items, 0);
+  transport_list = smartlist_create();
+  smartlist_split_string(transport_list, transports, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
+    if (!string_is_C_identifier(transport_name)) {
+      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+               transport_name);
       goto err;
+    }
+  } SMARTLIST_FOREACH_END(transport_name);
+
+  /* field2 is either a SOCKS version or "exec" */
+  field2 = smartlist_get(items, 1);
+
+  if (!strcmp(field2,"socks4")) {
+    socks_ver = PROXY_SOCKS4;
+  } else if (!strcmp(field2,"socks5")) {
+    socks_ver = PROXY_SOCKS5;
+  } else if (!strcmp(field2,"exec")) {
+    is_managed=1;
+  } else {
+    log_warn(LD_CONFIG, "Strange ClientTransportPlugin field '%s'.",
+             field2);
+    goto err;
+  }
+
+  if (is_managed) { /* managed */
+    if (!validate_only) {  /* if we are not just validating, use the
+                             rest of the line as the argv of the proxy
+                             to be launched */
+      proxy_argc = line_length-2;
+      tor_assert(proxy_argc > 0);
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
+      tmp = proxy_argv;
+      for (i=0;i<proxy_argc;i++) { /* store arguments */
+        *tmp++ = smartlist_get(items, 2);
+        smartlist_del_keeporder(items, 2);
+      }
+      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
+
+      /* kickstart the thing */
+      pt_kickstart_client_proxy(transport_list, proxy_argv);
+    }
+  } else { /* external */
+    if (smartlist_len(transport_list) != 1) {
+      log_warn(LD_CONFIG, "You can't have an external proxy with "
+               "more than one transports.");
+      goto err;
+    }
+
+    addrport = smartlist_get(items, 2);
+
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
+
+    if (!validate_only) {
+      transport_add_from_config(&addr, port, smartlist_get(transport_list, 0),
+                                socks_ver);
+
+      log_info(LD_DIR, "Transport '%s' found at %s:%d",
+               transports, fmt_addr(&addr), (int)port);
+    }
   }
 
   r = 0;
@@ -4779,6 +4853,127 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+  smartlist_free(transport_list);
+
+  return r;
+}
+
+/** Read the contents of a ServerTransportPlugin line from
+ * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
+ * isn't.
+ * If <b>validate_only</b> is 0, the line is well-formed, and it's a
+ * managed proxy line, launch the managed proxy. */
+static int
+parse_server_transport_line(const char *line, int validate_only)
+{
+  smartlist_t *items = NULL;
+  int r;
+  const char *transports=NULL;
+  smartlist_t *transport_list=NULL;
+  char *type=NULL;
+  char *addrport=NULL;
+  tor_addr_t addr;
+  uint16_t port = 0;
+
+  /* managed proxy options */
+  int is_managed=0;
+  char **proxy_argv=NULL;
+  char **tmp=NULL;
+  int proxy_argc,i;
+
+  int line_length;
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  line_length =  smartlist_len(items);
+  if (line_length < 3) {
+    log_warn(LD_CONFIG, "Too few arguments on ServerTransportPlugin line.");
+    goto err;
+  }
+
+  /* Get the first line element, split it to commas into
+     transport_list (in case it's multiple transports) and validate
+     the transport names. */
+  transports = smartlist_get(items, 0);
+  transport_list = smartlist_create();
+  smartlist_split_string(transport_list, transports, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
+    if (!string_is_C_identifier(transport_name)) {
+      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+               transport_name);
+      goto err;
+    }
+  } SMARTLIST_FOREACH_END(transport_name);
+
+  type = smartlist_get(items, 1);
+
+  if (!strcmp(type, "exec")) {
+    is_managed=1;
+  } else if (!strcmp(type, "proxy")) {
+    is_managed=0;
+  } else {
+    log_warn(LD_CONFIG, "Strange ServerTransportPlugin type '%s'", type);
+    goto err;
+  }
+
+  if (is_managed) { /* managed */
+    if (!validate_only) {
+      proxy_argc = line_length-2;
+      tor_assert(proxy_argc > 0);
+      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
+      tmp = proxy_argv;
+
+      for (i=0;i<proxy_argc;i++) { /* store arguments */
+        *tmp++ = smartlist_get(items, 2);
+        smartlist_del_keeporder(items, 2);
+      }
+      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
+
+      /* kickstart the thing */
+      pt_kickstart_server_proxy(transport_list, proxy_argv);
+    }
+  } else { /* external */
+    if (smartlist_len(transport_list) != 1) {
+      log_warn(LD_CONFIG, "You can't have an external proxy with "
+               "more than one transports.");
+      goto err;
+    }
+
+    addrport = smartlist_get(items, 2);
+
+    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+      log_warn(LD_CONFIG, "Error parsing transport "
+               "address '%s'", addrport);
+      goto err;
+    }
+    if (!port) {
+      log_warn(LD_CONFIG,
+               "Transport address '%s' has no port.", addrport);
+      goto err;
+    }
+
+    if (!validate_only) {
+      log_info(LD_DIR, "Server transport '%s' at %s:%d.",
+               transports, fmt_addr(&addr), (int)port);
+    }
+  }
+
+  r = 0;
+  goto done;
+
+ err:
+  r = -1;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+  smartlist_free(transport_list);
+
   return r;
 }
 
@@ -5721,6 +5916,69 @@ options_get_datadir_fname2_suffix(const or_options_t *options,
   return fname;
 }
 
+/** Return true if <b>line</b> is a valid state TransportProxy line.
+ *  Return false otherwise. */
+static int
+state_transport_line_is_valid(const char *line)
+{
+  smartlist_t *items = NULL;
+  char *addrport=NULL;
+  tor_addr_t addr;
+  uint16_t port = 0;
+  int r;
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(items) != 2) {
+    log_warn(LD_CONFIG, "state: Not enough arguments in TransportProxy line.");
+    goto err;
+  }
+
+  addrport = smartlist_get(items, 1);
+  if (tor_addr_port_parse(addrport, &addr, &port) < 0) {
+    log_warn(LD_CONFIG, "state: Could not parse addrport.");
+    goto err;
+  }
+
+  if (!port) {
+    log_warn(LD_CONFIG, "state: Transport line did not contain port.");
+    goto err;
+  }
+
+  r = 1;
+  goto done;
+
+ err:
+  r = 0;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  return r;
+}
+
+/** Return 0 if all TransportProxy lines in <b>state</b> are well
+ *  formed. Otherwise, return -1. */
+static int
+validate_transports_in_state(or_state_t *state)
+{
+  int broken = 0;
+  config_line_t *line;
+
+  for (line = state->TransportProxies ; line ; line = line->next) {
+    tor_assert(!strcmp(line->key, "TransportProxy"));
+    if (!state_transport_line_is_valid(line->value)<0)
+      broken = 1;
+  }
+
+  if (broken)
+    log_warn(LD_CONFIG, "state: State file seems to be broken.");
+
+  return 0;
+}
+
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -5737,6 +5995,9 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   (void) old_state;
 
   if (entry_guards_parse_state(state, 0, msg)<0)
+    return -1;
+
+  if (validate_transports_in_state(state)<0)
     return -1;
 
   return 0;
@@ -5969,6 +6230,150 @@ or_state_save(time_t now)
     global_state->next_write = TIME_MAX;
 
   return 0;
+}
+
+/** Return the config line for transport <b>transport</b> in the current state.
+ *  Return NULL if there is no config line for <b>transport</b>. */
+static config_line_t *
+get_transport_in_state_by_name(const char *transport)
+{
+  or_state_t *or_state = get_or_state();
+  config_line_t *line;
+  config_line_t *ret = NULL;
+  smartlist_t *items = NULL;
+
+  for (line = or_state->TransportProxies ; line ; line = line->next) {
+    tor_assert(!strcmp(line->key, "TransportProxy"));
+
+    items = smartlist_create();
+    smartlist_split_string(items, line->value, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+    if (smartlist_len(items) != 2) /* broken state */
+      goto done;
+
+    if (!strcmp(smartlist_get(items, 0), transport)) {
+      ret = line;
+      goto done;
+    }
+
+    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    smartlist_free(items);
+    items = NULL;
+  }
+
+ done:
+  if (items) {
+    SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+    smartlist_free(items);
+  }
+  return ret;
+}
+
+/** Return string containing the address:port part of the
+ *  TransportProxy <b>line</b> for transport <b>transport</b>.
+ *  If the line is corrupted, return NULL. */
+static const char *
+get_transport_bindaddr(const char *line, const char *transport)
+{
+  char *line_tmp = NULL;
+
+  if (strlen(line) < strlen(transport) + 2) {
+    goto broken_state;
+  } else {
+    /* line should start with the name of the transport and a space.
+       (for example, "obfs2 127.0.0.1:47245") */
+    tor_asprintf(&line_tmp, "%s ", transport);
+    if (strcmpstart(line, line_tmp))
+      goto broken_state;
+
+    tor_free(line_tmp);
+    return (line+strlen(transport)+1);
+  }
+
+ broken_state:
+  tor_free(line_tmp);
+  return NULL;
+}
+
+/** Return a static string containing the address:port a proxy
+ *  transport should bind on. */
+const char *
+get_bindaddr_for_transport(const char *transport)
+{
+  static const char default_addrport[] = "127.0.0.1:0";
+  const char *bindaddr = NULL;
+
+  config_line_t *line = get_transport_in_state_by_name(transport);
+  if (!line)
+    return default_addrport;
+
+  bindaddr = get_transport_bindaddr(line->value, transport);
+
+  return bindaddr ? bindaddr : default_addrport;
+}
+
+/** Save <b>transport</b> listening on <b>addr</b>:<b>port</b> to
+    state */
+void
+save_transport_to_state(const char *transport,
+                        const tor_addr_t *addr, uint16_t port)
+{
+  or_state_t *state = get_or_state();
+
+  char *transport_addrport=NULL;
+
+  /** find where to write on the state */
+  config_line_t **next, *line;
+
+  /* see if this transport is already stored in state */
+  config_line_t *transport_line =
+    get_transport_in_state_by_name(transport);
+
+  if (transport_line) { /* if transport already exists in state... */
+    const char *prev_bindaddr = /* get its addrport... */
+      get_transport_bindaddr(transport_line->value, transport);
+    tor_asprintf(&transport_addrport, "%s:%d", fmt_addr(addr), (int)port);
+
+    /* if transport in state has the same address as this one, life is good */
+    if (!strcmp(prev_bindaddr, transport_addrport)) {
+      log_info(LD_CONFIG, "Transport seems to have spawned on its usual "
+               "address:port.");
+      goto done;
+    } else { /* if addrport in state is different than the one we got */
+      log_info(LD_CONFIG, "Transport seems to have spawned on different "
+               "address:port. Let's update the state file with the new "
+               "address:port");
+      tor_free(transport_line->value); /* free the old line */
+      tor_asprintf(&transport_line->value, "%s %s:%d", transport,
+                   fmt_addr(addr),
+                   (int) port); /* replace old addrport line with new line */
+    }
+  } else { /* never seen this one before; save it in state for next time */
+    log_info(LD_CONFIG, "It's the first time we see this transport. "
+             "Let's save its address:port");
+    next = &state->TransportProxies;
+    /* find the last TransportProxy line in the state and point 'next'
+       right after it  */
+    line = state->TransportProxies;
+    while (line) {
+      next = &(line->next);
+      line = line->next;
+    }
+
+    /* allocate space for the new line and fill it in */
+    *next = line = tor_malloc_zero(sizeof(config_line_t));
+    line->key = tor_strdup("TransportProxy");
+    tor_asprintf(&line->value, "%s %s:%d", transport,
+                 fmt_addr(addr), (int) port);
+
+    next = &(line->next);
+  }
+
+  if (!get_options()->AvoidDiskWrites)
+    or_state_mark_dirty(state, 0);
+
+ done:
+  tor_free(transport_addrport);
 }
 
 /** Given a file name check to see whether the file exists but has not been

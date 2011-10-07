@@ -22,6 +22,9 @@ typedef struct {
   tor_addr_t addr;
   /** Port of proxy */
   uint16_t port;
+  /** Boolean: We are re-parsing our transport list, and we are going to remove
+   * this one if we don't find it in the list of configured transports. */
+  unsigned marked_for_removal : 1;
 } transport_t;
 
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
@@ -77,6 +80,9 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 
 void mark_bridge_list(void);
 void sweep_bridge_list(void);
+void mark_transport_list(void);
+void sweep_transport_list(void);
+
 int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
@@ -142,9 +148,16 @@ int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 void clear_transport_list(void);
 int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
+int transport_add(transport_t *t);
+void transport_free(transport_t *transport);
+transport_t *transport_create(const tor_addr_t *addr, uint16_t port,
+                                      const char *name, int socks_ver);
+
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const transport_t **transport);
-void validate_pluggable_transports_config(void);
+transport_t *transport_get_by_name(const char *name);
+
+int validate_pluggable_transports_config(void);
 
 #endif
 

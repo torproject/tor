@@ -31,6 +31,7 @@
 #include <direct.h>
 #include <process.h>
 #include <tchar.h>
+#include <Winbase.h>
 #else
 #include <dirent.h>
 #include <pwd.h>
@@ -46,6 +47,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <signal.h>
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
@@ -767,6 +769,34 @@ find_str_at_start_of_line(const char *haystack, const char *needle)
   } while (*haystack);
 
   return NULL;
+}
+
+/** Returns true if <b>string</b> could be a C identifier.
+    A C identifier must begin with a letter or an underscore and the
+    rest of its characters can be letters, numbers or underscores. No
+    length limit is imposed. */
+int
+string_is_C_identifier(const char *string)
+{
+  size_t iter;
+  size_t length = strlen(string);
+  if (!length)
+    return 0;
+
+  for (iter = 0; iter < length ; iter++) {
+    if (iter == 0) {
+      if (!(TOR_ISALPHA(string[iter]) ||
+            string[iter] == '_'))
+        return 0;
+    } else {
+      if (!(TOR_ISALPHA(string[iter]) ||
+            TOR_ISDIGIT(string[iter]) ||
+            string[iter] == '_'))
+        return 0;
+    }
+  }
+
+  return 1;
 }
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
@@ -3129,6 +3159,28 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
 
+/** Terminate process running at PID <b>pid</b>.
+ *  Code borrowed from Python's os.kill. */
+int
+tor_terminate_process(pid_t pid)
+{
+#ifdef MS_WINDOWS
+  HANDLE handle;
+  /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
+     attempt to open and terminate the process. */
+  handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+  if (!handle)
+    return -1;
+
+  if (!TerminateProcess(handle, 0))
+    return -1;
+  else
+    return 0;
+#else /* Unix */
+  return kill(pid, SIGTERM);
+#endif
+}
+
 #define CHILD_STATE_INIT 0
 #define CHILD_STATE_PIPE 1
 #define CHILD_STATE_MAXFD 2
@@ -3139,8 +3191,6 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 #define CHILD_STATE_CLOSEFD 7
 #define CHILD_STATE_EXEC 8
 #define CHILD_STATE_FAILEXEC 9
-
-#define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
 /** Start a program in the background. If <b>filename</b> contains a '/', then
  * it will be treated as an absolute or relative path.  Otherwise, on
@@ -3161,9 +3211,9 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  * Python, and example code from
  * http://msdn.microsoft.com/en-us/library/ms682499%28v=vs.85%29.aspx.
  */
-
 int
 tor_spawn_background(const char *const filename, const char **argv,
+                     const char **envp,
                      process_handle_t *process_handle)
 {
 #ifdef MS_WINDOWS
@@ -3372,7 +3422,10 @@ tor_spawn_background(const char *const filename, const char **argv,
     /* Call the requested program. We need the cast because
        execvp doesn't define argv as const, even though it
        does not modify the arguments */
-    execvp(filename, (char *const *) argv);
+    if (envp)
+      execve(filename, (char *const *) argv, (char*const*)envp);
+    else
+      execvp(filename, (char *const *) argv);
 
     /* If we got here, the exec or open(/dev/null) failed */
 
@@ -3763,6 +3816,7 @@ log_from_handle(HANDLE *pipe, int severity)
 }
 
 #else
+
 /** Read from stream, and send lines to log at the specified log level.
  * Returns 1 if stream is closed normally, -1 if there is a error reading, and
  * 0 otherwise. Handles lines from tor-fw-helper and
@@ -3773,65 +3827,44 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
               int *child_status)
 {
   char buf[256];
+  enum stream_status r;
 
   for (;;) {
-    char *retval;
-    retval = fgets(buf, sizeof(buf), stream);
+    r = get_string_from_pipe(stream, buf, sizeof(buf) - 1);
 
-    if (NULL == retval) {
-      if (feof(stream)) {
-        /* Program has closed stream (probably it exited) */
-        /* TODO: check error */
-        fclose(stream);
-        return 1;
+    if (r == IO_STREAM_CLOSED) {
+      fclose(stream);
+      return 1;
+    } else if (r == IO_STREAM_EAGAIN) {
+      return 0;
+    } else if (r == IO_STREAM_TERM) {
+      fclose(stream);
+      return -1;
+    }
+
+    tor_assert(r == IO_STREAM_OKAY);
+
+    /* Check if buf starts with SPAWN_ERROR_MESSAGE */
+    if (strcmpstart(buf, SPAWN_ERROR_MESSAGE) == 0) {
+      /* Parse error message */
+      int retval, child_state, saved_errno;
+      retval = tor_sscanf(buf, SPAWN_ERROR_MESSAGE "%x/%x",
+                          &child_state, &saved_errno);
+      if (retval == 2) {
+        log_warn(LD_GENERAL,
+                 "Failed to start child process \"%s\" in state %d: %s",
+                 executable, child_state, strerror(saved_errno));
+        if (child_status)
+          *child_status = 1;
       } else {
-        if (EAGAIN == errno) {
-          /* Nothing more to read, try again next time */
-          return 0;
-        } else {
-          /* There was a problem, abandon this child process */
-          fclose(stream);
-          return -1;
-        }
+        /* Failed to parse message from child process, log it as a
+           warning */
+        log_warn(LD_GENERAL,
+                 "Unexpected message from port forwarding helper \"%s\": %s",
+                 executable, buf);
       }
     } else {
-      /* We have some data, log it and keep asking for more */
-      size_t len;
-
-      len = strlen(buf);
-      if (buf[len - 1] == '\n') {
-        /* Remove the trailing newline */
-        buf[len - 1] = '\0';
-      } else {
-        /* No newline; check whether we overflowed the buffer */
-        if (!feof(stream))
-          log_warn(LD_GENERAL,
-                  "Line from port forwarding helper was truncated: %s", buf);
-          /* TODO: What to do with this error? */
-      }
-
-      /* Check if buf starts with SPAWN_ERROR_MESSAGE */
-      if (strcmpstart(buf, SPAWN_ERROR_MESSAGE) == 0) {
-          /* Parse error message */
-          int retval, child_state, saved_errno;
-          retval = tor_sscanf(buf, SPAWN_ERROR_MESSAGE "%x/%x",
-                              &child_state, &saved_errno);
-          if (retval == 2) {
-              log_warn(LD_GENERAL,
-                "Failed to start child process \"%s\" in state %d: %s",
-                executable, child_state, strerror(saved_errno));
-              if (child_status)
-                  *child_status = 1;
-          } else {
-              /* Failed to parse message from child process, log it as a
-                 warning */
-              log_warn(LD_GENERAL,
-                "Unexpected message from port forwarding helper \"%s\": %s",
-                executable, buf);
-          }
-      } else {
-          log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf);
-      }
+      log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf);
     }
   }
 
@@ -3839,6 +3872,65 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
   return -1;
 }
 #endif
+
+/** Reads from <b>stream</b> and stores input in <b>buf_out</b> making
+ *  sure it's below <b>count</b> bytes.
+ *  If the string has a trailing newline, we strip it off.
+ *
+ * This function is specifically created to handle input from managed
+ * proxies, according to the pluggable transports spec. Make sure it
+ * fits your needs before using it.
+ *
+ * Returns:
+ * IO_STREAM_CLOSED: If the stream is closed.
+ * IO_STREAM_EAGAIN: If there is nothing to read and we should check back
+ *  later.
+ * IO_STREAM_TERM: If something is wrong with the stream.
+ * IO_STREAM_OKAY: If everything went okay and we got a string
+ *  in <b>buf_out</b>. */
+enum stream_status
+get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
+{
+  char *retval;
+  size_t len;
+
+  retval = fgets(buf_out, count, stream);
+
+  if (!retval) {
+    if (feof(stream)) {
+      /* Program has closed stream (probably it exited) */
+      /* TODO: check error */
+      return IO_STREAM_CLOSED;
+    } else {
+      if (EAGAIN == errno) {
+        /* Nothing more to read, try again next time */
+        return IO_STREAM_EAGAIN;
+      } else {
+        /* There was a problem, abandon this child process */
+        return IO_STREAM_TERM;
+      }
+    }
+  } else {
+    len = strlen(buf_out);
+    tor_assert(len>0);
+
+    if (buf_out[len - 1] == '\n') {
+      /* Remove the trailing newline */
+      buf_out[len - 1] = '\0';
+    } else {
+      /* No newline; check whether we overflowed the buffer */
+      if (!feof(stream))
+        log_info(LD_GENERAL,
+                 "Line from stream was truncated: %s", buf_out);
+      /* TODO: What to do with this error? */
+    }
+
+    return IO_STREAM_OKAY;
+  }
+
+  /* We should never get here */
+  return IO_STREAM_TERM;
+}
 
 void
 tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
@@ -3885,9 +3977,9 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 
 #ifdef MS_WINDOWS
     /* Passing NULL as lpApplicationName makes Windows search for the .exe */
-    tor_spawn_background(NULL, argv, &child_handle);
+    tor_spawn_background(NULL, argv, NULL &child_handle);
 #else
-    tor_spawn_background(filename, argv, &child_handle);
+    tor_spawn_background(filename, argv, NULL, &child_handle);
 #endif
     if (PROCESS_STATUS_ERROR == child_handle.status) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",

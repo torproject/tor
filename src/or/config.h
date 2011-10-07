@@ -68,6 +68,11 @@ const smartlist_t *get_configured_client_ports(void);
 
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
+
+void save_transport_to_state(const char *transport_name,
+                             const tor_addr_t *addr, uint16_t port);
+const char *get_bindaddr_for_transport(const char *transport);
+
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer,
                           const char **errmsg);

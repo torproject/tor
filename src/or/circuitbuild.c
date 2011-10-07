@@ -26,6 +26,7 @@
 #include "nodelist.h"
 #include "onion.h"
 #include "policies.h"
+#include "transports.h"
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
@@ -123,8 +124,6 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
 
-static const transport_t *transport_get_by_name(const char *name);
-static void transport_free(transport_t *transport);
 static void bridge_free(bridge_info_t *bridge);
 
 /**
@@ -4595,6 +4594,32 @@ bridge_free(bridge_info_t *bridge)
 /** A list of pluggable transports found in torrc. */
 static smartlist_t *transport_list = NULL;
 
+/** Mark every entry of the transport list to be removed on our next call to
+ * sweep_transport_list unless it has first been un-marked. */
+void
+mark_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_create();
+  SMARTLIST_FOREACH(transport_list, transport_t *, t,
+                    t->marked_for_removal = 1);
+}
+
+/** Remove every entry of the transport list that was marked with
+ * mark_transport_list if it has not subsequently been un-marked. */
+void
+sweep_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, t) {
+    if (t->marked_for_removal) {
+      SMARTLIST_DEL_CURRENT(transport_list, t);
+      transport_free(t);
+    }
+  } SMARTLIST_FOREACH_END(t);
+}
+
 /** Initialize the pluggable transports list to empty, creating it if
  *  needed. */
 void
@@ -4607,7 +4632,7 @@ clear_transport_list(void)
 }
 
 /** Free the pluggable transport struct <b>transport</b>. */
-static void
+void
 transport_free(transport_t *transport)
 {
   if (!transport)
@@ -4619,7 +4644,7 @@ transport_free(transport_t *transport)
 
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
-static const transport_t *
+transport_t *
 transport_get_by_name(const char *name)
 {
   tor_assert(name);
@@ -4627,7 +4652,7 @@ transport_get_by_name(const char *name)
   if (!transport_list)
     return NULL;
 
-  SMARTLIST_FOREACH_BEGIN(transport_list, const transport_t *, transport) {
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
     if (!strcmp(transport->name, name))
       return transport;
   } SMARTLIST_FOREACH_END(transport);
@@ -4635,41 +4660,139 @@ transport_get_by_name(const char *name)
   return NULL;
 }
 
-/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
- *  <b>name</b> is set to the name of the protocol this proxy uses.
- *  <b>socks_ver</b> is set to the SOCKS version of the proxy.
- *
- *  Returns 0 on success, -1 on fail. */
-int
-transport_add_from_config(const tor_addr_t *addr, uint16_t port,
-                          const char *name, int socks_ver)
+/** Returns a transport_t struct for a transport proxy supporting the
+    protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
+    SOCKS version <b>socks_ver</b>. */
+transport_t *
+transport_create(const tor_addr_t *addr, uint16_t port,
+                 const char *name, int socks_ver)
 {
-  transport_t *t;
+  transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
-  if (transport_get_by_name(name)) { /* check for duplicate names */
-    log_warn(LD_CONFIG, "More than one transport has '%s' as "
-             "its name.", name);
-    return -1;
-  }
-
-  t = tor_malloc_zero(sizeof(transport_t));
   tor_addr_copy(&t->addr, addr);
   t->port = port;
   t->name = tor_strdup(name);
   t->socks_version = socks_ver;
 
-  if (!transport_list)
-    transport_list = smartlist_create();
+  return t;
+}
 
-  smartlist_add(transport_list, t);
+/** Resolve any conflicts that the insertion of transport <b>t</b>
+ *  might cause.
+ *  Return 0 if <b>t</b> is OK and should be registered, 1 if there is
+ *  a transport identical to <b>t</b> already registered and -1 if
+ *  <b>t</b> cannot be added due to conflicts. */
+static int
+transport_resolve_conflicts(transport_t *t)
+{
+  /* This is how we resolve transport conflicts:
+
+     If there is already a transport with the same name and addrport,
+     we either have duplicate torrc lines OR we are here post-HUP and
+     this transport was here pre-HUP as well. In any case, mark the
+     old transport so that it doesn't get removed and ignore the new
+     one. Our caller has to free the new transport so we return '1' to
+     signify this.
+
+     If there is already a transport with the same name but different
+     addrport:
+     * if it's marked for removal, it means that it either has a lower
+     priority than 't' in torrc (otherwise the mark would have been
+     cleared by the paragraph above), or it doesn't exist at all in
+     the post-HUP torrc. We destroy the old transport and register 't'.
+     * if it's *not* marked for removal, it means that it was newly
+     added in the post-HUP torrc or that it's of higher priority, in
+     this case we ignore 't'. */
+  transport_t *t_tmp = transport_get_by_name(t->name);
+  if (t_tmp) { /* same name */
+    if (tor_addr_eq(&t->addr, &t_tmp->addr) && (t->port == t_tmp->port)) {
+      /* same name *and* addrport */
+      t_tmp->marked_for_removal = 0;
+      return 1;
+    } else { /* same name but different addrport */
+      if (t_tmp->marked_for_removal) { /* marked for removal */
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "but there was already a transport marked for deletion at "
+                   "'%s:%u'. We deleted the old transport and registered the "
+                   "new one.", t->name, fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
+        smartlist_remove(transport_list, t_tmp);
+        transport_free(t_tmp);
+      } else { /* *not* marked for removal */
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "but the same transport already exists at '%s:%u'. "
+                   "Skipping.", t->name, fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
+        return -1;
+      }
+    }
+  }
+
   return 0;
 }
 
-/** Warns the user of possible pluggable transport misconfiguration. */
-void
+/** Add transport <b>t</b> to the internal list of pluggable
+ *  transports.
+ *  Returns 0 if the transport was added correctly, 1 if the same
+ *  transport was already registered (in this case the caller must
+ *  free the transport) and -1 if there was an error.  */
+int
+transport_add(transport_t *t)
+{
+  int r;
+  tor_assert(t);
+
+  r = transport_resolve_conflicts(t);
+
+  switch (r) {
+  case 0: /* should register transport */
+    if (!transport_list)
+      transport_list = smartlist_create();
+    smartlist_add(transport_list, t);
+    return 0;
+  default: /* let our caller know the return code */
+    return r;
+  }
+}
+
+/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
+ *  <b>name</b> is set to the name of the protocol this proxy uses.
+ *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
+int
+transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+                          const char *name, int socks_ver)
+{
+  transport_t *t = transport_create(addr, port, name, socks_ver);
+
+  int r = transport_add(t);
+
+  switch (r) {
+  case -1:
+  default:
+    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
+               t->name, fmt_addr(&t->addr), t->port);
+    transport_free(t);
+    return -1;
+  case 1:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+     transport_free(t); /* falling */
+     return 0;
+  case 0:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+    return 0;
+  }
+}
+
+/** Warn the user of possible pluggable transport misconfiguration.
+ *  Return 0 if the validation happened, -1 if we should postpone the
+ *  validation. */
+int
 validate_pluggable_transports_config(void)
 {
-  if (bridge_list) {
+  /* Don't validate if managed proxies are not yet fully configured. */
+  if (bridge_list && !pt_proxies_configuration_pending()) {
     SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
       /* Skip bridges without transports. */
       if (!b->transport_name)
@@ -4683,6 +4806,10 @@ validate_pluggable_transports_config(void)
                  "corresponding ClientTransportPlugin line.",
                  b->transport_name);
     } SMARTLIST_FOREACH_END(b);
+
+    return 0;
+  } else {
+    return -1;
   }
 }
 
@@ -4911,6 +5038,11 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
   int can_use_bridge_authority;
 
   if (!bridge_list)
+    return;
+
+  /* If we still have unconfigured managed proxies, don't go and
+     connect to a bridge. */
+  if (pt_proxies_configuration_pending())
     return;
 
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)

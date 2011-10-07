@@ -1389,9 +1389,9 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   /* Start the program */
 #ifdef MS_WINDOWS
-  tor_spawn_background(NULL, argv, &process_handle);
+  tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
-  tor_spawn_background(argv[0], argv, &process_handle);
+  tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
 
   tt_int_op(process_handle.status, ==, expected_status);
@@ -1506,9 +1506,9 @@ test_util_spawn_background_partial_read(void *ptr)
 
   /* Start the program */
 #ifdef MS_WINDOWS
-  tor_spawn_background(NULL, argv, &process_handle);
+  tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
-  tor_spawn_background(argv[0], argv, &process_handle);
+  tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
   tt_int_op(process_handle.status, ==, expected_status);
 

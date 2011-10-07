@@ -2020,9 +2020,12 @@ retry_all_listeners(smartlist_t *replaced_conns,
   return retval;
 }
 
-/** Return 1 if we should apply rate limiting to <b>conn</b>,
- * and 0 otherwise. Right now this just checks if it's an internal
- * IP address or an internal connection. */
+/** Return 1 if we should apply rate limiting to <b>conn</b>, and 0
+ * otherwise.
+ * Right now this just checks if it's an internal IP address or an
+ * internal connection. We also check if the connection uses pluggable
+ * transports, since we should then limit it even if it comes from an
+ * internal IP address. */
 static int
 connection_is_rate_limited(connection_t *conn)
 {

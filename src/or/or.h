@@ -2879,6 +2879,9 @@ typedef struct {
   config_line_t *ClientTransportPlugin; /**< List of client
                                            transport plugins. */
 
+  config_line_t *ServerTransportPlugin; /**< List of client
+                                           transport plugins. */
+
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the
                     * future. */
@@ -3349,6 +3352,8 @@ typedef struct {
 
   /** A list of Entry Guard-related configuration lines. */
   config_line_t *EntryGuards;
+
+  config_line_t *TransportProxies;
 
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the

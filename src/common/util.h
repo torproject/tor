@@ -205,6 +205,8 @@ const char *find_whitespace(const char *s) ATTR_PURE;
 const char *find_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
 const char *find_str_at_start_of_line(const char *haystack, const char *needle)
   ATTR_PURE;
+int string_is_C_identifier(const char *string);
+
 int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
 int tor_digest_is_zero(const char *digest) ATTR_PURE;
 int tor_digest256_is_zero(const char *digest) ATTR_PURE;
@@ -286,6 +288,16 @@ char *rate_limit_log(ratelim_t *lim, time_t now);
 ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
 ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
 
+/** Status of an I/O stream. */
+enum stream_status {
+  IO_STREAM_OKAY,
+  IO_STREAM_EAGAIN,
+  IO_STREAM_TERM,
+  IO_STREAM_CLOSED
+};
+
+enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
+
 /** Return values from file_status(); see that function's documentation
  * for details. */
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR } file_status_t;
@@ -348,6 +360,13 @@ void write_pidfile(char *filename);
 void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
+int tor_terminate_process(pid_t pid);
+typedef struct process_handle_s process_handle_t;
+int tor_spawn_background(const char *const filename, const char **argv,
+                         const char **envp, process_handle_t *process_handle);
+
+#define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
+
 #ifdef MS_WINDOWS
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
@@ -361,7 +380,7 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 #define PROCESS_STATUS_NOTRUNNING 0
 #define PROCESS_STATUS_RUNNING 1
 #define PROCESS_STATUS_ERROR -1
-typedef struct process_handle_s {
+struct process_handle_s {
   int status;
 #ifdef MS_WINDOWS
   HANDLE stdout_pipe;
@@ -374,10 +393,7 @@ typedef struct process_handle_s {
   FILE *stderr_handle;
   pid_t pid;
 #endif // MS_WINDOWS
-} process_handle_t;
-
-int tor_spawn_background(const char *const filename, const char **argv,
-                         process_handle_t *process_handle);
+};
 
 /* Return values of tor_get_exit_code() */
 #define PROCESS_EXIT_RUNNING 1
@@ -399,6 +415,7 @@ ssize_t tor_read_all_from_process_stdout(
 ssize_t tor_read_all_from_process_stderr(
     const process_handle_t *process_handle, char *buf, size_t count);
 char *tor_join_win_cmdline(const char *argv[]);
+
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 
