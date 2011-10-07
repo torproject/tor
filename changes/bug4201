@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Bridges now skip DNS self-tests, to act a little more stealthily.
+      Fixes bug 4201; bugfix on 0.2.0.3-alpha, which first introduced
+      bridges. Patch by "warms0x".
+
