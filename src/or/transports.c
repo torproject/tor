@@ -234,7 +234,7 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   /* kill the old obfsproxy process */
   tor_terminate_process(mp->pid);
   mp->pid = 0;
-  fclose(mp->stdout);
+  fclose(mp->_stdout);
 
   /* destroy all its old transports. we no longer use them. */
   SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
@@ -277,14 +277,22 @@ launch_managed_proxy(managed_proxy_t *mp)
   free_execve_args(envp);
 
   /* Set stdout/stderr pipes to be non-blocking */
-  fcntl(stdout_pipe, F_SETFL, O_NONBLOCK);
+#ifdef _WIN32
+  {
+    u_long nonblocking = 1;
+    ioctlsocket(stdout_pipe, FIONBIO, &nonblocking);
+  }
+#else
+    fcntl(stdout_pipe, F_SETFL, O_NONBLOCK);
+#endif
+
   /* Open the buffered IO streams */
   stdout_read = fdopen(stdout_pipe, "r");
 
   log_info(LD_CONFIG, "Managed proxy has spawned at PID %d.", pid);
 
   mp->conf_state = PT_PROTO_LAUNCHED;
-  mp->stdout = stdout_read;
+  mp->_stdout = stdout_read;
   mp->pid = pid;
 
   return 0;
@@ -344,7 +352,7 @@ configure_proxy(managed_proxy_t *mp)
   tor_assert(mp->conf_state != PT_PROTO_INFANT);
 
   while (1) {
-    r = get_string_from_pipe(mp->stdout, stdout_buf,
+    r = get_string_from_pipe(mp->_stdout, stdout_buf,
                              sizeof(stdout_buf) - 1);
 
     if (r  == IO_STREAM_OKAY) { /* got a line; handle it! */
@@ -456,8 +464,8 @@ managed_proxy_destroy(managed_proxy_t *mp)
   smartlist_remove(managed_proxy_list, mp);
 
   /* close its stdout stream */
-  if (mp->stdout)
-    fclose(mp->stdout);
+  if (mp->_stdout)
+    fclose(mp->_stdout);
 
   /* free the argv */
   free_execve_args(mp->argv);

@@ -47,7 +47,7 @@ typedef struct {
 
   int is_server; /* is it a server proxy? */
 
-  FILE *stdout; /* a stream to its stdout
+  FILE *_stdout; /* a stream to its stdout
                    (closed in managed_proxy_destroy()) */
 
   int pid; /* The Process ID this managed proxy is using. */

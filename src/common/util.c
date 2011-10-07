@@ -2966,20 +2966,18 @@ int
 tor_terminate_process(pid_t pid)
 {
 #ifdef MS_WINDOWS
-  DWORD pid_win = pid;
-  DWORD err;
   HANDLE handle;
   /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
      attempt to open and terminate the process. */
   handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-  if (handle == NULL)
+  if (!handle)
     return -1;
 
-  if (TerminateProcess(handle, sig) == 0)
+  if (!TerminateProcess(handle, 0))
     return -1;
   else
     return 0;
-#else /* *nix */
+#else /* Unix */
   return kill(pid, SIGTERM);
 #endif
 }
