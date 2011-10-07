@@ -11,13 +11,13 @@
 #ifndef TOR_TRANSPORTS_H
 #define TOR_TRANSPORTS_H
 
-void pt_kickstart_proxy(const char *method, char **proxy_argv,
+void pt_kickstart_proxy(const smartlist_t *transport_list, char **proxy_argv,
                         int is_server);
 
-#define pt_kickstart_client_proxy(m, pa)  \
-  pt_kickstart_proxy(m, pa, 0)
-#define pt_kickstart_server_proxy(m, pa) \
-  pt_kickstart_proxy(m, pa, 1)
+#define pt_kickstart_client_proxy(tl, pa)  \
+  pt_kickstart_proxy(tl, pa, 0)
+#define pt_kickstart_server_proxy(tl, pa) \
+  pt_kickstart_proxy(tl, pa, 1)
 
 void pt_configure_remaining_proxies(void);
 

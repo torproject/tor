@@ -890,7 +890,8 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
  *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server
  *  managed proxy. */
 static managed_proxy_t *
-managed_proxy_create(const char *transport, char **proxy_argv, int is_server)
+managed_proxy_create(const smartlist_t *transport_list,
+                     char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_INFANT;
@@ -899,7 +900,8 @@ managed_proxy_create(const char *transport, char **proxy_argv, int is_server)
   mp->transports = smartlist_create();
 
   mp->transports_to_launch = smartlist_create();
-  add_transport_to_proxy(transport, mp);
+  SMARTLIST_FOREACH(transport_list, const char *, transport,
+                    add_transport_to_proxy(transport, mp));
 
   /* register the managed proxy */
   if (!managed_proxy_list)
@@ -914,7 +916,8 @@ managed_proxy_create(const char *transport, char **proxy_argv, int is_server)
  *  the managed proxy subsystem.
  *  If <b>is_server</b> is true, then the proxy is a server proxy. */
 void
-pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
+pt_kickstart_proxy(const smartlist_t *transport_list,
+                   char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp=NULL;
   transport_t *old_transport = NULL;
@@ -922,7 +925,7 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
   mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
   if (!mp) { /* we haven't seen this proxy before */
-    managed_proxy_create(transport, proxy_argv, is_server);
+    managed_proxy_create(transport_list, proxy_argv, is_server);
 
   } else { /* known proxy. add its transport to its transport list */
     if (mp->got_hup) {
@@ -938,12 +941,15 @@ pt_kickstart_proxy(const char *transport, char **proxy_argv, int is_server)
         unconfigured_proxies_n++;
       }
 
-      old_transport = transport_get_by_name(transport);
-      if (old_transport)
-        old_transport->marked_for_removal = 0;
+      SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport) {
+        old_transport = transport_get_by_name(transport);
+        if (old_transport)
+          old_transport->marked_for_removal = 0;
+      } SMARTLIST_FOREACH_END(transport);
     }
 
-    add_transport_to_proxy(transport, mp);
+    SMARTLIST_FOREACH(transport_list, const char *, transport,
+                      add_transport_to_proxy(transport, mp));
     free_execve_args(proxy_argv);
   }
 }

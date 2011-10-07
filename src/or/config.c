@@ -4693,7 +4693,8 @@ parse_client_transport_line(const char *line, int validate_only)
   int r;
   char *field2=NULL;
 
-  const char *name=NULL;
+  const char *transports=NULL;
+  smartlist_t *transport_list=NULL;
   char *addrport=NULL;
   tor_addr_t addr;
   uint16_t port = 0;
@@ -4717,11 +4718,20 @@ parse_client_transport_line(const char *line, int validate_only)
     goto err;
   }
 
-  name = smartlist_get(items, 0);
-  if (!string_is_C_identifier(name)) {
-    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).", name);
-    goto err;
-  }
+  /* Get the first line element, split it to commas into
+     transport_list (in case it's multiple transports) and validate
+     the transport names. */
+  transports = smartlist_get(items, 0);
+  transport_list = smartlist_create();
+  smartlist_split_string(transport_list, transports, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
+    if (!string_is_C_identifier(transport_name)) {
+      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+               transport_name);
+      goto err;
+    }
+  } SMARTLIST_FOREACH_END(transport_name);
 
   /* field2 is either a SOCKS version or "exec" */
   field2 = smartlist_get(items, 1);
@@ -4753,9 +4763,15 @@ parse_client_transport_line(const char *line, int validate_only)
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
       /* kickstart the thing */
-      pt_kickstart_client_proxy(name, proxy_argv);
+      pt_kickstart_client_proxy(transport_list, proxy_argv);
     }
   } else { /* external */
+    if (smartlist_len(transport_list) != 1) {
+      log_warn(LD_CONFIG, "You can't have an external proxy with "
+               "more than one transports.");
+      goto err;
+    }
+
     addrport = smartlist_get(items, 2);
 
     if (tor_addr_port_parse(addrport, &addr, &port)<0) {
@@ -4770,10 +4786,11 @@ parse_client_transport_line(const char *line, int validate_only)
     }
 
     if (!validate_only) {
-      transport_add_from_config(&addr, port, name, socks_ver);
+      transport_add_from_config(&addr, port, smartlist_get(transport_list, 0),
+                                socks_ver);
 
-      log_info(LD_DIR, "Transport '%s' found at %s:%d", name,
-               fmt_addr(&addr), (int)port);
+      log_info(LD_DIR, "Transport '%s' found at %s:%d",
+               transports, fmt_addr(&addr), (int)port);
     }
   }
 
@@ -4786,6 +4803,9 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+  smartlist_free(transport_list);
+
   return r;
 }
 
@@ -4799,7 +4819,8 @@ parse_server_transport_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
-  const char *name=NULL;
+  const char *transports=NULL;
+  smartlist_t *transport_list=NULL;
   char *type=NULL;
   char *addrport=NULL;
   tor_addr_t addr;
@@ -4823,11 +4844,20 @@ parse_server_transport_line(const char *line, int validate_only)
     goto err;
   }
 
-  name = smartlist_get(items, 0);
-  if (!string_is_C_identifier(name)) {
-    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).", name);
-    goto err;
-  }
+  /* Get the first line element, split it to commas into
+     transport_list (in case it's multiple transports) and validate
+     the transport names. */
+  transports = smartlist_get(items, 0);
+  transport_list = smartlist_create();
+  smartlist_split_string(transport_list, transports, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
+    if (!string_is_C_identifier(transport_name)) {
+      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+               transport_name);
+      goto err;
+    }
+  } SMARTLIST_FOREACH_END(transport_name);
 
   type = smartlist_get(items, 1);
 
@@ -4854,9 +4884,15 @@ parse_server_transport_line(const char *line, int validate_only)
       *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
 
       /* kickstart the thing */
-      pt_kickstart_server_proxy(name, proxy_argv);
+      pt_kickstart_server_proxy(transport_list, proxy_argv);
     }
   } else { /* external */
+    if (smartlist_len(transport_list) != 1) {
+      log_warn(LD_CONFIG, "You can't have an external proxy with "
+               "more than one transports.");
+      goto err;
+    }
+
     addrport = smartlist_get(items, 2);
 
     if (tor_addr_port_parse(addrport, &addr, &port)<0) {
@@ -4871,8 +4907,8 @@ parse_server_transport_line(const char *line, int validate_only)
     }
 
     if (!validate_only) {
-      log_info(LD_DIR, "Server transport '%s' at %s:%d.", name,
-               fmt_addr(&addr), (int)port);
+      log_info(LD_DIR, "Server transport '%s' at %s:%d.",
+               transports, fmt_addr(&addr), (int)port);
     }
   }
 
@@ -4885,6 +4921,9 @@ parse_server_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+  smartlist_free(transport_list);
+
   return r;
 }
 
@@ -5993,3 +6032,4 @@ getinfo_helper_config(control_connection_t *conn,
   }
   return 0;
 }
+
