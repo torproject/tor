@@ -2596,6 +2596,120 @@ rep_hist_buffer_stats_write(time_t now)
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
 
+/*** Descriptor serving statistics ***/
+
+/** Digestmap to track which descriptors were downloaded this stats
+ *  collection interval. It maps descriptor digest to pointers to 1,
+ *  effectively turning this into a list. */
+static digestmap_t *served_descs = NULL;
+
+/** Number of how many descriptors were downloaded in total during this
+ * interval. */
+static unsigned long total_descriptor_downloads;
+
+/** Start time of served descs stats or 0 if we're not collecting those. */
+static time_t start_of_served_descs_stats_interval;
+
+/** Initialize descriptor stats. */
+void
+rep_hist_desc_stats_init(time_t now)
+{
+  if (served_descs) {
+    log_warn(LD_BUG, "Called rep_hist_desc_stats_init() when desc stats were "
+             "already initialized. This is probably harmless.");
+    return; // Already initialized
+  }
+  served_descs = digestmap_new();
+  total_descriptor_downloads = 0;
+  start_of_served_descs_stats_interval = now;
+}
+
+/** Reset served descs stats to empty, starting a new interval <b>now</b>. */
+static void
+rep_hist_reset_desc_stats(time_t now)
+{
+  rep_hist_desc_stats_term();
+  rep_hist_desc_stats_init(now);
+}
+
+/** Stop collecting served descs stats, so that rep_hist_desc_stats_init() is
+ * safe to be called again. */
+void
+rep_hist_desc_stats_term(void)
+{
+  digestmap_free(served_descs, NULL);
+  served_descs = NULL;
+  start_of_served_descs_stats_interval = 0;
+  total_descriptor_downloads = 0;
+}
+
+/** Helper for rep_hist_desc_stats_write(). Return a newly allocated string
+ * containing the served desc statistics until now, or NULL if we're not
+ * collecting served desc stats. Caller must ensure that now is not before
+ * start_of_served_descs_stats_interval. */
+static char *
+rep_hist_format_desc_stats(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  char *result;
+
+  if (!start_of_served_descs_stats_interval)
+    return NULL;
+
+  format_iso_time(t, now);
+
+  tor_asprintf(&result,
+               "served-descs-stats-end %s (%d s) total=%lu unique=%u\n",
+               t,
+               (unsigned) (now - start_of_served_descs_stats_interval),
+               total_descriptor_downloads,
+               digestmap_size(served_descs));
+
+  return result;
+}
+
+/** If WRITE_STATS_INTERVAL seconds have passed since the beginning of
+ * the current served desc stats interval, write the stats to
+ * $DATADIR/stats/served-desc-stats (possibly appending to an existing file)
+ * and reset the state for the next interval. Return when we would next want
+ * to write served desc stats or 0 if we won't want to write. */
+time_t
+rep_hist_desc_stats_write(time_t now)
+{
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
+
+  if (!start_of_served_descs_stats_interval)
+    return 0; /* We're not collecting stats. */
+  if (start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL > now)
+    return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
+
+  str = rep_hist_format_desc_stats(now);
+
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
+      goto done;
+  }
+  filename = get_datadir_fname2("stats", "served-desc-stats");
+  if (append_bytes_to_file(filename, str, strlen(str), 0) < 0)
+    log_warn(LD_HIST, "Unable to write served descs statistics to disk!");
+
+  rep_hist_reset_desc_stats(now);
+
+ done:
+  tor_free(statsdir);
+  tor_free(filename);
+  tor_free(str);
+  return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
+}
+
+void
+rep_hist_note_desc_served(const char * desc)
+{
+  digestmap_set(served_descs, desc, (void *)1);
+  total_descriptor_downloads++;
+}
+
 /*** Connection statistics ***/
 
 /** Start of the current connection stats interval or 0 if we're not
@@ -2839,5 +2953,7 @@ rep_hist_free_all(void)
     smartlist_free(circuits_for_buffer_stats);
     circuits_for_buffer_stats = NULL;
   }
+  rep_hist_desc_stats_term();
+  total_descriptor_downloads = 0;
 }
 

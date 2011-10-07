@@ -1532,7 +1532,8 @@ options_act(const or_options_t *old_options)
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
-      options->ConnDirectionStatistics) {
+      options->ConnDirectionStatistics ||
+      options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
     int print_notice = 0;
     if ((!old_options || !old_options->CellStatistics) &&
@@ -1577,6 +1578,10 @@ options_act(const or_options_t *old_options)
         options->ConnDirectionStatistics) {
       rep_hist_conn_stats_init(now);
     }
+    if (!old_options || !old_options->BridgeAuthoritativeDir) {
+      rep_hist_desc_stats_init(now);
+      print_notice = 1;
+    }
     if (print_notice)
       log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
                  "the *-stats files that will first be written to the "
@@ -1598,6 +1603,9 @@ options_act(const or_options_t *old_options)
   if (old_options && old_options->ConnDirectionStatistics &&
       !options->ConnDirectionStatistics)
     rep_hist_conn_stats_term();
+  if (old_options && old_options->BridgeAuthoritativeDir &&
+      !options->BridgeAuthoritativeDir)
+    rep_hist_desc_stats_term();
 
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&

@@ -3509,6 +3509,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
        * unknown bridge descriptor has shown up between then and now. */
       continue;
     }
+    rep_hist_note_desc_served(sd->identity_digest);
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       /* XXXX022 This 'last' business should actually happen on the last
