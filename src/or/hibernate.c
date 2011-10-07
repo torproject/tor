@@ -21,6 +21,7 @@ hibernating, phase 2:
   - close all OR/AP/exit conns)
 */
 
+#define HIBERNATE_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "connection.h"
@@ -29,26 +30,11 @@ hibernating, phase 2:
 #include "main.h"
 #include "router.h"
 
-/** Possible values of hibernate_state */
-typedef enum {
-  /** We are running normally. */
-  HIBERNATE_STATE_LIVE=1,
-  /** We're trying to shut down cleanly, and we'll kill all active connections
-   * at shutdown_time. */
-  HIBERNATE_STATE_EXITING=2,
-  /** We're running low on allocated bandwidth for this period, so we won't
-   * accept any new connections. */
-  HIBERNATE_STATE_LOWBANDWIDTH=3,
-  /** We are hibernating, and we won't wake up till there's more bandwidth to
-   * use. */
-  HIBERNATE_STATE_DORMANT=4
-} hibernate_state_t;
-
 extern long stats_n_seconds_working; /* published uptime */
 
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
-static hibernate_state_t hibernate_state = HIBERNATE_STATE_LIVE;
+static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
@@ -804,10 +790,12 @@ static void
 hibernate_end(hibernate_state_t new_state)
 {
   tor_assert(hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH ||
-             hibernate_state == HIBERNATE_STATE_DORMANT);
+             hibernate_state == HIBERNATE_STATE_DORMANT ||
+             hibernate_state == HIBERNATE_STATE_INITIAL);
 
   /* listeners will be relaunched in run_scheduled_events() in main.c */
-  log_notice(LD_ACCT,"Hibernation period ended. Resuming normal activity.");
+  if (hibernate_state != HIBERNATE_STATE_INITIAL)
+    log_notice(LD_ACCT,"Hibernation period ended. Resuming normal activity.");
 
   hibernate_state = new_state;
   hibernate_end_time = 0; /* no longer hibernating */
@@ -939,7 +927,8 @@ consider_hibernation(time_t now)
 
   /* Else, we aren't hibernating. See if it's time to start hibernating, or to
    * go dormant. */
-  if (hibernate_state == HIBERNATE_STATE_LIVE) {
+  if (hibernate_state == HIBERNATE_STATE_LIVE ||
+      hibernate_state == HIBERNATE_STATE_INITIAL) {
     if (hibernate_soft_limit_reached()) {
       log_notice(LD_ACCT,
                  "Bandwidth soft limit reached; commencing hibernation. "
@@ -951,6 +940,8 @@ consider_hibernation(time_t now)
                  "Commencing hibernation. We will wake up at %s local time.",
                  buf);
       hibernate_go_dormant(now);
+    } else if (hibernate_state == HIBERNATE_STATE_INITIAL) {
+      hibernate_end(HIBERNATE_STATE_LIVE);
     }
   }
 
@@ -1017,3 +1008,12 @@ getinfo_helper_accounting(control_connection_t *conn,
   return 0;
 }
 
+/**
+ * Manually change the hibernation state.  Private; used only by the unit
+ * tests.
+ */
+void
+hibernate_set_state_for_testing_(hibernate_state_t newstate)
+{
+  hibernate_state = newstate;
+}
