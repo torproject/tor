@@ -189,9 +189,9 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
   [tor_cv_c_flexarray=yes],
   [tor_cv_c_flexarray=no])])
  if test $tor_cv_flexarray = yes ; then
-   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [])
+   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
  else
-   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1])
+   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
  fi
 ])
 
