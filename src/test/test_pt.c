@@ -13,11 +13,9 @@
 static void
 reset_mp(managed_proxy_t *mp)
 {
-  mp->conf_state = PT_PROTO_INFANT;
+  mp->conf_state = PT_PROTO_LAUNCHED;
   SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
   smartlist_clear(mp->transports);
-  smartlist_free(mp->transports);
-  mp->transports = smartlist_create();
 }
 
 static void
@@ -94,7 +92,7 @@ test_pt_protocol(void)
   char line[200];
 
   managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
-  mp->conf_state = PT_PROTO_INFANT;
+  mp->conf_state = PT_PROTO_LAUNCHED;
   mp->transports = smartlist_create();
 
   /* various wrong protocol runs: */
