@@ -3977,7 +3977,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 
 #ifdef MS_WINDOWS
     /* Passing NULL as lpApplicationName makes Windows search for the .exe */
-    tor_spawn_background(NULL, argv, NULL &child_handle);
+    tor_spawn_background(NULL, argv, NULL, &child_handle);
 #else
     tor_spawn_background(filename, argv, NULL, &child_handle);
 #endif
