@@ -80,8 +80,8 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
 /** Extend the introduction circuit <b>circ</b> to another valid
  * introduction point for the hidden service it is trying to connect
  * to, or mark it and launch a new circuit if we can't extend it.
- * Return 0 on success.  Return -1 and mark the introduction
- * circuit on failure.
+ * Return 0 on success or possible success.  Return -1 and mark the
+ * introduction circuit for close on permanent failure.
  *
  * On failure, the caller is responsible for marking the associated
  * rendezvous circuit for close. */
