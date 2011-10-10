@@ -106,17 +106,11 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
     result = circuit_extend_to_new_exit(circ, extend_info);
   } else {
     log_info(LD_REND,
-             "Building a new introduction circuit, this time to %s.",
-             safe_str_client(extend_info_describe(extend_info)));
+             "Closing intro circ %d (out of RELAY_EARLY cells).",
+             circ->_base.n_circ_id);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
-    if (!circuit_launch_by_extend_info(CIRCUIT_PURPOSE_C_INTRODUCING,
-                                       extend_info,
-                                       CIRCLAUNCH_IS_INTERNAL)) {
-      log_warn(LD_REND, "Building introduction circuit failed.");
-      result = -1;
-    } else {
-      result = 0;
-    }
+    /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
+    result = 0;
   }
   extend_info_free(extend_info);
   return result;
