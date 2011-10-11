@@ -3894,7 +3894,9 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
   char *retval;
   size_t len;
 
-  retval = fgets(buf_out, count, stream);
+  tor_assert(count <= INT_MAX);
+
+  retval = fgets(buf_out, (int)count, stream);
 
   if (!retval) {
     if (feof(stream)) {
