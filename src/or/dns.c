@@ -687,7 +687,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
-  if (tor_addr_from_str(&addr, exitconn->_base.address) >= 0) {
+  if (tor_addr_parse(&addr, exitconn->_base.address) >= 0) {
     if (tor_addr_family(&addr) == AF_INET) {
       tor_addr_copy(&exitconn->_base.addr, &addr);
       exitconn->address_ttl = DEFAULT_DNS_TTL;
@@ -1198,7 +1198,7 @@ configure_nameservers(int force)
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (options->OutboundBindAddress) {
     tor_addr_t addr;
-    if (tor_addr_from_str(&addr, options->OutboundBindAddress) < 0) {
+    if (tor_addr_parse(&addr, options->OutboundBindAddress) < 0) {
       log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
                options->OutboundBindAddress);
     } else {

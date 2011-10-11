@@ -14,30 +14,30 @@ test_addr_basic(void)
   uint16_t u16;
   char *cp;
 
-  /* Test parse_addr_port */
+  /* Test addr_port_lookup */
   cp = NULL; u32 = 3; u16 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
   test_streq(cp, "1.2.3.4");
   test_eq(u32, 0x01020304u);
   test_eq(u16, 0);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
   test_streq(cp, "4.3.2.1");
   test_eq(u32, 0x04030201u);
   test_eq(u16, 99);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "nonexistent.address:4040",
+  test_assert(!addr_port_lookup(LOG_WARN, "nonexistent.address:4040",
                                &cp, NULL, &u16));
   test_streq(cp, "nonexistent.address");
   test_eq(u16, 4040);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
   test_streq(cp, "localhost");
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 9999);
   tor_free(cp);
   u32 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "localhost", NULL, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "localhost", NULL, &u32, &u16));
   test_eq(cp, NULL);
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
@@ -364,10 +364,10 @@ test_addr_ip6_helpers(void)
   test_addr_compare_masked("0::2:2:1", ==, "0::8000:2:1", 80);
 
   /* Test decorated addr_to_string. */
-  test_eq(AF_INET6, tor_addr_from_str(&t1, "[123:45:6789::5005:11]"));
+  test_eq(AF_INET6, tor_addr_parse(&t1, "[123:45:6789::5005:11]"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "[123:45:6789::5005:11]");
-  test_eq(AF_INET, tor_addr_from_str(&t1, "18.0.0.1"));
+  test_eq(AF_INET, tor_addr_parse(&t1, "18.0.0.1"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "18.0.0.1");
 

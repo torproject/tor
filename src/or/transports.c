@@ -715,7 +715,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   }
 
   addrport = smartlist_get(items, 2);
-  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing transport "
              "address '%s'", addrport);
     goto err;
@@ -800,7 +800,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   }
 
   addrport = smartlist_get(items, 3);
-  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing transport "
              "address '%s'", addrport);
     goto err;

@@ -2877,7 +2877,7 @@ is_listening_on_low_port(int port_option,
     return (port_option < 1024);
 
   for (l = listen_options; l; l = l->next) {
-    parse_addr_port(LOG_WARN, l->value, NULL, NULL, &p);
+    addr_port_lookup(LOG_WARN, l->value, NULL, NULL, &p);
     if (p<1024) {
       return 1;
     }
@@ -3573,7 +3573,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HTTPProxy) { /* parse it now */
-    if (tor_addr_port_parse(options->HTTPProxy,
+    if (tor_addr_port_lookup(options->HTTPProxy,
                         &options->HTTPProxyAddr, &options->HTTPProxyPort) < 0)
       REJECT("HTTPProxy failed to parse or resolve. Please fix.");
     if (options->HTTPProxyPort == 0) { /* give it a default */
@@ -3587,7 +3587,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HTTPSProxy) { /* parse it now */
-    if (tor_addr_port_parse(options->HTTPSProxy,
+    if (tor_addr_port_lookup(options->HTTPSProxy,
                         &options->HTTPSProxyAddr, &options->HTTPSProxyPort) <0)
       REJECT("HTTPSProxy failed to parse or resolve. Please fix.");
     if (options->HTTPSProxyPort == 0) { /* give it a default */
@@ -3601,7 +3601,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->Socks4Proxy) { /* parse it now */
-    if (tor_addr_port_parse(options->Socks4Proxy,
+    if (tor_addr_port_lookup(options->Socks4Proxy,
                         &options->Socks4ProxyAddr,
                         &options->Socks4ProxyPort) <0)
       REJECT("Socks4Proxy failed to parse or resolve. Please fix.");
@@ -3611,7 +3611,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->Socks5Proxy) { /* parse it now */
-    if (tor_addr_port_parse(options->Socks5Proxy,
+    if (tor_addr_port_lookup(options->Socks5Proxy,
                             &options->Socks5ProxyAddr,
                             &options->Socks5ProxyPort) <0)
       REJECT("Socks5Proxy failed to parse or resolve. Please fix.");
@@ -4684,7 +4684,7 @@ parse_bridge_line(const char *line, int validate_only)
     addrport = field1;
   }
 
-  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
   }
@@ -4827,7 +4827,7 @@ parse_client_transport_line(const char *line, int validate_only)
 
     addrport = smartlist_get(items, 2);
 
-    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
       log_warn(LD_CONFIG, "Error parsing transport "
                "address '%s'", addrport);
       goto err;
@@ -4948,7 +4948,7 @@ parse_server_transport_line(const char *line, int validate_only)
 
     addrport = smartlist_get(items, 2);
 
-    if (tor_addr_port_parse(addrport, &addr, &port)<0) {
+    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
       log_warn(LD_CONFIG, "Error parsing transport "
                "address '%s'", addrport);
       goto err;
@@ -5060,7 +5060,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   }
   addrport = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
-  if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
+  if (addr_port_lookup(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
   }
@@ -5228,7 +5228,7 @@ parse_client_port_config(smartlist_t *out,
     for (; listenaddrs; listenaddrs = listenaddrs->next) {
       tor_addr_t addr;
       uint16_t port = 0;
-      if (tor_addr_port_parse(listenaddrs->value, &addr, &port) < 0) {
+      if (tor_addr_port_lookup(listenaddrs->value, &addr, &port) < 0) {
         log_warn(LD_CONFIG, "Unable to parse %sListenAddress '%s'",
                  portname, listenaddrs->value);
         return -1;
@@ -5256,7 +5256,7 @@ parse_client_port_config(smartlist_t *out,
        port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
        cfg->type = listener_type;
        cfg->port = defaultport;
-       tor_addr_from_str(&cfg->addr, defaultaddr);
+       tor_addr_parse(&cfg->addr, defaultaddr);
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
@@ -5294,11 +5294,11 @@ parse_client_port_config(smartlist_t *out,
     addrport = smartlist_get(elts, 0);
     if (!strcmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
-      tor_addr_from_str(&addr, defaultaddr);
+      tor_addr_parse(&addr, defaultaddr);
     } else if (!strcasecmpend(addrport, ":auto")) {
       char *addrtmp = tor_strndup(addrport, strlen(addrport)-5);
       port = CFG_AUTO_PORT;
-      if (tor_addr_port_parse(addrtmp, &addr, &ptmp)<0 || ptmp) {
+      if (tor_addr_port_lookup(addrtmp, &addr, &ptmp)<0 || ptmp) {
         log_warn(LD_CONFIG, "Invalid address '%s' for %sPort",
                  escaped(addrport), portname);
         tor_free(addrtmp);
@@ -5309,8 +5309,8 @@ parse_client_port_config(smartlist_t *out,
          "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
-        tor_addr_from_str(&addr, defaultaddr);
-      } else if (tor_addr_port_parse(addrport, &addr, &ptmp) == 0) {
+        tor_addr_parse(&addr, defaultaddr);
+      } else if (tor_addr_port_lookup(addrport, &addr, &ptmp) == 0) {
         if (ptmp == 0) {
           log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
           goto err;
@@ -5946,7 +5946,7 @@ state_transport_line_is_valid(const char *line)
   }
 
   addrport = smartlist_get(items, 1);
-  if (tor_addr_port_parse(addrport, &addr, &port) < 0) {
+  if (tor_addr_port_lookup(addrport, &addr, &port) < 0) {
     log_warn(LD_CONFIG, "state: Could not parse addrport.");
     goto err;
   }

@@ -1893,7 +1893,7 @@ retry_listeners(smartlist_t *old_conns,
   int retval = 0;
 
   if (default_addr) {
-    tor_addr_from_str(&dflt_addr, default_addr);
+    tor_addr_parse(&dflt_addr, default_addr);
   } else {
     tor_addr_make_unspec(&dflt_addr);
   }
@@ -1917,7 +1917,7 @@ retry_listeners(smartlist_t *old_conns,
           port->is_unix_addr = 1;
           memcpy(port->unix_addr, c->value, len+1);
         } else {
-          if (tor_addr_port_parse(c->value, &addr, &portval) < 0) {
+          if (tor_addr_port_lookup(c->value, &addr, &portval) < 0) {
             log_warn(LD_CONFIG, "Can't parse/resolve %s %s",
                      c->key, c->value);
             retval = -1;

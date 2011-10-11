@@ -258,7 +258,7 @@ parse_port_config(const char *string)
   } else {
     addrport = smartlist_get(sl,1);
     if (strchr(addrport, ':') || strchr(addrport, '.')) {
-      if (tor_addr_port_parse(addrport, &addr, &p)<0) {
+      if (tor_addr_port_lookup(addrport, &addr, &p)<0) {
         log_warn(LD_CONFIG,"Unparseable address in hidden service port "
                  "configuration.");
         goto err;

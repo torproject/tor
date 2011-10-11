@@ -393,7 +393,7 @@ main(int argc, char **argv)
       socksport = 9050; /* 9050 */
     }
   } else if (n_args == 2) {
-    if (parse_addr_port(LOG_WARN, arg[1], NULL, &sockshost, &socksport)<0) {
+    if (addr_port_lookup(LOG_WARN, arg[1], NULL, &sockshost, &socksport)<0) {
       fprintf(stderr, "Couldn't parse/resolve address %s", arg[1]);
       return 1;
     }

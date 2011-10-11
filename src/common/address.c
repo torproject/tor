@@ -455,7 +455,7 @@ tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
 
   if (accept_regular) {
     tor_addr_t tmp;
-    int r = tor_addr_from_str(&tmp, address);
+    int r = tor_addr_parse(&tmp, address);
     if (r < 0)
       return 0;
     if (r != family && family != AF_UNSPEC)
@@ -984,7 +984,7 @@ fmt_addr32(uint32_t addr)
  *  Return an address family on success, or -1 if an invalid address string is
  *  provided. */
 int
-tor_addr_from_str(tor_addr_t *addr, const char *src)
+tor_addr_parse(tor_addr_t *addr, const char *src)
 {
   char *tmp = NULL; /* Holds substring if we got a dotted quad. */
   int result;
@@ -1012,7 +1012,7 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
  * address as needed, and put the result in <b>addr_out</b> and (optionally)
  * <b>port_out</b>.  Return 0 on success, negative on failure. */
 int
-tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
+tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 {
   const char *port;
   tor_addr_t addr;
@@ -1159,7 +1159,7 @@ is_internal_IP(uint32_t ip, int for_listening)
  * Return 0 on success, -1 on failure.
  */
 int
-parse_addr_port(int severity, const char *addrport, char **address,
+addr_port_lookup(int severity, const char *addrport, char **address,
                 uint32_t *addr, uint16_t *port_out)
 {
   const char *colon;

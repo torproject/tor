@@ -159,14 +159,14 @@ int tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
 int tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
                                        int family, int accept_regular);
 
-int tor_addr_port_parse(const char *s, tor_addr_t *addr_out,
+int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
 int tor_addr_parse_mask_ports(const char *s,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
 const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
                              int decorate);
-int tor_addr_from_str(tor_addr_t *addr, const char *src);
+int tor_addr_parse(tor_addr_t *addr, const char *src);
 void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 /** Set <b>dest</b> to the IPv4 address encoded in <b>v4addr</b> in host
@@ -183,7 +183,7 @@ int tor_addr_is_loopback(const tor_addr_t *addr);
 
 /* IPv4 helpers */
 int is_internal_IP(uint32_t ip, int for_listening) ATTR_PURE;
-int parse_addr_port(int severity, const char *addrport, char **address,
+int addr_port_lookup(int severity, const char *addrport, char **address,
                     uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);

@@ -1812,8 +1812,8 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     struct in_addr in;
     char *address = NULL;
     tor_assert(tok->n_args);
-    /* XXX023 use tor_addr_port_parse() below instead. -RD */
-    if (parse_addr_port(LOG_WARN, tok->args[0], &address, NULL,
+    /* XXX023 use tor_addr_port_lookup() below instead. -RD */
+    if (addr_port_lookup(LOG_WARN, tok->args[0], &address, NULL,
                         &cert->dir_port)<0 ||
         tor_inet_aton(address, &in) == 0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
@@ -4982,7 +4982,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                   info->identity_digest, DIGEST_LEN);
     /* Parse IP address. */
     tok = find_by_keyword(tokens, R_IPO_IP_ADDRESS);
-    if (tor_addr_from_str(&info->addr, tok->args[0])<0) {
+    if (tor_addr_parse(&info->addr, tok->args[0])<0) {
       log_warn(LD_REND, "Could not parse introduction point address.");
       rend_intro_point_free(intro);
       goto err;

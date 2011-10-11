@@ -169,7 +169,7 @@ parse_commandline(int argc, char **argv)
         fprintf(stderr, "No argument to -a\n");
         return 1;
       }
-      if (parse_addr_port(LOG_ERR, argv[++i], NULL, &addr, &port)<0)
+      if (addr_port_lookup(LOG_ERR, argv[++i], NULL, &addr, &port)<0)
         return 1;
       in.s_addr = htonl(addr);
       tor_inet_ntoa(&in, b, sizeof(b));

@@ -691,7 +691,7 @@ connection_ap_fail_onehop(const char *failed_digest,
       if (!build_state || !build_state->chosen_exit ||
           !entry_conn->socks_request || !entry_conn->socks_request->address)
         continue;
-      if (tor_addr_from_str(&addr, entry_conn->socks_request->address)<0 ||
+      if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
           !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
           build_state->chosen_exit->port != entry_conn->socks_request->port)
         continue;
@@ -1918,7 +1918,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       if (options->ClientRejectInternalAddresses &&
           !conn->use_begindir && !conn->chosen_exit_name && !circ) {
         tor_addr_t addr;
-        if (tor_addr_from_str(&addr, socks->address) >= 0 &&
+        if (tor_addr_parse(&addr, socks->address) >= 0 &&
             tor_addr_is_internal(&addr, 0)) {
           /* If this is an explicit private address with no chosen exit node,
            * then we really don't want to try to connect to it.  That's
@@ -2894,7 +2894,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                     END_STREAM_REASON_TORPROTOCOL, NULL);
       return 0;
     }
-    if (parse_addr_port(LOG_PROTOCOL_WARN,
+    if (addr_port_lookup(LOG_PROTOCOL_WARN,
                         (char*)(cell->payload+RELAY_HEADER_SIZE),
                         &address,NULL,&port)<0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
