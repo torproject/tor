@@ -1080,6 +1080,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     if (parse_client_ports(options, 0, msg, &n_client_ports))
       return -1;
 
+    /* Set the hibernation state appropriately.*/
+    consider_hibernation(time(NULL));
+
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
      * ports under 1024.)  We don't want to rebind if we're hibernating. */
     if (!we_are_hibernating()) {
