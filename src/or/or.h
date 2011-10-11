@@ -301,7 +301,7 @@ typedef enum {
  * haven't yet negotiated link protocol versions, done a V3 handshake, and
  * sent a netinfo cell. */
 #define OR_CONN_STATE_OR_HANDSHAKING_V3 7
-/** State for an OR connection:: Ready to send/receive cells. */
+/** State for an OR connection: Ready to send/receive cells. */
 #define OR_CONN_STATE_OPEN 8
 #define _OR_CONN_STATE_MAX 8
 

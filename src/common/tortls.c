@@ -936,7 +936,7 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
   return result;
 }
 
-/** Check wither <b>cert</b> is well-formed, currently live, and correctly
+/** Check whether <b>cert</b> is well-formed, currently live, and correctly
  * signed by the public key in <b>signing_cert</b>.  If <b>check_rsa_1024</b>,
  * make sure that it has an RSA key with 1024 bits; otherwise, just check that
  * the key is long enough. Return 1 if the cert is good, and 0 if it's bad or

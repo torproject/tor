@@ -992,7 +992,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
                       conn->handshake_state->authenticated_peer_id) < 0)
       ERR("Problem setting or checking peer id");
 
-    log_info(LD_OR, "Got some good certifcates from %s:%d: Authenticated it.",
+    log_info(LD_OR, "Got some good certificates from %s:%d: Authenticated it.",
              safe_str(conn->_base.address), conn->_base.port);
 
     conn->handshake_state->id_cert = id_cert;
@@ -1010,7 +1010,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       ERR("The ID certificate was not valid");
 
 
-    log_info(LD_OR, "Got some good certifcates from %s:%d: "
+    log_info(LD_OR, "Got some good certificates from %s:%d: "
              "Waiting for AUTHENTICATE.",
              safe_str(conn->_base.address), conn->_base.port);
     /* XXXX check more stuff? */

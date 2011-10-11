@@ -1181,7 +1181,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
             if (tor_tls_received_v3_certificate(conn->tls)) {
-              log_notice(LD_OR, "Client got a v3 cert!  Moving on to v3 "
+              log_info(LD_OR, "Client got a v3 cert!  Moving on to v3 "
                          "handshake.");
               return connection_or_launch_v3_or_handshake(conn);
             } else {
@@ -1241,7 +1241,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
       if (!tor_tls_is_server(conn->tls)) {
         if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
           if (tor_tls_received_v3_certificate(conn->tls)) {
-            log_notice(LD_OR, "Client got a v3 cert!");
+            log_info(LD_OR, "Client got a v3 cert!");
             if (connection_or_launch_v3_or_handshake(conn) < 0)
               connection_mark_for_close(TO_CONN(conn));
             return;
