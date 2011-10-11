@@ -1951,7 +1951,7 @@ connection_or_send_cert_cell(or_connection_t *conn)
   size_t link_len, id_len;
   var_cell_t *cell;
   size_t cell_len;
-  int pos;
+  ssize_t pos;
   int server_mode;
 
   tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
@@ -2037,6 +2037,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
  *
  * If <b>server</b> is false and <b>signing_key</b> is provided, calculate the
  * entire authenticator, signed with <b>signing_key</b>.
+ * DOCDOC return value
  */
 int
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
@@ -2128,7 +2129,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   tor_assert(ptr - out == V3_AUTH_FIXED_PART_LEN);
 
   if (server)
-    return ptr-out;
+    return V3_AUTH_FIXED_PART_LEN; // ptr-out
 
   /* Time: 8 octets. */
   {
@@ -2147,7 +2148,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   tor_assert(ptr - out == V3_AUTH_BODY_LEN);
 
   if (!signing_key)
-    return ptr - out;
+    return V3_AUTH_BODY_LEN; // ptr - out
 
   {
     int siglen;
@@ -2161,7 +2162,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
     ptr += siglen;
     tor_assert(ptr <= out+outlen);
-    return ptr - out;
+    return (int)(ptr - out);
   }
 }
 
@@ -2173,7 +2174,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   var_cell_t *cell;
   crypto_pk_env_t *pk = tor_tls_get_my_client_auth_key();
   int authlen;
-  int cell_maxlen;
+  size_t cell_maxlen;
   /* XXXX make sure we're actually supposed to send this! */
 
   if (!pk) {
