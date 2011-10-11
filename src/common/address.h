@@ -154,19 +154,19 @@ int tor_addr_is_internal(const tor_addr_t *ip, int for_listening) ATTR_PURE;
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
 #define REVERSE_LOOKUP_NAME_BUF_LEN 73
-int tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
+int tor_addr_to_PTR_name(char *out, size_t outlen,
                                     const tor_addr_t *addr);
-int tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
+int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
                                        int family, int accept_regular);
 
-int tor_addr_port_parse(const char *s, tor_addr_t *addr_out,
+int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
 int tor_addr_parse_mask_ports(const char *s,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
 const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
                              int decorate);
-int tor_addr_from_str(tor_addr_t *addr, const char *src);
+int tor_addr_parse(tor_addr_t *addr, const char *src);
 void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 /** Set <b>dest</b> to the IPv4 address encoded in <b>v4addr</b> in host
@@ -181,9 +181,12 @@ void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
 int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
 
+int tor_addr_port_split(int severity, const char *addrport,
+                        char **address_out, uint16_t *port_out);
+
 /* IPv4 helpers */
 int is_internal_IP(uint32_t ip, int for_listening) ATTR_PURE;
-int parse_addr_port(int severity, const char *addrport, char **address,
+int addr_port_lookup(int severity, const char *addrport, char **address,
                     uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);

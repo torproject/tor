@@ -14,30 +14,30 @@ test_addr_basic(void)
   uint16_t u16;
   char *cp;
 
-  /* Test parse_addr_port */
+  /* Test addr_port_lookup */
   cp = NULL; u32 = 3; u16 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
   test_streq(cp, "1.2.3.4");
   test_eq(u32, 0x01020304u);
   test_eq(u16, 0);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
   test_streq(cp, "4.3.2.1");
   test_eq(u32, 0x04030201u);
   test_eq(u16, 99);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "nonexistent.address:4040",
+  test_assert(!addr_port_lookup(LOG_WARN, "nonexistent.address:4040",
                                &cp, NULL, &u16));
   test_streq(cp, "nonexistent.address");
   test_eq(u16, 4040);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
   test_streq(cp, "localhost");
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 9999);
   tor_free(cp);
   u32 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "localhost", NULL, &u32, &u16));
+  test_assert(!addr_port_lookup(LOG_WARN, "localhost", NULL, &u32, &u16));
   test_eq(cp, NULL);
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
@@ -364,32 +364,32 @@ test_addr_ip6_helpers(void)
   test_addr_compare_masked("0::2:2:1", ==, "0::8000:2:1", 80);
 
   /* Test decorated addr_to_string. */
-  test_eq(AF_INET6, tor_addr_from_str(&t1, "[123:45:6789::5005:11]"));
+  test_eq(AF_INET6, tor_addr_parse(&t1, "[123:45:6789::5005:11]"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "[123:45:6789::5005:11]");
-  test_eq(AF_INET, tor_addr_from_str(&t1, "18.0.0.1"));
+  test_eq(AF_INET, tor_addr_parse(&t1, "18.0.0.1"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "18.0.0.1");
 
-  /* Test tor_addr_parse_reverse_lookup_name */
-  i = tor_addr_parse_reverse_lookup_name(&t1, "Foobar.baz", AF_UNSPEC, 0);
+  /* Test tor_addr_parse_PTR_name */
+  i = tor_addr_parse_PTR_name(&t1, "Foobar.baz", AF_UNSPEC, 0);
   test_eq(0, i);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "Foobar.baz", AF_UNSPEC, 1);
+  i = tor_addr_parse_PTR_name(&t1, "Foobar.baz", AF_UNSPEC, 1);
   test_eq(0, i);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "1.0.168.192.in-addr.arpa",
+  i = tor_addr_parse_PTR_name(&t1, "1.0.168.192.in-addr.arpa",
                                          AF_UNSPEC, 1);
   test_eq(1, i);
   test_eq(tor_addr_family(&t1), AF_INET);
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "192.168.0.1");
-  i = tor_addr_parse_reverse_lookup_name(&t1, "192.168.0.99", AF_UNSPEC, 0);
+  i = tor_addr_parse_PTR_name(&t1, "192.168.0.99", AF_UNSPEC, 0);
   test_eq(0, i);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "192.168.0.99", AF_UNSPEC, 1);
+  i = tor_addr_parse_PTR_name(&t1, "192.168.0.99", AF_UNSPEC, 1);
   test_eq(1, i);
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "192.168.0.99");
   memset(&t1, 0, sizeof(t1));
-  i = tor_addr_parse_reverse_lookup_name(&t1,
+  i = tor_addr_parse_PTR_name(&t1,
                                          "0.1.2.3.4.5.6.7.8.9.a.b.c.d.e.f."
                                          "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
                                          "ip6.ARPA",
@@ -398,37 +398,37 @@ test_addr_ip6_helpers(void)
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "[9dee:effe:ebe1:beef:fedc:ba98:7654:3210]");
   /* Failing cases. */
-  i = tor_addr_parse_reverse_lookup_name(&t1,
+  i = tor_addr_parse_PTR_name(&t1,
                                          "6.7.8.9.a.b.c.d.e.f."
                                          "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
                                          "ip6.ARPA",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1,
+  i = tor_addr_parse_PTR_name(&t1,
                                          "6.7.8.9.a.b.c.d.e.f.a.b.c.d.e.f.0."
                                          "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
                                          "ip6.ARPA",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1,
+  i = tor_addr_parse_PTR_name(&t1,
                                          "6.7.8.9.a.b.c.d.e.f.X.0.0.0.0.9."
                                          "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
                                          "ip6.ARPA",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "32.1.1.in-addr.arpa",
+  i = tor_addr_parse_PTR_name(&t1, "32.1.1.in-addr.arpa",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1, ".in-addr.arpa",
+  i = tor_addr_parse_PTR_name(&t1, ".in-addr.arpa",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "1.2.3.4.5.in-addr.arpa",
+  i = tor_addr_parse_PTR_name(&t1, "1.2.3.4.5.in-addr.arpa",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1, "1.2.3.4.5.in-addr.arpa",
+  i = tor_addr_parse_PTR_name(&t1, "1.2.3.4.5.in-addr.arpa",
                                          AF_INET6, 0);
   test_eq(i, -1);
-  i = tor_addr_parse_reverse_lookup_name(&t1,
+  i = tor_addr_parse_PTR_name(&t1,
                                          "6.7.8.9.a.b.c.d.e.f.a.b.c.d.e.0."
                                          "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
                                          "ip6.ARPA",

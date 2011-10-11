@@ -3207,7 +3207,7 @@ dirserv_orconn_tls_done(const char *address,
         log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
                  router_describe(ri),
                  address, ri->or_port);
-        if (tor_addr_from_str(&addr, ri->address) != -1)
+        if (tor_addr_parse(&addr, ri->address) != -1)
           addrp = &addr;
         else
           log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);

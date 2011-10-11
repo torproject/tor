@@ -687,7 +687,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
-  if (tor_addr_from_str(&addr, exitconn->_base.address) >= 0) {
+  if (tor_addr_parse(&addr, exitconn->_base.address) >= 0) {
     if (tor_addr_family(&addr) == AF_INET) {
       tor_addr_copy(&exitconn->_base.addr, &addr);
       exitconn->address_ttl = DEFAULT_DNS_TTL;
@@ -721,7 +721,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
    * .in-addr.arpa address but this isn't a resolve request, kill the
    * connection.
    */
-  if ((r = tor_addr_parse_reverse_lookup_name(&addr, exitconn->_base.address,
+  if ((r = tor_addr_parse_PTR_name(&addr, exitconn->_base.address,
                                               AF_UNSPEC, 0)) != 0) {
     if (r == 1) {
       is_reverse = 1;
@@ -1198,7 +1198,7 @@ configure_nameservers(int force)
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (options->OutboundBindAddress) {
     tor_addr_t addr;
-    if (tor_addr_from_str(&addr, options->OutboundBindAddress) < 0) {
+    if (tor_addr_parse(&addr, options->OutboundBindAddress) < 0) {
       log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
                options->OutboundBindAddress);
     } else {
@@ -1404,7 +1404,7 @@ launch_resolve(edge_connection_t *exitconn)
     }
   }
 
-  r = tor_addr_parse_reverse_lookup_name(
+  r = tor_addr_parse_PTR_name(
                             &a, exitconn->_base.address, AF_UNSPEC, 0);
 
   tor_assert(the_evdns_base);

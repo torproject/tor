@@ -117,7 +117,7 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
           tor_addr_t addr;
-          int r = tor_addr_from_str(&addr, conn->socks_request->address);
+          int r = tor_addr_parse(&addr, conn->socks_request->address);
           if (r < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
@@ -1454,7 +1454,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
               log_info(LD_DIR, "Broken exit digest on tunnel conn. Closing.");
               return -1;
             }
-            if (tor_addr_from_str(&addr, conn->socks_request->address) < 0) {
+            if (tor_addr_parse(&addr, conn->socks_request->address) < 0) {
               log_info(LD_DIR, "Broken address %s on tunnel conn. Closing.",
                        escaped_safe_str_client(conn->socks_request->address));
               return -1;
