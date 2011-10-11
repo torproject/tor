@@ -1812,9 +1812,9 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     struct in_addr in;
     char *address = NULL;
     tor_assert(tok->n_args);
-    /* XXX023 use tor_addr_port_lookup() below instead. -RD */
-    if (addr_port_lookup(LOG_WARN, tok->args[0], &address, NULL,
-                        &cert->dir_port)<0 ||
+    /* XXX023 use some tor_addr parse function below instead. -RD */
+    if (tor_addr_port_split(LOG_WARN, tok->args[0], &address,
+                            &cert->dir_port) < 0 ||
         tor_inet_aton(address, &in) == 0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
       tor_free(address);

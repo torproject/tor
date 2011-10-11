@@ -1148,6 +1148,20 @@ is_internal_IP(uint32_t ip, int for_listening)
   return tor_addr_is_internal(&myaddr, for_listening);
 }
 
+/** Given an address of the form "host:port", try to divide it into its host
+ * ane port portions, setting *<b>address_out</b> to a newly allocated string
+ * holding the address portion and *<b>port_out</b> to the port (or 0 if no
+ * port is given).  Return 0 on success, -1 on failure. */
+int
+tor_addr_port_split(int severity, const char *addrport,
+                    char **address_out, uint16_t *port_out)
+{
+  tor_assert(addrport);
+  tor_assert(address_out);
+  tor_assert(port_out);
+  return addr_port_lookup(severity, addrport, address_out, NULL, port_out);
+}
+
 /** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
  * <b>address</b> is provided, set *<b>address</b> to a copy of the
  * host portion of the string.  If <b>addr</b> is provided, try to
@@ -1169,7 +1183,7 @@ addr_port_lookup(int severity, const char *addrport, char **address,
 
   tor_assert(addrport);
 
-  colon = strchr(addrport, ':');
+  colon = strrchr(addrport, ':');
   if (colon) {
     _address = tor_strndup(addrport, colon-addrport);
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);

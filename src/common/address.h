@@ -181,6 +181,9 @@ void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
 int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
 
+int tor_addr_port_split(int severity, const char *addrport,
+                        char **address_out, uint16_t *port_out);
+
 /* IPv4 helpers */
 int is_internal_IP(uint32_t ip, int for_listening) ATTR_PURE;
 int addr_port_lookup(int severity, const char *addrport, char **address,

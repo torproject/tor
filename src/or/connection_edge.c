@@ -2894,9 +2894,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                     END_STREAM_REASON_TORPROTOCOL, NULL);
       return 0;
     }
-    if (addr_port_lookup(LOG_PROTOCOL_WARN,
-                        (char*)(cell->payload+RELAY_HEADER_SIZE),
-                        &address,NULL,&port)<0) {
+    if (tor_addr_port_split(LOG_PROTOCOL_WARN,
+                            (char*)(cell->payload+RELAY_HEADER_SIZE),
+                            &address,&port)<0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Unable to parse addr:port in relay begin cell. Closing.");
       relay_send_end_cell_from_edge(rh.stream_id, circ,
