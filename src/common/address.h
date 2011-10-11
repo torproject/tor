@@ -154,9 +154,9 @@ int tor_addr_is_internal(const tor_addr_t *ip, int for_listening) ATTR_PURE;
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
 #define REVERSE_LOOKUP_NAME_BUF_LEN 73
-int tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
+int tor_addr_to_PTR_name(char *out, size_t outlen,
                                     const tor_addr_t *addr);
-int tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
+int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
                                        int family, int accept_regular);
 
 int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,

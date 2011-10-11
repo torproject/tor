@@ -721,7 +721,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
    * .in-addr.arpa address but this isn't a resolve request, kill the
    * connection.
    */
-  if ((r = tor_addr_parse_reverse_lookup_name(&addr, exitconn->_base.address,
+  if ((r = tor_addr_parse_PTR_name(&addr, exitconn->_base.address,
                                               AF_UNSPEC, 0)) != 0) {
     if (r == 1) {
       is_reverse = 1;
@@ -1404,7 +1404,7 @@ launch_resolve(edge_connection_t *exitconn)
     }
   }
 
-  r = tor_addr_parse_reverse_lookup_name(
+  r = tor_addr_parse_PTR_name(
                             &a, exitconn->_base.address, AF_UNSPEC, 0);
 
   tor_assert(the_evdns_base);

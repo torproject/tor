@@ -384,7 +384,7 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
  * IPv4 or IPv6 address too.
  */
 int
-tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
+tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
                                    int family, int accept_regular)
 {
   if (!strcasecmpend(address, ".in-addr.arpa")) {
@@ -474,7 +474,7 @@ tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
  * the result in the <b>outlen</b>-byte buffer at <b>out</b>.  Return 0 on
  * success, -1 on failure. */
 int
-tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
+tor_addr_to_PTR_name(char *out, size_t outlen,
                                 const tor_addr_t *addr)
 {
   if (addr->family == AF_INET) {

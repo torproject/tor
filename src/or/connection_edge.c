@@ -1766,7 +1766,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
       tor_addr_t addr;
       int ok;
-      ok = tor_addr_parse_reverse_lookup_name(
+      ok = tor_addr_parse_PTR_name(
                                &addr, socks->address, AF_UNSPEC, 1);
       if (ok == 1 && tor_addr_is_internal(&addr, 0)) {
         connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
@@ -2530,7 +2530,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
     /* We're doing a reverse lookup.  The input could be an IP address, or
      * could be an .in-addr.arpa or .ip6.arpa address */
-    r = tor_addr_parse_reverse_lookup_name(&addr, a, AF_INET, 1);
+    r = tor_addr_parse_PTR_name(&addr, a, AF_INET, 1);
     if (r <= 0) {
       log_warn(LD_APP, "Rejecting ill-formed reverse lookup of %s",
                safe_str_client(a));
@@ -2538,7 +2538,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
       return -1;
     }
 
-    r = tor_addr_to_reverse_lookup_name(inaddr_buf, sizeof(inaddr_buf), &addr);
+    r = tor_addr_to_PTR_name(inaddr_buf, sizeof(inaddr_buf), &addr);
     if (r < 0) {
       log_warn(LD_BUG, "Couldn't generate reverse lookup hostname of %s",
                safe_str_client(a));
