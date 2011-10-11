@@ -366,8 +366,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
         safe_str_client(circ->rend_data->onion_address),
         safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
     if (rend_client_report_intro_point_failure(circ->build_state->chosen_exit,
-                                               circ->rend_data,
-                                               INTRO_POINT_FAILURE_GENERIC)>0){
+                                             circ->rend_data,
+                                             INTRO_POINT_FAILURE_GENERIC)>0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       int result = rend_client_reextend_intro_circuit(circ);

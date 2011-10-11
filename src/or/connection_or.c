@@ -1185,8 +1185,8 @@ connection_tls_continue_handshake(or_connection_t *conn)
                          "handshake.");
               return connection_or_launch_v3_or_handshake(conn);
             } else {
-              log_debug(LD_OR, "Done with initial SSL handshake (client-side). "
-                        "Requesting renegotiation.");
+              log_debug(LD_OR, "Done with initial SSL handshake (client-side)."
+                        " Requesting renegotiation.");
               conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
               goto again;
             }
@@ -1563,7 +1563,6 @@ connection_or_launch_v3_or_handshake(or_connection_t *conn)
 
   return connection_or_send_versions(conn, 1);
 }
-
 
 /** Allocate a new connection handshake state for the connection
  * <b>conn</b>.  Return 0 on success, -1 on failure. */
@@ -1964,8 +1963,8 @@ connection_or_send_cert_cell(or_connection_t *conn)
   tor_cert_get_der(link_cert, &link_encoded, &link_len);
   tor_cert_get_der(id_cert, &id_encoded, &id_len);
 
-  cell_len = 1 /* 1 octet: num certs in cell */ +
-             2 * ( 1 + 2 ) /* For each cert: 1 octet for type, 2 for length */ +
+  cell_len = 1 /* 1 byte: num certs in cell */ +
+             2 * ( 1 + 2 ) /* For each cert: 1 byte for type, 2 for length */ +
              link_len + id_len;
   cell = var_cell_new(cell_len);
   cell->command = CELL_CERT;
@@ -2178,7 +2177,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   /* XXXX make sure we're actually supposed to send this! */
 
   if (!pk) {
-    log_warn(LD_BUG, "Unable to compute authenticate cell: no client auth key");
+    log_warn(LD_BUG, "Can't compute authenticate cell: no client auth key");
     return -1;
   }
   if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET) {
@@ -2216,3 +2215,4 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
 
   return 0;
 }
+

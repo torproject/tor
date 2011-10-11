@@ -1016,7 +1016,6 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
-
     log_info(LD_OR, "Got some good certificates from %s:%d: "
              "Waiting for AUTHENTICATE.",
              safe_str(conn->_base.address), conn->_base.port);
@@ -1026,7 +1025,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   }
 
   conn->handshake_state->received_cert_cell = 1;
-err:
+ err:
   tor_cert_free(id_cert);
   tor_cert_free(link_cert);
   tor_cert_free(auth_cert);
@@ -1100,7 +1099,8 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
       return;
     }
   } else {
-    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Not authenticating",
+    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Not "
+             "authenticating",
              safe_str(conn->_base.address), conn->_base.port);
   }
 #undef ERR

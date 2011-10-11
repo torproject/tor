@@ -5134,9 +5134,9 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
                "use it as an open proxy. Please don't allow this unless you "
                "have a good reason.", portname);
     } else if (!tor_addr_is_loopback(&port->addr)) {
-      log_notice(LD_CONFIG, "You configured a non-loopback address for %sPort. "
-                 "This allows everybody on your local network to use your "
-                 "machine as a proxy.  Make sure this is what you wanted.",
+      log_notice(LD_CONFIG, "You configured a non-loopback address for "
+                 "%sPort. This allows everybody on your local network to use "
+                 "your machine as a proxy. Make sure this is what you wanted.",
                  portname);
     }
   } SMARTLIST_FOREACH_END(port);

@@ -1005,14 +1005,15 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   return (int)buf->datalen;
 }
 
-/** True iff the cell command <b>command</b> is one that implies a variable-length
- * cell in Tor link protocol <b>linkproto</b>. */
+/** True iff the cell command <b>command</b> is one that implies a
+ * variable-length cell in Tor link protocol <b>linkproto</b>. */
 static inline int
 cell_command_is_var_length(uint8_t command, int linkproto)
 {
-  /* If linkproto is v2 (2), CELL_VERSIONS is the only variable-length cells work as
-   * implemented here. If it's 1, there are no variable-length cells.  Tor
-   * does not support other versions right now, and so can't negotiate them.
+  /* If linkproto is v2 (2), CELL_VERSIONS is the only variable-length cells
+   * work as implemented here. If it's 1, there are no variable-length cells.
+   * Tor does not support other versions right now, and so can't negotiate
+   * them.
    */
   switch (linkproto) {
   case 1:

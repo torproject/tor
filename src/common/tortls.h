@@ -111,7 +111,8 @@ struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
 #endif
 
 void tor_cert_free(tor_cert_t *cert);
-tor_cert_t *tor_cert_decode(const uint8_t *certificate, size_t certificate_len);
+tor_cert_t *tor_cert_decode(const uint8_t *certificate,
+                            size_t certificate_len);
 void tor_cert_get_der(const tor_cert_t *cert,
                       const uint8_t **encoded_out, size_t *size_out);
 const digests_t *tor_cert_get_id_digests(const tor_cert_t *cert);
