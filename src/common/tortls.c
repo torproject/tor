@@ -97,15 +97,27 @@ static int use_unsafe_renegotiation_op = 0;
  * SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION? */
 static int use_unsafe_renegotiation_flag = 0;
 
+/** Structure that we use for a single certificate. */
+struct tor_cert_t {
+  X509 *cert;
+  uint8_t *encoded;
+  size_t encoded_len;
+  unsigned pkey_digests_set : 1;
+  digests_t cert_digests;
+  digests_t pkey_digests;
+};
+
 /** Holds a SSL_CTX object and related state used to configure TLS
  * connections.
  */
 typedef struct tor_tls_context_t {
   int refcnt;
   SSL_CTX *ctx;
-  X509 *my_cert;
-  X509 *my_id_cert;
-  crypto_pk_env_t *key;
+  tor_cert_t *my_link_cert;
+  tor_cert_t *my_id_cert;
+  tor_cert_t *my_auth_cert;
+  crypto_pk_env_t *link_key;
+  crypto_pk_env_t *auth_key;
 } tor_tls_context_t;
 
 #define TOR_TLS_MAGIC 0x71571571
@@ -198,6 +210,7 @@ static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     unsigned int key_lifetime);
 static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
                                               unsigned int key_lifetime);
+static int check_cert_lifetime_internal(const X509 *cert, int tolerance);
 
 /** Global TLS contexts. We keep them here because nobody else needs
  * to touch them. */
@@ -670,6 +683,137 @@ static const int N_CLIENT_CIPHERS =
                              SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #endif
 
+/** Free all storage held in <b>cert</b> */
+void
+tor_cert_free(tor_cert_t *cert)
+{
+  if (! cert)
+    return;
+  if (cert->cert)
+    X509_free(cert->cert);
+  tor_free(cert->encoded);
+  memset(cert, 0x03, sizeof(cert));
+  tor_free(cert);
+}
+
+/**
+ * Allocate a new tor_cert_t to hold the certificate "x509_cert".
+ *
+ * Steals a reference to x509_cert.
+ */
+static tor_cert_t *
+tor_cert_new(X509 *x509_cert)
+{
+  tor_cert_t *cert;
+  EVP_PKEY *pkey;
+  RSA *rsa;
+  int length, length2;
+  unsigned char *cp;
+
+  if (!x509_cert)
+    return NULL;
+
+  length = i2d_X509(x509_cert, NULL);
+  cert = tor_malloc_zero(sizeof(tor_cert_t));
+  if (length <= 0) {
+    tor_free(cert);
+    log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
+    X509_free(x509_cert);
+    return NULL;
+  }
+  cert->encoded_len = (size_t) length;
+  cp = cert->encoded = tor_malloc(length);
+  length2 = i2d_X509(x509_cert, &cp);
+  tor_assert(length2 == length);
+
+  cert->cert = x509_cert;
+
+  crypto_digest_all(&cert->cert_digests,
+                    (char*)cert->encoded, cert->encoded_len);
+
+  if ((pkey = X509_get_pubkey(x509_cert)) &&
+      (rsa = EVP_PKEY_get1_RSA(pkey))) {
+    crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(rsa);
+    crypto_pk_get_all_digests(pk, &cert->pkey_digests);
+    cert->pkey_digests_set = 1;
+    crypto_free_pk_env(pk);
+    EVP_PKEY_free(pkey);
+  }
+
+  return cert;
+}
+
+/** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
+ * from a <b>certificate</b>.  Return a newly allocated tor_cert_t on success
+ * and NULL on failure. */
+tor_cert_t *
+tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
+{
+  X509 *x509;
+  const unsigned char *cp = (const unsigned char *)certificate;
+  tor_cert_t *newcert;
+  tor_assert(certificate);
+
+  if (certificate_len > INT_MAX)
+    return NULL;
+
+#if OPENSSL_VERSION_NUMBER < 0x00908000l
+  /* This ifdef suppresses a type warning.  Take out this case once everybody
+   * is using OpenSSL 0.9.8 or later. */
+  x509 = d2i_X509(NULL, (unsigned char**)&cp, (int)certificate_len);
+#else
+  x509 = d2i_X509(NULL, &cp, (int)certificate_len);
+#endif
+  if (!x509)
+    return NULL; /* Couldn't decode */
+  if (cp - certificate != (int)certificate_len) {
+    X509_free(x509);
+    return NULL; /* Didn't use all the bytes */
+  }
+  newcert = tor_cert_new(x509);
+  if (!newcert) {
+    return NULL;
+  }
+  if (newcert->encoded_len != certificate_len ||
+      fast_memneq(newcert->encoded, certificate, certificate_len)) {
+    /* Cert wasn't in DER */
+    tor_cert_free(newcert);
+    return NULL;
+  }
+  return newcert;
+}
+
+/** Set *<b>encoded_out</b> and *<b>size_out/b> to <b>cert</b>'s encoded DER
+ * representation and length, respectively. */
+void
+tor_cert_get_der(const tor_cert_t *cert,
+                 const uint8_t **encoded_out, size_t *size_out)
+{
+  tor_assert(cert);
+  tor_assert(encoded_out);
+  tor_assert(size_out);
+  *encoded_out = cert->encoded;
+  *size_out = cert->encoded_len;
+}
+
+/** Return a set of digests for the public key in <b>cert</b>, or NULL if this
+ * cert's public key is not one we know how to take the digest of. */
+const digests_t *
+tor_cert_get_id_digests(const tor_cert_t *cert)
+{
+  if (cert->pkey_digests_set)
+    return &cert->pkey_digests;
+  else
+    return NULL;
+}
+
+/** Return a set of digests for the public key in <b>cert</b>. */
+const digests_t *
+tor_cert_get_cert_digests(const tor_cert_t *cert)
+{
+  return &cert->cert_digests;
+}
+
 /** Remove a reference to <b>ctx</b>, and free it if it has no more
  * references. */
 static void
@@ -678,11 +822,169 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
   tor_assert(ctx);
   if (--ctx->refcnt == 0) {
     SSL_CTX_free(ctx->ctx);
-    X509_free(ctx->my_cert);
-    X509_free(ctx->my_id_cert);
-    crypto_free_pk_env(ctx->key);
+    tor_cert_free(ctx->my_link_cert);
+    tor_cert_free(ctx->my_id_cert);
+    tor_cert_free(ctx->my_auth_cert);
+    crypto_free_pk_env(ctx->link_key);
+    crypto_free_pk_env(ctx->auth_key);
     tor_free(ctx);
   }
+}
+
+/** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
+ * and ID certificate that we're currently using for our V3 in-protocol
+ * handshake's certificate chain.  If <b>server</b> is true, provide the certs
+ * that we use in server mode; otherwise, provide the certs that we use in
+ * client mode. */
+int
+tor_tls_get_my_certs(int server,
+                     const tor_cert_t **link_cert_out,
+                     const tor_cert_t **id_cert_out)
+{
+  tor_tls_context_t *ctx = server ? server_tls_context : client_tls_context;
+  if (! ctx)
+    return -1;
+  if (link_cert_out)
+    *link_cert_out = server ? ctx->my_link_cert : ctx->my_auth_cert;
+  if (id_cert_out)
+    *id_cert_out = ctx->my_id_cert;
+  return 0;
+}
+
+/**
+ * Return the authentication key that we use to authenticate ourselves as a
+ * client in the V3 in-protocol handshake.
+ */
+crypto_pk_env_t *
+tor_tls_get_my_client_auth_key(void)
+{
+  if (! client_tls_context)
+    return NULL;
+  return client_tls_context->auth_key;
+}
+
+/**
+ * Return the public key that a cetificate certifies.  Return NULL if the
+ * cert's key is not RSA.
+ */
+crypto_pk_env_t *
+tor_tls_cert_get_key(tor_cert_t *cert)
+{
+  crypto_pk_env_t *result = NULL;
+  EVP_PKEY *pkey = X509_get_pubkey(cert->cert);
+  RSA *rsa;
+  if (!pkey)
+    return NULL;
+  rsa = EVP_PKEY_get1_RSA(pkey);
+  if (!rsa) {
+    EVP_PKEY_free(pkey);
+    return NULL;
+  }
+  result = _crypto_new_pk_env_rsa(rsa);
+  EVP_PKEY_free(pkey);
+  return result;
+}
+
+/** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
+static int
+pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
+{
+  /* We'd like to do this, but openssl 0.9.7 doesn't have it:
+     return EVP_PKEY_cmp(a,b) == 1;
+  */
+  unsigned char *a_enc=NULL, *b_enc=NULL, *a_ptr, *b_ptr;
+  int a_len1, b_len1, a_len2, b_len2, result;
+  a_len1 = i2d_PublicKey(a, NULL);
+  b_len1 = i2d_PublicKey(b, NULL);
+  if (a_len1 != b_len1)
+    return 0;
+  a_ptr = a_enc = tor_malloc(a_len1);
+  b_ptr = b_enc = tor_malloc(b_len1);
+  a_len2 = i2d_PublicKey(a, &a_ptr);
+  b_len2 = i2d_PublicKey(b, &b_ptr);
+  tor_assert(a_len2 == a_len1);
+  tor_assert(b_len2 == b_len1);
+  result = tor_memeq(a_enc, b_enc, a_len1);
+  tor_free(a_enc);
+  tor_free(b_enc);
+  return result;
+}
+
+/** Return true iff the other side of <b>tls</b> has authenticated to us, and
+ * the key certified in <b>cert</b> is the same as the key they used to do it.
+ */
+int
+tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
+{
+  X509 *peercert = SSL_get_peer_certificate(tls->ssl);
+  EVP_PKEY *link_key = NULL, *cert_key = NULL;
+  int result;
+
+  if (!peercert)
+    return 0;
+  link_key = X509_get_pubkey(peercert);
+  cert_key = X509_get_pubkey(cert->cert);
+
+  result = link_key && cert_key && pkey_eq(cert_key, link_key);
+
+  X509_free(peercert);
+  if (link_key)
+    EVP_PKEY_free(link_key);
+  if (cert_key)
+    EVP_PKEY_free(cert_key);
+
+  return result;
+}
+
+/** Check whether <b>cert</b> is well-formed, currently live, and correctly
+ * signed by the public key in <b>signing_cert</b>.  If <b>check_rsa_1024</b>,
+ * make sure that it has an RSA key with 1024 bits; otherwise, just check that
+ * the key is long enough. Return 1 if the cert is good, and 0 if it's bad or
+ * we couldn't check it. */
+int
+tor_tls_cert_is_valid(const tor_cert_t *cert,
+                      const tor_cert_t *signing_cert,
+                      int check_rsa_1024)
+{
+  EVP_PKEY *cert_key;
+  EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
+  int r, key_ok = 0;
+  if (!signing_key)
+    return 0;
+  r = X509_verify(cert->cert, signing_key);
+  EVP_PKEY_free(signing_key);
+  if (r <= 0)
+    return 0;
+
+  /* okay, the signature checked out right.  Now let's check the check the
+   * lifetime. */
+  /*XXXX tolerance might be iffy here */
+  if (check_cert_lifetime_internal(cert->cert, 60*60) < 0)
+    return 0;
+
+  cert_key = X509_get_pubkey(cert->cert);
+  if (check_rsa_1024 && cert_key) {
+    RSA *rsa = EVP_PKEY_get1_RSA(cert_key);
+    if (rsa && BN_num_bits(rsa->n) == 1024)
+      key_ok = 1;
+    if (rsa)
+      RSA_free(rsa);
+  } else if (cert_key) {
+    int min_bits = 1024;
+#ifdef EVP_PKEY_EC
+    if (EVP_PKEY_type(cert_key->type) == EVP_PKEY_EC)
+      min_bits = 128;
+#endif
+    if (EVP_PKEY_bits(cert_key) >= min_bits)
+      key_ok = 1;
+  }
+  EVP_PKEY_free(cert_key);
+  if (!key_ok)
+    return 0;
+
+  /* XXXX compare DNs or anything? */
+
+  return 1;
 }
 
 /** Increase the reference count of <b>ctx</b>. */
@@ -785,37 +1087,54 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
 static tor_tls_context_t *
 tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
-  crypto_pk_env_t *rsa = NULL;
+  crypto_pk_env_t *rsa = NULL, *rsa_auth = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
-  X509 *cert = NULL, *idcert = NULL;
+  X509 *cert = NULL, *idcert = NULL, *authcert = NULL;
   char *nickname = NULL, *nn2 = NULL;
 
   tor_tls_init();
   nickname = crypto_random_hostname(8, 20, "www.", ".net");
+#ifdef DISABLE_V3_LINKPROTO_SERVERSIDE
   nn2 = crypto_random_hostname(8, 20, "www.", ".net");
+#else
+  nn2 = crypto_random_hostname(8, 20, "www.", ".com");
+#endif
 
-  /* Generate short-term RSA key. */
+  /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_new_pk_env()))
     goto error;
   if (crypto_pk_generate_key(rsa)<0)
     goto error;
-  /* Create certificate signed by identity key. */
+  /* Generate short-term RSA key for use in the in-protocol ("v3")
+   * authentication handshake. */
+  if (!(rsa_auth = crypto_new_pk_env()))
+    goto error;
+  if (crypto_pk_generate_key(rsa_auth)<0)
+    goto error;
+  /* Create a link certificate signed by identity key. */
   cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
                                     key_lifetime);
   /* Create self-signed certificate for identity key. */
   idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
                                       IDENTITY_CERT_LIFETIME);
-  if (!cert || !idcert) {
+  /* Create an authentication certificate signed by identity key. */
+  authcert = tor_tls_create_certificate(rsa_auth, identity, nickname, nn2,
+                                        key_lifetime);
+  if (!cert || !idcert || !authcert) {
     log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
     goto error;
   }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
-  result->my_cert = X509_dup(cert);
-  result->my_id_cert = X509_dup(idcert);
-  result->key = crypto_pk_dup_key(rsa);
+  result->my_link_cert = tor_cert_new(X509_dup(cert));
+  result->my_id_cert = tor_cert_new(X509_dup(idcert));
+  result->my_auth_cert = tor_cert_new(X509_dup(authcert));
+  if (!result->my_link_cert || !result->my_id_cert || !result->my_auth_cert)
+    goto error;
+  result->link_key = crypto_pk_dup_key(rsa);
+  result->auth_key = crypto_pk_dup_key(rsa_auth);
 
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
@@ -881,6 +1200,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
   if (rsa)
     crypto_free_pk_env(rsa);
+  if (rsa_auth)
+    crypto_free_pk_env(rsa_auth);
+  X509_free(authcert);
   tor_free(nickname);
   tor_free(nn2);
   return result;
@@ -893,12 +1215,16 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     EVP_PKEY_free(pkey);
   if (rsa)
     crypto_free_pk_env(rsa);
+  if (rsa_auth)
+    crypto_free_pk_env(rsa_auth);
   if (result)
     tor_tls_context_decref(result);
   if (cert)
     X509_free(cert);
   if (idcert)
     X509_free(idcert);
+  if (authcert)
+    X509_free(authcert);
   return NULL;
 }
 
@@ -1569,9 +1895,21 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
+/** Return the peer certificate, or NULL if there isn't one. */
+tor_cert_t *
+tor_tls_get_peer_cert(tor_tls_t *tls)
+{
+  X509 *cert;
+  cert = SSL_get_peer_certificate(tls->ssl);
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "getting peer certificate");
+  if (!cert)
+    return NULL;
+  return tor_cert_new(cert);
+}
+
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
-log_cert_lifetime(X509 *cert, const char *problem)
+log_cert_lifetime(const X509 *cert, const char *problem)
 {
   BIO *bio = NULL;
   BUF_MEM *buf;
@@ -1718,25 +2056,14 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 int
 tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
 {
-  time_t now, t;
   X509 *cert;
   int r = -1;
-
-  now = time(NULL);
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     goto done;
 
-  t = now + tolerance;
-  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
-    log_cert_lifetime(cert, "not yet valid");
+  if (check_cert_lifetime_internal(cert, tolerance) < 0)
     goto done;
-  }
-  t = now - tolerance;
-  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
-    log_cert_lifetime(cert, "already expired");
-    goto done;
-  }
 
   r = 0;
  done:
@@ -1746,6 +2073,30 @@ tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
   tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
 
   return r;
+}
+
+/** Helper: check whether <b>cert</b> is currently live, give or take
+ * <b>tolerance</b> seconds.  If it is live, return 0.  If it is not live,
+ * log a message and return -1. */
+static int
+check_cert_lifetime_internal(const X509 *cert, int tolerance)
+{
+  time_t now, t;
+
+  now = time(NULL);
+
+  t = now + tolerance;
+  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
+    log_cert_lifetime(cert, "not yet valid");
+    return -1;
+  }
+  t = now - tolerance;
+  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
+    log_cert_lifetime(cert, "already expired");
+    return -1;
+  }
+
+  return 0;
 }
 
 /** Return the number of bytes available for reading from <b>tls</b>.
@@ -1831,6 +2182,82 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   return 1;
 }
 
+/** Return true iff <b>name</b> is a DN of a kind that could only
+ * occur in a v3-handshake-indicating certificate */
+static int
+dn_indicates_v3_cert(X509_NAME *name)
+{
+#ifdef DISABLE_V3_LINKPROTO_CLIENTSIDE
+  (void)name;
+  return 0;
+#else
+  X509_NAME_ENTRY *entry;
+  int n_entries;
+  ASN1_OBJECT *obj;
+  ASN1_STRING *str;
+  unsigned char *s;
+  int len, r;
+
+  n_entries = X509_NAME_entry_count(name);
+  if (n_entries != 1)
+    return 1; /* More than one entry in the DN. */
+  entry = X509_NAME_get_entry(name, 0);
+
+  obj = X509_NAME_ENTRY_get_object(entry);
+  if (OBJ_obj2nid(obj) != OBJ_txt2nid("commonName"))
+    return 1; /* The entry isn't a commonName. */
+
+  str = X509_NAME_ENTRY_get_data(entry);
+  len = ASN1_STRING_to_UTF8(&s, str);
+  if (len < 0)
+    return 0;
+  r = fast_memneq(s + len - 4, ".net", 4);
+  OPENSSL_free(s);
+  return r;
+#endif
+}
+
+/** Return true iff the peer certificate we're received on <b>tls</b>
+ * indicates that this connection should use the v3 (in-protocol)
+ * authentication handshake.
+ *
+ * Only the connection initiator should use this, and only once the initial
+ * handshake is done; the responder detects a v1 handshake by cipher types,
+ * and a v3/v2 handshake by Versions cell vs renegotiation.
+ */
+int
+tor_tls_received_v3_certificate(tor_tls_t *tls)
+{
+  X509 *cert = SSL_get_peer_certificate(tls->ssl);
+  EVP_PKEY *key;
+  X509_NAME *issuer_name, *subject_name;
+
+  if (!cert) {
+    log_warn(LD_BUG, "Called on a connection with no peer certificate");
+    return 0;
+  }
+
+  subject_name = X509_get_subject_name(cert);
+  issuer_name = X509_get_issuer_name(cert);
+
+  if (X509_name_cmp(subject_name, issuer_name) == 0)
+    return 1; /* purportedly self signed */
+
+  if (dn_indicates_v3_cert(subject_name) ||
+      dn_indicates_v3_cert(issuer_name))
+    return 1; /* DN is fancy */
+
+  key = X509_get_pubkey(cert);
+  if (EVP_PKEY_bits(key) != 1024 ||
+      EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
+    EVP_PKEY_free(key);
+    return 1; /* Key is fancy */
+  }
+
+  EVP_PKEY_free(key);
+  return 0;
+}
+
 /** Return the number of server handshakes that we've noticed doing on
  * <b>tls</b>. */
 int
@@ -1845,6 +2272,36 @@ int
 tor_tls_server_got_renegotiate(tor_tls_t *tls)
 {
   return tls->got_renegotiate;
+}
+
+/** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
+ * the v3 handshake to prove that the client knows the TLS secrets for the
+ * connection <b>tls</b>.  Return 0 on success, -1 on failure.
+ */
+int
+tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
+{
+#define TLSSECRET_MAGIC "Tor V3 handshake TLS cross-certification"
+  char buf[128];
+  size_t len;
+  tor_assert(tls);
+  tor_assert(tls->ssl);
+  tor_assert(tls->ssl->s3);
+  tor_assert(tls->ssl->session);
+  /*
+    The value is an HMAC, using the TLS master key as the HMAC key, of
+    client_random | server_random | TLSSECRET_MAGIC
+  */
+  memcpy(buf +  0, tls->ssl->s3->client_random, 32);
+  memcpy(buf + 32, tls->ssl->s3->server_random, 32);
+  memcpy(buf + 64, TLSSECRET_MAGIC, strlen(TLSSECRET_MAGIC) + 1);
+  len = 64 + strlen(TLSSECRET_MAGIC) + 1;
+  crypto_hmac_sha256((char*)secrets_out,
+                     (char*)tls->ssl->session->master_key,
+                     tls->ssl->session->master_key_length,
+                     buf, len);
+  memset(buf, 0, sizeof(buf));
+  return 0;
 }
 
 /** Examine the amount of memory used and available for buffers in <b>tls</b>.

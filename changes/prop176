@@ -1,0 +1,8 @@
+  o Major features
+    - Implement a new handshake protocol for authenticating Tors to
+      each other over TLS. It should be more resistant to fingerprinting
+      than previous protocols, and should require less TLS hacking for
+      future Tor implementations.  Implements Proposal 185.
+    - Allow variable-length padding cells to disguise the length of
+      Tor's TLS records.  Implements part of Proposal 184.
+

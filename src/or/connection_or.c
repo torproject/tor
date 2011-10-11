@@ -35,10 +35,8 @@
 #endif
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
+static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
-static int connection_or_send_versions(or_connection_t *conn);
-static int connection_init_or_handshake_state(or_connection_t *conn,
-                                              int started_here);
 static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                                    int started_here,
                                                    char *digest_rcvd_out);
@@ -378,8 +376,8 @@ connection_or_process_inbuf(or_connection_t *conn)
       }
 
       return ret;
-#ifdef USE_BUFFEREVENTS
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
+#ifdef USE_BUFFEREVENTS
       if (tor_tls_server_got_renegotiate(conn->tls))
         connection_or_tls_renegotiated_cb(conn->tls, conn);
       if (conn->_base.marked_for_close)
@@ -387,7 +385,8 @@ connection_or_process_inbuf(or_connection_t *conn)
       /* fall through. */
 #endif
     case OR_CONN_STATE_OPEN:
-    case OR_CONN_STATE_OR_HANDSHAKING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
       return connection_or_process_cells_from_inbuf(conn);
     default:
       return 0; /* don't do anything */
@@ -439,7 +438,8 @@ connection_or_finished_flushing(or_connection_t *conn)
   switch (conn->_base.state) {
     case OR_CONN_STATE_PROXY_HANDSHAKING:
     case OR_CONN_STATE_OPEN:
-    case OR_CONN_STATE_OR_HANDSHAKING:
+    case OR_CONN_STATE_OR_HANDSHAKING_V2:
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
       break;
     default:
       log_err(LD_BUG,"Called in unexpected state %d.", conn->_base.state);
@@ -627,7 +627,7 @@ connection_or_update_token_buckets(smartlist_t *conns,
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
  * by checking to see if this describes a router we know. */
-static void
+void
 connection_or_init_conn_from_address(or_connection_t *conn,
                                      const tor_addr_t *addr, uint16_t port,
                                      const char *id_digest,
@@ -1180,16 +1180,22 @@ connection_tls_continue_handshake(or_connection_t *conn)
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-            log_debug(LD_OR, "Done with initial SSL handshake (client-side). "
-                             "Requesting renegotiation.");
-            conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
-            goto again;
+            if (tor_tls_received_v3_certificate(conn->tls)) {
+              log_info(LD_OR, "Client got a v3 cert!  Moving on to v3 "
+                         "handshake.");
+              return connection_or_launch_v3_or_handshake(conn);
+            } else {
+              log_debug(LD_OR, "Done with initial SSL handshake (client-side). "
+                        "Requesting renegotiation.");
+              conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
+              goto again;
+            }
           }
           // log_notice(LD_OR,"Done. state was %d.", conn->_base.state);
         } else {
-          /* improved handshake, but not a client. */
+          /* v2/v3 handshake, but not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
-                           "Expecting renegotiation.");
+                           "Expecting renegotiation or VERSIONS cell");
           tor_tls_set_renegotiate_callback(conn->tls,
                                            connection_or_tls_renegotiated_cb,
                                            conn);
@@ -1234,17 +1240,24 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
     if (! tor_tls_used_v1_handshake(conn->tls)) {
       if (!tor_tls_is_server(conn->tls)) {
         if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-          conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
-          tor_tls_unblock_renegotiation(conn->tls);
-          if (bufferevent_ssl_renegotiate(conn->_base.bufev)<0) {
-            log_warn(LD_OR, "Start_renegotiating went badly.");
-            connection_mark_for_close(TO_CONN(conn));
+          if (tor_tls_received_v3_certificate(conn->tls)) {
+            log_info(LD_OR, "Client got a v3 cert!");
+            if (connection_or_launch_v3_or_handshake(conn) < 0)
+              connection_mark_for_close(TO_CONN(conn));
+            return;
+          } else {
+            conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
+            tor_tls_unblock_renegotiation(conn->tls);
+            if (bufferevent_ssl_renegotiate(conn->_base.bufev)<0) {
+              log_warn(LD_OR, "Start_renegotiating went badly.");
+              connection_mark_for_close(TO_CONN(conn));
+            }
+            tor_tls_unblock_renegotiation(conn->tls);
+            return; /* ???? */
           }
-          tor_tls_unblock_renegotiation(conn->tls);
-          return; /* ???? */
         }
       } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
-        /* improved handshake, as a server. Only got one handshake, so
+        /* v2 or v3 handshake, as a server. Only got one handshake, so
          * wait for the next one. */
         tor_tls_set_renegotiate_callback(conn->tls,
                                          connection_or_tls_renegotiated_cb,
@@ -1256,7 +1269,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
         const int handshakes = tor_tls_get_num_server_handshakes(conn->tls);
         tor_assert(handshakes >= 2);
         if (handshakes == 2) {
-          /* improved handshake, as a server.  Two handshakes happened already,
+          /* v2 handshake, as a server.  Two handshakes happened already,
            * so we treat renegotiation as done.
            */
           connection_or_tls_renegotiated_cb(conn->tls, conn);
@@ -1300,6 +1313,29 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
   return !tor_tls_is_server(conn->tls);
 }
 
+/** Set the circid_type field of <b>conn</b> (which determines which part of
+ * the circuit ID space we're willing to use) based on comparing our ID to
+ * <b>identity_rcvd</b> */
+void
+connection_or_set_circid_type(or_connection_t *conn,
+                              crypto_pk_env_t *identity_rcvd)
+{
+  const int started_here = connection_or_nonopen_was_started_here(conn);
+  crypto_pk_env_t *our_identity =
+    started_here ? get_tlsclient_identity_key() :
+                   get_server_identity_key();
+
+  if (identity_rcvd) {
+    if (crypto_pk_cmp_keys(our_identity, identity_rcvd)<0) {
+      conn->circ_id_type = CIRC_ID_TYPE_LOWER;
+    } else {
+      conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+    }
+  } else {
+    conn->circ_id_type = CIRC_ID_TYPE_NEITHER;
+  }
+}
+
 /** <b>Conn</b> just completed its handshake. Return 0 if all is well, and
  * return -1 if he is lying, broken, or otherwise something is wrong.
  *
@@ -1337,10 +1373,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     started_here ? conn->_base.address :
                    safe_str_client(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
-  crypto_pk_env_t *our_identity =
-    started_here ? get_tlsclient_identity_key() :
-                   get_server_identity_key();
-  int has_cert = 0, has_identity=0;
+  int has_cert = 0;
 
   check_no_tls_errors();
   has_cert = tor_tls_peer_has_cert(conn->tls);
@@ -1375,21 +1408,46 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   if (identity_rcvd) {
-    has_identity = 1;
     crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
-    if (crypto_pk_cmp_keys(our_identity, identity_rcvd)<0) {
-      conn->circ_id_type = CIRC_ID_TYPE_LOWER;
-    } else {
-      conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
-    }
-    crypto_free_pk_env(identity_rcvd);
   } else {
     memset(digest_rcvd_out, 0, DIGEST_LEN);
-    conn->circ_id_type = CIRC_ID_TYPE_NEITHER;
   }
 
-  if (started_here && tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_set_identity_digest(conn, digest_rcvd_out);
+  connection_or_set_circid_type(conn, identity_rcvd);
+  crypto_free_pk_env(identity_rcvd);
+
+  if (started_here)
+    return connection_or_client_learned_peer_id(conn,
+                                     (const uint8_t*)digest_rcvd_out);
+
+  return 0;
+}
+
+/** Called when we (as a connection initiator) have definitively,
+ * authenticatedly, learned that ID of the Tor instance on the other
+ * side of <b>conn</b> is <b>peer_id</b>.  For v1 and v2 handshakes,
+ * this is right after we get a certificate chain in a TLS handshake
+ * or renegotiation.  For v3 handshakes, this is right after we get a
+ * certificate chain in a CERT cell.
+ *
+ * If we want any particular ID before, record the one we got.
+ *
+ * If we wanted an ID, but we didn't get it, log a warning and return -1.
+ *
+ * If we're testing reachability, remember what we learned.
+ *
+ * Return 0 on success, -1 on failure.
+ */
+int
+connection_or_client_learned_peer_id(or_connection_t *conn,
+                                     const uint8_t *peer_id)
+{
+  int as_expected = 1;
+  const or_options_t *options = get_options();
+  int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
+
+  if (tor_digest_is_zero(conn->identity_digest)) {
+    connection_or_set_identity_digest(conn, (const char*)peer_id);
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
@@ -1401,43 +1459,39 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->_base.addr, conn->_base.port,
-                            digest_rcvd_out);
+                            (const char*)peer_id);
   }
 
-  if (started_here) {
-    int as_advertised = 1;
-    tor_assert(has_cert);
-    tor_assert(has_identity);
-    if (tor_memneq(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
-      /* I was aiming for a particular digest. I didn't get it! */
-      char seen[HEX_DIGEST_LEN+1];
-      char expected[HEX_DIGEST_LEN+1];
-      base16_encode(seen, sizeof(seen), digest_rcvd_out, DIGEST_LEN);
-      base16_encode(expected, sizeof(expected), conn->identity_digest,
-                    DIGEST_LEN);
-      log_fn(severity, LD_HANDSHAKE,
-             "Tried connecting to router at %s:%d, but identity key was not "
-             "as expected: wanted %s but got %s.",
-             conn->_base.address, conn->_base.port, expected, seen);
-      entry_guard_register_connect_status(conn->identity_digest, 0, 1,
-                                          time(NULL));
-      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
-              END_OR_CONN_REASON_OR_IDENTITY);
-      if (!authdir_mode_tests_reachability(options))
-        control_event_bootstrap_problem("foo", END_OR_CONN_REASON_OR_IDENTITY);
-      as_advertised = 0;
-    }
-    if (authdir_mode_tests_reachability(options)) {
-      dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
-                              digest_rcvd_out, as_advertised);
-    }
-    if (!as_advertised)
-      return -1;
+  if (tor_memneq(peer_id, conn->identity_digest, DIGEST_LEN)) {
+    /* I was aiming for a particular digest. I didn't get it! */
+    char seen[HEX_DIGEST_LEN+1];
+    char expected[HEX_DIGEST_LEN+1];
+    base16_encode(seen, sizeof(seen), (const char*)peer_id, DIGEST_LEN);
+    base16_encode(expected, sizeof(expected), conn->identity_digest,
+                  DIGEST_LEN);
+    log_fn(severity, LD_HANDSHAKE,
+           "Tried connecting to router at %s:%d, but identity key was not "
+           "as expected: wanted %s but got %s.",
+           conn->_base.address, conn->_base.port, expected, seen);
+    entry_guard_register_connect_status(conn->identity_digest, 0, 1,
+                                        time(NULL));
+    control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
+                                 END_OR_CONN_REASON_OR_IDENTITY);
+    if (!authdir_mode_tests_reachability(options))
+      control_event_bootstrap_problem("foo", END_OR_CONN_REASON_OR_IDENTITY);
+    as_expected = 0;
   }
+  if (authdir_mode_tests_reachability(options)) {
+    dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
+                            (const char*)peer_id, as_expected);
+  }
+  if (!as_expected)
+    return -1;
+
   return 0;
 }
 
-/** The tls handshake is finished.
+/** The v1/v2 TLS handshake is finished.
  *
  * Make sure we are happy with the person we just handshaked with.
  *
@@ -1447,6 +1501,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  * If all is successful, call circuit_n_conn_done() to handle events
  * that have been pending on the <tls handshake completion. Also set the
  * directory to be dirty (only matters if I'm an authdirserver).
+ *
+ * If this is a v2 TLS handshake, send a versions cell.
  */
 static int
 connection_tls_finish_handshake(or_connection_t *conn)
@@ -1476,25 +1532,49 @@ connection_tls_finish_handshake(or_connection_t *conn)
     tor_tls_block_renegotiation(conn->tls);
     return connection_or_set_state_open(conn);
   } else {
-    conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
+    conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V2;
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     if (!started_here) {
       connection_or_init_conn_from_address(conn, &conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
-    return connection_or_send_versions(conn);
+    return connection_or_send_versions(conn, 0);
   }
 }
 
+/**
+ * Called as client when initial TLS handshake is done, and we notice
+ * that we got a v3-handshake signalling certificate from the server.
+ * Set up structures, do bookkeeping, and send the versions cell.
+ * Return 0 on success and -1 on failure.
+ */
+static int
+connection_or_launch_v3_or_handshake(or_connection_t *conn)
+{
+  tor_assert(connection_or_nonopen_was_started_here(conn));
+  tor_assert(tor_tls_received_v3_certificate(conn->tls));
+
+  circuit_build_times_network_is_live(&circ_times);
+
+  conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
+  if (connection_init_or_handshake_state(conn, 1) < 0)
+    return -1;
+
+  return connection_or_send_versions(conn, 1);
+}
+
+
 /** Allocate a new connection handshake state for the connection
  * <b>conn</b>.  Return 0 on success, -1 on failure. */
-static int
+int
 connection_init_or_handshake_state(or_connection_t *conn, int started_here)
 {
   or_handshake_state_t *s;
   s = conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
   s->started_here = started_here ? 1 : 0;
+  s->digest_sent_data = 1;
+  s->digest_received_data = 1;
   return 0;
 }
 
@@ -1504,8 +1584,87 @@ or_handshake_state_free(or_handshake_state_t *state)
 {
   if (!state)
     return;
+  crypto_free_digest_env(state->digest_sent);
+  crypto_free_digest_env(state->digest_received);
+  tor_cert_free(state->auth_cert);
+  tor_cert_free(state->id_cert);
   memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
+}
+
+/**
+ * Remember that <b>cell</b> has been transmitted (if <b>incoming</b> is
+ * false) or received (if <b>incoming is true) during a V3 handshake using
+ * <b>state</b>.
+ *
+ * (We don't record the cell, but we keep a digest of everything sent or
+ * received during the v3 handshake, and the client signs it in an
+ * authenticate cell.)
+ */
+void
+or_handshake_state_record_cell(or_handshake_state_t *state,
+                               const cell_t *cell,
+                               int incoming)
+{
+  crypto_digest_env_t *d, **dptr;
+  packed_cell_t packed;
+  if (incoming) {
+    if (!state->digest_received_data)
+      return;
+  } else {
+    if (!state->digest_sent_data)
+      return;
+  }
+  if (!incoming) {
+    log_warn(LD_BUG, "We shouldn't be sending any non-variable-length cells "
+             "while making a handshake digest.  But we think we are sending "
+             "one with type %d.", (int)cell->command);
+  }
+  dptr = incoming ? &state->digest_received : &state->digest_sent;
+  if (! *dptr)
+    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+
+  d = *dptr;
+  /* Re-packing like this is a little inefficient, but we don't have to do
+     this very often at all. */
+  cell_pack(&packed, cell);
+  crypto_digest_add_bytes(d, packed.body, sizeof(packed.body));
+  memset(&packed, 0, sizeof(packed));
+}
+
+/** Remember that a variable-length <b>cell</b> has been transmitted (if
+ * <b>incoming</b> is false) or received (if <b>incoming is true) during a V3
+ * handshake using <b>state</b>.
+ *
+ * (We don't record the cell, but we keep a digest of everything sent or
+ * received during the v3 handshake, and the client signs it in an
+ * authenticate cell.)
+ */
+void
+or_handshake_state_record_var_cell(or_handshake_state_t *state,
+                                   const var_cell_t *cell,
+                                   int incoming)
+{
+  crypto_digest_env_t *d, **dptr;
+  char buf[VAR_CELL_HEADER_SIZE];
+  if (incoming) {
+    if (!state->digest_received_data)
+      return;
+  } else {
+    if (!state->digest_sent_data)
+      return;
+  }
+  dptr = incoming ? &state->digest_received : &state->digest_sent;
+  if (! *dptr)
+    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+
+  d = *dptr;
+
+  var_cell_pack_header(cell, buf);
+  crypto_digest_add_bytes(d, buf, sizeof(buf));
+  crypto_digest_add_bytes(d, (const char *)cell->payload, cell->payload_len);
+
+  memset(buf, 0, sizeof(buf));
 }
 
 /** Set <b>conn</b>'s state to OR_CONN_STATE_OPEN, and tell other subsystems
@@ -1575,6 +1734,9 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
 
+  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
+    or_handshake_state_record_cell(conn->handshake_state, cell, 0);
+
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
 }
@@ -1594,6 +1756,8 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
   connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
   connection_write_to_buf((char*)cell->payload,
                           cell->payload_len, TO_CONN(conn));
+  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
+    or_handshake_state_record_var_cell(conn->handshake_state, cell, 0);
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
 }
@@ -1678,7 +1842,7 @@ connection_or_send_destroy(circid_t circ_id, or_connection_t *conn, int reason)
 }
 
 /** Array of recognized link protocol versions. */
-static const uint16_t or_protocol_versions[] = { 1, 2 };
+static const uint16_t or_protocol_versions[] = { 1, 2, 3 };
 /** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
   (int)( sizeof(or_protocol_versions)/sizeof(uint16_t) );
@@ -1697,20 +1861,33 @@ is_or_protocol_version_known(uint16_t v)
 }
 
 /** Send a VERSIONS cell on <b>conn</b>, telling the other host about the
- * link protocol versions that this Tor can support. */
-static int
-connection_or_send_versions(or_connection_t *conn)
+ * link protocol versions that this Tor can support.
+ *
+ * If <b>v3_plus</b>, this is part of a V3 protocol handshake, so only
+ * allow protocol version v3 or later.  If not <b>v3_plus</b>, this is
+ * not part of a v3 protocol handshake, so don't allow protocol v3 or
+ * later.
+ **/
+int
+connection_or_send_versions(or_connection_t *conn, int v3_plus)
 {
   var_cell_t *cell;
   int i;
+  int n_versions = 0;
+  const int min_version = v3_plus ? 3 : 0;
+  const int max_version = v3_plus ? UINT16_MAX : 2;
   tor_assert(conn->handshake_state &&
              !conn->handshake_state->sent_versions_at);
   cell = var_cell_new(n_or_protocol_versions * 2);
   cell->command = CELL_VERSIONS;
   for (i = 0; i < n_or_protocol_versions; ++i) {
     uint16_t v = or_protocol_versions[i];
-    set_uint16(cell->payload+(2*i), htons(v));
+    if (v < min_version || v > max_version)
+      continue;
+    set_uint16(cell->payload+(2*n_versions), htons(v));
+    ++n_versions;
   }
+  cell->payload_len = n_versions * 2;
 
   connection_or_write_var_cell_to_buf(cell, conn);
   conn->handshake_state->sent_versions_at = time(NULL);
@@ -1729,6 +1906,8 @@ connection_or_send_netinfo(or_connection_t *conn)
   const routerinfo_t *me;
   int len;
   uint8_t *out;
+
+  tor_assert(conn->handshake_state);
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
@@ -1756,8 +1935,284 @@ connection_or_send_netinfo(or_connection_t *conn)
     *out = 0;
   }
 
+  conn->handshake_state->digest_sent_data = 0;
   connection_or_write_cell_to_buf(&cell, conn);
 
   return 0;
 }
 
+/** Send a CERT cell on the connection <b>conn</b>.  Return 0 on success, -1
+ * on failure. */
+int
+connection_or_send_cert_cell(or_connection_t *conn)
+{
+  const tor_cert_t *link_cert = NULL, *id_cert = NULL;
+  const uint8_t *link_encoded = NULL, *id_encoded = NULL;
+  size_t link_len, id_len;
+  var_cell_t *cell;
+  size_t cell_len;
+  ssize_t pos;
+  int server_mode;
+
+  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+
+  if (! conn->handshake_state)
+    return -1;
+  server_mode = ! conn->handshake_state->started_here;
+  if (tor_tls_get_my_certs(server_mode, &link_cert, &id_cert) < 0)
+    return -1;
+  tor_cert_get_der(link_cert, &link_encoded, &link_len);
+  tor_cert_get_der(id_cert, &id_encoded, &id_len);
+
+  cell_len = 1 /* 1 octet: num certs in cell */ +
+             2 * ( 1 + 2 ) /* For each cert: 1 octet for type, 2 for length */ +
+             link_len + id_len;
+  cell = var_cell_new(cell_len);
+  cell->command = CELL_CERT;
+  cell->payload[0] = 2;
+  pos = 1;
+
+  if (server_mode)
+    cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
+  else
+    cell->payload[pos] = OR_CERT_TYPE_AUTH_1024; /* client authentication */
+  set_uint16(&cell->payload[pos+1], htons(link_len));
+  memcpy(&cell->payload[pos+3], link_encoded, link_len);
+  pos += 3 + link_len;
+
+  cell->payload[pos] = OR_CERT_TYPE_ID_1024; /* ID cert */
+  set_uint16(&cell->payload[pos+1], htons(id_len));
+  memcpy(&cell->payload[pos+3], id_encoded, id_len);
+  pos += 3 + id_len;
+
+  tor_assert(pos == (int)cell_len); /* Otherwise we just smashed the heap */
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+
+  return 0;
+}
+
+/** Send an AUTH_CHALLENGE cell on the connection <b>conn</b>. Return 0
+ * on success, -1 on failure. */
+int
+connection_or_send_auth_challenge_cell(or_connection_t *conn)
+{
+  var_cell_t *cell;
+  uint8_t *cp;
+  uint8_t challenge[OR_AUTH_CHALLENGE_LEN];
+  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+
+  if (! conn->handshake_state)
+    return -1;
+
+  if (crypto_rand((char*)challenge, OR_AUTH_CHALLENGE_LEN) < 0)
+    return -1;
+  cell = var_cell_new(OR_AUTH_CHALLENGE_LEN + 4);
+  cell->command = CELL_AUTH_CHALLENGE;
+  memcpy(cell->payload, challenge, OR_AUTH_CHALLENGE_LEN);
+  cp = cell->payload + OR_AUTH_CHALLENGE_LEN;
+  set_uint16(cp, htons(1)); /* We recognize one authentication type. */
+  set_uint16(cp+2, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+  memset(challenge, 0, sizeof(challenge));
+
+  return 0;
+}
+
+/** Compute the main body of an AUTHENTICATE cell that a client can use
+ * to authenticate itself on a v3 handshake for <b>conn</b>.  Write it to the
+ * <b>outlen</b>-byte buffer at <b>out</b>.
+ *
+ * If <b>server</b> is true, only calculate the first
+ * V3_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
+ * determined by the rest of the handshake, and which match the provided value
+ * exactly.
+ *
+ * If <b>server</b> is false and <b>signing_key</b> is NULL, calculate the
+ * first V3_AUTH_BODY_LEN bytes of the authenticator (that is, everything
+ * that should be signed), but don't actually sign it.
+ *
+ * If <b>server</b> is false and <b>signing_key</b> is provided, calculate the
+ * entire authenticator, signed with <b>signing_key</b>.
+ * DOCDOC return value
+ */
+int
+connection_or_compute_authenticate_cell_body(or_connection_t *conn,
+                                             uint8_t *out, size_t outlen,
+                                             crypto_pk_env_t *signing_key,
+                                             int server)
+{
+  uint8_t *ptr;
+
+  /* assert state is reasonable XXXX */
+
+  if (outlen < V3_AUTH_FIXED_PART_LEN ||
+      (!server && outlen < V3_AUTH_BODY_LEN))
+    return -1;
+
+  ptr = out;
+
+  /* Type: 8 bytes. */
+  memcpy(ptr, "AUTH0001", 8);
+  ptr += 8;
+
+  {
+    const tor_cert_t *id_cert=NULL, *link_cert=NULL;
+    const digests_t *my_digests, *their_digests;
+    const uint8_t *my_id, *their_id, *client_id, *server_id;
+    if (tor_tls_get_my_certs(0, &link_cert, &id_cert))
+      return -1;
+    my_digests = tor_cert_get_id_digests(id_cert);
+    their_digests = tor_cert_get_id_digests(conn->handshake_state->id_cert);
+    tor_assert(my_digests);
+    tor_assert(their_digests);
+    my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];
+    their_id = (uint8_t*)their_digests->d[DIGEST_SHA256];
+
+    client_id = server ? their_id : my_id;
+    server_id = server ? my_id : their_id;
+
+    /* Client ID digest: 32 octets. */
+    memcpy(ptr, client_id, 32);
+    ptr += 32;
+
+    /* Server ID digest: 32 octets. */
+    memcpy(ptr, server_id, 32);
+    ptr += 32;
+  }
+
+  {
+    crypto_digest_env_t *server_d, *client_d;
+    if (server) {
+      server_d = conn->handshake_state->digest_sent;
+      client_d = conn->handshake_state->digest_received;
+    } else {
+      client_d = conn->handshake_state->digest_sent;
+      server_d = conn->handshake_state->digest_received;
+    }
+
+    /* Server log digest : 32 octets */
+    crypto_digest_get_digest(server_d, (char*)ptr, 32);
+    ptr += 32;
+
+    /* Client log digest : 32 octets */
+    crypto_digest_get_digest(client_d, (char*)ptr, 32);
+    ptr += 32;
+  }
+
+  {
+    /* Digest of cert used on TLS link : 32 octets. */
+    const tor_cert_t *cert = NULL;
+    tor_cert_t *freecert = NULL;
+    if (server) {
+      tor_tls_get_my_certs(1, &cert, NULL);
+    } else {
+      freecert = tor_tls_get_peer_cert(conn->tls);
+      cert = freecert;
+    }
+    if (!cert)
+      return -1;
+    memcpy(ptr, tor_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
+
+    if (freecert)
+      tor_cert_free(freecert);
+    ptr += 32;
+  }
+
+  /* HMAC of clientrandom and serverrandom using master key : 32 octets */
+  tor_tls_get_tlssecrets(conn->tls, ptr);
+  ptr += 32;
+
+  tor_assert(ptr - out == V3_AUTH_FIXED_PART_LEN);
+
+  if (server)
+    return V3_AUTH_FIXED_PART_LEN; // ptr-out
+
+  /* Time: 8 octets. */
+  {
+    uint64_t now = time(NULL);
+    if ((time_t)now < 0)
+      return -1;
+    set_uint32(ptr, htonl((uint32_t)(now>>32)));
+    set_uint32(ptr+4, htonl((uint32_t)now));
+    ptr += 8;
+  }
+
+  /* Nonce: 16 octets. */
+  crypto_rand((char*)ptr, 16);
+  ptr += 16;
+
+  tor_assert(ptr - out == V3_AUTH_BODY_LEN);
+
+  if (!signing_key)
+    return V3_AUTH_BODY_LEN; // ptr - out
+
+  {
+    int siglen;
+    char d[32];
+    crypto_digest256(d, (char*)out, ptr-out, DIGEST_SHA256);
+    siglen = crypto_pk_private_sign(signing_key,
+                                    (char*)ptr, outlen - (ptr-out),
+                                    d, 32);
+    if (siglen < 0)
+      return -1;
+
+    ptr += siglen;
+    tor_assert(ptr <= out+outlen);
+    return (int)(ptr - out);
+  }
+}
+
+/** Send an AUTHENTICATE cell on the connection <b>conn</b>.  Return 0 on
+ * success, -1 on failure */
+int
+connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
+{
+  var_cell_t *cell;
+  crypto_pk_env_t *pk = tor_tls_get_my_client_auth_key();
+  int authlen;
+  size_t cell_maxlen;
+  /* XXXX make sure we're actually supposed to send this! */
+
+  if (!pk) {
+    log_warn(LD_BUG, "Unable to compute authenticate cell: no client auth key");
+    return -1;
+  }
+  if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET) {
+    log_warn(LD_BUG, "Tried to send authenticate cell with unknown "
+             "authentication type %d", authtype);
+    return -1;
+  }
+
+  cell_maxlen = 4 + /* overhead */
+    V3_AUTH_BODY_LEN + /* Authentication body */
+    crypto_pk_keysize(pk) + /* Max signature length */
+    16 /* add a few extra bytes just in case. */;
+
+  cell = var_cell_new(cell_maxlen);
+  cell->command = CELL_AUTHENTICATE;
+  set_uint16(cell->payload, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
+  /* skip over length ; we don't know that yet. */
+
+  authlen = connection_or_compute_authenticate_cell_body(conn,
+                                                         cell->payload+4,
+                                                         cell_maxlen-4,
+                                                         pk,
+                                                         0 /* not server */);
+  if (authlen < 0) {
+    log_warn(LD_BUG, "Unable to compute authenticate cell!");
+    var_cell_free(cell);
+    return -1;
+  }
+  tor_assert(authlen + 4 <= cell->payload_len);
+  set_uint16(cell->payload+2, htons(authlen));
+  cell->payload_len = authlen + 4;
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+  var_cell_free(cell);
+
+  return 0;
+}

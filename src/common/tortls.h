@@ -17,6 +17,9 @@
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_t tor_tls_t;
 
+/* Opaque structure to hold an X509 certificate. */
+typedef struct tor_cert_t tor_cert_t;
+
 /* Possible return values for most tor_tls_* functions. */
 #define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
@@ -63,6 +66,7 @@ void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
+tor_cert_t *tor_tls_get_peer_cert(tor_tls_t *tls);
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
@@ -85,8 +89,10 @@ void tor_tls_get_buffer_sizes(tor_tls_t *tls,
                               size_t *wbuf_capacity, size_t *wbuf_bytes);
 
 int tor_tls_used_v1_handshake(tor_tls_t *tls);
+int tor_tls_received_v3_certificate(tor_tls_t *tls);
 int tor_tls_get_num_server_handshakes(tor_tls_t *tls);
 int tor_tls_server_got_renegotiate(tor_tls_t *tls);
+int tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
@@ -103,6 +109,22 @@ struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
                                       evutil_socket_t socket, int receiving,
                                      int filter);
 #endif
+
+void tor_cert_free(tor_cert_t *cert);
+tor_cert_t *tor_cert_decode(const uint8_t *certificate, size_t certificate_len);
+void tor_cert_get_der(const tor_cert_t *cert,
+                      const uint8_t **encoded_out, size_t *size_out);
+const digests_t *tor_cert_get_id_digests(const tor_cert_t *cert);
+const digests_t *tor_cert_get_cert_digests(const tor_cert_t *cert);
+int tor_tls_get_my_certs(int server,
+                         const tor_cert_t **link_cert_out,
+                         const tor_cert_t **id_cert_out);
+crypto_pk_env_t *tor_tls_get_my_client_auth_key(void);
+crypto_pk_env_t *tor_tls_cert_get_key(tor_cert_t *cert);
+int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
+int tor_tls_cert_is_valid(const tor_cert_t *cert,
+                          const tor_cert_t *signing_cert,
+                          int check_rsa_1024);
 
 #endif
 

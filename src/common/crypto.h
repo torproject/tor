@@ -150,6 +150,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, char *to,
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, size_t dest_len);
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
+int crypto_pk_get_all_digests(crypto_pk_env_t *pk, digests_t *digests_out);
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out,int add_space);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
@@ -195,6 +196,9 @@ void crypto_digest_assign(crypto_digest_env_t *into,
 void crypto_hmac_sha1(char *hmac_out,
                       const char *key, size_t key_len,
                       const char *msg, size_t msg_len);
+void crypto_hmac_sha256(char *hmac_out,
+                        const char *key, size_t key_len,
+                        const char *msg, size_t msg_len);
 
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1

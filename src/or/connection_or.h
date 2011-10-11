@@ -41,7 +41,23 @@ void connection_or_report_broken_states(int severity, int domain);
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
+int connection_init_or_handshake_state(or_connection_t *conn, int started_here);
+void connection_or_init_conn_from_address(or_connection_t *conn,
+                                          const tor_addr_t *addr, uint16_t port,
+                                          const char *id_digest,
+                                          int started_here);
+int connection_or_client_learned_peer_id(or_connection_t *conn,
+                                         const uint8_t *peer_id);
+void connection_or_set_circid_type(or_connection_t *conn,
+                                   crypto_pk_env_t *identity_rcvd);
 void or_handshake_state_free(or_handshake_state_t *state);
+void or_handshake_state_record_cell(or_handshake_state_t *state,
+                                    const cell_t *cell,
+                                    int incoming);
+void or_handshake_state_record_var_cell(or_handshake_state_t *state,
+                                        const var_cell_t *cell,
+                                        int incoming);
+
 int connection_or_set_state_open(or_connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
@@ -49,7 +65,16 @@ void connection_or_write_var_cell_to_buf(const var_cell_t *cell,
                                          or_connection_t *conn);
 int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
                                int reason);
+int connection_or_send_versions(or_connection_t *conn, int v3_plus);
 int connection_or_send_netinfo(or_connection_t *conn);
+int connection_or_send_cert_cell(or_connection_t *conn);
+int connection_or_send_auth_challenge_cell(or_connection_t *conn);
+int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
+                                                 uint8_t *out, size_t outlen,
+                                                 crypto_pk_env_t *signing_key,
+                                                 int server);
+int connection_or_send_authenticate_cell(or_connection_t *conn, int type);
+
 int is_or_protocol_version_known(uint16_t version);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
