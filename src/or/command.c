@@ -689,6 +689,13 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
              send_chall ? " AUTH_CHALLENGE" : "",
              send_netinfo ? " NETINFO" : "");
 
+#ifdef DISABLE_V3_LINKPROTO_SERVERSIDE
+    if (1) {
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+#endif
+
     if (send_versions) {
       if (connection_or_send_versions(conn, 1) < 0) {
         log_warn(LD_OR, "Couldn't send versions cell");

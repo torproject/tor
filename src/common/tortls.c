@@ -1095,7 +1095,11 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
   tor_tls_init();
   nickname = crypto_random_hostname(8, 20, "www.", ".net");
+#ifdef DISABLE_V3_LINKPROTO_SERVERSIDE
+  nn2 = crypto_random_hostname(8, 20, "www.", ".net");
+#else
   nn2 = crypto_random_hostname(8, 20, "www.", ".com");
+#endif
 
   /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_new_pk_env()))
@@ -2183,6 +2187,10 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
 static int
 dn_indicates_v3_cert(X509_NAME *name)
 {
+#ifdef DISABLE_V3_LINKPROTO_CLIENTSIDE
+  (void)name;
+  return 0;
+#else
   X509_NAME_ENTRY *entry;
   int n_entries;
   ASN1_OBJECT *obj;
@@ -2206,6 +2214,7 @@ dn_indicates_v3_cert(X509_NAME *name)
   r = fast_memneq(s + len - 4, ".net", 4);
   OPENSSL_free(s);
   return r;
+#endif
 }
 
 /** Return true iff the peer certificate we're received on <b>tls</b>
