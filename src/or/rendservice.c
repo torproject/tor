@@ -1947,17 +1947,11 @@ rend_services_introduce(void)
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
-        if (service->desc) {
-          SMARTLIST_FOREACH(service->desc->intro_nodes, rend_intro_point_t *,
-                            dintro, {
-            if (tor_memeq(dintro->extend_info->identity_digest,
-                intro->extend_info->identity_digest, DIGEST_LEN)) {
-              log_info(LD_REND, "The intro point we are giving up on was "
-                                "included in the last published descriptor. "
-                                "Marking current descriptor as dirty.");
-              service->desc_is_dirty = now;
-            }
-          });
+        if (intro->listed_in_last_desc) {
+          log_info(LD_REND, "The intro point we are giving up on was "
+                   "included in the last published descriptor. "
+                   "Marking current descriptor as dirty.");
+          service->desc_is_dirty = now;
         }
         rend_intro_point_free(intro);
         smartlist_del(service->intro_nodes,j--);
