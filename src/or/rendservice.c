@@ -544,9 +544,16 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
     rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);
     rend_intro_point_t *intro_desc;
+
+    /* This intro point won't be listed in the descriptor... */
+    intro_svc->listed_in_last_desc = 0;
+
     circ = find_intro_circuit(intro_svc, service->pk_digest);
     if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
       continue;
+
+    /* ...unless this intro point is listed in the descriptor. */
+    intro_svc->listed_in_last_desc = 1;
 
     /* We have an entirely established intro circuit.  Publish it in
      * our descriptor. */

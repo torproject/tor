@@ -3481,6 +3481,10 @@ typedef struct rend_intro_point_t {
    * circuit-build timeout.  See also MAX_INTRO_POINT_REACHABILITY_FAILURES. */
   unsigned int unreachable_count : 3;
 
+  /** (Service side only) Flag indicating that this intro point was
+   * included in the last HS descriptor we generated. */
+  unsigned int listed_in_last_desc : 1;
+
   /** (Service side only) The number of INTRODUCE2 cells this intro
    * point's circuit has received. */
   unsigned int introduction_count : 24;
