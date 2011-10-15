@@ -1912,7 +1912,7 @@ rend_services_introduce(void)
   routerinfo_t *router;
   rend_service_t *service;
   rend_intro_point_t *intro;
-  int changed, prev_intro_nodes;
+  int intro_point_set_changed, prev_intro_nodes;
   unsigned int n_intro_points_to_open;
   smartlist_t *intro_routers;
   time_t now;
@@ -1926,7 +1926,7 @@ rend_services_introduce(void)
     service = smartlist_get(rend_service_list, i);
 
     tor_assert(service);
-    changed = 0;
+    intro_point_set_changed = 0;
     if (now > service->intro_period_started+INTRO_CIRC_RETRY_PERIOD) {
       /* One period has elapsed; we can try building circuits again. */
       service->intro_period_started = now;
@@ -1955,7 +1955,7 @@ rend_services_introduce(void)
         }
         rend_intro_point_free(intro);
         smartlist_del(service->intro_nodes,j--);
-        changed = 1;
+        intro_point_set_changed = 1;
       }
       if (router)
         smartlist_add(intro_routers, router);
@@ -1964,8 +1964,9 @@ rend_services_introduce(void)
     /* We have enough intro points, and the intro points we thought we had were
      * all connected.
      */
-    if (!changed && (smartlist_len(service->intro_nodes) >=
-                     (int)service->n_intro_points_wanted)) { /*XXX023 remove cast*/
+    if (!intro_point_set_changed &&
+        (smartlist_len(service->intro_nodes) >=
+         (int)service->n_intro_points_wanted)) { /*XXX023 remove cast*/
       /* We have all our intro points! Start a fresh period and reset the
        * circuit count. */
       service->intro_period_started = now;
@@ -2001,7 +2002,7 @@ rend_services_introduce(void)
                  n_intro_points_to_open);
         break;
       }
-      changed = 1;
+      intro_point_set_changed = 1;
       smartlist_add(intro_routers, router);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_router(router);
@@ -2015,7 +2016,7 @@ rend_services_introduce(void)
     }
 
     /* If there's no need to launch new circuits, stop here. */
-    if (!changed)
+    if (!intro_point_set_changed)
       continue;
 
     /* Establish new introduction points. */
