@@ -1961,14 +1961,15 @@ rend_services_introduce(void)
         smartlist_add(intro_routers, router);
     }
 
-    /* We have enough intro points, and the intro points we thought we had were
-     * all connected.
-     */
     if (!intro_point_set_changed &&
         (smartlist_len(service->intro_nodes) >=
          (int)service->n_intro_points_wanted)) { /*XXX023 remove cast*/
-      /* We have all our intro points! Start a fresh period and reset the
-       * circuit count. */
+      /* We have enough intro circuits in progress, and none of our
+       * intro circuits have died since the last call to
+       * rend_services_introduce!  Start a fresh period and reset the
+       * circuit count.
+       *
+       * XXXX WTF? */
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
       continue;
