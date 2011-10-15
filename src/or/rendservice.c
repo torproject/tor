@@ -27,6 +27,9 @@ static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);
 static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
 
+static int intro_point_should_expire_now(rend_intro_point_t *intro,
+                                         time_t now);
+
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
  */
@@ -52,6 +55,10 @@ typedef struct rend_service_port_config_t {
 /** How many seconds should we spend trying to connect to a requested
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
+
+/** How many seconds should we wait for new HS descriptors to reach
+ * our clients before we close an expiring intro point? */
+#define INTRO_POINT_EXPIRATION_GRACE_PERIOD 5*60
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
@@ -548,9 +555,16 @@ rend_service_update_descriptor(rend_service_t *service)
     /* This intro point won't be listed in the descriptor... */
     intro_svc->listed_in_last_desc = 0;
 
-    circ = find_intro_circuit(intro_svc, service->pk_digest);
-    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
+    if (intro_svc->time_expiring != -1) {
+      /* This intro point is expiring.  Don't list it. */
       continue;
+    }
+
+    circ = find_intro_circuit(intro_svc, service->pk_digest);
+    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
+      /* This intro point's circuit isn't finished yet.  Don't list it. */
+      continue;
+    }
 
     /* ...unless this intro point is listed in the descriptor. */
     intro_svc->listed_in_last_desc = 1;
@@ -1901,6 +1915,20 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
+/** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we
+ * should stop publishing it in new descriptors and eventually close
+ * it).
+ *
+ * XXXX This is a dummy function for now.  It will actually do
+ * something in a later commit. */
+static int
+intro_point_should_expire_now(rend_intro_point_t *intro,
+                              time_t now)
+{
+  (void)intro; (void)now;
+  return 0;
+}
+
 /** For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
@@ -1913,6 +1941,7 @@ rend_services_introduce(void)
   rend_service_t *service;
   rend_intro_point_t *intro;
   int intro_point_set_changed, prev_intro_nodes;
+  unsigned int n_intro_points_unexpired;
   unsigned int n_intro_points_to_open;
   smartlist_t *intro_routers;
   time_t now;
@@ -1926,7 +1955,16 @@ rend_services_introduce(void)
     service = smartlist_get(rend_service_list, i);
 
     tor_assert(service);
+
+    /* intro_point_set_changed becomes non-zero iff the set of intro
+     * points to be published in service's descriptor has changed. */
     intro_point_set_changed = 0;
+
+    /* n_intro_points_unexpired collects the number of non-expiring
+     * intro points we have, so that we know how many new intro
+     * circuits we need to launch for this service. */
+    n_intro_points_unexpired = 0;
+
     if (now > service->intro_period_started+INTRO_CIRC_RETRY_PERIOD) {
       /* One period has elapsed; we can try building circuits again. */
       service->intro_period_started = now;
@@ -1941,28 +1979,78 @@ rend_services_introduce(void)
     /* Find out which introduction points we have in progress for this
        service. */
     SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *, intro){
+      origin_circuit_t *intro_circ =
+        find_intro_circuit(intro, service->pk_digest);
+
+      if (intro->time_expiring + INTRO_POINT_EXPIRATION_GRACE_PERIOD > now) {
+        /* This intro point has completely expired.  Remove it, and
+         * mark the circuit for close if it's still alive. */
+        if (intro_circ != NULL) {
+          circuit_mark_for_close(TO_CIRCUIT(intro_circ),
+                                 END_CIRC_REASON_FINISHED);
+        }
+        rend_intro_point_free(intro);
+        intro = NULL; /* SMARTLIST_DEL_CURRENT takes a name, not a value. */
+        SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+        /* We don't need to set intro_point_set_changed here, because
+         * this intro point wouldn't have been published in a current
+         * descriptor anyway. */
+        continue;
+      }
+
       router = router_get_by_digest(intro->extend_info->identity_digest);
-      if (!router || !find_intro_circuit(intro, service->pk_digest)) {
-        log_info(LD_REND,"Giving up on %s as intro point for %s.",
+      if (!router || !intro_circ) {
+        int removing_this_intro_point_changes_the_intro_point_set = 1;
+        log_info(LD_REND, "Giving up on %s as intro point for %s"
+                 " (circuit disappeared).",
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
-        if (intro->listed_in_last_desc) {
+        if (intro->time_expiring != -1) {
+          log_info(LD_REND, "We were already expiring the intro point; "
+                   "no need to mark the HS descriptor as dirty over this.");
+          removing_this_intro_point_changes_the_intro_point_set = 0;
+        } else if (intro->listed_in_last_desc) {
           log_info(LD_REND, "The intro point we are giving up on was "
                    "included in the last published descriptor. "
                    "Marking current descriptor as dirty.");
           service->desc_is_dirty = now;
         }
         rend_intro_point_free(intro);
+        intro = NULL; /* SMARTLIST_DEL_CURRENT takes a name, not a value. */
         SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+        if (removing_this_intro_point_changes_the_intro_point_set)
+          intro_point_set_changed = 1;
+      }
+
+      if (intro != NULL && intro_point_should_expire_now(intro, now)) {
+        log_info(LD_REND, "Expiring %s as intro point for %s.",
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
+
+        /* The polite (and generally Right) way to expire an intro
+         * point is to establish a new one to replace it, publish a
+         * new descriptor that doesn't list any expiring intro points,
+         * and *then*, once our upload attempts for the new descriptor
+         * have ended (whether in success or failure), close the
+         * expiring intro points.
+         *
+         * Unfortunately, we can't find out when the new descriptor
+         * has actually been uploaded, so we'll have to settle for a
+         * five-minute timer.  Start it.  XXX023 This sucks. */
+        intro->time_expiring = now;
+
         intro_point_set_changed = 1;
       }
+
+      if (intro != NULL && intro->time_expiring == -1)
+        ++n_intro_points_unexpired;
+
       if (router)
         smartlist_add(intro_routers, router);
     } SMARTLIST_FOREACH_END(intro);
 
     if (!intro_point_set_changed &&
-        (smartlist_len(service->intro_nodes) >=
-         (int)service->n_intro_points_wanted)) { /*XXX023 remove cast*/
+        (n_intro_points_unexpired >= service->n_intro_points_wanted)) {
       /* We have enough intro circuits in progress, and none of our
        * intro circuits have died since the last call to
        * rend_services_introduce!  Start a fresh period and reset the
@@ -1974,8 +2062,16 @@ rend_services_introduce(void)
       continue;
     }
 
-    /* Remember how many introduction circuits we started with. */
+    /* Remember how many introduction circuits we started with.
+     *
+     * prev_intro_nodes serves a different purpose than
+     * n_intro_points_unexpired -- this variable tells us where our
+     * previously-created intro points end and our new ones begin in
+     * the intro-point list, so we don't have to launch the circuits
+     * at the same time as we create the intro points they correspond
+     * to.  XXXX This is daft. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
+
     /* We have enough directory information to start establishing our
      * intro points. We want to end up with n_intro_points_wanted
      * intro points, but if we're just starting, we launch two extra
@@ -1988,7 +2084,9 @@ rend_services_introduce(void)
      * in progress" loop. */
     n_intro_points_to_open = (service->n_intro_points_wanted +
                               (prev_intro_nodes == 0 ? 2 : 0));
-    for (j=prev_intro_nodes; j < (int)n_intro_points_to_open; ++j) { /* XXXX remove cast */
+    for (j = (int)n_intro_points_unexpired;
+         j < (int)n_intro_points_to_open;
+         ++j) { /* XXXX remove casts */
       router_crn_flags_t flags = CRN_NEED_UPTIME;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
@@ -2009,6 +2107,7 @@ rend_services_introduce(void)
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       intro->time_published = -1;
+      intro->time_expiring = -1;
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(router_describe(router)),

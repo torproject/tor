@@ -3493,6 +3493,16 @@ typedef struct rend_intro_point_t {
    * published, or -1 if this intro point has not yet been
    * published. */
   time_t time_published;
+
+  /** (Service side only) The time at which we decided that this intro
+   * point should start expiring, or -1 if this intro point is not yet
+   * expiring.
+   *
+   * This field also serves as a flag to indicate that we have decided
+   * to expire this intro point, in case intro_point_should_expire_now
+   * flaps (perhaps due to a clock jump; perhaps due to other
+   * weirdness, or even a (present or future) bug). */
+  time_t time_expiring;
 } rend_intro_point_t;
 
 /** Information used to connect to a hidden service.  Used on both the
