@@ -371,9 +371,6 @@ int tor_spawn_background(const char *const filename, const char **argv,
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
 
-#ifdef UTIL_PRIVATE
-/* Prototypes for private functions only used by util.c (and unit tests) */
-
 /* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
  * 0 because tor_check_port_forwarding depends on this being the initial
  * statue of the static instance of process_handle_t */
@@ -415,6 +412,9 @@ ssize_t tor_read_all_from_process_stdout(
 ssize_t tor_read_all_from_process_stderr(
     const process_handle_t *process_handle, char *buf, size_t count);
 char *tor_join_win_cmdline(const char *argv[]);
+
+#ifdef UTIL_PRIVATE
+/* Prototypes for private functions only used by util.c (and unit tests) */
 
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);

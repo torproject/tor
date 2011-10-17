@@ -47,8 +47,8 @@ typedef struct {
 
   int is_server; /* is it a server proxy? */
 
-  FILE *_stdout; /* a stream to its stdout
-                   (closed in managed_proxy_destroy()) */
+  /* A pointer to the process handle of this managed proxy. */
+  process_handle_t *process_handle;
 
   int pid; /* The Process ID this managed proxy is using. */
 
