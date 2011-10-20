@@ -831,7 +831,10 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     char *nodename;
     routerinfo_t *ri; /* XXX023 Use node_t. */
 
-    if (strcmpend(target, ".exit")) {
+    if (!target) {
+      /* DNS resolving in progress */
+      continue;
+    } else if (strcmpend(target, ".exit")) {
       /* Not a .exit mapping */
       continue;
     } else if (ent->source != ADDRMAPSRC_TRACKEXIT) {
