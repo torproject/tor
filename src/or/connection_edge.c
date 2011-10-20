@@ -944,7 +944,10 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
     char *nodename;
     const node_t *node;
 
-    if (strcmpend(target, ".exit")) {
+    if (!target) {
+      /* DNS resolving in progress */
+      continue;
+    } else if (strcmpend(target, ".exit")) {
       /* Not a .exit mapping */
       continue;
     } else if (ent->source != ADDRMAPSRC_TRACKEXIT) {
