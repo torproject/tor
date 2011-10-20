@@ -5128,7 +5128,9 @@ static void
 warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
 {
   SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
-    if (!tor_addr_is_internal(&port->addr, 1)) {
+    if (port->is_unix_addr) {
+      /* Unix sockets aren't accessible over a network. */
+    } else if (!tor_addr_is_internal(&port->addr, 1)) {
       log_warn(LD_CONFIG, "You specified a public address for %sPort. "
                "Other people on the Internet might find your computer and "
                "use it as an open proxy. Please don't allow this unless you "
