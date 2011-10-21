@@ -976,7 +976,8 @@ geoip_dirreq_stats_term(void)
 }
 
 /** Return a newly allocated string containing the dirreq statistics
- * until <b>now</b>, or NULL if we're not collecting dirreq stats. */
+ * until <b>now</b>, or NULL if we're not collecting dirreq stats. Caller
+ * must ensure start_of_dirreq_stats_interval is in the past. */
 char *
 geoip_format_dirreq_stats(time_t now)
 {
@@ -991,6 +992,8 @@ geoip_format_dirreq_stats(time_t now)
 
   if (!start_of_dirreq_stats_interval)
     return NULL; /* Not initialized. */
+
+  tor_assert(now >= start_of_dirreq_stats_interval);
 
   format_iso_time(t, now);
   v2_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
@@ -1351,7 +1354,8 @@ geoip_entry_stats_term(void)
 }
 
 /** Return a newly allocated string containing the entry statistics
- * until <b>now</b>, or NULL if we're not collecting entry stats. */
+ * until <b>now</b>, or NULL if we're not collecting entry stats. Caller
+ * must ensure start_of_entry_stats_interval lies in the past. */
 char *
 geoip_format_entry_stats(time_t now)
 {
@@ -1361,6 +1365,8 @@ geoip_format_entry_stats(time_t now)
 
   if (!start_of_entry_stats_interval)
     return NULL; /* Not initialized. */
+
+  tor_assert(now >= start_of_entry_stats_interval);
 
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   format_iso_time(t, now);

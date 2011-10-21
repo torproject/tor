@@ -1,0 +1,4 @@
+  o Removed features:
+    - Remove the ability to define TRACK_SERVED_TIME. The feature wasn't used
+      and is now outdated that microdescriptors are around.
+

@@ -1690,11 +1690,6 @@ typedef struct signed_descriptor_t {
    * networkstatus that listed it.  0 for "never listed in a consensus or
    * status, so far as we know." */
   time_t last_listed_as_valid_until;
-#ifdef TRACK_SERVED_TIME
-  /** The last time we served anybody this descriptor.  Used for internal
-   * testing to see whether we're holding on to descriptors too long. */
-  time_t last_served_at; /*XXXX remove if not useful. */
-#endif
   /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
   /* If true, this item is meant to represent an extrainfo. */

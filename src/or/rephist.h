@@ -82,6 +82,11 @@ void rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
 char *rep_hist_format_buffer_stats(time_t now);
 void rep_hist_reset_buffer_stats(time_t now);
 
+void rep_hist_desc_stats_init(time_t now);
+void rep_hist_note_desc_served(const char * desc);
+void rep_hist_desc_stats_term(void);
+time_t rep_hist_desc_stats_write(time_t now);
+
 void rep_hist_conn_stats_init(time_t now);
 void rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
                                  size_t num_written, time_t when);
