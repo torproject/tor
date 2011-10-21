@@ -2114,7 +2114,8 @@ _compare_int(const void *x, const void *y)
 }
 
 /** Return a newly allocated string containing the exit port statistics
- * until <b>now</b>, or NULL if we're not collecting exit stats. */
+ * until <b>now</b>, or NULL if we're not collecting exit stats. Caller
+ * must ensure start_of_exit_stats_interval is in the past. */
 char *
 rep_hist_format_exit_stats(time_t now)
 {
@@ -2132,6 +2133,8 @@ rep_hist_format_exit_stats(time_t now)
 
   if (!start_of_exit_stats_interval)
     return NULL; /* Not initialized. */
+
+  tor_assert(now >= start_of_exit_stats_interval);
 
   /* Go through all ports to find the n ports that saw most written and
    * read bytes.
@@ -2456,7 +2459,8 @@ rep_hist_reset_buffer_stats(time_t now)
 }
 
 /** Return a newly allocated string containing the buffer statistics until
- * <b>now</b>, or NULL if we're not collecting buffer stats. */
+ * <b>now</b>, or NULL if we're not collecting buffer stats. Caller must
+ * ensure start_of_buffer_stats_interval is in the past. */
 char *
 rep_hist_format_buffer_stats(time_t now)
 {
@@ -2474,6 +2478,8 @@ rep_hist_format_buffer_stats(time_t now)
 
   if (!start_of_buffer_stats_interval)
     return NULL; /* Not initialized. */
+
+  tor_assert(now >= start_of_buffer_stats_interval);
 
   /* Calculate deciles if we saw at least one circuit. */
   memset(processed_cells, 0, SHARES * sizeof(int));
@@ -2874,7 +2880,8 @@ rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
 }
 
 /** Return a newly allocated string containing the connection statistics
- * until <b>now</b>, or NULL if we're not collecting conn stats. */
+ * until <b>now</b>, or NULL if we're not collecting conn stats. Caller must
+ * ensure start_of_conn_stats_interval is in the past. */
 char *
 rep_hist_format_conn_stats(time_t now)
 {
@@ -2882,6 +2889,8 @@ rep_hist_format_conn_stats(time_t now)
 
   if (!start_of_conn_stats_interval)
     return NULL; /* Not initialized. */
+
+  tor_assert(now >= start_of_conn_stats_interval);
 
   format_iso_time(written, now);
   tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
