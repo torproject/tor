@@ -989,6 +989,8 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
         ERR("Couldn't compute digests for key in ID cert");
 
       identity_rcvd = tor_tls_cert_get_key(id_cert);
+      if (!identity_rcvd)
+        ERR("Internal error: Couldn't get RSA key from ID cert.");
       memcpy(conn->handshake_state->authenticated_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
       connection_or_set_circid_type(conn, identity_rcvd);
@@ -1183,6 +1185,8 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     size_t keysize;
     int signed_len;
 
+    if (!pk)
+      ERR("Internal error: couldn't get RSA key from AUTH cert.");
     crypto_digest256(d, (char*)auth, V3_AUTH_BODY_LEN, DIGEST_SHA256);
 
     keysize = crypto_pk_keysize(pk);
