@@ -2229,33 +2229,43 @@ int
 tor_tls_received_v3_certificate(tor_tls_t *tls)
 {
   X509 *cert = SSL_get_peer_certificate(tls->ssl);
-  EVP_PKEY *key;
+  EVP_PKEY *key = NULL;
   X509_NAME *issuer_name, *subject_name;
+  int is_v3 = 0;
 
   if (!cert) {
     log_warn(LD_BUG, "Called on a connection with no peer certificate");
-    return 0;
+    goto done;
   }
 
   subject_name = X509_get_subject_name(cert);
   issuer_name = X509_get_issuer_name(cert);
 
-  if (X509_name_cmp(subject_name, issuer_name) == 0)
-    return 1; /* purportedly self signed */
+  if (X509_name_cmp(subject_name, issuer_name) == 0) {
+    is_v3 = 1; /* purportedly self signed */
+    goto done;
+  }
 
   if (dn_indicates_v3_cert(subject_name) ||
-      dn_indicates_v3_cert(issuer_name))
-    return 1; /* DN is fancy */
+      dn_indicates_v3_cert(issuer_name)) {
+    is_v3 = 1; /* DN is fancy */
+    goto done;
+  }
 
   key = X509_get_pubkey(cert);
   if (EVP_PKEY_bits(key) != 1024 ||
       EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
-    EVP_PKEY_free(key);
-    return 1; /* Key is fancy */
+    is_v3 = 1; /* Key is fancy */
+    goto done;
   }
 
-  EVP_PKEY_free(key);
-  return 0;
+ done:
+  if (key)
+    EVP_PKEY_free(key);
+  if (cert)
+    X509_free(cert);
+
+  return is_v3;
 }
 
 /** Return the number of server handshakes that we've noticed doing on
