@@ -1201,7 +1201,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    int timed_out = (reason == END_STREAM_REASON_TIMEOUT);
+    int timed_out = (reason == END_CIRC_REASON_TIMEOUT);
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(ocirc->build_state->chosen_exit);
     tor_assert(ocirc->rend_data);
@@ -1216,7 +1216,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                                            INTRO_POINT_FAILURE_TIMEOUT :
                                            INTRO_POINT_FAILURE_GENERIC);
   } else if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
-             reason != END_STREAM_REASON_TIMEOUT) {
+             reason != END_CIRC_REASON_TIMEOUT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     tor_assert(ocirc->build_state->chosen_exit);
     tor_assert(ocirc->rend_data);
