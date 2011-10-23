@@ -776,6 +776,8 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
+  conn->is_outgoing = 1;
+
   if (options->HttpsProxy) {
     /* we shouldn't connect directly. use the https proxy instead. */
     tor_addr_from_ipv4h(&addr, options->HttpsProxyAddr);

@@ -1035,6 +1035,8 @@ typedef struct or_connection_t {
    * is a client.  Connections with this flag set should never be used
    * to satisfy an EXTEND request.  */
   unsigned int is_connection_with_client:1;
+  /** True iff this is an outgoing connection. */
+  unsigned int is_outgoing:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   circid_t next_circ_id; /**< Which circ_id do we try to use next on
