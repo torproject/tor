@@ -1190,6 +1190,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     signed_len = crypto_pk_public_checksig(pk, signed_data, keysize,
                                            (char*)auth + V3_AUTH_BODY_LEN,
                                            authlen - V3_AUTH_BODY_LEN);
+    crypto_free_pk_env(pk);
     if (signed_len < 0) {
       tor_free(signed_data);
       ERR("Signature wasn't valid");
