@@ -1,0 +1,12 @@
+  o Security fixes:
+
+    - Don't send TLS certificate chains on outgoing OR connections
+      from clients and bridges.  Previously, each client or bridge
+      would use a single cert chain for all outgoing OR connections
+      for up to 24 hours, which allowed any relay connected to by a
+      client or bridge to determine which entry guards it is using.
+      This is a potential user-tracing bug for *all* users; everyone
+      who uses Tor's client or hidden service functionality should
+      upgrade.  Fixes CVE-2011-2768.  Bugfix on FIXME; found by
+      frosty_un.
+
