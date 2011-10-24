@@ -14,7 +14,8 @@
 #include "util.h"
 
 #ifdef MS_WINDOWS
-static void set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp);
+static void set_managed_proxy_environment(LPVOID *envp,
+                                          const managed_proxy_t *mp);
 #else
 static int set_managed_proxy_environment(char ***envp,
                                          const managed_proxy_t *mp);
@@ -236,15 +237,11 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 
   tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
-  /* kill the old obfsproxy process */
-#ifdef MS_WINDOWS
-  tor_terminate_process(mp->process_handle);
-#else
-  tor_terminate_process(mp->process_handle);
-#endif
+  /* destroy the process handle and terminate the process. */
+  tor_process_destroy(mp->process_handle, 1);
 
-  /* ??? */
-  memset(mp->process_handle, 0, sizeof(process_handle_t));
+  /* create process handle for the upcoming new process. */
+  mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
 
   /* destroy all its old transports. we no longer use them. */
   SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
@@ -266,6 +263,8 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 static int
 launch_managed_proxy(managed_proxy_t *mp)
 {
+  int retval;
+
 #ifdef MS_WINDOWS
 
   LPVOID envp=NULL;
@@ -274,8 +273,8 @@ launch_managed_proxy(managed_proxy_t *mp)
   tor_assert(envp);
 
   /* Passing NULL as lpApplicationName makes Windows search for the .exe */
-  tor_spawn_background(NULL, (const char **)mp->argv, envp,
-                       mp->process_handle);
+  retval = tor_spawn_background(NULL, (const char **)mp->argv, envp,
+                                mp->process_handle);
 
   tor_free(envp);
 
@@ -286,32 +285,27 @@ launch_managed_proxy(managed_proxy_t *mp)
   /* prepare the environment variables for the managed proxy */
   if (set_managed_proxy_environment(&envp, mp) < 0) {
     log_warn(LD_GENERAL, "Could not setup the environment of "
-             "the managed proxy '%s'.", mp->argv[0]);
+             "the managed proxy at '%s'.", mp->argv[0]);
     free_execve_args(envp);
     return -1;
   }
 
-  tor_spawn_background(mp->argv[0], (const char **)mp->argv,
-                       (const char **)envp, mp->process_handle);
+  retval = tor_spawn_background(mp->argv[0], (const char **)mp->argv,
+                                (const char **)envp, mp->process_handle);
 
   /* free the memory allocated by set_managed_proxy_environment(). */
   free_execve_args(envp);
 
 #endif
 
-  if (mp->process_handle->status == PROCESS_STATUS_ERROR) {
+  if (retval == PROCESS_STATUS_ERROR) {
     log_warn(LD_GENERAL, "Managed proxy at '%s' failed at launch.",
              mp->argv[0]);
     return -1;
   }
 
-#ifdef MS_WINDOWS
-  log_info(LD_CONFIG, "Managed proxy at '%s' has spawned.",
-           mp->argv[0]);
-#else
-  log_info(LD_CONFIG, "Managed proxy at '%s' has spawned with pid %d.",
-           mp->argv[0], mp->process_handle->pid);
-#endif
+  log_info(LD_CONFIG, "Managed proxy at '%s' has spawned with PID '%d'.",
+           tor_process_get_pid(mp->process_handle));
 
   mp->conf_state = PT_PROTO_LAUNCHED;
 
@@ -398,8 +392,11 @@ configure_proxy(managed_proxy_t *mp)
   tor_split_lines(lines, stdout_buf, pos);
 
   /* Handle lines. */
-  SMARTLIST_FOREACH(lines, const char *, line,
-                    handle_proxy_line(line, mp));
+  SMARTLIST_FOREACH_BEGIN(lines, const char *, line) {
+    handle_proxy_line(line, mp);
+    if (proxy_configuration_finished(mp))
+      goto done;
+  } SMARTLIST_FOREACH_END(line);
 
  done:
   /* if the proxy finished configuring, exit the loop. */
@@ -410,7 +407,7 @@ configure_proxy(managed_proxy_t *mp)
     smartlist_free(lines);
 }
 
-#else /* Unix version: */
+#else /* MS_WINDOWS */
 
 /** Attempt to continue configuring managed proxy <b>mp</b>. */
 static void
@@ -561,8 +558,8 @@ handle_finished_proxy(managed_proxy_t *mp)
   case PT_PROTO_BROKEN: /* if broken: */
     managed_proxy_destroy(mp, 1); /* annihilate it. */
     break;
-  case PT_PROTO_FAILED_LAUNCH:
-    managed_proxy_destroy(mp, 0);
+  case PT_PROTO_FAILED_LAUNCH: /* if it failed before launching: */
+    managed_proxy_destroy(mp, 0); /* destroy it but don't terminate */
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
     register_proxy(mp); /* register its transports */
@@ -696,6 +693,9 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
 
  err:
   mp->conf_state = PT_PROTO_BROKEN;
+  log_warn(LD_CONFIG, "Managed proxy at '%s' failed the configuration protocol"
+           " and will be destroyed.", mp->argv[0]);
+
   return;
 }
 
@@ -969,6 +969,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   while (*environ_tmp)
     smartlist_add(envs, *environ_tmp++);
 
+  /* Create the TOR_PT_* environment variables. */
   state_tmp = get_datadir_fname("pt_state/"); /* XXX temp */
   tor_asprintf(&state_env, "TOR_PT_STATE_LOCATION=%s", state_tmp);
 
@@ -999,10 +1000,12 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
     smartlist_add(envs, bindaddr_env);
   }
 
+  /* It seems like some versions of Windows need a sorted lpEnvironment
+     block. */
   smartlist_sort_strings(envs);
 
   /* An environment block consists of a null-terminated block of
-     null-terminated strings. */
+     null-terminated strings: */
 
   /* Calculate the block's size. */
   SMARTLIST_FOREACH(envs, const char *, s,
@@ -1012,7 +1015,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   *envp = tor_malloc(env_size);
   tmp = *envp;
 
-  /* Finally, create the block */
+  /* Create the block. */
   SMARTLIST_FOREACH_BEGIN(envs, const char *, s) {
     memcpy(tmp, s, strlen(s)); /* copy the env. variable string */
     tmp += strlen(s);
@@ -1021,6 +1024,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   } SMARTLIST_FOREACH_END(s);
   memset(tmp, '\0', 1); /* last NUL */
 
+  /* Finally, free the whole mess. */
   tor_free(state_tmp);
   tor_free(state_env);
   tor_free(transports_to_launch);
@@ -1028,10 +1032,11 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   tor_free(bindaddr_tmp);
   tor_free(bindaddr_env);
   tor_free(orport_env);
+
   smartlist_free(envs);
 }
 
-#else /* Unix version: */
+#else /* MS_WINDOWS */
 
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
@@ -1091,7 +1096,7 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   return r;
 }
 
-#endif
+#endif /* MS_WINDOWS */
 
 /** Create and return a new managed proxy for <b>transport</b> using
  *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server

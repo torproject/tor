@@ -417,6 +417,8 @@ ssize_t tor_read_all_from_process_stderr(
     const process_handle_t *process_handle, char *buf, size_t count);
 char *tor_join_win_cmdline(const char *argv[]);
 
+int tor_process_get_pid(process_handle_t *process_handle);
+
 int tor_terminate_process(process_handle_t *process_handle);
 void tor_process_destroy(process_handle_t *process_handle,
                          int also_terminate_process);
