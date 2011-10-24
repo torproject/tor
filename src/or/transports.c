@@ -22,7 +22,8 @@ static int set_managed_proxy_environment(char ***envp,
 
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
-static void managed_proxy_destroy(managed_proxy_t *mp);
+static void managed_proxy_destroy(managed_proxy_t *mp,
+                                  int also_terminate_process);
 
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void configure_proxy(managed_proxy_t *mp);
@@ -242,6 +243,7 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   tor_terminate_process(mp->process_handle);
 #endif
 
+  /* ??? */
   memset(mp->process_handle, 0, sizeof(process_handle_t));
 
   /* destroy all its old transports. we no longer use them. */
@@ -325,7 +327,8 @@ pt_configure_remaining_proxies(void)
   log_debug(LD_CONFIG, "Configuring remaining managed proxies (%d)!",
             unconfigured_proxies_n);
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
-    tor_assert(mp->conf_state != PT_PROTO_BROKEN);
+    tor_assert(mp->conf_state != PT_PROTO_BROKEN ||
+               mp->conf_state != PT_PROTO_FAILED_LAUNCH);
 
     if (mp->got_hup) {
       mp->got_hup = 0;
@@ -367,7 +370,7 @@ configure_proxy(managed_proxy_t *mp)
   /* if we haven't launched the proxy yet, do it now */
   if (mp->conf_state == PT_PROTO_INFANT) {
     if (launch_managed_proxy(mp) < 0) { /* launch fail */
-      mp->conf_state = PT_PROTO_BROKEN;
+      mp->conf_state = PT_PROTO_FAILED_LAUNCH;
       handle_finished_proxy(mp);
     }
     return;
@@ -419,7 +422,7 @@ configure_proxy(managed_proxy_t *mp)
   /* if we haven't launched the proxy yet, do it now */
   if (mp->conf_state == PT_PROTO_INFANT) {
     if (launch_managed_proxy(mp) < 0) { /* launch fail */
-      mp->conf_state = PT_PROTO_BROKEN;
+      mp->conf_state = PT_PROTO_FAILED_LAUNCH;
       handle_finished_proxy(mp);
     }
     return;
@@ -524,7 +527,8 @@ register_proxy(managed_proxy_t *mp)
 
 /** Free memory allocated by managed proxy <b>mp</b>. */
 static void
-managed_proxy_destroy(managed_proxy_t *mp)
+managed_proxy_destroy(managed_proxy_t *mp,
+                      int also_terminate_process)
 {
   if (mp->conf_state != PT_PROTO_COMPLETED)
     SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
@@ -544,7 +548,7 @@ managed_proxy_destroy(managed_proxy_t *mp)
   /* free the argv */
   free_execve_args(mp->argv);
 
-  tor_process_destroy(mp->process_handle, 1);
+  tor_process_destroy(mp->process_handle, also_terminate_process);
 
   tor_free(mp);
 }
@@ -555,7 +559,10 @@ handle_finished_proxy(managed_proxy_t *mp)
 {
   switch (mp->conf_state) {
   case PT_PROTO_BROKEN: /* if broken: */
-    managed_proxy_destroy(mp); /* annihilate it. */
+    managed_proxy_destroy(mp, 1); /* annihilate it. */
+    break;
+  case PT_PROTO_FAILED_LAUNCH:
+    managed_proxy_destroy(mp, 0);
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
     register_proxy(mp); /* register its transports */
@@ -581,7 +588,8 @@ static INLINE int
 proxy_configuration_finished(const managed_proxy_t *mp)
 {
   return (mp->conf_state == PT_PROTO_CONFIGURED ||
-          mp->conf_state == PT_PROTO_BROKEN);
+          mp->conf_state == PT_PROTO_BROKEN ||
+          mp->conf_state == PT_PROTO_FAILED_LAUNCH);
 }
 
 /** This function is called when a proxy sends an {S,C}METHODS DONE message. */
@@ -680,7 +688,8 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
     return;
   } else if (!strcmpstart(line, SPAWN_ERROR_MESSAGE)) {
     log_warn(LD_GENERAL, "Could not launch managed proxy executable!");
-    goto err;
+    mp->conf_state = PT_PROTO_FAILED_LAUNCH;
+    return;
   }
 
   log_warn(LD_CONFIG, "Unknown line received by managed proxy. (%s)", line);
@@ -1180,9 +1189,9 @@ pt_prepare_proxy_list_for_config_read(void)
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
     /* Destroy unconfigured proxies. */
     if (mp->conf_state != PT_PROTO_COMPLETED) {
-        managed_proxy_destroy(mp);
-        unconfigured_proxies_n--;
-        continue;
+      managed_proxy_destroy(mp, 1);
+      unconfigured_proxies_n--;
+      continue;
     }
 
     tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
@@ -1209,7 +1218,7 @@ sweep_proxy_list(void)
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
     if (mp->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
-      managed_proxy_destroy(mp);
+      managed_proxy_destroy(mp, 1);
     }
   } SMARTLIST_FOREACH_END(mp);
 }
@@ -1224,7 +1233,7 @@ pt_free_all(void)
        free them. Otherwise, it hasn't registered its transports yet
        and we should free them here. */
     SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp,
-                      managed_proxy_destroy(mp));
+                      managed_proxy_destroy(mp, 1));
 
     smartlist_free(managed_proxy_list);
     managed_proxy_list=NULL;

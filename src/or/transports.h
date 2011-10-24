@@ -36,7 +36,8 @@ enum pt_proto_state {
   PT_PROTO_ACCEPTING_METHODS, /* accepting methods */
   PT_PROTO_CONFIGURED, /* configured successfully */
   PT_PROTO_COMPLETED, /* configure and registered its transports */
-  PT_PROTO_BROKEN
+  PT_PROTO_BROKEN, /* broke during the protocol */
+  PT_PROTO_FAILED_LAUNCH /* failed while launching */
 };
 
 /** Structure containing information of a managed proxy. */
