@@ -1077,6 +1077,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published,
     log_warn(LD_REND, "Received service descriptor for service ID %s; "
              "expected descriptor for service ID %s.",
              query, safe_str(service_id));
+    rend_service_descriptor_free(parsed);
     return -2;
   }
   now = time(NULL);
