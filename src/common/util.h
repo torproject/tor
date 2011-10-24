@@ -420,8 +420,8 @@ char *tor_join_win_cmdline(const char *argv[]);
 int tor_process_get_pid(process_handle_t *process_handle);
 
 int tor_terminate_process(process_handle_t *process_handle);
-void tor_process_destroy(process_handle_t *process_handle,
-                         int also_terminate_process);
+void tor_process_handle_destroy(process_handle_t *process_handle,
+                                int also_terminate_process);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */

@@ -3520,8 +3520,8 @@ tor_spawn_background(const char *const filename, const char **argv,
  *  If <b>also_terminate_process</b> is true, also terminate the
  *  process of the process handle. */
 void
-tor_process_destroy(process_handle_t *process_handle,
-                    int also_terminate_process)
+tor_process_handle_destroy(process_handle_t *process_handle,
+                           int also_terminate_process)
 {
   if (also_terminate_process) {
     if (tor_terminate_process(process_handle) < 0) {

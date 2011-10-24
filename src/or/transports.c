@@ -238,7 +238,7 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
   /* destroy the process handle and terminate the process. */
-  tor_process_destroy(mp->process_handle, 1);
+  tor_process_handle_destroy(mp->process_handle, 1);
 
   /* create process handle for the upcoming new process. */
   mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
@@ -545,7 +545,7 @@ managed_proxy_destroy(managed_proxy_t *mp,
   /* free the argv */
   free_execve_args(mp->argv);
 
-  tor_process_destroy(mp->process_handle, also_terminate_process);
+  tor_process_handle_destroy(mp->process_handle, also_terminate_process);
 
   tor_free(mp);
 }
