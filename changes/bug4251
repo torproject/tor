@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+
+    - When a hidden service turns an extra service-side introduction
+      circuit into a general-purpose circuit, free the rend_data and
+      intro_key fields first, so they won't be leaked if the circuit
+      is cannibalized for use as another service-side introduction
+      circuit.  Bugfix on 0.2.1.7-alpha; fixes bug 4251.
+

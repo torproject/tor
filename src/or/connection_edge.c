@@ -831,7 +831,10 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     char *nodename;
     routerinfo_t *ri; /* XXX023 Use node_t. */
 
-    if (strcmpend(target, ".exit")) {
+    if (!target) {
+      /* DNS resolving in progress */
+      continue;
+    } else if (strcmpend(target, ".exit")) {
       /* Not a .exit mapping */
       continue;
     } else if (ent->source != ADDRMAPSRC_TRACKEXIT) {
@@ -842,8 +845,8 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     if (len < 6)
       continue; /* malformed. */
     dot = target + len - 6; /* dot now points to just before .exit */
-    while(dot > target && *dot != '.')
-	dot--;
+    while (dot > target && *dot != '.')
+      dot--;
     if (*dot == '.') dot++;
     nodename = tor_strndup(dot, len-5-(dot-target));;
     ri = router_get_by_nickname(nodename, 0);
