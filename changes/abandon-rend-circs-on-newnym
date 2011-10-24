@@ -1,8 +1,0 @@
-  o Security fixes:
-    - Don't attach new streams to old rendezvous circuits after SIGNAL
-      NEWNYM.  Previously, we would keep using an existing rendezvous
-      circuit if it remained open (i.e. if it were kept open by a
-      long-lived stream or if a new stream were attached to it before
-      Tor could notice that it was old and no longer in use and close
-      it).  Bugfix on 0.1.1.15-rc; fixes bug 3375.
-

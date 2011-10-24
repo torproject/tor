@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Always NUL-terminate the sun_path field of a sockaddr_un before
-      passing it to the kernel. (Not a security issue: kernels are
-      smart enough to reject bad sockaddr_uns.) Found by Coverity; CID
-      # 428. Bugfix on Tor 0.2.0.3-alpha.

@@ -24,6 +24,12 @@ Changes in version 0.2.1.31 - 2011-05-??
     - Fix an assert in parsing router descriptors containing IPv6
       addresses. This one took down the directory authorities when
       somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
+    - Don't attach new streams to old rendezvous circuits after SIGNAL
+      NEWNYM. Previously, we would keep using an existing rendezvous
+      circuit if it remained open (i.e. if it were kept open by a
+      long-lived stream, or if a new stream were attached to it before
+      Tor could notice that it was old and no longer in use). Bugfix on
+      0.1.1.15-rc; fixes bug 3375.
 
   o Minor bugfixes (also included in 0.2.2.x):
     - When we restart our relay, we might get a successful connection
@@ -53,6 +59,14 @@ Changes in version 0.2.1.31 - 2011-05-??
       example due to a permissions change, between when we start up
       and when a controller calls SAVECONF. Fixes bug 3135; bugfix
       on 0.0.9pre6.
+    - Always NUL-terminate the sun_path field of a sockaddr_un before
+      passing it to the kernel. (Not a security issue: kernels are
+      smart enough to reject bad sockaddr_uns.) Found by Coverity;
+      CID #428. Bugfix on Tor 0.2.0.3-alpha.
+    - Don't stack-allocate the list of supplementary GIDs when we're
+      about to log them. Stack-allocating NGROUPS_MAX gid_t elements
+      could take up to 256K, which is way too much stack. Found by
+      Coverity; CID #450. Bugfix on 0.2.1.7-alpha.
 
   o Minor bugfixes (only in 0.2.1.x):
     - Resume using micro-version numbers in 0.2.1.x: our Debian packages
@@ -60,8 +74,11 @@ Changes in version 0.2.1.31 - 2011-05-??
     - Use git revisions instead of svn revisions when generating our
       micro-version numbers. Bugfix on 0.2.1.15-rc; fixes bug 2402.
 
-  o Minor features:
-    - Update to the May 1 2011 Maxmind GeoLite Country database.
+  o Minor features (also included in 0.2.2.x):
+    - Adjust the expiration time on our SSL session certificates to
+      better match SSL certs seen in the wild. Resolves ticket 4014.
+    - Allow nameservers with IPv6 address. Resolves bug 2574.
+    - Update to the October 4 2011 Maxmind GeoLite Country database.
 
 
 Changes in version 0.2.1.30 - 2011-02-23
