@@ -3159,25 +3159,29 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
 
-/** Terminate process running at PID <b>pid</b>.
+/** Terminate the process of <b>process_handle</b>.
  *  Code borrowed from Python's os.kill. */
 int
-tor_terminate_process(pid_t pid)
+tor_terminate_process(process_handle_t *process_handle)
 {
 #ifdef MS_WINDOWS
-  HANDLE handle;
-  /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
-     attempt to open and terminate the process. */
-  handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-  if (!handle)
-    return -1;
+  if (tor_get_exit_code(process_handle, 0, NULL) == PROCESS_EXIT_RUNNING) {
+    HANDLE handle;
+    /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
+       attempt to open and terminate the process. */
+    handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_handle->pid.dwProcessId);
+    if (!handle)
+      return -1;
 
-  if (!TerminateProcess(handle, 0))
+    if (!TerminateProcess(handle, 0))
+      return -1;
+    else
+      return 0;
+  } else { /* process was not running */
     return -1;
-  else
-    return 0;
+  }
 #else /* Unix */
-  return kill(pid, SIGTERM);
+  return kill(process_handle->pid, SIGTERM);
 #endif
 }
 
@@ -3213,7 +3217,11 @@ tor_terminate_process(pid_t pid)
  */
 int
 tor_spawn_background(const char *const filename, const char **argv,
+#ifdef MS_WINDOWS
+                     LPVOID envp,
+#else
                      const char **envp,
+#endif
                      process_handle_t *process_handle)
 {
 #ifdef MS_WINDOWS
@@ -3293,7 +3301,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
    * work?) */
                  0,             // creation flags
-                 NULL,          // use parent's environment
+                 envp,          // use parent's environment
                  NULL,          // use parent's current directory
                  &siStartInfo,  // STARTUPINFO pointer
                  &(process_handle->pid));  // receives PROCESS_INFORMATION
@@ -3352,7 +3360,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   }
 
   retval = pipe(stderr_pipe);
-  if (-1 == retval) {
+  if (-1 == retval) { /* if it fails here, it doesn't close the stdout_pipe */
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
@@ -3493,6 +3501,34 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   return process_handle->status;
 #endif // MS_WINDOWS
+}
+
+void
+tor_process_destroy(process_handle_t *process_handle,
+                    int also_terminate_process)
+{
+  if (also_terminate_process)
+    if (tor_terminate_process(process_handle) < 0) {
+      log_notice(LD_GENERAL, "Failed to terminate process with PID "
+#ifdef MS_WINDOWS
+                 "%u\n", process_handle->pid.dwProcessId
+#else
+                 "%d\n", (int) process_handle->pid
+#endif
+                 );
+    }
+
+  process_handle->status = PROCESS_STATUS_NOTRUNNING;
+
+#ifdef MS_WINDOWS
+  CloseHandle(process_handle->stdout_pipe);
+  CloseHandle(process_handle->stderr_pipe);
+#else
+  fclose(process_handle->stdout_handle);
+  fclose(process_handle->stderr_handle);
+#endif
+
+  tor_free(process_handle);
 }
 
 /** Get the exit code of a process specified by <b>process_handle</b> and store
