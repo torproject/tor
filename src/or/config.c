@@ -1578,7 +1578,8 @@ options_act(const or_options_t *old_options)
         options->ConnDirectionStatistics) {
       rep_hist_conn_stats_init(now);
     }
-    if (!old_options || !old_options->BridgeAuthoritativeDir) {
+    if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
+        options->BridgeAuthoritativeDir) {
       rep_hist_desc_stats_init(now);
       print_notice = 1;
     }
