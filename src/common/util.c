@@ -3470,6 +3470,10 @@ tor_spawn_background(const char *const filename, const char **argv,
     log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
+
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
+
     return status;
   }
 
