@@ -2712,6 +2712,8 @@ rep_hist_desc_stats_write(time_t now)
 void
 rep_hist_note_desc_served(const char * desc)
 {
+  if (!served_descs)
+    return; // We're not collecting stats
   digestmap_set(served_descs, desc, (void *)1);
   total_descriptor_downloads++;
 }
