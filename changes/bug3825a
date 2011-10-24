@@ -1,8 +1,0 @@
-  o Major bugfixes:
-
-    - When one of a hidden service's introduction points appears to be
-      unreachable, stop trying it.  Previously, we would keep trying
-      to build circuits to the introduction point until we lost the
-      descriptor, usually because the user gave up and restarted Tor.
-      Partly fixes bug 3825.
-

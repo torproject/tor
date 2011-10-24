@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Rephrase the log message emitted if the TestSocks check is
-      successful. Patch from Fabian Keil; fixes bug 4094.

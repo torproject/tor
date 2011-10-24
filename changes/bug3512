@@ -1,6 +1,0 @@
-  o Code simplifications and refactoring:
-    - Rename Tor functions that turn strings into addresses, so that
-      "parse" indicates that no hostname resolution occurs, and
-      "lookup" indicates that hostname resolution may occur. This
-      should help prevent mistakes in the future. Fixes bug 3512.
-

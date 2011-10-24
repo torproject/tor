@@ -1,8 +1,0 @@
-  o Major bugfixes:
-    - Don't update the AccountingSoftLimitHitAt state file entry whenever
-      tor gets started. This prevents a wrong average bandwidth estimate,
-      which would cause relays to always start a new accounting interval at
-      the earliest possible moment. Fixes bug 2003; bugfix on 0.2.2.7-alpha.
-      Reported by BryonEldridge, who also helped immensely in tracking this
-      bug down. Thanks!
-

@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-
-    - When one of a hidden service's introduction points times out,
-      consider trying it again during the next attempt to connect to
-      the HS.  Previously, we would not try it again unless a newly
-      fetched descriptor contained it.  Required by fixes for bugs
-      1297 and 3825.
-

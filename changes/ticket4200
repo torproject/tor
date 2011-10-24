@@ -1,5 +1,0 @@
-  o Minor features:
-    - The bridge authority now writes statistics on how many bridge
-      descriptors it gave out in total, and how many unique descriptors
-      it gave out. Implements ticket 4200.
-

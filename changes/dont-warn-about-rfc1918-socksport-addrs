@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-
-    - Don't warn users that they are exposing a client port to the
-      Internet if they have specified an RFC1918 address.  Previously,
-      we would warn if the user had specified any non-loopback
-      address.  Bugfix on 0.2.3.3-alpha.  Fixes bug 4018; reported by Tas.
-
