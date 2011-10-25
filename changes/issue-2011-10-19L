@@ -19,3 +19,10 @@
       client is connected to a patched relay.  Bugfix on FIXME; found
       by frosty_un.
 
+    - Don't assign the Guard flag to relays running a version of Tor
+      which would use an OR connection on which it has received a
+      CREATE_FAST cell to satisfy an EXTEND request.  Mitigates
+      CVE-2011-2768, by ensuring that clients will not connect
+      directly to any relay which an attacker could probe for an
+      unpatched client's connections.
+
