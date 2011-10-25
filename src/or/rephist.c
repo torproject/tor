@@ -2659,18 +2659,44 @@ rep_hist_format_desc_stats(time_t now)
   char t[ISO_TIME_LEN+1];
   char *result;
 
+  digestmap_iter_t *iter;
+  const char *key;
+  void *val;
+  unsigned size;
+  int *vals;
+  int n = 0;
+
   if (!start_of_served_descs_stats_interval)
     return NULL;
+
+  size =  digestmap_size(served_descs);
+  vals = tor_malloc(size * sizeof(int));
+
+  for (iter = digestmap_iter_init(served_descs); !digestmap_iter_done(iter);
+      iter = digestmap_iter_next(served_descs, iter) ) {
+    uintptr_t count;
+    digestmap_iter_get(iter, &key, &val);
+    count = (uintptr_t)val;
+    vals[n++] = (int)count;
+    (void)key;
+  }
 
   format_iso_time(t, now);
 
   tor_asprintf(&result,
-               "served-descs-stats-end %s (%d s) total=%lu unique=%u\n",
+               "served-descs-stats-end %s (%d s) total=%lu unique=%u "
+               "max=%d q3=%d md=%d q1=%d min=%d\n",
                t,
                (unsigned) (now - start_of_served_descs_stats_interval),
                total_descriptor_downloads,
-               digestmap_size(served_descs));
+               size,
+               find_nth_int(vals, size, size-1),
+               find_nth_int(vals, size, (3*size-1)/4),
+               find_nth_int(vals, size, (size-1)/2),
+               find_nth_int(vals, size, (size-1)/4),
+               find_nth_int(vals, size, 0));
 
+  tor_free(vals);
   return result;
 }
 
@@ -2712,9 +2738,15 @@ rep_hist_desc_stats_write(time_t now)
 void
 rep_hist_note_desc_served(const char * desc)
 {
+  void *val;
+  uintptr_t count;
   if (!served_descs)
     return; // We're not collecting stats
-  digestmap_set(served_descs, desc, (void *)1);
+  val = digestmap_get(served_descs, desc);
+  count = (uintptr_t)val;
+  if (count != INT_MAX)
+    ++count;
+  digestmap_set(served_descs, desc, (void*)count);
   total_descriptor_downloads++;
 }
 
