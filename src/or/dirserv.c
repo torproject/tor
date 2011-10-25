@@ -3488,6 +3488,8 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
                conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_DIGEST);
   time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
 
+  const or_options_t *options = get_options();
+
   while (smartlist_len(conn->fingerprint_stack) &&
          connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     const char *body;
@@ -3509,7 +3511,16 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
        * unknown bridge descriptor has shown up between then and now. */
       continue;
     }
-    rep_hist_note_desc_served(sd->identity_digest);
+
+    /** If we are the bridge authority and the descriptor is a bridge
+     * descriptor, remember that we served this descriptor for desc stats. */
+    if (options->BridgeAuthoritativeDir && by_fp) {
+      const routerinfo_t *router =
+          router_get_by_id_digest(sd->identity_digest);
+      tor_assert(router);
+      if (router->purpose == ROUTER_PURPOSE_BRIDGE)
+        rep_hist_note_desc_served(sd->identity_digest);
+    }
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       /* XXXX022 This 'last' business should actually happen on the last
