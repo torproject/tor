@@ -2332,6 +2332,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  int naming, int listbadexits,
                                  int listbaddirs, int vote_on_hsdirs)
 {
+  const or_options_t *options = get_options();
   int unstable_version =
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   memset(rs, 0, sizeof(routerstatus_t));
@@ -2363,7 +2364,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
        router_get_advertised_bandwidth(ri) >=
                               MIN(guard_bandwidth_including_exits,
                                   guard_bandwidth_excluding_exits)) &&
-      is_router_version_good_for_possible_guard(ri->platform)) {
+      (options->GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays ||
+       is_router_version_good_for_possible_guard(ri->platform))) {
     long tk = rep_hist_get_weighted_time_known(
                                       ri->cache_info.identity_digest, now);
     double wfu = rep_hist_get_weighted_fractional_uptime(

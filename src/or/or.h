@@ -2672,6 +2672,10 @@ typedef struct {
                                      * number of servers per IP address shared
                                      * with an authority. */
 
+  /** Should we assign the Guard flag to relays which would allow
+   * exploitation of CVE-2011-2768 against their clients? */
+  int GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays;
+
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
