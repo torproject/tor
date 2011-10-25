@@ -527,7 +527,7 @@ The following options are useful only for clients (that is, if
     A list of identity fingerprints, nicknames, country codes and address
     patterns of nodes to avoid when building a circuit.
     (Example:
-    ExcludeNodes SlowServer, $    EFFFFFFFFFFFFFFF, \{cc}, 255.254.0.0/8) +
+    ExcludeNodes SlowServer, ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
  +
     By default, this option is treated as a preference that Tor is allowed
     to override in order to keep working.
