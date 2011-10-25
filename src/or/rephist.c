@@ -2643,7 +2643,7 @@ rep_hist_reset_desc_stats(time_t now)
 void
 rep_hist_desc_stats_term(void)
 {
-  digestmap_free(served_descs, _tor_free);
+  digestmap_free(served_descs, NULL);
   served_descs = NULL;
   start_of_served_descs_stats_interval = 0;
   total_descriptor_downloads = 0;
@@ -2664,7 +2664,7 @@ rep_hist_format_desc_stats(time_t now)
   void *val;
   unsigned size;
   int *vals;
-  int n = 0, *count;
+  int n = 0;
 
   if (!start_of_served_descs_stats_interval)
     return NULL;
@@ -2674,10 +2674,11 @@ rep_hist_format_desc_stats(time_t now)
 
   for (iter = digestmap_iter_init(served_descs); !digestmap_iter_done(iter);
       iter = digestmap_iter_next(served_descs, iter) ) {
+    uintptr_t count;
     digestmap_iter_get(iter, &key, &val);
-    count = val;
-    vals[n++] = *count;
-      (void)key;
+    count = (uintptr_t)val;
+    vals[n++] = (int)count;
+    (void)key;
   }
 
   format_iso_time(t, now);
@@ -2737,17 +2738,15 @@ rep_hist_desc_stats_write(time_t now)
 void
 rep_hist_note_desc_served(const char * desc)
 {
-  int *val;
+  void *val;
+  uintptr_t count;
   if (!served_descs)
     return; // We're not collecting stats
   val = digestmap_get(served_descs, desc);
-  if (!val) {
-    val = tor_malloc(sizeof(int));
-    *val = 1;
-    digestmap_set(served_descs, desc, val);
-  } else {
-    (*val)++;
-  }
+  count = (uintptr_t)val;
+  if (count != INT_MAX)
+    ++count;
+  digestmap_set(served_descs, desc, (void*)count);
   total_descriptor_downloads++;
 }
 
