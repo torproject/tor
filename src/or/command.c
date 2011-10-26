@@ -285,7 +285,7 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
       break;
     case CELL_VPADDING:
       ++stats_n_vpadding_cells_processed;
-      PROCESS_CELL(versions, cell, conn);
+      /* Do nothing */
       break;
     case CELL_CERT:
       ++stats_n_cert_cells_processed;
