@@ -1,8 +1,0 @@
-(NOTE: THIS SHOULD REPLACE THE TICKET 4200 ENTRY IN THE CHANGELOG)
-  o Minor features:
-    - The Bridge Authority now writes statistics on how many bridge
-      descriptors it gave out in total, and how many unique descriptors it
-      gave out. It also lists how often the most and least commonly fetched
-      descriptors were given out, as well as the median and 25/75 percentile.
-      Implements tickets 4200 and 4294.
-

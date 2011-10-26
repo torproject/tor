@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix memory leaks in the failing cases of the new SocksPort and
-      ControlPort code. Found by Coverity Scan. Bugfix on
-      0.2.3.3-alpha; fixes coverity CID 485, 486, and 487.
-
