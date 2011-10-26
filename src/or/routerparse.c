@@ -572,7 +572,6 @@ static int check_signature_token(const char *digest,
                                  int flags,
                                  const char *doctype);
 static crypto_pk_env_t *find_dir_signing_key(const char *str, const char *eos);
-static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
 #undef DEBUG_AREA_ALLOC
 
@@ -4556,7 +4555,7 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
 
 /** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.
  */
-static int
+int
 tor_version_same_series(tor_version_t *a, tor_version_t *b)
 {
   tor_assert(a);

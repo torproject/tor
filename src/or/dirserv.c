@@ -2251,6 +2251,74 @@ get_possible_sybil_list(const smartlist_t *routers)
   return omit_as_sybil;
 }
 
+/** Return non-zero iff a relay running the Tor version specified in
+ * <b>platform</b> is suitable for use as a potential entry guard. */
+static int
+is_router_version_good_for_possible_guard(const char *platform)
+{
+  static int parsed_versions_initialized = 0;
+  static tor_version_t first_good_0_2_1_guard_version;
+  static tor_version_t first_good_0_2_2_guard_version;
+  static tor_version_t first_good_later_guard_version;
+
+  tor_version_t router_version;
+
+  /* XXX023 This block should be extracted into its own function. */
+  /* XXXX Begin code copied from tor_version_as_new_as (in routerparse.c) */
+  {
+    char *s, *s2, *start;
+    char tmp[128];
+
+    tor_assert(platform);
+
+    if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
+      return 1;
+
+    start = (char *)eat_whitespace(platform+3);
+    if (!*start) return 0;
+    s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
+    s2 = (char*)eat_whitespace(s);
+    if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
+      s = (char*)find_whitespace(s2);
+
+    if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
+      return 0;
+    strlcpy(tmp, start, s-start+1);
+
+    if (tor_version_parse(tmp, &router_version)<0) {
+      log_info(LD_DIR,"Router version '%s' unparseable.",tmp);
+      return 1; /* be safe and say yes */
+    }
+  }
+  /* XXXX End code copied from tor_version_as_new_as (in routerparse.c) */
+
+  if (!parsed_versions_initialized) {
+    /* CVE-2011-2769 was fixed on the relay side in Tor versions
+     * 0.2.1.31, 0.2.2.34, and 0.2.3.6-alpha. */
+    tor_assert(tor_version_parse("0.2.1.31",
+                                 &first_good_0_2_1_guard_version)>=0);
+    tor_assert(tor_version_parse("0.2.2.34",
+                                 &first_good_0_2_2_guard_version)>=0);
+    tor_assert(tor_version_parse("0.2.3.6-alpha",
+                                 &first_good_later_guard_version)>=0);
+
+    /* Don't parse these constant version strings once for every relay
+     * for every vote. */
+    parsed_versions_initialized = 1;
+  }
+
+  return ((tor_version_same_series(&first_good_0_2_1_guard_version,
+                                   &router_version) &&
+           tor_version_compare(&first_good_0_2_1_guard_version,
+                               &router_version) <= 0) ||
+          (tor_version_same_series(&first_good_0_2_2_guard_version,
+                                   &router_version) &&
+           tor_version_compare(&first_good_0_2_2_guard_version,
+                               &router_version) <= 0) ||
+          (tor_version_compare(&first_good_later_guard_version,
+                               &router_version) <= 0));
+}
+
 /** Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>>.  If <b>naming</b>, consider setting
  * the named flag in <b>rs</b>.
@@ -2264,6 +2332,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  int naming, int listbadexits,
                                  int listbaddirs, int vote_on_hsdirs)
 {
+  const or_options_t *options = get_options();
   int unstable_version =
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   memset(rs, 0, sizeof(routerstatus_t));
@@ -2294,7 +2363,9 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
       (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
        router_get_advertised_bandwidth(ri) >=
                               MIN(guard_bandwidth_including_exits,
-                                  guard_bandwidth_excluding_exits))) {
+                                  guard_bandwidth_excluding_exits)) &&
+      (options->GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays ||
+       is_router_version_good_for_possible_guard(ri->platform))) {
     long tk = rep_hist_get_weighted_time_known(
                                       ri->cache_info.identity_digest, now);
     double wfu = rep_hist_get_weighted_fractional_uptime(

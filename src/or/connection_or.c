@@ -548,6 +548,11 @@ connection_or_get_for_extend(const char *digest,
     tor_assert(tor_memeq(conn->identity_digest, digest, DIGEST_LEN));
     if (conn->_base.marked_for_close)
       continue;
+    /* Never return a connection on which the other end appears to be
+     * a client. */
+    if (conn->is_connection_with_client) {
+      continue;
+    }
     /* Never return a non-open connection. */
     if (conn->_base.state != OR_CONN_STATE_OPEN) {
       /* If the address matches, don't launch a new connection for this
@@ -807,6 +812,8 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
+
+  conn->is_outgoing = 1;
 
   /* use a proxy server if available */
   if (options->HTTPSProxy) {
