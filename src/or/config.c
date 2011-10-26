@@ -4865,8 +4865,10 @@ parse_client_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
-  smartlist_free(transport_list);
+  if (transport_list) {
+    SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+    smartlist_free(transport_list);
+  }
 
   return r;
 }
@@ -5989,7 +5991,7 @@ validate_transports_in_state(or_state_t *state)
 
   for (line = state->TransportProxies ; line ; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
-    if (!state_transport_line_is_valid(line->value)<0)
+    if (!state_transport_line_is_valid(line->value))
       broken = 1;
   }
 
