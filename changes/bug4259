@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Fix a crash bug when changing node restrictions while a DNS lookup
-      is in-progress. Fixes bug 4259; bugfix on 0.2.2.25-alpha. Bugfix
-      by "Tey'".

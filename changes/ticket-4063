@@ -1,6 +1,0 @@
-  o Minor bugfixes (usability):
-    - Downgrade log messages about circuit timeout calibration from
-      "notice" to "info": they don't require or suggest any human
-      intervention. Patch from Tom Lowenthal. Fixes bug 4063;
-      bugfix on 0.2.2.14-alpha. 
-

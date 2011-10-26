@@ -1,3 +1,59 @@
+Changes in version 0.2.2.34 - 2011-10-??
+  o Security fixes:
+    - Bridge relays now do their directory fetches inside Tor TLS
+      connections, like all the other clients do, rather than connecting
+      directly to the DirPort like public relays do. Removes another
+      avenue for enumerating bridges. Fixes bug 4115; bugfix on 0.2.0.35.
+    - Bridges relays now build circuits for themselves in a more similar
+      way to how clients build them. Removes another avenue for
+      enumerating bridges. Fixes bug 4124; bugfix on 0.2.0.3-alpha,
+      when bridges were introduced.
+
+  o Major bugfixes:
+    - Fix a crash bug when changing node restrictions while a DNS lookup
+      is in-progress. Fixes bug 4259; bugfix on 0.2.2.25-alpha. Bugfix
+      by "Tey'".
+    - Don't launch a useless circuit after failing to use one of a
+      hidden service's introduction points. Previously, we would
+      launch a new introduction circuit, but not set the hidden service
+      which that circuit was intended to connect to, so it would never
+      actually be used. A different piece of code would then create a
+      new introduction circuit correctly. Bug reported by katmagic and
+      found by Sebastian Hahn. Bugfix on 0.2.1.13-alpha; fixes bug 4212.
+
+  o Minor bugfixes:
+    - Change an integer overflow check in the OpenBSD_Malloc code so
+      that GCC is less likely to eliminate it as impossible. Patch
+      from Mansour Moufid. Fixes bug 4059.
+    - When a hidden service turns an extra service-side introduction
+      circuit into a general-purpose circuit, free the rend_data and
+      intro_key fields first, so we won't leak memory if the circuit
+      is cannibalized for use as another service-side introduction
+      circuit. Bugfix on 0.2.1.7-alpha; fixes bug 4251.
+    - Bridges now skip DNS self-tests, to act a little more stealthily.
+      Fixes bug 4201; bugfix on 0.2.0.3-alpha, which first introduced
+      bridges. Patch by "warms0x".
+
+  o Minor bugfixes (log messages and documentation):
+    - Remove a confusing dollar sign from the example fingerprint in the
+      man page, and also make the example fingerprint a valid one. Fixes
+      bug 4309; bugfix on 0.2.1.3-alpha.
+    - The next version of Windows will be called Windows 8, and it has
+      a major version of 6, minor version of 2. Correctly identify that
+      version instead of calling it "Very recent version". Resolves
+      ticket 4153; reported by funkstar.
+    - Downgrade log messages about circuit timeout calibration from
+      "notice" to "info": they don't require or suggest any human
+      intervention. Patch from Tom Lowenthal. Fixes bug 4063;
+      bugfix on 0.2.2.14-alpha.
+
+  o Minor features:
+    - Turn on directory request statistics by default and include them in
+      extra-info descriptors. Don't break if we have no GeoIP database.
+      Backported from 0.2.3.1-alpha; implements ticket 3951.
+    - Update to the October 4 2011 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.2.33 - 2011-09-13
   Tor 0.2.2.33 fixes several bugs, and includes a slight tweak to Tor's
   TLS handshake that makes relays and bridges that run this new version

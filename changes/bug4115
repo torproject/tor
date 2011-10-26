@@ -1,7 +1,0 @@
-  o Security fixes:
-    - Bridge relays now do their directory fetches inside Tor TLS
-      connections, like all the other clients do, rather than connecting
-      directly to the DirPort like public relays do. Removes another
-      avenue for enumerating bridges. Fixes part of bug 4115; bugfix
-      on 0.2.0.35.
-

@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Remove a confusing dollar sign from the example fingerprint in the
-      man page, and also make example fingerprint a valid one. Fixes bug
-      4309; bugfix on 0.2.1.3-alpha.
-
