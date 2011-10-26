@@ -321,10 +321,12 @@ crypto_new_pk_env(void)
 void
 crypto_free_pk_env(crypto_pk_env_t *env)
 {
-  tor_assert(env);
+  if (!env)
+    return;
 
   if (--env->refs > 0)
     return;
+  tor_assert(env->refs == 0);
 
   if (env->key)
     RSA_free(env->key);

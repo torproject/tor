@@ -961,6 +961,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   const char *safe_address =
     started_here ? conn->_base.address : safe_str(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
+  crypto_pk_env_t *our_identity =
+    started_here ? get_tlsclient_identity_key() :
+                   get_server_identity_key();
   int has_cert = 0, has_identity=0;
 
   check_no_tls_errors();
@@ -997,7 +1000,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   if (identity_rcvd) {
     has_identity = 1;
     crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
-    if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
+    if (crypto_pk_cmp_keys(our_identity, identity_rcvd)<0) {
       conn->circ_id_type = CIRC_ID_TYPE_LOWER;
     } else {
       conn->circ_id_type = CIRC_ID_TYPE_HIGHER;

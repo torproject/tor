@@ -816,6 +816,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_dump_geoip_stats = 0;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
+  int is_server = server_mode(options);
   int i;
   int have_dir_info;
 
@@ -837,7 +838,7 @@ run_scheduled_events(time_t now)
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
    */
-  if (server_mode(options) &&
+  if (is_server &&
       get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
     log_info(LD_GENERAL,"Rotating onion key.");
     rotate_onion_key();
@@ -872,8 +873,10 @@ run_scheduled_events(time_t now)
     last_rotated_x509_certificate = now;
   if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(),
-                            MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
+    if (tor_tls_context_init(public_server_mode(options),
+                             get_tlsclient_identity_key(),
+                             is_server ? get_server_identity_key() : NULL,
+                             MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? -RD */
     }
@@ -1111,7 +1114,7 @@ run_scheduled_events(time_t now)
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
-  if (server_mode(options) && time_to_check_for_correct_dns < now) {
+  if (is_server && time_to_check_for_correct_dns < now) {
     if (!time_to_check_for_correct_dns) {
       time_to_check_for_correct_dns = now + 60 + crypto_rand_int(120);
     } else {
@@ -1387,7 +1390,7 @@ do_main_loop(void)
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
-  if (! identity_key_is_set()) {
+  if (! client_identity_key_is_set()) {
     if (init_keys() < 0) {
       log_err(LD_BUG,"Error initializing keys; exiting");
       return -1;
@@ -2017,7 +2020,7 @@ do_list_fingerprint(void)
     log_err(LD_BUG,"Error initializing keys; can't display fingerprint");
     return -1;
   }
-  if (!(k = get_identity_key())) {
+  if (!(k = get_server_identity_key())) {
     log_err(LD_GENERAL,"Error: missing identity key.");
     return -1;
   }

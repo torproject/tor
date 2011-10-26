@@ -184,10 +184,16 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname_sign,
                                         unsigned int lifetime);
 static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
+static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
+                                    crypto_pk_env_t *identity,
+                                    unsigned int key_lifetime);
+static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
+                                              unsigned int key_lifetime);
 
-/** Global tls context. We keep it here because nobody else needs to
- * touch it. */
-static tor_tls_context_t *global_tls_context = NULL;
+/** Global TLS contexts. We keep them here because nobody else needs
+ * to touch them. */
+static tor_tls_context_t *server_tls_context = NULL;
+static tor_tls_context_t *client_tls_context = NULL;
 /** True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;
 
@@ -400,9 +406,15 @@ tor_tls_init(void)
 void
 tor_tls_free_all(void)
 {
-  if (global_tls_context) {
-    tor_tls_context_decref(global_tls_context);
-    global_tls_context = NULL;
+  if (server_tls_context) {
+    tor_tls_context_t *ctx = server_tls_context;
+    server_tls_context = NULL;
+    tor_tls_context_decref(ctx);
+  }
+  if (client_tls_context) {
+    tor_tls_context_t *ctx = client_tls_context;
+    client_tls_context = NULL;
+    tor_tls_context_decref(ctx);
   }
   if (!HT_EMPTY(&tlsmap_root)) {
     log_warn(LD_MM, "Still have entries in the tlsmap at shutdown.");
@@ -589,15 +601,99 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
   ++ctx->refcnt;
 }
 
+/** Create new global client and server TLS contexts.
+ *
+ * If <b>server_identity</b> is NULL, this will not generate a server
+ * TLS context. If <b>is_public_server</b> is non-zero, this will use
+ * the same TLS context for incoming and outgoing connections, and
+ * ignore <b>client_identity</b>. */
+int
+tor_tls_context_init(int is_public_server,
+                     crypto_pk_env_t *client_identity,
+                     crypto_pk_env_t *server_identity,
+                     unsigned int key_lifetime)
+{
+  int rv1 = 0;
+  int rv2 = 0;
+
+  if (is_public_server) {
+    tor_tls_context_t *new_ctx;
+    tor_tls_context_t *old_ctx;
+
+    tor_assert(server_identity != NULL);
+
+    rv1 = tor_tls_context_init_one(&server_tls_context,
+                                   server_identity,
+                                   key_lifetime);
+
+    if (rv1 >= 0) {
+      new_ctx = server_tls_context;
+      tor_tls_context_incref(new_ctx);
+      old_ctx = client_tls_context;
+      client_tls_context = new_ctx;
+
+      if (old_ctx != NULL) {
+        tor_tls_context_decref(old_ctx);
+      }
+    }
+  } else {
+    if (server_identity != NULL) {
+      rv1 = tor_tls_context_init_one(&server_tls_context,
+                                     server_identity,
+                                     key_lifetime);
+    } else {
+      tor_tls_context_t *old_ctx = server_tls_context;
+      server_tls_context = NULL;
+
+      if (old_ctx != NULL) {
+        tor_tls_context_decref(old_ctx);
+      }
+    }
+
+    rv2 = tor_tls_context_init_one(&client_tls_context,
+                                   client_identity,
+                                   key_lifetime);
+  }
+
+  return rv1 < rv2 ? rv1 : rv2;
+}
+
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
- * certificate, and <b>nickname</b> set to the nickname to use.
+ * certificate.
  *
  * You can call this function multiple times.  Each time you call it,
  * it generates new certificates; all new connections will use
  * the new SSL context.
  */
-int
+static int
+tor_tls_context_init_one(tor_tls_context_t **ppcontext,
+                         crypto_pk_env_t *identity,
+                         unsigned int key_lifetime)
+{
+  tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
+                                                   key_lifetime);
+  tor_tls_context_t *old_ctx = *ppcontext;
+
+  if (new_ctx != NULL) {
+    *ppcontext = new_ctx;
+
+    /* Free the old context if one existed. */
+    if (old_ctx != NULL) {
+      /* This is safe even if there are open connections: we reference-
+       * count tor_tls_context_t objects. */
+      tor_tls_context_decref(old_ctx);
+    }
+  }
+
+  return ((new_ctx != NULL) ? 0 : -1);
+}
+
+/** Create a new TLS context for use with Tor TLS handshakes.
+ * <b>identity</b> should be set to the identity key used to sign the
+ * certificate.
+ */
+static tor_tls_context_t *
 tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
@@ -692,18 +788,12 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-  /* Free the old context if one exists. */
-  if (global_tls_context) {
-    /* This is safe even if there are open connections: OpenSSL does
-     * reference counting with SSL and SSL_CTX objects. */
-    tor_tls_context_decref(global_tls_context);
-  }
-  global_tls_context = result;
+
   if (rsa)
     crypto_free_pk_env(rsa);
   tor_free(nickname);
   tor_free(nn2);
-  return 0;
+  return result;
 
  error:
   tls_log_errors(NULL, LOG_WARN, "creating TLS context");
@@ -719,7 +809,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     X509_free(cert);
   if (idcert)
     X509_free(idcert);
-  return -1;
+  return NULL;
 }
 
 #ifdef V2_HANDSHAKE_SERVER
@@ -899,10 +989,12 @@ tor_tls_new(int sock, int isServer)
 {
   BIO *bio = NULL;
   tor_tls_t *result = tor_malloc_zero(sizeof(tor_tls_t));
+  tor_tls_context_t *context = isServer ? server_tls_context :
+    client_tls_context;
 
-  tor_assert(global_tls_context); /* make sure somebody made it first */
-  if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
-    tls_log_errors(NULL, LOG_WARN, "generating TLS context");
+  tor_assert(context); /* make sure somebody made it first */
+  if (!(result->ssl = SSL_new(context->ctx))) {
+    tls_log_errors(NULL, LOG_WARN, "creating SSL object");
     tor_free(result);
     return NULL;
   }
@@ -941,8 +1033,8 @@ tor_tls_new(int sock, int isServer)
   }
   HT_INSERT(tlsmap, &tlsmap_root, result);
   SSL_set_bio(result->ssl, bio, bio);
-  tor_tls_context_incref(global_tls_context);
-  result->context = global_tls_context;
+  tor_tls_context_incref(context);
+  result->context = context;
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
