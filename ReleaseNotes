@@ -3,6 +3,115 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.1.31 - 2011-10-26
+  Tor 0.2.1.31 backports important security and privacy fixes for
+  oldstable. This release is intended only for package maintainers and
+  other users who cannot use the 0.2.2 stable series. All others should
+  be using Tor 0.2.2.x or newer.
+
+  o Security fixes (also included in 0.2.2.x):
+    - Replace all potentially sensitive memory comparison operations
+      with versions whose runtime does not depend on the data being
+      compared. This will help resist a class of attacks where an
+      adversary can use variations in timing information to learn
+      sensitive data. Fix for one case of bug 3122. (Safe memcmp
+      implementation by Robert Ransom based partially on code by DJB.)
+    - Fix an assert in parsing router descriptors containing IPv6
+      addresses. This one took down the directory authorities when
+      somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
+
+  o Privacy/anonymity fixes (also included in 0.2.2.x):
+    - Clients and bridges no longer send TLS certificate chains on
+      outgoing OR connections. Previously, each client or bridge
+      would use a single cert chain for all outgoing OR connections
+      for up to 24 hours, which allowed any relay that the client or
+      bridge contacted to determine which entry guards it is using.
+      Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by frosty_un.
+    - If a relay receives a CREATE_FAST cell on a TLS connection, it
+      no longer considers that connection as suitable for satisfying a
+      circuit EXTEND request. Now relays can protect clients from the
+      CVE-2011-2768 issue even if the clients haven't upgraded yet.
+    - Bridges now refuse CREATE or CREATE_FAST cells on OR connections
+      that they initiated. Relays could distinguish incoming bridge 
+      connections from client connections, creating another avenue for
+      enumerating bridges. Fixes CVE-2011-2769. Bugfix on 0.2.0.3-alpha.
+      Found by "frosty_un".
+    - When receiving a hidden service descriptor, check that it is for
+      the hidden service we wanted. Previously, Tor would store any
+      hidden service descriptors that a directory gave it, whether it
+      wanted them or not. This wouldn't have let an attacker impersonate
+      a hidden service, but it did let directories pre-seed a client
+      with descriptors that it didn't want. Bugfix on 0.0.6.
+    - Avoid linkability based on cached hidden service descriptors: forget
+      all hidden service descriptors cached as a client when processing a
+      SIGNAL NEWNYM command. Fixes bug 3000; bugfix on 0.0.6.
+    - Make the bridge directory authority refuse to answer directory
+      requests for "all" descriptors. It used to include bridge
+      descriptors in its answer, which was a major information leak.
+      Found by "piebeer". Bugfix on 0.2.0.3-alpha.
+    - Don't attach new streams to old rendezvous circuits after SIGNAL
+      NEWNYM. Previously, we would keep using an existing rendezvous
+      circuit if it remained open (i.e. if it were kept open by a
+      long-lived stream, or if a new stream were attached to it before
+      Tor could notice that it was old and no longer in use). Bugfix on
+      0.1.1.15-rc; fixes bug 3375.
+
+  o Minor bugfixes (also included in 0.2.2.x):
+    - When we restart our relay, we might get a successful connection
+      from the outside before we've started our reachability tests,
+      triggering a warning: "ORPort found reachable, but I have no
+      routerinfo yet. Failing to inform controller of success." This
+      bug was harmless unless Tor is running under a controller
+      like Vidalia, in which case the controller would never get a
+      REACHABILITY_SUCCEEDED status event. Bugfix on 0.1.2.6-alpha;
+      fixes bug 1172.
+    - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
+      enabled. Fixes bug 1526.
+    - Remove undocumented option "-F" from tor-resolve: it hasn't done
+      anything since 0.2.1.16-rc.
+    - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
+      None of the cases where we did this before were wrong, but by making
+      this change we avoid warnings. Fixes bug 2475; bugfix on 0.2.1.28.
+    - Fix a rare crash bug that could occur when a client was configured
+      with a large number of bridges. Fixes bug 2629; bugfix on
+      0.2.1.2-alpha. Bugfix by trac user "shitlei".
+    - Correct the warning displayed when a rendezvous descriptor exceeds
+      the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found by
+      John Brooks.
+    - Fix an uncommon assertion failure when running with DNSPort under
+      heavy load. Fixes bug 2933; bugfix on 0.2.0.1-alpha.
+    - When warning about missing zlib development packages during compile,
+      give the correct package names. Bugfix on 0.2.0.1-alpha.
+    - Require that introduction point keys and onion keys have public
+      exponent 65537. Bugfix on 0.2.0.10-alpha.
+    - Do not crash when our configuration file becomes unreadable, for
+      example due to a permissions change, between when we start up
+      and when a controller calls SAVECONF. Fixes bug 3135; bugfix
+      on 0.0.9pre6.
+    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
+      Fixes bug 3208.
+    - Always NUL-terminate the sun_path field of a sockaddr_un before
+      passing it to the kernel. (Not a security issue: kernels are
+      smart enough to reject bad sockaddr_uns.) Found by Coverity;
+      CID #428. Bugfix on Tor 0.2.0.3-alpha.
+    - Don't stack-allocate the list of supplementary GIDs when we're
+      about to log them. Stack-allocating NGROUPS_MAX gid_t elements
+      could take up to 256K, which is way too much stack. Found by
+      Coverity; CID #450. Bugfix on 0.2.1.7-alpha.
+
+  o Minor bugfixes (only in 0.2.1.x):
+    - Resume using micro-version numbers in 0.2.1.x: our Debian packages
+      rely on them. Bugfix on 0.2.1.30.
+    - Use git revisions instead of svn revisions when generating our
+      micro-version numbers. Bugfix on 0.2.1.15-rc; fixes bug 2402.
+
+  o Minor features (also included in 0.2.2.x):
+    - Adjust the expiration time on our SSL session certificates to
+      better match SSL certs seen in the wild. Resolves ticket 4014.
+    - Allow nameservers with IPv6 address. Resolves bug 2574.
+    - Update to the October 4 2011 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.1.30 - 2011-02-23
   Tor 0.2.1.30 fixes a variety of less critical bugs. The main other
   change is a slight tweak to Tor's TLS handshake that makes relays
