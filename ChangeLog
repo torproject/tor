@@ -1,5 +1,23 @@
-Changes in version 0.2.2.34 - 2011-10-??
-  o Security fixes:
+Changes in version 0.2.2.34 - 2011-10-26
+  o Privacy/anonymity fixes:
+    - Clients and bridges no longer send TLS certificate chains on
+      outgoing OR connections. Previously, each client or bridge
+      would use the same cert chain for all outgoing OR connections
+      for up to 24 hours, which allowed any relay that the client or
+      bridge contacted to determine which entry guards it is using.
+      Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by "frosty_un".
+    - If a relay receives a CREATE_FAST cell on a TLS connection, it
+      no longer considers that connection as suitable for satisfying a
+      circuit EXTEND request. Now relays can protect clients from the
+      CVE-2011-2768 issue even if the clients haven't upgraded yet.
+    - Directory authorities no longer assign the Guard flag to relays
+      that haven't upgraded to the above "refuse EXTEND requests
+      to client connections" fix. Now directory authorities can
+      protect clients from the CVE-2011-2768 issue even if neither
+      the clients nor the relays have upgraded yet. There's a new
+      "GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays" config option
+      to let us transition smoothly, else tomorrow there would be no
+      guard relays.
     - Bridge relays now do their directory fetches inside Tor TLS
       connections, like all the other clients do, rather than connecting
       directly to the DirPort like public relays do. Removes another
@@ -8,6 +26,11 @@ Changes in version 0.2.2.34 - 2011-10-??
       way to how clients build them. Removes another avenue for
       enumerating bridges. Fixes bug 4124; bugfix on 0.2.0.3-alpha,
       when bridges were introduced.
+    - Bridges now refuse CREATE or CREATE_FAST cells on OR connections
+      that they initiated. Relays could distinguish incoming bridge 
+      connections from client connections, creating another avenue for
+      enumerating bridges. Fixes CVE-2011-2769. Bugfix on 0.2.0.3-alpha.
+      Found by "frosty_un".
 
   o Major bugfixes:
     - Fix a crash bug when changing node restrictions while a DNS lookup
