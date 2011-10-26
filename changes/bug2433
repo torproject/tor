@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Don't assert when changing from bridge to relay or vice versa with a controller.
-      The assert happened because we didn't properly initialize our keys in this case.
-      Bugfix on 0.2.2.18, fixes bug 2433. Issue first discovered by bastik.
-

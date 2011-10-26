@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
-      Fixes bug 3208.
-

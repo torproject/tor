@@ -1,4 +1,0 @@
-  o Removed options:
-    - Remove undocumented option "-F" from tor-resolve: it hasn't done
-      anything since 0.2.1.16-rc.
-

@@ -40,6 +40,10 @@ Changes in version 0.2.1.31 - 2011-05-??
       like Vidalia, in which case the controller would never get a
       REACHABILITY_SUCCEEDED status event. Bugfix on 0.1.2.6-alpha;
       fixes bug 1172.
+    - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
+      enabled. Fixes bug 1526.
+    - Remove undocumented option "-F" from tor-resolve: it hasn't done
+      anything since 0.2.1.16-rc.
     - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
       None of the cases where we did this before were wrong, but by making
       this change we avoid warnings. Fixes bug 2475; bugfix on 0.2.1.28.
@@ -59,6 +63,8 @@ Changes in version 0.2.1.31 - 2011-05-??
       example due to a permissions change, between when we start up
       and when a controller calls SAVECONF. Fixes bug 3135; bugfix
       on 0.0.9pre6.
+    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
+      Fixes bug 3208.
     - Always NUL-terminate the sun_path field of a sockaddr_un before
       passing it to the kernel. (Not a security issue: kernels are
       smart enough to reject bad sockaddr_uns.) Found by Coverity;
