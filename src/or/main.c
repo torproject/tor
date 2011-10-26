@@ -1378,7 +1378,8 @@ ip_address_changed(int at_interface)
   if (at_interface) {
     if (! server) {
       /* Okay, change our keys. */
-      init_keys();
+      if (init_keys()<0)
+        log_warn(LD_GENERAL, "Unable to rotate keys after IP change!");
     }
   } else {
     if (server) {
