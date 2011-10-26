@@ -2297,7 +2297,6 @@ entry_guards_compute_status(void)
 {
   time_t now;
   int changed = 0;
-  int severity = LOG_DEBUG;
   or_options_t *options;
   digestmap_t *reasons;
   if (! entry_guards)
@@ -2324,8 +2323,6 @@ entry_guards_compute_status(void)
 
   if (remove_dead_entry_guards())
     changed = 1;
-
-  severity = changed ? LOG_DEBUG : LOG_INFO;
 
   if (changed) {
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
