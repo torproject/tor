@@ -192,9 +192,11 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
 static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     crypto_pk_env_t *identity,
-                                    unsigned int key_lifetime);
+                                    unsigned int key_lifetime,
+                                    int is_client);
 static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
-                                              unsigned int key_lifetime);
+                                              unsigned int key_lifetime,
+                                              int is_client);
 
 /** Global TLS contexts. We keep them here because nobody else needs
  * to touch them. */
@@ -653,7 +655,7 @@ tor_tls_context_init(int is_public_server,
 
     rv1 = tor_tls_context_init_one(&server_tls_context,
                                    server_identity,
-                                   key_lifetime);
+                                   key_lifetime, 0);
 
     if (rv1 >= 0) {
       new_ctx = server_tls_context;
@@ -669,7 +671,8 @@ tor_tls_context_init(int is_public_server,
     if (server_identity != NULL) {
       rv1 = tor_tls_context_init_one(&server_tls_context,
                                      server_identity,
-                                     key_lifetime);
+                                     key_lifetime,
+                                     0);
     } else {
       tor_tls_context_t *old_ctx = server_tls_context;
       server_tls_context = NULL;
@@ -681,7 +684,8 @@ tor_tls_context_init(int is_public_server,
 
     rv2 = tor_tls_context_init_one(&client_tls_context,
                                    client_identity,
-                                   key_lifetime);
+                                   key_lifetime,
+                                   1);
   }
 
   return MIN(rv1, rv2);
@@ -696,10 +700,12 @@ tor_tls_context_init(int is_public_server,
 static int
 tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                          crypto_pk_env_t *identity,
-                         unsigned int key_lifetime)
+                         unsigned int key_lifetime,
+                         int is_client)
 {
   tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
-                                                   key_lifetime);
+                                                   key_lifetime,
+                                                   is_client);
   tor_tls_context_t *old_ctx = *ppcontext;
 
   if (new_ctx != NULL) {
@@ -721,7 +727,8 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
  * certificate.
  */
 static tor_tls_context_t *
-tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
+tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
+                    int is_client)
 {
   crypto_pk_env_t *rsa = NULL;
   EVP_PKEY *pkey = NULL;
@@ -738,22 +745,26 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     goto error;
   if (crypto_pk_generate_key(rsa)<0)
     goto error;
-  /* Create certificate signed by identity key. */
-  cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
-                                    key_lifetime);
-  /* Create self-signed certificate for identity key. */
-  idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
-                                      IDENTITY_CERT_LIFETIME);
-  if (!cert || !idcert) {
-    log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
-    goto error;
+  if (!is_client) {
+    /* Create certificate signed by identity key. */
+    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
+                                      key_lifetime);
+    /* Create self-signed certificate for identity key. */
+    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
+                                        IDENTITY_CERT_LIFETIME);
+    if (!cert || !idcert) {
+      log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
+      goto error;
+    }
   }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
-  result->my_cert = X509_dup(cert);
-  result->my_id_cert = X509_dup(idcert);
-  result->key = crypto_pk_dup_key(rsa);
+  if (!is_client) {
+    result->my_cert = X509_dup(cert);
+    result->my_id_cert = X509_dup(idcert);
+    result->key = crypto_pk_dup_key(rsa);
+  }
 
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
@@ -785,27 +796,31 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 #ifdef SSL_MODE_RELEASE_BUFFERS
   SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
 #endif
-  if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
-    goto error;
-  X509_free(cert); /* We just added a reference to cert. */
-  cert=NULL;
-  if (idcert) {
-    X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
-    tor_assert(s);
-    X509_STORE_add_cert(s, idcert);
-    X509_free(idcert); /* The context now owns the reference to idcert */
-    idcert = NULL;
+  if (! is_client) {
+    if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
+      goto error;
+    X509_free(cert); /* We just added a reference to cert. */
+    cert=NULL;
+    if (idcert) {
+      X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
+      tor_assert(s);
+      X509_STORE_add_cert(s, idcert);
+      X509_free(idcert); /* The context now owns the reference to idcert */
+      idcert = NULL;
+    }
   }
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
-  tor_assert(rsa);
-  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
-    goto error;
-  if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
-    goto error;
-  EVP_PKEY_free(pkey);
-  pkey = NULL;
-  if (!SSL_CTX_check_private_key(result->ctx))
-    goto error;
+  if (!is_client) {
+    tor_assert(rsa);
+    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
+      goto error;
+    if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
+      goto error;
+    EVP_PKEY_free(pkey);
+    pkey = NULL;
+    if (!SSL_CTX_check_private_key(result->ctx))
+      goto error;
+  }
   {
     crypto_dh_env_t *dh = crypto_dh_new(DH_TYPE_TLS);
     tor_assert(dh);
