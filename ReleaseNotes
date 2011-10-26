@@ -6,8 +6,8 @@ each development snapshot, see the ChangeLog file.
 Changes in version 0.2.1.31 - 2011-10-26
   Tor 0.2.1.31 backports important security and privacy fixes for
   oldstable. This release is intended only for package maintainers and
-  other users who cannot use the 0.2.2 stable series. All others should
-  be using Tor 0.2.2.x or newer.
+  others who cannot use the 0.2.2 stable series. All others should be
+  using Tor 0.2.2.x or newer.
 
   o Security fixes (also included in 0.2.2.x):
     - Replace all potentially sensitive memory comparison operations
@@ -23,7 +23,7 @@ Changes in version 0.2.1.31 - 2011-10-26
   o Privacy/anonymity fixes (also included in 0.2.2.x):
     - Clients and bridges no longer send TLS certificate chains on
       outgoing OR connections. Previously, each client or bridge
-      would use a single cert chain for all outgoing OR connections
+      would use the same cert chain for all outgoing OR connections
       for up to 24 hours, which allowed any relay that the client or
       bridge contacted to determine which entry guards it is using.
       Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by frosty_un.
