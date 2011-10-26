@@ -1031,6 +1031,12 @@ typedef struct or_connection_t {
    * because the connection is too old, or because there's a better one, etc.
    */
   unsigned int is_bad_for_new_circs:1;
+  /** True iff we have decided that the other end of this connection
+   * is a client.  Connections with this flag set should never be used
+   * to satisfy an EXTEND request.  */
+  unsigned int is_connection_with_client:1;
+  /** True iff this is an outgoing connection. */
+  unsigned int is_outgoing:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   circid_t next_circ_id; /**< Which circ_id do we try to use next on
