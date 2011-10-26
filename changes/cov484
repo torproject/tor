@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Report any failure in init_keys() calls done because our IP address
+      has changed. Spotted by Coverity Scan. Bugfix on 0.1.1.4-alpha;
+      fixes CID 484.

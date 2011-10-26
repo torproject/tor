@@ -1690,6 +1690,10 @@ crypto_digest_get_digest(crypto_digest_env_t *digest,
       SHA256_Final(r, &tmpenv.d.sha2);
       break;
     default:
+      log_warn(LD_BUG, "Called with unknown algorithm %d", digest->algorithm);
+      /* If fragile_assert is not enabled, then we should at least not
+       * leak anything. */
+      memset(r, 0xff, sizeof(r));
       tor_fragile_assert();
       break;
   }
