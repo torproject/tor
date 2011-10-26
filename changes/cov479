@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix internal bug-checking logic that was supposed to catch
-      failures in digest generation so that it will fail more robustly
-      if we ask for a nonexistent algorithm. Found by Coverity Scan.
-      Bugfix on 0.2.2.1-alpha; fixes Coverity CID 479.

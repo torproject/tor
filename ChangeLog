@@ -33,6 +33,13 @@ Changes in version 0.2.2.34 - 2011-10-??
     - Bridges now skip DNS self-tests, to act a little more stealthily.
       Fixes bug 4201; bugfix on 0.2.0.3-alpha, which first introduced
       bridges. Patch by "warms0x".
+    - Fix internal bug-checking logic that was supposed to catch
+      failures in digest generation so that it will fail more robustly
+      if we ask for a nonexistent algorithm. Found by Coverity Scan.
+      Bugfix on 0.2.2.1-alpha; fixes Coverity CID 479.
+    - Report any failure in init_keys() calls launched because our
+      IP address has changed. Spotted by Coverity Scan. Bugfix on
+      0.1.1.4-alpha; fixes CID 484.
 
   o Minor bugfixes (log messages and documentation):
     - Remove a confusing dollar sign from the example fingerprint in the
