@@ -1228,6 +1228,17 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   return NULL;
 }
 
+/** Return true if the <b>tls</b> object has completed more
+ *  renegotiations than needed for the Tor protocol. */
+static INLINE int
+tor_tls_got_excess_renegotiations(tor_tls_t *tls)
+{
+  /** The Tor v2 server handshake needs a single renegotiation after
+      the initial SSL handshake. This means that if we ever see more
+      than 2 handshakes, we raise the flag. */
+  return (tls->server_handshake_count > 2) ? 1 : 0;
+}
+
 #ifdef V2_HANDSHAKE_SERVER
 /** Return true iff the cipher list suggested by the client for <b>ssl</b> is
  * a list that indicates that the client knows how to do the v2 TLS connection
@@ -1605,6 +1616,12 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
 
+  if (tor_tls_got_excess_renegotiations(tls)) {
+    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
+
+    return TOR_TLS_ERROR_MISC;
+  }
+
 #ifdef V2_HANDSHAKE_SERVER
   if (tls->got_renegotiate) {
     tor_assert(tls->server_handshake_count == 2);
@@ -1617,14 +1634,6 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
     tls->got_renegotiate = 0;
 
     return r;
-  } else if (tls->server_handshake_count > 2) {
-    /* If we get more than 2 handshakes, it means that our peer is
-       trying to re-renegotiate. Return an error. */
-    tor_assert(tls->server_handshake_count == 3);
-
-    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
-
-    return TOR_TLS_ERROR_MISC;
   }
 #endif
 
@@ -1664,6 +1673,13 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   }
   r = SSL_write(tls->ssl, cp, (int)n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO, LD_NET);
+
+  if (tor_tls_got_excess_renegotiations(tls)) {
+    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
+
+    return TOR_TLS_ERROR_MISC;
+  }
+
   if (err == TOR_TLS_DONE) {
     return r;
   }
