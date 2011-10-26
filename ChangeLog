@@ -1,13 +1,33 @@
-Changes in version 0.2.1.31 - 2011-05-??
+Changes in version 0.2.1.31 - 2011-10-26
   Tor 0.2.1.31 fixes a variety of potential privacy problems.
 
-  o Security/privacy fixes (also included in 0.2.2.x):
+  o Security fixes (also included in 0.2.2.x):
     - Replace all potentially sensitive memory comparison operations
       with versions whose runtime does not depend on the data being
       compared. This will help resist a class of attacks where an
       adversary can use variations in timing information to learn
       sensitive data. Fix for one case of bug 3122. (Safe memcmp
       implementation by Robert Ransom based partially on code by DJB.)
+    - Fix an assert in parsing router descriptors containing IPv6
+      addresses. This one took down the directory authorities when
+      somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
+
+  o Privacy/anonymity fixes (also included in 0.2.2.x):
+    - Clients and bridges no longer send TLS certificate chains on
+      outgoing OR connections. Previously, each client or bridge
+      would use a single cert chain for all outgoing OR connections
+      for up to 24 hours, which allowed any relay that the client or
+      bridge contacted to determine which entry guards it is using.
+      Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by frosty_un.
+    - If a relay receives a CREATE_FAST cell on a TLS connection, it
+      no longer considers that connection as suitable for satisfying a
+      circuit EXTEND request. Now relays can protect clients from the
+      CVE-2011-2768 issue even if the clients haven't upgraded yet.
+    - Bridges now refuse CREATE or CREATE_FAST cells on OR connections
+      that they initiated. Relays could distinguish incoming bridge 
+      connections from client connections, creating another avenue for
+      enumerating bridges. Fixes CVE-2011-2769. Bugfix on 0.2.0.3-alpha.
+      Found by "frosty_un".
     - When receiving a hidden service descriptor, check that it is for
       the hidden service we wanted. Previously, Tor would store any
       hidden service descriptors that a directory gave it, whether it
@@ -21,9 +41,6 @@ Changes in version 0.2.1.31 - 2011-05-??
       requests for "all" descriptors. It used to include bridge
       descriptors in its answer, which was a major information leak.
       Found by "piebeer". Bugfix on 0.2.0.3-alpha.
-    - Fix an assert in parsing router descriptors containing IPv6
-      addresses. This one took down the directory authorities when
-      somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
     - Don't attach new streams to old rendezvous circuits after SIGNAL
       NEWNYM. Previously, we would keep using an existing rendezvous
       circuit if it remained open (i.e. if it were kept open by a
