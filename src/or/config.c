@@ -4985,8 +4985,10 @@ parse_server_transport_line(const char *line, int validate_only)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
-  smartlist_free(transport_list);
+  if (transport_list) {
+    SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
+    smartlist_free(transport_list);
+  }
 
   return r;
 }
