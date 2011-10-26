@@ -47,6 +47,7 @@ version_status_t tor_version_is_obsolete(const char *myversion,
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
+int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);

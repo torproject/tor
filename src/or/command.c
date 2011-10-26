@@ -316,6 +316,7 @@ static void
 command_process_create_cell(cell_t *cell, or_connection_t *conn)
 {
   or_circuit_t *circ;
+  const or_options_t *options = get_options();
   int id_is_high;
 
   if (we_are_hibernating()) {
@@ -327,9 +328,11 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
     return;
   }
 
-  if (!server_mode(get_options())) {
+  if (!server_mode(options) ||
+      (!public_server_mode(options) && conn->is_outgoing)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received create cell (type %d) from %s:%d, but we're a client. "
+           "Received create cell (type %d) from %s:%d, but we're connected "
+           "to it as a client. "
            "Sending back a destroy.",
            (int)cell->command, conn->_base.address, conn->_base.port);
     connection_or_send_destroy(cell->circ_id, conn,
@@ -392,7 +395,13 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
      * a CPU worker. */
     char keys[CPATH_KEY_MATERIAL_LEN];
     char reply[DIGEST_LEN*2];
+
     tor_assert(cell->command == CELL_CREATE_FAST);
+
+    /* Make sure we never try to use the OR connection on which we
+     * received this cell to satisfy an EXTEND request,  */
+    conn->is_connection_with_client = 1;
+
     if (fast_server_handshake(cell->payload, (uint8_t*)reply,
                               (uint8_t*)keys, sizeof(keys))<0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");

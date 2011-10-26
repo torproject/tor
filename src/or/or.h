@@ -1220,6 +1220,12 @@ typedef struct or_connection_t {
    * router itself has a problem.
    */
   unsigned int is_bad_for_new_circs:1;
+  /** True iff we have decided that the other end of this connection
+   * is a client.  Connections with this flag set should never be used
+   * to satisfy an EXTEND request.  */
+  unsigned int is_connection_with_client:1;
+  /** True iff this is an outgoing connection. */
+  unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
@@ -3151,6 +3157,10 @@ typedef struct {
   int AuthDirMaxServersPerAuthAddr; /**< Do not permit more than this
                                      * number of servers per IP address shared
                                      * with an authority. */
+
+  /** Should we assign the Guard flag to relays which would allow
+   * exploitation of CVE-2011-2768 against their clients? */
+  int GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays;
 
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */

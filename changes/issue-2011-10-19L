@@ -1,0 +1,28 @@
+  o Security fixes:
+
+    - Don't send TLS certificate chains on outgoing OR connections
+      from clients and bridges.  Previously, each client or bridge
+      would use a single cert chain for all outgoing OR connections
+      for up to 24 hours, which allowed any relay connected to by a
+      client or bridge to determine which entry guards it is using.
+      This is a potential user-tracing bug for *all* users; everyone
+      who uses Tor's client or hidden service functionality should
+      upgrade.  Fixes CVE-2011-2768.  Bugfix on FIXME; found by
+      frosty_un.
+
+    - Don't use any OR connection on which we have received a
+      CREATE_FAST cell to satisfy an EXTEND request.  Previously, we
+      would not consider whether a connection appears to be from a
+      client or bridge when deciding whether to use that connection to
+      satisfy an EXTEND request.  Mitigates CVE-2011-2768, by
+      preventing an attacker from determining whether an unpatched
+      client is connected to a patched relay.  Bugfix on FIXME; found
+      by frosty_un.
+
+    - Don't assign the Guard flag to relays running a version of Tor
+      which would use an OR connection on which it has received a
+      CREATE_FAST cell to satisfy an EXTEND request.  Mitigates
+      CVE-2011-2768, by ensuring that clients will not connect
+      directly to any relay which an attacker could probe for an
+      unpatched client's connections.
+
