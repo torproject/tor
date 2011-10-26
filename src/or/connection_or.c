@@ -1139,10 +1139,6 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
   or_connection_t *conn = _conn;
   (void)tls;
 
-  /* Don't invoke this again. */
-  tor_tls_set_renegotiate_callback(tls, NULL, NULL);
-  tor_tls_block_renegotiation(tls);
-
   if (connection_tls_finish_handshake(conn) < 0) {
     /* XXXX_TLS double-check that it's ok to do this from inside read. */
     /* XXXX_TLS double-check that this verifies certificates. */
@@ -1529,7 +1525,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
       connection_or_init_conn_from_address(conn, &conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
-    tor_tls_block_renegotiation(conn->tls);
     return connection_or_set_state_open(conn);
   } else {
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V2;
