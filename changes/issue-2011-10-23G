@@ -1,9 +1,0 @@
-  o Security fixes:
-
-    - Reject CREATE and CREATE_FAST cells on outgoing OR connections
-      from a bridge to a relay.  Previously, we would accept them and
-      handle them normally, thereby allowing a malicious relay to
-      easily distinguish bridges which connect to it from clients.
-      Fixes CVE-2011-2769.  Bugfix on 0.2.0.3-alpha, when bridges were
-      implemented; found by frosty_un.
-
