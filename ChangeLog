@@ -1,5 +1,31 @@
 Changes in version 0.2.2.34 - 2011-10-26
-  o Privacy/anonymity fixes:
+  Tor 0.2.2.34 fixes a critical anonymity vulnerability where an attacker
+  can deanonymize Tor users. Everybody should upgrade.
+
+  The attack relies on four components: 1) Clients reuse their TLS cert
+  when talking to different relays, so relays can recognize a user by
+  the identity key in her cert. 2) An attacker who knows the client's
+  identity key can probe each guard relay to see if that identity key
+  is connected to that guard relay right now. 3) A variety of active
+  attacks in the literature (starting from "Low-Cost Traffic Analysis
+  of Tor" by Murdoch and Danezis in 2005) allow a malicious website to
+  discover the guard relays that a Tor user visiting the website is using.
+  4) Clients typically pick three guards at random, so the set of guards
+  for a given user could well be a unique fingerprint for her. This
+  release fixes components #1 and #2, which is enough to block the attack;
+  the other two remain as open research problems. Special thanks to
+  "frosty_un" for reporting the issue to us!
+
+  Clients should upgrade so they are no longer recognizable by the TLS
+  certs they present. Relays should upgrade so they no longer allow a
+  remote attacker to probe them to test whether unpatched clients are
+  currently connected to them.
+
+  This release also fixes several vulnerabilities that allow an attacker
+  to enumerate bridge relays. Some bridge enumeration attacks still
+  remain; see for example proposal 188.
+
+  o Privacy/anonymity fixes (clients):
     - Clients and bridges no longer send TLS certificate chains on
       outgoing OR connections. Previously, each client or bridge
       would use the same cert chain for all outgoing OR connections
@@ -18,6 +44,8 @@ Changes in version 0.2.2.34 - 2011-10-26
       "GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays" config option
       to let us transition smoothly, else tomorrow there would be no
       guard relays.
+
+  o Privacy/anonymity fixes (bridge enumeration):
     - Bridge relays now do their directory fetches inside Tor TLS
       connections, like all the other clients do, rather than connecting
       directly to the DirPort like public relays do. Removes another
@@ -27,7 +55,7 @@ Changes in version 0.2.2.34 - 2011-10-26
       enumerating bridges. Fixes bug 4124; bugfix on 0.2.0.3-alpha,
       when bridges were introduced.
     - Bridges now refuse CREATE or CREATE_FAST cells on OR connections
-      that they initiated. Relays could distinguish incoming bridge 
+      that they initiated. Relays could distinguish incoming bridge
       connections from client connections, creating another avenue for
       enumerating bridges. Fixes CVE-2011-2769. Bugfix on 0.2.0.3-alpha.
       Found by "frosty_un".
