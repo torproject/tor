@@ -1,4 +1,11 @@
 Changes in version 0.2.3.6-alpha - 2011-10-26
+  Tor 0.2.3.6-alpha includes the fix from 0.2.2.34 for a critical
+  anonymity vulnerability where an attacker can deanonymize Tor
+  users. Everybody should upgrade.
+
+  This release also features support for a new v3 connection handshake
+  protocol, and fixes to make hidden service connections more robust.
+
   o Major features:
     - Implement a new handshake protocol (v3) for authenticating Tors to
       each other over TLS. It should be more resistant to fingerprinting
