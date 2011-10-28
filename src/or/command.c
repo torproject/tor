@@ -1020,8 +1020,6 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       ERR("The certs we wanted were missing");
 
     /* Remember these certificates so we can check an AUTHENTICATE cell */
-    conn->handshake_state->id_cert = id_cert;
-    conn->handshake_state->auth_cert = auth_cert;
     if (! tor_tls_cert_is_valid(auth_cert, id_cert, 1))
       ERR("The authentication certificate was not valid");
     if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
@@ -1032,6 +1030,8 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
              safe_str(conn->_base.address), conn->_base.port);
     /* XXXX check more stuff? */
 
+    conn->handshake_state->id_cert = id_cert;
+    conn->handshake_state->auth_cert = auth_cert;
     id_cert = auth_cert = NULL;
   }
 

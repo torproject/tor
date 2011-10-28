@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix a double-free bug that would occur when we received an invalid
+      certificate in a CERT cell in the new v3 handshake. Fixes bug 4343;
+      bugfix on 0.2.3.6-alpha.
+
