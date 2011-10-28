@@ -1,0 +1,7 @@
+  o Major features:
+    - Now that Tor 0.2.0.x is completely deprecated, we can enable the
+      final part of "Proposal 110: Avoiding infinite length circuits"
+      by refusing all circuit-extend requests that do not appear in a
+      "relay_early" cell. This change helps Tor to resist a class of
+      denial-of-service attacks by limiting the maximum circuit length.
+
