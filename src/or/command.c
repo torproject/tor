@@ -148,6 +148,9 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
 #endif
 
+  if (conn->_base.marked_for_close)
+    return;
+
   /* Reject all but VERSIONS and NETINFO when handshaking. */
   /* (VERSIONS should actually be impossible; it's variable-length.) */
   if (handshaking && cell->command != CELL_VERSIONS &&
@@ -229,6 +232,9 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
     current_second = now;
   }
 #endif
+
+  if (conn->_base.marked_for_close)
+    return;
 
   switch (conn->_base.state)
   {
