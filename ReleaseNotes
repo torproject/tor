@@ -32,10 +32,10 @@ Changes in version 0.2.2.34 - 2011-10-26
 
   o Privacy/anonymity fixes (clients):
     - Clients and bridges no longer send TLS certificate chains on
-      outgoing OR connections. Previously, each client or bridge
-      would use the same cert chain for all outgoing OR connections
-      for up to 24 hours, which allowed any relay that the client or
-      bridge contacted to determine which entry guards it is using.
+      outgoing OR connections. Previously, each client or bridge would
+      use the same cert chain for all outgoing OR connections until
+      its IP address changes, which allowed any relay that the client
+      or bridge contacted to determine which entry guards it is using.
       Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by "frosty_un".
     - If a relay receives a CREATE_FAST cell on a TLS connection, it
       no longer considers that connection as suitable for satisfying a
@@ -136,11 +136,11 @@ Changes in version 0.2.1.31 - 2011-10-26
 
   o Privacy/anonymity fixes (also included in 0.2.2.x):
     - Clients and bridges no longer send TLS certificate chains on
-      outgoing OR connections. Previously, each client or bridge
-      would use the same cert chain for all outgoing OR connections
-      for up to 24 hours, which allowed any relay that the client or
-      bridge contacted to determine which entry guards it is using.
-      Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by frosty_un.
+      outgoing OR connections. Previously, each client or bridge would
+      use the same cert chain for all outgoing OR connections until
+      its IP address changes, which allowed any relay that the client
+      or bridge contacted to determine which entry guards it is using.
+      Fixes CVE-2011-2768. Bugfix on 0.0.9pre5; found by "frosty_un".
     - If a relay receives a CREATE_FAST cell on a TLS connection, it
       no longer considers that connection as suitable for satisfying a
       circuit EXTEND request. Now relays can protect clients from the
