@@ -1135,7 +1135,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad AUTHETNICATE cell from %s:%d: %s",   \
+           "Received a bad AUTHENTICATE cell from %s:%d: %s",   \
            safe_str(conn->_base.address), conn->_base.port, (s));       \
     connection_mark_for_close(TO_CONN(conn));                   \
     return;                                                     \
