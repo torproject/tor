@@ -694,7 +694,7 @@ tor_cert_free(tor_cert_t *cert)
   if (cert->cert)
     X509_free(cert->cert);
   tor_free(cert->encoded);
-  memset(cert, 0x03, sizeof(cert));
+  memset(cert, 0x03, sizeof(*cert));
   tor_free(cert);
 }
 
