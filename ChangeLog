@@ -1,9 +1,11 @@
 Changes in version 0.2.3.7-alpha - 2011-10-??
   o Major bugfix:
-    - Do not process cells on a marked-for-close connection. We previously
-      avoided this by not calling read handlers on marked connections, but
-      that's not adequate for the case when cells are very small. Fixes
-      bug 4299; bugfix on 0.2.0.20-rc which first made small cells possible.
+    - If we mark an OR connection for close based on a cell we process,
+      don't process any further cells on it. We already avoided reading
+      on marked-for-close connections, but now we also discard the cells
+      we'd already read. Fixes bug 4299; bugfix on 0.2.0.10-alpha, which
+      was the first version where we might mark a connection for close
+      based on processing a cell on it.
     - Fix a double-free bug that would occur when we received an invalid
       certificate in a CERT cell in the new v3 handshake. Fixes bug 4343;
       bugfix on 0.2.3.6-alpha.
