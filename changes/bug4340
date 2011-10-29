@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Don't crash when we're running as a relay and don't have a geoip
+    file. Bugfix on tor-0.2.2.34; fixes bug 4340. This backports a fix
+    we've had in master already.
+
