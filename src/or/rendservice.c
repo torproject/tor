@@ -1917,16 +1917,47 @@ upload_service_descriptor(rend_service_t *service)
 
 /** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we
  * should stop publishing it in new descriptors and eventually close
- * it).
- *
- * XXXX This is a dummy function for now.  It will actually do
- * something in a later commit. */
+ * it). */
 static int
 intro_point_should_expire_now(rend_intro_point_t *intro,
                               time_t now)
 {
-  (void)intro; (void)now;
-  return 0;
+  tor_assert(intro != NULL);
+
+  if (intro->time_published == -1) {
+    /* Don't expire an intro point if we haven't even published it yet. */
+    return 0;
+  }
+
+  if (intro->time_expiring != -1) {
+    /* We've already started expiring this intro point.  *Don't* let
+     * this function's result 'flap'. */
+    return 1;
+  }
+
+  if (intro->introduction_count >= INTRO_POINT_LIFETIME_INTRODUCTIONS) {
+    /* This intro point has been used too many times.  Expire it now. */
+    return 1;
+  }
+
+  if (intro->time_to_expire == -1) {
+    /* This intro point has been published, but we haven't picked an
+     * expiration time for it.  Pick one now. */
+    int intro_point_lifetime_seconds =
+      INTRO_POINT_LIFETIME_MIN_SECONDS +
+      crypto_rand_int(INTRO_POINT_LIFETIME_MAX_SECONDS -
+                      INTRO_POINT_LIFETIME_MIN_SECONDS);
+
+    /* Start the expiration timer now, rather than when the intro
+     * point was first published.  There shouldn't be much of a time
+     * difference. */
+    intro->time_to_expire = now + intro_point_lifetime_seconds;
+
+    return 0;
+  }
+
+  /* This intro point has a time to expire set already.  Use it. */
+  return (now >= intro->time_to_expire);
 }
 
 /** For every service, check how many intro points it currently has, and:
@@ -2107,6 +2138,7 @@ rend_services_introduce(void)
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       intro->time_published = -1;
+      intro->time_to_expire = -1;
       intro->time_expiring = -1;
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",

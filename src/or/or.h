@@ -3461,6 +3461,26 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * introduction point.  See also rend_intro_point_t.unreachable_count. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
+/** The maximum number of distinct INTRODUCE2 cells which a hidden
+ * service's introduction point will receive before it begins to
+ * expire.
+ *
+ * XXX023 Is this number at all sane? */
+#define INTRO_POINT_LIFETIME_INTRODUCTIONS 16384
+
+/** The minimum number of seconds that an introduction point will last
+ * before expiring due to old age.  (If it receives
+ * INTRO_POINT_LIFETIME_INTRODUCTIONS INTRODUCE2 cells, it may expire
+ * sooner.)
+ *
+ * XXX023 Should this be configurable? */
+#define INTRO_POINT_LIFETIME_MIN_SECONDS 18*60*60
+/** The maximum number of seconds that an introduction point will last
+ * before expiring due to old age.
+ *
+ * XXX023 Should this be configurable? */
+#define INTRO_POINT_LIFETIME_MAX_SECONDS 24*60*60
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
@@ -3493,6 +3513,11 @@ typedef struct rend_intro_point_t {
    * published, or -1 if this intro point has not yet been
    * published. */
   time_t time_published;
+
+  /** (Service side only) The time at which this intro point should
+   * (start to) expire, or -1 if we haven't decided when this intro
+   * point should expire. */
+  time_t time_to_expire;
 
   /** (Service side only) The time at which we decided that this intro
    * point should start expiring, or -1 if this intro point is not yet
