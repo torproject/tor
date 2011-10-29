@@ -1,4 +1,0 @@
-  o Trivial fixes:
-    - Fixed a typo in a hibernation-related log message. Fixes bug 4331;
-      bugfix on 0.2.2.23-alpha; found by "tmpname0901".
-

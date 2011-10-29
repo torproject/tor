@@ -1,3 +1,17 @@
+Changes in version 0.2.3.7-alpha - 2011-10-??
+  o Major bugfix:
+    - Do not process cells on a marked-for-close connection. We previously
+      avoided this by not calling read handlers on marked connections, but
+      that's not adequate for the case when cells are very small. Fixes
+      bug 4299; bugfix on 0.2.0.20-rc which first made small cells possible.
+    - Fix a double-free bug that would occur when we received an invalid
+      certificate in a CERT cell in the new v3 handshake. Fixes bug 4343;
+      bugfix on 0.2.3.6-alpha.
+
+  o Trivial fixes:
+    - Fixed a typo in a hibernation-related log message. Fixes bug 4331;
+      bugfix on 0.2.2.23-alpha; found by "tmpname0901".
+
 Changes in version 0.2.3.6-alpha - 2011-10-26
   Tor 0.2.3.6-alpha includes the fix from 0.2.2.34 for a critical
   anonymity vulnerability where an attacker can deanonymize Tor

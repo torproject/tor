@@ -1,5 +1,0 @@
-  o Major bugfix:
-    - Do not process cells on a marked-for-close connection. We previously
-      avoided this by not calling read handlers on marked connections, but
-      that's not adequate for the case when cells are very small. Fixes
-      bug 4299; bugfix on 0.2.0.20-rc which first made small cells possible.
