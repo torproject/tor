@@ -1,7 +1,0 @@
-  Privacy fixes:
-    - Bridges no longer include their address in NETINFO cells on outgoing
-      OR connections, to allow them to blend in better with clients.
-      Removes another avenue for enumerating bridges. Reported by
-      "troll_un". Fixes bug 4348; bugfix on 0.2.0.10-alpha, when NETINFO
-      cells were introduced.
-
