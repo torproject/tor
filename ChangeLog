@@ -1,4 +1,8 @@
 Changes in version 0.2.3.7-alpha - 2011-10-30
+  Tor 0.2.3.7-alpha fixes a crash bug in 0.2.3.6-alpha introduced by
+  the new v3 handshake. It also resolves yet another bridge address
+  enumeration issue.
+
   o Major bugfixes:
     - If we mark an OR connection for close based on a cell we process,
       don't process any further cells on it. We already avoid further
