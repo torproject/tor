@@ -1928,8 +1928,11 @@ connection_or_send_netinfo(or_connection_t *conn)
     return -1;
   out += len;
 
-  /* My address. */
-  if ((me = router_get_my_routerinfo())) {
+  /* My address -- only include it if I'm a public relay, or if I'm a
+   * bridge and this is an incoming connection. If I'm a bridge and this
+   * is an outgoing connection, act like a normal client and omit it. */
+  if ((public_server_mode(get_options()) || !conn->is_outgoing) &&
+      (me = router_get_my_routerinfo())) {
     tor_addr_t my_addr;
     *out++ = 1; /* only one address is supported. */
 
