@@ -759,7 +759,7 @@ typedef struct rend_data_t {
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
  * simultaneous attempts to connect to the same rendezvous point. */
-#define REND_REPLAY_TIME_INTERVAL (60 * 60)
+#define REND_REPLAY_TIME_INTERVAL (5 * 60)
 
 /** Used to indicate which way a cell is going on a circuit. */
 typedef enum {
