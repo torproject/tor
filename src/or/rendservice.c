@@ -1037,7 +1037,6 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   len = r;
   if (*buf == 3) {
     /* Version 3 INTRODUCE2 cell. */
-    time_t ts = 0;
     v3_shift = 1;
     auth_type = buf[1];
     switch (auth_type) {
@@ -1059,17 +1058,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
         log_info(LD_REND, "Unknown authorization type '%d'", auth_type);
     }
 
-    /* Check timestamp. */
-    ts = ntohl(get_uint32(buf+1+v3_shift));
+    /* Skip the timestamp field.  We no longer use it. */
     v3_shift += 4;
-    if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
-        (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
-      /* This is far more likely to mean that a client's clock is
-       * skewed than that a replay attack is in progress. */
-      log_info(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
-               (now - ts) < 0 ? "old" : "new");
-      return -1;
-    }
   }
   if (*buf == 2 || *buf == 3) {
     /* Version 2 INTRODUCE2 cell. */
