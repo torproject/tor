@@ -3505,9 +3505,12 @@ typedef struct rend_intro_point_t {
    * included in the last HS descriptor we generated. */
   unsigned int listed_in_last_desc : 1;
 
-  /** (Service side only) The number of INTRODUCE2 cells this intro
-   * point's circuit has received. */
-  unsigned int introduction_count : 24;
+  /** (Service side only) A digestmap recording the INTRODUCE2 cells
+   * this intro point's circuit has received.  Each key is the digest
+   * of the RSA-encrypted part of a received INTRODUCE2 cell; each
+   * value is a pointer to the time_t at which the cell was
+   * received. */
+  digestmap_t *accepted_intros;
 
   /** (Service side only) The time at which this intro point was first
    * published, or -1 if this intro point has not yet been

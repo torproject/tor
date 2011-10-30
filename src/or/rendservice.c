@@ -1005,14 +1005,14 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (!service->accepted_intros)
     service->accepted_intros = digestmap_new();
 
+  if (!intro_point->accepted_intros)
+    intro_point->accepted_intros = digestmap_new();
+
   {
     char pkpart_digest[DIGEST_LEN];
-    /* Check for replay of PK-encrypted portion.  It is slightly naughty to
-       use the same digestmap to check for this and for g^x replays, but
-       collisions are tremendously unlikely.
-    */
+    /* Check for replay of PK-encrypted portion. */
     crypto_digest(pkpart_digest, (char*)request+DIGEST_LEN, keylen);
-    access_time = digestmap_get(service->accepted_intros, pkpart_digest);
+    access_time = digestmap_get(intro_point->accepted_intros, pkpart_digest);
     if (access_time != NULL) {
       log_warn(LD_REND, "Possible replay detected! We received an "
                "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
@@ -1021,14 +1021,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     }
     access_time = tor_malloc(sizeof(time_t));
     *access_time = now;
-    digestmap_set(service->accepted_intros, pkpart_digest, access_time);
-  }
-
-  /* Record that we've received another INTRODUCE2 cell through this
-   * intro point. */
-  ++(intro_point->introduction_count);
-  if (intro_point->introduction_count == 0) {
-    --(intro_point->introduction_count);
+    digestmap_set(intro_point->accepted_intros, pkpart_digest, access_time);
   }
 
   /* Next N bytes is encrypted with service key */
@@ -1935,7 +1928,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 1;
   }
 
-  if (intro->introduction_count >= INTRO_POINT_LIFETIME_INTRODUCTIONS) {
+  if (digestmap_size(intro->accepted_intros) >=
+      INTRO_POINT_LIFETIME_INTRODUCTIONS) {
     /* This intro point has been used too many times.  Expire it now. */
     return 1;
   }

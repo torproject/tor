@@ -1,0 +1,7 @@
+  o Minor features:
+
+    - Move the replay-detection cache for the RSA-encrypted parts of
+      INTRODUCE2 cells to the introduction point data structures.
+      Previously, we would use one replay-detection cache per hidden
+      service.  Required by fix for bug 3460.
+
