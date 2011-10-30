@@ -1,3 +1,20 @@
+Changes in version 0.2.2.35 - 2011-1?-??
+  o Major bugfix:
+    - If we mark an OR connection for close based on a cell we process,
+      don't process any further cells on it. We already avoided reading
+      on marked-for-close connections, but now we also discard the cells
+      we'd already read. Fixes bug 4299; bugfix on 0.2.0.10-alpha, which
+      was the first version where we might mark a connection for close
+      based on processing a cell on it.
+    - Don't crash when we're running as a relay and don't have a geoip
+      file. Bugfix on 0.2.2.34; fixes bug 4340. This backports a fix
+      we've had in the 0.2.3.x branch already.
+
+  o Trivial fixes:
+    - Fix a typo in a hibernation-related log message. Fixes bug 4331;
+      bugfix on 0.2.2.23-alpha; found by "tmpname0901".
+
+
 Changes in version 0.2.2.34 - 2011-10-26
   Tor 0.2.2.34 fixes a critical anonymity vulnerability where an attacker
   can deanonymize Tor users. Everybody should upgrade.
