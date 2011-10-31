@@ -1752,6 +1752,21 @@ test_util_di_ops(void)
   ;
 }
 
+/**
+ * Test counting high bits
+ */
+static void
+test_util_n_bits_set(void *ptr)
+{
+  (void)ptr;
+  test_eq(n_bits_set_u8(0), 0);
+  test_eq(n_bits_set_u8(1), 1);
+  test_eq(n_bits_set_u8(129), 2);
+  test_eq(n_bits_set_u8(255), 8);
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1789,6 +1804,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_partial_read, 0),
   UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
+  UTIL_TEST(n_bits_set, 0),
   END_OF_TESTCASES
 };
 
