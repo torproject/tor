@@ -363,16 +363,6 @@ test_util_strmisc(void)
   test_assert(!tor_strisprint(cp));
   tor_free(cp);
 
-  /* Test eat_whitespace. */
-  {
-    const char *s = "  \n a";
-    test_eq_ptr(eat_whitespace(s), s+4);
-    s = "abcd";
-    test_eq_ptr(eat_whitespace(s), s);
-    s = "#xyz\nab";
-    test_eq_ptr(eat_whitespace(s), s+5);
-  }
-
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
@@ -1767,6 +1757,77 @@ test_util_n_bits_set(void *ptr)
   ;
 }
 
+/**
+ * Test LHS whitespace (and comment) eater
+ */
+static void
+test_util_eat_whitespace(void *ptr)
+{
+  const char ws[] = { ' ', '\t', '\r' }; /* Except NL */
+  char str[80];
+  size_t i;
+
+  (void)ptr;
+
+  /* Try one leading ws */
+  strcpy(str, "fuubaar");
+  for (i = 0; i < sizeof(ws); ++i) {
+    str[0] = ws[i];
+    test_streq(eat_whitespace(str), str + 1);
+    test_streq(eat_whitespace_eos(str, str + strlen(str)), str + 1);
+    test_streq(eat_whitespace_eos_no_nl(str, str + strlen(str)), str + 1);
+    test_streq(eat_whitespace_no_nl(str), str + 1);
+  }
+  str[0] = '\n';
+  test_streq(eat_whitespace(str), str + 1);
+  test_streq(eat_whitespace_eos(str, str + strlen(str)), str + 1);
+
+  /* Empty string */
+  strcpy(str, "");
+  test_eq_ptr(eat_whitespace(str), str);
+  test_eq_ptr(eat_whitespace_eos(str, str), str);
+  test_eq_ptr(eat_whitespace_eos_no_nl(str, str), str);
+  test_eq_ptr(eat_whitespace_no_nl(str), str);
+
+  /* Only ws */
+  strcpy(str, " \t\r\n");
+  test_eq_ptr(eat_whitespace(str), str + strlen(str));
+  test_eq_ptr(eat_whitespace_eos(str, str + strlen(str)), str + strlen(str));
+
+  strcpy(str, " \t\r ");
+  test_eq_ptr(eat_whitespace_no_nl(str), str + strlen(str));
+  test_eq_ptr(eat_whitespace_eos_no_nl(str, str + strlen(str)),
+              str + strlen(str));
+
+  /* Multiple ws */
+  strcpy(str, "fuubaar");
+  for (i = 0; i < sizeof(ws); ++i)
+    str[i] = ws[i];
+  test_streq(eat_whitespace(str), str + sizeof(ws));
+  test_streq(eat_whitespace_eos(str, str + strlen(str)), str + sizeof(ws));
+  test_streq(eat_whitespace_no_nl(str), str + sizeof(ws));
+  test_streq(eat_whitespace_eos_no_nl(str, str + strlen(str)),
+             str + sizeof(ws));
+
+  /* Eat comment */
+  strcpy(str, "# Comment \n No Comment");
+  test_streq(eat_whitespace(str), "No Comment");
+  test_streq(eat_whitespace_eos(str, str + strlen(str)), "No Comment");
+
+  /* Eat comment & ws mix */
+  strcpy(str, " # \t Comment \n\t\nNo Comment");
+  test_streq(eat_whitespace(str), "No Comment");
+  test_streq(eat_whitespace_eos(str, str + strlen(str)), "No Comment");
+
+  /* Eat entire comment */
+  strcpy(str, "#Comment");
+  test_eq_ptr(eat_whitespace(str), str + strlen(str));
+  test_eq_ptr(eat_whitespace_eos(str, str + strlen(str)), str + strlen(str));
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1805,6 +1866,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),
+  UTIL_TEST(eat_whitespace, 0),
   END_OF_TESTCASES
 };
 
