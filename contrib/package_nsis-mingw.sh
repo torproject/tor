@@ -91,5 +91,5 @@ clean_localstatedir src/config/torrc.sample.in win_tmp/src/config/torrc.sample
 cp contrib/tor-mingw.nsi.in win_tmp/contrib/
 
 cd win_tmp
-"C:\Program Files\NSIS\makensis.exe" contrib/tor-mingw.nsi.in
+makensis.exe contrib/tor-mingw.nsi.in
 
