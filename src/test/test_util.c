@@ -409,6 +409,20 @@ test_util_strmisc(void)
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
   }
+
+  /* Test hex_str */
+  {
+    char binary_data[64];
+    size_t i;
+    for (i = 0; i < sizeof(binary_data); ++i)
+      binary_data[i] = i;
+    test_streq(hex_str(binary_data, 0), "");
+    test_streq(hex_str(binary_data, 1), "00");
+    test_streq(hex_str(binary_data, 17), "000102030405060708090A0B0C0D0E0F10");
+    test_streq(hex_str(binary_data, 32),
+               "000102030405060708090A0B0C0D0E0F"
+               "101112131415161718191A1B1C1D1E1F");
+  }
  done:
   ;
 }
