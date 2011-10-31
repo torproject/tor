@@ -49,7 +49,7 @@ uint64_t stats_n_netinfo_cells_processed = 0;
 /** How many CELL_VPADDING cells have we received, ever? */
 uint64_t stats_n_vpadding_cells_processed = 0;
 /** How many CELL_CERTS cells have we received, ever? */
-uint64_t stats_n_cert_cells_processed = 0;
+uint64_t stats_n_certs_cells_processed = 0;
 /** How many CELL_AUTH_CHALLENGE cells have we received, ever? */
 uint64_t stats_n_auth_challenge_cells_processed = 0;
 /** How many CELL_AUTHENTICATE cells have we received, ever? */
@@ -63,7 +63,7 @@ static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_versions_cell(var_cell_t *cell,
                                           or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
-static void command_process_cert_cell(var_cell_t *cell,
+static void command_process_certs_cell(var_cell_t *cell,
                                       or_connection_t *conn);
 static void command_process_auth_challenge_cell(var_cell_t *cell,
                                           or_connection_t *conn);
@@ -214,19 +214,19 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
-  static int num_versions=0, num_cert=0;
+  static int num_versions=0, num_certs=0;
 
   time_t now = time(NULL);
 
   if (now > current_second) { /* the second has rolled over */
     /* print stats */
     log_info(LD_OR,
-             "At end of second: %d versions (%d ms), %d cert (%d ms)",
+             "At end of second: %d versions (%d ms), %d certs (%d ms)",
              num_versions, versions_time/1000,
-             cert, cert_time/1000);
+             num_certs, certs_time/1000);
 
-    num_versions = num_cert = 0;
-    versions_time = cert_time = 0;
+    num_versions = num_certs = 0;
+    versions_time = certs_time = 0;
 
     /* remember which second it is, for next time */
     current_second = now;
@@ -293,9 +293,9 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
       ++stats_n_vpadding_cells_processed;
       /* Do nothing */
       break;
-    case CELL_CERT:
-      ++stats_n_cert_cells_processed;
-      PROCESS_CELL(cert, cell, conn);
+    case CELL_CERTS:
+      ++stats_n_certs_cells_processed;
+      PROCESS_CELL(certs, cell, conn);
       break;
     case CELL_AUTH_CHALLENGE:
       ++stats_n_auth_challenge_cells_processed;
@@ -719,8 +719,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
       }
     }
     if (send_certs) {
-      if (connection_or_send_cert_cell(conn) < 0) {
-        log_warn(LD_OR, "Couldn't send cert cell");
+      if (connection_or_send_certs_cell(conn) < 0) {
+        log_warn(LD_OR, "Couldn't send certs cell");
         connection_mark_for_close(TO_CONN(conn));
         return;
       }
@@ -887,9 +887,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 
-/** Process a CERT cell from an OR connection.
+/** Process a CERTS cell from an OR connection.
  *
- * If the other side should not have sent us a CERT cell, or the cell is
+ * If the other side should not have sent us a CERTS cell, or the cell is
  * malformed, or it is supposed to authenticate the TLS key but it doesn't,
  * then mark the connection.
  *
@@ -899,12 +899,12 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
  * If it's the server side, wait for an AUTHENTICATE cell.
  */
 static void
-command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
+command_process_certs_cell(var_cell_t *cell, or_connection_t *conn)
 {
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad CERT cell from %s:%d: %s",           \
+           "Received a bad CERTS cell from %s:%d: %s",          \
            safe_str(conn->_base.address), conn->_base.port, (s)); \
     connection_mark_for_close(TO_CONN(conn));                   \
     goto err;                                                   \
@@ -921,7 +921,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     ERR("We're not doing a v3 handshake!");
   if (conn->link_proto < 3)
     ERR("We're not using link protocol >= 3");
-  if (conn->handshake_state->received_cert_cell)
+  if (conn->handshake_state->received_certs_cell)
     ERR("We already got one");
   if (conn->handshake_state->authenticated) {
     /* Should be unreachable, but let's make sure. */
@@ -951,7 +951,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       tor_cert_t *cert = tor_cert_decode(ptr + 3, cert_len);
       if (!cert) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "Received undecodable certificate in CERT cell from %s:%d",
+               "Received undecodable certificate in CERTS cell from %s:%d",
                safe_str(conn->_base.address), conn->_base.port);
       } else {
         if (cert_type == OR_CERT_TYPE_TLS_LINK) {
@@ -1041,7 +1041,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     id_cert = auth_cert = NULL;
   }
 
-  conn->handshake_state->received_cert_cell = 1;
+  conn->handshake_state->received_certs_cell = 1;
  err:
   tor_cert_free(id_cert);
   tor_cert_free(link_cert);
@@ -1055,7 +1055,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
  * originator of the connection), or it's ill-formed, or we aren't doing a v3
  * handshake, mark the connection.  If the cell is well-formed but we don't
  * want to authenticate, just drop it.  If the cell is well-formed *and* we
- * want to authenticate, send an AUTHENTICATE cell. */
+ * want to authenticate, send an AUTHENTICATE cell and then a NETINFO cell. */
 static void
 command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
 {
@@ -1079,7 +1079,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
     ERR("We didn't originate this connection");
   if (conn->handshake_state->received_auth_challenge)
     ERR("We already received one");
-  if (! conn->handshake_state->received_cert_cell)
+  if (! conn->handshake_state->received_certs_cell)
     ERR("We haven't gotten a CERTS cell yet");
   if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2)
     ERR("It was too short");
@@ -1128,7 +1128,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
  * If it's ill-formed or we weren't supposed to get one or we're not doing a
  * v3 handshake, then mark the connection.  If it does not authenticate the
  * other side of the connection successfully (because it isn't signed right,
- * we didn't get a CERT cell, etc) mark the connection.  Otherwise, accept
+ * we didn't get a CERTS cell, etc) mark the connection.  Otherwise, accept
  * the identity of the router on the other side of the connection.
  */
 static void
@@ -1159,8 +1159,8 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     /* Should be impossible given other checks */
     ERR("The peer is already authenticated");
   }
-  if (! conn->handshake_state->received_cert_cell)
-    ERR("We never got a cert cell");
+  if (! conn->handshake_state->received_certs_cell)
+    ERR("We never got a certs cell");
   if (conn->handshake_state->auth_cert == NULL)
     ERR("We never got an authentication certificate");
   if (conn->handshake_state->id_cert == NULL)

@@ -826,7 +826,7 @@ typedef enum {
 #define CELL_RELAY_EARLY 9
 
 #define CELL_VPADDING 128
-#define CELL_CERT 129
+#define CELL_CERTS 129
 #define CELL_AUTH_CHALLENGE 130
 #define CELL_AUTHENTICATE 131
 
@@ -1088,10 +1088,10 @@ typedef struct listener_connection_t {
 #define OR_AUTH_CHALLENGE_LEN 32
 
 /**
- * @name Certificate types for CERT cells.
+ * @name Certificate types for CERTS cells.
  *
  * These values are defined by the protocol, and affect how an X509
- * certificate in a CERT cell is interpreted and used.
+ * certificate in a CERTS cell is interpreted and used.
  *
  * @{ */
 /** A certificate that authenticates a TLS link key.  The subject key
@@ -1137,8 +1137,8 @@ typedef struct or_handshake_state_t {
   unsigned int received_versions : 1;
   /** True iff we have received and processed an AUTH_CHALLENGE cell */
   unsigned int received_auth_challenge : 1;
-  /** True iff we have received and processed a CERT cell. */
-  unsigned int received_cert_cell : 1;
+  /** True iff we have received and processed a CERTS cell. */
+  unsigned int received_certs_cell : 1;
   /** True iff we have received and processed an AUTHENTICATE cell */
   unsigned int received_authenticate : 1;
 
@@ -1171,7 +1171,7 @@ typedef struct or_handshake_state_t {
   crypto_digest_env_t *digest_received;
   /** @} */
 
-  /** Certificates that a connection initiator sent us in a CERT cell; we're
+  /** Certificates that a connection initiator sent us in a CERTS cell; we're
    * holding on to them until we get an AUTHENTICATE cell.
    *
    * @{

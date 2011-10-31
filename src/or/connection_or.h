@@ -69,7 +69,7 @@ int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_versions(or_connection_t *conn, int v3_plus);
 int connection_or_send_netinfo(or_connection_t *conn);
-int connection_or_send_cert_cell(or_connection_t *conn);
+int connection_or_send_certs_cell(or_connection_t *conn);
 int connection_or_send_auth_challenge_cell(or_connection_t *conn);
 int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                                  uint8_t *out, size_t outlen,
