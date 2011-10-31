@@ -1,0 +1,4 @@
+  o Packaging changes:
+    - Remove absolute path from makensis.exe command to build Tor expert bundle
+      in order to make it easier to automate package builds
+
