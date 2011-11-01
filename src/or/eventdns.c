@@ -75,7 +75,6 @@
 #include <stdint.h>
 #endif
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <assert.h>
 #ifdef HAVE_UNISTD_H

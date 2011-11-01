@@ -62,7 +62,6 @@
 
 #if 1
 /* Tor dependencies */
-#include "orconfig.h"
 #include "util.h"
 #include "compat.h"
 #include "torlog.h"

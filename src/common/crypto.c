@@ -64,8 +64,6 @@
 #error "We require OpenSSL >= 0.9.7"
 #endif
 
-#include <openssl/engine.h>
-
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */
 #define DISABLE_ENGINES
