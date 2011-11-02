@@ -305,7 +305,7 @@ launch_managed_proxy(managed_proxy_t *mp)
   }
 
   log_info(LD_CONFIG, "Managed proxy at '%s' has spawned with PID '%d'.",
-           tor_process_get_pid(mp->process_handle));
+           mp->argv[0], tor_process_get_pid(mp->process_handle));
 
   mp->conf_state = PT_PROTO_LAUNCHED;
 
@@ -465,6 +465,10 @@ register_server_proxy(managed_proxy_t *mp)
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
+    /* LOG_WARN so that the bridge operator can easily find the
+       transport's port in the log file and send it to the users. */
+    log_warn(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
+             t->name, fmt_addr(&t->addr), (int)t->port);
     smartlist_add(sm_tmp, tor_strdup(t->name));
   } SMARTLIST_FOREACH_END(t);
 
