@@ -3590,8 +3590,9 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     if (options->BridgeAuthoritativeDir && by_fp) {
       const routerinfo_t *router =
           router_get_by_id_digest(sd->identity_digest);
-      tor_assert(router);
-      if (router->purpose == ROUTER_PURPOSE_BRIDGE)
+      /* router can be NULL here when the bridge auth is asked for its own
+       * descriptor. */
+      if (router && router->purpose == ROUTER_PURPOSE_BRIDGE)
         rep_hist_note_desc_served(sd->identity_digest);
     }
     body = signed_descriptor_get_body(sd);

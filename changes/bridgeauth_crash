@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Don't crash when we, as the bridge authority, are asked for our own
+      descriptor. Bugfix on 0.2.3.7-alpha, reported by Lucky.
+
