@@ -2308,7 +2308,8 @@ is_router_version_good_for_possible_guard(const char *platform)
 
     tor_assert(platform);
 
-    if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
+    /* nonstandard Tor; be safe and say yes */
+    if (strcmpstart(platform,"Tor "))
       return 1;
 
     start = (char *)eat_whitespace(platform+3);
