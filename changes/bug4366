@@ -1,0 +1,4 @@
+  o Code simplifications and refactoring:
+    - Remove some redundant #include directives throughout the code.
+      Patch from Andrea Gelmini.
+
