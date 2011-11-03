@@ -985,15 +985,24 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   }
 
   if (conn->handshake_state->started_here) {
+    int severity;
     if (! (id_cert && link_cert))
       ERR("The certs we wanted were missing");
     /* Okay. We should be able to check the certificates now. */
     if (! tor_tls_cert_matches_key(conn->tls, link_cert)) {
       ERR("The link certificate didn't match the TLS public key");
     }
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, link_cert, id_cert, 0))
+    /* Note that this warns more loudly about time and validity if we were
+    * _trying_ to connect to an authority, not necessarily if we _did_ connect
+    * to one. */
+    if (router_digest_is_trusted_dir(conn->identity_digest))
+      severity = LOG_WARN;
+    else
+      severity = LOG_PROTOCOL_WARN;
+
+    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, 0))
       ERR("The link certificate was not valid");
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
     conn->handshake_state->authenticated = 1;
