@@ -694,11 +694,11 @@ The following options are useful only for clients (that is, if
     received on this SOCKSPort are allowed to share circuits with one
     another.  Recognized isolation flags are:
     **IsolateClientAddr**;;
-        Don't share a circuits with streams from a different
+        Don't share circuits with streams from a different
         client address.  (On by default and strongly recommended;
         you can disable it with **NoIsolateClientAddr**.)
     **IsolateSOCKSAuth**;;
-        Don't share a circuits with streams for which different
+        Don't share circuits with streams for which different
         SOCKS authentication was provided. (On by default;
         you can disable it with **NoIsolateSOCKSAuth**.)
     **IsolateClientProtocol**;;
@@ -706,10 +706,10 @@ The following options are useful only for clients (that is, if
         (SOCKS 4, SOCKS 5, TransPort connections, NATDPort connections,
         and DNSPort requests are all considered to be different protocols.)
     **IsolateDestPort**;;
-        Don't share a circuits with streams targetting a different
+        Don't share circuits with streams targetting a different
         destination port.
     **IsolateDestAddr**;;
-        Don't share a circuits with streams targetting a different
+        Don't share circuits with streams targetting a different
         destination address.
     **SessionGroup=**__INT__;;
         If no other isolation rules would prevent it, allow streams
