@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Successfully detect AUTH_CHALLENGE cells with no recognized
+      authentication type listed. Fixes bug 4367; bugfix on 0.2.3.6-alpha.
+      Found by frosty_un.
+

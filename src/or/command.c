@@ -1100,7 +1100,7 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
 
   conn->handshake_state->received_auth_challenge = 1;
 
-  if (use_type && public_server_mode(get_options())) {
+  if (use_type >= 0 && public_server_mode(get_options())) {
     log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Sending "
              "authentication",
              safe_str(conn->_base.address), conn->_base.port);
