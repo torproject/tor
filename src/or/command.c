@@ -688,8 +688,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     const int send_chall = !started_here && public_server_mode(get_options());
     /* If our certs cell will authenticate us, or if we have no intention of
      * authenticating, send a netinfo cell right now. */
-    const int send_netinfo =
-      !(started_here && public_server_mode(get_options()));
+    const int send_netinfo = !started_here;
     const int send_any =
       send_versions || send_certs || send_chall || send_netinfo;
     tor_assert(conn->link_proto >= 3);
@@ -1021,6 +1020,13 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
 
     conn->handshake_state->id_cert = id_cert;
     id_cert = NULL;
+    if (!public_server_mode(get_options())) {
+      if (connection_or_send_netinfo(conn) < 0) {
+        log_warn(LD_OR, "Couldn't send netinfo cell");
+        connection_mark_for_close(TO_CONN(conn));
+        goto err;
+      }
+    }
   } else {
     if (! (id_cert && auth_cert))
       ERR("The certs we wanted were missing");
