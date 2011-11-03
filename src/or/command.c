@@ -1100,7 +1100,14 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
 
   conn->handshake_state->received_auth_challenge = 1;
 
-  if (use_type >= 0 && public_server_mode(get_options())) {
+  if (! public_server_mode(get_options())) {
+    /* If we're not a public server then we don't want to authenticate on a
+       connection we originated, and we already sent a NETINFO cell when we
+       got the CERTS cell. We have nothing more to do. */
+    return;
+  }
+
+  if (use_type >= 0) {
     log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Sending "
              "authentication",
              safe_str(conn->_base.address), conn->_base.port);
@@ -1110,16 +1117,18 @@ command_process_auth_challenge_cell(var_cell_t *cell, or_connection_t *conn)
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
-    if (connection_or_send_netinfo(conn) < 0) {
-      log_warn(LD_OR, "Couldn't send netinfo cell");
-      connection_mark_for_close(TO_CONN(conn));
-      return;
-    }
   } else {
-    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d: Not "
-             "authenticating",
+    log_info(LD_OR, "Got an AUTH_CHALLENGE cell from %s:%d, but we don't "
+             "know any of its authentication types. Not authenticating.",
              safe_str(conn->_base.address), conn->_base.port);
   }
+
+  if (connection_or_send_netinfo(conn) < 0) {
+    log_warn(LD_OR, "Couldn't send netinfo cell");
+    connection_mark_for_close(TO_CONN(conn));
+    return;
+  }
+
 #undef ERR
 }
 
