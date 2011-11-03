@@ -1291,17 +1291,21 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
-/** We sent the ServerHello part of an SSL handshake.  This might mean
- * that we completed a renegotiation and appropriate actions must be
- * taken. */
+/** We got an SSL ClientHello message.  This might mean that the
+ * client wants to initiate a renegotiation and appropriate actions
+ * must be taken. */
 static void
-tor_tls_got_server_hello(tor_tls_t *tls)
+tor_tls_got_client_hello(tor_tls_t *tls)
 {
   if (tls->server_handshake_count < 3)
     ++tls->server_handshake_count;
 
   if (tls->server_handshake_count == 2) {
-    tor_assert(tls->negotiated_callback);
+    if (!tls->negotiated_callback) {
+      log_warn(LD_BUG, "Got a renegotiation request but we don't"
+               " have a renegotiation callback set!");
+    }
+
     tls->got_renegotiate = 1;
   }
 
@@ -1344,8 +1348,8 @@ tor_tls_state_changed_callback(const SSL *ssl, int type, int val)
   if (type == SSL_CB_ACCEPT_LOOP &&
       ssl->state == SSL3_ST_SW_SRVR_HELLO_A) {
 
-    /* Call tor_tls_got_server_hello() for every SSL ServerHello we
-       send. */
+    /* Call tor_tls_got_client_hello() for every SSL ClientHello we
+       receive. */
 
     tor_tls_t *tls = tor_tls_get_by_ssl(ssl);
     if (!tls) {
@@ -1353,7 +1357,7 @@ tor_tls_state_changed_callback(const SSL *ssl, int type, int val)
       return;
     }
 
-    tor_tls_got_server_hello(tls);
+    tor_tls_got_client_hello(tls);
   }
 #endif
 
@@ -1624,8 +1628,10 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 
 #ifdef V2_HANDSHAKE_SERVER
   if (tls->got_renegotiate) {
-    tor_assert(tls->server_handshake_count == 2);
-    /* XXX tor_assert(err == TOR_TLS_WANTREAD); */
+    if (tls->server_handshake_count != 2) {
+      log_warn(LD_BUG, "We did not notice renegotiation in a timely fashion (%u)!",
+               tls->server_handshake_count);
+    }
 
     /* Renegotiation happened! */
     log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
