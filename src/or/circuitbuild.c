@@ -4997,13 +4997,14 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
       DIR_PURPOSE_FETCH_SERVERDESC))
     return; /* it's already on the way */
 
-  address = tor_dup_addr(&bridge->addr);
   if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
     download_status_mark_impossible(&bridge->fetch_status);
     log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
              safe_str_client(fmt_addr(&bridge->addr)));
     return;
   }
+
+  address = tor_dup_addr(&bridge->addr);
 
   directory_initiate_command(address, &bridge->addr,
                              bridge->port, 0,
