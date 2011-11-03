@@ -36,7 +36,7 @@ Changes in version 0.2.3.6-alpha - 2011-10-26
     - Implement a new handshake protocol (v3) for authenticating Tors to
       each other over TLS. It should be more resistant to fingerprinting
       than previous protocols, and should require less TLS hacking for
-      future Tor implementations. Implements proposal 185.
+      future Tor implementations. Implements proposal 176.
     - Allow variable-length padding cells to disguise the length of
       Tor's TLS records. Implements part of proposal 184.
 
