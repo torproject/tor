@@ -110,6 +110,12 @@ Other options can be specified either on the command-line (--option
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
+**ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
+    When set along with a corresponding Bridge line, the Tor client
+    forwards its traffic to a SOCKS-speaking proxy on "IP:PORT". It's
+    the duty of that proxy to properly forward the traffic to the
+    bridge.
+
 **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
@@ -483,13 +489,17 @@ The following options are useful only for clients (that is, if
     so using these relays might make your client stand out.
     (Default: 1)
 
-**Bridge** __IP__:__ORPort__ [fingerprint]::
+**Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
     "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
     is provided (using the same format as for DirServer), we will verify that
     the relay running at that location has the right fingerprint. We also use
     fingerprint to look up the bridge descriptor at the bridge authority, if
-    it's provided and if UpdateBridgesFromAuthority is set too.
+    it's provided and if UpdateBridgesFromAuthority is set too.  +
+ +
+    If "transport" is provided, and matches to a ClientTransportPlugin
+    line, we use that pluggable transports proxy to transfer data to
+    the bridge.
 
 **LearnCircuitBuildTimeout** **0**|**1**::
     If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
