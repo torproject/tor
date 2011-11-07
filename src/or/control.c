@@ -1640,6 +1640,22 @@ getinfo_helper_dir(control_connection_t *control_conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+  } else if (!strcmpstart(question, "md/id/")) {
+    const node_t *node = node_get_by_hex_id(question+strlen("md/id/"));
+    const microdesc_t *md = NULL;
+    if (node) md = node->md;
+    if (md) {
+      tor_assert(md->body);
+      *answer = tor_strndup(md->body, md->bodylen);
+    }
+  } else if (!strcmpstart(question, "md/name/")) {
+    const node_t *node = node_get_by_nickname(question+strlen("md/name/"), 1);
+    const microdesc_t *md = NULL;
+    if (node) md = node->md;
+    if (md) {
+      tor_assert(md->body);
+      *answer = tor_strndup(md->body, md->bodylen);
+    }
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
     ri = router_get_by_hexdigest(question+
                                  strlen("desc-annotations/id/"));
@@ -2034,6 +2050,8 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
+  PREFIX("md/id/", dir, "Microdescriptors by ID"),
+  PREFIX("md/name/", dir, "Microdescriptors by name"),
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
   PREFIX("net/listeners/", listeners, "Bound addresses by type"),
   ITEM("ns/all", networkstatus,
