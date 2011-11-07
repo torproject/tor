@@ -2,5 +2,5 @@
 
     - Don't leak memory when we check whether a hidden service
       descriptor has any usable introduction points left.  Fixes bug
-      4424.  Bugfix on 0.2.2.25-alpha; found by frosty_un.
+      4424.  Bugfix on 0.2.2.25-alpha.
 
