@@ -1597,6 +1597,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
         *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
     }
   } else if (!strcmpstart(question, "desc/name/")) {
+    /* XXX023 Setting 'warn_if_unnamed' here is a bit silly -- the
+     * warning goes to the user, not to the controller. */
     ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
@@ -1649,7 +1651,10 @@ getinfo_helper_dir(control_connection_t *control_conn,
       *answer = tor_strndup(md->body, md->bodylen);
     }
   } else if (!strcmpstart(question, "md/name/")) {
+    /* XXX023 Setting 'warn_if_unnamed' here is a bit silly -- the
+     * warning goes to the user, not to the controller. */
     const node_t *node = node_get_by_nickname(question+strlen("md/name/"), 1);
+    /* XXXX duplicated code */
     const microdesc_t *md = NULL;
     if (node) md = node->md;
     if (md) {
