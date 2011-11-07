@@ -1048,6 +1048,7 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
   /* Do we need to look up the router or is the extend info complete? */
   if (!intro->extend_info->onion_key) {
     const node_t *node;
+    extend_info_t *new_extend_info;
     if (tor_digest_is_zero(intro->extend_info->identity_digest))
       node = node_get_by_hex_id(intro->extend_info->nickname);
     else
@@ -1058,8 +1059,18 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
       smartlist_del(usable_nodes, i);
       goto again;
     }
-    extend_info_free(intro->extend_info);
-    intro->extend_info = extend_info_from_node(node);
+    new_extend_info = extend_info_from_node(node);
+    if (!new_extend_info) {
+      log_info(LD_REND, "We don't have a descriptor for the intro-point relay "
+               "'%s'; trying another.",
+               extend_info_describe(intro->extend_info));
+      smartlist_del(usable_nodes, i);
+      goto again;
+    } else {
+      extend_info_free(intro->extend_info);
+      intro->extend_info = new_extend_info;
+    }
+    tor_assert(intro->extend_info != NULL);
   }
   /* Check if we should refuse to talk to this router. */
   if (strict &&
