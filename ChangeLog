@@ -1,3 +1,36 @@
+Changes in version 0.2.3.8-alpha - 2011-11-??
+  o Major bugfixes:
+    - Correctly sanity-check that we don't underflow on a memory
+      allocation (and then assert) for hidden service introduction
+      point decryption. Bug discovered by Dan Rosenberg. Fixes bug 4410;
+      bugfix on 0.2.1.5-alpha.
+    - Fix a rare assertion failure when checking whether a v0 hidden
+      service descriptor has any usable introduction points left, and
+      we don't have enough information to build a circuit to the first
+      intro point named in the descriptor. The HS client code in
+      0.2.3.x no longer uses v0 HS descriptors, but this assertion can
+      trigger on (and crash) v0 HS authorities. Fixes bug 4411.
+      Bugfix on 0.2.3.1-alpha; diagnosed by frosty_un.
+    - Don't crash when we, as the bridge authority, are asked for our own
+      descriptor. Bugfix on 0.2.3.7-alpha, reported by Lucky Green.
+
+  o Minor bugfixes:
+    - Fix a memory leak when we check whether a hidden service
+      descriptor has any usable introduction points left. Fixes bug
+      4424. Bugfix on 0.2.2.25-alpha.
+    - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
+      occurred when a client tried to fetch a descriptor for a bridge
+      in ExcludeNodes. Fixes #4383; bugfix on 0.2.2.25-alpha.
+
+  o Packaging changes:
+    - Make it easier to automate expert package builds on Windows
+      by removing an absolute path from makensis.exe command.
+
+  o Code simplifications and refactoring:
+    - Remove some redundant #include directives throughout the code.
+      Patch from Andrea Gelmini.
+
+
 Changes in version 0.2.3.7-alpha - 2011-10-30
   Tor 0.2.3.7-alpha fixes a crash bug in 0.2.3.6-alpha introduced by
   the new v3 handshake. It also resolves yet another bridge address
