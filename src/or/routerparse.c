@@ -4886,6 +4886,11 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
     crypto_cipher_env_t *cipher;
     char *dec;
     int declen;
+    if (ipos_encrypted_size < CIPHER_IV_LEN + 2) {
+      log_warn(LD_REND, "Size of encrypted introduction points is too "
+                        "small.");
+      return -1;
+    }
     dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1);
     cipher = crypto_create_init_cipher(descriptor_cookie, 0);
     declen = crypto_cipher_decrypt_with_iv(cipher, dec,

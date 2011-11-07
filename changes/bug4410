@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Correctly sanity-check that we don't underflow on a memory allocation
+      for introduction point decryption. Bug discovered by Dan Rosenberg.
+      Fixes bug 4410; bugfix on 0.2.1.5-alpha.
+
