@@ -1212,7 +1212,7 @@ directory_fetches_from_authorities(const or_options_t *options)
     return 1; /* we don't know our IP address; ask an authority. */
   refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
-  if (options->DirPort == 0 && !refuseunknown)
+  if (options->DirPort == NULL && !refuseunknown)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
@@ -1248,7 +1248,7 @@ directory_fetches_dir_info_later(const or_options_t *options)
 int
 directory_caches_v2_dir_info(const or_options_t *options)
 {
-  return options->DirPort != 0;
+  return options->DirPort != NULL;
 }
 
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
@@ -1273,7 +1273,7 @@ directory_caches_dir_info(const or_options_t *options)
 int
 directory_permits_begindir_requests(const or_options_t *options)
 {
-  return options->BridgeRelay != 0 || options->DirPort != 0;
+  return options->BridgeRelay != 0 || options->DirPort != NULL;
 }
 
 /** Return 1 if we want to allow controllers to ask us directory
@@ -1282,7 +1282,7 @@ directory_permits_begindir_requests(const or_options_t *options)
 int
 directory_permits_controller_requests(const or_options_t *options)
 {
-  return options->DirPort != 0;
+  return options->DirPort != NULL;
 }
 
 /** Return 1 if we have no need to fetch new descriptors. This generally

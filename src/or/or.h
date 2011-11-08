@@ -2833,6 +2833,13 @@ typedef struct port_cfg_t {
   int session_group; /**< A session group, or -1 if this port is not in a
                       * session group. */
 
+  /* Server port types (or, dir) only: */
+  unsigned int no_advertise : 1;
+  unsigned int no_listen : 1;
+  unsigned int all_addrs : 1;
+  unsigned int ipv4_only : 1;
+  unsigned int ipv6_only : 1;
+
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
@@ -2948,17 +2955,17 @@ typedef struct {
   int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
-  int ORPort; /**< Port to listen on for OR connections. */
+  config_line_t *ORPort; /**< Ports to listen on for OR connections. */
   config_line_t *SocksPort; /**< Ports to listen on for SOCKS connections. */
   /** Ports to listen on for transparent pf/netfilter connections. */
   config_line_t *TransPort;
   config_line_t *NATDPort; /**< Ports to listen on for transparent natd
                             * connections. */
-  int ControlPort; /**< Port to listen on for control connections. */
+  config_line_t *ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
-  int DirPort; /**< Port to listen on for directory connections. */
+  config_line_t *DirPort; /**< Port to listen on for directory connections. */
   config_line_t *DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */

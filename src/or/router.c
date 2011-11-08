@@ -1083,7 +1083,7 @@ int
 server_mode(const or_options_t *options)
 {
   if (options->ClientOnly) return 0;
-  return (options->ORPort != 0 || options->ORListenAddress);
+  return (options->ORPort || options->ORListenAddress);
 }
 
 /** Return true iff we are trying to be a non-bridge server.
@@ -1134,7 +1134,14 @@ int
 proxy_mode(const or_options_t *options)
 {
   (void)options;
-  return smartlist_len(get_configured_client_ports()) > 0;
+  SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
+    if (p->type == CONN_TYPE_AP_LISTENER ||
+        p->type == CONN_TYPE_AP_TRANS_LISTENER ||
+        p->type == CONN_TYPE_AP_DNS_LISTENER ||
+        p->type == CONN_TYPE_AP_NATD_LISTENER)
+      return 1;
+  } SMARTLIST_FOREACH_END(p);
+  return 0;
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:
@@ -1193,17 +1200,22 @@ consider_publishable_server(int force)
 
 /** Return the port that we should advertise as our ORPort; this is either
  * the one configured in the ORPort option, or the one we actually bound to
- * if ORPort is "auto". */
+ * if ORPort is "auto".
+ * DOCDOC
+ */
 uint16_t
 router_get_advertised_or_port(const or_options_t *options)
 {
-  if (options->ORPort == CFG_AUTO_PORT) {
+  int port = get_primary_or_port();
+  (void)options;
+
+  if (port == CFG_AUTO_PORT) {
     connection_t *c = connection_get_by_type(CONN_TYPE_OR_LISTENER);
     if (c)
       return c->port;
     return 0;
   }
-  return options->ORPort;
+  return port;
 }
 
 /** Return the port that we should advertise as our DirPort;
@@ -1214,15 +1226,18 @@ router_get_advertised_or_port(const or_options_t *options)
 uint16_t
 router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 {
-  if (!options->DirPort)
+  int dirport_configured = get_primary_dir_port();
+  (void)options;
+
+  if (!dirport_configured)
     return dirport;
-  if (options->DirPort == CFG_AUTO_PORT) {
+  if (dirport_configured == CFG_AUTO_PORT) {
     connection_t *c = connection_get_by_type(CONN_TYPE_DIR_LISTENER);
     if (c)
       return c->port;
     return 0;
   }
-  return options->DirPort;
+  return dirport_configured;
 }
 
 /*
