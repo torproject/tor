@@ -64,6 +64,7 @@ typedef enum {
   K_DIR_OPTIONS,
   K_CLIENT_VERSIONS,
   K_SERVER_VERSIONS,
+  K_OR_ADDRESS,
   K_P,
   K_R,
   K_S,
@@ -286,6 +287,7 @@ static token_rule_t routerdesc_token_table[] = {
 
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
+  T0N("or-address",          K_OR_ADDRESS,          GE(1),   NO_OBJ ),
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
@@ -541,6 +543,7 @@ static int router_get_hashes_impl(const char *s, size_t s_len,
                                   const char *start_str, const char *end_str,
                                   char end_char);
 static void token_clear(directory_token_t *tok);
+static smartlist_t *find_all_by_keyword(smartlist_t *s, directory_keyword k);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *_find_by_keyword(smartlist_t *s,
                                            directory_keyword keyword,
@@ -1505,6 +1508,27 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Rejecting router with reject6/accept6 line: they crash "
              "older Tors.");
     goto err;
+  }
+  {
+    smartlist_t *or_addresses = find_all_by_keyword(tokens, K_OR_ADDRESS);
+    if (or_addresses) {
+      SMARTLIST_FOREACH_BEGIN(or_addresses, directory_token_t *, t) {
+        tor_addr_t a;
+        maskbits_t bits;
+        uint16_t port_min, port_max;
+        /* XXXX Prop186 the full spec allows much more than this. */
+        if (tor_addr_parse_mask_ports(t->args[0], &a, &bits, &port_min,
+                                      &port_max) == AF_INET6 &&
+            bits == 128 &&
+            port_min == port_max) {
+          /* Okay, this is one we can understand. */
+          tor_addr_copy(&router->ipv6_addr, &a);
+          router->ipv6_orport = port_min;
+          break;
+        }
+      } SMARTLIST_FOREACH_END(t);
+      smartlist_free(or_addresses);
+    }
   }
   exit_policy_tokens = find_all_exitpolicy(tokens);
   if (!smartlist_len(exit_policy_tokens)) {
@@ -4132,6 +4156,20 @@ _find_by_keyword(smartlist_t *s, directory_keyword keyword,
     tor_assert(tok);
   }
   return tok;
+}
+
+/** DOCDOC */
+static smartlist_t *
+find_all_by_keyword(smartlist_t *s, directory_keyword k)
+{
+  smartlist_t *out = NULL;
+  SMARTLIST_FOREACH(s, directory_token_t *, t,
+                    if (t->tp == k) {
+                      if (!out)
+                        out = smartlist_create();
+                      smartlist_add(out, t);
+                    });
+  return out;
 }
 
 /** Return a newly allocated smartlist of all accept or reject tokens in

@@ -1722,6 +1722,13 @@ typedef struct {
   uint16_t or_port; /**< Port for TLS connections. */
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
+  /* DOCDOC */
+  /* XXXXX187 Actually these should probably be part of a list of addresses,
+   * not just a special case.  Use abstractions to access these; don't do it
+   * directly. */
+  tor_addr_t ipv6_addr;
+  uint16_t ipv6_orport;
+
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
 

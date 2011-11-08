@@ -1903,6 +1903,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   int result=0;
   addr_policy_t *tmpe;
   char *family_line;
+  char *extra_or_address = NULL;
   const or_options_t *options = get_options();
 
   /* Make sure the identity key matches the one in the routerinfo. */
@@ -1955,9 +1956,22 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                   router->cache_info.extra_info_digest, DIGEST_LEN);
   }
 
+  if (router->ipv6_orport &&
+      tor_addr_family(&router->ipv6_addr) == AF_INET6) {
+    char addr[TOR_ADDR_BUF_LEN];
+    const char *a;
+    a = tor_addr_to_str(addr, &router->ipv6_addr, sizeof(addr), 1);
+    if (a) {
+      tor_asprintf(&extra_or_address,
+                   "or-address %s:%d\n", a, router->ipv6_orport);
+      log_notice(LD_OR, "My line is <%s>", extra_or_address);
+    }
+  }
+
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
                     "router %s %s %d 0 %d\n"
+                    "%s"
                     "platform %s\n"
                     "opt protocols Link 1 2 Circuit 1\n"
                     "published %s\n"
@@ -1972,6 +1986,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->address,
     router->or_port,
     decide_to_advertise_dirport(options, router->dir_port),
+    extra_or_address ? extra_or_address : "",
     router->platform,
     published,
     fingerprint,
@@ -1992,6 +2007,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);
+  tor_free(extra_or_address);
 
   if (result < 0) {
     log_warn(LD_BUG,"descriptor snprintf #1 ran out of room!");

@@ -96,6 +96,8 @@ test_dir_formats(void)
   r1->cache_info.published_on = 0;
   r1->or_port = 9000;
   r1->dir_port = 9003;
+  tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
+  r1->ipv6_orport = 9999;
   r1->onion_pkey = crypto_pk_dup_key(pk1);
   r1->identity_pkey = crypto_pk_dup_key(pk2);
   r1->bandwidthrate = 1000;
@@ -141,6 +143,7 @@ test_dir_formats(void)
   test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
 
   strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
+          "or-address [1:2:3:4::]:9999\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
