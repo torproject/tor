@@ -1,12 +1,18 @@
-/* The original version of this module was written by Adam Langley; for
- * a history of modifications, check out the subversion logs.
+/* READ THIS COMMENT BEFORE HACKING THIS FILE.
  *
- * When editing this module, try to keep it re-mergeable by Adam.  Don't
- * reformat the whitespace, add Tor dependencies, or so on.
+ * This eventdns.c copy has diverged a bit from Libevent's version, and it's
+ * no longer easy to resynchronize them.  Once Tor requires Libevent 2.0, we
+ * will just dump this file and use Libevent's evdns code.
  *
- * TODO:
- *	 - Replace all externally visible magic numbers with #defined constants.
- *	 - Write documentation for APIs of all external functions.
+ * Therefore, you probably shouldn't make any change here without making it to
+ * Libevent as well: it's not good for the implementation to diverge even
+ * more.  Also, we can't shouldn't wantonly the API here (since Libevent APIs
+ * can't change in ways that break user behavior).  Also, we shouldn't bother
+ * with cosmetic changes: the whole module is slated for demolition, so
+ * there's no point dusting the linebreaks or re-painting the parser.
+ *
+ * (We can't just drop the Libevent 2.0 evdns implementation in here instead,
+ * since it depends pretty heavily on parts of Libevent 2.0.)
  */
 
 /* Async DNS Library
