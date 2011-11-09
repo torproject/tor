@@ -1,0 +1,11 @@
+  o Code simplification and refactoring:
+    - Unconditionally use OpenSSL's AES implementation instead of our
+      old built-in one. OpenSSL's AES has been better for a while, and
+      relatively few servers should still be on any version of OpenSSL
+      that doesn't have good optimized assembly AES.
+
+  o Major features:
+    - Use OpenSSL's EVP interface for AES encryption, so that all
+      AES operations can use hardware acceleration (if present).
+      Resolves issue #4442.
+
