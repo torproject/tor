@@ -44,12 +44,6 @@
 #endif
 
 /*======================================================================*/
-/* From rijndael-alg-fst.h */
-
-typedef uint32_t u32;
-typedef uint8_t u8;
-
-/*======================================================================*/
 /* Interface to AES code, and counter implementation */
 
 /** Implements an AES counter-mode cipher. */
@@ -65,27 +59,27 @@ struct aes_cnt_cipher {
 #define USING_COUNTER_VARS
   /** These four values, together, implement a 128-bit counter, with
    * counter0 as the low-order word and counter3 as the high-order word. */
-  u32 counter3;
-  u32 counter2;
-  u32 counter1;
-  u32 counter0;
+  uint32_t counter3;
+  uint32_t counter2;
+  uint32_t counter1;
+  uint32_t counter0;
 #endif
 
 #ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
 #define USING_COUNTER_BUFS
   union {
     /** The counter, in big-endian order, as bytes. */
-    u8 buf[16];
+    uint8_t buf[16];
     /** The counter, in big-endian order, as big-endian words.  Note that
      * on big-endian platforms, this is redundant with counter3...0,
      * so we just use these values instead. */
-    u32 buf32[4];
+    uint32_t buf32[4];
   } ctr_buf;
 #endif
   /** The encrypted value of ctr_buf. */
-  u8 buf[16];
+  uint8_t buf[16];
   /** Our current stream position within buf. */
-  u8 pos;
+  uint8_t pos;
 };
 
 #if !defined(USING_COUNTER_VARS)
