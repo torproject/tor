@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Rename the bench_{aes,dmap} functions to test_*, so that tinytest can
+      pick them up when the tests aren't disabled. Bugfix on 0.2.2.4-alpha
+      which introduced tinytest.
+

@@ -1267,7 +1267,7 @@ test_policies(void)
 
 /** Run AES performance benchmarks. */
 static void
-bench_aes(void)
+test_bench_aes(void)
 {
   int len, i;
   char *b1, *b2;
@@ -1299,7 +1299,7 @@ bench_aes(void)
 
 /** Run digestmap_t performance benchmarks. */
 static void
-bench_dmap(void)
+test_bench_dmap(void)
 {
   smartlist_t *sl = smartlist_create();
   smartlist_t *sl2 = smartlist_create();
@@ -1899,7 +1899,7 @@ const struct testcase_setup_t legacy_setup = {
   { #group "_" #name, legacy_test_helper, 0, &legacy_setup,             \
       test_ ## group ## _ ## name }
 #define DISABLED(name)                                                  \
-  { #name, legacy_test_helper, TT_SKIP, &legacy_setup, name }
+  { #name, legacy_test_helper, TT_SKIP, &legacy_setup, test_ ## name }
 #define FORK(name)                                                      \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_ ## name }
 
