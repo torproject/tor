@@ -1494,6 +1494,24 @@ router_rebuild_descriptor(int force)
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
+  if (options->BridgeRelay) {
+    /* For now, only bridges advertise an ipv6 or-address.  And only one. */
+    const port_cfg_t *ipv6_orport = NULL;
+    SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
+      if (p->type == CONN_TYPE_OR_LISTENER &&
+          ! p->no_advertise &&
+          ! p->ipv4_only &&
+          tor_addr_family(&p->addr) == AF_INET6 &&
+          ! tor_addr_is_internal(&p->addr, 1)) {
+        ipv6_orport = p;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(p);
+    if (ipv6_orport) {
+      tor_addr_copy(&ri->ipv6_addr, &ipv6_orport->addr);
+      ri->ipv6_orport = ipv6_orport->port;
+    }
+  }
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
   if (crypto_pk_get_digest(ri->identity_pkey,
                            ri->cache_info.identity_digest)<0) {
