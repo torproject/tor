@@ -55,7 +55,7 @@ struct aes_cnt_cipher {
   AES_KEY key;
 #endif
 
-#if !defined(WORDS_BIGENDIAN) || defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
+#if !defined(WORDS_BIGENDIAN)
 #define USING_COUNTER_VARS
   /** These four values, together, implement a 128-bit counter, with
    * counter0 as the low-order word and counter3 as the high-order word. */
@@ -65,8 +65,6 @@ struct aes_cnt_cipher {
   uint32_t counter0;
 #endif
 
-#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
-#define USING_COUNTER_BUFS
   union {
     /** The counter, in big-endian order, as bytes. */
     uint8_t buf[16];
@@ -75,7 +73,7 @@ struct aes_cnt_cipher {
      * so we just use these values instead. */
     uint32_t buf32[4];
   } ctr_buf;
-#endif
+
   /** The encrypted value of ctr_buf. */
   uint8_t buf[16];
   /** Our current stream position within buf. */
@@ -149,9 +147,8 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
   cipher->counter2 = 0;
   cipher->counter3 = 0;
 #endif
-#ifdef USING_COUNTER_BUFS
+
   memset(cipher->ctr_buf.buf, 0, sizeof(cipher->ctr_buf.buf));
-#endif
 
   cipher->pos = 0;
   _aes_fill_buf(cipher);
@@ -171,7 +168,7 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
   tor_free(cipher);
 }
 
-#if defined(USING_COUNTER_VARS) && defined(USING_COUNTER_BUFS)
+#if defined(USING_COUNTER_VARS)
 #define UPDATE_CTR_BUF(c, n) STMT_BEGIN                 \
   (c)->ctr_buf.buf32[3-(n)] = htonl((c)->counter ## n); \
   STMT_END
@@ -273,9 +270,7 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
   cipher->counter0 = ntohl(get_uint32(iv+12));
 #endif
   cipher->pos = 0;
-#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
   memcpy(cipher->ctr_buf.buf, iv, 16);
-#endif
 
   _aes_fill_buf(cipher);
 }
