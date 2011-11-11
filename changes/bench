@@ -1,0 +1,6 @@
+  o Testing
+    - The long-disabled benchmark tests are now split into their own
+      ./src/test/bench binary.
+    - The benchmarks can now use more accurate timers than gettimeofday
+      when such are available.
+

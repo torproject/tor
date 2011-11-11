@@ -1,6 +1,6 @@
 TESTS = test
 
-noinst_PROGRAMS = test test-child
+noinst_PROGRAMS = test test-child bench
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
@@ -23,9 +23,19 @@ test_SOURCES = \
 	test_util.c \
 	tinytest.c
 
+bench_SOURCES = \
+	bench.c
+
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 test_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
+	../common/libor-event.a \
+	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@
+
+bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+        @TOR_LDFLAGS_libevent@
+bench_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@

@@ -1265,102 +1265,6 @@ test_policies(void)
   }
 }
 
-/** Run AES performance benchmarks. */
-static void
-test_bench_aes(void)
-{
-  int len, i;
-  char *b1, *b2;
-  crypto_cipher_env_t *c;
-  struct timeval start, end;
-  const int iters = 100000;
-  uint64_t nsec;
-  c = crypto_new_cipher_env();
-  crypto_cipher_generate_key(c);
-  crypto_cipher_encrypt_init_cipher(c);
-  for (len = 1; len <= 8192; len *= 2) {
-    b1 = tor_malloc_zero(len);
-    b2 = tor_malloc_zero(len);
-    tor_gettimeofday(&start);
-    for (i = 0; i < iters; ++i) {
-      crypto_cipher_encrypt(c, b1, b2, len);
-    }
-    tor_gettimeofday(&end);
-    tor_free(b1);
-    tor_free(b2);
-    nsec = (uint64_t) tv_udiff(&start,&end);
-    nsec *= 1000;
-    nsec /= (iters*len);
-    printf("%d bytes: "U64_FORMAT" nsec per byte\n", len,
-           U64_PRINTF_ARG(nsec));
-  }
-  crypto_free_cipher_env(c);
-}
-
-/** Run digestmap_t performance benchmarks. */
-static void
-test_bench_dmap(void)
-{
-  smartlist_t *sl = smartlist_create();
-  smartlist_t *sl2 = smartlist_create();
-  struct timeval start, end, pt2, pt3, pt4;
-  const int iters = 10000;
-  const int elts = 4000;
-  const int fpostests = 1000000;
-  char d[20];
-  int i,n=0, fp = 0;
-  digestmap_t *dm = digestmap_new();
-  digestset_t *ds = digestset_new(elts);
-
-  for (i = 0; i < elts; ++i) {
-    crypto_rand(d, 20);
-    smartlist_add(sl, tor_memdup(d, 20));
-  }
-  for (i = 0; i < elts; ++i) {
-    crypto_rand(d, 20);
-    smartlist_add(sl2, tor_memdup(d, 20));
-  }
-  printf("nbits=%d\n", ds->mask+1);
-
-  tor_gettimeofday(&start);
-  for (i = 0; i < iters; ++i) {
-    SMARTLIST_FOREACH(sl, const char *, cp, digestmap_set(dm, cp, (void*)1));
-  }
-  tor_gettimeofday(&pt2);
-  for (i = 0; i < iters; ++i) {
-    SMARTLIST_FOREACH(sl, const char *, cp, digestmap_get(dm, cp));
-    SMARTLIST_FOREACH(sl2, const char *, cp, digestmap_get(dm, cp));
-  }
-  tor_gettimeofday(&pt3);
-  for (i = 0; i < iters; ++i) {
-    SMARTLIST_FOREACH(sl, const char *, cp, digestset_add(ds, cp));
-  }
-  tor_gettimeofday(&pt4);
-  for (i = 0; i < iters; ++i) {
-    SMARTLIST_FOREACH(sl, const char *, cp, n += digestset_isin(ds, cp));
-    SMARTLIST_FOREACH(sl2, const char *, cp, n += digestset_isin(ds, cp));
-  }
-  tor_gettimeofday(&end);
-
-  for (i = 0; i < fpostests; ++i) {
-    crypto_rand(d, 20);
-    if (digestset_isin(ds, d)) ++fp;
-  }
-
-  printf("%ld\n",(unsigned long)tv_udiff(&start, &pt2));
-  printf("%ld\n",(unsigned long)tv_udiff(&pt2, &pt3));
-  printf("%ld\n",(unsigned long)tv_udiff(&pt3, &pt4));
-  printf("%ld\n",(unsigned long)tv_udiff(&pt4, &end));
-  printf("-- %d\n", n);
-  printf("++ %f\n", fp/(double)fpostests);
-  digestmap_free(dm, NULL);
-  digestset_free(ds);
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
-  smartlist_free(sl);
-  smartlist_free(sl2);
-}
-
 /** Test encoding and parsing of rendezvous service descriptors. */
 static void
 test_rend_fns(void)
@@ -1913,8 +1817,6 @@ static struct testcase_t test_array[] = {
   ENT(geoip),
   FORK(stats),
 
-  DISABLED(bench_aes),
-  DISABLED(bench_dmap),
   END_OF_TESTCASES
 };
 

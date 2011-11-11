@@ -276,6 +276,7 @@ AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(inet_aton, [resolv])
+AC_SEARCH_LIBS([clock_gettime], [rt], [have_rt=yes])
 
 if test "$enable_threads" = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
@@ -288,6 +289,7 @@ dnl exports strlcpy without defining it in a header.
 
 AC_CHECK_FUNCS(
 	accept4 \
+	clock_gettime \
         flock \
         ftime \
         getaddrinfo \
@@ -363,9 +365,6 @@ dnl On Gnu/Linux or any place we require it, we'll add librt to the Libevent
 dnl linking for static builds.
 STATIC_LIBEVENT_FLAGS=""
 if test "$enable_static_libevent" = "yes"; then
-    dnl Determine if we have clock_gettime in librt
-    AC_SEARCH_LIBS([clock_gettime], [rt],
-        [have_rt=yes])
     if test "$have_rt" = yes; then
       STATIC_LIBEVENT_FLAGS=" -lrt "
     fi
