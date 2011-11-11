@@ -53,9 +53,17 @@ test_addr_basic(void)
     char tmpbuf[TOR_ADDR_BUF_LEN];
     const char *ip = "176.192.208.224";
     struct in_addr in;
-    tor_inet_pton(AF_INET, ip, &in);
-    tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf));
+
+    /* good round trip */
+    test_eq(tor_inet_pton(AF_INET, ip, &in), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf)), &tmpbuf);
     test_streq(tmpbuf, ip);
+
+    /* just enough buffer length */
+    test_streq(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip) + 1), ip);
+
+    /* too short buffer */
+    test_eq_ptr(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip)), NULL);
   }
 
  done:
@@ -179,6 +187,29 @@ test_addr_ip6_helpers(void)
 
   //  struct in_addr b1, b2;
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
+  {
+    const char *ip = "2001::1234";
+    const char *ip_ffff = "::ffff:192.168.1.2";
+
+    /* good round trip */
+    test_eq(tor_inet_pton(AF_INET6, ip, &a1), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), &buf);
+    test_streq(buf, ip);
+
+    /* good round trip - ::ffff:0:0 style */
+    test_eq(tor_inet_pton(AF_INET6, ip_ffff, &a2), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a2, buf, sizeof(buf)), &buf);
+    test_streq(buf, ip_ffff);
+
+    /* just long enough buffer (remember \0) */
+    test_streq(tor_inet_ntop(AF_INET6, &a1, buf, strlen(ip)+1), ip);
+    test_streq(tor_inet_ntop(AF_INET6, &a2, buf, strlen(ip_ffff)+1),
+               ip_ffff);
+
+    /* too short buffer (remember \0) */
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a1, buf, strlen(ip)), NULL);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a2, buf, strlen(ip_ffff)), NULL);
+  }
 
   /* ==== Converting to and from sockaddr_t. */
   sin = (struct sockaddr_in *)&sa_storage;
