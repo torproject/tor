@@ -350,15 +350,21 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
 
   switch (tor_addr_family(addr)) {
     case AF_INET:
-      if (len<3)
+      /* Shortest addr x.x.x.x + \0 */
+      if (len < 8)
         return NULL;
-        ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
+      ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
       break;
     case AF_INET6:
+      /* Shortest addr [ :: ] + \0 */
+      if (len < (3 + (decorate ? 2 : 0)))
+        return NULL;
+
       if (decorate)
         ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest+1, len-2);
       else
         ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest, len);
+
       if (ptr && decorate) {
         *dest = '[';
         memcpy(dest+strlen(dest), "]", 2);
