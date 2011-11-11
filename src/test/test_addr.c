@@ -53,9 +53,17 @@ test_addr_basic(void)
     char tmpbuf[TOR_ADDR_BUF_LEN];
     const char *ip = "176.192.208.224";
     struct in_addr in;
-    tor_inet_pton(AF_INET, ip, &in);
-    tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf));
+
+    /* good round trip */
+    test_eq(tor_inet_pton(AF_INET, ip, &in), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf)), &tmpbuf);
     test_streq(tmpbuf, ip);
+
+    /* just enough buffer length */
+    test_streq(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip) + 1), ip);
+
+    /* too short buffer */
+    test_eq_ptr(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip)), NULL);
   }
 
  done:
@@ -179,6 +187,29 @@ test_addr_ip6_helpers(void)
 
   //  struct in_addr b1, b2;
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
+  {
+    const char *ip = "2001::1234";
+    const char *ip_ffff = "::ffff:192.168.1.2";
+
+    /* good round trip */
+    test_eq(tor_inet_pton(AF_INET6, ip, &a1), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), &buf);
+    test_streq(buf, ip);
+
+    /* good round trip - ::ffff:0:0 style */
+    test_eq(tor_inet_pton(AF_INET6, ip_ffff, &a2), 1);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a2, buf, sizeof(buf)), &buf);
+    test_streq(buf, ip_ffff);
+
+    /* just long enough buffer (remember \0) */
+    test_streq(tor_inet_ntop(AF_INET6, &a1, buf, strlen(ip)+1), ip);
+    test_streq(tor_inet_ntop(AF_INET6, &a2, buf, strlen(ip_ffff)+1),
+               ip_ffff);
+
+    /* too short buffer (remember \0) */
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a1, buf, strlen(ip)), NULL);
+    test_eq_ptr(tor_inet_ntop(AF_INET6, &a2, buf, strlen(ip_ffff)), NULL);
+  }
 
   /* ==== Converting to and from sockaddr_t. */
   sin = (struct sockaddr_in *)&sa_storage;
@@ -363,13 +394,47 @@ test_addr_ip6_helpers(void)
   test_addr_compare_masked("0::2:2:1", <, "0::8000:2:1", 81);
   test_addr_compare_masked("0::2:2:1", ==, "0::8000:2:1", 80);
 
-  /* Test decorated addr_to_string. */
+  /* Test undecorated tor_addr_to_str */
+  test_eq(AF_INET6, tor_addr_parse(&t1, "[123:45:6789::5005:11]"));
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 0);
+  test_streq(p1, "123:45:6789::5005:11");
+  test_eq(AF_INET, tor_addr_parse(&t1, "18.0.0.1"));
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 0);
+  test_streq(p1, "18.0.0.1");
+
+  /* Test decorated tor_addr_to_str */
   test_eq(AF_INET6, tor_addr_parse(&t1, "[123:45:6789::5005:11]"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "[123:45:6789::5005:11]");
   test_eq(AF_INET, tor_addr_parse(&t1, "18.0.0.1"));
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "18.0.0.1");
+
+  /* Test buffer bounds checking of tor_addr_to_str */
+  test_eq(AF_INET6, tor_addr_parse(&t1, "::")); /* 2 + \0 */
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 2, 0), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 3, 0), "::");
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 4, 1), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 5, 1), "[::]");
+
+  test_eq(AF_INET6, tor_addr_parse(&t1, "2000::1337")); /* 10 + \0 */
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 10, 0), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 11, 0), "2000::1337");
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 12, 1), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 13, 1), "[2000::1337]");
+
+  test_eq(AF_INET, tor_addr_parse(&t1, "1.2.3.4")); /* 7 + \0 */
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 7, 0), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 8, 0), "1.2.3.4");
+
+  test_eq(AF_INET, tor_addr_parse(&t1, "255.255.255.255")); /* 15 + \0 */
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 15, 0), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 16, 0), "255.255.255.255");
+  test_eq_ptr(tor_addr_to_str(buf, &t1, 15, 1), NULL); /* too short buf */
+  test_streq(tor_addr_to_str(buf, &t1, 16, 1), "255.255.255.255");
+
+  t1.family = AF_UNSPEC;
+  test_eq_ptr(tor_addr_to_str(buf, &t1, sizeof(buf), 0), NULL);
 
   /* Test tor_addr_parse_PTR_name */
   i = tor_addr_parse_PTR_name(&t1, "Foobar.baz", AF_UNSPEC, 0);
