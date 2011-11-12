@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Make util unit tests build correctly with MSVC. Bugfix on 
+      0.2.3.3-alpha. Patch by Gisle Vanem.
+

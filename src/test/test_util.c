@@ -1597,7 +1597,7 @@ test_util_join_win_cmdline(void *ptr)
     {"a\\\\\\b", "de fg", "H", NULL}, // Backslashes
     {"a\\\"b", "\\c", "D\\", NULL}, // Backslashes before quote
     {"a\\\\b c", "d", "E", NULL}, // Backslashes not before quote
-    {} // Terminator
+    { NULL } // Terminator
   };
 
   const char *cmdlines[] = {
@@ -1649,7 +1649,7 @@ test_util_split_lines(void *ptr)
     {"\n\rfoo\n\rbar\r\n", 12, {"foo", "bar", NULL}},
     {"fo o\r\nb\tar", 10, {"fo o", "b.ar", NULL}},
     {"\x0f""f\0o\0\n\x01""b\0r\0\r", 12, {".f.o.", ".b.r.", NULL}},
-    {NULL, 0, {}}
+    {NULL, 0, { NULL }}
   };
 
   int i, j;
