@@ -52,7 +52,6 @@
 #include <event2/bufferevent_ssl.h>
 #include <event2/buffer.h>
 #include <event2/event.h>
-#include "compat_libevent.h"
 #endif
 
 #define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
@@ -64,6 +63,7 @@
 #include "torlog.h"
 #include "container.h"
 #include <string.h>
+#include "compat_libevent.h"
 
 /* Enable the "v2" TLS handshake.
  */
@@ -157,6 +157,11 @@ struct tor_tls_t {
   /** If set, a callback to invoke whenever the client tries to renegotiate
    * the handshake. */
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
+
+  /** Callback to invoke whenever a client tries to renegotiate more
+      than once. */
+  void (*excess_renegotiations_callback)(evutil_socket_t, short, void *);
+
   /** Argument to pass to negotiated_callback. */
   void *callback_arg;
 };
@@ -1228,17 +1233,6 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   return NULL;
 }
 
-/** Return true if the <b>tls</b> object has completed more
- *  renegotiations than needed for the Tor protocol. */
-static INLINE int
-tor_tls_got_excess_renegotiations(tor_tls_t *tls)
-{
-  /** The Tor v2 server handshake needs a single renegotiation after
-      the initial SSL handshake. This means that if we ever see more
-      than 2 handshakes, we raise the flag. */
-  return (tls->server_handshake_count > 2) ? 1 : 0;
-}
-
 #ifdef V2_HANDSHAKE_SERVER
 /** Return true iff the cipher list suggested by the client for <b>ssl</b> is
  * a list that indicates that the client knows how to do the v2 TLS connection
@@ -1307,6 +1301,20 @@ tor_tls_got_client_hello(tor_tls_t *tls)
     }
 
     tls->got_renegotiate = 1;
+  } else if (tls->server_handshake_count > 2) {
+    /* We got more than one renegotiation requests. The Tor protocol
+       needs just one renegotiation; more than that probably means
+       They are trying to DoS us and we have to stop them. We can't
+       close their connection from in here since it's an OpenSSL
+       callback, so we set a libevent timer that triggers in the next
+       event loop and closes the connection. */
+
+    struct timeval zero_seconds_timer = {0,0};
+
+    if (tor_event_base_once(tls->excess_renegotiations_callback,
+                            tls->callback_arg, &zero_seconds_timer) < 0) {
+      log_warn(LD_GENERAL, "Didn't manage to set a renegotiation limiting callback.");
+    }
   }
 
   /* Now check the cipher list. */
@@ -1523,16 +1531,20 @@ tor_tls_set_logged_address(tor_tls_t *tls, const char *address)
   tls->address = tor_strdup(address);
 }
 
-/** Set <b>cb</b> to be called with argument <b>arg</b> whenever <b>tls</b>
- * next gets a client-side renegotiate in the middle of a read.  Do not
- * invoke this function until <em>after</em> initial handshaking is done!
+/** Set <b>cb</b> to be called with argument <b>arg</b> whenever
+ * <b>tls</b> next gets a client-side renegotiate in the middle of a
+ * read. Set <b>cb2</b> to be called with argument <b>arg</b> whenever
+ * <b>tls</b> gets excess renegotiation requests.  Do not invoke this
+ * function until <em>after</em> initial handshaking is done!
  */
 void
-tor_tls_set_renegotiate_callback(tor_tls_t *tls,
+tor_tls_set_renegotiate_callbacks(tor_tls_t *tls,
                                  void (*cb)(tor_tls_t *, void *arg),
+                                 void (*cb2)(evutil_socket_t, short, void *),
                                  void *arg)
 {
   tls->negotiated_callback = cb;
+  tls->excess_renegotiations_callback = cb2;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
   SSL_set_info_callback(tls->ssl, tor_tls_state_changed_callback);
@@ -1592,6 +1604,7 @@ tor_tls_free(tor_tls_t *tls)
   SSL_free(tls->ssl);
   tls->ssl = NULL;
   tls->negotiated_callback = NULL;
+  tls->excess_renegotiations_callback = NULL;
   if (tls->context)
     tor_tls_context_decref(tls->context);
   tor_free(tls->address);
@@ -1619,12 +1632,6 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   /* If we got here, SSL_read() did not go as expected. */
 
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
-
-  if (tor_tls_got_excess_renegotiations(tls)) {
-    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
-
-    return TOR_TLS_ERROR_MISC;
-  }
 
 #ifdef V2_HANDSHAKE_SERVER
   if (tls->got_renegotiate) {
@@ -1679,12 +1686,6 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   }
   r = SSL_write(tls->ssl, cp, (int)n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO, LD_NET);
-
-  if (tor_tls_got_excess_renegotiations(tls)) {
-    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
-
-    return TOR_TLS_ERROR_MISC;
-  }
 
   if (err == TOR_TLS_DONE) {
     return r;
