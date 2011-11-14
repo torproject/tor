@@ -179,6 +179,7 @@ tor_libevent_initialize(void)
 #ifdef HAVE_EVENT2_EVENT_H
   {
     struct event_config *cfg = event_config_new();
+    tor_assert(cfg);
 
     /* In 0.2.2, we don't use locking at all.  Telling Libevent not to try to
      * turn it on can avoid a needless socketpair() attempt.
@@ -192,6 +193,11 @@ tor_libevent_initialize(void)
 #else
   the_event_base = event_init();
 #endif
+
+  if (!the_event_base) {
+    log_err(LD_GENERAL, "Unable to initialize Libevent: cannot continue.");
+    exit(1);
+  }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions

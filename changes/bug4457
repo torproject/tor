@@ -5,4 +5,5 @@
       bug 4457; workaround for Libevent versions 2.0.1-alpha through
       2.0.15-stable.
 
+    - Detect failure to initialize Libevent. Better detection for bug 4457.
 
