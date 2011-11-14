@@ -175,6 +175,7 @@ static void
 test_addr_ip6_helpers(void)
 {
   char buf[TOR_ADDR_BUF_LEN], bug[TOR_ADDR_BUF_LEN];
+  char rbuf[REVERSE_LOOKUP_NAME_BUF_LEN];
   struct in6_addr a1, a2;
   tor_addr_t t1, t2;
   int r, i;
@@ -499,6 +500,54 @@ test_addr_ip6_helpers(void)
                                          "ip6.ARPA",
                                          AF_INET, 0);
   test_eq(i, -1);
+
+  /* === Test tor_addr_to_PTR_name */
+
+  /* Stage IPv4 addr */
+  memset(&sa_storage, 0, sizeof(sa_storage));
+  sin = (struct sockaddr_in *)&sa_storage;
+  sin->sin_family = AF_INET;
+  sin->sin_addr.s_addr = htonl(0x7f010203); /* 127.1.2.3 */
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin, NULL);
+
+  /* Check IPv4 PTR - too short buffer */
+  test_eq(tor_addr_to_PTR_name(rbuf, 1, &t1), -1);
+  test_eq(tor_addr_to_PTR_name(rbuf,
+                               strlen("3.2.1.127.in-addr.arpa") - 1,
+                               &t1), -1);
+
+  /* Check IPv4 PTR - valid addr */
+  test_eq(tor_addr_to_PTR_name(rbuf, sizeof(rbuf), &t1),
+          strlen("3.2.1.127.in-addr.arpa"));
+  test_streq(rbuf, "3.2.1.127.in-addr.arpa");
+
+  /* Invalid addr family */
+  t1.family = AF_UNSPEC;
+  test_eq(tor_addr_to_PTR_name(rbuf, sizeof(rbuf), &t1), -1);
+
+  /* Stage IPv6 addr */
+  memset(&sa_storage, 0, sizeof(sa_storage));
+  sin6 = (struct sockaddr_in6 *)&sa_storage;
+  sin6->sin6_family = AF_INET6;
+  sin6->sin6_addr.s6_addr[0] = 0x80; /* 8000::abcd */
+  sin6->sin6_addr.s6_addr[14] = 0xab;
+  sin6->sin6_addr.s6_addr[15] = 0xcd;
+
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6, NULL);
+
+  {
+    const char* addr_PTR = "d.c.b.a.0.0.0.0.0.0.0.0.0.0.0.0."
+      "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.ip6.arpa";
+
+    /* Check IPv6 PTR - too short buffer */
+    test_eq(tor_addr_to_PTR_name(rbuf, 0, &t1), -1);
+    test_eq(tor_addr_to_PTR_name(rbuf, strlen(addr_PTR) - 1, &t1), -1);
+
+    /* Check IPv6 PTR - valid addr */
+    test_eq(tor_addr_to_PTR_name(rbuf, sizeof(rbuf), &t1),
+            strlen(addr_PTR));
+    test_streq(rbuf, addr_PTR);
+  }
 
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,

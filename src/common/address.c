@@ -476,13 +476,17 @@ tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
   return 0;
 }
 
-/** Convert <b>addr</b> to an in-addr.arpa name or a .ip6.arpa name, and store
- * the result in the <b>outlen</b>-byte buffer at <b>out</b>.  Return 0 on
- * success, -1 on failure. */
+/** Convert <b>addr</b> to an in-addr.arpa name or a .ip6.arpa name,
+ * and store the result in the <b>outlen</b>-byte buffer at
+ * <b>out</b>.  Return the number of chars written to <b>out</b>, not
+ * including the trailing \0, on success. Returns -1 on failure. */
 int
 tor_addr_to_PTR_name(char *out, size_t outlen,
-                                const tor_addr_t *addr)
+                     const tor_addr_t *addr)
 {
+  tor_assert(out);
+  tor_assert(addr);
+
   if (addr->family == AF_INET) {
     uint32_t a = tor_addr_to_ipv4h(addr);
 
@@ -505,7 +509,7 @@ tor_addr_to_PTR_name(char *out, size_t outlen,
       *cp++ = '.';
     }
     memcpy(cp, "ip6.arpa", 9); /* 8 characters plus NUL */
-    return 0;
+    return 32 * 2 + 8;
   }
   return -1;
 }
