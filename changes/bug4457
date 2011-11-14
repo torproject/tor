@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
+      that it doesn't attempt to allocate a socketpair. This could cause
+      some problems on windows systems with overzealous firewalls. Fix for
+      bug 4457; workaround for Libevent versions 2.0.1-alpha through
+      2.0.15-stable.
+
+
