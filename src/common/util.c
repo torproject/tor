@@ -3228,6 +3228,8 @@ tor_spawn_background(const char *const filename, const char **argv,
   SECURITY_ATTRIBUTES saAttr;
   char *joined_argv;
 
+  (void)envp; // Unused on Windows
+
   /* process_handle must not be NULL */
   tor_assert(process_handle != NULL);
 

@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a couple of compile warnings on Windows. Fixes bug 4469; bugfix
+      on 0.2.3.4-alpha and 0.2.3.6-alpha.
+

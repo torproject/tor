@@ -996,6 +996,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
       tor_close_socket(s);
       goto err;
     }
+#else
+    (void)options;
 #endif /* HAVE_SYS_UN_H */
   } else {
       log_err(LD_BUG,"Got unexpected address family %d.",
