@@ -1923,7 +1923,7 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   /* Their address. */
   out = cell.payload + 4;
-  len = append_address_to_payload(out, &conn->_base.addr);
+  len = append_address_to_payload(out, &conn->real_addr);
   if (len<0)
     return -1;
   out += len;
