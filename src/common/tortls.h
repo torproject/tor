@@ -68,7 +68,9 @@ void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
 tor_cert_t *tor_tls_get_peer_cert(tor_tls_t *tls);
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
-int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
+int tor_tls_check_lifetime(int severity,
+                           tor_tls_t *tls, int past_tolerance,
+                           int future_tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
@@ -123,7 +125,8 @@ int tor_tls_get_my_certs(int server,
 crypto_pk_env_t *tor_tls_get_my_client_auth_key(void);
 crypto_pk_env_t *tor_tls_cert_get_key(tor_cert_t *cert);
 int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
-int tor_tls_cert_is_valid(const tor_cert_t *cert,
+int tor_tls_cert_is_valid(int severity,
+                          const tor_cert_t *cert,
                           const tor_cert_t *signing_cert,
                           int check_rsa_1024);
 
