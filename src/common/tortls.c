@@ -212,7 +212,7 @@ static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
 static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
                                               unsigned int key_lifetime,
                                               int is_client);
-static int check_cert_lifetime_internal(const X509 *cert,
+static int check_cert_lifetime_internal(int severity, const X509 *cert,
                                    int past_tolerance, int future_tolerance);
 
 /** Global TLS contexts. We keep them here because nobody else needs
@@ -945,7 +945,8 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
  * the key is long enough. Return 1 if the cert is good, and 0 if it's bad or
  * we couldn't check it. */
 int
-tor_tls_cert_is_valid(const tor_cert_t *cert,
+tor_tls_cert_is_valid(int severity,
+                      const tor_cert_t *cert,
                       const tor_cert_t *signing_cert,
                       int check_rsa_1024)
 {
@@ -961,7 +962,8 @@ tor_tls_cert_is_valid(const tor_cert_t *cert,
 
   /* okay, the signature checked out right.  Now let's check the check the
    * lifetime. */
-  if (check_cert_lifetime_internal(cert->cert, 48*60*60, 30*24*60*60) < 0)
+  if (check_cert_lifetime_internal(severity, cert->cert,
+                                   48*60*60, 30*24*60*60) < 0)
     return 0;
 
   cert_key = X509_get_pubkey(cert->cert);
@@ -1924,7 +1926,7 @@ tor_tls_get_peer_cert(tor_tls_t *tls)
 
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
-log_cert_lifetime(const X509 *cert, const char *problem)
+log_cert_lifetime(int severity, const X509 *cert, const char *problem)
 {
   BIO *bio = NULL;
   BUF_MEM *buf;
@@ -1934,9 +1936,10 @@ log_cert_lifetime(const X509 *cert, const char *problem)
   struct tm tm;
 
   if (problem)
-    log_warn(LD_GENERAL,
-             "Certificate %s: is your system clock set incorrectly?",
-             problem);
+    log(severity, LD_GENERAL,
+        "Certificate %s. Either their clock is set wrong, or your clock "
+        "is wrong.",
+           problem);
 
   if (!(bio = BIO_new(BIO_s_mem()))) {
     log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
@@ -1958,9 +1961,9 @@ log_cert_lifetime(const X509 *cert, const char *problem)
 
   strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
 
-  log_warn(LD_GENERAL,
-           "(certificate lifetime runs from %s through %s. Your time is %s.)",
-           s1,s2,mytime);
+  log(severity, LD_GENERAL,
+      "(certificate lifetime runs from %s through %s. Your time is %s.)",
+      s1,s2,mytime);
 
  end:
   /* Not expected to get invoked */
@@ -2069,7 +2072,8 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
  * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
  */
 int
-tor_tls_check_lifetime(tor_tls_t *tls, int past_tolerance, int future_tolerance)
+tor_tls_check_lifetime(int severity, tor_tls_t *tls,
+                       int past_tolerance, int future_tolerance)
 {
   X509 *cert;
   int r = -1;
@@ -2077,7 +2081,8 @@ tor_tls_check_lifetime(tor_tls_t *tls, int past_tolerance, int future_tolerance)
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     goto done;
 
-  if (check_cert_lifetime_internal(cert, past_tolerance, future_tolerance) < 0)
+  if (check_cert_lifetime_internal(severity, cert,
+                                   past_tolerance, future_tolerance) < 0)
     goto done;
 
   r = 0;
@@ -2095,7 +2100,7 @@ tor_tls_check_lifetime(tor_tls_t *tls, int past_tolerance, int future_tolerance)
  * <b>future_tolerance</b> seconds.  If it is live, return 0.  If it is not
  * live, log a message and return -1. */
 static int
-check_cert_lifetime_internal(const X509 *cert, int past_tolerance,
+check_cert_lifetime_internal(int severity, const X509 *cert, int past_tolerance,
                              int future_tolerance)
 {
   time_t now, t;
@@ -2104,12 +2109,12 @@ check_cert_lifetime_internal(const X509 *cert, int past_tolerance,
 
   t = now + future_tolerance;
   if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
-    log_cert_lifetime(cert, "not yet valid");
+    log_cert_lifetime(severity, cert, "not yet valid");
     return -1;
   }
   t = now - past_tolerance;
   if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
-    log_cert_lifetime(cert, "already expired");
+    log_cert_lifetime(severity, cert, "already expired");
     return -1;
   }
 

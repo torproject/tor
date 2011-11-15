@@ -991,9 +991,9 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
     if (! tor_tls_cert_matches_key(conn->tls, link_cert)) {
       ERR("The link certificate didn't match the TLS public key");
     }
-    if (! tor_tls_cert_is_valid(link_cert, id_cert, 0))
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, link_cert, id_cert, 0))
       ERR("The link certificate was not valid");
-    if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
     conn->handshake_state->authenticated = 1;
@@ -1026,9 +1026,9 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
       ERR("The certs we wanted were missing");
 
     /* Remember these certificates so we can check an AUTHENTICATE cell */
-    if (! tor_tls_cert_is_valid(auth_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, 1))
       ERR("The authentication certificate was not valid");
-    if (! tor_tls_cert_is_valid(id_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
       ERR("The ID certificate was not valid");
 
     log_info(LD_OR, "Got some good certificates from %s:%d: "
