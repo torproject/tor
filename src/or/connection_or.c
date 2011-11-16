@@ -1923,7 +1923,11 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   /* Their address. */
   out = cell.payload + 4;
-  len = append_address_to_payload(out, &conn->real_addr);
+  /* We use &conn->real_addr below, unless it hasn't yet been set. If it
+   * hasn't yet been set, we know that _base.addr hasn't been tampered with
+   * yet either. */
+  len = append_address_to_payload(out, !tor_addr_is_null(&conn->real_addr)
+                                       ? &conn->real_addr : &conn->_base.addr);
   if (len<0)
     return -1;
   out += len;
