@@ -1024,7 +1024,7 @@ authdir_mode_any_nonhidserv(const or_options_t *options)
 }
 /** Return true iff we are an authoritative directory server that is
  * authoritative about receiving and serving descriptors of type
- * <b>purpose</b> its dirport.  Use -1 for "any purpose". */
+ * <b>purpose</b> on its dirport.  Use -1 for "any purpose". */
 int
 authdir_mode_handles_descs(const or_options_t *options, int purpose)
 {
