@@ -2100,8 +2100,8 @@ tor_tls_check_lifetime(int severity, tor_tls_t *tls,
  * <b>future_tolerance</b> seconds.  If it is live, return 0.  If it is not
  * live, log a message and return -1. */
 static int
-check_cert_lifetime_internal(int severity, const X509 *cert, int past_tolerance,
-                             int future_tolerance)
+check_cert_lifetime_internal(int severity, const X509 *cert,
+                             int past_tolerance, int future_tolerance)
 {
   time_t now, t;
 
