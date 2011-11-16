@@ -52,6 +52,13 @@
 #include <string.h>
 #include <assert.h>
 
+/* tor_addr_is_null() and maybe other functions rely on AF_UNSPEC being 0 to
+ * work correctly. Bail out here if we've found a platform where AF_UNSPEC
+ * isn't 0. */
+#if AF_UNSPEC != 0
+#error We rely on AF_UNSPEC being 0. Let us know about your platform, please!
+#endif
+
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
  * sockaddr object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
  * room is available in sa_out, or on error, return 0.  On success, return

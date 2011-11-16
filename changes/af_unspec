@@ -1,0 +1,4 @@
+  o Minor features:
+    - Detect when we build on a platform that doesn't define AF_UNSPEC to 0.
+      We don't work there, so refuse to compile.
+
