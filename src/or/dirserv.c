@@ -2888,7 +2888,7 @@ generate_v2_networkstatus_opinion(void)
     goto done;
   }
 
-  contact = get_options()->ContactInfo;
+  contact = options->ContactInfo;
   if (!contact)
     contact = "(none)";
 
@@ -2971,7 +2971,7 @@ generate_v2_networkstatus_opinion(void)
   });
 
   if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
-                   get_options()->Nickname)<0) {
+                   options->Nickname)<0) {
     log_warn(LD_BUG, "Unable to write signature line.");
     goto done;
   }
