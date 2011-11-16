@@ -195,15 +195,32 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 
 #ifdef HAVE_EVENT2_EVENT_H
   {
-    struct event_config *cfg = event_config_new();
+    int attempts = 0;
+    int using_threads;
+    struct event_config *cfg;
+
+  retry:
+    ++attempts;
+    using_threads = 0;
+    cfg = event_config_new();
+    tor_assert(cfg);
 
 #if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
     if (! torcfg->disable_iocp) {
       evthread_use_windows_threads();
       event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
       using_iocp_bufferevents = 1;
+      using_threads = 1;
+    } else {
+      using_iocp_bufferevents = 0;
     }
 #endif
+
+    if (!using_threads) {
+      /* Telling Libevent not to try to turn locking on can avoid a needless
+       * socketpair() attempt. */
+      event_config_set_flag(cfg, EVENT_BASE_FLAG_NOLOCK);
+    }
 
 #if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,0,7)
     if (torcfg->num_cpus > 0)
@@ -219,10 +236,34 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     the_event_base = event_base_new_with_config(cfg);
 
     event_config_free(cfg);
+
+    if (using_threads && the_event_base == NULL && attempts < 2) {
+      /* This could be a socketpair() failure, which can happen sometimes on
+       * windows boxes with obnoxious firewall rules.  Downgrade and try
+       * again. */
+#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
+      if (torcfg->disable_iocp == 0) {
+        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again with "
+                 "IOCP disabled.");
+      } else
+#endif
+      {
+          log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again.");
+      }
+
+      torcfg->disable_iocp = 1;
+      goto retry;
+    }
+
   }
 #else
   the_event_base = event_init();
 #endif
+
+  if (!the_event_base) {
+    log_err(LD_GENERAL, "Unable to initialize Libevent: cannot continue.");
+    exit(1);
+  }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
