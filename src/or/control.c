@@ -1055,7 +1055,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   int bad_cookie=0, bad_password=0;
   smartlist_t *sl = NULL;
 
-  if (TOR_ISXDIGIT(body[0])) {
+  if (!len) {
+    password = tor_strdup("");
+    password_len = 0;
+  } else if (TOR_ISXDIGIT(body[0])) {
     cp = body;
     while (TOR_ISXDIGIT(*cp))
       ++cp;
@@ -1072,9 +1075,6 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       tor_free(password);
       return 0;
     }
-  } else if (TOR_ISSPACE(body[0])) {
-    password = tor_strdup("");
-    password_len = 0;
   } else {
     if (!decode_escaped_string(body, len, &password, &password_len)) {
       connection_write_str_to_buf("551 Invalid quoted string.  You need "
@@ -3118,7 +3118,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   args = conn->incoming_cmd+cmd_len+1;
   tor_assert(data_len>(size_t)cmd_len);
   data_len -= (cmd_len+1); /* skip the command and NUL we added after it */
-  while (*args == ' ' || *args == '\t') {
+  while (TOR_ISSPACE(*args)) {
     ++args;
     --data_len;
   }
