@@ -174,7 +174,7 @@ rend_add_service(rend_service_t *service)
       smartlist_len(service->clients) == 0) {
     log_warn(LD_CONFIG, "Hidden service (%s) with client authorization but no "
                         "clients; ignoring.",
-             esc_for_log(service->directory));
+             escaped(service->directory));
     rend_service_free(service);
     return;
   }
@@ -182,7 +182,7 @@ rend_add_service(rend_service_t *service)
   if (!smartlist_len(service->ports)) {
     log_warn(LD_CONFIG, "Hidden service (%s) with no ports configured; "
              "ignoring.",
-             esc_for_log(service->directory));
+             escaped(service->directory));
     rend_service_free(service);
   } else {
     int dupe = 0;
