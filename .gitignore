@@ -144,6 +144,8 @@
 # /src/test
 /src/test/Makefile
 /src/test/Makefile.in
+/src/test/bench
+/src/test/bench.exe
 /src/test/test
 /src/test/test-child
 /src/test/test.exe

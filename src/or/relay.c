@@ -11,6 +11,7 @@
  **/
 
 #include <math.h>
+#define RELAY_PRIVATE
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
@@ -33,9 +34,6 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
-static int relay_crypt(circuit_t *circ, cell_t *cell,
-                       cell_direction_t cell_direction,
-                       crypt_path_t **layer_hint, char *recognized);
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
@@ -297,7 +295,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
  * Return -1 to indicate that we should mark the circuit for close,
  * else return 0.
  */
-static int
+int
 relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
             crypt_path_t **layer_hint, char *recognized)
 {

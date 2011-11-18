@@ -66,5 +66,10 @@ void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
 void tor_gettimeofday_cache_clear(void);
 
+#ifdef RELAY_PRIVATE
+int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
+                crypt_path_t **layer_hint, char *recognized);
+#endif
+
 #endif
 
