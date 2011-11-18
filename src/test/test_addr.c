@@ -186,7 +186,6 @@ test_addr_ip6_helpers(void)
   struct sockaddr_in *sin;
   struct sockaddr_in6 *sin6;
 
-  //  struct in_addr b1, b2;
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
   {
     const char *ip = "2001::1234";
@@ -302,12 +301,23 @@ test_addr_ip6_helpers(void)
   test_ntop6_reduces("1000:0001:0000:0007:0000:0000:0000:0000",
                      "1000:1:0:7::");
 
+  /* Bad af param */
+  test_eq(tor_inet_pton(AF_UNSPEC, 0, 0), -1);
+
   /* === Test pton: invalid in6. */
   test_pton6_bad("foobar.");
+  test_pton6_bad("-1::");
+  test_pton6_bad("00001::");
+  test_pton6_bad("10000::");
+  test_pton6_bad("::10000");
   test_pton6_bad("55555::");
   test_pton6_bad("9:-60::");
+  test_pton6_bad("9:+60::");
+  test_pton6_bad("9|60::");
+  test_pton6_bad("0x60::");
+  test_pton6_bad("::0x60");
+  test_pton6_bad("9:0x60::");
   test_pton6_bad("1:2:33333:4:0002:3::");
-  //test_pton6_bad("1:2:3333:4:00002:3::");// BAD, but glibc doesn't say so.
   test_pton6_bad("1:2:3333:4:fish:3::");
   test_pton6_bad("1:2:3:4:5:6:7:8:9");
   test_pton6_bad("1:2:3:4:5:6:7");
@@ -315,8 +325,14 @@ test_addr_ip6_helpers(void)
   test_pton6_bad("1:2:3:4:5:6:1.2.3");
   test_pton6_bad("::1.2.3");
   test_pton6_bad("::1.2.3.4.5");
+  test_pton6_bad("::ffff:0xff.0.0.0");
+  test_pton6_bad("::ffff:ff.0.0.0");
+  test_pton6_bad("::ffff:256.0.0.0");
+  test_pton6_bad("::ffff:-1.0.0.0");
   test_pton6_bad("99");
   test_pton6_bad("");
+  test_pton6_bad(".");
+  test_pton6_bad(":");
   test_pton6_bad("1::2::3:4");
   test_pton6_bad("a:::b:c");
   test_pton6_bad(":::a:b:c");
@@ -325,6 +341,9 @@ test_addr_ip6_helpers(void)
   /* test internal checking */
   test_external_ip("fbff:ffff::2:7", 0);
   test_internal_ip("fc01::2:7", 0);
+  test_internal_ip("fc01::02:7", 0);
+  test_internal_ip("fc01::002:7", 0);
+  test_internal_ip("fc01::0002:7", 0);
   test_internal_ip("fdff:ffff::f:f", 0);
   test_external_ip("fe00::3:f", 0);
 
