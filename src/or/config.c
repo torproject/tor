@@ -403,6 +403,7 @@ static config_var_t _option_vars[] = {
   V(UseEntryGuards,              BOOL,     "1"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   V(User,                        STRING,   NULL),
+  V(UserspaceIOCPBuffers,        BOOL,     "0"),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),

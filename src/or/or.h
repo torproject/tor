@@ -3424,6 +3424,11 @@ typedef struct {
    * never use it.  If -1, we do what the consensus says. */
   int OptimisticData;
 
+  /** If 1, and we are using IOCP, we set the kernel socket SNDBUF and RCVBUF
+   * to 0 to try to save kernel memory and avoid the dread "Out of buffers"
+   * issue. */
+  int UserspaceIOCPBuffers;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
