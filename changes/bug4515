@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix parsing of some corner-cases with tor_inet_pton. Fixes bug 4515;
+      bugfix on 0.2.0.1-alpha; fix by Anders Sundman.
