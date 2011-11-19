@@ -1541,6 +1541,15 @@ options_act(const or_options_t *old_options)
       options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
     int print_notice = 0;
+
+    /* If we aren't acting as a server, we can't collect stats anyway. */
+    if (!server_mode(options)) {
+      options->CellStatistics = 0;
+      options->DirReqStatistics = 0;
+      options->EntryStatistics = 0;
+      options->ExitPortStatistics = 0;
+    }
+
     if ((!old_options || !old_options->CellStatistics) &&
         options->CellStatistics) {
       rep_hist_buffer_stats_init(now);
