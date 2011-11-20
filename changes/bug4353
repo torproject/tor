@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - When running as client without a geoip database, do not print a
+      misleading (and plain wrong) log message that we're collecting
+      dirreq statistics - we're not collecting statistics as clients.
+      Also don't create a useless (because empty) stats file in the
+      stats/ directory. Fixes bug 4353, bugfix on 0.2.2.34.
+

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix a memleak in launch_direct_bridge_descriptor_fetch() that
+      occured when a client tried to fetch a descriptor for a bridge
+      in ExcludeNodes. Fixes #4383; bugfix on 0.2.2.25-alpha.
+
