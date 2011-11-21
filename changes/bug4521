@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Backport fixes for a pair of compilation warnings on Windows.
-      Fixes bug 4521; bugfix on 0.2.2.28-beta and on 0.2.2.29-beta.

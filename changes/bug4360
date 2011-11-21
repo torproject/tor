@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Use the name "CERTS" consistently to refer to the new cell type;
-      we were calling it CERT in some places and CERTS in others.

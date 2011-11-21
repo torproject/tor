@@ -45,6 +45,9 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       by Anders Sundman.
     - Fix parsing of some corner-cases with tor_inet_pton(). Fixes
       bug 4515; bugfix on 0.2.0.1-alpha; fix by Anders Sundman.
+    - When configuring, starting, or stopping an NT service, stop
+      immediately after the service configuration attempt has succeeded
+      or failed. Fixes bug 3963; bugfix on 0.2.0.7-alpha.
     - When sending a NETINFO cell, include the original address
       received for the other side, not its canonical address. Found
       by "troll_un"; fixes bug 4349; bugfix on 0.2.0.10-alpha.
@@ -57,6 +60,8 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
     - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
       occurred when a client tried to fetch a descriptor for a bridge
       in ExcludeNodes. Fixes bug 4383; bugfix on 0.2.2.25-alpha.
+    - Backport fixes for a pair of compilation warnings on Windows.
+      Fixes bug 4521; bugfix on 0.2.2.28-beta and on 0.2.2.29-beta.
     - When running as a client, do not print a misleading (and plain
       wrong) log message that we're collecting "directory request"
       statistics: clients don't collect statistics. Also don't create a
@@ -108,6 +113,8 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       old built-in one. OpenSSL's AES has been better for a while, and
       relatively few servers should still be on any version of OpenSSL
       that doesn't have good optimized assembly AES.
+    - Use the name "CERTS" consistently to refer to the new cell type;
+      we were calling it CERT in some places and CERTS in others.
 
   o Testing:
     - Numerous new unit tests for functions in util.c and address.c by
