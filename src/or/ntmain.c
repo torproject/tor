@@ -727,6 +727,7 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
   if ((argc >= 3) &&
       (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
     nt_service_loadlibrary();
+    *should_exit = 1;
     if (!strcmp(argv[2], "install"))
       return nt_service_install(argc, argv);
     if (!strcmp(argv[2], "remove"))
@@ -736,7 +737,6 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
     if (!strcmp(argv[2], "stop"))
       return nt_service_cmd_stop();
     printf("Unrecognized service command '%s'\n", argv[2]);
-    *should_exit = 1;
     return 1;
   }
   if (argc >= 2) {
