@@ -1,8 +1,0 @@
-  o Minor features:
-
-    - When Tor ignores a hidden service specified in its
-      configuration, include the hidden service's directory in the
-      warning message.  Previously, we would only tell the user that
-      some hidden service was ignored.  Bugfix on 0.0.6; fixes bug
-      4426.
-

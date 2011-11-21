@@ -1,18 +1,57 @@
-Changes in version 0.2.2.35 - 2011-1?-??
-  o Major bugfix:
+Changes in version 0.2.2.35 - 2011-11-??
+  o Major bugfixes:
+    - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
+      that it doesn't attempt to allocate a socketpair. This could cause
+      some problems on Windows systems with overzealous firewalls. Fix for
+      bug 4457; workaround for Libevent versions 2.0.1-alpha through
+      2.0.15-stable.
     - If we mark an OR connection for close based on a cell we process,
       don't process any further cells on it. We already avoided reading
       on marked-for-close connections, but now we also discard the cells
       we'd already read. Fixes bug 4299; bugfix on 0.2.0.10-alpha, which
       was the first version where we might mark a connection for close
       based on processing a cell on it.
-    - Don't crash when we're running as a relay and don't have a geoip
+    - Correctly sanity-check that we don't underflow on a memory
+      allocation (and then assert) for hidden service introduction
+      point decryption. Bug discovered by Dan Rosenberg. Fixes bug 4410;
+      bugfix on 0.2.1.5-alpha.
+    - Fix a memory leak when we check whether a hidden service
+      descriptor has any usable introduction points left. Fixes bug
+      4424. Bugfix on 0.2.2.25-alpha.
+    - Don't crash when we're running as a relay and don't have a GeoIP
       file. Bugfix on 0.2.2.34; fixes bug 4340. This backports a fix
       we've had in the 0.2.3.x branch already.
+    - When running as a client, do not print a misleading (and plain
+      wrong) log message that we're collecting "directory request"
+      statistics: we don't collect statistics as clients. Also don't
+      create a useless (because empty) stats file in the stats/
+      directory. Fixes bug 4353; bugfix on 0.2.2.34.
 
-  o Trivial fixes:
-    - Fix a typo in a hibernation-related log message. Fixes bug 4331;
+  o Minor bugfixes:
+    - Detect failure to initialize Libevent. This fix provides better
+      detection for future instances of bug 4457.
+    - Don't warn about unused log_mutex in log.c when building with
+      --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
+      0.1.0.6-rc which introduced --disable-threads.
+    - When sending a NETINFO cell, include the original address
+      received for the other side, not its canonical address. Found
+      by "troll_un"; fixes bug 4349; bugfix on 0.2.0.10-alpha.
+    - Fixed a typo in a hibernation-related log message. Fixes bug 4331;
       bugfix on 0.2.2.23-alpha; found by "tmpname0901".
+    - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
+      occurred when a client tried to fetch a descriptor for a bridge
+      in ExcludeNodes. Fixes bug 4383; bugfix on 0.2.2.25-alpha.
+
+  o Minor features:
+    - When Tor ignores a hidden service specified in its configuration,
+      include the hidden service's directory in the warning message.
+      Previously, we would only tell the user that some hidden service
+      was ignored. Bugfix on 0.0.6; fixes bug 4426.
+    - Update to the November 1 2011 Maxmind GeoLite Country database.
+
+  o Packaging changes:
+    - Make it easier to automate expert package builds on Windows,
+      by removing an absolute path from makensis.exe command.
 
 
 Changes in version 0.2.2.34 - 2011-10-26

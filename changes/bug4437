@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Don't warn about unused log_mutex in log.c when building with
-      --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
-      0.1.0.6-rc which introduced --disable-threads.
-
