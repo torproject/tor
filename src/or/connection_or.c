@@ -1435,7 +1435,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  * side of <b>conn</b> is <b>peer_id</b>.  For v1 and v2 handshakes,
  * this is right after we get a certificate chain in a TLS handshake
  * or renegotiation.  For v3 handshakes, this is right after we get a
- * certificate chain in a CERT cell.
+ * certificate chain in a CERTS cell.
  *
  * If we want any particular ID before, record the one we got.
  *
@@ -1954,10 +1954,10 @@ connection_or_send_netinfo(or_connection_t *conn)
   return 0;
 }
 
-/** Send a CERT cell on the connection <b>conn</b>.  Return 0 on success, -1
+/** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
-connection_or_send_cert_cell(or_connection_t *conn)
+connection_or_send_certs_cell(or_connection_t *conn)
 {
   const tor_cert_t *link_cert = NULL, *id_cert = NULL;
   const uint8_t *link_encoded = NULL, *id_encoded = NULL;
@@ -1981,7 +1981,7 @@ connection_or_send_cert_cell(or_connection_t *conn)
              2 * ( 1 + 2 ) /* For each cert: 1 byte for type, 2 for length */ +
              link_len + id_len;
   cell = var_cell_new(cell_len);
-  cell->command = CELL_CERT;
+  cell->command = CELL_CERTS;
   cell->payload[0] = 2;
   pos = 1;
 
