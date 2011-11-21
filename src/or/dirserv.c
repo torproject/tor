@@ -1720,12 +1720,6 @@ should_generate_v2_networkstatus(void)
 /** If a router's MTBF is at least this value, then it is always stable.
  * See above.  (Corresponds to about 7 days for current decay rates.) */
 #define MTBF_TO_GUARANTEE_STABLE (60*60*24*5)
-/** Similarly, we protect sufficiently fast nodes from being pushed
- * out of the set of Fast nodes. */
-#define BANDWIDTH_TO_GUARANTEE_FAST ROUTER_REQUIRED_MIN_BANDWIDTH
-/** Similarly, every node with sufficient bandwidth can be considered
- * for Guard status. */
-#define BANDWIDTH_TO_GUARANTEE_GUARD (250*1024)
 /** Similarly, every node with at least this much weighted time known can be
  * considered familiar enough to be a guard.  Corresponds to about 20 days for
  * current decay rates.
@@ -1870,6 +1864,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   long *tks;
   double *mtbfs, *wfus;
   time_t now = time(NULL);
+  or_options_t *options = get_options();
 
   /* initialize these all here, in case there are no routers */
   stable_uptime = 0;
@@ -1942,8 +1937,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (guard_tk > TIME_KNOWN_TO_GUARANTEE_FAMILIAR)
     guard_tk = TIME_KNOWN_TO_GUARANTEE_FAMILIAR;
 
-  if (fast_bandwidth > BANDWIDTH_TO_GUARANTEE_FAST)
-    fast_bandwidth = BANDWIDTH_TO_GUARANTEE_FAST;
+  /* Protect sufficiently fast nodes from being pushed out of the set
+   * of Fast nodes. */
+  if (options->AuthDirFastGuarantee &&
+      fast_bandwidth > options->AuthDirFastGuarantee)
+    fast_bandwidth = options->AuthDirFastGuarantee;
 
   /* Now that we have a time-known that 7/8 routers are known longer than,
    * fill wfus with the wfu of every such "familiar" router. */
@@ -2375,6 +2373,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   const or_options_t *options = get_options();
   int unstable_version =
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
+  uint32_t routerbw = router_get_advertised_bandwidth(ri);
+
   memset(rs, 0, sizeof(routerstatus_t));
 
   rs->is_authority =
@@ -2400,10 +2400,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_valid = node->is_valid;
 
   if (node->is_fast &&
-      (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
-       router_get_advertised_bandwidth(ri) >=
-                              MIN(guard_bandwidth_including_exits,
-                                  guard_bandwidth_excluding_exits)) &&
+      ((options->AuthDirGuardBWGuarantee &&
+        routerbw >= options->AuthDirGuardBWGuarantee) ||
+       routerbw >= MIN(guard_bandwidth_including_exits,
+                       guard_bandwidth_excluding_exits)) &&
       (options->GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays ||
        is_router_version_good_for_possible_guard(ri->platform))) {
     long tk = rep_hist_get_weighted_time_known(

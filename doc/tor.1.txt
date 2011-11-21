@@ -1406,6 +1406,16 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     Authoritative directories only. Like AuthDirMaxServersPerAddr, but applies
     to addresses shared with directory authorities. (Default: 5)
 
+**AuthDirFastGuarantee** __N__ **bytes**|**KB**|**MB**|**GB**::
+    Authoritative directories only. If non-zero, always vote the
+    Fast flag for any relay advertising this amount of capacity or
+    more. (Default: 20 KB)
+
+**AuthDirGuardBWGuarantee** __N__ **bytes**|**KB**|**MB**|**GB**::
+    Authoritative directories only. If non-zero, this advertised capacity
+    or more is always sufficient to satisfy the bandwidth requirement
+    for the Guard flag. (Default: 250 KB)
+
 **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
     serve all requested bridge information.  Used for debugging.  (Default:
