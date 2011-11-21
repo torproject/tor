@@ -446,9 +446,19 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
 {
   char qbuf[1];
   char tag[TAG_LEN];
+  time_t now = approx_time();
+  static time_t last_culled_cpuworkers = 0;
 
-  cull_wedged_cpuworkers();
-  spawn_enough_cpuworkers();
+  /* Checking for wedged cpuworkers requires a linear search over all
+   * connections, so let's do it only once a minute.
+   */
+#define CULL_CPUWORKERS_INTERVAL 60
+
+  if (last_culled_cpuworkers + CULL_CPUWORKERS_INTERVAL <= now) {
+    cull_wedged_cpuworkers();
+    spawn_enough_cpuworkers();
+    last_culled_cpuworkers = now;
+  }
 
   if (1) {
     if (num_cpuworkers_busy == num_cpuworkers) {
