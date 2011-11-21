@@ -1864,7 +1864,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   long *tks;
   double *mtbfs, *wfus;
   time_t now = time(NULL);
-  or_options_t *options = get_options();
+  const or_options_t *options = get_options();
 
   /* initialize these all here, in case there are no routers */
   stable_uptime = 0;
