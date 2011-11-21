@@ -1,6 +1,0 @@
-  o Minor features:
-    - When we fail to initialize Libevent, retry with IOCP disabled so we
-      don't need to turn on multi-threading support in Libevent, which in
-      turn requires a working socketpair().  This is a workaround for bug
-      4457, which affects Libevent versions from 2.0.1-alpha through
-      2.0.15-stable.

@@ -11,16 +11,89 @@ Changes in version 0.2.3.8-alpha - 2011-11-??
       0.2.3.x no longer uses v0 HS descriptors, but this assertion can
       trigger on (and crash) v0 HS authorities. Fixes bug 4411.
       Bugfix on 0.2.3.1-alpha; diagnosed by frosty_un.
-    - Don't crash when we, as the bridge authority, are asked for our own
+    - Make bridge authorities not crash when they are asked for their own
       descriptor. Bugfix on 0.2.3.7-alpha, reported by Lucky Green.
 
-  o Minor bugfixes:
+  o Major features:
+    - Allow Tor controllers like Vidalia to obtain the microdescriptor
+      for a relay by identity digest or nickname. Previously,
+      microdescriptors were only available by their own digests, so a
+      controller would have to ask for and parse the whole microdescriptor
+      consensus in order to look up a single relay's microdesc. Fixes
+      bug 3832; bugfix on 0.2.3.1-alpha.
+    - Use OpenSSL's EVP interface for AES encryption, so that all AES
+      operations can use hardware acceleration (if present). Resolves
+      ticket 4442.
+
+  o Minor bugfixes (on 0.2.2.x and earlier):
     - Fix a memory leak when we check whether a hidden service
       descriptor has any usable introduction points left. Fixes bug
       4424. Bugfix on 0.2.2.25-alpha.
     - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
       occurred when a client tried to fetch a descriptor for a bridge
       in ExcludeNodes. Fixes #4383; bugfix on 0.2.2.25-alpha.
+    - Allow manual 'authenticate' commands to the controller interface
+      from netcat (nc) as well as telnet. We were rejecting them because
+      they didn't come with the expected whitespace at the end of the
+      command. Bugfix on 0.1.1.1-alpha; fixes bug 2893.
+    - When sending a NETINFO cell, include the original address
+      received for the other side, not its canonical address. Found
+      by "troll_un"; fixes bug 4349; bugfix on 0.2.0.10-alpha.
+    - When running as a client without a geoip database, do not print a
+      misleading (and plain wrong) log message that we're collecting
+      dirreq statistics - we're not collecting statistics as clients.
+      Also don't create a useless (because empty) stats file in the stats/
+      directory. Fixes bug 4353; bugfix on 0.2.2.34 / 0.2.3.7-alpha.
+    - Fix some (not actually triggerable) buffer size checks in usage of
+      tor_inet_ntop. Fixes bug 4434; bugfix on Tor 0.2.0.1-alpha. Patch
+      by Anders Sundman.
+    - Don't warn about unused log_mutex in log.c when building with
+      --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
+      0.1.0.6-rc which introduced --disable-threads.
+    - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
+      that it doesn't attempt to allocate a socketpair. This could cause
+      some problems on windows systems with overzealous firewalls. Fix for
+      bug 4457; workaround for Libevent versions 2.0.1-alpha through
+      2.0.15-stable.
+    - Detect failure to initialize Libevent. Better detection for
+      bug 4457.
+    - Fix parsing of some corner-cases with tor_inet_pton. Fixes bug 4515;
+      bugfix on 0.2.0.1-alpha; fix by Anders Sundman.
+    - Rename the bench_{aes,dmap} functions to test_*, so that tinytest
+      can pick them up when the tests aren't disabled. Bugfix on
+      0.2.2.4-alpha which introduced tinytest.
+
+  o Minor bugfixes (on 0.2.3.x):
+    - Successfully detect AUTH_CHALLENGE cells with no recognized
+      authentication type listed. Fixes bug 4367; bugfix on 0.2.3.6-alpha.
+      Found by frosty_un.
+    - If a relay receives an AUTH_CHALLENGE it can't answer, it should
+      still send a NETINFO cell to allow the connection to become open.
+      Fixes bug 4368; fix on 0.2.3.6-alpha; bug found by "frosty".
+    - Log less loudly when we get an invalid certificate from a source
+      other than a directory authority: it's not unusual to see
+      invalid certs because of clock skew. Fixes bug 4370; bugfix on
+      0.2.3.6-alpha.
+    - Tolerate servers with more clock skew than previously. Fixes
+      bug 4371; bugfix on 0.2.3.6-alpha.
+    - Fix a couple of compile warnings on Windows. Fixes bug 4469; bugfix
+      on 0.2.3.4-alpha and 0.2.3.6-alpha.
+    - Make util unit tests build correctly with MSVC. Bugfix on
+      0.2.3.3-alpha. Patch by Gisle Vanem.
+
+  o Minor features:
+    - When Tor ignores a hidden service specified in its configuration,
+      include the hidden service's directory in the warning message.
+      Previously, we would only tell the user that some hidden service
+      was ignored. Bugfix on 0.0.6; fixes bug 4426.
+    - When we fail to initialize Libevent, retry with IOCP disabled so we
+      don't need to turn on multi-threading support in Libevent, which in
+      turn requires a working socketpair(). This is a workaround for bug
+      4457, which affects Libevent versions from 2.0.1-alpha through
+      2.0.15-stable.
+    - Detect when we build on a platform that doesn't define AF_UNSPEC
+      to 0. We don't work there, so refuse to compile.
+    - Update to the November 1 2011 Maxmind GeoLite Country database.
 
   o Packaging changes:
     - Make it easier to automate expert package builds on Windows
@@ -29,6 +102,18 @@ Changes in version 0.2.3.8-alpha - 2011-11-??
   o Code simplifications and refactoring:
     - Remove some redundant #include directives throughout the code.
       Patch from Andrea Gelmini.
+    - Unconditionally use OpenSSL's AES implementation instead of our
+      old built-in one. OpenSSL's AES has been better for a while, and
+      relatively few servers should still be on any version of OpenSSL
+      that doesn't have good optimized assembly AES.
+
+  o Testing:
+    - Numerous new unit tests for functions in util.c and address.c by
+      Anders Sundman.
+    - The long-disabled benchmark tests are now split into their own
+      ./src/test/bench binary.
+    - The benchmark tests can now use more accurate timers than
+      gettimeofday when such timers are available.
 
 
 Changes in version 0.2.3.7-alpha - 2011-10-30

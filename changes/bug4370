@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Log less loudly when we get an invalid certificate from a source other
-      than a directory authority: it's not unusual to see invalid certs
-      because of clock skew. Fixes bug 4370; bugfix on 0.2.3.6-alpha.

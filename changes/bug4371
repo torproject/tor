@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Tolerate servers with more clock skew than previously. Fixes bug 4371;
-      bugfix on 0.2.3.6-alpha.

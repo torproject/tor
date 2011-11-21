@@ -1,9 +1,0 @@
-  o Major features:
-
-    - Allow Tor controllers like Vidalia to obtain the microdescriptor
-      for a relay by identity digest or nickname.  Previously,
-      microdescriptors were only available by their own digests, so a
-      controller would have to ask for and parse the whole
-      microdescriptor consensus in order to look up a single relay's
-      microdesc.  Fixes bug 3832; bugfix on 0.2.3.1-alpha.
-

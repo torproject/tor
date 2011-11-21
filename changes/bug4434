@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Fix some (not actually triggerable) buffer size checks in usage of
-      tor_inet_ntop. Fixes bug 4434; bugfix on Tor 0.2.0.1-alpha. Patch
-      by Anders Sundman.
-
-  o Testing:
-    - Numerous new unit tests for functions in util.c and address.c by
-      Anders Sundman.
-      

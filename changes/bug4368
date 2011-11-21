@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - If a relay receives an AUTH_CHALLENGE it can't answer, it should
-      still send a NETINFO cell to allow the connection to become open.
-      Fixes bug 4368; fix on 0.2.3.6-alpha; bug found by "frosty".

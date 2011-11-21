@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When sending a NETINFO cell, include the original address
-      received for the other side, not its canonical address.  Found
-      by "troll_un"; fixes bug 4349; bugfix on 0.2.0.10-alpha.
