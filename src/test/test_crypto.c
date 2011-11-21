@@ -7,6 +7,7 @@
 #define CRYPTO_PRIVATE
 #include "or.h"
 #include "test.h"
+#include "aes.h"
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
@@ -95,12 +96,15 @@ test_crypto_rng(void)
 
 /** Run unit tests for our AES functionality */
 static void
-test_crypto_aes(void)
+test_crypto_aes(void *arg)
 {
   char *data1 = NULL, *data2 = NULL, *data3 = NULL;
   crypto_cipher_env_t *env1 = NULL, *env2 = NULL;
   int i, j;
   char *mem_op_hex_tmp=NULL;
+
+  int use_evp = !strcmp(arg,"evp");
+  evaluate_evp_for_aes(use_evp);
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -670,13 +674,16 @@ test_crypto_s2k(void)
 
 /** Test AES-CTR encryption and decryption with IV. */
 static void
-test_crypto_aes_iv(void)
+test_crypto_aes_iv(void *arg)
 {
   crypto_cipher_env_t *cipher;
   char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
   ssize_t encrypted_size, decrypted_size;
+
+  int use_evp = !strcmp(arg,"evp");
+  evaluate_evp_for_aes(use_evp);
 
   plain = tor_malloc(4095);
   encrypted1 = tor_malloc(4095 + 1 + 16);
@@ -851,18 +858,36 @@ test_crypto_base32_decode(void)
   ;
 }
 
+static void *
+pass_data_setup_fn(const struct testcase_t *testcase)
+{
+  return testcase->setup_data;
+}
+static int
+pass_data_cleanup_fn(const struct testcase_t *testcase, void *ptr)
+{
+  (void)ptr;
+  (void)testcase;
+  return 1;
+}
+static const struct testcase_setup_t pass_data = {
+  pass_data_setup_fn, pass_data_cleanup_fn
+};
+
 #define CRYPTO_LEGACY(name)                                            \
   { #name, legacy_test_helper, 0, &legacy_setup, test_crypto_ ## name }
 
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
-  CRYPTO_LEGACY(aes),
+  { "aes_AES", test_crypto_aes, TT_FORK, &pass_data, (void*)"aes" },
+  { "aes_EVP", test_crypto_aes, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   CRYPTO_LEGACY(dh),
   CRYPTO_LEGACY(s2k),
-  CRYPTO_LEGACY(aes_iv),
+  { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
+  { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(base32_decode),
   END_OF_TESTCASES
 };
