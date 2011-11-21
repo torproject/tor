@@ -14,34 +14,28 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+#include <openssl/engine.h>
 #include "compat.h"
 #include "aes.h"
 #include "util.h"
 #include "torlog.h"
 
-/* We have 2 strategies for getting AES: Via OpenSSL's AES_encrypt function,
- * via OpenSSL's EVP_EncryptUpdate function. */
-
-/** Defined iff we're using OpenSSL's AES functions for AES. */
-#undef USE_OPENSSL_AES
-/** Defined iff we're using OpenSSL's EVP code for AES. */
-#undef USE_OPENSSL_EVP
-
-/* Here we pick which to use, if none is force-defined above */
-#if (!defined(USE_OPENSSL_AES) && \
-     !defined(USE_OPENSSL_EVP))
-
-#define USE_OPENSSL_EVP
-
+#ifdef ANDROID
+/* Android's OpenSSL seems to have removed all of its Engine support. */
+#define DISABLE_ENGINES
 #endif
+
+/* We have 2 strategies for getting AES: Via OpenSSL's AES_encrypt function,
+ * via OpenSSL's EVP_EncryptUpdate function.
+ *
+ * If there's any hardware acceleration in play, we want to be using EVP_* so
+ * we can get it.  Otherwise, we'll want AES_*, which seems to be about 5%
+ * faster than indirecting through the EVP layer.
+ */
 
 /* Include OpenSSL headers as needed. */
-#ifdef USE_OPENSSL_AES
-# include <openssl/aes.h>
-#endif
-#ifdef USE_OPENSSL_EVP
-# include <openssl/evp.h>
-#endif
 
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
@@ -49,11 +43,10 @@
 /** Implements an AES counter-mode cipher. */
 struct aes_cnt_cipher {
 /** This next element (however it's defined) is the AES key. */
-#if defined(USE_OPENSSL_EVP)
-  EVP_CIPHER_CTX key;
-#elif defined(USE_OPENSSL_AES)
-  AES_KEY key;
-#endif
+  union {
+    EVP_CIPHER_CTX evp;
+    AES_KEY aes;
+  } key;
 
 #if !defined(WORDS_BIGENDIAN)
 #define USING_COUNTER_VARS
@@ -78,7 +71,44 @@ struct aes_cnt_cipher {
   uint8_t buf[16];
   /** Our current stream position within buf. */
   uint8_t pos;
+
+  /** True iff we're using the evp implementation of this cipher. */
+  uint8_t using_evp;
 };
+
+/** True if we should prefer the EVP implementation for AES, either because
+ * we're testing it or because we have hardware acceleration configured */
+static int should_use_EVP = 0;
+
+/** Check whether we should use the EVP interface for AES. If <b>force_val</b>
+ * is nonnegative, we use use EVP iff it is true.  Otherwise, we use EVP
+ * if there is an engine enabled for aes-ecb. */
+int
+evaluate_evp_for_aes(int force_val)
+{
+  ENGINE *e;
+
+  if (force_val >= 0) {
+    should_use_EVP = force_val;
+    return 0;
+  }
+#ifdef DISABLE_ENGINES
+  should_use_EVP = 0;
+#else
+  e = ENGINE_get_cipher_engine(NID_aes_128_ecb);
+
+  if (e) {
+    log_notice(LD_CRYPTO, "AES engine \"%s\" found; using EVP_* functions.",
+               ENGINE_get_name(e));
+    should_use_EVP = 1;
+  } else {
+    log_notice(LD_CRYPTO, "No AES engine found; using AES_* functions.");
+    should_use_EVP = 0;
+  }
+#endif
+
+  return 0;
+}
 
 #if !defined(USING_COUNTER_VARS)
 #define COUNTER(c, n) ((c)->ctr_buf.buf32[3-(n)])
@@ -100,15 +130,13 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
    * None of these issues are insurmountable in principle.
    */
 
-#if defined(USE_OPENSSL_EVP)
-  {
+  if (cipher->using_evp) {
     int outl=16, inl=16;
-    EVP_EncryptUpdate(&cipher->key, cipher->buf, &outl,
+    EVP_EncryptUpdate(&cipher->key.evp, cipher->buf, &outl,
                       cipher->ctr_buf.buf, inl);
+  } else {
+    AES_encrypt(cipher->ctr_buf.buf, cipher->buf, &cipher->key.aes);
   }
-#elif defined(USE_OPENSSL_AES)
-  AES_encrypt(cipher->ctr_buf.buf, cipher->buf, &cipher->key);
-#endif
 }
 
 /**
@@ -129,18 +157,20 @@ aes_new_cipher(void)
 void
 aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 {
-#if defined(USE_OPENSSL_EVP)
-  const EVP_CIPHER *c;
-  switch (key_bits) {
-    case 128: c = EVP_aes_128_ecb(); break;
-    case 192: c = EVP_aes_192_ecb(); break;
-    case 256: c = EVP_aes_256_ecb(); break;
-    default: tor_assert(0);
+  if (should_use_EVP) {
+    const EVP_CIPHER *c;
+    switch (key_bits) {
+      case 128: c = EVP_aes_128_ecb(); break;
+      case 192: c = EVP_aes_192_ecb(); break;
+      case 256: c = EVP_aes_256_ecb(); break;
+      default: tor_assert(0);
+    }
+    EVP_EncryptInit(&cipher->key.evp, c, (const unsigned char*)key, NULL);
+    cipher->using_evp = 1;
+  } else {
+    AES_set_encrypt_key((const unsigned char *)key, key_bits, &cipher->key.aes);
+    cipher->using_evp = 0;
   }
-  EVP_EncryptInit(&cipher->key, c, (const unsigned char*)key, NULL);
-#elif defined(USE_OPENSSL_AES)
-  AES_set_encrypt_key((const unsigned char *)key, key_bits, &(cipher->key));
-#endif
 #ifdef USING_COUNTER_VARS
   cipher->counter0 = 0;
   cipher->counter1 = 0;
@@ -161,9 +191,9 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
 {
   if (!cipher)
     return;
-#ifdef USE_OPENSSL_EVP
-  EVP_CIPHER_CTX_cleanup(&cipher->key);
-#endif
+  if (cipher->using_evp) {
+    EVP_CIPHER_CTX_cleanup(&cipher->key.evp);
+  }
   memset(cipher, 0, sizeof(aes_cnt_cipher_t));
   tor_free(cipher);
 }

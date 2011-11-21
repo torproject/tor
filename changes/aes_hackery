@@ -8,4 +8,7 @@
     - Use OpenSSL's EVP interface for AES encryption, so that all
       AES operations can use hardware acceleration (if present).
       Resolves issue #4442.
+    - But only use the EVP interface when AES acceleration is enabled,
+      to avoid a performance regression.  Resolves issue #4525.
+
 
