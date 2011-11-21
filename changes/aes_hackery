@@ -4,11 +4,13 @@
       relatively few servers should still be on any version of OpenSSL
       that doesn't have good optimized assembly AES.
 
-  o Major features:
+  o Major features (AES performance):
     - Use OpenSSL's EVP interface for AES encryption, so that all
       AES operations can use hardware acceleration (if present).
       Resolves issue #4442.
     - But only use the EVP interface when AES acceleration is enabled,
       to avoid a performance regression.  Resolves issue #4525.
-
-
+    - When using OpenSSL 1.0.0 or later, use OpenSSL's counter mode
+      implementation; it makes AES_CTR about 7% faster than our old one
+      (which was about 10% faster than the one OpenSSL used to provide).
+      Resolves issue #4526.
