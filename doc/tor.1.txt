@@ -1409,7 +1409,7 @@ DIRECTORY AUTHORITY SERVER OPTIONS
 **AuthDirFastGuarantee** __N__ **bytes**|**KB**|**MB**|**GB**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
-    more. (Default: 20 KB)
+    more. (Default: 100 KB)
 
 **AuthDirGuardBWGuarantee** __N__ **bytes**|**KB**|**MB**|**GB**::
     Authoritative directories only. If non-zero, this advertised capacity
