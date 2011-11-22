@@ -1,4 +1,13 @@
-Changes in version 0.2.3.8-alpha - 2011-11-21
+Changes in version 0.2.3.8-alpha - 2011-11-22
+  Tor 0.2.3.8-alpha fixes some crash and assert bugs, including a
+  socketpair-related bug that has been bothering Windows users. It adds
+  support to serve microdescriptors to controllers, so Vidalia's network
+  map can resume listing relays (once Vidalia implements its side),
+  and adds better support for hardware AES acceleration. Finally, it
+  starts the process of adjusting the bandwidth cutoff for getting the
+  "Fast" flag from 20KB to (currently) 32KB -- preliminary results show
+  that tiny relays harm performance more than they help network capacity.
+
   o Major bugfixes:
     - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
       that it doesn't attempt to allocate a socketpair. This could cause
@@ -9,6 +18,12 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       allocation (and then assert) for hidden service introduction
       point decryption. Bug discovered by Dan Rosenberg. Fixes bug 4410;
       bugfix on 0.2.1.5-alpha.
+    - Remove the artificially low cutoff of 20KB to guarantee the Fast
+      flag. In the past few years the average relay speed has picked
+      up, and while the "top 7/8 of the network get the Fast flag" and
+      "all relays with 20KB or more of capacity get the Fast flag" rules
+      used to have the same result, now the top 7/8 of the network has
+      a capacity more like 32KB. Bugfix on 0.2.1.14-rc. Fixes bug 4489.
     - Fix a rare assertion failure when checking whether a v0 hidden
       service descriptor has any usable introduction points left, and
       we don't have enough information to build a circuit to the first
@@ -18,12 +33,11 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       Bugfix on 0.2.3.1-alpha; diagnosed by frosty_un.
     - Make bridge authorities not crash when they are asked for their own
       descriptor. Bugfix on 0.2.3.7-alpha, reported by Lucky Green.
-    - Remove the artificially low cutoff of 20KB to guarantee the Fast
-      flag. In the past few years the average relay speed has picked
-      up, and while the "top 7/8 of the network get the Fast flag" and
-      "all relays with 20KB or more of capacity get the Fast flag" rules
-      used to have the same result, now the top 7/8 of the network has
-      a capacity more like 32KB. Bugfix on 0.2.1.14-rc. Fixes bug 4489.
+    - When running as a client, do not print a misleading (and plain
+      wrong) log message that we're collecting "directory request"
+      statistics: clients don't collect statistics. Also don't create a
+      useless (because empty) stats file in the stats/ directory. Fixes
+      bug 4353; bugfix on 0.2.2.34 and 0.2.3.7-alpha.
 
   o Major features:
     - Allow Tor controllers like Vidalia to obtain the microdescriptor
@@ -69,13 +83,6 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
     - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
       occurred when a client tried to fetch a descriptor for a bridge
       in ExcludeNodes. Fixes bug 4383; bugfix on 0.2.2.25-alpha.
-    - Backport fixes for a pair of compilation warnings on Windows.
-      Fixes bug 4521; bugfix on 0.2.2.28-beta and on 0.2.2.29-beta.
-    - When running as a client, do not print a misleading (and plain
-      wrong) log message that we're collecting "directory request"
-      statistics: clients don't collect statistics. Also don't create a
-      useless (because empty) stats file in the stats/ directory. Fixes
-      bug 4353; bugfix on 0.2.2.34 and 0.2.3.7-alpha.
 
   o Minor bugfixes (on 0.2.3.x):
     - Make util unit tests build correctly with MSVC. Bugfix on
@@ -118,7 +125,7 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
     - Update to the November 1 2011 Maxmind GeoLite Country database.
 
   o Packaging changes:
-    - Make it easier to automate expert package builds on Windows
+    - Make it easier to automate expert package builds on Windows,
       by removing an absolute path from makensis.exe command.
 
   o Code simplifications and refactoring:
