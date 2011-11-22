@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - When configuring, starting, or stopping an NT service, stop
+      immediately after the service configuration attempt has succeeded
+      or failed. Fixes bug3963; bugfix on 0.2.0.7-alpha.
+
