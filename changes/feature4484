@@ -1,8 +1,0 @@
-  o Minor features:
-    - Add two new config options for directory authorities:
-      AuthDirFastGuarantee sets a bandwidth threshold for guaranteeing the
-      Fast flag, and AuthDirGuardBWGuarantee sets a bandwidth threshold
-      that is always sufficient to satisfy the bandwidth requirement for
-      the Guard flag. Now it will be easier for researchers to simulate
-      Tor networks with different values. Resolves ticket 4484.
-

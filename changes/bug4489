@@ -1,8 +1,0 @@
-  o Major bugfixes (performance):
-    - Remove the artificially low cutoff of 20KB to guarantee the Fast
-      flag. In the past few years the average relay speed has picked
-      up, and while the "top 7/8 of the network get the Fast flag" and
-      "all relays with 20KB or more of capacity get the Fast flag" rules
-      used to have the same result, now the top 7/8 of the network has
-      a capacity more like 32KB. Bugfix on 0.2.1.14-rc. Fixes bug 4489.
-
