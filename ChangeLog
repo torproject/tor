@@ -18,6 +18,12 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       Bugfix on 0.2.3.1-alpha; diagnosed by frosty_un.
     - Make bridge authorities not crash when they are asked for their own
       descriptor. Bugfix on 0.2.3.7-alpha, reported by Lucky Green.
+    - Remove the artificially low cutoff of 20KB to guarantee the Fast
+      flag. In the past few years the average relay speed has picked
+      up, and while the "top 7/8 of the network get the Fast flag" and
+      "all relays with 20KB or more of capacity get the Fast flag" rules
+      used to have the same result, now the top 7/8 of the network has
+      a capacity more like 32KB. Bugfix on 0.2.1.14-rc. Fixes bug 4489.
 
   o Major features:
     - Allow Tor controllers like Vidalia to obtain the microdescriptor
@@ -33,6 +39,9 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
   o Minor bugfixes (on 0.2.2.x and earlier):
     - Detect failure to initialize Libevent. This fix provides better
       detection for future instances of bug 4457.
+    - Avoid frequent calls to the fairly expensive cull_wedged_cpuworkers
+      function. This was eating up hideously large amounts of time on some
+      busy servers. Fixes bug 4518; bugfix on 0.0.9.8.
     - Don't warn about unused log_mutex in log.c when building with
       --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
       0.1.0.6-rc which introduced --disable-threads.
@@ -89,6 +98,12 @@ Changes in version 0.2.3.8-alpha - 2011-11-21
       on 0.2.3.4-alpha and 0.2.3.6-alpha.
 
   o Minor features:
+    - Add two new config options for directory authorities:
+      AuthDirFastGuarantee sets a bandwidth threshold for guaranteeing the
+      Fast flag, and AuthDirGuardBWGuarantee sets a bandwidth threshold
+      that is always sufficient to satisfy the bandwidth requirement for
+      the Guard flag. Now it will be easier for researchers to simulate
+      Tor networks with different values. Resolves ticket 4484.
     - When Tor ignores a hidden service specified in its configuration,
       include the hidden service's directory in the warning message.
       Previously, we would only tell the user that some hidden service
