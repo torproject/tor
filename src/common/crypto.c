@@ -291,37 +291,6 @@ crypto_thread_cleanup(void)
   ERR_remove_state(0);
 }
 
-/** Uninitialize the crypto library. Return 0 on success, -1 on failure.
- */
-int
-crypto_global_cleanup(void)
-{
-  EVP_cleanup();
-  ERR_remove_state(0);
-  ERR_free_strings();
-
-#ifndef DISABLE_ENGINES
-  ENGINE_cleanup();
-#endif
-
-  CONF_modules_unload(1);
-  CRYPTO_cleanup_all_ex_data();
-#ifdef TOR_IS_MULTITHREADED
-  if (_n_openssl_mutexes) {
-    int n = _n_openssl_mutexes;
-    tor_mutex_t **ms = _openssl_mutexes;
-    int i;
-    _openssl_mutexes = NULL;
-    _n_openssl_mutexes = 0;
-    for (i=0;i<n;++i) {
-      tor_mutex_free(ms[i]);
-    }
-    tor_free(ms);
-  }
-#endif
-  return 0;
-}
-
 /** used by tortls.c: wrap an RSA* in a crypto_pk_env_t. */
 crypto_pk_env_t *
 _crypto_new_pk_env_rsa(RSA *rsa)
@@ -3090,5 +3059,37 @@ setup_openssl_threading(void)
   return 0;
 }
 #endif
+
+/** Uninitialize the crypto library. Return 0 on success, -1 on failure.
+ */
+int
+crypto_global_cleanup(void)
+{
+  EVP_cleanup();
+  ERR_remove_state(0);
+  ERR_free_strings();
+
+#ifndef DISABLE_ENGINES
+  ENGINE_cleanup();
+#endif
+
+  CONF_modules_unload(1);
+  CRYPTO_cleanup_all_ex_data();
+#ifdef TOR_IS_MULTITHREADED
+  if (_n_openssl_mutexes) {
+    int n = _n_openssl_mutexes;
+    tor_mutex_t **ms = _openssl_mutexes;
+    int i;
+    _openssl_mutexes = NULL;
+    _n_openssl_mutexes = 0;
+    for (i=0;i<n;++i) {
+      tor_mutex_free(ms[i]);
+    }
+    tor_free(ms);
+  }
+#endif
+  return 0;
+}
+
 /** @} */
 
