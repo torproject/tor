@@ -3069,6 +3069,13 @@ crypto_global_cleanup(void)
   ERR_remove_state(0);
   ERR_free_strings();
 
+  if (dh_param_p)
+    BN_free(dh_param_p);
+  if (dh_param_p_tls)
+    BN_free(dh_param_p_tls);
+  if (dh_param_g)
+    BN_free(dh_param_g);
+
 #ifndef DISABLE_ENGINES
   ENGINE_cleanup();
 #endif
