@@ -239,6 +239,12 @@ Other options can be specified either on the command-line (--option
     distinguishable from other users, because you won't believe the same
     authorities they do.
 
+**DynamicPrimes** **0**|**1**::
+    If this option is set to 1, use a dynamic Diffie-Hellman prime
+    modulus instead of using the modulus of Apache's mod_ssl. This
+    option might help circumvent censorship based on static
+    Diffie-Hellman parameters. (Default: 1).
+
 **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
 **AlternateHSAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
