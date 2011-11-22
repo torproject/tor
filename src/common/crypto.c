@@ -1825,27 +1825,28 @@ static BIGNUM *dh_param_g = NULL;
 static BIGNUM *
 crypto_generate_dynamic_prime(void)
 {
-  BIGNUM *dynamic_prime, *misc;
+  BIGNUM *dynamic_prime;
   DH *dh_parameters;
-  int r;
-  int dh_codes;
+  int r, dh_codes;
   char *s;
 
-  dh_parameters = DH_new();
   dynamic_prime = BN_new();
-  misc = BN_new();
-
   tor_assert(dynamic_prime);
-  dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL); // XXX Do we want a pretty call back?
+
+  dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL);
   tor_assert(dh_parameters);
+
   r = DH_check(dh_parameters, &dh_codes);
   tor_assert(r);
-  misc = BN_copy(dynamic_prime, dh_parameters->p);
-  tor_assert(misc);
+
+  BN_copy(dynamic_prime, dh_parameters->p);
+  tor_assert(dynamic_prime);
+
   DH_free(dh_parameters);
 
-  {
+  { /* log the dynamic prime: */
     s = BN_bn2hex(dynamic_prime);
+    tor_assert(s);
     log_notice(LD_OR, "Dynamic prime generated: [%s]", s);
     OPENSSL_free(s);
   }
@@ -1858,62 +1859,56 @@ crypto_generate_dynamic_prime(void)
 static void
 init_dh_param(void)
 {
-  BIGNUM *dynamic_prime, *p, *p2, *g;
+  BIGNUM *circuit_dh_prime, *tls_prime, *generator;
   int r;
   if (dh_param_p && dh_param_g && dh_param_p_tls)
     return;
 
-  dynamic_prime = BN_new();
-  p = BN_new();
-  p2 = BN_new();
-  g = BN_new();
-  tor_assert(dynamic_prime);
-  tor_assert(p);
-  tor_assert(p2);
-  tor_assert(g);
+  circuit_dh_prime = BN_new();
+  generator = BN_new();
+  tor_assert(circuit_dh_prime && generator);
 
   /* Set our generator for all DH parameters */
-  r = BN_set_word(g, DH_GENERATOR);
+  r = BN_set_word(generator, DH_GENERATOR);
   tor_assert(r);
-
-  /* This implements the prime number strategy outlined in prop 179 */
-  if (use_dynamic_primes) {
-    log_notice(LD_OR, "Generating fresh dynamic prime.");
-    dynamic_prime = crypto_generate_dynamic_prime();
-  }
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
      supposedly it equals:
         2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 }.
   */
-  r = BN_hex2bn(&p,
+  r = BN_hex2bn(&circuit_dh_prime,
                 "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
                 "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
                 "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
                 "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
                 "49286651ECE65381FFFFFFFFFFFFFFFF");
   tor_assert(r);
-  /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
-   * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
-   * prime.
-  */
-  r = BN_hex2bn(&p2,
-                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
-                "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
-                "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
-                "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
-                "B0E7393E0F24218EB3");
-  tor_assert(r);
 
-  r = BN_set_word(g, 2);
-  tor_assert(r);
-  dh_param_p = p;
-  if (use_dynamic_primes) {
-    dh_param_p_tls = dynamic_prime;
-  } else {
-    dh_param_p_tls = p2;
+  if (use_dynamic_primes) { /* use dynamic primes: */
+    log_notice(LD_OR, "Generating fresh dynamic prime.");
+    tls_prime = crypto_generate_dynamic_prime();
+    tor_assert(tls_prime);
+  } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
+    tls_prime = BN_new();
+    tor_assert(tls_prime);
+
+    /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
+     * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
+     * prime.
+     */
+    r = BN_hex2bn(&tls_prime,
+                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
+                  "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
+                  "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
+                  "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
+                  "B0E7393E0F24218EB3");
+    tor_assert(r);
   }
-  dh_param_g = g;
+
+  /* Set the new values as the global DH parameters. */
+  dh_param_p = circuit_dh_prime;
+  dh_param_p_tls = tls_prime;
+  dh_param_g = generator;
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
