@@ -1821,35 +1821,32 @@ static BIGNUM *dh_param_g = NULL;
 static int use_dynamic_primes = 0;
 
 /** Generate and return a reasonable and safe DH parameter p. */
-static BIGNUM *generate_rakshasa_prime(void)
+static BIGNUM *
+crypto_generate_dynamic_prime(void)
 {
-  BIGNUM *rakshasa_prime, *misc;
+  BIGNUM *dynamic_prime, *misc;
   DH *dh_parameters;
   int r;
   int dh_codes;
-  int rakshasa_bits = RAKSHASA_BITS;
-  int generator = DH_GENERATOR;
 
   dh_parameters = DH_new();
-  rakshasa_prime = BN_new();
+  dynamic_prime = BN_new();
   misc = BN_new();
 
-  /** XXX - do we want to cache the result in a file? Or perhaps load from a file? */
-  /* This implements the prime number strategy outlined in prop 179 */
-  tor_assert(rakshasa_prime);
-  log_notice(LD_OR, "Generating Rakshasa prime; this will take a while...");
-  dh_parameters = DH_generate_parameters(rakshasa_bits, generator, NULL, NULL); // XXX Do we want a pretty call back?
+  tor_assert(dynamic_prime);
+  log_notice(LD_OR, "Generating Dynamic prime; this will take a while...");
+  dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL); // XXX Do we want a pretty call back?
   tor_assert(dh_parameters);
-  log_notice(LD_OR, "Rakshasa prime generated!");
-  log_notice(LD_OR, "Testing our Rakshasa prime; this will take a while...");
+  log_notice(LD_OR, "Dynamic prime generated!");
+  log_notice(LD_OR, "Testing our Dynamic prime; this will take a while...");
   r = DH_check(dh_parameters, &dh_codes);
   tor_assert(r);
-  log_notice(LD_OR, "Rakshasa prime seems probabilistically reasonable!");
-  misc = BN_copy(rakshasa_prime, dh_parameters->p);
+  log_notice(LD_OR, "Dynamic prime seems probabilistically reasonable!");
+  misc = BN_copy(dynamic_prime, dh_parameters->p);
   tor_assert(misc);
   DH_free(dh_parameters);
 
-  return rakshasa_prime;
+  return dynamic_prime;
 }
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -1857,16 +1854,16 @@ static BIGNUM *generate_rakshasa_prime(void)
 static void
 init_dh_param(void)
 {
-  BIGNUM *rakshasa_prime, *p, *p2, *g;
+  BIGNUM *dynamic_prime, *p, *p2, *g;
   int r;
   if (dh_param_p && dh_param_g && dh_param_p_tls)
     return;
 
-  rakshasa_prime = BN_new();
+  dynamic_prime = BN_new();
   p = BN_new();
   p2 = BN_new();
   g = BN_new();
-  tor_assert(rakshasa_prime);
+  tor_assert(dynamic_prime);
   tor_assert(p);
   tor_assert(p2);
   tor_assert(g);
@@ -1877,7 +1874,7 @@ init_dh_param(void)
 
   /* This implements the prime number strategy outlined in prop 179 */
   if (use_dynamic_primes) {
-    rakshasa_prime = generate_rakshasa_prime();
+    dynamic_prime = crypto_generate_dynamic_prime();
   }
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
@@ -1906,8 +1903,8 @@ init_dh_param(void)
   r = BN_set_word(g, 2);
   tor_assert(r);
   dh_param_p = p;
-  if (rakshasa) {
-    dh_param_p_tls = rakshasa_prime;
+  if (use_dynamic_primes) {
+    dh_param_p_tls = dynamic_prime;
   } else {
     dh_param_p_tls = p2;
   }
