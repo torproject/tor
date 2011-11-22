@@ -1829,23 +1829,26 @@ crypto_generate_dynamic_prime(void)
   DH *dh_parameters;
   int r;
   int dh_codes;
+  char *s;
 
   dh_parameters = DH_new();
   dynamic_prime = BN_new();
   misc = BN_new();
 
   tor_assert(dynamic_prime);
-  log_notice(LD_OR, "Generating Dynamic prime; this will take a while...");
   dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL); // XXX Do we want a pretty call back?
   tor_assert(dh_parameters);
-  log_notice(LD_OR, "Dynamic prime generated!");
-  log_notice(LD_OR, "Testing our Dynamic prime; this will take a while...");
   r = DH_check(dh_parameters, &dh_codes);
   tor_assert(r);
-  log_notice(LD_OR, "Dynamic prime seems probabilistically reasonable!");
   misc = BN_copy(dynamic_prime, dh_parameters->p);
   tor_assert(misc);
   DH_free(dh_parameters);
+
+  {
+    s = BN_bn2hex(dynamic_prime);
+    log_notice(LD_OR, "Dynamic prime generated: [%s]", s);
+    OPENSSL_free(s);
+  }
 
   return dynamic_prime;
 }
@@ -1875,6 +1878,7 @@ init_dh_param(void)
 
   /* This implements the prime number strategy outlined in prop 179 */
   if (use_dynamic_primes) {
+    log_notice(LD_OR, "Generating fresh dynamic prime.");
     dynamic_prime = crypto_generate_dynamic_prime();
   }
 
