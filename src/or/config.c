@@ -247,6 +247,7 @@ static config_var_t _option_vars[] = {
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableIOCP,                 BOOL,     "1"),
+  V(DynamicPrimes,               BOOL,     "1"),
   V(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),

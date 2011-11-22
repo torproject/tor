@@ -87,7 +87,8 @@ typedef struct crypto_dh_env_t crypto_dh_env_t;
 /* global state */
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
-                       const char *accelPath);
+                       const char *accelPath,
+                       int DynamicPrimes);
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 

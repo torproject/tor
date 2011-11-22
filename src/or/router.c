@@ -514,7 +514,8 @@ init_keys(void)
    * openssl to initialize itself. */
   if (crypto_global_init(get_options()->HardwareAccel,
                          get_options()->AccelName,
-                         get_options()->AccelDir)) {
+                         get_options()->AccelDir,
+                         get_options()->DynamicPrimes)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }

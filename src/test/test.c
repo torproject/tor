@@ -1903,7 +1903,7 @@ main(int c, const char **v)
   }
 
   options->command = CMD_RUN_UNITTESTS;
-  if (crypto_global_init(0, NULL, NULL)) {
+  if (crypto_global_init(0, NULL, NULL, 1)) {
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
   }

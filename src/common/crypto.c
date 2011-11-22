@@ -224,13 +224,15 @@ try_load_engine(const char *path, const char *engine)
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
-crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
+crypto_global_init(int useAccel, const char *accelName, const char *accelDir,
+                   int DynamicPrimes)
 {
   if (!_crypto_global_initialized) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
+    use_dynamic_primes = DynamicPrimes;
     if (useAccel > 0) {
 #ifdef DISABLE_ENGINES
       (void)accelName;
@@ -1815,6 +1817,8 @@ static BIGNUM *dh_param_p = NULL;
 static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
+/** True if we use dynamic primes. */
+static int use_dynamic_primes = 0;
 
 /** Generate and return a reasonable and safe DH parameter p. */
 static BIGNUM *generate_rakshasa_prime(void)
@@ -1871,13 +1875,8 @@ init_dh_param(void)
   r = BN_set_word(g, generator);
   tor_assert(r);
 
-  /* Are we generating a random DH parameter?*/
-  log_notice(LD_OR, "Do we want to generate a Rakshasa prime?");
-  rakshasa = get_rakshasa();
-  log_notice(LD_OR, "We think: %i?", rakshasa);
-
   /* This implements the prime number strategy outlined in prop 179 */
-  if (rakshasa == 1) {
+  if (use_dynamic_primes) {
     rakshasa_prime = generate_rakshasa_prime();
   }
 
