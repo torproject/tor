@@ -1,4 +1,7 @@
 Changes in version 0.2.2.35 - 2011-11-??
+
+  Formalize end-of-life for 0.2.0.
+
   o Major bugfixes:
     - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
       that it doesn't attempt to allocate a socketpair. This could cause
@@ -30,9 +33,15 @@ Changes in version 0.2.2.35 - 2011-11-??
   o Minor bugfixes:
     - Detect failure to initialize Libevent. This fix provides better
       detection for future instances of bug 4457.
+    - Avoid frequent calls to the fairly expensive cull_wedged_cpuworkers
+      function. This was eating up hideously large amounts of time on some
+      busy servers. Fixes bug 4518; bugfix on 0.0.9.8.
     - Don't warn about unused log_mutex in log.c when building with
       --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
       0.1.0.6-rc which introduced --disable-threads.
+    - When configuring, starting, or stopping an NT service, stop
+      immediately after the service configuration attempt has succeeded
+      or failed. Fixes bug3963; bugfix on 0.2.0.7-alpha.
     - When sending a NETINFO cell, include the original address
       received for the other side, not its canonical address. Found
       by "troll_un"; fixes bug 4349; bugfix on 0.2.0.10-alpha.
@@ -41,8 +50,16 @@ Changes in version 0.2.2.35 - 2011-11-??
     - Fix a memory leak in launch_direct_bridge_descriptor_fetch() that
       occurred when a client tried to fetch a descriptor for a bridge
       in ExcludeNodes. Fixes bug 4383; bugfix on 0.2.2.25-alpha.
+    - Backport fixes for a pair of compilation warnings on Windows.
+      Fixes bug 4521; bugfix on 0.2.2.28-beta and on 0.2.2.29-beta.
 
   o Minor features:
+    - Add two new config options for directory authorities:
+      AuthDirFastGuarantee sets a bandwidth threshold for guaranteeing the
+      Fast flag, and AuthDirGuardBWGuarantee sets a bandwidth threshold
+      that is always sufficient to satisfy the bandwidth requirement for
+      the Guard flag. Now it will be easier for researchers to simulate
+      Tor networks with different values. Resolves ticket 4484.
     - When Tor ignores a hidden service specified in its configuration,
       include the hidden service's directory in the warning message.
       Previously, we would only tell the user that some hidden service

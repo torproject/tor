@@ -1,4 +1,0 @@
-  o Minor bugfixes (performance):
-    - Avoid frequent calls to the fairly expensive cull_wedged_cpuworkers
-      function. This was eating up hideously large amounts of time on some
-      busy servers. Fixes bug 4518.
