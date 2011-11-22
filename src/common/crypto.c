@@ -105,6 +105,9 @@ static tor_mutex_t **_openssl_mutexes = NULL;
 static int _n_openssl_mutexes = 0;
 #endif
 
+/** True if we use dynamic primes. */
+static int use_dynamic_primes = 0;
+
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_env_t
 {
@@ -1817,8 +1820,6 @@ static BIGNUM *dh_param_p = NULL;
 static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
-/** True if we use dynamic primes. */
-static int use_dynamic_primes = 0;
 
 /** Generate and return a reasonable and safe DH parameter p. */
 static BIGNUM *
@@ -1869,7 +1870,7 @@ init_dh_param(void)
   tor_assert(g);
 
   /* Set our generator for all DH parameters */
-  r = BN_set_word(g, generator);
+  r = BN_set_word(g, DH_GENERATOR);
   tor_assert(r);
 
   /* This implements the prime number strategy outlined in prop 179 */
