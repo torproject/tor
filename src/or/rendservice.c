@@ -910,7 +910,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t *access_time;
   const or_options_t *options = get_options();
 
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circuit->build_state->onehop_tunnel));
+#endif
   tor_assert(circuit->rend_data);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -1394,7 +1396,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   crypto_pk_env_t *intro_key;
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circuit->build_state->onehop_tunnel));
+#endif
   tor_assert(circuit->cpath);
   tor_assert(circuit->rend_data);
 
@@ -1550,7 +1554,9 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
   tor_assert(circuit->build_state);
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circuit->build_state->onehop_tunnel));
+#endif
   tor_assert(circuit->rend_data);
   hop = circuit->build_state->pending_final_cpath;
   tor_assert(hop);

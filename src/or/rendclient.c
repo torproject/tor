@@ -139,8 +139,10 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(rendcirc->rend_data);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_data->onion_address,
                                    rendcirc->rend_data->onion_address));
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(introcirc->build_state->onehop_tunnel));
   tor_assert(!(rendcirc->build_state->onehop_tunnel));
+#endif
 
   if (rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
                               &entry) < 1) {
@@ -331,7 +333,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   }
 
   tor_assert(circ->build_state->chosen_exit);
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circ->build_state->onehop_tunnel));
+#endif
   tor_assert(circ->rend_data);
 
   if (request_len == 0) {
@@ -343,7 +347,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_data->onion_address, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
+#ifndef NON_ANONYMOUS_MODE_ENABLED
       tor_assert(!(rendcirc->build_state->onehop_tunnel));
+#endif
       rendcirc->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
       /* Set timestamp_dirty, because circuit_expire_building expects
        * it to specify when a circuit entered the
