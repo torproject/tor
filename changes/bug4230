@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Resolve an integer overflow bug in smartlist_ensure_capacity.
+      Fixes bug 4230; bugfix on Tor 0.1.0.1-rc. Based on a patch by 
+      Mansour Moufid.
+
