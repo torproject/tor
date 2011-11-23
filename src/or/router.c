@@ -484,6 +484,86 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
+
+/** Store <b>dynamic_prime</b> to disk for future use. */
+int
+router_store_dynamic_prime(const BIGNUM *dynamic_prime)
+{
+  FILE *fp = NULL;
+  char *fname = get_datadir_fname2("keys", "dynamic_prime");
+  int retval = -1;
+
+  if (file_status(fname) != FN_NOENT) {
+    log_warn(LD_GENERAL, "Dynamic prime already occupied.");
+    goto done;
+  }
+
+  if (!(fp = fopen(fname, "w"))) {
+    log_warn(LD_GENERAL, "Error writing to certificate file");
+    goto done;
+  }
+
+  if (BN_print_fp(fp, dynamic_prime) == 0) {
+    log_warn(LD_GENERAL, "Error on bn_print_fp()");
+    goto done;
+  }
+
+  retval = 0;
+
+ done:
+  if (fp)
+    fclose(fp);
+  tor_free(fname);
+
+  return retval;
+}
+
+/** Return the dynamic prime stored in the disk. If there is no
+    dynamic prime stored in the disk, return NULL. */
+BIGNUM *
+router_get_stored_dynamic_prime(void)
+{
+  int retval;
+  char *contents = NULL;
+  char *fname = get_datadir_fname2("keys", "dynamic_prime");
+  BIGNUM *dynamic_prime = BN_new();
+  if (!dynamic_prime)
+    goto err;
+
+  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
+  if (!contents) {
+    log_warn(LD_GENERAL, "Error reading dynamic prime from \"%s\"", fname);
+    goto err;
+  }
+
+  retval = BN_hex2bn(&dynamic_prime, contents);
+  if (!retval) {
+    log_warn(LD_GENERAL, "C0rrupted dynamic prime?!?!");
+    goto err;
+  }
+
+  { /* log the dynamic prime: */
+    char *s = BN_bn2hex(dynamic_prime);
+    tor_assert(s);
+    log_notice(LD_OR, "Found stored dynamic prime: [%s]", s);
+    OPENSSL_free(s);
+  }
+
+  goto done;
+
+ err:
+  if (dynamic_prime) {
+    BN_free(dynamic_prime);
+    dynamic_prime = NULL;
+  }
+
+ done:
+  tor_free(fname);
+  tor_free(contents);
+
+  return dynamic_prime;
+}
+
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.
@@ -514,8 +594,7 @@ init_keys(void)
    * openssl to initialize itself. */
   if (crypto_global_init(get_options()->HardwareAccel,
                          get_options()->AccelName,
-                         get_options()->AccelDir,
-                         get_options()->DynamicPrimes)) {
+                         get_options()->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
@@ -634,6 +713,17 @@ init_keys(void)
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }
+
+  /** 3b. If we use a dynamic prime, store it to disk. */
+  if (get_options()->DynamicPrimes) {
+    BIGNUM *dynamic_prime = crypto_get_tls_dh_prime();
+    if (dynamic_prime) {
+      if (router_store_dynamic_prime(dynamic_prime) < 0)
+        log_warn(LD_GENERAL, "Failed while storing dynamic prime. "
+                 "Make sure your data directory is sane.");
+    }
+  }
+
   /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();

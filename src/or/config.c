@@ -1373,9 +1373,9 @@ options_act(const or_options_t *old_options)
     if (options->DynamicPrimes && !old_options->DynamicPrimes) {
       crypto_set_tls_dh_prime(1, router_get_stored_dynamic_prime());
     } else if (!options->DynamicPrimes && old_options->DynamicPrimes) {
-      crypto_set_tlS_dh_prime(0, NULL);
+      crypto_set_tls_dh_prime(0, NULL);
     } else {
-      tor_assert(crypto_get_tls_dh_prime);
+      tor_assert(crypto_get_tls_dh_prime());
     }
   }
 
@@ -4069,6 +4069,7 @@ options_transition_affects_workers(const or_options_t *old_options,
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCPUs != new_options->NumCPUs ||
+      old_options->DynamicPrimes != new_options->DynamicPrimes ||
       old_options->ORPort != new_options->ORPort ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||

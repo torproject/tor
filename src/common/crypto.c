@@ -1849,6 +1849,12 @@ crypto_generate_dynamic_prime(void)
   return dynamic_prime;
 }
 
+BIGNUM *
+crypto_get_tls_dh_prime(void)
+{
+  return dh_param_p_tls;
+}
+
 /** Set the global TLS Diffie-Hellman modulus.
  * If <b>use_dynamic_primes</b> is <em>not</em> set, use the prime
  * modulus of mod_ssl.
@@ -1858,6 +1864,7 @@ void
 crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
 {
   BIGNUM *tls_prime = NULL;
+  int r;
 
   /* If the space is occupied, free the previous TLS DH prime */
   if (dh_param_p_tls) {
@@ -1867,7 +1874,7 @@ crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
 
   if (use_dynamic_primes) { /* use dynamic primes: */
     if (stored_dynamic_prime) {
-      log_notice(LD_OR, "Using stored dynamic prime.");
+      log_warn(LD_OR, "Using stored dynamic prime.");
       tls_prime = stored_dynamic_prime;
     } else {
       log_notice(LD_OR, "Generating fresh dynamic prime.");

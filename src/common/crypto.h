@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include "torint.h"
 
+#include <openssl/bn.h>
+
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
 /** Length of the output of our second (improved) message digests.  (For now
@@ -92,6 +94,10 @@ int crypto_global_cleanup(void);
 /* environment setup */
 crypto_pk_env_t *crypto_new_pk_env(void);
 void crypto_free_pk_env(crypto_pk_env_t *env);
+
+void crypto_set_tls_dh_prime(int use_dynamic_primes,
+                             BIGNUM *stored_dynamic_prime);
+BIGNUM * crypto_get_tls_dh_prime(void);
 
 /* convenience function: wraps crypto_create_crypto_env, set_key, and init. */
 crypto_cipher_env_t *crypto_create_init_cipher(const char *key,
