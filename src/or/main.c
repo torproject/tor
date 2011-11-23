@@ -2237,14 +2237,24 @@ tor_init(int argc, char *argv[])
   }
   quiet_level = quiet;
 
-  log(LOG_NOTICE, LD_GENERAL, "Tor v%s%s. This is experimental software. "
-      "Do not rely on it for strong anonymity. (Running on %s)", get_version(),
+  {
+    const char *version = get_version();
+    log_notice(LD_GENERAL, "Tor v%s%s running on %s.", version,
 #ifdef USE_BUFFEREVENTS
-      " (with bufferevents)",
+               " (with bufferevents)",
 #else
-      "",
+               "",
 #endif
-      get_uname());
+               get_uname());
+
+    log_notice(LD_GENERAL, "WARNING: Tor can't help you if you use it wrong. "
+               "Learn how to be safe at "
+               "https://www.torproject.org/download/download#warning");
+
+    if (strstr(version, "alpha") || strstr(version, "beta"))
+      log_notice(LD_GENERAL, "This version is not a stable Tor release. "
+                 "Expect more bugs than usual.");
+  }
 
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
