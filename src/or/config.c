@@ -1362,6 +1362,23 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
+  /* If needed, generate a new TLS DH prime according to the current torrc. */
+  if (!old_options) {
+    if (options->DynamicPrimes) {
+      crypto_set_tls_dh_prime(1, router_get_stored_dynamic_prime());
+    } else {
+      crypto_set_tls_dh_prime(0, NULL);
+    }
+  } else {
+    if (options->DynamicPrimes && !old_options->DynamicPrimes) {
+      crypto_set_tls_dh_prime(1, router_get_stored_dynamic_prime());
+    } else if (!options->DynamicPrimes && old_options->DynamicPrimes) {
+      crypto_set_tlS_dh_prime(0, NULL);
+    } else {
+      tor_assert(crypto_get_tls_dh_prime);
+    }
+  }
+
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||

@@ -31,7 +31,7 @@ main(int c, char **v)
     return 1;
   }
 
-  if (crypto_global_init(0, NULL, NULL, 0)) {
+  if (crypto_global_init(0, NULL, NULL)) {
     fprintf(stderr, "Couldn't initialize crypto library.\n");
     return 1;
   }

@@ -105,9 +105,6 @@ static tor_mutex_t **_openssl_mutexes = NULL;
 static int _n_openssl_mutexes = 0;
 #endif
 
-/** True if we use dynamic primes. */
-static int use_dynamic_primes = 0;
-
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_env_t
 {
@@ -227,15 +224,13 @@ try_load_engine(const char *path, const char *engine)
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
-crypto_global_init(int useAccel, const char *accelName, const char *accelDir,
-                   int DynamicPrimes)
+crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
   if (!_crypto_global_initialized) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
-    use_dynamic_primes = DynamicPrimes;
     if (useAccel > 0) {
 #ifdef DISABLE_ENGINES
       (void)accelName;
@@ -1854,14 +1849,60 @@ crypto_generate_dynamic_prime(void)
   return dynamic_prime;
 }
 
+/** Set the global TLS Diffie-Hellman modulus.
+ * If <b>use_dynamic_primes</b> is <em>not</em> set, use the prime
+ * modulus of mod_ssl.
+ * If <b>use_dynamic_primes</b> is set, use <b>stored_dynamic_prime</b>
+ * if it exists, otherwise generate and use a new prime modulus. */
+void
+crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
+{
+  BIGNUM *tls_prime = NULL;
+
+  /* If the space is occupied, free the previous TLS DH prime */
+  if (dh_param_p_tls) {
+    BN_free(dh_param_p_tls);
+    dh_param_p_tls = NULL;
+  }
+
+  if (use_dynamic_primes) { /* use dynamic primes: */
+    if (stored_dynamic_prime) {
+      log_notice(LD_OR, "Using stored dynamic prime.");
+      tls_prime = stored_dynamic_prime;
+    } else {
+      log_notice(LD_OR, "Generating fresh dynamic prime.");
+      tls_prime = crypto_generate_dynamic_prime();
+    }
+  } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
+    tls_prime = BN_new();
+    tor_assert(tls_prime);
+
+    /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
+     * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
+     * prime.
+     */
+    r = BN_hex2bn(&tls_prime,
+                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
+                  "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
+                  "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
+                  "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
+                  "B0E7393E0F24218EB3");
+    tor_assert(r);
+  }
+
+  tor_assert(tls_prime);
+
+  dh_param_p_tls = tls_prime;
+}
+
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void
 init_dh_param(void)
 {
-  BIGNUM *circuit_dh_prime, *tls_prime, *generator;
+  BIGNUM *circuit_dh_prime, *generator;
   int r;
-  if (dh_param_p && dh_param_g && dh_param_p_tls)
+  if (dh_param_p && dh_param_g)
     return;
 
   circuit_dh_prime = BN_new();
@@ -1884,31 +1925,12 @@ init_dh_param(void)
                 "49286651ECE65381FFFFFFFFFFFFFFFF");
   tor_assert(r);
 
-  if (use_dynamic_primes) { /* use dynamic primes: */
-    log_notice(LD_OR, "Generating fresh dynamic prime.");
-    tls_prime = crypto_generate_dynamic_prime();
-    tor_assert(tls_prime);
-  } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
-    tls_prime = BN_new();
-    tor_assert(tls_prime);
-
-    /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
-     * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
-     * prime.
-     */
-    r = BN_hex2bn(&tls_prime,
-                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
-                  "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
-                  "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
-                  "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
-                  "B0E7393E0F24218EB3");
-    tor_assert(r);
-  }
-
   /* Set the new values as the global DH parameters. */
   dh_param_p = circuit_dh_prime;
-  dh_param_p_tls = tls_prime;
   dh_param_g = generator;
+
+  /* Should be already set by config.c. */
+  tor_assert(dh_param_p_tls);
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
