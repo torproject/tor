@@ -1909,7 +1909,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
    * of Fast nodes. */
   if (options->AuthDirFastGuarantee &&
       fast_bandwidth > options->AuthDirFastGuarantee)
-    fast_bandwidth = options->AuthDirFastGuarantee;
+    fast_bandwidth = (uint32_t)options->AuthDirFastGuarantee;
 
   /* Now that we have a time-known that 7/8 routers are known longer than,
    * fill wfus with the wfu of every such "familiar" router. */
