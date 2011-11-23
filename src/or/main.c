@@ -1894,9 +1894,9 @@ tor_init(int argc, char *argv[])
                "Learn how to be safe at "
                "https://www.torproject.org/download/download#warning");
 
-    if (strstr(version, "alpha"))
-      log_notice(LD_GENERAL, "This is an alpha release; do not rely on it for "
-                 "strong anonymity.");
+    if (strstr(version, "alpha") || strstr(version, "beta"))
+      log_notice(LD_GENERAL, "This version is not a stable Tor release. "
+                 "Expect more bugs than usual.");
   }
 
 
