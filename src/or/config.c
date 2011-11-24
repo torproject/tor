@@ -1310,7 +1310,8 @@ options_act(const or_options_t *old_options)
   if (options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
             "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
-            "option enabled.");
+            "option enabled. To enable Tor2webMode recompile with the "
+            "--enable-tor2webmode option.");
     return -1;
   }
 #endif

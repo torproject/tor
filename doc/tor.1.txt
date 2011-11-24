@@ -960,7 +960,10 @@ The following options are useful only for clients (that is, if
 **Tor2webMode** **0**|**1**::
     When this option is set, Tor connects to hidden services
     **non-anonymously**.  This option also disables client connections to
-    non-hidden-service hostnames through Tor.  (Default: 0)
+    non-hidden-service hostnames through Tor. It **must only** be used when
+    running a tor2web Hidden Service web proxy.
+    To enable this option the compile time flag --enable-tor2webmode must be
+    specified. (Default: 0)
 
 SERVER OPTIONS
 --------------
