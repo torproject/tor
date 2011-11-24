@@ -484,52 +484,6 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
-
-/** Return the dynamic prime stored in the disk. If there is no
-    dynamic prime stored in the disk, return NULL. */
-BIGNUM *
-router_get_stored_dynamic_prime(void)
-{
-  int retval;
-  char *contents = NULL;
-  char *fname = get_datadir_fname2("keys", "dynamic_prime");
-  BIGNUM *dynamic_prime = BN_new();
-  if (!dynamic_prime)
-    goto err;
-
-  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!contents)
-    goto err;
-
-  retval = BN_hex2bn(&dynamic_prime, contents);
-  if (!retval) {
-    log_notice(LD_GENERAL, "Could not understand the dynamic prime "
-               "format in '%s'", fname);
-    goto err;
-  }
-
-  { /* log the dynamic prime: */
-    char *s = BN_bn2hex(dynamic_prime);
-    tor_assert(s);
-    log_info(LD_OR, "Found stored dynamic prime: [%s]", s);
-    OPENSSL_free(s);
-  }
-
-  goto done;
-
- err:
-  if (dynamic_prime) {
-    BN_free(dynamic_prime);
-    dynamic_prime = NULL;
-  }
-
- done:
-  tor_free(fname);
-  tor_free(contents);
-
-  return dynamic_prime;
-}
-
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.
@@ -682,12 +636,12 @@ init_keys(void)
 
   /** 3b. If we use a dynamic prime, store it to disk. */
   if (get_options()->DynamicPrimes) {
-      const char *fname = get_datadir_fname2("keys", "dynamic_prime");
-      if (crypto_store_dynamic_prime(fname)) {
-          log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
-                     "Make sure your data directory is sane.");
-      }
-      tor_free(fname);
+    char *fname = get_datadir_fname2("keys", "dynamic_prime");
+    if (crypto_store_dynamic_prime(fname)) {
+      log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
+                 "Make sure your data directory is sane.");
+    }
+    tor_free(fname);
   }
 
   /* 4. Build our router descriptor. */

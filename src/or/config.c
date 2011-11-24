@@ -1365,17 +1365,19 @@ options_act(const or_options_t *old_options)
   /* If needed, generate a new TLS DH prime according to the current torrc. */
   if (!old_options) {
     if (options->DynamicPrimes) {
-      crypto_set_tls_dh_prime(1, router_get_stored_dynamic_prime());
+      char *fname = get_datadir_fname2("keys", "dynamic_prime");
+      crypto_set_tls_dh_prime(fname);
+      tor_free(fname);
     } else {
-      crypto_set_tls_dh_prime(0, NULL);
+      crypto_set_tls_dh_prime(NULL);
     }
   } else {
     if (options->DynamicPrimes && !old_options->DynamicPrimes) {
-      crypto_set_tls_dh_prime(1, router_get_stored_dynamic_prime());
+      char *fname = get_datadir_fname2("keys", "dynamic_prime");
+      crypto_set_tls_dh_prime(fname);
+      tor_free(fname);
     } else if (!options->DynamicPrimes && old_options->DynamicPrimes) {
-      crypto_set_tls_dh_prime(0, NULL);
-    } else {
-      tor_assert(crypto_get_tls_dh_prime());
+      crypto_set_tls_dh_prime(NULL);
     }
   }
 

@@ -1851,7 +1851,7 @@ crypto_generate_dynamic_prime(void)
 
 /** Store our dynamic prime to <b>fname</b> for future use. */
 int
-router_store_dynamic_prime(const char *fname)
+crypto_store_dynamic_prime(const char *fname)
 {
   FILE *fp = NULL;
   int retval = -1;
@@ -1889,13 +1889,61 @@ router_store_dynamic_prime(const char *fname)
   return retval;
 }
 
+/** Return the dynamic prime stored in <b>fname</b>. If there is no
+    dynamic prime stored in <b>fname</b>, return NULL. */
+static BIGNUM *
+crypto_get_stored_dynamic_prime(const char *fname)
+{
+  int retval;
+  char *contents = NULL;
+  BIGNUM *dynamic_prime = BN_new();
+
+  tor_assert(fname);
+
+  if (!dynamic_prime)
+    goto err;
+
+  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
+  if (!contents)
+    goto err;
+
+  retval = BN_hex2bn(&dynamic_prime, contents);
+  if (!retval) {
+    log_notice(LD_GENERAL, "Could not understand the dynamic prime "
+               "format in '%s'", fname);
+    goto err;
+  }
+
+  { /* log the dynamic prime: */
+    char *s = BN_bn2hex(dynamic_prime);
+    tor_assert(s);
+    log_info(LD_OR, "Found stored dynamic prime: [%s]", s);
+    OPENSSL_free(s);
+  }
+
+  goto done;
+
+ err:
+  if (dynamic_prime) {
+    BN_free(dynamic_prime);
+    dynamic_prime = NULL;
+  }
+
+ done:
+  tor_free(contents);
+
+  return dynamic_prime;
+}
+
+
 /** Set the global TLS Diffie-Hellman modulus.
- * If <b>use_dynamic_primes</b> is <em>not</em> set, use the prime
- * modulus of mod_ssl.
- * If <b>use_dynamic_primes</b> is set, use <b>stored_dynamic_prime</b>
- * if it exists, otherwise generate and use a new prime modulus. */
+ * If <b>dynamic_prime_fname</b> is set, try to read a dynamic prime
+ * off it and use it as the DH modulus. If that's not possible,
+ * generate a new dynamic prime.
+ * If <b>dynamic_prime_fname</b> is NULL, use the Apache mod_ssl DH
+ * modulus. */
 void
-crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
+crypto_set_tls_dh_prime(const char *dynamic_prime_fname)
 {
   BIGNUM *tls_prime = NULL;
   int r;
@@ -1906,11 +1954,11 @@ crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
     dh_param_p_tls = NULL;
   }
 
-  if (use_dynamic_primes) { /* use dynamic primes: */
-    if (stored_dynamic_prime) {
-      log_info(LD_OR, "Using stored dynamic prime.");
-      tls_prime = stored_dynamic_prime;
-    } else {
+  if (dynamic_prime_fname) { /* use dynamic primes: */
+    log_info(LD_OR, "Using stored dynamic prime.");
+    tls_prime = crypto_get_stored_dynamic_prime(dynamic_prime_fname);
+
+    if (!tls_prime) {
       log_info(LD_OR, "Generating fresh dynamic prime.");
       tls_prime = crypto_generate_dynamic_prime();
     }

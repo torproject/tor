@@ -29,8 +29,6 @@ void rotate_onion_key(void);
 crypto_pk_env_t *init_key_from_file(const char *fname, int generate,
                                     int severity);
 
-BIGNUM *router_get_stored_dynamic_prime(void);
-
 void v3_authority_check_key_expiry(void);
 
 int init_keys(void);
