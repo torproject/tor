@@ -37,6 +37,9 @@ int control_event_is_interesting(int event);
 
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
+int control_event_circuit_status_2(origin_circuit_t *circ,
+                                   circuit_status_2_event_t e,
+                                   int arg1, const void *arg2);
 int control_event_stream_status(entry_connection_t *conn,
                                 stream_status_event_t e,
                                 int reason);

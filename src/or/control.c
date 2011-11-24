@@ -54,7 +54,7 @@
 #define EVENT_STREAM_STATUS    0x0002
 #define EVENT_OR_CONN_STATUS   0x0003
 #define EVENT_BANDWIDTH_USED   0x0004
-#define EVENT_LOG_OBSOLETE     0x0005 /* Can reclaim this. */
+#define EVENT_CIRCUIT_STATUS_2 0x0005
 #define EVENT_NEW_DESC         0x0006
 #define EVENT_DEBUG_MSG        0x0007
 #define EVENT_INFO_MSG         0x0008
@@ -272,8 +272,7 @@ control_adjust_event_log_severity(void)
       break;
     }
   }
-  if (EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) ||
-      EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL)) {
+  if (EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL)) {
     if (min_log_event > EVENT_NOTICE_MSG)
       min_log_event = EVENT_NOTICE_MSG;
     if (max_log_event < EVENT_ERR_MSG)
@@ -925,6 +924,7 @@ struct control_event_t {
 };
 static const struct control_event_t control_event_table[] = {
   { EVENT_CIRCUIT_STATUS, "CIRC" },
+  { EVENT_CIRCUIT_STATUS_2, "CIRC2" },
   { EVENT_STREAM_STATUS, "STREAM" },
   { EVENT_OR_CONN_STATUS, "ORCONN" },
   { EVENT_BANDWIDTH_USED, "BW" },
@@ -3308,8 +3308,8 @@ connection_control_process_inbuf(control_connection_t *conn)
   goto again;
 }
 
-/** Something has happened to circuit <b>circ</b>: tell any interested
- * control connections. */
+/** Something major has happened to circuit <b>circ</b>: tell any
+ * interested control connections. */
 int
 control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
@@ -3329,6 +3329,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     case CIRC_EVENT_CLOSED: status = "CLOSED"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
+      tor_fragile_assert();
       return 0;
     }
 
@@ -3357,6 +3358,59 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                                 status, sp,
                                 circdesc,
                                 reasons);
+    tor_free(circdesc);
+  }
+
+  return 0;
+}
+
+/** Something minor has happened to circuit <b>circ</b>: tell any
+ * interested control connections. */
+int
+control_event_circuit_status_2(origin_circuit_t *circ,
+                               circuit_status_2_event_t e,
+                               int arg1, const void *arg2)
+{
+  const char *event_desc;
+  char event_tail[96] = "";
+  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_2))
+    return 0;
+  tor_assert(circ);
+
+  (void)arg2; /* currently unused */
+
+  switch (e)
+    {
+    case CIRC2_EVENT_PURPOSE_CHANGED:
+      /* arg1 is the previous purpose of the circuit. */
+      event_desc = "PURPOSE_CHANGED";
+
+      {
+        const char *hs_state_str =
+          circuit_purpose_to_controller_hs_state_string(arg1);
+        tor_snprintf(event_tail, sizeof(event_tail),
+                     " OLD_PURPOSE=%s%s%s",
+                     circuit_purpose_to_controller_string(arg1),
+                     (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
+                     (hs_state_str != NULL) ? hs_state_str : "");
+      }
+
+      break;
+    default:
+      log_warn(LD_BUG, "Unrecognized status code %d", (int)e);
+      tor_fragile_assert();
+      return 0;
+    }
+
+  {
+    char *circdesc = circuit_describe_status_for_controller(circ);
+    const char *sp = strlen(circdesc) ? " " : "";
+    send_control_event(EVENT_CIRCUIT_STATUS_2, ALL_FORMATS,
+                       "650 CIRC2 %lu %s%s%s%s\r\n",
+                       (unsigned long)circ->global_identifier,
+                       event_desc, sp,
+                       circdesc,
+                       event_tail);
     tor_free(circdesc);
   }
 

@@ -2,4 +2,7 @@
 
     - Log (at debug level) whenever a circuit's purpose is changed.
 
+    - Allow controllers to request an event notification whenever a
+      circuit's purpose is changed.  Implements part of ticket 3457.
+
 
