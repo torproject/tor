@@ -1832,7 +1832,7 @@ crypto_generate_dynamic_prime(void)
   tor_assert(dh_parameters);
 
   r = DH_check(dh_parameters, &dh_codes);
-  tor_assert(r);
+  tor_assert(r && !dh_codes);
 
   BN_copy(dynamic_prime, dh_parameters->p);
   tor_assert(dynamic_prime);
@@ -1855,9 +1855,11 @@ crypto_store_dynamic_prime(const char *fname)
 {
   FILE *fp = NULL;
   int retval = -1;
-  file_status_t fname_status = file_status(fname);
+  file_status_t fname_status;
 
   tor_assert(fname);
+
+  fname_status = file_status(fname);
 
   if (fname_status == FN_FILE) {
     /* If the fname is a file, then the dynamic prime is already stored. */
@@ -1896,6 +1898,8 @@ crypto_get_stored_dynamic_prime(const char *fname)
 {
   int retval;
   char *contents = NULL;
+  DH *dh = NULL;
+  int dh_codes;
   BIGNUM *dynamic_prime = BN_new();
 
   tor_assert(fname);
@@ -1909,9 +1913,33 @@ crypto_get_stored_dynamic_prime(const char *fname)
 
   retval = BN_hex2bn(&dynamic_prime, contents);
   if (!retval) {
-    log_notice(LD_GENERAL, "Could not understand the dynamic prime "
-               "format in '%s'", fname);
+    log_warn(LD_GENERAL, "Could not understand the dynamic prime "
+             "format in '%s'", fname);
     goto err;
+  }
+
+  { /* validate the stored prime */
+    dh = DH_new();
+    if (!dh)
+      goto err;
+
+    dh->p = BN_dup(dynamic_prime);
+    dh->g = BN_new();
+    BN_set_word(dh->g, DH_GENERATOR);
+
+    retval = DH_check(dh, &dh_codes);
+    if (!retval || dh_codes) {
+      log_warn(LD_GENERAL, "Stored dynamic DH prime is not a safe prime.");
+      goto err;
+    }
+
+    retval = DH_size(dh);
+    if (retval < DH_BYTES) {
+      log_warn(LD_GENERAL, "Stored dynamic DH prime is smaller "
+               "than '%d' bits.", DH_BYTES*8);
+      goto err;
+    }
+
   }
 
   { /* log the dynamic prime: */
@@ -1931,6 +1959,8 @@ crypto_get_stored_dynamic_prime(const char *fname)
 
  done:
   tor_free(contents);
+  if (dh)
+    DH_free(dh);
 
   return dynamic_prime;
 }
