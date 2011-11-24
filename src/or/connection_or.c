@@ -648,8 +648,9 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   tor_addr_copy(&conn->real_addr, addr);
   if (r) {
     tor_addr_t node_addr;
-    node_get_addr(r, &node_addr);
-    /* XXXX proposal 118 will make this more complex. */
+    node_get_pref_addr(r, &node_addr);
+    /* XXXX proposal 186 is making this more complex.  For now, a conn
+       is canonical when it uses the _preferred_ address. */
     if (tor_addr_eq(&conn->_base.addr, &node_addr))
       conn->is_canonical = 1;
     if (!started_here) {
@@ -664,7 +665,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
       tor_addr_copy(&conn->_base.addr, &node_addr);
-      conn->_base.port = node_get_orport(r);
+      conn->_base.port = node_get_pref_orport(r);
     }
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->_base.address);
