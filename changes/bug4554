@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a compile warning in tor_inet_pton(). Bugfix on 0.2.3.8-alpha;
+      fixes bug 4554.
+

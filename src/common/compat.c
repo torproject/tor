@@ -1733,7 +1733,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         return 0;
       if (TOR_ISXDIGIT(*src)) {
         char *next;
-        int len;
+        ssize_t len;
         long r = strtol(src, &next, 16);
         tor_assert(next != NULL);
         tor_assert(next != src);
