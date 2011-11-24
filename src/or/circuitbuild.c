@@ -5152,19 +5152,39 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     routerinfo_t *ri = node->ri;
     tor_addr_from_ipv4h(&addr, ri->addr);
 
-    if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-        bridge->port == ri->or_port) {
+    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+         bridge->port == ri->or_port) ||
+        (!tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
+         bridge->port == ri->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
-      ri->addr = tor_addr_to_ipv4h(&bridge->addr);
-      tor_free(ri->address);
-      ri->address = tor_dup_ip(ri->addr);
-      ri->or_port = bridge->port;
-      log_info(LD_DIR,
-               "Adjusted bridge routerinfo for '%s' to match configured "
-               "address %s:%d.",
-               ri->nickname, ri->address, ri->or_port);
+      if (tor_addr_family(&bridge->addr) == AF_INET) {
+        ri->addr = tor_addr_to_ipv4h(&bridge->addr);
+        tor_free(ri->address);
+        ri->address = tor_dup_ip(ri->addr);
+        ri->or_port = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerinfo for '%s' to match configured "
+                 "address %s:%d.",
+                 ri->nickname, ri->address, ri->or_port);
+      } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
+        tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
+        ri->ipv6_orport = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerinfo for '%s' to match configured "
+                 "address %s:%d.",
+                 ri->nickname, fmt_addr(&ri->ipv6_addr), ri->ipv6_orport);
+      } else {
+        log_err(LD_BUG, "Address family not supported: %d.",
+                tor_addr_family(&bridge->addr));
+        return;
+      }
     }
+
+    /* Indicate that we prefer connecting to this bridge over the
+       protocol that the bridge address indicates.  Last bridge
+       descriptor handled wins.  */
+    ri->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
   }
   if (node->rs) {
     routerstatus_t *rs = node->rs;
