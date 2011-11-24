@@ -630,7 +630,9 @@ connection_or_update_token_buckets(smartlist_t *conns,
 
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
- * by checking to see if this describes a router we know. */
+ * by checking to see if this describes a router we know.
+ * <b>started_here</b> is 1 if we are the initiator of <b>conn</b> and
+ * 0 if it's an incoming connection.  */
 void
 connection_or_init_conn_from_address(or_connection_t *conn,
                                      const tor_addr_t *addr, uint16_t port,
