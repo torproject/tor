@@ -1,0 +1,5 @@
+  o Minor features:
+
+    - Log (at debug level) whenever a circuit's purpose is changed.
+
+

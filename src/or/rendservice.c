@@ -1428,7 +1428,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                "circuit, but we already have enough. Redefining purpose to "
                "general; leaving as internal.");
 
-      TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+      circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_C_GENERAL);
 
       {
         rend_data_t *rend_data = circuit->rend_data;
@@ -1520,7 +1520,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
     goto err;
   }
   service->desc_is_dirty = time(NULL);
-  circuit->_base.purpose = CIRCUIT_PURPOSE_S_INTRO;
+  circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_INTRO);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
                 circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
@@ -1609,7 +1609,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   circuit->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
   /* Change the circuit purpose. */
-  circuit->_base.purpose = CIRCUIT_PURPOSE_S_REND_JOINED;
+  circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_REND_JOINED);
 
   return;
  err:

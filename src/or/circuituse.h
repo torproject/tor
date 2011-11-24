@@ -50,6 +50,8 @@ int connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
                                                   crypt_path_t *cpath);
 int connection_ap_handshake_attach_circuit(entry_connection_t *conn);
 
+void circuit_change_purpose(circuit_t *circ, uint8_t new_purpose);
+
 int hostname_in_track_host_exits(const or_options_t *options,
                                  const char *address);
 
