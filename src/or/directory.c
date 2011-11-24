@@ -919,7 +919,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     return;
   }
 
-  conn = dir_connection_new(AF_INET);
+  conn = dir_connection_new(tor_addr_family(&addr));
 
   /* set up conn so it's got all the data we need to remember */
   tor_addr_copy(&conn->_base.addr, &addr);

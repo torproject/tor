@@ -880,7 +880,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     return NULL;
   }
 
-  if (listensockaddr->sa_family == AF_INET) {
+  if (listensockaddr->sa_family == AF_INET ||
+      listensockaddr->sa_family == AF_INET6) {
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_tcp)
       start_reading = 1;
@@ -890,7 +891,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     log_notice(LD_NET, "Opening %s on %s:%d",
                conn_type_to_string(type), fmt_addr(&addr), usePort);
 
-    s = tor_open_socket(PF_INET,
+    s = tor_open_socket(tor_addr_family(&addr),
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
                         is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
     if (!SOCKET_OK(s)) {
