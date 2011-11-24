@@ -30,7 +30,6 @@ crypto_pk_env_t *init_key_from_file(const char *fname, int generate,
                                     int severity);
 
 BIGNUM *router_get_stored_dynamic_prime(void);
-int router_store_dynamic_prime(const BIGNUM *dynamic_prime);
 
 void v3_authority_check_key_expiry(void);
 

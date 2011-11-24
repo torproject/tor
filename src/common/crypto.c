@@ -1849,10 +1849,44 @@ crypto_generate_dynamic_prime(void)
   return dynamic_prime;
 }
 
-BIGNUM *
-crypto_get_tls_dh_prime(void)
+/** Store our dynamic prime to <b>fname</b> for future use. */
+int
+router_store_dynamic_prime(const char *fname)
 {
-  return dh_param_p_tls;
+  FILE *fp = NULL;
+  int retval = -1;
+  file_status_t fname_status = file_status(fname);
+
+  tor_assert(fname);
+
+  if (fname_status == FN_FILE) {
+    /* If the fname is a file, then the dynamic prime is already stored. */
+    retval = 0;
+    goto done;
+  } else if (fname_status != FN_NOENT) {
+    log_info(LD_GENERAL, "Dynamic prime filename is occupied.");
+    goto done;
+  }
+
+  tor_assert(fname_status == FN_NOENT);
+
+  if (!(fp = fopen(fname, "w"))) {
+    log_notice(LD_GENERAL, "Error while creating dynamic prime file.");
+    goto done;
+  }
+
+  if (BN_print_fp(fp, dh_param_p_tls) == 0) {
+    log_warn(LD_GENERAL, "Error while printing dynamic prime to file.");
+    goto done;
+  }
+
+  retval = 0;
+
+ done:
+  if (fp)
+    fclose(fp);
+
+  return retval;
 }
 
 /** Set the global TLS Diffie-Hellman modulus.

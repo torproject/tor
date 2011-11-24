@@ -485,46 +485,6 @@ v3_authority_check_key_expiry(void)
 }
 
 
-/** Store <b>dynamic_prime</b> to disk for future use. */
-int
-router_store_dynamic_prime(const BIGNUM *dynamic_prime)
-{
-  FILE *fp = NULL;
-  char *fname = get_datadir_fname2("keys", "dynamic_prime");
-  int retval = -1;
-  file_status_t fname_status = file_status(fname);
-
-  if (fname_status == FN_FILE) {
-    /* If the fname is a file, then the dynamic prime is already stored. */
-    retval = 0;
-    goto done;
-  } else if (fname_status != FN_NOENT) {
-    log_info(LD_GENERAL, "Dynamic prime filename is occupied.");
-    goto done;
-  }
-
-  tor_assert(fname_status == FN_NOENT);
-
-  if (!(fp = fopen(fname, "w"))) {
-    log_notice(LD_GENERAL, "Error while creating dynamic prime file.");
-    goto done;
-  }
-
-  if (BN_print_fp(fp, dynamic_prime) == 0) {
-    log_warn(LD_GENERAL, "Error while printing dynamic prime to file.");
-    goto done;
-  }
-
-  retval = 0;
-
- done:
-  if (fp)
-    fclose(fp);
-  tor_free(fname);
-
-  return retval;
-}
-
 /** Return the dynamic prime stored in the disk. If there is no
     dynamic prime stored in the disk, return NULL. */
 BIGNUM *
@@ -722,12 +682,12 @@ init_keys(void)
 
   /** 3b. If we use a dynamic prime, store it to disk. */
   if (get_options()->DynamicPrimes) {
-    BIGNUM *dynamic_prime = crypto_get_tls_dh_prime();
-    if (dynamic_prime) {
-      if (router_store_dynamic_prime(dynamic_prime) < 0)
-        log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
-                   "Make sure your data directory is sane.");
-    }
+      const char *fname = get_datadir_fname2("keys", "dynamic_prime");
+      if (crypto_store_dynamic_prime(fname)) {
+          log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
+                     "Make sure your data directory is sane.");
+      }
+      tor_free(fname);
   }
 
   /* 4. Build our router descriptor. */
