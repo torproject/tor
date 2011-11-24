@@ -29,6 +29,10 @@
 #define PK_BYTES (1024/8)
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
+/** Our DH 'g' parameter */
+#define DH_GENERATOR 2
+/** Length of our Rakshasa DH parameter prime 'p' */
+#define RAKSHASA_BITS 1024
 
 /** Length of a sha1 message digest when encoded in base64 with trailing =
  * signs removed. */

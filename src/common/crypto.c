@@ -1816,22 +1816,70 @@ static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
+/** Generate and return a reasonable and safe DH parameter p. */
+static BIGNUM *generate_rakshasa_prime(void)
+{
+  BIGNUM *rakshasa_prime, *misc;
+  DH *dh_parameters;
+  int r;
+  int dh_codes;
+  int rakshasa_bits = RAKSHASA_BITS;
+  int generator = DH_GENERATOR;
+
+  dh_parameters = DH_new();
+  rakshasa_prime = BN_new();
+  misc = BN_new();
+
+  /** XXX - do we want to cache the result in a file? Or perhaps load from a file? */
+  /* This implements the prime number strategy outlined in prop 179 */
+  tor_assert(rakshasa_prime);
+  log_notice(LD_OR, "Generating Rakshasa prime; this will take a while...");
+  dh_parameters = DH_generate_parameters(rakshasa_bits, generator, NULL, NULL); // XXX Do we want a pretty call back?
+  tor_assert(dh_parameters);
+  log_notice(LD_OR, "Rakshasa prime generated!");
+  log_notice(LD_OR, "Testing our Rakshasa prime; this will take a while...");
+  r = DH_check(dh_parameters, &dh_codes);
+  tor_assert(r);
+  log_notice(LD_OR, "Rakshasa prime seems probabilistically reasonable!");
+  misc = BN_copy(rakshasa_prime, dh_parameters->p);
+  tor_assert(misc);
+  DH_free(dh_parameters);
+
+  return rakshasa_prime;
+}
+
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void
 init_dh_param(void)
 {
-  BIGNUM *p, *p2, *g;
+  BIGNUM *rakshasa_prime, *p, *p2, *g;
   int r;
   if (dh_param_p && dh_param_g && dh_param_p_tls)
     return;
 
+  rakshasa_prime = BN_new();
   p = BN_new();
   p2 = BN_new();
   g = BN_new();
+  tor_assert(rakshasa_prime);
   tor_assert(p);
   tor_assert(p2);
   tor_assert(g);
+
+  /* Set our generator for all DH parameters */
+  r = BN_set_word(g, generator);
+  tor_assert(r);
+
+  /* Are we generating a random DH parameter?*/
+  log_notice(LD_OR, "Do we want to generate a Rakshasa prime?");
+  rakshasa = get_rakshasa();
+  log_notice(LD_OR, "We think: %i?", rakshasa);
+
+  /* This implements the prime number strategy outlined in prop 179 */
+  if (rakshasa == 1) {
+    rakshasa_prime = generate_rakshasa_prime();
+  }
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
      supposedly it equals:
@@ -1845,7 +1893,9 @@ init_dh_param(void)
                 "49286651ECE65381FFFFFFFFFFFFFFFF");
   tor_assert(r);
   /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
-   * modules/ssl/ssl_engine_dh.c */
+   * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
+   * prime.
+  */
   r = BN_hex2bn(&p2,
                   "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
                 "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
@@ -1857,7 +1907,11 @@ init_dh_param(void)
   r = BN_set_word(g, 2);
   tor_assert(r);
   dh_param_p = p;
-  dh_param_p_tls = p2;
+  if (rakshasa) {
+    dh_param_p_tls = rakshasa_prime;
+  } else {
+    dh_param_p_tls = p2;
+  }
   dh_param_g = g;
 }
 
