@@ -1294,6 +1294,11 @@ options_act(const or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
+#ifdef NON_ANONYMOUS_MODE_ENABLED
+  log(LOG_WARN, LD_GENERAL, "This copy of Tor was compiled to run in a "
+      "non-anonymous mode. It will provide NO ANONYMITY.");
+#endif
+
 #ifdef ENABLE_TOR2WEB_MODE
   if (!options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
