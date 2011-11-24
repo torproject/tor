@@ -1760,6 +1760,8 @@ typedef struct {
   /** True if, after we have added this router, we should re-launch
    * tests for it. */
   unsigned int needs_retest_if_added:1;
+  /** True if ipv6_addr:ipv6_orport is preferred.  */
+  unsigned int ipv6_preferred:1;
 
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server

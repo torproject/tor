@@ -3012,7 +3012,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
       log_warn(LD_CIRC,"failed to choose an exit server");
       return -1;
     }
-    exit = extend_info_from_node(node);
+    exit = extend_info_from_node(node, 0);
     tor_assert(exit);
   }
   state->chosen_exit = exit;
@@ -3254,14 +3254,19 @@ onion_extend_cpath(origin_circuit_t *circ)
   } else if (cur_len == 0) { /* picking first node */
     const node_t *r = choose_good_entry_server(purpose, state);
     if (r) {
-      info = extend_info_from_node(r);
+      /* If we're extending to a bridge, use the preferred address
+         rather than the primary, for potentially extending to an IPv6
+         bridge.  */
+      int use_pref_addr = (r->ri != NULL &&
+                           r->ri->purpose == ROUTER_PURPOSE_BRIDGE);
+      info = extend_info_from_node(r, use_pref_addr);
       tor_assert(info);
     }
   } else {
     const node_t *r =
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r) {
-      info = extend_info_from_node(r);
+      info = extend_info_from_node(r, 0);
       tor_assert(info);
     }
   }
@@ -3320,28 +3325,37 @@ extend_info_alloc(const char *nickname, const char *digest,
   return info;
 }
 
-/** Allocate and return a new extend_info_t that can be used to build a
- * circuit to or through the router <b>r</b>. */
+/** Allocate and return a new extend_info_t that can be used to build
+ * a circuit to or through the router <b>r</b>. Use the primary
+ * address of the router unless <b>for_direct_connect</b> is true, in
+ * which case the preferred address is used instead. */
 extend_info_t *
-extend_info_from_router(const routerinfo_t *r)
+extend_info_from_router(const routerinfo_t *r, int for_direct_connect)
 {
   tor_addr_t addr;
+  uint16_t port;
   tor_assert(r);
-  tor_addr_from_ipv4h(&addr, r->addr);
+
+  if (for_direct_connect)
+    router_get_pref_addr_port(r, &addr, &port);
+  else
+    router_get_prim_addr_port(r, &addr, &port);
   return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, &addr, r->or_port);
+                           r->onion_pkey, &addr, port);
 }
 
-/** Allocate and return a new extend_info that can be used to build a ircuit
- * to or through the node <b>node</b>.  May return NULL if there is not
- * enough info about <b>node</b> to extend to it--for example, if there
- * is no routerinfo_t or microdesc_t.
+/** Allocate and return a new extend_info that can be used to build a
+ * ircuit to or through the node <b>node</b>. Use the primary address
+ * of the node unless <b>for_direct_connect</b> is true, in which case
+ * the preferred address is used instead. May return NULL if there is
+ * not enough info about <b>node</b> to extend to it--for example, if
+ * there is no routerinfo_t or microdesc_t.
  **/
 extend_info_t *
-extend_info_from_node(const node_t *node)
+extend_info_from_node(const node_t *node, int for_direct_connect)
 {
   if (node->ri) {
-    return extend_info_from_router(node->ri);
+    return extend_info_from_router(node->ri, for_direct_connect);
   } else if (node->rs && node->md) {
     tor_addr_t addr;
     tor_addr_from_ipv4h(&addr, node->rs->addr);
@@ -4858,18 +4872,31 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 int
 node_is_a_configured_bridge(const node_t *node)
 {
-  tor_addr_t addr;
-  uint16_t orport;
-  if (!node)
-    return 0;
-  if (node_get_addr(node, &addr) < 0)
-    return 0;
-  orport = node_get_orport(node);
-  if (orport == 0)
-    return 0;
+  int retval = 0;		/* Negative.  */
+  smartlist_t *orports = NULL;
 
-  return get_configured_bridge_by_addr_port_digest(
-                       &addr, orport, node->identity) != NULL;
+  if (!node)
+    goto out;
+
+  orports = node_get_all_orports(node);
+  if (orports == NULL)
+    goto out;
+
+  SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, orport) {
+    if (get_configured_bridge_by_addr_port_digest(&orport->addr, orport->port,
+						  node->identity) != NULL) {
+      retval = 1;
+      goto out;
+    }
+  } SMARTLIST_FOREACH_END(orport);
+
+out:
+  if (orports != NULL) {
+    SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
+    smartlist_free(orports);
+    orports = NULL;
+  }
+  return retval;
 }
 
 /** We made a connection to a router at <b>addr</b>:<b>port</b>

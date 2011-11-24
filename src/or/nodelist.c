@@ -646,24 +646,59 @@ node_exit_policy_rejects_all(const node_t *node)
     return 1;
 }
 
-/** Copy the address for <b>node</b> into *<b>addr_out</b>. */
-int
-node_get_addr(const node_t *node, tor_addr_t *addr_out)
+/** Return list of tor_addr_port_t with all OR ports (in the sense IP
+ * addr + TCP port) for <b>node</b>.  Caller must free all elements
+ * using tor_free() and free the list using smartlist_free().
+ *
+ * XXX this is potentially a memory fragmentation hog -- if on
+ * critical path consider the option of having the caller allocate the
+ * memory
+ */
+smartlist_t *
+node_get_all_orports(const node_t *node)
+{
+  smartlist_t *sl = smartlist_create();
+
+  if (node->ri != NULL) {
+    if (node->ri->addr != 0) {
+      tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
+      tor_addr_from_ipv4h(&ap->addr, node->ri->addr);
+      ap->port = node->ri->or_port;
+      smartlist_add(sl, ap);
+    }
+    if (!tor_addr_is_null(&node->ri->ipv6_addr)) {
+      tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
+      tor_addr_copy(&ap->addr, &node->ri->ipv6_addr);
+      ap->port = node->ri->or_port;
+      smartlist_add(sl, ap);
+    }
+  } else if (node->rs != NULL) {
+      tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
+      tor_addr_from_ipv4h(&ap->addr, node->rs->addr);
+      ap->port = node->rs->or_port;
+      smartlist_add(sl, ap);
+  }
+
+  return sl;
+}
+
+/** Copy the primary, IPv4, address for <b>node</b> into
+ * *<b>addr_out</b>.  */
+void
+node_get_prim_addr(const node_t *node, tor_addr_t *addr_out)
 {
   if (node->ri) {
-    tor_addr_from_ipv4h(addr_out, node->ri->addr);
-    return 0;
-  } else if (node->rs) {
-    tor_addr_from_ipv4h(addr_out, node->rs->addr);
-    return 0;
+    router_get_prim_addr_port(node->ri, addr_out, NULL);
   }
-  return -1;
+  else if (node->rs) {
+    tor_addr_from_ipv4h(addr_out, node->rs->addr);
+  }
 }
 
 /** Return the host-order IPv4 address for <b>node</b>, or 0 if it doesn't
  * seem to have one.  */
 uint32_t
-node_get_addr_ipv4h(const node_t *node)
+node_get_prim_addr_ipv4h(const node_t *node)
 {
   if (node->ri) {
     return node->ri->addr;
@@ -673,9 +708,45 @@ node_get_addr_ipv4h(const node_t *node)
   return 0;
 }
 
-/** Copy a string representation of the IP address for <b>node</b> into the
- * <b>len</b>-byte buffer at <b>buf</b>.
- */
+/** Return 1 if we prefer the IPv6 address of <b>node</b>, else 0.  */
+static int
+node_ipv6_preferred(const node_t *node)
+{
+  if (node->ri != NULL)
+    return router_ipv6_preferred(node->ri);
+  return 0;
+}
+
+/** Copy the preferred address for <b>node</b> into
+ * <b>addr_out</b>.  */
+void
+node_get_pref_addr(const node_t *node, tor_addr_t *addr_out)
+{
+  if (node->ri) {
+    router_get_pref_addr_port(node->ri, addr_out, NULL);
+  } else if (node->rs) {
+    /* No IPv6 in routerstatus_t yet.  XXXprop186 ok for private
+       bridges but needs fixing */
+    tor_addr_from_ipv4h(addr_out, node->rs->addr);
+  }
+}
+
+/** Copy the preferred IPv6 address for <b>node</b> into
+ * *<b>addr_out</b>. */
+void
+node_get_pref_ipv6_addr(const node_t *node, tor_addr_t *addr_out)
+{
+  if (node->ri) {
+    tor_addr_copy(addr_out, &node->ri->ipv6_addr);
+  } else if (node->rs) {
+    /* No IPv6 in routerstatus_t yet.  XXXprop186 ok for private
+       bridges but needs fixing */
+    tor_addr_make_unspec(addr_out);
+  }
+}
+
+/** Copy a string representation of an IP address for <b>node</b> into
+ * the <b>len</b>-byte buffer at <b>buf</b>.  */
 void
 node_get_address_string(const node_t *node, char *buf, size_t len)
 {
@@ -701,14 +772,36 @@ node_get_declared_uptime(const node_t *node)
     return -1;
 }
 
-/** Return <b>node</b>'s declared or_port */
+/** Return <b>node</b>'s declared primary (IPv4) or_port. */
 uint16_t
-node_get_orport(const node_t *node)
+node_get_prim_orport(const node_t *node)
 {
   if (node->ri)
     return node->ri->or_port;
   else if (node->rs)
     return node->rs->or_port;
+  else
+    return 0;
+}
+
+/** Return <b>node</b>'s preferred or_port. */
+uint16_t
+node_get_pref_orport(const node_t *node)
+{
+  if (node_ipv6_preferred(node))
+    return node_get_pref_ipv6_orport(node);
+  else
+    return node_get_prim_orport(node);
+}
+
+/** Return <b>node</b>'s preferred IPv6 or_port. */
+uint16_t
+node_get_pref_ipv6_orport(const node_t *node)
+{
+  if (node->ri)
+    return node->ri->ipv6_orport;
+  else if (node->rs)
+    return 0;			/* No IPv6 in routerstatus_t yet. */
   else
     return 0;
 }

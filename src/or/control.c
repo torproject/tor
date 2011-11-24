@@ -2402,7 +2402,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   /* now circ refers to something that is ready to be extended */
   SMARTLIST_FOREACH(nodes, const node_t *, node,
   {
-    extend_info_t *info = extend_info_from_node(node);
+    extend_info_t *info = extend_info_from_node(node, 0);
     tor_assert(info); /* True, since node_has_descriptor(node) == true */
     circuit_append_new_exit(circ, info);
     extend_info_free(info);

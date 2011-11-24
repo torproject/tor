@@ -59,8 +59,10 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
                                  crypto_pk_env_t *onion_key,
                                  const tor_addr_t *addr, uint16_t port);
-extend_info_t *extend_info_from_router(const routerinfo_t *r);
-extend_info_t *extend_info_from_node(const node_t *node);
+extend_info_t *extend_info_from_router(const routerinfo_t *r,
+                                       int for_direct_connect);
+extend_info_t *extend_info_from_node(const node_t *node,
+                                     int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);

@@ -1439,7 +1439,10 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         int opt = conn->chosen_exit_optional;
         r = node_get_by_nickname(conn->chosen_exit_name, 1);
         if (r && node_has_descriptor(r)) {
-          extend_info = extend_info_from_node(r);
+          /* We might want to connect to an IPv6 bridge for loading
+             descriptors so we use the preferred address rather than
+             the primary.  */
+          extend_info = extend_info_from_node(r, conn->want_onehop ? 1 : 0);
         } else {
           log_debug(LD_DIR, "considering %d, %s",
                     want_onehop, conn->chosen_exit_name);

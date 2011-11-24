@@ -893,7 +893,8 @@ consider_testing_reachability(int test_or, int test_dir)
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
-    ei = extend_info_from_router(me);
+    /* XXX IPv6 self testing IPv6 orports will need pref_addr */
+    ei = extend_info_from_router(me, 0);
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
     extend_info_free(ei);
@@ -1201,7 +1202,6 @@ consider_publishable_server(int force)
 /** Return the port that we should advertise as our ORPort; this is either
  * the one configured in the ORPort option, or the one we actually bound to
  * if ORPort is "auto".
- * DOCDOC
  */
 uint16_t
 router_get_advertised_or_port(const or_options_t *options)
@@ -2119,6 +2119,58 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 #endif
 
   return (int)written+1;
+}
+
+
+/** Copy the primary, IPv4, address and port for <b>router</b> into
+    *<b>addr_out</b> and *<b>port_out</b>. */
+void
+router_get_prim_addr_port(const routerinfo_t *router, tor_addr_t *addr_out,
+			  uint16_t *port_out)
+{
+  if (addr_out != NULL)
+    tor_addr_from_ipv4h(addr_out, router->addr);
+  if (port_out != NULL)
+    *port_out = router->or_port;
+}
+
+/** Copy the alternative, presumably IPv6, address and port for
+    <b>router</b> into *<b>addr_out</b> and *<b>port_out</b>. */
+void
+router_get_alt_addr_port(const routerinfo_t *router,
+			 tor_addr_t *addr_out,
+			 uint16_t *port_out)
+{
+  if (addr_out != NULL)
+    tor_addr_copy(addr_out, &router->ipv6_addr);
+  if (port_out != NULL)
+    *port_out = router->ipv6_orport;
+}
+
+/** Return 1 if we prefer the IPv6 address of <b>router</b>, else 0.
+
+    We prefer the IPv6 address if the router has one and
+    i) the routerinfo_t says so
+    or
+    ii) the router has no IPv4 address.  */
+int
+router_ipv6_preferred(const routerinfo_t *router)
+{
+  return (!tor_addr_is_null(&router->ipv6_addr)
+	  && (router->ipv6_preferred || router->addr == 0));
+}
+
+/** Copy the preferred IP address and port for <b>router</b> into
+    *<b>addr_out</b> and *<b>port_out</b> .  */
+void
+router_get_pref_addr_port(const routerinfo_t *router,
+			  tor_addr_t *addr_out,
+			  uint16_t *port_out)
+{
+  if (router_ipv6_preferred(router))
+    router_get_alt_addr_port(router, addr_out, port_out);
+  else
+    router_get_prim_addr_port(router, addr_out, port_out);
 }
 
 /** Load the contents of <b>filename</b>, find the last line starting with
