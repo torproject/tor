@@ -1,0 +1,5 @@
+   o Minor bugfixes:
+     - Prevent a false positive from the check-spaces script by disabling
+       the "whitespace between function name and (" check for functions
+       named 'op()'.
+
