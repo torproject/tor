@@ -1294,6 +1294,22 @@ options_act(const or_options_t *old_options)
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
+#ifdef ENABLE_TOR2WEB_MODE
+  if (!options->Tor2webMode) {
+    log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
+            "'tor2web mode'. It can only be run with the Tor2webMode torrc "
+            "option enabled.");
+    return -1;
+  }
+#else
+  if (options->Tor2webMode) {
+    log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
+            "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
+            "option enabled.");
+    return -1;
+  }
+#endif
+
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {

@@ -130,6 +130,10 @@
 #define cell_t tor_cell_t
 #endif
 
+#ifdef ENABLE_TOR2WEB_MODE
+#define NON_ANONYMOUS_MODE_ENABLED 1
+#endif
+
 /** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
 /** Length of a router identity encoded as a hexadecimal digest, plus
