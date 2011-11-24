@@ -492,19 +492,26 @@ router_store_dynamic_prime(const BIGNUM *dynamic_prime)
   FILE *fp = NULL;
   char *fname = get_datadir_fname2("keys", "dynamic_prime");
   int retval = -1;
+  file_status_t fname_status = file_status(fname);
 
-  if (file_status(fname) != FN_NOENT) {
-    log_warn(LD_GENERAL, "Dynamic prime already occupied.");
+  if (fname_status == FN_FILE) {
+    /* If the fname is a file, then the dynamic prime is already stored. */
+    retval = 0;
+    goto done;
+  } else if (fname_status != FN_NOENT) {
+    log_info(LD_GENERAL, "Dynamic prime filename is occupied.");
     goto done;
   }
 
+  tor_assert(fname_status == FN_NOENT);
+
   if (!(fp = fopen(fname, "w"))) {
-    log_warn(LD_GENERAL, "Error writing to certificate file");
+    log_notice(LD_GENERAL, "Error while creating dynamic prime file.");
     goto done;
   }
 
   if (BN_print_fp(fp, dynamic_prime) == 0) {
-    log_warn(LD_GENERAL, "Error on bn_print_fp()");
+    log_warn(LD_GENERAL, "Error while printing dynamic prime to file.");
     goto done;
   }
 
@@ -531,21 +538,20 @@ router_get_stored_dynamic_prime(void)
     goto err;
 
   contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!contents) {
-    log_warn(LD_GENERAL, "Error reading dynamic prime from \"%s\"", fname);
+  if (!contents)
     goto err;
-  }
 
   retval = BN_hex2bn(&dynamic_prime, contents);
   if (!retval) {
-    log_warn(LD_GENERAL, "C0rrupted dynamic prime?!?!");
+    log_notice(LD_GENERAL, "Could not understand the dynamic prime "
+               "format in '%s'", fname);
     goto err;
   }
 
   { /* log the dynamic prime: */
     char *s = BN_bn2hex(dynamic_prime);
     tor_assert(s);
-    log_notice(LD_OR, "Found stored dynamic prime: [%s]", s);
+    log_info(LD_OR, "Found stored dynamic prime: [%s]", s);
     OPENSSL_free(s);
   }
 
@@ -719,8 +725,8 @@ init_keys(void)
     BIGNUM *dynamic_prime = crypto_get_tls_dh_prime();
     if (dynamic_prime) {
       if (router_store_dynamic_prime(dynamic_prime) < 0)
-        log_warn(LD_GENERAL, "Failed while storing dynamic prime. "
-                 "Make sure your data directory is sane.");
+        log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
+                   "Make sure your data directory is sane.");
     }
   }
 

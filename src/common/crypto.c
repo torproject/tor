@@ -1842,7 +1842,7 @@ crypto_generate_dynamic_prime(void)
   { /* log the dynamic prime: */
     s = BN_bn2hex(dynamic_prime);
     tor_assert(s);
-    log_notice(LD_OR, "Dynamic prime generated: [%s]", s);
+    log_info(LD_OR, "Dynamic prime generated: [%s]", s);
     OPENSSL_free(s);
   }
 
@@ -1874,10 +1874,10 @@ crypto_set_tls_dh_prime(int use_dynamic_primes, BIGNUM *stored_dynamic_prime)
 
   if (use_dynamic_primes) { /* use dynamic primes: */
     if (stored_dynamic_prime) {
-      log_warn(LD_OR, "Using stored dynamic prime.");
+      log_info(LD_OR, "Using stored dynamic prime.");
       tls_prime = stored_dynamic_prime;
     } else {
-      log_notice(LD_OR, "Generating fresh dynamic prime.");
+      log_info(LD_OR, "Generating fresh dynamic prime.");
       tls_prime = crypto_generate_dynamic_prime();
     }
   } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
