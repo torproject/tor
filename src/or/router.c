@@ -484,6 +484,17 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
+
+int
+router_initialize_tls_context(void)
+{
+  return tor_tls_context_init(public_server_mode(get_options()),
+                              get_tlsclient_identity_key(),
+                              server_mode(get_options()) ?
+                              get_server_identity_key() : NULL,
+                              MAX_SSL_KEY_LIFETIME_ADVERTISED);
+}
+
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.
@@ -530,10 +541,7 @@ init_keys(void)
     }
     set_client_identity_key(prkey);
     /* Create a TLS context. */
-    if (tor_tls_context_init(0,
-                             get_tlsclient_identity_key(),
-                             NULL,
-                             MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
+    if (router_initialize_tls_context() < 0) {
       log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
       return -1;
     }
@@ -626,10 +634,7 @@ init_keys(void)
   tor_free(keydir);
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_init(public_server_mode(options),
-                           get_tlsclient_identity_key(),
-                           get_server_identity_key(),
-                           MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
+  if (router_initialize_tls_context() < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }

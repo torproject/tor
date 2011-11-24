@@ -30,6 +30,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname, int generate,
                                     int severity);
 void v3_authority_check_key_expiry(void);
 
+int router_initialize_tls_context(void);
 int init_keys(void);
 
 int check_whether_orport_reachable(void);

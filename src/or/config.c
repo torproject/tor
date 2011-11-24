@@ -1267,6 +1267,24 @@ get_effective_bwburst(const or_options_t *options)
   return (uint32_t)bw;
 }
 
+/** Return True if any changes from <b>old_options</b> to
+ * <b>new_options</b> needs us to refresh our TLS context. */
+static int
+options_transition_requires_fresh_tls_context(const or_options_t *old_options,
+                                              const or_options_t *new_options)
+{
+  tor_assert(new_options);
+
+  if (!old_options)
+    return 0;
+
+  if ((old_options->DynamicDHGroups != new_options->DynamicDHGroups)) {
+    return 1;
+  }
+
+  return 0;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -1392,6 +1410,13 @@ options_act(const or_options_t *old_options)
                                        !old_options->V3AuthoritativeDir))) {
     if (init_keys() < 0) {
       log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
+  } else if (old_options &&
+             options_transition_requires_fresh_tls_context(old_options,
+                                                           options)) {
+    if (router_initialize_tls_context() < 0) {
+      log_warn(LD_BUG,"Error initializing TLS context.");
       return -1;
     }
   }
@@ -4075,7 +4100,6 @@ options_transition_affects_workers(const or_options_t *old_options,
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCPUs != new_options->NumCPUs ||
-      old_options->DynamicDHGroups != new_options->DynamicDHGroups ||
       old_options->ORPort != new_options->ORPort ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||
