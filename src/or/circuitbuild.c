@@ -4856,9 +4856,11 @@ static bridge_info_t *
 get_configured_bridge_by_routerinfo(const routerinfo_t *ri)
 {
   tor_addr_t addr;
-  tor_addr_from_ipv4h(&addr, ri->addr);
-  return get_configured_bridge_by_addr_port_digest(&addr,
-                              ri->or_port, ri->cache_info.identity_digest);
+  uint16_t port;
+
+  router_get_pref_addr_port(ri, &addr, &port);
+  return get_configured_bridge_by_addr_port_digest(&addr, port,
+					        ri->cache_info.identity_digest);
 }
 
 /** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
