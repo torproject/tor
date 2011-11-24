@@ -1989,7 +1989,8 @@ crypto_set_tls_dh_prime(const char *dynamic_prime_fname)
     tls_prime = crypto_get_stored_dynamic_prime(dynamic_prime_fname);
 
     if (!tls_prime) {
-      log_info(LD_OR, "Generating fresh dynamic prime.");
+      log_notice(LD_OR, "Generating fresh dynamic prime. "
+                 "This might take a while...");
       tls_prime = crypto_generate_dynamic_prime();
     }
   } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
