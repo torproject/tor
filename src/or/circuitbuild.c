@@ -5179,8 +5179,8 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       rewrite_node_address_for_bridge(bridge, node);
       add_an_entry_guard(node, 1, 1);
 
-      log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
-                 from_cache ? "cached" : "fresh");
+      log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
+                 from_cache ? "cached" : "fresh", router_describe(ri));
       /* set entry->made_contact so if it goes down we don't drop it from
        * our entry node list */
       entry_guard_register_connect_status(ri->cache_info.identity_digest,

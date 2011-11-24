@@ -1935,6 +1935,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
 
   smartlist_free(listeners);
 
+  /* XXXprop186 should take all advertised ports into account */
   if (old_or_port != router_get_advertised_or_port(options) ||
       old_dir_port != router_get_advertised_dir_port(options, 0)) {
     /* Our chosen ORPort or DirPort is not what it used to be: the

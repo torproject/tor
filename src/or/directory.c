@@ -1619,9 +1619,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (!reason) reason = tor_strdup("[no reason given]");
 
   log_debug(LD_DIR,
-            "Received response from directory server '%s:%d': %d %s",
+            "Received response from directory server '%s:%d': %d %s "
+            "(purpose: %d)",
             conn->_base.address, conn->_base.port, status_code,
-            escaped(reason));
+            escaped(reason),
+            conn->_base.purpose);
 
   /* now check if it's got any hints for us about our IP address. */
   if (conn->dirconn_direct) {
