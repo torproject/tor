@@ -1328,7 +1328,8 @@ tor_tls_got_client_hello(tor_tls_t *tls)
 
     if (tor_run_in_libevent_loop(tls->excess_renegotiations_callback,
                                  tls->callback_arg) < 0) {
-      log_warn(LD_GENERAL, "Didn't manage to set a renegotiation limiting callback.");
+      log_warn(LD_GENERAL, "Didn't manage to set a renegotiation "
+               "limiting callback.");
     }
   }
 
@@ -1383,7 +1384,6 @@ tor_tls_state_changed_callback(const SSL *ssl, int type, int val)
     tor_tls_got_client_hello(tls);
   }
 #endif
-
 }
 
 /** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
@@ -1651,8 +1651,8 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 #ifdef V2_HANDSHAKE_SERVER
   if (tls->got_renegotiate) {
     if (tls->server_handshake_count != 2) {
-      log_warn(LD_BUG, "We did not notice renegotiation in a timely fashion (%u)!",
-               tls->server_handshake_count);
+      log_warn(LD_BUG, "We did not notice renegotiation in a timely "
+               "fashion (%u)!", tls->server_handshake_count);
     }
 
     /* Renegotiation happened! */
