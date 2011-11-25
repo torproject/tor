@@ -1850,7 +1850,7 @@ crypto_generate_dynamic_dh_modulus(void)
 }
 
 /** Store our dynamic DH modulus to <b>fname</b> for future use. */
-int
+static int
 crypto_store_dynamic_dh_modulus(const char *fname)
 {
   FILE *fp = NULL;
@@ -1974,6 +1974,7 @@ void
 crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
 {
   BIGNUM *tls_prime = NULL;
+  int store_dh_prime_afterwards = 0;
   int r;
 
   /* If the space is occupied, free the previous TLS DH prime */
@@ -1982,7 +1983,7 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
     dh_param_p_tls = NULL;
   }
 
-  if (dynamic_dh_modulus_fname) { /* use dynamic DH moduluss: */
+  if (dynamic_dh_modulus_fname) { /* use dynamic DH modulus: */
     log_info(LD_OR, "Using stored dynamic DH modulus.");
     tls_prime = crypto_get_stored_dynamic_dh_modulus(dynamic_dh_modulus_fname);
 
@@ -1990,6 +1991,8 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
       log_notice(LD_OR, "Generating fresh dynamic DH modulus. "
                  "This might take a while...");
       tls_prime = crypto_generate_dynamic_dh_modulus();
+
+      store_dh_prime_afterwards++;
     }
   } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
     tls_prime = BN_new();
@@ -2011,6 +2014,14 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
   tor_assert(tls_prime);
 
   dh_param_p_tls = tls_prime;
+
+  if (store_dh_prime_afterwards)
+    /* save the new dynamic DH modulus to disk. */
+    if (crypto_store_dynamic_dh_modulus(dynamic_dh_modulus_fname)) {
+      log_notice(LD_GENERAL, "Failed while storing dynamic DH modulus. "
+                 "Make sure your data directory is sane.");
+    }
+
 }
 
 /** Initialize dh_param_p and dh_param_g if they are not already

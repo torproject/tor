@@ -634,16 +634,6 @@ init_keys(void)
     return -1;
   }
 
-  /** 3b. If we use a dynamic prime, store it to disk. */
-  if (get_options()->DynamicDHGroups) {
-    char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
-    if (crypto_store_dynamic_dh_modulus(fname)) {
-      log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
-                 "Make sure your data directory is sane.");
-    }
-    tor_free(fname);
-  }
-
   /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
