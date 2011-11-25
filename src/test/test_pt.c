@@ -91,7 +91,7 @@ test_pt_protocol(void)
 {
   char line[200];
 
-  managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
+  managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_LAUNCHED;
   mp->transports = smartlist_create();
 

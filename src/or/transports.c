@@ -699,9 +699,7 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
  err:
   mp->conf_state = PT_PROTO_BROKEN;
   log_warn(LD_CONFIG, "Managed proxy at '%s' failed the configuration protocol"
-           " and will be destroyed.", mp->argv[0]);
-
-  return;
+           " and will be destroyed.", mp->argv ? mp->argv[0] : "");
 }
 
 /** Parses an ENV-ERROR <b>line</b> and warns the user accordingly. */
