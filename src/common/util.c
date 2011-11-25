@@ -3647,8 +3647,8 @@ tor_get_exit_code(const process_handle_t *process_handle,
     /* Process has not exited */
     return PROCESS_EXIT_RUNNING;
   } else if (retval != process_handle->pid) {
-    log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s", process_handle->pid,
-             strerror(errno));
+    log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s",
+             process_handle->pid, strerror(errno));
     return PROCESS_EXIT_ERROR;
   }
 

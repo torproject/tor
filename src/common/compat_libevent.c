@@ -558,13 +558,48 @@ tor_check_libevent_header_compatibility(void)
 #endif
 }
 
-/** Wrapper around libevent's event_base_once(). Sets a
- * timeout-triggered event with no associated file descriptor. */
-int
-tor_event_base_once(void (*cb)(evutil_socket_t, short, void *),
-                    void *arg, struct timeval *timer)
+typedef struct runnable_t {
+  struct event *ev;
+  void (*cb)(void *arg);
+  void *arg;
+} runnable_t;
+
+/** Callback for tor_run_in_libevent_loop */
+static void
+run_runnable_cb(evutil_socket_t s, short what, void *arg)
 {
-  return event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT, cb, arg, timer);
+  runnable_t *r = arg;
+  void (*cb)(void *) = r->cb;
+  void *cb_arg = r->arg;
+  (void)what;
+  (void)s;
+  event_free(r->ev);
+  tor_free(r);
+
+  cb(cb_arg);
+}
+
+/** Cause cb(arg) to run later on this iteration of the libevent loop, or in
+ * the next iteration of the libevent loop.  This is useful for when you're
+ * deep inside a no-reentrant code and there's some function you want to call
+ * without worrying about whether it might cause reeentrant invocation.
+ */
+int
+tor_run_in_libevent_loop(void (*cb)(void *arg), void *arg)
+{
+  runnable_t *r = tor_malloc(sizeof(runnable_t));
+  r->cb = cb;
+  r->arg = arg;
+  r->ev = tor_event_new(tor_libevent_get_base(), -1, EV_TIMEOUT,
+                        run_runnable_cb, r);
+  if (!r->ev) {
+    tor_free(r);
+    return -1;
+  }
+  /* Make the event active immediately. */
+  event_active(r->ev, EV_TIMEOUT, 1);
+
+  return 0;
 }
 
 /*
