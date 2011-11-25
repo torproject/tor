@@ -1818,15 +1818,15 @@ static BIGNUM *dh_param_g = NULL;
 
 /** Generate and return a reasonable and safe DH parameter p. */
 static BIGNUM *
-crypto_generate_dynamic_prime(void)
+crypto_generate_dynamic_dh_modulus(void)
 {
-  BIGNUM *dynamic_prime;
+  BIGNUM *dynamic_dh_modulus;
   DH *dh_parameters;
   int r, dh_codes;
   char *s;
 
-  dynamic_prime = BN_new();
-  tor_assert(dynamic_prime);
+  dynamic_dh_modulus = BN_new();
+  tor_assert(dynamic_dh_modulus);
 
   dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL);
   tor_assert(dh_parameters);
@@ -1834,24 +1834,24 @@ crypto_generate_dynamic_prime(void)
   r = DH_check(dh_parameters, &dh_codes);
   tor_assert(r && !dh_codes);
 
-  BN_copy(dynamic_prime, dh_parameters->p);
-  tor_assert(dynamic_prime);
+  BN_copy(dynamic_dh_modulus, dh_parameters->p);
+  tor_assert(dynamic_dh_modulus);
 
   DH_free(dh_parameters);
 
-  { /* log the dynamic prime: */
-    s = BN_bn2hex(dynamic_prime);
+  { /* log the dynamic DH modulus: */
+    s = BN_bn2hex(dynamic_dh_modulus);
     tor_assert(s);
-    log_info(LD_OR, "Dynamic prime generated: [%s]", s);
+    log_info(LD_OR, "Dynamic DH modulus generated: [%s]", s);
     OPENSSL_free(s);
   }
 
-  return dynamic_prime;
+  return dynamic_dh_modulus;
 }
 
-/** Store our dynamic prime to <b>fname</b> for future use. */
+/** Store our dynamic DH modulus to <b>fname</b> for future use. */
 int
-crypto_store_dynamic_prime(const char *fname)
+crypto_store_dynamic_dh_modulus(const char *fname)
 {
   FILE *fp = NULL;
   int retval = -1;
@@ -1862,23 +1862,23 @@ crypto_store_dynamic_prime(const char *fname)
   fname_status = file_status(fname);
 
   if (fname_status == FN_FILE) {
-    /* If the fname is a file, then the dynamic prime is already stored. */
+    /* If the fname is a file, then the dynamic DH modulus is already stored. */
     retval = 0;
     goto done;
   } else if (fname_status != FN_NOENT) {
-    log_info(LD_GENERAL, "Dynamic prime filename is occupied.");
+    log_info(LD_GENERAL, "Dynamic DH modulus filename is occupied.");
     goto done;
   }
 
   tor_assert(fname_status == FN_NOENT);
 
   if (!(fp = fopen(fname, "w"))) {
-    log_notice(LD_GENERAL, "Error while creating dynamic prime file.");
+    log_notice(LD_GENERAL, "Error while creating dynamic DH modulus file.");
     goto done;
   }
 
   if (BN_print_fp(fp, dh_param_p_tls) == 0) {
-    log_warn(LD_GENERAL, "Error while printing dynamic prime to file.");
+    log_warn(LD_GENERAL, "Error while printing dynamic DH modulus to file.");
     goto done;
   }
 
@@ -1891,29 +1891,29 @@ crypto_store_dynamic_prime(const char *fname)
   return retval;
 }
 
-/** Return the dynamic prime stored in <b>fname</b>. If there is no
-    dynamic prime stored in <b>fname</b>, return NULL. */
+/** Return the dynamic DH modulus stored in <b>fname</b>. If there is no
+    dynamic DH modulus stored in <b>fname</b>, return NULL. */
 static BIGNUM *
-crypto_get_stored_dynamic_prime(const char *fname)
+crypto_get_stored_dynamic_dh_modulus(const char *fname)
 {
   int retval;
   char *contents = NULL;
   DH *dh = NULL;
   int dh_codes;
-  BIGNUM *dynamic_prime = BN_new();
+  BIGNUM *dynamic_dh_modulus = BN_new();
 
   tor_assert(fname);
 
-  if (!dynamic_prime)
+  if (!dynamic_dh_modulus)
     goto err;
 
   contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
   if (!contents)
     goto err;
 
-  retval = BN_hex2bn(&dynamic_prime, contents);
+  retval = BN_hex2bn(&dynamic_dh_modulus, contents);
   if (!retval) {
-    log_warn(LD_GENERAL, "Could not understand the dynamic prime "
+    log_warn(LD_GENERAL, "Could not understand the dynamic DH modulus "
              "format in '%s'", fname);
     goto err;
   }
@@ -1923,7 +1923,7 @@ crypto_get_stored_dynamic_prime(const char *fname)
     if (!dh)
       goto err;
 
-    dh->p = BN_dup(dynamic_prime);
+    dh->p = BN_dup(dynamic_dh_modulus);
     dh->g = BN_new();
     BN_set_word(dh->g, DH_GENERATOR);
 
@@ -1942,19 +1942,19 @@ crypto_get_stored_dynamic_prime(const char *fname)
 
   }
 
-  { /* log the dynamic prime: */
-    char *s = BN_bn2hex(dynamic_prime);
+  { /* log the dynamic DH modulus: */
+    char *s = BN_bn2hex(dynamic_dh_modulus);
     tor_assert(s);
-    log_info(LD_OR, "Found stored dynamic prime: [%s]", s);
+    log_info(LD_OR, "Found stored dynamic DH modulus: [%s]", s);
     OPENSSL_free(s);
   }
 
   goto done;
 
  err:
-  if (dynamic_prime) {
-    BN_free(dynamic_prime);
-    dynamic_prime = NULL;
+  if (dynamic_dh_modulus) {
+    BN_free(dynamic_dh_modulus);
+    dynamic_dh_modulus = NULL;
   }
 
  done:
@@ -1962,18 +1962,18 @@ crypto_get_stored_dynamic_prime(const char *fname)
   if (dh)
     DH_free(dh);
 
-  return dynamic_prime;
+  return dynamic_dh_modulus;
 }
 
 
 /** Set the global TLS Diffie-Hellman modulus.
- * If <b>dynamic_prime_fname</b> is set, try to read a dynamic prime
+ * If <b>dynamic_dh_modulus_fname</b> is set, try to read a dynamic DH modulus
  * off it and use it as the DH modulus. If that's not possible,
- * generate a new dynamic prime.
- * If <b>dynamic_prime_fname</b> is NULL, use the Apache mod_ssl DH
+ * generate a new dynamic DH modulus.
+ * If <b>dynamic_dh_modulus_fname</b> is NULL, use the Apache mod_ssl DH
  * modulus. */
 void
-crypto_set_tls_dh_prime(const char *dynamic_prime_fname)
+crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
 {
   BIGNUM *tls_prime = NULL;
   int r;
@@ -1984,14 +1984,14 @@ crypto_set_tls_dh_prime(const char *dynamic_prime_fname)
     dh_param_p_tls = NULL;
   }
 
-  if (dynamic_prime_fname) { /* use dynamic primes: */
-    log_info(LD_OR, "Using stored dynamic prime.");
-    tls_prime = crypto_get_stored_dynamic_prime(dynamic_prime_fname);
+  if (dynamic_dh_modulus_fname) { /* use dynamic DH moduluss: */
+    log_info(LD_OR, "Using stored dynamic DH modulus.");
+    tls_prime = crypto_get_stored_dynamic_dh_modulus(dynamic_dh_modulus_fname);
 
     if (!tls_prime) {
-      log_notice(LD_OR, "Generating fresh dynamic prime. "
+      log_notice(LD_OR, "Generating fresh dynamic DH modulus. "
                  "This might take a while...");
-      tls_prime = crypto_generate_dynamic_prime();
+      tls_prime = crypto_generate_dynamic_dh_modulus();
     }
   } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
     tls_prime = BN_new();

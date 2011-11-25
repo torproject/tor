@@ -636,8 +636,8 @@ init_keys(void)
 
   /** 3b. If we use a dynamic prime, store it to disk. */
   if (get_options()->DynamicDHGroups) {
-    char *fname = get_datadir_fname2("keys", "dynamic_prime");
-    if (crypto_store_dynamic_prime(fname)) {
+    char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
+    if (crypto_store_dynamic_dh_modulus(fname)) {
       log_notice(LD_GENERAL, "Failed while storing dynamic prime. "
                  "Make sure your data directory is sane.");
     }

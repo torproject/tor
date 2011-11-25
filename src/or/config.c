@@ -1365,7 +1365,7 @@ options_act(const or_options_t *old_options)
   /* If needed, generate a new TLS DH prime according to the current torrc. */
   if (!old_options) {
     if (options->DynamicDHGroups) {
-      char *fname = get_datadir_fname2("keys", "dynamic_prime");
+      char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
       crypto_set_tls_dh_prime(fname);
       tor_free(fname);
     } else {
@@ -1373,7 +1373,7 @@ options_act(const or_options_t *old_options)
     }
   } else {
     if (options->DynamicDHGroups && !old_options->DynamicDHGroups) {
-      char *fname = get_datadir_fname2("keys", "dynamic_prime");
+      char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
       crypto_set_tls_dh_prime(fname);
       tor_free(fname);
     } else if (!options->DynamicDHGroups && old_options->DynamicDHGroups) {
