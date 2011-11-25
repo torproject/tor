@@ -153,7 +153,7 @@ parse_commandline(int argc, char **argv)
       }
       months_lifetime = atoi(argv[++i]);
       if (months_lifetime > 24 || months_lifetime < 0) {
-        fprintf(stderr, "Lifetime (in months) was out of range.");
+        fprintf(stderr, "Lifetime (in months) was out of range.\n");
         return 1;
       }
     } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--reuse")) {
