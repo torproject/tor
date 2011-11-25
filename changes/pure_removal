@@ -1,0 +1,7 @@
+  o Code simplifications and refactorings:
+    - Remove the pure attribute from all functions that used it previously.
+      In many cases this we assigned it incorrectly, because the functions
+      might assert or call impure functions, and we don't have evidence
+      that keeping the pure attribute is worthwhile. Implements changes
+      suggested in ticket 4421.
+

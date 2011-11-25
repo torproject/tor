@@ -173,19 +173,15 @@ int n_bits_set_u8(uint8_t v);
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s) ATTR_NONNULL((1));
 void tor_strupper(char *s) ATTR_NONNULL((1));
-int tor_strisprint(const char *s) ATTR_PURE ATTR_NONNULL((1));
-int tor_strisnonupper(const char *s) ATTR_PURE ATTR_NONNULL((1));
-int strcmp_opt(const char *s1, const char *s2) ATTR_PURE;
-int strcmpstart(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
-int strcmp_len(const char *s1, const char *s2, size_t len)
-  ATTR_PURE ATTR_NONNULL((1,2));
-int strcasecmpstart(const char *s1, const char *s2)
-  ATTR_PURE ATTR_NONNULL((1,2));
-int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
-int strcasecmpend(const char *s1, const char *s2)
-  ATTR_PURE ATTR_NONNULL((1,2));
-int fast_memcmpstart(const void *mem, size_t memlen,
-                     const char *prefix) ATTR_PURE;
+int tor_strisprint(const char *s) ATTR_NONNULL((1));
+int tor_strisnonupper(const char *s) ATTR_NONNULL((1));
+int strcmp_opt(const char *s1, const char *s2);
+int strcmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
+int strcmp_len(const char *s1, const char *s2, size_t len) ATTR_NONNULL((1,2));
+int strcasecmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
+int strcmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
+int strcasecmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
+int fast_memcmpstart(const void *mem, size_t memlen, const char *prefix);
 
 void tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
 long tor_parse_long(const char *s, int base, long min,
@@ -197,19 +193,19 @@ double tor_parse_double(const char *s, double min, double max, int *ok,
 uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
                          uint64_t max, int *ok, char **next);
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
-const char *eat_whitespace(const char *s) ATTR_PURE;
-const char *eat_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
-const char *eat_whitespace_no_nl(const char *s) ATTR_PURE;
-const char *eat_whitespace_eos_no_nl(const char *s, const char *eos) ATTR_PURE;
-const char *find_whitespace(const char *s) ATTR_PURE;
-const char *find_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
-const char *find_str_at_start_of_line(const char *haystack, const char *needle)
-  ATTR_PURE;
+const char *eat_whitespace(const char *s);
+const char *eat_whitespace_eos(const char *s, const char *eos);
+const char *eat_whitespace_no_nl(const char *s);
+const char *eat_whitespace_eos_no_nl(const char *s, const char *eos);
+const char *find_whitespace(const char *s);
+const char *find_whitespace_eos(const char *s, const char *eos);
+const char *find_str_at_start_of_line(const char *haystack,
+                                      const char *needle);
 int string_is_C_identifier(const char *string);
 
-int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
-int tor_digest_is_zero(const char *digest) ATTR_PURE;
-int tor_digest256_is_zero(const char *digest) ATTR_PURE;
+int tor_mem_is_zero(const char *mem, size_t len);
+int tor_digest_is_zero(const char *digest);
+int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 struct smartlist_t;
@@ -349,7 +345,7 @@ const char *parse_config_line_from_str(const char *line,
                                        char **key_out, char **value_out);
 char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
-int path_is_relative(const char *filename) ATTR_PURE;
+int path_is_relative(const char *filename);
 
 /* Process helpers */
 void start_daemon(void);
