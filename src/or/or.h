@@ -3248,6 +3248,8 @@ typedef struct {
                     disclaimer. This allows a server administrator to show
                     that they're running Tor and anyone visiting their server
                     will know this without any specialized knowledge. */
+  int DisableDebuggerAttachment; /**< Currently Linux only specific attempt to
+                                      disable ptrace; needs BSD testing. */
   /** Boolean: if set, we start even if our resolv.conf file is missing
    * or broken. */
   int ServerDNSAllowBrokenConfig;
