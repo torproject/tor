@@ -46,6 +46,9 @@ void tor_event_free(struct event *ev);
 
 typedef struct periodic_timer_t periodic_timer_t;
 
+int tor_event_base_once(void (*cb)(evutil_socket_t, short, void *),
+                        void *arg, struct timeval *timer);
+
 periodic_timer_t *periodic_timer_new(struct event_base *base,
              const struct timeval *tv,
              void (*cb)(periodic_timer_t *timer, void *data),
