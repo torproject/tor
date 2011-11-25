@@ -247,7 +247,7 @@ static config_var_t _option_vars[] = {
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableIOCP,                 BOOL,     "1"),
-  V(DynamicPrimes,               BOOL,     "1"),
+  V(DynamicDHGroups,             BOOL,     "1"),
   V(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -1364,7 +1364,7 @@ options_act(const or_options_t *old_options)
 
   /* If needed, generate a new TLS DH prime according to the current torrc. */
   if (!old_options) {
-    if (options->DynamicPrimes) {
+    if (options->DynamicDHGroups) {
       char *fname = get_datadir_fname2("keys", "dynamic_prime");
       crypto_set_tls_dh_prime(fname);
       tor_free(fname);
@@ -1372,11 +1372,11 @@ options_act(const or_options_t *old_options)
       crypto_set_tls_dh_prime(NULL);
     }
   } else {
-    if (options->DynamicPrimes && !old_options->DynamicPrimes) {
+    if (options->DynamicDHGroups && !old_options->DynamicDHGroups) {
       char *fname = get_datadir_fname2("keys", "dynamic_prime");
       crypto_set_tls_dh_prime(fname);
       tor_free(fname);
-    } else if (!options->DynamicPrimes && old_options->DynamicPrimes) {
+    } else if (!options->DynamicDHGroups && old_options->DynamicDHGroups) {
       crypto_set_tls_dh_prime(NULL);
     }
   }
@@ -4071,7 +4071,7 @@ options_transition_affects_workers(const or_options_t *old_options,
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCPUs != new_options->NumCPUs ||
-      old_options->DynamicPrimes != new_options->DynamicPrimes ||
+      old_options->DynamicDHGroups != new_options->DynamicDHGroups ||
       old_options->ORPort != new_options->ORPort ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||
