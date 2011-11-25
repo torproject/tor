@@ -70,3 +70,10 @@ check-logs:
 	./contrib/checkLogs.pl                        \
 		src/*/*.[ch] | sort -n
 
+version:
+	@echo "Tor @VERSION@"
+	@if test -d "$(top_srcdir)/.git" && test -x "`which git 2>&1;true`"; then \
+	   echo -n "git: " ;\
+	   (cd "$(top_srcdir)" && git rev-parse --short=16 HEAD); \
+	fi
+

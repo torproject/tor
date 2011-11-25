@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - Running "make version" now displays the version of Tor that
+      we're about to build. Idea from katmagic; resolves issue 4400.
+
