@@ -1809,6 +1809,9 @@ crypto_hmac_sha256(char *hmac_out,
 
 /* DH */
 
+/** Our DH 'g' parameter */
+#define DH_GENERATOR 2
+
 /** Shared P parameter for our circuit-crypto DH key exchanges. */
 static BIGNUM *dh_param_p = NULL;
 /** Shared P parameter for our TLS DH key exchanges. */
