@@ -40,18 +40,18 @@
 #include <shlobj.h>
 #endif
 
-#include "procmon.h"
-
-/* From main.c */
-extern int quiet_level;
-
 /* Includes for the process attaching prevention */
 #if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
-#include <sys/prctl.h> 
+#include <sys/prctl.h>
 #elif defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #endif
+
+#include "procmon.h"
+
+/* From main.c */
+extern int quiet_level;
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
@@ -703,25 +703,33 @@ get_dirportfrontpage(void)
  * attach to the Tor process.
 */
 /** Attempt to disable debugger attachment. */
-static int tor_disable_debugger_attach(void) {
-    int r;
+static int
+tor_disable_debugger_attach(void)
+{
+    int r, attempted;
     r = -1;
+    attempted = 0;
     log_debug(LD_CONFIG,
-    "Attemping to disable debugger attachment to Tor for unprivileged users.");
+              "Attemping to disable debugger attachment to Tor for "
+              "unprivileged users.");
 #if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
 #ifdef PR_SET_DUMPABLE
+    attempted = 1;
     r = prctl(PR_SET_DUMPABLE, 0);
 #endif
 #endif
 #if defined(__APPLE__) && defined(PT_DENY_ATTACH)
-    r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
+    if (r < 0) {
+      attempted = 1;
+      r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
+    }
 #endif
 
 // XXX: TODO - Mac OS X has dtrace and this may be disabled - implement it here
 // XXX: TODO - Windows probably has something similar - implement it here
     if (r == 0) {
       log_debug(LD_CONFIG,"Debugger attachment disabled for unprivileged users.");
-    } else {
+    } else if (attempted) {
       log_warn(LD_CONFIG, "Unable to disable ptrace attach: %s",
                           strerror(errno));
     }

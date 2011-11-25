@@ -1,14 +1,16 @@
   o Minor features:
-    - If set to 1, Tor will attempt to prevent basic debugging attachment
-      attempts by other processes. It has no impact for users who wish to
-      attach if they have CAP_SYS_PTRACE or if they are root.  We believe that
-      this feature works on modern Gnu/Linux distributions, and that it may
-      also work on *BSD systems (untested).  Some modern Gnu/Linux systems such
-      as Ubuntu have the kernel.yama.ptrace_scope sysctl and by default enable
-      it as an attempt to limit the PTRACE scope for all user processes by
-      default. This feature will attempt to limit the PTRACE scope for Tor
-      specifically - it will not attempt to alter the system wide ptrace scope
-      as it may not even exist. If you wish to attach to Tor with a debugger
-      such as gdb or strace you will want to set this to 0 for the duration of
+    - If set to 1, Tor will attempt to prevent basic debugging
+      attachment attempts by other processes. It has no impact for
+      users who wish to attach if they have CAP_SYS_PTRACE or if they
+      are root.  We believe that this feature works on modern
+      Gnu/Linux distributions, and that it may also work on OSX and
+      some *BSD systems (untested).  Some modern Gnu/Linux systems
+      such as Ubuntu have the kernel.yama.ptrace_scope sysctl and by
+      default enable it as an attempt to limit the PTRACE scope for
+      all user processes by default. This feature will attempt to
+      limit the PTRACE scope for Tor specifically - it will not
+      attempt to alter the system wide ptrace scope as it may not even
+      exist. If you wish to attach to Tor with a debugger such as gdb
+      or strace you will want to set this to 0 for the duration of
       your debugging. Normal users should leave it on. (Default: 1)
 
