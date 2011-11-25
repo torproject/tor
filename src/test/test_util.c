@@ -1388,27 +1388,29 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 {
   int retval, exit_code;
   ssize_t pos;
-  process_handle_t process_handle;
+  process_handle_t *process_handle=NULL;
   char stdout_buf[100], stderr_buf[100];
+  int status;
 
   /* Start the program */
 #ifdef MS_WINDOWS
-  tor_spawn_background(NULL, argv, NULL, &process_handle);
+  status = tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
-  tor_spawn_background(argv[0], argv, NULL, &process_handle);
+  status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
 
-  tt_int_op(process_handle.status, ==, expected_status);
-
-  /* If the process failed to start, don't bother continuing */
-  if (process_handle.status == PROCESS_STATUS_ERROR)
+  tt_int_op(status, ==, expected_status);
+  if (status == PROCESS_STATUS_ERROR)
     return;
 
-  tt_int_op(process_handle.stdout_pipe, >, 0);
-  tt_int_op(process_handle.stderr_pipe, >, 0);
+  tt_assert(process_handle != NULL);
+  tt_int_op(process_handle->status, ==, expected_status);
+
+  tt_int_op(process_handle->stdout_pipe, >, 0);
+  tt_int_op(process_handle->stderr_pipe, >, 0);
 
   /* Check stdout */
-  pos = tor_read_all_from_process_stdout(&process_handle, stdout_buf,
+  pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
                                          sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
@@ -1422,7 +1424,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
-  pos = tor_read_all_from_process_stderr(&process_handle, stderr_buf,
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
@@ -1430,7 +1432,8 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   tt_int_op(pos, ==, strlen(expected_err));
 
  done:
-  ;
+  if (process_handle)
+    tor_process_handle_destroy(process_handle, 1);
 }
 
 /** Check that we can launch a process and read the output */
@@ -1489,7 +1492,8 @@ test_util_spawn_background_partial_read(void *ptr)
 
   int retval, exit_code;
   ssize_t pos = -1;
-  process_handle_t process_handle;
+  process_handle_t *process_handle=NULL;
+  int status;
   char stdout_buf[100], stderr_buf[100];
 #ifdef MS_WINDOWS
   const char *argv[] = {"test-child.exe", "--test", NULL};
@@ -1510,21 +1514,23 @@ test_util_spawn_background_partial_read(void *ptr)
 
   /* Start the program */
 #ifdef MS_WINDOWS
-  tor_spawn_background(NULL, argv, NULL, &process_handle);
+  status = tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
-  tor_spawn_background(argv[0], argv, NULL, &process_handle);
+  status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
-  tt_int_op(process_handle.status, ==, expected_status);
+  tt_int_op(status, ==, expected_status);
+  tt_assert(process_handle);
+  tt_int_op(process_handle->status, ==, expected_status);
 
   /* Check stdout */
-  for (expected_out_ctr =0; expected_out[expected_out_ctr] != NULL;) {
+  for (expected_out_ctr = 0; expected_out[expected_out_ctr] != NULL;) {
 #ifdef MS_WINDOWS
-    pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+    pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL);
 #else
     /* Check that we didn't read the end of file last time */
     tt_assert(!eof);
-    pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
+    pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL, &eof);
 #endif
     log_info(LD_GENERAL, "tor_read_all_handle() returned %d", (int)pos);
@@ -1542,16 +1548,16 @@ test_util_spawn_background_partial_read(void *ptr)
 
   /* The process should have exited without writing more */
 #ifdef MS_WINDOWS
-  pos = tor_read_all_handle(process_handle.stdout_pipe, stdout_buf,
+  pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
-                            &process_handle);
+                            process_handle);
   tt_int_op(pos, ==, 0);
 #else
   if (!eof) {
     /* We should have got all the data, but maybe not the EOF flag */
-    pos = tor_read_all_handle(process_handle.stdout_handle, stdout_buf,
+    pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1,
-                              &process_handle, &eof);
+                              process_handle, &eof);
     tt_int_op(pos, ==, 0);
     tt_assert(eof);
   }
@@ -1566,7 +1572,7 @@ test_util_spawn_background_partial_read(void *ptr)
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
-  pos = tor_read_all_from_process_stderr(&process_handle, stderr_buf,
+  pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
   tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
@@ -1574,7 +1580,7 @@ test_util_spawn_background_partial_read(void *ptr)
   tt_int_op(pos, ==, strlen(expected_err));
 
  done:
-  ;
+  tor_process_handle_destroy(process_handle, 1);
 }
 
 /**

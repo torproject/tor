@@ -239,9 +239,7 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 
   /* destroy the process handle and terminate the process. */
   tor_process_handle_destroy(mp->process_handle, 1);
-
-  /* create process handle for the upcoming new process. */
-  mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
+  mp->process_handle = NULL;
 
   /* destroy all its old transports. we no longer use them. */
   SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
@@ -274,7 +272,7 @@ launch_managed_proxy(managed_proxy_t *mp)
 
   /* Passing NULL as lpApplicationName makes Windows search for the .exe */
   retval = tor_spawn_background(NULL, (const char **)mp->argv, envp,
-                                mp->process_handle);
+                                &mp->process_handle);
 
   tor_free(envp);
 
@@ -291,7 +289,7 @@ launch_managed_proxy(managed_proxy_t *mp)
   }
 
   retval = tor_spawn_background(mp->argv[0], (const char **)mp->argv,
-                                (const char **)envp, mp->process_handle);
+                                (const char **)envp, &mp->process_handle);
 
   /* free the memory allocated by set_managed_proxy_environment(). */
   free_execve_args(envp);
@@ -371,8 +369,9 @@ configure_proxy(managed_proxy_t *mp)
   }
 
   tor_assert(mp->conf_state != PT_PROTO_INFANT);
+  tor_assert(mp->process_handle);
 
-  pos = tor_read_all_handle(mp->process_handle->stdout_pipe,
+  pos = tor_read_all_handle(tor_process_get_stdout_pipe(mp->process_handle),
                             stdout_buf, sizeof(stdout_buf) - 1, NULL);
   if (pos < 0) {
     log_notice(LD_GENERAL, "Failed to read data from managed proxy");
@@ -426,9 +425,10 @@ configure_proxy(managed_proxy_t *mp)
   }
 
   tor_assert(mp->conf_state != PT_PROTO_INFANT);
+  tor_assert(mp->process_handle);
 
   while (1) {
-    r = get_string_from_pipe(mp->process_handle->stdout_handle,
+    r = get_string_from_pipe(tor_process_get_stdout_pipe(mp->process_handle),
                              stdout_buf, sizeof(stdout_buf) - 1);
 
     if (r  == IO_STREAM_OKAY) { /* got a line; handle it! */
@@ -550,6 +550,7 @@ managed_proxy_destroy(managed_proxy_t *mp,
   free_execve_args(mp->argv);
 
   tor_process_handle_destroy(mp->process_handle, also_terminate_process);
+  mp->process_handle = NULL;
 
   tor_free(mp);
 }
@@ -1118,8 +1119,6 @@ managed_proxy_create(const smartlist_t *transport_list,
   mp->transports_to_launch = smartlist_create();
   SMARTLIST_FOREACH(transport_list, const char *, transport,
                     add_transport_to_proxy(transport, mp));
-
-  mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
 
   /* register the managed proxy */
   if (!managed_proxy_list)
