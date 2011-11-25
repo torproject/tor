@@ -566,6 +566,7 @@ set_uint8(void *cp, uint8_t v)
 typedef unsigned long rlim_t;
 #endif
 int set_max_file_descriptors(rlim_t limit, int *max);
+int tor_disable_debugger_attach(void);
 int switch_id(const char *user);
 #ifdef HAVE_PWD_H
 char *get_user_homedir(const char *username);

@@ -40,14 +40,6 @@
 #include <shlobj.h>
 #endif
 
-/* Includes for the process attaching prevention */
-#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
-#include <sys/prctl.h>
-#elif defined(__APPLE__)
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#endif
-
 #include "procmon.h"
 
 /* From main.c */
@@ -687,55 +679,6 @@ get_dirportfrontpage(void)
   return global_dirfrontpagecontents;
 }
 
-/* We only use the linux prctl for now. There is no Win32 support; this may
- * also work on various BSD systems and Mac OS X - send testing feedback!
- * 
- * On recent Gnu/Linux kernels it is possible to create a system-wide policy
- * that will prevent non-root processes from attaching to other processes
- * unless they are the parent process; thus gdb can attach to programs that
- * they execute but they cannot attach to other processes running as the same
- * user. The system wide policy may be set with the sysctl
- * kernel.yama.ptrace_scope or by inspecting /proc/sys/kernel/yama/ptrace_scope
- * and it is 1 by default on Ubuntu 11.04.
- *
- * This ptrace scope will be ignored on Gnu/Linux for users with
- * CAP_SYS_PTRACE and so it is very likely that root will still be able to
- * attach to the Tor process.
-*/
-/** Attempt to disable debugger attachment. */
-static int
-tor_disable_debugger_attach(void)
-{
-    int r, attempted;
-    r = -1;
-    attempted = 0;
-    log_debug(LD_CONFIG,
-              "Attemping to disable debugger attachment to Tor for "
-              "unprivileged users.");
-#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
-#ifdef PR_SET_DUMPABLE
-    attempted = 1;
-    r = prctl(PR_SET_DUMPABLE, 0);
-#endif
-#endif
-#if defined(__APPLE__) && defined(PT_DENY_ATTACH)
-    if (r < 0) {
-      attempted = 1;
-      r = ptrace(PT_DENY_ATTACH, 0, 0, 0);
-    }
-#endif
-
-// XXX: TODO - Mac OS X has dtrace and this may be disabled - implement it here
-// XXX: TODO - Windows probably has something similar - implement it here
-    if (r == 0) {
-      log_debug(LD_CONFIG,"Debugger attachment disabled for unprivileged users.");
-    } else if (attempted) {
-      log_warn(LD_CONFIG, "Unable to disable ptrace attach: %s",
-                          strerror(errno));
-    }
-    return r;
-}
-
 /** Allocate an empty configuration object of a given format type. */
 static void *
 config_alloc(const config_format_t *fmt)
@@ -1346,11 +1289,12 @@ options_act(const or_options_t *old_options)
 
    /* disable ptrace and later, other basic debugging techniques */
   if (options->DisableDebuggerAttachment) {
-      tor_disable_debugger_attach();
+    tor_disable_debugger_attach();
   } else {
-      log_notice(LD_CONFIG,"Debugger attachment enabled for unprivileged users.");
+    log_notice(LD_CONFIG,"Debugger attachment enabled "
+               "for unprivileged users.");
   }
- 
+
   if (running_tor && !have_lockfile()) {
     if (try_locking(options, 1) < 0)
       return -1;
