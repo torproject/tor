@@ -1862,7 +1862,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   fname_status = file_status(fname);
 
   if (fname_status == FN_FILE) {
-    /* If the fname is a file, then the dynamic DH modulus is already stored. */
+    /* If the fname is a file, then the dynamic DH modulus is already stored.*/
     retval = 0;
     goto done;
   } else if (fname_status != FN_NOENT) {
@@ -1939,7 +1939,6 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
                "than '%d' bits.", DH_BYTES*8);
       goto err;
     }
-
   }
 
   { /* log the dynamic DH modulus: */
@@ -1964,7 +1963,6 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
 
   return dynamic_dh_modulus;
 }
-
 
 /** Set the global TLS Diffie-Hellman modulus.
  * If <b>dynamic_dh_modulus_fname</b> is set, try to read a dynamic DH modulus
@@ -2001,12 +1999,12 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
      * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
      * prime.
      */
-    r = BN_hex2bn(&tls_prime,
-                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
-                  "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
-                  "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
-                  "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
-                  "B0E7393E0F24218EB3");
+    r =BN_hex2bn(&tls_prime,
+                 "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
+                 "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
+                 "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
+                 "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
+                 "B0E7393E0F24218EB3");
     tor_assert(r);
   }
 

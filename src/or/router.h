@@ -28,7 +28,6 @@ void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 void rotate_onion_key(void);
 crypto_pk_env_t *init_key_from_file(const char *fname, int generate,
                                     int severity);
-
 void v3_authority_check_key_expiry(void);
 
 int init_keys(void);

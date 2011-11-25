@@ -16,8 +16,6 @@
 #include <stdio.h>
 #include "torint.h"
 
-#include <openssl/bn.h>
-
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
 /** Length of the output of our second (improved) message digests.  (For now
