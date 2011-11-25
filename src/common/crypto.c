@@ -276,6 +276,9 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
+
+    evaluate_evp_for_aes(-1);
+
     return crypto_seed_rng(1);
   }
   return 0;
