@@ -356,19 +356,20 @@ void write_pidfile(char *filename);
 void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
-int tor_terminate_process(pid_t pid);
 typedef struct process_handle_s process_handle_t;
 int tor_spawn_background(const char *const filename, const char **argv,
-                         const char **envp, process_handle_t *process_handle);
+#ifdef MS_WINDOWS
+                         LPVOID envp,
+#else
+                         const char **envp,
+#endif
+                         process_handle_t *process_handle);
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
 #ifdef MS_WINDOWS
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
-
-#ifdef UTIL_PRIVATE
-/* Prototypes for private functions only used by util.c (and unit tests) */
 
 /* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
  * 0 because tor_check_port_forwarding depends on this being the initial
@@ -411,6 +412,15 @@ ssize_t tor_read_all_from_process_stdout(
 ssize_t tor_read_all_from_process_stderr(
     const process_handle_t *process_handle, char *buf, size_t count);
 char *tor_join_win_cmdline(const char *argv[]);
+
+int tor_process_get_pid(process_handle_t *process_handle);
+
+int tor_terminate_process(process_handle_t *process_handle);
+void tor_process_handle_destroy(process_handle_t *process_handle,
+                                int also_terminate_process);
+
+#ifdef UTIL_PRIVATE
+/* Prototypes for private functions only used by util.c (and unit tests) */
 
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
