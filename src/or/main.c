@@ -196,6 +196,26 @@ free_old_inbuf(connection_t *conn)
 }
 #endif
 
+#ifdef MS_WINDOWS
+/** Remove the kernel-space send and receive buffers for <b>s</b>. For use
+ * with IOCP only. */
+static int
+set_buffer_lengths_to_zero(tor_socket_t s)
+{
+  int zero = 0;
+  int r = 0;
+  if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&zero, sizeof(zero))) {
+    log_warn(LD_NET, "Unable to clear SO_SNDBUF");
+    r = -1;
+  }
+  if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&zero, sizeof(zero))) {
+    log_warn(LD_NET, "Unable to clear SO_RCVBUF");
+    r = -1;
+  }
+  return r;
+}
+#endif
+
 /** Add <b>conn</b> to the array of connections that we can poll on.  The
  * connection's socket must be set; the connection starts out
  * non-reading and non-writing.
@@ -216,6 +236,14 @@ connection_add_impl(connection_t *conn, int is_connecting)
 #ifdef USE_BUFFEREVENTS
   if (connection_type_uses_bufferevent(conn)) {
     if (SOCKET_OK(conn->s) && !conn->linked) {
+
+#ifdef MS_WINDOWS
+      if (tor_libevent_using_iocp_bufferevents() &&
+          get_options()->UserspaceIOCPBuffers) {
+        set_buffer_lengths_to_zero(conn->s);
+      }
+#endif
+
       conn->bufev = bufferevent_socket_new(
                          tor_libevent_get_base(),
                          conn->s,
