@@ -1384,7 +1384,7 @@ options_act(const or_options_t *old_options)
   if (server_mode(options)) {
     if (!old_options) {
       if (options->DynamicDHGroups) {
-        char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
+        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
         crypto_set_tls_dh_prime(fname);
         tor_free(fname);
       } else {
@@ -1392,7 +1392,7 @@ options_act(const or_options_t *old_options)
       }
     } else {
       if (options->DynamicDHGroups && !old_options->DynamicDHGroups) {
-        char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
+        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
         crypto_set_tls_dh_prime(fname);
         tor_free(fname);
       } else if (!options->DynamicDHGroups && old_options->DynamicDHGroups) {

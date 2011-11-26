@@ -1852,44 +1852,66 @@ crypto_generate_dynamic_dh_modulus(void)
   return dynamic_dh_modulus;
 }
 
-/** Store our dynamic DH modulus to <b>fname</b> for future use. */
+/** Store our dynamic DH modulus (and its group parameters) to
+    <b>fname</b> for future use. */
 static int
 crypto_store_dynamic_dh_modulus(const char *fname)
 {
-  FILE *fp = NULL;
+  int len, new_len;
+  DH *dh = NULL;
+  unsigned char *dh_string_repr = NULL, *cp = NULL;
+  char *base64_encoded_dh = NULL;
   int retval = -1;
-  file_status_t fname_status;
 
   tor_assert(fname);
 
-  fname_status = file_status(fname);
-
-  if (fname_status == FN_FILE) {
-    /* If the fname is a file, then the dynamic DH modulus is already stored.*/
-    retval = 0;
-    goto done;
-  } else if (fname_status != FN_NOENT) {
-    log_info(LD_GENERAL, "Dynamic DH modulus filename is occupied.");
+  if (!dh_param_p_tls) {
+    log_info(LD_CRYPTO, "Tried to store a DH modulus that does not exist.");
     goto done;
   }
 
-  tor_assert(fname_status == FN_NOENT);
+  if (!(dh = DH_new()))
+    goto done;
+  if (!(dh->p = BN_dup(dh_param_p_tls)))
+    goto done;
+  if (!(dh->g = BN_new()))
+    goto done;
+  if (!BN_set_word(dh->g, DH_GENERATOR))
+    goto done;
 
-  if (!(fp = fopen(fname, "w"))) {
-    log_notice(LD_GENERAL, "Error while creating dynamic DH modulus file.");
+  len = i2d_DHparams(dh, NULL);
+  if (len < 0) {
+    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (1).");
     goto done;
   }
 
-  if (BN_print_fp(fp, dh_param_p_tls) == 0) {
-    log_warn(LD_GENERAL, "Error while printing dynamic DH modulus to file.");
+  cp = dh_string_repr = tor_malloc_zero(len+1);
+  len = i2d_DHparams(dh, &cp);
+  if ((len < 0) || ((cp - dh_string_repr) != len)) {
+    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (2).");
+    goto done;
+  }
+
+  base64_encoded_dh = tor_malloc_zero(len * 2); /* should be enough */
+  new_len = base64_encode(base64_encoded_dh, len * 2,
+                          (char *)dh_string_repr, len);
+  if (new_len < 0) {
+    log_warn(LD_CRYPTO, "Error occured while base64-encoding DH modulus.");
+    goto done;
+  }
+
+  if (write_bytes_to_new_file(fname, base64_encoded_dh, new_len, 0) < 0) {
+    log_info(LD_CRYPTO, "'%s' was already occupied.", fname);
     goto done;
   }
 
   retval = 0;
 
  done:
-  if (fp)
-    fclose(fp);
+  if (dh)
+    DH_free(dh);
+  tor_free(dh_string_repr);
+  tor_free(base64_encoded_dh);
 
   return retval;
 }
@@ -1901,52 +1923,62 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
 {
   int retval;
   char *contents = NULL;
-  DH *dh = NULL;
   int dh_codes;
   char *fname_new = NULL;
-  BIGNUM *dynamic_dh_modulus = BN_new();
+  DH *stored_dh = NULL;
+  BIGNUM *dynamic_dh_modulus = NULL;
+  int length = 0;
+  unsigned char *base64_decoded_dh = NULL;
+  const unsigned char *cp = NULL;
 
   tor_assert(fname);
 
-  if (!dynamic_dh_modulus)
-    goto err;
-
   contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!contents)
-    goto err;
+  if (!contents) {
+    log_info(LD_CRYPTO, "Could not open file '%s'", fname);
+    goto done; /*usually means that ENOENT. don't try to move file to broken.*/
+  }
 
-  retval = BN_hex2bn(&dynamic_dh_modulus, contents);
-  if (!retval) {
-    log_warn(LD_GENERAL, "Could not understand the dynamic DH modulus "
-             "format in '%s'", fname);
+  /* 'fname' contains the DH parameters stored in base64-ed DER
+     format. We are only interested in the DH modulus. */
+
+  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents));
+  length = base64_decode((char *)base64_decoded_dh, strlen(contents),
+                         contents, strlen(contents));
+  if (length < 0) {
+    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (base64).");
     goto err;
   }
 
-  { /* validate the stored prime */
-    dh = DH_new();
-    if (!dh)
-      goto err;
+  stored_dh = d2i_DHparams(NULL, &cp, length);
+  if ((!stored_dh) || (cp - base64_decoded_dh != length)) {
+    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (d2i).");
+    goto err;
+  }
 
-    dh->p = BN_dup(dynamic_dh_modulus);
-    dh->g = BN_new();
-    BN_set_word(dh->g, DH_GENERATOR);
-
-    retval = DH_check(dh, &dh_codes);
+  { /* check the cryptographic qualities of the stored dynamic DH modulus: */
+    retval = DH_check(stored_dh, &dh_codes);
     if (!retval || dh_codes) {
-      log_warn(LD_GENERAL, "Stored dynamic DH prime is not a safe prime.");
+      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is not a safe prime.");
       goto err;
     }
 
-    retval = DH_size(dh);
+    retval = DH_size(stored_dh);
     if (retval < DH_BYTES) {
-      log_warn(LD_GENERAL, "Stored dynamic DH prime is smaller "
+      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is smaller "
                "than '%d' bits.", DH_BYTES*8);
+      goto err;
+    }
+
+    if (!BN_is_word(stored_dh->g, 2)) {
+      log_warn(LD_CRYPTO, "Stored dynamic DH parameters do not use '2' "
+               "as the group generator.");
       goto err;
     }
   }
 
   { /* log the dynamic DH modulus: */
-    char *s = BN_bn2hex(dynamic_dh_modulus);
+    char *s = BN_bn2hex(stored_dh->p);
     tor_assert(s);
     log_info(LD_OR, "Found stored dynamic DH modulus: [%s]", s);
     OPENSSL_free(s);
@@ -1957,31 +1989,34 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
  err:
 
   { /* move broken prime to $filename.broken */
-
     fname_new = tor_malloc(strlen(fname) + 8);
 
     /* no can do if these functions return error */
     strlcpy(fname_new, fname, strlen(fname) + 8);
     strlcat(fname_new, ".broken", strlen(fname) + 8);
 
-    log_warn(LD_GENERAL, "Moving broken dynamic DH prime to '%s'.", fname_new);
+    log_warn(LD_CRYPTO, "Moving broken dynamic DH prime to '%s'.", fname_new);
 
     if (replace_file(fname, fname_new))
-      log_warn(LD_GENERAL, "Error while moving '%s' to '%s'.", fname, fname_new);
+      log_notice(LD_CRYPTO, "Error while moving '%s' to '%s'.",
+                 fname, fname_new);
 
     tor_free(fname_new);
-
   }
 
-  if (dynamic_dh_modulus) {
-    BN_free(dynamic_dh_modulus);
-    dynamic_dh_modulus = NULL;
+  if (stored_dh) {
+    DH_free(stored_dh);
+    stored_dh = NULL;
   }
 
  done:
   tor_free(contents);
-  if (dh)
-    DH_free(dh);
+  tor_free(base64_decoded_dh);
+
+  if (stored_dh) {
+    dynamic_dh_modulus = BN_dup(stored_dh->p);
+    DH_free(stored_dh);
+  }
 
   return dynamic_dh_modulus;
 }
@@ -2040,10 +2075,9 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
   if (store_dh_prime_afterwards)
     /* save the new dynamic DH modulus to disk. */
     if (crypto_store_dynamic_dh_modulus(dynamic_dh_modulus_fname)) {
-      log_notice(LD_GENERAL, "Failed while storing dynamic DH modulus. "
+      log_notice(LD_CRYPTO, "Failed while storing dynamic DH modulus. "
                  "Make sure your data directory is sane.");
     }
-
 }
 
 /** Initialize dh_param_p and dh_param_g if they are not already

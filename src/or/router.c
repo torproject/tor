@@ -484,7 +484,6 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
-
 int
 router_initialize_tls_context(void)
 {
