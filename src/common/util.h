@@ -315,6 +315,7 @@ int check_private_dir(const char *dirname, cpd_check_t check,
                       const char *effective_user);
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
+#define OPEN_FLAGS_DONT_REPLACE (O_CREAT|O_EXCL|O_APPEND|O_WRONLY)
 typedef struct open_file_t open_file_t;
 int start_writing_to_file(const char *fname, int open_flags, int mode,
                           open_file_t **data_out);
@@ -336,6 +337,8 @@ int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
                          int bin);
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
                          int bin);
+int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
+                            int bin);
 
 /** Flag for read_file_to_str: open the file in binary mode. */
 #define RFTS_BIN            1

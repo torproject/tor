@@ -2137,13 +2137,12 @@ write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
   return write_chunks_to_file_impl(fname, chunks, flags);
 }
 
-/** As write_str_to_file, but does not assume a NUL-terminated
- * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
-int
-write_bytes_to_file(const char *fname, const char *str, size_t len,
-                    int bin)
+/** Write <b>len</b> bytes, starting at <b>str</b>, to <b>fname</b>
+    using the open() flags passed in <b>flags</b>. */
+static int
+write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
+                         int flags)
 {
-  int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
   int r;
   sized_chunk_t c = { str, len };
   smartlist_t *chunks = smartlist_create();
@@ -2153,20 +2152,35 @@ write_bytes_to_file(const char *fname, const char *str, size_t len,
   return r;
 }
 
+/** As write_str_to_file, but does not assume a NUL-terminated
+ * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
+int
+write_bytes_to_file(const char *fname, const char *str, size_t len,
+                    int bin)
+{
+  return write_bytes_to_file_impl(fname, str, len,
+                                  OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT));
+}
+
 /** As write_bytes_to_file, but if the file already exists, append the bytes
  * to the end of the file instead of overwriting it. */
 int
 append_bytes_to_file(const char *fname, const char *str, size_t len,
                      int bin)
 {
-  int flags = OPEN_FLAGS_APPEND|(bin?O_BINARY:O_TEXT);
-  int r;
-  sized_chunk_t c = { str, len };
-  smartlist_t *chunks = smartlist_create();
-  smartlist_add(chunks, &c);
-  r = write_chunks_to_file_impl(fname, chunks, flags);
-  smartlist_free(chunks);
-  return r;
+  return write_bytes_to_file_impl(fname, str, len,
+                                  OPEN_FLAGS_APPEND|(bin?O_BINARY:O_TEXT));
+}
+
+/** Like write_str_to_file(), but also return -1 if there was a file
+    already residing in <b>fname</b>. */
+int
+write_bytes_to_new_file(const char *fname, const char *str, size_t len,
+                        int bin)
+{
+  return write_bytes_to_file_impl(fname, str, len,
+                                  OPEN_FLAGS_DONT_REPLACE|
+                                  (bin?O_BINARY:O_TEXT));
 }
 
 /** Read the contents of <b>filename</b> into a newly allocated
