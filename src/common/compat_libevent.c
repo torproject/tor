@@ -573,7 +573,7 @@ run_runnable_cb(evutil_socket_t s, short what, void *arg)
   void *cb_arg = r->arg;
   (void)what;
   (void)s;
-  event_free(r->ev);
+  tor_event_free(r->ev);
   tor_free(r);
 
   cb(cb_arg);
