@@ -1381,7 +1381,7 @@ options_act(const or_options_t *old_options)
   }
 
   /* If needed, generate a new TLS DH prime according to the current torrc. */
-  if (server_mode(options) && options->BridgeRelay) {
+  if (server_mode(options)) {
     if (!old_options) {
       if (options->DynamicDHGroups) {
         char *fname = get_datadir_fname2("keys", "dynamic_dh_modulus");
