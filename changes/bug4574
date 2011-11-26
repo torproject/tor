@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a minor formatting issue in one of tor-gencert's error messages.
-      Fixes bug 4574.
-

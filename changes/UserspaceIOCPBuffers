@@ -1,7 +1,0 @@
-  o Minor features:
-    - Experimental support for running on Windows with IOCP and no
-      kernel-space socket buffers. This feature is controlled by a new
-      UserspaceIOCPBuffers feature (off by default), which has no
-      effect unless Tor has been built with support for bufferevents,
-      is running on Windows, and has enabled IOCP.  This may, in the
-      long run, help solve or mitigate bug 98.

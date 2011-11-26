@@ -1,3 +1,80 @@
+Changes in version 0.2.3.9-alpha - 2011-1?-??
+  o Major features:
+    - When using OpenSSL 1.0.0 or later, use OpenSSL's counter mode
+      implementation. It makes AES_CTR about 7% faster than our old one
+      (which was about 10% faster than the one OpenSSL used to provide).
+      Resolves ticket 4526.
+    - Tor clients and bridges can now be easily configured to use a
+      separate 'transport' proxy. This approach helps to resist
+      censorship by allowing bridges to use protocol obfuscation
+      plugins. It implements the 'managed proxy' part of proposal
+      180. Implements ticket 3472.
+    - Block excess renegotiations even if they are RFC5746 compliant.
+      This security fix mitigates potential SSL Denial of Service attacks
+      that use SSL renegotiation as a way of forcing the server to perform
+      unneeded computationally expensive SSL handshakes. Implements
+      ticket 4312.
+
+  o Major bugfixes:
+    - Teach Tor how to notice excess renegotiation attempts before it
+      receives the first data SSL record. Fixes part of ticket 4312.
+    - Only use the EVP interface when AES acceleration is enabled,
+      to avoid a 5-7% performance regression. Resolves issue 4525;
+      bugfix on 0.2.3.8-alpha.
+
+  o Minor features:
+    - Experimental support for running on Windows with IOCP and no
+      kernel-space socket buffers. This feature is controlled by a new
+      UserspaceIOCPBuffers feature (off by default), which has no
+      effect unless Tor has been built with support for bufferevents,
+      is running on Windows, and has enabled IOCP. This may, in the
+      long run, help solve or mitigate bug 98.
+    - Try to make the introductory warning message that Tor prints on
+      startup more useful for actually finding help and information.
+      Resolves ticket 2474.
+    - Running "make version" now displays the version of Tor that
+      we're about to build. Idea from katmagic; resolves issue 4400.
+    - If set to 1, Tor will attempt to prevent basic debugging
+      attachment attempts by other processes. It has no impact for
+      users who wish to attach if they have CAP_SYS_PTRACE or if they
+      are root.  We believe that this feature works on modern
+      Gnu/Linux distributions, and that it may also work on OSX and
+      some *BSD systems (untested).  Some modern Gnu/Linux systems
+      such as Ubuntu have the kernel.yama.ptrace_scope sysctl and by
+      default enable it as an attempt to limit the PTRACE scope for
+      all user processes by default. This feature will attempt to
+      limit the PTRACE scope for Tor specifically - it will not
+      attempt to alter the system wide ptrace scope as it may not even
+      exist. If you wish to attach to Tor with a debugger such as gdb
+      or strace you will want to set this to 0 for the duration of
+      your debugging. Normal users should leave it on. (Default: 1)
+
+  o Minor bugfixes:
+    - Resolve an integer overflow bug in smartlist_ensure_capacity().
+      Fixes bug 4230; bugfix on Tor 0.1.0.1-rc. Based on a patch by
+      Mansour Moufid.
+    - Fix a compile warning in tor_inet_pton(). Bugfix on 0.2.3.8-alpha;
+      fixes bug 4554.
+    - Fix a minor formatting issue in one of tor-gencert's error messages.
+      Fixes bug 4574.
+    - Prevent a false positive from the check-spaces script, by disabling
+      the "whitespace between function name and (" check for functions
+      named 'op()'.
+
+  o Build fixes:
+    - Properly handle the case where the build-tree is not the same
+      as the source tree when generating src/common/common_sha1.i,
+      src/or/micro-revision.i, and src/or/or_sha1.i. Fixes bug 3953;
+      bugfix on 0.2.0.1-alpha.
+
+  o Code simplifications and refactorings:
+    - Remove the pure attribute from all functions that used it
+      previously. In many cases we assigned it incorrectly, because the
+      functions might assert or call impure functions, and we don't have
+      evidence that keeping the pure attribute is worthwhile. Implements
+      changes suggested in ticket 4421.
+
+
 Changes in version 0.2.3.8-alpha - 2011-11-22
   Tor 0.2.3.8-alpha fixes some crash and assert bugs, including a
   socketpair-related bug that has been bothering Windows users. It adds

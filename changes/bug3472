@@ -1,7 +1,0 @@
-  o Major features:
-
-    - Tor clients and bridges can now be easily configured to use a
-      separate 'transport' proxy. This approach helps to resist
-      censorship by allowing bridges to use protocol obfuscation
-      plugins. It implements the 'managed proxy' part of proposal
-      180. Implements ticket #3472.
