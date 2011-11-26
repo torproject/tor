@@ -1178,14 +1178,17 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * <b>new_address</b> should be a newly dup'ed string, which we'll use or
  * free as appropriate. We will leave address alone.
  *
- * If <b>new_address</b> is NULL, or equal to <b>address</b>, remove
- * any mappings that exist from <b>address</b>.
- *
  * If <b>wildcard_addr</b> is true, then the mapping will match any address
  * equal to <b>address</b>, or any address ending with a period followed by
  * <b>address</b>.  If <b>wildcard_addr</b> and <b>wildcard_new_addr</b> are
  * both true, the mapping will rewrite addresses that end with
  * ".<b>address</b>" into ones that end with ".<b>new_address</b>."
+ *
+ * If <b>new_address</b> is NULL, or <b>new_address</b> is equal to
+ * <b>address</b> and <b>wildcard_addr</b> is equal to
+ * <b>wildcard_new_addr</b>, remove any mappings that exist from
+ * <b>address</b>.
+ *
  *
  * It is an error to set <b>wildcard_new_addr</b> if <b>wildcard_addr</b> is
  * not set. */
@@ -1201,7 +1204,8 @@ addressmap_register(const char *address, char *new_address, time_t expires,
     tor_assert(wildcard_addr);
 
   ent = strmap_get(addressmap, address);
-  if (!new_address || !strcasecmp(address,new_address)) {
+  if (!new_address || (!strcasecmp(address,new_address) &&
+                       wildcard_addr == wildcard_new_addr)) {
     /* Remove the mapping, if any. */
     tor_free(new_address);
     if (ent) {
