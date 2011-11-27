@@ -1783,7 +1783,7 @@ config_line_append(config_line_t **lst,
 {
   config_line_t *newline;
 
-  newline = tor_malloc(sizeof(config_line_t));
+  newline = tor_malloc_zero(sizeof(config_line_t));
   newline->key = tor_strdup(key);
   newline->value = tor_strdup(val);
   newline->next = NULL;
@@ -1817,7 +1817,7 @@ config_get_lines(const char *string, config_line_t **result)
       /* This list can get long, so we keep a pointer to the end of it
        * rather than using config_line_append over and over and getting
        * n^2 performance. */
-      *next = tor_malloc(sizeof(config_line_t));
+      *next = tor_malloc_zero(sizeof(config_line_t));
       (*next)->key = k;
       (*next)->value = v;
       (*next)->next = NULL;
@@ -2048,7 +2048,19 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_LINELIST:
   case CONFIG_TYPE_LINELIST_S:
-    config_line_append((config_line_t**)lvalue, c->key, c->value);
+    {
+      config_line_t *lastval = *(config_line_t**)lvalue;
+      if (lastval && lastval->fragile) {
+        if (c->command != CONFIG_LINE_APPEND) {
+          config_free_lines(lastval);
+          *(config_line_t**)lvalue = NULL;
+        } else {
+          lastval->fragile = 0;
+        }
+      }
+
+      config_line_append((config_line_t**)lvalue, c->key, c->value);
+    }
     break;
   case CONFIG_TYPE_OBSOLETE:
     log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
@@ -2062,6 +2074,28 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
     break;
   }
   return 0;
+}
+
+/** Mark every linelist in <b>options<b> "fragile", so that fresh assignments
+ * to it will replace old ones. */
+static void
+config_mark_lists_fragile(const config_format_t *fmt, or_options_t *options)
+{
+  int i;
+  tor_assert(fmt);
+  tor_assert(options);
+
+  for (i = 0; fmt->vars[i].name; ++i) {
+    const config_var_t *var = &fmt->vars[i];
+    config_line_t *list;
+    if (var->type != CONFIG_TYPE_LINELIST &&
+        var->type != CONFIG_TYPE_LINELIST_V)
+      continue;
+
+    list = *(config_line_t **)STRUCT_VAR_P(options, var->var_offset);
+    if (list)
+      list->fragile = 1;
+  }
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
@@ -2211,7 +2245,7 @@ config_lines_dup(const config_line_t *inp)
   config_line_t *result = NULL;
   config_line_t **next_out = &result;
   while (inp) {
-    *next_out = tor_malloc(sizeof(config_line_t));
+    *next_out = tor_malloc_zero(sizeof(config_line_t));
     (*next_out)->key = tor_strdup(inp->key);
     (*next_out)->value = tor_strdup(inp->value);
     inp = inp->next;
@@ -2448,6 +2482,12 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
     list = list->next;
   }
   bitarray_free(options_seen);
+
+  /** Now we're done assigning a group of options to the configuration.
+   * Subsequent group assignments should _replace_ linelists, not extend
+   * them. */
+  config_mark_lists_fragile(fmt, options);
+
   return 0;
 }
 

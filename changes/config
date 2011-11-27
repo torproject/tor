@@ -1,0 +1,13 @@
+  o Minor features
+    - Slightly change behavior of "list" options (that is, options that
+      can appear more than once) when they appear both in torrc and on
+      the command line. Previously, the command-line options would be
+      appended to the ones from torrc. Now, the command-line options
+      override the torrc options entirely. This new behavior allows
+      the user to override list options (like exit policies and
+      ports to listen on) from the command line, rather than simply
+      appending to the list.
+
+  o Minor bugfixes:
+    - Restore behavior of overriding SocksPort, ORPort, and similar
+      options from the command line. Bugfix on 0.2.3.3-alpha.
