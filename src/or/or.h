@@ -3508,8 +3508,8 @@ typedef struct rend_intro_point_t {
   /** (Service side only) A digestmap recording the INTRODUCE2 cells
    * this intro point's circuit has received.  Each key is the digest
    * of the RSA-encrypted part of a received INTRODUCE2 cell; each
-   * value is a pointer to the time_t at which the cell was
-   * received. */
+   * value is a pointer to the time_t at which the cell was received.
+   * This digestmap is used to prevent replay attacks. */
   digestmap_t *accepted_intro_rsa_parts;
 
   /** (Service side only) The time at which this intro point was first

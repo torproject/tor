@@ -89,8 +89,12 @@ typedef struct rend_service_t {
                          * up-to-date. */
   time_t next_upload_time; /**< Scheduled next hidden service descriptor
                             * upload time. */
-  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t of when
-   * they were received; used to prevent replays. */
+  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t
+   * of when they were received.  Clients may send INTRODUCE1 cells
+   * for the same rendezvous point through two or more different
+   * introduction points; when they do, this digestmap keeps us from
+   * launching multiple simultaneous attempts to connect to the same
+   * rend point. */
   digestmap_t *accepted_intro_dh_parts;
   /** Time at which we last removed expired values from
    * accepted_intro_dh_parts. */
