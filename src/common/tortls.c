@@ -585,7 +585,11 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
                            const char *cname_sign,
                            unsigned int cert_lifetime)
 {
+#define SERIAL_NUMBER_SIZE 8
+
   time_t start_time, end_time;
+  BIGNUM *serial_number = NULL;
+  unsigned char serial_tmp[SERIAL_NUMBER_SIZE];
   EVP_PKEY *sign_pkey = NULL, *pkey=NULL;
   X509 *x509 = NULL;
   X509_NAME *name = NULL, *name_issuer=NULL;
@@ -606,8 +610,15 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     goto error;
   if (!(X509_set_version(x509, 2)))
     goto error;
-  if (!(ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)start_time)))
+
+  { /* our serial number is 8 random bytes. */
+  if (crypto_rand((char *)serial_tmp, sizeof(serial_tmp)) < 0)
     goto error;
+  if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
+    goto error;
+  if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
+    goto error;
+  }
 
   if (!(name = tor_x509_name_new(cname)))
     goto error;
@@ -640,11 +651,15 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     EVP_PKEY_free(sign_pkey);
   if (pkey)
     EVP_PKEY_free(pkey);
+  if (serial_number)
+    BN_free(serial_number);
   if (name)
     X509_NAME_free(name);
   if (name_issuer)
     X509_NAME_free(name_issuer);
   return x509;
+
+#undef SERIAL_NUMBER_SIZE
 }
 
 /** List of ciphers that servers should select from.*/
