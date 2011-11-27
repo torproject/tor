@@ -441,8 +441,8 @@ rend_intro_point_free(rend_intro_point_t *intro)
   extend_info_free(intro->extend_info);
   crypto_free_pk_env(intro->intro_key);
 
-  if (intro->accepted_intros != NULL) {
-    digestmap_free(intro->accepted_intros, _tor_free);
+  if (intro->accepted_intro_rsa_parts != NULL) {
+    digestmap_free(intro->accepted_intro_rsa_parts, _tor_free);
   }
 
   tor_free(intro);

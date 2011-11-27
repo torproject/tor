@@ -91,9 +91,10 @@ typedef struct rend_service_t {
                             * upload time. */
   /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t of when
    * they were received; used to prevent replays. */
-  digestmap_t *accepted_intros;
-  /** Time at which we last removed expired values from accepted_intros. */
-  time_t last_cleaned_accepted_intros;
+  digestmap_t *accepted_intro_dh_parts;
+  /** Time at which we last removed expired values from
+   * accepted_intro_dh_parts. */
+  time_t last_cleaned_accepted_intro_dh_parts;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -153,7 +154,7 @@ rend_service_free(rend_service_t *service)
       rend_authorized_client_free(c););
     smartlist_free(service->clients);
   }
-  digestmap_free(service->accepted_intros, _tor_free);
+  digestmap_free(service->accepted_intro_dh_parts, _tor_free);
   tor_free(service);
 }
 
@@ -888,15 +889,16 @@ rend_check_authorization(rend_service_t *service,
 /** Remove elements from <b>service</b>'s replay cache that are old enough to
  * be noticed by timestamp checking. */
 static void
-clean_accepted_intros(rend_service_t *service, time_t now)
+clean_accepted_intro_dh_parts(rend_service_t *service, time_t now)
 {
   const time_t cutoff = now - REND_REPLAY_TIME_INTERVAL;
 
-  service->last_cleaned_accepted_intros = now;
-  if (!service->accepted_intros)
+  service->last_cleaned_accepted_intro_dh_parts = now;
+  if (!service->accepted_intro_dh_parts)
     return;
 
-  DIGESTMAP_FOREACH_MODIFY(service->accepted_intros, digest, time_t *, t) {
+  DIGESTMAP_FOREACH_MODIFY(service->accepted_intro_dh_parts, digest,
+                           time_t *, t) {
     if (*t < cutoff) {
       tor_free(t);
       MAP_DEL_CURRENT(digest);
@@ -1002,17 +1004,18 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     return -1;
   }
 
-  if (!service->accepted_intros)
-    service->accepted_intros = digestmap_new();
+  if (!service->accepted_intro_dh_parts)
+    service->accepted_intro_dh_parts = digestmap_new();
 
-  if (!intro_point->accepted_intros)
-    intro_point->accepted_intros = digestmap_new();
+  if (!intro_point->accepted_intro_rsa_parts)
+    intro_point->accepted_intro_rsa_parts = digestmap_new();
 
   {
     char pkpart_digest[DIGEST_LEN];
     /* Check for replay of PK-encrypted portion. */
     crypto_digest(pkpart_digest, (char*)request+DIGEST_LEN, keylen);
-    access_time = digestmap_get(intro_point->accepted_intros, pkpart_digest);
+    access_time = digestmap_get(intro_point->accepted_intro_rsa_parts,
+                                pkpart_digest);
     if (access_time != NULL) {
       log_warn(LD_REND, "Possible replay detected! We received an "
                "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
@@ -1021,7 +1024,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     }
     access_time = tor_malloc(sizeof(time_t));
     *access_time = now;
-    digestmap_set(intro_point->accepted_intros, pkpart_digest, access_time);
+    digestmap_set(intro_point->accepted_intro_rsa_parts,
+                  pkpart_digest, access_time);
   }
 
   /* Next N bytes is encrypted with service key */
@@ -1158,7 +1162,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* Check whether there is a past request with the same Diffie-Hellman,
    * part 1. */
-  access_time = digestmap_get(service->accepted_intros, diffie_hellman_hash);
+  access_time = digestmap_get(service->accepted_intro_dh_parts,
+                              diffie_hellman_hash);
   if (access_time != NULL) {
     /* A Tor client will send a new INTRODUCE1 cell with the same rend
      * cookie and DH public key as its previous one if its intro circ
@@ -1180,9 +1185,11 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
    * one hour. */
   access_time = tor_malloc(sizeof(time_t));
   *access_time = now;
-  digestmap_set(service->accepted_intros, diffie_hellman_hash, access_time);
-  if (service->last_cleaned_accepted_intros + REND_REPLAY_TIME_INTERVAL < now)
-    clean_accepted_intros(service, now);
+  digestmap_set(service->accepted_intro_dh_parts,
+                diffie_hellman_hash, access_time);
+  if (service->last_cleaned_accepted_intro_dh_parts + REND_REPLAY_TIME_INTERVAL
+      < now)
+    clean_accepted_intro_dh_parts(service, now);
 
   /* If the service performs client authorization, check included auth data. */
   if (service->clients) {
@@ -1918,7 +1925,7 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 1;
   }
 
-  if (digestmap_size(intro->accepted_intros) >=
+  if (digestmap_size(intro->accepted_intro_rsa_parts) >=
       INTRO_POINT_LIFETIME_INTRODUCTIONS) {
     /* This intro point has been used too many times.  Expire it now. */
     return 1;

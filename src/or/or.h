@@ -3510,7 +3510,7 @@ typedef struct rend_intro_point_t {
    * of the RSA-encrypted part of a received INTRODUCE2 cell; each
    * value is a pointer to the time_t at which the cell was
    * received. */
-  digestmap_t *accepted_intros;
+  digestmap_t *accepted_intro_rsa_parts;
 
   /** (Service side only) The time at which this intro point was first
    * published, or -1 if this intro point has not yet been
