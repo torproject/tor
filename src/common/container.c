@@ -62,13 +62,22 @@ smartlist_clear(smartlist_t *sl)
 static INLINE void
 smartlist_ensure_capacity(smartlist_t *sl, int size)
 {
+#if SIZEOF_SIZE_T > SIZEOF_INT
+#define MAX_CAPACITY (INT_MAX)
+#else
+#define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
+#endif
   if (size > sl->capacity) {
-    int higher = sl->capacity * 2;
-    while (size > higher)
-      higher *= 2;
-    tor_assert(higher > 0); /* detect overflow */
+    int higher = sl->capacity;
+    if (PREDICT_UNLIKELY(size > MAX_CAPACITY/2)) {
+      tor_assert(size <= MAX_CAPACITY);
+      higher = MAX_CAPACITY;
+    } else {
+      while (size > higher)
+        higher *= 2;
+    }
     sl->capacity = higher;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
+    sl->list = tor_realloc(sl->list, sizeof(void*)*((size_t)sl->capacity));
   }
 }
 
