@@ -36,6 +36,9 @@ Changes in version 0.2.2.35 - 2011-11-??
     - Avoid frequent calls to the fairly expensive cull_wedged_cpuworkers
       function. This was eating up hideously large amounts of time on some
       busy servers. Fixes bug 4518; bugfix on 0.0.9.8.
+    - Resolve an integer overflow bug in smartlist_ensure_capacity.
+      Fixes bug 4230; bugfix on Tor 0.1.0.1-rc. Based on a patch by
+      Mansour Moufid.
     - Don't warn about unused log_mutex in log.c when building with
       --disable-threads using a recent GCC. Fixes bug 4437; bugfix on
       0.1.0.6-rc which introduced --disable-threads.
