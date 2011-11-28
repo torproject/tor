@@ -1105,6 +1105,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     }
     if (options->DisableNetwork) {
       /* Aggressively close non-controller stuff, NOW */
+      log_notice(LD_NET, "DisableNetwork is set. Tor will not make or accept "
+                 "non-control network connections. Shutting down all existing "
+                 "connections.");
       connection_mark_all_noncontrol_connections();
     }
   }
