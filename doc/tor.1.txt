@@ -125,6 +125,12 @@ Other options can be specified either on the command-line (--option
     You probably don't need to adjust this. It has no effect on Windows
     since that platform lacks getrlimit(). (Default: 1000)
 
+**DisableNetwork** **0**|**1**::
+    When this option is set, we don't listen for or accept any connections
+    other than controller connections, and we don't make any outbound
+    connections.  Controllers sometimes use this option to avoid using
+    the network until Tor is fully configured. (Default: 0)
+
 **ConstrainedSockets** **0**|**1**::
     If set, Tor will tell the kernel to attempt to shrink the buffers for all
     sockets to the size specified in **ConstrainedSockSize**. This is useful for
