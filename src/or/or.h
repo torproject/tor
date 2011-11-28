@@ -3439,6 +3439,10 @@ typedef struct {
    * issue. */
   int UserspaceIOCPBuffers;
 
+  /** If 1, we accept and launch no external network connections, except on
+   * control ports. */
+  int DisableNetwork;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

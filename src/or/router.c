@@ -780,7 +780,7 @@ check_whether_dirport_reachable(void)
   const or_options_t *options = get_options();
   return !options->DirPort ||
          options->AssumeReachable ||
-         we_are_hibernating() ||
+         net_is_disabled() ||
          can_reach_dir_port;
 }
 
@@ -806,7 +806,7 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
     return 0;
   if (authdir_mode(options)) /* always publish */
     return dir_port;
-  if (we_are_hibernating())
+  if (net_is_disabled())
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
@@ -972,6 +972,14 @@ router_perform_bandwidth_test(int num_circs, time_t now)
       }
     }
   }
+}
+
+/** Return true iff our network is in some sense disabled: either we're
+ * hibernating, entering hibernation, or */
+int
+net_is_disabled(void)
+{
+  return get_options()->DisableNetwork || we_are_hibernating();
 }
 
 /** Return true iff we believe ourselves to be an authoritative

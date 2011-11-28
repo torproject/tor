@@ -735,7 +735,6 @@ hibernate_soft_limit_reached(void)
 static void
 hibernate_begin(hibernate_state_t new_state, time_t now)
 {
-  connection_t *conn;
   const or_options_t *options = get_options();
 
   if (new_state == HIBERNATE_STATE_EXITING &&
@@ -756,15 +755,7 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
   }
 
   /* close listeners. leave control listener(s). */
-  while ((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
-         (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
-         (conn = connection_get_by_type(CONN_TYPE_AP_TRANS_LISTENER)) ||
-         (conn = connection_get_by_type(CONN_TYPE_AP_DNS_LISTENER)) ||
-         (conn = connection_get_by_type(CONN_TYPE_AP_NATD_LISTENER)) ||
-         (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
-    log_info(LD_NET,"Closing listener type %d", conn->type);
-    connection_mark_for_close(conn);
-  }
+  connection_mark_all_noncontrol_listeners();
 
   /* XXX kill intro point circs */
   /* XXX upload rendezvous service descriptors with no intro points */

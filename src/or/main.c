@@ -934,7 +934,7 @@ directory_info_has_arrived(time_t now, int from_cache)
       update_extrainfo_downloads(now);
   }
 
-  if (server_mode(options) && !we_are_hibernating() && !from_cache &&
+  if (server_mode(options) && !net_is_disabled() && !from_cache &&
       (can_complete_circuit || !any_predicted_circuits(now)))
     consider_testing_reachability(1, 1);
 }
@@ -1161,11 +1161,11 @@ run_scheduled_events(time_t now)
     if (router_rebuild_descriptor(1)<0) {
       log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
-    if (advertised_server_mode())
+    if (advertised_server_mode() & !options->DisableNetwork)
       router_upload_dir_desc_to_dirservers(0);
   }
 
-  if (time_to_try_getting_descriptors < now) {
+  if (!options->DisableNetwork && time_to_try_getting_descriptors < now) {
     update_all_descriptor_downloads(now);
     update_extrainfo_downloads(now);
     if (router_have_minimum_dir_info())
@@ -1219,7 +1219,7 @@ run_scheduled_events(time_t now)
 
   if (time_to_launch_reachability_tests < now &&
       (authdir_mode_tests_reachability(options)) &&
-       !we_are_hibernating()) {
+       !net_is_disabled()) {
     time_to_launch_reachability_tests = now + REACHABILITY_TEST_INTERVAL;
     /* try to determine reachability of the other Tor relays */
     dirserv_test_reachability(now);
@@ -1355,7 +1355,7 @@ run_scheduled_events(time_t now)
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
-  if (time_to_check_descriptor < now) {
+  if (time_to_check_descriptor < now && !options->DisableNetwork) {
     static int dirport_reachability_count = 0;
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     check_descriptor_bandwidth_changed(now);
@@ -1430,7 +1430,7 @@ run_scheduled_events(time_t now)
   connection_expire_held_open();
 
   /** 3d. And every 60 seconds, we relaunch listeners if any died. */
-  if (!we_are_hibernating() && time_to_check_listeners < now) {
+  if (!net_is_disabled() && time_to_check_listeners < now) {
     retry_all_listeners(NULL, NULL);
     time_to_check_listeners = now+60;
   }
@@ -1441,7 +1441,7 @@ run_scheduled_events(time_t now)
    *    and we make a new circ if there are no clean circuits.
    */
   have_dir_info = router_have_minimum_dir_info();
-  if (have_dir_info && !we_are_hibernating())
+  if (have_dir_info && !net_is_disabled())
     circuit_build_needed_circs(now);
 
   /* every 10 seconds, but not at the same second as other such events */
@@ -1472,7 +1472,7 @@ run_scheduled_events(time_t now)
   circuit_close_all_marked();
 
   /** 7. And upload service descriptors if necessary. */
-  if (can_complete_circuit && !we_are_hibernating()) {
+  if (can_complete_circuit && !net_is_disabled()) {
     rend_consider_services_upload(now);
     rend_consider_descriptor_republication();
   }
@@ -1489,7 +1489,8 @@ run_scheduled_events(time_t now)
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
-  if (public_server_mode(options) && time_to_check_for_correct_dns < now) {
+  if (!net_is_disabled() &&
+      public_server_mode(options) && time_to_check_for_correct_dns < now) {
     if (!time_to_check_for_correct_dns) {
       time_to_check_for_correct_dns = now + 60 + crypto_rand_int(120);
     } else {
@@ -1508,7 +1509,8 @@ run_scheduled_events(time_t now)
   }
 
   /** 11. check the port forwarding app */
-  if (time_to_check_port_forwarding < now &&
+  if (!net_is_disabled() &&
+      time_to_check_port_forwarding < now &&
       options->PortForwarding &&
       is_server) {
 #define PORT_FORWARDING_CHECK_INTERVAL 5
@@ -1520,7 +1522,7 @@ run_scheduled_events(time_t now)
   }
 
   /** 11b. check pending unconfigured managed proxies */
-  if (pt_proxies_configuration_pending())
+  if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
 
   /** 11c. validate pluggable transports configuration if we need to */
@@ -1592,7 +1594,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   control_event_stream_bandwidth_used();
 
   if (server_mode(options) &&
-      !we_are_hibernating() &&
+      !net_is_disabled() &&
       seconds_elapsed > 0 &&
       can_complete_circuit &&
       stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
@@ -1793,7 +1795,8 @@ do_hup(void)
   /* retry appropriate downloads */
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
-  update_networkstatus_downloads(time(NULL));
+  if (!options->DisableNetwork)
+    update_networkstatus_downloads(time(NULL));
 
   /* We'll retry routerstatus downloads in about 10 seconds; no need to
    * force a retry there. */

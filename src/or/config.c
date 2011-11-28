@@ -231,6 +231,7 @@ static config_var_t _option_vars[] = {
   V(CountPrivateBandwidth,       BOOL,     "0"),
   V(DataDirectory,               FILENAME, NULL),
   OBSOLETE("DebugLogFile"),
+  V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     NULL),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   V(DirListenAddress,            LINELIST, NULL),
@@ -1093,12 +1094,18 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     consider_hibernation(time(NULL));
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
-     * ports under 1024.)  We don't want to rebind if we're hibernating. */
+     * ports under 1024.)  We don't want to rebind if we're hibernating. If
+     * networking is disabled, this will close all but the control listeners,
+     * but disable those. */
     if (!we_are_hibernating()) {
       if (retry_all_listeners(replaced_listeners, new_listeners) < 0) {
         *msg = tor_strdup("Failed to bind one of the listener ports.");
         goto rollback;
       }
+    }
+    if (options->DisableNetwork) {
+      /* Aggressively close non-controller stuff, NOW */
+      connection_mark_all_noncontrol_connections();
     }
   }
 
@@ -4094,6 +4101,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       old_options->ORPort != new_options->ORPort ||
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
+      old_options->DisableNetwork != new_options->DisableNetwork ||
       old_options->_PublishServerDescriptor !=
         new_options->_PublishServerDescriptor ||
       get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
