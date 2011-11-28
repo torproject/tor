@@ -38,14 +38,12 @@ int node_get_purpose(const node_t *node);
 int node_is_me(const node_t *node);
 int node_exit_policy_rejects_all(const node_t *node);
 smartlist_t *node_get_all_orports(const node_t *node);
-void node_get_prim_addr(const node_t *node, tor_addr_t *addr_out);
-void node_get_pref_addr(const node_t *node, tor_addr_t *addr_out);
-void node_get_pref_ipv6_addr(const node_t *node, tor_addr_t *addr_out);
+void node_get_prim_orport(const node_t *node, tor_addr_port_t *addr_port_out);
+void node_get_pref_orport(const node_t *node, tor_addr_port_t *addr_port_out);
+void node_get_pref_ipv6_orport(const node_t *node,
+                               tor_addr_port_t *addr_port_out);
 uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 int node_allows_single_hop_exits(const node_t *node);
-uint16_t node_get_prim_orport(const node_t *node);
-uint16_t node_get_pref_orport(const node_t *node);
-uint16_t node_get_pref_ipv6_orport(const node_t *node);
 const char *node_get_nickname(const node_t *node);
 const char *node_get_platform(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
@@ -55,10 +53,9 @@ const smartlist_t *node_get_declared_family(const node_t *node);
 
 smartlist_t *nodelist_get_list(void);
 
-/* Temporary aliases during transition to multiple addresses.  */
-#define node_get_addr(n,a) node_get_prim_addr((n),(a))
+/* Temporary during transition to multiple addresses.  */
+void node_get_addr(const node_t *node, tor_addr_t *addr_out);
 #define node_get_addr_ipv4h(n) node_get_prim_addr_ipv4h((n))
-#define node_get_orport(n) node_get_prim_orport((n))
 
 /* XXXX These need to move out of routerlist.c */
 void nodelist_refresh_countries(void);
