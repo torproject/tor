@@ -7,6 +7,12 @@
       the user to override list options (like exit policies and
       ports to listen on) from the command line, rather than simply
       appending to the list.
+    - You can get the old (appending) command-line behavior for "list"
+      "list" options, by prefixing the option name with a "+".
+    - You can remove all the values for a "list" option from the command
+      line without adding any new ones by prefixing the option name
+      with a "/".
+
 
   o Minor bugfixes:
     - Restore behavior of overriding SocksPort, ORPort, and similar

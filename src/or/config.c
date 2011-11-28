@@ -1728,6 +1728,9 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
   int i = 1;
 
   while (i < argc) {
+    unsigned command = CONFIG_LINE_NORMAL;
+    int want_arg = 1;
+
     if (!strcmp(argv[i],"-f") ||
         !strcmp(argv[i],"--hash-password")) {
       i += 2; /* command-line option with argument. ignore them. */
@@ -1745,13 +1748,6 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       continue;
     }
 
-    if (i == argc-1) {
-      log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
-               argv[i]);
-      config_free_lines(front);
-      return -1;
-    }
-
     *new = tor_malloc_zero(sizeof(config_line_t));
     s = argv[i];
 
@@ -1760,15 +1756,33 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       s++;
     if (*s == '-')
       s++;
+    /* Figure out the command, if any. */
+    if (*s == '+') {
+      s++;
+      command = CONFIG_LINE_APPEND;
+    } else if (*s == '/') {
+      s++;
+      command = CONFIG_LINE_CLEAR;
+      /* A 'clear' command has no argument. */
+      want_arg = 0;
+    }
+
+    if (want_arg && i == argc-1) {
+      log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
+               argv[i]);
+      config_free_lines(front);
+      return -1;
+    }
 
     (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
-    (*new)->value = tor_strdup(argv[i+1]);
+    (*new)->value = want_arg ? tor_strdup(argv[i+1]) : tor_strdup("");
+    (*new)->command = command;
     (*new)->next = NULL;
     log(LOG_DEBUG, LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
         (*new)->key, (*new)->value);
 
     new = &((*new)->next);
-    i += 2;
+    i += want_arg ? 2 : 1;
   }
   *result = front;
   return 0;
@@ -1796,9 +1810,12 @@ config_line_append(config_line_t **lst,
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
- * misformatted lines. */
+ * misformatted lines.
+ *
+ * If <b>extended</b> is set, then treat keys beginning with / and with + as
+ * indicating "clear" and "append" respectively. */
 int
-config_get_lines(const char *string, config_line_t **result)
+config_get_lines(const char *string, config_line_t **result, int extended)
 {
   config_line_t *list = NULL, **next;
   char *k, *v;
@@ -1814,6 +1831,22 @@ config_get_lines(const char *string, config_line_t **result)
       return -1;
     }
     if (k && v) {
+      unsigned command = CONFIG_LINE_NORMAL;
+      if (extended) {
+        if (k[0] == '+') {
+          char *k_new = tor_strdup(k+1);
+          tor_free(k);
+          k = k_new;
+          command = CONFIG_LINE_APPEND;
+        } else if (k[0] == '/') {
+          char *k_new = tor_strdup(k+1);
+          tor_free(k);
+          k = k_new;
+          tor_free(v);
+          v = tor_strdup("");
+          command = CONFIG_LINE_CLEAR;
+        }
+      }
       /* This list can get long, so we keep a pointer to the end of it
        * rather than using config_line_append over and over and getting
        * n^2 performance. */
@@ -1821,6 +1854,7 @@ config_get_lines(const char *string, config_line_t **result)
       (*next)->key = k;
       (*next)->value = v;
       (*next)->next = NULL;
+      (*next)->command = command;
       next = &((*next)->next);
     } else {
       tor_free(k);
@@ -2140,8 +2174,9 @@ config_assign_line(const config_format_t *fmt, or_options_t *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (var->type == CONFIG_TYPE_LINELIST ||
-          var->type == CONFIG_TYPE_LINELIST_S) {
+      if ((var->type == CONFIG_TYPE_LINELIST ||
+           var->type == CONFIG_TYPE_LINELIST_S) &&
+          c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
@@ -2151,6 +2186,8 @@ config_assign_line(const config_format_t *fmt, or_options_t *options,
       }
     }
     return 0;
+  } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
+    option_reset(fmt, options, var, use_defaults);
   }
 
   if (options_seen && (var->type != CONFIG_TYPE_LINELIST &&
@@ -4454,7 +4491,7 @@ options_init_from_string(const char *cf,
   newoptions->command_arg = command_arg;
 
   /* get config lines, assign them */
-  retval = config_get_lines(cf, &cl);
+  retval = config_get_lines(cf, &cl, 1);
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;
@@ -4505,7 +4542,7 @@ options_init_from_string(const char *cf,
     newoptions->command_arg = command_arg;
 
     /* Assign all options a second time. */
-    retval = config_get_lines(cf, &cl);
+    retval = config_get_lines(cf, &cl, 1);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
       goto err;
@@ -6190,7 +6227,7 @@ or_state_load(void)
   if (contents) {
     config_line_t *lines=NULL;
     int assign_retval;
-    if (config_get_lines(contents, &lines)<0)
+    if (config_get_lines(contents, &lines, 0)<0)
       goto done;
     assign_retval = config_assign(&state_format, new_state,
                                   lines, 0, 0, &errmsg);

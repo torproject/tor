@@ -2841,6 +2841,8 @@ typedef struct port_cfg_t {
 /** Appends to previous configuration for the same option, even if we
  * would ordinary replace it. */
 #define CONFIG_LINE_APPEND 1
+/* Removes all previous configuration for an option. */
+#define CONFIG_LINE_CLEAR 2
 
 /** A linked list of lines in a config file. */
 typedef struct config_line_t {
@@ -2848,7 +2850,7 @@ typedef struct config_line_t {
   char *value;
   struct config_line_t *next;
   /** What special treatment (if any) does this line require? */
-  unsigned int command:1;
+  unsigned int command:2;
   /** If true, subsequent assignments to this linelist should replace
    * it, not extend it.  Set only on the first item in a linelist in an
    * or_options_t. */

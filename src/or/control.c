@@ -737,7 +737,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
   smartlist_free(entries);
 
-  if (config_get_lines(config, &lines) < 0) {
+  if (config_get_lines(config, &lines, 0) < 0) {
     log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
     connection_write_str_to_buf("551 Couldn't parse configuration\r\n",
                                 conn);
