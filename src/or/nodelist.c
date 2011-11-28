@@ -740,8 +740,7 @@ void
 node_get_pref_ipv6_addr(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
-    tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
-    ap_out->port = node->ri->ipv6_orport;
+    router_get_pref_ipv6_orport(node->ri, ap_out);
   } else if (node->rs) {
     /* No IPv6 in routerstatus_t yet.  XXXprop186 ok for private
        bridges but needs fixing */

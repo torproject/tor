@@ -2132,16 +2132,6 @@ router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
   ap_out->port = router->or_port;
 }
 
-/** Copy the alternative, presumably IPv6, OR port (IP address and TCP
- * port) for <b>router</b> into *<b>ap_out</b>. */
-void
-router_get_alt_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
-{
-  tor_assert(ap_out != NULL);
-  tor_addr_copy(&ap_out->addr, &router->ipv6_addr);
-  ap_out->port = router->ipv6_orport;
-}
-
 /** Return 1 if we prefer the IPv6 address and OR TCP port of
  * <b>router</b>, else 0.
  *
@@ -2162,9 +2152,19 @@ void
 router_get_pref_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 {
   if (router_ipv6_preferred(router))
-    router_get_alt_orport(router, ap_out);
+    router_get_pref_ipv6_orport(router, ap_out);
   else
     router_get_prim_orport(router, ap_out);
+}
+
+/** Copy the preferred IPv6 OR port (IP address and TCP port) for
+ * <b>router</b> into *<b>ap_out</b>. */
+void
+router_get_pref_ipv6_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
+{
+  tor_assert(ap_out != NULL);
+  tor_addr_copy(&ap_out->addr, &router->ipv6_addr);
+  ap_out->port = router->ipv6_orport;
 }
 
 /** Load the contents of <b>filename</b>, find the last line starting with

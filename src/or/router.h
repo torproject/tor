@@ -87,10 +87,10 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 void router_get_prim_orport(const routerinfo_t *router,
                             tor_addr_port_t *addr_port_out);
-void router_get_alt_orport(const routerinfo_t *router,
-                           tor_addr_port_t *addr_port_out);
 void router_get_pref_orport(const routerinfo_t *router,
                             tor_addr_port_t *addr_port_out);
+void router_get_pref_ipv6_orport(const routerinfo_t *router,
+                                 tor_addr_port_t *addr_port_out);
 int router_ipv6_preferred(const routerinfo_t *router);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_env_t *ident_key);
