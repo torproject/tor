@@ -2122,37 +2122,33 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 }
 
 
-/** Copy the primary, IPv4, address and port for <b>router</b> into
-    *<b>addr_out</b> and *<b>port_out</b>. */
+/** Copy the primary (IPv4) OR port (IP address and TCP port) for
+ * <b>router</b> into *<b>ap_out</b>. */
 void
-router_get_prim_addr_port(const routerinfo_t *router, tor_addr_t *addr_out,
-			  uint16_t *port_out)
+router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 {
-  if (addr_out != NULL)
-    tor_addr_from_ipv4h(addr_out, router->addr);
-  if (port_out != NULL)
-    *port_out = router->or_port;
+  tor_assert(ap_out != NULL);
+  tor_addr_from_ipv4h(&ap_out->addr, router->addr);
+  ap_out->port = router->or_port;
 }
 
-/** Copy the alternative, presumably IPv6, address and port for
-    <b>router</b> into *<b>addr_out</b> and *<b>port_out</b>. */
+/** Copy the alternative, presumably IPv6, OR port (IP address and TCP
+ * port) for <b>router</b> into *<b>ap_out</b>. */
 void
-router_get_alt_addr_port(const routerinfo_t *router,
-			 tor_addr_t *addr_out,
-			 uint16_t *port_out)
+router_get_alt_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 {
-  if (addr_out != NULL)
-    tor_addr_copy(addr_out, &router->ipv6_addr);
-  if (port_out != NULL)
-    *port_out = router->ipv6_orport;
+  tor_assert(ap_out != NULL);
+  tor_addr_copy(&ap_out->addr, &router->ipv6_addr);
+  ap_out->port = router->ipv6_orport;
 }
 
-/** Return 1 if we prefer the IPv6 address of <b>router</b>, else 0.
-
-    We prefer the IPv6 address if the router has one and
-    i) the routerinfo_t says so
-    or
-    ii) the router has no IPv4 address.  */
+/** Return 1 if we prefer the IPv6 address and OR TCP port of
+ * <b>router</b>, else 0.
+ *
+ *  We prefer the IPv6 address if the router has one and
+ *  i) the routerinfo_t says so
+ *  or
+ *  ii) the router has no IPv4 address.  */
 int
 router_ipv6_preferred(const routerinfo_t *router)
 {
@@ -2160,17 +2156,15 @@ router_ipv6_preferred(const routerinfo_t *router)
 	  && (router->ipv6_preferred || router->addr == 0));
 }
 
-/** Copy the preferred IP address and port for <b>router</b> into
-    *<b>addr_out</b> and *<b>port_out</b> .  */
+/** Copy the preferred OR port (IP address and TCP port) for
+ * <b>router</b> into *<b>addr_out</b>.  */
 void
-router_get_pref_addr_port(const routerinfo_t *router,
-			  tor_addr_t *addr_out,
-			  uint16_t *port_out)
+router_get_pref_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 {
   if (router_ipv6_preferred(router))
-    router_get_alt_addr_port(router, addr_out, port_out);
+    router_get_alt_orport(router, ap_out);
   else
-    router_get_prim_addr_port(router, addr_out, port_out);
+    router_get_prim_orport(router, ap_out);
 }
 
 /** Load the contents of <b>filename</b>, find the last line starting with

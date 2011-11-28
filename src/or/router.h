@@ -85,12 +85,12 @@ int router_pick_published_address(const or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
-void router_get_prim_addr_port(const routerinfo_t *router, tor_addr_t *addr_out,
-			       uint16_t *port_out);
-void router_get_alt_addr_port(const routerinfo_t *router, tor_addr_t *addr_out,
-			      uint16_t *port_out);
-void router_get_pref_addr_port(const routerinfo_t *router, tor_addr_t *addr_out,
-			       uint16_t *port_out);
+void router_get_prim_orport(const routerinfo_t *router,
+                            tor_addr_port_t *addr_port_out);
+void router_get_alt_orport(const routerinfo_t *router,
+                           tor_addr_port_t *addr_port_out);
+void router_get_pref_orport(const routerinfo_t *router,
+                            tor_addr_port_t *addr_port_out);
 int router_ipv6_preferred(const routerinfo_t *router);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_env_t *ident_key);

@@ -688,7 +688,7 @@ void
 node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
-    router_get_prim_addr_port(node->ri, &ap_out->addr, &ap_out->port);
+    router_get_prim_orport(node->ri, ap_out);
   }
   else if (node->rs) {
     tor_addr_from_ipv4h(&ap_out->addr, node->rs->addr);
@@ -725,7 +725,7 @@ void
 node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
-    router_get_pref_addr_port(node->ri, &ap_out->addr, &ap_out->port);
+    router_get_pref_orport(node->ri, ap_out);
   } else if (node->rs) {
     /* No IPv6 in routerstatus_t yet.  XXXprop186 ok for private
        bridges but needs fixing */
@@ -737,7 +737,7 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 /** Copy the preferred IPv6 OR port (address and TCP port) for
  * <b>node</b> into *<b>ap_out</b>. */
 void
-node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
+node_get_pref_ipv6_addr(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);

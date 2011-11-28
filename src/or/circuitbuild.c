@@ -3332,16 +3332,15 @@ extend_info_alloc(const char *nickname, const char *digest,
 extend_info_t *
 extend_info_from_router(const routerinfo_t *r, int for_direct_connect)
 {
-  tor_addr_t addr;
-  uint16_t port;
+  tor_addr_port_t ap;
   tor_assert(r);
 
   if (for_direct_connect)
-    router_get_pref_addr_port(r, &addr, &port);
+    router_get_pref_orport(r, &ap);
   else
-    router_get_prim_addr_port(r, &addr, &port);
+    router_get_prim_orport(r, &ap);
   return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, &addr, port);
+                           r->onion_pkey, &ap.addr, ap.port);
 }
 
 /** Allocate and return a new extend_info that can be used to build a
@@ -4855,11 +4854,10 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
 static bridge_info_t *
 get_configured_bridge_by_routerinfo(const routerinfo_t *ri)
 {
-  tor_addr_t addr;
-  uint16_t port;
+  tor_addr_port_t ap;
 
-  router_get_pref_addr_port(ri, &addr, &port);
-  return get_configured_bridge_by_addr_port_digest(&addr, port,
+  router_get_pref_orport(ri, &ap);
+  return get_configured_bridge_by_addr_port_digest(&ap.addr, ap.port,
 					        ri->cache_info.identity_digest);
 }
 
