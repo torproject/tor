@@ -1812,6 +1812,9 @@ crypto_hmac_sha256(char *hmac_out,
 
 /* DH */
 
+/** Our DH 'g' parameter */
+#define DH_GENERATOR 2
+
 /** Shared P parameter for our circuit-crypto DH key exchanges. */
 static BIGNUM *dh_param_p = NULL;
 /** Shared P parameter for our TLS DH key exchanges. */
@@ -1819,49 +1822,303 @@ static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
+/** Generate and return a reasonable and safe DH parameter p. */
+static BIGNUM *
+crypto_generate_dynamic_dh_modulus(void)
+{
+  BIGNUM *dynamic_dh_modulus;
+  DH *dh_parameters;
+  int r, dh_codes;
+  char *s;
+
+  dynamic_dh_modulus = BN_new();
+  tor_assert(dynamic_dh_modulus);
+
+  dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL);
+  tor_assert(dh_parameters);
+
+  r = DH_check(dh_parameters, &dh_codes);
+  tor_assert(r && !dh_codes);
+
+  BN_copy(dynamic_dh_modulus, dh_parameters->p);
+  tor_assert(dynamic_dh_modulus);
+
+  DH_free(dh_parameters);
+
+  { /* log the dynamic DH modulus: */
+    s = BN_bn2hex(dynamic_dh_modulus);
+    tor_assert(s);
+    log_info(LD_OR, "Dynamic DH modulus generated: [%s]", s);
+    OPENSSL_free(s);
+  }
+
+  return dynamic_dh_modulus;
+}
+
+/** Store our dynamic DH modulus (and its group parameters) to
+    <b>fname</b> for future use. */
+static int
+crypto_store_dynamic_dh_modulus(const char *fname)
+{
+  int len, new_len;
+  DH *dh = NULL;
+  unsigned char *dh_string_repr = NULL, *cp = NULL;
+  char *base64_encoded_dh = NULL;
+  int retval = -1;
+
+  tor_assert(fname);
+
+  if (!dh_param_p_tls) {
+    log_info(LD_CRYPTO, "Tried to store a DH modulus that does not exist.");
+    goto done;
+  }
+
+  if (!(dh = DH_new()))
+    goto done;
+  if (!(dh->p = BN_dup(dh_param_p_tls)))
+    goto done;
+  if (!(dh->g = BN_new()))
+    goto done;
+  if (!BN_set_word(dh->g, DH_GENERATOR))
+    goto done;
+
+  len = i2d_DHparams(dh, NULL);
+  if (len < 0) {
+    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (1).");
+    goto done;
+  }
+
+  cp = dh_string_repr = tor_malloc_zero(len+1);
+  len = i2d_DHparams(dh, &cp);
+  if ((len < 0) || ((cp - dh_string_repr) != len)) {
+    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (2).");
+    goto done;
+  }
+
+  base64_encoded_dh = tor_malloc_zero(len * 2); /* should be enough */
+  new_len = base64_encode(base64_encoded_dh, len * 2,
+                          (char *)dh_string_repr, len);
+  if (new_len < 0) {
+    log_warn(LD_CRYPTO, "Error occured while base64-encoding DH modulus.");
+    goto done;
+  }
+
+  if (write_bytes_to_new_file(fname, base64_encoded_dh, new_len, 0) < 0) {
+    log_info(LD_CRYPTO, "'%s' was already occupied.", fname);
+    goto done;
+  }
+
+  retval = 0;
+
+ done:
+  if (dh)
+    DH_free(dh);
+  tor_free(dh_string_repr);
+  tor_free(base64_encoded_dh);
+
+  return retval;
+}
+
+/** Return the dynamic DH modulus stored in <b>fname</b>. If there is no
+    dynamic DH modulus stored in <b>fname</b>, return NULL. */
+static BIGNUM *
+crypto_get_stored_dynamic_dh_modulus(const char *fname)
+{
+  int retval;
+  char *contents = NULL;
+  int dh_codes;
+  char *fname_new = NULL;
+  DH *stored_dh = NULL;
+  BIGNUM *dynamic_dh_modulus = NULL;
+  int length = 0;
+  unsigned char *base64_decoded_dh = NULL;
+  const unsigned char *cp = NULL;
+
+  tor_assert(fname);
+
+  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
+  if (!contents) {
+    log_info(LD_CRYPTO, "Could not open file '%s'", fname);
+    goto done; /*usually means that ENOENT. don't try to move file to broken.*/
+  }
+
+  /* 'fname' contains the DH parameters stored in base64-ed DER
+     format. We are only interested in the DH modulus. */
+
+  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents));
+  length = base64_decode((char *)base64_decoded_dh, strlen(contents),
+                         contents, strlen(contents));
+  if (length < 0) {
+    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (base64).");
+    goto err;
+  }
+
+  stored_dh = d2i_DHparams(NULL, &cp, length);
+  if ((!stored_dh) || (cp - base64_decoded_dh != length)) {
+    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (d2i).");
+    goto err;
+  }
+
+  { /* check the cryptographic qualities of the stored dynamic DH modulus: */
+    retval = DH_check(stored_dh, &dh_codes);
+    if (!retval || dh_codes) {
+      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is not a safe prime.");
+      goto err;
+    }
+
+    retval = DH_size(stored_dh);
+    if (retval < DH_BYTES) {
+      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is smaller "
+               "than '%d' bits.", DH_BYTES*8);
+      goto err;
+    }
+
+    if (!BN_is_word(stored_dh->g, 2)) {
+      log_warn(LD_CRYPTO, "Stored dynamic DH parameters do not use '2' "
+               "as the group generator.");
+      goto err;
+    }
+  }
+
+  { /* log the dynamic DH modulus: */
+    char *s = BN_bn2hex(stored_dh->p);
+    tor_assert(s);
+    log_info(LD_OR, "Found stored dynamic DH modulus: [%s]", s);
+    OPENSSL_free(s);
+  }
+
+  goto done;
+
+ err:
+
+  { /* move broken prime to $filename.broken */
+    fname_new = tor_malloc(strlen(fname) + 8);
+
+    /* no can do if these functions return error */
+    strlcpy(fname_new, fname, strlen(fname) + 8);
+    strlcat(fname_new, ".broken", strlen(fname) + 8);
+
+    log_warn(LD_CRYPTO, "Moving broken dynamic DH prime to '%s'.", fname_new);
+
+    if (replace_file(fname, fname_new))
+      log_notice(LD_CRYPTO, "Error while moving '%s' to '%s'.",
+                 fname, fname_new);
+
+    tor_free(fname_new);
+  }
+
+  if (stored_dh) {
+    DH_free(stored_dh);
+    stored_dh = NULL;
+  }
+
+ done:
+  tor_free(contents);
+  tor_free(base64_decoded_dh);
+
+  if (stored_dh) {
+    dynamic_dh_modulus = BN_dup(stored_dh->p);
+    DH_free(stored_dh);
+  }
+
+  return dynamic_dh_modulus;
+}
+
+/** Set the global TLS Diffie-Hellman modulus.
+ * If <b>dynamic_dh_modulus_fname</b> is set, try to read a dynamic DH modulus
+ * off it and use it as the DH modulus. If that's not possible,
+ * generate a new dynamic DH modulus.
+ * If <b>dynamic_dh_modulus_fname</b> is NULL, use the Apache mod_ssl DH
+ * modulus. */
+void
+crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
+{
+  BIGNUM *tls_prime = NULL;
+  int store_dh_prime_afterwards = 0;
+  int r;
+
+  /* If the space is occupied, free the previous TLS DH prime */
+  if (dh_param_p_tls) {
+    BN_free(dh_param_p_tls);
+    dh_param_p_tls = NULL;
+  }
+
+  if (dynamic_dh_modulus_fname) { /* use dynamic DH modulus: */
+    log_info(LD_OR, "Using stored dynamic DH modulus.");
+    tls_prime = crypto_get_stored_dynamic_dh_modulus(dynamic_dh_modulus_fname);
+
+    if (!tls_prime) {
+      log_notice(LD_OR, "Generating fresh dynamic DH modulus. "
+                 "This might take a while...");
+      tls_prime = crypto_generate_dynamic_dh_modulus();
+
+      store_dh_prime_afterwards++;
+    }
+  } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
+    tls_prime = BN_new();
+    tor_assert(tls_prime);
+
+    /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
+     * modules/ssl/ssl_engine_dh.c; Apache also uses a generator of 2 with this
+     * prime.
+     */
+    r =BN_hex2bn(&tls_prime,
+                 "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
+                 "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
+                 "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
+                 "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
+                 "B0E7393E0F24218EB3");
+    tor_assert(r);
+  }
+
+  tor_assert(tls_prime);
+
+  dh_param_p_tls = tls_prime;
+
+  if (store_dh_prime_afterwards)
+    /* save the new dynamic DH modulus to disk. */
+    if (crypto_store_dynamic_dh_modulus(dynamic_dh_modulus_fname)) {
+      log_notice(LD_CRYPTO, "Failed while storing dynamic DH modulus. "
+                 "Make sure your data directory is sane.");
+    }
+}
+
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void
 init_dh_param(void)
 {
-  BIGNUM *p, *p2, *g;
+  BIGNUM *circuit_dh_prime, *generator;
   int r;
-  if (dh_param_p && dh_param_g && dh_param_p_tls)
+  if (dh_param_p && dh_param_g)
     return;
 
-  p = BN_new();
-  p2 = BN_new();
-  g = BN_new();
-  tor_assert(p);
-  tor_assert(p2);
-  tor_assert(g);
+  circuit_dh_prime = BN_new();
+  generator = BN_new();
+  tor_assert(circuit_dh_prime && generator);
+
+  /* Set our generator for all DH parameters */
+  r = BN_set_word(generator, DH_GENERATOR);
+  tor_assert(r);
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
      supposedly it equals:
         2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 }.
   */
-  r = BN_hex2bn(&p,
+  r = BN_hex2bn(&circuit_dh_prime,
                 "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
                 "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
                 "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
                 "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
                 "49286651ECE65381FFFFFFFFFFFFFFFF");
   tor_assert(r);
-  /* This is the 1024-bit safe prime that Apache uses for its DH stuff; see
-   * modules/ssl/ssl_engine_dh.c */
-  r = BN_hex2bn(&p2,
-                  "D67DE440CBBBDC1936D693D34AFD0AD50C84D239A45F520BB88174CB98"
-                "BCE951849F912E639C72FB13B4B4D7177E16D55AC179BA420B2A29FE324A"
-                "467A635E81FF5901377BEDDCFD33168A461AAD3B72DAE8860078045B07A7"
-                "DBCA7874087D1510EA9FCC9DDD330507DD62DB88AEAA747DE0F4D6E2BD68"
-                "B0E7393E0F24218EB3");
-  tor_assert(r);
 
-  r = BN_set_word(g, 2);
-  tor_assert(r);
-  dh_param_p = p;
-  dh_param_p_tls = p2;
-  dh_param_g = g;
+  /* Set the new values as the global DH parameters. */
+  dh_param_p = circuit_dh_prime;
+  dh_param_g = generator;
+
+  /* Should be already set by config.c. */
+  tor_assert(dh_param_p_tls);
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman

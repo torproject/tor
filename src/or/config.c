@@ -249,6 +249,7 @@ static config_var_t _option_vars[] = {
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
+  V(DynamicDHGroups,             BOOL,     "1"),
   V(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -1285,6 +1286,24 @@ get_effective_bwburst(const or_options_t *options)
   return (uint32_t)bw;
 }
 
+/** Return True if any changes from <b>old_options</b> to
+ * <b>new_options</b> needs us to refresh our TLS context. */
+static int
+options_transition_requires_fresh_tls_context(const or_options_t *old_options,
+                                              const or_options_t *new_options)
+{
+  tor_assert(new_options);
+
+  if (!old_options)
+    return 0;
+
+  if ((old_options->DynamicDHGroups != new_options->DynamicDHGroups)) {
+    return 1;
+  }
+
+  return 0;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -1388,6 +1407,29 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
+  /* If needed, generate a new TLS DH prime according to the current torrc. */
+  if (server_mode(options)) {
+    if (!old_options) {
+      if (options->DynamicDHGroups) {
+        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
+        crypto_set_tls_dh_prime(fname);
+        tor_free(fname);
+      } else {
+        crypto_set_tls_dh_prime(NULL);
+      }
+    } else {
+      if (options->DynamicDHGroups && !old_options->DynamicDHGroups) {
+        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
+        crypto_set_tls_dh_prime(fname);
+        tor_free(fname);
+      } else if (!options->DynamicDHGroups && old_options->DynamicDHGroups) {
+        crypto_set_tls_dh_prime(NULL);
+      }
+    }
+  } else { /* clients don't need a dynamic DH prime. */
+    crypto_set_tls_dh_prime(NULL);
+  }
+
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||
@@ -1395,6 +1437,13 @@ options_act(const or_options_t *old_options)
                                        !old_options->V3AuthoritativeDir))) {
     if (init_keys() < 0) {
       log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
+  } else if (old_options &&
+             options_transition_requires_fresh_tls_context(old_options,
+                                                           options)) {
+    if (router_initialize_tls_context() < 0) {
+      log_warn(LD_BUG,"Error initializing TLS context.");
       return -1;
     }
   }

@@ -91,6 +91,8 @@ int crypto_global_cleanup(void);
 crypto_pk_env_t *crypto_new_pk_env(void);
 void crypto_free_pk_env(crypto_pk_env_t *env);
 
+void crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname);
+
 /* convenience function: wraps crypto_create_crypto_env, set_key, and init. */
 crypto_cipher_env_t *crypto_create_init_cipher(const char *key,
                                                int encrypt_mode);

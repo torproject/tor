@@ -1,0 +1,6 @@
+  o Privacy/anonymity features (bridge detection):
+    - Introduce a new config option 'DynamicDHGroups', enabled by
+      default, which provides each bridge with a unique prime DH
+      modulus to be used during SSL handshakes. This option attempts
+      to help against censors using the Apache DH modulus as a static
+      identifier for bridges.
