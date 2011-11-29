@@ -5183,6 +5183,20 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
        protocol that the bridge address indicates.  Last bridge
        descriptor handled wins.  */
     ri->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
+
+    /* XXXipv6 we lack support for falling back to another address for
+       the same relay, warn the user */
+    if (!tor_addr_is_null(&ri->ipv6_addr))
+    {
+      tor_addr_port_t ap;
+      router_get_pref_orport(ri, &ap);
+      log_notice(LD_CONFIG,
+                 "Bridge '%s' has both an IPv4 and an IPv6 address.  "
+                 "Will prefer using its %s address (%s:%d).",
+                 ri->nickname,
+                 ri->ipv6_preferred ? "IPv6" : "IPv4",
+                 fmt_addr(&ap.addr), ap.port);
+    }
   }
   if (node->rs) {
     routerstatus_t *rs = node->rs;
