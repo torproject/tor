@@ -4858,7 +4858,7 @@ get_configured_bridge_by_routerinfo(const routerinfo_t *ri)
 
   router_get_pref_orport(ri, &ap);
   return get_configured_bridge_by_addr_port_digest(&ap.addr, ap.port,
-					        ri->cache_info.identity_digest);
+                                               ri->cache_info.identity_digest);
 }
 
 /** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
@@ -4872,7 +4872,7 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 int
 node_is_a_configured_bridge(const node_t *node)
 {
-  int retval = 0;		/* Negative.  */
+  int retval = 0;               /* Negative.  */
   smartlist_t *orports = NULL;
 
   if (!node)
@@ -4884,13 +4884,13 @@ node_is_a_configured_bridge(const node_t *node)
 
   SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, orport) {
     if (get_configured_bridge_by_addr_port_digest(&orport->addr, orport->port,
-						  node->identity) != NULL) {
+                                                  node->identity) != NULL) {
       retval = 1;
       goto out;
     }
   } SMARTLIST_FOREACH_END(orport);
 
-out:
+ out:
   if (orports != NULL) {
     SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
     smartlist_free(orports);

@@ -2121,7 +2121,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return (int)written+1;
 }
 
-
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for
  * <b>router</b> into *<b>ap_out</b>. */
 void
@@ -2143,7 +2142,7 @@ int
 router_ipv6_preferred(const routerinfo_t *router)
 {
   return (!tor_addr_is_null(&router->ipv6_addr)
-	  && (router->ipv6_preferred || router->addr == 0));
+          && (router->ipv6_preferred || router->addr == 0));
 }
 
 /** Copy the preferred OR port (IP address and TCP port) for
@@ -2160,7 +2159,8 @@ router_get_pref_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
 /** Copy the preferred IPv6 OR port (IP address and TCP port) for
  * <b>router</b> into *<b>ap_out</b>. */
 void
-router_get_pref_ipv6_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
+router_get_pref_ipv6_orport(const routerinfo_t *router,
+                            tor_addr_port_t *ap_out)
 {
   tor_assert(ap_out != NULL);
   tor_addr_copy(&ap_out->addr, &router->ipv6_addr);

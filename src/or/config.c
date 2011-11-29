@@ -5918,11 +5918,11 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
     if (cfg->type == listener_type &&
         !cfg->no_advertise &&
         (tor_addr_family(&cfg->addr) == address_family ||
-	 tor_addr_family(&cfg->addr) == AF_UNSPEC)) {
+         tor_addr_family(&cfg->addr) == AF_UNSPEC)) {
       if (tor_addr_family(&cfg->addr) != AF_UNSPEC ||
-	  (address_family == AF_INET && !cfg->ipv6_only) ||
-	  (address_family == AF_INET6 && !cfg->ipv4_only)) {
-	return cfg->port;
+          (address_family == AF_INET && !cfg->ipv6_only) ||
+          (address_family == AF_INET6 && !cfg->ipv4_only)) {
+        return cfg->port;
       }
     }
   } SMARTLIST_FOREACH_END(cfg);
