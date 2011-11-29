@@ -661,8 +661,12 @@ static const config_format_t state_format = {
 
 /** Command-line and config-file options. */
 static or_options_t *global_options = NULL;
+/** DOCDOC */
+static or_options_t *global_default_options = NULL;
 /** Name of most recently read torrc file. */
 static char *torrc_fname = NULL;
+/** DOCDOC */
+static char *torrc_defaults_fname;
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
 /** Configuration Options set by command line. */
@@ -806,6 +810,8 @@ config_free_all(void)
 {
   or_options_free(global_options);
   global_options = NULL;
+  or_options_free(global_default_options);
+  global_default_options = NULL;
 
   config_free(&state_format, global_state);
   global_state = NULL;
@@ -821,6 +827,7 @@ config_free_all(void)
   }
 
   tor_free(torrc_fname);
+  tor_free(torrc_defaults_fname);
   tor_free(_version);
   tor_free(global_dirfrontpagecontents);
 }
@@ -1728,7 +1735,11 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
   int i = 1;
 
   while (i < argc) {
+    unsigned command = CONFIG_LINE_NORMAL;
+    int want_arg = 1;
+
     if (!strcmp(argv[i],"-f") ||
+        !strcmp(argv[i],"--defaults-torrc") ||
         !strcmp(argv[i],"--hash-password")) {
       i += 2; /* command-line option with argument. ignore them. */
       continue;
@@ -1745,13 +1756,6 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       continue;
     }
 
-    if (i == argc-1) {
-      log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
-               argv[i]);
-      config_free_lines(front);
-      return -1;
-    }
-
     *new = tor_malloc_zero(sizeof(config_line_t));
     s = argv[i];
 
@@ -1760,15 +1764,33 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       s++;
     if (*s == '-')
       s++;
+    /* Figure out the command, if any. */
+    if (*s == '+') {
+      s++;
+      command = CONFIG_LINE_APPEND;
+    } else if (*s == '/') {
+      s++;
+      command = CONFIG_LINE_CLEAR;
+      /* A 'clear' command has no argument. */
+      want_arg = 0;
+    }
+
+    if (want_arg && i == argc-1) {
+      log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
+               argv[i]);
+      config_free_lines(front);
+      return -1;
+    }
 
     (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
-    (*new)->value = tor_strdup(argv[i+1]);
+    (*new)->value = want_arg ? tor_strdup(argv[i+1]) : tor_strdup("");
+    (*new)->command = command;
     (*new)->next = NULL;
     log(LOG_DEBUG, LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
         (*new)->key, (*new)->value);
 
     new = &((*new)->next);
-    i += 2;
+    i += want_arg ? 2 : 1;
   }
   *result = front;
   return 0;
@@ -1783,7 +1805,7 @@ config_line_append(config_line_t **lst,
 {
   config_line_t *newline;
 
-  newline = tor_malloc(sizeof(config_line_t));
+  newline = tor_malloc_zero(sizeof(config_line_t));
   newline->key = tor_strdup(key);
   newline->value = tor_strdup(val);
   newline->next = NULL;
@@ -1796,9 +1818,12 @@ config_line_append(config_line_t **lst,
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
- * misformatted lines. */
+ * misformatted lines.
+ *
+ * If <b>extended</b> is set, then treat keys beginning with / and with + as
+ * indicating "clear" and "append" respectively. */
 int
-config_get_lines(const char *string, config_line_t **result)
+config_get_lines(const char *string, config_line_t **result, int extended)
 {
   config_line_t *list = NULL, **next;
   char *k, *v;
@@ -1814,13 +1839,30 @@ config_get_lines(const char *string, config_line_t **result)
       return -1;
     }
     if (k && v) {
+      unsigned command = CONFIG_LINE_NORMAL;
+      if (extended) {
+        if (k[0] == '+') {
+          char *k_new = tor_strdup(k+1);
+          tor_free(k);
+          k = k_new;
+          command = CONFIG_LINE_APPEND;
+        } else if (k[0] == '/') {
+          char *k_new = tor_strdup(k+1);
+          tor_free(k);
+          k = k_new;
+          tor_free(v);
+          v = tor_strdup("");
+          command = CONFIG_LINE_CLEAR;
+        }
+      }
       /* This list can get long, so we keep a pointer to the end of it
        * rather than using config_line_append over and over and getting
        * n^2 performance. */
-      *next = tor_malloc(sizeof(config_line_t));
+      *next = tor_malloc_zero(sizeof(config_line_t));
       (*next)->key = k;
       (*next)->value = v;
       (*next)->next = NULL;
+      (*next)->command = command;
       next = &((*next)->next);
     } else {
       tor_free(k);
@@ -2048,7 +2090,19 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_LINELIST:
   case CONFIG_TYPE_LINELIST_S:
-    config_line_append((config_line_t**)lvalue, c->key, c->value);
+    {
+      config_line_t *lastval = *(config_line_t**)lvalue;
+      if (lastval && lastval->fragile) {
+        if (c->command != CONFIG_LINE_APPEND) {
+          config_free_lines(lastval);
+          *(config_line_t**)lvalue = NULL;
+        } else {
+          lastval->fragile = 0;
+        }
+      }
+
+      config_line_append((config_line_t**)lvalue, c->key, c->value);
+    }
     break;
   case CONFIG_TYPE_OBSOLETE:
     log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
@@ -2062,6 +2116,28 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
     break;
   }
   return 0;
+}
+
+/** Mark every linelist in <b>options<b> "fragile", so that fresh assignments
+ * to it will replace old ones. */
+static void
+config_mark_lists_fragile(const config_format_t *fmt, or_options_t *options)
+{
+  int i;
+  tor_assert(fmt);
+  tor_assert(options);
+
+  for (i = 0; fmt->vars[i].name; ++i) {
+    const config_var_t *var = &fmt->vars[i];
+    config_line_t *list;
+    if (var->type != CONFIG_TYPE_LINELIST &&
+        var->type != CONFIG_TYPE_LINELIST_V)
+      continue;
+
+    list = *(config_line_t **)STRUCT_VAR_P(options, var->var_offset);
+    if (list)
+      list->fragile = 1;
+  }
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
@@ -2106,8 +2182,9 @@ config_assign_line(const config_format_t *fmt, or_options_t *options,
   if (!strlen(c->value)) {
     /* reset or clear it, then return */
     if (!clear_first) {
-      if (var->type == CONFIG_TYPE_LINELIST ||
-          var->type == CONFIG_TYPE_LINELIST_S) {
+      if ((var->type == CONFIG_TYPE_LINELIST ||
+           var->type == CONFIG_TYPE_LINELIST_S) &&
+          c->command != CONFIG_LINE_CLEAR) {
         /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
@@ -2117,6 +2194,8 @@ config_assign_line(const config_format_t *fmt, or_options_t *options,
       }
     }
     return 0;
+  } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
+    option_reset(fmt, options, var, use_defaults);
   }
 
   if (options_seen && (var->type != CONFIG_TYPE_LINELIST &&
@@ -2211,7 +2290,7 @@ config_lines_dup(const config_line_t *inp)
   config_line_t *result = NULL;
   config_line_t **next_out = &result;
   while (inp) {
-    *next_out = tor_malloc(sizeof(config_line_t));
+    *next_out = tor_malloc_zero(sizeof(config_line_t));
     (*next_out)->key = tor_strdup(inp->key);
     (*next_out)->value = tor_strdup(inp->value);
     inp = inp->next;
@@ -2448,6 +2527,12 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
     list = list->next;
   }
   bitarray_free(options_seen);
+
+  /** Now we're done assigning a group of options to the configuration.
+   * Subsequent group assignments should _replace_ linelists, not extend
+   * them. */
+  config_mark_lists_fragile(fmt, options);
+
   return 0;
 }
 
@@ -2943,24 +3028,30 @@ config_init(const config_format_t *fmt, void *options)
  * Else, if comment_defaults, write default values as comments.
  */
 static char *
-config_dump(const config_format_t *fmt, const void *options, int minimal,
+config_dump(const config_format_t *fmt, const void *default_options,
+            const void *options, int minimal,
             int comment_defaults)
 {
   smartlist_t *elements;
-  or_options_t *defaults;
+  const or_options_t *defaults = default_options;
+  void *defaults_tmp = NULL;
   config_line_t *line, *assigned;
   char *result;
   int i;
   char *msg = NULL;
 
-  defaults = config_alloc(fmt);
-  config_init(fmt, defaults);
+  if (defaults == NULL) {
+    defaults = defaults_tmp = config_alloc(fmt);
+    config_init(fmt, defaults_tmp);
+  }
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
-  if (fmt->validate_fn(NULL,defaults, 1, &msg) < 0) {
-    log_err(LD_BUG, "Failed to validate default config.");
-    tor_free(msg);
-    tor_assert(0);
+  if (default_options == NULL) {
+    if (fmt->validate_fn(NULL, defaults_tmp, 1, &msg) < 0) {
+      log_err(LD_BUG, "Failed to validate default config.");
+      tor_free(msg);
+      tor_assert(0);
+    }
   }
 
   elements = smartlist_create();
@@ -3002,7 +3093,8 @@ config_dump(const config_format_t *fmt, const void *options, int minimal,
   result = smartlist_join_strings(elements, "", 0, NULL);
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
-  config_free(fmt, defaults);
+  if (defaults_tmp)
+    config_free(fmt, defaults_tmp);
   return result;
 }
 
@@ -3013,7 +3105,8 @@ config_dump(const config_format_t *fmt, const void *options, int minimal,
 char *
 options_dump(const or_options_t *options, int minimal)
 {
-  return config_dump(&options_format, options, minimal, 0);
+  return config_dump(&options_format, global_default_options,
+                     options, minimal, 0);
 }
 
 /** Return 0 if every element of sl is a string holding a decimal
@@ -4167,17 +4260,25 @@ get_windows_conf_root(void)
 }
 #endif
 
-/** Return the default location for our torrc file. */
+/** Return the default location for our torrc file.
+ * DOCDOC defaults_file */
 static const char *
-get_default_conf_file(void)
+get_default_conf_file(int defaults_file)
 {
 #ifdef MS_WINDOWS
-  static char path[MAX_PATH+1];
-  strlcpy(path, get_windows_conf_root(), MAX_PATH);
-  strlcat(path,"\\torrc",MAX_PATH);
-  return path;
+  if (defaults_file) {
+    static char defaults_path[MAX_PATH+1];
+    tor_snprintf(defaults_path, MAX_PATH, "%s\\torrc-defaults",
+                 get_windows_conf_root());
+    return defaults_path;
+  } else {
+    static char path[MAX_PATH+1];
+    tor_snprintf(path, MAX_PATH, "%s\\torrc",
+                 get_windows_conf_root());
+    return path;
+  }
 #else
-  return (CONFDIR "/torrc");
+  return defaults_file ? CONFDIR "/torrc-defaults" : CONFDIR "/torrc";
 #endif
 }
 
@@ -4210,37 +4311,46 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   return r;
 }
 
-/** Learn config file name from command line arguments, or use the default */
+/** Learn config file name from command line arguments, or use the default,
+ * DOCDOC defaults_file */
 static char *
 find_torrc_filename(int argc, char **argv,
+                    int defaults_file,
                     int *using_default_torrc, int *ignore_missing_torrc)
 {
   char *fname=NULL;
   int i;
+  const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
+  const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
+
+  if (defaults_file)
+    *ignore_missing_torrc = 1;
 
   for (i = 1; i < argc; ++i) {
-    if (i < argc-1 && !strcmp(argv[i],"-f")) {
+    if (i < argc-1 && !strcmp(argv[i],fname_opt)) {
       if (fname) {
-        log(LOG_WARN, LD_CONFIG, "Duplicate -f options on command line.");
+        log(LOG_WARN, LD_CONFIG, "Duplicate %s options on command line.",
+            fname_opt);
         tor_free(fname);
       }
       fname = expand_filename(argv[i+1]);
       *using_default_torrc = 0;
       ++i;
-    } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {
+    } else if (ignore_opt && !strcmp(argv[i],ignore_opt)) {
       *ignore_missing_torrc = 1;
     }
   }
 
   if (*using_default_torrc) {
     /* didn't find one, try CONFDIR */
-    const char *dflt = get_default_conf_file();
+    const char *dflt = get_default_conf_file(defaults_file);
     if (dflt && file_status(dflt) == FN_FILE) {
       fname = tor_strdup(dflt);
     } else {
 #ifndef MS_WINDOWS
-      char *fn;
-      fn = expand_filename("~/.torrc");
+      char *fn = NULL;
+      if (!defaults_file)
+        fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;
       } else {
@@ -4255,31 +4365,34 @@ find_torrc_filename(int argc, char **argv,
   return fname;
 }
 
-/** Load torrc from disk, setting torrc_fname if successful */
+/** Load torrc from disk, setting torrc_fname if successful.
+ * DOCDOC defaults_file */
 static char *
-load_torrc_from_disk(int argc, char **argv)
+load_torrc_from_disk(int argc, char **argv, int defaults_file)
 {
   char *fname=NULL;
   char *cf = NULL;
   int using_default_torrc = 1;
   int ignore_missing_torrc = 0;
+  char **fname_var = defaults_file ? &torrc_fname : &torrc_defaults_fname;
 
-  fname = find_torrc_filename(argc, argv,
+  fname = find_torrc_filename(argc, argv, defaults_file,
                               &using_default_torrc, &ignore_missing_torrc);
   tor_assert(fname);
   log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
 
-  tor_free(torrc_fname);
-  torrc_fname = fname;
+  tor_free(*fname_var);
+  *fname_var = fname;
 
   /* Open config file */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0,NULL))) {
-    if (using_default_torrc == 1 || ignore_missing_torrc ) {
-      log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
-          "using reasonable defaults.", fname);
+    if (using_default_torrc == 1 || ignore_missing_torrc) {
+      if (!defaults_file)
+        log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
+            "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
-      torrc_fname = NULL;
+      *fname_var = NULL;
       cf = tor_strdup("");
     } else {
       log(LOG_WARN, LD_CONFIG,
@@ -4293,7 +4406,7 @@ load_torrc_from_disk(int argc, char **argv)
   return cf;
  err:
   tor_free(fname);
-  torrc_fname = NULL;
+  *fname_var = NULL;
   return NULL;
 }
 
@@ -4304,7 +4417,7 @@ load_torrc_from_disk(int argc, char **argv)
 int
 options_init_from_torrc(int argc, char **argv)
 {
-  char *cf=NULL;
+  char *cf=NULL, *cf_defaults=NULL;
   int i, retval, command;
   static char **backup_argv;
   static int backup_argc;
@@ -4364,13 +4477,15 @@ options_init_from_torrc(int argc, char **argv)
   if (command == CMD_HASH_PASSWORD) {
     cf = tor_strdup("");
   } else {
-    cf = load_torrc_from_disk(argc, argv);
+    cf_defaults = load_torrc_from_disk(argc, argv, 1);
+    cf = load_torrc_from_disk(argc, argv, 0);
     if (!cf)
       goto err;
   }
 
-  retval = options_init_from_string(cf, command, command_arg, &errmsg);
+  retval = options_init_from_string(cf_defaults, cf, command, command_arg, &errmsg);
   tor_free(cf);
+  tor_free(cf_defaults);
   if (retval < 0)
     goto err;
 
@@ -4394,13 +4509,13 @@ options_init_from_torrc(int argc, char **argv)
  *  * -4 for error while setting the new options
  */
 setopt_err_t
-options_init_from_string(const char *cf,
+options_init_from_string(const char *cf_defaults, const char *cf,
                          int command, const char *command_arg,
                          char **msg)
 {
-  or_options_t *oldoptions, *newoptions;
+  or_options_t *oldoptions, *newoptions, *newdefaultoptions=NULL;
   config_line_t *cl;
-  int retval;
+  int retval, i;
   setopt_err_t err = SETOPT_ERR_MISC;
   tor_assert(msg);
 
@@ -4413,17 +4528,24 @@ options_init_from_string(const char *cf,
   newoptions->command = command;
   newoptions->command_arg = command_arg;
 
-  /* get config lines, assign them */
-  retval = config_get_lines(cf, &cl);
-  if (retval < 0) {
-    err = SETOPT_ERR_PARSE;
-    goto err;
-  }
-  retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
-  config_free_lines(cl);
-  if (retval < 0) {
-    err = SETOPT_ERR_PARSE;
-    goto err;
+  for (i = 0; i < 2; ++i) {
+    const char *body = i==0 ? cf_defaults : cf;
+    if (!body)
+      continue;
+    /* get config lines, assign them */
+    retval = config_get_lines(body, &cl, 1);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
+    retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+    config_free_lines(cl);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
+    if (i==0)
+      newdefaultoptions = options_dup(&options_format, newoptions);
   }
 
   /* Go through command-line variables too */
@@ -4458,6 +4580,8 @@ options_init_from_string(const char *cf,
 
     /* Clear newoptions and re-initialize them with new defaults. */
     config_free(&options_format, newoptions);
+    config_free(&options_format, newdefaultoptions);
+    newdefaultoptions = NULL;
     newoptions = tor_malloc_zero(sizeof(or_options_t));
     newoptions->_magic = OR_OPTIONS_MAGIC;
     options_init(newoptions);
@@ -4465,22 +4589,24 @@ options_init_from_string(const char *cf,
     newoptions->command_arg = command_arg;
 
     /* Assign all options a second time. */
-    retval = config_get_lines(cf, &cl);
-    if (retval < 0) {
-      err = SETOPT_ERR_PARSE;
-      goto err;
-    }
-    retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
-    config_free_lines(cl);
-    if (retval < 0) {
-      err = SETOPT_ERR_PARSE;
-      goto err;
-    }
-    retval = config_assign(&options_format, newoptions,
-                           global_cmdline_options, 0, 0, msg);
-    if (retval < 0) {
-      err = SETOPT_ERR_PARSE;
-      goto err;
+    for (i = 0; i < 2; ++i) {
+      const char *body = i==0 ? cf_defaults : cf;
+      if (!body)
+        continue;
+      /* get config lines, assign them */
+      retval = config_get_lines(body, &cl, 1);
+      if (retval < 0) {
+        err = SETOPT_ERR_PARSE;
+        goto err;
+      }
+      retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+      config_free_lines(cl);
+      if (retval < 0) {
+        err = SETOPT_ERR_PARSE;
+        goto err;
+      }
+      if (i==0)
+        newdefaultoptions = options_dup(&options_format, newoptions);
     }
   }
 
@@ -4499,11 +4625,14 @@ options_init_from_string(const char *cf,
     err = SETOPT_ERR_SETTING;
     goto err; /* frees and replaces old options */
   }
+  config_free(&options_format, global_default_options);
+  global_default_options = newdefaultoptions;
 
   return SETOPT_OK;
 
  err:
   config_free(&options_format, newoptions);
+  config_free(&options_format, newdefaultoptions);
   if (*msg) {
     char *old_msg = *msg;
     tor_asprintf(msg, "Failed to parse/validate config: %s", old_msg);
@@ -4515,12 +4644,14 @@ options_init_from_string(const char *cf,
 /** Return the location for our configuration file.
  */
 const char *
-get_torrc_fname(void)
+get_torrc_fname(int defaults_fname)
 {
-  if (torrc_fname)
-    return torrc_fname;
+  const char *fname = defaults_fname ? torrc_defaults_fname : torrc_fname;
+
+  if (fname)
+    return fname;
   else
-    return get_default_conf_file();
+    return get_default_conf_file(defaults_fname);
 }
 
 /** Adjust the address map based on the MapAddress elements in the
@@ -5125,7 +5256,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
      * clause once Tor 0.1.2.17 is obsolete. */
     log_warn(LD_CONFIG, "Dangerous dirserver line. To correct, erase your "
              "torrc file (%s), or reinstall Tor and use the default torrc.",
-             get_torrc_fname());
+             get_torrc_fname(0));
     goto err;
   }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
@@ -5684,7 +5815,7 @@ options_save_current(void)
    * If we try falling back to datadirectory or something, we have a better
    * chance of saving the configuration, but a better chance of doing
    * something the user never expected. */
-  return write_configuration_file(get_torrc_fname(), get_options());
+  return write_configuration_file(get_torrc_fname(0), get_options());
 }
 
 /** Mapping from a unit name to a multiplier for converting that unit into a
@@ -6150,7 +6281,7 @@ or_state_load(void)
   if (contents) {
     config_line_t *lines=NULL;
     int assign_retval;
-    if (config_get_lines(contents, &lines)<0)
+    if (config_get_lines(contents, &lines, 0)<0)
       goto done;
     assign_retval = config_assign(&state_format, new_state,
                                   lines, 0, 0, &errmsg);
@@ -6254,7 +6385,7 @@ or_state_save(time_t now)
   tor_free(global_state->TorVersion);
   tor_asprintf(&global_state->TorVersion, "Tor %s", get_version());
 
-  state = config_dump(&state_format, global_state, 1, 0);
+  state = config_dump(&state_format, NULL, global_state, 1, 0);
   format_local_iso_time(tbuf, now);
   tor_asprintf(&contents,
                "# Tor state file last generated on %s local time\n"

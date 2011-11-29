@@ -737,7 +737,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
   smartlist_free(entries);
 
-  if (config_get_lines(config, &lines) < 0) {
+  if (config_get_lines(config, &lines, 0) < 0) {
     log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
     connection_write_str_to_buf("551 Couldn't parse configuration\r\n",
                                 conn);
@@ -883,7 +883,7 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   const char *msg = NULL;
   (void) len;
 
-  retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
+  retval = options_init_from_string(NULL, body, CMD_RUN_TOR, NULL, &errstring);
 
   if (retval != SETOPT_OK)
     log_warn(LD_CONTROL,
@@ -1378,7 +1378,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(get_version());
   } else if (!strcmp(question, "config-file")) {
-    *answer = tor_strdup(get_torrc_fname());
+    *answer = tor_strdup(get_torrc_fname(0));
+  } else if (!strcmp(question, "config-defaults-file")) {
+    *answer = tor_strdup(get_torrc_fname(1));
   } else if (!strcmp(question, "config-text")) {
     *answer = options_dump(get_options(), 1);
   } else if (!strcmp(question, "info/names")) {

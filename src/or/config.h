@@ -23,7 +23,7 @@ const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
 const char *get_version(void);
 
-int config_get_lines(const char *string, config_line_t **result);
+int config_get_lines(const char *string, config_line_t **result, int extended);
 void config_free_lines(config_line_t *front);
 setopt_err_t options_trial_assign(config_line_t *list, int use_defaults,
                                   int clear_first, char **msg);
@@ -33,14 +33,14 @@ int is_local_addr(const tor_addr_t *addr);
 void options_init(or_options_t *options);
 char *options_dump(const or_options_t *options, int minimal);
 int options_init_from_torrc(int argc, char **argv);
-setopt_err_t options_init_from_string(const char *cf,
+setopt_err_t options_init_from_string(const char *cf_defaults, const char *cf,
                             int command, const char *command_arg, char **msg);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
 config_line_t *option_get_assignment(const or_options_t *options,
                                      const char *key);
 int options_save_current(void);
-const char *get_torrc_fname(void);
+const char *get_torrc_fname(int defaults_fname);
 char *options_get_datadir_fname2_suffix(const or_options_t *options,
                                         const char *sub1, const char *sub2,
                                         const char *suffix);
