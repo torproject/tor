@@ -1395,6 +1395,10 @@ launch_resolve(edge_connection_t *exitconn)
   int r;
   int options = get_options()->ServerDNSSearchDomains ? 0
     : DNS_QUERY_NO_SEARCH;
+
+  if (get_options()->DisableNetwork)
+    return -1;
+
   /* What? Nameservers not configured?  Sounds like a bug. */
   if (!nameservers_configured) {
     log_warn(LD_EXIT, "(Harmless.) Nameservers not configured, but resolve "
@@ -1600,6 +1604,9 @@ launch_test_addresses(int fd, short event, void *args)
   (void)fd;
   (void)event;
   (void)args;
+
+  if (options->DisableNetwork)
+    return;
 
   log_info(LD_EXIT, "Launching checks to see whether our nameservers like to "
            "hijack *everything*.");

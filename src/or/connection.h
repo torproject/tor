@@ -66,6 +66,9 @@ int get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
+void connection_mark_all_noncontrol_listeners(void);
+void connection_mark_all_noncontrol_connections(void);
+
 ssize_t connection_bucket_write_limit(connection_t *conn, time_t now);
 int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
 void connection_bucket_init(void);

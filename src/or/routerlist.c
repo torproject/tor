@@ -3244,7 +3244,7 @@ router_set_status(const char *digest, int up)
     log_debug(LD_DIR,"Marking router %s as %s.",
               node_describe(node), up ? "up" : "down");
 #endif
-    if (!up && node_is_me(node) && !we_are_hibernating())
+    if (!up && node_is_me(node) && !net_is_disabled())
       log_warn(LD_NET, "We just marked ourself as down. Are your external "
                "addresses reachable?");
     node->is_running = up;
@@ -4009,6 +4009,8 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 void
 update_all_descriptor_downloads(time_t now)
 {
+  if (get_options()->DisableNetwork)
+    return;
   update_router_descriptor_downloads(now);
   update_microdesc_downloads(now);
   launch_dummy_descriptor_download_as_needed(now, get_options());
@@ -4021,6 +4023,8 @@ routerlist_retry_directory_downloads(time_t now)
 {
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
+  if (get_options()->DisableNetwork)
+    return;
   update_networkstatus_downloads(now);
   update_all_descriptor_downloads(now);
 }

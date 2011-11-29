@@ -1318,6 +1318,24 @@ connection_connect(connection_t *conn, const char *address,
   else
     protocol_family = PF_INET;
 
+  if (get_options()->DisableNetwork) {
+    /* We should never even try to connect anyplace if DisableNetwork is set.
+     * Warn if we do, and refuse to make the connection. */
+    static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
+    char *m;
+#ifdef MS_WINDOWS
+    *socket_error = WSAENETUNREACH;
+#else
+    *socket_error = ENETUNREACH;
+#endif
+    if ((m = rate_limit_log(&disablenet_violated, approx_time()))) {
+      log_warn(LD_BUG, "Tried to open a socket with DisableNetwork set.%s", m);
+      tor_free(m);
+    }
+    tor_fragile_assert();
+    return -1;
+  }
+
   s = tor_open_socket(protocol_family,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     *socket_error = tor_socket_errno(-1);
@@ -1968,7 +1986,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
       smartlist_add(listeners, conn);
   } SMARTLIST_FOREACH_END(conn);
 
-  if (! options->ClientOnly) {
+  if (! options->ClientOnly && ! options->DisableNetwork) {
     if (retry_listeners(listeners,
                         CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                         options->ORPort, "0.0.0.0",
@@ -1981,10 +1999,13 @@ retry_all_listeners(smartlist_t *replaced_conns,
       retval = -1;
   }
 
-  if (retry_listener_ports(listeners,
-                           get_configured_client_ports(),
-                           new_conns) < 0)
-    retval = -1;
+  if (!options->DisableNetwork) {
+    if (retry_listener_ports(listeners,
+                             get_configured_client_ports(),
+                             new_conns) < 0)
+      retval = -1;
+  }
+
   if (retry_listeners(listeners,
                       CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
@@ -2023,6 +2044,43 @@ retry_all_listeners(smartlist_t *replaced_conns,
   }
 
   return retval;
+}
+
+/** Mark every listener of type other than CONTROL_LISTENER to be closed. */
+void
+connection_mark_all_noncontrol_listeners(void)
+{
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    if (conn->marked_for_close)
+      continue;
+    if (conn->type == CONN_TYPE_CONTROL_LISTENER)
+      continue;
+    if (connection_is_listener(conn))
+      connection_mark_for_close(conn);
+  } SMARTLIST_FOREACH_END(conn);
+}
+
+/** Mark every external conection not used for controllers for close. */
+void
+connection_mark_all_noncontrol_connections(void)
+{
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    if (conn->marked_for_close)
+      continue;
+    switch (conn->type) {
+      case CONN_TYPE_CPUWORKER:
+      case CONN_TYPE_CONTROL_LISTENER:
+      case CONN_TYPE_CONTROL:
+        break;
+      case CONN_TYPE_AP:
+        connection_mark_unattached_ap(TO_ENTRY_CONN(conn),
+                                      END_STREAM_REASON_HIBERNATING);
+        break;
+      default:
+        connection_mark_for_close(conn);
+        break;
+    }
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Return 1 if we should apply rate limiting to <b>conn</b>, and 0
