@@ -1272,6 +1272,8 @@ typedef struct or_connection_t {
   unsigned active_circuit_pqueue_last_recalibrated;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
+
+  tor_libevent_action_t *pending_action;
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)

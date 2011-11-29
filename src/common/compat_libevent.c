@@ -558,17 +558,17 @@ tor_check_libevent_header_compatibility(void)
 #endif
 }
 
-typedef struct runnable_t {
+struct tor_libevent_action_t {
   struct event *ev;
   void (*cb)(void *arg);
   void *arg;
-} runnable_t;
+};
 
 /** Callback for tor_run_in_libevent_loop */
 static void
 run_runnable_cb(evutil_socket_t s, short what, void *arg)
 {
-  runnable_t *r = arg;
+  tor_libevent_action_t *r = arg;
   void (*cb)(void *) = r->cb;
   void *cb_arg = r->arg;
   (void)what;
@@ -584,22 +584,32 @@ run_runnable_cb(evutil_socket_t s, short what, void *arg)
  * deep inside a no-reentrant code and there's some function you want to call
  * without worrying about whether it might cause reeentrant invocation.
  */
-int
+tor_libevent_action_t *
 tor_run_in_libevent_loop(void (*cb)(void *arg), void *arg)
 {
-  runnable_t *r = tor_malloc(sizeof(runnable_t));
+  tor_libevent_action_t *r = tor_malloc(sizeof(tor_libevent_action_t));
   r->cb = cb;
   r->arg = arg;
   r->ev = tor_event_new(tor_libevent_get_base(), -1, EV_TIMEOUT,
                         run_runnable_cb, r);
   if (!r->ev) {
     tor_free(r);
-    return -1;
+    return NULL;
   }
   /* Make the event active immediately. */
   event_active(r->ev, EV_TIMEOUT, 1);
 
-  return 0;
+  return r;
+}
+
+/**
+ * Cancel <b>action</b> without running it.
+ */
+void
+tor_cancel_libevent_action(tor_libevent_action_t *action)
+{
+  tor_event_free(action->ev);
+  tor_free(action);
 }
 
 /*

@@ -44,10 +44,12 @@ void tor_event_free(struct event *ev);
 #define tor_evdns_add_server_port evdns_add_server_port
 #endif
 
+typedef struct tor_libevent_action_t tor_libevent_action_t;
+tor_libevent_action_t *tor_run_in_libevent_loop(void (*cb)(void *arg),
+                                                void *arg);
+void tor_cancel_libevent_action(tor_libevent_action_t *action);
+
 typedef struct periodic_timer_t periodic_timer_t;
-
-int tor_run_in_libevent_loop(void (*cb)(void *arg), void *arg);
-
 periodic_timer_t *periodic_timer_new(struct event_base *base,
              const struct timeval *tv,
              void (*cb)(periodic_timer_t *timer, void *data),
