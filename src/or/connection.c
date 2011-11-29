@@ -2046,7 +2046,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
   return retval;
 }
 
-/** DOCDOC */
+/** Mark every listener of type other than CONTROL_LISTENER to be closed. */
 void
 connection_mark_all_noncontrol_listeners(void)
 {
@@ -2060,7 +2060,7 @@ connection_mark_all_noncontrol_listeners(void)
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** DOCDOC */
+/** Mark every external conection not used for controllers for close. */
 void
 connection_mark_all_noncontrol_connections(void)
 {
