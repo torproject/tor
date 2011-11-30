@@ -42,6 +42,7 @@ static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                                    char *digest_rcvd_out);
 
 static void connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn);
+static void connection_or_close_connection_cb(void *_conn);
 
 #ifdef USE_BUFFEREVENTS
 static void connection_or_handle_event_cb(struct bufferevent *bufev,
@@ -1099,12 +1100,16 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
   tor_assert(!conn->tls);
   conn->tls = tor_tls_new(conn->_base.s, receiving);
-  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
-      escaped_safe_str(conn->_base.address));
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
+  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
+      escaped_safe_str(conn->_base.address));
+  tor_tls_set_renegotiate_callbacks(conn->tls,
+                                    connection_or_tls_renegotiated_cb,
+                                    connection_or_close_connection_cb,
+                                    conn);
 #ifdef USE_BUFFEREVENTS
   if (connection_type_uses_bufferevent(TO_CONN(conn))) {
     const int filtering = get_options()->_UseFilteringSSLBufferevents;
@@ -1230,10 +1235,6 @@ connection_tls_continue_handshake(or_connection_t *conn)
           /* v2/v3 handshake, but not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
                            "Expecting renegotiation or VERSIONS cell");
-          tor_tls_set_renegotiate_callbacks(conn->tls,
-                                           connection_or_tls_renegotiated_cb,
-                                           connection_or_close_connection_cb,
-                                           conn);
           conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
           connection_stop_writing(TO_CONN(conn));
           connection_start_reading(TO_CONN(conn));
@@ -1294,10 +1295,6 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
       } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
         /* v2 or v3 handshake, as a server. Only got one handshake, so
          * wait for the next one. */
-        tor_tls_set_renegotiate_callbacks(conn->tls,
-                                         connection_or_tls_renegotiated_cb,
-                                         connection_or_close_connection_cb,
-                                         conn);
         conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
         /* return 0; */
         return; /* ???? */

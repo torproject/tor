@@ -1573,7 +1573,6 @@ tor_tls_set_renegotiate_callbacks(tor_tls_t *tls,
   tls->excess_renegotiations_callback = cb2;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
-  SSL_set_info_callback(tls->ssl, tor_tls_state_changed_callback);
 }
 
 /** If this version of openssl requires it, turn on renegotiation on
@@ -1777,7 +1776,6 @@ tor_tls_finish_handshake(tor_tls_t *tls)
 {
   int r = TOR_TLS_DONE;
   if (tls->isServer) {
-    SSL_set_info_callback(tls->ssl, NULL);
     SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
     /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
     tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
