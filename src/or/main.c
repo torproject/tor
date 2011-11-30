@@ -196,7 +196,7 @@ free_old_inbuf(connection_t *conn)
 }
 #endif
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
 /** Remove the kernel-space send and receive buffers for <b>s</b>. For use
  * with IOCP only. */
 static int
