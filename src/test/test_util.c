@@ -1660,7 +1660,7 @@ test_util_split_lines(void *ptr)
 
   int i, j;
   char *orig_line;
-  smartlist_t *sl;
+  smartlist_t *sl=NULL;
 
   (void)ptr;
 
@@ -1689,10 +1689,12 @@ test_util_split_lines(void *ptr)
     tt_assert(tests[i].split_line[j] == NULL);
     tor_free(orig_line);
     smartlist_free(sl);
+    sl = NULL;
   }
 
  done:
-  ;
+  tor_free(orig_line);
+  smartlist_free(sl);
 }
 
 static void
