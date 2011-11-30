@@ -21,6 +21,7 @@ test_SOURCES = \
 	test_microdesc.c \
 	test_pt.c \
 	test_util.c \
+	test_config.c \
 	tinytest.c
 
 bench_SOURCES = \

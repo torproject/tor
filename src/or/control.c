@@ -1331,7 +1331,8 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
           smartlist_add(reply, ans);
         }
       } else {
-        addressmap_register(from, tor_strdup(to), 1, ADDRMAPSRC_CONTROLLER);
+        addressmap_register(from, tor_strdup(to), 1,
+                            ADDRMAPSRC_CONTROLLER, 0, 0);
         tor_snprintf(ans, anslen, "250-%s", line);
         smartlist_add(reply, ans);
       }

@@ -803,11 +803,18 @@ connection_ap_detach_retriable(entry_connection_t *conn,
  * the configuration file, "1" for mappings set from the control
  * interface, and other values for DNS and TrackHostExit mappings that can
  * expire.)
+ *
+ * A mapping may be 'wildcarded'.  If "src_wildcard" is true, then
+ * any address that ends with a . followed by the key for this entry will
+ * get remapped by it.  If "dst_wildcard" is also true, then only the
+ * matching suffix of such addresses will get replaced by new_address.
  */
 typedef struct {
   char *new_address;
   time_t expires;
   addressmap_entry_source_t source:3;
+  unsigned src_wildcard:1;
+  unsigned dst_wildcard:1;
   short num_resolve_failures;
 } addressmap_entry_t;
 
@@ -1054,6 +1061,37 @@ addressmap_free_all(void)
   virtaddress_reversemap = NULL;
 }
 
+/** Try to find a match for AddressMap expressions that use
+ *  wildcard notation such as '*.c.d *.e.f' (so 'a.c.d' will map to 'a.e.f') or
+ *  '*.c.d a.b.c' (so 'a.c.d' will map to a.b.c).
+ *  Return the matching entry in AddressMap or NULL if no match is found.
+ *  For expressions such as '*.c.d *.e.f', truncate <b>address</b> 'a.c.d'
+ *  to 'a' before we return the matching AddressMap entry.
+ *
+ * This function does not handle the case where a pattern of the form "*.c.d"
+ * matches the address c.d -- that's done by the main addressmap_rewrite
+ * function.
+ */
+static addressmap_entry_t *
+addressmap_match_superdomains(char *address)
+{
+  addressmap_entry_t *val;
+  char *cp;
+
+  cp = address;
+  while ((cp = strchr(cp, '.'))) {
+    /* cp now points to a suffix of address that begins with a . */
+    val = strmap_get_lc(addressmap, cp+1);
+    if (val && val->src_wildcard) {
+      if (val->dst_wildcard)
+        *cp = '\0';
+      return val;
+    }
+    ++cp;
+  }
+  return NULL;
+}
+
 /** Look at address, and rewrite it until it doesn't want any
  * more rewrites; but don't get into an infinite loop.
  * Don't write more than maxlen chars into address.  Return true if the
@@ -1066,25 +1104,49 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 {
   addressmap_entry_t *ent;
   int rewrites;
-  char *cp;
   time_t expires = TIME_MAX;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
+    int exact_match = 0;
+    char *addr_orig = tor_strdup(escaped_safe_str_client(address));
+
     ent = strmap_get(addressmap, address);
 
     if (!ent || !ent->new_address) {
+      ent = addressmap_match_superdomains(address);
+    } else {
+      if (ent->src_wildcard && !ent->dst_wildcard &&
+          !strcasecmp(address, ent->new_address)) {
+        /* This is a rule like *.example.com example.com, and we just got
+         * "example.com" */
+        tor_free(addr_orig);
+        if (expires_out)
+          *expires_out = expires;
+        return rewrites > 0;
+      }
+
+      exact_match = 1;
+    }
+
+    if (!ent || !ent->new_address) {
+      tor_free(addr_orig);
       if (expires_out)
         *expires_out = expires;
       return (rewrites > 0); /* done, no rewrite needed */
     }
 
-    cp = tor_strdup(escaped_safe_str_client(ent->new_address));
+    if (ent->dst_wildcard && !exact_match) {
+      strlcat(address, ".", maxlen);
+      strlcat(address, ent->new_address, maxlen);
+    } else {
+      strlcpy(address, ent->new_address, maxlen);
+    }
+
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
-             escaped_safe_str_client(address), cp);
+             addr_orig, escaped_safe_str_client(address));
     if (ent->expires > 1 && ent->expires < expires)
       expires = ent->expires;
-    tor_free(cp);
-    strlcpy(address, ent->new_address, maxlen);
+    tor_free(addr_orig);
   }
   log_warn(LD_CONFIG,
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
@@ -1148,17 +1210,34 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * <b>new_address</b> should be a newly dup'ed string, which we'll use or
  * free as appropriate. We will leave address alone.
  *
- * If <b>new_address</b> is NULL, or equal to <b>address</b>, remove
- * any mappings that exist from <b>address</b>.
- */
+ * If <b>wildcard_addr</b> is true, then the mapping will match any address
+ * equal to <b>address</b>, or any address ending with a period followed by
+ * <b>address</b>.  If <b>wildcard_addr</b> and <b>wildcard_new_addr</b> are
+ * both true, the mapping will rewrite addresses that end with
+ * ".<b>address</b>" into ones that end with ".<b>new_address</b>."
+ *
+ * If <b>new_address</b> is NULL, or <b>new_address</b> is equal to
+ * <b>address</b> and <b>wildcard_addr</b> is equal to
+ * <b>wildcard_new_addr</b>, remove any mappings that exist from
+ * <b>address</b>.
+ *
+ *
+ * It is an error to set <b>wildcard_new_addr</b> if <b>wildcard_addr</b> is
+ * not set. */
 void
 addressmap_register(const char *address, char *new_address, time_t expires,
-                    addressmap_entry_source_t source)
+                    addressmap_entry_source_t source,
+                    const int wildcard_addr,
+                    const int wildcard_new_addr)
 {
   addressmap_entry_t *ent;
 
+  if (wildcard_new_addr)
+    tor_assert(wildcard_addr);
+
   ent = strmap_get(addressmap, address);
-  if (!new_address || !strcasecmp(address,new_address)) {
+  if (!new_address || (!strcasecmp(address,new_address) &&
+                       wildcard_addr == wildcard_new_addr)) {
     /* Remove the mapping, if any. */
     tor_free(new_address);
     if (ent) {
@@ -1193,6 +1272,8 @@ addressmap_register(const char *address, char *new_address, time_t expires,
   ent->expires = expires==2 ? 1 : expires;
   ent->num_resolve_failures = 0;
   ent->source = source;
+  ent->src_wildcard = wildcard_addr ? 1 : 0;
+  ent->dst_wildcard = wildcard_new_addr ? 1 : 0;
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
            safe_str_client(address),
@@ -1277,7 +1358,7 @@ client_dns_set_addressmap_impl(const char *address, const char *name,
                  "%s", name);
   }
   addressmap_register(extendedaddress, tor_strdup(extendedval),
-                      time(NULL) + ttl, ADDRMAPSRC_DNS);
+                      time(NULL) + ttl, ADDRMAPSRC_DNS, 0, 0);
 }
 
 /** Record the fact that <b>address</b> resolved to <b>val</b>.
@@ -1529,7 +1610,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   log_info(LD_APP, "Registering map from %s to %s", *addrp, new_address);
   if (vent_needs_to_be_added)
     strmap_set(virtaddress_reversemap, new_address, vent);
-  addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_AUTOMAP);
+  addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_AUTOMAP, 0, 0);
 
 #if 0
   {

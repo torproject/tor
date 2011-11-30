@@ -1687,7 +1687,7 @@ consider_recording_trackhost(const entry_connection_t *conn,
 
   addressmap_register(conn->socks_request->address, new_address,
                       time(NULL) + options->TrackHostExitsExpire,
-                      ADDRMAPSRC_TRACKEXIT);
+                      ADDRMAPSRC_TRACKEXIT, 0, 0);
 }
 
 /** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and send a
