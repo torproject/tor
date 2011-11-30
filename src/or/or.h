@@ -789,10 +789,10 @@ typedef struct rend_data_t {
   char rend_cookie[REND_COOKIE_LEN];
 } rend_data_t;
 
-/** Time interval for tracking possible replays of INTRODUCE2 cells.
- * Incoming cells with timestamps half of this interval in the past or
- * future are dropped immediately. */
-#define REND_REPLAY_TIME_INTERVAL (60 * 60)
+/** Time interval for tracking replays of DH public keys received in
+ * INTRODUCE2 cells.  Used only to avoid launching multiple
+ * simultaneous attempts to connect to the same rendezvous point. */
+#define REND_REPLAY_TIME_INTERVAL (5 * 60)
 
 /** Used to indicate which way a cell is going on a circuit. */
 typedef enum {
@@ -4046,6 +4046,26 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * introduction point.  See also rend_intro_point_t.unreachable_count. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
+/** The maximum number of distinct INTRODUCE2 cells which a hidden
+ * service's introduction point will receive before it begins to
+ * expire.
+ *
+ * XXX023 Is this number at all sane? */
+#define INTRO_POINT_LIFETIME_INTRODUCTIONS 16384
+
+/** The minimum number of seconds that an introduction point will last
+ * before expiring due to old age.  (If it receives
+ * INTRO_POINT_LIFETIME_INTRODUCTIONS INTRODUCE2 cells, it may expire
+ * sooner.)
+ *
+ * XXX023 Should this be configurable? */
+#define INTRO_POINT_LIFETIME_MIN_SECONDS 18*60*60
+/** The maximum number of seconds that an introduction point will last
+ * before expiring due to old age.
+ *
+ * XXX023 Should this be configurable? */
+#define INTRO_POINT_LIFETIME_MAX_SECONDS 24*60*60
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
@@ -4065,6 +4085,37 @@ typedef struct rend_intro_point_t {
    * circuit to this intro point for some reason other than our
    * circuit-build timeout.  See also MAX_INTRO_POINT_REACHABILITY_FAILURES. */
   unsigned int unreachable_count : 3;
+
+  /** (Service side only) Flag indicating that this intro point was
+   * included in the last HS descriptor we generated. */
+  unsigned int listed_in_last_desc : 1;
+
+  /** (Service side only) A digestmap recording the INTRODUCE2 cells
+   * this intro point's circuit has received.  Each key is the digest
+   * of the RSA-encrypted part of a received INTRODUCE2 cell; each
+   * value is a pointer to the time_t at which the cell was received.
+   * This digestmap is used to prevent replay attacks. */
+  digestmap_t *accepted_intro_rsa_parts;
+
+  /** (Service side only) The time at which this intro point was first
+   * published, or -1 if this intro point has not yet been
+   * published. */
+  time_t time_published;
+
+  /** (Service side only) The time at which this intro point should
+   * (start to) expire, or -1 if we haven't decided when this intro
+   * point should expire. */
+  time_t time_to_expire;
+
+  /** (Service side only) The time at which we decided that this intro
+   * point should start expiring, or -1 if this intro point is not yet
+   * expiring.
+   *
+   * This field also serves as a flag to indicate that we have decided
+   * to expire this intro point, in case intro_point_should_expire_now
+   * flaps (perhaps due to a clock jump; perhaps due to other
+   * weirdness, or even a (present or future) bug). */
+  time_t time_expiring;
 } rend_intro_point_t;
 
 /** Information used to connect to a hidden service.  Used on both the

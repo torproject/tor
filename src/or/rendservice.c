@@ -26,6 +26,10 @@
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);
+static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
+
+static int intro_point_should_expire_now(rend_intro_point_t *intro,
+                                         time_t now);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -36,8 +40,10 @@ typedef struct rend_service_port_config_t {
   tor_addr_t real_addr;
 } rend_service_port_config_t;
 
-/** Try to maintain this many intro points per service if possible. */
-#define NUM_INTRO_POINTS 3
+/** Try to maintain this many intro points per service by default. */
+#define NUM_INTRO_POINTS_DEFAULT 3
+/** Maintain no more than this many intro points per hidden service. */
+#define NUM_INTRO_POINTS_MAX 10
 
 /** If we can't build our intro circuits, don't retry for this long. */
 #define INTRO_CIRC_RETRY_PERIOD (60*5)
@@ -50,6 +56,10 @@ typedef struct rend_service_port_config_t {
 /** How many seconds should we spend trying to connect to a requested
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
+
+/** How many seconds should we wait for new HS descriptors to reach
+ * our clients before we close an expiring intro point? */
+#define INTRO_POINT_EXPIRATION_GRACE_PERIOD 5*60
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
@@ -72,17 +82,24 @@ typedef struct rend_service_t {
                                 * introduction points. */
   int n_intro_circuits_launched; /**< Count of intro circuits we have
                                   * established in this period. */
+  unsigned int n_intro_points_wanted; /**< Number of intro points this
+                                       * service wants to have open. */
   rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
   time_t desc_is_dirty; /**< Time at which changes to the hidden service
                          * descriptor content occurred, or 0 if it's
                          * up-to-date. */
   time_t next_upload_time; /**< Scheduled next hidden service descriptor
                             * upload time. */
-  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t of when
-   * they were received; used to prevent replays. */
-  digestmap_t *accepted_intros;
-  /** Time at which we last removed expired values from accepted_intros. */
-  time_t last_cleaned_accepted_intros;
+  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t
+   * of when they were received.  Clients may send INTRODUCE1 cells
+   * for the same rendezvous point through two or more different
+   * introduction points; when they do, this digestmap keeps us from
+   * launching multiple simultaneous attempts to connect to the same
+   * rend point. */
+  digestmap_t *accepted_intro_dh_parts;
+  /** Time at which we last removed expired values from
+   * accepted_intro_dh_parts. */
+  time_t last_cleaned_accepted_intro_dh_parts;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -142,7 +159,7 @@ rend_service_free(rend_service_t *service)
       rend_authorized_client_free(c););
     smartlist_free(service->clients);
   }
-  digestmap_free(service->accepted_intros, _tor_free);
+  digestmap_free(service->accepted_intro_dh_parts, _tor_free);
   tor_free(service);
 }
 
@@ -319,6 +336,7 @@ rend_config_services(const or_options_t *options, int validate_only)
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
       service->intro_period_started = time(NULL);
+      service->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
       continue;
     }
     if (!service) {
@@ -542,16 +560,38 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
     rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);
     rend_intro_point_t *intro_desc;
-    circ = find_intro_circuit(intro_svc, service->pk_digest);
-    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
-      continue;
 
-    /* We have an entirely established intro circuit. */
+    /* This intro point won't be listed in the descriptor... */
+    intro_svc->listed_in_last_desc = 0;
+
+    if (intro_svc->time_expiring != -1) {
+      /* This intro point is expiring.  Don't list it. */
+      continue;
+    }
+
+    circ = find_intro_circuit(intro_svc, service->pk_digest);
+    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
+      /* This intro point's circuit isn't finished yet.  Don't list it. */
+      continue;
+    }
+
+    /* ...unless this intro point is listed in the descriptor. */
+    intro_svc->listed_in_last_desc = 1;
+
+    /* We have an entirely established intro circuit.  Publish it in
+     * our descriptor. */
     intro_desc = tor_malloc_zero(sizeof(rend_intro_point_t));
     intro_desc->extend_info = extend_info_dup(intro_svc->extend_info);
     if (intro_svc->intro_key)
       intro_desc->intro_key = crypto_pk_dup_key(intro_svc->intro_key);
     smartlist_add(d->intro_nodes, intro_desc);
+
+    if (intro_svc->time_published == -1) {
+      /* We are publishing this intro point in a descriptor for the
+       * first time -- note the current time in the service's copy of
+       * the intro point. */
+      intro_svc->time_published = time(NULL);
+    }
   }
 }
 
@@ -857,15 +897,16 @@ rend_check_authorization(rend_service_t *service,
 /** Remove elements from <b>service</b>'s replay cache that are old enough to
  * be noticed by timestamp checking. */
 static void
-clean_accepted_intros(rend_service_t *service, time_t now)
+clean_accepted_intro_dh_parts(rend_service_t *service, time_t now)
 {
   const time_t cutoff = now - REND_REPLAY_TIME_INTERVAL;
 
-  service->last_cleaned_accepted_intros = now;
-  if (!service->accepted_intros)
+  service->last_cleaned_accepted_intro_dh_parts = now;
+  if (!service->accepted_intro_dh_parts)
     return;
 
-  DIGESTMAP_FOREACH_MODIFY(service->accepted_intros, digest, time_t *, t) {
+  DIGESTMAP_FOREACH_MODIFY(service->accepted_intro_dh_parts, digest,
+                           time_t *, t) {
     if (*t < cutoff) {
       tor_free(t);
       MAP_DEL_CURRENT(digest);
@@ -890,6 +931,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
+  rend_intro_point_t *intro_point;
   int r, i, v3_shift = 0;
   size_t len, keylen;
   crypto_dh_env_t *dh = NULL;
@@ -937,7 +979,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   service = rend_service_get_by_pk_digest(
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
-    log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
+    log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro "
+             "circ for an unrecognized service %s.",
              escaped(serviceid));
     return -1;
   }
@@ -962,17 +1005,26 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     return -1;
   }
 
-  if (!service->accepted_intros)
-    service->accepted_intros = digestmap_new();
+  intro_point = find_intro_point(circuit);
+  if (intro_point == NULL) {
+    log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro circ "
+             "(for service %s) with no corresponding rend_intro_point_t.",
+             escaped(serviceid));
+    return -1;
+  }
+
+  if (!service->accepted_intro_dh_parts)
+    service->accepted_intro_dh_parts = digestmap_new();
+
+  if (!intro_point->accepted_intro_rsa_parts)
+    intro_point->accepted_intro_rsa_parts = digestmap_new();
 
   {
     char pkpart_digest[DIGEST_LEN];
-    /* Check for replay of PK-encrypted portion.  It is slightly naughty to
-       use the same digestmap to check for this and for g^x replays, but
-       collisions are tremendously unlikely.
-    */
+    /* Check for replay of PK-encrypted portion. */
     crypto_digest(pkpart_digest, (char*)request+DIGEST_LEN, keylen);
-    access_time = digestmap_get(service->accepted_intros, pkpart_digest);
+    access_time = digestmap_get(intro_point->accepted_intro_rsa_parts,
+                                pkpart_digest);
     if (access_time != NULL) {
       log_warn(LD_REND, "Possible replay detected! We received an "
                "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
@@ -981,7 +1033,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     }
     access_time = tor_malloc(sizeof(time_t));
     *access_time = now;
-    digestmap_set(service->accepted_intros, pkpart_digest, access_time);
+    digestmap_set(intro_point->accepted_intro_rsa_parts,
+                  pkpart_digest, access_time);
   }
 
   /* Next N bytes is encrypted with service key */
@@ -997,7 +1050,6 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   len = r;
   if (*buf == 3) {
     /* Version 3 INTRODUCE2 cell. */
-    time_t ts = 0;
     v3_shift = 1;
     auth_type = buf[1];
     switch (auth_type) {
@@ -1019,17 +1071,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
         log_info(LD_REND, "Unknown authorization type '%d'", auth_type);
     }
 
-    /* Check timestamp. */
-    ts = ntohl(get_uint32(buf+1+v3_shift));
+    /* Skip the timestamp field.  We no longer use it. */
     v3_shift += 4;
-    if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
-        (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
-      /* This is far more likely to mean that a client's clock is
-       * skewed than that a replay attack is in progress. */
-      log_info(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
-               (now - ts) < 0 ? "old" : "new");
-      return -1;
-    }
   }
   if (*buf == 2 || *buf == 3) {
     /* Version 2 INTRODUCE2 cell. */
@@ -1128,7 +1171,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* Check whether there is a past request with the same Diffie-Hellman,
    * part 1. */
-  access_time = digestmap_get(service->accepted_intros, diffie_hellman_hash);
+  access_time = digestmap_get(service->accepted_intro_dh_parts,
+                              diffie_hellman_hash);
   if (access_time != NULL) {
     /* A Tor client will send a new INTRODUCE1 cell with the same rend
      * cookie and DH public key as its previous one if its intro circ
@@ -1150,9 +1194,11 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
    * one hour. */
   access_time = tor_malloc(sizeof(time_t));
   *access_time = now;
-  digestmap_set(service->accepted_intros, diffie_hellman_hash, access_time);
-  if (service->last_cleaned_accepted_intros + REND_REPLAY_TIME_INTERVAL < now)
-    clean_accepted_intros(service, now);
+  digestmap_set(service->accepted_intro_dh_parts,
+                diffie_hellman_hash, access_time);
+  if (service->last_cleaned_accepted_intro_dh_parts + REND_REPLAY_TIME_INTERVAL
+      < now)
+    clean_accepted_intro_dh_parts(service, now);
 
   /* If the service performs client authorization, check included auth data. */
   if (service->clients) {
@@ -1412,7 +1458,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit or close it, depending. */
-  if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
+  if (count_established_intro_points(serviceid) >
+      (int)service->n_intro_points_wanted) { /* XXX023 remove cast */
     const or_options_t *options = get_options();
     if (options->ExcludeNodes) {
       /* XXXX in some future version, we can test whether the transition is
@@ -1652,6 +1699,35 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
   return NULL;
 }
 
+/** Return a pointer to the rend_intro_point_t corresponding to the
+ * service-side introduction circuit <b>circ</b>. */
+static rend_intro_point_t *
+find_intro_point(origin_circuit_t *circ)
+{
+  const char *serviceid;
+  rend_service_t *service = NULL;
+
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+             TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+  tor_assert(circ->rend_data);
+  serviceid = circ->rend_data->onion_address;
+
+  SMARTLIST_FOREACH(rend_service_list, rend_service_t *, s,
+    if (tor_memeq(s->service_id, serviceid, REND_SERVICE_ID_LEN_BASE32)) {
+      service = s;
+      break;
+    });
+
+  if (service == NULL) return NULL;
+
+  SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro_point,
+    if (crypto_pk_cmp_keys(intro_point->intro_key, circ->intro_key) == 0) {
+      return intro_point;
+    });
+
+  return NULL;
+}
+
 /** Determine the responsible hidden service directories for the
  * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
  * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
@@ -1855,6 +1931,52 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
+/** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we
+ * should stop publishing it in new descriptors and eventually close
+ * it). */
+static int
+intro_point_should_expire_now(rend_intro_point_t *intro,
+                              time_t now)
+{
+  tor_assert(intro != NULL);
+
+  if (intro->time_published == -1) {
+    /* Don't expire an intro point if we haven't even published it yet. */
+    return 0;
+  }
+
+  if (intro->time_expiring != -1) {
+    /* We've already started expiring this intro point.  *Don't* let
+     * this function's result 'flap'. */
+    return 1;
+  }
+
+  if (digestmap_size(intro->accepted_intro_rsa_parts) >=
+      INTRO_POINT_LIFETIME_INTRODUCTIONS) {
+    /* This intro point has been used too many times.  Expire it now. */
+    return 1;
+  }
+
+  if (intro->time_to_expire == -1) {
+    /* This intro point has been published, but we haven't picked an
+     * expiration time for it.  Pick one now. */
+    int intro_point_lifetime_seconds =
+      INTRO_POINT_LIFETIME_MIN_SECONDS +
+      crypto_rand_int(INTRO_POINT_LIFETIME_MAX_SECONDS -
+                      INTRO_POINT_LIFETIME_MIN_SECONDS);
+
+    /* Start the expiration timer now, rather than when the intro
+     * point was first published.  There shouldn't be much of a time
+     * difference. */
+    intro->time_to_expire = now + intro_point_lifetime_seconds;
+
+    return 0;
+  }
+
+  /* This intro point has a time to expire set already.  Use it. */
+  return (now >= intro->time_to_expire);
+}
+
 /** For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
@@ -1866,7 +1988,9 @@ rend_services_introduce(void)
   const node_t *node;
   rend_service_t *service;
   rend_intro_point_t *intro;
-  int changed, prev_intro_nodes;
+  int intro_point_set_changed, prev_intro_nodes;
+  unsigned int n_intro_points_unexpired;
+  unsigned int n_intro_points_to_open;
   smartlist_t *intro_nodes;
   time_t now;
   const or_options_t *options = get_options();
@@ -1879,7 +2003,16 @@ rend_services_introduce(void)
     service = smartlist_get(rend_service_list, i);
 
     tor_assert(service);
-    changed = 0;
+
+    /* intro_point_set_changed becomes non-zero iff the set of intro
+     * points to be published in service's descriptor has changed. */
+    intro_point_set_changed = 0;
+
+    /* n_intro_points_unexpired collects the number of non-expiring
+     * intro points we have, so that we know how many new intro
+     * circuits we need to launch for this service. */
+    n_intro_points_unexpired = 0;
+
     if (now > service->intro_period_started+INTRO_CIRC_RETRY_PERIOD) {
       /* One period has elapsed; we can try building circuits again. */
       service->intro_period_started = now;
@@ -1893,59 +2026,115 @@ rend_services_introduce(void)
 
     /* Find out which introduction points we have in progress for this
        service. */
-    for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
-      intro = smartlist_get(service->intro_nodes, j);
-      node = node_get_by_id(intro->extend_info->identity_digest);
-      if (!node || !find_intro_circuit(intro, service->pk_digest)) {
-        log_info(LD_REND,"Giving up on %s as intro point for %s.",
-                 safe_str_client(extend_info_describe(intro->extend_info)),
-                 safe_str_client(service->service_id));
-        if (service->desc) {
-          SMARTLIST_FOREACH(service->desc->intro_nodes, rend_intro_point_t *,
-                            dintro, {
-            if (tor_memeq(dintro->extend_info->identity_digest,
-                intro->extend_info->identity_digest, DIGEST_LEN)) {
-              log_info(LD_REND, "The intro point we are giving up on was "
-                                "included in the last published descriptor. "
-                                "Marking current descriptor as dirty.");
-              service->desc_is_dirty = now;
-            }
-          });
+    SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *, intro){
+      origin_circuit_t *intro_circ =
+        find_intro_circuit(intro, service->pk_digest);
+
+      if (intro->time_expiring + INTRO_POINT_EXPIRATION_GRACE_PERIOD > now) {
+        /* This intro point has completely expired.  Remove it, and
+         * mark the circuit for close if it's still alive. */
+        if (intro_circ != NULL) {
+          circuit_mark_for_close(TO_CIRCUIT(intro_circ),
+                                 END_CIRC_REASON_FINISHED);
         }
         rend_intro_point_free(intro);
-        smartlist_del(service->intro_nodes,j--);
-        changed = 1;
+        intro = NULL; /* SMARTLIST_DEL_CURRENT takes a name, not a value. */
+        SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+        /* We don't need to set intro_point_set_changed here, because
+         * this intro point wouldn't have been published in a current
+         * descriptor anyway. */
+        continue;
       }
+
+      node = node_get_by_id(intro->extend_info->identity_digest);
+      if (!node || !intro_circ) {
+        int removing_this_intro_point_changes_the_intro_point_set = 1;
+        log_info(LD_REND, "Giving up on %s as intro point for %s"
+                 " (circuit disappeared).",
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
+        if (intro->time_expiring != -1) {
+          log_info(LD_REND, "We were already expiring the intro point; "
+                   "no need to mark the HS descriptor as dirty over this.");
+          removing_this_intro_point_changes_the_intro_point_set = 0;
+        } else if (intro->listed_in_last_desc) {
+          log_info(LD_REND, "The intro point we are giving up on was "
+                   "included in the last published descriptor. "
+                   "Marking current descriptor as dirty.");
+          service->desc_is_dirty = now;
+        }
+        rend_intro_point_free(intro);
+        intro = NULL; /* SMARTLIST_DEL_CURRENT takes a name, not a value. */
+        SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+        if (removing_this_intro_point_changes_the_intro_point_set)
+          intro_point_set_changed = 1;
+      }
+
+      if (intro != NULL && intro_point_should_expire_now(intro, now)) {
+        log_info(LD_REND, "Expiring %s as intro point for %s.",
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
+
+        /* The polite (and generally Right) way to expire an intro
+         * point is to establish a new one to replace it, publish a
+         * new descriptor that doesn't list any expiring intro points,
+         * and *then*, once our upload attempts for the new descriptor
+         * have ended (whether in success or failure), close the
+         * expiring intro points.
+         *
+         * Unfortunately, we can't find out when the new descriptor
+         * has actually been uploaded, so we'll have to settle for a
+         * five-minute timer.  Start it.  XXX023 This sucks. */
+        intro->time_expiring = now;
+
+        intro_point_set_changed = 1;
+      }
+
+      if (intro != NULL && intro->time_expiring == -1)
+        ++n_intro_points_unexpired;
+
       if (node)
         smartlist_add(intro_nodes, (void*)node);
-    }
+    } SMARTLIST_FOREACH_END(intro);
 
-    /* We have enough intro points, and the intro points we thought we had were
-     * all connected.
-     */
-    if (!changed && smartlist_len(service->intro_nodes) >= NUM_INTRO_POINTS) {
-      /* We have all our intro points! Start a fresh period and reset the
-       * circuit count. */
+    if (!intro_point_set_changed &&
+        (n_intro_points_unexpired >= service->n_intro_points_wanted)) {
+      /* We have enough intro circuits in progress, and none of our
+       * intro circuits have died since the last call to
+       * rend_services_introduce!  Start a fresh period and reset the
+       * circuit count.
+       *
+       * XXXX WTF? */
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
       continue;
     }
 
-    /* Remember how many introduction circuits we started with. */
+    /* Remember how many introduction circuits we started with.
+     *
+     * prev_intro_nodes serves a different purpose than
+     * n_intro_points_unexpired -- this variable tells us where our
+     * previously-created intro points end and our new ones begin in
+     * the intro-point list, so we don't have to launch the circuits
+     * at the same time as we create the intro points they correspond
+     * to.  XXXX This is daft. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
+
     /* We have enough directory information to start establishing our
-     * intro points. We want to end up with three intro points, but if
-     * we're just starting, we launch five and pick the first three that
-     * complete.
+     * intro points. We want to end up with n_intro_points_wanted
+     * intro points, but if we're just starting, we launch two extra
+     * circuits and use the first n_intro_points_wanted that complete.
      *
      * The ones after the first three will be converted to 'general'
      * internal circuits in rend_service_intro_has_opened(), and then
      * we'll drop them from the list of intro points next time we
      * go through the above "find out which introduction points we have
      * in progress" loop. */
-#define NUM_INTRO_POINTS_INIT (NUM_INTRO_POINTS + 2)
-    for (j=prev_intro_nodes; j < (prev_intro_nodes == 0 ?
-             NUM_INTRO_POINTS_INIT : NUM_INTRO_POINTS); ++j) {
+    n_intro_points_to_open = (service->n_intro_points_wanted +
+                              (prev_intro_nodes == 0 ? 2 : 0));
+    for (j = (int)n_intro_points_unexpired;
+         j < (int)n_intro_points_to_open;
+         ++j) { /* XXXX remove casts */
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
@@ -1953,16 +2142,21 @@ rend_services_introduce(void)
                                        options->ExcludeNodes, flags);
       if (!node) {
         log_warn(LD_REND,
-                 "Could only establish %d introduction points for %s.",
-                 smartlist_len(service->intro_nodes), service->service_id);
+                 "Could only establish %d introduction points for %s; "
+                 "wanted %u.",
+                 smartlist_len(service->intro_nodes), service->service_id,
+                 n_intro_points_to_open);
         break;
       }
-      changed = 1;
+      intro_point_set_changed = 1;
       smartlist_add(intro_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_node(node);
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
+      intro->time_published = -1;
+      intro->time_to_expire = -1;
+      intro->time_expiring = -1;
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(node_describe(node)),
@@ -1970,7 +2164,7 @@ rend_services_introduce(void)
     }
 
     /* If there's no need to launch new circuits, stop here. */
-    if (!changed)
+    if (!intro_point_set_changed)
       continue;
 
     /* Establish new introduction points. */
