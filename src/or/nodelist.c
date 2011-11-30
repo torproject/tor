@@ -737,7 +737,7 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 /** Copy the preferred IPv6 OR port (address and TCP port) for
  * <b>node</b> into *<b>ap_out</b>. */
 void
-node_get_pref_ipv6_addr(const node_t *node, tor_addr_port_t *ap_out)
+node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
     router_get_pref_ipv6_orport(node->ri, ap_out);
