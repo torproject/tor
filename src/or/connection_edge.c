@@ -1087,23 +1087,38 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 {
   addressmap_entry_t *ent;
   int rewrites;
-  char *cp;
   time_t expires = TIME_MAX;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
+    int exact_match = 0;
+    char *addr_orig = tor_strdup(escaped_safe_str_client(address));
+
     ent = strmap_get(addressmap, address);
 
-    if (!ent || !ent->new_address)
+    if (!ent || !ent->new_address) {
       ent = addressmap_match_superdomains(address);
+    } else {
+      if (ent->src_wildcard && !ent->dst_wildcard &&
+          !strcasecmp(address, ent->new_address)) {
+        /* This is a rule like *.example.com example.com, and we just got
+         * "example.com" */
+        tor_free(addr_orig);
+        if (expires_out)
+          *expires_out = expires;
+        return rewrites > 0;
+      }
+
+      exact_match = 1;
+    }
 
     if (!ent || !ent->new_address) {
+      tor_free(addr_orig);
       if (expires_out)
         *expires_out = expires;
       return (rewrites > 0); /* done, no rewrite needed */
     }
 
-    cp = tor_strdup(escaped_safe_str_client(address));
-    if (ent->dst_wildcard) {
+    if (ent->dst_wildcard && !exact_match) {
       strlcat(address, ".", maxlen);
       strlcat(address, ent->new_address, maxlen);
     } else {
@@ -1111,10 +1126,10 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
     }
 
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
-             cp, escaped_safe_str_client(address));
+             addr_orig, escaped_safe_str_client(address));
     if (ent->expires > 1 && ent->expires < expires)
       expires = ent->expires;
-    tor_free(cp);
+    tor_free(addr_orig);
   }
   log_warn(LD_CONFIG,
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
