@@ -2026,7 +2026,8 @@ rend_services_introduce(void)
 
     /* Find out which introduction points we have in progress for this
        service. */
-    SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *, intro){
+    SMARTLIST_FOREACH_BEGIN(service->intro_nodes, rend_intro_point_t *,
+                            intro) {
       origin_circuit_t *intro_circ =
         find_intro_circuit(intro, service->pk_digest);
 

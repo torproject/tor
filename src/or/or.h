@@ -2970,7 +2970,8 @@ typedef struct {
   config_line_t *TransPort;
   config_line_t *NATDPort; /**< Ports to listen on for transparent natd
                             * connections. */
-  config_line_t *ControlPort; /**< Port to listen on for control connections. */
+  config_line_t *ControlPort; /**< Port to listen on for control
+                               * connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */

@@ -4464,7 +4464,8 @@ options_init_from_torrc(int argc, char **argv)
       goto err;
   }
 
-  retval = options_init_from_string(cf_defaults, cf, command, command_arg, &errmsg);
+  retval = options_init_from_string(cf_defaults, cf, command, command_arg,
+                                    &errmsg);
   tor_free(cf);
   tor_free(cf_defaults);
   if (retval < 0)
