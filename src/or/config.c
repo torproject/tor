@@ -4399,7 +4399,8 @@ int
 options_init_from_torrc(int argc, char **argv)
 {
   char *cf=NULL, *cf_defaults=NULL;
-  int i, retval, command;
+  int i, command;
+  int retval = -1;
   static char **backup_argv;
   static int backup_argc;
   char *command_arg = NULL;
@@ -4466,19 +4467,16 @@ options_init_from_torrc(int argc, char **argv)
 
   retval = options_init_from_string(cf_defaults, cf, command, command_arg,
                                     &errmsg);
-  tor_free(cf);
-  tor_free(cf_defaults);
-  if (retval < 0)
-    goto err;
-
-  return 0;
 
  err:
+
+  tor_free(cf);
+  tor_free(cf_defaults);
   if (errmsg) {
     log(LOG_WARN,LD_CONFIG,"%s", errmsg);
     tor_free(errmsg);
   }
-  return -1;
+  return retval < 0 ? -1 : 0;
 }
 
 /** Load the options from the configuration in <b>cf</b>, validate
