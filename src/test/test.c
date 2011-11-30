@@ -1907,6 +1907,7 @@ main(int c, const char **v)
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
   }
+  crypto_set_tls_dh_prime(NULL);
   rep_hist_init();
   network_init();
   setup_directory();
