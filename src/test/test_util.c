@@ -1659,7 +1659,7 @@ test_util_split_lines(void *ptr)
   };
 
   int i, j;
-  char *orig_line;
+  char *orig_line=NULL;
   smartlist_t *sl=NULL;
 
   (void)ptr;
