@@ -3012,7 +3012,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
       log_warn(LD_CIRC,"failed to choose an exit server");
       return -1;
     }
-    exit = extend_info_from_node(node);
+    exit = extend_info_from_node(node, 0);
     tor_assert(exit);
   }
   state->chosen_exit = exit;
@@ -3254,14 +3254,19 @@ onion_extend_cpath(origin_circuit_t *circ)
   } else if (cur_len == 0) { /* picking first node */
     const node_t *r = choose_good_entry_server(purpose, state);
     if (r) {
-      info = extend_info_from_node(r);
+      /* If we're extending to a bridge, use the preferred address
+         rather than the primary, for potentially extending to an IPv6
+         bridge.  */
+      int use_pref_addr = (r->ri != NULL &&
+                           r->ri->purpose == ROUTER_PURPOSE_BRIDGE);
+      info = extend_info_from_node(r, use_pref_addr);
       tor_assert(info);
     }
   } else {
     const node_t *r =
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r) {
-      info = extend_info_from_node(r);
+      info = extend_info_from_node(r, 0);
       tor_assert(info);
     }
   }
@@ -3320,28 +3325,36 @@ extend_info_alloc(const char *nickname, const char *digest,
   return info;
 }
 
-/** Allocate and return a new extend_info_t that can be used to build a
- * circuit to or through the router <b>r</b>. */
+/** Allocate and return a new extend_info_t that can be used to build
+ * a circuit to or through the router <b>r</b>. Use the primary
+ * address of the router unless <b>for_direct_connect</b> is true, in
+ * which case the preferred address is used instead. */
 extend_info_t *
-extend_info_from_router(const routerinfo_t *r)
+extend_info_from_router(const routerinfo_t *r, int for_direct_connect)
 {
-  tor_addr_t addr;
+  tor_addr_port_t ap;
   tor_assert(r);
-  tor_addr_from_ipv4h(&addr, r->addr);
+
+  if (for_direct_connect)
+    router_get_pref_orport(r, &ap);
+  else
+    router_get_prim_orport(r, &ap);
   return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, &addr, r->or_port);
+                           r->onion_pkey, &ap.addr, ap.port);
 }
 
-/** Allocate and return a new extend_info that can be used to build a ircuit
- * to or through the node <b>node</b>.  May return NULL if there is not
- * enough info about <b>node</b> to extend to it--for example, if there
- * is no routerinfo_t or microdesc_t.
+/** Allocate and return a new extend_info that can be used to build a
+ * ircuit to or through the node <b>node</b>. Use the primary address
+ * of the node unless <b>for_direct_connect</b> is true, in which case
+ * the preferred address is used instead. May return NULL if there is
+ * not enough info about <b>node</b> to extend to it--for example, if
+ * there is no routerinfo_t or microdesc_t.
  **/
 extend_info_t *
-extend_info_from_node(const node_t *node)
+extend_info_from_node(const node_t *node, int for_direct_connect)
 {
   if (node->ri) {
-    return extend_info_from_router(node->ri);
+    return extend_info_from_router(node->ri, for_direct_connect);
   } else if (node->rs && node->md) {
     tor_addr_t addr;
     tor_addr_from_ipv4h(&addr, node->rs->addr);
@@ -4841,10 +4854,11 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
 static bridge_info_t *
 get_configured_bridge_by_routerinfo(const routerinfo_t *ri)
 {
-  tor_addr_t addr;
-  tor_addr_from_ipv4h(&addr, ri->addr);
-  return get_configured_bridge_by_addr_port_digest(&addr,
-                              ri->or_port, ri->cache_info.identity_digest);
+  tor_addr_port_t ap;
+
+  router_get_pref_orport(ri, &ap);
+  return get_configured_bridge_by_addr_port_digest(&ap.addr, ap.port,
+                                               ri->cache_info.identity_digest);
 }
 
 /** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
@@ -4858,18 +4872,31 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 int
 node_is_a_configured_bridge(const node_t *node)
 {
-  tor_addr_t addr;
-  uint16_t orport;
-  if (!node)
-    return 0;
-  if (node_get_addr(node, &addr) < 0)
-    return 0;
-  orport = node_get_orport(node);
-  if (orport == 0)
-    return 0;
+  int retval = 0;               /* Negative.  */
+  smartlist_t *orports = NULL;
 
-  return get_configured_bridge_by_addr_port_digest(
-                       &addr, orport, node->identity) != NULL;
+  if (!node)
+    goto out;
+
+  orports = node_get_all_orports(node);
+  if (orports == NULL)
+    goto out;
+
+  SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, orport) {
+    if (get_configured_bridge_by_addr_port_digest(&orport->addr, orport->port,
+                                                  node->identity) != NULL) {
+      retval = 1;
+      goto out;
+    }
+  } SMARTLIST_FOREACH_END(orport);
+
+ out:
+  if (orports != NULL) {
+    SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
+    smartlist_free(orports);
+    orports = NULL;
+  }
+  return retval;
 }
 
 /** We made a connection to a router at <b>addr</b>:<b>port</b>
@@ -5123,18 +5150,52 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     routerinfo_t *ri = node->ri;
     tor_addr_from_ipv4h(&addr, ri->addr);
 
-    if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-        bridge->port == ri->or_port) {
+    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+         bridge->port == ri->or_port) ||
+        (!tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
+         bridge->port == ri->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
-      ri->addr = tor_addr_to_ipv4h(&bridge->addr);
-      tor_free(ri->address);
-      ri->address = tor_dup_ip(ri->addr);
-      ri->or_port = bridge->port;
-      log_info(LD_DIR,
-               "Adjusted bridge routerinfo for '%s' to match configured "
-               "address %s:%d.",
-               ri->nickname, ri->address, ri->or_port);
+      if (tor_addr_family(&bridge->addr) == AF_INET) {
+        ri->addr = tor_addr_to_ipv4h(&bridge->addr);
+        tor_free(ri->address);
+        ri->address = tor_dup_ip(ri->addr);
+        ri->or_port = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerinfo for '%s' to match configured "
+                 "address %s:%d.",
+                 ri->nickname, ri->address, ri->or_port);
+      } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
+        tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
+        ri->ipv6_orport = bridge->port;
+        log_info(LD_DIR,
+                 "Adjusted bridge routerinfo for '%s' to match configured "
+                 "address %s:%d.",
+                 ri->nickname, fmt_addr(&ri->ipv6_addr), ri->ipv6_orport);
+      } else {
+        log_err(LD_BUG, "Address family not supported: %d.",
+                tor_addr_family(&bridge->addr));
+        return;
+      }
+    }
+
+    /* Indicate that we prefer connecting to this bridge over the
+       protocol that the bridge address indicates.  Last bridge
+       descriptor handled wins.  */
+    ri->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
+
+    /* XXXipv6 we lack support for falling back to another address for
+       the same relay, warn the user */
+    if (!tor_addr_is_null(&ri->ipv6_addr))
+    {
+      tor_addr_port_t ap;
+      router_get_pref_orport(ri, &ap);
+      log_notice(LD_CONFIG,
+                 "Bridge '%s' has both an IPv4 and an IPv6 address.  "
+                 "Will prefer using its %s address (%s:%d).",
+                 ri->nickname,
+                 ri->ipv6_preferred ? "IPv6" : "IPv4",
+                 fmt_addr(&ap.addr), ap.port);
     }
   }
   if (node->rs) {
@@ -5179,8 +5240,8 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       rewrite_node_address_for_bridge(bridge, node);
       add_an_entry_guard(node, 1, 1);
 
-      log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
-                 from_cache ? "cached" : "fresh");
+      log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
+                 from_cache ? "cached" : "fresh", router_describe(ri));
       /* set entry->made_contact so if it goes down we don't drop it from
        * our entry node list */
       entry_guard_register_connect_status(ri->cache_info.identity_digest,

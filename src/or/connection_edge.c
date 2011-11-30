@@ -2593,7 +2593,7 @@ connection_ap_make_link(connection_t *partner,
            want_onehop ? "direct" : "anonymized",
            safe_str_client(address), port);
 
-  conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  conn = entry_connection_new(CONN_TYPE_AP, tor_addr_family(&partner->addr));
   base_conn = ENTRY_TO_CONN(conn);
   base_conn->linked = 1; /* so that we can add it safely below. */
 
@@ -3199,7 +3199,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   exitconn->_base.state = EXIT_CONN_STATE_OPEN;
 
-  dirconn = dir_connection_new(AF_INET);
+  dirconn = dir_connection_new(tor_addr_family(&exitconn->_base.addr));
 
   tor_addr_copy(&dirconn->_base.addr, &exitconn->_base.addr);
   dirconn->_base.port = 0;

@@ -880,7 +880,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     return NULL;
   }
 
-  if (listensockaddr->sa_family == AF_INET) {
+  if (listensockaddr->sa_family == AF_INET ||
+      listensockaddr->sa_family == AF_INET6) {
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_tcp)
       start_reading = 1;
@@ -890,7 +891,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     log_notice(LD_NET, "Opening %s on %s:%d",
                conn_type_to_string(type), fmt_addr(&addr), usePort);
 
-    s = tor_open_socket(PF_INET,
+    s = tor_open_socket(tor_addr_family(&addr),
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
                         is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
     if (!SOCKET_OK(s)) {
@@ -1814,6 +1815,9 @@ retry_listener_ports(smartlist_t *old_conns,
           (conn->socket_family == AF_UNIX && ! wanted->is_unix_addr))
         continue;
 
+      if (wanted->no_listen)
+        continue; /* We don't want to open a listener for this one */
+
       if (wanted->is_unix_addr) {
         if (conn->socket_family == AF_UNIX &&
             !strcmp(wanted->unix_addr, conn->address)) {
@@ -1852,6 +1856,8 @@ retry_listener_ports(smartlist_t *old_conns,
     connection_t *conn;
     int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
     tor_assert(real_port <= UINT16_MAX);
+    if (port->no_listen)
+      continue;
 
     if (port->is_unix_addr) {
       listensockaddr = (struct sockaddr *)
@@ -1888,82 +1894,6 @@ retry_listener_ports(smartlist_t *old_conns,
   return r;
 }
 
-/**
- * Launch any configured listener connections of type <b>type</b>.  (A
- * listener is configured if <b>port_option</b> is non-zero.  If any
- * ListenAddress configuration options are given in <b>cfg</b>, create a
- * connection binding to each one.  Otherwise, create a single
- * connection binding to the address <b>default_addr</b>.)
- *
- * We assume that we're starting with a list of existing listener connection_t
- * pointers in <b>old_conns</b>: we do not launch listeners that are already
- * in that list.  Instead, we just remove them from the list.
- *
- * All new connections we launch are added to <b>new_conns</b>.
- */
-static int
-retry_listeners(smartlist_t *old_conns,
-                int type, const config_line_t *cfg,
-                int port_option, const char *default_addr,
-                smartlist_t *new_conns,
-                int is_sockaddr_un)
-{
-  smartlist_t *ports = smartlist_create();
-  tor_addr_t dflt_addr;
-  int retval = 0;
-
-  if (default_addr) {
-    tor_addr_parse(&dflt_addr, default_addr);
-  } else {
-    tor_addr_make_unspec(&dflt_addr);
-  }
-
-  if (port_option) {
-    if (!cfg) {
-      port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t));
-      tor_addr_copy(&port->addr, &dflt_addr);
-      port->port = port_option;
-      port->type = type;
-      smartlist_add(ports, port);
-    } else {
-      const config_line_t *c;
-      for (c = cfg; c; c = c->next) {
-        port_cfg_t *port;
-        tor_addr_t addr;
-        uint16_t portval = 0;
-        if (is_sockaddr_un) {
-          size_t len = strlen(c->value);
-          port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
-          port->is_unix_addr = 1;
-          memcpy(port->unix_addr, c->value, len+1);
-        } else {
-          if (tor_addr_port_lookup(c->value, &addr, &portval) < 0) {
-            log_warn(LD_CONFIG, "Can't parse/resolve %s %s",
-                     c->key, c->value);
-            retval = -1;
-            continue;
-          }
-          port = tor_malloc_zero(sizeof(port_cfg_t));
-          tor_addr_copy(&port->addr, &addr);
-        }
-        port->type = type;
-        port->port = portval ? portval : port_option;
-        smartlist_add(ports, port);
-      }
-    }
-  }
-
-  if (retval == -1)
-    goto cleanup;
-
-  retval = retry_listener_ports(old_conns, ports, new_conns);
-
- cleanup:
-  SMARTLIST_FOREACH(ports, port_cfg_t *, p, tor_free(p));
-  smartlist_free(ports);
-  return retval;
-}
-
 /** Launch listeners for each port you should have open.  Only launch
  * listeners who are not already open, and only close listeners we no longer
  * want.
@@ -1986,37 +1916,9 @@ retry_all_listeners(smartlist_t *replaced_conns,
       smartlist_add(listeners, conn);
   } SMARTLIST_FOREACH_END(conn);
 
-  if (! options->ClientOnly && ! options->DisableNetwork) {
-    if (retry_listeners(listeners,
-                        CONN_TYPE_OR_LISTENER, options->ORListenAddress,
-                        options->ORPort, "0.0.0.0",
-                        new_conns, 0) < 0)
-      retval = -1;
-    if (retry_listeners(listeners,
-                        CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
-                        options->DirPort, "0.0.0.0",
-                        new_conns, 0) < 0)
-      retval = -1;
-  }
-
-  if (!options->DisableNetwork) {
-    if (retry_listener_ports(listeners,
-                             get_configured_client_ports(),
-                             new_conns) < 0)
-      retval = -1;
-  }
-
-  if (retry_listeners(listeners,
-                      CONN_TYPE_CONTROL_LISTENER,
-                      options->ControlListenAddress,
-                      options->ControlPort, "127.0.0.1",
-                      new_conns, 0) < 0)
-    retval = -1;
-  if (retry_listeners(listeners,
-                      CONN_TYPE_CONTROL_LISTENER,
-                      options->ControlSocket,
-                      options->ControlSocket ? 1 : 0, NULL,
-                      new_conns, 1) < 0)
+  if (retry_listener_ports(listeners,
+                           get_configured_ports(),
+                           new_conns) < 0)
     retval = -1;
 
   /* Any members that were still in 'listeners' don't correspond to
@@ -2034,6 +1936,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
 
   smartlist_free(listeners);
 
+  /* XXXprop186 should take all advertised ports into account */
   if (old_or_port != router_get_advertised_or_port(options) ||
       old_dir_port != router_get_advertised_dir_port(options, 0)) {
     /* Our chosen ORPort or DirPort is not what it used to be: the

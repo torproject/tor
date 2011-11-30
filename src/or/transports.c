@@ -12,6 +12,7 @@
 #include "circuitbuild.h"
 #include "transports.h"
 #include "util.h"
+#include "router.h"
 
 #ifdef MS_WINDOWS
 static void set_managed_proxy_environment(LPVOID *envp,
@@ -1079,7 +1080,8 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
     bindaddr = get_bindaddr_for_proxy(mp);
 
     /* XXX temp */
-    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort);
+    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d",
+                 router_get_advertised_or_port(options));
     tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
     /* XXX temp*/

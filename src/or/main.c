@@ -1511,9 +1511,10 @@ run_scheduled_events(time_t now)
       options->PortForwarding &&
       is_server) {
 #define PORT_FORWARDING_CHECK_INTERVAL 5
+    /* XXXXX this should take a list of ports, not just two! */
     tor_check_port_forwarding(options->PortForwardingHelper,
-                              options->DirPort,
-                              options->ORPort,
+                              get_primary_dir_port(),
+                              get_primary_or_port(),
                               now);
     time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }

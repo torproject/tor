@@ -31,6 +31,13 @@ typedef struct tor_addr_t
   } addr;
 } tor_addr_t;
 
+/** Holds an IP address and a TCP/UDP port.  */
+typedef struct tor_addr_port_t
+{
+  tor_addr_t addr;
+  uint16_t port;
+} tor_addr_port_t;
+
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);

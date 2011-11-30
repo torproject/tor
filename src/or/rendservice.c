@@ -1142,7 +1142,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
       goto err;
     }
 
-    extend_info = extend_info_from_node(node);
+    extend_info = extend_info_from_node(node, 0);
   }
 
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
@@ -2151,7 +2151,7 @@ rend_services_introduce(void)
       intro_point_set_changed = 1;
       smartlist_add(intro_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
-      intro->extend_info = extend_info_from_node(node);
+      intro->extend_info = extend_info_from_node(node, 0);
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       intro->time_published = -1;

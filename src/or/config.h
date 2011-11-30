@@ -64,7 +64,13 @@ or_state_t *get_or_state(void);
 int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
-const smartlist_t *get_configured_client_ports(void);
+const smartlist_t *get_configured_ports(void);
+int get_first_advertised_port_by_type_af(int listener_type,
+                                         int address_family);
+#define get_primary_or_port() \
+  (get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER, AF_INET))
+#define get_primary_dir_port() \
+  (get_first_advertised_port_by_type_af(CONN_TYPE_DIR_LISTENER, AF_INET))
 
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);

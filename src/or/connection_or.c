@@ -630,7 +630,9 @@ connection_or_update_token_buckets(smartlist_t *conns,
 
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
- * by checking to see if this describes a router we know. */
+ * by checking to see if this describes a router we know.
+ * <b>started_here</b> is 1 if we are the initiator of <b>conn</b> and
+ * 0 if it's an incoming connection.  */
 void
 connection_or_init_conn_from_address(or_connection_t *conn,
                                      const tor_addr_t *addr, uint16_t port,
@@ -645,10 +647,11 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   tor_addr_copy(&conn->_base.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
   if (r) {
-    tor_addr_t node_addr;
-    node_get_addr(r, &node_addr);
-    /* XXXX proposal 118 will make this more complex. */
-    if (tor_addr_eq(&conn->_base.addr, &node_addr))
+    tor_addr_port_t node_ap;
+    node_get_pref_orport(r, &node_ap);
+    /* XXXX proposal 186 is making this more complex.  For now, a conn
+       is canonical when it uses the _preferred_ address. */
+    if (tor_addr_eq(&conn->_base.addr, &node_ap.addr))
       conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
@@ -661,12 +664,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
-      tor_addr_copy(&conn->_base.addr, &node_addr);
-      conn->_base.port = node_get_orport(r);
+      tor_addr_copy(&conn->_base.addr, &node_ap.addr);
+      conn->_base.port = node_ap.port;
     }
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->_base.address);
-    conn->_base.address = tor_dup_addr(&node_addr);
+    conn->_base.address = tor_dup_addr(&node_ap.addr);
   } else {
     const char *n;
     /* If we're an authoritative directory server, we may know a
@@ -1033,7 +1036,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  conn = or_connection_new(AF_INET);
+  conn = or_connection_new(tor_addr_family(&addr));
 
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);
