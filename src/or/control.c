@@ -2026,6 +2026,7 @@ typedef struct getinfo_item_t {
 static const getinfo_item_t getinfo_items[] = {
   ITEM("version", misc, "The current version of Tor."),
   ITEM("config-file", misc, "Current location of the \"torrc\" file."),
+  ITEM("config-defaults-file", misc, "Current location of the defaults file."),
   ITEM("config-text", misc,
        "Return the string that would be written by a saveconf command."),
   ITEM("accounting/bytes", accounting,

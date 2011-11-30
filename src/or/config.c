@@ -4434,7 +4434,7 @@ load_torrc_from_disk(int argc, char **argv, int defaults_file)
   char *cf = NULL;
   int using_default_torrc = 1;
   int ignore_missing_torrc = 0;
-  char **fname_var = defaults_file ? &torrc_fname : &torrc_defaults_fname;
+  char **fname_var = defaults_file ? &torrc_defaults_fname : &torrc_fname;
 
   fname = find_torrc_filename(argc, argv, defaults_file,
                               &using_default_torrc, &ignore_missing_torrc);
