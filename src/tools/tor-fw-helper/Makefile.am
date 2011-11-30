@@ -15,7 +15,7 @@ noinst_HEADERS = \
 
 if NAT_PMP
 nat_pmp_ldflags = @TOR_LDFLAGS_libnatpmp@
-nat_pmp_ldadd  = -lnatpmp
+nat_pmp_ldadd  = -lnatpmp @TOR_LIB_IPHLPAPI@
 nat_pmp_cppflags = @TOR_CPPFLAGS_libnatpmp@
 else
 nat_pmp_ldflags =

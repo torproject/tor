@@ -555,9 +555,12 @@ dnl There are no packages for Debian or Redhat as of this patch
 
 if test "$natpmp" = "true"; then
     AC_DEFINE(NAT_PMP, 1, [Define to 1 if we are building with nat-pmp.])
-    TOR_SEARCH_LIBRARY(libnatpmp, $trylibnatpmpdir, [-lnatpmp],
+    TOR_SEARCH_LIBRARY(libnatpmp, $trylibnatpmpdir, [-lnatpmp $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
         [#include <natpmp.h>],
-        [#include <natpmp.h>],
+        [#ifdef MS_WINDOWS
+         #define STATICLIB
+         #endif
+         #include <natpmp.h>],
         [   int r;
             natpmp_t natpmp;
             natpmpresp_t response;

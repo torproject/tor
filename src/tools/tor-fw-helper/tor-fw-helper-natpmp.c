@@ -9,11 +9,13 @@
 
 #include "orconfig.h"
 #ifdef NAT_PMP
+#ifdef MS_WINDOWS
+#define STATICLIB
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <arpa/inet.h>
 
 // debugging stuff
 #include <assert.h>
@@ -82,7 +84,7 @@ tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state)
 
 /** Use select() to wait until we can read on fd. */
 static int
-wait_until_fd_readable(int fd, struct timeval *timeout)
+wait_until_fd_readable(unsigned int fd, struct timeval *timeout)
 {
   int r;
   fd_set fds;
