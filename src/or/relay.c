@@ -924,6 +924,7 @@ connection_edge_process_relay_cell_not_open(
     }
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
+    tor_assert(entry_conn->socks_request != NULL);
     if (!entry_conn->socks_request->has_finished)
       connection_ap_handshake_socks_reply(entry_conn, NULL, 0, 0);
 
