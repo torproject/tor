@@ -397,6 +397,7 @@ static config_var_t _option_vars[] = {
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
+  V(Tor2webMode,                 BOOL,     "0"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -1338,6 +1339,28 @@ options_act(const or_options_t *old_options)
 
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
+
+#ifdef NON_ANONYMOUS_MODE_ENABLED
+  log(LOG_WARN, LD_GENERAL, "This copy of Tor was compiled to run in a "
+      "non-anonymous mode. It will provide NO ANONYMITY.");
+#endif
+
+#ifdef ENABLE_TOR2WEB_MODE
+  if (!options->Tor2webMode) {
+    log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
+            "'tor2web mode'. It can only be run with the Tor2webMode torrc "
+            "option enabled.");
+    return -1;
+  }
+#else
+  if (options->Tor2webMode) {
+    log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
+            "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
+            "option enabled. To enable Tor2webMode recompile with the "
+            "--enable-tor2webmode option.");
+    return -1;
+  }
+#endif
 
   if (options->Bridges) {
     mark_bridge_list();
@@ -3615,6 +3638,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
              MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
+  }
+
+  if (options->Tor2webMode && options->LearnCircuitBuildTimeout) {
+    /* LearnCircuitBuildTimeout and Tor2webMode are incompatible in
+     * two ways:
+     *
+     * - LearnCircuitBuildTimeout results in a low CBT, which
+     *   Tor2webMode's use of one-hop rendezvous circuits lowers
+     *   much further, producing *far* too many timeouts.
+     *
+     * - The adaptive CBT code does not update its timeout estimate
+     *   using build times for single-hop circuits.
+     *
+     * If we fix both of these issues someday, we should test
+     * Tor2webMode with LearnCircuitBuildTimeout on again. */
+    log_notice(LD_CONFIG,"Tor2webMode is enabled; turning "
+               "LearnCircuitBuildTimeout off.");
+    options->LearnCircuitBuildTimeout = 0;
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {

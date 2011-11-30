@@ -130,6 +130,10 @@
 #define cell_t tor_cell_t
 #endif
 
+#ifdef ENABLE_TOR2WEB_MODE
+#define NON_ANONYMOUS_MODE_ENABLED 1
+#endif
+
 /** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
 /** Length of a router identity encoded as a hexadecimal digest, plus
@@ -3042,6 +3046,11 @@ typedef struct {
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
+
+  /** Run in 'tor2web mode'? (I.e. only make client connections to hidden
+   * services, and use a single hop for all hidden-service-related
+   * circuits.) */
+  int Tor2webMode;
 
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */

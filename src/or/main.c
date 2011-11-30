@@ -2285,6 +2285,11 @@ tor_init(int argc, char *argv[])
                  "Expect more bugs than usual.");
   }
 
+#ifdef NON_ANONYMOUS_MODE_ENABLED
+  log(LOG_WARN, LD_GENERAL, "This copy of Tor was compiled to run in a "
+      "non-anonymous mode. It will provide NO ANONYMITY.");
+#endif
+
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
     return -1;

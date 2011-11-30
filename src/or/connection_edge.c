@@ -1973,6 +1973,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    if (options->Tor2webMode) {
+      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname %s "
+               "because tor2web mode is enabled.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    }
+
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       uint32_t answer;
       struct in_addr in;
@@ -2534,7 +2542,9 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
   begin_type = ap_conn->use_begindir ?
                  RELAY_COMMAND_BEGIN_DIR : RELAY_COMMAND_BEGIN;
   if (begin_type == RELAY_COMMAND_BEGIN) {
+#ifndef NON_ANONYMOUS_MODE_ENABLED
     tor_assert(circ->build_state->onehop_tunnel == 0);
+#endif
   }
 
   if (connection_edge_send_command(edge_conn, begin_type,

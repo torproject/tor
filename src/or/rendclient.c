@@ -139,8 +139,10 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(rendcirc->rend_data);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_data->onion_address,
                                    rendcirc->rend_data->onion_address));
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(introcirc->build_state->onehop_tunnel));
   tor_assert(!(rendcirc->build_state->onehop_tunnel));
+#endif
 
   if (rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
                               &entry) < 1) {
@@ -331,7 +333,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   }
 
   tor_assert(circ->build_state->chosen_exit);
+#ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circ->build_state->onehop_tunnel));
+#endif
   tor_assert(circ->rend_data);
 
   if (request_len == 0) {
@@ -343,7 +347,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_data->onion_address, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
+#ifndef NON_ANONYMOUS_MODE_ENABLED
       tor_assert(!(rendcirc->build_state->onehop_tunnel));
+#endif
       rendcirc->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
       /* Set timestamp_dirty, because circuit_expire_building expects
        * it to specify when a circuit entered the
@@ -529,6 +535,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+  int tor2web_mode = get_options()->Tor2webMode;
   tor_assert(desc_id);
   tor_assert(rend_query);
   /* Determine responsible dirs. Even if we can't get all we want,
@@ -587,7 +594,8 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_initiate_command_routerstatus_rend(hs_dir,
                                           DIR_PURPOSE_FETCH_RENDDESC_V2,
                                           ROUTER_PURPOSE_GENERAL,
-                                          1, desc_id_base32, NULL, 0, 0,
+                                          !tor2web_mode, desc_id_base32,
+                                          NULL, 0, 0,
                                           rend_query);
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s', auth type %d, "
