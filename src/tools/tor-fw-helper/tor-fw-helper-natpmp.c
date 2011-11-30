@@ -9,11 +9,13 @@
 
 #include "orconfig.h"
 #ifdef NAT_PMP
+#ifdef MS_WINDOWS
+#define STATICLIB
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <arpa/inet.h>
 
 // debugging stuff
 #include <assert.h>
