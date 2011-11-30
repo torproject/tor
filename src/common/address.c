@@ -962,8 +962,11 @@ char *
 tor_dup_addr(const tor_addr_t *addr)
 {
   char buf[TOR_ADDR_BUF_LEN];
-  tor_addr_to_str(buf, addr, sizeof(buf), 0);
-  return tor_strdup(buf);
+  if (tor_addr_to_str(buf, addr, sizeof(buf), 0)) {
+    return tor_strdup(buf);
+  } else {
+    return tor_strdup("<unknown address type>");
+  }
 }
 
 /** Return a string representing the address <b>addr</b>.  This string is
