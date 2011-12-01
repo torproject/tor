@@ -946,10 +946,8 @@ static void
 set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
 {
   const or_options_t *options = get_options();
-  extern char **environ;
 
-  LPVOID tmp=NULL;
-
+  char *tmp=NULL;
   char *state_tmp=NULL;
   char *state_env=NULL;
   char *transports_to_launch=NULL;
@@ -992,7 +990,8 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   smartlist_add(envs, transports_env);
 
   if (mp->is_server) {
-    tor_asprintf(&orport_env, "TOR_PT_ORPORT=127.0.0.1:%d", options->ORPort);
+    tor_asprintf(&orport_env, "TOR_PT_ORPORT=127.0.0.1:%s",
+                 options->ORPort->value);
 
     bindaddr_tmp = get_bindaddr_for_proxy(mp);
     tor_asprintf(&bindaddr_env, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
