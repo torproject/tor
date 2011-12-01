@@ -1957,7 +1957,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 1;
   }
 
-  if (digestmap_size(intro->accepted_intro_rsa_parts) >=
+  if (intro->accepted_intro_rsa_parts != NULL &&
+      digestmap_size(intro->accepted_intro_rsa_parts) >=
       INTRO_POINT_LIFETIME_INTRODUCTIONS) {
     /* This intro point has been used too many times.  Expire it now. */
     return 1;
