@@ -1064,7 +1064,7 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
       ++port;
   }
 
-  if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) < 0)
+  if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) != 0)
     goto err;
   tor_free(tmp);
 
