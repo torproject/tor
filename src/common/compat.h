@@ -408,7 +408,7 @@ typedef int socklen_t;
 
 int tor_close_socket(tor_socket_t s);
 tor_socket_t tor_open_socket(int domain, int type, int protocol);
-tor_socket_t tor_accept_socket(int sockfd, struct sockaddr *addr,
+tor_socket_t tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr,
                                   socklen_t *len);
 int get_n_open_sockets(void);
 
