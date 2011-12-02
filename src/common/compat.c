@@ -934,7 +934,7 @@ tor_open_socket(int domain, int type, int protocol)
 
 /** As socket(), but counts the number of open sockets. */
 tor_socket_t
-tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len)
+tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr, socklen_t *len)
 {
   tor_socket_t s = accept(sockfd, addr, len);
   if (SOCKET_OK(s)) {
