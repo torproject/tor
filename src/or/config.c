@@ -232,7 +232,7 @@ static config_var_t _option_vars[] = {
   V(DataDirectory,               FILENAME, NULL),
   OBSOLETE("DebugLogFile"),
   V(DisableNetwork,              BOOL,     "0"),
-  V(DirAllowPrivateAddresses,    BOOL,     NULL),
+  V(DirAllowPrivateAddresses,    BOOL,     "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   V(DirListenAddress,            LINELIST, NULL),
   OBSOLETE("DirFetchPeriod"),
