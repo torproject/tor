@@ -1912,9 +1912,12 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
   }
 
   /* 'fname' contains the DH parameters stored in base64-ed DER
-     format. We are only interested in the DH modulus. */
+   *  format. We are only interested in the DH modulus.
+   *  NOTE: We allocate more storage here than we need. Since we're already
+   *  doing that, we can also add 1 byte extra to appease Coverity's
+   *  scanner. */
 
-  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents));
+  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents) + 1);
   length = base64_decode((char *)base64_decoded_dh, strlen(contents),
                          contents, strlen(contents));
   if (length < 0) {

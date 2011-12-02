@@ -156,7 +156,7 @@ test_config_addressmap(void *arg)
   strlcpy(address, "www.torproject.org", sizeof(address));
   test_assert(!addressmap_rewrite(address, sizeof(address), &expires));
 
-done:
+ done:
   ;
 }
 
