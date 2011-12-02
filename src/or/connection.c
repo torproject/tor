@@ -3137,8 +3137,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   /* Sometimes, "writable" means "connected". */
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
-      log_warn(LD_BUG,
-               "getsockopt() syscall failed?! Please report to tor-ops.");
+      log_warn(LD_BUG, "getsockopt() syscall failed");
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(TO_EDGE_CONN(conn));
       connection_mark_for_close(conn);
