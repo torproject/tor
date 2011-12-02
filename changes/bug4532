@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Initialize conn->addr to a vaild state in spawn_cpuworker. Fixes bug
+      4532; found by troll_un.

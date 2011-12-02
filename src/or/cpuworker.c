@@ -347,6 +347,7 @@ spawn_cpuworker(void)
   /* set up conn so it's got all the data we need to remember */
   conn->s = fd;
   conn->address = tor_strdup("localhost");
+  tor_addr_make_unspec(&conn->addr);
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for cpuworker failed. Giving up.");
