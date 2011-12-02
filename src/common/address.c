@@ -13,10 +13,16 @@
 #include "util.h"
 #include "address.h"
 #include "torlog.h"
+#include "container.h"
 
 #ifdef MS_WINDOWS
 #include <process.h>
 #include <windows.h>
+#include <winsock2.h>
+/* For access to structs needed by GetAdaptersAddresses */
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#include <iphlpapi.h>
 #endif
 
 #ifdef HAVE_SYS_TIME_H
@@ -45,6 +51,9 @@
 #endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
+#endif
+#ifdef HAVE_IFADDRS_H
+#include <ifaddrs.h>
 #endif
 #include <stdarg.h>
 #include <stdio.h>
@@ -1086,6 +1095,114 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
   return -1;
 }
 
+#ifdef MS_WINDOWS
+typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
+              ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
+#endif
+
+/** Try to ask our network interfaces what addresses they are bound to.
+ * Return a new smartlist of tor_addr_t on success, and NULL on failure.
+ * (An empty smartlist indicates that we successfully learned that we have no
+ * addresses.)  Log failure messages at <b>severity</b>. */
+static smartlist_t *
+get_interface_addresses_raw(int severity)
+{
+#if defined(HAVE_GETIFADDRS)
+  /* Most free Unixy systems provide getifaddrs, which gives us a linked list
+   * of struct ifaddrs. */
+  struct ifaddrs *ifa = NULL;
+  const struct ifaddrs *i;
+  smartlist_t *result;
+  if (getifaddrs(&ifa) < 0) {
+    log_fn(severity, LD_NET, "Unable to call getifaddrs(): %s",
+           strerror(errno));
+    return NULL;
+  }
+
+  result = smartlist_create();
+  for (i = ifa; i; i = i->ifa_next) {
+    tor_addr_t tmp;
+    if (!i->ifa_addr)
+      continue;
+    if (i->ifa_addr->sa_family != AF_INET &&
+        i->ifa_addr->sa_family != AF_INET6)
+      continue;
+    if (tor_addr_from_sockaddr(&tmp, i->ifa_addr, NULL) < 0)
+      continue;
+    smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
+  }
+
+  freeifaddrs(ifa);
+  return result;
+#elif defined(MS_WINDOWS)
+  /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
+     "GetAdaptersInfo", but that's deprecated; let's just try
+     GetAdaptersAddresses and fall back to connect+getsockname.
+  */
+  HANDLE lib = load_windows_system_library(TEXT("iphlpapi.dll"));
+  smartlist_t *result = NULL;
+  GetAdaptersAddresses_fn_t fn;
+  ULONG size, res;
+  IP_ADAPTER_ADDRESSES *addresses = NULL, *address;
+
+  (void) severity;
+
+#define FLAGS (GAA_FLAG_SKIP_ANYCAST | \
+               GAA_FLAG_SKIP_MULTICAST | \
+               GAA_FLAG_SKIP_DNS_SERVER)
+
+  if (!lib) {
+    log_fn(severity, LD_NET, "Unable to load iphlpapi.dll");
+    goto done;
+  }
+
+  if (!(fn = (GetAdaptersAddresses_fn_t)
+                  GetProcAddress(lib, "GetAdaptersAddresses"))) {
+    log_fn(severity, LD_NET, "Unable to obtain pointer to "
+           "GetAdaptersAddresses");
+    goto done;
+  }
+
+  /* Guess how much space we need. */
+  size = 15*1024;
+  addresses = tor_malloc(size);
+  res = fn(AF_UNSPEC, FLAGS, NULL, addresses, &size);
+  if (res == ERROR_BUFFER_OVERFLOW) {
+    /* we didn't guess that we needed enough space; try again */
+    tor_free(addresses);
+    addresses = tor_malloc(size);
+    res = fn(AF_UNSPEC, FLAGS, NULL, addresses, &size);
+  }
+  if (res != NO_ERROR) {
+    log_fn(severity, LD_NET, "GetAdaptersAddresses failed (result: %lu)", res);
+    goto done;
+  }
+
+  result = smartlist_create();
+  for (address = addresses; address; address = address->Next) {
+    IP_ADAPTER_UNICAST_ADDRESS *a;
+    for (a = address->FirstUnicastAddress; a; a = a->Next) {
+      /* Yes, it's a linked list inside a linked list */
+      struct sockaddr *sa = a->Address.lpSockaddr;
+      tor_addr_t tmp;
+      if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
+        continue;
+      if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
+        continue;
+      smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
+    }
+  }
+
+ done:
+  if (lib)
+    FreeLibrary(lib);
+  tor_free(addresses);
+  return result;
+#else
+  (void) severity;
+  return NULL;
+#endif
+}
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
  * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
@@ -1093,12 +1210,36 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 int
 get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
 {
+  /* XXX really, this function should yield a smartlist of addresses. */
+  smartlist_t *addrs;
   int sock=-1, r=-1;
   struct sockaddr_storage my_addr, target_addr;
   socklen_t addr_len;
-
   tor_assert(addr);
 
+  /* Try to do this the smart way if possible. */
+  if ((addrs = get_interface_addresses_raw(severity))) {
+    int rv = -1;
+    SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
+      if (family != AF_UNSPEC && family != tor_addr_family(a))
+        continue;
+      if (tor_addr_is_loopback(a))
+        continue;
+      tor_addr_copy(addr, a);
+      rv = 0;
+
+      /* If we found a non-internal address, declare success.  Otherwise,
+       * keep looking. */
+      if (!tor_addr_is_internal(a, 0))
+        break;
+    } SMARTLIST_FOREACH_END(a);
+
+    SMARTLIST_FOREACH(addrs, tor_addr_t *, a, tor_free(a));
+    smartlist_free(addrs);
+    return rv;
+  }
+
+  /* Okay, the smart way is out. */
   memset(addr, 0, sizeof(tor_addr_t));
   memset(&target_addr, 0, sizeof(target_addr));
   /* Don't worry: no packets are sent. We just need to use a real address

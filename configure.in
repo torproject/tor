@@ -300,6 +300,7 @@ AC_CHECK_FUNCS(
         flock \
         ftime \
         getaddrinfo \
+	getifaddrs \
         getrlimit \
         gettimeofday \
         gmtime_r \
@@ -624,6 +625,7 @@ dnl These headers are not essential
 AC_CHECK_HEADERS(
         arpa/inet.h \
         grp.h \
+	ifaddrs.h \
         inttypes.h \
         limits.h \
         linux/types.h \
