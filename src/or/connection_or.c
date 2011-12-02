@@ -1514,7 +1514,9 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
                                  END_OR_CONN_REASON_OR_IDENTITY);
     if (!authdir_mode_tests_reachability(options))
-      control_event_bootstrap_problem("foo", END_OR_CONN_REASON_OR_IDENTITY);
+      control_event_bootstrap_problem(
+                                "Unexpected identity in router certificate",
+                                END_OR_CONN_REASON_OR_IDENTITY);
     as_expected = 0;
   }
   if (authdir_mode_tests_reachability(options)) {
