@@ -1634,6 +1634,42 @@ get_parent_directory(char *fname)
   return -1;
 }
 
+/** Expand possibly relative path <b>fname</b> to an absolute path.
+ * Return a newly allocated string, possibly equal to <b>fname</b>. */
+char *
+make_path_absolute(char *fname)
+{
+#ifdef WINDOWS
+  char *absfname_malloced = _fullpath(NULL, fname, 1);
+
+  /* We don't want to assume that tor_free can free a string allocated
+   * with malloc.  On failure, return fname (it's better than nothing). */
+  char *absfname = tor_strdup(absfname_malloced ? absfname_malloced : fname);
+  if (absfname_malloced) free(absfname_malloced);
+
+  return absfname;
+#else
+  char path[PATH_MAX+1];
+  char *absfname = NULL;
+
+  tor_assert(fname);
+
+  if(fname[0] == '/') {
+    absfname = tor_strdup(fname);
+  } else {
+    if (getcwd(path, PATH_MAX) != NULL) {
+      tor_asprintf(&absfname, "%s/%s", path, fname);
+    } else {
+      /* If getcwd failed, the best we can do here is keep using the
+       * relative path.  (Perhaps / isn't readable by this UID/GID.) */
+      absfname = tor_strdup(fname);
+    }
+  }
+
+  return absfname;
+#endif
+}
+
 /** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)

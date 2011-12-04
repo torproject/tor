@@ -4356,6 +4356,14 @@ find_torrc_filename(int argc, char **argv,
         tor_free(fname);
       }
       fname = expand_filename(argv[i+1]);
+
+      {
+        char *absfname;
+        absfname = make_path_absolute(fname);
+        tor_free(fname);
+        fname = absfname;
+      }
+
       *using_default_torrc = 0;
       ++i;
     } else if (ignore_opt && !strcmp(argv[i],ignore_opt)) {
