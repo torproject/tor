@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+
+    - Don't send two ESTABLISH_RENDEZVOUS cells when opening a new
+      circuit for use as a hidden service client's rendezvous point.
+      Fixes bugs 4641 and 4171; bugfix on 0.2.3.3-alpha.  Diagnosed
+      with help from wanoskarnet.
+

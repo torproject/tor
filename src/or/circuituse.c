@@ -1017,7 +1017,6 @@ circuit_has_opened(origin_circuit_t *circ)
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
-      can_try_clearing_isolation = 1;
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
