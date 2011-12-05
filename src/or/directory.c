@@ -410,7 +410,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     } else {
       /* Otherwise it might be a consensus we don't parse, but which we
        * do cache.  Look at the cached copy, perhaps. */
-      cached_dir_t *cd = dirserv_get_consensus(resource ? resource : "ns");
+      cached_dir_t *cd = dirserv_get_consensus(resource);
       if (cd)
         if_modified_since = cd->published + 180;
     }
