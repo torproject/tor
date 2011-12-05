@@ -1017,6 +1017,14 @@ circuit_has_opened(origin_circuit_t *circ)
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
+      /* XXXX We'd like to set something like "can_try_clearing_isolation"
+       * here, so that we can change the isolation of this circuit (and maybe
+       * its purpose too) if it turns out that we no longer have any streams
+       * that want to use it.  But connection_ap_attach_pending() doesn't
+       * actually attach streams to a C_ESTABLISH_REND circuit-- streams
+       * don't get attached until the circuit is in C_REND_JOINED... so
+       * we can't clear isolation now.
+       */
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
