@@ -29,6 +29,7 @@ void reset_bandwidth_test(void);
 int circuit_enough_testing_circs(void);
 
 void circuit_has_opened(origin_circuit_t *circ);
+void circuit_try_attaching_streams(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
 
 /** Flag to set when a circuit should have only a single hop. */
