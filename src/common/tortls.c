@@ -1638,28 +1638,19 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   tor_assert(len<INT_MAX);
   r = SSL_read(tls->ssl, cp, (int)len);
-  if (r > 0) /* return the number of characters read */
-    return r;
-
-  /* If we got here, SSL_read() did not go as expected. */
-
-  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
-
+  if (r > 0) {
 #ifdef V2_HANDSHAKE_SERVER
-  if (tls->got_renegotiate) {
-    tor_assert(tls->server_handshake_count == 2);
-    /* XXX tor_assert(err == TOR_TLS_WANTREAD); */
-
-    /* Renegotiation happened! */
-    log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
-    if (tls->negotiated_callback)
-      tls->negotiated_callback(tls, tls->callback_arg);
-    tls->got_renegotiate = 0;
-
+    if (tls->got_renegotiate) {
+      /* Renegotiation happened! */
+      log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
+      if (tls->negotiated_callback)
+        tls->negotiated_callback(tls, tls->callback_arg);
+      tls->got_renegotiate = 0;
+    }
+#endif
     return r;
   }
-#endif
-
+  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
   if (err == _TOR_TLS_ZERORETURN || err == TOR_TLS_CLOSE) {
     log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
