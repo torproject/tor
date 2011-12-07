@@ -77,6 +77,7 @@ int tor_tls_handshake(tor_tls_t *tls);
 int tor_tls_finish_handshake(tor_tls_t *tls);
 int tor_tls_renegotiate(tor_tls_t *tls);
 void tor_tls_unblock_renegotiation(tor_tls_t *tls);
+void tor_tls_block_renegotiation(tor_tls_t *tls);
 void tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls);
 int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);

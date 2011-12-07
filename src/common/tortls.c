@@ -1572,6 +1572,16 @@ tor_tls_unblock_renegotiation(tor_tls_t *tls)
   }
 }
 
+/** If this version of openssl supports it, turn off renegotiation on
+ * <b>tls</b>.  (Our protocol never requires this for security, but it's nice
+ * to use belt-and-suspenders here.)
+ */
+void
+tor_tls_block_renegotiation(tor_tls_t *tls)
+{
+  tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+}
+
 void
 tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 {
