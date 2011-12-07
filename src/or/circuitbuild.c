@@ -2524,7 +2524,8 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
 
   append_cell_to_circuit_queue(TO_CIRCUIT(circ),
                                circ->p_conn, &cell, CELL_DIRECTION_IN, 0);
-  log_debug(LD_CIRC,"Finished sending 'created' cell.");
+  log_debug(LD_CIRC,"Finished sending '%s' cell.",
+            circ->is_first_hop ? "created_fast" : "created");
 
   if (!is_local_addr(&circ->p_conn->_base.addr) &&
       !connection_or_nonopen_was_started_here(circ->p_conn)) {
