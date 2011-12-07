@@ -893,9 +893,6 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
-  /* XXXX023 This is a pretty brute-force approach. It'd be better to
-   * attach only the connections that are waiting on this circuit, rather
-   * than trying to attach them all. See comments bug 743. */
   circuit_try_attaching_streams(circ);
 
   memset(keys, 0, sizeof(keys));
