@@ -1162,12 +1162,10 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
 static void
 connection_or_close_connection_cb(void *_conn)
 {
-  or_connection_t *or_conn = _conn;
-  connection_t *conn = TO_CONN(or_conn);
+  or_connection_t *conn = _conn;
 
-  connection_stop_reading(conn);
-  if (!conn->marked_for_close)
-    connection_mark_for_close(conn);
+  connection_stop_reading(TO_CONN(conn));
+  connection_mark_for_close(TO_CONN(conn));
 }
 
 /** Move forward with the tls handshake. If it finishes, hand
