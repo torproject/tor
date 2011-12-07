@@ -146,7 +146,7 @@ struct tor_tls_t {
   /** True iff we should call negotiated_callback when we're done reading. */
   unsigned int got_renegotiate:1;
   /** Incremented every time we start the server side of a handshake. */
-  unsigned int server_handshake_count:2;
+  uint8_t server_handshake_count;
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   /** Last values retrieved from BIO_number_read()/write(); see
@@ -1318,13 +1318,11 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
 static void
 tor_tls_got_server_hello(tor_tls_t *tls)
 {
-  if (tls->server_handshake_count < 3)
-    ++tls->server_handshake_count;
-
-  if (tls->server_handshake_count == 2) {
-    tor_assert(tls->negotiated_callback);
+  /* Check whether we're watching for renegotiates.  If so, this is one! */
+  if (tls->negotiated_callback)
     tls->got_renegotiate = 1;
-  }
+  if (tls->server_handshake_count < 127) /*avoid any overflow possibility*/
+    ++tls->server_handshake_count;
 
   /* Now check the cipher list. */
   if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
@@ -1659,14 +1657,6 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
     tls->got_renegotiate = 0;
 
     return r;
-  } else if (tls->server_handshake_count > 2) {
-    /* If we get more than 2 handshakes, it means that our peer is
-       trying to re-renegotiate. Return an error. */
-    tor_assert(tls->server_handshake_count == 3);
-
-    log_info(LD_NET, "Detected excess renegotiation from %s!", ADDR(tls));
-
-    return TOR_TLS_ERROR_MISC;
   }
 #endif
 
