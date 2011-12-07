@@ -1333,8 +1333,7 @@ tor_tls_got_client_hello(tor_tls_t *tls)
     }
 
     tls->got_renegotiate = 1;
-  } else if (tls->server_handshake_count > 2 &&
-             tls->excess_renegotiations_callback) {
+  } else if (tls->server_handshake_count > 2) {
     /* We got more than one renegotiation requests. The Tor protocol
        needs just one renegotiation; more than that probably means
        They are trying to DoS us and we have to stop them. We can't
