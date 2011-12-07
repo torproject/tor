@@ -1339,9 +1339,16 @@ tor_tls_got_client_hello(tor_tls_t *tls)
              tls->excess_renegotiations_callback) {
     /* We got more than one renegotiation requests. The Tor protocol
        needs just one renegotiation; more than that probably means
-       They are trying to DoS us and we have to stop them. */
+       They are trying to DoS us and we have to stop them. We can't
+       close their connection from in here since it's an OpenSSL
+       callback, so we set a libevent timer that triggers in the next
+       event loop and closes the connection. */
 
-    tls->excess_renegotiations_callback(tls->callback_arg);
+    if (tor_run_in_libevent_loop(tls->excess_renegotiations_callback,
+                                 tls->callback_arg) < 0) {
+      log_warn(LD_GENERAL, "Didn't manage to set a renegotiation "
+               "limiting callback.");
+    }
   }
 
   /* Now check the cipher list. */

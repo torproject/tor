@@ -492,9 +492,6 @@ connection_or_about_to_close(or_connection_t *or_conn)
   time_t now = time(NULL);
   connection_t *conn = TO_CONN(or_conn);
 
-  if (or_conn->pending_action)
-    tor_cancel_libevent_action(or_conn->pending_action);
-
   /* Remember why we're closing this connection. */
   if (conn->state != OR_CONN_STATE_OPEN) {
     /* Inform any pending (not attached) circs that they should
@@ -1159,32 +1156,18 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
   }
 }
 
-/*DOCDOC*/
+/** Invoked on the server side using a timer from inside
+ * tor_tls_got_client_hello() when the server receives excess
+ * renegotiation attempts; probably indicating a DoS. */
 static void
-close_connection_libevent_cb(void *_conn)
+connection_or_close_connection_cb(void *_conn)
 {
   or_connection_t *or_conn = _conn;
   connection_t *conn = TO_CONN(or_conn);
 
-  or_conn->pending_action = NULL;
-
   connection_stop_reading(conn);
   if (!conn->marked_for_close)
     connection_mark_for_close(conn);
-}
-
-/* DOCDOC */
-static void
-connection_or_close_connection_cb(void *_conn)
-{
-  /* We can't close their connection from in here since it's an OpenSSL
-     callback, so we set a libevent event that triggers in the next event
-     loop and closes the connection. */
-  or_connection_t *or_conn = _conn;
-  if (or_conn->_base.marked_for_close || or_conn->pending_action)
-    return;
-  or_conn->pending_action =
-    tor_run_in_libevent_loop(close_connection_libevent_cb, or_conn);
 }
 
 /** Move forward with the tls handshake. If it finishes, hand
