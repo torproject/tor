@@ -559,15 +559,6 @@ tor_check_libevent_header_compatibility(void)
 #endif
 }
 
-/** Wrapper around libevent's event_base_once(). Sets a
- * timeout-triggered event with no associated file descriptor. */
-int
-tor_event_base_once(void (*cb)(evutil_socket_t, short, void *),
-                    void *arg, struct timeval *timer)
-{
-  return event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT, cb, arg, timer);
-}
-
 /*
   If possible, we're going to try to use Libevent's periodic timer support,
   since it does a pretty good job of making sure that periodic events get

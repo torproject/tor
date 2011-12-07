@@ -1156,20 +1156,6 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
   }
 }
 
-/** Invoked on the server side using a timer from inside
- * tor_tls_got_client_hello() when the server receives excess
- * renegotiation attempts; probably indicating a DoS. */
-static void
-connection_or_close_connection_cb(evutil_socket_t fd, short what, void *_conn)
-{
-  or_connection_t *conn = _conn;
-  (void) what;
-  (void) fd;
-
-  connection_stop_reading(TO_CONN(conn));
-  connection_mark_for_close(TO_CONN(conn));
-}
-
 /** Move forward with the tls handshake. If it finishes, hand
  * <b>conn</b> to connection_tls_finish_handshake().
  *
@@ -1216,9 +1202,8 @@ connection_tls_continue_handshake(or_connection_t *conn)
           /* v2/v3 handshake, but not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
                            "Expecting renegotiation or VERSIONS cell");
-          tor_tls_set_renegotiate_callbacks(conn->tls,
+          tor_tls_set_renegotiate_callback(conn->tls,
                                            connection_or_tls_renegotiated_cb,
-                                           connection_or_close_connection_cb,
                                            conn);
           conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
           connection_stop_writing(TO_CONN(conn));
@@ -1280,9 +1265,8 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
       } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
         /* v2 or v3 handshake, as a server. Only got one handshake, so
          * wait for the next one. */
-        tor_tls_set_renegotiate_callbacks(conn->tls,
+        tor_tls_set_renegotiate_callback(conn->tls,
                                          connection_or_tls_renegotiated_cb,
-                                         connection_or_close_connection_cb,
                                          conn);
         conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
         /* return 0; */
