@@ -243,8 +243,8 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
        * again. */
 #if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
       if (torcfg->disable_iocp == 0) {
-        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again "
-                 "with IOCP disabled.");
+        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again with "
+                 "IOCP disabled.");
       } else
 #endif
       {
@@ -254,6 +254,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
       torcfg->disable_iocp = 1;
       goto retry;
     }
+
   }
 #else
   the_event_base = event_init();
