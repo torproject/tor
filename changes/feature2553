@@ -1,0 +1,9 @@
+  o Major features:
+    - Add a 'tor2web mode' for clients which want to connect to hidden
+      services non-anonymously (and possibly more quickly).  As a
+      safety measure to try to keep users from turning this on without
+      knowing what they are doing, tor2web mode must be explicitly
+      enabled at compile time, and a copy of Tor compiled to run in
+      tor2web mode cannot be used as a normal Tor client.  Implements
+      feature 2553.
+
