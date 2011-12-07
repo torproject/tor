@@ -1312,29 +1312,55 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
-/** We sent the ServerHello part of an SSL handshake.  This might mean
- * that we completed a renegotiation and appropriate actions must be
- * taken. */
 static void
-tor_tls_got_server_hello(tor_tls_t *tls)
+tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
-  /* Check whether we're watching for renegotiates.  If so, this is one! */
-  if (tls->negotiated_callback)
-    tls->got_renegotiate = 1;
-  if (tls->server_handshake_count < 127) /*avoid any overflow possibility*/
-    ++tls->server_handshake_count;
+  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
+            ssl, ssl_state_to_string(ssl->state), type, val);
+}
+
+/** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
+ * changes state. We use this:
+ * <ul><li>To alter the state of the handshake partway through, so we
+ *         do not send or request extra certificates in v2 handshakes.</li>
+ * <li>To detect renegotiation</li></ul>
+ */
+static void
+tor_tls_server_info_callback(const SSL *ssl, int type, int val)
+{
+  tor_tls_t *tls;
+  (void) val;
+
+  tor_tls_debug_state_callback(ssl, type, val);
+
+  if (type != SSL_CB_ACCEPT_LOOP)
+    return;
+  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
+    return;
+
+  tls = tor_tls_get_by_ssl(ssl);
+  if (tls) {
+    /* Check whether we're watching for renegotiates.  If so, this is one! */
+    if (tls->negotiated_callback)
+      tls->got_renegotiate = 1;
+    if (tls->server_handshake_count < 127) /*avoid any overflow possibility*/
+      ++tls->server_handshake_count;
+  } else {
+    log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+    return;
+  }
 
   /* Now check the cipher list. */
-  if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
+  if (tor_tls_client_is_using_v2_ciphers(ssl, ADDR(tls))) {
     /*XXXX_TLS keep this from happening more than once! */
 
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */
 
     /* Set SSL_MODE_NO_AUTO_CHAIN to keep from sending back any extra certs. */
-    SSL_set_mode((SSL*) tls->ssl, SSL_MODE_NO_AUTO_CHAIN);
+    SSL_set_mode((SSL*) ssl, SSL_MODE_NO_AUTO_CHAIN);
     /* Don't send a hello request. */
-    SSL_set_verify((SSL*) tls->ssl, SSL_VERIFY_NONE, NULL);
+    SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
 
     if (tls) {
       tls->wasV2Handshake = 1;
@@ -1348,35 +1374,6 @@ tor_tls_got_server_hello(tor_tls_t *tls)
   }
 }
 #endif
-
-/** This is a callback function for SSL_set_info_callback() and it
- *  will be called in every SSL state change.
- *  It logs the SSL state change, and executes any actions that must be
- *  taken.  */
-static void
-tor_tls_state_changed_callback(const SSL *ssl, int type, int val)
-{
-  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
-            ssl, ssl_state_to_string(ssl->state), type, val);
-
-#ifdef V2_HANDSHAKE_SERVER
-  if (type == SSL_CB_ACCEPT_LOOP &&
-      ssl->state == SSL3_ST_SW_SRVR_HELLO_A) {
-
-    /* Call tor_tls_got_server_hello() for every SSL ServerHello we
-       send. */
-
-    tor_tls_t *tls = tor_tls_get_by_ssl(ssl);
-    if (!tls) {
-      log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
-      return;
-    }
-
-    tor_tls_got_server_hello(tls);
-  }
-#endif
-
-}
 
 /** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
  * a list designed to mimic a common web browser.  Some of the ciphers in the
@@ -1519,8 +1516,14 @@ tor_tls_new(int sock, int isServer)
     log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
              result->last_read_count, result->last_write_count);
   }
-
-  SSL_set_info_callback(result->ssl, tor_tls_state_changed_callback);
+#ifdef V2_HANDSHAKE_SERVER
+  if (isServer) {
+    SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
+  } else
+#endif
+  {
+    SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
+  }
 
   /* Not expected to get called. */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
@@ -1550,7 +1553,13 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
   tls->negotiated_callback = cb;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
-  SSL_set_info_callback(tls->ssl, tor_tls_state_changed_callback);
+#ifdef V2_HANDSHAKE_SERVER
+  if (cb) {
+    SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
+  } else {
+    SSL_set_info_callback(tls->ssl, tor_tls_debug_state_callback);
+  }
+#endif
 }
 
 /** If this version of openssl requires it, turn on renegotiation on
