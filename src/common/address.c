@@ -1203,6 +1203,24 @@ get_interface_addresses_raw(int severity)
   return NULL;
 #endif
 }
+
+/** Return true iff <b>a</b> is a multicast address.  */
+static int
+tor_addr_is_multicast(const tor_addr_t *a)
+{
+  sa_family_t family = tor_addr_family(a);
+  if (family == AF_INET) {
+    uint32_t ipv4h = tor_addr_to_ipv4h(a);
+    if ((ipv4h >> 24) == 0xe0)
+      return 1; /* Multicast */
+  } else if (family == AF_INET6) {
+    const uint8_t *a32 = tor_addr_to_in6_addr8(a);
+    if (a32[0] == 0xff)
+      return 1;
+  }
+  return 0;
+}
+
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
  * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
@@ -1223,8 +1241,10 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
     SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
       if (family != AF_UNSPEC && family != tor_addr_family(a))
         continue;
-      if (tor_addr_is_loopback(a))
+      if (tor_addr_is_loopback(a) ||
+          tor_addr_is_multicast(a))
         continue;
+
       tor_addr_copy(addr, a);
       rv = 0;
 
