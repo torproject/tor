@@ -1160,9 +1160,11 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
  * tor_tls_got_client_hello() when the server receives excess
  * renegotiation attempts; probably indicating a DoS. */
 static void
-connection_or_close_connection_cb(void *_conn)
+connection_or_close_connection_cb(evutil_socket_t fd, short what, void *_conn)
 {
   or_connection_t *conn = _conn;
+  (void) what;
+  (void) fd;
 
   connection_stop_reading(TO_CONN(conn));
   connection_mark_for_close(TO_CONN(conn));

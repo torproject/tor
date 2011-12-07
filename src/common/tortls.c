@@ -160,7 +160,7 @@ struct tor_tls_t {
 
   /** Callback to invoke whenever a client tries to renegotiate more
       than once. */
-  void (*excess_renegotiations_callback)(void *);
+  void (*excess_renegotiations_callback)(evutil_socket_t, short, void *);
 
   /** Argument to pass to negotiated_callback. */
   void *callback_arg;
@@ -1341,8 +1341,10 @@ tor_tls_got_client_hello(tor_tls_t *tls)
        callback, so we set a libevent timer that triggers in the next
        event loop and closes the connection. */
 
-    if (tor_run_in_libevent_loop(tls->excess_renegotiations_callback,
-                                 tls->callback_arg) < 0) {
+    struct timeval zero_seconds_timer = {0,0};
+
+    if (tor_event_base_once(tls->excess_renegotiations_callback,
+                            tls->callback_arg, &zero_seconds_timer) < 0) {
       log_warn(LD_GENERAL, "Didn't manage to set a renegotiation limiting callback.");
     }
   }
@@ -1570,7 +1572,7 @@ tor_tls_set_logged_address(tor_tls_t *tls, const char *address)
 void
 tor_tls_set_renegotiate_callbacks(tor_tls_t *tls,
                                  void (*cb)(tor_tls_t *, void *arg),
-                                 void (*cb2)(void *),
+                                 void (*cb2)(evutil_socket_t, short, void *),
                                  void *arg)
 {
   tls->negotiated_callback = cb;
