@@ -1542,8 +1542,8 @@ switch_id(const char *user)
  * CAP_SYS_PTRACE and so it is very likely that root will still be able to
  * attach to the Tor process.
  */
-/** Attempt to disable debugger attachment: return 0 on success, -1 on
- * failure. */
+/** Attempt to disable debugger attachment: return 1 on success, -1 on
+ * failure, and 0 if we don't know how to try on this platform. */
 int
 tor_disable_debugger_attach(void)
 {
@@ -1568,11 +1568,12 @@ tor_disable_debugger_attach(void)
 
   // XXX: TODO - Mac OS X has dtrace and this may be disabled.
   // XXX: TODO - Windows probably has something similar
-  if (r == 0) {
+  if (r == 0 && attempted) {
     log_debug(LD_CONFIG,"Debugger attachment disabled for "
               "unprivileged users.");
+    return 1;
   } else if (attempted) {
-    log_warn(LD_CONFIG, "Unable to disable ptrace attach: %s",
+    log_warn(LD_CONFIG, "Unable to disable debugger attaching: %s",
              strerror(errno));
   }
   return r;

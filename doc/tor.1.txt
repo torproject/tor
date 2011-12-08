@@ -282,8 +282,8 @@ Other options can be specified either on the command-line (--option
    to alter the system wide ptrace scope as it may not even exist. If you wish
    to attach to Tor with a debugger such as gdb or strace you will want to set
    this to 0 for the duration of your debugging. Normal users should leave it
-   on. (Default: 1)
- 
+   on. Disabling this option while Tor is running is prohibited. (Default: 1)
+
 **FetchDirInfoEarly** **0**|**1**::
     If set to 1, Tor will always fetch directory information like other
     directory caches, even if you don't meet the normal criteria for fetching
