@@ -243,8 +243,8 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
        * again. */
 #if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
       if (torcfg->disable_iocp == 0) {
-        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again "
-                 "with IOCP disabled.");
+        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again with "
+                 "IOCP disabled.");
       } else
 #endif
       {
@@ -254,6 +254,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
       torcfg->disable_iocp = 1;
       goto retry;
     }
+
   }
 #else
   the_event_base = event_init();
@@ -556,60 +557,6 @@ tor_check_libevent_header_compatibility(void)
 #else
   /* Your libevent is ancient. */
 #endif
-}
-
-struct tor_libevent_action_t {
-  struct event *ev;
-  void (*cb)(void *arg);
-  void *arg;
-};
-
-/** Callback for tor_run_in_libevent_loop */
-static void
-run_runnable_cb(evutil_socket_t s, short what, void *arg)
-{
-  tor_libevent_action_t *r = arg;
-  void (*cb)(void *) = r->cb;
-  void *cb_arg = r->arg;
-  (void)what;
-  (void)s;
-  tor_event_free(r->ev);
-  tor_free(r);
-
-  cb(cb_arg);
-}
-
-/** Cause cb(arg) to run later on this iteration of the libevent loop, or in
- * the next iteration of the libevent loop.  This is useful for when you're
- * deep inside a no-reentrant code and there's some function you want to call
- * without worrying about whether it might cause reeentrant invocation.
- */
-tor_libevent_action_t *
-tor_run_in_libevent_loop(void (*cb)(void *arg), void *arg)
-{
-  tor_libevent_action_t *r = tor_malloc(sizeof(tor_libevent_action_t));
-  r->cb = cb;
-  r->arg = arg;
-  r->ev = tor_event_new(tor_libevent_get_base(), -1, EV_TIMEOUT,
-                        run_runnable_cb, r);
-  if (!r->ev) {
-    tor_free(r);
-    return NULL;
-  }
-  /* Make the event active immediately. */
-  event_active(r->ev, EV_TIMEOUT, 1);
-
-  return r;
-}
-
-/**
- * Cancel <b>action</b> without running it.
- */
-void
-tor_cancel_libevent_action(tor_libevent_action_t *action)
-{
-  tor_event_free(action->ev);
-  tor_free(action);
 }
 
 /*

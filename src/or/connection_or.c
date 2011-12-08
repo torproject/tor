@@ -42,7 +42,6 @@ static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                                    char *digest_rcvd_out);
 
 static void connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn);
-static void connection_or_close_connection_cb(void *_conn);
 
 #ifdef USE_BUFFEREVENTS
 static void connection_or_handle_event_cb(struct bufferevent *bufev,
@@ -492,9 +491,6 @@ connection_or_about_to_close(or_connection_t *or_conn)
 {
   time_t now = time(NULL);
   connection_t *conn = TO_CONN(or_conn);
-
-  if (or_conn->pending_action)
-    tor_cancel_libevent_action(or_conn->pending_action);
 
   /* Remember why we're closing this connection. */
   if (conn->state != OR_CONN_STATE_OPEN) {
@@ -1103,16 +1099,12 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
   tor_assert(!conn->tls);
   conn->tls = tor_tls_new(conn->_base.s, receiving);
+  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
+      escaped_safe_str(conn->_base.address));
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
-  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
-      escaped_safe_str(conn->_base.address));
-  tor_tls_set_renegotiate_callbacks(conn->tls,
-                                    connection_or_tls_renegotiated_cb,
-                                    connection_or_close_connection_cb,
-                                    conn);
 #ifdef USE_BUFFEREVENTS
   if (connection_type_uses_bufferevent(TO_CONN(conn))) {
     const int filtering = get_options()->_UseFilteringSSLBufferevents;
@@ -1157,39 +1149,15 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
   or_connection_t *conn = _conn;
   (void)tls;
 
+  /* Don't invoke this again. */
+  tor_tls_set_renegotiate_callback(tls, NULL, NULL);
+  tor_tls_block_renegotiation(tls);
+
   if (connection_tls_finish_handshake(conn) < 0) {
     /* XXXX_TLS double-check that it's ok to do this from inside read. */
     /* XXXX_TLS double-check that this verifies certificates. */
     connection_mark_for_close(TO_CONN(conn));
   }
-}
-
-/*DOCDOC*/
-static void
-close_connection_libevent_cb(void *_conn)
-{
-  or_connection_t *or_conn = _conn;
-  connection_t *conn = TO_CONN(or_conn);
-
-  or_conn->pending_action = NULL;
-
-  connection_stop_reading(conn);
-  if (!conn->marked_for_close)
-    connection_mark_for_close(conn);
-}
-
-/* DOCDOC */
-static void
-connection_or_close_connection_cb(void *_conn)
-{
-  /* We can't close their connection from in here since it's an OpenSSL
-     callback, so we set a libevent event that triggers in the next event
-     loop and closes the connection. */
-  or_connection_t *or_conn = _conn;
-  if (or_conn->_base.marked_for_close || or_conn->pending_action)
-    return;
-  or_conn->pending_action =
-    tor_run_in_libevent_loop(close_connection_libevent_cb, or_conn);
 }
 
 /** Move forward with the tls handshake. If it finishes, hand
@@ -1238,6 +1206,9 @@ connection_tls_continue_handshake(or_connection_t *conn)
           /* v2/v3 handshake, but not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
                            "Expecting renegotiation or VERSIONS cell");
+          tor_tls_set_renegotiate_callback(conn->tls,
+                                           connection_or_tls_renegotiated_cb,
+                                           conn);
           conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
           connection_stop_writing(TO_CONN(conn));
           connection_start_reading(TO_CONN(conn));
@@ -1298,6 +1269,9 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
       } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
         /* v2 or v3 handshake, as a server. Only got one handshake, so
          * wait for the next one. */
+        tor_tls_set_renegotiate_callback(conn->tls,
+                                         connection_or_tls_renegotiated_cb,
+                                         conn);
         conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
         /* return 0; */
         return; /* ???? */
@@ -1567,6 +1541,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
       connection_or_init_conn_from_address(conn, &conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
+    tor_tls_block_renegotiation(conn->tls);
     return connection_or_set_state_open(conn);
   } else {
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V2;

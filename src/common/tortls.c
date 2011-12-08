@@ -52,6 +52,7 @@
 #include <event2/bufferevent_ssl.h>
 #include <event2/buffer.h>
 #include <event2/event.h>
+#include "compat_libevent.h"
 #endif
 
 #define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
@@ -63,7 +64,6 @@
 #include "torlog.h"
 #include "container.h"
 #include <string.h>
-#include "compat_libevent.h"
 
 /* Enable the "v2" TLS handshake.
  */
@@ -146,7 +146,7 @@ struct tor_tls_t {
   /** True iff we should call negotiated_callback when we're done reading. */
   unsigned int got_renegotiate:1;
   /** Incremented every time we start the server side of a handshake. */
-  unsigned int server_handshake_count:2;
+  uint8_t server_handshake_count;
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   /** Last values retrieved from BIO_number_read()/write(); see
@@ -157,11 +157,6 @@ struct tor_tls_t {
   /** If set, a callback to invoke whenever the client tries to renegotiate
    * the handshake. */
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
-
-  /** Callback to invoke whenever a client tries to renegotiate more
-      than once. */
-  void (*excess_renegotiations_callback)(void *);
-
   /** Argument to pass to negotiated_callback. */
   void *callback_arg;
 };
@@ -585,8 +580,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
                            const char *cname_sign,
                            unsigned int cert_lifetime)
 {
-  /* OpenSSL generates self-signed certificates with random 64-bit serial
-   * numbers, so let's do that too. */
 #define SERIAL_NUMBER_SIZE 8
 
   time_t start_time, end_time;
@@ -614,12 +607,12 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     goto error;
 
   { /* our serial number is 8 random bytes. */
-    if (crypto_rand((char *)serial_tmp, sizeof(serial_tmp)) < 0)
-      goto error;
-    if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
-      goto error;
-    if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
-      goto error;
+  if (crypto_rand((char *)serial_tmp, sizeof(serial_tmp)) < 0)
+    goto error;
+  if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
+    goto error;
+  if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
+    goto error;
   }
 
   if (!(name = tor_x509_name_new(cname)))
@@ -1319,42 +1312,55 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
-/** We got an SSL ClientHello message.  This might mean that the
- * client wants to initiate a renegotiation and appropriate actions
- * must be taken. */
 static void
-tor_tls_got_client_hello(tor_tls_t *tls)
+tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
-  if (tls->server_handshake_count < 3)
-    ++tls->server_handshake_count;
+  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
+            ssl, ssl_state_to_string(ssl->state), type, val);
+}
 
-  if (tls->server_handshake_count == 2) {
-    if (!tls->negotiated_callback) {
-      log_warn(LD_BUG, "Got a renegotiation request but we don't"
-               " have a renegotiation callback set!");
-    }
+/** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
+ * changes state. We use this:
+ * <ul><li>To alter the state of the handshake partway through, so we
+ *         do not send or request extra certificates in v2 handshakes.</li>
+ * <li>To detect renegotiation</li></ul>
+ */
+static void
+tor_tls_server_info_callback(const SSL *ssl, int type, int val)
+{
+  tor_tls_t *tls;
+  (void) val;
 
-    tls->got_renegotiate = 1;
-  } else if (tls->server_handshake_count > 2 &&
-             tls->excess_renegotiations_callback) {
-    /* We got more than one renegotiation requests. The Tor protocol
-       needs just one renegotiation; more than that probably means
-       They are trying to DoS us and we have to stop them. */
+  tor_tls_debug_state_callback(ssl, type, val);
 
-    tls->excess_renegotiations_callback(tls->callback_arg);
+  if (type != SSL_CB_ACCEPT_LOOP)
+    return;
+  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
+    return;
+
+  tls = tor_tls_get_by_ssl(ssl);
+  if (tls) {
+    /* Check whether we're watching for renegotiates.  If so, this is one! */
+    if (tls->negotiated_callback)
+      tls->got_renegotiate = 1;
+    if (tls->server_handshake_count < 127) /*avoid any overflow possibility*/
+      ++tls->server_handshake_count;
+  } else {
+    log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+    return;
   }
 
   /* Now check the cipher list. */
-  if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
+  if (tor_tls_client_is_using_v2_ciphers(ssl, ADDR(tls))) {
     /*XXXX_TLS keep this from happening more than once! */
 
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */
 
     /* Set SSL_MODE_NO_AUTO_CHAIN to keep from sending back any extra certs. */
-    SSL_set_mode((SSL*) tls->ssl, SSL_MODE_NO_AUTO_CHAIN);
+    SSL_set_mode((SSL*) ssl, SSL_MODE_NO_AUTO_CHAIN);
     /* Don't send a hello request. */
-    SSL_set_verify((SSL*) tls->ssl, SSL_VERIFY_NONE, NULL);
+    SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
 
     if (tls) {
       tls->wasV2Handshake = 1;
@@ -1368,34 +1374,6 @@ tor_tls_got_client_hello(tor_tls_t *tls)
   }
 }
 #endif
-
-/** This is a callback function for SSL_set_info_callback() and it
- *  will be called in every SSL state change.
- *  It logs the SSL state change, and executes any actions that must be
- *  taken.  */
-static void
-tor_tls_state_changed_callback(const SSL *ssl, int type, int val)
-{
-  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
-            ssl, ssl_state_to_string(ssl->state), type, val);
-
-#ifdef V2_HANDSHAKE_SERVER
-  if (type == SSL_CB_ACCEPT_LOOP &&
-      ssl->state == SSL3_ST_SW_SRVR_HELLO_A) {
-
-    /* Call tor_tls_got_client_hello() for every SSL ClientHello we
-       receive. */
-
-    tor_tls_t *tls = tor_tls_get_by_ssl(ssl);
-    if (!tls) {
-      log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
-      return;
-    }
-
-    tor_tls_got_client_hello(tls);
-  }
-#endif
-}
 
 /** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
  * a list designed to mimic a common web browser.  Some of the ciphers in the
@@ -1538,8 +1516,14 @@ tor_tls_new(int sock, int isServer)
     log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
              result->last_read_count, result->last_write_count);
   }
-
-  SSL_set_info_callback(result->ssl, tor_tls_state_changed_callback);
+#ifdef V2_HANDSHAKE_SERVER
+  if (isServer) {
+    SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
+  } else
+#endif
+  {
+    SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
+  }
 
   /* Not expected to get called. */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
@@ -1557,22 +1541,25 @@ tor_tls_set_logged_address(tor_tls_t *tls, const char *address)
   tls->address = tor_strdup(address);
 }
 
-/** Set <b>cb</b> to be called with argument <b>arg</b> whenever
- * <b>tls</b> next gets a client-side renegotiate in the middle of a
- * read. Set <b>cb2</b> to be called with argument <b>arg</b> whenever
- * <b>tls</b> gets excess renegotiation requests.  Do not invoke this
- * function until <em>after</em> initial handshaking is done!
+/** Set <b>cb</b> to be called with argument <b>arg</b> whenever <b>tls</b>
+ * next gets a client-side renegotiate in the middle of a read.  Do not
+ * invoke this function until <em>after</em> initial handshaking is done!
  */
 void
-tor_tls_set_renegotiate_callbacks(tor_tls_t *tls,
+tor_tls_set_renegotiate_callback(tor_tls_t *tls,
                                  void (*cb)(tor_tls_t *, void *arg),
-                                 void (*cb2)(void *),
                                  void *arg)
 {
   tls->negotiated_callback = cb;
-  tls->excess_renegotiations_callback = cb2;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
+#ifdef V2_HANDSHAKE_SERVER
+  if (cb) {
+    SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
+  } else {
+    SSL_set_info_callback(tls->ssl, tor_tls_debug_state_callback);
+  }
+#endif
 }
 
 /** If this version of openssl requires it, turn on renegotiation on
@@ -1590,6 +1577,16 @@ tor_tls_unblock_renegotiation(tor_tls_t *tls)
     SSL_set_options(tls->ssl,
                     SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
   }
+}
+
+/** If this version of openssl supports it, turn off renegotiation on
+ * <b>tls</b>.  (Our protocol never requires this for security, but it's nice
+ * to use belt-and-suspenders here.)
+ */
+void
+tor_tls_block_renegotiation(tor_tls_t *tls)
+{
+  tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 }
 
 void
@@ -1629,7 +1626,6 @@ tor_tls_free(tor_tls_t *tls)
   SSL_free(tls->ssl);
   tls->ssl = NULL;
   tls->negotiated_callback = NULL;
-  tls->excess_renegotiations_callback = NULL;
   if (tls->context)
     tor_tls_context_decref(tls->context);
   tor_free(tls->address);
@@ -1651,30 +1647,19 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   tor_assert(len<INT_MAX);
   r = SSL_read(tls->ssl, cp, (int)len);
-  if (r > 0) /* return the number of characters read */
-    return r;
-
-  /* If we got here, SSL_read() did not go as expected. */
-
-  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
-
+  if (r > 0) {
 #ifdef V2_HANDSHAKE_SERVER
-  if (tls->got_renegotiate) {
-    if (tls->server_handshake_count != 2) {
-      log_warn(LD_BUG, "We did not notice renegotiation in a timely "
-               "fashion (%u)!", tls->server_handshake_count);
+    if (tls->got_renegotiate) {
+      /* Renegotiation happened! */
+      log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
+      if (tls->negotiated_callback)
+        tls->negotiated_callback(tls, tls->callback_arg);
+      tls->got_renegotiate = 0;
     }
-
-    /* Renegotiation happened! */
-    log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
-    if (tls->negotiated_callback)
-      tls->negotiated_callback(tls, tls->callback_arg);
-    tls->got_renegotiate = 0;
-
+#endif
     return r;
   }
-#endif
-
+  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
   if (err == _TOR_TLS_ZERORETURN || err == TOR_TLS_CLOSE) {
     log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
@@ -1711,7 +1696,6 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   }
   r = SSL_write(tls->ssl, cp, (int)n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO, LD_NET);
-
   if (err == TOR_TLS_DONE) {
     return r;
   }
@@ -1776,6 +1760,7 @@ tor_tls_finish_handshake(tor_tls_t *tls)
 {
   int r = TOR_TLS_DONE;
   if (tls->isServer) {
+    SSL_set_info_callback(tls->ssl, NULL);
     SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
     /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
     tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
