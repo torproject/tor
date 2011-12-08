@@ -1,6 +1,0 @@
-  o Major features:
-    - Implement a more secure consensus parameter voting algorithm that
-      ensures that at least three directory authorities or a majority of
-      them voted on a given parameter before including it in the
-      consensus. Implements proposal 178.
-

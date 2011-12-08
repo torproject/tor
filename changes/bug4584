@@ -1,4 +1,0 @@
-  o Privacy/anonymity features (bridge detection):
-    - Make bridge SSL certificates a bit more stealthy by using random
-      serial numbers, in the same fashion as OpenSSL when generating
-      self-signed certificates. Implements ticket 4584.

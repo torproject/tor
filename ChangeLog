@@ -1,58 +1,148 @@
-Changes in version 0.2.3.9-alpha - 2011-12-??
+Changes in version 0.2.3.9-alpha - 2011-12-08
   o Major features:
+    - Clients can now connect to private bridges over IPv6. Bridges
+      still need at least one IPv4 address in order to connect to
+      other relays. Note that we don't yet handle the case where the
+      user has two bridge lines for the same bridge (one IPv4, one
+      IPv6). Implements parts of proposal 186.
+    - New "DisableNetwork" config option to prevent Tor from launching any
+      connections or accepting any connections except on a control port.
+      Bundles and controllers can set this option before letting Tor talk
+      to the rest of the network, for example to prevent any connections
+      to a non-bridge address. Packages like Orbot can also use this
+      option to instruct Tor to save power when the network is off.
+    - Clients and bridges can now be configured to use a separate
+      "transport" proxy. This approach makes the censorship arms race
+      easier by allowing bridges to use protocol obfuscation plugins. It
+      implements the "managed proxy" part of proposal 180 (ticket 3472).
     - When using OpenSSL 1.0.0 or later, use OpenSSL's counter mode
       implementation. It makes AES_CTR about 7% faster than our old one
       (which was about 10% faster than the one OpenSSL used to provide).
       Resolves ticket 4526.
-    - Tor clients and bridges can now be easily configured to use a
-      separate 'transport' proxy. This approach helps to resist
-      censorship by allowing bridges to use protocol obfuscation
-      plugins. It implements the 'managed proxy' part of proposal
-      180. Implements ticket 3472.
+    - Add a "tor2web mode" for clients that want to connect to hidden
+      services non-anonymously (and possibly more quickly). As a safety
+      measure to try to keep users from turning this on without knowing
+      what they are doing, tor2web mode must be explicitly enabled at
+      compile time, and a copy of Tor compiled to run in tor2web mode
+      cannot be used as a normal Tor client. Implements feature 2553.
+    - Add experimental support for running on Windows with IOCP and no
+      kernel-space socket buffers. This feature is controlled by a new
+      "UserspaceIOCPBuffers" config option (off by default), which has
+      no effect unless Tor has been built with support for bufferevents,
+      is running on Windows, and has enabled IOCP. This may, in the long
+      run, help solve or mitigate bug 98.
+    - Use a more secure consensus parameter voting algorithm. Now at
+      least three directory authorities or a majority of them must
+      vote on a given parameter before it will be included in the
+      consensus. Implements proposal 178.
 
   o Major bugfixes:
+    - Hidden services now ignore the timestamps on INTRODUCE2 cells.
+      They used to check that the timestamp was within 30 minutes
+      of their system clock, so they could cap the size of their
+      replay-detection cache, but that approach unnecessarily refused
+      service to clients with wrong clocks. Bugfix on 0.2.1.6-alpha, when
+      the v3 intro-point protocol (the first one which sent a timestamp
+      field in the INTRODUCE2 cell) was introduced; fixes bug 3460.
     - Only use the EVP interface when AES acceleration is enabled,
       to avoid a 5-7% performance regression. Resolves issue 4525;
       bugfix on 0.2.3.8-alpha.
 
+  o Privacy/anonymity features (bridge detection):
+    - Make bridge SSL certificates a bit more stealthy by using random
+      serial numbers, in the same fashion as OpenSSL when generating
+      self-signed certificates. Implements ticket 4584.
+    - Introduce a new config option "DynamicDHGroups", enabled by
+      default, which provides each bridge with a unique prime DH modulus
+      to be used during SSL handshakes. This option attempts to help
+      against censors who might use the Apache DH modulus as a static
+      identifier for bridges. Addresses ticket 4548.
+
+  o Minor features (new/different config options):
+    - New configuration option "DisableDebuggerAttachment" (on by default)
+      to prevent basic debugging attachment attempts by other processes.
+      Supports Mac OS X and Gnu/Linux. Resolves ticket 3313.
+    - Allow MapAddress directives to specify matches against super-domains,
+      as in "MapAddress *.torproject.org *.torproject.org.torserver.exit".
+      Implements issue 933.
+    - Slightly change behavior of "list" options (that is, config
+      options that can appear more than once) when they appear both in
+      torrc and on the command line. Previously, the command-line options
+      would be appended to the ones from torrc. Now, the command-line
+      options override the torrc options entirely. This new behavior
+      allows the user to override list options (like exit policies and
+      ports to listen on) from the command line, rather than simply
+      appending to the list.
+    - You can get the old (appending) command-line behavior for "list"
+      options by prefixing the option name with a "+".
+    - You can remove all the values for a "list" option from the command
+      line without adding any new ones by prefixing the option name
+      with a "/".
+    - Add experimental support for a "defaults" torrc file to be parsed
+      before the regular torrc. Torrc options override the defaults file's
+      options in the same way that the command line overrides the torrc.
+      The SAVECONF controller command saves only those options which
+      differ between the current configuration and the defaults file. HUP
+      reloads both files. (Note: This is an experimental feature; its
+      behavior will probably be refined in future 0.2.3.x-alpha versions
+      to better meet packagers' needs.)
+
   o Minor features:
-    - Experimental support for running on Windows with IOCP and no
-      kernel-space socket buffers. This feature is controlled by a new
-      UserspaceIOCPBuffers feature (off by default), which has no
-      effect unless Tor has been built with support for bufferevents,
-      is running on Windows, and has enabled IOCP. This may, in the
-      long run, help solve or mitigate bug 98.
     - Try to make the introductory warning message that Tor prints on
       startup more useful for actually finding help and information.
       Resolves ticket 2474.
     - Running "make version" now displays the version of Tor that
       we're about to build. Idea from katmagic; resolves issue 4400.
-    - If set to 1, Tor will attempt to prevent basic debugging
-      attachment attempts by other processes. It has no impact for
-      users who wish to attach if they have CAP_SYS_PTRACE or if they
-      are root.  We believe that this feature works on modern
-      Gnu/Linux distributions, and that it may also work on OSX and
-      some *BSD systems (untested).  Some modern Gnu/Linux systems
-      such as Ubuntu have the kernel.yama.ptrace_scope sysctl and by
-      default enable it as an attempt to limit the PTRACE scope for
-      all user processes by default. This feature will attempt to
-      limit the PTRACE scope for Tor specifically - it will not
-      attempt to alter the system wide ptrace scope as it may not even
-      exist. If you wish to attach to Tor with a debugger such as gdb
-      or strace you will want to set this to 0 for the duration of
-      your debugging. Normal users should leave it on. (Default: 1)
+    - Expire old or over-used hidden service introduction points.
+      Required by fix for bug 3460.
+    - Move the replay-detection cache for the RSA-encrypted parts of
+      INTRODUCE2 cells to the introduction point data structures.
+      Previously, we would use one replay-detection cache per hidden
+      service. Required by fix for bug 3460.
+    - Reduce the lifetime of elements of hidden services' Diffie-Hellman
+      public key replay-detection cache from 60 minutes to 5 minutes. This
+      replay-detection cache is now used only to detect multiple
+      INTRODUCE2 cells specifying the same rendezvous point, so we can
+      avoid launching multiple simultaneous attempts to connect to it.
 
-  o Minor bugfixes:
+  o Minor bugfixes (on Tor 0.2.2.x and earlier):
     - Resolve an integer overflow bug in smartlist_ensure_capacity().
       Fixes bug 4230; bugfix on Tor 0.1.0.1-rc. Based on a patch by
       Mansour Moufid.
-    - Fix a compile warning in tor_inet_pton(). Bugfix on 0.2.3.8-alpha;
-      fixes bug 4554.
     - Fix a minor formatting issue in one of tor-gencert's error messages.
       Fixes bug 4574.
     - Prevent a false positive from the check-spaces script, by disabling
       the "whitespace between function name and (" check for functions
       named 'op()'.
+    - Fix a log message suggesting that people contact a non-existent
+      email address. Fixes bug 3448.
+    - Fix null-pointer access that could occur if TLS allocation failed.
+      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un".
+    - Report a real bootstrap problem to the controller on router
+      identity mismatch. Previously we just said "foo", which probably
+      made a lot of sense at the time. Fixes bug 4169; bugfix on
+      0.2.1.1-alpha.
+    - If we had ever tried to call tor_addr_to_str() on an address of
+      unknown type, we would have done a strdup() on an uninitialized
+      buffer. Now we won't. Fixes bug 4529; bugfix on 0.2.1.3-alpha.
+      Reported by "troll_un".
+    - Correctly detect and handle transient lookup failures from
+      tor_addr_lookup(). Fixes bug 4530; bugfix on 0.2.1.5-alpha.
+      Reported by "troll_un".
+    - Use tor_socket_t type for listener argument to accept(). Fixes bug
+      4535; bugfix on 0.2.2.28-beta. Found by "troll_un".
+    - Initialize conn->addr to a valid state in spawn_cpuworker(). Fixes
+      bug 4532; found by "troll_un".
+
+  o Minor bugfixes (on Tor 0.2.3.x):
+    - Fix a compile warning in tor_inet_pton(). Bugfix on 0.2.3.8-alpha;
+      fixes bug 4554.
+    - Don't send two ESTABLISH_RENDEZVOUS cells when opening a new
+      circuit for use as a hidden service client's rendezvous point.
+      Fixes bugs 4641 and 4171; bugfix on 0.2.3.3-alpha. Diagnosed
+      with help from wanoskarnet.
+    - Restore behavior of overriding SocksPort, ORPort, and similar
+      options from the command line. Bugfix on 0.2.3.3-alpha.
 
   o Build fixes:
     - Properly handle the case where the build-tree is not the same
@@ -60,12 +150,14 @@ Changes in version 0.2.3.9-alpha - 2011-12-??
       src/or/micro-revision.i, and src/or/or_sha1.i. Fixes bug 3953;
       bugfix on 0.2.0.1-alpha.
 
-  o Code simplifications and refactorings:
+  o Code simplifications, cleanups, and refactorings:
     - Remove the pure attribute from all functions that used it
       previously. In many cases we assigned it incorrectly, because the
       functions might assert or call impure functions, and we don't have
       evidence that keeping the pure attribute is worthwhile. Implements
       changes suggested in ticket 4421.
+    - Remove some dead code spotted by coverity. Fixes cid 432.
+      Bugfix on 0.2.3.1-alpha, closes bug 4637.
 
 
 Changes in version 0.2.3.8-alpha - 2011-11-22

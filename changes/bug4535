@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Use tor_socket_t type for listener argument to accept(). Fixes bug
-      4535; bugfix on 0.2.2.28-beta. Found by "troll_un".

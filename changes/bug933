@@ -1,4 +1,0 @@
-  o Minor features:
-    - Allow MapAddress directives to specify matches against super-domains,
-      as in 'MapAddress *.torproject.org *.torproject.org.torserver.exit'.
-      Implements issue 933.

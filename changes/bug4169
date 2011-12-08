@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Report a real bootstrap problem to the controller on router
-      identity mismatch. Previously we just said "foo", which probably
-      made a lot of sense at the time. Fixes bug 4169; bugfix on
-      0.2.1.1-alpha.
-

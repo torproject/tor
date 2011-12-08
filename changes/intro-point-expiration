@@ -1,5 +1,0 @@
-  o Minor features:
-
-    - Expire old or over-used hidden service introduction points.
-      Required by fix for bug 3460.
-

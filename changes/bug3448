@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix a log message suggesting that people contact a non-existent
-      email address. Fix for bug 3448.

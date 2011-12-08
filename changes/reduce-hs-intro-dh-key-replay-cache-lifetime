@@ -1,9 +1,0 @@
-  o Minor features:
-
-    - Reduce the lifetime of elements of hidden services'
-      Diffie-Hellman public key replay-detection cache from 60 minutes
-      to 5 minutes.  This replay-detection cache is now used only to
-      detect multiple INTRODUCE2 cells specifying the same rendezvous
-      point, so we don't launch multiple simultaneous attempts to
-      connect to it.
-

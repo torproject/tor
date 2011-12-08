@@ -1,7 +1,0 @@
-  o Major features:
-    - Implement support for clients connecting to private bridges over
-      IPv6. Bridges still need at least one IPv4 address in order to
-      connect to other relays. Currently, adding Bridge lines with
-      both an IPv4 and an IPv6 address to the same bridge will most
-      probably result in the IPv6 address not being used. Implements
-      parts of proposal 186.

@@ -1,9 +1,0 @@
-  o Minor features:
-
-    - New "DisableNetwork" option to prevent Tor from launching any
-      connections or accepting any connections except on a control
-      port. Some bundles and controllers want to use this so they can
-      configure Tor before letting Tor talk to the rest of the
-      network--for example, to prevent any connections from being made
-      to a non-bridge address.
-
