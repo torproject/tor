@@ -2276,7 +2276,7 @@ tor_init(int argc, char *argv[])
 #endif
                get_uname());
 
-    log_notice(LD_GENERAL, "WARNING: Tor can't help you if you use it wrong. "
+    log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
                "https://www.torproject.org/download/download#warning");
 
