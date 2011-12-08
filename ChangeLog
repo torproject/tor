@@ -1,4 +1,4 @@
-Changes in version 0.2.3.9-alpha - 2011-1?-??
+Changes in version 0.2.3.9-alpha - 2011-12-??
   o Major features:
     - When using OpenSSL 1.0.0 or later, use OpenSSL's counter mode
       implementation. It makes AES_CTR about 7% faster than our old one
@@ -9,15 +9,8 @@ Changes in version 0.2.3.9-alpha - 2011-1?-??
       censorship by allowing bridges to use protocol obfuscation
       plugins. It implements the 'managed proxy' part of proposal
       180. Implements ticket 3472.
-    - Block excess renegotiations even if they are RFC5746 compliant.
-      This security fix mitigates potential SSL Denial of Service attacks
-      that use SSL renegotiation as a way of forcing the server to perform
-      unneeded computationally expensive SSL handshakes. Implements
-      ticket 4312.
 
   o Major bugfixes:
-    - Teach Tor how to notice excess renegotiation attempts before it
-      receives the first data SSL record. Fixes part of ticket 4312.
     - Only use the EVP interface when AES acceleration is enabled,
       to avoid a 5-7% performance regression. Resolves issue 4525;
       bugfix on 0.2.3.8-alpha.
