@@ -1,4 +1,11 @@
 Changes in version 0.2.3.9-alpha - 2011-12-08
+  Tor 0.2.3.9-alpha introduces initial IPv6 support for bridges, adds
+  a "DisableNetwork" security feature that bundles can use to avoid
+  touching the network until bridges are configured, moves forward on
+  the pluggable transport design, fixes a flaw in the hidden service
+  design that unnecessarily prevented clients with wrong clocks from
+  reaching hidden services, and fixes a wide variety of other issues.
+
   o Major features:
     - Clients can now connect to private bridges over IPv6. Bridges
       still need at least one IPv4 address in order to connect to
