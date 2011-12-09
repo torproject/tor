@@ -1004,7 +1004,6 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
-  int can_try_clearing_isolation = 0, tried_clearing_isolation = 0;
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
@@ -1012,20 +1011,18 @@ circuit_has_opened(origin_circuit_t *circ)
    * to consider its build time. */
   circ->has_opened = 1;
 
- again:
-
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
-      /* XXXX We'd like to set something like "can_try_clearing_isolation"
-       * here, so that we can change the isolation of this circuit (and maybe
-       * its purpose too) if it turns out that we no longer have any streams
-       * that want to use it.  But connection_ap_attach_pending() doesn't
-       * actually attach streams to a C_ESTABLISH_REND circuit-- streams
-       * don't get attached until the circuit is in C_REND_JOINED... so
-       * we can't clear isolation now.
-       */
+      /* Start building an intro circ if we don't have one yet. */
       connection_ap_attach_pending();
+      /* This isn't a call to circuit_try_attaching_streams because a
+       * circuit in _C_ESTABLISH_REND state isn't connected to its
+       * hidden service yet, thus we can't attach streams to it yet,
+       * thus circuit_try_attaching_streams would always clear the
+       * circuit's isolation state.  circuit_try_attaching_streams is
+       * called later, when the rend circ enters _C_REND_JOINED
+       * state. */
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       rend_client_introcirc_has_opened(circ);
@@ -1033,8 +1030,7 @@ circuit_has_opened(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
-      can_try_clearing_isolation = 1;
-      connection_ap_attach_pending();
+      circuit_try_attaching_streams(circ);
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
@@ -1051,12 +1047,15 @@ circuit_has_opened(origin_circuit_t *circ)
      * This won't happen in normal operation, but might happen if the
      * controller did it. Just let it slide. */
   }
+}
 
+/** If the stream-isolation state of <b>circ</b> can be cleared, clear
+ * it.  Return non-zero iff <b>circ</b>'s isolation state was cleared. */
+static int
+circuit_try_clearing_isolation_state(origin_circuit_t *circ)
+{
   if (/* The circuit may have become non-open if it was cannibalized.*/
       circ->_base.state == CIRCUIT_STATE_OPEN &&
-      /* Only if the purpose is clearable, and only if we haven't tried
-       * to clear isolation yet, do we try. */
-      can_try_clearing_isolation && !tried_clearing_isolation &&
       /* If !isolation_values_set, there is nothing to clear. */
       circ->isolation_values_set &&
       /* It's not legal to clear a circuit's isolation info if it's ever had
@@ -1066,8 +1065,26 @@ circuit_has_opened(origin_circuit_t *circ)
      * we didn't manage to attach any streams to it, then we can
      * and should clear it and try again. */
     circuit_clear_isolation(circ);
-    tried_clearing_isolation = 1;
-    goto again;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/** Called when a circuit becomes ready for streams to be attached to
+ * it. */
+void
+circuit_try_attaching_streams(origin_circuit_t *circ)
+{
+  /* Attach streams to this circuit if we can. */
+  connection_ap_attach_pending();
+
+  /* The call to circuit_try_clearing_isolation_state here will do
+   * nothing and return 0 if we didn't attach any streams to circ
+   * above. */
+  if (circuit_try_clearing_isolation_state(circ)) {
+    /* Maybe *now* we can attach some streams to this circuit. */
+    connection_ap_attach_pending();
   }
 }
 
