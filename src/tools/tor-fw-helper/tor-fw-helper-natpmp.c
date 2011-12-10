@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#ifndef MS_WINDOWS
+#include <arpa/inet.h>
+#endif
 
 // debugging stuff
 #include <assert.h>
