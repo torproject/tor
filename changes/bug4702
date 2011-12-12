@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+
+    - Fix an assertion failure when a relay with accounting enabled
+      starts up while dormant.  Fixes bug 4702; bugfix on
+      0.2.3.9-alpha.
+

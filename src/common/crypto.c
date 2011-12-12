@@ -2089,8 +2089,11 @@ init_dh_param(void)
   dh_param_p = circuit_dh_prime;
   dh_param_g = generator;
 
-  /* Should be already set by config.c. */
-  tor_assert(dh_param_p_tls);
+  /* Ensure that we have TLS DH parameters set up, too, even if we're
+     going to change them soon. */
+  if (!dh_param_p_tls) {
+    crypto_set_tls_dh_prime(NULL);
+  }
 }
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
