@@ -55,6 +55,12 @@
 #ifdef HAVE_IFADDRS_H
 #include <ifaddrs.h>
 #endif
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1197,6 +1203,43 @@ get_interface_addresses_raw(int severity)
   if (lib)
     FreeLibrary(lib);
   tor_free(addresses);
+  return result;
+#elif defined(SIOCGIFCONF) && defined(HAVE_IOCTL)
+  /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
+  struct ifconf ifc;
+  int fd, i, sz, n;
+  smartlist_t *result = NULL;
+  /* This interface, AFAICT, only supports AF_INET addresses */
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) {
+    log(severity, LD_NET, "socket failed: %s", strerror(errno));
+    goto done;
+  }
+  /* Guess how much space we need. */
+  ifc.ifc_len = sz = 15*1024;
+  ifc.ifc_ifcu.ifcu_req = tor_malloc(sz);
+  if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
+    log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
+    close(fd);
+    goto done;
+  }
+  close(fd);
+  result = smartlist_create();
+  if (ifc.ifc_len < sz)
+    sz = ifc.ifc_len;
+  n = sz / sizeof(struct ifreq);
+  for (i = 0; i < n ; ++i) {
+    struct ifreq *r = &ifc.ifc_ifcu.ifcu_req[i];
+    struct sockaddr *sa = &r->ifr_addr;
+    tor_addr_t tmp;
+    if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
+      continue; /* should be impossible */
+    if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
+      continue;
+    smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
+  }
+ done:
+  tor_free(ifc.ifc_ifcu.ifcu_req);
   return result;
 #else
   (void) severity;
