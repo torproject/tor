@@ -4114,6 +4114,11 @@ typedef struct rend_intro_point_t {
    * included in the last HS descriptor we generated. */
   unsigned int listed_in_last_desc : 1;
 
+  /** (Service side only) Flag indicating that
+   * rend_service_note_removing_intro_point has been called for this
+   * intro point. */
+  unsigned int rend_service_note_removing_intro_point_called : 1;
+
   /** (Service side only) A digestmap recording the INTRODUCE2 cells
    * this intro point's circuit has received.  Each key is the digest
    * of the RSA-encrypted part of a received INTRODUCE2 cell; each
