@@ -28,6 +28,7 @@ static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);
 static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
 
+static int intro_point_accepted_intro_count(rend_intro_point_t *intro);
 static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
 
@@ -1937,6 +1938,18 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
+/** Return the number of INTRODUCE2 cells an intro point has
+ * received. */
+static int
+intro_point_accepted_intro_count(rend_intro_point_t *intro)
+{
+  if (intro->accepted_intro_rsa_parts == NULL) {
+    return 0;
+  } else {
+    return digestmap_size(intro->accepted_intro_rsa_parts);
+  }
+}
+
 /** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we
  * should stop publishing it in new descriptors and eventually close
  * it). */
@@ -1957,8 +1970,7 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     return 1;
   }
 
-  if (intro->accepted_intro_rsa_parts != NULL &&
-      digestmap_size(intro->accepted_intro_rsa_parts) >=
+  if (intro_point_accepted_intro_count(intro) >=
       INTRO_POINT_LIFETIME_INTRODUCTIONS) {
     /* This intro point has been used too many times.  Expire it now. */
     return 1;
