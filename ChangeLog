@@ -1,3 +1,15 @@
+Changes in version 0.2.1.32 - 201?-??-??
+
+  o Major bugfixes (also included in 0.2.2.x):
+    - Correctly sanity-check that we don't underflow on a memory
+      allocation (and then assert) for hidden service introduction
+      point decryption. Bug discovered by Dan Rosenberg. Fixes bug 4410;
+      bugfix on 0.2.1.5-alpha.
+
+  o Minor features:
+    - Update to the December 6 2011 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.1.31 - 2011-10-26
   Tor 0.2.1.31 backports important security and privacy fixes for
   oldstable. This release is intended only for package maintainers and
