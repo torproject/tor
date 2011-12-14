@@ -1,3 +1,27 @@
+Changes in version 0.2.3.10-alpha - 201?-??-??
+
+
+  o Minor bugfixes:
+    - If we can't attach streams to a rendezvous circuit when we
+      finish connecting to a hidden service, clear the rendezvous
+      circuit's stream-isolation state and try to attach streams
+      again.  Previously, we cleared rendezvous circuits' isolation
+      state either too early (if they were freshly built) or not at
+      all (if they had been built earlier and were cannibalized).
+      Bugfix on 0.2.3.3-alpha; fixes bug 4655.
+    - Fix compilation of the libnatpmp helper on non-Windows. Bugfix on
+      0.2.3.9-alpha; fixes bug 4691. Reported by Anthony G. Basile.
+
+  o Minor bugfixes:
+    - Fix an assertion failure when a relay with accounting enabled
+      starts up while dormant.  Fixes bug 4702; bugfix on
+      0.2.3.9-alpha.
+
+  o Minor features:
+    - Update to the December 6 2011 Maxmind GeoLite Country database.
+
+
+
 Changes in version 0.2.3.9-alpha - 2011-12-08
   Tor 0.2.3.9-alpha introduces initial IPv6 support for bridges, adds
   a "DisableNetwork" security feature that bundles can use to avoid

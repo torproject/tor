@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Fix compilation of the libnatpmp helper on non-Windows. Bugfix on
-      0.2.3.9-alpha; fixes bug 4691. Reported by Anthony G. Basile.
-
