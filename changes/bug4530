@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-
-    - Correctly detect and handle transient lookup failures from
-      tor_addr_lookup. Fixes bug 4530; bugfix on 0.2.1.5-alpha.
-      Reported by "troll_un".
-

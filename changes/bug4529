@@ -1,5 +1,0 @@
-  o Minor bufixes:
-    - If we had ever tried to call tor_addr_to_str on an address of
-      unknown type, we would have done a strdup on an uninitialized
-      buffer. Now we won't. Fixes bug 4529; bugfix on 0.2.1.3-alpha.
-      Reported by "troll_un".

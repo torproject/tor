@@ -1,6 +1,15 @@
-Changes in version 0.2.2.35 - 2011-11-??
+Changes in version 0.2.2.35 - 2011-12-1?
 
-  Formalize end-of-life for 0.2.0.
+  Tor 0.2.2.35 fixes several bugs in previous versions, including
+  crash bugs for unusual configurations, and a long-term bug that
+  would that would prevent Tor from starting on Windows machines with
+  draconian AV software.
+
+  With this release, we remind everyone that 0.2.0.x has reached its
+  formal end-of-life.  Those Tor versions have many known flaws, and
+  nobody should be using them. You should upgrade--ideally to the
+  0.2.2.x series. If you're using a Linux or BSD and its packages are
+  obsolete, stop using those packages and upgrade anyway.
 
   o Major bugfixes:
     - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
@@ -55,6 +64,17 @@ Changes in version 0.2.2.35 - 2011-11-??
       in ExcludeNodes. Fixes bug 4383; bugfix on 0.2.2.25-alpha.
     - Backport fixes for a pair of compilation warnings on Windows.
       Fixes bug 4521; bugfix on 0.2.2.28-beta and on 0.2.2.29-beta.
+    - If we had ever tried to call tor_addr_to_str on an address of
+      unknown type, we would have done a strdup on an uninitialized
+      buffer. Now we won't. Fixes bug 4529; bugfix on 0.2.1.3-alpha.
+      Reported by "troll_un".
+    - Correctly detect and handle transient lookup failures from
+      tor_addr_lookup. Fixes bug 4530; bugfix on 0.2.1.5-alpha.
+      Reported by "troll_un".
+    - Fix null-pointer access that could occur if TLS allocation failed.
+      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un".
+    - Use tor_socket_t type for listener argument to accept(). Fixes bug
+      4535; bugfix on 0.2.2.28-beta. Found by "troll_un".
 
   o Minor features:
     - Add two new config options for directory authorities:
@@ -67,7 +87,7 @@ Changes in version 0.2.2.35 - 2011-11-??
       include the hidden service's directory in the warning message.
       Previously, we would only tell the user that some hidden service
       was ignored. Bugfix on 0.0.6; fixes bug 4426.
-    - Update to the November 1 2011 Maxmind GeoLite Country database.
+    - Update to the December 6 2011 Maxmind GeoLite Country database.
 
   o Packaging changes:
     - Make it easier to automate expert package builds on Windows,
