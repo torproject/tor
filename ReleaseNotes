@@ -10,7 +10,7 @@ Changes in version 0.2.1.32 - 2011-12-16
   using Tor 0.2.2.x or newer.
 
   The Tor 0.2.1.x series will reach formal end-of-life some time in
-  early 2012, when we will stop releasing patches for it.
+  early 2012; we will stop releasing patches for it then.
 
   o Major bugfixes (also included in 0.2.2.x):
     - Correctly sanity-check that we don't underflow on a memory
