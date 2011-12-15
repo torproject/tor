@@ -1,0 +1,7 @@
+
+  o Major bugfixes:
+    - Fix a heap overflow bug that could occur when trying to pull
+      data into the first chunk of a buffer, when that chunk had
+      already had some data drained from it. Fixes CVE-2011-2778;
+      bugfix on 0.2.0.16-alpha. Reported by "Vektor".
+
