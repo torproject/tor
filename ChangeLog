@@ -1,5 +1,30 @@
-Changes in version 0.2.3.10-alpha - 201?-??-??
+Changes in version 0.2.3.10-alpha - 2011-12-16
+  Tor 0.2.3.10-alpha fixes a critical heap-overflow security issue in Tor's
+  buffers code. Absolutely everybody should upgrade.
 
+  The bug relied on an incorrect calculation when making data continuous
+  in one of our IO buffers, if the first chunk of the buffer was
+  misaligned by just the wrong amount. The miscalculation would allow an
+  attacker to overflow a piece of heap-allocated memory. To mount this
+  attack, the attacker would need to either open a SOCKS connection to
+  Tor's SocksPort (usually restricted to localhost), or target a Tor
+  instance configured to make its connections through a SOCKS proxy
+  (which Tor does not do by default).
+
+  Good security practice requires that all heap-overflow bugs should be
+  presumed to be exploitable until proven otherwise, so we are treating
+  this as a potential code execution attack. Please upgrade immediately!
+  This bug does not affect bufferevents-based builds of Tor. Special
+  thanks to "Vektor" for reporting this issue to us!
+
+  This release also contains a few minor bugfixes for issues
+  discovered in 0.2.3.9-alpha.
+
+  o Major bugfixes:
+    - Fix a heap overflow bug that could occur when trying to pull
+      data into the first chunk of a buffer, when that chunk had
+      already had some data drained from it. Fixes CVE-2011-2778;
+      bugfix on 0.2.0.16-alpha. Reported by "Vektor".
 
   o Minor bugfixes:
     - If we can't attach streams to a rendezvous circuit when we
@@ -11,8 +36,6 @@ Changes in version 0.2.3.10-alpha - 201?-??-??
       Bugfix on 0.2.3.3-alpha; fixes bug 4655.
     - Fix compilation of the libnatpmp helper on non-Windows. Bugfix on
       0.2.3.9-alpha; fixes bug 4691. Reported by Anthony G. Basile.
-
-  o Minor bugfixes:
     - Fix an assertion failure when a relay with accounting enabled
       starts up while dormant.  Fixes bug 4702; bugfix on
       0.2.3.9-alpha.
