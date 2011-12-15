@@ -29,7 +29,7 @@ Changes in version 0.2.2.35 - 2011-12-16
   obsolete, stop using those packages and upgrade anyway.
 
   The Tor 0.2.1.x series is also approaching its end-of-life: it will no
-  longer receive support after some time in early 2011.
+  longer receive support after some time in early 2012.
 
   o Major bugfixes:
     - Fix a heap overflow bug that could occur when trying to pull
