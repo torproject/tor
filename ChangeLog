@@ -32,6 +32,10 @@ Changes in version 0.2.2.35 - 2011-12-16
   longer receive support after some time in early 2011.
 
   o Major bugfixes:
+    - Fix a heap overflow bug that could occur when trying to pull
+      data into the first chunk of a buffer, when that chunk had
+      already had some data drained from it. Fixes CVE-2011-2778;
+      bugfix on 0.2.0.16-alpha. Reported by "Vektor".
     - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
       that it doesn't attempt to allocate a socketpair. This could cause
       some problems on Windows systems with overzealous firewalls. Fix for
