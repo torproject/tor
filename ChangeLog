@@ -1,6 +1,23 @@
-Changes in version 0.2.2.35 - 2011-12-1?
+Changes in version 0.2.2.35 - 2011-12-16
+  Tor 0.2.2.35 fixes a critical heap-overflow security issue in Tor's
+  buffers code. Absolutely everybody should upgrade.
 
-  Tor 0.2.2.35 fixes several bugs in previous versions, including
+  The bug relied on an incorrect calculation when making data continuous
+  in one of our IO buffers, if the first chunk of the buffer was
+  misaligned by just the wrong amount. The miscalculation would allow an
+  attacker to overflow a piece of heap-allocated memory. To mount this
+  attack, the attacker would need to either open a SOCKS connection to
+  Tor's SocksPort (usually restricted to localhost), or target a Tor
+  instance configured to make its connections through a SOCKS proxy
+  (which Tor does not do by default).
+
+  Good security practice requires that all heap-overflow bugs should be
+  presumed to be exploitable until proven otherwise, so we are treating
+  this as a potential code execution attack. Please upgrade immediately!
+  This bug does not affect bufferevents-based builds of Tor. Special
+  thanks to "Vektor" for reporting this issue to us!
+
+  Tor 0.2.2.35 also fixes several bugs in previous versions, including
   crash bugs for unusual configurations, and a long-term bug that
   would that would prevent Tor from starting on Windows machines with
   draconian AV software.
@@ -10,6 +27,9 @@ Changes in version 0.2.2.35 - 2011-12-1?
   nobody should be using them. You should upgrade--ideally to the
   0.2.2.x series. If you're using a Linux or BSD and its packages are
   obsolete, stop using those packages and upgrade anyway.
+
+  The Tor 0.2.1.x series is also approaching its end-of-life: it will no
+  longer receive support after some time in early 2011.
 
   o Major bugfixes:
     - Initialize Libevent with the EVENT_BASE_FLAG_NOLOCK flag enabled, so
