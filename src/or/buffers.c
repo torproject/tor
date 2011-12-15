@@ -397,9 +397,10 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
 
   if (buf->head->memlen >= capacity) {
     /* We don't need to grow the first chunk, but we might need to repack it.*/
-    if (CHUNK_REMAINING_CAPACITY(buf->head) < capacity-buf->datalen)
+    size_t needed = capacity - buf->head->datalen;
+    if (CHUNK_REMAINING_CAPACITY(buf->head) < needed)
       chunk_repack(buf->head);
-    tor_assert(CHUNK_REMAINING_CAPACITY(buf->head) >= capacity-buf->datalen);
+    tor_assert(CHUNK_REMAINING_CAPACITY(buf->head) >= needed);
   } else {
     chunk_t *newhead;
     size_t newsize;
