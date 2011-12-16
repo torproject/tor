@@ -24,12 +24,12 @@ Changes in version 0.2.2.35 - 2011-12-16
 
   Tor 0.2.2.35 also fixes several bugs in previous versions, including
   crash bugs for unusual configurations, and a long-term bug that
-  would that would prevent Tor from starting on Windows machines with
-  draconian AV software.
+  would prevent Tor from starting on Windows machines with draconian
+  AV software.
 
   With this release, we remind everyone that 0.2.0.x has reached its
-  formal end-of-life.  Those Tor versions have many known flaws, and
-  nobody should be using them. You should upgrade--ideally to the
+  formal end-of-life. Those Tor versions have many known flaws, and
+  nobody should be using them. You should upgrade -- ideally to the
   0.2.2.x series. If you're using a Linux or BSD and its packages are
   obsolete, stop using those packages and upgrade anyway.
 
