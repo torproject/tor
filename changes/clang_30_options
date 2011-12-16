@@ -1,0 +1,5 @@
+  o Code simplifications and refactoring:
+    - During configure, detect when we're building with clang version 3.0 or
+      lower and disable the -Wnormalized=id and -Woverride-init CFLAGS.
+      clang doesn't support them yet.
+
