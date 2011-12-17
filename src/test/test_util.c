@@ -1460,23 +1460,24 @@ test_util_spawn_background_ok(void *ptr)
 static void
 test_util_spawn_background_fail(void *ptr)
 {
-#ifdef MS_WINDOWS
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
-  const char *expected_out = "ERR: Failed to spawn background process "
-                             "- code          9/2\n";
   const char *expected_err = "";
+  char expected_out[1024];
+  char code[32];
+#ifdef MS_WINDOWS
   const int expected_status = PROCESS_STATUS_ERROR;
 #else
-  const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
-  const char *expected_out = "ERR: Failed to spawn background process "
-                             "- code          9/2\n";
-  const char *expected_err = "";
   /* TODO: Once we can signal failure to exec, set this to be
    * PROCESS_STATUS_ERROR */
   const int expected_status = PROCESS_STATUS_RUNNING;
 #endif
 
   (void)ptr;
+
+  tor_snprintf(code, sizeof(code), "%x/%x",
+    9 /* CHILD_STATE_FAILEXEC */ , ENOENT);
+  tor_snprintf(expected_out, sizeof(expected_out),
+    "ERR: Failed to spawn background process - code %12s\n", code);
 
   run_util_spawn_background(argv, expected_out, expected_err, 255,
                             expected_status);
