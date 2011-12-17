@@ -2960,6 +2960,9 @@ connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
 {
   connection_t *conn = arg;
   (void) bufev;
+  if (conn->marked_for_close)
+    return;
+
   if (event & BEV_EVENT_CONNECTED) {
     tor_assert(connection_state_is_connecting(conn));
     if (connection_finished_connecting(conn)<0)
