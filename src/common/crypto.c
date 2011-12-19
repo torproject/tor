@@ -1833,7 +1833,10 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   DH *dh = NULL;
   unsigned char *dh_string_repr = NULL, *cp = NULL;
   char *base64_encoded_dh = NULL;
+  char *file_string = NULL;
   int retval = -1;
+  const static char *file_header = "# This file contains stored Diffie-Hellman"
+    " parameters for future use.\n# You *do not* need to edit this file.\n\n";
 
   tor_assert(fname);
 
@@ -1872,7 +1875,11 @@ crypto_store_dynamic_dh_modulus(const char *fname)
     goto done;
   }
 
-  if (write_bytes_to_new_file(fname, base64_encoded_dh, new_len, 0) < 0) {
+  /* concatenate file header and the dh parameters blob */
+  tor_asprintf(&file_string, "%s%s", file_header, base64_encoded_dh);
+
+  /* write to file */
+  if (write_bytes_to_new_file(fname, file_string, strlen(file_string), 0) < 0) {
     log_info(LD_CRYPTO, "'%s' was already occupied.", fname);
     goto done;
   }
@@ -1884,6 +1891,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
     DH_free(dh);
   tor_free(dh_string_repr);
   tor_free(base64_encoded_dh);
+  tor_free(file_string);
 
   return retval;
 }
@@ -1895,6 +1903,7 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
 {
   int retval;
   char *contents = NULL;
+  const char *contents_tmp = NULL;
   int dh_codes;
   char *fname_new = NULL;
   DH *stored_dh = NULL;
@@ -1911,15 +1920,23 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
     goto done; /*usually means that ENOENT. don't try to move file to broken.*/
   }
 
+  /* skip the file header */
+  contents_tmp = eat_whitespace(contents);
+  if (!*contents_tmp) {
+    log_warn(LD_CRYPTO, "Stored dynamic DH modulus file "
+             "seems corrupted (eat_whitespace).");
+    goto err;
+  }
+
   /* 'fname' contains the DH parameters stored in base64-ed DER
    *  format. We are only interested in the DH modulus.
    *  NOTE: We allocate more storage here than we need. Since we're already
    *  doing that, we can also add 1 byte extra to appease Coverity's
    *  scanner. */
 
-  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents) + 1);
-  length = base64_decode((char *)base64_decoded_dh, strlen(contents),
-                         contents, strlen(contents));
+  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents_tmp) + 1);
+  length = base64_decode((char *)base64_decoded_dh, strlen(contents_tmp),
+                         contents_tmp, strlen(contents_tmp));
   if (length < 0) {
     log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (base64).");
     goto err;
