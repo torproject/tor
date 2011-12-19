@@ -489,9 +489,9 @@ dnl On some platforms (Haiku/BeOS) the math library is
 dnl part of libroot. In which case don't link against lm
 TOR_LIB_MATH=""
 save_LIBS="$LIBS"
-AC_SEARCH_LIBS(cos, [m], , AC_MSG_ERROR([Could not find libm and libcore does not provide the functions.]))
-if test "$ac_cv_search_cos" != "none required"; then
-    TOR_LIB_MATH="$ac_cv_search_cos"
+AC_SEARCH_LIBS(pow, [m], , AC_MSG_ERROR([Could not find pow in libm or libc.]))
+if test "$ac_cv_search_pow" != "none required"; then
+    TOR_LIB_MATH="$ac_cv_search_pow"
 fi
 LIBS="$save_LIBS"
 AC_SUBST(TOR_LIB_MATH)
