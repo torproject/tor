@@ -2268,13 +2268,12 @@ tor_init(int argc, char *argv[])
 
   {
     const char *version = get_version();
-    log_notice(LD_GENERAL, "Tor v%s%s running on %s.", version,
 #ifdef USE_BUFFEREVENTS
-               " (with bufferevents)",
+    log_notice(LD_GENERAL, "Tor v%s (with bufferevents) running on %s.",
+                version, get_uname());
 #else
-               "",
+    log_notice(LD_GENERAL, "Tor v%s running on %s.", version, get_uname());
 #endif
-               get_uname());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "

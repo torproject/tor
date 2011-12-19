@@ -1,0 +1,14 @@
+  o Minor buxfixes:
+    - During configure, search for library containing cos function as
+      libm lives in libcore on some platforms (BeOS/Haiku).
+      Linking against libm was hard-coded before. Bugfix on
+      0.2.2.2-alpha, fixes the first part of bug 4727. Patch and
+      analysis by Martin Hebnes Pedersen.
+    - Preprocessor directives should not be put inside the arguments
+      of a macro. This would break compilation with GCC releases prior
+      to version 3.3. We would never recommend such an old GCC
+      version, but it is apparently required for binary compatibility
+      on some platforms (namely, certain builds of Haiku). Bugfix on
+      0.2.3.3-alpha, fixes the other part of bug 4727. Patch and
+      analysis by Martin Hebnes Pedersen.
+

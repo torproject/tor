@@ -31,15 +31,15 @@ test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 test_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
-	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 bench_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
-	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = \
 	tinytest.h \
