@@ -1,0 +1,7 @@
+  o Major features:
+
+    - Adjust the number of introduction points that a hidden service
+      will try to maintain based on how long its introduction points
+      remain in use and how many introductions they handle.  Fixes
+      part of bug 3825.
+
