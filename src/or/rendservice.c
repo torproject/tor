@@ -991,7 +991,7 @@ rend_service_note_removing_intro_point(rend_service_t *service,
     } else if (fractional_n_intro_points_wanted_to_replace_this_one < 0) {
       n_intro_points_wanted_to_replace_this_one = 0;
     } else {
-      n_intro_points_wanted_to_replace_this_one =
+      n_intro_points_wanted_to_replace_this_one = (unsigned)
         fractional_n_intro_points_wanted_to_replace_this_one;
     }
 
