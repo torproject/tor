@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix null-pointer access that could occur if TLS allocation failed.
+      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un". This was
+      erroneously listed as fixed in 0.2.3.9-alpha, but the fix had
+      accidentally been reverted.
