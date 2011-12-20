@@ -6828,21 +6828,29 @@ get_transport_bindaddr(const char *line, const char *transport)
   return NULL;
 }
 
-/** Return a static string containing the address:port a proxy
- *  transport should bind on. */
-const char *
+/** Return a string containing the address:port that a proxy transport
+ *  should bind on. The string is stored on the heap and must be freed
+ *  by the caller of this function. */
+char *
 get_bindaddr_for_transport(const char *transport)
 {
-  static const char default_addrport[] = "127.0.0.1:0";
-  const char *bindaddr = NULL;
+  char *default_addrport = NULL;
+  const char *stored_bindaddr = NULL;
 
   config_line_t *line = get_transport_in_state_by_name(transport);
-  if (!line)
-    return default_addrport;
+  if (!line) /* Found no references in state for this transport. */
+    goto no_bindaddr_found;
 
-  bindaddr = get_transport_bindaddr(line->value, transport);
+  stored_bindaddr = get_transport_bindaddr(line->value, transport);
+  if (stored_bindaddr) /* found stored bindaddr in state file. */
+    return tor_strdup(stored_bindaddr);
 
-  return bindaddr ? bindaddr : default_addrport;
+ no_bindaddr_found:
+  /** If we didn't find references for this pluggable transport in the
+      state file, we should instruct the pluggable transport proxy to
+      listen on INADDR_ANY on a random ephemeral port. */
+  tor_asprintf(&default_addrport, "%s:%s", fmt_addr32(INADDR_ANY), "0");
+  return default_addrport;
 }
 
 /** Save <b>transport</b> listening on <b>addr</b>:<b>port</b> to

@@ -919,13 +919,18 @@ static char *
 get_bindaddr_for_proxy(const managed_proxy_t *mp)
 {
   char *bindaddr = NULL;
+  char *bindaddr_tmp = NULL;
   smartlist_t *string_tmp = smartlist_create();
 
   tor_assert(mp->is_server);
 
   SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t) {
-    tor_asprintf(&bindaddr, "%s-%s", t, get_bindaddr_for_transport(t));
+    bindaddr_tmp = get_bindaddr_for_transport(t);
+
+    tor_asprintf(&bindaddr, "%s-%s", t, bindaddr_tmp);
     smartlist_add(string_tmp, bindaddr);
+
+    tor_free(bindaddr_tmp);
   } SMARTLIST_FOREACH_END(t);
 
   bindaddr = smartlist_join_strings(string_tmp, ",", 0, NULL);
