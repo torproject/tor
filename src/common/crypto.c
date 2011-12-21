@@ -82,6 +82,9 @@
 #include "sha256.c"
 #define SHA256_Final(a,b) sha256_done(b,a)
 
+/* Bug 4413*/
+#define MAX_HOSTNAME_SIZE 63
+
 static unsigned char *
 SHA256(const unsigned char *m, size_t len, unsigned char *d)
 {
@@ -2554,7 +2557,12 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   size_t resultlen, prefixlen;
 
   tor_assert(max_rand_len >= min_rand_len);
+
   randlen = min_rand_len + crypto_rand_int(max_rand_len - min_rand_len + 1);
+  if (randlen > MAX_HOSTNAME_SIZE) {
+    randlen = MAX_HOSTNAME_SIZE;
+  }
+
   prefixlen = strlen(prefix);
   resultlen = prefixlen + strlen(suffix) + randlen + 16;
 
