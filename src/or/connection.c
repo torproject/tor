@@ -1122,14 +1122,14 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   tor_socket_t news; /* the new socket */
   connection_t *newconn;
   /* information about the remote peer when connecting to other routers */
-  char addrbuf[256]; /*XXX023 use sockaddr_storage instead*/
-  struct sockaddr *remote = (struct sockaddr*)addrbuf;
+  struct sockaddr_storage addrbuf;
+  struct sockaddr *remote = (struct sockaddr*)&addrbuf;
   /* length of the remote address. Must be whatever accept() needs. */
   socklen_t remotelen = (socklen_t)sizeof(addrbuf);
   const or_options_t *options = get_options();
 
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
-  memset(addrbuf, 0, sizeof(addrbuf));
+  memset(&addrbuf, 0, sizeof(addrbuf));
 
   news = tor_accept_socket(conn->s,remote,&remotelen);
   if (!SOCKET_OK(news)) { /* accept() error */
@@ -1296,7 +1296,7 @@ connection_connect(connection_t *conn, const char *address,
 {
   tor_socket_t s;
   int inprogress = 0;
-  char addrbuf[256];
+  struct sockaddr_storage addrbuf;
   struct sockaddr *dest_addr;
   int dest_addr_len;
   const or_options_t *options = get_options();
@@ -1364,8 +1364,8 @@ connection_connect(connection_t *conn, const char *address,
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(s, (int)options->ConstrainedSockSize);
 
-  memset(addrbuf,0,sizeof(addrbuf));
-  dest_addr = (struct sockaddr*) addrbuf;
+  memset(&addrbuf,0,sizeof(addrbuf));
+  dest_addr = (struct sockaddr*) &addrbuf;
   dest_addr_len = tor_addr_to_sockaddr(addr, port, dest_addr, sizeof(addrbuf));
   tor_assert(dest_addr_len > 0);
 
