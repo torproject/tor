@@ -275,6 +275,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   payload_len = DIGEST_LEN + r;
   tor_assert(payload_len <= RELAY_PAYLOAD_SIZE); /* we overran something */
 
+  /* Copy the rendezvous cookie from rendcirc to introcirc, so that
+   * when introcirc gets an ack, we can change the state of the right
+   * rendezvous circuit. */
+  memcpy(rendcirc->rend_data->rend_cookie, introcirc->rend_data->rend_cookie,
+         REND_COOKIE_LEN);
+
   log_info(LD_REND, "Sending an INTRODUCE1 cell");
   if (relay_send_command_from_edge(0, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
