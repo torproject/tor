@@ -1196,7 +1196,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'extend' cell received for non-zero stream. Dropping.");
         return 0;
       }
-      if (cell->command != CELL_RELAY_EARLY) {
+      if (cell->command != CELL_RELAY_EARLY &&
+          !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
 #define EARLY_WARNING_INTERVAL 900
         static ratelim_t early_warning_limit =
           RATELIM_INIT(EARLY_WARNING_INTERVAL);
