@@ -1,0 +1,3 @@
+  o Minor features:
+    - Use absolute path names when reporting the torrc filename, so
+      that a controller can more easily find it. Resolves bug 1101.
