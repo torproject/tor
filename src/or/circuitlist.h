@@ -32,8 +32,8 @@ int circuit_id_in_use_on_orconn(circid_t circ_id, or_connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);
-origin_circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
-                                                        uint8_t purpose);
+origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
+  const rend_data_t *rend_data);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                          const char *digest, uint8_t purpose);
 or_circuit_t *circuit_get_rendezvous(const char *cookie);

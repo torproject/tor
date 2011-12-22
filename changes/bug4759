@@ -1,0 +1,14 @@
+  o Minor bugfixes:
+
+    - Make sure we never mark the wrong rendezvous circuit as having
+      had its introduction cell acknowleged by the introduction-point
+      relay.  Previously, when we received an INTRODUCE_ACK cell on a
+      client-side hidden-service introduction circuit, we might have
+      marked a rendezvous circuit other than the one we specified in
+      the INTRODUCE1 cell as INTRO_ACKED, which would have produced a
+      warning message and interfered with the hidden service
+      connection-establishment process.  Bugfix on 0.2.3.3-alpha, when
+      the stream-isolation feature which might cause Tor to open
+      multiple rendezvous circuits for the same hidden service was
+      added.  Fixes bug 4759.
+

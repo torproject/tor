@@ -350,8 +350,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * and tell it.
      */
     log_info(LD_REND,"Received ack. Telling rend circ...");
-    rendcirc = circuit_get_by_rend_query_and_purpose(
-               circ->rend_data->onion_address, CIRCUIT_PURPOSE_C_REND_READY);
+    rendcirc = circuit_get_ready_rend_circ_by_rend_data(circ->rend_data);
     if (rendcirc) { /* remember the ack */
 #ifndef NON_ANONYMOUS_MODE_ENABLED
       tor_assert(!(rendcirc->build_state->onehop_tunnel));
