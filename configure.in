@@ -295,22 +295,22 @@ dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
 AC_CHECK_FUNCS(
-	accept4 \
-	clock_gettime \
+        accept4 \
+        clock_gettime \
         flock \
         ftime \
         getaddrinfo \
-	getifaddrs \
+        getifaddrs \
         getrlimit \
         gettimeofday \
         gmtime_r \
         inet_aton \
-	ioctl \
+        ioctl \
         localtime_r \
-	lround \
+        lround \
         memmem \
         prctl \
-	rint \
+        rint \
         socketpair \
         strlcat \
         strlcpy \
@@ -626,7 +626,7 @@ dnl These headers are not essential
 AC_CHECK_HEADERS(
         arpa/inet.h \
         grp.h \
-	ifaddrs.h \
+        ifaddrs.h \
         inttypes.h \
         limits.h \
         linux/types.h \
@@ -635,7 +635,7 @@ AC_CHECK_HEADERS(
         malloc/malloc.h \
         malloc_np.h \
         netdb.h \
-	net/if.h \
+        net/if.h \
         netinet/in.h \
         netinet/in6.h \
         pwd.h \
