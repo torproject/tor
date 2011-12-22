@@ -1780,6 +1780,88 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
+/** Allocate and return a description of <b>circ</b>'s current status,
+ * including its path (if any). */
+static char *
+circuit_describe_status_for_controller(origin_circuit_t *circ)
+{
+  char *rv;
+  smartlist_t *descparts = smartlist_create();
+
+  {
+    char *vpath = circuit_list_path_for_controller(circ);
+    if (*vpath) {
+      smartlist_add(descparts, vpath);
+    } else {
+      tor_free(vpath); /* empty path; don't put an extra space in the result */
+    }
+  }
+
+  {
+    char *buildflags = NULL;
+    cpath_build_state_t *build_state = circ->build_state;
+    smartlist_t *flaglist = smartlist_create();
+    char *flaglist_joined;
+
+    if (build_state->onehop_tunnel)
+      smartlist_add(flaglist, (void *)"ONEHOP_TUNNEL");
+    if (build_state->is_internal)
+      smartlist_add(flaglist, (void *)"IS_INTERNAL");
+    if (build_state->need_capacity)
+      smartlist_add(flaglist, (void *)"NEED_CAPACITY");
+    if (build_state->need_uptime)
+      smartlist_add(flaglist, (void *)"NEED_UPTIME");
+
+    /* Only emit a BUILD_FLAGS argument if it will have a non-empty value. */
+    if (smartlist_len(flaglist)) {
+      flaglist_joined = smartlist_join_strings(flaglist, ",", 0, NULL);
+
+      tor_asprintf(&buildflags, "BUILD_FLAGS=%s", flaglist_joined);
+      smartlist_add(descparts, buildflags);
+
+      tor_free(flaglist_joined);
+    }
+
+    smartlist_free(flaglist);
+  }
+
+  {
+    char *purpose = NULL;
+    tor_asprintf(&purpose, "PURPOSE=%s",
+                 circuit_purpose_to_controller_string(circ->_base.purpose));
+    smartlist_add(descparts, purpose);
+  }
+
+  {
+    char *hs_state_arg = NULL;
+    const char *hs_state =
+      circuit_purpose_to_controller_hs_state_string(circ->_base.purpose);
+
+    if (hs_state != NULL) {
+      tor_asprintf(&hs_state_arg, "HS_STATE=%s",
+                   hs_state);
+
+      smartlist_add(descparts, hs_state_arg);
+    }
+  }
+
+  if (circ->rend_data != NULL) {
+    char *rend_query_arg = NULL;
+
+    tor_asprintf(&rend_query_arg, "REND_QUERY=%s",
+                 circ->rend_data->onion_address);
+
+    smartlist_add(descparts, rend_query_arg);
+  }
+
+  rv = smartlist_join_strings(descparts, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
+  smartlist_free(descparts);
+
+  return rv;
+}
+
 /** Implementation helper for GETINFO: knows how to generate summaries of the
  * current states of things we send events about. */
 static int
@@ -1789,33 +1871,33 @@ getinfo_helper_events(control_connection_t *control_conn,
 {
   (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
-    circuit_t *circ;
+    circuit_t *circ_;
     smartlist_t *status = smartlist_create();
-    for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
-      char *s, *path;
+    for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
+      origin_circuit_t *circ;
+      char *s, *circdesc;
       size_t slen;
       const char *state;
-      const char *purpose;
-      if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
+      if (! CIRCUIT_IS_ORIGIN(circ_) || circ_->marked_for_close)
         continue;
+      circ = TO_ORIGIN_CIRCUIT(circ_);
 
-      path = circuit_list_path_for_controller(TO_ORIGIN_CIRCUIT(circ));
-
-      if (circ->state == CIRCUIT_STATE_OPEN)
+      if (circ->_base.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
-      else if (strlen(path))
+      else if (circ->cpath)
         state = "EXTENDED";
       else
         state = "LAUNCHED";
 
-      purpose = circuit_purpose_to_controller_string(circ->purpose);
-      slen = strlen(path)+strlen(state)+strlen(purpose)+30;
+      circdesc = circuit_describe_status_for_controller(circ);
+
+      slen = strlen(circdesc)+strlen(state)+30;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s%s%s PURPOSE=%s",
-                   (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                   state, *path ? " " : "", path, purpose);
+      tor_snprintf(s, slen, "%lu %s%s%s",
+                   (unsigned long)circ->global_identifier,
+                   state, *circdesc ? " " : "", circdesc);
       smartlist_add(status, s);
-      tor_free(path);
+      tor_free(circdesc);
     }
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
@@ -3237,7 +3319,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
 {
   const char *status;
-  char extended_buf[96];
+  char reasons[64] = "";
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
@@ -3254,36 +3336,32 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       return 0;
     }
 
-  tor_snprintf(extended_buf, sizeof(extended_buf), "PURPOSE=%s",
-               circuit_purpose_to_controller_string(circ->_base.purpose));
-
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
-    char *reason = NULL;
-    size_t n=strlen(extended_buf);
+    char unk_reason_buf[16];
     if (!reason_str) {
-      reason = tor_malloc(16);
-      tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);
-      reason_str = reason;
+      tor_snprintf(unk_reason_buf, 16, "UNKNOWN_%d", reason_code);
+      reason_str = unk_reason_buf;
     }
     if (reason_code > 0 && reason_code & END_CIRC_REASON_FLAG_REMOTE) {
-      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+      tor_snprintf(reasons, sizeof(reasons),
                    " REASON=DESTROYED REMOTE_REASON=%s", reason_str);
     } else {
-      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+      tor_snprintf(reasons, sizeof(reasons),
                    " REASON=%s", reason_str);
     }
-    tor_free(reason);
   }
 
   {
-    char *vpath = circuit_list_path_for_controller(circ);
-    const char *sp = strlen(vpath) ? " " : "";
+    char *circdesc = circuit_describe_status_for_controller(circ);
+    const char *sp = strlen(circdesc) ? " " : "";
     send_control_event(EVENT_CIRCUIT_STATUS, ALL_FORMATS,
-                                "650 CIRC %lu %s%s%s %s\r\n",
+                                "650 CIRC %lu %s%s%s%s\r\n",
                                 (unsigned long)circ->global_identifier,
-                                status, sp, vpath, extended_buf);
-    tor_free(vpath);
+                                status, sp,
+                                circdesc,
+                                reasons);
+    tor_free(circdesc);
   }
 
   return 0;

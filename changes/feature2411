@@ -1,0 +1,12 @@
+  o Minor features:
+
+    - Report flags that control a circuit's path selection to
+      controllers in CIRC events and in replies to 'GETINFO
+      circuit-status'.  Implements part of ticket 2411.
+
+    - Report the hidden service address and current state of a
+      hidden-service-related circuit to controllers in CIRC events and
+      in replies to 'GETINFO circuit-status'.  Implements part of
+      ticket 2411.
+
+
