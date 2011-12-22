@@ -3566,6 +3566,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
+  if (options->EntryNodes && !options->UseEntryGuards)
+    log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
+             "EntryNodes will be ignored.");
+
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH(options->AllowInvalidNodes, const char *, cp, {
