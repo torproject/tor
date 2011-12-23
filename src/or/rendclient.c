@@ -895,6 +895,11 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
+  /* Now that this circuit has finished connecting to its destination,
+   * make sure circuit_get_open_circ_or_launch is willing to return it
+   * so we can actually use it. */
+  circ->hs_circ_has_timed_out = 0;
+
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
