@@ -12,3 +12,7 @@
       CloseHSClientCircuitsImmediatelyOnTimeout option.  Fixes part of
       bug 1297.
 
+    - Don't close hidden-service-side rendezvous circuits when they
+      reach the normal circuit-build timeout.  Previously, we would
+      close them.  Fixes the remaining part of bug 1297.
+

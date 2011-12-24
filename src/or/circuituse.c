@@ -550,6 +550,22 @@ circuit_expire_building(void)
       }
     }
 
+    /* If this is a service-side rendezvous circuit which is far
+     * enough along in connecting to its destination, consider sparing
+     * it. */
+    if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
+        victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+      log_info(LD_CIRC,"Marking circ %s:%d:%d (state %d:%s, purpose %d) "
+               "as timed-out HS circ; relaunching rendezvous attempt.",
+               victim->n_conn->_base.address, victim->n_conn->_base.port,
+               victim->n_circ_id,
+               victim->state, circuit_state_to_string(victim->state),
+               victim->purpose);
+      TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
+      rend_service_relaunch_rendezvous(TO_ORIGIN_CIRCUIT(victim));
+      continue;
+    }
+
     if (victim->n_conn)
       log_info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
                victim->n_conn->_base.address, victim->n_conn->_base.port,
