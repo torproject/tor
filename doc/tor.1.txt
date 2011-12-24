@@ -644,16 +644,6 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-**HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
-    Client authorization for a hidden service. Valid onion addresses contain 16
-    characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
-    characters in A-Za-z0-9+/. The service name is only used for internal
-    purposes, e.g., for Tor controllers. This option may be used multiple times
-    for different hidden services. If a hidden service uses authorization and
-    this option is not set, the hidden service is not accessible. Hidden
-    services can be configured to require authorization using the 
-    **HiddenServiceAuthorizeClient** option.
-
 **ReachableAddresses** __ADDR__[/__MASK__][:__PORT__]...::
     A comma-separated list of IP addresses and ports that your firewall allows
     you to connect to. The format is as for the addresses in ExitPolicy, except
@@ -682,6 +672,16 @@ The following options are useful only for clients (that is, if
     TLS connections (which Tor uses to connect to Onion Routers) to port 443,
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.
+
+**HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
+    Client authorization for a hidden service. Valid onion addresses contain 16
+    characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
+    characters in A-Za-z0-9+/. The service name is only used for internal
+    purposes, e.g., for Tor controllers. This option may be used multiple times
+    for different hidden services. If a hidden service uses authorization and
+    this option is not set, the hidden service is not accessible. Hidden
+    services can be configured to require authorization using the 
+    **HiddenServiceAuthorizeClient** option.
 
 **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
