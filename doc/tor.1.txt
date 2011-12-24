@@ -693,6 +693,14 @@ The following options are useful only for clients (that is, if
     another set of introduction and rendezvous circuits for the same
     destination hidden service will be launched. (Default: 0)
 
+**CloseHSServiceRendCircuitsImmediatelyOnTimeout** **0**|**1**::
+    If 1, Tor will close unfinished hidden-service-side rendezvous
+    circuits after the current circuit-build timeout.  Otherwise, such
+    circuits will be left open, in the hope that they will finish
+    connecting to their destinations.  In either case, another
+    rendezvous circuit for the same destination client will be
+    launched. (Default: 0)
+
 **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
     (e.g. chat and interactive shells). Circuits for streams that use these

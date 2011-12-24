@@ -3066,6 +3066,10 @@ typedef struct {
    * an INTRODUCE1 cell on its way to the service. */
   int CloseHSClientCircuitsImmediatelyOnTimeout;
 
+  /** Close hidden-service-side rendezvous circuits immediately when
+   * they reach the normal circuit-build timeout. */
+  int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
+
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */

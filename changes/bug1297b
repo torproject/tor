@@ -14,5 +14,7 @@
 
     - Don't close hidden-service-side rendezvous circuits when they
       reach the normal circuit-build timeout.  Previously, we would
-      close them.  Fixes the remaining part of bug 1297.
+      close them.  This behaviour change can be disabled using the new
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout option.  Fixes
+      the remaining part of bug 1297.
 
