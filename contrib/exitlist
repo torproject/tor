@@ -8,23 +8,25 @@
  exitlist -- Given a Tor directory on stdin, lists the Tor servers
  that accept connections to given addreses.
 
- example usage (Tor 0.2.0.7-alpha and earlier):
-
-    cat ~/.tor/cached-routers* | python exitlist 18.244.0.188:80
-
- example usage (Tor 0.2.0.8-alpha and later):
+ example usage:
 
     cat ~/.tor/cached-descriptors* | python exitlist 18.244.0.188:80
 
- You should look at the "FetchUselessDescriptors" config option in the
- man page. For 0.2.0.13-alpha and later, also look at the
- "FetchDirInfoEarly" config option.
+ You should look at the "FetchUselessDescriptors" and "FetchDirInfoEarly"
+ config options in the man page.
 
  Note that this script won't give you a perfect list of IP addresses
- that might connect to you using Tor, since some Tor servers might exit
- from other addresses than the one they publish. See
- https://check.torproject.org/ for an alternative (more
- accurate!) approach.
+ that might connect to you using Tor.
+ False negatives:
+   - Some Tor servers might exit from other addresses than the one they
+     publish in their descriptor.
+ False positives:
+   - This script just looks at the descriptor lists, so it counts relays
+     that were running a day in the past and aren't running now (or are
+     now running at a different address).
+
+ See https://check.torproject.org/ for an alternative (more accurate!)
+  approach.
 
 """
 
