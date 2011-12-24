@@ -7,6 +7,8 @@
       from the introduction-point relay and rendezvous circuits which
       have been specified in an INTRODUCE1 cell sent to a hidden
       service after the normal CBT; now, we mark them as 'timed out',
-      and launch another rendezvous attempt in parallel.  Fixes part
-      of bug 1297.
+      and launch another rendezvous attempt in parallel.  This
+      behaviour change can be disabled using the new
+      CloseHSClientCircuitsImmediatelyOnTimeout option.  Fixes part of
+      bug 1297.
 

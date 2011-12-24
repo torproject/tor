@@ -306,6 +306,7 @@ static config_var_t _option_vars[] = {
   V(HidServAuth,                 LINELIST, NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
   OBSOLETE("HSAuthorityRecordStats"),
+  V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(HTTPProxy,                   STRING,   NULL),
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),

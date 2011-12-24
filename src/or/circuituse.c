@@ -511,16 +511,18 @@ circuit_expire_building(void)
       }
     }
 
-    /* If this is a hidden-service circuit which is far enough along
-     * in connecting to its destination, and we haven't already
-     * flagged it as 'timed out', flag it as 'timed out' so we'll
-     * launch another intro or rend circ, but don't mark it for close
-     * yet.
+    /* If this is a hidden service client circuit which is far enough
+     * along in connecting to its destination, and we haven't already
+     * flagged it as 'timed out', and the user has not told us to
+     * close such circs immediately on timeout, flag it as 'timed out'
+     * so we'll launch another intro or rend circ, but don't mark it
+     * for close yet.
      *
      * (Circs flagged as 'timed out' are given a much longer timeout
      * period above, so we won't close them in the next call to
      * circuit_expire_building.) */
-    if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
+    if (!(options->CloseHSClientCircuitsImmediatelyOnTimeout) &&
+        !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
       switch (victim->purpose) {
       case CIRCUIT_PURPOSE_C_REND_READY:
         /* We only want to spare a rend circ if it has been specified in

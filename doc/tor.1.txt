@@ -683,6 +683,16 @@ The following options are useful only for clients (that is, if
     services can be configured to require authorization using the 
     **HiddenServiceAuthorizeClient** option.
 
+**CloseHSClientCircuitsImmediatelyOnTimeout** **0**|**1**::
+    If 1, Tor will close unfinished hidden service client circuits
+    which have not moved closer to connecting to their destination
+    hidden service when their internal state has not changed for the
+    duration of the current circuit-build timeout.  Otherwise, such
+    circuits will be left open, in the hope that they will finish
+    connecting to their destination hidden services.  In either case,
+    another set of introduction and rendezvous circuits for the same
+    destination hidden service will be launched. (Default: 0)
+
 **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections
     (e.g. chat and interactive shells). Circuits for streams that use these

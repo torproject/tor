@@ -3057,6 +3057,11 @@ typedef struct {
    * circuits.) */
   int Tor2webMode;
 
+  /** Close hidden service client circuits immediately when they reach
+   * the normal circuit-build timeout, even if they have already sent
+   * an INTRODUCE1 cell on its way to the service. */
+  int CloseHSClientCircuitsImmediatelyOnTimeout;
+
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
