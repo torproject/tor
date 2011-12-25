@@ -1188,13 +1188,41 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         connection_mark_and_flush(TO_CONN(conn));
       }
       return 0;
-    case RELAY_COMMAND_EXTEND:
+    case RELAY_COMMAND_EXTEND: {
+      static uint64_t total_n_extend=0, total_nonearly=0;
+      total_n_extend++;
       if (conn) {
         log_fn(LOG_PROTOCOL_WARN, domain,
                "'extend' cell received for non-zero stream. Dropping.");
         return 0;
       }
+      if (cell->command != CELL_RELAY_EARLY &&
+          !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
+#define EARLY_WARNING_INTERVAL 900
+        static ratelim_t early_warning_limit =
+          RATELIM_INIT(EARLY_WARNING_INTERVAL);
+        char *m;
+        if (cell->command == CELL_RELAY) {
+          ++total_nonearly;
+          if ((m = rate_limit_log(&early_warning_limit, approx_time()))) {
+            /* XXXX make this a protocol_warn once we're happier with it*/
+            double percentage = ((double)total_nonearly)/total_n_extend;
+            percentage *= 100;
+            log_fn(LOG_WARN, domain, "EXTEND cell received, "
+                   "but not via RELAY_EARLY. Dropping.%s", m);
+            log_fn(LOG_WARN, domain, "  (We have dropped %.02f%% of all "
+                   "EXTEND cells for this reason)", percentage);
+            tor_free(m);
+          }
+        } else {
+          log_fn(LOG_WARN, domain,
+                 "EXTEND cell received, in a cell with type %d! Dropping.",
+                 cell->command);
+        }
+        return 0;
+      }
       return circuit_extend(cell, circ);
+    }
     case RELAY_COMMAND_EXTENDED:
       if (!layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
