@@ -1198,20 +1198,19 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       if (cell->command != CELL_RELAY_EARLY &&
           !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
-#define EARLY_WARNING_INTERVAL 900
+#define EARLY_WARNING_INTERVAL 3600
         static ratelim_t early_warning_limit =
           RATELIM_INIT(EARLY_WARNING_INTERVAL);
         char *m;
         if (cell->command == CELL_RELAY) {
           ++total_nonearly;
           if ((m = rate_limit_log(&early_warning_limit, approx_time()))) {
-            /* XXXX make this a protocol_warn once we're happier with it*/
             double percentage = ((double)total_nonearly)/total_n_extend;
             percentage *= 100;
-            log_fn(LOG_WARN, domain, "EXTEND cell received, "
+            log_fn(LOG_PROTOCOL_WARN, domain, "EXTEND cell received, "
                    "but not via RELAY_EARLY. Dropping.%s", m);
-            log_fn(LOG_WARN, domain, "  (We have dropped %.02f%% of all "
-                   "EXTEND cells for this reason)", percentage);
+            log_fn(LOG_PROTOCOL_WARN, domain, "  (We have dropped %.02f%% of "
+                   "all EXTEND cells for this reason)", percentage);
             tor_free(m);
           }
         } else {
