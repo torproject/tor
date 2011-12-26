@@ -335,7 +335,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #define timeradd(tv1,tv2,tvout) \
   do {                                                  \
     (tvout)->tv_sec = (tv1)->tv_sec + (tv2)->tv_sec;    \
-    (tvout)->tv_usec = (tv2)->tv_usec + (tv2)->tv_usec; \
+    (tvout)->tv_usec = (tv1)->tv_usec + (tv2)->tv_usec; \
     if ((tvout)->tv_usec >= 1000000) {                  \
       (tvout)->tv_usec -= 1000000;                      \
       (tvout)->tv_sec++;                                \
@@ -349,7 +349,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #define timersub(tv1,tv2,tvout) \
   do {                                                  \
     (tvout)->tv_sec = (tv1)->tv_sec - (tv2)->tv_sec;    \
-    (tvout)->tv_usec = (tv2)->tv_usec - (tv2)->tv_usec; \
+    (tvout)->tv_usec = (tv1)->tv_usec - (tv2)->tv_usec; \
     if ((tvout)->tv_usec < 0) {                         \
       (tvout)->tv_usec += 1000000;                      \
       (tvout)->tv_sec--;                                \
