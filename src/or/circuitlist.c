@@ -1275,16 +1275,16 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   } else if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
              reason != END_CIRC_REASON_TIMEOUT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    tor_assert(ocirc->build_state->chosen_exit);
-    tor_assert(ocirc->rend_data);
-    log_info(LD_REND, "Failed intro circ %s to %s "
-             "(building circuit to intro point). "
-             "Marking intro point as possibly unreachable.",
-             safe_str_client(ocirc->rend_data->onion_address),
+    if (ocirc->build_state->chosen_exit && ocirc->rend_data) {
+      log_info(LD_REND, "Failed intro circ %s to %s "
+               "(building circuit to intro point). "
+               "Marking intro point as possibly unreachable.",
+               safe_str_client(ocirc->rend_data->onion_address),
            safe_str_client(build_state_get_exit_nickname(ocirc->build_state)));
-    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
-                                           ocirc->rend_data,
-                                           INTRO_POINT_FAILURE_UNREACHABLE);
+      rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                             ocirc->rend_data,
+                                             INTRO_POINT_FAILURE_UNREACHABLE);
+    }
   }
   if (circ->n_conn) {
     circuit_clear_cell_queue(circ, circ->n_conn);

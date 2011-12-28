@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+
+    - Don't exit with an assertion failure when we mark a new
+      client-side hidden-service introduction circuit for close during
+      the process of creating it.  Bugfix on 0.2.3.6-alpha.  Fixes bug
+      4796; reported by murb.
+
