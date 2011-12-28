@@ -17,7 +17,7 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+#if OPENSSL_VERSION_NUMBER >= 0x1000001fL
 /* See comments about which counter mode implementation to use below. */
 #include <openssl/modes.h>
 #define USE_OPENSSL_CTR
@@ -45,7 +45,9 @@
  * Here we have a counter mode that's faster than the one shipping with
  * OpenSSL pre-1.0 (by about 10%!).  But OpenSSL 1.0.0 added a counter mode
  * implementation faster than the one here (by about 7%).  So we pick which
- * one to used based on the Openssl version above.
+ * one to used based on the Openssl version above.  (OpenSSL 1.0.0a fixed a
+ * critical bug in that counter mode implementation, so we actually require
+ * that one.)
  */
 
 /*======================================================================*/

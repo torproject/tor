@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Do not use OpenSSL 1.0.0's counter mode: it has a critical bug
+      that was fixed in OpenSSL 1.0.0a. Fixes bug 4779; bugfix on
+      Tor 0.2.3.9-alpha. Found by Pascal.
