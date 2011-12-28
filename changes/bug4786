@@ -1,0 +1,9 @@
+  - Feature removal:
+    - When sending or relaying a RELAY_EARLY cell, we used to convert
+      it to a RELAY cell if the connection was using the v1 link
+      protocol. This was a workaround for older versions of Tor, which
+      didn't handle RELAY_EARLY cells properly. Now that all supported
+      versions can handle RELAY_EARLY cells, and now that we're
+      enforcing the "no RELAY_EXTEND commands except in RELAY_EARLY
+      cells" rule, we're removing this workaround. Addresses bug 4786.
+
