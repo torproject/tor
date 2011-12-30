@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Correctly spell "connect" in a log message when creating a controlsocket
+      fails. Fixes bug 4803; bugfix on 0.2.2.26-beta/0.2.3.2-alpha.
+
