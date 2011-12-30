@@ -1654,7 +1654,7 @@ make_path_absolute(char *fname)
 
   tor_assert(fname);
 
-  if(fname[0] == '/') {
+  if (fname[0] == '/') {
     absfname = tor_strdup(fname);
   } else {
     if (getcwd(path, PATH_MAX) != NULL) {

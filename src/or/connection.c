@@ -1956,7 +1956,7 @@ connection_mark_all_noncontrol_listeners(void)
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** Mark every external conection not used for controllers for close. */
+/** Mark every external connection not used for controllers for close. */
 void
 connection_mark_all_noncontrol_connections(void)
 {
