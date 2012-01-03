@@ -817,7 +817,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path)
     log_warn(LD_GENERAL, "Before Tor can create a control socket in %s, the "
              "directory %s needs to exist, and to be accessible only by the "
              "user%s account that is running Tor.  (On some Unix systems, "
-             "anybody who can list a socket can conect to it, so Tor is "
+             "anybody who can list a socket can connect to it, so Tor is "
              "being careful.)", escpath, escdir,
              options->ControlSocketsGroupWritable ? " and group" : "");
     tor_free(escpath);
