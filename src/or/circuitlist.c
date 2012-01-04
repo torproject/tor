@@ -930,26 +930,30 @@ circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
   }
 }
 
-/** Return a circ such that:
- *  - circ-\>rend_data-\>onion_address is equal to <b>rend_query</b>, and
- *  - circ-\>purpose is equal to <b>purpose</b>.
+/** Return a circ such that
+ *  - circ-\>rend_data-\>onion_address is equal to
+ *    <b>rend_data</b>-\>onion_address,
+ *  - circ-\>rend_data-\>rend_cookie is equal to
+ *    <b>rend_data</b>-\>rend_cookie, and
+ *  - circ-\>purpose is equal to CIRCUIT_PURPOSE_C_REND_READY.
  *
  * Return NULL if no such circuit exists.
  */
 origin_circuit_t *
-circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
+circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
 {
   circuit_t *circ;
 
-  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(purpose));
-
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (!circ->marked_for_close &&
-        circ->purpose == purpose) {
+        circ->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
       if (ocirc->rend_data &&
-          !rend_cmp_service_ids(rend_query,
-                                ocirc->rend_data->onion_address))
+          !rend_cmp_service_ids(rend_data->onion_address,
+                                ocirc->rend_data->onion_address) &&
+          tor_memeq(ocirc->rend_data->rend_cookie,
+                    rend_data->rend_cookie,
+                    REND_COOKIE_LEN))
         return ocirc;
     }
   }

@@ -1419,6 +1419,17 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
 
   tor_assert(oldcirc->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
+  /* Don't relaunch the same rend circ twice. */
+  if (oldcirc->hs_service_side_rend_circ_has_been_relaunched) {
+    log_info(LD_REND, "Rendezvous circuit to %s has already been relaunched; "
+             "not relaunching it again.",
+             oldcirc->build_state ?
+             safe_str(extend_info_describe(oldcirc->build_state->chosen_exit))
+             : "*unknown*");
+    return;
+  }
+  oldcirc->hs_service_side_rend_circ_has_been_relaunched = 1;
+
   if (!oldcirc->build_state ||
       oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
       oldcirc->build_state->expiry_time < time(NULL)) {
@@ -1726,6 +1737,11 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            "Done building circuit %d to rendezvous with "
            "cookie %s for service %s",
            circuit->_base.n_circ_id, hexcookie, serviceid);
+
+  /* Clear the 'in-progress HS circ has timed out' flag for
+   * consistency with what happens on the client side; this line has
+   * no effect on Tor's behaviour. */
+  circuit->hs_circ_has_timed_out = 0;
 
   service = rend_service_get_by_pk_digest(
                 circuit->rend_data->rend_pk_digest);

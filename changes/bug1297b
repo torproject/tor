@@ -1,0 +1,20 @@
+  o Minor bugfixes:
+
+    - Don't close hidden service client circuits which have almost
+      finished connecting to their destination when they reach the
+      normal circuit-build timeout.  Previously, we would close
+      introduction circuits which are waiting for an acknowledgement
+      from the introduction-point relay and rendezvous circuits which
+      have been specified in an INTRODUCE1 cell sent to a hidden
+      service after the normal CBT; now, we mark them as 'timed out',
+      and launch another rendezvous attempt in parallel.  This
+      behaviour change can be disabled using the new
+      CloseHSClientCircuitsImmediatelyOnTimeout option.  Fixes part of
+      bug 1297.
+
+    - Don't close hidden-service-side rendezvous circuits when they
+      reach the normal circuit-build timeout.  Previously, we would
+      close them.  This behaviour change can be disabled using the new
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout option.  Fixes
+      the remaining part of bug 1297.
+

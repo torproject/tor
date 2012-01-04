@@ -75,6 +75,11 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       return 0;
   }
 
+  /* If this is a timed-out hidden service circuit, skip it. */
+  if (origin_circ->hs_circ_has_timed_out) {
+    return 0;
+  }
+
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
       purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
     if (circ->timestamp_dirty &&
@@ -351,7 +356,9 @@ circuit_expire_building(void)
    * circuit_build_times_get_initial_timeout() if we haven't computed
    * custom timeouts yet */
   struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff,
-    cannibalize_cutoff, close_cutoff, extremely_old_cutoff;
+    cannibalize_cutoff, close_cutoff, extremely_old_cutoff,
+    hs_extremely_old_cutoff;
+  const or_options_t *options = get_options();
   struct timeval now;
   cpath_build_state_t *build_state;
 
@@ -370,6 +377,10 @@ circuit_expire_building(void)
   SET_CUTOFF(cannibalize_cutoff, circ_times.timeout_ms / 2.0);
   SET_CUTOFF(close_cutoff, circ_times.close_ms);
   SET_CUTOFF(extremely_old_cutoff, circ_times.close_ms*2 + 1000);
+
+  SET_CUTOFF(hs_extremely_old_cutoff,
+             MAX(circ_times.close_ms*2 + 1000,
+                 options->SocksTimeout * 1000));
 
   while (next_circ) {
     struct timeval cutoff;
@@ -391,6 +402,9 @@ circuit_expire_building(void)
       cutoff = close_cutoff;
     else
       cutoff = general_cutoff;
+
+    if (TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)
+      cutoff = hs_extremely_old_cutoff;
 
     if (timercmp(&victim->timestamp_created, &cutoff, >))
       continue; /* it's still young, leave it alone */
@@ -495,6 +509,62 @@ circuit_expire_building(void)
           circuit_build_times_set_timeout(&circ_times);
         }
       }
+    }
+
+    /* If this is a hidden service client circuit which is far enough
+     * along in connecting to its destination, and we haven't already
+     * flagged it as 'timed out', and the user has not told us to
+     * close such circs immediately on timeout, flag it as 'timed out'
+     * so we'll launch another intro or rend circ, but don't mark it
+     * for close yet.
+     *
+     * (Circs flagged as 'timed out' are given a much longer timeout
+     * period above, so we won't close them in the next call to
+     * circuit_expire_building.) */
+    if (!(options->CloseHSClientCircuitsImmediatelyOnTimeout) &&
+        !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
+      switch (victim->purpose) {
+      case CIRCUIT_PURPOSE_C_REND_READY:
+        /* We only want to spare a rend circ if it has been specified in
+         * an INTRODUCE1 cell sent to a hidden service.  A circ's
+         * pending_final_cpath field is non-NULL iff it is a rend circ
+         * and we have tried to send an INTRODUCE1 cell specifying it.
+         * Thus, if the pending_final_cpath field *is* NULL, then we
+         * want to not spare it. */
+        if (TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
+            NULL)
+          break;
+      case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+      case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+        /* If we have reached this line, we want to spare the circ for now. */
+        log_info(LD_CIRC,"Marking circ %s:%d:%d (state %d:%s, purpose %d) "
+                 "as timed-out HS circ",
+                 victim->n_conn->_base.address, victim->n_conn->_base.port,
+                 victim->n_circ_id,
+                 victim->state, circuit_state_to_string(victim->state),
+                 victim->purpose);
+        TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
+        continue;
+      default:
+        break;
+      }
+    }
+
+    /* If this is a service-side rendezvous circuit which is far
+     * enough along in connecting to its destination, consider sparing
+     * it. */
+    if (!(options->CloseHSServiceRendCircuitsImmediatelyOnTimeout) &&
+        !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
+        victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+      log_info(LD_CIRC,"Marking circ %s:%d:%d (state %d:%s, purpose %d) "
+               "as timed-out HS circ; relaunching rendezvous attempt.",
+               victim->n_conn->_base.address, victim->n_conn->_base.port,
+               victim->n_circ_id,
+               victim->state, circuit_state_to_string(victim->state),
+               victim->purpose);
+      TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
+      rend_service_relaunch_rendezvous(TO_ORIGIN_CIRCUIT(victim));
+      continue;
     }
 
     if (victim->n_conn)

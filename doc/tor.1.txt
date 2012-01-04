@@ -644,16 +644,6 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-**HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
-    Client authorization for a hidden service. Valid onion addresses contain 16
-    characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
-    characters in A-Za-z0-9+/. The service name is only used for internal
-    purposes, e.g., for Tor controllers. This option may be used multiple times
-    for different hidden services. If a hidden service uses authorization and
-    this option is not set, the hidden service is not accessible. Hidden
-    services can be configured to require authorization using the 
-    **HiddenServiceAuthorizeClient** option.
-
 **ReachableAddresses** __ADDR__[/__MASK__][:__PORT__]...::
     A comma-separated list of IP addresses and ports that your firewall allows
     you to connect to. The format is as for the addresses in ExitPolicy, except
@@ -682,6 +672,34 @@ The following options are useful only for clients (that is, if
     TLS connections (which Tor uses to connect to Onion Routers) to port 443,
     and some limit HTTP GET requests (which Tor uses for fetching directory
     information) to port 80.
+
+**HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
+    Client authorization for a hidden service. Valid onion addresses contain 16
+    characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
+    characters in A-Za-z0-9+/. The service name is only used for internal
+    purposes, e.g., for Tor controllers. This option may be used multiple times
+    for different hidden services. If a hidden service uses authorization and
+    this option is not set, the hidden service is not accessible. Hidden
+    services can be configured to require authorization using the 
+    **HiddenServiceAuthorizeClient** option.
+
+**CloseHSClientCircuitsImmediatelyOnTimeout** **0**|**1**::
+    If 1, Tor will close unfinished hidden service client circuits
+    which have not moved closer to connecting to their destination
+    hidden service when their internal state has not changed for the
+    duration of the current circuit-build timeout.  Otherwise, such
+    circuits will be left open, in the hope that they will finish
+    connecting to their destination hidden services.  In either case,
+    another set of introduction and rendezvous circuits for the same
+    destination hidden service will be launched. (Default: 0)
+
+**CloseHSServiceRendCircuitsImmediatelyOnTimeout** **0**|**1**::
+    If 1, Tor will close unfinished hidden-service-side rendezvous
+    circuits after the current circuit-build timeout.  Otherwise, such
+    circuits will be left open, in the hope that they will finish
+    connecting to their destinations.  In either case, another
+    rendezvous circuit for the same destination client will be
+    launched. (Default: 0)
 
 **LongLivedPorts** __PORTS__::
     A list of ports for services that tend to have long-running connections

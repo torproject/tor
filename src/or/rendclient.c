@@ -275,6 +275,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   payload_len = DIGEST_LEN + r;
   tor_assert(payload_len <= RELAY_PAYLOAD_SIZE); /* we overran something */
 
+  /* Copy the rendezvous cookie from rendcirc to introcirc, so that
+   * when introcirc gets an ack, we can change the state of the right
+   * rendezvous circuit. */
+  memcpy(rendcirc->rend_data->rend_cookie, introcirc->rend_data->rend_cookie,
+         REND_COOKIE_LEN);
+
   log_info(LD_REND, "Sending an INTRODUCE1 cell");
   if (relay_send_command_from_edge(0, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
@@ -344,8 +350,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * and tell it.
      */
     log_info(LD_REND,"Received ack. Telling rend circ...");
-    rendcirc = circuit_get_by_rend_query_and_purpose(
-               circ->rend_data->onion_address, CIRCUIT_PURPOSE_C_REND_READY);
+    rendcirc = circuit_get_ready_rend_circ_by_rend_data(circ->rend_data);
     if (rendcirc) { /* remember the ack */
 #ifndef NON_ANONYMOUS_MODE_ENABLED
       tor_assert(!(rendcirc->build_state->onehop_tunnel));
@@ -889,6 +894,11 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
    */
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
+
+  /* Now that this circuit has finished connecting to its destination,
+   * make sure circuit_get_open_circ_or_launch is willing to return it
+   * so we can actually use it. */
+  circ->hs_circ_has_timed_out = 0;
 
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */

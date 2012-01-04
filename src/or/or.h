@@ -2607,6 +2607,30 @@ typedef struct origin_circuit_t {
    * cannibalized circuits. */
   unsigned int has_opened : 1;
 
+  /** Set iff this is a hidden-service circuit which has timed out
+   * according to our current circuit-build timeout, but which has
+   * been kept around because it might still succeed in connecting to
+   * its destination, and which is not a fully-connected rendezvous
+   * circuit.
+   *
+   * (We clear this flag for client-side rendezvous circuits when they
+   * are 'joined' to the other side's rendezvous circuit, so that
+   * connection_ap_handshake_attach_circuit can put client streams on
+   * the circuit.  We also clear this flag for service-side rendezvous
+   * circuits when they are 'joined' to a client's rend circ, but only
+   * for symmetry with the client case.  Client-side introduction
+   * circuits are closed when we get a joined rend circ, and
+   * service-side introduction circuits never have this flag set.) */
+  unsigned int hs_circ_has_timed_out : 1;
+
+  /** Set iff this is a service-side rendezvous circuit for which a
+   * new connection attempt has been launched.  We consider launching
+   * a new service-side rend circ to a client when the previous one
+   * fails; now that we don't necessarily close a service-side rend
+   * circ when we launch a new one to the same client, this flag keeps
+   * us from launching two retries for the same failed rend circ. */
+  unsigned int hs_service_side_rend_circ_has_been_relaunched : 1;
+
   /** What commands were sent over this circuit that decremented the
    * RELAY_EARLY counter? This is for debugging task 878. */
   uint8_t relay_early_commands[MAX_RELAY_EARLY_CELLS_PER_CIRCUIT];
@@ -3049,6 +3073,15 @@ typedef struct {
    * services, and use a single hop for all hidden-service-related
    * circuits.) */
   int Tor2webMode;
+
+  /** Close hidden service client circuits immediately when they reach
+   * the normal circuit-build timeout, even if they have already sent
+   * an INTRODUCE1 cell on its way to the service. */
+  int CloseHSClientCircuitsImmediatelyOnTimeout;
+
+  /** Close hidden-service-side rendezvous circuits immediately when
+   * they reach the normal circuit-build timeout. */
+  int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
 
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
