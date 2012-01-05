@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - When running with an older Linux kernel that erroneously responds
-      to strange nmap behavior by having accept() return successfully
-      with a zero-length socket, just close the connection. Previously,
-      we would try harder to learn the remote address: but there was no
-      such remote address to learn, and our method for trying to learn
-      it was incorrect. Fixes bugs #1240, #4745, and #4747. Bugfix on
-      0.1.0.3-rc. Reported and diagnosed by "r1eo".

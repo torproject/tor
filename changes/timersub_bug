@@ -1,7 +1,0 @@
-  o Major bugfixes:
-    - Provide correct replacements for the timeradd() and timersub() functions
-      for platforms that lack them (for example, windows). The timersub()
-      function is used when expiring circuits, timeradd() is currently unused.
-      Patch written by Vektor, who also reported the bug. Thanks! Bugfix
-      on 0.2.2.24-alpha/0.2.3.1-alpha, fixes bug 4778.
-
