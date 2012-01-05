@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Use macros to indicate OpenSSL versions, so we don't need to worry
+      about accidental hexadecimal bit shifts.
+

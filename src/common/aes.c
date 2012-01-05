@@ -17,7 +17,8 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
-#if OPENSSL_VERSION_NUMBER >= 0x1000001fL
+#include "crypto.h"
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V(1,0,0,'a')
 /* See comments about which counter mode implementation to use below. */
 #include <openssl/modes.h>
 #define USE_OPENSSL_CTR
