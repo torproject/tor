@@ -503,6 +503,7 @@ tor_tls_init(void)
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;
     } else {
+      /* this is dead code, yes? */
       log_info(LD_GENERAL, "OpenSSL %s has version %lx",
                SSLeay_version(SSLEAY_VERSION), version);
     }
