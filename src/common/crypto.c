@@ -2360,12 +2360,6 @@ crypto_dh_free(crypto_dh_env_t *dh)
  * work for us too. */
 #define ADD_ENTROPY 32
 
-/** True iff we should use OpenSSL's RAND_poll function to add entropy to its
- * pool.
- *
- * Use RAND_poll if OpenSSL is 0.9.6 release or later. */
-#define HAVE_RAND_POLL (OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(0,9,6))
-
 /** True iff it's safe to use RAND_poll after setup.
  *
  * Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
@@ -2409,8 +2403,7 @@ crypto_seed_rng(int startup)
   size_t n;
 #endif
 
-#if HAVE_RAND_POLL
-  /* OpenSSL 0.9.6 adds a RAND_poll function that knows about more kinds of
+  /* OpenSSL has a RAND_poll function that knows about more kinds of
    * entropy than we do.  We'll try calling that, *and* calling our own entropy
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
   if (startup || RAND_POLL_IS_SAFE) {
@@ -2418,7 +2411,6 @@ crypto_seed_rng(int startup)
     if (rand_poll_status == 0)
       log_warn(LD_CRYPTO, "RAND_poll() failed.");
   }
-#endif
 
 #ifdef MS_WINDOWS
   if (!provider_set) {
