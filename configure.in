@@ -635,7 +635,6 @@ AC_CHECK_HEADERS(
         malloc/malloc.h \
         malloc_np.h \
         netdb.h \
-        net/if.h \
         netinet/in.h \
         netinet/in6.h \
         pwd.h \
