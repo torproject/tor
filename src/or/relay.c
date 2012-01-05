@@ -2423,10 +2423,6 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     queue = &orcirc->p_conn_cells;
     streams_blocked = circ->streams_blocked_on_p_conn;
   }
-  if (cell->command == CELL_RELAY_EARLY && orconn->link_proto < 2) {
-    /* V1 connections don't understand RELAY_EARLY. */
-    cell->command = CELL_RELAY;
-  }
 
   cell_queue_append_packed_copy(queue, cell);
 
