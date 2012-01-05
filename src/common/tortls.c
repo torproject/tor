@@ -68,6 +68,16 @@
 
 #define ADDR(tls) (((tls) && (tls)->address) ? tls->address : "peer")
 
+#if (OPENSSL_VERSION_NUMBER  <  0x0090813fL ||    \
+     (OPENSSL_VERSION_NUMBER >= 0x00909000L &&    \
+      OPENSSL_VERSION_NUMBER <  0x1000006fL))
+/* This is a version of OpenSSL before 0.9.8s/1.0.0f. It does not have
+ * the CVE-2011-4657 fix, and as such it can't use RELEASE_BUFFERS and
+ * SSL3 safely at the same time.
+ */
+#define DISABLE_SSL3_HANDSHAKE
+#endif
+
 /* We redefine these so that we can run correctly even if the vendor gives us
  * a version of OpenSSL that does not match its header files.  (Apple: I am
  * looking at you.)
@@ -766,16 +776,37 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
     result->key = crypto_pk_dup_key(rsa);
   }
 
-#ifdef EVERYONE_HAS_AES
-  /* Tell OpenSSL to only use TLS1 */
+#if 0
+  /* Tell OpenSSL to only use TLS1. This would actually break compatibility
+   * with clients that are configured to use SSLv23_method(), so we should
+   * probably never use it.
+   */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
     goto error;
-#else
+#endif
+
   /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
+
+  if (
+#ifdef DISABLE_SSL3_HANDSHAKE
+      1 ||
 #endif
+      SSLeay()  <  0x0090813fL ||
+      (SSLeay() >= 0x00909000L &&
+       SSLeay() <  0x1000006fL)) {
+    /* And not SSL3 if it's subject to CVE-2011-4657. */
+    log_info(LD_NET, "Disabling SSLv3 because this OpenSSL version "
+             "might otherwise be vulnerable to CVE-2011-4657 "
+             "(compile-time version %08lx (%s); "
+             "runtime version %08lx (%s))",
+             OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
+             SSLeay(), SSLeay_version(SSLEAY_VERSION));
+    SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
+  }
+
   SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
 
 #ifdef SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION

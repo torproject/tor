@@ -1,0 +1,13 @@
+  o Major security workaround:
+    - When building or running with any version of OpenSSL earlier
+      than 0.9.8s or 1.0.0f, disable SSLv3 support. These versions had
+      a bug (CVE-2011-4576) in which their block cipher padding
+      included uninitialized data, potentially leaking sensitive
+      information to any peer with whom they made a SSLv3
+      connection. Tor does not use SSL v3 by default, but a hostile
+      client or server could force an SSLv3 connection in order to
+      gain information that they shouldn't have been able to get. The
+      best solution here is to upgrade to OpenSSL 0.9.8s or 1.0.0f (or
+      later). But when building or running with a non-upgraded
+      OpenSSL, we should instead make sure that the bug can't happen
+      by disabling SSLv3 entirely.
