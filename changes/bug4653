@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Use OpenSSL's built-in SSL_state_string_long() instead of our
+      own homebrewed ssl_state_to_string() replacement. Patch from
+      Emile Snyder. Fixes bug 4653.
