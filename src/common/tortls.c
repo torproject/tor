@@ -237,22 +237,6 @@ static int tls_library_is_initialized = 0;
 #define _TOR_TLS_SYSCALL    (_MIN_TOR_TLS_ERROR_VAL - 2)
 #define _TOR_TLS_ZERORETURN (_MIN_TOR_TLS_ERROR_VAL - 1)
 
-#include "tortls_states.h"
-
-/** Return the symbolic name of an OpenSSL state. */
-static const char *
-ssl_state_to_string(int ssl_state)
-{
-  static char buf[40];
-  int i;
-  for (i = 0; state_map[i].name; ++i) {
-    if (state_map[i].state == ssl_state)
-      return state_map[i].name;
-  }
-  tor_snprintf(buf, sizeof(buf), "Unknown state %d", ssl_state);
-  return buf;
-}
-
 /** Write a description of the current state of <b>tls</b> into the
  * <b>sz</b>-byte buffer at <b>buf</b>. */
 void
@@ -266,7 +250,7 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
     return;
   }
 
-  ssl_state = ssl_state_to_string(tls->ssl->state);
+  ssl_state = SSL_state_string_long(tls->ssl);
   switch (tls->state) {
 #define CASE(st) case TOR_TLS_ST_##st: tortls_state = " in "#st ; break
     CASE(HANDSHAKE);
@@ -293,10 +277,8 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
 {
   const char *state = NULL, *addr;
   const char *msg, *lib, *func;
-  int st;
 
-  st = (tls && tls->ssl) ? tls->ssl->state : -1;
-  state = (st>=0)?ssl_state_to_string(st):"---";
+  state = (tls && tls->ssl)?SSL_state_string_long(tls->ssl):"---";
 
   addr = tls ? tls->address : NULL;
 
@@ -433,14 +415,14 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
         return _TOR_TLS_SYSCALL;
       if (r == 0) {
         log(severity, LD_NET, "TLS error: unexpected close while %s (%s)",
-            doing, ssl_state_to_string(tls->ssl->state));
+            doing, SSL_state_string_long(tls->ssl));
         tor_error = TOR_TLS_ERROR_IO;
       } else {
         int e = tor_socket_errno(tls->socket);
         log(severity, LD_NET,
             "TLS error: <syscall error while %s> (errno=%d: %s; state=%s)",
             doing, e, tor_socket_strerror(e),
-            ssl_state_to_string(tls->ssl->state));
+            SSL_state_string_long(tls->ssl));
         tor_error = tor_errno_to_tls_error(e);
       }
       tls_log_errors(tls, severity, domain, doing);
@@ -449,7 +431,7 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
       log(severity, LD_NET, "TLS connection closed while %s in state %s",
-          doing, ssl_state_to_string(tls->ssl->state));
+          doing, SSL_state_string_long(tls->ssl));
       tls_log_errors(tls, severity, domain, doing);
       return TOR_TLS_CLOSE;
     default:
@@ -1350,7 +1332,7 @@ static void
 tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
   log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
-            ssl, ssl_state_to_string(ssl->state), type, val);
+            ssl, SSL_state_string_long(ssl), type, val);
 }
 
 /** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
@@ -1755,16 +1737,16 @@ tor_tls_handshake(tor_tls_t *tls)
   oldstate = tls->ssl->state;
   if (tls->isServer) {
     log_debug(LD_HANDSHAKE, "About to call SSL_accept on %p (%s)", tls,
-              ssl_state_to_string(tls->ssl->state));
+              SSL_state_string_long(tls->ssl));
     r = SSL_accept(tls->ssl);
   } else {
     log_debug(LD_HANDSHAKE, "About to call SSL_connect on %p (%s)", tls,
-              ssl_state_to_string(tls->ssl->state));
+              SSL_state_string_long(tls->ssl));
     r = SSL_connect(tls->ssl);
   }
   if (oldstate != tls->ssl->state)
     log_debug(LD_HANDSHAKE, "After call, %p was in state %s",
-              tls, ssl_state_to_string(tls->ssl->state));
+              tls, SSL_state_string_long(tls->ssl));
   /* We need to call this here and not earlier, since OpenSSL has a penchant
    * for clearing its flags when you say accept or connect. */
   tor_tls_unblock_renegotiation(tls);

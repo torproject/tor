@@ -51,7 +51,6 @@ noinst_HEADERS = 				\
   torint.h					\
   torlog.h					\
   tortls.h					\
-  tortls_states.h				\
   util.h
 
 common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
