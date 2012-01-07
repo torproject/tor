@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix an assertion failure when, while running with bufferevents, a
-      connection finishes connecting after it is marked for close, but
-      before it is closed. Fix for bug 4697; Bugfix on 0.2.3.1-alpha.
-

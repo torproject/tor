@@ -1,3 +1,0 @@
-  - Minor features:
-    - If EntryNodes are given, but UseEntryGuards is set to 0, warn that
-      EntryNodes will have no effect. Resolves issue 2571.

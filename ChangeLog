@@ -1,4 +1,150 @@
-Changes in version 0.2.3.11-alpha - 201?-??-??
+Changes in version 0.2.3.11-alpha - 2012-01-0?
+  o Major features:
+    - Now that Tor 0.2.0.x is completely deprecated, enable the final
+      part of "Proposal 110: Avoiding infinite length circuits" by
+      refusing all circuit-extend requests that do not use a relay_early
+      cell. This change helps Tor resist a class of denial-of-service
+      attacks by limiting the maximum circuit length.
+    - Adjust the number of introduction points that a hidden service
+      will try to maintain based on how long its introduction points
+      remain in use and how many introductions they handle. Fixes
+      part of bug 3825.
+    - Try to use system facilities for enumerating local interface
+      addresses, before falling back to our old approach (which was
+      binding a UDP socket, and calling getsockname() on it). That
+      approach was scaring OS X users whose draconian firewall
+      software warned about binding to UDP sockets, regardless of
+      whether packets were sent. Now we try to use getifaddrs(),
+      SIOCGIFCONF, or GetAdaptersAddresses(), depending on what the
+      system supports. Resolves ticket 1827.
+
+  o Major security workaround:
+    - When building or running with any version of OpenSSL earlier
+      than 0.9.8s or 1.0.0f, disable SSLv3 support. These OpenSSL
+      versions have a bug (CVE-2011-4576) in which their block cipher
+      padding includes uninitialized data, potentially leaking sensitive
+      information to any peer with whom they make a SSLv3 connection. Tor
+      does not use SSL v3 by default, but a hostile client or server
+      could force an SSLv3 connection in order to gain information that
+      they shouldn't have been able to get. The best solution here is to
+      upgrade to OpenSSL 0.9.8s or 1.0.0f (or later). But when building
+      or running with a non-upgraded OpenSSL, we disable SSLv3 entirely
+      to make sure that the bug can't happen.
+
+  o Major bugfixes:
+    - Correct our replacements for the timeradd() and timersub() functions
+      on platforms that lack them (for example, Windows). The timersub()
+      function is used when expiring circuits, while timeradd() is
+      currently unused. Bug report and patch by Vektor. Bugfix on
+      0.2.2.24-alpha and 0.2.3.1-alpha; fixes bug 4778.
+    - Do not use OpenSSL 1.0.0's counter mode: it has a critical bug
+      that was fixed in OpenSSL 1.0.0a. Fixes bug 4779; bugfix on
+      Tor 0.2.3.9-alpha. Found by Pascal.
+
+  o Minor features:
+    - Directory servers now reject versions of Tor older than 0.2.1.30,
+      and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
+      (inclusive). These versions accounted for only a small fraction of
+      the Tor network, and have numerous known security issues. Resolves
+      issue 4788.
+    - Use absolute path names when reporting the torrc filename in the
+      control protocol, so a controller can more easily find the torrc
+      file. Resolves bug 1101.
+    - If EntryNodes are given, but UseEntryGuards is set to 0, warn that
+      EntryNodes will have no effect. Resolves issue 2571.
+    - Extend the control protocol to report flags that control a circuit's
+      path selection in CIRC events and in replies to 'GETINFO
+      circuit-status'. Implements part of ticket 2411.
+    - Extend the control protocol to report the hidden service address
+      and current state of a hidden-service-related circuit in CIRC
+      events and in replies to 'GETINFO circuit-status'. Implements part
+      of ticket 2411.
+    - Update to the January 3 2012 Maxmind GeoLite Country database.
+
+  o Minor bugfixes (hidden services):
+    - Don't close hidden service client circuits which have almost
+      finished connecting to their destination when they reach
+      the normal circuit-build timeout. Previously, we would close
+      introduction circuits which are waiting for an acknowledgement
+      from the introduction point, and rendezvous circuits which have
+      been specified in an INTRODUCE1 cell sent to a hidden service,
+      after the normal CBT. Now, we mark them as 'timed out', and launch
+      another rendezvous attempt in parallel. This behavior change can
+      be disabled using the new CloseHSClientCircuitsImmediatelyOnTimeout
+      option. Fixes part of bug 1297.
+    - Don't close hidden-service-side rendezvous circuits when they
+      reach the normal circuit-build timeout. This behaviour change can
+      be disabled using the new
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
+      remaining part of bug 1297.
+    - Make sure we never mark the wrong rendezvous circuit as having
+      had its introduction cell acknowleged by the introduction-point
+      relay. Previously, when we received an INTRODUCE_ACK cell on a
+      client-side hidden-service introduction circuit, we might have
+      marked a rendezvous circuit other than the one we specified in
+      the INTRODUCE1 cell as INTRO_ACKED, which would have produced
+      a warning message and interfered with the hidden service
+      connection-establishment process. Bugfix on 0.2.3.3-alpha, when we
+      added the stream-isolation feature which might cause Tor to open
+      multiple rendezvous circuits for the same hidden service. Fixes
+      bug 4759.
+    - Don't trigger an assertion failure when we mark a new client-side
+      hidden-service introduction circuit for close during the process
+      of creating it. Bugfix on 0.2.3.6-alpha. Fixes bug 4796; reported
+      by murb.
+
+  o Minor bugfixes (other):
+    - Fix null-pointer access that could occur if TLS allocation failed.
+      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un". This was
+      erroneously listed as fixed in 0.2.3.9-alpha, but the fix had
+      accidentally been reverted.
+    - Fix an assertion failure when, while running with bufferevents, a
+      connection finishes connecting after it is marked for close, but
+      before it is closed. Fixes bug 4697; bugfix on 0.2.3.1-alpha.
+    - Older Linux kernels erroneously respond to strange nmap behavior
+      by having accept() return successfully with a zero-length
+      socket. When this happens, just close the connection. Previously,
+      we would try harder to learn the remote address: but there was
+      no such remote address to learn, and our method for trying to
+      learn it was incorrect. Fixes bugs 1240, 4745, and 4747. Bugfix
+      on 0.1.0.3-rc. Reported and diagnosed by "r1eo".
+    - test_util_spawn_background_ok() hardcoded the expected value
+      for ENOENT to 2. This isn't portable as error numbers are
+      platform specific, and particularly the hurd has ENOENT at
+      0x40000002. Construct expected string at runtime, using the correct
+      value for ENOENT. Fixes bug 4733; bugfix on 0.2.3.1-alpha.
+    - Correctly spell "connect" in a log message on failure to create a
+      controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta and
+      0.2.3.2-alpha.
+    - During configure, search for library containing cos function as
+      libm lives in libcore on some platforms (BeOS/Haiku).
+      Linking against libm was hard-coded before. Bugfix on
+      0.2.2.2-alpha; fixes the first part of bug 4727. Patch and
+      analysis by Martin Hebnes Pedersen.
+    - Preprocessor directives should not be put inside the arguments
+      of a macro. This would break compilation with GCC releases prior
+      to version 3.3. We would never recommend such an old GCC
+      version, but it is apparently required for binary compatibility
+      on some platforms (namely, certain builds of Haiku). Bugfix on
+      0.2.3.3-alpha; fixes the other part of bug 4727. Patch and
+      analysis by Martin Hebnes Pedersen.
+
+  - Feature removal:
+    - When sending or relaying a RELAY_EARLY cell, we used to convert
+      it to a RELAY cell if the connection was using the v1 link
+      protocol. This was a workaround for older versions of Tor, which
+      didn't handle RELAY_EARLY cells properly. Now that all supported
+      versions can handle RELAY_EARLY cells, and now that we're enforcing
+      the "no RELAY_EXTEND commands except in RELAY_EARLY cells" rule,
+      remove this workaround. Addresses bug 4786.
+
+  o Code simplifications and refactoring:
+    - During configure, detect when we're building with clang version
+      3.0 or lower and disable the -Wnormalized=id and -Woverride-init
+      CFLAGS. clang doesn't support them yet.
+    - Use OpenSSL's built-in SSL_state_string_long() instead of our
+      own homebrewed ssl_state_to_string() replacement. Patch from
+      Emile Snyder. Fixes bug 4653.
 
 
 Changes in version 0.2.3.10-alpha - 2011-12-16
@@ -786,7 +932,7 @@ Changes in version 0.2.1.31 - 2011-10-26
       circuit EXTEND request. Now relays can protect clients from the
       CVE-2011-2768 issue even if the clients haven't upgraded yet.
     - Bridges now refuse CREATE or CREATE_FAST cells on OR connections
-      that they initiated. Relays could distinguish incoming bridge 
+      that they initiated. Relays could distinguish incoming bridge
       connections from client connections, creating another avenue for
       enumerating bridges. Fixes CVE-2011-2769. Bugfix on 0.2.0.3-alpha.
       Found by "frosty_un".

@@ -1,6 +1,0 @@
-  o Minor features (directory server):
-    - Directory servers now reject versions of Tor older than 0.2.1.30,
-      and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
-      (inclusive). These versions accounted for only a small fraction of
-      the Tor network, and have numerous known security issues. Resolves
-      issue #4788.

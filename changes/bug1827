@@ -1,9 +1,0 @@
-  - Minor features:
-    - Try to use system facilities for enumerating local interface
-      addresses, before falling back to our old approach (which was
-      binding a UDP socket, and calling getsockname() on it). That
-      approach was confusing people whose draconian firewall software
-      didn't like binding to UDP sockets, regardless of whether
-      packets were sent. Now we try to use getifaddrs(), SIOCGIFCONF,
-      or GetAdaptersAddresses(), depending on what the system
-      supports. Resolves ticket #1827.

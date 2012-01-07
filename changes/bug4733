@@ -1,6 +1,0 @@
-  o Minor fix:
-    test_util_spawn_background_ok() hardcoded the expected value
-    for ENOENT to 2.  This isn't portable as error numbers are
-    platform specific, and particularly the hurd has ENOENT at
-    0x40000002.  Construct expected string at runtime, using the
-    correct value for ENOENT (closes: #4733).  Bugfix on 0.2.3.1-alpha.
