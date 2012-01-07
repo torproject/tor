@@ -2063,8 +2063,8 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
-/** Return the number of INTRODUCE2 cells an intro point has
- * received. */
+/** Return the number of INTRODUCE2 cells this hidden service has received
+ * from this intro point. */
 static int
 intro_point_accepted_intro_count(rend_intro_point_t *intro)
 {
