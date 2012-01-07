@@ -1,35 +1,34 @@
-Changes in version 0.2.2.36 - 2012-01-06
+Changes in version 0.2.2.36 - 2012-01-0?
   o Major security workaround:
     - When building or running with any version of OpenSSL earlier
       than 0.9.8s or 1.0.0f, disable SSLv3 support. These OpenSSL
-      versions had a bug (CVE-2011-4576) in which their block cipher
-      padding included uninitialized data, potentially leaking sensitive
-      information to any peer with whom they made a SSLv3 connection. Tor
+      versions have a bug (CVE-2011-4576) in which their block cipher
+      padding includes uninitialized data, potentially leaking sensitive
+      information to any peer with whom they make a SSLv3 connection. Tor
       does not use SSL v3 by default, but a hostile client or server
       could force an SSLv3 connection in order to gain information that
       they shouldn't have been able to get. The best solution here is to
       upgrade to OpenSSL 0.9.8s or 1.0.0f (or later). But when building
-      or running with a non-upgraded OpenSSL, we should instead make
-      sure that the bug can't happen by disabling SSLv3 entirely.
+      or running with a non-upgraded OpenSSL, we disable SSLv3 entirely
+      to make sure that the bug can't happen.
 
   o Major bugfixes:
-    - Provide correct replacements for the timeradd() and timersub()
-      functions for platforms that lack them (for example, windows). The
-      timersub() function is used when expiring circuits, timeradd() is
-      currently unused. Patch written by Vektor, who also reported the
-      bug. Thanks! Bugfix on 0.2.2.24-alpha/0.2.3.1-alpha, fixes bug 4778.
+    - Correct our replacements for the timeradd() and timersub() functions
+      on platforms that lack them (for example, Windows). The timersub()
+      function is used when expiring circuits, while timeradd() is
+      currently unused. Bug report and patch by Vektor. Bugfix on
+      0.2.2.24-alpha; fixes bug 4778.
 
   o Minor bugfixes:
-    - When running with an older Linux kernel that erroneously responds
-      to strange nmap behavior by having accept() return successfully
-      with a zero-length socket, just close the connection. Previously,
+    - Older Linux kernels erroneously respond to strange nmap behavior
+      by having accept() return successfully with a zero-length
+      socket. When this happens, just close the connection. Previously,
       we would try harder to learn the remote address: but there was
       no such remote address to learn, and our method for trying to
       learn it was incorrect. Fixes bugs 1240, 4745, and 4747. Bugfix
       on 0.1.0.3-rc. Reported and diagnosed by "r1eo".
-    - Correctly spell "connect" in a log message when creating a
-      controlsocket fails. Fixes bug 4803; bugfix on 0.2.2.26-beta and
-      0.2.3.2-alpha.
+    - Correctly spell "connect" in a log message on failure to create a
+      controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta.
 
   o Minor features:
     - Directory servers now reject versions of Tor older than 0.2.1.30,
@@ -46,7 +45,7 @@ Changes in version 0.2.2.36 - 2012-01-06
       didn't handle RELAY_EARLY cells properly. Now that all supported
       versions can handle RELAY_EARLY cells, and now that we're enforcing
       the "no RELAY_EXTEND commands except in RELAY_EARLY cells" rule,
-      we're removing this workaround. Addresses bug 4786.
+      remove this workaround. Addresses bug 4786.
 
   o Code simplifications and refactoring:
     - During configure, detect when we're building with clang version
