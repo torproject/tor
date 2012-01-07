@@ -1385,7 +1385,12 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memcpy(launched->rend_data->rend_cookie, r_cookie, REND_COOKIE_LEN);
   strlcpy(launched->rend_data->onion_address, service->service_id,
           sizeof(launched->rend_data->onion_address));
-  launched->build_state->pending_final_cpath = cpath =
+
+  launched->build_state->service_pending_final_cpath_ref =
+    tor_malloc_zero(sizeof(crypt_path_reference_t));
+  launched->build_state->service_pending_final_cpath_ref->refcount = 1;
+
+  launched->build_state->service_pending_final_cpath_ref->cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
   launched->build_state->expiry_time = now + MAX_REND_TIMEOUT;
@@ -1445,7 +1450,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   oldstate = oldcirc->build_state;
   tor_assert(oldstate);
 
-  if (oldstate->pending_final_cpath == NULL) {
+  if (oldstate->service_pending_final_cpath_ref == NULL) {
     log_info(LD_REND,"Skipping relaunch of circ that failed on its first hop. "
              "Initiator will retry.");
     return;
@@ -1467,8 +1472,9 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   tor_assert(newstate);
   newstate->failure_count = oldstate->failure_count+1;
   newstate->expiry_time = oldstate->expiry_time;
-  newstate->pending_final_cpath = oldstate->pending_final_cpath;
-  oldstate->pending_final_cpath = NULL;
+  newstate->service_pending_final_cpath_ref =
+    oldstate->service_pending_final_cpath_ref;
+  ++(newstate->service_pending_final_cpath_ref->refcount);
 
   newcirc->rend_data = rend_data_dup(oldcirc->rend_data);
 }
@@ -1726,8 +1732,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(!(circuit->build_state->onehop_tunnel));
 #endif
   tor_assert(circuit->rend_data);
-  hop = circuit->build_state->pending_final_cpath;
-  tor_assert(hop);
+  hop = circuit->build_state->service_pending_final_cpath_ref->cpath;
 
   base16_encode(hexcookie,9,circuit->rend_data->rend_cookie,4);
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -1742,6 +1747,22 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
    * consistency with what happens on the client side; this line has
    * no effect on Tor's behaviour. */
   circuit->hs_circ_has_timed_out = 0;
+
+  /* If hop is NULL, another rend circ has already connected to this
+   * rend point.  Close this circ. */
+  if (hop == NULL) {
+    log_info(LD_REND, "Another rend circ has already reached this rend point; "
+             "closing this rend circ.");
+    reason = END_CIRC_REASON_NONE;
+    goto err;
+  }
+
+  /* Remove our final cpath element from the reference, so that no
+   * other circuit will try to use it.  Store it in
+   * pending_final_cpath for now to ensure that it will be freed if
+   * our rendezvous attempt fails. */
+  circuit->build_state->pending_final_cpath = hop;
+  circuit->build_state->service_pending_final_cpath_ref->cpath = NULL;
 
   service = rend_service_get_by_pk_digest(
                 circuit->rend_data->rend_pk_digest);

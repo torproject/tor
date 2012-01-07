@@ -39,6 +39,7 @@ static smartlist_t *circuits_pending_or_conns=NULL;
 static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
+static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 
 /********* END VARIABLES ************/
 
@@ -600,6 +601,7 @@ circuit_free(circuit_t *circ)
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
         circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
+        cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
 
@@ -721,6 +723,18 @@ circuit_free_cpath_node(crypt_path_t *victim)
 
   memset(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
   tor_free(victim);
+}
+
+/** Release a crypt_path_reference_t*, which may be NULL. */
+static void
+cpath_ref_decref(crypt_path_reference_t *cpath_ref)
+{
+  if (cpath_ref != NULL) {
+    if (--(cpath_ref->refcount) == 0) {
+      circuit_free_cpath_node(cpath_ref->cpath);
+      tor_free(cpath_ref);
+    }
+  }
 }
 
 /** A helper function for circuit_dump_by_conn() below. Log a bunch
