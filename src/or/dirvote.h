@@ -31,6 +31,8 @@ char *networkstatus_compute_consensus(smartlist_t *votes,
                                       consensus_flavor_t flavor);
 int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           ns_detached_signatures_t *sigs,
+                                          const char *source,
+                                          int severity,
                                           const char **msg_out);
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 void ns_detached_signatures_free(ns_detached_signatures_t *s);

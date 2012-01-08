@@ -1164,6 +1164,11 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
    * with clients that are configured to use SSLv23_method(), so we should
    * probably never use it.
    */
+  /* XXX wanoskarnet says this comment is bunk -- that even if we turn
+   * this line on, clients configured to use SSLv23 would still able to
+   * talk to us. But he also says it's ok to leave it out. I suggest we
+   * delete this whole clause (the one that's #if 0'ed out). I'll leave
+   * it in place until Nick expresses an opinion. -RD */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
     goto error;
 #endif
