@@ -2276,7 +2276,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       log_info(LD_DIR, "Adding signature from %s with %s", voter_identity,
                algorithm);
       log(severity, LD_DIR, "Added a signature for %s from %s.",
-          voter_identity, source);
+          target_voter->nickname, source);
       ++r;
       if (old_sig) {
         smartlist_remove(target_voter->sigs, old_sig);
