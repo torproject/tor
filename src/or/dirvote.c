@@ -35,10 +35,13 @@ typedef struct pending_consensus_t {
 
 static int dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
+                       const char *source,
                        const char **msg_out);
 static int dirvote_add_signatures_to_pending_consensus(
                        pending_consensus_t *pc,
                        ns_detached_signatures_t *sigs,
+                       const char *source,
+                       int severity,
                        const char **msg_out);
 static char *list_v3_auth_ids(void);
 static void dirvote_fetch_missing_votes(void);
@@ -2168,6 +2171,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 int
 networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
+                                      const char *source,
+                                      int severity,
                                       const char **msg_out)
 {
   int r = 0;
@@ -2270,6 +2275,8 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     if (sig->good_signature || !old_sig || old_sig->bad_signature) {
       log_info(LD_DIR, "Adding signature from %s with %s", voter_identity,
                algorithm);
+      log(severity, LD_DIR, "Added a signature for %s from %s.",
+          voter_identity, source);
       ++r;
       if (old_sig) {
         smartlist_remove(target_voter->sigs, old_sig);
@@ -3198,7 +3205,8 @@ dirvote_compute_consensuses(void)
     SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
       {
         const char *msg = NULL;
-        int r = dirvote_add_signatures_to_all_pending_consensuses(sig, &msg);
+        int r = dirvote_add_signatures_to_all_pending_consensuses(sig,
+                                                     "pending", &msg);
         if (r >= 0)
           n_sigs += r;
         else
@@ -3240,6 +3248,8 @@ static int
 dirvote_add_signatures_to_pending_consensus(
                        pending_consensus_t *pc,
                        ns_detached_signatures_t *sigs,
+                       const char *source,
+                       int severity,
                        const char **msg_out)
 {
   const char *flavor_name;
@@ -3258,7 +3268,8 @@ dirvote_add_signatures_to_pending_consensus(
     log_info(LD_DIR, "Have %d signatures for adding to %s consensus.",
              sig_list ? smartlist_len(sig_list) : 0, flavor_name);
   }
-  r = networkstatus_add_detached_signatures(pc->consensus, sigs, msg_out);
+  r = networkstatus_add_detached_signatures(pc->consensus, sigs,
+                                            source, severity, msg_out);
   log_info(LD_DIR,"Added %d signatures to consensus.", r);
 
   if (r >= 1) {
@@ -3307,6 +3318,7 @@ dirvote_add_signatures_to_pending_consensus(
 static int
 dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
+                       const char *source,
                        const char **msg_out)
 {
   int r=0, i, n_added = 0, errors = 0;
@@ -3323,10 +3335,12 @@ dirvote_add_signatures_to_all_pending_consensuses(
 
   for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
     int res;
+    int severity = i == FLAV_NS ? LOG_NOTICE : LOG_INFO;
     pending_consensus_t *pc = &pending_consensuses[i];
     if (!pc->consensus)
       continue;
-    res = dirvote_add_signatures_to_pending_consensus(pc, sigs, msg_out);
+    res = dirvote_add_signatures_to_pending_consensus(pc, sigs, source,
+                                                      severity, msg_out);
     if (res < 0)
       errors++;
     else
@@ -3373,7 +3387,7 @@ dirvote_add_signatures(const char *detached_signatures_body,
     log_notice(LD_DIR, "Got a signature from %s. "
                        "Adding it to the pending consensus.", source);
     return dirvote_add_signatures_to_all_pending_consensuses(
-                                     detached_signatures_body, msg);
+                                     detached_signatures_body, source, msg);
   } else {
     log_notice(LD_DIR, "Got a signature from %s. "
                        "Queuing it for the next consensus.", source);

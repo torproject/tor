@@ -1207,9 +1207,11 @@ test_dir_v3_networkstatus(void)
 
     /* Try adding it to con2. */
     detached_text2 = get_detached_sigs(con2,con_md2);
-    test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, &msg));
+    test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, "test",
+                                                     LOG_INFO, &msg));
     tor_free(detached_text2);
-    test_eq(1, networkstatus_add_detached_signatures(con_md2, dsig1, &msg));
+    test_eq(1, networkstatus_add_detached_signatures(con_md2, dsig1, "test",
+                                                     LOG_INFO, &msg));
     tor_free(detached_text2);
     detached_text2 = get_detached_sigs(con2,con_md2);
     //printf("\n<%s>\n", detached_text2);
@@ -1230,10 +1232,12 @@ test_dir_v3_networkstatus(void)
                                                    "microdesc")));
 
     /* Try adding to con2 twice; verify that nothing changes. */
-    test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, &msg));
+    test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, "test",
+                                                     LOG_INFO, &msg));
 
     /* Add to con. */
-    test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &msg));
+    test_eq(2, networkstatus_add_detached_signatures(con, dsig2, "test",
+                                                     LOG_INFO, &msg));
     /* Check signatures */
     voter = smartlist_get(con->voters, 1);
     sig = smartlist_get(voter->sigs, 0);
