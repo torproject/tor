@@ -71,12 +71,12 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       after the normal CBT. Now, we mark them as 'timed out', and launch
       another rendezvous attempt in parallel. This behavior change can
       be disabled using the new CloseHSClientCircuitsImmediatelyOnTimeout
-      option. Fixes part of bug 1297.
+      option. Bugfix on 0.2.2.2-alpha; fixes part of bug 1297.
     - Don't close hidden-service-side rendezvous circuits when they
       reach the normal circuit-build timeout. This behaviour change can
       be disabled using the new
-      CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
-      remaining part of bug 1297.
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Bugfix on
+      0.2.2.2-alpha; fixes the remaining part of bug 1297.
     - Make sure we never mark the wrong rendezvous circuit as having
       had its introduction cell acknowleged by the introduction-point
       relay. Previously, when we received an INTRODUCE_ACK cell on a
