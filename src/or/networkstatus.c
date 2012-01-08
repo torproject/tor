@@ -471,6 +471,8 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   int n_no_signature = 0;
   int n_v3_authorities = get_n_authorities(V3_AUTHORITY);
   int n_required = n_v3_authorities/2 + 1;
+  smartlist_t *list_good = smartlist_create();
+  smartlist_t *list_no_signature = smartlist_create();
   smartlist_t *need_certs_from = smartlist_create();
   smartlist_t *unrecognized = smartlist_create();
   smartlist_t *missing_authorities = smartlist_create();
@@ -521,11 +523,13 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       else if (sig->bad_signature)
         ++bad_here;
     } SMARTLIST_FOREACH_END(sig);
-    if (good_here)
+
+    if (good_here) {
       ++n_good;
-    else if (bad_here)
+      smartlist_add(list_good, voter->nickname);
+    } else if (bad_here) {
       ++n_bad;
-    else if (missing_key_here) {
+    } else if (missing_key_here) {
       ++n_missing_key;
       if (dl_failed_key_here)
         ++n_dl_failed_key;
@@ -533,6 +537,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       ++n_unknown;
     } else {
       ++n_no_signature;
+      smartlist_add(list_no_signature, voter->nickname);
     }
   } SMARTLIST_FOREACH_END(voter);
 
@@ -580,13 +585,17 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
     {
       smartlist_t *sl = smartlist_create();
       char *cp;
+      char *tmp = smartlist_join_strings(list_good, " ", 0, NULL);
       tor_asprintf(&cp, "A consensus needs %d good signatures from recognized "
-                   "authorities for us to accept it. This one has %d.",
-                   n_required, n_good);
+                   "authorities for us to accept it. This one has %d (%s).",
+                   n_required, n_good, tmp);
+      tor_free(tmp);
       smartlist_add(sl,cp);
       if (n_no_signature) {
-        tor_asprintf(&cp, "%d of the authorities we know didn't sign it.",
-                     n_no_signature);
+        tmp = smartlist_join_strings(list_no_signature, " ", 0, NULL);
+        tor_asprintf(&cp, "%d (%s) of the authorities we know didn't sign it.",
+                     n_no_signature, tmp);
+        tor_free(tmp);
         smartlist_add(sl,cp);
       }
       if (n_unknown) {
@@ -612,6 +621,8 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
     }
   }
 
+  smartlist_free(list_good);
+  smartlist_free(list_no_signature);
   smartlist_free(unrecognized);
   smartlist_free(need_certs_from);
   smartlist_free(missing_authorities);
