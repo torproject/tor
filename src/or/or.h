@@ -2406,6 +2406,18 @@ typedef struct crypt_path_t {
                        * at this step? */
 } crypt_path_t;
 
+/** A reference-counted pointer to a crypt_path_t, used only to share
+ * the final rendezvous cpath to be used on a service-side rendezvous
+ * circuit among multiple circuits built in parallel to the same
+ * destination rendezvous point. */
+typedef struct {
+  /** The reference count. */
+  unsigned int refcount;
+  /** The pointer.  Set to NULL when the crypt_path_t is put into use
+   * on an opened rendezvous circuit. */
+  crypt_path_t *cpath;
+} crypt_path_reference_t;
+
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
 #define DH_KEY_LEN DH_BYTES
@@ -2432,6 +2444,9 @@ typedef struct {
   unsigned int onehop_tunnel : 1;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   crypt_path_t *pending_final_cpath;
+  /** A ref-counted reference to the crypt_path_t to append after
+   * rendezvous; used on the service side. */
+  crypt_path_reference_t *service_pending_final_cpath_ref;
   /** How many times has building a circuit for this task failed? */
   int failure_count;
   /** At what time should we give up on this task? */
