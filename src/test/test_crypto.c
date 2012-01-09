@@ -105,6 +105,7 @@ test_crypto_aes(void *arg)
 
   int use_evp = !strcmp(arg,"evp");
   evaluate_evp_for_aes(use_evp);
+  evaluate_ctr_for_aes();
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);

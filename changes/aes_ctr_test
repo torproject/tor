@@ -1,0 +1,5 @@
+  o Minor bugfixes
+    - Test for the OpenSSL 1.0.0 counter mode bug at runtime, not compile
+      time. This is necessary because OpenSSL has been hacked to mis-report
+      its version on a few distributions.
+      Bugfix on Tor 0.2.3.11-alpha.

@@ -281,6 +281,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     }
 
     evaluate_evp_for_aes(-1);
+    evaluate_ctr_for_aes();
 
     return crypto_seed_rng(1);
   }
