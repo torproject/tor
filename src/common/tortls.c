@@ -1160,15 +1160,10 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
   }
 
 #if 0
-  /* Tell OpenSSL to only use TLS1. This would actually break compatibility
-   * with clients that are configured to use SSLv23_method(), so we should
-   * probably never use it.
-   */
-  /* XXX wanoskarnet says this comment is bunk -- that even if we turn
-   * this line on, clients configured to use SSLv23 would still able to
-   * talk to us. But he also says it's ok to leave it out. I suggest we
-   * delete this whole clause (the one that's #if 0'ed out). I'll leave
-   * it in place until Nick expresses an opinion. -RD */
+  /* Tell OpenSSL to only use TLS1.  This may have subtly different results
+   * from SSLv23_method() with SSLv2 and SSLv3 disabled, so we need to do some
+   * investigation before we consider adjusting it. It should be compatible
+   * with existing Tors. */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
     goto error;
 #endif
