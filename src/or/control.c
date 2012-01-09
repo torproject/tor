@@ -2944,8 +2944,11 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     const or_options_t *options = get_options();
     int cookies = options->CookieAuthentication;
     char *cfile = get_cookie_file();
-    char *esc_cfile = esc_for_log(cfile);
+    char *abs_cfile;
+    char *esc_cfile;
     char *methods;
+    abs_cfile = make_path_absolute(cfile);
+    esc_cfile = esc_for_log(abs_cfile);
     {
       int passwd = (options->HashedControlPassword != NULL ||
                     options->HashedControlSessionPassword != NULL);
@@ -2971,6 +2974,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
                              escaped(VERSION));
     tor_free(methods);
     tor_free(cfile);
+    tor_free(abs_cfile);
     tor_free(esc_cfile);
   }
  done:
