@@ -278,7 +278,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   /* Copy the rendezvous cookie from rendcirc to introcirc, so that
    * when introcirc gets an ack, we can change the state of the right
    * rendezvous circuit. */
-  memcpy(rendcirc->rend_data->rend_cookie, introcirc->rend_data->rend_cookie,
+  memcpy(introcirc->rend_data->rend_cookie, rendcirc->rend_data->rend_cookie,
          REND_COOKIE_LEN);
 
   log_info(LD_REND, "Sending an INTRODUCE1 cell");
