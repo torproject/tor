@@ -1839,8 +1839,9 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   char *base64_encoded_dh = NULL;
   char *file_string = NULL;
   int retval = -1;
-  const static char *file_header = "# This file contains stored Diffie-Hellman"
-    " parameters for future use.\n# You *do not* need to edit this file.\n\n";
+  static const char file_header[] = "# This file contains stored Diffie-"
+    "Hellman parameters for future use.\n# You *do not* need to edit this "
+    "file.\n\n";
 
   tor_assert(fname);
 
@@ -1880,10 +1881,10 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   }
 
   /* concatenate file header and the dh parameters blob */
-  tor_asprintf(&file_string, "%s%s", file_header, base64_encoded_dh);
+  new_len = tor_asprintf(&file_string, "%s%s", file_header, base64_encoded_dh);
 
   /* write to file */
-  if (write_bytes_to_new_file(fname, file_string, strlen(file_string), 0) < 0) {
+  if (write_bytes_to_new_file(fname, file_string, new_len, 0) < 0) {
     log_info(LD_CRYPTO, "'%s' was already occupied.", fname);
     goto done;
   }
