@@ -974,11 +974,14 @@ rend_service_note_removing_intro_point(rend_service_t *service,
      * service->n_intro_points_wanted and let rend_services_introduce
      * create the new intro points we want (if any).
      */
-    double fractional_n_intro_points_wanted_to_replace_this_one =
-      (1.5 * ((intro_point_accepted_intro_count(intro) /
-               (double)INTRO_POINT_LIFETIME_INTRODUCTIONS) /
-              (((double)now - intro->time_published) /
-               INTRO_POINT_LIFETIME_MIN_SECONDS)));
+    const double intro_point_usage =
+      intro_point_accepted_intro_count(intro) /
+      (double)(now - intro->time_published);
+    const double intro_point_target_usage =
+      INTRO_POINT_LIFETIME_INTRODUCTIONS /
+      (double)INTRO_POINT_LIFETIME_MIN_SECONDS;
+    const double fractional_n_intro_points_wanted_to_replace_this_one =
+      (1.5 * (intro_point_usage / intro_point_target_usage));
     unsigned int n_intro_points_wanted_to_replace_this_one;
     unsigned int n_intro_points_wanted_now;
     unsigned int n_intro_points_really_wanted_now;
