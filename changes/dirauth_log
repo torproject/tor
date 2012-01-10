@@ -1,0 +1,3 @@
+  o Minor features:
+    - Log which authority we're missing votes from when we go to fetch them
+      from the other auths.

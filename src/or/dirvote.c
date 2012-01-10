@@ -2801,8 +2801,13 @@ dirvote_fetch_missing_votes(void)
     smartlist_free(missing_fps);
     return;
   }
-  log_notice(LOG_NOTICE, "We're missing votes from %d authorities. Asking "
-             "every other authority for a copy.", smartlist_len(missing_fps));
+  {
+    char *tmp = smartlist_join_strings(missing_fps, " ", 0, NULL);
+    log_notice(LOG_NOTICE, "We're missing votes from %d authorities (%s). "
+               "Asking every other authority for a copy.",
+               smartlist_len(missing_fps), tmp);
+    tor_free(tmp);
+  }
   resource = smartlist_join_strings(missing_fps, "+", 0, NULL);
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE,
                                      0, resource);
