@@ -69,6 +69,9 @@
 #define DISABLE_ENGINES
 #endif
 
+/** Longest recognized */
+#define MAX_DNS_LABEL_SIZE 63
+
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
 /** @{ */
 /** On OpenSSL versions before 0.9.8, there is no working SHA256
@@ -81,9 +84,6 @@
 /** @} */
 #include "sha256.c"
 #define SHA256_Final(a,b) sha256_done(b,a)
-
-/** Longest recognized */
-#define MAX_DNS_LABEL_SIZE 63
 
 static unsigned char *
 SHA256(const unsigned char *m, size_t len, unsigned char *d)
