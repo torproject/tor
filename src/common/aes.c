@@ -324,28 +324,28 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
   else
 #endif
   {
-  int c = cipher->pos;
-  if (PREDICT_UNLIKELY(!len)) return;
+    int c = cipher->pos;
+    if (PREDICT_UNLIKELY(!len)) return;
 
-  while (1) {
-    do {
-      if (len-- == 0) { cipher->pos = c; return; }
-      *(output++) = *(input++) ^ cipher->buf[c];
-    } while (++c != 16);
-    cipher->pos = c = 0;
-    if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
-      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
-        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
-          ++COUNTER(cipher, 3);
-          UPDATE_CTR_BUF(cipher, 3);
+    while (1) {
+      do {
+        if (len-- == 0) { cipher->pos = c; return; }
+        *(output++) = *(input++) ^ cipher->buf[c];
+      } while (++c != 16);
+      cipher->pos = c = 0;
+      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
+        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
+          if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
+            ++COUNTER(cipher, 3);
+            UPDATE_CTR_BUF(cipher, 3);
+          }
+          UPDATE_CTR_BUF(cipher, 2);
         }
-        UPDATE_CTR_BUF(cipher, 2);
+        UPDATE_CTR_BUF(cipher, 1);
       }
-      UPDATE_CTR_BUF(cipher, 1);
+      UPDATE_CTR_BUF(cipher, 0);
+      _aes_fill_buf(cipher);
     }
-    UPDATE_CTR_BUF(cipher, 0);
-    _aes_fill_buf(cipher);
-  }
   }
 }
 
@@ -364,28 +364,28 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
   else
 #endif
   {
-  int c = cipher->pos;
-  if (PREDICT_UNLIKELY(!len)) return;
+    int c = cipher->pos;
+    if (PREDICT_UNLIKELY(!len)) return;
 
-  while (1) {
-    do {
-      if (len-- == 0) { cipher->pos = c; return; }
-      *(data++) ^= cipher->buf[c];
-    } while (++c != 16);
-    cipher->pos = c = 0;
-    if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
-      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
-        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
-          ++COUNTER(cipher, 3);
-          UPDATE_CTR_BUF(cipher, 3);
+    while (1) {
+      do {
+        if (len-- == 0) { cipher->pos = c; return; }
+        *(data++) ^= cipher->buf[c];
+      } while (++c != 16);
+      cipher->pos = c = 0;
+      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
+        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
+          if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
+            ++COUNTER(cipher, 3);
+            UPDATE_CTR_BUF(cipher, 3);
+          }
+          UPDATE_CTR_BUF(cipher, 2);
         }
-        UPDATE_CTR_BUF(cipher, 2);
+        UPDATE_CTR_BUF(cipher, 1);
       }
-      UPDATE_CTR_BUF(cipher, 1);
+      UPDATE_CTR_BUF(cipher, 0);
+      _aes_fill_buf(cipher);
     }
-    UPDATE_CTR_BUF(cipher, 0);
-    _aes_fill_buf(cipher);
-  }
   }
 }
 
