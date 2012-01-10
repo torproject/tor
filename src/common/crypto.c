@@ -82,8 +82,8 @@
 #include "sha256.c"
 #define SHA256_Final(a,b) sha256_done(b,a)
 
-/* Bug 4413*/
-#define MAX_HOSTNAME_SIZE 63
+/** Longest recognized */
+#define MAX_DNS_LABEL_SIZE 63
 
 static unsigned char *
 SHA256(const unsigned char *m, size_t len, unsigned char *d)
@@ -2545,9 +2545,12 @@ crypto_rand_double(void)
 }
 
 /** Generate and return a new random hostname starting with <b>prefix</b>,
- * ending with <b>suffix</b>, and containing no less than
+ * ending with <b>suffix</b>, and containing no fewer than
  * <b>min_rand_len</b> and no more than <b>max_rand_len</b> random base32
- * characters between. */
+ * characters between.
+ *
+ * Clip <b>max_rand_len</b> to MAX_DNS_LABEL_SIZE.
+ **/
 char *
 crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
                        const char *suffix)
@@ -2556,12 +2559,12 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   int randlen, rand_bytes_len;
   size_t resultlen, prefixlen;
 
-  tor_assert(max_rand_len >= min_rand_len);
+  if (max_rand_len > MAX_DNS_LABEL_SIZE)
+    max_rand_len = MAX_DNS_LABEL_SIZE;
+  if (min_rand_len > max_rand_len)
+    min_rand_len = max_rand_len;
 
   randlen = min_rand_len + crypto_rand_int(max_rand_len - min_rand_len + 1);
-  if (randlen > MAX_HOSTNAME_SIZE) {
-    randlen = MAX_HOSTNAME_SIZE;
-  }
 
   prefixlen = strlen(prefix);
   resultlen = prefixlen + strlen(suffix) + randlen + 16;
