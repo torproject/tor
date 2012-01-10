@@ -44,10 +44,6 @@
 #include <openssl/bio.h>
 #include <openssl/opensslv.h>
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000l
-#error "We require OpenSSL >= 0.9.7"
-#endif
-
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
 #include <event2/buffer.h>
@@ -65,6 +61,10 @@
 #include "container.h"
 #include <string.h>
 
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,7)
+#error "We require OpenSSL >= 0.9.7"
+#endif
+
 /* Enable the "v2" TLS handshake.
  */
 #define V2_HANDSHAKE_SERVER
@@ -79,9 +79,9 @@
 
 #define ADDR(tls) (((tls) && (tls)->address) ? tls->address : "peer")
 
-#if (OPENSSL_VERSION_NUMBER  <  0x0090813fL ||    \
-     (OPENSSL_VERSION_NUMBER >= 0x00909000L &&    \
-      OPENSSL_VERSION_NUMBER <  0x1000006fL))
+#if (OPENSSL_VERSION_NUMBER  <  OPENSSL_V(0,9,8,'s') ||         \
+     (OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(0,9,9) &&      \
+      OPENSSL_VERSION_NUMBER <  OPENSSL_V(1,0,0,'f')))
 /* This is a version of OpenSSL before 0.9.8s/1.0.0f. It does not have
  * the CVE-2011-4657 fix, and as such it can't use RELEASE_BUFFERS and
  * SSL3 safely at the same time.
@@ -474,18 +474,18 @@ tor_tls_init(void)
      * program should be allowed to use renegotiation unless it first passed
      * a test of intelligence and determination.
      */
-    if (version >= 0x009080c0L && version < 0x009080d0L) {
+    if (version > OPENSSL_V(0,9,8,'k') && version <= OPENSSL_V(0,9,8,'l')) {
       log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l; "
                  "I will try SSL3_FLAGS to enable renegotation.",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;
-    } else if (version >= 0x009080d0L) {
+    } else if (version > OPENSSL_V(0,9,8,'l')) {
       log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8m or later; "
                  "I will try SSL_OP to enable renegotiation",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_op = 1;
-    } else if (version < 0x009080c0L) {
+    } else if (version <= OPENSSL_V(0,9,8,'k')) {
       log_notice(LD_GENERAL, "OpenSSL %s [%lx] looks like it's older than "
                  "0.9.8l, but some vendors have backported 0.9.8l's "
                  "renegotiation code to earlier versions, and some have "
@@ -770,7 +770,7 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
   if (certificate_len > INT_MAX)
     return NULL;
 
-#if OPENSSL_VERSION_NUMBER < 0x00908000l
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
   /* This ifdef suppresses a type warning.  Take out this case once everybody
    * is using OpenSSL 0.9.8 or later. */
   x509 = d2i_X509(NULL, (unsigned char**)&cp, (int)certificate_len);
@@ -1177,9 +1177,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
 #ifdef DISABLE_SSL3_HANDSHAKE
       1 ||
 #endif
-      SSLeay()  <  0x0090813fL ||
-      (SSLeay() >= 0x00909000L &&
-       SSLeay() <  0x1000006fL)) {
+      SSLeay()  <  OPENSSL_V(0,9,8,'s') ||
+      (SSLeay() >= OPENSSL_V_SERIES(0,9,9) &&
+       SSLeay() <  OPENSSL_V(1,0,0,'f'))) {
     /* And not SSL3 if it's subject to CVE-2011-4657. */
     log_info(LD_NET, "Disabling SSLv3 because this OpenSSL version "
              "might otherwise be vulnerable to CVE-2011-4657 "

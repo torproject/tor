@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Use macros to indicate OpenSSL versions, so we don't need to worry
+      about accidental hexadecimal bit shifts.
+    - Remove some workaround code for OpenSSL 0.9.6, which is no longer
+      supported.
+

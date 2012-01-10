@@ -60,7 +60,7 @@
 #include "container.h"
 #include "compat.h"
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000l
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,7)
 #error "We require OpenSSL >= 0.9.7"
 #endif
 
@@ -72,7 +72,7 @@
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
 
-#if OPENSSL_VERSION_NUMBER < 0x00908000l
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
 /** @{ */
 /** On OpenSSL versions before 0.9.8, there is no working SHA256
  * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
@@ -452,7 +452,7 @@ crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits)
 
   if (env->key)
     RSA_free(env->key);
-#if OPENSSL_VERSION_NUMBER < 0x00908000l
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
   /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
   env->key = RSA_generate_key(bits, 65537, NULL, NULL);
 #else
@@ -1723,7 +1723,7 @@ crypto_hmac_sha256(char *hmac_out,
                    const char *key, size_t key_len,
                    const char *msg, size_t msg_len)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x00908000l)
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(0,9,8)
   /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
   tor_assert(key_len < INT_MAX);
   tor_assert(msg_len < INT_MAX);
@@ -2360,13 +2360,6 @@ crypto_dh_free(crypto_dh_env_t *dh)
  * work for us too. */
 #define ADD_ENTROPY 32
 
-/** True iff we should use OpenSSL's RAND_poll function to add entropy to its
- * pool.
- *
- * Use RAND_poll if OpenSSL is 0.9.6 release or later.  (The "f" means
- *"release".)  */
-#define HAVE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
-
 /** True iff it's safe to use RAND_poll after setup.
  *
  * Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
@@ -2374,9 +2367,9 @@ crypto_dh_free(crypto_dh_env_t *dh)
  * that fd without checking whether it fit in the fd_set.  Thus, if the
  * system has not just been started up, it is unsafe to call */
 #define RAND_POLL_IS_SAFE                       \
-  ((OPENSSL_VERSION_NUMBER >= 0x009070afl &&    \
-    OPENSSL_VERSION_NUMBER <= 0x00907fffl) ||   \
-   (OPENSSL_VERSION_NUMBER >= 0x0090803fl))
+  ((OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,7,'j') &&        \
+    OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)) ||     \
+   OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,8,'c'))
 
 /** Set the seed of the weak RNG to a random value. */
 static void
@@ -2410,8 +2403,7 @@ crypto_seed_rng(int startup)
   size_t n;
 #endif
 
-#if HAVE_RAND_POLL
-  /* OpenSSL 0.9.6 adds a RAND_poll function that knows about more kinds of
+  /* OpenSSL has a RAND_poll function that knows about more kinds of
    * entropy than we do.  We'll try calling that, *and* calling our own entropy
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
   if (startup || RAND_POLL_IS_SAFE) {
@@ -2419,7 +2411,6 @@ crypto_seed_rng(int startup)
     if (rand_poll_status == 0)
       log_warn(LD_CRYPTO, "RAND_poll() failed.");
   }
-#endif
 
 #ifdef MS_WINDOWS
   if (!provider_set) {
