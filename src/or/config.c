@@ -1326,12 +1326,26 @@ options_act(const or_options_t *old_options)
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
 
-   /* disable ptrace and later, other basic debugging techniques */
-  if (options->DisableDebuggerAttachment) {
-    tor_disable_debugger_attach();
-  } else {
-    log_notice(LD_CONFIG,"Debugger attachment enabled "
-               "for unprivileged users.");
+  /* disable ptrace and later, other basic debugging techniques */
+  {
+    /* Remember if we already disabled debugger attachment */
+    static int disabled_debugger_attach = 0;
+    /* Remember if we already warned about being configured not to disable
+     * debugger attachment */
+    static int warned_debugger_attach = 0;
+    if (options->DisableDebuggerAttachment && !disabled_debugger_attach) {
+      int ok = tor_disable_debugger_attach();
+      if (warned_debugger_attach && ok == 1) {
+        log_notice(LD_CONFIG, "Disabled attaching debuggers for unprivileged "
+                   "users.");
+      }
+      disabled_debugger_attach = (ok == 1);
+    } else if (!options->DisableDebuggerAttachment &&
+               !warned_debugger_attach) {
+      log_notice(LD_CONFIG, "Not disabling debugger attaching for "
+                 "unprivileged users.");
+      warned_debugger_attach = 1;
+    }
   }
 
   if (running_tor && !have_lockfile()) {
@@ -4167,6 +4181,13 @@ options_transition_allowed(const or_options_t *old,
   if (old->DisableIOCP != new_val->DisableIOCP) {
     *msg = tor_strdup("While Tor is running, changing DisableIOCP "
                       "is not allowed.");
+    return -1;
+  }
+
+  if (old->DisableDebuggerAttachment &&
+      !new_val->DisableDebuggerAttachment) {
+    *msg = tor_strdup("While Tor is running, disabling "
+                      "DisableDebuggerAttachment is not allowed.");
     return -1;
   }
 
