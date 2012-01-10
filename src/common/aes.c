@@ -47,8 +47,8 @@
  * OpenSSL pre-1.0 (by about 10%!).  But OpenSSL 1.0.0 added a counter mode
  * implementation faster than the one here (by about 7%).  So we pick which
  * one to used based on the Openssl version above.  (OpenSSL 1.0.0a fixed a
- * critical bug in that counter mode implementation, so we actually require
- * that one.)
+ * critical bug in that counter mode implementation, so we need to test to
+ * make sure that we have a fixed version.)
  */
 
 /*======================================================================*/
@@ -90,12 +90,13 @@ struct aes_cnt_cipher {
   uint8_t using_evp;
 };
 
-/** True if we should prefer the EVP implementation for AES, either because
+/** True iff we should prefer the EVP implementation for AES, either because
  * we're testing it or because we have hardware acceleration configured */
 static int should_use_EVP = 0;
 
 #ifdef CAN_USE_OPENSSL_CTR
-/**DOCDOC*/
+/** True iff we have tested the counter-mode implementation and found that it
+ * doesn't have the counter-mode bug from OpenSSL 1.0.0. */
 static int should_use_openssl_CTR = 0;
 #endif
 
@@ -129,7 +130,13 @@ evaluate_evp_for_aes(int force_val)
   return 0;
 }
 
-/**DOCDOC*/
+/** Test the OpenSSL counter mode implementation to see whether it has the
+ * counter-mode bug from OpenSSL 1.0.0. If the implementation works, then
+ * we will use it for future encryption/decryption operations.
+ *
+ * We can't just look at the OpenSSL version, since some distributions update
+ * their OpenSSL packages without changing the version number.
+ **/
 int
 evaluate_ctr_for_aes(void)
 {
