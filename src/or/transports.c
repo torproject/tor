@@ -918,7 +918,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
 static char *
 get_bindaddr_for_proxy(const managed_proxy_t *mp)
 {
-  char *bindaddr = NULL;
+  char *bindaddr_result = NULL;
   char *bindaddr_tmp = NULL;
   smartlist_t *string_tmp = smartlist_create();
 
@@ -927,18 +927,17 @@ get_bindaddr_for_proxy(const managed_proxy_t *mp)
   SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t) {
     bindaddr_tmp = get_bindaddr_for_transport(t);
 
-    tor_asprintf(&bindaddr, "%s-%s", t, bindaddr_tmp);
-    smartlist_add(string_tmp, bindaddr);
+    smartlist_add_asprintf(string_tmp, "%s-%s", t, bindaddr_tmp);
 
     tor_free(bindaddr_tmp);
   } SMARTLIST_FOREACH_END(t);
 
-  bindaddr = smartlist_join_strings(string_tmp, ",", 0, NULL);
+  bindaddr_result = smartlist_join_strings(string_tmp, ",", 0, NULL);
 
   SMARTLIST_FOREACH(string_tmp, char *, t, tor_free(t));
   smartlist_free(string_tmp);
 
-  return bindaddr;
+  return bindaddr_result;
 }
 
 #ifdef MS_WINDOWS

@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring
+    - Use the smartlist_add_asprintf alias more consistently
+      throughout the codebase.

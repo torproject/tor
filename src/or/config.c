@@ -3147,11 +3147,9 @@ config_dump(const config_format_t *fmt, const void *default_options,
     line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name, 1);
 
     for (; line; line = line->next) {
-      char *tmp;
-      tor_asprintf(&tmp, "%s%s %s\n",
+      smartlist_add_asprintf(elements, "%s%s %s\n",
                    comment_option ? "# " : "",
                    line->key, line->value);
-      smartlist_add(elements, tmp);
     }
     config_free_lines(assigned);
   }
@@ -3159,9 +3157,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->var_offset);
     for (; line; line = line->next) {
-      char *tmp;
-      tor_asprintf(&tmp, "%s %s\n", line->key, line->value);
-      smartlist_add(elements, tmp);
+      smartlist_add_asprintf(elements, "%s %s\n", line->key, line->value);
     }
   }
 
@@ -6994,7 +6990,6 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; _option_vars[i].name; ++i) {
       const config_var_t *var = &_option_vars[i];
       const char *type;
-      char *line;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
@@ -7018,8 +7013,7 @@ getinfo_helper_config(control_connection_t *conn,
       }
       if (!type)
         continue;
-      tor_asprintf(&line, "%s %s\n",var->name,type);
-      smartlist_add(sl, line);
+      smartlist_add_asprintf(sl, "%s %s\n",var->name,type);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));

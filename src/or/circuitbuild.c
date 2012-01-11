@@ -1545,15 +1545,13 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
 
   if (verbose) {
     const char *nickname = build_state_get_exit_nickname(circ->build_state);
-    char *cp;
-    tor_asprintf(&cp, "%s%s circ (length %d%s%s):",
+    smartlist_add_asprintf(elements, "%s%s circ (length %d%s%s):",
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", last hop ",
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" :
                  (nickname?nickname:"*unnamed*"));
-    smartlist_add(elements, cp);
   }
 
   hop = circ->cpath;
@@ -3599,19 +3597,17 @@ log_entry_guards(int severity)
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e)
     {
       const char *msg = NULL;
-      char *cp;
       if (entry_is_live(e, 0, 1, 0, &msg))
-        tor_asprintf(&cp, "%s [%s] (up %s)",
+        smartlist_add_asprintf(elements, "%s [%s] (up %s)",
                      e->nickname,
                      hex_str(e->identity, DIGEST_LEN),
                      e->made_contact ? "made-contact" : "never-contacted");
       else
-        tor_asprintf(&cp, "%s [%s] (%s, %s)",
+        smartlist_add_asprintf(elements, "%s [%s] (%s, %s)",
                      e->nickname,
                      hex_str(e->identity, DIGEST_LEN),
                      msg,
                      e->made_contact ? "made-contact" : "never-contacted");
-      smartlist_add(elements, cp);
     }
   SMARTLIST_FOREACH_END(e);
 

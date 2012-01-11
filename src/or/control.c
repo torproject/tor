@@ -525,18 +525,15 @@ control_ports_write_to_file(void)
   lines = smartlist_create();
 
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
-    char *port_str = NULL;
     if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
       continue;
 #ifdef AF_UNIX
     if (conn->socket_family == AF_UNIX) {
-      tor_asprintf(&port_str, "UNIX_PORT=%s\n", conn->address);
-      smartlist_add(lines, port_str);
+      smartlist_add_asprintf(lines, "UNIX_PORT=%s\n", conn->address);
       continue;
     }
 #endif
-    tor_asprintf(&port_str, "PORT=%s:%d\n", conn->address, conn->port);
-    smartlist_add(lines, port_str);
+    smartlist_add_asprintf(lines, "PORT=%s:%d\n", conn->address, conn->port);
   } SMARTLIST_FOREACH_END(conn);
 
   joined = smartlist_join_strings(lines, "", 0, NULL);
@@ -1558,7 +1555,6 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 
   res = smartlist_create();
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
-    char *addr;
     struct sockaddr_storage ss;
     socklen_t ss_len = sizeof(ss);
 
@@ -1566,14 +1562,13 @@ getinfo_helper_listeners(control_connection_t *control_conn,
       continue;
 
     if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
-      tor_asprintf(&addr, "%s:%d", conn->address, (int)conn->port);
+      smartlist_add_asprintf(res, "%s:%d", conn->address, (int)conn->port);
     } else {
       char *tmp = tor_sockaddr_to_str((struct sockaddr *)&ss);
-      addr = esc_for_log(tmp);
+      smartlist_add(res, esc_for_log(tmp));
       tor_free(tmp);
     }
-    if (addr)
-      smartlist_add(res, addr);
+
   } SMARTLIST_FOREACH_END(conn);
 
   *answer = smartlist_join_strings(res, " ", 0, NULL);
@@ -1798,7 +1793,6 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   }
 
   {
-    char *buildflags = NULL;
     cpath_build_state_t *build_state = circ->build_state;
     smartlist_t *flaglist = smartlist_create();
     char *flaglist_joined;
@@ -1816,8 +1810,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     if (smartlist_len(flaglist)) {
       flaglist_joined = smartlist_join_strings(flaglist, ",", 0, NULL);
 
-      tor_asprintf(&buildflags, "BUILD_FLAGS=%s", flaglist_joined);
-      smartlist_add(descparts, buildflags);
+      smartlist_add_asprintf(descparts, "BUILD_FLAGS=%s", flaglist_joined);
 
       tor_free(flaglist_joined);
     }
@@ -1825,43 +1818,29 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_free(flaglist);
   }
 
-  {
-    char *purpose = NULL;
-    tor_asprintf(&purpose, "PURPOSE=%s",
-                 circuit_purpose_to_controller_string(circ->_base.purpose));
-    smartlist_add(descparts, purpose);
-  }
+  smartlist_add_asprintf(descparts, "PURPOSE=%s",
+                    circuit_purpose_to_controller_string(circ->_base.purpose));
 
   {
-    char *hs_state_arg = NULL;
     const char *hs_state =
       circuit_purpose_to_controller_hs_state_string(circ->_base.purpose);
 
     if (hs_state != NULL) {
-      tor_asprintf(&hs_state_arg, "HS_STATE=%s",
-                   hs_state);
-
-      smartlist_add(descparts, hs_state_arg);
+      smartlist_add_asprintf(descparts, "HS_STATE=%s", hs_state);
     }
   }
 
   if (circ->rend_data != NULL) {
-    char *rend_query_arg = NULL;
-
-    tor_asprintf(&rend_query_arg, "REND_QUERY=%s",
+    smartlist_add_asprintf(descparts, "REND_QUERY=%s",
                  circ->rend_data->onion_address);
 
-    smartlist_add(descparts, rend_query_arg);
   }
 
   {
-    char *time_created_arg = NULL;
     char tbuf[ISO_TIME_USEC_LEN+1];
     format_iso_time_nospace_usec(tbuf, &circ->_base.timestamp_created);
 
-    tor_asprintf(&time_created_arg, "TIME_CREATED=%s", tbuf);
-
-    smartlist_add(descparts, time_created_arg);
+    smartlist_add_asprintf(descparts, "TIME_CREATED=%s", tbuf);
   }
 
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
@@ -2218,18 +2197,16 @@ static char *
 list_getinfo_options(void)
 {
   int i;
-  char *buf=NULL;
   smartlist_t *lines = smartlist_create();
   char *ans;
   for (i = 0; getinfo_items[i].varname; ++i) {
     if (!getinfo_items[i].desc)
       continue;
 
-    tor_asprintf(&buf, "%s%s -- %s\n",
+    smartlist_add_asprintf(lines, "%s%s -- %s\n",
                  getinfo_items[i].varname,
                  getinfo_items[i].is_prefix ? "*" : "",
                  getinfo_items[i].desc);
-    smartlist_add(lines, buf);
   }
   smartlist_sort_strings(lines);
 

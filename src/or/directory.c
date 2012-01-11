@@ -1124,7 +1124,6 @@ directory_send_command(dir_connection_t *conn,
   smartlist_t *headers = smartlist_create();
   char *url;
   char request[8192];
-  char *header;
   const char *httpcommand = NULL;
   size_t len;
 
@@ -1147,8 +1146,7 @@ directory_send_command(dir_connection_t *conn,
   if (if_modified_since) {
     char b[RFC1123_TIME_LEN+1];
     format_rfc1123_time(b, if_modified_since);
-    tor_asprintf(&header, "If-Modified-Since: %s\r\n", b);
-    smartlist_add(headers, header);
+    smartlist_add_asprintf(headers, "If-Modified-Since: %s\r\n", b);
   }
 
   /* come up with some proxy lines, if we're using one. */
@@ -1163,11 +1161,10 @@ directory_send_command(dir_connection_t *conn,
         log_warn(LD_BUG, "Encoding http authenticator failed");
     }
     if (base64_authenticator) {
-      tor_asprintf(&header,
+      smartlist_add_asprintf(headers,
                    "Proxy-Authorization: Basic %s\r\n",
                    base64_authenticator);
       tor_free(base64_authenticator);
-      smartlist_add(headers, header);
     }
   } else {
     proxystring[0] = 0;
@@ -1238,8 +1235,7 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "POST";
       url = tor_strdup("/tor/");
       if (why) {
-        tor_asprintf(&header, "X-Desc-Gen-Reason: %s\r\n", why);
-        smartlist_add(headers, header);
+        smartlist_add_asprintf(headers, "X-Desc-Gen-Reason: %s\r\n", why);
       }
       break;
     }
@@ -1294,15 +1290,16 @@ directory_send_command(dir_connection_t *conn,
   tor_free(url);
 
   if (!strcmp(httpcommand, "POST") || payload) {
-    tor_asprintf(&header, "Content-Length: %lu\r\n",
+    smartlist_add_asprintf(headers, "Content-Length: %lu\r\n",
                  payload ? (unsigned long)payload_len : 0);
-    smartlist_add(headers, header);
   }
 
-  header = smartlist_join_strings(headers, "", 0, NULL);
-  tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nHost: %s\r\n%s\r\n",
-               hoststring, header);
-  tor_free(header);
+  {
+    char *header = smartlist_join_strings(headers, "", 0, NULL);
+    tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nHost: %s\r\n%s\r\n",
+                 hoststring, header);
+    tor_free(header);
+  }
 
   connection_write_to_buf(request, strlen(request), TO_CONN(conn));
 

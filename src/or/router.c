@@ -2267,9 +2267,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   smartlist_add(chunks, pre);
 
   if (geoip_is_loaded()) {
-    char *chunk=NULL;
-    tor_asprintf(&chunk, "geoip-db-digest %s\n", geoip_db_digest());
-    smartlist_add(chunks, chunk);
+    smartlist_add_asprintf(chunks, "geoip-db-digest %s\n", geoip_db_digest());
   }
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
