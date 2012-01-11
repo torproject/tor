@@ -2408,8 +2408,6 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       int any_unwarned = 0;
       SMARTLIST_FOREACH_BEGIN(routerlist->routers, routerinfo_t *, router) {
           routerstatus_t *rs;
-          char *desc;
-          size_t dlen;
           char fp[HEX_DIGEST_LEN+1];
           if (strcasecmp(router->nickname, nickname))
             continue;
@@ -2421,11 +2419,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
           }
           base16_encode(fp, sizeof(fp),
                         router->cache_info.identity_digest, DIGEST_LEN);
-          dlen = 32 + HEX_DIGEST_LEN + strlen(router->address);
-          desc = tor_malloc(dlen);
-          tor_snprintf(desc, dlen, "\"$%s\" for the one at %s:%d",
+          smartlist_add_asprintf(fps, "\"$%s\" for the one at %s:%d",
                        fp, router->address, router->or_port);
-          smartlist_add(fps, desc);
       } SMARTLIST_FOREACH_END(router);
       if (any_unwarned) {
         char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
@@ -4071,7 +4066,6 @@ add_trusted_dir_server(const char *nickname, const char *address,
   trusted_dir_server_t *ent;
   uint32_t a;
   char *hostname = NULL;
-  size_t dlen;
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
@@ -4104,13 +4098,11 @@ add_trusted_dir_server(const char *nickname, const char *address,
   if (v3_auth_digest && (type & V3_DIRINFO))
     memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
 
-  dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
-  ent->description = tor_malloc(dlen);
   if (nickname)
-    tor_snprintf(ent->description, dlen, "directory server \"%s\" at %s:%d",
+    tor_asprintf(&ent->description, "directory server \"%s\" at %s:%d",
                  nickname, hostname, (int)dir_port);
   else
-    tor_snprintf(ent->description, dlen, "directory server at %s:%d",
+    tor_asprintf(&ent->description, "directory server at %s:%d",
                  hostname, (int)dir_port);
 
   ent->fake_status.addr = ent->addr;
@@ -5333,7 +5325,6 @@ esc_router_info(const routerinfo_t *router)
 {
   static char *info=NULL;
   char *esc_contact, *esc_platform;
-  size_t len;
   tor_free(info);
 
   if (!router)
@@ -5342,10 +5333,7 @@ esc_router_info(const routerinfo_t *router)
   esc_contact = esc_for_log(router->contact_info);
   esc_platform = esc_for_log(router->platform);
 
-  len = strlen(esc_contact)+strlen(esc_platform)+32;
-  info = tor_malloc(len);
-  tor_snprintf(info, len, "Contact %s, Platform %s", esc_contact,
-               esc_platform);
+  tor_asprintf(&info, "Contact %s, Platform %s", esc_contact, esc_platform);
   tor_free(esc_contact);
   tor_free(esc_platform);
 

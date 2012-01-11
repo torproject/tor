@@ -1964,7 +1964,6 @@ int
 start_writing_to_file(const char *fname, int open_flags, int mode,
                       open_file_t **data_out)
 {
-  size_t tempname_len = strlen(fname)+16;
   open_file_t *new_file = tor_malloc_zero(sizeof(open_file_t));
   const char *open_name;
   int append = 0;
@@ -1975,7 +1974,6 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   tor_assert((open_flags & (O_BINARY|O_TEXT)) != 0);
 #endif
   new_file->fd = -1;
-  tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
   new_file->filename = tor_strdup(fname);
   if (open_flags & O_APPEND) {
     open_name = fname;
@@ -1983,11 +1981,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     append = 1;
     open_flags &= ~O_APPEND;
   } else {
-    open_name = new_file->tempname = tor_malloc(tempname_len);
-    if (tor_snprintf(new_file->tempname, tempname_len, "%s.tmp", fname)<0) {
-      log_warn(LD_GENERAL, "Failed to generate filename");
-      goto err;
-    }
+    tor_asprintf(&new_file->tempname, "%s.tmp", fname);
+    open_name = new_file->tempname;
     /* We always replace an existing temporary file if there is one. */
     open_flags |= O_CREAT|O_TRUNC;
     open_flags &= ~O_EXCL;
@@ -2786,14 +2781,12 @@ tor_listdir(const char *dirname)
 {
   smartlist_t *result;
 #ifdef MS_WINDOWS
-  char *pattern;
+  char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
   char name[MAX_PATH] = {0};
   HANDLE handle;
   WIN32_FIND_DATA findData;
-  size_t pattern_len = strlen(dirname)+16;
-  pattern = tor_malloc(pattern_len);
-  tor_snprintf(pattern, pattern_len, "%s\\*", dirname);
+  tor_asprintf(&pattern, "%s\\*", dirname);
 #ifdef UNICODE
   mbstowcs(tpattern,pattern,MAX_PATH);
 #else

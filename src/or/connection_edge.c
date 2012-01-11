@@ -909,13 +909,10 @@ addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 static void
 clear_trackexithost_mappings(const char *exitname)
 {
-  char *suffix;
-  size_t suffix_len;
+  char *suffix = NULL;
   if (!addressmap || !exitname)
     return;
-  suffix_len = strlen(exitname) + 16;
-  suffix = tor_malloc(suffix_len);
-  tor_snprintf(suffix, suffix_len, ".%s.exit", exitname);
+  tor_asprintf(&suffix, ".%s.exit", exitname);
   tor_strlower(suffix);
 
   STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
@@ -1402,9 +1399,8 @@ client_dns_set_reverse_addressmap(const char *address, const char *v,
                                   const char *exitname,
                                   int ttl)
 {
-  size_t len = strlen(address) + 16;
-  char *s = tor_malloc(len);
-  tor_snprintf(s, len, "REVERSE[%s]", address);
+  char *s = NULL;
+  tor_asprintf(&s, "REVERSE[%s]", address);
   client_dns_set_addressmap_impl(s, v, exitname, ttl);
   tor_free(s);
 }
@@ -1688,21 +1684,18 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
          addressmap_ent_remove(key, val);
          continue;
        } else if (val->new_address) {
-         size_t len = strlen(key)+strlen(val->new_address)+ISO_TIME_LEN+5;
-         char *line = tor_malloc(len);
          if (want_expiry) {
            if (val->expires < 3 || val->expires == TIME_MAX)
-             tor_snprintf(line, len, "%s %s NEVER", key, val->new_address);
+             smartlist_add_asprintf(sl, "%s %s NEVER", key, val->new_address);
            else {
              char time[ISO_TIME_LEN+1];
              format_iso_time(time, val->expires);
-             tor_snprintf(line, len, "%s %s \"%s\"", key, val->new_address,
+             smartlist_add_asprintf(sl, "%s %s \"%s\"", key, val->new_address,
                           time);
            }
          } else {
-           tor_snprintf(line, len, "%s %s", key, val->new_address);
+           smartlist_add_asprintf(sl, "%s %s", key, val->new_address);
          }
-         smartlist_add(sl, line);
        }
      }
      iter = strmap_iter_next(addressmap,iter);

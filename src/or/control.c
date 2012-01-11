@@ -814,19 +814,13 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
       config_line_t *answer = option_get_assignment(options,q);
       if (!answer) {
         const char *name = option_get_canonical_name(q);
-        size_t alen = strlen(name)+8;
-        char *astr = tor_malloc(alen);
-        tor_snprintf(astr, alen, "250-%s\r\n", name);
-        smartlist_add(answers, astr);
+        smartlist_add_asprintf(answers, "250-%s\r\n", name);
       }
 
       while (answer) {
         config_line_t *next;
-        size_t alen = strlen(answer->key)+strlen(answer->value)+8;
-        char *astr = tor_malloc(alen);
-        tor_snprintf(astr, alen, "250-%s=%s\r\n",
+        smartlist_add_asprintf(answers, "250-%s=%s\r\n",
                      answer->key, answer->value);
-        smartlist_add(answers, astr);
 
         next = answer->next;
         tor_free(answer->key);
@@ -1658,13 +1652,13 @@ getinfo_helper_dir(control_connection_t *control_conn,
                               ri->cache_info.annotations_len);
     }
   } else if (!strcmpstart(question, "dir/server/")) {
-    size_t answer_len = 0, url_len = strlen(question)+2;
-    char *url = tor_malloc(url_len);
+    size_t answer_len = 0;
+    char *url = NULL;
     smartlist_t *descs = smartlist_create();
     const char *msg;
     int res;
     char *cp;
-    tor_snprintf(url, url_len, "/tor/%s", question+4);
+    tor_asprintf(&url, "/tor/%s", question+4);
     res = dirserv_get_routerdescs(descs, url, &msg);
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
@@ -1852,8 +1846,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_t *status = smartlist_create();
     for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
       origin_circuit_t *circ;
-      char *s, *circdesc;
-      size_t slen;
+      char *circdesc;
       const char *state;
       if (! CIRCUIT_IS_ORIGIN(circ_) || circ_->marked_for_close)
         continue;
@@ -1868,12 +1861,9 @@ getinfo_helper_events(control_connection_t *control_conn,
 
       circdesc = circuit_describe_status_for_controller(circ);
 
-      slen = strlen(circdesc)+strlen(state)+30;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s%s%s",
+      smartlist_add_asprintf(status, "%lu %s%s%s",
                    (unsigned long)circ->global_identifier,
                    state, *circdesc ? " " : "", circdesc);
-      smartlist_add(status, s);
       tor_free(circdesc);
     }
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
@@ -1886,8 +1876,6 @@ getinfo_helper_events(control_connection_t *control_conn,
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
       entry_connection_t *conn;
-      char *s;
-      size_t slen;
       circuit_t *circ;
       origin_circuit_t *origin_circ = NULL;
       if (base_conn->type != CONN_TYPE_AP ||
@@ -1922,14 +1910,11 @@ getinfo_helper_events(control_connection_t *control_conn,
       if (circ && CIRCUIT_IS_ORIGIN(circ))
         origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
-      slen = strlen(buf)+strlen(state)+32;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s %lu %s",
+      smartlist_add_asprintf(status, "%lu %s %lu %s",
                    (unsigned long) base_conn->global_identifier,state,
                    origin_circ?
                          (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
-      smartlist_add(status, s);
     } SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
@@ -1939,9 +1924,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_t *status = smartlist_create();
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
-      char *s;
       char name[128];
-      size_t slen;
       or_connection_t *conn;
       if (base_conn->type != CONN_TYPE_OR || base_conn->marked_for_close)
         continue;
@@ -1953,10 +1936,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       else
         state = "NEW";
       orconn_target_get_name(name, sizeof(name), conn);
-      slen = strlen(name)+strlen(state)+2;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%s %s", name, state);
-      smartlist_add(status, s);
+      smartlist_add_asprintf(status, "%s %s", name, state);
     } SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
@@ -3513,8 +3493,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     const char *reason_str = stream_end_reason_to_control_string(reason_code);
     char *r = NULL;
     if (!reason_str) {
-      r = tor_malloc(16);
-      tor_snprintf(r, 16, " UNKNOWN_%d", reason_code);
+      tor_asprintf(&r, " UNKNOWN_%d", reason_code);
       reason_str = r;
     }
     if (reason_code & END_STREAM_REASON_FLAG_REMOTE)
@@ -3799,16 +3778,13 @@ control_event_descriptors_changed(smartlist_t *routers)
   {
     smartlist_t *names = smartlist_create();
     char *ids;
-    size_t names_len;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
         router_get_verbose_nickname(b, ri);
         smartlist_add(names, b);
       });
-    ids = smartlist_join_strings(names, " ", 0, &names_len);
-    names_len = strlen(ids)+32;
-    msg = tor_malloc(names_len);
-    tor_snprintf(msg, names_len, "650 NEWDESC %s\r\n", ids);
+    ids = smartlist_join_strings(names, " ", 0, NULL);
+    tor_asprintf(&msg, "650 NEWDESC %s\r\n", ids);
     send_control_event_string(EVENT_NEW_DESC, ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);

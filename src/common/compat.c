@@ -1351,31 +1351,19 @@ log_credential_status(void)
     return -1;
   } else {
     int i, retval = 0;
-    char *strgid;
     char *s = NULL;
     smartlist_t *elts = smartlist_create();
 
     for (i = 0; i<ngids; i++) {
-      strgid = tor_malloc(11);
-      if (tor_snprintf(strgid, 11, "%u", (unsigned)sup_gids[i]) < 0) {
-        log_warn(LD_GENERAL, "Error printing supplementary GIDs");
-        tor_free(strgid);
-        retval = -1;
-        goto error;
-      }
-      smartlist_add(elts, strgid);
+      smartlist_add_asprintf(elts, "%u", (unsigned)sup_gids[i]);
     }
 
     s = smartlist_join_strings(elts, " ", 0, NULL);
 
     log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Supplementary groups are: %s",s);
 
-   error:
     tor_free(s);
-    SMARTLIST_FOREACH(elts, char *, cp,
-    {
-      tor_free(cp);
-    });
+    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_free(elts);
     tor_free(sup_gids);
 

@@ -1647,10 +1647,8 @@ options_act(const or_options_t *old_options)
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
       const char *conf_root = get_windows_conf_root();
-      size_t len = strlen(conf_root)+16;
       tor_free(actual_fname);
-      actual_fname = tor_malloc(len+1);
-      tor_snprintf(actual_fname, len, "%s\\geoip", conf_root);
+      tor_asprintf(&actual_fname, "%s\\geoip", conf_root);
     }
 #endif
     geoip_load_file(actual_fname, options);
@@ -6144,18 +6142,12 @@ write_configuration_file(const char *fname, const or_options_t *options)
 
   if (rename_old) {
     int i = 1;
-    size_t fn_tmp_len = strlen(fname)+32;
-    char *fn_tmp;
-    tor_assert(fn_tmp_len > strlen(fname)); /*check for overflow*/
-    fn_tmp = tor_malloc(fn_tmp_len);
+    char *fn_tmp = NULL;
     while (1) {
-      if (tor_snprintf(fn_tmp, fn_tmp_len, "%s.orig.%d", fname, i)<0) {
-        log_warn(LD_BUG, "tor_snprintf failed inexplicably");
-        tor_free(fn_tmp);
-        goto err;
-      }
+      tor_asprintf(&fn_tmp, "%s.orig.%d", fname, i);
       if (file_status(fn_tmp) == FN_NOENT)
         break;
+      tor_free(fn_tmp);
       ++i;
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
@@ -6602,13 +6594,13 @@ or_state_save_broken(char *fname)
 {
   int i;
   file_status_t status;
-  size_t len = strlen(fname)+16;
-  char *fname2 = tor_malloc(len);
+  char *fname2 = NULL;
   for (i = 0; i < 100; ++i) {
-    tor_snprintf(fname2, len, "%s.%d", fname, i);
+    tor_asprintf(&fname2, "%s.%d", fname, i);
     status = file_status(fname2);
     if (status == FN_NOENT)
       break;
+    tor_free(fname2);
   }
   if (i == 100) {
     log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "

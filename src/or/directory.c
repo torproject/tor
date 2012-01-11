@@ -2463,11 +2463,9 @@ note_client_request(int purpose, int compressed, size_t bytes)
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:  kind = "dl/ul-rend2"; break;
   }
   if (kind) {
-    key = tor_malloc(256);
-    tor_snprintf(key, 256, "%s%s", kind, compressed?".z":"");
+    tor_asprintf(&key, "%s%s", kind, compressed?".z":"");
   } else {
-    key = tor_malloc(256);
-    tor_snprintf(key, 256, "unknown purpose (%d)%s",
+    tor_asprintf(&key, "unknown purpose (%d)%s",
                  purpose, compressed?".z":"");
   }
   note_request(key, bytes);

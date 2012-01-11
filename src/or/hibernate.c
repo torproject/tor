@@ -976,8 +976,7 @@ getinfo_helper_accounting(control_connection_t *conn,
     else
       *answer = tor_strdup("awake");
   } else if (!strcmp(question, "accounting/bytes")) {
-    *answer = tor_malloc(32);
-    tor_snprintf(*answer, 32, U64_FORMAT" "U64_FORMAT,
+    tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
                  U64_PRINTF_ARG(n_bytes_read_in_interval),
                  U64_PRINTF_ARG(n_bytes_written_in_interval));
   } else if (!strcmp(question, "accounting/bytes-left")) {
@@ -987,8 +986,7 @@ getinfo_helper_accounting(control_connection_t *conn,
       read_left = limit - n_bytes_read_in_interval;
     if (n_bytes_written_in_interval < limit)
       write_left = limit - n_bytes_written_in_interval;
-    *answer = tor_malloc(64);
-    tor_snprintf(*answer, 64, U64_FORMAT" "U64_FORMAT,
+    tor_asprintf(answer, U64_FORMAT" "U64_FORMAT,
                  U64_PRINTF_ARG(read_left), U64_PRINTF_ARG(write_left));
   } else if (!strcmp(question, "accounting/interval-start")) {
     *answer = tor_malloc(ISO_TIME_LEN+1);

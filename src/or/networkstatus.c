@@ -2159,9 +2159,8 @@ networkstatus_dump_bridge_status_to_file(time_t now)
 {
   char *status = networkstatus_getinfo_by_purpose("bridge", now);
   const or_options_t *options = get_options();
-  size_t len = strlen(options->DataDirectory) + 32;
-  char *fname = tor_malloc(len);
-  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"networkstatus-bridges",
+  char *fname = NULL;
+  tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
                options->DataDirectory);
   write_str_to_file(fname,status,0);
   tor_free(fname);

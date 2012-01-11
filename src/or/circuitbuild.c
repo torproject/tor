@@ -675,8 +675,7 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
     if (histogram[i] == 0) continue;
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("CircuitBuildTimeBin");
-    line->value = tor_malloc(25);
-    tor_snprintf(line->value, 25, "%d %d",
+    tor_asprintf(&line->value, "%d %d",
             CBT_BIN_TO_MS(i), histogram[i]);
     next = &(line->next);
   }
@@ -1592,11 +1591,8 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
     }
     tor_assert(elt);
     if (verbose) {
-      size_t len = strlen(elt)+2+strlen(states[hop->state])+1;
-      char *v = tor_malloc(len);
       tor_assert(hop->state <= 2);
-      tor_snprintf(v,len,"%s(%s)",elt,states[hop->state]);
-      smartlist_add(elements, v);
+      smartlist_add_asprintf(elements,"%s(%s)",elt,states[hop->state]);
       tor_free(elt);
     } else {
       smartlist_add(elements, elt);
@@ -3751,9 +3747,8 @@ remove_obsolete_entry_guards(time_t now)
       msg = "does not seem to be from any recognized version of Tor";
       version_is_bad = 1;
     } else {
-      size_t len = strlen(ver)+5;
-      char *tor_ver = tor_malloc(len);
-      tor_snprintf(tor_ver, len, "Tor %s", ver);
+      char *tor_ver = NULL;
+      tor_asprintf(&tor_ver, "Tor %s", ver);
       if ((tor_version_as_new_as(tor_ver, "0.1.0.10-alpha") &&
            !tor_version_as_new_as(tor_ver, "0.1.2.16-dev")) ||
           (tor_version_as_new_as(tor_ver, "0.2.0.0-alpha") &&
@@ -4466,15 +4461,11 @@ entry_guards_update_state(or_state_t *state)
           !strchr(e->chosen_by_version, ' ')) {
         char d[HEX_DIGEST_LEN+1];
         char t[ISO_TIME_LEN+1];
-        size_t val_len;
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardAddedBy");
-        val_len = (HEX_DIGEST_LEN+1+strlen(e->chosen_by_version)
-                   +1+ISO_TIME_LEN+1);
-        line->value = tor_malloc(val_len);
         base16_encode(d, sizeof(d), e->identity, DIGEST_LEN);
         format_iso_time(t, e->chosen_on_date);
-        tor_snprintf(line->value, val_len, "%s %s %s",
+        tor_asprintf(&line->value, "%s %s %s",
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
@@ -4506,8 +4497,6 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     if (!entry_guards)
       entry_guards = smartlist_create();
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
-        size_t len = MAX_VERBOSE_NICKNAME_LEN+ISO_TIME_LEN+32;
-        char *c = tor_malloc(len);
         const char *status = NULL;
         time_t when = 0;
         const node_t *node;
@@ -4533,11 +4522,10 @@ getinfo_helper_entry_guards(control_connection_t *conn,
 
         if (when) {
           format_iso_time(tbuf, when);
-          tor_snprintf(c, len, "%s %s %s\n", nbuf, status, tbuf);
+          smartlist_add_asprintf(sl, "%s %s %s\n", nbuf, status, tbuf);
         } else {
-          tor_snprintf(c, len, "%s %s\n", nbuf, status);
+          smartlist_add_asprintf(sl, "%s %s\n", nbuf, status);
         }
-        smartlist_add(sl, c);
     } SMARTLIST_FOREACH_END(e);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
