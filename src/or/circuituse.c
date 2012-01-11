@@ -1228,9 +1228,9 @@ circuit_launch_by_extend_info(uint8_t purpose,
        * began. */
       tor_gettimeofday(&circ->_base.timestamp_created);
 
-      control_event_circuit_status_2(circ, CIRC2_EVENT_CANNIBALIZED,
-                                     (int)old_purpose,
-                                     &old_timestamp_created);
+      control_event_circuit_status_minor(circ, CIRC_MINOR_EVENT_CANNIBALIZED,
+                                         (int)old_purpose,
+                                         &old_timestamp_created);
 
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
@@ -1965,9 +1965,9 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
   circ->purpose = new_purpose;
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    control_event_circuit_status_2(TO_ORIGIN_CIRCUIT(circ),
-                                   CIRC2_EVENT_PURPOSE_CHANGED,
-                                   (int)old_purpose, NULL);
+    control_event_circuit_status_minor(TO_ORIGIN_CIRCUIT(circ),
+                                       CIRC_MINOR_EVENT_PURPOSE_CHANGED,
+                                       (int)old_purpose, NULL);
   }
 }
 

@@ -3751,12 +3751,12 @@ typedef enum circuit_status_event_t {
   CIRC_EVENT_CLOSED   = 4,
 } circuit_status_event_t;
 
-/** Used to indicate the type of a CIRC2 event passed to the controller.
+/** Used to indicate the type of a CIRC_MINOR event passed to the controller.
  * The various types are defined in control-spec.txt . */
-typedef enum circuit_status_2_event_t {
-  CIRC2_EVENT_PURPOSE_CHANGED           = 0,
-  CIRC2_EVENT_CANNIBALIZED              = 1,
-} circuit_status_2_event_t;
+typedef enum circuit_status_minor_event_t {
+  CIRC_MINOR_EVENT_PURPOSE_CHANGED,
+  CIRC_MINOR_EVENT_CANNIBALIZED,
+} circuit_status_minor_event_t;
 
 /** Used to indicate the type of a stream event passed to the controller.
  * The various types are defined in control-spec.txt */

@@ -54,7 +54,7 @@
 #define EVENT_STREAM_STATUS    0x0002
 #define EVENT_OR_CONN_STATUS   0x0003
 #define EVENT_BANDWIDTH_USED   0x0004
-#define EVENT_CIRCUIT_STATUS_2 0x0005
+#define EVENT_CIRCUIT_STATUS_MINOR 0x0005
 #define EVENT_NEW_DESC         0x0006
 #define EVENT_DEBUG_MSG        0x0007
 #define EVENT_INFO_MSG         0x0008
@@ -924,7 +924,7 @@ struct control_event_t {
 };
 static const struct control_event_t control_event_table[] = {
   { EVENT_CIRCUIT_STATUS, "CIRC" },
-  { EVENT_CIRCUIT_STATUS_2, "CIRC2" },
+  { EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR" },
   { EVENT_STREAM_STATUS, "STREAM" },
   { EVENT_OR_CONN_STATUS, "ORCONN" },
   { EVENT_BANDWIDTH_USED, "BW" },
@@ -3377,47 +3377,45 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 /** Something minor has happened to circuit <b>circ</b>: tell any
  * interested control connections. */
 int
-control_event_circuit_status_2(origin_circuit_t *circ,
-                               circuit_status_2_event_t e,
-                               int arg1, const void *arg2)
+control_event_circuit_status_minor(origin_circuit_t *circ,
+                                   circuit_status_minor_event_t e,
+                                   int purpose, const struct timeval *tv)
 {
   const char *event_desc;
   char event_tail[160] = "";
-  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_2))
+  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_MINOR))
     return 0;
   tor_assert(circ);
 
   switch (e)
     {
-    case CIRC2_EVENT_PURPOSE_CHANGED:
-      /* arg1 is the previous purpose of the circuit. */
+    case CIRC_MINOR_EVENT_PURPOSE_CHANGED:
       event_desc = "PURPOSE_CHANGED";
 
       {
         /* event_tail can currently be up to 68 chars long */
         const char *hs_state_str =
-          circuit_purpose_to_controller_hs_state_string(arg1);
+          circuit_purpose_to_controller_hs_state_string(purpose);
         tor_snprintf(event_tail, sizeof(event_tail),
                      " OLD_PURPOSE=%s%s%s",
-                     circuit_purpose_to_controller_string(arg1),
+                     circuit_purpose_to_controller_string(purpose),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
                      (hs_state_str != NULL) ? hs_state_str : "");
       }
 
       break;
-    case CIRC2_EVENT_CANNIBALIZED:
-      /* arg1 is the previous purpose of the circuit. */
+    case CIRC_MINOR_EVENT_CANNIBALIZED:
       event_desc = "CANNIBALIZED";
 
       {
         /* event_tail can currently be up to 130 chars long */
         const char *hs_state_str =
-          circuit_purpose_to_controller_hs_state_string(arg1);
-        const struct timeval *old_timestamp_created = arg2;
+          circuit_purpose_to_controller_hs_state_string(purpose);
+        const struct timeval *old_timestamp_created = tv;
 
         tor_snprintf(event_tail, sizeof(event_tail),
                      " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%ld,%ld",
-                     circuit_purpose_to_controller_string(arg1),
+                     circuit_purpose_to_controller_string(purpose),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
                      (hs_state_str != NULL) ? hs_state_str : "",
                      old_timestamp_created->tv_sec,
@@ -3434,8 +3432,8 @@ control_event_circuit_status_2(origin_circuit_t *circ,
   {
     char *circdesc = circuit_describe_status_for_controller(circ);
     const char *sp = strlen(circdesc) ? " " : "";
-    send_control_event(EVENT_CIRCUIT_STATUS_2, ALL_FORMATS,
-                       "650 CIRC2 %lu %s%s%s%s\r\n",
+    send_control_event(EVENT_CIRCUIT_STATUS_MINOR, ALL_FORMATS,
+                       "650 CIRC_MINOR %lu %s%s%s%s\r\n",
                        (unsigned long)circ->global_identifier,
                        event_desc, sp,
                        circdesc,
