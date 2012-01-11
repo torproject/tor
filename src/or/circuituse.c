@@ -481,7 +481,7 @@ circuit_expire_building(void)
           control_event_circuit_status(TO_ORIGIN_CIRCUIT(victim),
                                        CIRC_EVENT_FAILED,
                                        END_CIRC_REASON_TIMEOUT);
-          victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+          circuit_change_purpose(victim, CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT);
           /* Record this failure to check for too many timeouts
            * in a row. This function does not record a time value yet
            * (we do that later); it only counts the fact that we did
@@ -1309,14 +1309,22 @@ circuit_launch_by_extend_info(uint8_t purpose,
      * internal circs rather than exit circs? -RD */
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
+      uint8_t old_purpose = circ->_base.purpose;
+      struct timeval old_timestamp_created;
+
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
-      circ->_base.purpose = purpose;
+
+      circuit_change_purpose(TO_CIRCUIT(circ), purpose);
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
        * began. */
       tor_gettimeofday(&circ->_base.timestamp_created);
+
+      control_event_circuit_cannibalized(circ, old_purpose,
+                                         &old_timestamp_created);
+
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
@@ -2025,6 +2033,42 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
              introcirc ? introcirc->_base.n_circ_id : 0,
              rendcirc ? rendcirc->_base.n_circ_id : 0, conn_age);
     return 0;
+  }
+}
+
+/** Change <b>circ</b>'s purpose to <b>new_purpose</b>. */
+void
+circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
+{
+  uint8_t old_purpose;
+  /* Don't allow an OR circ to become an origin circ or vice versa. */
+  tor_assert(!!(CIRCUIT_IS_ORIGIN(circ)) ==
+             !!(CIRCUIT_PURPOSE_IS_ORIGIN(new_purpose)));
+
+  if (circ->purpose == new_purpose) return;
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    char old_purpose_desc[80] = "";
+
+    strncpy(old_purpose_desc, circuit_purpose_to_string(circ->purpose), 80-1);
+    old_purpose_desc[80-1] = '\0';
+
+    log_debug(LD_CIRC,
+              "changing purpose of origin circ %d "
+              "from \"%s\" (%d) to \"%s\" (%d)",
+              TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+              old_purpose_desc,
+              circ->purpose,
+              circuit_purpose_to_string(new_purpose),
+              new_purpose);
+  }
+
+  old_purpose = circ->purpose;
+  circ->purpose = new_purpose;
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),
+                                          old_purpose);
   }
 }
 

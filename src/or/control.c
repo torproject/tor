@@ -54,7 +54,7 @@
 #define EVENT_STREAM_STATUS    0x0002
 #define EVENT_OR_CONN_STATUS   0x0003
 #define EVENT_BANDWIDTH_USED   0x0004
-#define EVENT_LOG_OBSOLETE     0x0005 /* Can reclaim this. */
+#define EVENT_CIRCUIT_STATUS_MINOR 0x0005
 #define EVENT_NEW_DESC         0x0006
 #define EVENT_DEBUG_MSG        0x0007
 #define EVENT_INFO_MSG         0x0008
@@ -272,8 +272,7 @@ control_adjust_event_log_severity(void)
       break;
     }
   }
-  if (EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) ||
-      EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL)) {
+  if (EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL)) {
     if (min_log_event > EVENT_NOTICE_MSG)
       min_log_event = EVENT_NOTICE_MSG;
     if (max_log_event < EVENT_ERR_MSG)
@@ -925,6 +924,7 @@ struct control_event_t {
 };
 static const struct control_event_t control_event_table[] = {
   { EVENT_CIRCUIT_STATUS, "CIRC" },
+  { EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR" },
   { EVENT_STREAM_STATUS, "STREAM" },
   { EVENT_OR_CONN_STATUS, "ORCONN" },
   { EVENT_BANDWIDTH_USED, "BW" },
@@ -1854,6 +1854,16 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_add(descparts, rend_query_arg);
   }
 
+  {
+    char *time_created_arg = NULL;
+    char tbuf[ISO_TIME_USEC_LEN+1];
+    format_iso_time_nospace_usec(tbuf, &circ->_base.timestamp_created);
+
+    tor_asprintf(&time_created_arg, "TIME_CREATED=%s", tbuf);
+
+    smartlist_add(descparts, time_created_arg);
+  }
+
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
@@ -2554,7 +2564,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
     }
   }
 
-  circ->_base.purpose = new_purpose;
+  circuit_change_purpose(TO_CIRCUIT(circ), new_purpose);
   connection_write_str_to_buf("250 OK\r\n", conn);
 
  done:
@@ -3316,8 +3326,8 @@ connection_control_process_inbuf(control_connection_t *conn)
   goto again;
 }
 
-/** Something has happened to circuit <b>circ</b>: tell any interested
- * control connections. */
+/** Something major has happened to circuit <b>circ</b>: tell any
+ * interested control connections. */
 int
 control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
@@ -3337,6 +3347,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     case CIRC_EVENT_CLOSED: status = "CLOSED"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
+      tor_fragile_assert();
       return 0;
     }
 
@@ -3370,6 +3381,106 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 
   return 0;
 }
+
+/** Something minor has happened to circuit <b>circ</b>: tell any
+ * interested control connections. */
+static int
+control_event_circuit_status_minor(origin_circuit_t *circ,
+                                   circuit_status_minor_event_t e,
+                                   int purpose, const struct timeval *tv)
+{
+  const char *event_desc;
+  char event_tail[160] = "";
+  if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS_MINOR))
+    return 0;
+  tor_assert(circ);
+
+  switch (e)
+    {
+    case CIRC_MINOR_EVENT_PURPOSE_CHANGED:
+      event_desc = "PURPOSE_CHANGED";
+
+      {
+        /* event_tail can currently be up to 68 chars long */
+        const char *hs_state_str =
+          circuit_purpose_to_controller_hs_state_string(purpose);
+        tor_snprintf(event_tail, sizeof(event_tail),
+                     " OLD_PURPOSE=%s%s%s",
+                     circuit_purpose_to_controller_string(purpose),
+                     (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
+                     (hs_state_str != NULL) ? hs_state_str : "");
+      }
+
+      break;
+    case CIRC_MINOR_EVENT_CANNIBALIZED:
+      event_desc = "CANNIBALIZED";
+
+      {
+        /* event_tail can currently be up to 130 chars long */
+        const char *hs_state_str =
+          circuit_purpose_to_controller_hs_state_string(purpose);
+        const struct timeval *old_timestamp_created = tv;
+
+        tor_snprintf(event_tail, sizeof(event_tail),
+                     " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%ld,%ld",
+                     circuit_purpose_to_controller_string(purpose),
+                     (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
+                     (hs_state_str != NULL) ? hs_state_str : "",
+                     old_timestamp_created->tv_sec,
+                     old_timestamp_created->tv_usec);
+      }
+
+      break;
+    default:
+      log_warn(LD_BUG, "Unrecognized status code %d", (int)e);
+      tor_fragile_assert();
+      return 0;
+    }
+
+  {
+    char *circdesc = circuit_describe_status_for_controller(circ);
+    const char *sp = strlen(circdesc) ? " " : "";
+    send_control_event(EVENT_CIRCUIT_STATUS_MINOR, ALL_FORMATS,
+                       "650 CIRC_MINOR %lu %s%s%s%s\r\n",
+                       (unsigned long)circ->global_identifier,
+                       event_desc, sp,
+                       circdesc,
+                       event_tail);
+    tor_free(circdesc);
+  }
+
+  return 0;
+}
+
+/**
+ * <b>circ</b> has changed its purpose from <b>old_purpose</b>: tell any
+ * interested controllers.
+ */
+int
+control_event_circuit_purpose_changed(origin_circuit_t *circ,
+                                      int old_purpose)
+{
+  return control_event_circuit_status_minor(circ,
+                                            CIRC_MINOR_EVENT_PURPOSE_CHANGED,
+                                            old_purpose,
+                                            NULL);
+}
+
+/**
+ * <b>circ</b> has changed its purpose from <b>old_purpose</b>, and its
+ * created-time from <b>old_tv_created</b>: tell any interested controllers.
+ */
+int
+control_event_circuit_cannibalized(origin_circuit_t *circ,
+                                   int old_purpose,
+                                   const struct timeval *old_tv_created)
+{
+  return control_event_circuit_status_minor(circ,
+                                            CIRC_MINOR_EVENT_CANNIBALIZED,
+                                            old_purpose,
+                                            old_tv_created);
+}
+
 
 /** Given an AP connection <b>conn</b> and a <b>len</b>-character buffer
  * <b>buf</b>, determine the address:port combination requested on

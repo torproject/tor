@@ -292,7 +292,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   }
 
   /* Now, we wait for an ACK or NAK on this circuit. */
-  introcirc->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
+  circuit_change_purpose(TO_CIRCUIT(introcirc),
+                         CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT);
   /* Set timestamp_dirty, because circuit_expire_building expects it
    * to specify when a circuit entered the _C_INTRODUCE_ACK_WAIT
    * state. */
@@ -355,7 +356,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 #ifndef NON_ANONYMOUS_MODE_ENABLED
       tor_assert(!(rendcirc->build_state->onehop_tunnel));
 #endif
-      rendcirc->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
+      circuit_change_purpose(TO_CIRCUIT(rendcirc),
+                             CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
       /* Set timestamp_dirty, because circuit_expire_building expects
        * it to specify when a circuit entered the
        * _C_REND_READY_INTRO_ACKED state. */
@@ -364,11 +366,12 @@ rend_client_introduction_acked(origin_circuit_t *circ,
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
     /* close the circuit: we won't need it anymore. */
-    circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
+    circuit_change_purpose(TO_CIRCUIT(circ),
+                           CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
-    circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+    circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);
     /* Remove this intro point from the set of viable introduction
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
@@ -823,7 +826,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
   }
   log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
            "rendezvous.");
-  circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
   /* Set timestamp_dirty, because circuit_expire_building expects it
    * to specify when a circuit entered the _C_REND_READY state. */
   circ->_base.timestamp_dirty = time(NULL);
@@ -887,7 +890,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
   hop->dh_handshake_state = NULL;
 
   /* All is well. Extend the circuit. */
-  circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_JOINED);
   hop->state = CPATH_STATE_OPEN;
   /* set the windows to default. these are the windows
    * that alice thinks bob has.

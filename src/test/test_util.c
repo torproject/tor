@@ -19,9 +19,10 @@ test_util_time(void)
 {
   struct timeval start, end;
   struct tm a_time;
-  char timestr[RFC1123_TIME_LEN+1];
+  char timestr[128];
   time_t t_res;
   int i;
+  struct timeval tv;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -82,6 +83,24 @@ test_util_time(void)
   tor_gettimeofday(&end);
   /* We might've timewarped a little. */
   tt_int_op(tv_udiff(&start, &end), >=, -5000);
+
+  /* Now let's check some format_iso_time variants */
+  tv.tv_sec = (time_t)1326296338;
+  tv.tv_usec = 3060;
+  format_iso_time(timestr, tv.tv_sec);
+  test_streq("2012-01-11 15:38:58", timestr);
+  /* The output of format_local_iso_time will vary by timezone, and setting
+     our timezone for testing purposes would be a nontrivial flaky pain.
+     Skip this test for now.
+  format_local_iso_time(timestr, tv.tv_sec);
+  test_streq("2012-01-11 10:38:58", timestr);
+  */
+  format_iso_time_nospace(timestr, tv.tv_sec);
+  test_streq("2012-01-11T15:38:58", timestr);
+  test_eq(strlen(timestr), ISO_TIME_LEN);
+  format_iso_time_nospace_usec(timestr, &tv);
+  test_streq("2012-01-11T15:38:58.003060", timestr);
+  test_eq(strlen(timestr), ISO_TIME_USEC_LEN);
 
  done:
   ;
