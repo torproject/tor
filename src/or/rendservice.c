@@ -958,15 +958,14 @@ rend_service_note_removing_intro_point(rend_service_t *service,
      * _LIFETIME_INTRODUCTIONS introductions that it has handled by
      * the fraction of _LIFETIME_MIN_SECONDS for which it existed.
      *
-     * Then we take the reciprocal of that fraction of desired usage,
-     * then multiply by a fudge factor of 1.5, to decide how many new
-     * introduction points should ideally replace intro (which is now
-     * closed or soon to be closed).  In theory, assuming that
-     * introduction load is distributed equally across all intro
-     * points and ignoring the fact that different intro points are
-     * established and closed at different times, that number of intro
-     * points should bring all of our intro points exactly to our
-     * target usage.
+     * Then we multiply that fraction of desired usage by a fudge
+     * factor of 1.5, to decide how many new introduction points
+     * should ideally replace intro (which is now closed or soon to be
+     * closed).  In theory, assuming that introduction load is
+     * distributed equally across all intro points and ignoring the
+     * fact that different intro points are established and closed at
+     * different times, that number of intro points should bring all
+     * of our intro points exactly to our target usage.
      *
      * Then we clamp that number to a number of intro points we might
      * be willing to replace this intro point with and turn it into an
@@ -975,11 +974,14 @@ rend_service_note_removing_intro_point(rend_service_t *service,
      * service->n_intro_points_wanted and let rend_services_introduce
      * create the new intro points we want (if any).
      */
-    double fractional_n_intro_points_wanted_to_replace_this_one =
-      ((((double)now - intro->time_published) /
-        INTRO_POINT_LIFETIME_MIN_SECONDS) *
-       ((intro_point_accepted_intro_count(intro)) /
-        INTRO_POINT_LIFETIME_INTRODUCTIONS)) * 1.5;
+    const double intro_point_usage =
+      intro_point_accepted_intro_count(intro) /
+      (double)(now - intro->time_published);
+    const double intro_point_target_usage =
+      INTRO_POINT_LIFETIME_INTRODUCTIONS /
+      (double)INTRO_POINT_LIFETIME_MIN_SECONDS;
+    const double fractional_n_intro_points_wanted_to_replace_this_one =
+      (1.5 * (intro_point_usage / intro_point_target_usage));
     unsigned int n_intro_points_wanted_to_replace_this_one;
     unsigned int n_intro_points_wanted_now;
     unsigned int n_intro_points_really_wanted_now;
