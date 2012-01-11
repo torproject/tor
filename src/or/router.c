@@ -1973,7 +1973,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   format_iso_time(published, router->cache_info.published_on);
 
   if (router->declared_family && smartlist_len(router->declared_family)) {
-    char *family = smartlist_join_strings(router->declared_family, " ", 0, NULL);
+    char *family = smartlist_join_strings(router->declared_family,
+                                          " ", 0, NULL);
     tor_asprintf(&family_line, "family %s\n", family);
     tor_free(family);
   } else {

@@ -1815,7 +1815,6 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   if (circ->rend_data != NULL) {
     smartlist_add_asprintf(descparts, "REND_QUERY=%s",
                  circ->rend_data->onion_address);
-
   }
 
   {
