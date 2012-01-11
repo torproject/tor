@@ -54,6 +54,8 @@ uint64_t stats_n_certs_cells_processed = 0;
 uint64_t stats_n_auth_challenge_cells_processed = 0;
 /** How many CELL_AUTHENTICATE cells have we received, ever? */
 uint64_t stats_n_authenticate_cells_processed = 0;
+/** How many CELL_AUTHORIZE cells have we received, ever? */
+uint64_t stats_n_authorize_cells_processed = 0;
 
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
@@ -69,6 +71,8 @@ static void command_process_auth_challenge_cell(var_cell_t *cell,
                                           or_connection_t *conn);
 static void command_process_authenticate_cell(var_cell_t *cell,
                                           or_connection_t *conn);
+static int enter_v3_handshake_with_cell(var_cell_t *cell,
+                                        or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -203,6 +207,22 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
   }
 }
 
+/** Return true if <b>command</b> is a cell command that's allowed to start a
+ * V3 handshake. */
+static int
+command_allowed_before_handshake(uint8_t command)
+{
+  switch (command) {
+    case CELL_PADDING: /*XXXX not implemented. Should remove, or implement? */
+    case CELL_VERSIONS:
+    case CELL_VPADDING:
+    case CELL_AUTHORIZE:
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 /** Process a <b>cell</b> that was just received on <b>conn</b>. Keep internal
  * statistics about how many of each cell we've processed so far
  * this second, and the total number of microseconds it took to
@@ -250,13 +270,16 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
 
       /* fall through */
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
-      if (cell->command != CELL_VERSIONS) {
+      if (! command_allowed_before_handshake(cell->command)) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "Received a non-VERSIONS cell with command %d in state %s; "
+               "Received a cell with command %d in state %s; "
                "ignoring it.",
                (int)cell->command,
                conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
         return;
+      } else {
+        if (enter_v3_handshake_with_cell(cell, conn)<0)
+          return;
       }
       break;
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
@@ -304,6 +327,10 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
     case CELL_AUTHENTICATE:
       ++stats_n_authenticate_cells_processed;
       PROCESS_CELL(authenticate, cell, conn);
+      break;
+    case CELL_AUTHORIZE:
+      ++stats_n_authorize_cells_processed;
+      /* Ignored so far. */
       break;
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
@@ -592,6 +619,35 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
   }
 }
 
+/** Called when we as a server receive an appropriate cell while waiting
+ * either for a cell or a TLS handshake.  Set the connection's state to
+ * "handshaking_v3', initializes the or_handshake_state field as needed,
+ * and add the cell to the hash of incoming cells.)
+ *
+ * Return 0 on success; return -1 and mark the connection on failure.
+ */
+static int
+enter_v3_handshake_with_cell(var_cell_t *cell, or_connection_t *conn)
+{
+  const int started_here = connection_or_nonopen_was_started_here(conn);
+
+  tor_assert(conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING ||
+             conn->_base.state == OR_CONN_STATE_TLS_SERVER_RENEGOTIATING);
+
+  if (started_here) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a cell while TLS-handshaking, not in "
+           "OR_HANDSHAKING_V3, on a connection we originated.");
+  }
+  conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
+  if (connection_init_or_handshake_state(conn, started_here) < 0) {
+    connection_mark_for_close(TO_CONN(conn));
+    return -1;
+  }
+  or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
+  return 0;
+}
+
 /** Process a 'versions' cell.  The current link protocol version must be 0
  * to indicate that no version has yet been negotiated.  We compare the
  * versions in the cell to the list of versions we support, pick the
@@ -614,23 +670,10 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   switch (conn->_base.state)
     {
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
+    case OR_CONN_STATE_OR_HANDSHAKING_V3:
       break;
     case OR_CONN_STATE_TLS_HANDSHAKING:
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
-      if (started_here) {
-        log_fn(LOG_PROTOCOL_WARN, LD_OR,
-               "Received a versions cell while TLS-handshaking not in "
-               "OR_HANDSHAKING_V3 on a connection we originated.");
-      }
-      conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
-      if (connection_init_or_handshake_state(conn, started_here) < 0) {
-        connection_mark_for_close(TO_CONN(conn));
-        return;
-      }
-      or_handshake_state_record_var_cell(conn->handshake_state, cell, 1);
-      break;
-    case OR_CONN_STATE_OR_HANDSHAKING_V3:
-      break;
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_OR,
              "VERSIONS cell while in unexpected state");

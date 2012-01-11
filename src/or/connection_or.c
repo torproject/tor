@@ -1583,6 +1583,10 @@ int
 connection_init_or_handshake_state(or_connection_t *conn, int started_here)
 {
   or_handshake_state_t *s;
+  if (conn->handshake_state) {
+    log_warn(LD_BUG, "Duplicate call to connection_init_or_handshake_state!");
+    return 0;
+  }
   s = conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
   s->started_here = started_here ? 1 : 0;
   s->digest_sent_data = 1;
