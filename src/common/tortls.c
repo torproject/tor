@@ -475,8 +475,10 @@ tor_tls_init(void)
      * a test of intelligence and determination.
      */
     if (version > OPENSSL_V(0,9,8,'k') && version <= OPENSSL_V(0,9,8,'l')) {
-      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l; "
-                 "I will try SSL3_FLAGS to enable renegotation.",
+      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l, but "
+                 "some vendors have backported renegotiation code from "
+                 "0.9.8m without updating the version number. "
+                 "I will try SSL3_FLAGS and SSL_OP to enable renegotation.",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;

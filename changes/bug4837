@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix the log message describing how we work around discovering
+      that our version is the ill-fated OpenSSL 0.9.8l. Fixes bug
+      4837; bugfix on 0.2.2.9-alpha.
