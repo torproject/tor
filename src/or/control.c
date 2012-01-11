@@ -3420,14 +3420,15 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
         const char *hs_state_str =
           circuit_purpose_to_controller_hs_state_string(purpose);
         const struct timeval *old_timestamp_created = tv;
+        char tbuf[ISO_TIME_USEC_LEN+1];
+        format_iso_time_nospace_usec(tbuf, old_timestamp_created);
 
         tor_snprintf(event_tail, sizeof(event_tail),
-                     " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%ld,%ld",
+                     " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%s",
                      circuit_purpose_to_controller_string(purpose),
                      (hs_state_str != NULL) ? " OLD_HS_STATE=" : "",
                      (hs_state_str != NULL) ? hs_state_str : "",
-                     old_timestamp_created->tv_sec,
-                     old_timestamp_created->tv_usec);
+                     tbuf);
       }
 
       break;
