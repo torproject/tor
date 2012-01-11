@@ -213,7 +213,6 @@ static int
 command_allowed_before_handshake(uint8_t command)
 {
   switch (command) {
-    case CELL_PADDING: /*XXXX not implemented. Should remove, or implement? */
     case CELL_VERSIONS:
     case CELL_VPADDING:
     case CELL_AUTHORIZE:
