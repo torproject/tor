@@ -37,9 +37,11 @@ int control_event_is_interesting(int event);
 
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
-int control_event_circuit_status_minor(origin_circuit_t *circ,
-                                       circuit_status_minor_event_t e,
-                                       int purpose, const struct timeval *tv);
+int control_event_circuit_purpose_changed(origin_circuit_t *circ,
+                                          int old_purpose);
+int control_event_circuit_cannibalized(origin_circuit_t *circ,
+                                       int old_purpose,
+                                       const struct timeval *old_tv_created);
 int control_event_stream_status(entry_connection_t *conn,
                                 stream_status_event_t e,
                                 int reason);

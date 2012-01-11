@@ -3376,7 +3376,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 
 /** Something minor has happened to circuit <b>circ</b>: tell any
  * interested control connections. */
-int
+static int
 control_event_circuit_status_minor(origin_circuit_t *circ,
                                    circuit_status_minor_event_t e,
                                    int purpose, const struct timeval *tv)
@@ -3443,6 +3443,36 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
 
   return 0;
 }
+
+/**
+ * <b>circ</b> has changed its purpose from <b>old_purpose</b>: tell any
+ * interested controllers.
+ */
+int
+control_event_circuit_purpose_changed(origin_circuit_t *circ,
+                                      int old_purpose)
+{
+  return control_event_circuit_status_minor(circ,
+                                            CIRC_MINOR_EVENT_PURPOSE_CHANGED,
+                                            old_purpose,
+                                            NULL);
+}
+
+/**
+ * <b>circ</b> has changed its purpose from <b>old_purpose</b>, and its
+ * created-time from <b>old_tv_created</b>: tell any interested controllers.
+ */
+int
+control_event_circuit_cannibalized(origin_circuit_t *circ,
+                                   int old_purpose,
+                                   const struct timeval *old_tv_created)
+{
+  return control_event_circuit_status_minor(circ,
+                                            CIRC_MINOR_EVENT_CANNIBALIZED,
+                                            old_purpose,
+                                            old_tv_created);
+}
+
 
 /** Given an AP connection <b>conn</b> and a <b>len</b>-character buffer
  * <b>buf</b>, determine the address:port combination requested on
