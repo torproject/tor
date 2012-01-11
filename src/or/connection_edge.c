@@ -1894,8 +1894,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                          remapped_to_exit || options->AllowDotExit);
 
   if (addresstype == BAD_HOSTNAME) {
-    log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
-             safe_str_client(socks->address));
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -3410,8 +3408,14 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
 /** If address is of the form "y.onion" with a well-formed handle y:
  *     Put a NUL after y, lower-case it, and return ONION_HOSTNAME.
  *
+ * If address is of the form "y.onion" with a badly-formed handle y:
+ *     Return BAD_HOSTNAME and log a message.
+ *
  * If address is of the form "y.exit" and <b>allowdotexit</b> is true:
  *     Put a NUL after y and return EXIT_HOSTNAME.
+ *
+ * If address is of the form "y.exit" and <b>allowdotexit</b> is false:
+ *     Return BAD_HOSTNAME and log a message.
  *
  * Otherwise:
  *     Return NORMAL_HOSTNAME and change nothing.
@@ -3451,6 +3455,8 @@ parse_extended_hostname(char *address, int allowdotexit)
  failed:
     /* otherwise, return to previous state and return 0 */
     *s = '.';
+    log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
+             safe_str_client(address));
     return BAD_HOSTNAME;
 }
 
