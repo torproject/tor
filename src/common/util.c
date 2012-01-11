@@ -2757,17 +2757,17 @@ tor_sscanf(const char *buf, const char *pattern, ...)
 /** Append the string produced by tor_asprintf(<b>pattern</b>, <b>...</b>)
  * to <b>sl</b>. */
 void
-smartlist_asprintf_add(struct smartlist_t *sl, const char *pattern, ...)
+smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
 {
   va_list ap;
   va_start(ap, pattern);
-  smartlist_vasprintf_add(sl, pattern, ap);
+  smartlist_add_vasprintf(sl, pattern, ap);
   va_end(ap);
 }
 
-/** va_list-based backend of smartlist_asprintf_add. */
+/** va_list-based backend of smartlist_add_asprintf. */
 void
-smartlist_vasprintf_add(struct smartlist_t *sl, const char *pattern,
+smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
                         va_list args)
 {
   char *str = NULL;

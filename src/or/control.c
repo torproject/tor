@@ -4239,9 +4239,9 @@ control_event_conf_changed(smartlist_t *elements)
     char *k = smartlist_get(elements, i);
     char *v = smartlist_get(elements, i+1);
     if (v == NULL) {
-      smartlist_asprintf_add(lines, "650-%s", k);
+      smartlist_add_asprintf(lines, "650-%s", k);
     } else {
-      smartlist_asprintf_add(lines, "650-%s=%s", k, v);
+      smartlist_add_asprintf(lines, "650-%s=%s", k, v);
     }
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
