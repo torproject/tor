@@ -941,7 +941,6 @@ rep_hist_get_router_stability_doc(time_t now)
   DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
     const node_t *node;
     char dbuf[BASE64_DIGEST_LEN+1];
-    char header_buf[512];
     char *info;
     digest_to_base64(dbuf, id);
     node = node_get_by_id(id);
@@ -954,7 +953,7 @@ rep_hist_get_router_stability_doc(time_t now)
         format_iso_time(tbuf, published);
       else
         strlcpy(tbuf, "???", sizeof(tbuf));
-      tor_snprintf(header_buf, sizeof(header_buf),
+      smartlist_add_asprintf(chunks,
                    "router %s %s %s\n"
                    "published %s\n"
                    "relevant-flags %s%s%s\n"
@@ -966,10 +965,9 @@ rep_hist_get_router_stability_doc(time_t now)
                    node->ri && node->ri->is_hibernating ? "Hibernating " : "",
                    node_get_declared_uptime(node));
     } else {
-      tor_snprintf(header_buf, sizeof(header_buf),
+      smartlist_add_asprintf(chunks,
                    "router %s {no descriptor}\n", dbuf);
     }
-    smartlist_add(chunks, tor_strdup(header_buf));
     info = rep_hist_format_router_status(hist, now);
     if (info)
       smartlist_add(chunks, info);

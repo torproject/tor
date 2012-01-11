@@ -1125,7 +1125,6 @@ directory_send_command(dir_connection_t *conn,
   char *url;
   char request[8192];
   const char *httpcommand = NULL;
-  size_t len;
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
@@ -1174,9 +1173,7 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/status/%s", resource);
+      tor_asprintf(&url, "/tor/status/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
       /* resource is optional.  If present, it's a flavor name */
@@ -1191,17 +1188,13 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/keys/%s", resource);
+      tor_asprintf(&url, "/tor/keys/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:
       tor_assert(resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/status-vote/next/%s.z", resource);
+      tor_asprintf(&url, "/tor/status-vote/next/%s.z", resource);
       break;
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       tor_assert(!resource);
@@ -1212,16 +1205,12 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_SERVERDESC:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/server/%s", resource);
+      tor_asprintf(&url, "/tor/server/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_EXTRAINFO:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/extra/%s", resource);
+      tor_asprintf(&url, "/tor/extra/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_MICRODESC:
       tor_assert(resource);
@@ -1256,9 +1245,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource) + 32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/rendezvous2/%s", resource);
+      tor_asprintf(&url, "/tor/rendezvous2/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);
@@ -2519,7 +2506,6 @@ char *
 directory_dump_request_log(void)
 {
   smartlist_t *lines;
-  char tmp[256];
   char *result;
   strmap_iter_t *iter;
 
@@ -2535,9 +2521,8 @@ directory_dump_request_log(void)
     request_t *r;
     strmap_iter_get(iter, &key, &val);
     r = val;
-    tor_snprintf(tmp, sizeof(tmp), "%s  "U64_FORMAT"  "U64_FORMAT"\n",
+    smartlist_add_asprintf(lines, "%s  "U64_FORMAT"  "U64_FORMAT"\n",
                  key, U64_PRINTF_ARG(r->bytes), U64_PRINTF_ARG(r->count));
-    smartlist_add(lines, tor_strdup(tmp));
   }
   smartlist_sort_strings(lines);
   result = smartlist_join_strings(lines, "", 0, NULL);
@@ -3291,8 +3276,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #define ADD_MALLINFO_LINE(x) do {                               \
-    tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);        \
-    smartlist_add(lines, tor_strdup(tmp));                      \
+    smartlist_add_asprintf(lines, "%s %d\n", #x, mi.x);        \
   }while(0);
 
   if (!strcmp(url,"/tor/mallinfo.txt") &&
@@ -3301,7 +3285,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     size_t len;
     struct mallinfo mi;
     smartlist_t *lines;
-    char tmp[256];
 
     memset(&mi, 0, sizeof(mi));
     mi = mallinfo();

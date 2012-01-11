@@ -4441,10 +4441,8 @@ entry_guards_update_state(or_state_t *state)
         continue; /* don't write this one to disk */
       *next = line = tor_malloc_zero(sizeof(config_line_t));
       line->key = tor_strdup("EntryGuard");
-      line->value = tor_malloc(HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2);
       base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
-      tor_snprintf(line->value,HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2,
-                   "%s %s", e->nickname, dbuf);
+      tor_asprintf(&line->value, "%s %s", e->nickname, dbuf);
       next = &(line->next);
       if (e->unreachable_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));

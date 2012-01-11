@@ -697,7 +697,6 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
     if (*eq == '=') {
       char *val=NULL;
       size_t val_len=0;
-      size_t ent_len;
       if (*body != '\"') {
         char *val_start = body;
         while (!TOR_ISSPACE(*body))
@@ -715,9 +714,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
           return 0;
         }
       }
-      ent_len = strlen(key)+val_len+3;
-      entry = tor_malloc(ent_len+1);
-      tor_snprintf(entry, ent_len, "%s %s", key, val);
+      tor_asprintf(&entry, "%s %s", key, val);
       tor_free(key);
       tor_free(val);
     } else {
@@ -1304,12 +1301,9 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
-      size_t anslen = strlen(line)+512;
-      char *ans = tor_malloc(anslen);
       if (address_is_invalid_destination(to, 1)) {
-        tor_snprintf(ans, anslen,
+        smartlist_add_asprintf(reply,
                      "512-syntax error: invalid address '%s'", to);
-        smartlist_add(reply, ans);
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
@@ -1317,28 +1311,22 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!address) {
-          tor_snprintf(ans, anslen,
+          smartlist_add_asprintf(reply,
                        "451-resource exhausted: skipping '%s'", line);
-          smartlist_add(reply, ans);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
                    safe_str_client(line));
         } else {
-          tor_snprintf(ans, anslen, "250-%s=%s", address, to);
-          smartlist_add(reply, ans);
+          smartlist_add_asprintf(reply, "250-%s=%s", address, to);
         }
       } else {
         addressmap_register(from, tor_strdup(to), 1,
                             ADDRMAPSRC_CONTROLLER, 0, 0);
-        tor_snprintf(ans, anslen, "250-%s", line);
-        smartlist_add(reply, ans);
+        smartlist_add_asprintf(reply, "250-%s", line);
       }
     } else {
-      size_t anslen = strlen(line)+256;
-      char *ans = tor_malloc(anslen);
-      tor_snprintf(ans, anslen, "512-syntax error: mapping '%s' is "
+      smartlist_add_asprintf(reply, "512-syntax error: mapping '%s' is "
                    "not of expected form 'foo=bar'.", line);
-      smartlist_add(reply, ans);
       log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
                            "number of items.",
                            safe_str_client(line));
@@ -2012,8 +2000,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
       *answer = tor_strdup(check_whether_dirport_reachable() ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded")) {
-      *answer = tor_malloc(16);
-      tor_snprintf(*answer, 16, "OR=%d DIR=%d",
+      tor_asprintf(answer, "OR=%d DIR=%d",
                    check_whether_orport_reachable() ? 1 : 0,
                    check_whether_dirport_reachable() ? 1 : 0);
     } else if (!strcmp(question, "status/bootstrap-phase")) {
@@ -2049,9 +2036,7 @@ getinfo_helper_events(control_connection_t *control_conn,
           }
       } else if (!strcmp(question, "status/version/num-versioning") ||
                  !strcmp(question, "status/version/num-concurring")) {
-        char s[33];
-        tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_DIRINFO));
-        *answer = tor_strdup(s);
+        tor_asprintf(answer, "%d", get_n_authorities(V3_DIRINFO));
         log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
                  "information", question);
       }

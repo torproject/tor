@@ -1165,11 +1165,10 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 static int
 addressmap_rewrite_reverse(char *address, size_t maxlen, time_t *expires_out)
 {
-  size_t len = maxlen + 16;
-  char *s = tor_malloc(len), *cp;
+  char *s, *cp;
   addressmap_entry_t *ent;
   int r = 0;
-  tor_snprintf(s, len, "REVERSE[%s]", address);
+  tor_asprintf(&s, "REVERSE[%s]", address);
   ent = strmap_get(addressmap, s);
   if (ent) {
     cp = tor_strdup(escaped_safe_str_client(ent->new_address));

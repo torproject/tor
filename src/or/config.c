@@ -781,22 +781,20 @@ set_options(or_options_t *new_val, char **msg)
 extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
-static char *_version = NULL;
+static char *the_tor_version = NULL;
 
 /** Return the current Tor version. */
 const char *
 get_version(void)
 {
-  if (_version == NULL) {
+  if (the_tor_version == NULL) {
     if (strlen(tor_git_revision)) {
-      size_t len = strlen(VERSION)+strlen(tor_git_revision)+16;
-      _version = tor_malloc(len);
-      tor_snprintf(_version, len, "%s (git-%s)", VERSION, tor_git_revision);
+      tor_asprintf(&the_tor_version, "%s (git-%s)", VERSION, tor_git_revision);
     } else {
-      _version = tor_strdup(VERSION);
+      the_tor_version = tor_strdup(VERSION);
     }
   }
-  return _version;
+  return the_tor_version;
 }
 
 /** Release additional memory allocated in options
@@ -841,7 +839,7 @@ config_free_all(void)
 
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
-  tor_free(_version);
+  tor_free(the_tor_version);
   tor_free(global_dirfrontpagecontents);
 }
 
@@ -1174,9 +1172,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   control_ports_write_to_file();
 
   if (directory_caches_v2_dir_info(options)) {
-    size_t len = strlen(options->DataDirectory)+32;
-    char *fn = tor_malloc(len);
-    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
+    char *fn = NULL;
+    tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-status",
                  options->DataDirectory);
     if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK,
                           options->User) < 0) {
@@ -3506,11 +3503,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       SMARTLIST_FOREACH(options->FirewallPorts, const char *, portno,
       {
         int p = atoi(portno);
-        char *s;
         if (p<0) continue;
-        s = tor_malloc(16);
-        tor_snprintf(s, 16, "*:%d", p);
-        smartlist_add(instead, s);
+        smartlist_add_asprintf(instead, "*:%d", p);
       });
       new_line->value = smartlist_join_strings(instead,",",0,NULL);
       /* These have been deprecated since 0.1.1.5-alpha-cvs */
