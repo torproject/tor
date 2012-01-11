@@ -1430,6 +1430,26 @@ format_iso_time(char *buf, time_t t)
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
+/** As format_iso_time, but use the yyyy-mm-ddThh:mm:ss format to avoid
+ * embedding an internal space. */
+void
+format_iso_time_nospace(char *buf, time_t t)
+{
+  format_iso_time(buf, t);
+  buf[10] = 'T';
+}
+
+/** As format_iso_time_nospace, but include microseconds in decimal
+ * fixed-point format.  Requires that buf be at least ISO_TIME_USEC_LEN+1
+ * bytes long. */
+void
+format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
+{
+  tor_assert(tv);
+  format_iso_time_nospace(buf, tv->tv_sec);
+  tor_snprintf(buf+ISO_TIME_LEN, 8, ".%06d", (int)tv->tv_usec);
+}
+
 /** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
  * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
  * failure.  Ignore extraneous stuff in <b>cp</b> separated by whitespace from

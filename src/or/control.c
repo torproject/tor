@@ -1853,10 +1853,10 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
   {
     char *time_created_arg = NULL;
+    char tbuf[ISO_TIME_USEC_LEN+1];
+    format_iso_time_nospace_usec(tbuf, &circ->_base.timestamp_created);
 
-    tor_asprintf(&time_created_arg, "TIME_CREATED=%ld,%ld",
-                 circ->_base.timestamp_created.tv_sec,
-                 circ->_base.timestamp_created.tv_usec);
+    tor_asprintf(&time_created_arg, "TIME_CREATED=%s", tbuf);
 
     smartlist_add(descparts, time_created_arg);
   }
