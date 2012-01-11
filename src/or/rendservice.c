@@ -1564,7 +1564,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
-             "introduction circuit.");
+             "rendezvous circuit.");
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
