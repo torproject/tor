@@ -775,8 +775,8 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
              "might otherwise be vulnerable to CVE-2011-4657 "
              "(compile-time version %08lx (%s); "
              "runtime version %08lx (%s))",
-             OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
-             SSLeay(), SSLeay_version(SSLEAY_VERSION));
+             (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
+             (unsigned long)SSLeay(), SSLeay_version(SSLEAY_VERSION));
     SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
   }
 
