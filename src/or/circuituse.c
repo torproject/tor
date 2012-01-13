@@ -537,9 +537,8 @@ circuit_expire_building(void)
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
-        log_info(LD_CIRC,"Marking circ %s:%d:%d (state %d:%s, purpose %d) "
+        log_info(LD_CIRC,"Marking circ %d (state %d:%s, purpose %d) "
                  "as timed-out HS circ",
-                 victim->n_conn->_base.address, victim->n_conn->_base.port,
                  victim->n_circ_id,
                  victim->state, circuit_state_to_string(victim->state),
                  victim->purpose);
@@ -556,9 +555,8 @@ circuit_expire_building(void)
     if (!(options->CloseHSServiceRendCircuitsImmediatelyOnTimeout) &&
         !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
         victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      log_info(LD_CIRC,"Marking circ %s:%d:%d (state %d:%s, purpose %d) "
+      log_info(LD_CIRC,"Marking circ %d (state %d:%s, purpose %d) "
                "as timed-out HS circ; relaunching rendezvous attempt.",
-               victim->n_conn->_base.address, victim->n_conn->_base.port,
                victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
