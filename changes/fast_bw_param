@@ -1,0 +1,8 @@
+  o Minor features (directory authority):
+    - Provide two consensus parameters (FastFlagMinThreshold and
+      FastFlagMaxThreshold) to control the range of allowable bandwidths for
+      the Fast directory flag. This allows authorities to run better
+      experiments on appropriate requirements for being a "Fast" node.
+      The AuthDirFastGuarantee flag still applies.
+
+
