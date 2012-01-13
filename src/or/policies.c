@@ -14,6 +14,7 @@
 #include "nodelist.h"
 #include "policies.h"
 #include "routerparse.h"
+#include "geoip.h"
 #include "ht.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */
@@ -313,13 +314,29 @@ socks_policy_permits_address(const tor_addr_t *addr)
   return addr_policy_permits_tor_addr(addr, 1, socks_policy);
 }
 
+/** Return true iff the address <b>addr</b> is in a country listed in the
+ * case-insentive list of country codes <b>cc_list</b>. */
+static int
+addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
+{
+  country_t country;
+  const char *name;
+  if (!cc_list)
+    return 0;
+  country = geoip_get_country_by_ip(addr);
+  name = geoip_get_country_name(country);
+  return smartlist_string_isin_case(cc_list, name);
+}
+
 /** Return 1 if <b>addr</b>:<b>port</b> is permitted to publish to our
  * directory, based on <b>authdir_reject_policy</b>. Else return 0.
  */
 int
 authdir_policy_permits_address(uint32_t addr, uint16_t port)
 {
-  return addr_policy_permits_address(addr, port, authdir_reject_policy);
+  if (! addr_policy_permits_address(addr, port, authdir_reject_policy))
+    return 0;
+  return !addr_is_in_cc_list(addr, get_options()->AuthDirRejectCC);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> is considered valid in our
@@ -328,7 +345,9 @@ authdir_policy_permits_address(uint32_t addr, uint16_t port)
 int
 authdir_policy_valid_address(uint32_t addr, uint16_t port)
 {
-  return addr_policy_permits_address(addr, port, authdir_invalid_policy);
+  if (! addr_policy_permits_address(addr, port, authdir_invalid_policy))
+    return 0;
+  return !addr_is_in_cc_list(addr, get_options()->AuthDirInvalidCC);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad dir,
@@ -337,7 +356,9 @@ authdir_policy_valid_address(uint32_t addr, uint16_t port)
 int
 authdir_policy_baddir_address(uint32_t addr, uint16_t port)
 {
-  return ! addr_policy_permits_address(addr, port, authdir_baddir_policy);
+  if (! addr_policy_permits_address(addr, port, authdir_baddir_policy))
+    return 1;
+  return addr_is_in_cc_list(addr, get_options()->AuthDirBadDirCC);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad exit,
@@ -346,7 +367,9 @@ authdir_policy_baddir_address(uint32_t addr, uint16_t port)
 int
 authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 {
-  return ! addr_policy_permits_address(addr, port, authdir_badexit_policy);
+  if (! addr_policy_permits_address(addr, port, authdir_badexit_policy))
+    return 1;
+  return addr_is_in_cc_list(addr, get_options()->AuthDirBadExitCC);
 }
 
 #define REJECT(arg) \

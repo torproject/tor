@@ -1462,6 +1462,18 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     authority publishes, or accepted as an OR address in any descriptor
     submitted for publication by this authority.
 
+**AuthDirBadDirCC** __CC__,... +
+
+**AuthDirBadExitCC** __CC__,... +
+
+**AuthDirInvalidCC** __CC__,... +
+
+**AuthDirRejectCC** __CC__,...::
+    Authoritative directories only. These options contain a comma-separated
+    list of country codes such that any server in one of those country codes
+    will be marked as a bad directory/bad exit/invalid for use, or rejected
+    entirely.
+
 **AuthDirListBadDirs** **0**|**1**::
     Authoritative directories only. If set to 1, this directory has some
     opinion about which nodes are unsuitable as directory caches. (Do not set

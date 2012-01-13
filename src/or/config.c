@@ -89,6 +89,10 @@ typedef struct config_abbrev_t {
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
 static config_abbrev_t _option_abbrevs[] = {
+  PLURAL(AuthDirBadDirCC),
+  PLURAL(AuthDirBadExitCC),
+  PLURAL(AuthDirInvalidCC),
+  PLURAL(AuthDirRejectCC),
   PLURAL(ExitNode),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
@@ -182,11 +186,15 @@ static config_var_t _option_vars[] = {
   V(AlternateHSAuthority,        LINELIST, NULL),
   V(AssumeReachable,             BOOL,     "0"),
   V(AuthDirBadDir,               LINELIST, NULL),
+  V(AuthDirBadDirCC,             CSV,      ""),
   V(AuthDirBadExit,              LINELIST, NULL),
+  V(AuthDirBadExitCC,            CSV,      ""),
   V(AuthDirInvalid,              LINELIST, NULL),
+  V(AuthDirInvalidCC,            CSV,      ""),
   V(AuthDirFastGuarantee,        MEMUNIT,  "100 KB"),
   V(AuthDirGuardBWGuarantee,     MEMUNIT,  "250 KB"),
   V(AuthDirReject,               LINELIST, NULL),
+  V(AuthDirRejectCC,             CSV,      ""),
   V(AuthDirRejectUnlisted,       BOOL,     "0"),
   V(AuthDirListBadDirs,          BOOL,     "0"),
   V(AuthDirListBadExits,         BOOL,     "0"),

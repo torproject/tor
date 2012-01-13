@@ -1,0 +1,3 @@
+  o Minor features (directory authority):
+    - Authority operators can now vote for all routers in a given
+      country to be BadDir/BadExit/Invali/Rejected.

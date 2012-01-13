@@ -3237,6 +3237,19 @@ typedef struct {
                                  * reject. */
   config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
                                   * never mark as valid. */
+  /** @name AuthDir...CC
+   *
+   * Lists of of country codes to mark as BadDir, BadExit, or Invalid, or to
+   * reject entirely.
+   *
+   * @{
+   */
+  smartlist_t *AuthDirBadDirCC;
+  smartlist_t *AuthDirBadExitCC;
+  smartlist_t *AuthDirRejectCC;
+  smartlist_t *AuthDirInvalidCC;
+  /**@}*/
+
   int AuthDirListBadDirs; /**< True iff we should list bad dirs,
                            * and vote for all other dir mirrors as good. */
   int AuthDirListBadExits; /**< True iff we should list bad exits,
