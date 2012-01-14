@@ -3482,7 +3482,6 @@ control_event_circuit_cannibalized(origin_circuit_t *circ,
                                             old_tv_created);
 }
 
-
 /** Given an AP connection <b>conn</b> and a <b>len</b>-character buffer
  * <b>buf</b>, determine the address:port combination requested on
  * <b>conn</b>, and write it to <b>buf</b>.  Return 0 on success, -1 on
