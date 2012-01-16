@@ -315,7 +315,7 @@ socks_policy_permits_address(const tor_addr_t *addr)
 }
 
 /** Return true iff the address <b>addr</b> is in a country listed in the
- * case-insentive list of country codes <b>cc_list</b>. */
+ * case-insensitive list of country codes <b>cc_list</b>. */
 static int
 addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
 {

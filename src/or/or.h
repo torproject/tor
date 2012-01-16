@@ -3246,8 +3246,8 @@ typedef struct {
    */
   smartlist_t *AuthDirBadDirCC;
   smartlist_t *AuthDirBadExitCC;
-  smartlist_t *AuthDirRejectCC;
   smartlist_t *AuthDirInvalidCC;
+  smartlist_t *AuthDirRejectCC;
   /**@}*/
 
   int AuthDirListBadDirs; /**< True iff we should list bad dirs,
