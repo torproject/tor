@@ -6857,7 +6857,7 @@ get_transport_bindaddr(const char *line, const char *transport)
  *  should bind on. The string is stored on the heap and must be freed
  *  by the caller of this function. */
 char *
-get_bindaddr_for_transport(const char *transport)
+get_stored_bindaddr_for_server_transport(const char *transport)
 {
   char *default_addrport = NULL;
   const char *stored_bindaddr = NULL;

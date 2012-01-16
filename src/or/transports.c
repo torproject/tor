@@ -912,11 +912,12 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   return r;
 }
 
-/** Return a string containing the address:port that <b>transport</b>
- *  should use. It's the responsibility of the caller to free() the
- *  received string. */
+/** Return the string that tor should place in TOR_PT_SERVER_BINDADDR
+ *  while configuring the server managed proxy in <b>mp</b>. The
+ *  string is stored in the heap, and it's the the responsibility of
+ *  the caller to deallocate it after its use. */
 static char *
-get_bindaddr_for_proxy(const managed_proxy_t *mp)
+get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
 {
   char *bindaddr_result = NULL;
   char *bindaddr_tmp = NULL;
@@ -925,7 +926,7 @@ get_bindaddr_for_proxy(const managed_proxy_t *mp)
   tor_assert(mp->is_server);
 
   SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t) {
-    bindaddr_tmp = get_bindaddr_for_transport(t);
+    bindaddr_tmp = get_stored_bindaddr_for_server_transport(t);
 
     smartlist_add_asprintf(string_tmp, "%s-%s", t, bindaddr_tmp);
 
@@ -996,7 +997,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
     tor_asprintf(&orport_env, "TOR_PT_ORPORT=127.0.0.1:%s",
                  options->ORPort->value);
 
-    bindaddr_tmp = get_bindaddr_for_proxy(mp);
+    bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
     tor_asprintf(&bindaddr_env, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
 
     strcpy(extended_env, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200");
@@ -1079,7 +1080,7 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   tor_asprintf(tmp++, "TOR_PT_STATE_LOCATION=%s", state_loc);
   tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
   if (mp->is_server) {
-    bindaddr = get_bindaddr_for_proxy(mp);
+    bindaddr = get_bindaddr_for_server_proxy(mp);
 
     /* XXX temp */
     tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d",
@@ -1131,8 +1132,8 @@ managed_proxy_create(const smartlist_t *transport_list,
   return mp;
 }
 
-/** Register <b>transport</b> using proxy with <b>proxy_argv</b> to
- *  the managed proxy subsystem.
+/** Register proxy with <b>proxy_argv</b>, supporting transports in
+ *  <b>transport_list</b>, to the managed proxy subsystem.
  *  If <b>is_server</b> is true, then the proxy is a server proxy. */
 void
 pt_kickstart_proxy(const smartlist_t *transport_list,
