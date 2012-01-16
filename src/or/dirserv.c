@@ -1938,6 +1938,18 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (guard_tk > TIME_KNOWN_TO_GUARANTEE_FAMILIAR)
     guard_tk = TIME_KNOWN_TO_GUARANTEE_FAMILIAR;
 
+  {
+    /* We can vote on a parameter for the minimum and maximum. */
+    int32_t min_fast, max_fast;
+    min_fast = networkstatus_get_param(NULL, "FastFlagMinThreshold",
+                                       0, 0, INT32_MAX);
+    max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
+                                       INT32_MAX, min_fast, INT32_MAX);
+    if (fast_bandwidth < (uint32_t)min_fast)
+      fast_bandwidth = min_fast;
+    if (fast_bandwidth > (uint32_t)max_fast)
+      fast_bandwidth = max_fast;
+  }
   /* Protect sufficiently fast nodes from being pushed out of the set
    * of Fast nodes. */
   if (options->AuthDirFastGuarantee &&
