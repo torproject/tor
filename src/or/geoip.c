@@ -856,9 +856,7 @@ geoip_get_client_history(geoip_client_action_t action)
   /* Build the result. */
   chunks = smartlist_create();
   SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
-      char *buf=NULL;
-      tor_asprintf(&buf, "%s=%u", ch->country, ch->total);
-      smartlist_add(chunks, buf);
+      smartlist_add_asprintf(chunks, "%s=%u", ch->country, ch->total);
   });
   result = smartlist_join_strings(chunks, ",", 0, NULL);
  done:
@@ -907,10 +905,8 @@ geoip_get_request_history(geoip_client_action_t action)
 
   strings = smartlist_create();
   SMARTLIST_FOREACH(entries, c_hist_t *, ent, {
-      char *buf = NULL;
-      tor_asprintf(&buf, "%s=%u", ent->country, ent->total);
-      smartlist_add(strings, buf);
-    });
+      smartlist_add_asprintf(strings, "%s=%u", ent->country, ent->total);
+  });
   result = smartlist_join_strings(strings, ",", 0, NULL);
   SMARTLIST_FOREACH(strings, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(entries, c_hist_t *, ent, tor_free(ent));

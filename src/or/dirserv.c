@@ -2906,9 +2906,7 @@ generate_v2_networkstatus_opinion(void)
     contact = "(none)";
 
   if (versioning) {
-    size_t v_len = 64+strlen(client_versions)+strlen(server_versions);
-    version_lines = tor_malloc(v_len);
-    tor_snprintf(version_lines, v_len,
+    tor_asprintf(&version_lines,
                  "client-versions %s\nserver-versions %s\n",
                  client_versions, server_versions);
   } else {

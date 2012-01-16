@@ -1973,11 +1973,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   format_iso_time(published, router->cache_info.published_on);
 
   if (router->declared_family && smartlist_len(router->declared_family)) {
-    size_t n;
-    char *family = smartlist_join_strings(router->declared_family, " ", 0, &n);
-    n += strlen("family ") + 2; /* 1 for \n, 1 for \0. */
-    family_line = tor_malloc(n);
-    tor_snprintf(family_line, n, "family %s\n", family);
+    char *family = smartlist_join_strings(router->declared_family,
+                                          " ", 0, NULL);
+    tor_asprintf(&family_line, "family %s\n", family);
     tor_free(family);
   } else {
     family_line = tor_strdup("");
@@ -2267,9 +2265,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   smartlist_add(chunks, pre);
 
   if (geoip_is_loaded()) {
-    char *chunk=NULL;
-    tor_asprintf(&chunk, "geoip-db-digest %s\n", geoip_db_digest());
-    smartlist_add(chunks, chunk);
+    smartlist_add_asprintf(chunks, "geoip-db-digest %s\n", geoip_db_digest());
   }
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {

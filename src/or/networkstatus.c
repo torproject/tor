@@ -598,39 +598,38 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                  hex_str(ds->v3_identity_digest, DIGEST_LEN));
       });
     {
+      char *joined;
       smartlist_t *sl = smartlist_create();
-      char *cp;
       char *tmp = smartlist_join_strings(list_good, " ", 0, NULL);
-      tor_asprintf(&cp, "A consensus needs %d good signatures from recognized "
+      smartlist_add_asprintf(sl,
+                   "A consensus needs %d good signatures from recognized "
                    "authorities for us to accept it. This one has %d (%s).",
                    n_required, n_good, tmp);
       tor_free(tmp);
-      smartlist_add(sl,cp);
       if (n_no_signature) {
         tmp = smartlist_join_strings(list_no_signature, " ", 0, NULL);
-        tor_asprintf(&cp, "%d (%s) of the authorities we know didn't sign it.",
+        smartlist_add_asprintf(sl,
+                     "%d (%s) of the authorities we know didn't sign it.",
                      n_no_signature, tmp);
         tor_free(tmp);
-        smartlist_add(sl,cp);
       }
       if (n_unknown) {
-        tor_asprintf(&cp, "It has %d signatures from authorities we don't "
+        smartlist_add_asprintf(sl,
+                      "It has %d signatures from authorities we don't "
                       "recognize.", n_unknown);
-        smartlist_add(sl,cp);
       }
       if (n_bad) {
-        tor_asprintf(&cp, "%d of the signatures on it didn't verify "
+        smartlist_add_asprintf(sl, "%d of the signatures on it didn't verify "
                       "correctly.", n_bad);
-        smartlist_add(sl,cp);
       }
       if (n_missing_key) {
-        tor_asprintf(&cp, "We were unable to check %d of the signatures, "
+        smartlist_add_asprintf(sl,
+                      "We were unable to check %d of the signatures, "
                       "because we were missing the keys.", n_missing_key);
-        smartlist_add(sl,cp);
       }
-      cp = smartlist_join_strings(sl, " ", 0, NULL);
-      log(severity, LD_DIR, "%s", cp);
-      tor_free(cp);
+      joined = smartlist_join_strings(sl, " ", 0, NULL);
+      log(severity, LD_DIR, "%s", joined);
+      tor_free(joined);
       SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
       smartlist_free(sl);
     }
@@ -2160,9 +2159,8 @@ networkstatus_dump_bridge_status_to_file(time_t now)
 {
   char *status = networkstatus_getinfo_by_purpose("bridge", now);
   const or_options_t *options = get_options();
-  size_t len = strlen(options->DataDirectory) + 32;
-  char *fname = tor_malloc(len);
-  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"networkstatus-bridges",
+  char *fname = NULL;
+  tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
                options->DataDirectory);
   write_str_to_file(fname,status,0);
   tor_free(fname);

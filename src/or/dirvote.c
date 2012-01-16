@@ -581,15 +581,13 @@ make_consensus_method_list(int low, int high, const char *separator)
 {
   char *list;
 
-  char b[32];
   int i;
   smartlist_t *lst;
   lst = smartlist_create();
   for (i = low; i <= high; ++i) {
     if (!consensus_method_is_supported(i))
       continue;
-    tor_snprintf(b, sizeof(b), "%d", i);
-    smartlist_add(lst, tor_strdup(b));
+    smartlist_add_asprintf(lst, "%d", i);
   }
   list = smartlist_join_strings(lst, separator, 0, NULL);
   tor_assert(list);
@@ -810,8 +808,6 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
   int64_t Wmg = -1, Wme = -1, Wmd = -1;
   int64_t Wed = -1, Wee = -1;
   const char *casename;
-  char buf[512];
-  int r;
 
   if (G <= 0 || M <= 0 || E <= 0 || D <= 0) {
     log_warn(LD_DIR, "Consensus with empty bandwidth: "
@@ -1019,7 +1015,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
    *
    * NOTE: This list is sorted.
    */
-  r = tor_snprintf(buf, sizeof(buf),
+  smartlist_add_asprintf(chunks,
      "bandwidth-weights Wbd=%d Wbe=%d Wbg=%d Wbm=%d "
      "Wdb=%d "
      "Web=%d Wed=%d Wee=%d Weg=%d Wem=%d "
@@ -1030,13 +1026,6 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
      (int)weight_scale, (int)Wed, (int)Wee, (int)Wed, (int)Wee,
      (int)weight_scale, (int)Wgd, (int)Wgg, (int)Wgg,
      (int)weight_scale, (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale);
-  if (r<0) {
-    log_warn(LD_BUG,
-             "Not enough space in buffer for bandwidth-weights line.");
-    *buf = '\0';
-    return 0;
-  }
-  smartlist_add(chunks, tor_strdup(buf));
 
   log_notice(LD_CIRC, "Computed bandwidth weights for %s with v10: "
              "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
@@ -1060,8 +1049,6 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
   int64_t Wmg = -1, Wme = -1, Wmd = -1;
   int64_t Wed = -1, Wee = -1;
   const char *casename;
-  char buf[512];
-  int r;
 
   if (G <= 0 || M <= 0 || E <= 0 || D <= 0) {
     log_warn(LD_DIR, "Consensus with empty bandwidth: "
@@ -1323,7 +1310,7 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
    *
    * NOTE: This list is sorted.
    */
-  r = tor_snprintf(buf, sizeof(buf),
+  smartlist_add_asprintf(chunks,
      "Wbd=%d Wbe=%d Wbg=%d Wbm=%d "
      "Wdb=%d "
      "Web=%d Wed=%d Wee=%d Weg=%d Wem=%d "
@@ -1334,12 +1321,7 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
      (int)weight_scale, (int)Wed, (int)Wee, (int)Wed, (int)Wee,
      (int)weight_scale, (int)Wgd, (int)Wgg, (int)Wgg,
      (int)weight_scale, (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale);
-  if (r<0) {
-    log_warn(LD_BUG,
-             "Not enough space in buffer for bandwidth-weights line.");
-    *buf = '\0';
-  }
-  smartlist_add(chunks, tor_strdup(buf));
+
   log_notice(LD_CIRC, "Computed bandwidth weights for %s with v9: "
              "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
              " T="I64_FORMAT,
@@ -1475,7 +1457,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
   chunks = smartlist_create();
 
   {
-    char *buf=NULL;
     char va_buf[ISO_TIME_LEN+1], fu_buf[ISO_TIME_LEN+1],
       vu_buf[ISO_TIME_LEN+1];
     char *flaglist;
@@ -1484,20 +1465,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
     format_iso_time(vu_buf, valid_until);
     flaglist = smartlist_join_strings(flags, " ", 0, NULL);
 
-    tor_asprintf(&buf, "network-status-version 3%s%s\n"
+    smartlist_add_asprintf(chunks, "network-status-version 3%s%s\n"
                  "vote-status consensus\n",
                  flavor == FLAV_NS ? "" : " ",
                  flavor == FLAV_NS ? "" : flavor_name);
 
-    smartlist_add(chunks, buf);
-
     if (consensus_method >= 2) {
-      tor_asprintf(&buf, "consensus-method %d\n",
+      smartlist_add_asprintf(chunks, "consensus-method %d\n",
                    consensus_method);
-      smartlist_add(chunks, buf);
     }
 
-    tor_asprintf(&buf,
+    smartlist_add_asprintf(chunks,
                  "valid-after %s\n"
                  "fresh-until %s\n"
                  "valid-until %s\n"
@@ -1508,7 +1486,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
                  va_buf, fu_buf, vu_buf,
                  vote_seconds, dist_seconds,
                  client_versions, server_versions, flaglist);
-    smartlist_add(chunks, buf);
 
     tor_free(flaglist);
   }
@@ -1550,7 +1527,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       char votedigest[HEX_DIGEST_LEN+1];
       networkstatus_t *v = e->v;
       networkstatus_voter_info_t *voter = get_voter(v);
-      char *buf = NULL;
 
       if (e->is_legacy)
         tor_assert(consensus_method >= 2);
@@ -1559,20 +1535,18 @@ networkstatus_compute_consensus(smartlist_t *votes,
       base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
                     DIGEST_LEN);
 
-      tor_asprintf(&buf,
+      smartlist_add_asprintf(chunks,
                    "dir-source %s%s %s %s %s %d %d\n",
                    voter->nickname, e->is_legacy ? "-legacy" : "",
                    fingerprint, voter->address, fmt_addr32(voter->addr),
                    voter->dir_port,
                    voter->or_port);
-      smartlist_add(chunks, buf);
       if (! e->is_legacy) {
-        tor_asprintf(&buf,
+        smartlist_add_asprintf(chunks,
                      "contact %s\n"
                      "vote-digest %s\n",
                      voter->contact,
                      votedigest);
-        smartlist_add(chunks, buf);
       }
     } SMARTLIST_FOREACH_END(e);
     SMARTLIST_FOREACH(dir_sources, dir_src_ent_t *, e, tor_free(e));
@@ -1709,7 +1683,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
-      char *buf=NULL;
       char microdesc_digest[DIGEST256_LEN];
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
@@ -1977,10 +1950,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /*     Now an m line, if applicable. */
       if (flavor == FLAV_MICRODESC &&
           !tor_digest256_is_zero(microdesc_digest)) {
-        char m[BASE64_DIGEST256_LEN+1], *cp;
+        char m[BASE64_DIGEST256_LEN+1];
         digest256_to_base64(m, microdesc_digest);
-        tor_asprintf(&cp, "m %s\n", m);
-        smartlist_add(chunks, cp);
+        smartlist_add_asprintf(chunks, "m %s\n", m);
       }
       /*     Next line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,
@@ -1993,15 +1965,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        char *cp=NULL;
-        tor_asprintf(&cp, "w Bandwidth=%d\n", rs_out.bandwidth);
-        smartlist_add(chunks, cp);
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d\n", rs_out.bandwidth);
       }
 
       /*     Now the exitpolicy summary line. */
       if (rs_out.has_exitsummary && flavor == FLAV_NS) {
-        tor_asprintf(&buf, "p %s\n", rs_out.exitsummary);
-        smartlist_add(chunks, buf);
+        smartlist_add_asprintf(chunks, "p %s\n", rs_out.exitsummary);
       }
 
       /* And the loop is over and we move on to the next router */
@@ -2083,7 +2052,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     size_t digest_len =
       flavor == FLAV_NS ? DIGEST_LEN : DIGEST256_LEN;
     const char *algname = crypto_digest_algorithm_get_name(digest_alg);
-    char *buf = NULL;
     char sigbuf[4096];
 
     smartlist_add(chunks, tor_strdup("directory-signature "));
@@ -2097,14 +2065,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* add the junk that will go at the end of the line. */
     if (flavor == FLAV_NS) {
-      tor_asprintf(&buf, "%s %s\n", fingerprint,
+      smartlist_add_asprintf(chunks, "%s %s\n", fingerprint,
                    signing_key_fingerprint);
     } else {
-      tor_asprintf(&buf, "%s %s %s\n",
+      smartlist_add_asprintf(chunks, "%s %s %s\n",
                    algname, fingerprint,
                    signing_key_fingerprint);
     }
-    smartlist_add(chunks, buf);
     /* And the signature. */
     sigbuf[0] = '\0';
     if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
@@ -2122,14 +2089,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
       crypto_pk_get_fingerprint(legacy_signing_key,
                                 signing_key_fingerprint, 0);
       if (flavor == FLAV_NS) {
-        tor_asprintf(&buf, "%s %s\n", fingerprint,
+        smartlist_add_asprintf(chunks, "%s %s\n", fingerprint,
                      signing_key_fingerprint);
       } else {
-        tor_asprintf(&buf, "%s %s %s\n",
+        smartlist_add_asprintf(chunks, "%s %s %s\n",
                      algname, fingerprint,
                      signing_key_fingerprint);
       }
-      smartlist_add(chunks, buf);
       sigbuf[0] = '\0';
       if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
                                          digest, digest_len,
@@ -2334,20 +2300,19 @@ networkstatus_format_signatures(networkstatus_t *consensus,
       base16_encode(sk, sizeof(sk), sig->signing_key_digest, DIGEST_LEN);
       base16_encode(id, sizeof(id), sig->identity_digest, DIGEST_LEN);
       if (flavor == FLAV_NS) {
-        tor_snprintf(buf, sizeof(buf),
+        smartlist_add_asprintf(elements,
                      "%s %s %s\n-----BEGIN SIGNATURE-----\n",
                      keyword, id, sk);
       } else {
         const char *digest_name =
           crypto_digest_algorithm_get_name(sig->alg);
-        tor_snprintf(buf, sizeof(buf),
+        smartlist_add_asprintf(elements,
                      "%s%s%s %s %s %s\n-----BEGIN SIGNATURE-----\n",
                      keyword,
                      for_detached_signatures ? " " : "",
                      for_detached_signatures ? flavor_name : "",
                      digest_name, id, sk);
       }
-      smartlist_add(elements, tor_strdup(buf));
       base64_encode(buf, sizeof(buf), sig->signature, sig->signature_len);
       strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
       smartlist_add(elements, tor_strdup(buf));
@@ -2370,7 +2335,6 @@ char *
 networkstatus_get_detached_signatures(smartlist_t *consensuses)
 {
   smartlist_t *elements;
-  char buf[4096];
   char *result = NULL, *sigs = NULL;
   networkstatus_t *consensus_ns = NULL;
   tor_assert(consensuses);
@@ -2399,12 +2363,11 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
     format_iso_time(fu_buf, consensus_ns->fresh_until);
     format_iso_time(vu_buf, consensus_ns->valid_until);
 
-    tor_snprintf(buf, sizeof(buf),
+    smartlist_add_asprintf(elements,
                  "consensus-digest %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
                  "valid-until %s\n", d, va_buf, fu_buf, vu_buf);
-    smartlist_add(elements, tor_strdup(buf));
   }
 
   /* Get all the digests for the non-FLAV_NS consensuses */
@@ -2423,9 +2386,8 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
       if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
       base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
-      tor_snprintf(buf, sizeof(buf), "additional-digest %s %s %s\n",
+      smartlist_add_asprintf(elements, "additional-digest %s %s %s\n",
                    flavor_name, alg_name, d);
-      smartlist_add(elements, tor_strdup(buf));
     }
   } SMARTLIST_FOREACH_END(ns);
 

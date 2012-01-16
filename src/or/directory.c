@@ -1124,9 +1124,7 @@ directory_send_command(dir_connection_t *conn,
   smartlist_t *headers = smartlist_create();
   char *url;
   char request[8192];
-  char *header;
   const char *httpcommand = NULL;
-  size_t len;
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
@@ -1147,8 +1145,7 @@ directory_send_command(dir_connection_t *conn,
   if (if_modified_since) {
     char b[RFC1123_TIME_LEN+1];
     format_rfc1123_time(b, if_modified_since);
-    tor_asprintf(&header, "If-Modified-Since: %s\r\n", b);
-    smartlist_add(headers, header);
+    smartlist_add_asprintf(headers, "If-Modified-Since: %s\r\n", b);
   }
 
   /* come up with some proxy lines, if we're using one. */
@@ -1163,11 +1160,10 @@ directory_send_command(dir_connection_t *conn,
         log_warn(LD_BUG, "Encoding http authenticator failed");
     }
     if (base64_authenticator) {
-      tor_asprintf(&header,
+      smartlist_add_asprintf(headers,
                    "Proxy-Authorization: Basic %s\r\n",
                    base64_authenticator);
       tor_free(base64_authenticator);
-      smartlist_add(headers, header);
     }
   } else {
     proxystring[0] = 0;
@@ -1177,9 +1173,7 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/status/%s", resource);
+      tor_asprintf(&url, "/tor/status/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
       /* resource is optional.  If present, it's a flavor name */
@@ -1194,17 +1188,13 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/keys/%s", resource);
+      tor_asprintf(&url, "/tor/keys/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:
       tor_assert(resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/status-vote/next/%s.z", resource);
+      tor_asprintf(&url, "/tor/status-vote/next/%s.z", resource);
       break;
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       tor_assert(!resource);
@@ -1215,16 +1205,12 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_SERVERDESC:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/server/%s", resource);
+      tor_asprintf(&url, "/tor/server/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_EXTRAINFO:
       tor_assert(resource);
       httpcommand = "GET";
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/extra/%s", resource);
+      tor_asprintf(&url, "/tor/extra/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_MICRODESC:
       tor_assert(resource);
@@ -1238,8 +1224,7 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "POST";
       url = tor_strdup("/tor/");
       if (why) {
-        tor_asprintf(&header, "X-Desc-Gen-Reason: %s\r\n", why);
-        smartlist_add(headers, header);
+        smartlist_add_asprintf(headers, "X-Desc-Gen-Reason: %s\r\n", why);
       }
       break;
     }
@@ -1260,9 +1245,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
       tor_assert(!payload);
       httpcommand = "GET";
-      len = strlen(resource) + 32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/rendezvous2/%s", resource);
+      tor_asprintf(&url, "/tor/rendezvous2/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);
@@ -1294,15 +1277,16 @@ directory_send_command(dir_connection_t *conn,
   tor_free(url);
 
   if (!strcmp(httpcommand, "POST") || payload) {
-    tor_asprintf(&header, "Content-Length: %lu\r\n",
+    smartlist_add_asprintf(headers, "Content-Length: %lu\r\n",
                  payload ? (unsigned long)payload_len : 0);
-    smartlist_add(headers, header);
   }
 
-  header = smartlist_join_strings(headers, "", 0, NULL);
-  tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nHost: %s\r\n%s\r\n",
-               hoststring, header);
-  tor_free(header);
+  {
+    char *header = smartlist_join_strings(headers, "", 0, NULL);
+    tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nHost: %s\r\n%s\r\n",
+                 hoststring, header);
+    tor_free(header);
+  }
 
   connection_write_to_buf(request, strlen(request), TO_CONN(conn));
 
@@ -2479,11 +2463,9 @@ note_client_request(int purpose, int compressed, size_t bytes)
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:  kind = "dl/ul-rend2"; break;
   }
   if (kind) {
-    key = tor_malloc(256);
-    tor_snprintf(key, 256, "%s%s", kind, compressed?".z":"");
+    tor_asprintf(&key, "%s%s", kind, compressed?".z":"");
   } else {
-    key = tor_malloc(256);
-    tor_snprintf(key, 256, "unknown purpose (%d)%s",
+    tor_asprintf(&key, "unknown purpose (%d)%s",
                  purpose, compressed?".z":"");
   }
   note_request(key, bytes);
@@ -2522,7 +2504,6 @@ char *
 directory_dump_request_log(void)
 {
   smartlist_t *lines;
-  char tmp[256];
   char *result;
   strmap_iter_t *iter;
 
@@ -2538,9 +2519,8 @@ directory_dump_request_log(void)
     request_t *r;
     strmap_iter_get(iter, &key, &val);
     r = val;
-    tor_snprintf(tmp, sizeof(tmp), "%s  "U64_FORMAT"  "U64_FORMAT"\n",
+    smartlist_add_asprintf(lines, "%s  "U64_FORMAT"  "U64_FORMAT"\n",
                  key, U64_PRINTF_ARG(r->bytes), U64_PRINTF_ARG(r->count));
-    smartlist_add(lines, tor_strdup(tmp));
   }
   smartlist_sort_strings(lines);
   result = smartlist_join_strings(lines, "", 0, NULL);
@@ -3294,8 +3274,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #define ADD_MALLINFO_LINE(x) do {                               \
-    tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);        \
-    smartlist_add(lines, tor_strdup(tmp));                      \
+    smartlist_add_asprintf(lines, "%s %d\n", #x, mi.x);        \
   }while(0);
 
   if (!strcmp(url,"/tor/mallinfo.txt") &&
@@ -3304,7 +3283,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     size_t len;
     struct mallinfo mi;
     smartlist_t *lines;
-    char tmp[256];
 
     memset(&mi, 0, sizeof(mi));
     mi = mallinfo();

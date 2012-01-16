@@ -1218,7 +1218,7 @@ policy_summarize(smartlist_t *policy)
   smartlist_t *summary = policy_summary_create();
   smartlist_t *accepts, *rejects;
   int i, last, start_prt;
-  size_t accepts_len, rejects_len, shorter_len, final_size;
+  size_t accepts_len, rejects_len;
   char *accepts_str = NULL, *rejects_str = NULL, *shorter_str, *result;
   const char *prefix;
 
@@ -1290,21 +1290,15 @@ policy_summarize(smartlist_t *policy)
     tor_assert(*c == ',');
     *c = '\0';
 
-    shorter_len = strlen(shorter_str);
   } else if (rejects_len < accepts_len) {
     shorter_str = rejects_str;
-    shorter_len = rejects_len;
     prefix = "reject";
   } else {
     shorter_str = accepts_str;
-    shorter_len = accepts_len;
     prefix = "accept";
   }
 
-  final_size = strlen(prefix)+1+shorter_len+1;
-  tor_assert(final_size <= MAX_EXITPOLICY_SUMMARY_LEN+1);
-  result = tor_malloc(final_size);
-  tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
+  tor_asprintf(&result, "%s %s", prefix, shorter_str);
 
  cleanup:
   /* cleanup */

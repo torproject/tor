@@ -781,22 +781,20 @@ set_options(or_options_t *new_val, char **msg)
 extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
-static char *_version = NULL;
+static char *the_tor_version = NULL;
 
 /** Return the current Tor version. */
 const char *
 get_version(void)
 {
-  if (_version == NULL) {
+  if (the_tor_version == NULL) {
     if (strlen(tor_git_revision)) {
-      size_t len = strlen(VERSION)+strlen(tor_git_revision)+16;
-      _version = tor_malloc(len);
-      tor_snprintf(_version, len, "%s (git-%s)", VERSION, tor_git_revision);
+      tor_asprintf(&the_tor_version, "%s (git-%s)", VERSION, tor_git_revision);
     } else {
-      _version = tor_strdup(VERSION);
+      the_tor_version = tor_strdup(VERSION);
     }
   }
-  return _version;
+  return the_tor_version;
 }
 
 /** Release additional memory allocated in options
@@ -841,7 +839,7 @@ config_free_all(void)
 
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
-  tor_free(_version);
+  tor_free(the_tor_version);
   tor_free(global_dirfrontpagecontents);
 }
 
@@ -1174,9 +1172,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   control_ports_write_to_file();
 
   if (directory_caches_v2_dir_info(options)) {
-    size_t len = strlen(options->DataDirectory)+32;
-    char *fn = tor_malloc(len);
-    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
+    char *fn = NULL;
+    tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-status",
                  options->DataDirectory);
     if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK,
                           options->User) < 0) {
@@ -1650,10 +1647,8 @@ options_act(const or_options_t *old_options)
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
       const char *conf_root = get_windows_conf_root();
-      size_t len = strlen(conf_root)+16;
       tor_free(actual_fname);
-      actual_fname = tor_malloc(len+1);
-      tor_snprintf(actual_fname, len, "%s\\geoip", conf_root);
+      tor_asprintf(&actual_fname, "%s\\geoip", conf_root);
     }
 #endif
     geoip_load_file(actual_fname, options);
@@ -3147,11 +3142,9 @@ config_dump(const config_format_t *fmt, const void *default_options,
     line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name, 1);
 
     for (; line; line = line->next) {
-      char *tmp;
-      tor_asprintf(&tmp, "%s%s %s\n",
+      smartlist_add_asprintf(elements, "%s%s %s\n",
                    comment_option ? "# " : "",
                    line->key, line->value);
-      smartlist_add(elements, tmp);
     }
     config_free_lines(assigned);
   }
@@ -3159,9 +3152,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->var_offset);
     for (; line; line = line->next) {
-      char *tmp;
-      tor_asprintf(&tmp, "%s %s\n", line->key, line->value);
-      smartlist_add(elements, tmp);
+      smartlist_add_asprintf(elements, "%s %s\n", line->key, line->value);
     }
   }
 
@@ -3510,11 +3501,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       SMARTLIST_FOREACH(options->FirewallPorts, const char *, portno,
       {
         int p = atoi(portno);
-        char *s;
         if (p<0) continue;
-        s = tor_malloc(16);
-        tor_snprintf(s, 16, "*:%d", p);
-        smartlist_add(instead, s);
+        smartlist_add_asprintf(instead, "*:%d", p);
       });
       new_line->value = smartlist_join_strings(instead,",",0,NULL);
       /* These have been deprecated since 0.1.1.5-alpha-cvs */
@@ -6154,18 +6142,12 @@ write_configuration_file(const char *fname, const or_options_t *options)
 
   if (rename_old) {
     int i = 1;
-    size_t fn_tmp_len = strlen(fname)+32;
-    char *fn_tmp;
-    tor_assert(fn_tmp_len > strlen(fname)); /*check for overflow*/
-    fn_tmp = tor_malloc(fn_tmp_len);
+    char *fn_tmp = NULL;
     while (1) {
-      if (tor_snprintf(fn_tmp, fn_tmp_len, "%s.orig.%d", fname, i)<0) {
-        log_warn(LD_BUG, "tor_snprintf failed inexplicably");
-        tor_free(fn_tmp);
-        goto err;
-      }
+      tor_asprintf(&fn_tmp, "%s.orig.%d", fname, i);
       if (file_status(fn_tmp) == FN_NOENT)
         break;
+      tor_free(fn_tmp);
       ++i;
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
@@ -6612,13 +6594,13 @@ or_state_save_broken(char *fname)
 {
   int i;
   file_status_t status;
-  size_t len = strlen(fname)+16;
-  char *fname2 = tor_malloc(len);
+  char *fname2 = NULL;
   for (i = 0; i < 100; ++i) {
-    tor_snprintf(fname2, len, "%s.%d", fname, i);
+    tor_asprintf(&fname2, "%s.%d", fname, i);
     status = file_status(fname2);
     if (status == FN_NOENT)
       break;
+    tor_free(fname2);
   }
   if (i == 100) {
     log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
@@ -6994,7 +6976,6 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; _option_vars[i].name; ++i) {
       const config_var_t *var = &_option_vars[i];
       const char *type;
-      char *line;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
@@ -7018,8 +6999,7 @@ getinfo_helper_config(control_connection_t *conn,
       }
       if (!type)
         continue;
-      tor_asprintf(&line, "%s %s\n",var->name,type);
-      smartlist_add(sl, line);
+      smartlist_add_asprintf(sl, "%s %s\n",var->name,type);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));

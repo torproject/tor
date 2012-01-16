@@ -525,18 +525,15 @@ control_ports_write_to_file(void)
   lines = smartlist_create();
 
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
-    char *port_str = NULL;
     if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
       continue;
 #ifdef AF_UNIX
     if (conn->socket_family == AF_UNIX) {
-      tor_asprintf(&port_str, "UNIX_PORT=%s\n", conn->address);
-      smartlist_add(lines, port_str);
+      smartlist_add_asprintf(lines, "UNIX_PORT=%s\n", conn->address);
       continue;
     }
 #endif
-    tor_asprintf(&port_str, "PORT=%s:%d\n", conn->address, conn->port);
-    smartlist_add(lines, port_str);
+    smartlist_add_asprintf(lines, "PORT=%s:%d\n", conn->address, conn->port);
   } SMARTLIST_FOREACH_END(conn);
 
   joined = smartlist_join_strings(lines, "", 0, NULL);
@@ -700,7 +697,6 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
     if (*eq == '=') {
       char *val=NULL;
       size_t val_len=0;
-      size_t ent_len;
       if (*body != '\"') {
         char *val_start = body;
         while (!TOR_ISSPACE(*body))
@@ -718,9 +714,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
           return 0;
         }
       }
-      ent_len = strlen(key)+val_len+3;
-      entry = tor_malloc(ent_len+1);
-      tor_snprintf(entry, ent_len, "%s %s", key, val);
+      tor_asprintf(&entry, "%s %s", key, val);
       tor_free(key);
       tor_free(val);
     } else {
@@ -820,19 +814,13 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
       config_line_t *answer = option_get_assignment(options,q);
       if (!answer) {
         const char *name = option_get_canonical_name(q);
-        size_t alen = strlen(name)+8;
-        char *astr = tor_malloc(alen);
-        tor_snprintf(astr, alen, "250-%s\r\n", name);
-        smartlist_add(answers, astr);
+        smartlist_add_asprintf(answers, "250-%s\r\n", name);
       }
 
       while (answer) {
         config_line_t *next;
-        size_t alen = strlen(answer->key)+strlen(answer->value)+8;
-        char *astr = tor_malloc(alen);
-        tor_snprintf(astr, alen, "250-%s=%s\r\n",
+        smartlist_add_asprintf(answers, "250-%s=%s\r\n",
                      answer->key, answer->value);
-        smartlist_add(answers, astr);
 
         next = answer->next;
         tor_free(answer->key);
@@ -1307,12 +1295,9 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
-      size_t anslen = strlen(line)+512;
-      char *ans = tor_malloc(anslen);
       if (address_is_invalid_destination(to, 1)) {
-        tor_snprintf(ans, anslen,
+        smartlist_add_asprintf(reply,
                      "512-syntax error: invalid address '%s'", to);
-        smartlist_add(reply, ans);
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
@@ -1320,28 +1305,22 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!address) {
-          tor_snprintf(ans, anslen,
+          smartlist_add_asprintf(reply,
                        "451-resource exhausted: skipping '%s'", line);
-          smartlist_add(reply, ans);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
                    safe_str_client(line));
         } else {
-          tor_snprintf(ans, anslen, "250-%s=%s", address, to);
-          smartlist_add(reply, ans);
+          smartlist_add_asprintf(reply, "250-%s=%s", address, to);
         }
       } else {
         addressmap_register(from, tor_strdup(to), 1,
                             ADDRMAPSRC_CONTROLLER, 0, 0);
-        tor_snprintf(ans, anslen, "250-%s", line);
-        smartlist_add(reply, ans);
+        smartlist_add_asprintf(reply, "250-%s", line);
       }
     } else {
-      size_t anslen = strlen(line)+256;
-      char *ans = tor_malloc(anslen);
-      tor_snprintf(ans, anslen, "512-syntax error: mapping '%s' is "
+      smartlist_add_asprintf(reply, "512-syntax error: mapping '%s' is "
                    "not of expected form 'foo=bar'.", line);
-      smartlist_add(reply, ans);
       log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
                            "number of items.",
                            safe_str_client(line));
@@ -1558,7 +1537,6 @@ getinfo_helper_listeners(control_connection_t *control_conn,
 
   res = smartlist_create();
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
-    char *addr;
     struct sockaddr_storage ss;
     socklen_t ss_len = sizeof(ss);
 
@@ -1566,14 +1544,13 @@ getinfo_helper_listeners(control_connection_t *control_conn,
       continue;
 
     if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
-      tor_asprintf(&addr, "%s:%d", conn->address, (int)conn->port);
+      smartlist_add_asprintf(res, "%s:%d", conn->address, (int)conn->port);
     } else {
       char *tmp = tor_sockaddr_to_str((struct sockaddr *)&ss);
-      addr = esc_for_log(tmp);
+      smartlist_add(res, esc_for_log(tmp));
       tor_free(tmp);
     }
-    if (addr)
-      smartlist_add(res, addr);
+
   } SMARTLIST_FOREACH_END(conn);
 
   *answer = smartlist_join_strings(res, " ", 0, NULL);
@@ -1675,13 +1652,13 @@ getinfo_helper_dir(control_connection_t *control_conn,
                               ri->cache_info.annotations_len);
     }
   } else if (!strcmpstart(question, "dir/server/")) {
-    size_t answer_len = 0, url_len = strlen(question)+2;
-    char *url = tor_malloc(url_len);
+    size_t answer_len = 0;
+    char *url = NULL;
     smartlist_t *descs = smartlist_create();
     const char *msg;
     int res;
     char *cp;
-    tor_snprintf(url, url_len, "/tor/%s", question+4);
+    tor_asprintf(&url, "/tor/%s", question+4);
     res = dirserv_get_routerdescs(descs, url, &msg);
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
@@ -1798,7 +1775,6 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   }
 
   {
-    char *buildflags = NULL;
     cpath_build_state_t *build_state = circ->build_state;
     smartlist_t *flaglist = smartlist_create();
     char *flaglist_joined;
@@ -1816,8 +1792,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     if (smartlist_len(flaglist)) {
       flaglist_joined = smartlist_join_strings(flaglist, ",", 0, NULL);
 
-      tor_asprintf(&buildflags, "BUILD_FLAGS=%s", flaglist_joined);
-      smartlist_add(descparts, buildflags);
+      smartlist_add_asprintf(descparts, "BUILD_FLAGS=%s", flaglist_joined);
 
       tor_free(flaglist_joined);
     }
@@ -1825,43 +1800,28 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_free(flaglist);
   }
 
-  {
-    char *purpose = NULL;
-    tor_asprintf(&purpose, "PURPOSE=%s",
-                 circuit_purpose_to_controller_string(circ->_base.purpose));
-    smartlist_add(descparts, purpose);
-  }
+  smartlist_add_asprintf(descparts, "PURPOSE=%s",
+                    circuit_purpose_to_controller_string(circ->_base.purpose));
 
   {
-    char *hs_state_arg = NULL;
     const char *hs_state =
       circuit_purpose_to_controller_hs_state_string(circ->_base.purpose);
 
     if (hs_state != NULL) {
-      tor_asprintf(&hs_state_arg, "HS_STATE=%s",
-                   hs_state);
-
-      smartlist_add(descparts, hs_state_arg);
+      smartlist_add_asprintf(descparts, "HS_STATE=%s", hs_state);
     }
   }
 
   if (circ->rend_data != NULL) {
-    char *rend_query_arg = NULL;
-
-    tor_asprintf(&rend_query_arg, "REND_QUERY=%s",
+    smartlist_add_asprintf(descparts, "REND_QUERY=%s",
                  circ->rend_data->onion_address);
-
-    smartlist_add(descparts, rend_query_arg);
   }
 
   {
-    char *time_created_arg = NULL;
     char tbuf[ISO_TIME_USEC_LEN+1];
     format_iso_time_nospace_usec(tbuf, &circ->_base.timestamp_created);
 
-    tor_asprintf(&time_created_arg, "TIME_CREATED=%s", tbuf);
-
-    smartlist_add(descparts, time_created_arg);
+    smartlist_add_asprintf(descparts, "TIME_CREATED=%s", tbuf);
   }
 
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
@@ -1885,8 +1845,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_t *status = smartlist_create();
     for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
       origin_circuit_t *circ;
-      char *s, *circdesc;
-      size_t slen;
+      char *circdesc;
       const char *state;
       if (! CIRCUIT_IS_ORIGIN(circ_) || circ_->marked_for_close)
         continue;
@@ -1901,12 +1860,9 @@ getinfo_helper_events(control_connection_t *control_conn,
 
       circdesc = circuit_describe_status_for_controller(circ);
 
-      slen = strlen(circdesc)+strlen(state)+30;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s%s%s",
+      smartlist_add_asprintf(status, "%lu %s%s%s",
                    (unsigned long)circ->global_identifier,
                    state, *circdesc ? " " : "", circdesc);
-      smartlist_add(status, s);
       tor_free(circdesc);
     }
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
@@ -1919,8 +1875,6 @@ getinfo_helper_events(control_connection_t *control_conn,
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
       entry_connection_t *conn;
-      char *s;
-      size_t slen;
       circuit_t *circ;
       origin_circuit_t *origin_circ = NULL;
       if (base_conn->type != CONN_TYPE_AP ||
@@ -1955,14 +1909,11 @@ getinfo_helper_events(control_connection_t *control_conn,
       if (circ && CIRCUIT_IS_ORIGIN(circ))
         origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
-      slen = strlen(buf)+strlen(state)+32;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s %lu %s",
+      smartlist_add_asprintf(status, "%lu %s %lu %s",
                    (unsigned long) base_conn->global_identifier,state,
                    origin_circ?
                          (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
-      smartlist_add(status, s);
     } SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
@@ -1972,9 +1923,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_t *status = smartlist_create();
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
-      char *s;
       char name[128];
-      size_t slen;
       or_connection_t *conn;
       if (base_conn->type != CONN_TYPE_OR || base_conn->marked_for_close)
         continue;
@@ -1986,10 +1935,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       else
         state = "NEW";
       orconn_target_get_name(name, sizeof(name), conn);
-      slen = strlen(name)+strlen(state)+2;
-      s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%s %s", name, state);
-      smartlist_add(status, s);
+      smartlist_add_asprintf(status, "%s %s", name, state);
     } SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
@@ -2033,8 +1979,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
       *answer = tor_strdup(check_whether_dirport_reachable() ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded")) {
-      *answer = tor_malloc(16);
-      tor_snprintf(*answer, 16, "OR=%d DIR=%d",
+      tor_asprintf(answer, "OR=%d DIR=%d",
                    check_whether_orport_reachable() ? 1 : 0,
                    check_whether_dirport_reachable() ? 1 : 0);
     } else if (!strcmp(question, "status/bootstrap-phase")) {
@@ -2070,9 +2015,7 @@ getinfo_helper_events(control_connection_t *control_conn,
           }
       } else if (!strcmp(question, "status/version/num-versioning") ||
                  !strcmp(question, "status/version/num-concurring")) {
-        char s[33];
-        tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_DIRINFO));
-        *answer = tor_strdup(s);
+        tor_asprintf(answer, "%d", get_n_authorities(V3_DIRINFO));
         log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
                  "information", question);
       }
@@ -2218,18 +2161,16 @@ static char *
 list_getinfo_options(void)
 {
   int i;
-  char *buf=NULL;
   smartlist_t *lines = smartlist_create();
   char *ans;
   for (i = 0; getinfo_items[i].varname; ++i) {
     if (!getinfo_items[i].desc)
       continue;
 
-    tor_asprintf(&buf, "%s%s -- %s\n",
+    smartlist_add_asprintf(lines, "%s%s -- %s\n",
                  getinfo_items[i].varname,
                  getinfo_items[i].is_prefix ? "*" : "",
                  getinfo_items[i].desc);
-    smartlist_add(lines, buf);
   }
   smartlist_sort_strings(lines);
 
@@ -3551,8 +3492,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     const char *reason_str = stream_end_reason_to_control_string(reason_code);
     char *r = NULL;
     if (!reason_str) {
-      r = tor_malloc(16);
-      tor_snprintf(r, 16, " UNKNOWN_%d", reason_code);
+      tor_asprintf(&r, " UNKNOWN_%d", reason_code);
       reason_str = r;
     }
     if (reason_code & END_STREAM_REASON_FLAG_REMOTE)
@@ -3837,16 +3777,13 @@ control_event_descriptors_changed(smartlist_t *routers)
   {
     smartlist_t *names = smartlist_create();
     char *ids;
-    size_t names_len;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
         router_get_verbose_nickname(b, ri);
         smartlist_add(names, b);
       });
-    ids = smartlist_join_strings(names, " ", 0, &names_len);
-    names_len = strlen(ids)+32;
-    msg = tor_malloc(names_len);
-    tor_snprintf(msg, names_len, "650 NEWDESC %s\r\n", ids);
+    ids = smartlist_join_strings(names, " ", 0, NULL);
+    tor_asprintf(&msg, "650 NEWDESC %s\r\n", ids);
     send_control_event_string(EVENT_NEW_DESC, ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);
@@ -4239,9 +4176,9 @@ control_event_conf_changed(smartlist_t *elements)
     char *k = smartlist_get(elements, i);
     char *v = smartlist_get(elements, i+1);
     if (v == NULL) {
-      smartlist_asprintf_add(lines, "650-%s", k);
+      smartlist_add_asprintf(lines, "650-%s", k);
     } else {
-      smartlist_asprintf_add(lines, "650-%s=%s", k, v);
+      smartlist_add_asprintf(lines, "650-%s=%s", k, v);
     }
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
