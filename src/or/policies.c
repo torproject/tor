@@ -336,7 +336,7 @@ authdir_policy_permits_address(uint32_t addr, uint16_t port)
 {
   if (! addr_policy_permits_address(addr, port, authdir_reject_policy))
     return 0;
-  return !addr_is_in_cc_list(addr, get_options()->AuthDirRejectCC);
+  return !addr_is_in_cc_list(addr, get_options()->AuthDirRejectCCs);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> is considered valid in our
@@ -347,7 +347,7 @@ authdir_policy_valid_address(uint32_t addr, uint16_t port)
 {
   if (! addr_policy_permits_address(addr, port, authdir_invalid_policy))
     return 0;
-  return !addr_is_in_cc_list(addr, get_options()->AuthDirInvalidCC);
+  return !addr_is_in_cc_list(addr, get_options()->AuthDirInvalidCCs);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad dir,
@@ -358,7 +358,7 @@ authdir_policy_baddir_address(uint32_t addr, uint16_t port)
 {
   if (! addr_policy_permits_address(addr, port, authdir_baddir_policy))
     return 1;
-  return addr_is_in_cc_list(addr, get_options()->AuthDirBadDirCC);
+  return addr_is_in_cc_list(addr, get_options()->AuthDirBadDirCCs);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad exit,
@@ -369,7 +369,7 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 {
   if (! addr_policy_permits_address(addr, port, authdir_badexit_policy))
     return 1;
-  return addr_is_in_cc_list(addr, get_options()->AuthDirBadExitCC);
+  return addr_is_in_cc_list(addr, get_options()->AuthDirBadExitCCs);
 }
 
 #define REJECT(arg) \

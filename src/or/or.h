@@ -3239,15 +3239,15 @@ typedef struct {
                                   * never mark as valid. */
   /** @name AuthDir...CC
    *
-   * Lists of of country codes to mark as BadDir, BadExit, or Invalid, or to
+   * Lists of country codes to mark as BadDir, BadExit, or Invalid, or to
    * reject entirely.
    *
    * @{
    */
-  smartlist_t *AuthDirBadDirCC;
-  smartlist_t *AuthDirBadExitCC;
-  smartlist_t *AuthDirInvalidCC;
-  smartlist_t *AuthDirRejectCC;
+  smartlist_t *AuthDirBadDirCCs;
+  smartlist_t *AuthDirBadExitCCs;
+  smartlist_t *AuthDirInvalidCCs;
+  smartlist_t *AuthDirRejectCCs;
   /**@}*/
 
   int AuthDirListBadDirs; /**< True iff we should list bad dirs,

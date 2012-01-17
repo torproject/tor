@@ -1462,13 +1462,13 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     authority publishes, or accepted as an OR address in any descriptor
     submitted for publication by this authority.
 
-**AuthDirBadDirCC** __CC__,... +
+**AuthDirBadDirCCs** __CC__,... +
 
-**AuthDirBadExitCC** __CC__,... +
+**AuthDirBadExitCCs** __CC__,... +
 
-**AuthDirInvalidCC** __CC__,... +
+**AuthDirInvalidCCs** __CC__,... +
 
-**AuthDirRejectCC** __CC__,...::
+**AuthDirRejectCCs** __CC__,...::
     Authoritative directories only. These options contain a comma-separated
     list of country codes such that any server in one of those country codes
     will be marked as a bad directory/bad exit/invalid for use, or rejected
