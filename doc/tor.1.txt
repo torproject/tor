@@ -1347,6 +1347,10 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     votes on whether to accept relays as hidden service directories.
     (Default: 1)
 
+GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays **0**|**1**::
+    When this option is set to 0, do not vote to give the Guard flag to any
+    version of Tor vulnerable to CVE-2011-2769. (Default: 0)
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
