@@ -2889,6 +2889,11 @@ network_init(void)
     log_warn(LD_NET,"Error initializing windows network layer: code was %d",r);
     return -1;
   }
+  if (sizeof(SOCKET) != sizeof(tor_socket_t)) {
+    log_warn(LD_BUG,"The tor_socket_t type does not match SOCKET in size; Tor "
+             "might not work. (Sizes are %d and %d respectively.)",
+             (int)sizeof(tor_socket_t), (int)sizeof(SOCKET));
+  }
   /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
    * We might use it to complain if we're trying to be a server but have
    * too few sockets available. */
