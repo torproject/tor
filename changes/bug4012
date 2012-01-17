@@ -1,0 +1,8 @@
+  o Minor bugfixes (documentation):
+    - Add missing documentation for the MaxClientCircuitsPending,
+      UseMicrodescriptors, UserspaceIOCPBuffers, and
+      _UseFilteringSSLBufferevents options, all introduced during
+      the 0.2.3.x series.
+
+
+

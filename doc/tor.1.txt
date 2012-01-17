@@ -487,6 +487,21 @@ Other options can be specified either on the command-line (--option
     and you're running on Windows, setting this option to 1 will tell Libevent
     not to use the Windows IOCP networking API.  (Default: 1)
 
+**UserspaceIOCPBuffers** **0**|**1**::
+    If IOCP is enabled (see DisableIOCP above), setting this option to 1
+    will tell Tor to disable kernel-space TCP buffers, in order to avoid
+    needless copy operations and try not to run out of non-paged RAM.
+    This feature is experimental; don't use it yet unless you're eager to
+    help tracking down bugs. (Default: 0)
+
+**_UseFilteringSSLBufferevents** **0**|**1**::
+    Tells Tor to do its SSL communication using a chain of
+    bufferevents: one for SSL and one for networking.  This option has no
+    effect if bufferevents are disabled (in which case it can't turn on), or
+    if IOCP bufferevents are enabled (in which case it can't turn off).  This
+    option is useful for debugging only; most users shouldn't touch it.
+    (Default: 0)
+
 **CountPrivateBandwidth** **0**|**1**::
     If this option is set, then Tor's rate-limiting applies not only to
     remote connections, but also to connections to private addresses like
@@ -756,6 +771,11 @@ The following options are useful only for clients (that is, if
     Feel free to reuse a circuit that was first used at most NUM seconds ago,
     but never attach a new stream to a circuit that is too old. (Default: 10
     minutes)
+
+**MaxClientCircuitsPending** __NUM__::
+    Do not allow more than NUM circuits to be pending at a time for handling
+    client streams. A circuit is pending if we have begun constructing it,
+    but it has not yet been completely constructed.  (Default: 32)
 
 **NodeFamily** __node__,__node__,__...__::
     The Tor servers, defined by their identity fingerprints or nicknames,
@@ -1041,6 +1061,15 @@ The following options are useful only for clients (that is, if
     running a tor2web Hidden Service web proxy.
     To enable this option the compile time flag --enable-tor2webmode must be
     specified. (Default: 0)
+
+**UseMicrodescriptors** **0**|**1**|**auto**::
+    Microdescriptors are a smaller version of the information that Tor needs
+    in order to build its circuits.  Using microdescriptors makes Tor clients
+    download less directory information, thus saving bandwidth.  Directory
+    caches need to fetch regular descriptors and microdescriptors, so this
+    option doesn't save any bandwidth for them.  If this option is set to
+    "auto" (recommended) then it is on for all clients that do not set
+    FetchUselessDescriptors. (Default: auto)
 
 SERVER OPTIONS
 --------------
