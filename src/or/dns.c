@@ -454,7 +454,7 @@ purge_expired_resolves(time_t now)
         pend = resolve->pending_connections;
         resolve->pending_connections = pend->next;
         /* Connections should only be pending if they have no socket. */
-        tor_assert(pend->conn->_base.s == -1);
+        tor_assert(pend->conn->_base.s == TOR_INVALID_SOCKET);
         pendconn = pend->conn;
         connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
@@ -681,7 +681,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   uint8_t is_reverse = 0;
   int r;
   assert_connection_ok(TO_CONN(exitconn), 0);
-  tor_assert(exitconn->_base.s == -1);
+  tor_assert(exitconn->_base.s == TOR_INVALID_SOCKET);
   assert_cache_ok();
   tor_assert(oncirc);
 
@@ -849,7 +849,7 @@ assert_all_pending_dns_resolves_ok(void)
          pend;
          pend = pend->next) {
       assert_connection_ok(TO_CONN(pend->conn), 0);
-      tor_assert(pend->conn->_base.s == -1);
+      tor_assert(pend->conn->_base.s == TOR_INVALID_SOCKET);
       tor_assert(!connection_in_array(TO_CONN(pend->conn)));
     }
   }
@@ -955,7 +955,7 @@ dns_cancel_pending_resolve(const char *address)
     pend->conn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn;
     assert_connection_ok(TO_CONN(pendconn), 0);
-    tor_assert(pendconn->_base.s == -1);
+    tor_assert(pendconn->_base.s == TOR_INVALID_SOCKET);
     if (!pendconn->_base.marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED);
     }
