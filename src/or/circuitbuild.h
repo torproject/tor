@@ -57,7 +57,7 @@ int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
-                                 crypto_pk_env_t *onion_key,
+                                 crypto_pk_t *onion_key,
                                  const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_router(const routerinfo_t *r,
                                        int for_direct_connect);
@@ -152,7 +152,7 @@ int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
 int transport_add(transport_t *t);
 void transport_free(transport_t *transport);
-transport_t *transport_create(const tor_addr_t *addr, uint16_t port,
+transport_t *transport_new(const tor_addr_t *addr, uint16_t port,
                                       const char *name, int socks_ver);
 
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,

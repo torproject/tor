@@ -257,7 +257,7 @@ connection_or_report_broken_states(int severity, int domain)
   if (!broken_connection_counts || disable_broken_connection_counts)
     return;
 
-  items = smartlist_create();
+  items = smartlist_new();
   STRMAP_FOREACH(broken_connection_counts, state, void *, countptr) {
     broken_state_count_t *c = tor_malloc(sizeof(broken_state_count_t));
     c->count = (intptr_t)countptr;
@@ -1329,10 +1329,10 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  * <b>identity_rcvd</b> */
 void
 connection_or_set_circid_type(or_connection_t *conn,
-                              crypto_pk_env_t *identity_rcvd)
+                              crypto_pk_t *identity_rcvd)
 {
   const int started_here = connection_or_nonopen_was_started_here(conn);
-  crypto_pk_env_t *our_identity =
+  crypto_pk_t *our_identity =
     started_here ? get_tlsclient_identity_key() :
                    get_server_identity_key();
 
@@ -1377,7 +1377,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                         int started_here,
                                         char *digest_rcvd_out)
 {
-  crypto_pk_env_t *identity_rcvd=NULL;
+  crypto_pk_t *identity_rcvd=NULL;
   const or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
   const char *safe_address =
@@ -1425,7 +1425,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   connection_or_set_circid_type(conn, identity_rcvd);
-  crypto_free_pk_env(identity_rcvd);
+  crypto_pk_free(identity_rcvd);
 
   if (started_here)
     return connection_or_client_learned_peer_id(conn,
@@ -1600,8 +1600,8 @@ or_handshake_state_free(or_handshake_state_t *state)
 {
   if (!state)
     return;
-  crypto_free_digest_env(state->digest_sent);
-  crypto_free_digest_env(state->digest_received);
+  crypto_digest_free(state->digest_sent);
+  crypto_digest_free(state->digest_received);
   tor_cert_free(state->auth_cert);
   tor_cert_free(state->id_cert);
   memset(state, 0xBE, sizeof(or_handshake_state_t));
@@ -1622,7 +1622,7 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
                                const cell_t *cell,
                                int incoming)
 {
-  crypto_digest_env_t *d, **dptr;
+  crypto_digest_t *d, **dptr;
   packed_cell_t packed;
   if (incoming) {
     if (!state->digest_received_data)
@@ -1638,7 +1638,7 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
   }
   dptr = incoming ? &state->digest_received : &state->digest_sent;
   if (! *dptr)
-    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+    *dptr = crypto_digest256_new(DIGEST_SHA256);
 
   d = *dptr;
   /* Re-packing like this is a little inefficient, but we don't have to do
@@ -1661,7 +1661,7 @@ or_handshake_state_record_var_cell(or_handshake_state_t *state,
                                    const var_cell_t *cell,
                                    int incoming)
 {
-  crypto_digest_env_t *d, **dptr;
+  crypto_digest_t *d, **dptr;
   char buf[VAR_CELL_HEADER_SIZE];
   if (incoming) {
     if (!state->digest_received_data)
@@ -1672,7 +1672,7 @@ or_handshake_state_record_var_cell(or_handshake_state_t *state,
   }
   dptr = incoming ? &state->digest_received : &state->digest_sent;
   if (! *dptr)
-    *dptr = crypto_new_digest256_env(DIGEST_SHA256);
+    *dptr = crypto_digest256_new(DIGEST_SHA256);
 
   d = *dptr;
 
@@ -2065,7 +2065,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 int
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                              uint8_t *out, size_t outlen,
-                                             crypto_pk_env_t *signing_key,
+                                             crypto_pk_t *signing_key,
                                              int server)
 {
   uint8_t *ptr;
@@ -2108,7 +2108,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   }
 
   {
-    crypto_digest_env_t *server_d, *client_d;
+    crypto_digest_t *server_d, *client_d;
     if (server) {
       server_d = conn->handshake_state->digest_sent;
       client_d = conn->handshake_state->digest_received;
@@ -2195,7 +2195,7 @@ int
 connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
 {
   var_cell_t *cell;
-  crypto_pk_env_t *pk = tor_tls_get_my_client_auth_key();
+  crypto_pk_t *pk = tor_tls_get_my_client_auth_key();
   int authlen;
   size_t cell_maxlen;
   /* XXXX make sure we're actually supposed to send this! */

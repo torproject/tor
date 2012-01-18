@@ -466,7 +466,7 @@ nt_service_command_line(int *using_default_torrc)
     return NULL;
 
   /* Get the service arguments */
-  sl = smartlist_create();
+  sl = smartlist_new();
   for (i = 1; i < backup_argc; ++i) {
     if (!strcmp(backup_argv[i], "--options") ||
         !strcmp(backup_argv[i], "-options")) {

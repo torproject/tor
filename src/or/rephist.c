@@ -930,7 +930,7 @@ rep_hist_get_router_stability_doc(time_t now)
     return NULL;
 
   tor_free(last_stability_doc);
-  chunks = smartlist_create();
+  chunks = smartlist_new();
 
   if (rep_hist_have_measured_enough_stability()) {
     smartlist_add(chunks, tor_strdup("we-have-enough-measurements\n"));
@@ -1061,7 +1061,7 @@ rep_hist_load_mtbf_data(time_t now)
     tor_free(filename);
     if (!d)
       return -1;
-    lines = smartlist_create();
+    lines = smartlist_new();
     smartlist_split_string(lines, d, "\n", SPLIT_SKIP_SPACE, 0);
     tor_free(d);
   }
@@ -1609,15 +1609,15 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
     }
     *s_begins = 0;
     *s_interval = 900;
-    *s_values = smartlist_create();
-    *s_maxima = smartlist_create();
+    *s_values = smartlist_new();
+    *s_maxima = smartlist_new();
     return;
   }
   *s_begins = b->next_period;
   *s_interval = NUM_SECS_BW_SUM_INTERVAL;
 
-  *s_values = smartlist_create();
-  *s_maxima = smartlist_create();
+  *s_values = smartlist_new();
+  *s_maxima = smartlist_new();
   /* Set i to first position in circular array */
   i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
   for (j=0; j < b->num_maxes_set; ++j,++i) {
@@ -1801,7 +1801,7 @@ add_predicted_port(time_t now, uint16_t port)
 static void
 predicted_ports_init(void)
 {
-  predicted_ports_list = smartlist_create();
+  predicted_ports_list = smartlist_new();
   add_predicted_port(time(NULL), 80); /* add one to kickstart us */
 }
 
@@ -1850,7 +1850,7 @@ rep_hist_note_used_port(time_t now, uint16_t port)
 smartlist_t *
 rep_hist_get_predicted_ports(time_t now)
 {
-  smartlist_t *out = smartlist_create();
+  smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
 
   /* clean out obsolete entries */
@@ -2184,9 +2184,9 @@ rep_hist_format_exit_stats(time_t now)
   }
 
   /* Add observations of top ports to smartlists. */
-  written_strings = smartlist_create();
-  read_strings = smartlist_create();
-  streams_strings = smartlist_create();
+  written_strings = smartlist_new();
+  read_strings = smartlist_new();
+  streams_strings = smartlist_new();
   other_read = total_read;
   other_written = total_written;
   other_streams = total_streams;
@@ -2370,7 +2370,7 @@ rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
   stat->mean_time_cells_in_queue = mean_time_cells_in_queue;
   stat->processed_cells = processed_cells;
   if (!circuits_for_buffer_stats)
-    circuits_for_buffer_stats = smartlist_create();
+    circuits_for_buffer_stats = smartlist_new();
   smartlist_add(circuits_for_buffer_stats, stat);
 }
 
@@ -2439,7 +2439,7 @@ void
 rep_hist_reset_buffer_stats(time_t now)
 {
   if (!circuits_for_buffer_stats)
-    circuits_for_buffer_stats = smartlist_create();
+    circuits_for_buffer_stats = smartlist_new();
   SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
       stat, tor_free(stat));
   smartlist_clear(circuits_for_buffer_stats);
@@ -2474,7 +2474,7 @@ rep_hist_format_buffer_stats(time_t now)
   memset(queued_cells, 0, SHARES * sizeof(double));
   memset(time_in_queue, 0, SHARES * sizeof(double));
   if (!circuits_for_buffer_stats)
-    circuits_for_buffer_stats = smartlist_create();
+    circuits_for_buffer_stats = smartlist_new();
   number_of_circuits = smartlist_len(circuits_for_buffer_stats);
   if (number_of_circuits > 0) {
     smartlist_sort(circuits_for_buffer_stats,
@@ -2493,9 +2493,9 @@ rep_hist_format_buffer_stats(time_t now)
   }
 
   /* Write deciles to strings. */
-  processed_cells_strings = smartlist_create();
-  queued_cells_strings = smartlist_create();
-  time_in_queue_strings = smartlist_create();
+  processed_cells_strings = smartlist_new();
+  queued_cells_strings = smartlist_new();
+  time_in_queue_strings = smartlist_new();
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(processed_cells_strings,
                            "%d", !circs_in_share[i] ? 0 :

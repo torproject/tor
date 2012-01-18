@@ -34,7 +34,7 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
   if (!desc)
     return;
   if (desc->pk)
-    crypto_free_pk_env(desc->pk);
+    crypto_pk_free(desc->pk);
   if (desc->intro_nodes) {
     SMARTLIST_FOREACH(desc->intro_nodes, rend_intro_point_t *, intro,
       rend_intro_point_free(intro););
@@ -64,11 +64,11 @@ rend_get_descriptor_id_bytes(char *descriptor_id_out,
                              const char *service_id,
                              const char *secret_id_part)
 {
-  crypto_digest_env_t *digest = crypto_new_digest_env();
+  crypto_digest_t *digest = crypto_digest_new();
   crypto_digest_add_bytes(digest, service_id, REND_SERVICE_ID_LEN);
   crypto_digest_add_bytes(digest, secret_id_part, DIGEST_LEN);
   crypto_digest_get_digest(digest, descriptor_id_out, DIGEST_LEN);
-  crypto_free_digest_env(digest);
+  crypto_digest_free(digest);
 }
 
 /** Compute the secret ID part for time_period,
@@ -80,7 +80,7 @@ static void
 get_secret_id_part_bytes(char *secret_id_part, uint32_t time_period,
                          const char *descriptor_cookie, uint8_t replica)
 {
-  crypto_digest_env_t *digest = crypto_new_digest_env();
+  crypto_digest_t *digest = crypto_digest_new();
   time_period = htonl(time_period);
   crypto_digest_add_bytes(digest, (char*)&time_period, sizeof(uint32_t));
   if (descriptor_cookie) {
@@ -89,7 +89,7 @@ get_secret_id_part_bytes(char *secret_id_part, uint32_t time_period,
   }
   crypto_digest_add_bytes(digest, (const char *)&replica, REND_REPLICA_LEN);
   crypto_digest_get_digest(digest, secret_id_part, DIGEST_LEN);
-  crypto_free_digest_env(digest);
+  crypto_digest_free(digest);
 }
 
 /** Return the time period for time <b>now</b> plus a potentially
@@ -181,7 +181,7 @@ rend_encode_v2_intro_points(char **encoded, rend_service_descriptor_t *desc)
     char id_base32[REND_INTRO_POINT_ID_LEN_BASE32 + 1];
     char *onion_key = NULL;
     size_t onion_key_len;
-    crypto_pk_env_t *intro_key;
+    crypto_pk_t *intro_key;
     char *service_key = NULL;
     char *address = NULL;
     size_t service_key_len;
@@ -262,8 +262,8 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
   char *enc = NULL, iv[CIPHER_IV_LEN], *client_part = NULL,
        session_key[CIPHER_KEY_LEN];
   smartlist_t *encrypted_session_keys = NULL;
-  crypto_digest_env_t *digest;
-  crypto_cipher_env_t *cipher;
+  crypto_digest_t *digest;
+  crypto_cipher_t *cipher;
   tor_assert(encoded);
   tor_assert(client_cookies && smartlist_len(client_cookies) > 0);
 
@@ -294,7 +294,7 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
   enclen = crypto_cipher_encrypt_with_iv(cipher,
       enc + 2 + client_entries_len,
       CIPHER_IV_LEN + strlen(encoded), encoded, strlen(encoded));
-  crypto_free_cipher_env(cipher);
+  crypto_cipher_free(cipher);
   if (enclen < 0) {
     log_warn(LD_REND, "Could not encrypt introduction point string.");
     goto done;
@@ -303,7 +303,7 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
 
   /* Encrypt session key for cookies, determine client IDs, and put both
    * in a smartlist. */
-  encrypted_session_keys = smartlist_create();
+  encrypted_session_keys = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(client_cookies, const char *, cookie) {
     client_part = tor_malloc_zero(REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
     /* Encrypt session key. */
@@ -312,19 +312,19 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
                                   REND_BASIC_AUTH_CLIENT_ID_LEN,
                               session_key, CIPHER_KEY_LEN) < 0) {
       log_warn(LD_REND, "Could not encrypt session key for client.");
-      crypto_free_cipher_env(cipher);
+      crypto_cipher_free(cipher);
       tor_free(client_part);
       goto done;
     }
-    crypto_free_cipher_env(cipher);
+    crypto_cipher_free(cipher);
 
     /* Determine client ID. */
-    digest = crypto_new_digest_env();
+    digest = crypto_digest_new();
     crypto_digest_add_bytes(digest, cookie, REND_DESC_COOKIE_LEN);
     crypto_digest_add_bytes(digest, iv, CIPHER_IV_LEN);
     crypto_digest_get_digest(digest, client_part,
                              REND_BASIC_AUTH_CLIENT_ID_LEN);
-    crypto_free_digest_env(digest);
+    crypto_digest_free(digest);
 
     /* Put both together. */
     smartlist_add(encrypted_session_keys, client_part);
@@ -374,7 +374,7 @@ rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
                                      const char *descriptor_cookie)
 {
   int r = -1, enclen;
-  crypto_cipher_env_t *cipher;
+  crypto_cipher_t *cipher;
   char *enc;
   tor_assert(encoded);
   tor_assert(descriptor_cookie);
@@ -385,7 +385,7 @@ rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
   enclen = crypto_cipher_encrypt_with_iv(cipher, enc + 1,
                                          CIPHER_IV_LEN+strlen(encoded),
                                          encoded, strlen(encoded));
-  crypto_free_cipher_env(cipher);
+  crypto_cipher_free(cipher);
   if (enclen < 0) {
     log_warn(LD_REND, "Could not encrypt introduction point string.");
     goto done;
@@ -439,7 +439,7 @@ rend_intro_point_free(rend_intro_point_t *intro)
     return;
 
   extend_info_free(intro->extend_info);
-  crypto_free_pk_env(intro->intro_key);
+  crypto_pk_free(intro->intro_key);
 
   if (intro->accepted_intro_rsa_parts != NULL) {
     digestmap_free(intro->accepted_intro_rsa_parts, _tor_free);
@@ -460,7 +460,7 @@ int
 rend_encode_v2_descriptors(smartlist_t *descs_out,
                            rend_service_descriptor_t *desc, time_t now,
                            uint8_t period, rend_auth_type_t auth_type,
-                           crypto_pk_env_t *client_key,
+                           crypto_pk_t *client_key,
                            smartlist_t *client_cookies)
 {
   char service_id[DIGEST_LEN];
@@ -470,7 +470,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
   size_t ipos_len = 0, ipos_encrypted_len = 0;
   int k;
   uint32_t seconds_valid;
-  crypto_pk_env_t *service_key;
+  crypto_pk_t *service_key;
   if (!desc) {
     log_warn(LD_BUG, "Could not encode v2 descriptor: No desc given.");
     return -1;
@@ -708,7 +708,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
   n_intro_points = ntohs(get_uint16(cp));
   cp += 2;
 
-  result->intro_nodes = smartlist_create();
+  result->intro_nodes = smartlist_new();
   for (i=0;i<n_intro_points;++i) {
     if (end-cp < 2) goto truncated;
     eos = (const char *)memchr(cp,'\0',end-cp);
@@ -753,7 +753,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
  * identify services in directory requests and .onion URLs.)
  */
 int
-rend_get_service_id(crypto_pk_env_t *pk, char *out)
+rend_get_service_id(crypto_pk_t *pk, char *out)
 {
   char buf[DIGEST_LEN];
   tor_assert(pk);
@@ -1319,7 +1319,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     }
   } else {
     log_info(LD_REND, "Descriptor does not contain any introduction points.");
-    parsed->intro_nodes = smartlist_create();
+    parsed->intro_nodes = smartlist_new();
   }
   /* We don't need the encoded/encrypted introduction points any longer. */
   tor_free(intro_content);

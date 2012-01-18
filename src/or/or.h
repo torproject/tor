@@ -1172,8 +1172,8 @@ typedef struct or_handshake_state_t {
    *
    * @{
    */
-  crypto_digest_env_t *digest_sent;
-  crypto_digest_env_t *digest_received;
+  crypto_digest_t *digest_sent;
+  crypto_digest_t *digest_received;
   /** @} */
 
   /** Certificates that a connection initiator sent us in a CERTS cell; we're
@@ -1732,8 +1732,8 @@ typedef struct {
   tor_addr_t ipv6_addr;
   uint16_t ipv6_orport;
 
-  crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
-  crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
+  crypto_pk_t *onion_pkey; /**< Public RSA key for onions. */
+  crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -1961,7 +1961,7 @@ typedef struct microdesc_t {
   /* Fields in the microdescriptor. */
 
   /** As routerinfo_t.onion_pkey */
-  crypto_pk_env_t *onion_pkey;
+  crypto_pk_t *onion_pkey;
   /** As routerinfo_t.family */
   smartlist_t *family;
   /** Exit policy summary */
@@ -2069,7 +2069,7 @@ typedef struct networkstatus_v2_t {
 
   char identity_digest[DIGEST_LEN]; /**< Digest of signing key. */
   char *contact; /**< How to contact directory admin? (may be NULL). */
-  crypto_pk_env_t *signing_key; /**< Key used to sign this directory. */
+  crypto_pk_t *signing_key; /**< Key used to sign this directory. */
   char *client_versions; /**< comma-separated list of recommended client
                           * versions. */
   char *server_versions; /**< comma-separated list of recommended server
@@ -2298,7 +2298,7 @@ typedef struct extend_info_t {
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint16_t port; /**< OR port. */
   tor_addr_t addr; /**< IP address. */
-  crypto_pk_env_t *onion_key; /**< Current onionskin key. */
+  crypto_pk_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
 /** Certificate for v3 directory protocol: binds long-term authority identity
@@ -2307,9 +2307,9 @@ typedef struct authority_cert_t {
   /** Information relating to caching this cert on disk and looking it up. */
   signed_descriptor_t cache_info;
   /** This authority's long-term authority identity key. */
-  crypto_pk_env_t *identity_key;
+  crypto_pk_t *identity_key;
   /** This authority's medium-term signing key. */
-  crypto_pk_env_t *signing_key;
+  crypto_pk_t *signing_key;
   /** The digest of <b>signing_key</b> */
   char signing_key_digest[DIGEST_LEN];
   /** The listed expiration time of this certificate. */
@@ -2361,19 +2361,19 @@ typedef struct crypt_path_t {
   /* crypto environments */
   /** Encryption key and counter for cells heading towards the OR at this
    * step. */
-  crypto_cipher_env_t *f_crypto;
+  crypto_cipher_t *f_crypto;
   /** Encryption key and counter for cells heading back from the OR at this
    * step. */
-  crypto_cipher_env_t *b_crypto;
+  crypto_cipher_t *b_crypto;
 
   /** Digest state for cells heading towards the OR at this step. */
-  crypto_digest_env_t *f_digest; /* for integrity checking */
+  crypto_digest_t *f_digest; /* for integrity checking */
   /** Digest state for cells heading away from the OR at this step. */
-  crypto_digest_env_t *b_digest;
+  crypto_digest_t *b_digest;
 
   /** Current state of Diffie-Hellman key negotiation with the OR at this
    * step. */
-  crypto_dh_env_t *dh_handshake_state;
+  crypto_dh_t *dh_handshake_state;
   /** Current state of 'fast' (non-PK) key negotiation with the OR at this
    * step. Used to save CPU when TLS is already providing all the
    * authentication, secrecy, and integrity we need, and we're already
@@ -2662,7 +2662,7 @@ typedef struct origin_circuit_t {
   /* The intro key replaces the hidden service's public key if purpose is
    * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
    * descriptor is used. */
-  crypto_pk_env_t *intro_key;
+  crypto_pk_t *intro_key;
 
   /** Quasi-global identifier for this circuit; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
@@ -2746,19 +2746,19 @@ typedef struct or_circuit_t {
   edge_connection_t *resolving_streams;
   /** The cipher used by intermediate hops for cells heading toward the
    * OP. */
-  crypto_cipher_env_t *p_crypto;
+  crypto_cipher_t *p_crypto;
   /** The cipher used by intermediate hops for cells heading away from
    * the OP. */
-  crypto_cipher_env_t *n_crypto;
+  crypto_cipher_t *n_crypto;
 
   /** The integrity-checking digest used by intermediate hops, for
    * cells packaged here and heading towards the OP.
    */
-  crypto_digest_env_t *p_digest;
+  crypto_digest_t *p_digest;
   /** The integrity-checking digest used by intermediate hops, for
    * cells packaged at the OP and arriving here.
    */
-  crypto_digest_env_t *n_digest;
+  crypto_digest_t *n_digest;
 
   /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
    * is not marked for close. */
@@ -4125,7 +4125,7 @@ typedef enum {
 typedef struct rend_authorized_client_t {
   char *client_name;
   char descriptor_cookie[REND_DESC_COOKIE_LEN];
-  crypto_pk_env_t *client_key;
+  crypto_pk_t *client_key;
 } rend_authorized_client_t;
 
 /** ASCII-encoded v2 hidden service descriptor. */
@@ -4164,7 +4164,7 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * client and service side). */
 typedef struct rend_intro_point_t {
   extend_info_t *extend_info; /**< Extend info of this introduction point. */
-  crypto_pk_env_t *intro_key; /**< Introduction key that replaces the service
+  crypto_pk_t *intro_key; /**< Introduction key that replaces the service
                                * key, if this descriptor is V2. */
 
   /** (Client side only) Flag indicating that a timeout has occurred
@@ -4219,7 +4219,7 @@ typedef struct rend_intro_point_t {
 /** Information used to connect to a hidden service.  Used on both the
  * service side and the client side. */
 typedef struct rend_service_descriptor_t {
-  crypto_pk_env_t *pk; /**< This service's public key. */
+  crypto_pk_t *pk; /**< This service's public key. */
   int version; /**< Version of the descriptor format: 0 or 2. */
   time_t timestamp; /**< Time when the descriptor was generated. */
   uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?

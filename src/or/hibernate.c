@@ -140,7 +140,7 @@ accounting_parse_options(const or_options_t *options, int validate_only)
     return 0;
   }
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, v, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
   if (smartlist_len(items)<2) {
@@ -511,7 +511,7 @@ static void
 accounting_set_wakeup_time(void)
 {
   char digest[DIGEST_LEN];
-  crypto_digest_env_t *d_env;
+  crypto_digest_t *d_env;
   uint64_t time_to_exhaust_bw;
   int time_to_consider;
 
@@ -528,11 +528,11 @@ accounting_set_wakeup_time(void)
 
     crypto_pk_get_digest(get_server_identity_key(), digest);
 
-    d_env = crypto_new_digest_env();
+    d_env = crypto_digest_new();
     crypto_digest_add_bytes(d_env, buf, ISO_TIME_LEN);
     crypto_digest_add_bytes(d_env, digest, DIGEST_LEN);
     crypto_digest_get_digest(d_env, digest, DIGEST_LEN);
-    crypto_free_digest_env(d_env);
+    crypto_digest_free(d_env);
   } else {
     crypto_rand(digest, DIGEST_LEN);
   }

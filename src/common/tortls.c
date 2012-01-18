@@ -126,8 +126,8 @@ typedef struct tor_tls_context_t {
   tor_cert_t *my_link_cert;
   tor_cert_t *my_id_cert;
   tor_cert_t *my_auth_cert;
-  crypto_pk_env_t *link_key;
-  crypto_pk_env_t *auth_key;
+  crypto_pk_t *link_key;
+  crypto_pk_t *auth_key;
 } tor_tls_context_t;
 
 #define TOR_TLS_MAGIC 0x71571571
@@ -209,17 +209,17 @@ tor_tls_get_by_ssl(const SSL *ssl)
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
 static void tor_tls_context_incref(tor_tls_context_t *ctx);
-static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
-                                        crypto_pk_env_t *rsa_sign,
+static X509* tor_tls_create_certificate(crypto_pk_t *rsa,
+                                        crypto_pk_t *rsa_sign,
                                         const char *cname,
                                         const char *cname_sign,
                                         unsigned int lifetime);
 
 static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                                    crypto_pk_env_t *identity,
+                                    crypto_pk_t *identity,
                                     unsigned int key_lifetime,
                                     int is_client);
-static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
+static tor_tls_context_t *tor_tls_context_new(crypto_pk_t *identity,
                                               unsigned int key_lifetime,
                                               int is_client);
 static int check_cert_lifetime_internal(int severity, const X509 *cert,
@@ -569,8 +569,8 @@ tor_x509_name_new(const char *cname)
  * failure.
  */
 static X509 *
-tor_tls_create_certificate(crypto_pk_env_t *rsa,
-                           crypto_pk_env_t *rsa_sign,
+tor_tls_create_certificate(crypto_pk_t *rsa,
+                           crypto_pk_t *rsa_sign,
                            const char *cname,
                            const char *cname_sign,
                            unsigned int cert_lifetime)
@@ -594,9 +594,9 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   tor_assert(cname);
   tor_assert(rsa_sign);
   tor_assert(cname_sign);
-  if (!(sign_pkey = _crypto_pk_env_get_evp_pkey(rsa_sign,1)))
+  if (!(sign_pkey = _crypto_pk_get_evp_pkey(rsa_sign,1)))
     goto error;
-  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,0)))
+  if (!(pkey = _crypto_pk_get_evp_pkey(rsa,0)))
     goto error;
   if (!(x509 = X509_new()))
     goto error;
@@ -748,10 +748,10 @@ tor_cert_new(X509 *x509_cert)
 
   if ((pkey = X509_get_pubkey(x509_cert)) &&
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
-    crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(rsa);
+    crypto_pk_t *pk = _crypto_new_pk_from_rsa(rsa);
     crypto_pk_get_all_digests(pk, &cert->pkey_digests);
     cert->pkey_digests_set = 1;
-    crypto_free_pk_env(pk);
+    crypto_pk_free(pk);
     EVP_PKEY_free(pkey);
   }
 
@@ -840,8 +840,8 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
     tor_cert_free(ctx->my_link_cert);
     tor_cert_free(ctx->my_id_cert);
     tor_cert_free(ctx->my_auth_cert);
-    crypto_free_pk_env(ctx->link_key);
-    crypto_free_pk_env(ctx->auth_key);
+    crypto_pk_free(ctx->link_key);
+    crypto_pk_free(ctx->auth_key);
     tor_free(ctx);
   }
 }
@@ -870,7 +870,7 @@ tor_tls_get_my_certs(int server,
  * Return the authentication key that we use to authenticate ourselves as a
  * client in the V3 in-protocol handshake.
  */
-crypto_pk_env_t *
+crypto_pk_t *
 tor_tls_get_my_client_auth_key(void)
 {
   if (! client_tls_context)
@@ -882,10 +882,10 @@ tor_tls_get_my_client_auth_key(void)
  * Return a newly allocated copy of the public key that a certificate
  * certifies.  Return NULL if the cert's key is not RSA.
  */
-crypto_pk_env_t *
+crypto_pk_t *
 tor_tls_cert_get_key(tor_cert_t *cert)
 {
-  crypto_pk_env_t *result = NULL;
+  crypto_pk_t *result = NULL;
   EVP_PKEY *pkey = X509_get_pubkey(cert->cert);
   RSA *rsa;
   if (!pkey)
@@ -895,7 +895,7 @@ tor_tls_cert_get_key(tor_cert_t *cert)
     EVP_PKEY_free(pkey);
     return NULL;
   }
-  result = _crypto_new_pk_env_rsa(rsa);
+  result = _crypto_new_pk_from_rsa(rsa);
   EVP_PKEY_free(pkey);
   return result;
 }
@@ -1018,8 +1018,8 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
  * ignore <b>client_identity</b>. */
 int
 tor_tls_context_init(int is_public_server,
-                     crypto_pk_env_t *client_identity,
-                     crypto_pk_env_t *server_identity,
+                     crypto_pk_t *client_identity,
+                     crypto_pk_t *server_identity,
                      unsigned int key_lifetime)
 {
   int rv1 = 0;
@@ -1077,7 +1077,7 @@ tor_tls_context_init(int is_public_server,
  */
 static int
 tor_tls_context_init_one(tor_tls_context_t **ppcontext,
-                         crypto_pk_env_t *identity,
+                         crypto_pk_t *identity,
                          unsigned int key_lifetime,
                          int is_client)
 {
@@ -1105,10 +1105,10 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
  * certificate.
  */
 static tor_tls_context_t *
-tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
+tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
                     int is_client)
 {
-  crypto_pk_env_t *rsa = NULL, *rsa_auth = NULL;
+  crypto_pk_t *rsa = NULL, *rsa_auth = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
   X509 *cert = NULL, *idcert = NULL, *authcert = NULL;
@@ -1123,14 +1123,14 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
 #endif
 
   /* Generate short-term RSA key for use with TLS. */
-  if (!(rsa = crypto_new_pk_env()))
+  if (!(rsa = crypto_pk_new()))
     goto error;
   if (crypto_pk_generate_key(rsa)<0)
     goto error;
   if (!is_client) {
     /* Generate short-term RSA key for use in the in-protocol ("v3")
      * authentication handshake. */
-    if (!(rsa_auth = crypto_new_pk_env()))
+    if (!(rsa_auth = crypto_pk_new()))
       goto error;
     if (crypto_pk_generate_key(rsa_auth)<0)
       goto error;
@@ -1228,7 +1228,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (!is_client) {
     tor_assert(rsa);
-    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
+    if (!(pkey = _crypto_pk_get_evp_pkey(rsa,1)))
       goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
       goto error;
@@ -1238,9 +1238,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
       goto error;
   }
   {
-    crypto_dh_env_t *dh = crypto_dh_new(DH_TYPE_TLS);
+    crypto_dh_t *dh = crypto_dh_new(DH_TYPE_TLS);
     tor_assert(dh);
-    SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
+    SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_get_dh(dh));
     crypto_dh_free(dh);
   }
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
@@ -1249,9 +1249,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
   if (rsa)
-    crypto_free_pk_env(rsa);
+    crypto_pk_free(rsa);
   if (rsa_auth)
-    crypto_free_pk_env(rsa_auth);
+    crypto_pk_free(rsa_auth);
   X509_free(authcert);
   tor_free(nickname);
   tor_free(nn2);
@@ -1264,9 +1264,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
   if (pkey)
     EVP_PKEY_free(pkey);
   if (rsa)
-    crypto_free_pk_env(rsa);
+    crypto_pk_free(rsa);
   if (rsa_auth)
-    crypto_free_pk_env(rsa_auth);
+    crypto_pk_free(rsa_auth);
   if (result)
     tor_tls_context_decref(result);
   if (cert)
@@ -1314,7 +1314,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 0;
  dump_list:
   {
-    smartlist_t *elts = smartlist_create();
+    smartlist_t *elts = smartlist_new();
     char *s;
     for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
       SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
@@ -2053,7 +2053,7 @@ try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
  * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
  */
 int
-tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
+tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity_key)
 {
   X509 *cert = NULL, *id_cert = NULL;
   EVP_PKEY *id_pkey = NULL;
@@ -2081,7 +2081,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
   rsa = EVP_PKEY_get1_RSA(id_pkey);
   if (!rsa)
     goto done;
-  *identity_key = _crypto_new_pk_env_rsa(rsa);
+  *identity_key = _crypto_new_pk_from_rsa(rsa);
 
   r = 0;
 

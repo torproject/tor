@@ -202,7 +202,7 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   if (state == circ->state)
     return;
   if (!circuits_pending_or_conns)
-    circuits_pending_or_conns = smartlist_create();
+    circuits_pending_or_conns = smartlist_new();
   if (circ->state == CIRCUIT_STATE_OR_WAIT) {
     /* remove from waiting-circuit list. */
     smartlist_remove(circuits_pending_or_conns, circ);
@@ -269,7 +269,7 @@ int
 circuit_count_pending_on_or_conn(or_connection_t *or_conn)
 {
   int cnt;
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   circuit_get_all_pending_on_or_conn(sl, or_conn);
   cnt = smartlist_len(sl);
   smartlist_free(sl);
@@ -607,7 +607,7 @@ circuit_free(circuit_t *circ)
 
     circuit_free_cpath(ocirc->cpath);
 
-    crypto_free_pk_env(ocirc->intro_key);
+    crypto_pk_free(ocirc->intro_key);
     rend_data_free(ocirc->rend_data);
 
     tor_free(ocirc->dest_address);
@@ -628,10 +628,10 @@ circuit_free(circuit_t *circ)
     memlen = sizeof(or_circuit_t);
     tor_assert(circ->magic == OR_CIRCUIT_MAGIC);
 
-    crypto_free_cipher_env(ocirc->p_crypto);
-    crypto_free_digest_env(ocirc->p_digest);
-    crypto_free_cipher_env(ocirc->n_crypto);
-    crypto_free_digest_env(ocirc->n_digest);
+    crypto_cipher_free(ocirc->p_crypto);
+    crypto_digest_free(ocirc->p_digest);
+    crypto_cipher_free(ocirc->n_crypto);
+    crypto_digest_free(ocirc->n_digest);
 
     if (ocirc->rend_splice) {
       or_circuit_t *other = ocirc->rend_splice;
@@ -714,10 +714,10 @@ circuit_free_cpath_node(crypt_path_t *victim)
   if (!victim)
     return;
 
-  crypto_free_cipher_env(victim->f_crypto);
-  crypto_free_cipher_env(victim->b_crypto);
-  crypto_free_digest_env(victim->f_digest);
-  crypto_free_digest_env(victim->b_digest);
+  crypto_cipher_free(victim->f_crypto);
+  crypto_cipher_free(victim->b_crypto);
+  crypto_digest_free(victim->f_digest);
+  crypto_digest_free(victim->b_digest);
   crypto_dh_free(victim->dh_handshake_state);
   extend_info_free(victim->extend_info);
 

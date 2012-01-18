@@ -264,7 +264,7 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 /** Release storage held by <b>cipher</b>
  */
 void
-aes_free_cipher(aes_cnt_cipher_t *cipher)
+aes_cipher_free(aes_cnt_cipher_t *cipher)
 {
   if (!cipher)
     return;

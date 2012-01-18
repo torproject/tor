@@ -397,7 +397,7 @@ test_util_strmisc(void)
 
   /* Test wrap_string */
   {
-    smartlist_t *sl = smartlist_create();
+    smartlist_t *sl = smartlist_new();
     wrap_string(sl, "This is a test of string wrapping functionality: woot.",
                 10, "", "");
     cp = smartlist_join_strings(sl, "", 0, NULL);
@@ -928,7 +928,7 @@ test_util_mempool(void)
   test_eq(pool->item_alloc_size & 0x03, 0);
   test_assert(pool->new_chunk_capacity < 60);
 
-  allocated = smartlist_create();
+  allocated = smartlist_new();
   for (i = 0; i < 20000; ++i) {
     if (smartlist_len(allocated) < 20 || crypto_rand_int(2)) {
       void *m = mp_pool_get(pool);
@@ -1685,7 +1685,7 @@ test_util_split_lines(void *ptr)
   (void)ptr;
 
   for (i=0; tests[i].orig_line; i++) {
-    sl = smartlist_create();
+    sl = smartlist_new();
     /* Allocate space for string and trailing NULL */
     orig_line = tor_memdup(tests[i].orig_line, tests[i].orig_length + 1);
     tor_split_lines(sl, orig_line, tests[i].orig_length);

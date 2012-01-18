@@ -67,7 +67,7 @@
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, ==, hex)
 
 const char *get_fname(const char *name);
-crypto_pk_env_t *pk_generate(int idx);
+crypto_pk_t *pk_generate(int idx);
 
 void legacy_test_helper(void *data);
 extern const struct testcase_setup_t legacy_setup;

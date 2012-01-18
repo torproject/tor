@@ -185,7 +185,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
 /** Add the nickname and fingerprint for this OR to the
  * global list of recognized identity key fingerprints. */
 int
-dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
+dirserv_add_own_fingerprint(const char *nickname, crypto_pk_t *pk)
 {
   char fp[FINGERPRINT_LEN+1];
   if (crypto_pk_get_fingerprint(pk, fp, 0)<0) {
@@ -645,7 +645,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   }
 
   s = desc;
-  list = smartlist_create();
+  list = smartlist_new();
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0,
                                      annotation_buf)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
@@ -768,7 +768,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     smartlist_t *changed;
     control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
 
-    changed = smartlist_create();
+    changed = smartlist_new();
     smartlist_add(changed, ri);
     routerlist_descriptors_added(changed, 0);
     smartlist_free(changed);
@@ -830,7 +830,7 @@ directory_remove_invalid(void)
 {
   int changed = 0;
   routerlist_t *rl = router_get_routerlist();
-  smartlist_t *nodes = smartlist_create();
+  smartlist_t *nodes = smartlist_new();
   smartlist_add_all(nodes, nodelist_get_list());
 
   SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
@@ -1040,7 +1040,7 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   int authdir = authdir_mode_publishes_statuses(options);
   tor_assert(router_status_out);
 
-  rs_entries = smartlist_create();
+  rs_entries = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
@@ -1080,7 +1080,7 @@ format_versions_list(config_line_t *ln)
 {
   smartlist_t *versions;
   char *result;
-  versions = smartlist_create();
+  versions = smartlist_new();
   for ( ; ln; ln = ln->next) {
     smartlist_split_string(versions, ln->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1114,7 +1114,7 @@ router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
  */
 int
 dirserv_dump_directory_to_string(char **dir_out,
-                                 crypto_pk_env_t *private_key)
+                                 crypto_pk_t *private_key)
 {
   char *cp;
   char *identity_pkey; /* Identity key, DER64-encoded. */
@@ -1636,7 +1636,7 @@ generate_runningrouters(void)
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   size_t len;
-  crypto_pk_env_t *private_key = get_server_identity_key();
+  crypto_pk_t *private_key = get_server_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
 
@@ -2265,7 +2265,7 @@ get_possible_sybil_list(const smartlist_t *routers)
 {
   const or_options_t *options = get_options();
   digestmap_t *omit_as_sybil;
-  smartlist_t *routers_by_ip = smartlist_create();
+  smartlist_t *routers_by_ip = smartlist_new();
   uint32_t last_addr;
   int addr_count;
   /* Allow at most this number of Tor servers on a single IP address, ... */
@@ -2637,7 +2637,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
 /** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
 networkstatus_t *
-dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
+dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert)
 {
   const or_options_t *options = get_options();
@@ -2698,13 +2698,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 
   dirserv_compute_performance_thresholds(rl);
 
-  routers = smartlist_create();
+  routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
 
-  routerstatuses = smartlist_create();
-  microdescriptors = smartlist_create();
+  routerstatuses = smartlist_new();
+  microdescriptors = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (ri->cache_info.published_on >= cutoff) {
@@ -2794,7 +2794,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 
   v3_out->client_versions = client_versions;
   v3_out->server_versions = server_versions;
-  v3_out->known_flags = smartlist_create();
+  v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
                 "Authority Exit Fast Guard Stable V2Dir Valid",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2813,7 +2813,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   smartlist_sort_strings(v3_out->known_flags);
 
   if (options->ConsensusParams) {
-    v3_out->net_params = smartlist_create();
+    v3_out->net_params = smartlist_new();
     smartlist_split_string(v3_out->net_params,
                            options->ConsensusParams, NULL, 0, 0);
     smartlist_sort_strings(v3_out->net_params);
@@ -2822,7 +2822,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
-  voter->sigs = smartlist_create();
+  voter->sigs = smartlist_new();
   voter->address = hostname;
   voter->addr = addr;
   voter->dir_port = router_get_advertised_dir_port(options, 0);
@@ -2838,7 +2838,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     }
   }
 
-  v3_out->voters = smartlist_create();
+  v3_out->voters = smartlist_new();
   smartlist_add(v3_out->voters, voter);
   v3_out->cert = authority_cert_dup(cert);
   v3_out->routerstatus_list = routerstatuses;
@@ -2864,7 +2864,7 @@ generate_v2_networkstatus_opinion(void)
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
-  crypto_pk_env_t *private_key;
+  crypto_pk_t *private_key;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -2949,7 +2949,7 @@ generate_v2_networkstatus_opinion(void)
 
   dirserv_compute_performance_thresholds(rl);
 
-  routers = smartlist_create();
+  routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
 
@@ -3090,7 +3090,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                              const char *key)
 {
   cached_dir_t *cached;
-  smartlist_t *fingerprints = smartlist_create();
+  smartlist_t *fingerprints = smartlist_new();
   tor_assert(result);
 
   if (!cached_v2_networkstatus)
@@ -3211,7 +3211,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     if (ri)
       smartlist_add(descs_out, (void*) &(ri->cache_info));
   } else if (!strcmpstart(key, "/tor/server/d/")) {
-    smartlist_t *digests = smartlist_create();
+    smartlist_t *digests = smartlist_new();
     key += strlen("/tor/server/d/");
     dir_split_resource_into_fingerprints(key, digests, NULL,
                                          DSR_HEX|DSR_SORT_UNIQ);
@@ -3224,7 +3224,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
     smartlist_free(digests);
   } else if (!strcmpstart(key, "/tor/server/fp/")) {
-    smartlist_t *digests = smartlist_create();
+    smartlist_t *digests = smartlist_new();
     time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
     dir_split_resource_into_fingerprints(key, digests, NULL,

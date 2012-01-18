@@ -88,7 +88,7 @@ test_md_cache(void *data)
   smartlist_free(added);
   added = NULL;
 
-  wanted = smartlist_create();
+  wanted = smartlist_new();
   added = microdescs_add_to_cache(mc, test_md2, NULL, SAVED_NOWHERE, 0,
                                   time2, wanted);
   /* Should fail, since we didn't list test_md2's digest in wanted */

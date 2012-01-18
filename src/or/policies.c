@@ -75,7 +75,7 @@ policy_expand_private(smartlist_t **policy)
   if (!*policy) /*XXXX disallow NULL policies? */
     return;
 
-  tmp = smartlist_create();
+  tmp = smartlist_new();
 
   SMARTLIST_FOREACH(*policy, addr_policy_t *, p,
   {
@@ -122,8 +122,8 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
   if (!cfg)
     return 0;
 
-  result = smartlist_create();
-  entries = smartlist_create();
+  result = smartlist_new();
+  entries = smartlist_new();
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1064,7 +1064,7 @@ policy_summary_create(void)
   item->reject_count = 0;
   item->accepted = 0;
 
-  summary = smartlist_create();
+  summary = smartlist_new();
   smartlist_add(summary, item);
 
   return summary;
@@ -1236,8 +1236,8 @@ policy_summarize(smartlist_t *policy)
    */
   i = 0;
   start_prt = 1;
-  accepts = smartlist_create();
-  rejects = smartlist_create();
+  accepts = smartlist_new();
+  rejects = smartlist_new();
   while (1) {
     last = i == smartlist_len(summary)-1;
     if (last ||

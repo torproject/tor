@@ -29,7 +29,7 @@
 /** Allocate and return an empty smartlist.
  */
 smartlist_t *
-smartlist_create(void)
+smartlist_new(void)
 {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;

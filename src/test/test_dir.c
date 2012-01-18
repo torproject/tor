@@ -76,7 +76,7 @@ test_dir_formats(void)
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
-  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
@@ -127,7 +127,7 @@ test_dir_formats(void)
   r2->onion_pkey = crypto_pk_dup_key(pk2);
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
-  r2->exit_policy = smartlist_create();
+  r2->exit_policy = smartlist_new();
   smartlist_add(r2->exit_policy, ex2);
   smartlist_add(r2->exit_policy, ex1);
   r2->nickname = tor_strdup("Fred");
@@ -213,7 +213,7 @@ test_dir_formats(void)
 
   /* Okay, now for the directories. */
   {
-    fingerprint_list = smartlist_create();
+    fingerprint_list = smartlist_new();
     crypto_pk_get_fingerprint(pk2, buf, 1);
     add_fingerprint_to_dir("Magri", buf, fingerprint_list);
     crypto_pk_get_fingerprint(pk1, buf, 1);
@@ -250,9 +250,9 @@ test_dir_formats(void)
   tor_free(pk1_str);
   tor_free(pk2_str);
   tor_free(pk3_str);
-  if (pk1) crypto_free_pk_env(pk1);
-  if (pk2) crypto_free_pk_env(pk2);
-  if (pk3) crypto_free_pk_env(pk3);
+  if (pk1) crypto_pk_free(pk1);
+  if (pk2) crypto_pk_free(pk2);
+  if (pk3) crypto_pk_free(pk3);
   if (rp1) routerinfo_free(rp1);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
@@ -378,7 +378,7 @@ test_dir_versions(void)
 static void
 test_dir_fp_pairs(void)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   fp_pair_t *pair;
 
   dir_split_resource_into_fingerprint_pairs(
@@ -406,7 +406,7 @@ test_dir_fp_pairs(void)
 static void
 test_dir_split_fps(void *testdata)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   char *mem_op_hex_tmp = NULL;
   (void)testdata;
 
@@ -594,7 +594,7 @@ static void
 test_dir_param_voting(void)
 {
   networkstatus_t vote1, vote2, vote3, vote4;
-  smartlist_t *votes = smartlist_create();
+  smartlist_t *votes = smartlist_new();
   char *res = NULL;
 
   /* dirvote_compute_params only looks at the net_params field of the votes,
@@ -604,10 +604,10 @@ test_dir_param_voting(void)
   memset(&vote2, 0, sizeof(vote2));
   memset(&vote3, 0, sizeof(vote3));
   memset(&vote4, 0, sizeof(vote4));
-  vote1.net_params = smartlist_create();
-  vote2.net_params = smartlist_create();
-  vote3.net_params = smartlist_create();
-  vote4.net_params = smartlist_create();
+  vote1.net_params = smartlist_new();
+  vote2.net_params = smartlist_new();
+  vote3.net_params = smartlist_new();
+  vote4.net_params = smartlist_new();
   smartlist_split_string(vote1.net_params,
                          "ab=90 abcd=20 cw=50 x-yz=-99", NULL, 0, 0);
   smartlist_split_string(vote2.net_params,
@@ -759,7 +759,7 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
     tor_strdup("123456789012345678901234567890123");
   r->cache_info.signed_descriptor_len =
     strlen(r->cache_info.signed_descriptor_body);
-  r->exit_policy = smartlist_create();
+  r->exit_policy = smartlist_new();
   r->cache_info.published_on = ++published + time(NULL);
   return r;
 }
@@ -772,7 +772,7 @@ get_detached_sigs(networkstatus_t *ns, networkstatus_t *ns2)
   char *r;
   smartlist_t *sl;
   tor_assert(ns && ns->flavor == FLAV_NS);
-  sl = smartlist_create();
+  sl = smartlist_new();
   smartlist_add(sl,ns);
   if (ns2)
     smartlist_add(sl,ns2);
@@ -787,8 +787,8 @@ static void
 test_dir_v3_networkstatus(void)
 {
   authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
-  crypto_pk_env_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
-  crypto_pk_env_t *sign_skey_leg1=NULL;
+  crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
+  crypto_pk_t *sign_skey_leg1=NULL;
   const char *msg=NULL;
 
   time_t now = time(NULL);
@@ -799,7 +799,7 @@ test_dir_v3_networkstatus(void)
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL, *cp;
-  smartlist_t *votes = smartlist_create();
+  smartlist_t *votes = smartlist_new();
 
   /* For generating the two other consensuses. */
   char *detached_text1=NULL, *detached_text2=NULL;
@@ -817,9 +817,9 @@ test_dir_v3_networkstatus(void)
   test_assert(cert2);
   cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);
   test_assert(cert3);
-  sign_skey_1 = crypto_new_pk_env();
-  sign_skey_2 = crypto_new_pk_env();
-  sign_skey_3 = crypto_new_pk_env();
+  sign_skey_1 = crypto_pk_new();
+  sign_skey_2 = crypto_pk_new();
+  sign_skey_3 = crypto_pk_new();
   sign_skey_leg1 = pk_generate(4);
 
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
@@ -843,15 +843,15 @@ test_dir_v3_networkstatus(void)
   vote->valid_until = now+3000;
   vote->vote_seconds = 100;
   vote->dist_seconds = 200;
-  vote->supported_methods = smartlist_create();
+  vote->supported_methods = smartlist_new();
   smartlist_split_string(vote->supported_methods, "1 2 3", NULL, 0, -1);
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.15");
   vote->server_versions = tor_strdup("0.1.2.14,0.1.2.15,0.1.2.16");
-  vote->known_flags = smartlist_create();
+  vote->known_flags = smartlist_new();
   smartlist_split_string(vote->known_flags,
                      "Authority Exit Fast Guard Running Stable V2Dir Valid",
                      0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  vote->voters = smartlist_create();
+  vote->voters = smartlist_new();
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup("Voter1");
   voter->address = tor_strdup("1.2.3.4");
@@ -862,10 +862,10 @@ test_dir_v3_networkstatus(void)
   crypto_pk_get_digest(cert1->identity_key, voter->identity_digest);
   smartlist_add(vote->voters, voter);
   vote->cert = authority_cert_dup(cert1);
-  vote->net_params = smartlist_create();
+  vote->net_params = smartlist_new();
   smartlist_split_string(vote->net_params, "circuitwindow=101 foo=990",
                          NULL, 0, 0);
-  vote->routerstatus_list = smartlist_create();
+  vote->routerstatus_list = smartlist_new();
   /* add the first routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
   rs = &vrs->status;
@@ -1007,7 +1007,7 @@ test_dir_v3_networkstatus(void)
   vote->dist_seconds = 300;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert2);
-  vote->net_params = smartlist_create();
+  vote->net_params = smartlist_new();
   smartlist_split_string(vote->net_params, "bar=2000000000 circuitwindow=20",
                          NULL, 0, 0);
   tor_free(vote->client_versions);
@@ -1048,7 +1048,7 @@ test_dir_v3_networkstatus(void)
   vote->dist_seconds = 250;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert3);
-  vote->net_params = smartlist_create();
+  vote->net_params = smartlist_new();
   smartlist_split_string(vote->net_params, "circuitwindow=80 foo=660",
                          NULL, 0, 0);
   smartlist_add(vote->supported_methods, tor_strdup("4"));
@@ -1347,13 +1347,13 @@ test_dir_v3_networkstatus(void)
   if (con_md)
     networkstatus_vote_free(con_md);
   if (sign_skey_1)
-    crypto_free_pk_env(sign_skey_1);
+    crypto_pk_free(sign_skey_1);
   if (sign_skey_2)
-    crypto_free_pk_env(sign_skey_2);
+    crypto_pk_free(sign_skey_2);
   if (sign_skey_3)
-    crypto_free_pk_env(sign_skey_3);
+    crypto_pk_free(sign_skey_3);
   if (sign_skey_leg1)
-    crypto_free_pk_env(sign_skey_leg1);
+    crypto_pk_free(sign_skey_leg1);
   if (cert1)
     authority_cert_free(cert1);
   if (cert2)

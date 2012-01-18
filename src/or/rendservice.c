@@ -73,7 +73,7 @@ typedef struct rend_service_t {
                          * clients that may access our service. Can be NULL
                          * if no client authorization is performed. */
   /* Other fields */
-  crypto_pk_env_t *private_key; /**< Permanent hidden-service key. */
+  crypto_pk_t *private_key; /**< Permanent hidden-service key. */
   char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
                                                   * '.onion' */
   char pk_digest[DIGEST_LEN]; /**< Hash of permanent hidden-service key. */
@@ -134,7 +134,7 @@ rend_authorized_client_free(rend_authorized_client_t *client)
   if (!client)
     return;
   if (client->client_key)
-    crypto_free_pk_env(client->client_key);
+    crypto_pk_free(client->client_key);
   tor_free(client->client_name);
   tor_free(client);
 }
@@ -158,7 +158,7 @@ rend_service_free(rend_service_t *service)
   SMARTLIST_FOREACH(service->ports, void*, p, tor_free(p));
   smartlist_free(service->ports);
   if (service->private_key)
-    crypto_free_pk_env(service->private_key);
+    crypto_pk_free(service->private_key);
   if (service->intro_nodes) {
     SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro,
       rend_intro_point_free(intro););
@@ -197,7 +197,7 @@ rend_add_service(rend_service_t *service)
   int i;
   rend_service_port_config_t *p;
 
-  service->intro_nodes = smartlist_create();
+  service->intro_nodes = smartlist_new();
 
   if (service->auth_type != REND_NO_AUTH &&
       smartlist_len(service->clients) == 0) {
@@ -268,7 +268,7 @@ parse_port_config(const char *string)
   const char *addrport;
   rend_service_port_config_t *result = NULL;
 
-  sl = smartlist_create();
+  sl = smartlist_new();
   smartlist_split_string(sl, string, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
@@ -333,7 +333,7 @@ rend_config_services(const or_options_t *options, int validate_only)
 
   if (!validate_only) {
     old_service_list = rend_service_list;
-    rend_service_list = smartlist_create();
+    rend_service_list = smartlist_new();
   }
 
   for (line = options->RendConfigLines; line; line = line->next) {
@@ -346,7 +346,7 @@ rend_config_services(const or_options_t *options, int validate_only)
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
-      service->ports = smartlist_create();
+      service->ports = smartlist_new();
       service->intro_period_started = time(NULL);
       service->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
       continue;
@@ -377,7 +377,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         rend_service_free(service);
         return -1;
       }
-      type_names_split = smartlist_create();
+      type_names_split = smartlist_new();
       smartlist_split_string(type_names_split, line->value, " ", 0, 2);
       if (smartlist_len(type_names_split) < 1) {
         log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
@@ -402,7 +402,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         rend_service_free(service);
         return -1;
       }
-      service->clients = smartlist_create();
+      service->clients = smartlist_new();
       if (smartlist_len(type_names_split) < 2) {
         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
                             "auth-type '%s', but no client names.",
@@ -411,7 +411,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         smartlist_free(type_names_split);
         continue;
       }
-      clients = smartlist_create();
+      clients = smartlist_new();
       smartlist_split_string(clients, smartlist_get(type_names_split, 1),
                              ",", SPLIT_SKIP_SPACE, 0);
       SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
@@ -494,7 +494,7 @@ rend_config_services(const or_options_t *options, int validate_only)
    * keep the introduction points that are still needed and close the
    * other ones. */
   if (old_service_list && !validate_only) {
-    smartlist_t *surviving_services = smartlist_create();
+    smartlist_t *surviving_services = smartlist_new();
     circuit_t *circ;
 
     /* Copy introduction points to new services. */
@@ -565,7 +565,7 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  d->intro_nodes = smartlist_create();
+  d->intro_nodes = smartlist_new();
   /* Support intro protocols 2 and 3. */
   d->protocols = (1 << 2) + (1 << 3);
 
@@ -734,19 +734,19 @@ rend_service_load_keys(void)
           client->client_key = crypto_pk_dup_key(parsed->client_key);
         } else if (s->auth_type == REND_STEALTH_AUTH) {
           /* Create private key for client. */
-          crypto_pk_env_t *prkey = NULL;
-          if (!(prkey = crypto_new_pk_env())) {
+          crypto_pk_t *prkey = NULL;
+          if (!(prkey = crypto_pk_new())) {
             log_warn(LD_BUG,"Error constructing client key");
             goto err;
           }
           if (crypto_pk_generate_key(prkey)) {
             log_warn(LD_BUG,"Error generating client key");
-            crypto_free_pk_env(prkey);
+            crypto_pk_free(prkey);
             goto err;
           }
           if (crypto_pk_check_key(prkey) <= 0) {
             log_warn(LD_BUG,"Generated client key seems invalid");
-            crypto_free_pk_env(prkey);
+            crypto_pk_free(prkey);
             goto err;
           }
           client->client_key = prkey;
@@ -1046,19 +1046,19 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   rend_intro_point_t *intro_point;
   int r, i, v3_shift = 0;
   size_t len, keylen;
-  crypto_dh_env_t *dh = NULL;
+  crypto_dh_t *dh = NULL;
   origin_circuit_t *launched = NULL;
   crypt_path_t *cpath = NULL;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   char hexcookie[9];
   int circ_needs_uptime;
   int reason = END_CIRC_REASON_TORPROTOCOL;
-  crypto_pk_env_t *intro_key;
+  crypto_pk_t *intro_key;
   char intro_key_digest[DIGEST_LEN];
   int auth_type;
   size_t auth_len = 0;
   char auth_data[REND_DESC_COOKIE_LEN];
-  crypto_digest_env_t *digest = NULL;
+  crypto_digest_t *digest = NULL;
   time_t now = time(NULL);
   char diffie_hellman_hash[DIGEST_LEN];
   time_t *access_time;
@@ -1278,10 +1278,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   base16_encode(hexcookie,9,r_cookie,4);
 
   /* Determine hash of Diffie-Hellman, part 1 to detect replays. */
-  digest = crypto_new_digest_env();
+  digest = crypto_digest_new();
   crypto_digest_add_bytes(digest, ptr+REND_COOKIE_LEN, DH_KEY_LEN);
   crypto_digest_get_digest(digest, diffie_hellman_hash, DIGEST_LEN);
-  crypto_free_digest_env(digest);
+  crypto_digest_free(digest);
 
   /* Check whether there is a past request with the same Diffie-Hellman,
    * part 1. */
@@ -1568,7 +1568,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
-  crypto_pk_env_t *intro_key;
+  crypto_pk_t *intro_key;
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
 #ifndef NON_ANONYMOUS_MODE_ENABLED
@@ -1616,9 +1616,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
         rend_data_free(rend_data);
       }
       {
-        crypto_pk_env_t *intro_key = circuit->intro_key;
+        crypto_pk_t *intro_key = circuit->intro_key;
         circuit->intro_key = NULL;
-        crypto_free_pk_env(intro_key);
+        crypto_pk_free(intro_key);
       }
 
       circuit_has_opened(circuit);
@@ -1893,8 +1893,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                          int seconds_valid)
 {
   int i, j, failed_upload = 0;
-  smartlist_t *responsible_dirs = smartlist_create();
-  smartlist_t *successful_uploads = smartlist_create();
+  smartlist_t *responsible_dirs = smartlist_new();
+  smartlist_t *successful_uploads = smartlist_new();
   routerstatus_t *hs_dir;
   for (i = 0; i < smartlist_len(descs); i++) {
     rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
@@ -1962,7 +1962,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
     /* Remember which routers worked this time, so that we don't upload the
      * descriptor to them again. */
     if (!renddesc->successful_uploads)
-      renddesc->successful_uploads = smartlist_create();
+      renddesc->successful_uploads = smartlist_new();
     SMARTLIST_FOREACH(successful_uploads, const char *, c, {
       if (!smartlist_digest_isin(renddesc->successful_uploads, c)) {
         char *hsdir_id = tor_memdup(c, DIGEST_LEN);
@@ -1992,15 +1992,15 @@ upload_service_descriptor(rend_service_t *service)
     networkstatus_t *c = networkstatus_get_latest_consensus();
     if (c && smartlist_len(c->routerstatus_list) > 0) {
       int seconds_valid, i, j, num_descs;
-      smartlist_t *descs = smartlist_create();
-      smartlist_t *client_cookies = smartlist_create();
+      smartlist_t *descs = smartlist_new();
+      smartlist_t *client_cookies = smartlist_new();
       /* Either upload a single descriptor (including replicas) or one
        * descriptor for each authorized client in case of authorization
        * type 'stealth'. */
       num_descs = service->auth_type == REND_STEALTH_AUTH ?
                       smartlist_len(service->clients) : 1;
       for (j = 0; j < num_descs; j++) {
-        crypto_pk_env_t *client_key = NULL;
+        crypto_pk_t *client_key = NULL;
         rend_authorized_client_t *client = NULL;
         smartlist_clear(client_cookies);
         switch (service->auth_type) {
@@ -2162,7 +2162,7 @@ rend_services_introduce(void)
   time_t now;
   const or_options_t *options = get_options();
 
-  intro_nodes = smartlist_create();
+  intro_nodes = smartlist_new();
   now = time(NULL);
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
@@ -2323,7 +2323,7 @@ rend_services_introduce(void)
       smartlist_add(intro_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_node(node, 0);
-      intro->intro_key = crypto_new_pk_env();
+      intro->intro_key = crypto_pk_new();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       intro->time_published = -1;
       intro->time_to_expire = -1;
@@ -2489,7 +2489,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
              serviceid, circ->_base.n_circ_id);
     return -1;
   }
-  matching_ports = smartlist_create();
+  matching_ports = smartlist_new();
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
   {
     if (conn->_base.port == p->virtual_port) {

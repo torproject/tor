@@ -24,7 +24,7 @@ int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    size_t digest_len,
-                                   crypto_pk_env_t *private_key);
+                                   crypto_pk_t *private_key);
 int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location,

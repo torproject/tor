@@ -51,7 +51,7 @@ void connection_or_init_conn_from_address(or_connection_t *conn,
 int connection_or_client_learned_peer_id(or_connection_t *conn,
                                          const uint8_t *peer_id);
 void connection_or_set_circid_type(or_connection_t *conn,
-                                   crypto_pk_env_t *identity_rcvd);
+                                   crypto_pk_t *identity_rcvd);
 void or_handshake_state_free(or_handshake_state_t *state);
 void or_handshake_state_record_cell(or_handshake_state_t *state,
                                     const cell_t *cell,
@@ -73,7 +73,7 @@ int connection_or_send_certs_cell(or_connection_t *conn);
 int connection_or_send_auth_challenge_cell(or_connection_t *conn);
 int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                                  uint8_t *out, size_t outlen,
-                                                 crypto_pk_env_t *signing_key,
+                                                 crypto_pk_t *signing_key,
                                                  int server);
 int connection_or_send_authenticate_cell(or_connection_t *conn, int type);
 

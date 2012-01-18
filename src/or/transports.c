@@ -387,7 +387,7 @@ configure_proxy(managed_proxy_t *mp)
   stdout_buf[pos] = '\0';
 
   /* Split up the buffer */
-  lines = smartlist_create();
+  lines = smartlist_new();
   tor_split_lines(lines, stdout_buf, pos);
 
   /* Handle lines. */
@@ -460,7 +460,7 @@ register_server_proxy(managed_proxy_t *mp)
   /* After we register this proxy's transports, we switch its
      mp->transports to a list containing strings of its transport
      names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_create();
+  smartlist_t *sm_tmp = smartlist_new();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
@@ -490,7 +490,7 @@ register_client_proxy(managed_proxy_t *mp)
   /* After we register this proxy's transports, we switch its
      mp->transports to a list containing strings of its transport
      names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_create();
+  smartlist_t *sm_tmp = smartlist_new();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
@@ -774,7 +774,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
 
   transport_t *transport=NULL;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 3) {
@@ -805,7 +805,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_create(&addr, port, method_name, PROXY_NONE);
+  transport = transport_new(&addr, port, method_name, PROXY_NONE);
   if (!transport)
     goto err;
 
@@ -847,7 +847,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
 
   transport_t *transport=NULL;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 4) {
@@ -890,7 +890,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_create(&addr, port, method_name, socks_ver);
+  transport = transport_new(&addr, port, method_name, socks_ver);
   if (!transport)
     goto err;
 
@@ -921,7 +921,7 @@ get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
 {
   char *bindaddr_result = NULL;
   char *bindaddr_tmp = NULL;
-  smartlist_t *string_tmp = smartlist_create();
+  smartlist_t *string_tmp = smartlist_new();
 
   tor_assert(mp->is_server);
 
@@ -967,7 +967,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
 
   /* A smartlist carrying all the env. variables that the managed
      proxy should inherit. */
-  smartlist_t *envs = smartlist_create();
+  smartlist_t *envs = smartlist_new();
 
   /* Copy the whole environment of the Tor process.
      It should also copy PATH and HOME of the Tor process.*/
@@ -1117,15 +1117,15 @@ managed_proxy_create(const smartlist_t *transport_list,
   mp->conf_state = PT_PROTO_INFANT;
   mp->is_server = is_server;
   mp->argv = proxy_argv;
-  mp->transports = smartlist_create();
+  mp->transports = smartlist_new();
 
-  mp->transports_to_launch = smartlist_create();
+  mp->transports_to_launch = smartlist_new();
   SMARTLIST_FOREACH(transport_list, const char *, transport,
                     add_transport_to_proxy(transport, mp));
 
   /* register the managed proxy */
   if (!managed_proxy_list)
-    managed_proxy_list = smartlist_create();
+    managed_proxy_list = smartlist_new();
   smartlist_add(managed_proxy_list, mp);
   unconfigured_proxies_n++;
 

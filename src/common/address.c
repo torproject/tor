@@ -1125,7 +1125,7 @@ get_interface_addresses_raw(int severity)
     return NULL;
   }
 
-  result = smartlist_create();
+  result = smartlist_new();
   for (i = ifa; i; i = i->ifa_next) {
     tor_addr_t tmp;
     if (!i->ifa_addr)
@@ -1184,7 +1184,7 @@ get_interface_addresses_raw(int severity)
     goto done;
   }
 
-  result = smartlist_create();
+  result = smartlist_new();
   for (address = addresses; address; address = address->Next) {
     IP_ADAPTER_UNICAST_ADDRESS *a;
     for (a = address->FirstUnicastAddress; a; a = a->Next) {
@@ -1224,7 +1224,7 @@ get_interface_addresses_raw(int severity)
     goto done;
   }
   close(fd);
-  result = smartlist_create();
+  result = smartlist_new();
   if (ifc.ifc_len < sz)
     sz = ifc.ifc_len;
   n = sz / sizeof(struct ifreq);

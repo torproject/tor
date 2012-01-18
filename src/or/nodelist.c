@@ -64,7 +64,7 @@ init_nodelist(void)
   if (PREDICT_UNLIKELY(the_nodelist == NULL)) {
     the_nodelist = tor_malloc_zero(sizeof(nodelist_t));
     HT_INIT(nodelist_map, &the_nodelist->nodes_by_id);
-    the_nodelist->nodes = smartlist_create();
+    the_nodelist->nodes = smartlist_new();
   }
 }
 
@@ -494,7 +494,7 @@ node_get_by_nickname(const char *nickname, int warn_if_unnamed)
 
   /* Okay, so the name is not canonical for anybody. */
   {
-    smartlist_t *matches = smartlist_create();
+    smartlist_t *matches = smartlist_new();
     const node_t *choice = NULL;
 
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
@@ -657,7 +657,7 @@ node_exit_policy_rejects_all(const node_t *node)
 smartlist_t *
 node_get_all_orports(const node_t *node)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
 
   if (node->ri != NULL) {
     if (node->ri->addr != 0) {

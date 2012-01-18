@@ -170,12 +170,12 @@ onion_pending_remove(or_circuit_t *circ)
  * The meeting point/cookies and auth are zeroed out for now.
  */
 int
-onion_skin_create(crypto_pk_env_t *dest_router_key,
-                  crypto_dh_env_t **handshake_state_out,
+onion_skin_create(crypto_pk_t *dest_router_key,
+                  crypto_dh_t **handshake_state_out,
                   char *onion_skin_out) /* ONIONSKIN_CHALLENGE_LEN bytes */
 {
   char challenge[DH_KEY_LEN];
-  crypto_dh_env_t *dh = NULL;
+  crypto_dh_t *dh = NULL;
   int dhbytes, pkbytes;
 
   tor_assert(dest_router_key);
@@ -221,19 +221,19 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
  */
 int
 onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
-                            crypto_pk_env_t *private_key,
-                            crypto_pk_env_t *prev_private_key,
+                            crypto_pk_t *private_key,
+                            crypto_pk_t *prev_private_key,
                             char *handshake_reply_out, /*ONIONSKIN_REPLY_LEN*/
                             char *key_out,
                             size_t key_out_len)
 {
   char challenge[ONIONSKIN_CHALLENGE_LEN];
-  crypto_dh_env_t *dh = NULL;
+  crypto_dh_t *dh = NULL;
   ssize_t len;
   char *key_material=NULL;
   size_t key_material_len=0;
   int i;
-  crypto_pk_env_t *k;
+  crypto_pk_t *k;
 
   len = -1;
   for (i=0;i<2;++i) {
@@ -310,7 +310,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
  * After the invocation, call crypto_dh_free on handshake_state.
  */
 int
-onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
+onion_skin_client_handshake(crypto_dh_t *handshake_state,
             const char *handshake_reply, /* ONIONSKIN_REPLY_LEN bytes */
             char *key_out,
             size_t key_out_len)
