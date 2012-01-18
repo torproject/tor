@@ -44,7 +44,7 @@
 #include <pwd.h>
 #endif
 
-static connection_t *connection_create_listener(
+static connection_t *connection_listener_new(
                                const struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
                                const char *address,
@@ -244,7 +244,7 @@ or_connection_new(int socket_family)
   or_conn->timestamp_last_added_nonpadding = time(NULL);
   or_conn->next_circ_id = crypto_rand_int(1<<15);
 
-  or_conn->active_circuit_pqueue = smartlist_create();
+  or_conn->active_circuit_pqueue = smartlist_new();
   or_conn->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
   return or_conn;
@@ -858,7 +858,7 @@ make_socket_reuseable(tor_socket_t sock)
  * to the conn.
  */
 static connection_t *
-connection_create_listener(const struct sockaddr *listensockaddr,
+connection_listener_new(const struct sockaddr *listensockaddr,
                            socklen_t socklen,
                            int type, const char *address,
                            const port_cfg_t *port_cfg)
@@ -1790,7 +1790,7 @@ retry_listener_ports(smartlist_t *old_conns,
                      const smartlist_t *ports,
                      smartlist_t *new_conns)
 {
-  smartlist_t *launch = smartlist_create();
+  smartlist_t *launch = smartlist_new();
   int r = 0;
 
   smartlist_add_all(launch, ports);
@@ -1866,7 +1866,7 @@ retry_listener_ports(smartlist_t *old_conns,
     }
 
     if (listensockaddr) {
-      conn = connection_create_listener(listensockaddr, listensocklen,
+      conn = connection_listener_new(listensockaddr, listensocklen,
                                         port->type, address, port);
       tor_free(listensockaddr);
       tor_free(address);
@@ -1898,7 +1898,7 @@ int
 retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
-  smartlist_t *listeners = smartlist_create();
+  smartlist_t *listeners = smartlist_new();
   const or_options_t *options = get_options();
   int retval = 0;
   const uint16_t old_or_port = router_get_advertised_or_port(options);
@@ -3682,7 +3682,7 @@ client_check_address_changed(tor_socket_t sock)
   if (!last_interface_ip)
     get_interface_address(LOG_INFO, &last_interface_ip);
   if (!outgoing_addrs)
-    outgoing_addrs = smartlist_create();
+    outgoing_addrs = smartlist_new();
 
   if (getsockname(sock, (struct sockaddr*)&out_addr, &out_addr_len)<0) {
     int e = tor_socket_errno(sock);

@@ -25,7 +25,7 @@ test_pt_parsing(void)
 
   managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_INFANT;
-  mp->transports = smartlist_create();
+  mp->transports = smartlist_new();
 
   /* incomplete cmethod */
   strcpy(line,"CMETHOD trebuchet");
@@ -93,7 +93,7 @@ test_pt_protocol(void)
 
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_LAUNCHED;
-  mp->transports = smartlist_create();
+  mp->transports = smartlist_new();
 
   /* various wrong protocol runs: */
 

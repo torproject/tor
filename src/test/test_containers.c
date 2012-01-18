@@ -34,7 +34,7 @@ test_container_smartlist_basic(void)
   /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
   /* Test smartlist add, del_keeporder, insert, get. */
-  sl = smartlist_create();
+  sl = smartlist_new();
   smartlist_add(sl, (void*)1);
   smartlist_add(sl, (void*)2);
   smartlist_add(sl, (void*)3);
@@ -68,7 +68,7 @@ test_container_smartlist_basic(void)
 static void
 test_container_smartlist_strings(void)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   char *cp=NULL, *cp_alloc=NULL;
   size_t sz;
 
@@ -298,11 +298,11 @@ test_container_smartlist_strings(void)
 static void
 test_container_smartlist_overlap(void)
 {
-  smartlist_t *sl = smartlist_create();
-  smartlist_t *ints = smartlist_create();
-  smartlist_t *odds = smartlist_create();
-  smartlist_t *evens = smartlist_create();
-  smartlist_t *primes = smartlist_create();
+  smartlist_t *sl = smartlist_new();
+  smartlist_t *ints = smartlist_new();
+  smartlist_t *odds = smartlist_new();
+  smartlist_t *evens = smartlist_new();
+  smartlist_t *primes = smartlist_new();
   int i;
   for (i=1; i < 10; i += 2)
     smartlist_add(odds, (void*)(uintptr_t)i);
@@ -351,7 +351,7 @@ test_container_smartlist_overlap(void)
 static void
 test_container_smartlist_digests(void)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
 
   /* digest_isin. */
   smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
@@ -384,9 +384,9 @@ test_container_smartlist_digests(void)
 static void
 test_container_smartlist_join(void)
 {
-  smartlist_t *sl = smartlist_create();
-  smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
-    *sl4 = smartlist_create();
+  smartlist_t *sl = smartlist_new();
+  smartlist_t *sl2 = smartlist_new(), *sl3 = smartlist_new(),
+    *sl4 = smartlist_new();
   char *joined=NULL;
   /* unique, sorted. */
   smartlist_split_string(sl,
@@ -479,7 +479,7 @@ test_container_bitarray(void)
 static void
 test_container_digestset(void)
 {
-  smartlist_t *included = smartlist_create();
+  smartlist_t *included = smartlist_new();
   char d[DIGEST_LEN];
   int i;
   int ok = 1;
@@ -532,7 +532,7 @@ _compare_strings_for_pqueue(const void *p1, const void *p2)
 static void
 test_container_pqueue(void)
 {
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   int (*cmp)(const void *, const void*);
   const int offset = STRUCT_OFFSET(pq_entry_t, idx);
 #define ENTRY(s) pq_entry_t s = { #s, -1 }
@@ -669,7 +669,7 @@ test_container_strmap(void)
 
   /* Test iterator. */
   iter = strmap_iter_init(map);
-  found_keys = smartlist_create();
+  found_keys = smartlist_new();
   while (!strmap_iter_done(iter)) {
     strmap_iter_get(iter,&k,&v);
     smartlist_add(found_keys, tor_strdup(k));

@@ -131,7 +131,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   rend_cache_entry_t *entry;
   crypt_path_t *cpath;
   off_t dh_offset;
-  crypto_pk_env_t *intro_key = NULL;
+  crypto_pk_t *intro_key = NULL;
 
   tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
@@ -538,7 +538,7 @@ rend_client_purge_last_hid_serv_requests(void)
 static int
 directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 {
-  smartlist_t *responsible_dirs = smartlist_create();
+  smartlist_t *responsible_dirs = smartlist_new();
   routerstatus_t *hs_dir;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
@@ -1040,7 +1040,7 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
 
   /* We'll keep a separate list of the usable nodes.  If this becomes empty,
    * no nodes are usable.  */
-  usable_nodes = smartlist_create();
+  usable_nodes = smartlist_new();
   smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
 
   /* Remove the intro points that have timed out during this HS
@@ -1170,7 +1170,7 @@ rend_parse_service_authorization(const or_options_t *options,
   config_line_t *line;
   int res = -1;
   strmap_t *parsed = strmap_new();
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
   rend_service_authorization_t *auth = NULL;
 
   for (line = options->HidServAuth; line; line = line->next) {

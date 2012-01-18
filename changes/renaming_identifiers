@@ -1,0 +1,9 @@
+  o Code simplifications and refactorings:
+    - Rename a handful of old identifiers, mostly related to crypto
+      structures and crypto functions. By convention, our "create an
+      object" functions are called "type_new()", our "free an object"
+      functions are called "type_free()", and our types indicate that
+      they are types only with a final "_t". But a handful of older
+      types and functions broke these rules, with function names like
+      "type_create" or "subsystem_op_type", or with type names like
+      type_env_t.

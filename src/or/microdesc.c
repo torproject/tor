@@ -206,7 +206,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     }
   }
 
-  added = smartlist_create();
+  added = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(descriptors, microdesc_t *, md) {
     microdesc_t *md2;
     md2 = HT_FIND(microdesc_map, &cache->map, md);
@@ -428,7 +428,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   if (!f)
     return -1;
 
-  wrote = smartlist_create();
+  wrote = smartlist_new();
 
   HT_FOREACH(mdp, microdesc_map, &cache->map) {
     microdesc_t *md = *mdp;
@@ -566,7 +566,7 @@ microdesc_free(microdesc_t *md)
   //tor_assert(md->held_by_nodes == 0);
 
   if (md->onion_pkey)
-    crypto_free_pk_env(md->onion_pkey);
+    crypto_pk_free(md->onion_pkey);
   if (md->body && md->saved_location != SAVED_IN_CACHE)
     tor_free(md->body);
 
@@ -624,7 +624,7 @@ smartlist_t *
 microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
                                  int downloadable_only, digestmap_t *skip)
 {
-  smartlist_t *result = smartlist_create();
+  smartlist_t *result = smartlist_new();
   time_t now = time(NULL);
   tor_assert(ns->flavor == FLAV_MICRODESC);
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {

@@ -748,7 +748,7 @@ set_options(or_options_t *new_val, char **msg)
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
   if (old_options) {
-    elements = smartlist_create();
+    elements = smartlist_new();
     for (i=0; options_format.vars[i].name; ++i) {
       const config_var_t *var = &options_format.vars[i];
       const char *var_name = var->name;
@@ -1052,8 +1052,8 @@ consider_adding_dir_authorities(const or_options_t *options,
 static int
 options_act_reversible(const or_options_t *old_options, char **msg)
 {
-  smartlist_t *new_listeners = smartlist_create();
-  smartlist_t *replaced_listeners = smartlist_create();
+  smartlist_t *new_listeners = smartlist_new();
+  smartlist_t *replaced_listeners = smartlist_new();
   static int libevent_initialized = 0;
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
@@ -2182,7 +2182,7 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
       SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
       smartlist_clear(*(smartlist_t**)lvalue);
     } else {
-      *(smartlist_t**)lvalue = smartlist_create();
+      *(smartlist_t**)lvalue = smartlist_new();
     }
 
     smartlist_split_string(*(smartlist_t**)lvalue, c->value, ",",
@@ -2779,7 +2779,7 @@ static void
 list_torrc_options(void)
 {
   int i;
-  smartlist_t *lines = smartlist_create();
+  smartlist_t *lines = smartlist_new();
   for (i = 0; _option_vars[i].name; ++i) {
     const config_var_t *var = &_option_vars[i];
     if (var->type == CONFIG_TYPE_OBSOLETE ||
@@ -3124,7 +3124,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
     }
   }
 
-  elements = smartlist_create();
+  elements = smartlist_new();
   for (i=0; fmt->vars[i].name; ++i) {
     int comment_option = 0;
     if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE ||
@@ -3387,7 +3387,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->NodeFamilies) {
-    options->NodeFamilySets = smartlist_create();
+    options->NodeFamilySets = smartlist_new();
     for (cl = options->NodeFamilies; cl; cl = cl->next) {
       routerset_t *rs = routerset_new();
       if (routerset_parse(rs, cl->value, cl->key) == 0) {
@@ -3493,7 +3493,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       /* We already have firewall ports set, so migrate them to
        * ReachableAddresses, which will set ReachableORAddresses and
        * ReachableDirAddresses if they aren't set explicitly. */
-      smartlist_t *instead = smartlist_create();
+      smartlist_t *instead = smartlist_new();
       config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
       new_line->key = tor_strdup("ReachableAddresses");
       /* If we're configured with the old format, we need to prepend some
@@ -4338,7 +4338,7 @@ check_nickname_list(const char *lst, const char *name, char **msg)
 
   if (!lst)
     return 0;
-  sl = smartlist_create();
+  sl = smartlist_new();
 
   smartlist_split_string(sl, lst, ",",
     SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
@@ -4717,7 +4717,7 @@ config_register_addressmaps(const or_options_t *options)
   char *from, *to;
 
   addressmap_clear_configured();
-  elts = smartlist_create();
+  elts = smartlist_new();
   for (opt = options->AddressMap; opt; opt = opt->next) {
     int from_wildcard = 0, to_wildcard = 0;
     smartlist_split_string(elts, opt->value, NULL,
@@ -4825,7 +4825,7 @@ options_init_logs(or_options_t *options, int validate_only)
   }
 
   ok = 1;
-  elts = smartlist_create();
+  elts = smartlist_new();
 
   for (opt = options->Logs; opt; opt = opt->next) {
     log_severity_list_t *severity;
@@ -4919,7 +4919,7 @@ parse_bridge_line(const char *line, int validate_only)
   uint16_t port = 0;
   char digest[DIGEST_LEN];
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 1) {
@@ -5021,7 +5021,7 @@ parse_client_transport_line(const char *line, int validate_only)
 
   int line_length;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
@@ -5035,7 +5035,7 @@ parse_client_transport_line(const char *line, int validate_only)
      transport_list (in case it's multiple transports) and validate
      the transport names. */
   transports = smartlist_get(items, 0);
-  transport_list = smartlist_create();
+  transport_list = smartlist_new();
   smartlist_split_string(transport_list, transports, ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
@@ -5149,7 +5149,7 @@ parse_server_transport_line(const char *line, int validate_only)
 
   int line_length;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
@@ -5163,7 +5163,7 @@ parse_server_transport_line(const char *line, int validate_only)
      transport_list (in case it's multiple transports) and validate
      the transport names. */
   transports = smartlist_get(items, 0);
-  transport_list = smartlist_create();
+  transport_list = smartlist_new();
   smartlist_split_string(transport_list, transports, ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
@@ -5263,7 +5263,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   dirinfo_type_t type = V2_DIRINFO;
   int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 1) {
@@ -5597,7 +5597,7 @@ parse_port_config(smartlist_t *out,
 
   /* At last we can actually parse the FooPort lines.  The syntax is:
    * [Addr:](Port|auto) [Options].*/
-  elts = smartlist_create();
+  elts = smartlist_new();
 
   for (; ports; ports = ports->next) {
     tor_addr_t addr;
@@ -5828,7 +5828,7 @@ parse_ports(const or_options_t *options, int validate_only,
   smartlist_t *ports;
   int retval = -1;
 
-  ports = smartlist_create();
+  ports = smartlist_new();
 
   *n_ports_out = 0;
 
@@ -6010,7 +6010,7 @@ const smartlist_t *
 get_configured_ports(void)
 {
   if (!configured_ports)
-    configured_ports = smartlist_create();
+    configured_ports = smartlist_new();
   return configured_ports;
 }
 
@@ -6485,7 +6485,7 @@ state_transport_line_is_valid(const char *line)
   uint16_t port = 0;
   int r;
 
-  items = smartlist_create();
+  items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
 
@@ -6803,7 +6803,7 @@ get_transport_in_state_by_name(const char *transport)
   for (line = or_state->TransportProxies ; line ; line = line->next) {
     tor_assert(!strcmp(line->key, "TransportProxy"));
 
-    items = smartlist_create();
+    items = smartlist_new();
     smartlist_split_string(items, line->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
     if (smartlist_len(items) != 2) /* broken state */
@@ -6971,7 +6971,7 @@ getinfo_helper_config(control_connection_t *conn,
   (void) conn;
   (void) errmsg;
   if (!strcmp(question, "config/names")) {
-    smartlist_t *sl = smartlist_create();
+    smartlist_t *sl = smartlist_new();
     int i;
     for (i = 0; _option_vars[i].name; ++i) {
       const config_var_t *var = &_option_vars[i];

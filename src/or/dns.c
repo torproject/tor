@@ -376,7 +376,7 @@ set_expiry(cached_resolve_t *resolve, time_t expires)
 {
   tor_assert(resolve && resolve->expire == 0);
   if (!cached_resolve_pqueue)
-    cached_resolve_pqueue = smartlist_create();
+    cached_resolve_pqueue = smartlist_new();
   resolve->expire = expires;
   smartlist_pqueue_add(cached_resolve_pqueue,
                        _compare_cached_resolves_by_expiry,
@@ -1489,7 +1489,7 @@ wildcard_increment_answer(const char *id)
   ++*ip;
 
   if (*ip > 5 && n_wildcard_requests > 10) {
-    if (!dns_wildcard_list) dns_wildcard_list = smartlist_create();
+    if (!dns_wildcard_list) dns_wildcard_list = smartlist_new();
     if (!smartlist_string_isin(dns_wildcard_list, id)) {
     log(dns_wildcard_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider has given \"%s\" as an answer for %d different "
@@ -1511,7 +1511,7 @@ add_wildcarded_test_address(const char *address)
 {
   int n, n_test_addrs;
   if (!dns_wildcarded_test_address_list)
-    dns_wildcarded_test_address_list = smartlist_create();
+    dns_wildcarded_test_address_list = smartlist_new();
 
   if (smartlist_string_isin_case(dns_wildcarded_test_address_list, address))
     return;

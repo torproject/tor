@@ -431,7 +431,7 @@ smartlist_t *
 get_connection_array(void)
 {
   if (!connection_array)
-    connection_array = smartlist_create();
+    connection_array = smartlist_new();
   return connection_array;
 }
 
@@ -2230,11 +2230,11 @@ tor_init(int argc, char *argv[])
   int i, quiet = 0;
   time_of_process_start = time(NULL);
   if (!connection_array)
-    connection_array = smartlist_create();
+    connection_array = smartlist_new();
   if (!closeable_connection_lst)
-    closeable_connection_lst = smartlist_create();
+    closeable_connection_lst = smartlist_new();
   if (!active_linked_connection_lst)
-    active_linked_connection_lst = smartlist_create();
+    active_linked_connection_lst = smartlist_new();
   /* Have the log set up with our application name. */
   tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
   log_set_application_name(buf);
@@ -2477,7 +2477,7 @@ tor_cleanup(void)
 do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
-  crypto_pk_env_t *k;
+  crypto_pk_t *k;
   const char *nickname = get_options()->Nickname;
   if (!server_mode(get_options())) {
     log_err(LD_GENERAL,

@@ -522,7 +522,7 @@ control_ports_write_to_file(void)
   if (!options->ControlPortWriteToFile)
     return;
 
-  lines = smartlist_create();
+  lines = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
     if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
@@ -682,7 +682,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   const int clear_first = 1;
 
   char *config;
-  smartlist_t *entries = smartlist_create();
+  smartlist_t *entries = smartlist_new();
 
   /* We have a string, "body", of the format '(key(=val|="val")?)' entries
    * separated by space.  break it into a list of configuration entries. */
@@ -795,9 +795,9 @@ static int
 handle_control_getconf(control_connection_t *conn, uint32_t body_len,
                        const char *body)
 {
-  smartlist_t *questions = smartlist_create();
-  smartlist_t *answers = smartlist_create();
-  smartlist_t *unrecognized = smartlist_create();
+  smartlist_t *questions = smartlist_new();
+  smartlist_t *answers = smartlist_new();
+  smartlist_t *unrecognized = smartlist_new();
   char *msg = NULL;
   size_t msg_len;
   const or_options_t *options = get_options();
@@ -947,7 +947,7 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
 {
   int event_code = -1;
   uint32_t event_mask = 0;
-  smartlist_t *events = smartlist_create();
+  smartlist_t *events = smartlist_new();
 
   (void) len;
 
@@ -996,7 +996,7 @@ decode_hashed_passwords(config_line_t *passwords)
 {
   char decoded[64];
   config_line_t *cl;
-  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl = smartlist_new();
 
   tor_assert(passwords);
 
@@ -1109,7 +1109,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     smartlist_t *sl_tmp;
     char received[DIGEST_LEN];
     int also_cookie = options->CookieAuthentication;
-    sl = smartlist_create();
+    sl = smartlist_new();
     if (options->HashedControlPassword) {
       sl_tmp = decode_hashed_passwords(options->HashedControlPassword);
       if (!sl_tmp)
@@ -1283,9 +1283,9 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   size_t sz;
   (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
-  lines = smartlist_create();
-  elts = smartlist_create();
-  reply = smartlist_create();
+  lines = smartlist_new();
+  elts = smartlist_new();
+  reply = smartlist_new();
   smartlist_split_string(lines, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(lines, char *, line,
@@ -1367,7 +1367,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = list_getinfo_options();
   } else if (!strcmp(question, "events/names")) {
     int i;
-    smartlist_t *event_names = smartlist_create();
+    smartlist_t *event_names = smartlist_new();
 
     for (i = 0; control_event_table[i].event_name != NULL; ++i) {
       smartlist_add(event_names, (char *)control_event_table[i].event_name);
@@ -1443,7 +1443,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
-    crypto_pk_env_t *server_key;
+    crypto_pk_t *server_key;
     if (!server_mode(get_options())) {
       *errmsg = "Not running in server mode";
       return -1;
@@ -1535,7 +1535,7 @@ getinfo_helper_listeners(control_connection_t *control_conn,
   else
     return 0; /* unknown key */
 
-  res = smartlist_create();
+  res = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
     struct sockaddr_storage ss;
     socklen_t ss_len = sizeof(ss);
@@ -1587,7 +1587,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     }
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
-    smartlist_t *sl = smartlist_create();
+    smartlist_t *sl = smartlist_new();
     if (routerlist && routerlist->routers) {
       SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
       {
@@ -1603,7 +1603,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmp(question, "desc/all-recent-extrainfo-hack")) {
     /* XXXX Remove this once Torstat asks for extrainfos. */
     routerlist_t *routerlist = router_get_routerlist();
-    smartlist_t *sl = smartlist_create();
+    smartlist_t *sl = smartlist_new();
     if (routerlist && routerlist->routers) {
       SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
       {
@@ -1654,7 +1654,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "dir/server/")) {
     size_t answer_len = 0;
     char *url = NULL;
-    smartlist_t *descs = smartlist_create();
+    smartlist_t *descs = smartlist_new();
     const char *msg;
     int res;
     char *cp;
@@ -1683,7 +1683,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     if (directory_permits_controller_requests(get_options())) {
       size_t len=0;
       char *cp;
-      smartlist_t *status_list = smartlist_create();
+      smartlist_t *status_list = smartlist_new();
       dirserv_get_networkstatus_v2(status_list,
                                    question+strlen("dir/status/"));
       SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
@@ -1695,8 +1695,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
       *cp = '\0';
       smartlist_free(status_list);
     } else {
-      smartlist_t *fp_list = smartlist_create();
-      smartlist_t *status_list = smartlist_create();
+      smartlist_t *fp_list = smartlist_new();
+      smartlist_t *status_list = smartlist_new();
       dirserv_get_networkstatus_v2_fingerprints(
                              fp_list, question+strlen("dir/status/"));
       SMARTLIST_FOREACH(fp_list, const char *, fp, {
@@ -1763,7 +1763,7 @@ static char *
 circuit_describe_status_for_controller(origin_circuit_t *circ)
 {
   char *rv;
-  smartlist_t *descparts = smartlist_create();
+  smartlist_t *descparts = smartlist_new();
 
   {
     char *vpath = circuit_list_path_for_controller(circ);
@@ -1776,7 +1776,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
   {
     cpath_build_state_t *build_state = circ->build_state;
-    smartlist_t *flaglist = smartlist_create();
+    smartlist_t *flaglist = smartlist_new();
     char *flaglist_joined;
 
     if (build_state->onehop_tunnel)
@@ -1842,7 +1842,7 @@ getinfo_helper_events(control_connection_t *control_conn,
   (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
     circuit_t *circ_;
-    smartlist_t *status = smartlist_create();
+    smartlist_t *status = smartlist_new();
     for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
       origin_circuit_t *circ;
       char *circdesc;
@@ -1870,7 +1870,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_free(status);
   } else if (!strcmp(question, "stream-status")) {
     smartlist_t *conns = get_connection_array();
-    smartlist_t *status = smartlist_create();
+    smartlist_t *status = smartlist_new();
     char buf[256];
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
@@ -1920,7 +1920,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_free(status);
   } else if (!strcmp(question, "orconn-status")) {
     smartlist_t *conns = get_connection_array();
-    smartlist_t *status = smartlist_create();
+    smartlist_t *status = smartlist_new();
     SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
       char name[128];
@@ -1955,7 +1955,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     } else {
       return 0;
     }
-    mappings = smartlist_create();
+    mappings = smartlist_new();
     addressmap_get_mappings(mappings, min_e, max_e, 1);
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
@@ -2161,7 +2161,7 @@ static char *
 list_getinfo_options(void)
 {
   int i;
-  smartlist_t *lines = smartlist_create();
+  smartlist_t *lines = smartlist_new();
   char *ans;
   for (i = 0; getinfo_items[i].varname; ++i) {
     if (!getinfo_items[i].desc)
@@ -2214,9 +2214,9 @@ static int
 handle_control_getinfo(control_connection_t *conn, uint32_t len,
                        const char *body)
 {
-  smartlist_t *questions = smartlist_create();
-  smartlist_t *answers = smartlist_create();
-  smartlist_t *unrecognized = smartlist_create();
+  smartlist_t *questions = smartlist_new();
+  smartlist_t *answers = smartlist_new();
+  smartlist_t *unrecognized = smartlist_new();
   char *msg = NULL, *ans = NULL;
   int i;
   (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
@@ -2302,7 +2302,7 @@ static smartlist_t *
 getargs_helper(const char *command, control_connection_t *conn,
                const char *body, int min_args, int max_args)
 {
-  smartlist_t *args = smartlist_create();
+  smartlist_t *args = smartlist_new();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args) < min_args) {
@@ -2357,7 +2357,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   smartlist_t *args;
   (void) len;
 
-  router_nicknames = smartlist_create();
+  router_nicknames = smartlist_new();
 
   args = getargs_helper("EXTENDCIRCUIT", conn, body, 1, -1);
   if (!args)
@@ -2409,7 +2409,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
 
-  nodes = smartlist_create();
+  nodes = smartlist_new();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
     const node_t *node = node_get_by_nickname(n, 1);
@@ -2636,7 +2636,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   int cache = 0; /* eventually, we may switch this to 1 */
 
   char *cp = memchr(body, '\n', len);
-  smartlist_t *args = smartlist_create();
+  smartlist_t *args = smartlist_new();
   tor_assert(cp);
   *cp++ = '\0';
 
@@ -2835,7 +2835,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");
   }
-  args = smartlist_create();
+  args = smartlist_new();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   {
@@ -2843,7 +2843,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
     if (modearg && !strcasecmp(modearg, "mode=reverse"))
       is_reverse = 1;
   }
-  failed = smartlist_create();
+  failed = smartlist_new();
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!is_keyval_pair(arg)) {
           if (dnsserv_launch_request(arg, is_reverse)<0)
@@ -2873,7 +2873,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
   (void)len;
 
   conn->have_sent_protocolinfo = 1;
-  args = smartlist_create();
+  args = smartlist_new();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(args, const char *, arg, {
@@ -2903,7 +2903,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     {
       int passwd = (options->HashedControlPassword != NULL ||
                     options->HashedControlSessionPassword != NULL);
-      smartlist_t *mlist = smartlist_create();
+      smartlist_t *mlist = smartlist_new();
       if (cookies)
         smartlist_add(mlist, (char*)"COOKIE");
       if (passwd)
@@ -2944,7 +2944,7 @@ handle_control_usefeature(control_connection_t *conn,
   smartlist_t *args;
   int bad = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  args = smartlist_create();
+  args = smartlist_new();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(args, const char *, arg, {
@@ -3775,7 +3775,7 @@ control_event_descriptors_changed(smartlist_t *routers)
     return 0;
 
   {
-    smartlist_t *names = smartlist_create();
+    smartlist_t *names = smartlist_new();
     char *ids;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
@@ -3880,7 +3880,7 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
   if (!EVENT_IS_INTERESTING(event) || !smartlist_len(statuses))
     return 0;
 
-  strs = smartlist_create();
+  strs = smartlist_new();
   smartlist_add(strs, tor_strdup("650+"));
   smartlist_add(strs, tor_strdup(event_string));
   smartlist_add(strs, tor_strdup("\r\n"));
@@ -4019,7 +4019,7 @@ control_event_networkstatus_changed_single(const routerstatus_t *rs)
   if (!EVENT_IS_INTERESTING(EVENT_NS))
     return 0;
 
-  statuses = smartlist_create();
+  statuses = smartlist_new();
   smartlist_add(statuses, (void*)rs);
   r = control_event_networkstatus_changed(statuses);
   smartlist_free(statuses);
@@ -4171,7 +4171,7 @@ control_event_conf_changed(smartlist_t *elements)
       smartlist_len(elements) == 0) {
     return 0;
   }
-  lines = smartlist_create();
+  lines = smartlist_new();
   for (i = 0; i < smartlist_len(elements); i += 2) {
     char *k = smartlist_get(elements, i);
     char *v = smartlist_get(elements, i+1);

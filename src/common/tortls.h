@@ -55,8 +55,8 @@ void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
 
 void tor_tls_free_all(void);
 int tor_tls_context_init(int is_public_server,
-                         crypto_pk_env_t *client_identity,
-                         crypto_pk_env_t *server_identity,
+                         crypto_pk_t *client_identity,
+                         crypto_pk_t *server_identity,
                          unsigned int key_lifetime);
 tor_tls_t *tor_tls_new(int sock, int is_server);
 void tor_tls_set_logged_address(tor_tls_t *tls, const char *address);
@@ -67,7 +67,7 @@ int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
 tor_cert_t *tor_tls_get_peer_cert(tor_tls_t *tls);
-int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
+int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity);
 int tor_tls_check_lifetime(int severity,
                            tor_tls_t *tls, int past_tolerance,
                            int future_tolerance);
@@ -122,8 +122,8 @@ const digests_t *tor_cert_get_cert_digests(const tor_cert_t *cert);
 int tor_tls_get_my_certs(int server,
                          const tor_cert_t **link_cert_out,
                          const tor_cert_t **id_cert_out);
-crypto_pk_env_t *tor_tls_get_my_client_auth_key(void);
-crypto_pk_env_t *tor_tls_cert_get_key(tor_cert_t *cert);
+crypto_pk_t *tor_tls_get_my_client_auth_key(void);
+crypto_pk_t *tor_tls_cert_get_key(tor_cert_t *cert);
 int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
 int tor_tls_cert_is_valid(int severity,
                           const tor_cert_t *cert,

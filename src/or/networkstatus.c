@@ -161,7 +161,7 @@ router_reload_v2_networkstatus(void)
   int maybe_delete = !directory_caches_v2_dir_info(get_options());
   time_t now = time(NULL);
   if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_create();
+    networkstatus_v2_list = smartlist_new();
 
   entries = tor_listdir(filename);
   if (!entries) { /* dir doesn't exist */
@@ -326,7 +326,7 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
   tor_free(ns->source_address);
   tor_free(ns->contact);
   if (ns->signing_key)
-    crypto_free_pk_env(ns->signing_key);
+    crypto_pk_free(ns->signing_key);
   tor_free(ns->client_versions);
   tor_free(ns->server_versions);
   if (ns->entries) {
@@ -486,11 +486,11 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   int n_no_signature = 0;
   int n_v3_authorities = get_n_authorities(V3_DIRINFO);
   int n_required = n_v3_authorities/2 + 1;
-  smartlist_t *list_good = smartlist_create();
-  smartlist_t *list_no_signature = smartlist_create();
-  smartlist_t *need_certs_from = smartlist_create();
-  smartlist_t *unrecognized = smartlist_create();
-  smartlist_t *missing_authorities = smartlist_create();
+  smartlist_t *list_good = smartlist_new();
+  smartlist_t *list_no_signature = smartlist_new();
+  smartlist_t *need_certs_from = smartlist_new();
+  smartlist_t *unrecognized = smartlist_new();
+  smartlist_t *missing_authorities = smartlist_new();
   int severity;
   time_t now = time(NULL);
 
@@ -599,7 +599,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       });
     {
       char *joined;
-      smartlist_t *sl = smartlist_create();
+      smartlist_t *sl = smartlist_new();
       char *tmp = smartlist_join_strings(list_good, " ", 0, NULL);
       smartlist_add_asprintf(sl,
                    "A consensus needs %d good signatures from recognized "
@@ -778,7 +778,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   }
 
   if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_create();
+    networkstatus_v2_list = smartlist_new();
 
   if ( (source == NS_FROM_DIR_BY_FP || source == NS_FROM_DIR_ALL) &&
        router_digest_is_me(ns->identity_digest)) {
@@ -1002,7 +1002,7 @@ const smartlist_t *
 networkstatus_get_v2_list(void)
 {
   if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_create();
+    networkstatus_v2_list = smartlist_new();
   return networkstatus_v2_list;
 }
 
@@ -1531,7 +1531,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
     control_event_networkstatus_changed(new_c->routerstatus_list);
     return;
   }
-  changed = smartlist_create();
+  changed = smartlist_new();
 
   SMARTLIST_FOREACH_JOIN(
                      old_c->routerstatus_list, const routerstatus_t *, rs_old,
@@ -2011,7 +2011,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
   if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_create();
+    networkstatus_v2_list = smartlist_new();
 
   routers_sort_by_identity(routers);
 
@@ -2131,7 +2131,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
     return NULL;
   }
 
-  statuses = smartlist_create();
+  statuses = smartlist_new();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
     if (!node)
@@ -2299,7 +2299,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   }
 
   if (!strcmp(question, "ns/all")) {
-    smartlist_t *statuses = smartlist_create();
+    smartlist_t *statuses = smartlist_new();
     SMARTLIST_FOREACH(current_consensus->routerstatus_list,
                       const routerstatus_t *, rs,
       {

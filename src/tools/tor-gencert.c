@@ -222,13 +222,13 @@ static RSA *
 generate_key(int bits)
 {
   RSA *rsa = NULL;
-  crypto_pk_env_t *env = crypto_new_pk_env();
+  crypto_pk_t *env = crypto_pk_new();
   if (crypto_pk_generate_key_with_bits(env,bits)<0)
     goto done;
-  rsa = _crypto_pk_env_get_rsa(env);
+  rsa = _crypto_pk_get_rsa(env);
   rsa = RSAPrivateKey_dup(rsa);
  done:
-  crypto_free_pk_env(env);
+  crypto_pk_free(env);
   return rsa;
 }
 
@@ -399,10 +399,10 @@ static int
 get_fingerprint(EVP_PKEY *pkey, char *out)
 {
   int r = 1;
-  crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(EVP_PKEY_get1_RSA(pkey));
+  crypto_pk_t *pk = _crypto_new_pk_from_rsa(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_fingerprint(pk, out, 0);
-    crypto_free_pk_env(pk);
+    crypto_pk_free(pk);
   }
   return r;
 }
@@ -412,10 +412,10 @@ static int
 get_digest(EVP_PKEY *pkey, char *out)
 {
   int r = 1;
-  crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(EVP_PKEY_get1_RSA(pkey));
+  crypto_pk_t *pk = _crypto_new_pk_from_rsa(EVP_PKEY_get1_RSA(pkey));
   if (pk) {
     r = crypto_pk_get_digest(pk, out);
-    crypto_free_pk_env(pk);
+    crypto_pk_free(pk);
   }
   return r;
 }

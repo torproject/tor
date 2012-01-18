@@ -54,7 +54,7 @@
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
-int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
+int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
@@ -69,7 +69,7 @@ void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
 int list_server_status_v1(smartlist_t *routers, char **router_status_out,
                           int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,
-                                     crypto_pk_env_t *private_key);
+                                     crypto_pk_t *private_key);
 
 int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);

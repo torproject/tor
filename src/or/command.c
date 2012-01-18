@@ -1050,7 +1050,7 @@ command_process_certs_cell(var_cell_t *cell, or_connection_t *conn)
     conn->handshake_state->authenticated = 1;
     {
       const digests_t *id_digests = tor_cert_get_id_digests(id_cert);
-      crypto_pk_env_t *identity_rcvd;
+      crypto_pk_t *identity_rcvd;
       if (!id_digests)
         ERR("Couldn't compute digests for key in ID cert");
 
@@ -1060,7 +1060,7 @@ command_process_certs_cell(var_cell_t *cell, or_connection_t *conn)
       memcpy(conn->handshake_state->authenticated_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
       connection_or_set_circid_type(conn, identity_rcvd);
-      crypto_free_pk_env(identity_rcvd);
+      crypto_pk_free(identity_rcvd);
     }
 
     if (connection_or_client_learned_peer_id(conn,
@@ -1253,7 +1253,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     ERR("Some field in the AUTHENTICATE cell body was not as expected");
 
   {
-    crypto_pk_env_t *pk = tor_tls_cert_get_key(
+    crypto_pk_t *pk = tor_tls_cert_get_key(
                                    conn->handshake_state->auth_cert);
     char d[DIGEST256_LEN];
     char *signed_data;
@@ -1269,7 +1269,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
     signed_len = crypto_pk_public_checksig(pk, signed_data, keysize,
                                            (char*)auth + V3_AUTH_BODY_LEN,
                                            authlen - V3_AUTH_BODY_LEN);
-    crypto_free_pk_env(pk);
+    crypto_pk_free(pk);
     if (signed_len < 0) {
       tor_free(signed_data);
       ERR("Signature wasn't valid");
@@ -1292,7 +1292,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
   conn->handshake_state->authenticated = 1;
   conn->handshake_state->digest_received_data = 0;
   {
-    crypto_pk_env_t *identity_rcvd =
+    crypto_pk_t *identity_rcvd =
       tor_tls_cert_get_key(conn->handshake_state->id_cert);
     const digests_t *id_digests =
       tor_cert_get_id_digests(conn->handshake_state->id_cert);
@@ -1304,7 +1304,7 @@ command_process_authenticate_cell(var_cell_t *cell, or_connection_t *conn)
            id_digests->d[DIGEST_SHA1], DIGEST_LEN);
 
     connection_or_set_circid_type(conn, identity_rcvd);
-    crypto_free_pk_env(identity_rcvd);
+    crypto_pk_free(identity_rcvd);
 
     connection_or_init_conn_from_address(conn,
                   &conn->_base.addr,

@@ -233,7 +233,7 @@ cpuworker_main(void *data)
   char reply_to_proxy[ONIONSKIN_REPLY_LEN];
   char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
-  crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
+  crypto_pk_t *onion_key = NULL, *last_onion_key = NULL;
 
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
@@ -303,9 +303,9 @@ cpuworker_main(void *data)
   }
  end:
   if (onion_key)
-    crypto_free_pk_env(onion_key);
+    crypto_pk_free(onion_key);
   if (last_onion_key)
-    crypto_free_pk_env(last_onion_key);
+    crypto_pk_free(last_onion_key);
   tor_close_socket(fd);
   crypto_thread_cleanup();
   spawn_exit();

@@ -178,7 +178,7 @@ typedef struct directory_token_t {
   size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
 
-  crypto_pk_env_t *key;        /**< For public keys only.  Heap-allocated. */
+  crypto_pk_t *key;        /**< For public keys only.  Heap-allocated. */
 
   char *error;                 /**< For _ERR tokens only. */
 } directory_token_t;
@@ -569,10 +569,10 @@ static directory_token_t *get_next_token(memarea_t *area,
 static int check_signature_token(const char *digest,
                                  ssize_t digest_len,
                                  directory_token_t *tok,
-                                 crypto_pk_env_t *pkey,
+                                 crypto_pk_t *pkey,
                                  int flags,
                                  const char *doctype);
-static crypto_pk_env_t *find_dir_signing_key(const char *str, const char *eos);
+static crypto_pk_t *find_dir_signing_key(const char *str, const char *eos);
 
 #undef DEBUG_AREA_ALLOC
 
@@ -700,7 +700,7 @@ router_get_extrainfo_hash(const char *s, char *digest)
  */
 int
 router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
-                               size_t digest_len, crypto_pk_env_t *private_key)
+                               size_t digest_len, crypto_pk_t *private_key)
 {
   char *signature;
   size_t i, keysize;
@@ -766,7 +766,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
     log_err(LD_BUG,"I couldn't parse my own version (%s)", myversion);
     tor_assert(0);
   }
-  version_sl = smartlist_create();
+  version_sl = smartlist_new();
   smartlist_split_string(version_sl, versionlist, ",", SPLIT_SKIP_SPACE, 0);
 
   if (!strlen(versionlist)) { /* no authorities cared or agreed */
@@ -827,7 +827,7 @@ router_parse_directory(const char *str)
   int r;
   const char *end, *cp, *str_dup = str;
   smartlist_t *tokens = NULL;
-  crypto_pk_env_t *declared_key = NULL;
+  crypto_pk_t *declared_key = NULL;
   memarea_t *area = memarea_new();
 
   /* XXXX This could be simplified a lot, but it will all go away
@@ -848,7 +848,7 @@ router_parse_directory(const char *str)
     log_warn(LD_DIR, "No signature found on directory."); goto err;
   }
   ++cp;
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   if (tokenize_string(area,cp,strchr(cp,'\0'),tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing directory signature"); goto err;
   }
@@ -901,7 +901,7 @@ router_parse_directory(const char *str)
   dump_desc(str_dup, "v1 directory");
   r = -1;
  done:
-  if (declared_key) crypto_free_pk_env(declared_key);
+  if (declared_key) crypto_pk_free(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
@@ -923,7 +923,7 @@ router_parse_runningrouters(const char *str)
   directory_token_t *tok;
   time_t published_on;
   int r = -1;
-  crypto_pk_env_t *declared_key = NULL;
+  crypto_pk_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
   const char *eos = str + strlen(str), *str_dup = str;
   memarea_t *area = NULL;
@@ -933,7 +933,7 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
   area = memarea_new();
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   if (tokenize_string(area,str,eos,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
@@ -967,7 +967,7 @@ router_parse_runningrouters(const char *str)
   r = 0;
  err:
   dump_desc(str_dup, "v1 running-routers");
-  if (declared_key) crypto_free_pk_env(declared_key);
+  if (declared_key) crypto_pk_free(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
@@ -982,12 +982,12 @@ router_parse_runningrouters(const char *str)
 /** Given a directory or running-routers string in <b>str</b>, try to
  * find the its dir-signing-key token (if any).  If this token is
  * present, extract and return the key.  Return NULL on failure. */
-static crypto_pk_env_t *
+static crypto_pk_t *
 find_dir_signing_key(const char *str, const char *eos)
 {
   const char *cp;
   directory_token_t *tok;
-  crypto_pk_env_t *key = NULL;
+  crypto_pk_t *key = NULL;
   memarea_t *area = NULL;
   tor_assert(str);
   tor_assert(eos);
@@ -1030,7 +1030,7 @@ find_dir_signing_key(const char *str, const char *eos)
 /** Return true iff <b>key</b> is allowed to sign directories.
  */
 static int
-dir_signing_key_is_trusted(crypto_pk_env_t *key)
+dir_signing_key_is_trusted(crypto_pk_t *key)
 {
   char digest[DIGEST_LEN];
   if (!key) return 0;
@@ -1057,7 +1057,7 @@ static int
 check_signature_token(const char *digest,
                       ssize_t digest_len,
                       directory_token_t *tok,
-                      crypto_pk_env_t *pkey,
+                      crypto_pk_t *pkey,
                       int flags,
                       const char *doctype)
 {
@@ -1298,7 +1298,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     --end;
 
   area = memarea_new();
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   if (prepend_annotations) {
     if (tokenize_string(area,prepend_annotations,NULL,tokens,
                         routerdesc_token_table,TS_NOCHECK)) {
@@ -1546,7 +1546,7 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_opt_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
-    router->declared_family = smartlist_create();
+    router->declared_family = smartlist_new();
     for (i=0;i<tok->n_args;++i) {
       if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
         log_warn(LD_DIR, "Illegal nickname %s in family line",
@@ -1630,7 +1630,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   char digest[128];
   smartlist_t *tokens = NULL;
   directory_token_t *tok;
-  crypto_pk_env_t *key = NULL;
+  crypto_pk_t *key = NULL;
   routerinfo_t *router = NULL;
   memarea_t *area = NULL;
   const char *s_dup = s;
@@ -1647,7 +1647,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Couldn't compute router hash.");
     goto err;
   }
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   area = memarea_new();
   if (tokenize_string(area,s,end,tokens,extrainfo_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing extra-info document.");
@@ -1780,7 +1780,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     return NULL;
   }
 
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   area = memarea_new();
   if (tokenize_string(area,s, eos, tokens, dir_key_certificate_table, 0) < 0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
@@ -2257,8 +2257,8 @@ networkstatus_v2_t *
 networkstatus_v2_parse_from_string(const char *s)
 {
   const char *eos, *s_dup = s;
-  smartlist_t *tokens = smartlist_create();
-  smartlist_t *footer_tokens = smartlist_create();
+  smartlist_t *tokens = smartlist_new();
+  smartlist_t *footer_tokens = smartlist_new();
   networkstatus_v2_t *ns = NULL;
   char ns_digest[DIGEST_LEN];
   char tmp_digest[DIGEST_LEN];
@@ -2368,7 +2368,7 @@ networkstatus_v2_parse_from_string(const char *s)
      goto err;
   }
 
-  ns->entries = smartlist_create();
+  ns->entries = smartlist_new();
   s = eos;
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_clear(tokens);
@@ -2815,7 +2815,7 @@ networkstatus_t *
 networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                                      networkstatus_type_t ns_type)
 {
-  smartlist_t *tokens = smartlist_create();
+  smartlist_t *tokens = smartlist_new();
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
@@ -2900,7 +2900,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     if (parse_iso_time(tok->args[0], &ns->published))
       goto err;
 
-    ns->supported_methods = smartlist_create();
+    ns->supported_methods = smartlist_new();
     tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHODS);
     if (tok) {
       for (i=0; i < tok->n_args; ++i)
@@ -2967,7 +2967,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   tok = find_by_keyword(tokens, K_KNOWN_FLAGS);
-  ns->known_flags = smartlist_create();
+  ns->known_flags = smartlist_new();
   inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
     smartlist_add(ns->known_flags, tor_strdup(tok->args[i]));
@@ -2984,7 +2984,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   tok = find_opt_by_keyword(tokens, K_PARAMS);
   if (tok) {
     inorder = 1;
-    ns->net_params = smartlist_create();
+    ns->net_params = smartlist_new();
     for (i = 0; i < tok->n_args; ++i) {
       int ok=0;
       char *eq = strchr(tok->args[i], '=');
@@ -3009,7 +3009,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
   }
 
-  ns->voters = smartlist_create();
+  ns->voters = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
     tok = _tok;
@@ -3019,7 +3019,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       if (voter)
         smartlist_add(ns->voters, voter);
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
-      voter->sigs = smartlist_create();
+      voter->sigs = smartlist_new();
       if (ns->type != NS_TYPE_CONSENSUS)
         memcpy(voter->vote_digest, ns_digests.d[DIGEST_SHA1], DIGEST_LEN);
 
@@ -3104,10 +3104,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   /* Parse routerstatus lines. */
-  rs_tokens = smartlist_create();
+  rs_tokens = smartlist_new();
   rs_area = memarea_new();
   s = end_of_header;
-  ns->routerstatus_list = smartlist_create();
+  ns->routerstatus_list = smartlist_new();
 
   while (!strcmpstart(s, "r ")) {
     if (ns->type != NS_TYPE_CONSENSUS) {
@@ -3147,7 +3147,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   /* Parse footer; check signature. */
-  footer_tokens = smartlist_create();
+  footer_tokens = smartlist_new();
   if ((end_of_footer = strstr(s, "\nnetwork-status-version ")))
     ++end_of_footer;
   else
@@ -3180,7 +3180,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   tok = find_opt_by_keyword(footer_tokens, K_BW_WEIGHTS);
   if (tok) {
-    ns->weight_params = smartlist_create();
+    ns->weight_params = smartlist_new();
     for (i = 0; i < tok->n_args; ++i) {
       int ok=0;
       char *eq = strchr(tok->args[i], '=');
@@ -3372,7 +3372,7 @@ detached_get_signatures(ns_detached_signatures_t *sigs,
 {
   smartlist_t *sl = strmap_get(sigs->signatures, flavor_name);
   if (!sl) {
-    sl = smartlist_create();
+    sl = smartlist_new();
     strmap_set(sigs->signatures, flavor_name, sl);
   }
   return sl;
@@ -3389,7 +3389,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   memarea_t *area = NULL;
   digests_t *digests;
 
-  smartlist_t *tokens = smartlist_create();
+  smartlist_t *tokens = smartlist_new();
   ns_detached_signatures_t *sigs =
     tor_malloc_zero(sizeof(ns_detached_signatures_t));
   sigs->digests = strmap_new();
@@ -3644,7 +3644,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
   if (!newe)
     return -1;
   if (! router->exit_policy)
-    router->exit_policy = smartlist_create();
+    router->exit_policy = smartlist_new();
 
   if (((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
        tor_addr_family(&newe->addr) == AF_INET)
@@ -3752,7 +3752,7 @@ static void
 token_clear(directory_token_t *tok)
 {
   if (tok->key)
-    crypto_free_pk_env(tok->key);
+    crypto_pk_free(tok->key);
 }
 
 #define ALLOC_ZERO(sz) memarea_alloc_zero(area,sz)
@@ -3998,11 +3998,11 @@ get_next_token(memarea_t *area,
     RET_ERR("Couldn't parse object: missing footer or object much too big.");
 
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
-    tok->key = crypto_new_pk_env();
+    tok->key = crypto_pk_new();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
   } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
-    tok->key = crypto_new_pk_env();
+    tok->key = crypto_pk_new();
     if (crypto_pk_read_private_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
@@ -4166,7 +4166,7 @@ find_all_by_keyword(smartlist_t *s, directory_keyword k)
   SMARTLIST_FOREACH(s, directory_token_t *, t,
                     if (t->tp == k) {
                       if (!out)
-                        out = smartlist_create();
+                        out = smartlist_new();
                       smartlist_add(out, t);
                     });
   return out;
@@ -4178,7 +4178,7 @@ find_all_by_keyword(smartlist_t *s, directory_keyword k)
 static smartlist_t *
 find_all_exitpolicy(smartlist_t *s)
 {
-  smartlist_t *out = smartlist_create();
+  smartlist_t *out = smartlist_new();
   SMARTLIST_FOREACH(s, directory_token_t *, t,
       if (t->tp == K_ACCEPT || t->tp == K_ACCEPT6 ||
           t->tp == K_REJECT || t->tp == K_REJECT6)
@@ -4350,8 +4350,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
   s = eat_whitespace_eos(s, eos);
   area = memarea_new();
-  result = smartlist_create();
-  tokens = smartlist_create();
+  result = smartlist_new();
+  tokens = smartlist_new();
 
   while (s < eos) {
     start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
@@ -4396,7 +4396,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
       int i;
-      md->family = smartlist_create();
+      md->family = smartlist_new();
       for (i=0;i<tok->n_args;++i) {
         if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
           log_warn(LD_DIR, "Illegal nickname %s in family line",
@@ -4671,7 +4671,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                             tor_malloc_zero(sizeof(rend_service_descriptor_t));
   char desc_hash[DIGEST_LEN];
   const char *eos;
-  smartlist_t *tokens = smartlist_create();
+  smartlist_t *tokens = smartlist_new();
   directory_token_t *tok;
   char secret_id_part[DIGEST_LEN];
   int i, version, num_ok=1;
@@ -4780,7 +4780,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Parse protocol versions. */
   tok = find_by_keyword(tokens, R_PROTOCOL_VERSIONS);
   tor_assert(tok->n_args == 1);
-  versions = smartlist_create();
+  versions = smartlist_new();
   smartlist_split_string(versions, tok->args[0], ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   for (i = 0; i < smartlist_len(versions); i++) {
@@ -4863,8 +4863,8 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
          session_key[CIPHER_KEY_LEN], *dec;
     int declen, client_blocks;
     size_t pos = 0, len, client_entries_len;
-    crypto_digest_env_t *digest;
-    crypto_cipher_env_t *cipher;
+    crypto_digest_t *digest;
+    crypto_cipher_t *cipher;
     client_blocks = (int) ipos_encrypted[1];
     client_entries_len = client_blocks * REND_BASIC_AUTH_CLIENT_MULTIPLE *
                          REND_BASIC_AUTH_CLIENT_ENTRY_LEN;
@@ -4874,12 +4874,12 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
       return -1;
     }
     memcpy(iv, ipos_encrypted + 2 + client_entries_len, CIPHER_IV_LEN);
-    digest = crypto_new_digest_env();
+    digest = crypto_digest_new();
     crypto_digest_add_bytes(digest, descriptor_cookie, REND_DESC_COOKIE_LEN);
     crypto_digest_add_bytes(digest, iv, CIPHER_IV_LEN);
     crypto_digest_get_digest(digest, client_id,
                              REND_BASIC_AUTH_CLIENT_ID_LEN);
-    crypto_free_digest_env(digest);
+    crypto_digest_free(digest);
     for (pos = 2; pos < 2 + client_entries_len;
          pos += REND_BASIC_AUTH_CLIENT_ENTRY_LEN) {
       if (tor_memeq(ipos_encrypted + pos, client_id,
@@ -4890,17 +4890,17 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
                                   + pos + REND_BASIC_AUTH_CLIENT_ID_LEN,
                                   CIPHER_KEY_LEN) < 0) {
           log_warn(LD_REND, "Could not decrypt session key for client.");
-          crypto_free_cipher_env(cipher);
+          crypto_cipher_free(cipher);
           return -1;
         }
-        crypto_free_cipher_env(cipher);
+        crypto_cipher_free(cipher);
         cipher = crypto_create_init_cipher(session_key, 0);
         len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
         dec = tor_malloc(len);
         declen = crypto_cipher_decrypt_with_iv(cipher, dec, len,
             ipos_encrypted + 2 + client_entries_len,
             ipos_encrypted_size - 2 - client_entries_len);
-        crypto_free_cipher_env(cipher);
+        crypto_cipher_free(cipher);
         if (declen < 0) {
           log_warn(LD_REND, "Could not decrypt introduction point string.");
           tor_free(dec);
@@ -4921,7 +4921,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
              "check your authorization for this service!");
     return -1;
   } else if (ipos_encrypted[0] == (int)REND_STEALTH_AUTH) {
-    crypto_cipher_env_t *cipher;
+    crypto_cipher_t *cipher;
     char *dec;
     int declen;
     if (ipos_encrypted_size < CIPHER_IV_LEN + 2) {
@@ -4936,7 +4936,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
                                                CIPHER_IV_LEN - 1,
                                            ipos_encrypted + 1,
                                            ipos_encrypted_size - 1);
-    crypto_free_cipher_env(cipher);
+    crypto_cipher_free(cipher);
     if (declen < 0) {
       log_warn(LD_REND, "Decrypting introduction points failed!");
       tor_free(dec);
@@ -4976,8 +4976,8 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   /* Consider one intro point after the other. */
   current_ipo = intro_points_encoded;
   end_of_intro_points = intro_points_encoded + intro_points_encoded_size;
-  tokens = smartlist_create();
-  parsed->intro_nodes = smartlist_create();
+  tokens = smartlist_new();
+  parsed->intro_nodes = smartlist_new();
   area = memarea_new();
 
   while (!fast_memcmpstart(current_ipo, end_of_intro_points-current_ipo,
@@ -5098,7 +5098,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   memarea_t *area = NULL;
   if (!ckstr || strlen(ckstr) == 0)
     return -1;
-  tokens = smartlist_create();
+  tokens = smartlist_new();
   /* Begin parsing with first entry, skipping comments or whitespace at the
    * beginning. */
   area = memarea_new();

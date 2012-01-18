@@ -2160,7 +2160,7 @@ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
 {
   int r;
   sized_chunk_t c = { str, len };
-  smartlist_t *chunks = smartlist_create();
+  smartlist_t *chunks = smartlist_new();
   smartlist_add(chunks, &c);
   r = write_chunks_to_file_impl(fname, chunks, flags);
   smartlist_free(chunks);
@@ -2796,7 +2796,7 @@ tor_listdir(const char *dirname)
     tor_free(pattern);
     return NULL;
   }
-  result = smartlist_create();
+  result = smartlist_new();
   while (1) {
 #ifdef UNICODE
     wcstombs(name,findData.cFileName,MAX_PATH);
@@ -2825,7 +2825,7 @@ tor_listdir(const char *dirname)
   if (!(d = opendir(dirname)))
     return NULL;
 
-  result = smartlist_create();
+  result = smartlist_new();
   while ((de = readdir(d))) {
     if (!strcmp(de->d_name, ".") ||
         !strcmp(de->d_name, ".."))
@@ -3034,7 +3034,7 @@ format_win_cmdline_argument(const char *arg)
 
   /* Smartlist of *char */
   smartlist_t *arg_chars;
-  arg_chars = smartlist_create();
+  arg_chars = smartlist_new();
 
   /* Quote string if it contains whitespace or is empty */
   need_quotes = (strchr(arg, ' ') || strchr(arg, '\t') || '\0' == arg[0]);
@@ -3100,7 +3100,7 @@ tor_join_win_cmdline(const char *argv[])
   int i;
 
   /* Format each argument and put the result in a smartlist */
-  argv_list = smartlist_create();
+  argv_list = smartlist_new();
   for (i=0; argv[i] != NULL; i++) {
     smartlist_add(argv_list, (void *)format_win_cmdline_argument(argv[i]));
   }
@@ -3923,7 +3923,7 @@ log_from_handle(HANDLE *pipe, int severity)
   log_debug(LD_GENERAL, "Subprocess had %d bytes to say", pos);
 
   /* Split up the buffer */
-  lines = smartlist_create();
+  lines = smartlist_new();
   tor_split_lines(lines, buf, pos);
 
   /* Log each line */

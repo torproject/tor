@@ -1352,7 +1352,7 @@ log_credential_status(void)
   } else {
     int i, retval = 0;
     char *s = NULL;
-    smartlist_t *elts = smartlist_create();
+    smartlist_t *elts = smartlist_new();
 
     for (i = 0; i<ngids; i++) {
       smartlist_add_asprintf(elts, "%u", (unsigned)sup_gids[i]);
@@ -2587,7 +2587,7 @@ tor_cond_new(void)
 {
   tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
   InitializeCriticalSection(&cond->mutex);
-  cond->events = smartlist_create();
+  cond->events = smartlist_new();
   return cond;
 }
 void

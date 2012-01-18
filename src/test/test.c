@@ -164,27 +164,27 @@ remove_directory(void)
 /** Define this if unit tests spend too much time generating public keys*/
 #undef CACHE_GENERATED_KEYS
 
-static crypto_pk_env_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
+static crypto_pk_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
 #define N_PREGEN_KEYS ((int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])))
 
 /** Generate and return a new keypair for use in unit tests.  If we're using
  * the key cache optimization, we might reuse keys: we only guarantee that
  * keys made with distinct values for <b>idx</b> are different.  The value of
  * <b>idx</b> must be at least 0, and less than N_PREGEN_KEYS. */
-crypto_pk_env_t *
+crypto_pk_t *
 pk_generate(int idx)
 {
 #ifdef CACHE_GENERATED_KEYS
   tor_assert(idx < N_PREGEN_KEYS);
   if (! pregen_keys[idx]) {
-    pregen_keys[idx] = crypto_new_pk_env();
+    pregen_keys[idx] = crypto_pk_new();
     tor_assert(!crypto_pk_generate_key(pregen_keys[idx]));
   }
   return crypto_pk_dup_key(pregen_keys[idx]);
 #else
-  crypto_pk_env_t *result;
+  crypto_pk_t *result;
   (void) idx;
-  result = crypto_new_pk_env();
+  result = crypto_pk_new();
   tor_assert(!crypto_pk_generate_key(result));
   return result;
 #endif
@@ -197,7 +197,7 @@ free_pregenerated_keys(void)
   unsigned idx;
   for (idx = 0; idx < N_PREGEN_KEYS; ++idx) {
     if (pregen_keys[idx]) {
-      crypto_free_pk_env(pregen_keys[idx]);
+      crypto_pk_free(pregen_keys[idx]);
       pregen_keys[idx] = NULL;
     }
   }
@@ -812,7 +812,7 @@ static void
 test_onion_handshake(void)
 {
   /* client-side */
-  crypto_dh_env_t *c_dh = NULL;
+  crypto_dh_t *c_dh = NULL;
   char c_buf[ONIONSKIN_CHALLENGE_LEN];
   char c_keys[40];
 
@@ -821,7 +821,7 @@ test_onion_handshake(void)
   char s_keys[40];
 
   /* shared */
-  crypto_pk_env_t *pk = NULL;
+  crypto_pk_t *pk = NULL;
 
   pk = pk_generate(0);
 
@@ -851,7 +851,7 @@ test_onion_handshake(void)
   if (c_dh)
     crypto_dh_free(c_dh);
   if (pk)
-    crypto_free_pk_env(pk);
+    crypto_pk_free(pk);
 }
 
 static void
@@ -1010,7 +1010,7 @@ test_policy_summary_helper(const char *policy_str,
                            const char *expected_summary)
 {
   config_line_t line;
-  smartlist_t *policy = smartlist_create();
+  smartlist_t *policy = smartlist_new();
   char *summary = NULL;
   int r;
   short_policy_t *short_policy = NULL;
@@ -1050,7 +1050,7 @@ test_policies(void)
   smartlist_t *sm = NULL;
   char *policy_str = NULL;
 
-  policy = smartlist_create();
+  policy = smartlist_new();
 
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
   test_assert(p != NULL);
@@ -1076,7 +1076,7 @@ test_policies(void)
   test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL, 1));
   test_assert(policy2);
 
-  policy3 = smartlist_create();
+  policy3 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject *:*",-1);
   test_assert(p != NULL);
   smartlist_add(policy3, p);
@@ -1084,7 +1084,7 @@ test_policies(void)
   test_assert(p != NULL);
   smartlist_add(policy3, p);
 
-  policy4 = smartlist_create();
+  policy4 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept *:443",-1);
   test_assert(p != NULL);
   smartlist_add(policy4, p);
@@ -1092,7 +1092,7 @@ test_policies(void)
   test_assert(p != NULL);
   smartlist_add(policy4, p);
 
-  policy5 = smartlist_create();
+  policy5 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject 0.0.0.0/8:*",-1);
   test_assert(p != NULL);
   smartlist_add(policy5, p);
@@ -1124,12 +1124,12 @@ test_policies(void)
   test_assert(p != NULL);
   smartlist_add(policy5, p);
 
-  policy6 = smartlist_create();
+  policy6 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept 43.3.0.0/9:*",-1);
   test_assert(p != NULL);
   smartlist_add(policy6, p);
 
-  policy7 = smartlist_create();
+  policy7 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("accept 0.0.0.0/8:*",-1);
   test_assert(p != NULL);
   smartlist_add(policy7, p);
@@ -1226,7 +1226,7 @@ test_policies(void)
                              "reject 1,3,5,7");
 
   /* truncation ports */
-  sm = smartlist_create();
+  sm = smartlist_new();
   for (i=1; i<2000; i+=2) {
     char buf[POLICY_BUF_LEN];
     tor_snprintf(buf, sizeof(buf), "reject *:%d", i);
@@ -1273,10 +1273,10 @@ test_rend_fns(void)
   char service_id[DIGEST_LEN];
   char service_id_base32[REND_SERVICE_ID_LEN_BASE32+1];
   const char *next_desc;
-  smartlist_t *descs = smartlist_create();
+  smartlist_t *descs = smartlist_new();
   char computed_desc_id[DIGEST_LEN];
   char parsed_desc_id[DIGEST_LEN];
-  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
   time_t now;
   char *intro_points_encrypted = NULL;
   size_t intro_points_size;
@@ -1303,11 +1303,11 @@ test_rend_fns(void)
   generated->timestamp = now;
   generated->version = 2;
   generated->protocols = 42;
-  generated->intro_nodes = smartlist_create();
+  generated->intro_nodes = smartlist_new();
 
   for (i = 0; i < 3; i++) {
     rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
-    crypto_pk_env_t *okey = pk_generate(2 + i);
+    crypto_pk_t *okey = pk_generate(2 + i);
     intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
     intro->extend_info->onion_key = okey;
     crypto_pk_get_digest(intro->extend_info->onion_key,
@@ -1374,9 +1374,9 @@ test_rend_fns(void)
   if (generated)
     rend_service_descriptor_free(generated);
   if (pk1)
-    crypto_free_pk_env(pk1);
+    crypto_pk_free(pk1);
   if (pk2)
-    crypto_free_pk_env(pk2);
+    crypto_pk_free(pk2);
   tor_free(intro_points_encrypted);
 }
 

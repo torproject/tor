@@ -26,7 +26,7 @@ typedef struct smartlist_t {
   /** @} */
 } smartlist_t;
 
-smartlist_t *smartlist_create(void);
+smartlist_t *smartlist_new(void);
 void smartlist_free(smartlist_t *sl);
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);

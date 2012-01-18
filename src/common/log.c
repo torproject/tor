@@ -653,7 +653,7 @@ init_logging(void)
     log_mutex_initialized = 1;
   }
   if (pending_cb_messages == NULL)
-    pending_cb_messages = smartlist_create();
+    pending_cb_messages = smartlist_new();
 }
 
 /** Set whether we report logging domains as a part of our log messages.
@@ -737,7 +737,7 @@ flush_pending_log_callbacks(void)
   }
 
   messages = pending_cb_messages;
-  pending_cb_messages = smartlist_create();
+  pending_cb_messages = smartlist_new();
   do {
     SMARTLIST_FOREACH_BEGIN(messages, pending_cb_message_t *, msg) {
       const int severity = msg->severity;
@@ -993,7 +993,7 @@ parse_log_severity_config(const char **cfg_ptr,
         return -1;
       domains = 0;
       domains_str = tor_strndup(cfg+1, closebracket-cfg-1);
-      domains_list = smartlist_create();
+      domains_list = smartlist_new();
       smartlist_split_string(domains_list, domains_str, ",", SPLIT_SKIP_SPACE,
                              -1);
       tor_free(domains_str);

@@ -15,7 +15,7 @@
 int
 main(int c, char **v)
 {
-  crypto_pk_env_t *env;
+  crypto_pk_t *env;
   char *str;
   RSA *rsa;
   int wantdigest=0;
@@ -56,7 +56,7 @@ main(int c, char **v)
     return 1;
   }
 
-  env = crypto_new_pk_env();
+  env = crypto_pk_new();
   if (crypto_pk_read_public_key_from_string(env, str, strlen(str))<0) {
     fprintf(stderr, "Couldn't parse key.\n");
     return 1;
@@ -69,7 +69,7 @@ main(int c, char **v)
       return 1;
     printf("%s\n",digest);
   } else {
-    rsa = _crypto_pk_env_get_rsa(env);
+    rsa = _crypto_pk_get_rsa(env);
     str = BN_bn2hex(rsa->n);
 
     printf("%s\n", str);

@@ -92,7 +92,7 @@ uint64_t stats_n_relay_cells_delivered = 0;
  * cell.
  */
 static void
-relay_set_digest(crypto_digest_env_t *digest, cell_t *cell)
+relay_set_digest(crypto_digest_t *digest, cell_t *cell)
 {
   char integrity[4];
   relay_header_t rh;
@@ -113,11 +113,11 @@ relay_set_digest(crypto_digest_env_t *digest, cell_t *cell)
  * and cell to their original state and return 0.
  */
 static int
-relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
+relay_digest_matches(crypto_digest_t *digest, cell_t *cell)
 {
   char received_integrity[4], calculated_integrity[4];
   relay_header_t rh;
-  crypto_digest_env_t *backup_digest=NULL;
+  crypto_digest_t *backup_digest=NULL;
 
   backup_digest = crypto_digest_dup(digest);
 
@@ -141,10 +141,10 @@ relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
     /* restore the relay header */
     memcpy(rh.integrity, received_integrity, 4);
     relay_header_pack(cell->payload, &rh);
-    crypto_free_digest_env(backup_digest);
+    crypto_digest_free(backup_digest);
     return 0;
   }
-  crypto_free_digest_env(backup_digest);
+  crypto_digest_free(backup_digest);
   return 1;
 }
 
@@ -156,7 +156,7 @@ relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
  * Return -1 if the crypto fails, else return 0.
  */
 static int
-relay_crypt_one_payload(crypto_cipher_env_t *cipher, uint8_t *in,
+relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in,
                         int encrypt_mode)
 {
   int r;
@@ -607,7 +607,7 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
       /* If no RELAY_EARLY cells can be sent over this circuit, log which
        * commands have been sent as RELAY_EARLY cells before; helps debug
        * task 878. */
-      smartlist_t *commands_list = smartlist_create();
+      smartlist_t *commands_list = smartlist_new();
       int i = 0;
       char *commands = NULL;
       for (; i < origin_circ->relay_early_cells_sent; i++)

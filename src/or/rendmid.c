@@ -22,7 +22,7 @@ int
 rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
                          size_t request_len)
 {
-  crypto_pk_env_t *pk = NULL;
+  crypto_pk_t *pk = NULL;
   char buf[DIGEST_LEN+9];
   char expected_digest[DIGEST_LEN];
   char pk_digest[DIGEST_LEN];
@@ -86,7 +86,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  crypto_free_pk_env(pk); /* don't need it anymore */
+  crypto_pk_free(pk); /* don't need it anymore */
   pk = NULL; /* so we don't free it again if err */
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -122,7 +122,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
   log_warn(LD_PROTOCOL, "Rejecting truncated ESTABLISH_INTRO cell.");
   reason = END_CIRC_REASON_TORPROTOCOL;
  err:
-  if (pk) crypto_free_pk_env(pk);
+  if (pk) crypto_pk_free(pk);
   circuit_mark_for_close(TO_CIRCUIT(circ), reason);
   return -1;
 }
