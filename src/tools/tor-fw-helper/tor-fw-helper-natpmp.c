@@ -87,7 +87,7 @@ tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state)
 
 /** Use select() to wait until we can read on fd. */
 static int
-wait_until_fd_readable(unsigned int fd, struct timeval *timeout)
+wait_until_fd_readable(tor_socket_t fd, struct timeval *timeout)
 {
   int r;
   fd_set fds;
