@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Document the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays
+      directory authority option (introduced in Tor 0.2.2.34).
