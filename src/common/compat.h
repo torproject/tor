@@ -399,11 +399,19 @@ typedef int socklen_t;
 #endif
 
 #ifdef MS_WINDOWS
+/* XXX Actually, this should arguably be SOCKET; we use intptr_t here so that
+ * any inadvertant checks for the socket being <= 0 or > 0 will probably
+ * still work. */
 #define tor_socket_t intptr_t
 #define SOCKET_OK(s) ((SOCKET)(s) != INVALID_SOCKET)
+#define TOR_INVALID_SOCKET INVALID_SOCKET
 #else
+/** Type used for a network socket. */
 #define tor_socket_t int
+/** Macro: true iff 's' is a possible value for a valid initialized socket. */
 #define SOCKET_OK(s) ((s) >= 0)
+/** Error/uninitialized value for a tor_socket_t. */
+#define TOR_INVALID_SOCKET (-1)
 #endif
 
 int tor_close_socket(tor_socket_t s);

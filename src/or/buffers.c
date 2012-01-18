@@ -690,7 +690,7 @@ read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
 
   check();
   tor_assert(reached_eof);
-  tor_assert(s >= 0);
+  tor_assert(SOCKET_OK(s));
 
   while (at_most > total_read) {
     size_t readlen = at_most - total_read;
@@ -858,7 +858,7 @@ flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   int r;
   size_t flushed = 0;
   tor_assert(buf_flushlen);
-  tor_assert(s >= 0);
+  tor_assert(SOCKET_OK(s));
   tor_assert(*buf_flushlen <= buf->datalen);
   tor_assert(sz <= *buf_flushlen);
 

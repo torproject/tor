@@ -329,8 +329,8 @@ spawn_cpuworker(void)
     return -1;
   }
 
-  tor_assert(fdarray[0] >= 0);
-  tor_assert(fdarray[1] >= 0);
+  tor_assert(SOCKET_OK(fdarray[0]));
+  tor_assert(SOCKET_OK(fdarray[1]));
 
   fd = fdarray[0];
   spawn_func(cpuworker_main, (void*)fdarray);

@@ -1053,17 +1053,17 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   r = socketpair(family, type, protocol, fd);
   if (r == 0) {
 #if !defined(SOCK_CLOEXEC) && defined(FD_CLOEXEC)
-    if (fd[0] >= 0)
+    if (SOCKET_OK(fd[0]))
       fcntl(fd[0], F_SETFD, FD_CLOEXEC);
-    if (fd[1] >= 0)
+    if (SOCKET_OK(fd[1]))
       fcntl(fd[1], F_SETFD, FD_CLOEXEC);
 #endif
     socket_accounting_lock();
-    if (fd[0] >= 0) {
+    if (SOCKET_OK(fd[0])) {
       ++n_sockets_open;
       mark_socket_open(fd[0]);
     }
-    if (fd[1] >= 0) {
+    if (SOCKET_OK(fd[1])) {
       ++n_sockets_open;
       mark_socket_open(fd[1]);
     }
@@ -1100,7 +1100,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     }
 
     listener = tor_open_socket(AF_INET, type, 0);
-    if (listener < 0)
+    if (!SOCKET_OK(listener))
       return -tor_socket_errno(-1);
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
@@ -1113,7 +1113,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       goto tidy_up_and_fail;
 
     connector = tor_open_socket(AF_INET, type, 0);
-    if (connector < 0)
+    if (!SOCKET_OK(connector))
       goto tidy_up_and_fail;
     /* We want to find out the port number to connect to.  */
     size = sizeof(connect_addr);
@@ -1128,7 +1128,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     size = sizeof(listen_addr);
     acceptor = tor_accept_socket(listener,
                                  (struct sockaddr *) &listen_addr, &size);
-    if (acceptor < 0)
+    if (!SOCKET_OK(acceptor))
       goto tidy_up_and_fail;
     if (size != sizeof(listen_addr))
       goto abort_tidy_up_and_fail;
@@ -2888,6 +2888,11 @@ network_init(void)
   if (r) {
     log_warn(LD_NET,"Error initializing windows network layer: code was %d",r);
     return -1;
+  }
+  if (sizeof(SOCKET) != sizeof(tor_socket_t)) {
+    log_warn(LD_BUG,"The tor_socket_t type does not match SOCKET in size; Tor "
+             "might not work. (Sizes are %d and %d respectively.)",
+             (int)sizeof(tor_socket_t), (int)sizeof(SOCKET));
   }
   /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
    * We might use it to complain if we're trying to be a server but have

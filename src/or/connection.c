@@ -372,7 +372,7 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
       break;
   }
 
-  conn->s = -1; /* give it a default of 'not used' */
+  conn->s = TOR_INVALID_SOCKET; /* give it a default of 'not used' */
   conn->conn_array_index = -1; /* also default to 'not used' */
   conn->global_identifier = n_connections_allocated++;
 
@@ -395,8 +395,8 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
 void
 connection_link_connections(connection_t *conn_a, connection_t *conn_b)
 {
-  tor_assert(conn_a->s < 0);
-  tor_assert(conn_b->s < 0);
+  tor_assert(! SOCKET_OK(conn_a->s));
+  tor_assert(! SOCKET_OK(conn_b->s));
 
   conn_a->linked = 1;
   conn_b->linked = 1;
@@ -540,7 +540,7 @@ _connection_free(connection_t *conn)
   if (SOCKET_OK(conn->s)) {
     log_debug(LD_NET,"closing fd %d.",(int)conn->s);
     tor_close_socket(conn->s);
-    conn->s = -1;
+    conn->s = TOR_INVALID_SOCKET;
   }
 
   if (conn->type == CONN_TYPE_OR &&
@@ -625,7 +625,7 @@ connection_about_to_close_connection(connection_t *conn)
 /** Return true iff connection_close_immediate() has been called on this
  * connection. */
 #define CONN_IS_CLOSED(c) \
-  ((c)->linked ? ((c)->linked_conn_is_closed) : ((c)->s < 0))
+  ((c)->linked ? ((c)->linked_conn_is_closed) : (! SOCKET_OK(c->s)))
 
 /** Close the underlying socket for <b>conn</b>, so we don't try to
  * flush it. Must be used in conjunction with (right before)
@@ -651,7 +651,7 @@ connection_close_immediate(connection_t *conn)
 
   if (SOCKET_OK(conn->s))
     tor_close_socket(conn->s);
-  conn->s = -1;
+  conn->s = TOR_INVALID_SOCKET;
   if (conn->linked)
     conn->linked_conn_is_closed = 1;
   if (conn->outbuf)
@@ -958,7 +958,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
       goto err;
     }
     s = tor_open_socket(AF_UNIX, SOCK_STREAM, 0);
-    if (s < 0) {
+    if (! SOCKET_OK(s)) {
       log_warn(LD_NET,"Socket creation failed: %s.", strerror(errno));
       goto err;
     }
@@ -1331,7 +1331,7 @@ connection_connect(connection_t *conn, const char *address,
   }
 
   s = tor_open_socket(protocol_family,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0) {
+  if (! SOCKET_OK(s)) {
     *socket_error = tor_socket_errno(-1);
     log_warn(LD_NET,"Error creating network socket: %s",
              tor_socket_strerror(*socket_error));
