@@ -111,10 +111,21 @@ Other options can be specified either on the command-line (--option
     published in the consensus and your relay will use that value. (Default: 0)
 
 **ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
-    When set along with a corresponding Bridge line, the Tor client
-    forwards its traffic to a SOCKS-speaking proxy on "IP:PORT". It's
-    the duty of that proxy to properly forward the traffic to the
-    bridge.
+**ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
+    In its first form, when set along with a corresponding Bridge line, the Tor
+    client forwards its traffic to a SOCKS-speaking proxy on "IP:PORT". It's the
+    duty of that proxy to properly forward the traffic to the bridge. +
+ +
+    In its second form, when set along with a corresponding Bridge line, the Tor
+    client launches the pluggable transport proxy exacutable in
+    __path-to-binary__ using __options__ as its command-line options, and
+    forwards its traffic to it. It's the duty of that proxy to properly forward
+    the traffic to the bridge.
+
+**ServerTransportPlugin** __transport__ exec __path-to-binary__ [options]::
+    The Tor relay launches the pluggable transport proxy in __path-to-binary__
+    using __options__ as its command-line options, and expects to receive
+    proxied client traffic from it.
 
 **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
