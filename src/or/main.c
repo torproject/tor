@@ -1533,7 +1533,7 @@ run_scheduled_events(time_t now)
 
   /** 12. write the heartbeat message */
   if (options->HeartbeatPeriod &&
-      time_to_next_heartbeat < now) {
+      time_to_next_heartbeat <= now) {
     log_heartbeat(now);
     time_to_next_heartbeat = now+options->HeartbeatPeriod;
   }

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Actually log the heartbeat message every HeartbeatPeriod seconds, not
+      every HeartbeatPeriod + 1 seconds. Fixes bug 4942; bugfix on
+      0.2.3.1-alpha.. Bug reported by Scott Bennett.
+
