@@ -1,4 +1,10 @@
-Changes in version 0.2.3.11-alpha - 2012-01-??
+Changes in version 0.2.3.11-alpha - 2012-01-22
+  Tor 0.2.3.11-alpha marks feature-freeze for the 0.2.3 tree. It deploys
+  the last step of the plan to limit maximum circuit length, includes
+  a wide variety of hidden service performance and correctness fixes,
+  works around an OpenSSL security flaw if your distro is too stubborn
+  to upgrade. and fixes a bunch of smaller issues.
+
   o Major features:
     - Now that Tor 0.2.0.x is completely deprecated, enable the final
       part of "Proposal 110: Avoiding infinite length circuits" by
@@ -72,8 +78,8 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
       inclusive. These versions accounted for only a small fraction of
       the Tor network, and have numerous known security issues. Resolves
       issue 4788.
-    - Authority operators can now vote for all routers in a given
-      country to be BadDir/BadExit/Invali/Rejected.
+    - Authority operators can now vote for all relays in a given
+      set of countries to be BadDir/BadExit/Invalid/Rejected.
     - Provide two consensus parameters (FastFlagMinThreshold and
       FastFlagMaxThreshold) to control the range of allowable bandwidths
       for the Fast directory flag. These allow authorities to run
@@ -95,6 +101,10 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
     - Log which authority we're missing votes from when we go to fetch
       them from the other auths.
     - Log (at debug level) whenever a circuit's purpose is changed.
+    - Add missing documentation for the MaxClientCircuitsPending,
+      UseMicrodescriptors, UserspaceIOCPBuffers, and
+      _UseFilteringSSLBufferevents options, all introduced during
+      the 0.2.3.x series.
     - Update to the January 3 2012 Maxmind GeoLite Country database.
 
   o Minor bugfixes (hidden services):
@@ -142,11 +152,17 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
       an "invalid onion address". Fixes bug 3325; bugfix on 0.2.2.9-alpha.
 
   o Minor bugfixes (build fixes):
+    - During configure, detect when we're building with clang version
+      3.0 or lower and disable the -Wnormalized=id and -Woverride-init
+      CFLAGS. clang doesn't support them yet.
     - During configure, search for library containing cos function as
       libm lives in libcore on some platforms (BeOS/Haiku).  Linking
       against libm was hard-coded before. Fixes the first part of bug
       4727; bugfix on 0.2.2.2-alpha. Patch and analysis by Martin Hebnes
       Pedersen.
+    - Detect attempts to build Tor on (as yet hypothetical) versions
+      of Windows where sizeof(intptr_t) != sizeof(SOCKET). Partial
+      fix for bug 4533. Bugfix on 0.2.2.28-beta.
     - Preprocessor directives should not be put inside the arguments
       of a macro. This would break compilation with GCC releases prior
       to version 3.3. We would never recommend such an old GCC version,
@@ -154,20 +170,8 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
       platforms (namely, certain builds of Haiku). Fixes the other part
       of bug 4727; bugfix on 0.2.3.3-alpha. Patch and analysis by Martin
       Hebnes Pedersen.
-    - Use an appropriate-width type for sockets in tor-fw-helper on
-      win64. Fixes bug 1983 at last. Bugfix on 0.2.3.9-alpha.
-    - Detect attempts to build Tor on (as yet hypothetical) versions
-      of Windows where sizeof(intptr_t) != sizeof(SOCKET). Partial
-      fix for bug 4533. Bugfix on 0.2.2.28-beta.
 
   o Minor bugfixes (other):
-    - Fix null-pointer access that could occur if TLS allocation failed.
-      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un". This was
-      erroneously listed as fixed in 0.2.3.9-alpha, but the fix had
-      accidentally been reverted.
-    - Fix an assertion failure when, while running with bufferevents, a
-      connection finishes connecting after it is marked for close, but
-      before it is closed. Fixes bug 4697; bugfix on 0.2.3.1-alpha.
     - Older Linux kernels erroneously respond to strange nmap behavior
       by having accept() return successfully with a zero-length
       socket. When this happens, just close the connection. Previously,
@@ -175,24 +179,29 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
       no such remote address to learn, and our method for trying to
       learn it was incorrect. Fixes bugs 1240, 4745, and 4747. Bugfix
       on 0.1.0.3-rc. Reported and diagnosed by "r1eo".
+    - Fix null-pointer access that could occur if TLS allocation failed.
+      Fixes bug 4531; bugfix on 0.2.0.20-rc. Found by "troll_un". This was
+      erroneously listed as fixed in 0.2.3.9-alpha, but the fix had
+      accidentally been reverted.
+    - Fix our implementation of crypto_random_hostname() so it can't
+      overflow on ridiculously large inputs. (No Tor version has ever
+      provided this kind of bad inputs, but let's be correct in depth.)
+      Fixes bug 4413; bugfix on 0.2.2.9-alpha. Fix by Stephen Palmateer.
+    - Find more places in the code that should have been testing for
+      invalid sockets using the SOCKET_OK macro. Required for a fix
+      for bug 4533. Bugfix on 0.2.2.28-beta.
+    - Fix an assertion failure when, while running with bufferevents, a
+      connection finishes connecting after it is marked for close, but
+      before it is closed. Fixes bug 4697; bugfix on 0.2.3.1-alpha.
     - test_util_spawn_background_ok() hardcoded the expected value
       for ENOENT to 2. This isn't portable as error numbers are
       platform specific, and particularly the hurd has ENOENT at
       0x40000002. Construct expected string at runtime, using the correct
       value for ENOENT. Fixes bug 4733; bugfix on 0.2.3.1-alpha.
-    - Fix our implementation of crypto_random_hostname() so it can't
-      overflow on ridiculously large inputs. (No Tor version has ever
-      provided this kind of bad inputs, but let's be correct in depth.)
-      Fixes bug 4413; bugfix on 0.2.2.9-alpha. Fix by Stephen Palmateer.
     - Reject attempts to disable DisableDebuggerAttachment while Tor is
       running. Fixes bug 4650; bugfix on 0.2.3.9-alpha.
-    - Find more places in the code that should have been testing for
-      invalid sockets using the SOCKET_OK macro. Required for a fix
-      for bug 4533. Bugfix on 0.2.2.28-beta.
-    - Add missing documentation for the MaxClientCircuitsPending,
-      UseMicrodescriptors, UserspaceIOCPBuffers, and
-      _UseFilteringSSLBufferevents options, all introduced during
-      the 0.2.3.x series.
+    - Use an appropriate-width type for sockets in tor-fw-helper on
+      win64. Fixes bug 1983 at last. Bugfix on 0.2.3.9-alpha.
 
   o Feature removal:
     - When sending or relaying a RELAY_EARLY cell, we used to convert
@@ -204,9 +213,6 @@ Changes in version 0.2.3.11-alpha - 2012-01-??
       remove this workaround. Addresses bug 4786.
 
   o Code simplifications and refactoring:
-    - During configure, detect when we're building with clang version
-      3.0 or lower and disable the -Wnormalized=id and -Woverride-init
-      CFLAGS. clang doesn't support them yet.
     - Use OpenSSL's built-in SSL_state_string_long() instead of our
       own homebrewed ssl_state_to_string() replacement. Patch from
       Emile Snyder. Fixes bug 4653.
