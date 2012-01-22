@@ -1,7 +1,0 @@
-  o Minor features:
-    - Log more useful messages when we fail to disable debugger attachment.
-
-  o Minor bugfixes:
-    - Reject attempts to disable DisableDebuggerAttachment while Tor is
-      running. Fixes bug 4650; bugfix on 0.2.3.9-alpha.
-

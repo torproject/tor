@@ -1,6 +1,0 @@
-  o Minor features:
-    - Don't disable the DirPort when we cannot exceed our AccountingMax
-      limit during this interval because the effective bandwidthrate is
-      low enough. This is useful in a situation where AccountMax is only
-      used as an additional safeguard or to provide statistics.
-

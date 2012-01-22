@@ -1,3 +1,0 @@
-  o Minor bugfixes
-    - Use an appropriate-width type for sockets in tor-fw-helper on
-      win664. Fixes bug 1983 at last. Bugfix on 0.2.3.9-alpha.

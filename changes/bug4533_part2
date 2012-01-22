@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Fix the SOCKET_OK test that we use to tell when socket
-      creation fails so that it works on Win64. Fixes part of bug
-      4533; bugfix on 0.2.2.29-beta. Bug found by wanoskarnet.
-

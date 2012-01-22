@@ -1,4 +1,4 @@
-Changes in version 0.2.3.11-alpha - 2012-01-0?
+Changes in version 0.2.3.11-alpha - 2012-01-??
   o Major features:
     - Now that Tor 0.2.0.x is completely deprecated, enable the final
       part of "Proposal 110: Avoiding infinite length circuits" by
@@ -32,26 +32,24 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       to make sure that the bug can't happen.
 
   o Major bugfixes:
+    - Fix the SOCKET_OK test that we use to tell when socket
+      creation fails so that it works on Win64. Fixes part of bug 4533;
+      bugfix on 0.2.2.29-beta. Bug found by wanoskarnet.
     - Correct our replacements for the timeradd() and timersub() functions
       on platforms that lack them (for example, Windows). The timersub()
       function is used when expiring circuits, while timeradd() is
-      currently unused. Bug report and patch by Vektor. Bugfix on
-      0.2.2.24-alpha and 0.2.3.1-alpha; fixes bug 4778.
+      currently unused. Bug report and patch by Vektor. Fixes bug 4778;
+      bugfix on 0.2.2.24-alpha and 0.2.3.1-alpha.
     - Do not use OpenSSL 1.0.0's counter mode: it has a critical bug
-      that was fixed in OpenSSL 1.0.0a. Fixes bug 4779; bugfix on
-      Tor 0.2.3.9-alpha. Found by Pascal.
+      that was fixed in OpenSSL 1.0.0a. We test for the counter mode
+      bug at runtime, not compile time, because some distributions hack
+      their OpenSSL to mis-report its version. Fixes bug 4779; bugfix
+      on 0.2.3.9-alpha. Found by Pascal.
 
-  o Minor features:
-    - Directory servers now reject versions of Tor older than 0.2.1.30,
-      and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
-      (inclusive). These versions accounted for only a small fraction of
-      the Tor network, and have numerous known security issues. Resolves
-      issue 4788.
+  o Minor features (controller):
     - Use absolute path names when reporting the torrc filename in the
       control protocol, so a controller can more easily find the torrc
       file. Resolves bug 1101.
-    - If EntryNodes are given, but UseEntryGuards is set to 0, warn that
-      EntryNodes will have no effect. Resolves issue 2571.
     - Extend the control protocol to report flags that control a circuit's
       path selection in CIRC events and in replies to 'GETINFO
       circuit-status'. Implements part of ticket 2411.
@@ -59,6 +57,44 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       and current state of a hidden-service-related circuit in CIRC
       events and in replies to 'GETINFO circuit-status'. Implements part
       of ticket 2411.
+    - When reporting the path to the cookie file to the controller,
+      give an absolute path. Resolves ticket 4881.
+    - Allow controllers to request an event notification whenever a
+      circuit is cannibalized or its purpose is changed. Implements
+      part of ticket 3457.
+    - Include the creation time of a circuit in CIRC and CIRC2
+      control-port events and the list produced by the 'GETINFO
+      circuit-status' control-port command.
+
+  o Minor features (directory authorities):
+    - Directory authorities now reject versions of Tor older than
+      0.2.1.30, and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
+      inclusive. These versions accounted for only a small fraction of
+      the Tor network, and have numerous known security issues. Resolves
+      issue 4788.
+    - Authority operators can now vote for all routers in a given
+      country to be BadDir/BadExit/Invali/Rejected.
+    - Provide two consensus parameters (FastFlagMinThreshold and
+      FastFlagMaxThreshold) to control the range of allowable bandwidths
+      for the Fast directory flag. These allow authorities to run
+      experiments on appropriate requirements for being a "Fast" node.
+      The AuthDirFastGuarantee config value still applies.
+    - Document the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays
+      directory authority option (introduced in Tor 0.2.2.34).
+
+  o Minor features (other):
+    - Don't disable the DirPort when we cannot exceed our AccountingMax
+      limit during this interval because the effective bandwidthrate is
+      low enough. This is useful in a situation where AccountMax is only
+      used as an additional safeguard or to provide statistics.
+    - Prepend an informative header to generated dynamic_dh_params files.
+    - If EntryNodes are given, but UseEntryGuards is set to 0, warn that
+      EntryNodes will have no effect. Resolves issue 2571.
+    - Log more useful messages when we fail to disable debugger
+      attachment.
+    - Log which authority we're missing votes from when we go to fetch
+      them from the other auths.
+    - Log (at debug level) whenever a circuit's purpose is changed.
     - Update to the January 3 2012 Maxmind GeoLite Country database.
 
   o Minor bugfixes (hidden services):
@@ -71,12 +107,12 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       after the normal CBT. Now, we mark them as 'timed out', and launch
       another rendezvous attempt in parallel. This behavior change can
       be disabled using the new CloseHSClientCircuitsImmediatelyOnTimeout
-      option. Bugfix on 0.2.2.2-alpha; fixes part of bug 1297.
+      option. Fixes part of bug 1297; bugfix on 0.2.2.2-alpha.
     - Don't close hidden-service-side rendezvous circuits when they
       reach the normal circuit-build timeout. This behaviour change can
       be disabled using the new
-      CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Bugfix on
-      0.2.2.2-alpha; fixes the remaining part of bug 1297.
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
+      remaining part of bug 1297; bugfix on 0.2.2.2-alpha.
     - Make sure we never mark the wrong rendezvous circuit as having
       had its introduction cell acknowleged by the introduction-point
       relay. Previously, when we received an INTRODUCE_ACK cell on a
@@ -84,14 +120,45 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       marked a rendezvous circuit other than the one we specified in
       the INTRODUCE1 cell as INTRO_ACKED, which would have produced
       a warning message and interfered with the hidden service
-      connection-establishment process. Bugfix on 0.2.3.3-alpha, when we
-      added the stream-isolation feature which might cause Tor to open
-      multiple rendezvous circuits for the same hidden service. Fixes
-      bug 4759.
+      connection-establishment process. Fixes bug 4759; bugfix on
+      0.2.3.3-alpha, when we added the stream-isolation feature which
+      might cause Tor to open multiple rendezvous circuits for the same
+      hidden service.
     - Don't trigger an assertion failure when we mark a new client-side
       hidden-service introduction circuit for close during the process
-      of creating it. Bugfix on 0.2.3.6-alpha. Fixes bug 4796; reported
+      of creating it. Fixes bug 4796; bugfix on 0.2.3.6-alpha. Reported
       by murb.
+
+  o Minor bugfixes (log messages):
+    - Correctly spell "connect" in a log message on failure to create a
+      controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta and
+      0.2.3.2-alpha.
+    - Fix a typo in a log message in rend_service_rendezvous_has_opened().
+      Fixes bug 4856; bugfix on Tor 0.0.6.
+    - Fix the log message describing how we work around discovering
+      that our version is the ill-fated OpenSSL 0.9.8l. Fixes bug
+      4837; bugfix on 0.2.2.9-alpha.
+    - When logging about a disallowed .exit name, do not also call it
+      an "invalid onion address". Fixes bug 3325; bugfix on 0.2.2.9-alpha.
+
+  o Minor bugfixes (build fixes):
+    - During configure, search for library containing cos function as
+      libm lives in libcore on some platforms (BeOS/Haiku).  Linking
+      against libm was hard-coded before. Fixes the first part of bug
+      4727; bugfix on 0.2.2.2-alpha. Patch and analysis by Martin Hebnes
+      Pedersen.
+    - Preprocessor directives should not be put inside the arguments
+      of a macro. This would break compilation with GCC releases prior
+      to version 3.3. We would never recommend such an old GCC version,
+      but it is apparently required for binary compatibility on some
+      platforms (namely, certain builds of Haiku). Fixes the other part
+      of bug 4727; bugfix on 0.2.3.3-alpha. Patch and analysis by Martin
+      Hebnes Pedersen.
+    - Use an appropriate-width type for sockets in tor-fw-helper on
+      win64. Fixes bug 1983 at last. Bugfix on 0.2.3.9-alpha.
+    - Detect attempts to build Tor on (as yet hypothetical) versions
+      of Windows where sizeof(intptr_t) != sizeof(SOCKET). Partial
+      fix for bug 4533. Bugfix on 0.2.2.28-beta.
 
   o Minor bugfixes (other):
     - Fix null-pointer access that could occur if TLS allocation failed.
@@ -113,23 +180,21 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
       platform specific, and particularly the hurd has ENOENT at
       0x40000002. Construct expected string at runtime, using the correct
       value for ENOENT. Fixes bug 4733; bugfix on 0.2.3.1-alpha.
-    - Correctly spell "connect" in a log message on failure to create a
-      controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta and
-      0.2.3.2-alpha.
-    - During configure, search for library containing cos function as
-      libm lives in libcore on some platforms (BeOS/Haiku).
-      Linking against libm was hard-coded before. Bugfix on
-      0.2.2.2-alpha; fixes the first part of bug 4727. Patch and
-      analysis by Martin Hebnes Pedersen.
-    - Preprocessor directives should not be put inside the arguments
-      of a macro. This would break compilation with GCC releases prior
-      to version 3.3. We would never recommend such an old GCC
-      version, but it is apparently required for binary compatibility
-      on some platforms (namely, certain builds of Haiku). Bugfix on
-      0.2.3.3-alpha; fixes the other part of bug 4727. Patch and
-      analysis by Martin Hebnes Pedersen.
+    - Fix our implementation of crypto_random_hostname() so it can't
+      overflow on ridiculously large inputs. (No Tor version has ever
+      provided this kind of bad inputs, but let's be correct in depth.)
+      Fixes bug 4413; bugfix on 0.2.2.9-alpha. Fix by Stephen Palmateer.
+    - Reject attempts to disable DisableDebuggerAttachment while Tor is
+      running. Fixes bug 4650; bugfix on 0.2.3.9-alpha.
+    - Find more places in the code that should have been testing for
+      invalid sockets using the SOCKET_OK macro. Required for a fix
+      for bug 4533. Bugfix on 0.2.2.28-beta.
+    - Add missing documentation for the MaxClientCircuitsPending,
+      UseMicrodescriptors, UserspaceIOCPBuffers, and
+      _UseFilteringSSLBufferevents options, all introduced during
+      the 0.2.3.x series.
 
-  - Feature removal:
+  o Feature removal:
     - When sending or relaying a RELAY_EARLY cell, we used to convert
       it to a RELAY cell if the connection was using the v1 link
       protocol. This was a workaround for older versions of Tor, which
@@ -145,6 +210,22 @@ Changes in version 0.2.3.11-alpha - 2012-01-0?
     - Use OpenSSL's built-in SSL_state_string_long() instead of our
       own homebrewed ssl_state_to_string() replacement. Patch from
       Emile Snyder. Fixes bug 4653.
+    - Use macros to indicate OpenSSL versions, so we don't need to worry
+      about accidental hexadecimal bit shifts.
+    - Remove some workaround code for OpenSSL 0.9.6 (which is no longer
+      supported).
+    - Convert more instances of tor_snprintf+tor_strdup into tor_asprintf.
+    - Use the smartlist_add_asprintf() alias more consistently.
+    - Use a TOR_INVALID_SOCKET macro when initializing a socket to an
+      invalid value, rather than just -1.
+    - Rename a handful of old identifiers, mostly related to crypto
+      structures and crypto functions. By convention, our "create an
+      object" functions are called "type_new()", our "free an object"
+      functions are called "type_free()", and our types indicate that
+      they are types only with a final "_t". But a handful of older
+      types and functions broke these rules, with function names like
+      "type_create" or "subsystem_op_type", or with type names like
+      type_env_t.
 
 
 Changes in version 0.2.3.10-alpha - 2011-12-16

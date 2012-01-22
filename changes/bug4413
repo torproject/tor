@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix our implementation of crypto_random_hostname() so it can't
-      overflow on ridiculously large inputs. (No Tor version has ever
-      provided this kind of bad inputs, but let's be correct in depth.)
-      Fixes bug 4413; bugfix on 0.2.2.9-alpha. Fix by Stephen Palmateer.

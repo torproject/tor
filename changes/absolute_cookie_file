@@ -1,3 +1,0 @@
-  o Minor features (controller):
-    - When reporting the path to the cookie file to the controller,
-      give an absolute path. Resolves ticket 4881.

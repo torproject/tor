@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - When logging about a disallowed .exit name, do not also call it
-      an "invalid onion address". Fixes bug 3325; bugfix on 0.2.2.9-alpha.

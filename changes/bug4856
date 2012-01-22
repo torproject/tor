@@ -1,3 +1,0 @@
-  o Trivial bugfixes
-    - Fix a typo in a log message in rend_service_rendezvous_has_opened().
-      Fixes bug 4856; bugfix on Tor 0.0.6.
