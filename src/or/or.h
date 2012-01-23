@@ -1020,7 +1020,8 @@ typedef struct connection_t {
   /** CONNECT/SOCKS proxy client handshake state (for outgoing connections). */
   unsigned int proxy_state:4;
 
-  /** Our socket; -1 if this connection is closed, or has no socket. */
+  /** Our socket; set to TOR_INVALID_SOCKET if this connection is closed,
+   * or has no socket. */
   tor_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
 
