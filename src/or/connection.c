@@ -1338,6 +1338,8 @@ connection_connect(connection_t *conn, const char *address,
     return -1;
   }
 
+  make_socket_reuseable(s);
+
   if (options->OutboundBindAddress && !tor_addr_is_loopback(addr)) {
     struct sockaddr_in ext_addr;
 
@@ -1371,8 +1373,6 @@ connection_connect(connection_t *conn, const char *address,
 
   log_debug(LD_NET, "Connecting to %s:%u.",
             escaped_safe_str_client(address), port);
-
-  make_socket_reuseable(s);
 
   if (connect(s, dest_addr, (socklen_t)dest_addr_len) < 0) {
     int e = tor_socket_errno(s);

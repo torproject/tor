@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Set the SO_REUSEADDR socket option before we call bind() on outgoing
+      connections. This change should allow busy exit relays to stop
+      running out of available sockets as quickly. Fixes bug 4950;
+      bugfix on 0.2.2.26-beta.
+
