@@ -3,7 +3,7 @@ Changes in version 0.2.3.11-alpha - 2012-01-22
   the last step of the plan to limit maximum circuit length, includes
   a wide variety of hidden service performance and correctness fixes,
   works around an OpenSSL security flaw if your distro is too stubborn
-  to upgrade. and fixes a bunch of smaller issues.
+  to upgrade, and fixes a bunch of smaller issues.
 
   o Major features:
     - Now that Tor 0.2.0.x is completely deprecated, enable the final
@@ -156,7 +156,7 @@ Changes in version 0.2.3.11-alpha - 2012-01-22
       3.0 or lower and disable the -Wnormalized=id and -Woverride-init
       CFLAGS. clang doesn't support them yet.
     - During configure, search for library containing cos function as
-      libm lives in libcore on some platforms (BeOS/Haiku).  Linking
+      libm lives in libcore on some platforms (BeOS/Haiku). Linking
       against libm was hard-coded before. Fixes the first part of bug
       4727; bugfix on 0.2.2.2-alpha. Patch and analysis by Martin Hebnes
       Pedersen.
@@ -5238,7 +5238,7 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
     - When a download gets us zero good descriptors, do not notify
       Tor that new directory information has arrived.
     - Avoid some nasty corner cases in the logic for marking connections
-      as too old or obsolete or noncanonical for circuits.  Partial
+      as too old or obsolete or noncanonical for circuits. Partial
       bugfix on bug 891.
 
   o Minor features (controller):
@@ -6310,7 +6310,7 @@ Changes in version 0.2.0.22-rc - 2008-03-18
       bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
     - Fix the implementation of ClientDNSRejectInternalAddresses so that it
       actually works, and doesn't warn about every single reverse lookup.
-      Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
+      Fixes the other part of bug 617. Bugfix on 0.2.0.1-alpha.
 
   o Minor features:
     - Only log guard node status when guard node status has changed.
@@ -6493,7 +6493,7 @@ Changes in version 0.2.0.19-alpha - 2008-02-09
       bandwidthburst values.
 
   o Minor features (controller):
-    - Reject controller commands over 1MB in length.  This keeps rogue
+    - Reject controller commands over 1MB in length. This keeps rogue
       processes from running us out of memory.
 
   o Minor features (misc):
@@ -6537,7 +6537,7 @@ Changes in version 0.2.0.19-alpha - 2008-02-09
     - Fix shell error when warning about missing packages in configure
       script, on Fedora or Red Hat machines. Bugfix on 0.2.0.x.
     - Do not become confused when receiving a spurious VERSIONS-like
-      cell from a confused v1 client.  Bugfix on 0.2.0.x.
+      cell from a confused v1 client. Bugfix on 0.2.0.x.
     - Re-fetch v2 (as well as v0) rendezvous descriptors when all
       introduction points for a hidden service have failed. Patch from
       Karsten Loesing. Bugfix on 0.2.0.x.
@@ -6825,8 +6825,8 @@ Changes in version 0.2.0.14-alpha - 2007-12-23
     - Make PublishServerDescriptor default to 1, so the default doesn't
       have to change as we invent new directory protocol versions.
     - Fix test for rlim_t on OSX 10.3: sys/resource.h doesn't want to
-      be included unless sys/time.h is already included.  Fixes
-      bug 553.  Bugfix on 0.2.0.x.
+      be included unless sys/time.h is already included. Fixes
+      bug 553. Bugfix on 0.2.0.x.
     - If we receive a general-purpose descriptor and then receive an
       identical bridge-purpose descriptor soon after, don't discard
       the next one as a duplicate.
@@ -6933,7 +6933,7 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
       in really weird results on platforms whose sys/types.h files define
       nonstandard integer types. Bugfix on 0.1.2.x.
     - Fix compilation with --disable-threads set. Bugfix on 0.2.0.x.
-    - Don't crash on name lookup when we have no current consensus.  Fixes
+    - Don't crash on name lookup when we have no current consensus. Fixes
       bug 538; bugfix on 0.2.0.x.
     - Only Tors that want to mirror the v2 directory info should
       create the "cached-status" directory in their datadir. (All Tors
@@ -7117,7 +7117,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
     - Use "If-Modified-Since" to avoid retrieving consensus
       networkstatuses that we already have.
     - When we have no consensus, check FallbackNetworkstatusFile (defaults
-      to $PREFIX/share/tor/fallback-consensus) for a consensus.  This way
+      to $PREFIX/share/tor/fallback-consensus) for a consensus. This way
       we start knowing some directory caches.
     - When we receive a consensus from the future, warn about skew.
     - Improve skew reporting: try to give the user a better log message
@@ -7164,15 +7164,15 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
       on 0.2.0.1-alpha.
     - Stop leaking memory every time we load a v3 certificate. Bugfix
       on 0.2.0.1-alpha. Fixes bug 536.
-    - Stop leaking a cached networkstatus on exit.  Bugfix on
+    - Stop leaking a cached networkstatus on exit. Bugfix on
       0.2.0.3-alpha.
     - Stop leaking voter information every time we free a consensus.
       Bugfix on 0.2.0.3-alpha.
     - Stop leaking signed data every time we check a voter signature.
       Bugfix on 0.2.0.3-alpha.
     - Stop leaking a signature every time we fail to parse a consensus or
-      a vote.  Bugfix on 0.2.0.3-alpha.
-    - Stop leaking v2_download_status_map on shutdown.  Bugfix on
+      a vote. Bugfix on 0.2.0.3-alpha.
+    - Stop leaking v2_download_status_map on shutdown. Bugfix on
       0.2.0.9-alpha.
     - Stop leaking conn->nickname every time we make a connection to a
       Tor relay without knowing its expected identity digest (e.g. when
@@ -7303,7 +7303,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
     - Reattempt certificate downloads immediately on failure, as long as
       we haven't failed a threshold number of times yet.
     - Delay retrying consensus downloads while we're downloading
-      certificates to verify the one we just got.  Also, count getting a
+      certificates to verify the one we just got. Also, count getting a
       consensus that we already have (or one that isn't valid) as a failure,
       and count failing to get the certificates after 20 minutes as a
       failure.
@@ -7395,13 +7395,13 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       yet. Bug found by spending four hours without a v3 consensus. Bugfix
       on 0.1.2.x.
     - Detect the reason for failing to mmap a descriptor file we just
-      wrote, and give a more useful log message.  Fixes bug 533. Bugfix
+      wrote, and give a more useful log message. Fixes bug 533. Bugfix
       on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
       bandwidth accounting information in the state file since
-      0.1.2.5-alpha.  This may result in bandwidth accounting errors
+      0.1.2.5-alpha. This may result in bandwidth accounting errors
       if you try to upgrade from 0.1.1.x or earlier, or if you try to
       downgrade to 0.1.1.x or earlier.
     - New convenience code to locate a file within the DataDirectory.
@@ -7441,9 +7441,9 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - When a v3 authority is missing votes or signatures, it now tries
       to fetch them.
     - Directory authorities track weighted fractional uptime as well as
-      weighted mean-time-between failures.  WFU is suitable for deciding
+      weighted mean-time-between failures. WFU is suitable for deciding
       whether a node is "usually up", while MTBF is suitable for deciding
-      whether a node is "likely to stay up."  We need both, because
+      whether a node is "likely to stay up." We need both, because
       "usually up" is a good requirement for guards, while "likely to
       stay up" is a good requirement for long-lived connections.
 
@@ -7864,7 +7864,7 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
     - If we require CookieAuthentication, stop generating a new cookie
       every time we change any piece of our config.
     - When loading bandwidth history, do not believe any information in
-      the future.  Fixes bug 434.
+      the future. Fixes bug 434.
     - When loading entry guard information, do not believe any information
       in the future.
     - When we have our clock set far in the future and generate an
@@ -8169,7 +8169,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
     - Change the way that Tor buffers data that it is waiting to write.
       Instead of queueing data cells in an enormous ring buffer for each
       client->OR or OR->OR connection, we now queue cells on a separate
-      queue for each circuit.  This lets us use less slack memory, and
+      queue for each circuit. This lets us use less slack memory, and
       will eventually let us be smarter about prioritizing different kinds
       of traffic.
     - Use memory pools to allocate cells with better speed and memory
@@ -8229,7 +8229,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       authorities should set. This will let future authorities choose
       not to serve V2 directory information.
     - Directory authorities allow multiple router descriptors and/or extra
-      info documents to be uploaded in a single go.  This will make
+      info documents to be uploaded in a single go. This will make
       implementing proposal 104 simpler.
 
   o Minor features (controller):
@@ -8246,15 +8246,15 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
   o Minor features (hidden services):
     - Allow multiple HiddenServicePort directives with the same virtual
       port; when they occur, the user is sent round-robin to one
-      of the target ports chosen at random.  Partially fixes bug 393 by
+      of the target ports chosen at random. Partially fixes bug 393 by
       adding limited ad-hoc round-robining.
 
   o Minor features (other):
     - More unit tests.
     - Add a new AutomapHostsOnResolve option: when it is enabled, any
       resolve request for hosts matching a given pattern causes Tor to
-      generate an internal virtual address mapping for that host.  This
-      allows DNSPort to work sensibly with hidden service users.  By
+      generate an internal virtual address mapping for that host. This
+      allows DNSPort to work sensibly with hidden service users. By
       default, .exit and .onion addresses are remapped; the list of
       patterns can be reconfigured with AutomapHostsSuffixes.
     - Add an "-F" option to tor-resolve to force a resolve for a .onion
@@ -8268,7 +8268,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
       This has been deprecated since 0.1.1, and warnings have been issued
-      since 0.1.2.  When we encounter a v0 control message, we now send
+      since 0.1.2. When we encounter a v0 control message, we now send
       back an error and close the connection.
     - Remove the old "dns worker" server DNS code: it hasn't been default
       since 0.1.2.2-alpha, and all the servers seem to be using the new
@@ -8474,10 +8474,10 @@ Changes in version 0.1.2.9-rc - 2007-03-02
 
   o Minor bugfixes (other):
     - Fix an assert that could trigger if a controller quickly set then
-      cleared EntryNodes.  (Bug found by Udo van den Heuvel.)
+      cleared EntryNodes. Bug found by Udo van den Heuvel.
     - On architectures where sizeof(int)>4, still clamp declarable bandwidth
       to INT32_MAX.
-    - Fix a potential race condition in the rpm installer.  Found by
+    - Fix a potential race condition in the rpm installer. Found by
       Stefan Nordhausen.
     - Try to fix eventdns warnings once and for all: do not treat a dns rcode
       of 2 as indicating that the server is completely bad; it sometimes
@@ -8510,8 +8510,8 @@ Changes in version 0.1.2.8-beta - 2007-02-26
   o Minor bugfixes (controller):
     - Give the controller END_STREAM_REASON_DESTROY events _before_ we
       clear the corresponding on_circuit variable, and remember later
-      that we don't need to send a redundant CLOSED event.  (Resolves part
-      3 of bug 367.)
+      that we don't need to send a redundant CLOSED event. Resolves part
+      3 of bug 367.
     - Report events where a resolve succeeded or where we got a socks
       protocol error correctly, rather than calling both of them
       "INTERNAL".
@@ -8545,7 +8545,7 @@ Changes in version 0.1.2.8-beta - 2007-02-26
       tor_munmap() for systems with no mmap() call.
     - When Tor receives a router descriptor that it asked for, but
       no longer wants (because it has received fresh networkstatuses
-      in the meantime), do not warn the user.  Cache the descriptor if
+      in the meantime), do not warn the user. Cache the descriptor if
       we're a cache; drop it if we aren't.
     - Make earlier entry guards _really_ get retried when the network
       comes back online.
@@ -8556,7 +8556,7 @@ Changes in version 0.1.2.8-beta - 2007-02-26
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
-      control protocol.  We're planning to remove support for it during
+      control protocol. We're planning to remove support for it during
       the next development series, so it's good to give people some
       advance warning.
     - Add STREAM_BW events to report per-entry-stream bandwidth
@@ -8576,7 +8576,7 @@ Changes in version 0.1.2.8-beta - 2007-02-26
       (This is showing up in some profiles, but not others.)
 
   o Minor features:
-    - Remove some never-implemented options.  Mark PathlenCoinWeight as
+    - Remove some never-implemented options. Mark PathlenCoinWeight as
       obsolete.
     - Implement proposal 106: Stop requiring clients to have well-formed
       certificates; stop checking nicknames in certificates. (Clients
@@ -8617,10 +8617,10 @@ Changes in version 0.1.2.7-alpha - 2007-02-06
   o Major bugfixes (NT services):
     - Install as NT_AUTHORITY\LocalService rather than as SYSTEM; add a
       command-line flag so that admins can override the default by saying
-      "tor --service install --user "SomeUser"".  This will not affect
-      existing installed services.  Also, warn the user that the service
+      "tor --service install --user "SomeUser"". This will not affect
+      existing installed services. Also, warn the user that the service
       will look for its configuration file in the service user's
-      %appdata% directory.  (We can't do the 'hardwire the user's appdata
+      %appdata% directory. (We can't do the 'hardwire the user's appdata
       directory' trick any more, since we may not have read access to that
       directory.)
 
@@ -8667,7 +8667,7 @@ Changes in version 0.1.2.7-alpha - 2007-02-06
       "DNS resolve socks failed" handshake reply; just close it.
     - Stop using C functions that OpenBSD's linker doesn't like.
     - Don't launch requests for descriptors unless we have networkstatuses
-      from at least half of the authorities.  This delays the first
+      from at least half of the authorities. This delays the first
       download slightly under pathological circumstances, but can prevent
       us from downloading a bunch of descriptors we don't need.
     - Do not log IPs with TLS failures for incoming TLS
@@ -9045,7 +9045,7 @@ Changes in version 0.1.2.3-alpha - 2006-10-29
   o Minor features, controller:
     - Add a REASON field to CIRC events; for backward compatibility, this
       field is sent only to controllers that have enabled the extended
-      event format.  Also, add additional reason codes to explain why
+      event format. Also, add additional reason codes to explain why
       a given circuit has been destroyed or truncated. (Patches from
       Mike Perry)
     - Add a REMOTE_REASON field to extended CIRC events to tell the
@@ -9074,14 +9074,14 @@ Changes in version 0.1.2.3-alpha - 2006-10-29
     - When the controller does a "GETINFO network-status", tell it
       about even those routers whose descriptors are very old, and use
       long nicknames where appropriate.
-    - Change NT service functions to be loaded on demand.  This lets us
+    - Change NT service functions to be loaded on demand. This lets us
       build with MinGW without breaking Tor for Windows 98 users.
     - Do DirPort reachability tests less often, since a single test
       chews through many circuits before giving up.
     - In the hidden service example in torrc.sample, stop recommending
       esoteric and discouraged hidden service options.
     - When stopping an NT service, wait up to 10 sec for it to actually
-      stop.  (Patch from Matt Edman; resolves bug 295.)
+      stop. Patch from Matt Edman; resolves bug 295.
     - Fix handling of verbose nicknames with ORCONN controller events:
       make them show up exactly when requested, rather than exactly when
       not requested.
@@ -9737,7 +9737,7 @@ Changes in version 0.1.1.15-rc - 2006-03-11
     - Add a new circuit purpose 'controller' to let the controller ask
       for a circuit that Tor won't try to use. Extend the EXTENDCIRCUIT
       controller command to let you specify the purpose if you're
-      starting a new circuit.  Add a new SETCIRCUITPURPOSE controller
+      starting a new circuit. Add a new SETCIRCUITPURPOSE controller
       command to let you change a circuit's purpose after it's been
       created.
     - Accept "private:*" in routerdesc exit policies; not generated yet
@@ -9781,7 +9781,7 @@ Changes in version 0.1.1.14-alpha - 2006-02-20
       be forward-compatible.
     - Generate 18.0.0.0/8 address policy format in descs when we can;
       warn when the mask is not reducible to a bit-prefix.
-    - Let the user set ControlListenAddress in the torrc.  This can be
+    - Let the user set ControlListenAddress in the torrc. This can be
       dangerous, but there are some cases (like a secured LAN) where it
       makes sense.
     - Split ReachableAddresses into ReachableDirAddresses and
@@ -10240,7 +10240,7 @@ Changes in version 0.1.1.9-alpha - 2005-11-15
     - Start making directory caches retain old routerinfos, so soon
       clients can start asking by digest of descriptor rather than by
       fingerprint of server.
-    - Add half our entropy from RAND_poll in OpenSSL.  This knows how
+    - Add half our entropy from RAND_poll in OpenSSL. This knows how
       to use egd (if present), openbsd weirdness (if present), vms/os2
       weirdness (if we ever port there), and more in the future.
 
@@ -11086,7 +11086,7 @@ Changes in version 0.1.0.1-rc - 2005-03-28
 
   o Robustness/stability fixes:
     - Make Tor use Niels Provos's libevent instead of its current
-      poll-but-sometimes-select mess.  This will let us use faster async
+      poll-but-sometimes-select mess. This will let us use faster async
       cores (like epoll, kpoll, and /dev/poll), and hopefully work better
       on Windows too.
     - pthread support now too. This was forced because when we forked,
@@ -11204,7 +11204,7 @@ Changes in version 0.1.0.1-rc - 2005-03-28
 Changes in version 0.0.9.6 - 2005-03-24
   o Bugfixes on 0.0.9.x (crashes and asserts):
     - Add new end stream reasons to maintainance branch. Fix bug where
-      reason (8) could trigger an assert.  Prevent bug from recurring.
+      reason (8) could trigger an assert. Prevent bug from recurring.
     - Apparently win32 stat wants paths to not end with a slash.
     - Fix assert triggers in assert_cpath_layer_ok(), where we were
       blowing away the circuit that conn->cpath_layer points to, then
@@ -11427,7 +11427,7 @@ Changes in version 0.0.9rc5 - 2004-12-01
       but doesn't seem to be currently; thanks to Ilja van Sprundel for
       finding it.
     - If anybody set DirFetchPostPeriod, give them StatusFetchPeriod
-      instead.  Impose minima and maxima for all *Period options; impose
+      instead. Impose minima and maxima for all *Period options; impose
       even tighter maxima for fetching if we are a caching dirserver.
       Clip rather than rejecting.
     - Fetch cached running-routers from servers that serve it (that is,
@@ -12408,7 +12408,7 @@ Changes in version 0.0.2pre20 - 2004-01-30
     - I've split the TotalBandwidth option into BandwidthRate (how many
       bytes per second you want to allow, long-term) and
       BandwidthBurst (how many bytes you will allow at once before the cap
-      kicks in).  This better token bucket approach lets you, say, set
+      kicks in). This better token bucket approach lets you, say, set
       BandwidthRate to 10KB/s and BandwidthBurst to 10MB, allowing good
       performance while not exceeding your monthly bandwidth quota.
     - Push out a tls record's worth of data once you've got it, rather
