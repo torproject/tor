@@ -195,6 +195,25 @@ transport_free(transport_t *transport)
   tor_free(transport);
 }
 
+/** Return a deep copy of <b>transport</b>. */
+static transport_t *
+transport_copy(const transport_t *transport)
+{
+  transport_t *new_transport = NULL;
+
+  tor_assert(transport);
+
+  new_transport = tor_malloc_zero(sizeof(transport_t));
+
+  new_transport->socks_version = transport->socks_version;
+  new_transport->name = tor_strdup(transport->name);
+  tor_addr_copy(&new_transport->addr, &transport->addr);
+  new_transport->port = transport->port;
+  new_transport->marked_for_removal = transport->marked_for_removal;
+
+  return new_transport;
+}
+
 /** Returns the transport in our transport list that has the name <b>name</b>.
  *  Else returns NULL. */
 transport_t *
