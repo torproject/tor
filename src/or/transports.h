@@ -28,15 +28,11 @@ typedef struct {
 
 void mark_transport_list(void);
 void sweep_transport_list(void);
-void clear_transport_list(void);
 int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                                const char *name, int socks_ver);
-int transport_add(transport_t *t);
 void transport_free(transport_t *transport);
-transport_t *transport_new(const tor_addr_t *addr, uint16_t port,
-                           const char *name, int socks_ver);
-transport_t *transport_get_by_name(const char *name);
 
+transport_t *transport_get_by_name(const char *name);
 
 void pt_kickstart_proxy(const smartlist_t *transport_list, char **proxy_argv,
                         int is_server);

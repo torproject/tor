@@ -130,6 +130,34 @@ static INLINE void free_execve_args(char **arg);
 /** A list of pluggable transports found in torrc. */
 static smartlist_t *transport_list = NULL;
 
+/** Returns a transport_t struct for a transport proxy supporting the
+    protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
+    SOCKS version <b>socks_ver</b>. */
+static transport_t *
+transport_new(const tor_addr_t *addr, uint16_t port,
+                 const char *name, int socks_ver)
+{
+  transport_t *t = tor_malloc_zero(sizeof(transport_t));
+
+  tor_addr_copy(&t->addr, addr);
+  t->port = port;
+  t->name = tor_strdup(name);
+  t->socks_version = socks_ver;
+
+  return t;
+}
+
+/** Free the pluggable transport struct <b>transport</b>. */
+void
+transport_free(transport_t *transport)
+{
+  if (!transport)
+    return;
+
+  tor_free(transport->name);
+  tor_free(transport);
+}
+
 /** Mark every entry of the transport list to be removed on our next call to
  * sweep_transport_list unless it has first been un-marked. */
 void
@@ -158,41 +186,13 @@ sweep_transport_list(void)
 
 /** Initialize the pluggable transports list to empty, creating it if
  *  needed. */
-void
+static void
 clear_transport_list(void)
 {
   if (!transport_list)
     transport_list = smartlist_new();
   SMARTLIST_FOREACH(transport_list, transport_t *, t, transport_free(t));
   smartlist_clear(transport_list);
-}
-
-/** Returns a transport_t struct for a transport proxy supporting the
-    protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
-    SOCKS version <b>socks_ver</b>. */
-transport_t *
-transport_new(const tor_addr_t *addr, uint16_t port,
-                 const char *name, int socks_ver)
-{
-  transport_t *t = tor_malloc_zero(sizeof(transport_t));
-
-  tor_addr_copy(&t->addr, addr);
-  t->port = port;
-  t->name = tor_strdup(name);
-  t->socks_version = socks_ver;
-
-  return t;
-}
-
-/** Free the pluggable transport struct <b>transport</b>. */
-void
-transport_free(transport_t *transport)
-{
-  if (!transport)
-    return;
-
-  tor_free(transport->name);
-  tor_free(transport);
 }
 
 /** Return a deep copy of <b>transport</b>. */
@@ -230,36 +230,6 @@ transport_get_by_name(const char *name)
   } SMARTLIST_FOREACH_END(transport);
 
   return NULL;
-}
-
-/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
- *  <b>name</b> is set to the name of the protocol this proxy uses.
- *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
-int
-transport_add_from_config(const tor_addr_t *addr, uint16_t port,
-                          const char *name, int socks_ver)
-{
-  transport_t *t = transport_new(addr, port, name, socks_ver);
-
-  int r = transport_add(t);
-
-  switch (r) {
-  case -1:
-  default:
-    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
-               t->name, fmt_addr(&t->addr), t->port);
-    transport_free(t);
-    return -1;
-  case 1:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
-     transport_free(t); /* falling */
-     return 0;
-  case 0:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
-    return 0;
-  }
 }
 
 /** Resolve any conflicts that the insertion of transport <b>t</b>
@@ -321,7 +291,7 @@ transport_resolve_conflicts(transport_t *t)
  *  Returns 0 if the transport was added correctly, 1 if the same
  *  transport was already registered (in this case the caller must
  *  free the transport) and -1 if there was an error.  */
-int
+static int
 transport_add(transport_t *t)
 {
   int r;
@@ -337,6 +307,36 @@ transport_add(transport_t *t)
     return 0;
   default: /* let our caller know the return code */
     return r;
+  }
+}
+
+/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
+ *  <b>name</b> is set to the name of the protocol this proxy uses.
+ *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
+int
+transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+                          const char *name, int socks_ver)
+{
+  transport_t *t = transport_new(addr, port, name, socks_ver);
+
+  int r = transport_add(t);
+
+  switch (r) {
+  case -1:
+  default:
+    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
+               t->name, fmt_addr(&t->addr), t->port);
+    transport_free(t);
+    return -1;
+  case 1:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+     transport_free(t); /* falling */
+     return 0;
+  case 0:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+    return 0;
   }
 }
 
