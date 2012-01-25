@@ -135,7 +135,7 @@ static smartlist_t *transport_list = NULL;
     SOCKS version <b>socks_ver</b>. */
 static transport_t *
 transport_new(const tor_addr_t *addr, uint16_t port,
-                 const char *name, int socks_ver)
+              const char *name, int socks_ver)
 {
   transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
@@ -238,7 +238,7 @@ transport_get_by_name(const char *name)
  *  a transport identical to <b>t</b> already registered and -1 if
  *  <b>t</b> cannot be added due to conflicts. */
 static int
-transport_resolve_conflicts(transport_t *t)
+transport_resolve_conflicts(const transport_t *t)
 {
   /* This is how we resolve transport conflicts:
 
@@ -683,7 +683,7 @@ configure_proxy(managed_proxy_t *mp)
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
-register_server_proxy(managed_proxy_t *mp)
+register_server_proxy(const managed_proxy_t *mp)
 {
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
 
@@ -697,7 +697,7 @@ register_server_proxy(managed_proxy_t *mp)
 /** Register all the transports supported by client managed proxy
  *  <b>mp</b> to the bridge subsystem. */
 static void
-register_client_proxy(managed_proxy_t *mp)
+register_client_proxy(const managed_proxy_t *mp)
 {
   int r;
 
@@ -724,7 +724,7 @@ register_client_proxy(managed_proxy_t *mp)
 
 /** Register the transports of managed proxy <b>mp</b>. */
 static INLINE void
-register_proxy(managed_proxy_t *mp)
+register_proxy(const managed_proxy_t *mp)
 {
   if (mp->is_server)
     register_server_proxy(mp);
