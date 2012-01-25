@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "config.h"
 #include "directory.h"
 #include "dirserv.h"
@@ -720,8 +721,14 @@ we_use_microdescriptors_for_circuits(const or_options_t *options)
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
     /* UseMicrodescriptors is "auto"; we need to decide: */
-    /* So we decide that we'll use microdescriptors iff we are not a server,
-     * and we're not autofetching everything. */
+    /* If we are configured to use bridges and one of our bridges doesn't
+     * know what a microdescriptor is, the answer is no. */
+    if (options->UseBridges && any_bridges_dont_support_microdescriptors())
+      return 0;
+    /* Otherwise, we decide that we'll use microdescriptors iff we are
+     * not a server, and we're not autofetching everything. */
+    /* XXX023 what does not being a server have to do with it? also there's
+     * a partitioning issue here where bridges differ from clients. */
     ret = !server_mode(options) && !options->FetchUselessDescriptors;
   }
   return ret;

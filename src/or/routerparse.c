@@ -2125,14 +2125,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         tor_version_as_new_as(tok->args[0], "0.2.0.8-alpha");
       rs->version_supports_conditional_consensus =
         tor_version_as_new_as(tok->args[0], "0.2.1.1-alpha");
-      /* XXXX023 NM microdescs: 0.2.3.1-alpha isn't widely used yet, but
-       * not all 0.2.3.0-alpha "versions" actually support microdesc cacheing
-       * right.  There's a compromise here.  Since this is 5 May, let's
-       * err on the side of having some possible caches to use.  Once more
-       * caches are running 0.2.3.1-alpha, we can bump this version number.
-       */
       rs->version_supports_microdesc_cache =
-        tor_version_as_new_as(tok->args[0], "0.2.3.0-alpha");
+        tor_version_supports_microdescriptors(tok->args[0]);
       rs->version_supports_optimistic_data =
         tor_version_as_new_as(tok->args[0], "0.2.3.1-alpha");
     }
@@ -4429,6 +4423,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
   smartlist_free(tokens);
 
   return result;
+}
+
+/** Return true iff this Tor version can answer directory questions
+ * about microdescriptors. */
+int tor_version_supports_microdescriptors(const char *platform)
+{
+  return tor_version_as_new_as(platform, "0.2.3.1-alpha");
 }
 
 /** Parse the Tor version of the platform string <b>platform</b>,
