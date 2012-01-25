@@ -95,28 +95,7 @@ typedef struct {
   smartlist_t *transports_to_launch;
 
   /* The 'transports' list contains all the transports this proxy has
-     launched.
-
-     Before a managed_proxy_t reaches the PT_PROTO_COMPLETED phase,
-     this smartlist contains a 'transport_t' for every transport it
-     has launched.
-
-     When the managed_proxy_t reaches the PT_PROTO_COMPLETED phase, it
-     registers all its transports to the circuitbuild.c subsystem. At
-     that point the 'transport_t's are owned by the circuitbuild.c
-     subsystem.
-
-     To avoid carrying dangling 'transport_t's in this smartlist,
-     right before the managed_proxy_t reaches the PT_PROTO_COMPLETED
-     phase we replace all 'transport_t's with strings of their
-     transport names.
-
-     So, tl;dr:
-     When (conf_state != PT_PROTO_COMPLETED) this list carries
-     (transport_t *).
-     When (conf_state == PT_PROTO_COMPLETED) this list carries
-     (char *).
-   */
+     launched. */
   smartlist_t *transports;
 } managed_proxy_t;
 

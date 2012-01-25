@@ -430,11 +430,11 @@ proxy_needs_restart(const managed_proxy_t *mp)
 {
   /* mp->transport_to_launch is populated with the names of the
      transports that must be launched *after* the SIGHUP.
-     mp->transports is populated with the names of the transports that
-     were launched *before* the SIGHUP.
+     mp->transports is populated with the transports that were
+     launched *before* the SIGHUP.
 
-     If the two lists contain the same strings, we don't need to
-     restart the proxy, since it already does what we want. */
+     Check if all the transports that need to be launched are already
+     launched: */
 
   tor_assert(smartlist_len(mp->transports_to_launch) > 0);
   tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
@@ -442,11 +442,11 @@ proxy_needs_restart(const managed_proxy_t *mp)
   if (smartlist_len(mp->transports_to_launch) != smartlist_len(mp->transports))
     goto needs_restart;
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t_t_l) {
-    if (!smartlist_string_isin(mp->transports, t_t_l))
+  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+    if (!smartlist_string_isin(mp->transports_to_launch, t->name))
       goto needs_restart;
 
-  } SMARTLIST_FOREACH_END(t_t_l);
+  } SMARTLIST_FOREACH_END(t);
 
   return 0;
 
@@ -458,6 +458,7 @@ proxy_needs_restart(const managed_proxy_t *mp)
  *  preparations and then flag its state so that it will be relaunched
  *  in the next tick. */
 static void
+
 proxy_prepare_for_restart(managed_proxy_t *mp)
 {
   transport_t *t_tmp = NULL;
@@ -468,16 +469,17 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   tor_process_handle_destroy(mp->process_handle, 1);
   mp->process_handle = NULL;
 
-  /* destroy all its old transports. we no longer use them. */
-  SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
-    t_tmp = transport_get_by_name(t_name);
+  /* destroy all its registered transports, since we will no longer
+     use them. */
+  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+    t_tmp = transport_get_by_name(t->name);
     if (t_tmp)
       t_tmp->marked_for_removal = 1;
-  } SMARTLIST_FOREACH_END(t_name);
+  } SMARTLIST_FOREACH_END(t);
   sweep_transport_list();
 
-  /* free the transport names in mp->transports */
-  SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
+  /* free the transport in mp->transports */
+  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
   smartlist_clear(mp->transports);
 
   /* flag it as an infant proxy so that it gets launched on next tick */
@@ -683,26 +685,13 @@ configure_proxy(managed_proxy_t *mp)
 static void
 register_server_proxy(managed_proxy_t *mp)
 {
-  /* After we register this proxy's transports, we switch its
-     mp->transports to a list containing strings of its transport
-     names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_new();
-
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
+
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
     log_notice(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
                t->name, fmt_addr(&t->addr), (int)t->port);
-    smartlist_add(sm_tmp, tor_strdup(t->name));
   } SMARTLIST_FOREACH_END(t);
-
-  /* Since server proxies don't register their transports in the
-     circuitbuild.c subsystem, it's our duty to free them when we
-     switch mp->transports to strings. */
-  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
-  smartlist_free(mp->transports);
-
-  mp->transports = sm_tmp;
 }
 
 /** Register all the transports supported by client managed proxy
@@ -711,33 +700,26 @@ static void
 register_client_proxy(managed_proxy_t *mp)
 {
   int r;
-  /* After we register this proxy's transports, we switch its
-     mp->transports to a list containing strings of its transport
-     names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_new();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
+
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-    r = transport_add(t);
+    transport_t *transport_tmp = transport_copy(t);
+    r = transport_add(transport_tmp);
     switch (r) {
     case -1:
       log_notice(LD_GENERAL, "Could not add transport %s. Skipping.", t->name);
-      transport_free(t);
+      transport_free(transport_tmp);
       break;
     case 0:
       log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
-      smartlist_add(sm_tmp, tor_strdup(t->name));
       break;
     case 1:
       log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
-      smartlist_add(sm_tmp, tor_strdup(t->name));
-      transport_free(t);
+      transport_free(transport_tmp);
       break;
     }
   } SMARTLIST_FOREACH_END(t);
-
-  smartlist_free(mp->transports);
-  mp->transports = sm_tmp;
 }
 
 /** Register the transports of managed proxy <b>mp</b>. */
@@ -755,10 +737,7 @@ static void
 managed_proxy_destroy(managed_proxy_t *mp,
                       int also_terminate_process)
 {
-  if (mp->conf_state != PT_PROTO_COMPLETED)
-    SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
-  else
-    SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
+  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
 
   /* free the transports smartlist */
   smartlist_free(mp->transports);
