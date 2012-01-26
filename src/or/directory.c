@@ -472,14 +472,13 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     if (options->UseBridges && type != BRIDGE_DIRINFO) {
       /* We want to ask a running bridge for which we have a descriptor.
        *
-       * When we ask choose_random_entry() for a bridge, we specify that
-       * we're going to be using it for a dir fetch: if any of our bridges
-       * can handle microdescriptor questions, we'll get one of the ones
-       * that can.
+       * When we ask choose_random_entry() for a bridge, we specify what
+       * sort of dir fetch we'll be doing, so it won't return a bridge
+       * that can't answer our question.
        */
       /* XXX024 Not all bridges handle conditional consensus downloading,
        * so, for now, never assume the server supports that. -PP */
-      const node_t *node = choose_random_entry(NULL, 1);
+      const node_t *node = choose_random_entry(NULL, type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
         tor_addr_t addr;

@@ -64,8 +64,7 @@ static int entry_guards_dirty = 0;
 static void bridge_free(bridge_info_t *bridge);
 static const node_t *choose_random_entry_impl(cpath_build_state_t *state,
                                               int for_directory,
-                                              dirinfo_type_t dirtype,
-                                              int prefer_microdescs);
+                                              dirinfo_type_t dirtype);
 
 /** Return the list of entry guards, creating it if necessary. */
 const smartlist_t *
@@ -844,20 +843,28 @@ node_understands_microdescriptors(const node_t *node)
   return 0;
 }
 
+/** Return true iff <b>node</b> is able to answer directory questions
+ * of type <b>dirinfo</b>. */
+static int
+node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
+{
+  if ((dirinfo & MICRODESC_DIRINFO) &&
+      !node_understands_microdescriptors(node))
+    return 0;
+  return 1;
+}
+
 /** Pick a live (up and listed) entry guard from entry_guards. If
  * <b>state</b> is non-NULL, this is for a specific circuit --
  * make sure not to pick this circuit's exit or any node in the
  * exit's family. If <b>state</b> is NULL, we're looking for a random
- * guard (likely a bridge).
- *
- * If the prefer_microdescs flag is set, we are looking for a bridge to
- * use for directory fetching and pick a bridge that supports microdescriptors
- * if we know any that do so.
- */
+ * guard (likely a bridge).  If <b>dirinfo</b> is not NO_DIRINFO, then
+ * only select from nodes that know how to answer directory questions
+ * of that type. */
 const node_t *
-choose_random_entry(cpath_build_state_t *state, int prefer_microdescs)
+choose_random_entry(cpath_build_state_t *state, dirinfo_type_t dirinfo)
 {
-  return choose_random_entry_impl(state, 0, 0, prefer_microdescs);
+  return choose_random_entry_impl(state, 0, dirinfo);
 }
 
 /** Pick a live (up and listed) directory guard from entry_guards for
@@ -865,13 +872,13 @@ choose_random_entry(cpath_build_state_t *state, int prefer_microdescs)
 const node_t *
 choose_random_dirguard(dirinfo_type_t type)
 {
-  return choose_random_entry_impl(NULL, 1, type, 0);
+  return choose_random_entry_impl(NULL, 1, type);
 }
 
 /** Helper for choose_random{entry,dirguard}. */
 static const node_t *
 choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
-                         dirinfo_type_t dirinfo_type, int prefer_microdescs)
+                         dirinfo_type_t dirinfo_type)
 {
   const or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_new();
@@ -923,9 +930,8 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
         continue; /* don't pick the same node for entry and exit */
       if (consider_exit_family && smartlist_contains(exit_family, node))
         continue; /* avoid relays that are family members of our exit */
-      if (prefer_microdescs &&
-          we_use_microdescriptors_for_circuits(options) &&
-          !node_understands_microdescriptors(node))
+      if (dirinfo_type != NO_DIRINFO &&
+          !node_can_handle_dirinfo(node, dirinfo_type))
         continue; /* this node won't be able to answer our dir questions */
 #if 0 /* since EntryNodes is always strict now, this clause is moot */
       if (options->EntryNodes &&
@@ -2006,7 +2012,7 @@ int
 any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
-  return choose_random_entry(NULL, 0)!=NULL ? 1 : 0;
+  return choose_random_entry(NULL, NO_DIRINFO)!=NULL ? 1 : 0;
 }
 
 /** Return 1 if there are any directory conns fetching bridge descriptors
