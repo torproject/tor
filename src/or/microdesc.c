@@ -730,9 +730,9 @@ we_use_microdescriptors_for_circuits(const or_options_t *options)
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
     /* UseMicrodescriptors is "auto"; we need to decide: */
-    /* If we are configured to use bridges and one of our bridges doesn't
+    /* If we are configured to use bridges and none of our bridges
      * know what a microdescriptor is, the answer is no. */
-    if (options->UseBridges && any_bridges_dont_support_microdescriptors())
+    if (options->UseBridges && !any_bridge_supports_microdescriptors())
       return 0;
     /* Otherwise, we decide that we'll use microdescriptors iff we are
      * not a server, and we're not autofetching everything. */
