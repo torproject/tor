@@ -12,7 +12,7 @@
 #ifndef _TOR_NTMAIN_H
 #define _TOR_NTMAIN_H
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #if !defined (WINCE)
 #define NT_SERVICE
 #endif

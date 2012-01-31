@@ -224,12 +224,12 @@ AC_ARG_WITH(tor-group,
 AC_SUBST(TORGROUP)
 
 
-dnl If WIN32 is defined and non-zero, we are building for win32
+dnl If _WIN32 is defined and non-zero, we are building for win32
 AC_MSG_CHECKING([for win32])
 AC_RUN_IFELSE([AC_LANG_SOURCE([
 int main(int c, char **v) {
-#ifdef WIN32
-#if WIN32
+#ifdef _WIN32
+#if _WIN32
   return 0;
 #else
   return 1;
@@ -246,7 +246,7 @@ bwin32=cross; AC_MSG_RESULT([cross])
 if test "$bwin32" = cross; then
 AC_MSG_CHECKING([for win32 (cross)])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-#ifdef WIN32
+#ifdef _WIN32
 int main(int c, char **v) {return 0;}
 #else
 #error
@@ -257,9 +257,6 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
-if test "$bwin32" = true; then
-AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
-fi
 AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
 dnl Enable C99 when compiling with MIPSpro
@@ -380,19 +377,19 @@ if test "$enable_static_libevent" = "yes"; then
 fi
 
 TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32], [
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <event.h>], [
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
 void exit(int); void *event_init(void);],
     [
-#ifdef WIN32
+#ifdef _WIN32
 {WSADATA d; WSAStartup(0x101,&d); }
 #endif
 event_init(); exit(0);
@@ -573,7 +570,7 @@ if test "$natpmp" = "true"; then
     AC_DEFINE(NAT_PMP, 1, [Define to 1 if we are building with nat-pmp.])
     TOR_SEARCH_LIBRARY(libnatpmp, $trylibnatpmpdir, [-lnatpmp $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
         [#include <natpmp.h>],
-        [#ifdef MS_WINDOWS
+        [#ifdef _WIN32
          #define STATICLIB
          #endif
          #include <natpmp.h>],
@@ -772,7 +769,7 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN
@@ -797,7 +794,7 @@ AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct s
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN

@@ -12,7 +12,7 @@
 
 #include "orconfig.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #ifndef WIN32_WINNT
 #define WIN32_WINNT 0x400
 #endif
@@ -2409,7 +2409,7 @@ crypto_seed_rng(int startup)
   int rand_poll_status = 0;
 
   /* local variables */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   unsigned char buf[ADD_ENTROPY];
   static int provider_set = 0;
   static HCRYPTPROV provider;
@@ -2431,7 +2431,7 @@ crypto_seed_rng(int startup)
       log_warn(LD_CRYPTO, "RAND_poll() failed.");
   }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {

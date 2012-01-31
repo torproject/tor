@@ -34,7 +34,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 #include <pwd.h>
 #include <sys/resource.h>
 #endif
@@ -542,7 +542,7 @@ control_ports_write_to_file(void)
     log_warn(LD_CONTROL, "Writing %s failed: %s",
              options->ControlPortWriteToFile, strerror(errno));
   }
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (options->ControlPortFileGroupReadable) {
     if (chmod(options->ControlPortWriteToFile, 0640)) {
       log_warn(LD_FS,"Unable to make %s group-readable.",
@@ -1392,7 +1392,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
-    #ifdef MS_WINDOWS
+    #ifdef _WIN32
       myPid = _getpid();
     #else
       myPid = getpid();
@@ -1400,14 +1400,14 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
 
     tor_asprintf(answer, "%d", myPid);
   } else if (!strcmp(question, "process/uid")) {
-    #ifdef MS_WINDOWS
+    #ifdef _WIN32
       *answer = tor_strdup("-1");
     #else
       int myUid = geteuid();
       tor_asprintf(answer, "%d", myUid);
     #endif
   } else if (!strcmp(question, "process/user")) {
-    #ifdef MS_WINDOWS
+    #ifdef _WIN32
       *answer = tor_strdup("");
     #else
       int myUid = geteuid();
@@ -1435,7 +1435,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       }
     #elif defined(CYGWIN) || defined(__CYGWIN__)
       *answer = tor_strdup("3200");
-    #elif defined(MS_WINDOWS)
+    #elif defined(_WIN32)
       *answer = tor_strdup("15000");
     #else
       *answer = tor_strdup("15000");
@@ -4231,7 +4231,7 @@ init_cookie_authentication(int enabled)
     tor_free(fname);
     return -1;
   }
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (get_options()->CookieAuthFileGroupReadable) {
     if (chmod(fname, 0640)) {
       log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));

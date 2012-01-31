@@ -364,7 +364,7 @@ void tor_check_port_forwarding(const char *filename,
 
 typedef struct process_handle_t process_handle_t;
 int tor_spawn_background(const char *const filename, const char **argv,
-#ifdef MS_WINDOWS
+#ifdef _WIN32
                          LPVOID envp,
 #else
                          const char **envp,
@@ -373,7 +373,7 @@ int tor_spawn_background(const char *const filename, const char **argv,
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
 
@@ -388,7 +388,7 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 /*DOCDOC*/
 struct process_handle_t {
   int status;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
   PROCESS_INFORMATION pid;
@@ -398,7 +398,7 @@ struct process_handle_t {
   FILE *stdout_handle;
   FILE *stderr_handle;
   pid_t pid;
-#endif // MS_WINDOWS
+#endif // _WIN32
 };
 #endif
 
@@ -409,7 +409,7 @@ struct process_handle_t {
 int tor_get_exit_code(const process_handle_t *process_handle,
                       int block, int *exit_code);
 int tor_split_lines(struct smartlist_t *sl, char *buf, int len);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 ssize_t tor_read_all_handle(HANDLE h, char *buf, size_t count,
                             const process_handle_t *process);
 #else
@@ -424,7 +424,7 @@ ssize_t tor_read_all_from_process_stderr(
 char *tor_join_win_cmdline(const char *argv[]);
 
 int tor_process_get_pid(process_handle_t *process_handle);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 HANDLE tor_process_get_stdout_pipe(process_handle_t *process_handle);
 #else
 FILE *tor_process_get_stdout_pipe(process_handle_t *process_handle);

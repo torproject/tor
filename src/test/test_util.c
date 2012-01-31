@@ -530,7 +530,7 @@ test_util_threads(void)
   char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   struct timeval tv;
   tv.tv_sec=0;
   tv.tv_usec=10;
@@ -564,7 +564,7 @@ test_util_threads(void)
       timedout = done = 1;
     }
     tor_mutex_release(_thread_test_mutex);
-#ifndef MS_WINDOWS
+#ifndef _WIN32
     /* Prevent the main thread from starving the worker threads. */
     select(0, NULL, NULL, NULL, &tv);
 #endif
@@ -735,7 +735,7 @@ test_util_mmap(void)
   test_assert(mapping);
   test_eq(mapping->size, strlen("Short file."));
   test_streq(mapping->data, "Short file.");
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   tor_munmap_file(mapping);
   mapping = NULL;
   test_assert(unlink(fname1) == 0);
@@ -1260,7 +1260,7 @@ test_util_parent_dir(void *ptr)
   tor_free(cp);
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 static void
 test_util_load_win_lib(void *ptr)
 {
@@ -1312,7 +1312,7 @@ test_util_exit_status(void *ptr)
   ;
 }
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 /** Check that fgets waits until a full line, and not return a partial line, on
  * a EAGAIN with a non-blocking pipe */
 static void
@@ -1412,7 +1412,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   int status;
 
   /* Start the program */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   status = tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
@@ -1459,7 +1459,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   const char *argv[] = {"test-child.exe", "--test", NULL};
   const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
   const char *expected_err = "ERR\r\n";
@@ -1483,7 +1483,7 @@ test_util_spawn_background_fail(void *ptr)
   const char *expected_err = "";
   char expected_out[1024];
   char code[32];
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   const int expected_status = PROCESS_STATUS_ERROR;
 #else
   /* TODO: Once we can signal failure to exec, set this to be
@@ -1515,7 +1515,7 @@ test_util_spawn_background_partial_read(void *ptr)
   process_handle_t *process_handle=NULL;
   int status;
   char stdout_buf[100], stderr_buf[100];
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   const char *argv[] = {"test-child.exe", "--test", NULL};
   const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
                                  "DONE\r\n",
@@ -1533,7 +1533,7 @@ test_util_spawn_background_partial_read(void *ptr)
   (void)ptr;
 
   /* Start the program */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   status = tor_spawn_background(NULL, argv, NULL, &process_handle);
 #else
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
@@ -1544,7 +1544,7 @@ test_util_spawn_background_partial_read(void *ptr)
 
   /* Check stdout */
   for (expected_out_ctr = 0; expected_out[expected_out_ctr] != NULL;) {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL);
 #else
@@ -1567,7 +1567,7 @@ test_util_spawn_background_partial_read(void *ptr)
   }
 
   /* The process should have exited without writing more */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
                             process_handle);
@@ -1881,11 +1881,11 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   UTIL_TEST(load_win_lib, 0),
 #endif
   UTIL_TEST(exit_status, 0),
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   UTIL_TEST(fgets_eagain, TT_SKIP),
 #endif
   UTIL_TEST(spawn_background_ok, 0),

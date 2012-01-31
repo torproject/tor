@@ -26,7 +26,7 @@
 #include "container.h"
 #include "address.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h>
 #include <process.h>
@@ -915,7 +915,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
-#elif defined(MS_WINDOWS)
+#elif defined(_WIN32)
 #if defined(_MSC_VER) && _MSC_VER < 1300
   tor_assert(base <= 10);
   r = (uint64_t)_atoi64(s);
@@ -1731,7 +1731,7 @@ read_all(tor_socket_t fd, char *buf, size_t count, int isSocket)
 static void
 clean_name_for_stat(char *name)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   size_t len = strlen(name);
   if (!len)
     return;
@@ -1790,7 +1790,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   int r;
   struct stat st;
   char *f;
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   int mask;
   struct passwd *pw = NULL;
   uid_t running_uid;
@@ -1812,7 +1812,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     }
     if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
-#if defined (MS_WINDOWS) && !defined (WINCE)
+#if defined (_WIN32) && !defined (WINCE)
       r = mkdir(dirname);
 #else
       r = mkdir(dirname, 0700);
@@ -1834,7 +1834,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     log_warn(LD_FS, "%s is not a directory", dirname);
     return -1;
   }
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (effective_user) {
     /* Look up the user and group information.
      * If we have a problem, bail out. */
@@ -1921,7 +1921,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
 int
 write_str_to_file(const char *fname, const char *str, int bin)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (!bin && strchr(str, '\r')) {
     log_warn(LD_BUG,
              "We're writing a text string that already contains a CR.");
@@ -2263,7 +2263,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   }
   string[r] = '\0'; /* NUL-terminate the result. */
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (!bin && strchr(string, '\r')) {
     log_debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped "
               "when reading %s. Coping.",
@@ -2544,7 +2544,7 @@ char *
 expand_filename(const char *filename)
 {
   tor_assert(filename);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   return tor_strdup(filename);
 #else
   if (*filename == '~') {
@@ -2780,7 +2780,7 @@ smartlist_t *
 tor_listdir(const char *dirname)
 {
   smartlist_t *result;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
   char name[MAX_PATH] = {0};
@@ -2843,7 +2843,7 @@ path_is_relative(const char *filename)
 {
   if (filename && filename[0] == '/')
     return 0;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   else if (filename && filename[0] == '\\')
     return 0;
   else if (filename && strlen(filename)>3 && TOR_ISALPHA(filename[0]) &&
@@ -2858,7 +2858,7 @@ path_is_relative(const char *filename)
  * Process helpers
  * ===== */
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 /* Based on code contributed by christian grothoff */
 /** True iff we've called start_daemon(). */
 static int start_daemon_called = 0;
@@ -2972,7 +2972,7 @@ finish_daemon(const char *desired_cwd)
   close(daemon_filedes[1]);
 }
 #else
-/* defined(MS_WINDOWS) */
+/* defined(_WIN32) */
 void
 start_daemon(void)
 {
@@ -2995,7 +2995,7 @@ write_pidfile(char *filename)
     log_warn(LD_FS, "Unable to open \"%s\" for writing: %s", filename,
              strerror(errno));
   } else {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     fprintf(pidfile, "%d\n", (int)_getpid());
 #else
     fprintf(pidfile, "%d\n", (int)getpid());
@@ -3004,7 +3004,7 @@ write_pidfile(char *filename)
   }
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 HANDLE
 load_windows_system_library(const TCHAR *library_name)
 {
@@ -3191,7 +3191,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 int
 tor_terminate_process(process_handle_t *process_handle)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (tor_get_exit_code(process_handle, 0, NULL) == PROCESS_EXIT_RUNNING) {
     HANDLE handle;
     /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
@@ -3217,14 +3217,14 @@ tor_terminate_process(process_handle_t *process_handle)
 int
 tor_process_get_pid(process_handle_t *process_handle)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   return (int) process_handle->pid.dwProcessId;
 #else
   return (int) process_handle->pid;
 #endif
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 HANDLE
 tor_process_get_stdout_pipe(process_handle_t *process_handle)
 {
@@ -3243,7 +3243,7 @@ process_handle_new(void)
 {
   process_handle_t *out = tor_malloc_zero(sizeof(process_handle_t));
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   out->stdout_pipe = -1;
   out->stderr_pipe = -1;
 #endif
@@ -3284,14 +3284,14 @@ process_handle_new(void)
  */
 int
 tor_spawn_background(const char *const filename, const char **argv,
-#ifdef MS_WINDOWS
+#ifdef _WIN32
                      LPVOID envp,
 #else
                      const char **envp,
 #endif
                      process_handle_t **process_handle_out)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   HANDLE stdout_pipe_read = NULL;
   HANDLE stdout_pipe_write = NULL;
   HANDLE stderr_pipe_read = NULL;
@@ -3393,7 +3393,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   /* TODO: Close pipes on exit */
   *process_handle_out = process_handle;
   return status;
-#else // MS_WINDOWS
+#else // _WIN32
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
@@ -3574,7 +3574,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   *process_handle_out = process_handle;
   return process_handle->status;
-#endif // MS_WINDOWS
+#endif // _WIN32
 }
 
 /** Destroy all resources allocated by the process handle in
@@ -3600,7 +3600,7 @@ tor_process_handle_destroy(process_handle_t *process_handle,
 
   process_handle->status = PROCESS_STATUS_NOTRUNNING;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (process_handle->stdout_pipe)
     CloseHandle(process_handle->stdout_pipe);
 
@@ -3632,7 +3632,7 @@ int
 tor_get_exit_code(const process_handle_t *process_handle,
                   int block, int *exit_code)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   DWORD retval;
   BOOL success;
 
@@ -3687,12 +3687,12 @@ tor_get_exit_code(const process_handle_t *process_handle,
 
   if (exit_code != NULL)
     *exit_code = WEXITSTATUS(stat_loc);
-#endif // MS_WINDOWS
+#endif // _WIN32
 
   return PROCESS_EXIT_EXITED;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
  * <b>hProcess</b> is NULL, the function will return immediately if there is
  * nothing more to read. Otherwise <b>hProcess</b> should be set to the handle
@@ -3814,7 +3814,7 @@ ssize_t
 tor_read_all_from_process_stdout(const process_handle_t *process_handle,
                                  char *buf, size_t count)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   return tor_read_all_handle(process_handle->stdout_pipe, buf, count,
                              process_handle);
 #else
@@ -3828,7 +3828,7 @@ ssize_t
 tor_read_all_from_process_stderr(const process_handle_t *process_handle,
                                  char *buf, size_t count)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   return tor_read_all_handle(process_handle->stderr_pipe, buf, count,
                              process_handle);
 #else
@@ -3890,7 +3890,7 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
   return smartlist_len(sl);
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /** Read from stream, and send lines to log at the specified log level.
  * Returns -1 if there is a error reading, and 0 otherwise.
  * If the generated stream is flushed more often than on new lines, or
@@ -4103,7 +4103,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       child_handle = NULL;
     }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     /* Passing NULL as lpApplicationName makes Windows search for the .exe */
     status = tor_spawn_background(NULL, argv, NULL, &child_handle);
 #else
@@ -4126,7 +4126,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
   if (child_handle && PROCESS_STATUS_RUNNING == child_handle->status) {
     /* Read from stdout/stderr and log result */
     retval = 0;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     stdout_status = log_from_handle(child_handle->stdout_pipe, LOG_INFO);
     stderr_status = log_from_handle(child_handle->stderr_pipe, LOG_WARN);
     /* If we got this far (on Windows), the process started */
@@ -4146,7 +4146,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     if (-1 == stdout_status || -1 == stderr_status)
       /* There was a failure */
       retval = -1;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     else if (!child_handle || tor_get_exit_code(child_handle, 0, NULL) !=
              PROCESS_EXIT_RUNNING) {
       /* process has exited or there was an error */

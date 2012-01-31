@@ -91,7 +91,7 @@
 #include "util.h"
 #include "router.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 static void set_managed_proxy_environment(LPVOID *envp,
                                           const managed_proxy_t *mp);
 #else
@@ -263,7 +263,7 @@ launch_managed_proxy(managed_proxy_t *mp)
 {
   int retval;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 
   LPVOID envp=NULL;
 
@@ -349,7 +349,7 @@ pt_configure_remaining_proxies(void)
   } SMARTLIST_FOREACH_END(mp);
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 
 /** Attempt to continue configuring managed proxy <b>mp</b>. */
 static void
@@ -406,7 +406,7 @@ configure_proxy(managed_proxy_t *mp)
     smartlist_free(lines);
 }
 
-#else /* MS_WINDOWS */
+#else /* _WIN32 */
 
 /** Attempt to continue configuring managed proxy <b>mp</b>. */
 static void
@@ -451,7 +451,7 @@ configure_proxy(managed_proxy_t *mp)
   }
 }
 
-#endif /* MS_WINDOWS */
+#endif /* _WIN32 */
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
@@ -941,7 +941,7 @@ get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
   return bindaddr_result;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
@@ -1043,7 +1043,7 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
   smartlist_free(envs);
 }
 
-#else /* MS_WINDOWS */
+#else /* _WIN32 */
 
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
@@ -1104,7 +1104,7 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   return r;
 }
 
-#endif /* MS_WINDOWS */
+#endif /* _WIN32 */
 
 /** Create and return a new managed proxy for <b>transport</b> using
  *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server

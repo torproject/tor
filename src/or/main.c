@@ -196,7 +196,7 @@ free_old_inbuf(connection_t *conn)
 }
 #endif
 
-#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
+#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
 /** Remove the kernel-space send and receive buffers for <b>s</b>. For use
  * with IOCP only. */
 static int
@@ -237,7 +237,7 @@ connection_add_impl(connection_t *conn, int is_connecting)
   if (connection_type_uses_bufferevent(conn)) {
     if (SOCKET_OK(conn->s) && !conn->linked) {
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
       if (tor_libevent_using_iocp_bufferevents() &&
           get_options()->UserspaceIOCPBuffers) {
         set_buffer_lengths_to_zero(conn->s);
@@ -701,7 +701,7 @@ conn_read_callback(evutil_socket_t fd, short event, void *_conn)
 
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
-#ifndef MS_WINDOWS
+#ifndef _WIN32
       log_warn(LD_BUG,"Unhandled error on read for %s connection "
                "(fd %d); removing",
                conn_type_to_string(conn->type), (int)conn->s);
@@ -1689,7 +1689,7 @@ refill_callback(periodic_timer_t *timer, void *arg)
 }
 #endif
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 /** Called when a possibly ignorable libevent error occurs; ensures that we
  * don't get into an infinite loop by ignoring too many errors from
  * libevent. */
@@ -1908,7 +1908,7 @@ do_main_loop(void)
     if (nt_service_is_stopping())
       return 0;
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
     /* Make it easier to tell whether libevent failure is our fault or not. */
     errno = 0;
 #endif
@@ -1932,7 +1932,7 @@ do_main_loop(void)
         log_err(LD_NET,"libevent call with %s failed: %s [%d]",
                 tor_libevent_get_method(), tor_socket_strerror(e), e);
         return -1;
-#ifndef MS_WINDOWS
+#ifndef _WIN32
       } else if (e == EINVAL) {
         log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
         if (got_libevent_error())
@@ -1951,7 +1951,7 @@ do_main_loop(void)
   }
 }
 
-#ifndef MS_WINDOWS /* Only called when we're willing to use signals */
+#ifndef _WIN32 /* Only called when we're willing to use signals */
 /** Libevent callback: invoked when we get a signal.
  */
 static void
@@ -2168,7 +2168,7 @@ exit_function(void)
 {
   /* NOTE: If we ever daemonize, this gets called immediately.  That's
    * okay for now, because we only use this on Windows.  */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   WSACleanup();
 #endif
 }
@@ -2177,7 +2177,7 @@ exit_function(void)
 void
 handle_signals(int is_parent)
 {
-#ifndef MS_WINDOWS /* do signal stuff only on Unix */
+#ifndef _WIN32 /* do signal stuff only on Unix */
   int i;
   static const int signals[] = {
     SIGINT,  /* do a controlled slow shutdown */
@@ -2300,7 +2300,7 @@ tor_init(int argc, char *argv[])
     return -1;
   }
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (geteuid()==0)
     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
              "and you probably shouldn't.");
@@ -2342,7 +2342,7 @@ try_locking(const or_options_t *options, int err_if_locked)
         log_warn(LD_GENERAL, "It looks like another Tor process is running "
                  "with the same data directory.  Waiting 5 seconds to see "
                  "if it goes away.");
-#ifndef WIN32
+#ifndef _WIN32
         sleep(5);
 #else
         Sleep(5000);
@@ -2578,7 +2578,7 @@ tor_main(int argc, char *argv[])
   }
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* Call SetProcessDEPPolicy to permanently enable DEP.
      The function will not resolve on earlier versions of Windows,
      and failure is not dangerous. */

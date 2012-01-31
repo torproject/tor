@@ -1183,7 +1183,7 @@ configure_nameservers(int force)
   int r;
   options = get_options();
   conf_fname = options->ServerDNSResolvConfFile;
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (!conf_fname)
     conf_fname = "/etc/resolv.conf";
 #endif
@@ -1251,7 +1251,7 @@ configure_nameservers(int force)
     if (nameservers_configured)
       evdns_base_resume(the_evdns_base);
   }
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   else {
     if (nameservers_configured) {
       evdns_base_search_clear(the_evdns_base);

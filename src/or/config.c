@@ -36,7 +36,7 @@
 #include "util.h"
 #include "routerlist.h"
 #include "transports.h"
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <shlobj.h>
 #endif
 
@@ -289,7 +289,7 @@ static config_var_t _option_vars[] = {
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
   V(FetchV2Networkstatus,        BOOL,     "0"),
-#ifdef WIN32
+#ifdef _WIN32
   V(GeoIPFile,                   FILENAME, "<default>"),
 #else
   V(GeoIPFile,                   FILENAME,
@@ -573,7 +573,7 @@ typedef struct {
                *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
   STMT_END
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
 static void config_line_append(config_line_t **lst,
@@ -1644,7 +1644,7 @@ options_act(const or_options_t *old_options)
      * understand prefixes somehow. -NM */
     /* XXXX023 Reload GeoIPFile on SIGHUP. -NM */
     char *actual_fname = tor_strdup(options->GeoIPFile);
-#ifdef WIN32
+#ifdef _WIN32
     if (!strcmp(actual_fname, "<default>")) {
       const char *conf_root = get_windows_conf_root();
       tor_free(actual_fname);
@@ -3357,7 +3357,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   if (options->RunAsDaemon && torrc_fname && path_is_relative(torrc_fname))
     REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
 #endif
@@ -4247,7 +4247,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
   return 0;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /** Return the directory on windows where we expect to find our application
  * data. */
 static char *
@@ -4310,7 +4310,7 @@ get_windows_conf_root(void)
 static const char *
 get_default_conf_file(int defaults_file)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (defaults_file) {
     static char defaults_path[MAX_PATH+1];
     tor_snprintf(defaults_path, MAX_PATH, "%s\\torrc-defaults",
@@ -4400,7 +4400,7 @@ find_torrc_filename(int argc, char **argv,
     if (dflt && file_status(dflt) == FN_FILE) {
       fname = tor_strdup(dflt);
     } else {
-#ifndef MS_WINDOWS
+#ifndef _WIN32
       char *fn = NULL;
       if (!defaults_file)
         fn = expand_filename("~/.torrc");
@@ -4789,7 +4789,7 @@ options_init_logs(or_options_t *options, int validate_only)
   int ok;
   smartlist_t *elts;
   int daemon =
-#ifdef MS_WINDOWS
+#ifdef _WIN32
                0;
 #else
                options->RunAsDaemon;
@@ -5964,7 +5964,7 @@ check_server_ports(const smartlist_t *ports,
     } else {
       continue;
     }
-#ifndef MS_WINDOWS
+#ifndef _WIN32
     if (!port->no_advertise && port->port < 1024)
       ++n_low_port;
 #endif
@@ -6041,7 +6041,7 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
 static int
 normalize_data_directory(or_options_t *options)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   char *p;
   if (options->DataDirectory)
     return 0; /* all set */

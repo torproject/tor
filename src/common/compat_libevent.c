@@ -205,7 +205,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     cfg = event_config_new();
     tor_assert(cfg);
 
-#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
+#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
     if (! torcfg->disable_iocp) {
       evthread_use_windows_threads();
       event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
@@ -241,7 +241,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
       /* This could be a socketpair() failure, which can happen sometimes on
        * windows boxes with obnoxious firewall rules.  Downgrade and try
        * again. */
-#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
+#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
       if (torcfg->disable_iocp == 0) {
         log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again "
                  "with IOCP disabled.");

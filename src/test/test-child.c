@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "orconfig.h"
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
 #else
@@ -23,13 +23,13 @@ main(int argc, char **argv)
      succeed. Otherwise ReadFile() will get the entire output in one */
   // XXX: Can we make stdio flush on newline?
   fflush(stdout);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   Sleep(1000);
 #else
   sleep(1);
 #endif
   fprintf(stdout, "DONE\n");
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   Sleep(1000);
 #else
   sleep(1);

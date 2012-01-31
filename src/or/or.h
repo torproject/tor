@@ -22,7 +22,7 @@
 #endif
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #ifndef WIN32_WINNT
 #define WIN32_WINNT 0x400
 #endif
@@ -79,7 +79,7 @@
 #include <time.h>
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <io.h>
 #include <process.h>
 #include <direct.h>

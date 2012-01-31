@@ -21,7 +21,7 @@
 
 #include "compat.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <process.h>
 #include <windows.h>
 #include <sys/locking.h>
@@ -205,7 +205,7 @@ tor_munmap_file(tor_mmap_t *handle)
   munmap((char*)handle->data, handle->mapping_size);
   tor_free(handle);
 }
-#elif defined(MS_WINDOWS)
+#elif defined(_WIN32)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
@@ -341,7 +341,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
     return -1; /* no place for the NUL */
   if (size > SIZE_T_CEILING)
     return -1;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   r = _vsnprintf(str, size, format, args);
 #else
   r = vsnprintf(str, size, format, args);
@@ -570,7 +570,7 @@ tor_strtok_r_impl(char *str, const char *sep, char **lasts)
   return start;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /** Take a filename and return a pointer to its final element.  This
  * function is called on __FILE__ to fix a MSVC nit where __FILE__
  * contains the full path to the file.  This is bad, because it
@@ -670,7 +670,7 @@ set_uint64(void *cp, uint64_t v)
 int
 replace_file(const char *from, const char *to)
 {
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   return rename(from,to);
 #else
   switch (file_status(to))
@@ -739,7 +739,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
     return NULL;
   }
 
-#ifdef WIN32
+#ifdef _WIN32
   _lseek(fd, 0, SEEK_SET);
   if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 1) < 0) {
     if (errno != EACCES && errno != EDEADLOCK)
@@ -788,7 +788,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   tor_assert(lockfile);
 
   log_info(LD_FS, "Unlocking \"%s\"", lockfile->filename);
-#ifdef WIN32
+#ifdef _WIN32
   _lseek(lockfile->fd, 0, SEEK_SET);
   if (_locking(lockfile->fd, _LK_UNLCK, 1) < 0) {
     log_warn(LD_FS,"Error unlocking \"%s\": %s", lockfile->filename,
@@ -824,7 +824,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 off_t
 tor_fd_getpos(int fd)
 {
-#ifdef WIN32
+#ifdef _WIN32
   return (off_t) _lseek(fd, 0, SEEK_CUR);
 #else
   return (off_t) lseek(fd, 0, SEEK_CUR);
@@ -835,7 +835,7 @@ tor_fd_getpos(int fd)
 int
 tor_fd_seekend(int fd)
 {
-#ifdef WIN32
+#ifdef _WIN32
   return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
 #else
   return lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
@@ -888,7 +888,7 @@ tor_close_socket(tor_socket_t s)
    * tor_close_socket to close sockets, and always using close() on
    * files.
    */
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
   r = closesocket(s);
 #else
   r = close(s);
@@ -909,7 +909,7 @@ tor_close_socket(tor_socket_t s)
   } else {
     int err = tor_socket_errno(-1);
     log_info(LD_NET, "Close returned an error: %s", tor_socket_strerror(err));
-#ifdef WIN32
+#ifdef _WIN32
     if (err != WSAENOTSOCK)
       --n_sockets_open;
 #else
@@ -1016,7 +1016,7 @@ get_n_open_sockets(void)
 void
 set_socket_nonblocking(tor_socket_t socket)
 {
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
   unsigned long nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
@@ -1045,7 +1045,7 @@ int
 tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 {
 //don't use win32 socketpairs (they are always bad)
-#if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
+#if defined(HAVE_SOCKETPAIR) && !defined(_WIN32)
   int r;
 #ifdef SOCK_CLOEXEC
   type |= SOCK_CLOEXEC;
@@ -1089,7 +1089,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
         || family != AF_UNIX
 #endif
         ) {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
       return -WSAEAFNOSUPPORT;
 #else
       return -EAFNOSUPPORT;
@@ -1149,7 +1149,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     return 0;
 
   abort_tidy_up_and_fail:
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     saved_errno = WSAECONNABORTED;
 #else
     saved_errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
@@ -1191,7 +1191,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 #if defined(CYGWIN) || defined(__CYGWIN__)
   const char *platform = "Cygwin";
   const unsigned long MAX_CONNECTIONS = 3200;
-#elif defined(MS_WINDOWS)
+#elif defined(_WIN32)
   const char *platform = "Windows";
   const unsigned long MAX_CONNECTIONS = 15000;
 #else
@@ -1274,7 +1274,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   return 0;
 }
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 /** Log details of current user and group credentials. Return 0 on
  * success. Logs and return -1 on failure.
  */
@@ -1380,7 +1380,7 @@ log_credential_status(void)
 int
 switch_id(const char *user)
 {
-#ifndef MS_WINDOWS
+#ifndef _WIN32
   struct passwd *pw = NULL;
   uid_t old_uid;
   gid_t old_gid;
@@ -1591,7 +1591,7 @@ get_parent_directory(char *fname)
   char *cp;
   int at_end = 1;
   tor_assert(fname);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* If we start with, say, c:, then don't consider that the start of the path
    */
   if (fname[0] && fname[1] == ':') {
@@ -1608,7 +1608,7 @@ get_parent_directory(char *fname)
   at_end = 1;
   while (--cp > fname) {
     int is_sep = (*cp == '/'
-#ifdef MS_WINDOWS
+#ifdef _WIN32
                   || *cp == '\\'
 #endif
                   );
@@ -1628,7 +1628,7 @@ get_parent_directory(char *fname)
 char *
 make_path_absolute(char *fname)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   char *absfname_malloced = _fullpath(NULL, fname, 1);
 
   /* We don't want to assume that tor_free can free a string allocated
@@ -1900,7 +1900,7 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
 void
 tor_init_weak_random(unsigned seed)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   srand(seed);
 #else
   srandom(seed);
@@ -1913,7 +1913,7 @@ tor_init_weak_random(unsigned seed)
 long
 tor_weak_random(void)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   return rand();
 #else
   return random();
@@ -1942,7 +1942,7 @@ get_uname(void)
     } else
 #endif
       {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
         OSVERSIONINFOEX info;
         int i;
         const char *plat = NULL;
@@ -2144,7 +2144,7 @@ spawn_exit(void)
 static int
 compute_num_cpus_impl(void)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   SYSTEM_INFO info;
   memset(&info, 0, sizeof(info));
   GetSystemInfo(&info);
@@ -2192,7 +2192,7 @@ compute_num_cpus(void)
 void
 tor_gettimeofday(struct timeval *timeval)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* Epoch bias copied from perl: number of units between windows epoch and
    * Unix epoch. */
 #define EPOCH_BIAS U64_LITERAL(116444736000000000)
@@ -2237,7 +2237,7 @@ tor_gettimeofday(struct timeval *timeval)
   return;
 }
 
-#if defined(TOR_IS_MULTITHREADED) && !defined(MS_WINDOWS)
+#if defined(TOR_IS_MULTITHREADED) && !defined(_WIN32)
 /** Defined iff we need to add locks when defining fake versions of reentrant
  * versions of time-related functions. */
 #define TIME_FNS_NEED_LOCKS
@@ -2781,7 +2781,7 @@ in_main_thread(void)
  * should call tor_socket_errno <em>at most once</em> on the failing
  * socket to get the error.
  */
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
 int
 tor_socket_errno(tor_socket_t sock)
 {
@@ -2797,7 +2797,7 @@ tor_socket_errno(tor_socket_t sock)
 }
 #endif
 
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
 #define E(code, s) { code, (s " [" #code " ]") }
 struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAEINTR, "Interrupted function call"),
@@ -2879,7 +2879,7 @@ tor_socket_strerror(int e)
 int
 network_init(void)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* This silly exercise is necessary before windows will allow
    * gethostbyname to work. */
   WSADATA WSAData;
@@ -2901,7 +2901,7 @@ network_init(void)
   return 0;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /** Return a newly allocated string describing the windows system error code
  * <b>err</b>.  Note that error codes are different from errno.  Error codes
  * come from GetLastError() when a winapi call fails.  errno is set only when

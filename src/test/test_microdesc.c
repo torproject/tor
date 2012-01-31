@@ -9,7 +9,7 @@
 
 #include "test.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>
 #else
@@ -66,7 +66,7 @@ test_md_cache(void *data)
   /* Possibly, turn this into a test setup/cleanup pair */
   tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup(get_fname("md_datadir_test"));
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   tt_int_op(0, ==, mkdir(options->DataDirectory));
 #else
   tt_int_op(0, ==, mkdir(options->DataDirectory, 0700));

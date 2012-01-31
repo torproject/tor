@@ -21,7 +21,7 @@
 #include <errno.h>
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <windows.h>
 
 /* Windows does not define pid_t, but _getpid() returns an int. */
@@ -91,7 +91,7 @@ struct tor_process_monitor_t {
    * polls. */
   pid_t pid;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /** Windows-only: Should we poll hproc?  If false, poll pid
    * instead. */
   int poll_hproc;
@@ -192,7 +192,7 @@ tor_process_monitor_new(struct event_base *base,
 
   procmon->pid = ppspec.pid;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   procmon->hproc = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE,
                                FALSE,
                                procmon->pid);
@@ -246,7 +246,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
   tor_assert(procmon != NULL);
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (procmon->poll_hproc) {
     DWORD exit_code;
     if (!GetExitCodeProcess(procmon->hproc, &exit_code)) {
@@ -323,7 +323,7 @@ tor_process_monitor_free(tor_process_monitor_t *procmon)
   if (procmon == NULL)
     return;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   if (procmon->hproc != NULL)
     CloseHandle(procmon->hproc);
 #endif

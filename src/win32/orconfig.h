@@ -3,8 +3,7 @@
  */
 
 /* Windows-only defines. */
-#define MS_WINDOWS
-#define MS_WIN32
+#define _WIN32
 #define CONFDIR ""
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */

@@ -8,7 +8,7 @@
 
 #include "orconfig.h"
 #include "torint.h"
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #ifndef WIN32_WINNT
 #define WIN32_WINNT 0x400
 #endif
@@ -35,7 +35,7 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#if defined(HAVE_PTHREAD_H) && !defined(MS_WINDOWS)
+#if defined(HAVE_PTHREAD_H) && !defined(_WIN32)
 #include <pthread.h>
 #endif
 #include <stdarg.h>
@@ -89,7 +89,7 @@
 #endif
 
 /* inline is __inline on windows. */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define INLINE __inline
 #else
 #define INLINE inline
@@ -196,7 +196,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #endif
 
 /* ===== String compatibility */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /* Windows names string functions differently from most other platforms. */
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
@@ -249,7 +249,7 @@ typedef struct tor_mmap_t {
 #ifdef HAVE_SYS_MMAN_H
   size_t mapping_size; /**< Size of the actual mapping. (This is this file
                         * size, rounded up to the nearest page.) */
-#elif defined MS_WINDOWS
+#elif defined _WIN32
   HANDLE file_handle;
   HANDLE mmap_handle;
 #endif
@@ -307,7 +307,7 @@ char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
 const char *tor_fix_source_file(const char *fname);
 #else
@@ -386,7 +386,7 @@ void tor_lockfile_unlock(tor_lockfile_t *lockfile);
 off_t tor_fd_getpos(int fd);
 int tor_fd_seekend(int fd);
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define PATH_SEPARATOR "\\"
 #else
 #define PATH_SEPARATOR "/"
@@ -398,7 +398,7 @@ int tor_fd_seekend(int fd);
 typedef int socklen_t;
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /* XXX Actually, this should arguably be SOCKET; we use intptr_t here so that
  * any inadvertant checks for the socket being <= 0 or > 0 will probably
  * still work. */
@@ -499,7 +499,7 @@ int network_init(void);
  * errnos against expected values, and use tor_socket_errno to find
  * the actual errno after a socket operation fails.
  */
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
 /** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EINPROGRESS or the local equivalent. */
@@ -584,7 +584,7 @@ char *make_path_absolute(char *fname);
 int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
 
-#if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
+#if defined(ENABLE_THREADS) && defined(_WIN32)
 #define USE_WIN32_THREADS
 #define TOR_IS_MULTITHREADED 1
 #elif (defined(ENABLE_THREADS) && defined(HAVE_PTHREAD_H) && \
@@ -666,14 +666,14 @@ void tor_cond_signal_all(tor_cond_t *cond);
 #endif
 
 /* Platform-specific helpers. */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 char *format_win32_error(DWORD err);
 #endif
 
 /*for some reason my compiler doesn't have these version flags defined
   a nice homework assignment for someone one day is to define the rest*/
 //these are the values as given on MSDN
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 
 #ifndef VER_SUITE_EMBEDDEDNT
 #define VER_SUITE_EMBEDDEDNT 0x00000040
