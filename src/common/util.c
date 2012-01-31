@@ -2972,7 +2972,7 @@ finish_daemon(const char *desired_cwd)
   close(daemon_filedes[1]);
 }
 #else
-/* defined(MS_WINDOWS) */
+/* defined(_WIN32) */
 void
 start_daemon(void)
 {

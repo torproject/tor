@@ -257,9 +257,6 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
-if test "$bwin32" = true; then
-AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
-fi
 AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
 dnl Enable C99 when compiling with MIPSpro
@@ -573,7 +570,7 @@ if test "$natpmp" = "true"; then
     AC_DEFINE(NAT_PMP, 1, [Define to 1 if we are building with nat-pmp.])
     TOR_SEARCH_LIBRARY(libnatpmp, $trylibnatpmpdir, [-lnatpmp $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
         [#include <natpmp.h>],
-        [#ifdef MS_WINDOWS
+        [#ifdef _WIN32
          #define STATICLIB
          #endif
          #include <natpmp.h>],
@@ -772,7 +769,7 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN
@@ -797,7 +794,7 @@ AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct s
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN

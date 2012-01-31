@@ -14,11 +14,6 @@ typedef unsigned char u_char;
 #endif
 #include "torint.h"
 
-#if defined(_WIN32) && !defined(_WIN32)
-/* How did _this_ happen? */
-#define _WIN32
-#endif
-
 /* These are for debugging possible memory leaks. */
 #include "util.h"
 #include "compat.h"
