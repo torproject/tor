@@ -1628,7 +1628,7 @@ get_parent_directory(char *fname)
 char *
 make_path_absolute(char *fname)
 {
-#ifdef WINDOWS
+#ifdef MS_WINDOWS
   char *absfname_malloced = _fullpath(NULL, fname, 1);
 
   /* We don't want to assume that tor_free can free a string allocated
