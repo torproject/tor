@@ -421,11 +421,15 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
 
   if (!get_via_tor) {
     if (options->UseBridges && type != BRIDGE_DIRINFO) {
-      /* want to ask a running bridge for which we have a descriptor. */
-      /* XXX023 we assume that all of our bridges can answer any
-       * possible directory question. This won't be true forever. -RD */
-      /* It certainly is not true with conditional consensus downloading,
-       * so, for now, never assume the server supports that. */
+      /* We want to ask a running bridge for which we have a descriptor.
+       *
+       * Be careful here: we should only ask questions that we know our
+       * bridges can answer. So far we're solving that by backing off to
+       * the behavior supported by our oldest bridge; see for example
+       * any_bridges_dont_support_microdescriptors().
+       */
+      /* XXX024 Not all bridges handle conditional consensus downloading,
+       * so, for now, never assume the server supports that. -PP */
       const node_t *node = choose_random_entry(NULL);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */

@@ -3339,7 +3339,7 @@ extend_info_from_router(const routerinfo_t *r, int for_direct_connect)
 }
 
 /** Allocate and return a new extend_info that can be used to build a
- * ircuit to or through the node <b>node</b>. Use the primary address
+ * circuit to or through the node <b>node</b>. Use the primary address
  * of the node unless <b>for_direct_connect</b> is true, in which case
  * the preferred address is used instead. May return NULL if there is
  * not enough info about <b>node</b> to extend to it--for example, if
@@ -5326,6 +5326,34 @@ entries_retry_all(const or_options_t *options)
 {
   tor_assert(entry_list_is_constrained(options));
   entries_retry_helper(options, 1);
+}
+
+/** Return true if we've ever had a bridge running a Tor version that can't
+ * provide microdescriptors to us. In that case fall back to asking for
+ * full descriptors. Eventually all bridges will support microdescriptors
+ * and we can take this check out; see bug 4013. */
+int
+any_bridges_dont_support_microdescriptors(void)
+{
+  const node_t *node;
+  static int ever_answered_yes = 0;
+  if (!get_options()->UseBridges || !entry_guards)
+    return 0;
+  if (ever_answered_yes)
+    return 1; /* if we ever answer 'yes', always answer 'yes' */
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+    node = node_get_by_id(e->identity);
+    if (node && node->ri &&
+        node_is_bridge(node) && node_is_a_configured_bridge(node) &&
+        !tor_version_supports_microdescriptors(node->ri->platform)) {
+      /* This is one of our current bridges, and we know enough about
+       * it to know that it won't be able to answer our microdescriptor
+       * questions. */
+      ever_answered_yes = 1;
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(e);
+  return 0;
 }
 
 /** Release all storage held by the list of entry guards and related

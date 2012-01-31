@@ -44,8 +44,9 @@ addr_policy_t *router_parse_addr_policy_item_from_string(const char *s,
                                                   int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,
                                          const char *versionlist);
-int tor_version_parse(const char *s, tor_version_t *out);
+int tor_version_supports_microdescriptors(const char *platform);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
+int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 void sort_version_list(smartlist_t *lst, int remove_duplicates);
