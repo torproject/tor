@@ -96,7 +96,7 @@
 
 #include "eventdns.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <winsock2.h>
 #include <iphlpapi.h>
@@ -110,7 +110,7 @@
 #include <netinet/in6.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 typedef int socklen_t;
 #endif
 
@@ -343,7 +343,7 @@ static void server_port_ready_callback(int fd, short events, void *arg);
 
 static int strtoint(const char *const str);
 
-#ifdef WIN32
+#ifdef _WIN32
 static int
 last_error(int sock)
 {
@@ -432,7 +432,7 @@ _evdns_log(int warn, const char *fmt, ...)
 	if (!evdns_log_fn)
 		return;
 	va_start(args,fmt);
-#ifdef WIN32
+#ifdef _WIN32
 	_vsnprintf(buf, sizeof(buf), fmt, args);
 #else
 	vsnprintf(buf, sizeof(buf), fmt, args);
@@ -2298,7 +2298,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 
 	ns->socket = tor_open_socket(address->sa_family, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
-#ifdef WIN32
+#ifdef _WIN32
 	{
 		u_long nonblocking = 1;
 		ioctlsocket(ns->socket, FIONBIO, &nonblocking);
@@ -3101,7 +3101,7 @@ out1:
 	return err;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 /* Add multiple nameservers from a space-or-comma-separated list. */
 static int
 evdns_nameserver_ip_add_line(const char *ips) {
@@ -3309,7 +3309,7 @@ int
 evdns_init(void)
 {
 		int res = 0;
-#ifdef WIN32
+#ifdef _WIN32
 		evdns_config_windows_nameservers();
 #else
 		res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");

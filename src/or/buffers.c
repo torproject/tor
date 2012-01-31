@@ -633,7 +633,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
   if (read_result < 0) {
     int e = tor_socket_errno(fd);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
       if (e == WSAENOBUFS)
         log_warn(LD_NET,"recv() failed: WSAENOBUFS. Not enough ram?");
 #endif
@@ -790,7 +790,7 @@ flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
   if (write_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
       if (e == WSAENOBUFS)
         log_warn(LD_NET,"write() failed: WSAENOBUFS. Not enough ram?");
 #endif

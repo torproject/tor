@@ -9,7 +9,7 @@
 
 #include "orconfig.h"
 #ifdef MINIUPNPC
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define STATICLIB
 #endif
 #include <stdint.h>

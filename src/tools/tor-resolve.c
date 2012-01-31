@@ -32,7 +32,7 @@
 #include <errno.h>
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #if defined(_MSC_VER) && (_MSC_VER <= 1300)
 #include <winsock.h>
 #else

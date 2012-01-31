@@ -15,7 +15,7 @@
 #include "torlog.h"
 #include "container.h"
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <process.h>
 #include <windows.h>
 #include <winsock2.h>
@@ -275,7 +275,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     ent = err ? NULL : &hent;
 #else
     ent = gethostbyname(name);
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     err = WSAGetLastError();
 #else
     err = h_errno;
@@ -291,7 +291,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       }
       return 0;
     }
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     return (err == WSATRY_AGAIN) ? 1 : -1;
 #else
     return (err == TRY_AGAIN) ? 1 : -1;
@@ -1101,7 +1101,7 @@ tor_addr_port_lookup(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
   return -1;
 }
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
               ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
 #endif
@@ -1140,7 +1140,7 @@ get_interface_addresses_raw(int severity)
 
   freeifaddrs(ifa);
   return result;
-#elif defined(MS_WINDOWS)
+#elif defined(_WIN32)
   /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
      "GetAdaptersInfo", but that's deprecated; let's just try
      GetAdaptersAddresses and fall back to connect+getsockname.

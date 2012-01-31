@@ -21,7 +21,7 @@
 #include <time.h>
 #include <string.h>
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
 
@@ -229,7 +229,7 @@ tor_fw_add_dir_port(tor_fw_options_t *tor_fw_options,
 static int
 network_init(void)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* This silly exercise is necessary before windows will allow
    * gethostbyname to work. */
   WSADATA WSAData;

@@ -143,7 +143,7 @@ stream_end_reason_to_socks5_response(int reason)
  * E_CASE is for errors where windows has both a EFOO and a WSAEFOO
  * version, and S_CASE is for errors where windows has only a WSAEFOO
  * version.  (The E is for 'error', the S is for 'socket'). */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 #define E_CASE(s) case s: case WSA ## s
 #define S_CASE(s) case WSA ## s
 #else

@@ -19,7 +19,7 @@ const char tor_git_revision[] = "";
 #include <fcntl.h>
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
 /* For mkdir() */
 #include <direct.h>
 #else
@@ -83,7 +83,7 @@ setup_directory(void)
   int r;
   if (is_setup) return;
 
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   {
     char buf[MAX_PATH];
     const char *tmp = buf;

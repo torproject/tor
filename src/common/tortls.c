@@ -21,7 +21,7 @@
 #endif
 
 #include <assert.h>
-#ifdef MS_WINDOWS /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
+#ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
  #ifndef WIN32_WINNT
  #define WIN32_WINNT 0x400
  #endif
@@ -333,7 +333,7 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
 static int
 tor_errno_to_tls_error(int e)
 {
-#if defined(MS_WINDOWS)
+#if defined(_WIN32)
   switch (e) {
     case WSAECONNRESET: // most common
       return TOR_TLS_ERROR_CONNRESET;

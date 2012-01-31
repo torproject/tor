@@ -837,7 +837,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path)
 static void
 make_socket_reuseable(tor_socket_t sock)
 {
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   (void) sock;
 #else
   int one=1;
@@ -1317,7 +1317,7 @@ connection_connect(connection_t *conn, const char *address,
      * Warn if we do, and refuse to make the connection. */
     static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
     char *m;
-#ifdef MS_WINDOWS
+#ifdef _WIN32
     *socket_error = WSAENETUNREACH;
 #else
     *socket_error = ENETUNREACH;
