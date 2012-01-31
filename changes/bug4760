@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When binding to an IPv6 address, set the IPV6_V6ONLY socket
+      option, so that the IP stack doesn't decide to use it for IPv4
+      too. Fixes bug 4760; bugfix on 0.2.3.9-alpha.

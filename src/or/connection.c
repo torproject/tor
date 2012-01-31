@@ -902,6 +902,25 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
     make_socket_reuseable(s);
 
+#ifdef IPV6_V6ONLY
+    if (listensockaddr->sa_family == AF_INET6) {
+#ifdef _WIN32
+      /* In Redmond, this kind of thing passes for standards-conformance. */
+      DWORD one = 1;
+#else
+      int one = 1;
+#endif
+      /* We need to set IPV6_V6ONLY so that this socket can't get used for
+       * IPv4 connections. */
+      if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY, (void*)&one, sizeof(one))<0) {
+        int e = tor_socket_errno(s);
+        log_warn(LD_NET, "Error setting IPV6_V6ONLY flag: %s",
+                 tor_socket_strerror(e));
+        /* Keep going; probably not harmful. */
+      }
+    }
+#endif
+
     if (bind(s,listensockaddr,socklen) < 0) {
       const char *helpfulhint = "";
       int e = tor_socket_errno(s);
