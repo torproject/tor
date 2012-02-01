@@ -6,11 +6,11 @@
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See 'man tor', or https://www.torproject.org/tor-manual.html,
+## See 'man tor', or https://www.torproject.org/docs/tor-manual.html,
 ## for more options you can use in this file.
 ##
 ## Tor will look for this file in various places based on your platform:
-## https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#torrc
+## https://www.torproject.org/docs/faq#torrc
 
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
