@@ -243,6 +243,60 @@ test_util_config_line(void)
   tor_free(v);
 }
 
+static void
+test_util_config_line_quotes(void)
+{
+  char buf1[1024];
+  char buf2[128];
+  char buf3[128];
+  char buf4[128];
+  char *k=NULL, *v=NULL;
+  const char *str;
+
+  /* Test parse_config_line_from_str */
+  strlcpy(buf1, "kTrailingSpace \"quoted value\"   \n"
+          "kTrailingGarbage \"quoted value\"trailing garbage\n"
+          , sizeof(buf1));
+  strlcpy(buf2, "kTrailingSpaceAndGarbage \"quoted value\" trailing space+g\n"
+          , sizeof(buf2));
+  strlcpy(buf3, "kMultilineTrailingSpace \"mline\\ \nvalue w/ trailing sp\"\n"
+          , sizeof(buf3));
+  strlcpy(buf4, "kMultilineNoTrailingBackslash \"naked multiline\nvalue\"\n"
+          , sizeof(buf4));
+  str = buf1;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "kTrailingSpace");
+  test_streq(v, "quoted value");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+  str = buf2;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+  str = buf3;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+  str = buf4;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+ done:
+  tor_free(k);
+  tor_free(v);
+}
+
 /** Test basic string functionality. */
 static void
 test_util_strmisc(void)
@@ -2105,6 +2159,7 @@ test_util_set_env_var_in_sl(void *ptr)
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_LEGACY(config_line),
+  UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
