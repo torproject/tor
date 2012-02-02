@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Update "ClientOnly" man page entry to explain that there isn't
+      really any point to messing with it. Resolves ticket 5005.
