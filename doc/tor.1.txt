@@ -499,11 +499,12 @@ The following options are useful only for clients (that is, if
     number like 60. (Default: 0)
 
 **ClientOnly** **0**|**1**::
-    If set to 1, Tor will under no circumstances run as a server or serve
-    directory requests. The default is to run as a client unless ORPort is
-    configured. (Usually, you don't need to set this; Tor is pretty smart at
-    figuring out whether you are reliable and high-bandwidth enough to be a
-    useful server.) (Default: 0)
+    If set to 1, Tor will under no circumstances run as a relay or serve
+    directory requests. This config option is mostly meaningless: we
+    added it back when we were considering having Tor clients auto-promote
+    themselves to being relays if they were stable and fast enough. The
+    current behavior is simply that Tor is a client unless ORPort or
+    DirPort are configured. (Default: 0)
 
 **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, nicknames, country codes and address
@@ -1346,6 +1347,10 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     When this option is set in addition to **AuthoritativeDirectory**, Tor
     votes on whether to accept relays as hidden service directories.
     (Default: 1)
+
+GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays **0**|**1**::
+    When this option is set to 0, do not vote to give the Guard flag to any
+    version of Tor vulnerable to CVE-2011-2769. (Default: 0)
 
 HIDDEN SERVICE OPTIONS
 ----------------------
