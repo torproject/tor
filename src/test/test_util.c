@@ -304,6 +304,7 @@ test_util_config_line_escaped_content(void)
   char buf2[128];
   char buf3[128];
   char buf4[128];
+  char buf5[128];
   char *k=NULL, *v=NULL;
   const char *str;
 
@@ -329,6 +330,9 @@ test_util_config_line_escaped_content(void)
 
   strlcpy(buf4, "BrokenOctal \"\\8\"\n"
           , sizeof(buf4));
+
+  strlcpy(buf5, "BrokenHex \"\\xg4\"\n"
+          , sizeof(buf5));
 
   str = buf1;
 
@@ -404,6 +408,14 @@ test_util_config_line_escaped_content(void)
   str = parse_config_line_from_str(str, &k, &v);
   test_eq_ptr(str, NULL);
   tor_free(k); tor_free(v);
+
+#if 0
+  str = buf5;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+#endif
 
  done:
   tor_free(k);
