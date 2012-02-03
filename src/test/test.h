@@ -34,7 +34,6 @@
 #define test_neq_ptr(expr1, expr2) tt_ptr_op((expr1), !=, (expr2))
 #define test_streq(expr1, expr2) tt_str_op((expr1), ==, (expr2))
 #define test_strneq(expr1, expr2) tt_str_op((expr1), !=, (expr2))
-#define test_streq(expr1, expr2) tt_str_op((expr1), ==, (expr2))
 
 #define test_mem_op(expr1, op, expr2, len)                              \
   tt_assert_test_fmt_type(expr1,expr2,#expr1" "#op" "#expr2,            \
