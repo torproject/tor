@@ -315,8 +315,10 @@ test_util_config_line_escaped_content(void)
           "Newline \"\\n\"\n"
           "Tab \"\\t\"\n"
           "CarriageReturn \"\\r\"\n"
-          "Quote \"\\\"\"\n"
+          "DoubleQuote \"\\\"\"\n"
+          "SimpleQuote \"\\'\"\n"
           "Backslash \"\\\\\"\n"
+          "Mix \"This is a \\\"star\\\":\\t\\'\\x2a\\'\\nAnd second line\"\n"
           , sizeof(buf1));
 
   strlcpy(buf2, "BrokenEscapedContent \"\\a\"\n"
@@ -366,13 +368,23 @@ test_util_config_line_escaped_content(void)
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Quote");
+  test_streq(k, "DoubleQuote");
   test_streq(v, "\"");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "SimpleQuote");
+  test_streq(v, "'");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "Backslash");
   test_streq(v, "\\");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Mix");
+  test_streq(v, "This is a \"star\":\t'*'\nAnd second line");
   tor_free(k); tor_free(v);
 
   str = buf2;
