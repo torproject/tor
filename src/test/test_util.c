@@ -298,6 +298,44 @@ test_util_config_line_quotes(void)
 }
 
 static void
+test_util_config_line_comment_character(void)
+{
+  char buf[1024];
+  char *k=NULL, *v=NULL;
+  const char *str;
+
+  /* Test parse_config_line_from_str */
+  strlcpy(buf, "k1 \"# in quotes\"\n"
+          "k2 some value    # some comment\n"
+          "k3 /home/user/myTorNetwork#2\n"    /* Testcase for #1323 */
+          , sizeof(buf));
+  str = buf;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k1");
+  test_streq(v, "# in quotes");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k2");
+  test_streq(v, "some value");
+  tor_free(k); tor_free(v);
+
+#if 0
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k3");
+  test_streq(v, "/home/user/myTorNetwork#2");
+  tor_free(k); tor_free(v);
+
+  test_streq(str, "");
+#endif
+
+ done:
+  tor_free(k);
+  tor_free(v);
+}
+
+static void
 test_util_config_line_escaped_content(void)
 {
   char buf1[1024];
@@ -2285,6 +2323,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_LEGACY(config_line),
   UTIL_LEGACY(config_line_quotes),
+  UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
