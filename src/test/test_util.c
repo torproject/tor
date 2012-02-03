@@ -297,6 +297,107 @@ test_util_config_line_quotes(void)
   tor_free(v);
 }
 
+static void
+test_util_config_line_escaped_content(void)
+{
+  char buf1[1024];
+  char buf2[128];
+  char buf3[128];
+  char buf4[128];
+  char *k=NULL, *v=NULL;
+  const char *str;
+
+  /* Test parse_config_line_from_str */
+  strlcpy(buf1, "HexadecimalLower \"\\x2a\"\n"
+          "HexadecimalUpper \"\\x2A\"\n"
+          "HexadecimalUpperX \"\\X2A\"\n"
+          "Octal \"\\52\"\n"
+          "Newline \"\\n\"\n"
+          "Tab \"\\t\"\n"
+          "CarriageReturn \"\\r\"\n"
+          "Quote \"\\\"\"\n"
+          "Backslash \"\\\\\"\n"
+          , sizeof(buf1));
+
+  strlcpy(buf2, "BrokenEscapedContent \"\\a\"\n"
+          , sizeof(buf2));
+
+  strlcpy(buf3, "BrokenEscapedContent \"\\x\"\n"
+          , sizeof(buf3));
+
+  strlcpy(buf4, "BrokenOctal \"\\8\"\n"
+          , sizeof(buf4));
+
+  str = buf1;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "HexadecimalLower");
+  test_streq(v, "*");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "HexadecimalUpper");
+  test_streq(v, "*");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "HexadecimalUpperX");
+  test_streq(v, "*");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Octal");
+  test_streq(v, "*");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Newline");
+  test_streq(v, "\n");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Tab");
+  test_streq(v, "\t");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "CarriageReturn");
+  test_streq(v, "\r");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Quote");
+  test_streq(v, "\"");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "Backslash");
+  test_streq(v, "\\");
+  tor_free(k); tor_free(v);
+
+  str = buf2;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+  str = buf3;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+  str = buf4;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
+
+ done:
+  tor_free(k);
+  tor_free(v);
+}
+
 /** Test basic string functionality. */
 static void
 test_util_strmisc(void)
@@ -2160,6 +2261,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_LEGACY(config_line),
   UTIL_LEGACY(config_line_quotes),
+  UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
