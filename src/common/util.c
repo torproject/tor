@@ -2445,7 +2445,7 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
      KEYCHAR = Any character except ' ', '\r', '\n', '\t', '#', "\"
 
      VALUES = QUOTEDVALUE | NORMALVALUE
-     QUOTEDVALUE = QUOTE QVITEM* QUOTE EOLSPACE?
+     QUOTEDVALUE = QUOTE QVCHAR* QUOTE EOLSPACE?
      QUOTE = '"'
      QVCHAR = KEYCHAR | ESC ('n' | 't' | 'r' | '"' | ESC |'\'' | OCTAL | HEX)
      ESC = "\\"
