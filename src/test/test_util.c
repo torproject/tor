@@ -24,6 +24,8 @@ test_util_time(void)
   int i;
   struct timeval tv;
 
+  /* tv_udiff tests */
+
   start.tv_sec = 5;
   start.tv_usec = 5000;
 
@@ -48,9 +50,8 @@ test_util_time(void)
 
   test_eq(-1005000L, tv_udiff(&start, &end));
 
-  end.tv_usec = 999990;
-  start.tv_sec = 1;
-  start.tv_usec = 500;
+
+  /* tor_timegm tests */
 
   /* The test values here are confirmed to be correct on a platform
    * with a working timegm. */
@@ -67,6 +68,9 @@ test_util_time(void)
   a_time.tm_mday = 10;
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 
+
+  /* {format,parse}_rfc1123_time tests */
+
   format_rfc1123_time(timestr, 0);
   test_streq("Thu, 01 Jan 1970 00:00:00 GMT", timestr);
   format_rfc1123_time(timestr, (time_t)1091580502UL);
@@ -78,13 +82,23 @@ test_util_time(void)
   test_eq(t_res, (time_t)1091580502UL);
   test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
 
+
+  /* tor_gettimeofday tests */
+
+  end.tv_sec = 4;
+  end.tv_usec = 999990;
+  start.tv_sec = 1;
+  start.tv_usec = 500;
+
   tor_gettimeofday(&start);
   /* now make sure time works. */
   tor_gettimeofday(&end);
   /* We might've timewarped a little. */
   tt_int_op(tv_udiff(&start, &end), >=, -5000);
 
-  /* Now let's check some format_iso_time variants */
+
+  /* format_iso_time tests */
+
   tv.tv_sec = (time_t)1326296338;
   tv.tv_usec = 3060;
   format_iso_time(timestr, tv.tv_sec);
