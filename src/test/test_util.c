@@ -600,24 +600,33 @@ test_util_strmisc(void)
                U64_PRINTF_ARG(U64_LITERAL(12345678901)));
   test_streq(buf, "x!12345678901!x");
 
-  /* Test for strcmpstart and strcmpend */
+  /* Test str{,case}cmpstart */
   test_assert(strcmpstart("abcdef", "abcdef")==0);
   test_assert(strcmpstart("abcdef", "abc")==0);
   test_assert(strcmpstart("abcdef", "abd")<0);
   test_assert(strcmpstart("abcdef", "abb")>0);
   test_assert(strcmpstart("ab", "abb")<0);
+  test_assert(strcmpstart("ab", "")==0);
+  test_assert(strcmpstart("ab", "ab ")<0);
+  test_assert(strcasecmpstart("abcdef", "abCdEF")==0);
+  test_assert(strcasecmpstart("abcDeF", "abc")==0);
+  test_assert(strcasecmpstart("abcdef", "Abd")<0);
+  test_assert(strcasecmpstart("Abcdef", "abb")>0);
+  test_assert(strcasecmpstart("ab", "Abb")<0);
+  test_assert(strcasecmpstart("ab", "")==0);
+  test_assert(strcasecmpstart("ab", "ab ")<0);
 
+  /* Test str{,case}cmpend */
   test_assert(strcmpend("abcdef", "abcdef")==0);
   test_assert(strcmpend("abcdef", "def")==0);
   test_assert(strcmpend("abcdef", "deg")<0);
   test_assert(strcmpend("abcdef", "dee")>0);
-  test_assert(strcmpend("ab", "abb")<0);
-
+  test_assert(strcmpend("ab", "aab")>0);
   test_assert(strcasecmpend("AbcDEF", "abcdef")==0);
   test_assert(strcasecmpend("abcdef", "dEF")==0);
-  test_assert(strcasecmpend("abcDEf", "deg")<0);
-  test_assert(strcasecmpend("abcdef", "DEE")>0);
-  test_assert(strcasecmpend("ab", "abB")<0);
+  test_assert(strcasecmpend("abcdef", "Deg")<0);
+  test_assert(strcasecmpend("abcDef", "dee")>0);
+  test_assert(strcasecmpend("AB", "abb")<0);
 
   /* Test mem_is_zero */
   memset(buf,0,128);
