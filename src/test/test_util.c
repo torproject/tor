@@ -591,14 +591,21 @@ test_util_strmisc(void)
   test_eq(-10.0, d);
   }
 
-  /* Test failing snprintf cases */
+  /* Test tor_snprintf */
+  /* Returning -1 when there's not enough room in the output buffer */
   test_eq(-1, tor_snprintf(buf, 0, "Foo"));
   test_eq(-1, tor_snprintf(buf, 2, "Foo"));
-
-  /* Test printf with uint64 */
+  test_eq(-1, tor_snprintf(buf, 3, "Foo"));
+  test_neq(-1, tor_snprintf(buf, 4, "Foo"));
+  /* Always NUL-terminate the output */
+  tor_snprintf(buf, 5, "abcdef");
+  test_eq(0, buf[4]);
+  tor_snprintf(buf, 10, "abcdef");
+  test_eq(0, buf[6]);
+  /* uint64 */
   tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
                U64_PRINTF_ARG(U64_LITERAL(12345678901)));
-  test_streq(buf, "x!12345678901!x");
+  test_streq("x!12345678901!x", buf);
 
   /* Test str{,case}cmpstart */
   test_assert(strcmpstart("abcdef", "abcdef")==0);
