@@ -493,7 +493,7 @@ test_util_strmisc(void)
   strlcpy(buf, "Hello", sizeof(buf));
   test_eq(10, strlcat(buf, "Hello", 5));
 
-  /* Test tor_strstrip() */
+  /* Test strstrip() */
   strlcpy(buf, "Testing 1 2 3", sizeof(buf));
   tor_strstrip(buf, ",!");
   test_streq(buf, "Testing 1 2 3");
@@ -504,7 +504,7 @@ test_util_strmisc(void)
   tor_strstrip(buf, "!? ");
   test_streq(buf, "Testing123");
 
-  /* Test tor_parse_long */
+  /* Test parse_long */
   /* Empty/zero input */
   test_eq(0L, tor_parse_long("",10,0,100,&i,NULL));
   test_eq(0, i);
@@ -546,7 +546,7 @@ test_util_strmisc(void)
   test_eq(68284L, tor_parse_long("10abc",16,0,70000,NULL,NULL));
   test_eq(68284L, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
 
-  /* Test tor_parse_ulong */
+  /* Test parse_ulong */
   test_eq(0UL, tor_parse_ulong("",10,0,100,NULL,NULL));
   test_eq(0UL, tor_parse_ulong("0",10,0,100,NULL,NULL));
   test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
@@ -557,7 +557,7 @@ test_util_strmisc(void)
   test_eq(50UL, tor_parse_ulong("50",10,50,100,NULL,NULL));
   test_eq(0UL, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
 
-  /* Test tor_parse_uint64 */
+  /* Test parse_uint64 */
   test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
   test_eq(1, i);
   test_streq(cp, " x");
@@ -570,7 +570,7 @@ test_util_strmisc(void)
   test_eq(0, i);
 
   {
-  /* Test tor_parse_double */
+  /* Test parse_double */
   double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
   test_eq(1, i);
   test_assert(DBL_TO_U64(d) == 10);
@@ -591,7 +591,7 @@ test_util_strmisc(void)
   test_eq(-10.0, d);
   }
 
-  /* Test tor_snprintf */
+  /* Test snprintf */
   /* Returning -1 when there's not enough room in the output buffer */
   test_eq(-1, tor_snprintf(buf, 0, "Foo"));
   test_eq(-1, tor_snprintf(buf, 2, "Foo"));
@@ -635,10 +635,16 @@ test_util_strmisc(void)
   test_assert(strcasecmpend("abcDef", "dee")>0);
   test_assert(strcasecmpend("AB", "abb")<0);
 
+  /* Test digest_is_zero */
+  memset(buf,0,20);
+  buf[20] = 'x';
+  test_assert(tor_digest_is_zero(buf));
+  buf[19] = 'x';
+  test_assert(!tor_digest_is_zero(buf));
+
   /* Test mem_is_zero */
   memset(buf,0,128);
   buf[128] = 'x';
-  test_assert(tor_digest_is_zero(buf));
   test_assert(tor_mem_is_zero(buf, 10));
   test_assert(tor_mem_is_zero(buf, 20));
   test_assert(tor_mem_is_zero(buf, 128));
@@ -649,11 +655,15 @@ test_util_strmisc(void)
   test_assert(!tor_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
+  test_assert(NULL == escaped(NULL));
   test_streq("\"\"", escaped(""));
   test_streq("\"abcd\"", escaped("abcd"));
-  test_streq("\"\\\\\\n\\r\\t\\\"\\'\"", escaped("\\\n\r\t\"\'"));
-  test_streq("\"z\\001abc\\277d\"", escaped("z\001abc\277d"));
-  test_assert(NULL == escaped(NULL));
+  test_streq("\"\\\\ \\n\\r\\t\\\"\\'\"", escaped("\\ \n\r\t\"'"));
+  test_streq("\"unnecessary \\'backslashes\\'\"",
+             escaped("unnecessary \'backslashes\'"));
+  /* Non-printable characters appear as octal */
+  test_streq("\"z\\001abc\\277d\"",  escaped("z\001abc\277d"));
+  test_streq("\"z\\336\\255 ;foo\"", escaped("z\xde\xad\x20;foo"));
 
   /* Test strndup and memdup */
   {
@@ -681,6 +691,9 @@ test_util_strmisc(void)
   test_assert(!tor_strisnonupper(cp));
   tor_strupper(cp);
   test_streq(cp, "ABCDEF");
+  tor_strlower(cp);
+  test_streq(cp, "abcdef");
+  test_assert(tor_strisnonupper(cp));
   test_assert(tor_strisprint(cp));
   cp[3] = 3;
   test_assert(!tor_strisprint(cp));
@@ -689,24 +702,32 @@ test_util_strmisc(void)
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
-    tt_assert(!tor_memmem(haystack, 5, "ef", 2));
+    test_assert(!tor_memmem(haystack, 5, "ef", 2));
     test_eq_ptr(tor_memmem(haystack, 5, "cd", 2), haystack + 2);
     test_eq_ptr(tor_memmem(haystack, 5, "cde", 3), haystack + 2);
+    test_assert(!tor_memmem(haystack, 4, "cde", 3));
     haystack = "ababcad";
     test_eq_ptr(tor_memmem(haystack, 7, "abc", 3), haystack + 2);
+    /* memstr */
     test_eq_ptr(tor_memstr(haystack, 7, "abc"), haystack + 2);
+    test_eq_ptr(tor_memstr(haystack, 7, "cad"), haystack + 4);
+    test_assert(!tor_memstr(haystack, 6, "cad"));
+    test_assert(!tor_memstr(haystack, 7, "cadd"));
     test_assert(!tor_memstr(haystack, 7, "fe"));
-    test_assert(!tor_memstr(haystack, 7, "longerthantheoriginal"));
+    test_assert(!tor_memstr(haystack, 7, "ababcade"));
   }
 
   /* Test wrap_string */
   {
     smartlist_t *sl = smartlist_new();
-    wrap_string(sl, "This is a test of string wrapping functionality: woot.",
+    wrap_string(sl,
+                "This is a test of string wrapping functionality: woot. "
+                    "a functionality? w00t w00t...!",
                 10, "", "");
     cp = smartlist_join_strings(sl, "", 0, NULL);
     test_streq(cp,
-            "This is a\ntest of\nstring\nwrapping\nfunctional\nity: woot.\n");
+            "This is a\ntest of\nstring\nwrapping\nfunctional\nity: woot.\n"
+               "a\nfunctional\nity? w00t\nw00t...!\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_clear(sl);
@@ -717,7 +738,13 @@ test_util_strmisc(void)
     test_streq(cp,
              "### This is a\n# test of string\n# wrapping\n# functionality:\n"
              "# woot.\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
 
+    wrap_string(sl, "A test of string wrapping...", 6, "### ", "# ");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "### A\n# test\n# of\n# stri\n# ng\n# wrap\n# ping\n# ...\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
@@ -735,6 +762,10 @@ test_util_strmisc(void)
     test_streq(hex_str(binary_data, 32),
                "000102030405060708090A0B0C0D0E0F"
                "101112131415161718191A1B1C1D1E1F");
+    /* Repeat these tests for shorter strings after longer strings
+       have been tried, to make sure we're correctly terminating strings */
+    test_streq(hex_str(binary_data, 1), "00");
+    test_streq(hex_str(binary_data, 0), "");
   }
  done:
   ;
