@@ -482,8 +482,14 @@ test_util_strmisc(void)
   int i;
   char *cp;
 
-  /* Tests for corner cases of strl operations */
+  /* Test strl operations */
   test_eq(5, strlcpy(buf, "Hello", 0));
+  test_eq(5, strlcpy(buf, "Hello", 10));
+  test_streq(buf, "Hello");
+  test_eq(5, strlcpy(buf, "Hello", 6));
+  test_streq(buf, "Hello");
+  test_eq(5, strlcpy(buf, "Hello", 5));
+  test_streq(buf, "Hell");
   strlcpy(buf, "Hello", sizeof(buf));
   test_eq(10, strlcat(buf, "Hello", 5));
 
@@ -494,44 +500,95 @@ test_util_strmisc(void)
   strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
   tor_strstrip(buf, "!? ");
   test_streq(buf, "Testing123");
+  strlcpy(buf, "!!!Testing 1 2 3??", sizeof(buf));
+  tor_strstrip(buf, "!? ");
+  test_streq(buf, "Testing123");
 
-  /* Test tor_parse_long. */
-  test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
-  test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
-  test_eq(-50L, tor_parse_long("-50",10,-100,100,NULL,NULL));
+  /* Test tor_parse_long */
+  /* Empty/zero input */
+  test_eq(0L, tor_parse_long("",10,0,100,&i,NULL));
+  test_eq(0, i);
+  test_eq(0L, tor_parse_long("0",10,0,100,&i,NULL));
+  test_eq(1, i);
+  /* Normal cases */
+  test_eq(10L, tor_parse_long("10",10,0,100,&i,NULL));
+  test_eq(1, i);
+  test_eq(10L, tor_parse_long("10",10,0,10,&i,NULL));
+  test_eq(1, i);
+  test_eq(10L, tor_parse_long("10",10,10,100,&i,NULL));
+  test_eq(1, i);
+  test_eq(-50L, tor_parse_long("-50",10,-100,100,&i,NULL));
+  test_eq(1, i);
+  test_eq(-50L, tor_parse_long("-50",10,-100,0,&i,NULL));
+  test_eq(1, i);
+  test_eq(-50L, tor_parse_long("-50",10,-50,0,&i,NULL));
+  test_eq(1, i);
+  /* Extra garbage */
+  test_eq(0L, tor_parse_long("10m",10,0,100,&i,NULL));
+  test_eq(0, i);
+  test_eq(0L, tor_parse_long("-50 plus garbage",10,-100,100,&i,NULL));
+  test_eq(0, i);
+  test_eq(10L, tor_parse_long("10m",10,0,100,&i,&cp));
+  test_eq(1, i);
+  test_streq(cp, "m");
+  test_eq(-50L, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
+  test_eq(1, i);
+  test_streq(cp, " plus garbage");
+  /* Out of bounds */
+  test_eq(0L,  tor_parse_long("10",10,50,100,&i,NULL));
+  test_eq(0, i);
+  test_eq(0L,   tor_parse_long("-50",10,0,100,&i,NULL));
+  test_eq(0, i);
+  /* Base different than 10 */
+  test_eq(2L,   tor_parse_long("10",2,0,100,NULL,NULL));
+  test_eq(0L,   tor_parse_long("2",2,0,100,NULL,NULL));
+  test_eq(0L,   tor_parse_long("10",-2,0,100,NULL,NULL));
+  test_eq(68284L, tor_parse_long("10abc",16,0,70000,NULL,NULL));
+  test_eq(68284L, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
 
   /* Test tor_parse_ulong */
+  test_eq(0UL, tor_parse_ulong("",10,0,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("0",10,0,100,NULL,NULL));
   test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
   test_eq(0UL, tor_parse_ulong("10",10,50,100,NULL,NULL));
+  test_eq(10UL, tor_parse_ulong("10",10,0,10,NULL,NULL));
+  test_eq(10UL, tor_parse_ulong("10",10,10,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("8",8,0,100,NULL,NULL));
+  test_eq(50UL, tor_parse_ulong("50",10,50,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
 
-  /* Test tor_parse_uint64. */
+  /* Test tor_parse_uint64 */
   test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
-  test_assert(i == 1);
+  test_eq(1, i);
   test_streq(cp, " x");
   test_assert(U64_LITERAL(12345678901) ==
               tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
-  test_assert(i == 1);
+  test_eq(1, i);
   test_streq(cp, "");
   test_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
-  test_assert(i == 0);
+  test_eq(0, i);
 
   {
-  /* Test tor_parse_double. */
+  /* Test tor_parse_double */
   double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
+  test_eq(1, i);
   test_assert(DBL_TO_U64(d) == 10);
   d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
+  test_eq(1, i);
   test_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 0);
+  test_eq(0, i);
   d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 0);
+  test_eq(0, i);
   d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
-  test_assert(i == 1);
+  test_eq(1, i);
   d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
+  test_eq(1, i);
+  test_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
+  test_eq(1, i);
+  test_eq(-10.0, d);
   }
 
   /* Test failing snprintf cases */
@@ -543,7 +600,7 @@ test_util_strmisc(void)
                U64_PRINTF_ARG(U64_LITERAL(12345678901)));
   test_streq(buf, "x!12345678901!x");
 
-  /* Test for strcmpstart and strcmpend. */
+  /* Test for strcmpstart and strcmpend */
   test_assert(strcmpstart("abcdef", "abcdef")==0);
   test_assert(strcmpstart("abcdef", "abc")==0);
   test_assert(strcmpstart("abcdef", "abd")<0);
