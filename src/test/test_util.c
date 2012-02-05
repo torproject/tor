@@ -24,7 +24,7 @@ test_util_time(void)
   int i;
   struct timeval tv;
 
-  /* tv_udiff tests */
+  /* Test tv_udiff */
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -51,7 +51,7 @@ test_util_time(void)
   test_eq(-1005000L, tv_udiff(&start, &end));
 
 
-  /* tor_timegm tests */
+  /* Test tor_timegm */
 
   /* The test values here are confirmed to be correct on a platform
    * with a working timegm. */
@@ -69,7 +69,7 @@ test_util_time(void)
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 
 
-  /* {format,parse}_rfc1123_time tests */
+  /* Test {format,parse}_rfc1123_time */
 
   format_rfc1123_time(timestr, 0);
   test_streq("Thu, 01 Jan 1970 00:00:00 GMT", timestr);
@@ -83,7 +83,7 @@ test_util_time(void)
   test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
 
 
-  /* tor_gettimeofday tests */
+  /* Test tor_gettimeofday */
 
   end.tv_sec = 4;
   end.tv_usec = 999990;
@@ -97,7 +97,7 @@ test_util_time(void)
   tt_int_op(tv_udiff(&start, &end), >=, -5000);
 
 
-  /* format_iso_time tests */
+  /* Test format_iso_time */
 
   tv.tv_sec = (time_t)1326296338;
   tv.tv_usec = 3060;
