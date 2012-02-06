@@ -1254,6 +1254,12 @@ typedef struct control_connection_t {
    * connection. */
   unsigned int is_owning_control_connection:1;
 
+  /** If we have sent an AUTHCHALLENGE reply on this connection and
+   * have not received a successful AUTHENTICATE command, points to
+   * the value which the client must send to authenticate itself;
+   * otherwise, NULL. */
+  char *safecookie_client_hash;
+
   /** Amount of space allocated in incoming_cmd. */
   uint32_t incoming_cmd_len;
   /** Number of bytes currently stored in incoming_cmd. */
