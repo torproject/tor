@@ -954,13 +954,14 @@ test_util_gzip(void)
     test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                    GZIP_METHOD));
     test_assert(buf2);
-    test_assert(!memcmp(buf2, "\037\213", 2)); /* Gzip magic. */
+    test_assert(len1 < strlen(buf1));
     test_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
 
     test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                      GZIP_METHOD, 1, LOG_INFO));
     test_assert(buf3);
-    test_streq(buf1,buf3);
+    test_eq(strlen(buf1) + 1, len2);
+    test_streq(buf1, buf3);
 
     tor_free(buf2);
     tor_free(buf3);
@@ -969,13 +970,13 @@ test_util_gzip(void)
   test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
   test_assert(buf2);
-  test_assert(!memcmp(buf2, "\x78\xDA", 2)); /* deflate magic. */
   test_assert(detect_compression_method(buf2, len1) == ZLIB_METHOD);
 
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                    ZLIB_METHOD, 1, LOG_INFO));
   test_assert(buf3);
-  test_streq(buf1,buf3);
+  test_eq(strlen(buf1) + 1, len2);
+  test_streq(buf1, buf3);
 
   /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
@@ -983,7 +984,7 @@ test_util_gzip(void)
   memcpy(buf2+len1, buf2, len1);
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
                                    ZLIB_METHOD, 1, LOG_INFO));
-  test_eq(len2, (strlen(buf1)+1)*2);
+  test_eq((strlen(buf1)+1)*2, len2);
   test_memeq(buf3,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
@@ -1002,8 +1003,8 @@ test_util_gzip(void)
   /* when we allow an incomplete string, we should succeed.*/
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                   ZLIB_METHOD, 0, LOG_INFO));
-  buf3[len2]='\0';
   tt_assert(len2 > 5);
+  buf3[len2]='\0';
   tt_assert(!strcmpstart(buf1, buf3));
 
   /* when we demand a complete string, this must fail. */
@@ -1024,19 +1025,20 @@ test_util_gzip(void)
   len2 = 21;
   test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
               == TOR_ZLIB_OK);
-  test_eq(len2, 0); /* Make sure we compressed it all. */
+  test_eq(0, len2); /* Make sure we compressed it all. */
   test_assert(cp1 > buf1);
 
   len2 = 0;
   cp2 = cp1;
   test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
               == TOR_ZLIB_DONE);
-  test_eq(len2, 0);
+  test_eq(0, len2);
   test_assert(cp1 > cp2); /* Make sure we really added something. */
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
   test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
+  test_eq(21, len2);
 
  done:
   if (state)
