@@ -1150,94 +1150,114 @@ test_util_sscanf(void)
   char s1[10], s2[10], s3[10], ch;
   int r;
 
-  r = tor_sscanf("hello world", "hello world"); /* String match: success */
-  test_eq(r, 0);
-  r = tor_sscanf("hello world 3", "hello worlb %u", &u1); /* String fail */
-  test_eq(r, 0);
-  r = tor_sscanf("12345", "%u", &u1); /* Simple number */
-  test_eq(r, 1);
-  test_eq(u1, 12345u);
-  r = tor_sscanf("", "%u", &u1); /* absent number */
-  test_eq(r, 0);
-  r = tor_sscanf("A", "%u", &u1); /* bogus number */
-  test_eq(r, 0);
-  r = tor_sscanf("4294967295", "%u", &u1); /* UINT32_MAX should work. */
-  test_eq(r, 1);
-  test_eq(u1, 4294967295u);
-  r = tor_sscanf("4294967296", "%u", &u1); /* Always say -1 at 32 bits. */
-  test_eq(r, 0);
-  r = tor_sscanf("123456", "%2u%u", &u1, &u2); /* Width */
-  test_eq(r, 2);
-  test_eq(u1, 12u);
-  test_eq(u2, 3456u);
-  r = tor_sscanf("!12:3:456", "!%2u:%2u:%3u", &u1, &u2, &u3); /* separators */
-  test_eq(r, 3);
-  test_eq(u1, 12u);
-  test_eq(u2, 3u);
-  test_eq(u3, 456u);
-  r = tor_sscanf("12:3:045", "%2u:%2u:%3u", &u1, &u2, &u3); /* 0s */
-  test_eq(r, 3);
-  test_eq(u1, 12u);
-  test_eq(u2, 3u);
-  test_eq(u3, 45u);
+  /* Simple tests (malformed patterns and literal matching) */
+  test_eq(-1, tor_sscanf("123", "%i", &r)); /* %i is not supported */
+  test_eq(-1, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
+  test_eq(-1, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
+  /* No '%'-strings: always "success" */
+  test_eq(0, tor_sscanf("hello world", "hello world"));
+  test_eq(0, tor_sscanf("hello world", "good bye"));
+
+  /* Numbers (ie. %u) */
+  test_eq(0, tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
+  test_eq(1, tor_sscanf("12345", "%u", &u1));
+  test_eq(12345u, u1);
+  test_eq(1, tor_sscanf("12346 ", "%u", &u1));
+  test_eq(12346u, u1);
+  test_eq(0, tor_sscanf(" 12347", "%u", &u1));
+  test_eq(1, tor_sscanf(" 12348", " %u", &u1));
+  test_eq(12348u, u1);
+  test_eq(1, tor_sscanf("0", "%u", &u1));
+  test_eq(0u, u1);
+  test_eq(1, tor_sscanf("0000", "%u", &u2));
+  test_eq(0u, u2);
+  test_eq(0, tor_sscanf("", "%u", &u1)); /* absent number */
+  test_eq(0, tor_sscanf("A", "%u", &u1)); /* bogus number */
+  test_eq(0, tor_sscanf("-1", "%u", &u1)); /* negative number */
+  test_eq(1, tor_sscanf("4294967295", "%u", &u1)); /* UINT32_MAX should work */
+  test_eq(4294967295u, u1);
+  test_eq(0, tor_sscanf("4294967296", "%u", &u1)); /* But not at 32 bits */
+  test_eq(1, tor_sscanf("4294967296", "%9u", &u1)); /* but parsing only 9... */
+  test_eq(429496729u, u1);
+
+  /* Numbers with size (eg. %2u) */
+  test_eq(0, tor_sscanf("-1", "%2u", &u1));
+  test_eq(2, tor_sscanf("123456", "%2u%u", &u1, &u2));
+  test_eq(12u, u1);
+  test_eq(3456u, u2);
+  test_eq(1, tor_sscanf("123456", "%8u", &u1));
+  test_eq(123456u, u1);
+  test_eq(1, tor_sscanf("123457  ", "%8u", &u1));
+  test_eq(123457u, u1);
+  test_eq(0, tor_sscanf("  123456", "%8u", &u1));
+  test_eq(3, tor_sscanf("!12:3:456", "!%2u:%2u:%3u", &u1, &u2, &u3));
+  test_eq(12u, u1);
+  test_eq(3u, u2);
+  test_eq(456u, u3);
+  test_eq(3, tor_sscanf("67:8:099", "%2u:%2u:%3u", &u1, &u2, &u3)); /* 0s */
+  test_eq(67u, u1);
+  test_eq(8u, u2);
+  test_eq(99u, u3);
   /* %u does not match space.*/
-  r = tor_sscanf("12:3: 45", "%2u:%2u:%3u", &u1, &u2, &u3);
-  test_eq(r, 2);
+  test_eq(2, tor_sscanf("12:3: 45", "%2u:%2u:%3u", &u1, &u2, &u3));
+  test_eq(12u, u1);
+  test_eq(3u, u2);
   /* %u does not match negative numbers. */
-  r = tor_sscanf("12:3:-4", "%2u:%2u:%3u", &u1, &u2, &u3);
-  test_eq(r, 2);
+  test_eq(2, tor_sscanf("67:8:-9", "%2u:%2u:%3u", &u1, &u2, &u3));
+  test_eq(67u, u1);
+  test_eq(8u, u2);
   /* Arbitrary amounts of 0-padding are okay */
-  r = tor_sscanf("12:03:000000000000000099", "%2u:%2u:%u", &u1, &u2, &u3);
-  test_eq(r, 3);
-  test_eq(u1, 12u);
-  test_eq(u2, 3u);
-  test_eq(u3, 99u);
+  test_eq(3, tor_sscanf("12:03:000000000000000099", "%2u:%2u:%u",
+                        &u1, &u2, &u3));
+  test_eq(12u, u1);
+  test_eq(3u, u2);
+  test_eq(99u, u3);
 
-  /* %x should work. */
-  r = tor_sscanf("1234 02aBcdEf", "%x %x", &u1, &u2);
-  test_eq(r, 2);
-  test_eq(u1, 0x1234);
-  test_eq(u2, 0x2ABCDEF);
+  /* Hex (ie. %x) */
+  test_eq(3, tor_sscanf("1234 02aBcdEf ff", "%x %x %x", &u1, &u2, &u3));
+  test_eq(0x1234, u1);
+  test_eq(0x2ABCDEF, u2);
+  test_eq(0xFF, u3);
   /* Width works on %x */
-  r = tor_sscanf("f00dcafe444", "%4x%4x%u", &u1, &u2, &u3);
-  test_eq(r, 3);
-  test_eq(u1, 0xf00d);
-  test_eq(u2, 0xcafe);
-  test_eq(u3, 444);
+  test_eq(3, tor_sscanf("f00dcafe444", "%4x%4x%u", &u1, &u2, &u3));
+  test_eq(0xf00d, u1);
+  test_eq(0xcafe, u2);
+  test_eq(444, u3);
 
-  r = tor_sscanf("99% fresh", "%3u%% fresh", &u1); /* percents are scannable.*/
-  test_eq(r, 1);
-  test_eq(u1, 99);
+  /* Literal '%' (ie. '%%') */
+  test_eq(1, tor_sscanf("99% fresh", "%3u%% fresh", &u1));
+  test_eq(99, u1);
+  test_eq(1, tor_sscanf("% boo", "%% %3s", s1));
+  test_streq("boo", s1);
 
-  r = tor_sscanf("hello", "%s", s1); /* %s needs a number. */
-  test_eq(r, -1);
-
-  r = tor_sscanf("hello", "%3s%7s", s1, s2); /* %s matches characters. */
-  test_eq(r, 2);
+  /* Strings (ie. %s) */
+  test_eq(2, tor_sscanf("hello", "%3s%7s", s1, s2));
   test_streq(s1, "hel");
   test_streq(s2, "lo");
-  r = tor_sscanf("WD40", "%2s%u", s3, &u1); /* %s%u */
-  test_eq(r, 2);
+  test_eq(2, tor_sscanf("WD40", "%2s%u", s3, &u1)); /* %s%u */
   test_streq(s3, "WD");
-  test_eq(u1, 40);
-  r = tor_sscanf("76trombones", "%6u%9s", &u1, s1); /* %u%s */
-  test_eq(r, 2);
-  test_eq(u1, 76);
+  test_eq(40, u1);
+  test_eq(2, tor_sscanf("WD40", "%3s%u", s3, &u1)); /* %s%u */
+  test_streq(s3, "WD4");
+  test_eq(0, u1);
+  test_eq(2, tor_sscanf("76trombones", "%6u%9s", &u1, s1)); /* %u%s */
+  test_eq(76, u1);
   test_streq(s1, "trombones");
-  r = tor_sscanf("hello world", "%9s %9s", s1, s2); /* %s doesn't eat space. */
-  test_eq(r, 2);
+  /* %s doesn't eat spaces */
+  test_eq(2, tor_sscanf("hello world", "%9s %9s", s1, s2));
   test_streq(s1, "hello");
   test_streq(s2, "world");
-  r = tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3); /* %s can be empty. */
-  test_eq(r, 3);
+  test_eq(2, tor_sscanf("bye   world?", "%9s %9s", s1, s2));
+  test_streq(s1, "bye");
+  test_streq(s2, "");
+  test_eq(3, tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3)); /* %s can be empty. */
   test_streq(s1, "hi");
   test_streq(s2, "");
   test_streq(s3, "");
 
-  r = tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch);
-  test_eq(r, 3);
-  r = tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch);
-  test_eq(r, 4);
+  test_eq(3, tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
+  test_eq(4, tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
+  test_eq(' ', ch);
 
  done:
   ;
