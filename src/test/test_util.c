@@ -1131,12 +1131,12 @@ test_util_control_formats(void)
 {
   char *out = NULL;
   const char *inp =
-    "..This is a test\r\nof the emergency \nbroadcast\r\n..system.\r\nZ.\r\n";
+    "..This is a test\r\n.of the emergency \n..system.\r\n\rZ.\r\n";
   size_t sz;
 
   sz = read_escaped_data(inp, strlen(inp), &out);
   test_streq(out,
-             ".This is a test\nof the emergency \nbroadcast\n.system.\nZ.\n");
+             ".This is a test\nof the emergency \n.system.\n\rZ.\n");
   test_eq(sz, strlen(out));
 
  done:
