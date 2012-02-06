@@ -1716,8 +1716,8 @@ crypto_hmac_sha1(char *hmac_out,
 }
 
 /** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
- * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
- * in <b>hmac_out</b>.
+ * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST256_LEN-byte
+ * result in <b>hmac_out</b>.
  */
 void
 crypto_hmac_sha256(char *hmac_out,
