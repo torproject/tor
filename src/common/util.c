@@ -2759,7 +2759,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
 
 /** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
  * and store the results in the corresponding argument fields.  Differs from
- * sscanf in that it: Only handles %u and %x and %Ns.  Does not handle
+ * sscanf in that it: Only handles %u, %x, %c and %Ns.  Does not handle
  * arbitrarily long widths. %u and %x do not consume any space.  Is
  * locale-independent.  Returns -1 on malformed patterns.
  *
