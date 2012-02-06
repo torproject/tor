@@ -1065,8 +1065,6 @@ test_util_mmap(void)
   test_assert(! mapping);
 
   write_str_to_file(fname1, "Short file.", 1);
-  write_bytes_to_file(fname2, buf, buflen, 1);
-  write_bytes_to_file(fname3, buf, 16384, 1);
 
   mapping = tor_mmap_file(fname1);
   test_assert(mapping);
@@ -1093,9 +1091,10 @@ test_util_mmap(void)
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
-  test_assert(mapping == NULL);
+  test_assert(! mapping);
 
   /* Now try a big file that stretches across a few pages and isn't aligned */
+  write_bytes_to_file(fname2, buf, buflen, 1);
   mapping = tor_mmap_file(fname2);
   test_assert(mapping);
   test_eq(mapping->size, buflen);
@@ -1104,6 +1103,7 @@ test_util_mmap(void)
   mapping = NULL;
 
   /* Now try a big aligned file. */
+  write_bytes_to_file(fname3, buf, 16384, 1);
   mapping = tor_mmap_file(fname3);
   test_assert(mapping);
   test_eq(mapping->size, 16384);
