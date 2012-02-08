@@ -1508,24 +1508,34 @@ static void
 test_util_find_str_at_start_of_line(void *ptr)
 {
   const char *long_string =
-    "hello world. hello world. hello hello. howdy.\n"
-    "hello hello world\n";
+    "howdy world. how are you? i hope it's fine.\n"
+    "hello kitty\n"
+    "third line";
+  char *line2 = strchr(long_string,'\n')+1;
+  char *line3 = strchr(line2,'\n')+1;
+  const char *short_string = "hello kitty\n"
+    "third line\n";
+  char *short_line2 = strchr(short_string,'\n')+1;
 
   (void)ptr;
 
-  /* not-found case. */
-  tt_assert(! find_str_at_start_of_line(long_string, "fred"));
-
-  /* not-found case where haystack doesn't end with \n */
-  tt_assert(! find_str_at_start_of_line("foobar\nbaz", "fred"));
-
-  /* start-of-string case */
-  tt_assert(long_string ==
-            find_str_at_start_of_line(long_string, "hello world."));
-
-  /* start-of-line case */
-  tt_assert(strchr(long_string,'\n')+1 ==
-            find_str_at_start_of_line(long_string, "hello hello"));
+  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, ""));
+  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "nonsense"));
+  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "\n"));
+  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "how "));
+  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "kitty"));
+  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, "h"));
+  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, "how"));
+  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "he"));
+  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hell"));
+  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello k"));
+  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello kitty\n"));
+  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello kitty\nt"));
+  test_eq_ptr(line3, find_str_at_start_of_line(long_string, "third"));
+  test_eq_ptr(line3, find_str_at_start_of_line(long_string, "third line"));
+  test_eq_ptr(NULL,  find_str_at_start_of_line(long_string, "third line\n"));
+  test_eq_ptr(short_line2, find_str_at_start_of_line(short_string,
+                                                     "third line\n"));
  done:
   ;
 }
