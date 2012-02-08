@@ -1,0 +1,5 @@
+  o Minor features:
+    - Fix broken URLs in the sample torrc file, and tell readers about
+      the OutboundBindAddress, ExitPolicyRejectPrivate, and
+      PublishServerDescriptor options. Addresses bug 4652.
+

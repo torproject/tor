@@ -1,16 +1,16 @@
 ## Configuration file for a typical Tor user
-## Last updated 16 July 2009 for Tor 0.2.2.1-alpha.
-## (May or may not work for much older or much newer versions of Tor.)
+## Last updated 8 February 2012 for Tor 0.2.3.12-alpha.
+## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See 'man tor', or https://www.torproject.org/tor-manual.html,
+## See 'man tor', or https://www.torproject.org/docs/tor-manual.html,
 ## for more options you can use in this file.
 ##
 ## Tor will look for this file in various places based on your platform:
-## https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#torrc
+## https://www.torproject.org/docs/faq#torrc
 
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
@@ -21,7 +21,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
-## all (and only) requests from SocksListenAddress.
+## all (and only) requests from SocksListenAddress. Untrusted users who
+## can access your SocksPort may be able to learn about the connections
+## you make.
 #SocksPolicy accept 192.168.0.0/16
 #SocksPolicy reject *
 
@@ -86,12 +88,16 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## yourself to make this work.
 #ORListenAddress 0.0.0.0:9090
 
+## The IP address or full DNS name for incoming connections to your
+## relay. Leave commented out and Tor will guess.
+#Address noname.example.com
+
+## If you have multiple network interfaces, you can specify one for
+## outgoing traffic to use.
+# OutboundBindAddress 10.0.0.5
+
 ## A handle for your relay, so people don't have to refer to it by key.
 #Nickname ididnteditheconfig
-
-## The IP address or full DNS name for your relay. Leave commented out
-## and Tor will guess.
-#Address noname.example.com
 
 ## Define these to limit how much relayed traffic you will allow. Your
 ## own traffic is still unthrottled. Note that RelayBandwidthRate must
@@ -100,9 +106,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #RelayBandwidthBurst 200 KB # But allow bursts up to 200KB/s (1600Kbps)
 
 ## Use these to restrict the maximum traffic per day, week, or month.
-## Note that this threshold applies to sent _and_ to received bytes,
-## not to their sum: Setting "4 GB" may allow up to 8 GB
-## total before hibernating.
+## Note that this threshold applies separately to sent and received bytes,
+## not to their sum: setting "4 GB" may allow up to 8 GB total before
+## hibernating.
 ##
 ## Set a maximum of 4 gigabytes each way per period.
 #AccountingMax 4 GB
@@ -117,7 +123,7 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## indexes this, so spammers might also collect it.
 #ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one:
-#ContactInfo 1234D/FFFFFFFF Random Person <nobody AT example dot com>
+#ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>
 
 ## Uncomment this to mirror directory information for others. Please do
 ## if you have enough bandwidth.
@@ -137,7 +143,7 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## key fingerprint of each Tor relay you control, even if they're on
 ## different networks. You declare it here so Tor clients can avoid
 ## using more than one of your relays in a single circuit. See
-## https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#MultipleServers
+## https://www.torproject.org/docs/faq#MultipleRelays
 #MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
@@ -155,16 +161,24 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## you should update your exit policy to reflect this -- otherwise Tor
 ## users will be told that those destinations are down.
 ##
+## For security, by default Tor rejects connections to private (local)
+## networks, including to your public IP address. See the man page entry
+## for ExitPolicyRejectPrivate if you want to allow "exit enclaving".
+##
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
 #ExitPolicy reject *:* # no exits allowed
-#
+
 ## Bridge relays (or "bridges") are Tor relays that aren't listed in the
-## main directory. Since there is no complete public list of them, even if an
-## ISP is filtering connections to all the known Tor relays, they probably
+## main directory. Since there is no complete public list of them, even an
+## ISP that filters connections to all the known Tor relays probably
 ## won't be able to block all the bridges. Also, websites won't treat you
 ## differently because they won't know you're running Tor. If you can
 ## be a real relay, please do; but if not, be a bridge!
 #BridgeRelay 1
-#ExitPolicy reject *:*
+## By default, Tor will advertise your bridge to users through various
+## mechanisms like https://bridges.torproject.org/. If you want to run
+## a private bridge, for example because you'll give out your bridge
+## address manually to your friends, uncomment this line:
+#PublishServerDescriptor 0
 
