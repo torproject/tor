@@ -1478,8 +1478,28 @@ test_util_strtok(void)
   test_streq("perfect", S2());
   test_streq("descent", S1());
   test_streq("monument", S2());
-  test_assert(NULL == S1());
-  test_assert(NULL == S2());
+  test_eq_ptr(NULL, S1());
+  test_eq_ptr(NULL, S2());
+
+#if 0
+  buf[0] = 0;
+  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
+  test_eq_ptr(NULL, tor_strtok_r_impl(buf, "!", &cp1));
+
+  strlcpy(buf, "Howdy!", sizeof(buf));
+  test_streq("Howdy", tor_strtok_r_impl(buf, "!", &cp1));
+  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, "!", &cp1));
+
+  strlcpy(buf, " ", sizeof(buf));
+  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
+  strlcpy(buf, "  ", sizeof(buf));
+  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
+#endif
+
+  strlcpy(buf, "something  ", sizeof(buf));
+  test_streq("something", tor_strtok_r_impl(buf, " ", &cp1));
+  test_streq(" ", tor_strtok_r_impl(NULL, ";", &cp1));
+  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, " ", &cp1));
  done:
   ;
 }
