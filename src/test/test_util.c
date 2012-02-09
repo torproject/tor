@@ -1600,24 +1600,41 @@ static void
 test_util_listdir(void *ptr)
 {
   smartlist_t *dir_contents = NULL;
-  char *fname1=NULL, *fname2=NULL, *dirname=NULL;
+  char *fname1=NULL, *fname2=NULL, *fname3=NULL, *dir1=NULL, *dirname=NULL;
+  int r;
   (void)ptr;
 
   fname1 = tor_strdup(get_fname("hopscotch"));
   fname2 = tor_strdup(get_fname("mumblety-peg"));
+  fname3 = tor_strdup(get_fname(".hidden-file"));
+  dir1   = tor_strdup(get_fname("some-directory"));
   dirname = tor_strdup(get_fname(NULL));
 
-  tt_int_op(write_str_to_file(fname1, "X\n", 0), ==, 0);
-  tt_int_op(write_str_to_file(fname2, "Y\n", 0), ==, 0);
+  test_eq(0, write_str_to_file(fname1, "X\n", 0));
+  test_eq(0, write_str_to_file(fname2, "Y\n", 0));
+  test_eq(0, write_str_to_file(fname3, "Z\n", 0));
+#ifdef MS_WINDOWS
+  r = mkdir(dir1);
+#else
+  r = mkdir(dir1, 0700);
+#endif
+  if (r) {
+    fprintf(stderr, "Can't create directory %s:", dir1);
+    perror("");
+    exit(1);
+  }
 
   dir_contents = tor_listdir(dirname);
-  tt_assert(dir_contents);
+  test_assert(dir_contents);
   /* make sure that each filename is listed. */
-  tt_assert(smartlist_string_isin_case(dir_contents, "hopscotch"));
-  tt_assert(smartlist_string_isin_case(dir_contents, "mumblety-peg"));
+  test_eq(4, smartlist_len(dir_contents));
+  test_assert(smartlist_string_isin_case(dir_contents, "hopscotch"));
+  test_assert(smartlist_string_isin_case(dir_contents, "mumblety-peg"));
+  test_assert(smartlist_string_isin_case(dir_contents, ".hidden-file"));
+  test_assert(smartlist_string_isin_case(dir_contents, "some-directory"));
 
-  tt_assert(!smartlist_string_isin(dir_contents, "."));
-  tt_assert(!smartlist_string_isin(dir_contents, ".."));
+  test_assert(!smartlist_string_isin(dir_contents, "."));
+  test_assert(!smartlist_string_isin(dir_contents, ".."));
 
  done:
   tor_free(fname1);
