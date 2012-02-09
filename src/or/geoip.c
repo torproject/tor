@@ -269,13 +269,11 @@ geoip_get_country_by_ip(uint32_t ipaddr)
 int
 geoip_get_country_by_addr(const tor_addr_t *addr)
 {
-  uint32_t ipaddr;
   if (tor_addr_family(addr) != AF_INET) {
     /*XXXX IP6 support ipv6 geoip.*/
     return -1;
   }
-  ipaddr = tor_addr_to_ipv4h(addr);
-  return geoip_get_country_by_ip(ipaddr);
+  return geoip_get_country_by_ip(tor_addr_to_ipv4h(addr));
 }
 
 /** Return the number of countries recognized by the GeoIP database. */
