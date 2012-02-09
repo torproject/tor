@@ -74,9 +74,9 @@ micro-revision.i: FORCE
 
 or_sha1.i: $(tor_SOURCES)
 	if test "@SHA1SUM@" != none; then \
-	  @SHA1SUM@ $(tor_SOURCES) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
+	  "@SHA1SUM@" $(tor_SOURCES) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  @OPENSSL@ sha1 $(tor_SOURCES) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
+	  "@OPENSSL@" sha1 $(tor_SOURCES) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
 	else \
 	  rm or_sha1.i; \
 	  touch or_sha1.i; \
