@@ -2843,16 +2843,23 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-    geoip_note_client_seen(act, &TO_CONN(conn)->addr, time(NULL));
-    geoip_note_ns_response(act, GEOIP_SUCCESS);
-    /* Note that a request for a network status has started, so that we
-     * can measure the download time later on. */
-    if (TO_CONN(conn)->dirreq_id)
-      geoip_start_dirreq(TO_CONN(conn)->dirreq_id, dlen, act,
-                         DIRREQ_TUNNELED);
-    else
-      geoip_start_dirreq(TO_CONN(conn)->global_identifier, dlen, act,
-                         DIRREQ_DIRECT);
+    {
+      struct in_addr in;
+      tor_addr_t addr;
+      if (tor_inet_aton((TO_CONN(conn))->address, &in)) {
+        tor_addr_from_ipv4h(&addr, ntohl(in.s_addr));
+        geoip_note_client_seen(act, &addr, time(NULL));
+        geoip_note_ns_response(act, GEOIP_SUCCESS);
+        /* Note that a request for a network status has started, so that we
+         * can measure the download time later on. */
+        if (TO_CONN(conn)->dirreq_id)
+          geoip_start_dirreq(TO_CONN(conn)->dirreq_id, dlen, act,
+                             DIRREQ_TUNNELED);
+        else
+          geoip_start_dirreq(TO_CONN(conn)->global_identifier, dlen, act,
+                             DIRREQ_DIRECT);
+      }
+    }
 
     // note_request(request_type,dlen);
     (void) request_type;
