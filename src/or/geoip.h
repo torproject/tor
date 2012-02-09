@@ -18,6 +18,7 @@ int geoip_parse_entry(const char *line);
 int should_record_bridge_info(const or_options_t *options);
 int geoip_load_file(const char *filename, const or_options_t *options);
 int geoip_get_country_by_ip(uint32_t ipaddr);
+int geoip_get_country_by_addr(const tor_addr_t *addr);
 int geoip_get_n_countries(void);
 const char *geoip_get_country_name(country_t num);
 int geoip_is_loaded(void);
@@ -25,7 +26,7 @@ const char *geoip_db_digest(void);
 country_t geoip_get_country(const char *countrycode);
 
 void geoip_note_client_seen(geoip_client_action_t action,
-                            uint32_t addr, time_t now);
+                            const tor_addr_t *addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
 
 void geoip_note_ns_response(geoip_client_action_t action,

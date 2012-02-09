@@ -1713,11 +1713,8 @@ connection_or_set_state_open(or_connection_t *conn)
   } else {
     /* only report it to the geoip module if it's not a known router */
     if (!router_get_by_id_digest(conn->identity_digest)) {
-      if (tor_addr_family(&TO_CONN(conn)->addr) == AF_INET) {
-        /*XXXX IP6 support ipv6 geoip.*/
-        uint32_t a = tor_addr_to_ipv4h(&TO_CONN(conn)->addr);
-        geoip_note_client_seen(GEOIP_CLIENT_CONNECT, a, now);
-      }
+      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &TO_CONN(conn)->addr,
+                             now);
     }
   }
 
