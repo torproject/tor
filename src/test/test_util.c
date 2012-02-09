@@ -1549,36 +1549,47 @@ test_util_asprintf(void *ptr)
   int r;
   (void)ptr;
 
-  /* empty string. */
-  r = tor_asprintf(&cp, "%s", "");
-  tt_assert(cp);
-  tt_int_op(r, ==, strlen(cp));
-  tt_str_op(cp, ==, "");
+  /* simple string */
+  r = tor_asprintf(&cp, "simple string 100%% safe");
+  test_assert(cp);
+  test_streq("simple string 100% safe", cp);
+  test_eq(strlen(cp), r);
 
-  /* Short string with some printing in it. */
+  /* empty string */
+  r = tor_asprintf(&cp, "%s", "");
+  test_assert(cp);
+  test_streq("", cp);
+  test_eq(strlen(cp), r);
+
+  /* numbers (%i) */
+  r = tor_asprintf(&cp, "I like numbers-%2i, %i, etc.", -1, 2);
+  test_assert(cp);
+  test_streq("I like numbers--1, 2, etc.", cp);
+  test_eq(strlen(cp), r);
+
+  /* numbers (%d) */
   r = tor_asprintf(&cp2, "First=%d, Second=%d", 101, 202);
-  tt_assert(cp2);
-  tt_int_op(r, ==, strlen(cp2));
-  tt_str_op(cp2, ==, "First=101, Second=202");
-  tt_assert(cp != cp2);
+  test_assert(cp2);
+  test_eq(strlen(cp2), r);
+  test_streq("First=101, Second=202", cp2);
+  test_assert(cp != cp2);
   tor_free(cp);
   tor_free(cp2);
 
   /* Glass-box test: a string exactly 128 characters long. */
   r = tor_asprintf(&cp, "Lorem1: %sLorem2: %s", LOREMIPSUM, LOREMIPSUM);
-  tt_assert(cp);
-  tt_int_op(r, ==, 128);
-  tt_assert(cp[128] == '\0');
-  tt_str_op(cp, ==,
-            "Lorem1: "LOREMIPSUM"Lorem2: "LOREMIPSUM);
+  test_assert(cp);
+  test_eq(128, r);
+  test_assert(cp[128] == '\0');
+  test_streq("Lorem1: "LOREMIPSUM"Lorem2: "LOREMIPSUM, cp);
   tor_free(cp);
 
   /* String longer than 128 characters */
   r = tor_asprintf(&cp, "1: %s 2: %s 3: %s",
                    LOREMIPSUM, LOREMIPSUM, LOREMIPSUM);
-  tt_assert(cp);
-  tt_int_op(r, ==, strlen(cp));
-  tt_str_op(cp, ==, "1: "LOREMIPSUM" 2: "LOREMIPSUM" 3: "LOREMIPSUM);
+  test_assert(cp);
+  test_eq(strlen(cp), r);
+  test_streq("1: "LOREMIPSUM" 2: "LOREMIPSUM" 3: "LOREMIPSUM, cp);
 
  done:
   tor_free(cp);
