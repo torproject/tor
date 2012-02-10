@@ -2077,7 +2077,7 @@ test_util_join_win_cmdline(void *ptr)
   for (i=0; cmdlines[i]!=NULL; i++) {
     log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
     joined_argv = tor_join_win_cmdline(argvs[i]);
-    tt_str_op(joined_argv, ==, cmdlines[i]);
+    test_streq(cmdlines[i], joined_argv);
     tor_free(joined_argv);
   }
 
