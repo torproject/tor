@@ -2085,7 +2085,7 @@ test_util_join_win_cmdline(void *ptr)
   ;
 }
 
-#define MAX_SPLIT_LINE_COUNT 3
+#define MAX_SPLIT_LINE_COUNT 4
 struct split_lines_test_t {
   const char *orig_line; // Line to be split (may contain \0's)
   int orig_length; // Length of orig_line
@@ -2106,6 +2106,12 @@ test_util_split_lines(void *ptr)
     {"\n\rfoo\n\rbar\r\n", 12, {"foo", "bar", NULL}},
     {"fo o\r\nb\tar", 10, {"fo o", "b.ar", NULL}},
     {"\x0f""f\0o\0\n\x01""b\0r\0\r", 12, {".f.o.", ".b.r.", NULL}},
+    {"line 1\r\nline 2", 14, {"line 1", "line 2", NULL}},
+    {"line 1\r\n\r\nline 2", 16, {"line 1", "line 2", NULL}},
+    {"line 1\r\n\r\r\r\nline 2", 18, {"line 1", "line 2", NULL}},
+    {"line 1\r\n\n\n\n\rline 2", 18, {"line 1", "line 2", NULL}},
+    {"line 1\r\n\r\t\r\nline 3", 18, {"line 1", ".", "line 3", NULL}},
+    {"\n\t\r\t\nline 3", 11, {".", ".", "line 3", NULL}},
     {NULL, 0, { NULL }}
   };
 
@@ -2127,17 +2133,17 @@ test_util_split_lines(void *ptr)
     SMARTLIST_FOREACH(sl, const char *, line,
     {
       /* Check we have not got too many lines */
-      tt_int_op(j, <, MAX_SPLIT_LINE_COUNT);
+      test_assert(j < MAX_SPLIT_LINE_COUNT);
       /* Check that there actually should be a line here */
-      tt_assert(tests[i].split_line[j] != NULL);
+      test_assert(tests[i].split_line[j] != NULL);
       log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
                j, i, tests[i].split_line[j]);
       /* Check that the line is as expected */
-      tt_str_op(tests[i].split_line[j], ==, line);
+      test_streq(line, tests[i].split_line[j]);
       j++;
     });
     /* Check that we didn't miss some lines */
-    tt_assert(tests[i].split_line[j] == NULL);
+    test_eq_ptr(NULL, tests[i].split_line[j]);
     tor_free(orig_line);
     smartlist_free(sl);
     sl = NULL;
