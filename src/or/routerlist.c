@@ -510,9 +510,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
         if (download_status_is_ready(&cl->dl_status, now,
                                      MAX_CERT_DL_FAILURES) &&
             !digestmap_get(pending, voter->identity_digest)) {
-          log_notice(LD_DIR, "We're missing a certificate from authority "
-                     "with signing key %s: launching request.",
-                     hex_str(sig->signing_key_digest, DIGEST_LEN));
+          log_info(LD_DIR, "We're missing a certificate from authority "
+                   "with signing key %s: launching request.",
+                   hex_str(sig->signing_key_digest, DIGEST_LEN));
           smartlist_add(missing_digests, sig->identity_digest);
         }
       } SMARTLIST_FOREACH_END(sig);
