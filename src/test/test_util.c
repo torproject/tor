@@ -1652,24 +1652,40 @@ test_util_parent_dir(void *ptr)
   char *cp;
   (void)ptr;
 
-#define T(input,expect_ok,output)               \
+#define T(output,expect_ok,input)               \
   do {                                          \
     int ok;                                     \
     cp = tor_strdup(input);                     \
     ok = get_parent_directory(cp);              \
-    tt_int_op(ok, ==, expect_ok);               \
+    tt_int_op(expect_ok, ==, ok);               \
     if (ok==0)                                  \
-      tt_str_op(cp, ==, output);                \
+      tt_str_op(output, ==, cp);                \
     tor_free(cp);                               \
   } while (0);
 
-  T("/home/wombat/knish", 0, "/home/wombat");
-  T("/home/wombat/knish/", 0, "/home/wombat");
-  T("./home/wombat/knish/", 0, "./home/wombat");
-  T("./wombat", 0, ".");
+  T("/home/wombat", 0, "/home/wombat/knish");
+  T("/home/wombat", 0, "/home/wombat/knish/");
+  T("/home/wombat", 0, "/home/wombat/knish///");
+  T("./home/wombat", 0, "./home/wombat/knish/");
+  T(".", 0, "./wombat");
+  T(".", 0, "./wombat/");
+  T(".", 0, "./wombat//");
+  T("wombat", 0, "wombat/foo");
+  T("wombat/..", 0, "wombat/../foo");
+  T("wombat/../", 0, "wombat/..//foo"); /* Is this correct? */
+  T("wombat", 0, "wombat/..//");
+  T("wombat", 0, "wombat/foo/");
+  T("wombat", 0, "wombat/.foo");
+  T("wombat", 0, "wombat/.foo/");
+
   T("", -1, "");
-  T("/", -1, "");
-  T("////", -1, "");
+  T("", -1, ".");
+  T("", -1, "..");
+  T("", -1, "../");
+  T("", -1, "/");
+  T("", -1, "////");
+  T("", -1, "wombat");
+  T("", -1, "wombat/");
 
  done:
   tor_free(cp);
