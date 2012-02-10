@@ -72,7 +72,7 @@
      (OPENSSL_VERSION_NUMBER >= 0x00909000L &&    \
       OPENSSL_VERSION_NUMBER <  0x1000006fL))
 /* This is a version of OpenSSL before 0.9.8s/1.0.0f. It does not have
- * the CVE-2011-4657 fix, and as such it can't use RELEASE_BUFFERS and
+ * the CVE-2011-4576 fix, and as such it can't use RELEASE_BUFFERS and
  * SSL3 safely at the same time.
  */
 #define DISABLE_SSL3_HANDSHAKE
@@ -797,9 +797,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime,
       SSLeay()  <  0x0090813fL ||
       (SSLeay() >= 0x00909000L &&
        SSLeay() <  0x1000006fL)) {
-    /* And not SSL3 if it's subject to CVE-2011-4657. */
+    /* And not SSL3 if it's subject to CVE-2011-4576. */
     log_info(LD_NET, "Disabling SSLv3 because this OpenSSL version "
-             "might otherwise be vulnerable to CVE-2011-4657 "
+             "might otherwise be vulnerable to CVE-2011-4576 "
              "(compile-time version %08lx (%s); "
              "runtime version %08lx (%s))",
              (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
