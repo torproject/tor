@@ -1721,23 +1721,23 @@ test_util_exit_status(void *ptr)
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0, hex_errno);
-  tt_str_op(hex_errno, ==, "         0/0\n");
+  test_streq("         0/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
-  tt_str_op(hex_errno, ==, "  0/7FFFFFFF\n");
+  test_streq("  0/7FFFFFFF\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0xFF, -0x80000000, hex_errno);
-  tt_str_op(hex_errno, ==, "FF/-80000000\n");
+  test_streq("FF/-80000000\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x7F, 0, hex_errno);
-  tt_str_op(hex_errno, ==, "        7F/0\n");
+  test_streq("        7F/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x08, -0x242, hex_errno);
-  tt_str_op(hex_errno, ==, "      8/-242\n");
+  test_streq("      8/-242\n", hex_errno);
 
  done:
   ;
