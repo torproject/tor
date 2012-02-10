@@ -1849,37 +1849,37 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
 
-  tt_int_op(status, ==, expected_status);
+  test_eq(expected_status, status);
   if (status == PROCESS_STATUS_ERROR)
     return;
 
-  tt_assert(process_handle != NULL);
-  tt_int_op(process_handle->status, ==, expected_status);
+  test_assert(process_handle != NULL);
+  test_eq(expected_status, process_handle->status);
 
-  tt_int_op(process_handle->stdout_pipe, >, 0);
-  tt_int_op(process_handle->stderr_pipe, >, 0);
+  test_assert(process_handle->stdout_pipe > 0);
+  test_assert(process_handle->stderr_pipe > 0);
 
   /* Check stdout */
   pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,
                                          sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
-  tt_str_op(stdout_buf, ==, expected_out);
-  tt_int_op(pos, ==, strlen(expected_out));
+  test_eq(strlen(expected_out), pos);
+  test_streq(expected_out, stdout_buf);
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
-  tt_int_op(exit_code, ==, expected_exit);
+  test_eq(PROCESS_EXIT_EXITED, retval);
+  test_eq(expected_exit, exit_code);
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
-  tt_assert(pos >= 0);
+  test_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  tt_str_op(stderr_buf, ==, expected_err);
-  tt_int_op(pos, ==, strlen(expected_err));
+  test_streq(expected_err, stderr_buf);
+  test_eq(strlen(expected_err), pos);
 
  done:
   if (process_handle)
@@ -1969,9 +1969,9 @@ test_util_spawn_background_partial_read(void *ptr)
 #else
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
-  tt_int_op(status, ==, expected_status);
-  tt_assert(process_handle);
-  tt_int_op(process_handle->status, ==, expected_status);
+  test_eq(expected_status, status);
+  test_assert(process_handle);
+  test_eq(expected_status, process_handle->status);
 
   /* Check stdout */
   for (expected_out_ctr = 0; expected_out[expected_out_ctr] != NULL;) {
@@ -1980,7 +1980,7 @@ test_util_spawn_background_partial_read(void *ptr)
                               sizeof(stdout_buf) - 1, NULL);
 #else
     /* Check that we didn't read the end of file last time */
-    tt_assert(!eof);
+    test_assert(!eof);
     pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL, &eof);
 #endif
@@ -1990,10 +1990,10 @@ test_util_spawn_background_partial_read(void *ptr)
     if (0 == pos)
       continue;
 
-    tt_int_op(pos, >, 0);
+    test_assert(pos > 0);
     stdout_buf[pos] = '\0';
-    tt_str_op(stdout_buf, ==, expected_out[expected_out_ctr]);
-    tt_int_op(pos, ==, strlen(expected_out[expected_out_ctr]));
+    test_streq(expected_out[expected_out_ctr], stdout_buf);
+    test_eq(strlen(expected_out[expected_out_ctr]), pos);
     expected_out_ctr++;
   }
 
@@ -2002,33 +2002,33 @@ test_util_spawn_background_partial_read(void *ptr)
   pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
                             process_handle);
-  tt_int_op(pos, ==, 0);
+  test_eq(0, pos);
 #else
   if (!eof) {
     /* We should have got all the data, but maybe not the EOF flag */
     pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1,
                               process_handle, &eof);
-    tt_int_op(pos, ==, 0);
-    tt_assert(eof);
+    test_eq(0, pos);
+    test_assert(eof);
   }
   /* Otherwise, we got the EOF on the last read */
 #endif
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
-  tt_int_op(exit_code, ==, expected_exit);
+  test_eq(PROCESS_EXIT_EXITED, retval);
+  test_eq(expected_exit, exit_code);
 
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
-  tt_assert(pos >= 0);
+  test_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  tt_str_op(stderr_buf, ==, expected_err);
-  tt_int_op(pos, ==, strlen(expected_err));
+  test_streq(expected_err, stderr_buf);
+  test_eq(strlen(expected_err), pos);
 
  done:
   tor_process_handle_destroy(process_handle, 1);
