@@ -747,7 +747,24 @@ test_util_strmisc(void)
     test_streq(cp, "### A\n# test\n# of\n# stri\n# ng\n# wrap\n# ping\n# ...\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "Wrapping test", 6, "#### ", "# ");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "#### W\n# rapp\n# ing\n# test\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "Small test", 6, "### ", "#### ");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "### Sm\n#### a\n#### l\n#### l\n#### t\n#### e\n#### s\n#### t\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
+
+    /* Can't test prefixes that have the same length as the line width, because
+       the function has an assert */
   }
 
   /* Test hex_str */
