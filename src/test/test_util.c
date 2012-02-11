@@ -2240,56 +2240,78 @@ test_util_eat_whitespace(void *ptr)
   strcpy(str, "fuubaar");
   for (i = 0; i < sizeof(ws); ++i) {
     str[0] = ws[i];
-    test_streq(eat_whitespace(str), str + 1);
-    test_streq(eat_whitespace_eos(str, str + strlen(str)), str + 1);
-    test_streq(eat_whitespace_eos_no_nl(str, str + strlen(str)), str + 1);
-    test_streq(eat_whitespace_no_nl(str), str + 1);
+    test_eq_ptr(str + 1, eat_whitespace(str));
+    test_eq_ptr(str + 1, eat_whitespace_eos(str, str + strlen(str)));
+    test_eq_ptr(str + 1, eat_whitespace_no_nl(str));
+    test_eq_ptr(str + 1, eat_whitespace_eos_no_nl(str, str + strlen(str)));
   }
   str[0] = '\n';
-  test_streq(eat_whitespace(str), str + 1);
-  test_streq(eat_whitespace_eos(str, str + strlen(str)), str + 1);
+  test_eq_ptr(str + 1, eat_whitespace(str));
+  test_eq_ptr(str + 1, eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str,     eat_whitespace_no_nl(str));
+  test_eq_ptr(str,     eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Empty string */
   strcpy(str, "");
-  test_eq_ptr(eat_whitespace(str), str);
-  test_eq_ptr(eat_whitespace_eos(str, str), str);
-  test_eq_ptr(eat_whitespace_eos_no_nl(str, str), str);
-  test_eq_ptr(eat_whitespace_no_nl(str), str);
+  test_eq_ptr(str, eat_whitespace(str));
+  test_eq_ptr(str, eat_whitespace_eos(str, str));
+  test_eq_ptr(str, eat_whitespace_no_nl(str));
+  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str));
 
   /* Only ws */
   strcpy(str, " \t\r\n");
-  test_eq_ptr(eat_whitespace(str), str + strlen(str));
-  test_eq_ptr(eat_whitespace_eos(str, str + strlen(str)), str + strlen(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str + strlen(str) - 1,
+              eat_whitespace_no_nl(str));
+  test_eq_ptr(str + strlen(str) - 1,
+              eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   strcpy(str, " \t\r ");
-  test_eq_ptr(eat_whitespace_no_nl(str), str + strlen(str));
-  test_eq_ptr(eat_whitespace_eos_no_nl(str, str + strlen(str)),
-              str + strlen(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace(str));
+  test_eq_ptr(str + strlen(str),
+              eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str + strlen(str), eat_whitespace_no_nl(str));
+  test_eq_ptr(str + strlen(str),
+              eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Multiple ws */
   strcpy(str, "fuubaar");
   for (i = 0; i < sizeof(ws); ++i)
     str[i] = ws[i];
-  test_streq(eat_whitespace(str), str + sizeof(ws));
-  test_streq(eat_whitespace_eos(str, str + strlen(str)), str + sizeof(ws));
-  test_streq(eat_whitespace_no_nl(str), str + sizeof(ws));
-  test_streq(eat_whitespace_eos_no_nl(str, str + strlen(str)),
-             str + sizeof(ws));
+  test_eq_ptr(str + sizeof(ws), eat_whitespace(str));
+  test_eq_ptr(str + sizeof(ws), eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str + sizeof(ws), eat_whitespace_no_nl(str));
+  test_eq_ptr(str + sizeof(ws),
+              eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat comment */
   strcpy(str, "# Comment \n No Comment");
-  test_streq(eat_whitespace(str), "No Comment");
-  test_streq(eat_whitespace_eos(str, str + strlen(str)), "No Comment");
+  test_streq("No Comment", eat_whitespace(str));
+  test_streq("No Comment", eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str, eat_whitespace_no_nl(str));
+  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat comment & ws mix */
   strcpy(str, " # \t Comment \n\t\nNo Comment");
-  test_streq(eat_whitespace(str), "No Comment");
-  test_streq(eat_whitespace_eos(str, str + strlen(str)), "No Comment");
+  test_streq("No Comment", eat_whitespace(str));
+  test_streq("No Comment", eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str + 1, eat_whitespace_no_nl(str));
+  test_eq_ptr(str + 1, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat entire comment */
   strcpy(str, "#Comment");
-  test_eq_ptr(eat_whitespace(str), str + strlen(str));
-  test_eq_ptr(eat_whitespace_eos(str, str + strlen(str)), str + strlen(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str, eat_whitespace_no_nl(str));
+  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+
+  /* Blank line, then comment */
+  strcpy(str, " \t\n # Comment");
+  test_eq_ptr(str + strlen(str), eat_whitespace(str));
+  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
+  test_eq_ptr(str + 2, eat_whitespace_no_nl(str));
+  test_eq_ptr(str + 2, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
  done:
   ;
