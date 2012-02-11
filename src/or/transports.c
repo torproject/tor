@@ -129,8 +129,8 @@ static INLINE void free_execve_args(char **arg);
 #define SMALLEST_MANAGED_LINE_SIZE 9
 
 /** Number of environment variables for managed proxy clients/servers. */
-#define ENVIRON_SIZE_CLIENT 5
-#define ENVIRON_SIZE_SERVER 8
+#define ENVIRON_SIZE_CLIENT 3
+#define ENVIRON_SIZE_SERVER 6
 
 /** The first and only supported - at the moment - configuration
     protocol version. */
@@ -1077,6 +1077,8 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
 
 #else /* _WIN32 */
 
+extern char **environ;
+
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
  *  caller after its use. */
@@ -1088,27 +1090,31 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   char *state_loc=NULL;
   char *transports_to_launch=NULL;
   char *bindaddr=NULL;
-  char *home_env=NULL;
-  char *path_env=NULL;
+  int environ_size=0;
+  char **environ_tmp = environ;
 
   int r = -1;
   int n_envs = mp->is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
 
+  while (*environ_tmp) {
+    environ_size++;
+    environ_tmp++;
+  }
+  environ_tmp = environ;
+
   /* allocate enough space for our env. vars and a NULL pointer */
-  *envp = tor_malloc(sizeof(char*)*(n_envs+1));
+  *envp = tor_malloc(sizeof(char*)*(environ_size+n_envs+1));
   tmp = *envp;
 
   state_loc = get_datadir_fname("pt_state/"); /* XXX temp */
   transports_to_launch =
     smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
 
-  home_env = getenv("HOME");
-  path_env = getenv("PATH");
-  if (!home_env || !path_env)
-    goto done;
+  while (*environ_tmp) {
+    *tmp = tor_strdup(*environ_tmp);
+    tmp++, environ_tmp++;
+  }
 
-  tor_asprintf(tmp++, "HOME=%s", home_env);
-  tor_asprintf(tmp++, "PATH=%s", path_env);
   tor_asprintf(tmp++, "TOR_PT_STATE_LOCATION=%s", state_loc);
   tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
   if (mp->is_server) {
@@ -1126,7 +1132,6 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
 
   r = 0;
 
- done:
   tor_free(state_loc);
   tor_free(transports_to_launch);
   tor_free(bindaddr);
