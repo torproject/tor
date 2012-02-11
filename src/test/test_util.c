@@ -2214,10 +2214,12 @@ static void
 test_util_n_bits_set(void *ptr)
 {
   (void)ptr;
-  test_eq(n_bits_set_u8(0), 0);
-  test_eq(n_bits_set_u8(1), 1);
-  test_eq(n_bits_set_u8(129), 2);
-  test_eq(n_bits_set_u8(255), 8);
+  test_eq(0, n_bits_set_u8(0));
+  test_eq(1, n_bits_set_u8(1));
+  test_eq(3, n_bits_set_u8(7));
+  test_eq(1, n_bits_set_u8(8));
+  test_eq(2, n_bits_set_u8(129));
+  test_eq(8, n_bits_set_u8(255));
  done:
   ;
 }
