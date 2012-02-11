@@ -1514,7 +1514,7 @@ test_util_find_str_at_start_of_line(void *ptr)
   char *line2 = strchr(long_string,'\n')+1;
   char *line3 = strchr(line2,'\n')+1;
   const char *short_string = "hello kitty\n"
-    "third line\n";
+    "second line\n";
   char *short_line2 = strchr(short_string,'\n')+1;
 
   (void)ptr;
@@ -1535,7 +1535,7 @@ test_util_find_str_at_start_of_line(void *ptr)
   test_eq_ptr(line3, find_str_at_start_of_line(long_string, "third line"));
   test_eq_ptr(NULL,  find_str_at_start_of_line(long_string, "third line\n"));
   test_eq_ptr(short_line2, find_str_at_start_of_line(short_string,
-                                                     "third line\n"));
+                                                     "second line\n"));
  done:
   ;
 }
