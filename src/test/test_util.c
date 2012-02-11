@@ -1667,12 +1667,18 @@ test_util_parent_dir(void *ptr)
   T("/home/wombat", 0, "/home/wombat/knish/");
   T("/home/wombat", 0, "/home/wombat/knish///");
   T("./home/wombat", 0, "./home/wombat/knish/");
+#if 0
+  T("/", 0, "/home");
+  T("/", 0, "/home//");
+#endif
   T(".", 0, "./wombat");
   T(".", 0, "./wombat/");
   T(".", 0, "./wombat//");
   T("wombat", 0, "wombat/foo");
   T("wombat/..", 0, "wombat/../foo");
   T("wombat/../", 0, "wombat/..//foo"); /* Is this correct? */
+  T("wombat/.", 0, "wombat/./foo");
+  T("wombat/./", 0, "wombat/.//foo"); /* Is this correct? */
   T("wombat", 0, "wombat/..//");
   T("wombat", 0, "wombat/foo/");
   T("wombat", 0, "wombat/.foo");
