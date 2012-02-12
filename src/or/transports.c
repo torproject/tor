@@ -1000,8 +1000,6 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
     bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
     tor_asprintf(&bindaddr_env, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
 
-    strcpy(extended_env, "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200");
-
     smartlist_add(envs, orport_env);
     smartlist_add(envs, extended_env);
     smartlist_add(envs, bindaddr_env);
