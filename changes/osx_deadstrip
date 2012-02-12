@@ -1,5 +1,0 @@
-  o Minor features:
-    - Use the dead_strip option when building Tor on OS X. This reduces binary
-      size by almost 19% when linking openssl and libevent statically, which
-      we do for TBB.
-

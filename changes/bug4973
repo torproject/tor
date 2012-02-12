@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Calculate absolute paths correctly on Windows. Fixes bug 4973;
-      bugfix on 0.2.3.11-alpha.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (usability):
-    - Downgrade the "We're missing a certificate" message from notice
-      to info: people kept mistaking it for a real problem, whereas it
-      is only a problem when we are failing to bootstrap. Fixes bug
-      5067; bugfix on 0.2.10-alpha.

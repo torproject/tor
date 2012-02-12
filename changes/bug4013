@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Allow 0.2.3.x clients to use 0.2.2.x bridges. Previously the client
-      would ask the bridge for microdescriptors, which are only supported
-      in 0.2.3.x and later, and then fail to bootstrap when it didn't
-      get the answers it wanted. Fixes bug 4013; bugfix on 0.2.3.2-alpha.
-

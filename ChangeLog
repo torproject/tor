@@ -1,3 +1,45 @@
+Changes in version 0.2.3.12-alpha - 2012-02-??
+  o Major bugfixes:
+    - Set the SO_REUSEADDR socket option before we call bind() on outgoing
+      connections. This change should allow busy exit relays to stop
+      running out of available sockets as quickly. Fixes bug 4950;
+      bugfix on 0.2.2.26-beta.
+    - Allow 0.2.3.x clients to use 0.2.2.x bridges. Previously the client
+      would ask the bridge for microdescriptors, which are only supported
+      in 0.2.3.x and later, and then fail to bootstrap when it didn't
+      get the answers it wanted. Fixes bug 4013; bugfix on 0.2.3.2-alpha.
+
+  o Minor features:
+    - Use the dead_strip option when building Tor on OS X. This reduces
+      binary size by almost 19% when linking openssl and libevent
+      statically, which we do for TBB.
+    - Fix broken URLs in the sample torrc file, and tell readers about
+      the OutboundBindAddress, ExitPolicyRejectPrivate, and
+      PublishServerDescriptor options. Addresses bug 4652.
+    - Update to the February 7 2012 Maxmind GeoLite Country database.
+
+  o Minor bugfixes:
+    - Downgrade the "We're missing a certificate" message from notice
+      to info: people kept mistaking it for a real problem, whereas it
+      is seldom the problem even when we are failing to bootstrap. Fixes
+      bug 5067; bugfix on 0.2.0.10-alpha.
+    - Actually log the heartbeat message every HeartbeatPeriod seconds,
+      not every HeartbeatPeriod + 1 seconds. Fixes bug 4942; bugfix on
+      0.2.3.1-alpha. Bug reported by Scott Bennett.
+    - Calculate absolute paths correctly on Windows. Fixes bug 4973;
+      bugfix on 0.2.3.11-alpha.
+    - Update "ClientOnly" man page entry to explain that there isn't
+      really any point to messing with it. Resolves ticket 5005.
+    - Use the correct CVE number for CVE-2011-4576 in our comments and
+      log messages. Found by "fermenthor". Resolves bug 5066; fix on
+      0.2.3.11-alpha.
+
+  o Code simplifications and refactoring:
+    - Use the _WIN32 macro throughout our code to detect Windows.
+      (Previously we had used the obsolete 'WIN32' and the idiosyncratic
+      'MS_WINDOWS'.)
+
+
 Changes in version 0.2.3.11-alpha - 2012-01-22
   Tor 0.2.3.11-alpha marks feature-freeze for the 0.2.3 tree. It deploys
   the last step of the plan to limit maximum circuit length, includes

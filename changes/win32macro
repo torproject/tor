@@ -1,4 +1,0 @@
-  o Code simplifications and refactoring:
-    - Use the _WIN32 macro throughout our code to detect Windows.
-      (Previously we had used the obsolete 'WIN32' and the
-      idiosyncratic 'MS_WINDOWS'.)

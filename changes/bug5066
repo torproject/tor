@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Use the correct CVE number for CVE-2011-4576 in our comments and
-      log messages. Found by "fermenthor". Resolves bug 5066; fix on
-      0.2.3.11-alpha.
