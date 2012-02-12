@@ -95,7 +95,7 @@
 static void set_managed_proxy_environment(LPVOID *envp,
                                           const managed_proxy_t *mp);
 #else
-static int set_managed_proxy_environment(char ***envp,
+static void set_managed_proxy_environment(char ***envp,
                                          const managed_proxy_t *mp);
 #endif
 
@@ -305,12 +305,8 @@ launch_managed_proxy(managed_proxy_t *mp)
   char **envp=NULL;
 
   /* prepare the environment variables for the managed proxy */
-  if (set_managed_proxy_environment(&envp, mp) < 0) {
-    log_warn(LD_GENERAL, "Could not setup the environment of "
-             "the managed proxy at '%s'.", mp->argv[0]);
-    free_execve_args(envp);
-    return -1;
-  }
+  set_managed_proxy_environment(&envp, mp);
+  tor_assert(envp);
 
   retval = tor_spawn_background(mp->argv[0], (const char **)mp->argv,
                                 (const char **)envp, &mp->process_handle);
@@ -1082,7 +1078,7 @@ extern char **environ;
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
  *  caller after its use. */
-static int
+static void
 set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
 {
   const or_options_t *options = get_options();
@@ -1093,7 +1089,6 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   int environ_size=0;
   char **environ_tmp = environ;
 
-  int r = -1;
   int n_envs = mp->is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
 
   while (*environ_tmp) {
@@ -1130,13 +1125,9 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   }
   *tmp = NULL;
 
-  r = 0;
-
   tor_free(state_loc);
   tor_free(transports_to_launch);
   tor_free(bindaddr);
-
-  return r;
 }
 
 #endif /* _WIN32 */
