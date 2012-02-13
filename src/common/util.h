@@ -386,8 +386,11 @@ struct process_environment_t {
    * NUL-terminated strings of the form "NAME=VALUE". */
   char *windows_environment_block;
   /** A pointer to a NULL-terminated array of pointers to
-   * NUL-terminated strings of the form "NAME=VALUE". */
-  char **unixoid_environment_block;
+   * NUL-terminated strings of the form "NAME=VALUE".
+   *
+   * XXXX This should have type char **, but tor_spawn_background's
+   * prototype is incorrect. */
+  const char **unixoid_environment_block;
 };
 typedef struct process_environment_t process_environment_t;
 
