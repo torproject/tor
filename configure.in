@@ -280,7 +280,12 @@ AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(inet_aton, [resolv])
-AC_SEARCH_LIBS([clock_gettime], [rt], [have_rt=yes])
+saved_LIBS="$LIBS"
+AC_SEARCH_LIBS([clock_gettime], [rt])
+if test "$LIBS" != "$saved_LIBS"; then
+   # Looks like we need -lrt for clock_gettime().
+   have_rt=yes
+fi
 
 if test "$enable_threads" = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
