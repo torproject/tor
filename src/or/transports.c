@@ -288,12 +288,12 @@ launch_managed_proxy(managed_proxy_t *mp)
   /* Passing NULL as lpApplicationName makes Windows search for the .exe */
   retval = tor_spawn_background(NULL,
                                 (const char **)mp->argv,
-                                env->windows_environment_block,
+                                env,
                                 &mp->process_handle);
 #else
   retval = tor_spawn_background(mp->argv[0],
                                 (const char **)mp->argv,
-                                env->unixoid_environment_block,
+                                env,
                                 &mp->process_handle);
 #endif
 

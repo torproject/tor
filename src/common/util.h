@@ -365,12 +365,9 @@ void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
 typedef struct process_handle_t process_handle_t;
+typedef struct process_environment_t process_environment_t;
 int tor_spawn_background(const char *const filename, const char **argv,
-#ifdef _WIN32
-                         LPVOID envp,
-#else
-                         const char **envp,
-#endif
+                         process_environment_t *env,
                          process_handle_t **process_handle_out);
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
@@ -386,13 +383,9 @@ struct process_environment_t {
    * NUL-terminated strings of the form "NAME=VALUE". */
   char *windows_environment_block;
   /** A pointer to a NULL-terminated array of pointers to
-   * NUL-terminated strings of the form "NAME=VALUE".
-   *
-   * XXXX This should have type char **, but tor_spawn_background's
-   * prototype is incorrect. */
-  const char **unixoid_environment_block;
+   * NUL-terminated strings of the form "NAME=VALUE". */
+  char **unixoid_environment_block;
 };
-typedef struct process_environment_t process_environment_t;
 
 process_environment_t *process_environment_make(struct smartlist_t *env_vars);
 void process_environment_free(process_environment_t *env);

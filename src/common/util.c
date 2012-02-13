@@ -3313,11 +3313,7 @@ process_handle_new(void)
  */
 int
 tor_spawn_background(const char *const filename, const char **argv,
-#ifdef _WIN32
-                     LPVOID envp,
-#else
-                     const char **envp,
-#endif
+                     process_environment_t *env,
                      process_handle_t **process_handle_out)
 {
 #ifdef _WIN32
@@ -3398,7 +3394,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
    * work?) */
                  0,             // creation flags
-                 envp,          // use parent's environment
+                 (env==NULL) ? NULL : env->windows_environment_block,
                  NULL,          // use parent's current directory
                  &siStartInfo,  // STARTUPINFO pointer
                  &(process_handle->pid));  // receives PROCESS_INFORMATION
@@ -3528,8 +3524,8 @@ tor_spawn_background(const char *const filename, const char **argv,
     /* Call the requested program. We need the cast because
        execvp doesn't define argv as const, even though it
        does not modify the arguments */
-    if (envp)
-      execve(filename, (char *const *) argv, (char*const*)envp);
+    if (env)
+      execve(filename, (char *const *) argv, env->unixoid_environment_block);
     else
       execvp(filename, (char *const *) argv);
 
