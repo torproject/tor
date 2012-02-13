@@ -142,11 +142,11 @@ micro-revision.i: FORCE
 
 or_sha1.i: $(tor_SOURCES) $(libtor_a_SOURCES)
 	if test "@SHA1SUM@" != none; then \
-	  (cd "$(srcdir)" && @SHA1SUM@ $(tor_SOURCES) $(libtor_a_SOURCES)) | \
-	  @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
+	  (cd "$(srcdir)" && "@SHA1SUM@" $(tor_SOURCES) $(libtor_a_SOURCES)) | \
+	  "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  (cd "$(srcdir)" && @OPENSSL@ sha1 $(tor_SOURCES) $(libtor_a_SOURCES)) | \
-	  @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
+	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(tor_SOURCES) $(libtor_a_SOURCES)) | \
+	  "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
 	else \
 	  rm or_sha1.i; \
 	  touch or_sha1.i; \
