@@ -1,4 +1,4 @@
-Changes in version 0.2.3.12-alpha - 2012-02-??
+Changes in version 0.2.3.12-alpha - 2012-02-13
   o Major bugfixes:
     - Fix building when the path to sed, openssl or sha1sum contains
       spaces, which is pretty common on Windows. Fixes bug 5065; bugfix
