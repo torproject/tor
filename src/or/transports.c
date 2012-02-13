@@ -130,7 +130,7 @@ static INLINE void free_execve_args(char **arg);
 
 /** Number of environment variables for managed proxy clients/servers. */
 #define ENVIRON_SIZE_CLIENT 3
-#define ENVIRON_SIZE_SERVER 6
+#define ENVIRON_SIZE_SERVER 7 /* XXX known to be too high, but that's ok */
 
 /** The first and only supported - at the moment - configuration
     protocol version. */
@@ -1030,6 +1030,9 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
     bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
     tor_asprintf(&bindaddr_env, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
 
+    strlcpy(extended_env, "TOR_PT_EXTENDED_SERVER_PORT=",
+            sizeof(extended_env));
+
     smartlist_add(envs, orport_env);
     smartlist_add(envs, extended_env);
     smartlist_add(envs, bindaddr_env);
@@ -1120,6 +1123,7 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
                  router_get_advertised_or_port(options));
     tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
     tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
+    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=");
   } else {
     tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", transports_to_launch);
   }
