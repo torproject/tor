@@ -316,9 +316,16 @@ launch_managed_proxy(managed_proxy_t *mp)
 void
 pt_configure_remaining_proxies(void)
 {
+  smartlist_t *tmp = smartlist_new();
+
   log_debug(LD_CONFIG, "Configuring remaining managed proxies (%d)!",
             unconfigured_proxies_n);
-  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  managed_proxy_t *, mp) {
+
+  /* Iterate over tmp, not managed_proxy_list, since configure_proxy can
+   * remove elements from managed_proxy_list. */
+  smartlist_add_all(tmp, managed_proxy_list);
+
+  SMARTLIST_FOREACH_BEGIN(tmp,  managed_proxy_t *, mp) {
     tor_assert(mp->conf_state != PT_PROTO_BROKEN ||
                mp->conf_state != PT_PROTO_FAILED_LAUNCH);
 
@@ -347,6 +354,8 @@ pt_configure_remaining_proxies(void)
       configure_proxy(mp);
 
   } SMARTLIST_FOREACH_END(mp);
+
+  smartlist_free(tmp);
 }
 
 #ifdef _WIN32
@@ -1196,6 +1205,7 @@ pt_prepare_proxy_list_for_config_read(void)
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
     /* Destroy unconfigured proxies. */
     if (mp->conf_state != PT_PROTO_COMPLETED) {
+      SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
       managed_proxy_destroy(mp, 1);
       unconfigured_proxies_n--;
       continue;
@@ -1239,8 +1249,10 @@ pt_free_all(void)
        transports and it's the duty of the circuitbuild.c subsystem to
        free them. Otherwise, it hasn't registered its transports yet
        and we should free them here. */
-    SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp,
-                      managed_proxy_destroy(mp, 1));
+    SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp, {
+        SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
+        managed_proxy_destroy(mp, 1);
+    });
 
     smartlist_free(managed_proxy_list);
     managed_proxy_list=NULL;
