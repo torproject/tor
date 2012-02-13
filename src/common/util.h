@@ -379,6 +379,21 @@ int tor_spawn_background(const char *const filename, const char **argv,
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
 
+int environment_variable_names_equal(const char *s1, const char *s2);
+
+struct process_environment_t {
+  /** A pointer to a sorted empty-string-terminated sequence of
+   * NUL-terminated strings of the form "NAME=VALUE". */
+  char *windows_environment_block;
+  /** A pointer to a NULL-terminated array of pointers to
+   * NUL-terminated strings of the form "NAME=VALUE". */
+  char **unixoid_environment_block;
+};
+typedef struct process_environment_t process_environment_t;
+
+process_environment_t *process_environment_make(struct smartlist_t *env_vars);
+void process_environment_free(process_environment_t *env);
+
 /* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
  * 0 because tor_check_port_forwarding depends on this being the initial
  * statue of the static instance of process_handle_t */
