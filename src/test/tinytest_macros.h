@@ -68,7 +68,7 @@
 	TT_STMT_END
 
 /* Fail and abort the current test for the reason in msg */
-#define tt_abortprint_f(msg) TT_DIE(msg)
+#define tt_abort_printf(msg) TT_DIE(msg)
 #define tt_abort_perror(op) TT_DIE(("%s: %s [%d]",(op),strerror(errno), errno))
 #define tt_abort_msg(msg) TT_DIE(("%s", msg))
 #define tt_abort() TT_DIE(("%s", "(Failed.)"))
@@ -82,7 +82,7 @@
 /* End the current test, and indicate we are skipping it. */
 #define tt_skip()						\
 	TT_STMT_BEGIN						\
-	_tinytest_set_test_skipped();				\
+	tinytest_set_test_skipped_();				\
 	TT_EXIT_TEST_FUNCTION;					\
 	TT_STMT_END
 
