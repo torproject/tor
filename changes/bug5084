@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Avoid a crash when managed proxies are configured and we receive
+      HUP signals or configuration values too rapidly. Fixes bug 5084;
+      bugfix on 0.2.3.6-alpha.
