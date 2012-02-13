@@ -3853,6 +3853,30 @@ get_current_process_environment_variables(void)
   return sl;
 }
 
+/** For each string s in <b>env_vars</b> such that
+ * environment_variable_names_equal(s, <b>new_var</b>), remove it; if
+ * <b>free_p</b> is non-zero, call <b>free_old</b>(s).  If
+ * <b>new_var</b> contains '=', insert it into <b>env_vars</b>. */
+void
+set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
+                                      const char *new_var,
+                                      void (*free_old)(void*),
+                                      int free_p)
+{
+  SMARTLIST_FOREACH_BEGIN(env_vars, const char *, s) {
+    if (environment_variable_names_equal(s, new_var)) {
+      SMARTLIST_DEL_CURRENT(env_vars, s);
+      if (free_p) {
+        free_old((void *)s);
+      }
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  if (strchr(new_var, '=') != NULL) {
+    smartlist_add(env_vars, (void *)new_var);
+  }
+}
+
 #ifdef _WIN32
 /** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
  * <b>hProcess</b> is NULL, the function will return immediately if there is
