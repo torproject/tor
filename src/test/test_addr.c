@@ -73,17 +73,17 @@ test_addr_basic(void)
 #define _test_op_ip6(a,op,b,e1,e2)                               \
   STMT_BEGIN                                                     \
   tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
-    (memcmp(_val1->s6_addr, _val2->s6_addr, 16) op 0),           \
+    (memcmp(val1_->s6_addr, val2_->s6_addr, 16) op 0),           \
     char *, "%s",                                                \
     { int i; char *cp;                                           \
-      cp = _print = tor_malloc(64);                              \
+      cp = print_ = tor_malloc(64);                              \
       for (i=0;i<16;++i) {                                       \
-        tor_snprintf(cp, 3,"%02x", (unsigned)_value->s6_addr[i]);\
+        tor_snprintf(cp, 3,"%02x", (unsigned)value_->s6_addr[i]);\
         cp += 2;                                                 \
         if (i != 15) *cp++ = ':';                                \
       }                                                          \
     },                                                           \
-    { tor_free(_print); },                                       \
+    { tor_free(print_); },                                       \
     TT_EXIT_TEST_FUNCTION                                        \
   );                                                             \
   STMT_END
