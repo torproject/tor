@@ -3832,6 +3832,27 @@ process_environment_make(struct smartlist_t *env_vars)
   return env;
 }
 
+/** Return a newly allocated smartlist containing every variable in
+ * this process's environment, as a NUL-terminated string of the form
+ * "NAME=VALUE".  Note that on some/many/most/all OSes, the parent
+ * process can put strings not of that form in our environment;
+ * callers should try to not get crashed by that.
+ *
+ * The returned strings are statically allocated, and must be treated
+ * as read-only. */
+struct smartlist_t *
+get_current_process_environment_variables(void)
+{
+  smartlist_t *sl = smartlist_new();
+
+  char **environ_tmp; /* Not const char ** ? Really? */
+  for (environ_tmp = environ; *environ_tmp; ++environ_tmp) {
+    smartlist_add(sl, (void *)(*environ_tmp));
+  }
+
+  return sl;
+}
+
 #ifdef _WIN32
 /** Read from a handle <b>h</b> into <b>buf</b>, up to <b>count</b> bytes.  If
  * <b>hProcess</b> is NULL, the function will return immediately if there is
