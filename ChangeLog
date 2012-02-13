@@ -1,6 +1,10 @@
 Changes in version 0.2.3.12-alpha - 2012-02-13
+  Tor 0.2.3.12-alpha lets fast exit relays scale better, allows clients
+  to use bridges that run Tor 0.2.2.x, and resolves several big bugs
+  when Tor is configured to use a pluggable transport like obfsproxy.
+
   o Major bugfixes:
-    - Fix building when the path to sed, openssl or sha1sum contains
+    - Fix builds when the path to sed, openssl, or sha1sum contains
       spaces, which is pretty common on Windows. Fixes bug 5065; bugfix
       on 0.2.2.1-alpha.
     - Set the SO_REUSEADDR socket option before we call bind() on outgoing
@@ -9,21 +13,22 @@ Changes in version 0.2.3.12-alpha - 2012-02-13
       bugfix on 0.2.2.26-beta.
     - Allow 0.2.3.x clients to use 0.2.2.x bridges. Previously the client
       would ask the bridge for microdescriptors, which are only supported
-      in 0.2.3.x and later, and then fail to bootstrap when it didn't
-      get the answers it wanted. Fixes bug 4013; bugfix on 0.2.3.2-alpha.
-    - Avoid a crash when managed proxies are configured and we receive
-      HUP signals or configuration values too rapidly. This happens most
-      commonly when Vidalia tries to attach to Tor or tries to configure
-      the Tor it's attached to. Fixes bug 5084; bugfix on 0.2.3.6-alpha.
-    - Properly set up obfsproxy's environment in managed mode. The Tor
-      Browser Bundle needs LD_LIBRARY_PATH to be passed to obfsproxy,
+      in 0.2.3.x, and then fail to bootstrap when it didn't get the
+      answers it wanted. Fixes bug 4013; bugfix on 0.2.3.2-alpha.
+    - Avoid an assert when managed proxies like obfsproxy are configured,
+      and we receive HUP signals or configuration values too rapidly. This
+      situation happens most commonly when Vidalia tries to attach to
+      Tor or tries to configure the Tor it's attached to. Fixes bug 5084;
+      bugfix on 0.2.3.6-alpha.
+    - Properly set up obfsproxy's environment when in managed mode. The
+      Tor Browser Bundle needs LD_LIBRARY_PATH to be passed to obfsproxy,
       and when you run your Tor as a daemon, there's no HOME. Fixes bugs
       5076 and 5082; bugfix on 0.2.3.6-alpha.
 
   o Minor features:
     - Use the dead_strip option when building Tor on OS X. This reduces
       binary size by almost 19% when linking openssl and libevent
-      statically, which we do for TBB.
+      statically, which we do for Tor Browser Bundle.
     - Fix broken URLs in the sample torrc file, and tell readers about
       the OutboundBindAddress, ExitPolicyRejectPrivate, and
       PublishServerDescriptor options. Addresses bug 4652.
@@ -38,18 +43,18 @@ Changes in version 0.2.3.12-alpha - 2012-02-13
       managed pluggable transport server proxy's environment.
       Previously, we would put it there, even though Tor doesn't
       implement an 'extended server port' yet, and even though Tor
-      almost certainly isn't listening to that address. For now, we set
-      it to an empty string, to avoid crashing older obfsproxies. Bugfix
+      almost certainly isn't listening at that address. For now, we set
+      it to an empty string to avoid crashing older obfsproxies. Bugfix
       on 0.2.3.6-alpha.
-    - Actually log the heartbeat message every HeartbeatPeriod seconds,
-      not every HeartbeatPeriod + 1 seconds. Fixes bug 4942; bugfix on
+    - Log the heartbeat message every HeartbeatPeriod seconds, not every
+      HeartbeatPeriod + 1 seconds. Fixes bug 4942; bugfix on
       0.2.3.1-alpha. Bug reported by Scott Bennett.
     - Calculate absolute paths correctly on Windows. Fixes bug 4973;
       bugfix on 0.2.3.11-alpha.
     - Update "ClientOnly" man page entry to explain that there isn't
       really any point to messing with it. Resolves ticket 5005.
     - Use the correct CVE number for CVE-2011-4576 in our comments and
-      log messages. Found by "fermenthor". Resolves bug 5066; fix on
+      log messages. Found by "fermenthor". Resolves bug 5066; bugfix on
       0.2.3.11-alpha.
 
   o Code simplifications and refactoring:
