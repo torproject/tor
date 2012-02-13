@@ -1027,7 +1027,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
    * the hash table that we do in the unoptimized code above.  (Each of
    * HT_INSERT and HT_FIND calls HT_SET_HASH and HT_FIND_P.)
    */
-  _HT_FIND_OR_INSERT(digestmap_impl, node, digestmap_entry_hash, &(map->head),
+  HT_FIND_OR_INSERT_(digestmap_impl, node, digestmap_entry_hash, &(map->head),
          digestmap_entry_t, &search, ptr,
          {
             /* we found an entry. */
@@ -1041,7 +1041,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
              tor_malloc_zero(sizeof(digestmap_entry_t));
            memcpy(newent->key, key, DIGEST_LEN);
            newent->val = val;
-           _HT_FOI_INSERT(node, &(map->head), &search, newent, ptr);
+           HT_FOI_INSERT_(node, &(map->head), &search, newent, ptr);
            return NULL;
          });
 #endif
@@ -1354,14 +1354,14 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
 void
 strmap_assert_ok(const strmap_t *map)
 {
-  tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
+  tor_assert(!strmap_impl_HT_REP_IS_BAD_(&map->head));
 }
 /** Fail with an assertion error if anything has gone wrong with the internal
  * representation of <b>map</b>. */
 void
 digestmap_assert_ok(const digestmap_t *map)
 {
-  tor_assert(!_digestmap_impl_HT_REP_IS_BAD(&map->head));
+  tor_assert(!digestmap_impl_HT_REP_IS_BAD_(&map->head));
 }
 
 /** Return true iff <b>map</b> has no entries. */
