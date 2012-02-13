@@ -73,6 +73,7 @@
 void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_roundup(size_t *size DMALLOC_PARAMS) ATTR_MALLOC;
+void *_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
 char *_tor_strdup(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
 char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
@@ -107,6 +108,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 #define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
 #define tor_malloc_zero(size)  _tor_malloc_zero(size DMALLOC_ARGS)
+#define tor_calloc(nmemb,size) _tor_calloc(nmemb, size DMALLOC_ARGS)
 #define tor_malloc_roundup(szp) _tor_malloc_roundup(szp DMALLOC_ARGS)
 #define tor_realloc(ptr, size) _tor_realloc(ptr, size DMALLOC_ARGS)
 #define tor_strdup(s)          _tor_strdup(s DMALLOC_ARGS)

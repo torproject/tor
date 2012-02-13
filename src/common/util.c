@@ -172,6 +172,35 @@ _tor_malloc_zero(size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
+ * the memory with zero bytes, and return a pointer to the result.
+ * Log and terminate the process on error.  (Same as
+ * calloc(<b>nmemb</b>,<b>size</b>), but never returns NULL.)
+ *
+ * XXXX This implementation probably asserts in cases where it could
+ * work, because it only tries dividing SIZE_MAX by size (according to
+ * the calloc(3) man page, the size of an element of the nmemb-element
+ * array to be allocated), not by nmemb (which could in theory be
+ * smaller than size).  Don't do that then.
+ */
+void *
+_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS)
+{
+  /* You may ask yourself, "wouldn't it be smart to use calloc instead of
+   * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
+   * we don't!"  Indeed it does, but its optimizations are only a big win when
+   * we're allocating something very big (it knows if it just got the memory
+   * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
+   * for big stuff, so we don't bother with calloc. */
+  void *result;
+  size_t max_nmemb = (size == 0) ? SIZE_MAX : SIZE_MAX/size;
+
+  tor_assert(nmemb < max_nmemb);
+
+  result = _tor_malloc_zero((nmemb * size) DMALLOC_FN_ARGS);
+  return result;
+}
+
 /** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
  * bytes long; return the new memory block.  On error, log and
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
