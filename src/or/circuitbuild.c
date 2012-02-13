@@ -3906,14 +3906,14 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
   if (! entry_guards)
     return 0;
 
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
-    {
-      if (tor_memeq(e->identity, digest, DIGEST_LEN)) {
-        entry = e;
-        idx = e_sl_idx;
-        break;
-      }
-    });
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+    tor_assert(e);
+    if (tor_memeq(e->identity, digest, DIGEST_LEN)) {
+      entry = e;
+      idx = e_sl_idx;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(e);
 
   if (!entry)
     return 0;
