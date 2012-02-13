@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-
-    - Don't put "TOR_PT_EXTENDED_SERVER_PORT=127.0.0.1:4200" in a
-      managed pluggable transport server proxy's environment.
-      Previously, we would put it there, even though Tor doesn't
-      implement an 'extended server port' yet, and even though Tor
-      almost certainly isn't listening to that address.  Bugfix on
-      0.2.3.6-alpha.
-

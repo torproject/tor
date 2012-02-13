@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Properly set up obfsproxy's environment in managed mode. On TBB, we
-      need LD_LIBRARY_PATH to be copied, and when you run your Tor as a
-      daemon, there's no HOME. Fixes bug 5082 and 5076; bugfix on
-      0.2.3.6-alpha.
-
