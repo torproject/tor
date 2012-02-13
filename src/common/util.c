@@ -3334,8 +3334,6 @@ tor_spawn_background(const char *const filename, const char **argv,
   SECURITY_ATTRIBUTES saAttr;
   char *joined_argv;
 
-  (void)envp; // Unused on Windows
-
   saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
   saAttr.bInheritHandle = TRUE;
   /* TODO: should we set explicit security attributes? (#2046, comment 5) */
