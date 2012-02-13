@@ -140,12 +140,35 @@ static INLINE void free_execve_args(char **arg);
 static smartlist_t *managed_proxy_list = NULL;
 /** Number of still unconfigured proxies. */
 static int unconfigured_proxies_n = 0;
+/** Boolean: True iff we might need to restart some proxies. */
+static int check_if_restarts_needed = 0;
 
-/** Return true if there are still unconfigured managed proxies. */
+/** Return true if there are still unconfigured managed proxies, or proxies
+ * that need restarting. */
 int
 pt_proxies_configuration_pending(void)
 {
-  return !! unconfigured_proxies_n;
+  return unconfigured_proxies_n || check_if_restarts_needed;
+}
+
+/** Assert that the unconfigured_proxies_n value correctly matches the number
+ * of proxies in a state other than PT_PROTO_COMPLETE. */
+static void
+assert_unconfigured_count_ok(void)
+{
+  int n_completed = 0;
+  if (!managed_proxy_list) {
+    tor_assert(unconfigured_proxies_n == 0);
+    return;
+  }
+
+  SMARTLIST_FOREACH(managed_proxy_list, managed_proxy_t *, mp, {
+      if (mp->conf_state == PT_PROTO_COMPLETED)
+        ++n_completed;
+  });
+
+  tor_assert(n_completed + unconfigured_proxies_n ==
+             smartlist_len(managed_proxy_list));
 }
 
 /** Return true if <b>mp</b> has the same argv as <b>proxy_argv</b> */
@@ -255,6 +278,7 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 
   /* flag it as an infant proxy so that it gets launched on next tick */
   mp->conf_state = PT_PROTO_INFANT;
+  unconfigured_proxies_n++;
 }
 
 /** Launch managed proxy <b>mp</b>. */
@@ -325,6 +349,8 @@ pt_configure_remaining_proxies(void)
    * remove elements from managed_proxy_list. */
   smartlist_add_all(tmp, managed_proxy_list);
 
+  assert_unconfigured_count_ok();
+
   SMARTLIST_FOREACH_BEGIN(tmp,  managed_proxy_t *, mp) {
     tor_assert(mp->conf_state != PT_PROTO_BROKEN ||
                mp->conf_state != PT_PROTO_FAILED_LAUNCH);
@@ -332,17 +358,14 @@ pt_configure_remaining_proxies(void)
     if (mp->got_hup) {
       mp->got_hup = 0;
 
-    /* This proxy is marked by a SIGHUP. Check whether we need to
-       restart it. */
+      /* This proxy is marked by a SIGHUP. Check whether we need to
+         restart it. */
       if (proxy_needs_restart(mp)) {
         log_info(LD_GENERAL, "Preparing managed proxy for restart.");
         proxy_prepare_for_restart(mp);
-        continue;
       } else { /* it doesn't need to be restarted. */
         log_info(LD_GENERAL, "Nothing changed for managed proxy after HUP: "
                  "not restarting.");
-        unconfigured_proxies_n--;
-        tor_assert(unconfigured_proxies_n >= 0);
       }
 
       continue;
@@ -356,6 +379,8 @@ pt_configure_remaining_proxies(void)
   } SMARTLIST_FOREACH_END(mp);
 
   smartlist_free(tmp);
+  check_if_restarts_needed = 0;
+  assert_unconfigured_count_ok();
 }
 
 #ifdef _WIN32
@@ -1134,6 +1159,8 @@ managed_proxy_create(const smartlist_t *transport_list,
   smartlist_add(managed_proxy_list, mp);
   unconfigured_proxies_n++;
 
+  assert_unconfigured_count_ok();
+
   return mp;
 }
 
@@ -1163,7 +1190,7 @@ pt_kickstart_proxy(const smartlist_t *transport_list,
          it. */
       if (mp->marked_for_removal) {
         mp->marked_for_removal = 0;
-        unconfigured_proxies_n++;
+        check_if_restarts_needed = 1;
       }
 
       SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport) {
@@ -1202,6 +1229,7 @@ pt_prepare_proxy_list_for_config_read(void)
   if (!managed_proxy_list)
     return;
 
+  assert_unconfigured_count_ok();
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
     /* Destroy unconfigured proxies. */
     if (mp->conf_state != PT_PROTO_COMPLETED) {
@@ -1219,6 +1247,8 @@ pt_prepare_proxy_list_for_config_read(void)
     smartlist_clear(mp->transports_to_launch);
   } SMARTLIST_FOREACH_END(mp);
 
+  assert_unconfigured_count_ok();
+
   tor_assert(unconfigured_proxies_n == 0);
 }
 
@@ -1231,13 +1261,14 @@ sweep_proxy_list(void)
 {
   if (!managed_proxy_list)
     return;
-
+  assert_unconfigured_count_ok();
   SMARTLIST_FOREACH_BEGIN(managed_proxy_list, managed_proxy_t *, mp) {
     if (mp->marked_for_removal) {
       SMARTLIST_DEL_CURRENT(managed_proxy_list, mp);
       managed_proxy_destroy(mp, 1);
     }
   } SMARTLIST_FOREACH_END(mp);
+  assert_unconfigured_count_ok();
 }
 
 /** Release all storage held by the pluggable transports subsystem. */
