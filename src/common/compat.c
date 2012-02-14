@@ -116,16 +116,24 @@
 int
 tor_open_cloexec(const char *path, int flags, unsigned mode)
 {
+  int fd;
 #ifdef O_CLOEXEC
-  return open(path, flags|O_CLOEXEC, mode);
-#else
-  int fd = open(path, flags, mode);
+  fd = open(path, flags|O_CLOEXEC, mode);
+  if (fd >= 0)
+    return fd;
+  /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
+   * event though we were built on a system with O_CLOEXEC support, we
+   * are running on one without. */
+  if (errno != EINVAL)
+    return -1;
+#endif
+
+  fd = open(path, flags, mode);
 #ifdef FD_CLOEXEC
   if (fd >= 0)
         fcntl(fd, F_SETFD, FD_CLOEXEC);
 #endif
   return fd;
-#endif
 }
 
 /** DOCDOC */
@@ -961,19 +969,31 @@ tor_open_socket(int domain, int type, int protocol)
 {
   tor_socket_t s;
 #ifdef SOCK_CLOEXEC
-#define LINUX_CLOEXEC_OPEN_SOCKET
-  type |= SOCK_CLOEXEC;
-#endif
+  s = socket(domain, type|SOCK_CLOEXEC, protocol);
+  if (SOCKET_OK(s))
+    goto socket_ok;
+  /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
+   * event though we were built on a system with SOCK_CLOEXEC support, we
+   * are running on one without. */
+  if (errno != EINVAL)
+    return s;
+#endif /* SOCK_CLOEXEC */
+
   s = socket(domain, type, protocol);
-  if (SOCKET_OK(s)) {
-#if !defined(LINUX_CLOEXEC_OPEN_SOCKET) && defined(FD_CLOEXEC)
-    fcntl(s, F_SETFD, FD_CLOEXEC);
+  if (! SOCKET_OK(s))
+    return s;
+
+#if defined(FD_CLOEXEC)
+  fcntl(s, F_SETFD, FD_CLOEXEC);
 #endif
-    socket_accounting_lock();
-    ++n_sockets_open;
-    mark_socket_open(s);
-    socket_accounting_unlock();
-  }
+
+  goto socket_ok; /* So that socket_ok will not be unused. */
+
+ socket_ok:
+  socket_accounting_lock();
+  ++n_sockets_open;
+  mark_socket_open(s);
+  socket_accounting_unlock();
   return s;
 }
 
@@ -983,20 +1003,31 @@ tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr, socklen_t *len)
 {
   tor_socket_t s;
 #if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC)
-#define LINUX_CLOEXEC_ACCEPT
   s = accept4(sockfd, addr, len, SOCK_CLOEXEC);
-#else
+  if (SOCKET_OK(s))
+    goto socket_ok;
+  /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
+   * event though we were built on a system with accept4 support, we
+   * are running on one without. */
+  if (errno != EINVAL)
+    return s;
+#endif
+
   s = accept(sockfd, addr, len);
+  if (!SOCKET_OK(s))
+    return s;
+
+#if defined(FD_CLOEXEC)
+  fcntl(s, F_SETFD, FD_CLOEXEC);
 #endif
-  if (SOCKET_OK(s)) {
-#if !defined(LINUX_CLOEXEC_ACCEPT) && defined(FD_CLOEXEC)
-    fcntl(s, F_SETFD, FD_CLOEXEC);
-#endif
-    socket_accounting_lock();
-    ++n_sockets_open;
-    mark_socket_open(s);
-    socket_accounting_unlock();
-  }
+
+  goto socket_ok; /* So that socket_ok will not be unused. */
+
+ socket_ok:
+  socket_accounting_lock();
+  ++n_sockets_open;
+  mark_socket_open(s);
+  socket_accounting_unlock();
   return s;
 }
 
@@ -1047,29 +1078,43 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 //don't use win32 socketpairs (they are always bad)
 #if defined(HAVE_SOCKETPAIR) && !defined(_WIN32)
   int r;
+
 #ifdef SOCK_CLOEXEC
-  type |= SOCK_CLOEXEC;
+  r = socketpair(family, type|SOCK_CLOEXEC, protocol, fd);
+  if (r == 0)
+    goto sockets_ok;
+  /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
+   * event though we were built on a system with SOCK_CLOEXEC support, we
+   * are running on one without. */
+  if (errno != EINVAL)
+    return -errno;
 #endif
+
   r = socketpair(family, type, protocol, fd);
-  if (r == 0) {
-#if !defined(SOCK_CLOEXEC) && defined(FD_CLOEXEC)
-    if (SOCKET_OK(fd[0]))
-      fcntl(fd[0], F_SETFD, FD_CLOEXEC);
-    if (SOCKET_OK(fd[1]))
-      fcntl(fd[1], F_SETFD, FD_CLOEXEC);
+  if (r < 0)
+    return -errno;
+
+#if defined(FD_CLOEXEC)
+  if (SOCKET_OK(fd[0]))
+    fcntl(fd[0], F_SETFD, FD_CLOEXEC);
+  if (SOCKET_OK(fd[1]))
+    fcntl(fd[1], F_SETFD, FD_CLOEXEC);
 #endif
-    socket_accounting_lock();
-    if (SOCKET_OK(fd[0])) {
-      ++n_sockets_open;
-      mark_socket_open(fd[0]);
-    }
-    if (SOCKET_OK(fd[1])) {
-      ++n_sockets_open;
-      mark_socket_open(fd[1]);
-    }
-    socket_accounting_unlock();
+  goto sockets_ok; /* So that sockets_ok will not be unused. */
+
+ sockets_ok:
+  socket_accounting_lock();
+  if (SOCKET_OK(fd[0])) {
+    ++n_sockets_open;
+    mark_socket_open(fd[0]);
   }
-  return r < 0 ? -errno : r;
+  if (SOCKET_OK(fd[1])) {
+    ++n_sockets_open;
+    mark_socket_open(fd[1]);
+  }
+  socket_accounting_unlock();
+
+  return 0;
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
