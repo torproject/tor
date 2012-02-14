@@ -23,6 +23,8 @@
 // debugging stuff
 #include <assert.h>
 
+#include "compat.h"
+
 #include "tor-fw-helper.h"
 #include "tor-fw-helper-natpmp.h"
 
