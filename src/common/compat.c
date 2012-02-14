@@ -51,6 +51,9 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef HAVE_CRT_EXTERNS_H
+#include <crt_externs.h>
+#endif
 
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
@@ -1656,6 +1659,26 @@ make_path_absolute(char *fname)
   }
 
   return absfname;
+#endif
+}
+
+#ifndef HAVE__NSGETENVIRON
+/* FreeBSD needs this; it doesn't seem to hurt other platforms. */
+extern char **environ;
+#endif
+
+/** Return the current environment. This is a portable replacement for
+ * 'environ'. */
+char **
+get_environment(void)
+{
+#ifdef HAVE__NSGETENVIRON
+  /* This is for compatibility between OSX versions.  Otherwise (for example)
+   * when we do a mostly-static build on OSX 10.7, the resulting binary won't
+   * work on OSX 10.6. */
+  return *_NSGetEnviron();
+#else
+  return environ;
 #endif
 }
 

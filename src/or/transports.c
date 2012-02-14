@@ -1076,8 +1076,6 @@ set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
 
 #else /* _WIN32 */
 
-extern char **environ;
-
 /** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
  *  <b>envp</b> is allocated on the heap and should be freed by the
  *  caller after its use. */
@@ -1090,7 +1088,8 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
   char *transports_to_launch=NULL;
   char *bindaddr=NULL;
   int environ_size=0;
-  char **environ_tmp = environ;
+  char **environ_tmp = get_environment();
+  char **environ_save = environ_tmp;
 
   int n_envs = mp->is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
 
@@ -1098,7 +1097,7 @@ set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
     environ_size++;
     environ_tmp++;
   }
-  environ_tmp = environ;
+  environ_tmp = environ_save;
 
   /* allocate enough space for our env. vars and a NULL pointer */
   *envp = tor_malloc(sizeof(char*)*(environ_size+n_envs+1));

@@ -581,6 +581,8 @@ char *get_user_homedir(const char *username);
 int get_parent_directory(char *fname);
 char *make_path_absolute(char *fname);
 
+char **get_environment(void);
+
 int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
 
