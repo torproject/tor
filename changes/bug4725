@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Fix a bug where server managed proxies were unreachable from the
+      Internet, because tor asked them to bind on localhost. Fixes bug
+      4725; bugfix on 0.2.3.9-alpha.
