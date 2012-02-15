@@ -3832,8 +3832,8 @@ process_environment_make(struct smartlist_t *env_vars)
  * process can put strings not of that form in our environment;
  * callers should try to not get crashed by that.
  *
- * The returned strings are statically allocated, and must be treated
- * as read-only. */
+ * The returned strings are heap-allocated, and must be freed by the
+ * caller. */
 struct smartlist_t *
 get_current_process_environment_variables(void)
 {
@@ -3841,7 +3841,7 @@ get_current_process_environment_variables(void)
 
   char **environ_tmp; /* Not const char ** ? Really? */
   for (environ_tmp = environ; *environ_tmp; ++environ_tmp) {
-    smartlist_add(sl, (void *)(*environ_tmp));
+    smartlist_add(sl, tor_strdup(*environ_tmp));
   }
 
   return sl;

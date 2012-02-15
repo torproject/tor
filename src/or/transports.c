@@ -961,13 +961,14 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 {
   const or_options_t *options = get_options();
 
-  /* Environment variables to be added to or set in mp's environment.
-   * These are heap-allocated and are freed before this function
-   * returns. */
+  /* Environment variables to be added to or set in mp's environment. */
   smartlist_t *envs = smartlist_new();
+  /* XXXX The next time someone touches this code, shorten the name of
+   * set_environment_variable_in_smartlist, add a
+   * set_env_var_in_smartlist_asprintf function, and get rid of the
+   * silly extra envs smartlist. */
 
-  /* The final environment to be passed to mp.  Inherited variables are
-   * statically allocated; new ones are heap-allocated. */
+  /* The final environment to be passed to mp. */
   smartlist_t *merged_env_vars = get_current_process_environment_variables();
 
   process_environment_t *env;
@@ -1013,15 +1014,16 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
   }
 
   SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
-    set_environment_variable_in_smartlist(merged_env_vars, env_var, NULL, 0);
+    set_environment_variable_in_smartlist(merged_env_vars, env_var,
+                                          _tor_free, 1);
   } SMARTLIST_FOREACH_END(env_var);
 
   env = process_environment_make(merged_env_vars);
 
-  smartlist_free(merged_env_vars);
-
-  SMARTLIST_FOREACH(envs, void *, x, tor_free(x));
   smartlist_free(envs);
+
+  SMARTLIST_FOREACH(merged_env_vars, void *, x, tor_free(x));
+  smartlist_free(merged_env_vars);
 
   return env;
 }
