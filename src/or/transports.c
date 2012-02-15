@@ -495,10 +495,8 @@ register_server_proxy(managed_proxy_t *mp)
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
-    /* LOG_WARN so that the bridge operator can easily find the
-       transport's port in the log file and send it to the users. */
-    log_warn(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
-             t->name, fmt_addr(&t->addr), (int)t->port);
+    log_notice(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
+               t->name, fmt_addr(&t->addr), (int)t->port);
     smartlist_add(sm_tmp, tor_strdup(t->name));
   } SMARTLIST_FOREACH_END(t);
 
