@@ -1856,6 +1856,245 @@ test_util_eat_whitespace(void *ptr)
   ;
 }
 
+/** Return a newly allocated smartlist containing the lines of text in
+ * <b>lines</b>.  The returned strings are heap-allocated, and must be
+ * freed by the caller.
+ *
+ * XXXX? Move to container.[hc] ? */
+static smartlist_t *
+smartlist_new_from_text_lines(const char *lines)
+{
+  smartlist_t *sl = smartlist_new();
+  char *last_line;
+
+  smartlist_split_string(sl, lines, "\n", 0, 0);
+
+  last_line = smartlist_pop_last(sl);
+  if (last_line != NULL && *last_line != '\0') {
+    smartlist_add(sl, last_line);
+  }
+
+  return sl;
+}
+
+/** Test smartlist_new_from_text_lines */
+static void
+test_util_sl_new_from_text_lines(void *ptr)
+{
+  (void)ptr;
+
+  { /* Normal usage */
+    smartlist_t *sl = smartlist_new_from_text_lines("foo\nbar\nbaz\n");
+    int sl_len = smartlist_len(sl);
+
+    tt_want_int_op(sl_len, ==, 3);
+
+    if (sl_len > 0) tt_want_str_op(smartlist_get(sl, 0), ==, "foo");
+    if (sl_len > 1) tt_want_str_op(smartlist_get(sl, 1), ==, "bar");
+    if (sl_len > 2) tt_want_str_op(smartlist_get(sl, 2), ==, "baz");
+
+    SMARTLIST_FOREACH(sl, void *, x, tor_free(x));
+    smartlist_free(sl);
+  }
+
+  { /* No final newline */
+    smartlist_t *sl = smartlist_new_from_text_lines("foo\nbar\nbaz");
+    int sl_len = smartlist_len(sl);
+
+    tt_want_int_op(sl_len, ==, 3);
+
+    if (sl_len > 0) tt_want_str_op(smartlist_get(sl, 0), ==, "foo");
+    if (sl_len > 1) tt_want_str_op(smartlist_get(sl, 1), ==, "bar");
+    if (sl_len > 2) tt_want_str_op(smartlist_get(sl, 2), ==, "baz");
+
+    SMARTLIST_FOREACH(sl, void *, x, tor_free(x));
+    smartlist_free(sl);
+  }
+
+  { /* No newlines */
+    smartlist_t *sl = smartlist_new_from_text_lines("foo");
+    int sl_len = smartlist_len(sl);
+
+    tt_want_int_op(sl_len, ==, 1);
+
+    if (sl_len > 0) tt_want_str_op(smartlist_get(sl, 0), ==, "foo");
+
+    SMARTLIST_FOREACH(sl, void *, x, tor_free(x));
+    smartlist_free(sl);
+  }
+
+  { /* No text at all */
+    smartlist_t *sl = smartlist_new_from_text_lines("");
+    int sl_len = smartlist_len(sl);
+
+    tt_want_int_op(sl_len, ==, 0);
+
+    SMARTLIST_FOREACH(sl, void *, x, tor_free(x));
+    smartlist_free(sl);
+  }
+}
+
+/** Test process_environment_make */
+static void
+test_util_make_environment(void *ptr)
+{
+  const char *env_vars_string =
+    "PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/bin\n"
+    "HOME=/home/foozer\n";
+  const char expected_windows_env_block[] =
+    "HOME=/home/foozer\000"
+    "PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/bin\000"
+    "\000";
+  size_t expected_windows_env_block_len = sizeof(expected_windows_env_block);
+
+  smartlist_t *env_vars = smartlist_new_from_text_lines(env_vars_string);
+  smartlist_t *env_vars_sorted = smartlist_new();
+  smartlist_t *env_vars_in_unixoid_env_block_sorted = smartlist_new();
+
+  process_environment_t *env;
+
+  (void)ptr;
+
+  env = process_environment_make(env_vars);
+
+  /* Check that the Windows environment block is correct. */
+  tt_want(tor_memeq(expected_windows_env_block, env->windows_environment_block,
+                    expected_windows_env_block_len));
+
+  /* Now for the Unixoid environment block.  We don't care which order
+   * these environment variables are in, so we sort both lists first. */
+
+  smartlist_add_all(env_vars_sorted, env_vars);
+
+  {
+    char **v;
+    for (v = env->unixoid_environment_block; *v; ++v) {
+      smartlist_add(env_vars_in_unixoid_env_block_sorted, *v);
+    }
+  }
+
+  smartlist_sort_strings(env_vars_sorted);
+  smartlist_sort_strings(env_vars_in_unixoid_env_block_sorted);
+
+  tt_want_int_op(smartlist_len(env_vars_sorted), ==,
+                 smartlist_len(env_vars_in_unixoid_env_block_sorted));
+  {
+    int len = smartlist_len(env_vars_sorted);
+    int i;
+
+    if (smartlist_len(env_vars_in_unixoid_env_block_sorted) < len) {
+      len = smartlist_len(env_vars_in_unixoid_env_block_sorted);
+    }
+
+    for (i = 0; i < len; ++i) {
+      tt_want_str_op(smartlist_get(env_vars_sorted, i), ==,
+                     smartlist_get(env_vars_in_unixoid_env_block_sorted, i));
+    }
+  }
+
+  /* Clean up. */
+  smartlist_free(env_vars_in_unixoid_env_block_sorted);
+  smartlist_free(env_vars_sorted);
+
+  SMARTLIST_FOREACH(env_vars, char *, x, tor_free(x));
+  smartlist_free(env_vars);
+
+  process_environment_free(env);
+}
+
+/** Test set_environment_variable_in_smartlist */
+static void
+test_util_set_env_var_in_sl(void *ptr)
+{
+  /* The environment variables in these strings are in arbitrary
+   * order; we sort the resulting lists before comparing them.
+   *
+   * (They *will not* end up in the order shown in
+   * expected_resulting_env_vars_string.) */
+
+  const char *base_env_vars_string =
+    "PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/bin\n"
+    "HOME=/home/foozer\n"
+    "TERM=xterm\n"
+    "SHELL=/bin/ksh\n"
+    "USER=foozer\n"
+    "LOGNAME=foozer\n"
+    "USERNAME=foozer\n"
+    "LANG=en_US.utf8\n"
+    ;
+
+  const char *new_env_vars_string =
+    "TERM=putty\n"
+    "DISPLAY=:18.0\n"
+    ;
+
+  const char *expected_resulting_env_vars_string =
+    "PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/bin\n"
+    "HOME=/home/foozer\n"
+    "TERM=putty\n"
+    "SHELL=/bin/ksh\n"
+    "USER=foozer\n"
+    "LOGNAME=foozer\n"
+    "USERNAME=foozer\n"
+    "LANG=en_US.utf8\n"
+    "DISPLAY=:18.0\n"
+    ;
+
+  smartlist_t *merged_env_vars =
+    smartlist_new_from_text_lines(base_env_vars_string);
+  smartlist_t *new_env_vars =
+    smartlist_new_from_text_lines(new_env_vars_string);
+  smartlist_t *expected_resulting_env_vars =
+    smartlist_new_from_text_lines(expected_resulting_env_vars_string);
+
+  /* Elements of merged_env_vars are heap-allocated, and must be
+   * freed.  Some of them are (or should) be freed by
+   * set_environment_variable_in_smartlist.
+   *
+   * Elements of new_env_vars are heap-allocated, but are copied into
+   * merged_env_vars, so they are not freed separately at the end of
+   * the function.
+   *
+   * Elements of expected_resulting_env_vars are heap-allocated, and
+   * must be freed. */
+
+  (void)ptr;
+
+  SMARTLIST_FOREACH(new_env_vars, char *, env_var,
+                    set_environment_variable_in_smartlist(merged_env_vars,
+                                                          env_var,
+                                                          _tor_free,
+                                                          1));
+
+  smartlist_sort_strings(merged_env_vars);
+  smartlist_sort_strings(expected_resulting_env_vars);
+
+  tt_want_int_op(smartlist_len(merged_env_vars), ==,
+                 smartlist_len(expected_resulting_env_vars));
+  {
+    int len = smartlist_len(merged_env_vars);
+    int i;
+
+    if (smartlist_len(expected_resulting_env_vars) < len) {
+      len = smartlist_len(expected_resulting_env_vars);
+    }
+
+    for (i = 0; i < len; ++i) {
+      tt_want_str_op(smartlist_get(merged_env_vars, i), ==,
+                     smartlist_get(expected_resulting_env_vars, i));
+    }
+  }
+
+  /* Clean up. */
+  SMARTLIST_FOREACH(merged_env_vars, char *, x, tor_free(x));
+  smartlist_free(merged_env_vars);
+
+  smartlist_free(new_env_vars);
+
+  SMARTLIST_FOREACH(expected_resulting_env_vars, char *, x, tor_free(x));
+  smartlist_free(expected_resulting_env_vars);
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1895,6 +2134,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),
   UTIL_TEST(eat_whitespace, 0),
+  UTIL_TEST(sl_new_from_text_lines, 0),
+  UTIL_TEST(make_environment, 0),
+  UTIL_TEST(set_env_var_in_sl, 0),
   END_OF_TESTCASES
 };
 
