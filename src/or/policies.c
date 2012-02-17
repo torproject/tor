@@ -1452,7 +1452,17 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
   else
     accept = ! policy->is_accept;
 
-  /* ???? are these right? */
+  /* ???? are these right? -NM */
+  /* We should be sure not to return ADDR_POLICY_ACCEPTED in the accept
+   * case here, because it would cause clients to believe that the node
+   * allows exit enclaving. Trying it anyway would open up a cool attack
+   * where the node refuses due to exitpolicy, the client reacts in
+   * surprise by rewriting the node's exitpolicy to reject *:*, and then
+   * a bad guy targets users by causing them to attempt such connections
+   * to 98% of the exits.
+   *
+   * Once microdescriptors can handle addresses in special cases (e.g. if
+   * we ever solve ticket 1774), we can provide certainty here. -RD */
   if (accept)
     return ADDR_POLICY_PROBABLY_ACCEPTED;
   else
