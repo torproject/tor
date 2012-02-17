@@ -73,6 +73,7 @@
 void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_roundup(size_t *size DMALLOC_PARAMS) ATTR_MALLOC;
+void *_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
 char *_tor_strdup(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
 char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
@@ -107,6 +108,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 #define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
 #define tor_malloc_zero(size)  _tor_malloc_zero(size DMALLOC_ARGS)
+#define tor_calloc(nmemb,size) _tor_calloc(nmemb, size DMALLOC_ARGS)
 #define tor_malloc_roundup(szp) _tor_malloc_roundup(szp DMALLOC_ARGS)
 #define tor_realloc(ptr, size) _tor_realloc(ptr, size DMALLOC_ARGS)
 #define tor_strdup(s)          _tor_strdup(s DMALLOC_ARGS)
@@ -363,12 +365,9 @@ void tor_check_port_forwarding(const char *filename,
                                int dir_port, int or_port, time_t now);
 
 typedef struct process_handle_t process_handle_t;
+typedef struct process_environment_t process_environment_t;
 int tor_spawn_background(const char *const filename, const char **argv,
-#ifdef _WIN32
-                         LPVOID envp,
-#else
-                         const char **envp,
-#endif
+                         process_environment_t *env,
                          process_handle_t **process_handle_out);
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
@@ -376,6 +375,27 @@ int tor_spawn_background(const char *const filename, const char **argv,
 #ifdef _WIN32
 HANDLE load_windows_system_library(const TCHAR *library_name);
 #endif
+
+int environment_variable_names_equal(const char *s1, const char *s2);
+
+struct process_environment_t {
+  /** A pointer to a sorted empty-string-terminated sequence of
+   * NUL-terminated strings of the form "NAME=VALUE". */
+  char *windows_environment_block;
+  /** A pointer to a NULL-terminated array of pointers to
+   * NUL-terminated strings of the form "NAME=VALUE". */
+  char **unixoid_environment_block;
+};
+
+process_environment_t *process_environment_make(struct smartlist_t *env_vars);
+void process_environment_free(process_environment_t *env);
+
+struct smartlist_t *get_current_process_environment_variables(void);
+
+void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
+                                           const char *new_var,
+                                           void (*free_old)(void*),
+                                           int free_p);
 
 /* Values of process_handle_t.status. PROCESS_STATUS_NOTRUNNING must be
  * 0 because tor_check_port_forwarding depends on this being the initial

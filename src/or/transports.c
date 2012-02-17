@@ -91,13 +91,8 @@
 #include "util.h"
 #include "router.h"
 
-#ifdef _WIN32
-static void set_managed_proxy_environment(LPVOID *envp,
-                                          const managed_proxy_t *mp);
-#else
-static void set_managed_proxy_environment(char ***envp,
-                                         const managed_proxy_t *mp);
-#endif
+static process_environment_t *
+create_managed_proxy_environment(const managed_proxy_t *mp);
 
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
@@ -287,34 +282,22 @@ launch_managed_proxy(managed_proxy_t *mp)
 {
   int retval;
 
+  process_environment_t *env = create_managed_proxy_environment(mp);
+
 #ifdef _WIN32
-
-  LPVOID envp=NULL;
-
-  set_managed_proxy_environment(&envp, mp);
-  tor_assert(envp);
-
   /* Passing NULL as lpApplicationName makes Windows search for the .exe */
-  retval = tor_spawn_background(NULL, (const char **)mp->argv, envp,
+  retval = tor_spawn_background(NULL,
+                                (const char **)mp->argv,
+                                env,
                                 &mp->process_handle);
-
-  tor_free(envp);
-
 #else
-
-  char **envp=NULL;
-
-  /* prepare the environment variables for the managed proxy */
-  set_managed_proxy_environment(&envp, mp);
-  tor_assert(envp);
-
-  retval = tor_spawn_background(mp->argv[0], (const char **)mp->argv,
-                                (const char **)envp, &mp->process_handle);
-
-  /* free the memory allocated by set_managed_proxy_environment(). */
-  free_execve_args(envp);
-
+  retval = tor_spawn_background(mp->argv[0],
+                                (const char **)mp->argv,
+                                env,
+                                &mp->process_handle);
 #endif
+
+  process_environment_free(env);
 
   if (retval == PROCESS_STATUS_ERROR) {
     log_warn(LD_GENERAL, "Managed proxy at '%s' failed at launch.",
@@ -969,169 +952,79 @@ get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
   return bindaddr_result;
 }
 
-#ifdef _WIN32
-
-/** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
- *  <b>envp</b> is allocated on the heap and should be freed by the
- *  caller after its use. */
-static void
-set_managed_proxy_environment(LPVOID *envp, const managed_proxy_t *mp)
+/** Return a newly allocated process_environment_t * for <b>mp</b>'s
+ * process. */
+static process_environment_t *
+create_managed_proxy_environment(const managed_proxy_t *mp)
 {
   const or_options_t *options = get_options();
 
-  char *tmp=NULL;
-  char *state_tmp=NULL;
-  char *state_env=NULL;
-  char *transports_to_launch=NULL;
-  char *transports_env=NULL;
-  char *bindaddr_tmp=NULL;
-  char *bindaddr_env=NULL;
-  char *orport_env=NULL;
-
-  char version_env[31]; /* XXX temp */
-  char extended_env[43]; /* XXX temp */
-
-  int env_size = 0;
-
-  /* A smartlist carrying all the env. variables that the managed
-     proxy should inherit. */
+  /* Environment variables to be added to or set in mp's environment. */
   smartlist_t *envs = smartlist_new();
+  /* XXXX The next time someone touches this code, shorten the name of
+   * set_environment_variable_in_smartlist, add a
+   * set_env_var_in_smartlist_asprintf function, and get rid of the
+   * silly extra envs smartlist. */
 
-  /* Copy the whole environment of the Tor process.
-     It should also copy PATH and HOME of the Tor process.*/
-  char **environ_tmp = environ;
-  while (*environ_tmp)
-    smartlist_add(envs, *environ_tmp++);
+  /* The final environment to be passed to mp. */
+  smartlist_t *merged_env_vars = get_current_process_environment_variables();
 
-  /* Create the TOR_PT_* environment variables. */
-  state_tmp = get_datadir_fname("pt_state/"); /* XXX temp */
-  tor_asprintf(&state_env, "TOR_PT_STATE_LOCATION=%s", state_tmp);
+  process_environment_t *env;
 
-  strcpy(version_env, "TOR_PT_MANAGED_TRANSPORT_VER=1");
-
-  transports_to_launch =
-    smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
-
-  tor_asprintf(&transports_env,
-               mp->is_server ?
-               "TOR_PT_SERVER_TRANSPORTS=%s" : "TOR_PT_CLIENT_TRANSPORTS=%s",
-               transports_to_launch);
-
-  smartlist_add(envs, state_env);
-  smartlist_add(envs, version_env);
-  smartlist_add(envs, transports_env);
-
-  if (mp->is_server) {
-    tor_asprintf(&orport_env, "TOR_PT_ORPORT=127.0.0.1:%s",
-                 options->ORPort->value);
-
-    bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
-    tor_asprintf(&bindaddr_env, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
-
-    strlcpy(extended_env, "TOR_PT_EXTENDED_SERVER_PORT=",
-            sizeof(extended_env));
-
-    smartlist_add(envs, orport_env);
-    smartlist_add(envs, extended_env);
-    smartlist_add(envs, bindaddr_env);
+  {
+    char *state_tmp = get_datadir_fname("pt_state/"); /* XXX temp */
+    smartlist_add_asprintf(envs, "TOR_PT_STATE_LOCATION=%s", state_tmp);
+    tor_free(state_tmp);
   }
 
-  /* It seems like some versions of Windows need a sorted lpEnvironment
-     block. */
-  smartlist_sort_strings(envs);
+  smartlist_add(envs, tor_strdup("TOR_PT_MANAGED_TRANSPORT_VER=1"));
 
-  /* An environment block consists of a null-terminated block of
-     null-terminated strings: */
+  {
+    char *transports_to_launch =
+      smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
 
-  /* Calculate the block's size. */
-  SMARTLIST_FOREACH(envs, const char *, s,
-                    env_size += strlen(s) + 1);
-  env_size += 1; /* space for last NUL */
+    smartlist_add_asprintf(envs,
+                           mp->is_server ?
+                           "TOR_PT_SERVER_TRANSPORTS=%s" :
+                           "TOR_PT_CLIENT_TRANSPORTS=%s",
+                           transports_to_launch);
 
-  *envp = tor_malloc(env_size);
-  tmp = *envp;
+    tor_free(transports_to_launch);
+  }
 
-  /* Create the block. */
-  SMARTLIST_FOREACH_BEGIN(envs, const char *, s) {
-    memcpy(tmp, s, strlen(s)); /* copy the env. variable string */
-    tmp += strlen(s);
-    memset(tmp, '\0', 1); /* append NUL at the end of the string */
-    tmp += 1;
-  } SMARTLIST_FOREACH_END(s);
-  memset(tmp, '\0', 1); /* last NUL */
+  if (mp->is_server) {
+    smartlist_add_asprintf(envs, "TOR_PT_ORPORT=127.0.0.1:%s",
+                           options->ORPort->value);
 
-  /* Finally, free the whole mess. */
-  tor_free(state_tmp);
-  tor_free(state_env);
-  tor_free(transports_to_launch);
-  tor_free(transports_env);
-  tor_free(bindaddr_tmp);
-  tor_free(bindaddr_env);
-  tor_free(orport_env);
+    {
+      char *bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
+      smartlist_add_asprintf(envs, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
+      tor_free(bindaddr_tmp);
+    }
+
+    /* XXX023 Remove the '=' here once versions of obfsproxy which
+     * assert that this env var exists are sufficiently dead.
+     *
+     * (If we remove this line entirely, some joker will stick this
+     * variable in Tor's environment and crash PTs that try to parse
+     * it even when not run in server mode.) */
+    smartlist_add(envs, tor_strdup("TOR_PT_EXTENDED_SERVER_PORT="));
+  }
+
+  SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
+    set_environment_variable_in_smartlist(merged_env_vars, env_var,
+                                          _tor_free, 1);
+  } SMARTLIST_FOREACH_END(env_var);
+
+  env = process_environment_make(merged_env_vars);
 
   smartlist_free(envs);
+
+  SMARTLIST_FOREACH(merged_env_vars, void *, x, tor_free(x));
+  smartlist_free(merged_env_vars);
+
+  return env;
 }
-
-#else /* _WIN32 */
-
-/** Prepare the environment <b>envp</b> of managed proxy <b>mp</b>.
- *  <b>envp</b> is allocated on the heap and should be freed by the
- *  caller after its use. */
-static void
-set_managed_proxy_environment(char ***envp, const managed_proxy_t *mp)
-{
-  const or_options_t *options = get_options();
-  char **tmp=NULL;
-  char *state_loc=NULL;
-  char *transports_to_launch=NULL;
-  char *bindaddr=NULL;
-  int environ_size=0;
-  char **environ_tmp = get_environment();
-  char **environ_save = environ_tmp;
-
-  int n_envs = mp->is_server ? ENVIRON_SIZE_SERVER : ENVIRON_SIZE_CLIENT;
-
-  while (*environ_tmp) {
-    environ_size++;
-    environ_tmp++;
-  }
-  environ_tmp = environ_save;
-
-  /* allocate enough space for our env. vars and a NULL pointer */
-  *envp = tor_malloc(sizeof(char*)*(environ_size+n_envs+1));
-  tmp = *envp;
-
-  state_loc = get_datadir_fname("pt_state/"); /* XXX temp */
-  transports_to_launch =
-    smartlist_join_strings(mp->transports_to_launch, ",", 0, NULL);
-
-  while (*environ_tmp) {
-    *tmp = tor_strdup(*environ_tmp);
-    tmp++, environ_tmp++;
-  }
-
-  tor_asprintf(tmp++, "TOR_PT_STATE_LOCATION=%s", state_loc);
-  tor_asprintf(tmp++, "TOR_PT_MANAGED_TRANSPORT_VER=1"); /* temp */
-  if (mp->is_server) {
-    bindaddr = get_bindaddr_for_server_proxy(mp);
-
-    /* XXX temp */
-    tor_asprintf(tmp++, "TOR_PT_ORPORT=127.0.0.1:%d",
-                 router_get_advertised_or_port(options));
-    tor_asprintf(tmp++, "TOR_PT_SERVER_BINDADDR=%s", bindaddr);
-    tor_asprintf(tmp++, "TOR_PT_SERVER_TRANSPORTS=%s", transports_to_launch);
-    tor_asprintf(tmp++, "TOR_PT_EXTENDED_SERVER_PORT=");
-  } else {
-    tor_asprintf(tmp++, "TOR_PT_CLIENT_TRANSPORTS=%s", transports_to_launch);
-  }
-  *tmp = NULL;
-
-  tor_free(state_loc);
-  tor_free(transports_to_launch);
-  tor_free(bindaddr);
-}
-
-#endif /* _WIN32 */
 
 /** Create and return a new managed proxy for <b>transport</b> using
  *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server
