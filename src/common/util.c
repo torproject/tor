@@ -3840,7 +3840,7 @@ get_current_process_environment_variables(void)
   smartlist_t *sl = smartlist_new();
 
   char **environ_tmp; /* Not const char ** ? Really? */
-  for (environ_tmp = environ; *environ_tmp; ++environ_tmp) {
+  for (environ_tmp = get_environment(); *environ_tmp; ++environ_tmp) {
     smartlist_add(sl, tor_strdup(*environ_tmp));
   }
 
