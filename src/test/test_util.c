@@ -1644,7 +1644,6 @@ test_util_listdir(void *ptr)
   dir_contents = tor_listdir(dirname);
   test_assert(dir_contents);
   /* make sure that each filename is listed. */
-  test_eq(4, smartlist_len(dir_contents));
   test_assert(smartlist_string_isin_case(dir_contents, "hopscotch"));
   test_assert(smartlist_string_isin_case(dir_contents, "mumblety-peg"));
   test_assert(smartlist_string_isin_case(dir_contents, ".hidden-file"));
