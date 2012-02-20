@@ -1416,13 +1416,13 @@ parse_http_time(const char *date, struct tm *tm)
 
   /* First, try RFC1123 or RFC850 format: skip the weekday.  */
   if ((cp = strchr(date, ','))) {
-    ++cp;
-    if (tor_sscanf(date, "%2u %3s %4u %2u:%2u:%2u GMT",
+    cp += 2;
+    if (tor_sscanf(cp, "%2u %3s %4u %2u:%2u:%2u GMT",
                &tm_mday, month, &tm_year,
                &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc1123-date */
       tm_year -= 1900;
-    } else if (tor_sscanf(date, "%2u-%3s-%2u %2u:%2u:%2u GMT",
+    } else if (tor_sscanf(cp, "%2u-%3s-%2u %2u:%2u:%2u GMT",
                       &tm_mday, month, &tm_year,
                       &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc850-date */
@@ -1449,7 +1449,7 @@ parse_http_time(const char *date, struct tm *tm)
   /* Okay, now decode the month. */
   for (i = 0; i < 12; ++i) {
     if (!strcasecmp(MONTH_NAMES[i], month)) {
-      tm->tm_mon = i+1;
+      tm->tm_mon = i;
     }
   }
 
