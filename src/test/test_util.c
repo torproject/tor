@@ -789,6 +789,27 @@ test_util_strmisc(void)
     test_streq(cp, "### Sm\n#### a\n#### l\n#### l\n#### t\n#### e\n#### s\n#### t\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "First null", 6, NULL, "> ");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "First\n> null\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "Second null", 6, "> ", NULL);
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "> Seco\nnd\nnull\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "Both null", 6, NULL, NULL);
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp, "Both\nnull\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
 
     /* Can't test prefixes that have the same length as the line width, because
@@ -797,7 +818,7 @@ test_util_strmisc(void)
 
   /* Test hex_str */
   {
-    char binary_data[64];
+    char binary_data[68];
     size_t i;
     for (i = 0; i < sizeof(binary_data); ++i)
       binary_data[i] = i;
@@ -807,11 +828,36 @@ test_util_strmisc(void)
     test_streq(hex_str(binary_data, 32),
                "000102030405060708090A0B0C0D0E0F"
                "101112131415161718191A1B1C1D1E1F");
+    test_streq(hex_str(binary_data, 34),
+               "000102030405060708090A0B0C0D0E0F"
+               "101112131415161718191A1B1C1D1E1F");
     /* Repeat these tests for shorter strings after longer strings
        have been tried, to make sure we're correctly terminating strings */
     test_streq(hex_str(binary_data, 1), "00");
     test_streq(hex_str(binary_data, 0), "");
   }
+
+  /* Test strcmp_opt */
+  test_eq(-1, strcmp_opt("",   "foo"));
+  test_eq(0,  strcmp_opt("",    ""));
+  test_eq(1,  strcmp_opt("foo", ""));
+
+  test_eq(-1, strcmp_opt(NULL,  ""));
+  test_eq(0,  strcmp_opt(NULL,  NULL));
+  test_eq(1,  strcmp_opt("",    NULL));
+
+  test_eq(-1, strcmp_opt(NULL,  "foo"));
+  test_eq(1,  strcmp_opt("foo", NULL));
+
+  /* Test strcmp_len */
+  test_eq(1,  strcmp_len("foo", "bar", 3));
+  test_eq(-1, strcmp_len("foo", "bar", 2)); /* First len, then lexical */
+  test_eq(1,  strcmp_len("foo2", "foo1", 4));
+  test_eq(-1, strcmp_len("foo2", "foo1", 3)); /* Really stop at len */
+  test_eq(0, strcmp_len("foo2", "foo", 3));   /* Really stop at len */
+  test_eq(1, strcmp_len("blah", "", 4));
+  test_eq(0, strcmp_len("blah", "", 0));
+
  done:
   ;
 }
@@ -1565,6 +1611,7 @@ test_util_find_str_at_start_of_line(void *ptr)
   (void)ptr;
 
   test_eq_ptr(long_string, find_str_at_start_of_line(long_string, ""));
+  test_eq_ptr(NULL, find_str_at_start_of_line(short_string, "nonsense"));
   test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "nonsense"));
   test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "\n"));
   test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "how "));
