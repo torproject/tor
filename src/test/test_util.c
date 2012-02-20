@@ -67,6 +67,15 @@ test_util_time(void)
   a_time.tm_mon = 1;          /* Try a leap year, in feb. */
   a_time.tm_mday = 10;
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
+  a_time.tm_mon = 0;
+  a_time.tm_mday = 10;
+  test_eq((time_t) 1073715295UL, tor_timegm(&a_time));
+  a_time.tm_mon = 12;          /* Wrong month, it's 0-based */
+  a_time.tm_mday = 10;
+  test_eq((time_t) -1, tor_timegm(&a_time));
+  a_time.tm_mon = -1;          /* Wrong month */
+  a_time.tm_mday = 10;
+  test_eq((time_t) -1, tor_timegm(&a_time));
 
 
   /* Test {format,parse}_rfc1123_time */
@@ -78,9 +87,28 @@ test_util_time(void)
 
   t_res = 0;
   i = parse_rfc1123_time(timestr, &t_res);
-  test_eq(i,0);
+  test_eq(0,i);
+  test_eq(t_res, (time_t)1091580502UL);
+  /* The timezone doesn't matter */
+  t_res = 0;
+  test_eq(0, parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
   test_eq(t_res, (time_t)1091580502UL);
   test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 32 Mar 2011 00:00:00 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 24:00:00 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:60:00 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:62 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 1969 23:59:59 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
+
+#if 0
+  /* This fails, I imagine it's important and should be fixed? */
+  test_eq(-1, parse_rfc1123_time("Wed, 29 Feb 2011 16:00:00 GMT", &t_res));
+  /* Why is this string valid (ie. the test fails because it doesn't
+     return -1)? */
+  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:61 GMT", &t_res));
+#endif
 
 
   /* Test tor_gettimeofday */
