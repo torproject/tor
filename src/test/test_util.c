@@ -1288,6 +1288,11 @@ test_util_sscanf(void)
   /* No '%'-strings: always "success" */
   test_eq(0, tor_sscanf("hello world", "hello world"));
   test_eq(0, tor_sscanf("hello world", "good bye"));
+  /* Excess data */
+  test_eq(0, tor_sscanf("hello 3", "%u", &u1));  /* have to match the start */
+  test_eq(0, tor_sscanf(" 3 hello", "%u", &u1));
+  test_eq(0, tor_sscanf(" 3 hello", "%2u", &u1)); /* not even in this case */
+  test_eq(1, tor_sscanf("3 hello", "%u", &u1));  /* but trailing is alright */
 
   /* Numbers (ie. %u) */
   test_eq(0, tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
