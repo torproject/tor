@@ -111,6 +111,36 @@ test_util_time(void)
 #endif
 
 
+  /* Test parse_iso_time */
+
+  t_res = 0;
+  i = parse_iso_time("", &t_res);
+  test_eq(-1, i);
+  t_res = 0;
+  i = parse_iso_time("2004-08-32 00:48:22", &t_res);
+  test_eq(-1, i);
+  t_res = 0;
+  i = parse_iso_time("1969-08-03 00:48:22", &t_res);
+  test_eq(-1, i);
+
+  t_res = 0;
+  i = parse_iso_time("2004-08-04 00:48:22", &t_res);
+  test_eq(0,i);
+  test_eq(t_res, (time_t)1091580502UL);
+  t_res = 0;
+  i = parse_iso_time("2004-8-4 0:48:22", &t_res);
+  test_eq(0, i);
+  test_eq(t_res, (time_t)1091580502UL);
+  test_eq(-1, parse_iso_time("2004-08-zz 99-99x99 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-03-32 00:00:00 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-03-30 24:00:00 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-03-30 23:60:00 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-03-30 23:59:62 GMT", &t_res));
+  test_eq(-1, parse_iso_time("1969-03-30 23:59:59 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2011-03-30 23:59", &t_res));
+
+
   /* Test tor_gettimeofday */
 
   end.tv_sec = 4;
