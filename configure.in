@@ -1086,6 +1086,17 @@ int main(int c, char **v) { puts(__FUNCTION__); }])],
   tor_cv_have_FUNCTION_macro=yes,
   tor_cv_have_FUNCTION_macro=no))
 
+AC_CACHE_CHECK([whether we have extern char **environ already declared],
+  tor_cv_have_environ_declared,
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+/* We define _GNU_SOURCE here because it is also defined in compat.c.
+ * Without it environ doesn't get declared. */
+#define _GNU_SOURCE
+#include <unistd.h>
+int main(int c, char **v) { char **t = environ; }])],
+  tor_cv_have_environ_declared=yes,
+  tor_cv_have_environ_declared=no))
+
 if test "$tor_cv_have_func_macro" = 'yes'; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
@@ -1097,6 +1108,11 @@ fi
 if test "$tor_cv_have_FUNCTION_macro" = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
+fi
+
+if test "$tor_cv_have_environ_declared" = 'yes'; then
+  AC_DEFINE(HAVE_EXTERN_ENVIRON_DECLARED__, 1,
+           [Defined if we have extern char **environ already declared])
 fi
 
 # $prefix stores the value of the --prefix command line option, or
