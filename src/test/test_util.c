@@ -1945,7 +1945,8 @@ test_util_make_environment(void *ptr)
     "HOME=/home/foozer\000"
     "PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/bin\000"
     "\000";
-  size_t expected_windows_env_block_len = sizeof(expected_windows_env_block);
+  size_t expected_windows_env_block_len =
+    sizeof(expected_windows_env_block) - 1;
 
   smartlist_t *env_vars = smartlist_new_from_text_lines(env_vars_string);
   smartlist_t *env_vars_sorted = smartlist_new();
