@@ -588,6 +588,21 @@ test_util_expand_filename(void)
   /* Ideally we'd test ~anotheruser, but that's shady to test (we'd
      have to somehow inject/fake the get_user_homedir call) */
 
+  /* $HOME ending in a trailing slash */
+  setenv("HOME", "/home/itv/", 1);
+
+  str = expand_filename("~");
+  test_streq("/home/itv/", str);
+  tor_free(str);
+
+  str = expand_filename("~/");
+  test_streq("/home/itv/", str);
+  tor_free(str);
+
+  str = expand_filename("~/foo");
+  test_streq("/home/itv/foo", str);
+  tor_free(str);
+
   /* Try with empty $HOME */
 
   setenv("HOME", "", 1);
