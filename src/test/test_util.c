@@ -1503,6 +1503,42 @@ test_util_sscanf(void)
   ;
 }
 
+static void
+test_util_path_is_relative(void)
+{
+  /* OS-independent tests */
+  test_eq(1, path_is_relative(""));
+  test_eq(1, path_is_relative("dir"));
+  test_eq(1, path_is_relative("dir/"));
+  test_eq(1, path_is_relative("./dir"));
+  test_eq(1, path_is_relative("../dir"));
+
+  test_eq(0, path_is_relative("/"));
+  test_eq(0, path_is_relative("/dir"));
+  test_eq(0, path_is_relative("/dir/"));
+
+  /* Windows */
+#ifdef MS_WINDOWS
+  /* I don't have Windows so I can't test this, hence the "#ifdef
+     0". These are tests that look useful, so please try to get them
+     running and uncomment if it all works as it should */
+#ifdef 0
+  test_eq(1, path_is_relative("dir"));
+  test_eq(1, path_is_relative("dir\\"));
+  test_eq(1, path_is_relative("dir\\a:"));
+  test_eq(1, path_is_relative("dir\\a:\\"));
+
+  test_eq(0, path_is_relative("\\dir"));
+  test_eq(0, path_is_relative("a:\\dir"));
+  test_eq(0, path_is_relative("z:\\dir"));
+  test_eq(0, path_is_relative("http:\\dir"));
+#endif
+#endif
+
+ done:
+  ;
+}
+
 /** Run unittests for memory pool allocator */
 static void
 test_util_mempool(void)
@@ -2855,6 +2891,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(mmap),
   UTIL_LEGACY(threads),
   UTIL_LEGACY(sscanf),
+  UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
   UTIL_TEST(find_str_at_start_of_line, 0),
