@@ -415,6 +415,7 @@ test_util_config_line_escaped_content(void)
   char buf3[128];
   char buf4[128];
   char buf5[128];
+  char buf6[128];
   char *k=NULL, *v=NULL;
   const char *str;
 
@@ -443,6 +444,9 @@ test_util_config_line_escaped_content(void)
 
   strlcpy(buf5, "BrokenHex \"\\xg4\"\n"
           , sizeof(buf5));
+
+  strlcpy(buf6, "BrokenEscape \"\\"
+          , sizeof(buf6));
 
   str = buf1;
 
@@ -526,6 +530,12 @@ test_util_config_line_escaped_content(void)
   test_eq_ptr(str, NULL);
   tor_free(k); tor_free(v);
 #endif
+
+  str = buf6;
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_eq_ptr(str, NULL);
+  tor_free(k); tor_free(v);
 
  done:
   tor_free(k);
