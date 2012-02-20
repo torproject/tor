@@ -1633,6 +1633,35 @@ test_util_find_str_at_start_of_line(void *ptr)
 }
 
 static void
+test_util_string_is_C_identifier(void *ptr)
+{
+  (void)ptr;
+
+  test_eq(1, string_is_C_identifier("string_is_C_identifier"));
+  test_eq(1, string_is_C_identifier("_string_is_C_identifier"));
+  test_eq(1, string_is_C_identifier("_"));
+  test_eq(1, string_is_C_identifier("i"));
+  test_eq(1, string_is_C_identifier("_____"));
+  test_eq(1, string_is_C_identifier("__00__"));
+  test_eq(1, string_is_C_identifier("__init__"));
+  test_eq(1, string_is_C_identifier("_0"));
+  test_eq(1, string_is_C_identifier("_0string_is_C_identifier"));
+  test_eq(1, string_is_C_identifier("_0"));
+
+  test_eq(0, string_is_C_identifier("0_string_is_C_identifier"));
+  test_eq(0, string_is_C_identifier("0"));
+  test_eq(0, string_is_C_identifier(""));
+  test_eq(0, string_is_C_identifier(";"));
+  test_eq(0, string_is_C_identifier("i;"));
+  test_eq(0, string_is_C_identifier("_;"));
+  test_eq(0, string_is_C_identifier("í"));
+  test_eq(0, string_is_C_identifier("ñ"));
+
+ done:
+  ;
+}
+
+static void
 test_util_asprintf(void *ptr)
 {
 #define LOREMIPSUM                                              \
@@ -2679,6 +2708,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
   UTIL_TEST(find_str_at_start_of_line, 0),
+  UTIL_TEST(string_is_C_identifier, 0),
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
