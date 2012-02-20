@@ -1379,10 +1379,14 @@ test_util_sscanf(void)
   char s1[10], s2[10], s3[10], ch;
   int r;
 
-  /* Simple tests (malformed patterns and literal matching) */
+  /* Simple tests (malformed patterns, literal matching, ...) */
   test_eq(-1, tor_sscanf("123", "%i", &r)); /* %i is not supported */
   test_eq(-1, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
   test_eq(-1, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
+  test_eq(-1, tor_sscanf("prettylongstring", "%999999s", s1));
+  test_eq(-1, tor_sscanf("prettylongstring", "%0s", s1));
+  test_eq(-1, tor_sscanf("We're the 99 monkeys", "We're the 99%%"));
+  test_eq(0, tor_sscanf("prettylongstring", "%10s", NULL));
   /* No '%'-strings: always "success" */
   test_eq(0, tor_sscanf("hello world", "hello world"));
   test_eq(0, tor_sscanf("hello world", "good bye"));
@@ -1477,6 +1481,8 @@ test_util_sscanf(void)
   test_eq(2, tor_sscanf("76trombones", "%6u%9s", &u1, s1)); /* %u%s */
   test_eq(76, u1);
   test_streq(s1, "trombones");
+  test_eq(1, tor_sscanf("prettylongstring", "%999s", s1));
+  test_streq(s1, "prettylongstring");
   /* %s doesn't eat spaces */
   test_eq(2, tor_sscanf("hello world", "%9s %9s", s1, s2));
   test_streq(s1, "hello");
