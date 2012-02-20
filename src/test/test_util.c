@@ -542,6 +542,89 @@ test_util_config_line_escaped_content(void)
   tor_free(v);
 }
 
+#ifndef MS_WINDOWS
+static void
+test_util_expand_filename(void)
+{
+  char *str;
+
+  setenv("HOME", "/home/itv", 1); /* For "internal test value" */
+
+  str = expand_filename("");
+  test_streq("", str);
+  tor_free(str);
+
+  str = expand_filename("/normal/path");
+  test_streq("/normal/path", str);
+  tor_free(str);
+
+  str = expand_filename("/normal/trailing/path/");
+  test_streq("/normal/trailing/path/", str);
+  tor_free(str);
+
+  str = expand_filename("~");
+  test_streq("/home/itv/", str);
+  tor_free(str);
+
+  str = expand_filename("$HOME/nodice");
+  test_streq("$HOME/nodice", str);
+  tor_free(str);
+
+  str = expand_filename("~/");
+  test_streq("/home/itv/", str);
+  tor_free(str);
+
+  str = expand_filename("~/foobarqux");
+  test_streq("/home/itv/foobarqux", str);
+  tor_free(str);
+
+  str = expand_filename("~/../../etc/passwd");
+  test_streq("/home/itv/../../etc/passwd", str);
+  tor_free(str);
+
+  str = expand_filename("~/trailing/");
+  test_streq("/home/itv/trailing/", str);
+  tor_free(str);
+  /* Ideally we'd test ~anotheruser, but that's shady to test (we'd
+     have to somehow inject/fake the get_user_homedir call) */
+
+  /* Try with empty $HOME */
+
+  setenv("HOME", "", 1);
+
+  str = expand_filename("~");
+  test_streq("/", str);
+  tor_free(str);
+
+  str = expand_filename("~/");
+  test_streq("/", str);
+  tor_free(str);
+
+  str = expand_filename("~/foobar");
+  test_streq("/foobar", str);
+  tor_free(str);
+
+  /* Try with $HOME unset */
+
+  unsetenv("HOME");
+
+  str = expand_filename("~");
+  test_streq("/", str);
+  tor_free(str);
+
+  str = expand_filename("~/");
+  test_streq("/", str);
+  tor_free(str);
+
+  str = expand_filename("~/foobar");
+  test_streq("/foobar", str);
+  tor_free(str);
+
+ done:
+  tor_free(str);
+}
+#endif
+
 /** Test basic string functionality. */
 static void
 test_util_strmisc(void)
@@ -2740,6 +2823,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
+  UTIL_LEGACY(expand_filename),
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
