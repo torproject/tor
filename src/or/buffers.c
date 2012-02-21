@@ -2022,6 +2022,31 @@ parse_socks_client(const uint8_t *data, size_t datalen,
   return -1;
 }
 
+/** Return true if <b>cmd</b> looks like a HTTP (proxy) request. */
+int
+peek_buf_has_http_command(buf_t *buf)
+{
+  if (peek_buf_startswith(buf, "CONNECT ") ||
+      peek_buf_startswith(buf, "DELETE ") ||
+      peek_buf_startswith(buf, "GET ") ||
+      peek_buf_startswith(buf, "POST ") ||
+      peek_buf_startswith(buf, "PUT " ))
+    return 1;
+  return 0;
+}
+
+/** Return 1 iff <b>buf</b> starts with <b>cmd</b>. <b>cmd</b> must be a null
+ * terminated string */
+int
+peek_buf_startswith(buf_t *buf, const char *cmd)
+{
+  int clen = strlen(cmd);
+  if (buf->datalen >= clen)
+    if (!strncasecmp((buf->head)->data, cmd, (size_t) clen))
+      return 1;
+  return 0;
+}
+
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller
  * command on it than any valid v1 controller command. */
 int

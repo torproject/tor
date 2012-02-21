@@ -4882,6 +4882,12 @@ peek_connection_has_control0_command(connection_t *conn)
   return peek_buf_has_control0_command(conn->inbuf);
 }
 
+static int
+peek_connection_has_http_command(connection_t *conn)
+{
+  return peek_buf_has_http_command(conn->inbuf);
+}
+
 /** Called when data has arrived on a v1 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
@@ -4917,6 +4923,38 @@ connection_control_process_inbuf(control_connection_t *conn)
     set_uint16(buf+0, htons(body_len));
     connection_write_to_buf(buf, 4+body_len, TO_CONN(conn));
 
+    connection_mark_and_flush(TO_CONN(conn));
+    return 0;
+  }
+
+  /* If the user has the HTTP proxy port and the control port confused. */
+  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
+      peek_connection_has_http_command(TO_CONN(conn))) {
+    connection_write_str_to_buf("HTTP/1.0 501 Tor ControlPort is not a proxy"
+"\r\nContent-Type: text/html; charset=iso-8859-1\r\n\r\n"
+"<html>\n"
+"<head>\n"
+"<title>Tor's ControlPort is not proxy</title>\n"
+"</head>\n"
+"<body>\n"
+"<h1>Tor's ControlPort is not a proxy</h1>\n"
+"<p>\n"
+"It appears you have configured your web browser to use Tor's control port"
+" as an HTTP proxy.\n"
+"This is not correct: Tor's default SOCKS proxy port is 9050.\n"
+"Please configure your client accordingly.\n"
+"</p>\n"
+"<p>\n"
+"See <a href=\"https://www.torproject.org/documentation.html\">"
+           "https://www.torproject.org/documentation.html</a> for more "
+           "information.\n"
+"<!-- Plus this comment, to make the body response more than 512 bytes, so "
+"     IE will be willing to display it. Comment comment comment comment "
+"     comment comment comment comment comment comment comment comment.-->\n"
+"</p>\n"
+"</body>\n"
+"</html>\n", conn);
+    log_notice(LD_CONTROL, "Received HTTP request on ControlPort");
     connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }

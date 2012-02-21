@@ -1,0 +1,4 @@
+  o Minor features:
+    - If the control port is used as the HTTP proxy, responds with
+      a meaningful "This is the Tor control port" message, and logs
+      the event. Fixes bug 1667.
