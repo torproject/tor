@@ -744,6 +744,9 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
 {
   int r = 0;
   size_t total_read = 0;
+
+  check_no_tls_errors();
+
   check();
 
   while (at_most > total_read) {
