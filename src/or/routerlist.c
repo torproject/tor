@@ -3614,6 +3614,7 @@ routerlist_remove_old_routers(void)
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
   int have_enough_v2;
+  const or_options_t *options = get_options();
 
   trusted_dirs_remove_old_certs();
 
@@ -3675,6 +3676,7 @@ routerlist_remove_old_routers(void)
    * routers.) */
   /* we set this to true iff we don't care about v2 info, or we have enough. */
   have_enough_v2 = !caches ||
+    !(authdir_mode_any_main(options) || options->FetchV2Networkstatus) ||
     (networkstatus_v2_list &&
      smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2);
 
