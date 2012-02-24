@@ -572,6 +572,9 @@ pt_configure_remaining_proxies(void)
   smartlist_free(tmp);
   check_if_restarts_needed = 0;
   assert_unconfigured_count_ok();
+
+  if (!pt_proxies_configuration_pending())
+    mark_my_descriptor_dirty("configured managed proxies");
 }
 
 #ifdef _WIN32
