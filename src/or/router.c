@@ -2344,6 +2344,13 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     }
   }
 
+  /* Add information about the pluggable transports we support. */
+  if (options->ServerTransportPlugin) {
+    char *pluggable_transports = pt_get_extra_info_descriptor_string();
+    if (pluggable_transports)
+      smartlist_add(chunks, pluggable_transports);
+  }
+
   if (should_record_bridge_info(options) && write_stats_to_extrainfo) {
     const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
     if (bridge_stats) {

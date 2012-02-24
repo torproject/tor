@@ -46,6 +46,8 @@ void pt_configure_remaining_proxies(void);
 
 int pt_proxies_configuration_pending(void);
 
+char *pt_get_extra_info_descriptor_string(void);
+
 void pt_free_all(void);
 
 void pt_prepare_proxy_list_for_config_read(void);

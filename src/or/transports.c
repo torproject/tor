@@ -1373,6 +1373,51 @@ pt_prepare_proxy_list_for_config_read(void)
   tor_assert(unconfigured_proxies_n == 0);
 }
 
+/** Return the pluggable transport string that we should display in
+ *  our extra-info descriptor. If we shouldn't display such a string,
+ *  or we have nothing to display, return NULL. The string is
+ *  allocated on the heap and it's the responsibility of the caller to
+ *  free it. */
+char *
+pt_get_extra_info_descriptor_string(void)
+{
+  char *the_string = NULL;
+  smartlist_t *string_chunks = NULL;
+
+  if (!managed_proxy_list)
+    return NULL;
+
+  string_chunks = smartlist_new();
+
+  /* For each managed proxy, add its transports to the chunks list. */
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  const managed_proxy_t *, mp) {
+    if ((!mp->is_server) || (mp->conf_state != PT_PROTO_COMPLETED))
+      continue;
+
+    tor_assert(mp->transports);
+
+    SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+      smartlist_add_asprintf(string_chunks,
+                             "method %s %s:%u",
+                             t->name, fmt_addr(&t->addr), t->port);
+    } SMARTLIST_FOREACH_END(t);
+
+  } SMARTLIST_FOREACH_END(mp);
+
+  if (smartlist_len(string_chunks) == 0) {
+    smartlist_free(string_chunks);
+    return NULL;
+  }
+
+  /* Join all the chunks into the final string. */
+  the_string = smartlist_join_strings(string_chunks, "\n", 1, NULL);
+
+  SMARTLIST_FOREACH(string_chunks, char *, s, tor_free(s));
+  smartlist_free(string_chunks);
+
+  return the_string;
+}
+
 /** The tor config was read.
  *  Destroy all managed proxies that were marked by a previous call to
  *  prepare_proxy_list_for_config_read() and are not used by the new
