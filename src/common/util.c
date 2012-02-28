@@ -3823,6 +3823,8 @@ process_environment_make(struct smartlist_t *env_vars)
     tor_assert(cp == env->windows_environment_block + total_env_length - 1);
   }
 
+  smartlist_free(env_vars_sorted);
+
   return env;
 }
 
