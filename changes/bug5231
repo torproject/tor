@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Ensure we don't cannibalize circuits that are longer than three hops
+      already, so we don't end up making circuits with 5 or more hops. Patch
+      contributed by wanoskarnet. Fixes bug 5231; bugfix on 0.1.0.1-rc which
+      introduced cannibalization.
