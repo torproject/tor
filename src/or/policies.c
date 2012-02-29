@@ -669,7 +669,7 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
 
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
     if (tmpe->prt_min <= port && port <= tmpe->prt_max) {
-       if (tmpe->maskbits == 0) {
+      if (tmpe->maskbits == 0) {
         /* Definitely matches, since it covers all addresses. */
         if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
           /* If we already hit a clause that might trigger a 'reject', than we
