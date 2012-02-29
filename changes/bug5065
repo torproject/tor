@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix build if path to sed, openssl or sha1sum contains spaces.
+      This is pretty common on Windows. Fixes bug 5065; bugfix on
+      0.2.2.1-alpha.
+
