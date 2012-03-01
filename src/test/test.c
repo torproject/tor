@@ -1455,6 +1455,7 @@ test_geoip(void)
       "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "entry-ips \n";
   tor_addr_t addr;
+  struct in6_addr in6;
 
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
@@ -1466,38 +1467,73 @@ test_geoip(void)
   test_eq(0, geoip_ipv4_parse_entry("\"150\",\"190\",\"XY\""));
   test_eq(0, geoip_ipv4_parse_entry("\"200\",\"250\",\"AB\""));
 
+  /* Populate the IPv6 DB equivalently with fake IPs in the same range */
+  test_eq(0, geoip_ipv6_parse_entry("::a,::32,AB"));
+  test_eq(0, geoip_ipv6_parse_entry("::34,::5a,XY"));
+  test_eq(0, geoip_ipv6_parse_entry("::5f,::64,AB"));
+  test_eq(0, geoip_ipv6_parse_entry("::69,::8c,ZZ"));
+  test_eq(0, geoip_ipv6_parse_entry("::96,::be,XY"));
+  test_eq(0, geoip_ipv6_parse_entry("::c8,::fa,AB"));
+
   /* We should have 4 countries: ??, ab, xy, zz. */
   test_eq(4, geoip_get_n_countries());
+  memset(&in6, 0, sizeof(in6));
+
   /* Make sure that country ID actually works. */
-#define NAMEFOR(x) geoip_get_country_name(geoip_get_country_by_ipv4(x))
-  test_streq("??", NAMEFOR(3));
+#define SET_TEST_IPV6(i) in6.s6_addr32[3] = htonl((uint32_t) i)
+#define CHECK_COUNTRY(country, val) do {				\
+    /* test ipv4 country lookup */					\
+    test_streq(country, geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
+    /* test ipv6 country lookup */					\
+    SET_TEST_IPV6(val);							\
+    test_streq(country, geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
+  } while(0)
+
+  CHECK_COUNTRY("??", 3);
+  CHECK_COUNTRY("ab", 32);
+  CHECK_COUNTRY("??", 5);
+  CHECK_COUNTRY("??", 51);
+  CHECK_COUNTRY("xy", 150);
+  CHECK_COUNTRY("xy", 190);
+  CHECK_COUNTRY("??", 2000);
+
   test_eq(0, geoip_get_country_by_ipv4(3));
-  test_streq("ab", NAMEFOR(32));
-  test_streq("??", NAMEFOR(5));
-  test_streq("??", NAMEFOR(51));
-  test_streq("xy", NAMEFOR(150));
-  test_streq("xy", NAMEFOR(190));
-  test_streq("??", NAMEFOR(2000));
-#undef NAMEFOR
+  SET_TEST_IPV6(3);
+  test_eq(0, geoip_get_country_by_ipv6(&in6));
+
+#undef CHECK_COUNTRY
+
+  /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
+   * using ipv4.  Since our fake geoip database is the same between
+   * ipv4 and ipv6, we should get the same result no matter which
+   * address family we pick for each IP. */
+#define SET_TEST_ADDRESS(i) do { \
+    if ((i) & 1) {				\
+      SET_TEST_IPV6(i);				\
+      tor_addr_from_in6(&addr, &in6);		\
+    } else {					\
+      tor_addr_from_ipv4h(&addr, (uint32_t) i); \
+    }						\
+  } while(0)
 
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
   /* Put 9 observations in AB... */
   for (i=32; i < 40; ++i) {
-    tor_addr_from_ipv4h(&addr, (uint32_t) i);
+    SET_TEST_ADDRESS(i);
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
   }
-  tor_addr_from_ipv4h(&addr, (uint32_t) 225);
+  SET_TEST_ADDRESS(i);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
   /* and 3 observations in XY, several times. */
   for (j=0; j < 10; ++j)
     for (i=52; i < 55; ++i) {
-      tor_addr_from_ipv4h(&addr, (uint32_t) i);
+      SET_TEST_ADDRESS(i);
       geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-3600);
     }
   /* and 17 observations in ZZ... */
   for (i=110; i < 127; ++i) {
-    tor_addr_from_ipv4h(&addr, (uint32_t) i);
+    SET_TEST_ADDRESS(i);
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   }
   s = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
@@ -1538,7 +1574,7 @@ test_geoip(void)
 
   /* Start testing dirreq statistics by making sure that we don't collect
    * dirreq stats without initializing them. */
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
@@ -1546,7 +1582,7 @@ test_geoip(void)
   /* Initialize stats, note one connecting client, and generate the
    * dirreq-stats history string. */
   geoip_dirreq_stats_init(now);
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_1, s);
@@ -1555,7 +1591,7 @@ test_geoip(void)
   /* Stop collecting stats, add another connecting client, and ensure we
    * don't generate a history string. */
   geoip_dirreq_stats_term();
-  tor_addr_from_ipv4h(&addr, (uint32_t) 101);
+  SET_TEST_ADDRESS(101);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
@@ -1563,7 +1599,7 @@ test_geoip(void)
   /* Re-start stats, add a connecting client, reset stats, and make sure
    * that we get an all empty history string. */
   geoip_dirreq_stats_init(now);
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
   geoip_reset_dirreq_stats(now);
   s = geoip_format_dirreq_stats(now + 86400);
@@ -1591,7 +1627,7 @@ test_geoip(void)
 
   /* Start testing entry statistics by making sure that we don't collect
    * anything without initializing entry stats. */
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
@@ -1599,7 +1635,7 @@ test_geoip(void)
   /* Initialize stats, note one connecting client, and generate the
    * entry-stats history string. */
   geoip_entry_stats_init(now);
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_1, s);
@@ -1608,7 +1644,7 @@ test_geoip(void)
   /* Stop collecting stats, add another connecting client, and ensure we
    * don't generate a history string. */
   geoip_entry_stats_term();
-  tor_addr_from_ipv4h(&addr, (uint32_t) 101);
+  SET_TEST_ADDRESS(101);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
@@ -1616,12 +1652,15 @@ test_geoip(void)
   /* Re-start stats, add a connecting client, reset stats, and make sure
    * that we get an all empty history string. */
   geoip_entry_stats_init(now);
-  tor_addr_from_ipv4h(&addr, (uint32_t) 100);
+  SET_TEST_ADDRESS(100);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   geoip_reset_entry_stats(now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_2, s);
   tor_free(s);
+
+#undef SET_TEST_ADDRESS
+#undef SET_TEST_IPV6
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();

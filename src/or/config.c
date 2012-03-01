@@ -243,9 +243,12 @@ static config_var_t _option_vars[] = {
   V(FetchV2Networkstatus,        BOOL,     "0"),
 #ifdef _WIN32
   V(GeoIPFile,                   FILENAME, "<default>"),
+  V(GeoIPv6File,                 FILENAME, "<default>"),
 #else
   V(GeoIPFile,                   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
+  V(GeoIPv6File,                 FILENAME,
+    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip6"),
 #endif
   OBSOLETE("GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays"),
   OBSOLETE("Group"),
@@ -1524,9 +1527,28 @@ options_act(const or_options_t *old_options)
       tor_asprintf(&actual_fname, "%s\\geoip", conf_root);
     }
 #endif
-    geoip_load_file(actual_fname, options);
+    geoip_load_file(AF_INET, actual_fname, options);
     tor_free(actual_fname);
   }
+  /* And maybe load geoip ipv6 file */
+  if (options->GeoIPv6File &&
+      ((!old_options || !opt_streq(old_options->GeoIPv6File, options->GeoIPv6File))
+       || !geoip_is_loaded())) {
+    /* XXXX Don't use this "<default>" junk; make our filename options
+     * understand prefixes somehow. -NM */
+    /* XXXX023 Reload GeoIPFile on SIGHUP. -NM */
+    char *actual_fname = tor_strdup(options->GeoIPv6File);
+#ifdef _WIN32
+    if (!strcmp(actual_fname, "<default>")) {
+      const char *conf_root = get_windows_conf_root();
+      tor_free(actual_fname);
+      tor_asprintf(&actual_fname, "%s\\geoip6", conf_root);
+    }
+#endif
+    geoip_load_file(AF_INET6, actual_fname, options);
+    tor_free(actual_fname);
+  }
+      
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
