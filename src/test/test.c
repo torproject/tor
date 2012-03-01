@@ -1459,19 +1459,19 @@ test_geoip(void)
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
    * fine uint32_t values. */
-  test_eq(0, geoip_parse_entry("10,50,AB"));
-  test_eq(0, geoip_parse_entry("52,90,XY"));
-  test_eq(0, geoip_parse_entry("95,100,AB"));
-  test_eq(0, geoip_parse_entry("\"105\",\"140\",\"ZZ\""));
-  test_eq(0, geoip_parse_entry("\"150\",\"190\",\"XY\""));
-  test_eq(0, geoip_parse_entry("\"200\",\"250\",\"AB\""));
+  test_eq(0, geoip_ipv4_parse_entry("10,50,AB"));
+  test_eq(0, geoip_ipv4_parse_entry("52,90,XY"));
+  test_eq(0, geoip_ipv4_parse_entry("95,100,AB"));
+  test_eq(0, geoip_ipv4_parse_entry("\"105\",\"140\",\"ZZ\""));
+  test_eq(0, geoip_ipv4_parse_entry("\"150\",\"190\",\"XY\""));
+  test_eq(0, geoip_ipv4_parse_entry("\"200\",\"250\",\"AB\""));
 
   /* We should have 4 countries: ??, ab, xy, zz. */
   test_eq(4, geoip_get_n_countries());
   /* Make sure that country ID actually works. */
-#define NAMEFOR(x) geoip_get_country_name(geoip_get_country_by_ip(x))
+#define NAMEFOR(x) geoip_get_country_name(geoip_get_country_by_ipv4(x))
   test_streq("??", NAMEFOR(3));
-  test_eq(0, geoip_get_country_by_ip(3));
+  test_eq(0, geoip_get_country_by_ipv4(3));
   test_streq("ab", NAMEFOR(32));
   test_streq("??", NAMEFOR(5));
   test_streq("??", NAMEFOR(51));

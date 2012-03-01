@@ -321,7 +321,7 @@ addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
   const char *name;
   if (!cc_list)
     return 0;
-  country = geoip_get_country_by_ip(addr);
+  country = geoip_get_country_by_ipv4(addr);
   name = geoip_get_country_name(country);
   return smartlist_string_isin_case(cc_list, name);
 }
