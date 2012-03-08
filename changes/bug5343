@@ -1,0 +1,7 @@
+  o Security fixes:
+    - Only build circuits if we have a sufficient threshold of the total
+      descriptors marked in the consensus with the "Exit" flag.  This
+      mitigates an attack proposed by wanoskarnet, in which all of a
+      client's bridges collude to restrict the exit nodes that the
+      client knows about.  Fixes bug 5343.
+
