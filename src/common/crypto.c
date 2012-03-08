@@ -1001,8 +1001,7 @@ crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
  * bytes of data from <b>from</b>, with padding type 'padding',
  * storing the results on <b>to</b>.
  *
- * If no padding is used, the public key must be at least as large as
- * <b>from</b>.
+ * (Padding is required; the PK_NO_PADDING value is not supported.)
  *
  * Returns the number of bytes written on success, -1 on failure.
  *
@@ -1030,12 +1029,10 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
+  tor_assert(padding != PK_NO_PADDING);
 
   overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
-
-  if (padding == PK_NO_PADDING && fromlen < pkeylen)
-    return -1;
 
   if (!force && fromlen+overhead <= pkeylen) {
     /* It all fits in a single encrypt. */
@@ -1050,14 +1047,6 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   if (!cipher) return -1;
   if (crypto_cipher_generate_key(cipher)<0)
     goto err;
-  /* You can't just run around RSA-encrypting any bitstream: if it's
-   * greater than the RSA key, then OpenSSL will happily encrypt, and
-   * later decrypt to the wrong value.  So we set the first bit of
-   * 'cipher->key' to 0 if we aren't padding.  This means that our
-   * symmetric key is really only 127 bits.
-   */
-  if (padding == PK_NO_PADDING)
-    cipher->key[0] &= 0x7f;
   if (crypto_cipher_encrypt_init_cipher(cipher)<0)
     goto err;
   buf = tor_malloc(pkeylen+1);

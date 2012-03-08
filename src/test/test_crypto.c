@@ -485,14 +485,11 @@ test_crypto_pk(void)
 
   /* Try with hybrid encryption wrappers. */
   crypto_rand(data1, 1024);
-  for (i = 0; i < 3; ++i) {
+  for (i = 0; i < 2; ++i) {
     for (j = 85; j < 140; ++j) {
       memset(data2,0,1024);
       memset(data3,0,1024);
-      if (i == 0 && j < 129)
-        continue;
-      p = (i==0)?PK_NO_PADDING:
-        (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
+      p = (i==0)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
       len = crypto_pk_public_hybrid_encrypt(pk1,data2,sizeof(data2),
                                             data1,j,p,0);
       test_assert(len>=0);
