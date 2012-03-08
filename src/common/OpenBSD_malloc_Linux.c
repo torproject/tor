@@ -285,6 +285,8 @@ static void	*imalloc(size_t size);
 static void	ifree(void *ptr);
 static void	*irealloc(void *ptr, size_t size);
 static void	*malloc_bytes(size_t size);
+void *memalign(size_t boundary, size_t size);
+size_t malloc_good_size(size_t size);
 
 /*
  * Function for page directory lookup.
@@ -1980,10 +1982,11 @@ static int ispowerof2 (size_t a) {
 int posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	void *r;
+	size_t max;
 	if ((alignment < PTR_SIZE) || (alignment%PTR_SIZE != 0)) return EINVAL;
 	if (!ispowerof2(alignment)) return EINVAL;
 	if (alignment < malloc_minsize) alignment = malloc_minsize;
-	size_t max = alignment > size ? alignment : size;
+	max = alignment > size ? alignment : size;
 	if (alignment <= malloc_pagesize)
 		r = malloc(max);
 	else {
