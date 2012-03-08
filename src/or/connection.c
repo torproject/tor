@@ -2595,10 +2595,6 @@ connection_consider_empty_read_buckets(connection_t *conn)
 
 /** Read bytes from conn-\>s and process them.
  *
- * This function gets called from conn_read() in main.c, either
- * when poll() has declared that conn wants to read, or (for OR conns)
- * when there are pending TLS bytes.
- *
  * It calls connection_read_to_buf() to bring in any new bytes,
  * and then calls connection_process_inbuf() to process them.
  *
