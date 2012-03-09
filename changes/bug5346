@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Correct parsing of certain date types in parse_http_time().
+      Without this patch, If-Modified-Since would behave
+      incorrectly. Fix for bug 5346; bugfix on 0.2.0.2-alpha. Patch from
+      Esteban Manchado Velázques.
+
