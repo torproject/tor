@@ -1451,6 +1451,8 @@ parse_http_time(const char *date, struct tm *tm)
 
   month[3] = '\0';
   /* Okay, now decode the month. */
+  /* set tm->tm_mon to dummy value so the check below fails. */
+  tm->tm_mon = -1;
   for (i = 0; i < 12; ++i) {
     if (!strcasecmp(MONTH_NAMES[i], month)) {
       tm->tm_mon = i;

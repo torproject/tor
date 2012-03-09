@@ -121,6 +121,10 @@ test_util_parse_http_time(void *arg)
   test_eq((time_t)775961302UL, tor_timegm(&a_time));
   test_eq(0, parse_http_time("Mie Aug 4 0:48:22 1994", &a_time));
   test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  test_eq(0, parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
+  test_eq((time_t)1325376000UL, tor_timegm(&a_time));
+  test_eq(0, parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
+  test_eq((time_t)1356912000UL, tor_timegm(&a_time));
   test_eq(-1, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
   test_eq(-1, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
   test_eq(-1, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
