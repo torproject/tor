@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Detect and reject certain misformed escape sequences in configuration
+      values. Previously, these values would cause us to crash if received
+      in a torrc file or over an (authenticated) control port. Patch by
+      Esteban Manchado Velázquez. Fix for bug 5090; bugfix on 0.2.0.16-alpha.
+      
