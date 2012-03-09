@@ -3,4 +3,6 @@
       Without this patch, If-Modified-Since would behave
       incorrectly. Fix for bug 5346; bugfix on 0.2.0.2-alpha. Patch from
       Esteban Manchado Velázques.
+    - Reject out-of-range times like 23:59:61. Fix for bug 5346;
+      bugfix on 0.0.8pre3.
 
