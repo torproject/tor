@@ -1416,7 +1416,10 @@ parse_http_time(const char *date, struct tm *tm)
 
   /* First, try RFC1123 or RFC850 format: skip the weekday.  */
   if ((cp = strchr(date, ','))) {
-    cp += 2;
+    ++cp;
+    if (*cp != ' ')
+      return -1;
+    ++cp;
     if (tor_sscanf(cp, "%2u %3s %4u %2u:%2u:%2u GMT",
                &tm_mday, month, &tm_year,
                &tm_hour, &tm_min, &tm_sec) == 6) {

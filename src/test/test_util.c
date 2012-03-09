@@ -101,6 +101,7 @@ test_util_parse_http_time(void *arg)
   test_eq(-1, parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
   test_eq(-1, parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
   test_eq(-1, parse_http_time("Sunday, August the third", &a_time));
+  test_eq(-1, parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
 
   test_eq(0, parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
   test_eq((time_t)775961302UL, tor_timegm(&a_time));
