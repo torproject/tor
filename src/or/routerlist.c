@@ -5017,12 +5017,6 @@ update_router_have_minimum_dir_info(void)
     res = 0;
     control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
     goto done;
-  } else if (num_exit_present < 2) {
-    tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d descriptor%s here and believed reachable!",
-                 num_exit_present, num_exit_present ? "" : "s");
-    res = 0;
-    goto done;
   }
 
   /* Check for entry nodes. */
