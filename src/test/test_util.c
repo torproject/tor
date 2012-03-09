@@ -976,25 +976,25 @@ test_util_strmisc(void)
   }
 
   /* Test strcmp_opt */
-  test_eq(-1, strcmp_opt("",   "foo"));
-  test_eq(0,  strcmp_opt("",    ""));
-  test_eq(1,  strcmp_opt("foo", ""));
+  tt_int_op(strcmp_opt("",   "foo"), <, 0);
+  tt_int_op(strcmp_opt("",    ""),  ==, 0);
+  tt_int_op(strcmp_opt("foo", ""),   >, 0);
 
-  test_eq(-1, strcmp_opt(NULL,  ""));
-  test_eq(0,  strcmp_opt(NULL,  NULL));
-  test_eq(1,  strcmp_opt("",    NULL));
+  tt_int_op(strcmp_opt(NULL,  ""),    <, 0);
+  tt_int_op(strcmp_opt(NULL,  NULL), ==, 0);
+  tt_int_op(strcmp_opt("",    NULL),  >, 0);
 
-  test_eq(-1, strcmp_opt(NULL,  "foo"));
-  test_eq(1,  strcmp_opt("foo", NULL));
+  tt_int_op(strcmp_opt(NULL,  "foo"), <, 0);
+  tt_int_op(strcmp_opt("foo", NULL),  >, 0);
 
   /* Test strcmp_len */
-  test_eq(1,  strcmp_len("foo", "bar", 3));
-  test_eq(-1, strcmp_len("foo", "bar", 2)); /* First len, then lexical */
-  test_eq(1,  strcmp_len("foo2", "foo1", 4));
-  test_eq(-1, strcmp_len("foo2", "foo1", 3)); /* Really stop at len */
-  test_eq(0, strcmp_len("foo2", "foo", 3));   /* Really stop at len */
-  test_eq(1, strcmp_len("blah", "", 4));
-  test_eq(0, strcmp_len("blah", "", 0));
+  tt_int_op(strcmp_len("foo", "bar", 3),   >, 0);
+  tt_int_op(strcmp_len("foo", "bar", 2),   <, 0); /* First len, then lexical */
+  tt_int_op(strcmp_len("foo2", "foo1", 4), >, 0);
+  tt_int_op(strcmp_len("foo2", "foo1", 3), <, 0); /* Really stop at len */
+  tt_int_op(strcmp_len("foo2", "foo", 3), ==, 0);   /* Really stop at len */
+  tt_int_op(strcmp_len("blah", "", 4),     >, 0);
+  tt_int_op(strcmp_len("blah", "", 0),    ==, 0);
 
  done:
   ;
