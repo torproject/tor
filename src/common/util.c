@@ -2347,14 +2347,16 @@ unescape_string(const char *s, char **result, size_t *size_out)
       case '\"':
         goto end_of_loop;
       case '\\':
-        if ((cp[1] == 'x' || cp[1] == 'X')
-            && TOR_ISXDIGIT(cp[2]) && TOR_ISXDIGIT(cp[3])) {
+        if (cp[1] == 'x' || cp[1] == 'X') {
+          if (!(TOR_ISXDIGIT(cp[2]) && TOR_ISXDIGIT(cp[3])))
+            return NULL;
           cp += 4;
         } else if (TOR_ISODIGIT(cp[1])) {
           cp += 2;
           if (TOR_ISODIGIT(*cp)) ++cp;
           if (TOR_ISODIGIT(*cp)) ++cp;
-        } else if (cp[1]) {
+        } else if (cp[1] == 'n' || cp[1] == 'r' || cp[1] == 't' || cp[1] == '"'
+                   || cp[1] == '\\' || cp[1] == '\'') {
           cp += 2;
         } else {
           return NULL;
@@ -2386,9 +2388,19 @@ unescape_string(const char *s, char **result, size_t *size_out)
           case 'r': *out++ = '\r'; cp += 2; break;
           case 't': *out++ = '\t'; cp += 2; break;
           case 'x': case 'X':
-            *out++ = ((hex_decode_digit(cp[2])<<4) +
-                      hex_decode_digit(cp[3]));
-            cp += 4;
+            {
+              int x1, x2;
+
+              x1 = hex_decode_digit(cp[2]);
+              x2 = hex_decode_digit(cp[3]);
+              if (x1 == -1 || x2 == -1) {
+                  tor_free(*result);
+                  return NULL;
+              }
+
+              *out++ = ((x1<<4) + x2);
+              cp += 4;
+            }
             break;
           case '0': case '1': case '2': case '3': case '4': case '5':
           case '6': case '7':
