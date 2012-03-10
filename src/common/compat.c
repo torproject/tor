@@ -1645,7 +1645,10 @@ make_path_absolute(char *fname)
 
   return absfname;
 #else
-  char path[PATH_MAX+1];
+/* We use this as a starting path length. Not too large seems sane. */
+#define START_PATH_LENGTH 100
+  size_t path_length = START_PATH_LENGTH;
+  char *path = tor_malloc(path_length);
   char *absfname = NULL;
 
   tor_assert(fname);
@@ -1653,13 +1656,23 @@ make_path_absolute(char *fname)
   if (fname[0] == '/') {
     absfname = tor_strdup(fname);
   } else {
-    if (getcwd(path, PATH_MAX) != NULL) {
-      tor_asprintf(&absfname, "%s/%s", path, fname);
-    } else {
-      /* If getcwd failed, the best we can do here is keep using the
-       * relative path.  (Perhaps / isn't readable by this UID/GID.) */
-      absfname = tor_strdup(fname);
+    int save_errno = errno;
+    errno = 0;
+    while (getcwd(path, path_length) == NULL) {
+      if (errno == ERANGE) {
+        path_length*=2;
+        path = tor_realloc(path, path_length);
+      } else {
+        /* If getcwd failed with an error other than ERANGE, the best we can
+         * do here is keep using the relative path.  (Perhaps / isn't readable
+         * by this UID/GID.) */
+        absfname = tor_strdup(fname);
+        break;
+      }
     }
+    errno = save_errno;
+    tor_asprintf(&absfname, "%s/%s", path, fname);
+    tor_free(path);
   }
 
   return absfname;

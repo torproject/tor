@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Fix a compilation issue on GNU Hurd, which doesn't have PATH_MAX. Fixes
+      bug 5355; bugfix on 0.2.3.11-alpha.
+
