@@ -171,7 +171,7 @@ for firefox_macro in firefox_ciphers:
     if enabled_ciphers.get(js_cipher_name, 'false') != 'true':
         continue
 
-    hexval = sslProtoD[firefox_macro]
+    hexval = sslProtoD[firefox_macro].lower()
 
     try:
         openssl_macro = openssl_macro_by_hex[hexval.lower()]
