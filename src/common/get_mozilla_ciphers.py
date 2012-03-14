@@ -64,22 +64,20 @@ for line in cipherLines:
 
 ####
 # Now find the correct order for the ciphers
-fileC = open(ff('security/nss/lib/ssl/sslenum.c'), 'r')
+fileC = open(ff('security/nss/lib/ssl/ssl3con.c'), 'r')
 firefox_ciphers = []
 inEnum=False
 for line in fileC:
     if not inEnum:
-        if "SSL_ImplementedCiphers[] =" in line:
+        if "ssl3CipherSuiteCfg cipherSuites[" in line:
             inEnum = True
         continue
 
     if line.startswith("};"):
         break
 
-    m = re.match(r'^\s*([A-Z_0-9]+)\s*', line)
+    m = re.match(r'^\s*\{\s*([A-Z_0-9]+),', line)
     if m:
-        if m.group(1) == "0":
-            break
         firefox_ciphers.append(m.group(1))
 
 fileC.close()
