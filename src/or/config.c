@@ -4660,6 +4660,13 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       if (i==0)
         newdefaultoptions = options_dup(&options_format, newoptions);
     }
+    /* Assign command-line variables a second time too */
+    retval = config_assign(&options_format, newoptions,
+                           global_cmdline_options, 0, 0, msg);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
   }
 
   /* Validate newoptions */

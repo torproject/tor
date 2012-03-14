@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Stop discarding command-line arguments when TestingTorNetwork
+      is set. Discovered by Kevin Bauer. Fixes bug 5373; bugfix on
+      0.2.3.9-alpha, where task 4552 added support for two layers of
+      torrc files.
