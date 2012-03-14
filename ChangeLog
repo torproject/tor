@@ -558,7 +558,7 @@ Changes in version 0.2.3.9-alpha - 2011-12-08
       differ between the current configuration and the defaults file. HUP
       reloads both files. (Note: This is an experimental feature; its
       behavior will probably be refined in future 0.2.3.x-alpha versions
-      to better meet packagers' needs.)
+      to better meet packagers' needs.) Implements task 4552.
 
   o Minor features:
     - Try to make the introductory warning message that Tor prints on
