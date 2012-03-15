@@ -1,3 +1,74 @@
+Changes in version 0.2.3.13-alpha - 2012-03-1?
+  o Directory authority changes:
+    - Change IP address for maatuska (v3 directory authority).
+
+  o Security fixes:
+    - Never use a bridge as an exit, even if it claims to be one. Found by
+      wanoskarnet. Fixes bug 5342. Bugfix on ????.
+    - Only build circuits if we have a sufficient threshold of the total
+      descriptors marked in the consensus with the "Exit" flag. This
+      mitigates an attack proposed by wanoskarnet, in which all of
+      a client's bridges collude to restrict the exit nodes that the
+      client knows about. Fixes bug 5343.
+
+  o Major bugfixes:
+    - Fix a relay-side pluggable transports bug where managed proxies were
+      unreachable from the Internet, because Tor asked them to bind on
+      localhost. Fixes bug 4725; bugfix on 0.2.3.9-alpha.
+    - Resume building with nat-pmp support. Fixes bug 4955; bugfix on
+      0.2.3.11-alpha. Reported by Anthony G. Basile.
+    - Avoid an assert when managed proxies like obfsproxy are configured,
+      and we receive HUP signals or setconf attempts too rapidly. This
+      situation happens most commonly when Vidalia tries to attach to
+      Tor or tries to configure the Tor it's attached to. Fixes bug 5084;
+      bugfix on 0.2.3.6-alpha.
+    - Stop discarding command-line arguments when TestingTorNetwork
+      is set. Discovered by Kevin Bauer. Fixes bug 5373; bugfix on
+      0.2.3.9-alpha, where task 4552 added support for two layers of
+      torrc files.
+
+  o Minor bugfixes:
+    - On a failed pipe() call, don't leak file descriptors. Fixes bug
+      4296; bugfix on 0.2.3.1-alpha.
+    - Spec conformance: on a v3 handshake, do not send a NETINFO cell
+      until after we have received a CERTS cell. Fixes bug 4361; bugfix
+      on 0.2.3.6-alpha. Patch by "frosty".
+    - When binding to an IPv6 address, set the IPV6_V6ONLY socket
+      option, so that the IP stack doesn't decide to use it for IPv4
+      too. Fixes bug 4760; bugfix on 0.2.3.9-alpha.
+    - Directory caches no longer refuse to clean out descriptors when
+      because of missing v2 networkstatus documents, unless they're
+      actually trying to retrieve v2 networkstatus documents. Fixes bug
+      4838; bugfix on 0.2.2.26-beta. Patch by Daniel Bryg.
+    - Detect and reject certain misformed escape sequences in
+      configuration values. Previously, these values would cause us
+      to crash if received in a torrc file or over an (authenticated)
+      control port. Bug found by Esteban Manchado Velázquez. Patch by
+      "flupzor". Fixes bug 5090; bugfix on 0.2.0.16-alpha.
+    - Ensure that variables set in Tor's environment cannot override
+      environment variables which Tor tries to pass to a managed
+      pluggable-transport proxy. Previously, Tor would pass every
+      variable in its environment to managed proxies along with the
+      new ones, in such a way that on many operating systems, the
+      inherited environment variables would override those which Tor
+      tried to explicitly set. Bugfix on 0.2.3.12-alpha for most
+      Unixoid systems; bugfix on 0.2.3.9-alpha for Windows.
+    - Ensure we don't cannibalize circuits that are longer than three hops
+      already, so we don't end up making circuits with 5 or more
+      hops. Patch contributed by wanoskarnet. Fixes bug 5231; bugfix on
+      0.1.0.1-rc which introduced cannibalization.
+    - Fix a compile warning when using the --enable-openbsd-malloc
+      configure option. Fixes bug 5340; bugfix on 0.2.0.20-rc.
+    - Update to the latest version of the tinytest unit testing framework.
+      This includes a couple of bugfixes that can be relevant for
+      running forked unit tests on Windows, and a removal of all reserved
+      identifiers.
+
+  o Minor features:
+    - A wide variety of new unit tests by Esteban Manchado Velázquez.
+    - Update to the March 6 2012 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.3.12-alpha - 2012-02-13
   Tor 0.2.3.12-alpha lets fast exit relays scale better, allows clients
   to use bridges that run Tor 0.2.2.x, and resolves several big bugs
@@ -15,11 +86,6 @@ Changes in version 0.2.3.12-alpha - 2012-02-13
       would ask the bridge for microdescriptors, which are only supported
       in 0.2.3.x, and then fail to bootstrap when it didn't get the
       answers it wanted. Fixes bug 4013; bugfix on 0.2.3.2-alpha.
-    - Avoid an assert when managed proxies like obfsproxy are configured,
-      and we receive HUP signals or configuration values too rapidly. This
-      situation happens most commonly when Vidalia tries to attach to
-      Tor or tries to configure the Tor it's attached to. Fixes bug 5084;
-      bugfix on 0.2.3.6-alpha.
     - Properly set up obfsproxy's environment when in managed mode. The
       Tor Browser Bundle needs LD_LIBRARY_PATH to be passed to obfsproxy,
       and when you run your Tor as a daemon, there's no HOME. Fixes bugs

@@ -1,5 +1,0 @@
-  o Minor bufixes:
-    - Directory caches no longer refuse to clean out descriptors when
-      because of missing v2 networkstatus documents, unless they're
-      actually trying to retrieve v2 networkstatus documents.  Bugfix
-      on 0.2.2.26-beta; fixes bug 4838. Patch by Daniel Bryg.

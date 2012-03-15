@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Fix the build when built with nat-pmp support. Fixes bug 4955;
-      bugfix on 0.2.3.11-alpha. Reported by Anthony G. Basile
-      <blueness@gentoo.org>, thanks!
-

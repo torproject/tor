@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Update to the latest version of the tinytest unit testing framework.
-      This includes a couple of bugfixes that can be relevant for running
-      forked unit tests on Windows, and a removal of all reserved
-      identifiers.

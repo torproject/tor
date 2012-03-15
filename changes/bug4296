@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - On a failed pipe() call, don't leak fds. Fix for bug 4296; bugfix
-      on 0.2.3.1-alpha.

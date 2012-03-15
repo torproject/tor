@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Spec conformance: on a v3 handshake, do not send a NETINFO cell until
-      after we have received a CERTS cell. Bugfix on 0.2.3.6-alpha;
-      fixes bug 4361; patch by "frosty".

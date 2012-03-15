@@ -1,3 +1,0 @@
-  o Security fixes:
-    - Never use a bridge as an exit, even if it claims to be one.  Found by
-      wanoskarnet. Fixes bug 5342. Bugfix on ????.
