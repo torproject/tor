@@ -1401,7 +1401,7 @@ pt_get_extra_info_descriptor_string(void)
 
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
       smartlist_add_asprintf(string_chunks,
-                             "method %s %s:%u",
+                             "transport %s %s:%u",
                              t->name, fmt_addr(&t->addr), t->port);
     } SMARTLIST_FOREACH_END(t);
 
