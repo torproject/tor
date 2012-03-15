@@ -122,19 +122,23 @@ dnl -D_FORTIFY_SOURCE=2 -fstack-protector-all
 dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
 dnl This requires that we use gcc and that we add -O2 to the CFLAGS.
 AC_ARG_ENABLE(gcc-hardening,
-     AS_HELP_STRING(--enable-gcc-hardening, enable compiler security checks),
+    AS_HELP_STRING(--disable-gcc-hardening, disable compiler security checks),
+    [],
+    [enableval=yes;])
 [if test x$enableval = xyes; then
     CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -fstack-protector-all"
     CFLAGS="$CFLAGS -fwrapv -fPIE -Wstack-protector"
     CFLAGS="$CFLAGS --param ssp-buffer-size=1"
     LDFLAGS="$LDFLAGS -pie"
-fi])
+fi]
 
 dnl Linker hardening options
 dnl Currently these options are ELF specific - you can't use this with MacOSX
 AC_ARG_ENABLE(linker-hardening,
-        AS_HELP_STRING(--enable-linker-hardening, enable linker security fixups),
-[if test x$enableval = xyes; then
+    AS_HELP_STRING(--disable-linker-hardening, disable linker security fixups),
+    [],
+    [enableval=yes;])
+AC_CHECK_HEADER([elf.h], [if test x$enableval = xyes; then
     LDFLAGS="$LDFLAGS -z relro -z now"
 fi])
 
