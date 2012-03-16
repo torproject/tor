@@ -75,6 +75,9 @@ static void connection_or_handle_event_cb(struct bufferevent *bufev,
  * they form a linked list, with next_with_same_id as the next pointer. */
 static digestmap_t *orconn_identity_map = NULL;
 
+/**DOCDOC */
+static digestmap_t *orconn_ext_or_id_map = NULL;
+
 /** If conn is listed in orconn_identity_map, remove it, and clear
  * conn->identity_digest.  Otherwise do nothing. */
 void
@@ -174,6 +177,52 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 #endif
 }
 
+void
+connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
+{
+  or_connection_t *tmp;
+  if (!orconn_identity_map)
+    orconn_identity_map = digestmap_new();
+
+  tmp = digestmap_remove(orconn_ext_or_id_map, conn->ext_or_conn_id);
+  if (!tor_digest_is_zero(conn->ext_or_conn_id))
+    tor_assert(tmp == conn);
+
+  memset(conn->ext_or_conn_id, 0, EXT_OR_CONN_ID_LEN);
+}
+
+
+/*DOCDOC*/
+void
+connection_or_clear_ext_or_id_map(void)
+{
+  digestmap_free(orconn_ext_or_id_map, NULL);
+}
+
+/*DOCDOC
+  sets it to a random value */
+void
+connection_or_set_ext_or_identifier(or_connection_t *conn)
+{
+  char random_id[EXT_OR_CONN_ID_LEN];
+  or_connection_t *tmp;
+
+  if (!orconn_ext_or_id_map)
+    orconn_ext_or_id_map = digestmap_new();
+
+  if (!tor_digest_is_zero(conn->ext_or_conn_id))
+      connection_or_remove_from_ext_or_id_map(conn);
+
+  do {
+    crypto_rand(random_id, sizeof(random_id));
+  } while (digestmap_get(orconn_ext_or_id_map, random_id));
+
+  memcpy(conn->ext_or_conn_id, random_id, EXT_OR_CONN_ID_LEN);
+
+  tmp = digestmap_set(orconn_ext_or_id_map, random_id, conn);
+  tor_assert(!tmp);
+}
+
 /**************************************************************/
 
 /** Map from a string describing what a non-open OR connection was doing when
@@ -228,7 +277,7 @@ connection_or_get_state_description(or_connection_t *orconn,
   const char *conn_state;
   char tls_state[256];
 
-  tor_assert(conn->type == CONN_TYPE_OR);
+  tor_assert(conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR);
 
   conn_state = conn_state_to_string(conn->type, conn->state);
   tor_tls_get_state_description(orconn->tls, tls_state, sizeof(tls_state));
@@ -421,6 +470,23 @@ void
 var_cell_free(var_cell_t *cell)
 {
   tor_free(cell);
+}
+
+/*DOCDOC*/
+ext_or_cmd_t *
+ext_or_cmd_new(uint16_t len)
+{
+  size_t size = STRUCT_OFFSET(ext_or_cmd_t, body) + len;
+  ext_or_cmd_t *cmd = tor_malloc(size);
+  cmd->len = len;
+  return cmd;
+}
+
+/*DOCDOC*/
+void
+ext_or_cmd_free(ext_or_cmd_t *cmd)
+{
+  tor_free(cmd);
 }
 
 /** We've received an EOF from <b>conn</b>. Mark it for close and return. */
@@ -1077,7 +1143,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  conn = or_connection_new(tor_addr_family(&addr));
+  conn = or_connection_new(CONN_TYPE_OR, tor_addr_family(&addr));
 
   /*
    * Set up conn so it's got all the data we need to remember for channels
@@ -1470,7 +1536,8 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
 int
 connection_or_nonopen_was_started_here(or_connection_t *conn)
 {
-  tor_assert(conn->base_.type == CONN_TYPE_OR);
+  tor_assert(conn->base_.type == CONN_TYPE_OR ||
+             conn->base_.type == CONN_TYPE_EXT_OR);
   if (!conn->tls)
     return 1; /* it's still in proxy states or something */
   if (conn->handshake_state)
@@ -2365,3 +2432,132 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   return 0;
 }
 
+/*DOCDOC*/
+static int
+connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    return fetch_ext_or_command_from_evbuffer(input, out);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_ext_or_command_from_buf(conn->inbuf, out);
+  }
+}
+
+/*DOCDOC*/
+static int
+connection_write_ext_or_command(connection_t *conn,
+                                uint16_t command,
+                                const char *body,
+                                size_t bodylen)
+{
+  char header[4];
+  if (bodylen > UINT16_MAX)
+    return -1;
+  set_uint16(header, htons(command));
+  set_uint16(header+2, htons(bodylen));
+  connection_write_to_buf(header, 4, conn);
+  if (bodylen) {
+    tor_assert(body);
+    connection_write_to_buf(body, bodylen, conn);
+  }
+  return 0;
+}
+
+/*DOCDOC*/
+static void
+connection_ext_or_transition(or_connection_t *conn)
+{
+  tor_assert(conn->base_.type == CONN_TYPE_EXT_OR);
+
+  conn->base_.type = CONN_TYPE_OR;
+  control_event_or_conn_status(conn, OR_CONN_EVENT_NEW, 0);
+  connection_tls_start_handshake(conn, 1);
+}
+
+/*XXXX make these match the spec .*/
+#define EXT_OR_CMD_DONE 0x0001
+#define EXT_OR_CMD_USERADDR 0x0002
+#define EXT_OR_CMD_WANT_CONTROL 0x0003
+#define EXT_OR_CMD_OKAY 0x1001
+
+/*DOCDOC*/
+int
+connection_ext_or_process_inbuf(or_connection_t *or_conn)
+{
+  connection_t *conn = TO_CONN(or_conn);
+  ext_or_cmd_t *command;
+  int r;
+
+  while (1) {
+    command = NULL;
+    r = connection_fetch_ext_or_cmd_from_buf(conn, &command);
+    if (r < 0)
+      return -1;
+    else if (r == 0)
+      return 0; /* need to wait for more data */
+
+    /* Got a command! */
+    tor_assert(command);
+
+    if (command->cmd == EXT_OR_CMD_DONE) {
+      if (connection_get_inbuf_len(conn)) {
+        /* The inbuf isn't empty; the client is misbehaving. */
+        goto err;
+      }
+      connection_write_ext_or_command(conn, EXT_OR_CMD_OKAY, NULL, 0);
+
+      /* can't transition immediately; need to flush first. */
+      conn->state = EXT_OR_CONN_STATE_FLUSHING;
+      connection_stop_reading(conn);
+    } else if (command->cmd == EXT_OR_CMD_USERADDR) {
+      /* Copy address string. */
+      tor_addr_t addr;
+      uint16_t port;
+      char *addr_str;
+      char *address_part=NULL;
+      int res;
+      addr_str = tor_malloc(command->len + 1);
+      memcpy(addr_str, command->body, command->len);
+      addr_str[command->len] = 0;
+
+      res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
+      tor_free(addr_str);
+      if (res<0)
+        goto err;
+
+      res = tor_addr_parse(&addr, address_part);
+      tor_free(address_part);
+      if (res<0)
+        goto err;
+
+      /* record the address */
+      tor_addr_copy(&conn->addr, &addr);
+      conn->port = port;
+    } else if (command->cmd == EXT_OR_CMD_WANT_CONTROL) {
+      char response[128];
+      char *cp;
+      memcpy(response, or_conn->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
+      cp = response+EXT_OR_CONN_ID_LEN;
+      /* XXXX write the TransportControlPort; advance cp. */
+      connection_write_ext_or_command(conn, EXT_OR_CMD_OKAY, response,
+                                      cp-response);
+    }
+
+    ext_or_cmd_free(command);
+  }
+
+ err:
+  ext_or_cmd_free(command);
+  return -1;
+}
+
+int
+connection_ext_or_finished_flushing(or_connection_t *conn)
+{
+  if (conn->base_.state == EXT_OR_CONN_STATE_FLUSHING) {
+    connection_start_reading(TO_CONN(conn));
+    connection_ext_or_transition(conn);
+  }
+  return 0;
+}

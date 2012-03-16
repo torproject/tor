@@ -19,7 +19,7 @@ const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
 dir_connection_t *dir_connection_new(int socket_family);
-or_connection_t *or_connection_new(int socket_family);
+or_connection_t *or_connection_new(int type, int socket_family);
 edge_connection_t *edge_connection_new(int type, int socket_family);
 entry_connection_t *entry_connection_new(int type, int socket_family);
 control_connection_t *control_connection_new(int socket_family);

@@ -1702,6 +1702,54 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
 }
 #endif
 
+/*DOCDOC*/
+#define EXT_OR_CMD_HEADER_SIZE 4
+/*DOCDOC*/
+int
+fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
+{
+  char hdr[EXT_OR_CMD_HEADER_SIZE];
+  uint16_t len;
+
+  check();
+  if (buf->datalen < EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  peek_from_buf(hdr, sizeof(hdr), buf);
+  len = ntohs(get_uint16(hdr+2));
+  if (buf->datalen < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  *out = ext_or_cmd_new(len);
+  (*out)->cmd = ntohs(get_uint16(hdr));
+  (*out)->len = len;
+  buf_remove_from_front(buf, EXT_OR_CMD_HEADER_SIZE);
+  fetch_from_buf((*out)->body, len, buf);
+  return 1;
+}
+
+#ifdef USE_BUFFEREVENTS
+/*DOCDOC*/
+int
+fetch_ext_or_command_from_evbuffer(struct evbuffer *buf, ext_or_cmd_t **out)
+{
+  char hdr[EXT_OR_CMD_HEADER_SIZE];
+  uint16_t len;
+  size_t buf_len = evbuffer_get_length(buf);
+
+  if (buf_len < EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  evbuffer_copyout(buf, hdr, EXT_OR_CMD_HEADER_SIZE);
+  len = ntohs(get_uint16(hdr+2));
+  if (buf_len < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  *out = ext_or_cmd_new(len);
+  (*out)->cmd = ntohs(get_uint16(hdr));
+  (*out)->len = len;
+  evbuffer_drain(buf, EXT_OR_CMD_HEADER_SIZE);
+  evbuffer_remove(buf, (*out)->body, len);
+  return 1;
+}
+#endif
+
 /** Implementation helper to implement fetch_from_*_socks.  Instead of looking
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
  * <b>data</b>. Instead of removing data from the buffer, we set

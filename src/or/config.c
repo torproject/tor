@@ -230,6 +230,7 @@ static config_var_t option_vars_[] = {
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
+  VPORT(ExtORPort,               LINELIST, NULL),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
 
@@ -5685,6 +5686,14 @@ parse_ports(or_options_t *options, int validate_only,
                           "0.0.0.0", 0,
                           CL_PORT_SERVER_OPTIONS) < 0) {
       *msg = tor_strdup("Invalid ORPort/ORListenAddress configuration");
+      goto err;
+    }
+    if (parse_port_config(ports,
+                          options->ExtORPort_lines, NULL,
+                          "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
+                          "127.0.0.1", 0,
+                          CL_PORT_SERVER_OPTIONS) < 0) {
+      *msg = tor_strdup("Invalid ExtORPort configuration");
       goto err;
     }
     if (parse_port_config(ports,

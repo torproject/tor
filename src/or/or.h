@@ -228,8 +228,13 @@ typedef enum {
 #define CONN_TYPE_AP_NATD_LISTENER 14
 /** Type for sockets listening for DNS requests. */
 #define CONN_TYPE_AP_DNS_LISTENER 15
-#define CONN_TYPE_MAX_ 15
-/* !!!! If CONN_TYPE_MAX_ is ever over 15, we must grow the type field in
+
+/** DOCDOC */
+#define CONN_TYPE_EXT_OR 16
+#define CONN_TYPE_EXT_OR_LISTENER 17
+
+#define CONN_TYPE_MAX_ 17
+/* !!!! If _CONN_TYPE_MAX is ever over 31, we must grow the type field in
  * connection_t. */
 
 /* Proxy client types */
@@ -308,6 +313,12 @@ typedef enum {
 /** State for an OR connection: Ready to send/receive cells. */
 #define OR_CONN_STATE_OPEN 8
 #define OR_CONN_STATE_MAX_ 8
+
+/*DOCDOC*/
+#define _EXT_OR_CONN_STATE_MIN 1
+#define EXT_OR_CONN_STATE_OPEN 1
+#define EXT_OR_CONN_STATE_FLUSHING 2
+#define _EXT_OR_CONN_STATE_MAX 2
 
 #define EXIT_CONN_STATE_MIN_ 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -1082,6 +1093,13 @@ typedef struct var_cell_t {
   uint8_t payload[FLEXIBLE_ARRAY_MEMBER];
 } var_cell_t;
 
+/* DOCDOC */
+typedef struct ext_or_cmd_t {
+  uint16_t cmd;
+  uint16_t len;
+  char body[FLEXIBLE_ARRAY_MEMBER];
+} ext_or_cmd_t;
+
 /** A cell as packed for writing to the network. */
 typedef struct packed_cell_t {
   /** Next cell queued on this circuit. */
@@ -1163,7 +1181,7 @@ typedef struct connection_t {
                    * *_CONNECTION_MAGIC. */
 
   uint8_t state; /**< Current state of this connection. */
-  unsigned int type:4; /**< What kind of connection is this? */
+  unsigned int type:5; /**< What kind of connection is this? */
   unsigned int purpose:5; /**< Only used for DIR and EXIT types currently. */
 
   /* The next fields are all one-bit booleans. Some are only applicable to
@@ -1405,6 +1423,9 @@ typedef struct or_handshake_state_t {
   /**@}*/
 } or_handshake_state_t;
 
+/* DOCDOC */
+#define EXT_OR_CONN_ID_LEN 20
+
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
 typedef struct or_connection_t {
@@ -1413,6 +1434,8 @@ typedef struct or_connection_t {
   /** Hash of the public RSA key for the other side's identity key, or zeroes
    * if the other side hasn't shown us a valid identity key. */
   char identity_digest[DIGEST_LEN];
+  /*DOCDOC*/
+  char ext_or_conn_id[EXT_OR_CONN_ID_LEN];
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state. */
@@ -3428,6 +3451,8 @@ typedef struct {
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
+  /** Ports to listen on for extended OR connections. */
+  config_line_t *ExtORPort_lines;
   /** Ports to listen on for SOCKS connections. */
   config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
