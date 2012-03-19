@@ -5774,7 +5774,7 @@ parse_port_config(smartlist_t *out,
       cfg->session_group = sessiongroup;
       cfg->isolation_flags = isolation;
       cfg->no_listen = no_listen;
-      cfg->no_listen = no_advertise;
+      cfg->no_advertise = no_advertise;
       cfg->all_addrs = all_addrs;
       cfg->ipv4_only = ipv4_only;
       cfg->ipv6_only = ipv6_only;
