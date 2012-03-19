@@ -5768,13 +5768,13 @@ parse_port_config(smartlist_t *out,
 
     if (out && port) {
       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
-      cfg->type = listener_type;
-      cfg->port = port;
       tor_addr_copy(&cfg->addr, &addr);
-      cfg->session_group = sessiongroup;
+      cfg->port = port;
+      cfg->type = listener_type;
       cfg->isolation_flags = isolation;
-      cfg->no_listen = no_listen;
+      cfg->session_group = sessiongroup;
       cfg->no_advertise = no_advertise;
+      cfg->no_listen = no_listen;
       cfg->all_addrs = all_addrs;
       cfg->ipv4_only = ipv4_only;
       cfg->ipv6_only = ipv6_only;
