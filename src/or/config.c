@@ -459,7 +459,7 @@ static config_var_t _option_vars[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
   V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
-  V(_UsingTestNetworkDefaults,   BOOL,     "0"),
+  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -487,7 +487,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  V(_UsingTestNetworkDefaults,   BOOL,     "1"),
+  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "1"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
