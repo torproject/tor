@@ -1,0 +1,6 @@
+  o Major features (performance):
+    - When built to use the newly OpenSSL 1.0.1, and built for an x86 or
+      x86_64 instruction set, take advantage of OpenSSL's AESNI, bitsliced,
+      or vectorized AES implementations as appropriate.  These can be 
+      much, much faster than other AES implementations.
+

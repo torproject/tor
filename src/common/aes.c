@@ -33,15 +33,35 @@
 #define DISABLE_ENGINES
 #endif
 
-/* We have 2 strategies for getting AES: Via OpenSSL's AES_encrypt function,
- * via OpenSSL's EVP_EncryptUpdate function.
+/* We have five strategies for implementing AES counter mode.
+ *
+ * Best with x86 and x86_64: Use EVP_aes_ctr128() and EVP_EncryptUpdate().
+ * This is possible with OpenSSL 1.0.1, where the counter-mode implementation
+ * can use bit-sliced or vectorized AES or AESNI as appropriate.
+ *
+ * Otherwise: Pick the best possible AES block implementation that OpenSSL
+ * gives us, and the best possible counter-mode implementation, and combine
+ * them.
+ */
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_NOPATCH(1,0,1) &&               \
+  (defined(__i386) || defined(__i386__) || defined(_M_IX86) ||          \
+   defined(__x86_64) || defined(__x86_64__) ||                          \
+   defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))          \
+
+#define USE_EVP_AES_CTR
+
+#endif
+
+/* We have 2 strategies for getting the AES block cipher: Via OpenSSL's
+ * AES_encrypt function, or via OpenSSL's EVP_EncryptUpdate function.
  *
  * If there's any hardware acceleration in play, we want to be using EVP_* so
  * we can get it.  Otherwise, we'll want AES_*, which seems to be about 5%
  * faster than indirecting through the EVP layer.
  */
 
-/* We have 2 strategies for counter mode: use our own, or use OpenSSL's.
+/* We have 2 strategies for getting a plug-in counter mode: use our own, or
+ * use OpenSSL's.
  *
  * Here we have a counter mode that's faster than the one shipping with
  * OpenSSL pre-1.0 (by about 10%!).  But OpenSSL 1.0.0 added a counter mode
@@ -50,6 +70,66 @@
  * critical bug in that counter mode implementation, so we need to test to
  * make sure that we have a fixed version.)
  */
+
+#ifdef USE_EVP_AES_CTR
+
+struct aes_cnt_cipher {
+  EVP_CIPHER_CTX evp;
+};
+
+aes_cnt_cipher_t *
+aes_new_cipher(const char *key, const char *iv)
+{
+  aes_cnt_cipher_t *cipher;
+  cipher = tor_malloc_zero(sizeof(aes_cnt_cipher_t));
+  EVP_EncryptInit(&cipher->evp, EVP_aes_128_ctr(),
+                  (const unsigned char*)key, (const unsigned char *)iv);
+  return cipher;
+}
+void
+aes_cipher_free(aes_cnt_cipher_t *cipher)
+{
+  if (!cipher)
+    return;
+  EVP_CIPHER_CTX_cleanup(&cipher->evp);
+  memset(cipher, 0, sizeof(aes_cnt_cipher_t));
+  tor_free(cipher);
+}
+void
+aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
+          char *output)
+{
+  int outl;
+
+  tor_assert(len < INT_MAX);
+
+  EVP_EncryptUpdate(&cipher->evp, (unsigned char*)output,
+                    &outl, (const unsigned char *)input, (int)len);
+}
+void
+aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
+{
+  int outl;
+
+  tor_assert(len < INT_MAX);
+
+  EVP_EncryptUpdate(&cipher->evp, (unsigned char*)data,
+                    &outl, (unsigned char*)data, (int)len);
+}
+int
+evaluate_evp_for_aes(int force_val)
+{
+  (void) force_val;
+  log_notice(LD_CRYPTO, "This version of OpenSSL has a known-good EVP "
+             "counter-mode implementation. Using it.");
+  return 0;
+}
+int
+evaluate_ctr_for_aes(void)
+{
+  return 0;
+}
+#else
 
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
@@ -424,3 +504,4 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
     _aes_fill_buf(cipher);
 }
 
+#endif
