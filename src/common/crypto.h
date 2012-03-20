@@ -125,11 +125,8 @@ void crypto_pk_free(crypto_pk_t *env);
 
 void crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname);
 
-/* convenience function: wraps crypto_cipher_new, set_key, and init. */
-crypto_cipher_t *crypto_create_init_cipher(const char *key,
-                                               int encrypt_mode);
-
-crypto_cipher_t *crypto_cipher_new(void);
+crypto_cipher_t *crypto_cipher_new(const char *key);
+crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
 void crypto_cipher_free(crypto_cipher_t *env);
 
 /* public key crypto */
@@ -189,13 +186,7 @@ int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
 /* symmetric crypto */
-int crypto_cipher_generate_key(crypto_cipher_t *env);
-void crypto_cipher_set_key(crypto_cipher_t *env, const char *key);
-void crypto_cipher_generate_iv(char *iv_out);
-int crypto_cipher_set_iv(crypto_cipher_t *env, const char *iv);
 const char *crypto_cipher_get_key(crypto_cipher_t *env);
-int crypto_cipher_encrypt_init_cipher(crypto_cipher_t *env);
-int crypto_cipher_decrypt_init_cipher(crypto_cipher_t *env);
 
 int crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
                           const char *from, size_t fromlen);
@@ -203,10 +194,10 @@ int crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
                           const char *from, size_t fromlen);
 int crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *d, size_t len);
 
-int crypto_cipher_encrypt_with_iv(crypto_cipher_t *env,
+int crypto_cipher_encrypt_with_iv(const char *key,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
-int crypto_cipher_decrypt_with_iv(crypto_cipher_t *env,
+int crypto_cipher_decrypt_with_iv(const char *key,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 

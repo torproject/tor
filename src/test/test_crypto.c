@@ -118,14 +118,10 @@ test_crypto_aes(void *arg)
 
   memset(data2, 0, 1024);
   memset(data3, 0, 1024);
-  env1 = crypto_cipher_new();
+  env1 = crypto_cipher_new(NULL);
   test_neq(env1, 0);
-  env2 = crypto_cipher_new();
+  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
   test_neq(env2, 0);
-  j = crypto_cipher_generate_key(env1);
-  crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-  crypto_cipher_encrypt_init_cipher(env1);
-  crypto_cipher_decrypt_init_cipher(env2);
 
   /* Try encrypting 512 chars. */
   crypto_cipher_encrypt(env1, data2, data1, 512);
@@ -155,10 +151,8 @@ test_crypto_aes(void *arg)
   env2 = NULL;
 
   memset(data3, 0, 1024);
-  env2 = crypto_cipher_new();
+  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
   test_neq(env2, 0);
-  crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-  crypto_cipher_encrypt_init_cipher(env2);
   for (j = 0; j < 1024-16; j += 17) {
     crypto_cipher_encrypt(env2, data3+j, data1+j, 17);
   }
@@ -174,10 +168,9 @@ test_crypto_aes(void *arg)
   env2 = NULL;
 
   /* NIST test vector for aes. */
-  env1 = crypto_cipher_new(); /* IV starts at 0 */
-  crypto_cipher_set_key(env1, "\x80\x00\x00\x00\x00\x00\x00\x00"
-                              "\x00\x00\x00\x00\x00\x00\x00\x00");
-  crypto_cipher_encrypt_init_cipher(env1);
+  /* IV starts at 0 */
+  env1 = crypto_cipher_new("\x80\x00\x00\x00\x00\x00\x00\x00"
+                           "\x00\x00\x00\x00\x00\x00\x00\x00");
   crypto_cipher_encrypt(env1, data1,
                         "\x00\x00\x00\x00\x00\x00\x00\x00"
                         "\x00\x00\x00\x00\x00\x00\x00\x00", 16);
@@ -185,37 +178,55 @@ test_crypto_aes(void *arg)
 
   /* Now test rollover.  All these values are originally from a python
    * script. */
-  crypto_cipher_set_iv(env1, "\x00\x00\x00\x00\x00\x00\x00\x00"
-                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_free(env1);
+  env1 = crypto_cipher_new_with_iv(
+                                   "\x80\x00\x00\x00\x00\x00\x00\x00"
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00"
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff");
   memset(data2, 0,  1024);
   crypto_cipher_encrypt(env1, data1, data2, 32);
   test_memeq_hex(data1, "335fe6da56f843199066c14a00a40231"
                         "cdd0b917dbc7186908a6bfb5ffd574d3");
-
-  crypto_cipher_set_iv(env1, "\x00\x00\x00\x00\xff\xff\xff\xff"
-                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_free(env1);
+  env1 = crypto_cipher_new_with_iv(
+                                   "\x80\x00\x00\x00\x00\x00\x00\x00"
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                   "\x00\x00\x00\x00\xff\xff\xff\xff"
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff");
   memset(data2, 0,  1024);
   crypto_cipher_encrypt(env1, data1, data2, 32);
   test_memeq_hex(data1, "e627c6423fa2d77832a02b2794094b73"
                         "3e63c721df790d2c6469cc1953a3ffac");
-
-  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
-                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_free(env1);
+  env1 = crypto_cipher_new_with_iv(
+                                   "\x80\x00\x00\x00\x00\x00\x00\x00"
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff"
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff");
   memset(data2, 0,  1024);
   crypto_cipher_encrypt(env1, data1, data2, 32);
   test_memeq_hex(data1, "2aed2bff0de54f9328efd070bf48f70a"
                         "0EDD33D3C621E546455BD8BA1418BEC8");
 
   /* Now check rollover on inplace cipher. */
-  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
-                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_free(env1);
+  env1 = crypto_cipher_new_with_iv(
+                                   "\x80\x00\x00\x00\x00\x00\x00\x00"
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff"
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff");
   crypto_cipher_crypt_inplace(env1, data2, 64);
   test_memeq_hex(data2, "2aed2bff0de54f9328efd070bf48f70a"
                         "0EDD33D3C621E546455BD8BA1418BEC8"
                         "93e2c5243d6839eac58503919192f7ae"
                         "1908e67cafa08d508816659c2e693191");
-  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
-                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_free(env1);
+  env1 = crypto_cipher_new_with_iv(
+                                   "\x80\x00\x00\x00\x00\x00\x00\x00"
+                                   "\x00\x00\x00\x00\x00\x00\x00\x00",
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff"
+                                   "\xff\xff\xff\xff\xff\xff\xff\xff");
   crypto_cipher_crypt_inplace(env1, data2, 64);
   test_assert(tor_mem_is_zero(data2, 64));
 
@@ -674,7 +685,6 @@ test_crypto_s2k(void)
 static void
 test_crypto_aes_iv(void *arg)
 {
-  crypto_cipher_t *cipher;
   char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
@@ -698,113 +708,76 @@ test_crypto_aes_iv(void *arg)
   crypto_rand(plain_17, 17);
   key1[0] = key2[0] + 128; /* Make sure that contents are different. */
   /* Encrypt and decrypt with the same key. */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 4095,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 4095,
                                                  plain, 4095);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
+
   test_eq(encrypted_size, 16 + 4095);
   tt_assert(encrypted_size > 0); /* This is obviously true, since 4111 is
                                    * greater than 0, but its truth is not
                                    * obvious to all analysis tools. */
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 4095,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
+
   test_eq(decrypted_size, 4095);
   tt_assert(decrypted_size > 0);
   test_memeq(plain, decrypted1, 4095);
   /* Encrypt a second time (with a new random initialization vector). */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted2, 16 + 4095,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted2, 16 + 4095,
                                              plain, 4095);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
+
   test_eq(encrypted_size, 16 + 4095);
   tt_assert(encrypted_size > 0);
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted2, 4095,
                                              encrypted2, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(decrypted_size, 4095);
   tt_assert(decrypted_size > 0);
   test_memeq(plain, decrypted2, 4095);
   test_memneq(encrypted1, encrypted2, encrypted_size);
   /* Decrypt with the wrong key. */
-  cipher = crypto_create_init_cipher(key2, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key2, decrypted2, 4095,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_memneq(plain, decrypted2, encrypted_size);
   /* Alter the initialization vector. */
   encrypted1[0] += 42;
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 4095,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_memneq(plain, decrypted2, 4095);
   /* Special length case: 1. */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 1,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 1,
                                              plain_1, 1);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(encrypted_size, 16 + 1);
   tt_assert(encrypted_size > 0);
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 1,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(decrypted_size, 1);
   tt_assert(decrypted_size > 0);
   test_memeq(plain_1, decrypted1, 1);
   /* Special length case: 15. */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 15,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 15,
                                              plain_15, 15);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(encrypted_size, 16 + 15);
   tt_assert(encrypted_size > 0);
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 15,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 15,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(decrypted_size, 15);
   tt_assert(decrypted_size > 0);
   test_memeq(plain_15, decrypted1, 15);
   /* Special length case: 16. */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 16,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 16,
                                              plain_16, 16);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(encrypted_size, 16 + 16);
   tt_assert(encrypted_size > 0);
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 16,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 16,
                                              encrypted1, encrypted_size);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(decrypted_size, 16);
   tt_assert(decrypted_size > 0);
   test_memeq(plain_16, decrypted1, 16);
   /* Special length case: 17. */
-  cipher = crypto_create_init_cipher(key1, 1);
-  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 17,
+  encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 17,
                                              plain_17, 17);
-  crypto_cipher_free(cipher);
-  cipher = NULL;
   test_eq(encrypted_size, 16 + 17);
   tt_assert(encrypted_size > 0);
-  cipher = crypto_create_init_cipher(key1, 0);
-  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 17,
+  decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 17,
                                              encrypted1, encrypted_size);
   test_eq(decrypted_size, 17);
   tt_assert(decrypted_size > 0);
@@ -817,8 +790,6 @@ test_crypto_aes_iv(void *arg)
   tor_free(encrypted2);
   tor_free(decrypted1);
   tor_free(decrypted2);
-  if (cipher)
-    crypto_cipher_free(cipher);
 }
 
 /** Test base32 decoding. */

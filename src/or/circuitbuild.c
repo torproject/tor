@@ -2334,12 +2334,12 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
   crypto_digest_add_bytes(cpath->b_digest, key_data+DIGEST_LEN, DIGEST_LEN);
 
   if (!(cpath->f_crypto =
-        crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
+        crypto_cipher_new(key_data+(2*DIGEST_LEN)))) {
     log_warn(LD_BUG,"Forward cipher initialization failed.");
     return -1;
   }
   if (!(cpath->b_crypto =
-        crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
+        crypto_cipher_new(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN))) {
     log_warn(LD_BUG,"Backward cipher initialization failed.");
     return -1;
   }

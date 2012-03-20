@@ -290,11 +290,10 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
   enc[1] = (uint8_t)client_blocks;
 
   /* Encrypt with random session key. */
-  cipher = crypto_create_init_cipher(session_key, 1);
-  enclen = crypto_cipher_encrypt_with_iv(cipher,
+  enclen = crypto_cipher_encrypt_with_iv(session_key,
       enc + 2 + client_entries_len,
       CIPHER_IV_LEN + strlen(encoded), encoded, strlen(encoded));
-  crypto_cipher_free(cipher);
+
   if (enclen < 0) {
     log_warn(LD_REND, "Could not encrypt introduction point string.");
     goto done;
@@ -307,7 +306,7 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
   SMARTLIST_FOREACH_BEGIN(client_cookies, const char *, cookie) {
     client_part = tor_malloc_zero(REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
     /* Encrypt session key. */
-    cipher = crypto_create_init_cipher(cookie, 1);
+    cipher = crypto_cipher_new(cookie);
     if (crypto_cipher_encrypt(cipher, client_part +
                                   REND_BASIC_AUTH_CLIENT_ID_LEN,
                               session_key, CIPHER_KEY_LEN) < 0) {
@@ -374,18 +373,16 @@ rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
                                      const char *descriptor_cookie)
 {
   int r = -1, enclen;
-  crypto_cipher_t *cipher;
   char *enc;
   tor_assert(encoded);
   tor_assert(descriptor_cookie);
 
   enc = tor_malloc_zero(1 + CIPHER_IV_LEN + strlen(encoded));
   enc[0] = 0x02; /* Auth type */
-  cipher = crypto_create_init_cipher(descriptor_cookie, 1);
-  enclen = crypto_cipher_encrypt_with_iv(cipher, enc + 1,
+  enclen = crypto_cipher_encrypt_with_iv(descriptor_cookie,
+                                         enc + 1,
                                          CIPHER_IV_LEN+strlen(encoded),
                                          encoded, strlen(encoded));
-  crypto_cipher_free(cipher);
   if (enclen < 0) {
     log_warn(LD_REND, "Could not encrypt introduction point string.");
     goto done;

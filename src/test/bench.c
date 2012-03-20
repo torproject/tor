@@ -77,9 +77,8 @@ bench_aes(void)
   uint64_t start, end;
   const int bytes_per_iter = (1<<24);
   reset_perftime();
-  c = crypto_cipher_new();
-  crypto_cipher_generate_key(c);
-  crypto_cipher_encrypt_init_cipher(c);
+  c = crypto_cipher_new(NULL);
+
   for (len = 1; len <= 8192; len *= 2) {
     int iters = bytes_per_iter / len;
     b1 = tor_malloc_zero(len);
@@ -108,9 +107,7 @@ bench_cell_aes(void)
   crypto_cipher_t *c;
   int i, misalign;
 
-  c = crypto_cipher_new();
-  crypto_cipher_generate_key(c);
-  crypto_cipher_encrypt_init_cipher(c);
+  c = crypto_cipher_new(NULL);
 
   reset_perftime();
   for (misalign = 0; misalign <= max_misalign; ++misalign) {
@@ -221,12 +218,8 @@ bench_cell_ops(void)
   or_circ->_base.purpose = CIRCUIT_PURPOSE_OR;
 
   /* Initialize crypto */
-  or_circ->p_crypto = crypto_cipher_new();
-  crypto_cipher_generate_key(or_circ->p_crypto);
-  crypto_cipher_encrypt_init_cipher(or_circ->p_crypto);
-  or_circ->n_crypto = crypto_cipher_new();
-  crypto_cipher_generate_key(or_circ->n_crypto);
-  crypto_cipher_encrypt_init_cipher(or_circ->n_crypto);
+  or_circ->p_crypto = crypto_cipher_new(NULL);
+  or_circ->n_crypto = crypto_cipher_new(NULL);
   or_circ->p_digest = crypto_digest_new();
   or_circ->n_digest = crypto_digest_new();
 
