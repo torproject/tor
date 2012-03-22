@@ -1338,7 +1338,9 @@ options_act(const or_options_t *old_options)
     /* Remember if we already warned about being configured not to disable
      * debugger attachment */
     static int warned_debugger_attach = 0;
-    if (options->DisableDebuggerAttachment && !disabled_debugger_attach) {
+    /* Don't disable debugger attachment when we're running the unit tests. */
+    if (options->DisableDebuggerAttachment && !disabled_debugger_attach &&
+        running_tor) {
       int ok = tor_disable_debugger_attach();
       if (warned_debugger_attach && ok == 1) {
         log_notice(LD_CONFIG, "Disabled attaching debuggers for unprivileged "
