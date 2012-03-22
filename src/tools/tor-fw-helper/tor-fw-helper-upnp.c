@@ -78,7 +78,11 @@ tor_upnp_init(tor_fw_options_t *options, void *backend_state)
   memset(&(state->data), 0, sizeof(struct IGDdatas));
   state->init = 0;
 
+#ifdef MINIUPNPC15
   devlist = upnpDiscover(UPNP_DISCOVER_TIMEOUT, NULL, NULL, 0);
+#else
+  devlist = upnpDiscover(UPNP_DISCOVER_TIMEOUT, NULL, NULL, 0, 0, NULL);
+#endif
   if (NULL == devlist) {
     fprintf(stderr, "E: upnpDiscover returned: NULL\n");
     return UPNP_ERR_NODEVICESFOUND;
@@ -178,7 +182,11 @@ tor_upnp_add_tcp_mapping(tor_fw_options_t *options, void *backend_state)
   r = UPNP_AddPortMapping(state->urls.controlURL,
                           state->data.first.servicetype,
                           external_port_str, internal_port_str,
+#ifdef MINIUPNPC15
                           state->lanaddr, UPNP_DESC, "TCP", 0);
+#else
+                          state->lanaddr, UPNP_DESC, "TCP", 0, 0);
+#endif
   if (r != UPNPCOMMAND_SUCCESS)
     return UPNP_ERR_ADDPORTMAPPING;
 

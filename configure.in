@@ -592,15 +592,34 @@ dnl There are no packages for Debian or Redhat as of this patch
 
 if test "$upnp" = "true"; then
     AC_DEFINE(MINIUPNPC, 1, [Define to 1 if we are building with UPnP.])
-    TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
-        [#include <miniupnpc/miniwget.h>
-         #include <miniupnpc/miniupnpc.h>
-         #include <miniupnpc/upnpcommands.h>],
-        [void upnpDiscover(int delay, const char * multicastif,
-         const char * minissdpdsock, int sameport);],
-        [upnpDiscover(1, 0, 0, 0); exit(0);],
-        [--with-libminiupnpc-dir],
-        [/usr/lib/])
+
+    dnl Before we call TOR_SEARCH_LIBRARY we'll do a quick compile test
+    dnl to see if we have miniupnpc-1.5 or -1.6
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <miniupnpc/miniupnpc.h>],
+        [upnpDiscover(1, 0, 0, 0);exit(0);])],[miniupnpc15="true"],[miniupnpc15="false"])
+
+    if test "$miniupnpc15" = "true" ; then
+        AC_DEFINE([MINIUPNPC15],[1],[libminiupnpc version 1.5 found])
+        TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
+            [#include <miniupnpc/miniwget.h>
+             #include <miniupnpc/miniupnpc.h>
+             #include <miniupnpc/upnpcommands.h>],
+            [void upnpDiscover(int delay, const char * multicastif,
+             const char * minissdpdsock, int sameport);],
+            [upnpDiscover(1, 0, 0, 0); exit(0);],
+            [--with-libminiupnpc-dir],
+            [/usr/lib/])
+    else
+        TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
+            [#include <miniupnpc/miniwget.h>
+             #include <miniupnpc/miniupnpc.h>
+             #include <miniupnpc/upnpcommands.h>],
+            [void upnpDiscover(int delay, const char * multicastif,
+             const char * minissdpdsock, int sameport, int ipv6, int * error);],
+            [upnpDiscover(1, 0, 0, 0, 0, 0); exit(0);],
+            [--with-libminiupnpc-dir],
+            [/usr/lib/])
+    fi
 fi
 
 AC_SYS_LARGEFILE
