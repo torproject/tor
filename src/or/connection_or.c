@@ -75,7 +75,8 @@ static void connection_or_handle_event_cb(struct bufferevent *bufev,
  * they form a linked list, with next_with_same_id as the next pointer. */
 static digestmap_t *orconn_identity_map = NULL;
 
-/**DOCDOC */
+/** Global map between Extended ORPort identifiers and OR
+ *  connections. */
 static digestmap_t *orconn_ext_or_id_map = NULL;
 
 /** If conn is listed in orconn_identity_map, remove it, and clear
@@ -177,6 +178,9 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 #endif
 }
 
+/** Remove the Extended ORPort identifier of <b>conn</b> from the
+    global identifier list. Also, clear the identifier from the
+    connection itself. */
 void
 connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
 {
@@ -191,16 +195,15 @@ connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
   memset(conn->ext_or_conn_id, 0, EXT_OR_CONN_ID_LEN);
 }
 
-
-/*DOCDOC*/
+/** Deallocate the global Extended ORPort identifier list */
 void
 connection_or_clear_ext_or_id_map(void)
 {
   digestmap_free(orconn_ext_or_id_map, NULL);
 }
 
-/*DOCDOC
-  sets it to a random value */
+/** Creates an Extended ORPort identifier for <b>conn<b/> and deposits
+ *  it into the global list of identifiers. */
 void
 connection_or_set_ext_or_identifier(or_connection_t *conn)
 {
@@ -210,6 +213,7 @@ connection_or_set_ext_or_identifier(or_connection_t *conn)
   if (!orconn_ext_or_id_map)
     orconn_ext_or_id_map = digestmap_new();
 
+  /* Remove any previous identifiers: */
   if (!tor_digest_is_zero(conn->ext_or_conn_id))
       connection_or_remove_from_ext_or_id_map(conn);
 
@@ -472,7 +476,8 @@ var_cell_free(var_cell_t *cell)
   tor_free(cell);
 }
 
-/*DOCDOC*/
+/** Allocate and return a structure capable of holding an Extended
+ *  ORPort message of body length <b>len</b>. */
 ext_or_cmd_t *
 ext_or_cmd_new(uint16_t len)
 {
@@ -482,7 +487,7 @@ ext_or_cmd_new(uint16_t len)
   return cmd;
 }
 
-/*DOCDOC*/
+/** Deallocate the Extended ORPort message in <b>cmd</b>. */
 void
 ext_or_cmd_free(ext_or_cmd_t *cmd)
 {
@@ -2432,7 +2437,7 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   return 0;
 }
 
-/*DOCDOC*/
+/** Get an Extended ORPort message from <b>conn</b>, and place it in <b>out</b>. */
 static int
 connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
 {
@@ -2444,7 +2449,10 @@ connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
   }
 }
 
-/*DOCDOC*/
+/** Write an Extended ORPort message to <b>conn</b>. Use
+ *  <b>command</b> as the command type, <b>bodylen</b> as the body
+ *  length, and <b>body</b>, if it's present, as the body of the
+ *  message. */
 static int
 connection_write_ext_or_command(connection_t *conn,
                                 uint16_t command,
@@ -2464,7 +2472,8 @@ connection_write_ext_or_command(connection_t *conn,
   return 0;
 }
 
-/*DOCDOC*/
+/** Transition from an Extended ORPort which accepts Extended ORPort
+ *  messages, to an Extended ORport which accepts OR traffic. */
 static void
 connection_ext_or_transition(or_connection_t *conn)
 {
@@ -2475,13 +2484,18 @@ connection_ext_or_transition(or_connection_t *conn)
   connection_tls_start_handshake(conn, 1);
 }
 
-/*XXXX make these match the spec .*/
-#define EXT_OR_CMD_DONE 0x0001
-#define EXT_OR_CMD_USERADDR 0x0002
 #define EXT_OR_CMD_WANT_CONTROL 0x0003
-#define EXT_OR_CMD_OKAY 0x1001
 
-/*DOCDOC*/
+/** Extended ORPort commands (Transport-to-Bridge) */
+#define EXT_OR_CMD_TB_DONE 0x0000
+#define EXT_OR_CMD_TB_USERADDR 0x0001
+
+/** Extended ORPort commands (Bridge-to-Transport) */
+#define EXT_OR_CMD_BT_OKAY 0x1000
+#define EXT_OR_CMD_BT_DENY 0x1001
+#define EXT_OR_CMD_BT_CONTROL 0x1002
+
+/** Process Extended ORPort messages from <b>or_conn</b>. */
 int
 connection_ext_or_process_inbuf(or_connection_t *or_conn)
 {
@@ -2500,17 +2514,20 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
     /* Got a command! */
     tor_assert(command);
 
-    if (command->cmd == EXT_OR_CMD_DONE) {
+    if (command->cmd == EXT_OR_CMD_TB_DONE) {
       if (connection_get_inbuf_len(conn)) {
         /* The inbuf isn't empty; the client is misbehaving. */
         goto err;
       }
-      connection_write_ext_or_command(conn, EXT_OR_CMD_OKAY, NULL, 0);
+
+      log_debug(LD_NET, "Received DONE.");
+
+      connection_write_ext_or_command(conn, EXT_OR_CMD_BT_OKAY, NULL, 0);
 
       /* can't transition immediately; need to flush first. */
       conn->state = EXT_OR_CONN_STATE_FLUSHING;
       connection_stop_reading(conn);
-    } else if (command->cmd == EXT_OR_CMD_USERADDR) {
+    } else if (command->cmd == EXT_OR_CMD_TB_USERADDR) {
       /* Copy address string. */
       tor_addr_t addr;
       uint16_t port;
@@ -2520,6 +2537,8 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       addr_str = tor_malloc(command->len + 1);
       memcpy(addr_str, command->body, command->len);
       addr_str[command->len] = 0;
+
+      log_debug(LD_NET, "Received USERADDR: '%s'!", addr_str);
 
       res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
       tor_free(addr_str);
@@ -2540,8 +2559,11 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       memcpy(response, or_conn->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
       cp = response+EXT_OR_CONN_ID_LEN;
       /* XXXX write the TransportControlPort; advance cp. */
-      connection_write_ext_or_command(conn, EXT_OR_CMD_OKAY, response,
+      connection_write_ext_or_command(conn, EXT_OR_CMD_BT_OKAY, response,
                                       cp-response);
+    } else {
+      log_notice(LD_NET, "Got an Extended ORPort command we don't understand (%u).",
+                 command->cmd);
     }
 
     ext_or_cmd_free(command);
@@ -2552,6 +2574,9 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
   return -1;
 }
 
+/** <b>conn</b> finished flushing Extended ORPort messages to the
+ *  network, and is now ready to accept OR traffic. This function
+ *  does the transition. */
 int
 connection_ext_or_finished_flushing(or_connection_t *conn)
 {

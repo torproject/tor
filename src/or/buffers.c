@@ -1702,9 +1702,15 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
 }
 #endif
 
-/*DOCDOC*/
+/** The size of the header of an Extended ORPort message: 2 bytes for
+ *  COMMAND, 2 bytes for BODYLEN */
 #define EXT_OR_CMD_HEADER_SIZE 4
-/*DOCDOC*/
+
+/** Read <b>buf</b>, which should contain an Extended ORPort message
+ *  from a transport proxy. If well-formed, create and populate
+ *  <b>out</b> with the Extended ORport message. Return 0 if the
+ *  buffer was incomplete, 1 if it was well-formed and -1 if we
+ *  encountered an error while parsing it.  */
 int
 fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
 {
@@ -1727,7 +1733,11 @@ fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
 }
 
 #ifdef USE_BUFFEREVENTS
-/*DOCDOC*/
+/** Read <b>buf</b>, which should contain an Extended ORPort message
+ *  from a transport proxy. If well-formed, create and populate
+ *  <b>out</b> with the Extended ORport message. Return 0 if the
+ *  buffer was incomplete, 1 if it was well-formed and -1 if we
+ *  encountered an error while parsing it.  */
 int
 fetch_ext_or_command_from_evbuffer(struct evbuffer *buf, ext_or_cmd_t **out)
 {

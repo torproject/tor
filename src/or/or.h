@@ -229,8 +229,9 @@ typedef enum {
 /** Type for sockets listening for DNS requests. */
 #define CONN_TYPE_AP_DNS_LISTENER 15
 
-/** DOCDOC */
+/** Type for connections from the Extended ORPort. */
 #define CONN_TYPE_EXT_OR 16
+/** Type for sockets listening for Extended ORPort connections. */
 #define CONN_TYPE_EXT_OR_LISTENER 17
 
 #define CONN_TYPE_MAX_ 17
@@ -314,11 +315,14 @@ typedef enum {
 #define OR_CONN_STATE_OPEN 8
 #define OR_CONN_STATE_MAX_ 8
 
-/*DOCDOC*/
-#define _EXT_OR_CONN_STATE_MIN 1
+/** States of Extended ORPort. */
+#define EXT_OR_CONN_STATE_MIN_ 1
+/** Extended ORPort just launched, and is accepting connections. */
 #define EXT_OR_CONN_STATE_OPEN 1
+/** Extended ORPort is flushing its last messages and preparing to
+ *  start accepting OR connections. */
 #define EXT_OR_CONN_STATE_FLUSHING 2
-#define _EXT_OR_CONN_STATE_MAX 2
+#define EXT_OR_CONN_STATE_MAX_ 2
 
 #define EXIT_CONN_STATE_MIN_ 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -1093,11 +1097,11 @@ typedef struct var_cell_t {
   uint8_t payload[FLEXIBLE_ARRAY_MEMBER];
 } var_cell_t;
 
-/* DOCDOC */
+/** A parsed Extended ORPort message. */
 typedef struct ext_or_cmd_t {
-  uint16_t cmd;
-  uint16_t len;
-  char body[FLEXIBLE_ARRAY_MEMBER];
+  uint16_t cmd; /** Command type */
+  uint16_t len; /** Body length */
+  char body[FLEXIBLE_ARRAY_MEMBER]; /** Message body */
 } ext_or_cmd_t;
 
 /** A cell as packed for writing to the network. */
@@ -1423,8 +1427,8 @@ typedef struct or_handshake_state_t {
   /**@}*/
 } or_handshake_state_t;
 
-/* DOCDOC */
-#define EXT_OR_CONN_ID_LEN 20
+/** Length of Extended ORPort connection identifier. */
+#define EXT_OR_CONN_ID_LEN DIGEST_LEN /* 20 */
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
@@ -1434,8 +1438,8 @@ typedef struct or_connection_t {
   /** Hash of the public RSA key for the other side's identity key, or zeroes
    * if the other side hasn't shown us a valid identity key. */
   char identity_digest[DIGEST_LEN];
-  /*DOCDOC*/
-  char ext_or_conn_id[EXT_OR_CONN_ID_LEN];
+  /** Extended ORPort connection identifier. */
+  char *ext_or_conn_id;
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state. */
