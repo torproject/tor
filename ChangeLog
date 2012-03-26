@@ -43,8 +43,11 @@ Changes in version 0.2.3.13-alpha - 2012-03-1?
     - Detect and reject certain misformed escape sequences in
       configuration values. Previously, these values would cause us
       to crash if received in a torrc file or over an (authenticated)
-      control port. Bug found by Esteban Manchado Velázquez. Patch by
-      "flupzor". Fixes bug 5090; bugfix on 0.2.0.16-alpha.
+      control port. Bug found by Esteban Manchado Velázquez, and
+      independently by Robert Connolly from Matta Consulting who further
+      noted that it allows a post-authentication heap overflow. Patch
+      by "flupzor". Fixes bugs 5090 and 5402 (CVE 2012-1668); bugfix
+      on 0.2.0.16-alpha.
     - Ensure that variables set in Tor's environment cannot override
       environment variables which Tor tries to pass to a managed
       pluggable-transport proxy. Previously, Tor would pass every
