@@ -419,6 +419,7 @@ _connection_free(connection_t *conn)
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
+    tor_free(control_conn->safecookie_client_hash);
     tor_free(control_conn->incoming_cmd);
   }
 

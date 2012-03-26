@@ -101,6 +101,12 @@ static int authentication_cookie_is_set = 0;
  * read it off disk, it has permission to connect.) */
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
+#define SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT \
+  "Tor safe cookie authentication server-to-controller hash"
+#define SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT \
+  "Tor safe cookie authentication controller-to-server hash"
+#define SAFECOOKIE_SERVER_NONCE_LEN DIGEST256_LEN
+
 /** A sufficiently large size to record the last bootstrap phase string. */
 #define BOOTSTRAP_MSG_LEN 1024
 
@@ -1076,6 +1082,32 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       return 0;
     }
     used_quoted_string = 1;
+  }
+
+  if (conn->safecookie_client_hash != NULL) {
+    /* The controller has chosen safe cookie authentication; the only
+     * acceptable authentication value is the controller-to-server
+     * response. */
+
+    tor_assert(authentication_cookie_is_set);
+
+    if (password_len != DIGEST256_LEN) {
+      log_warn(LD_CONTROL,
+               "Got safe cookie authentication response with wrong length "
+               "(%d)", (int)password_len);
+      errstr = "Wrong length for safe cookie response.";
+      goto err;
+    }
+
+    if (tor_memneq(conn->safecookie_client_hash, password, DIGEST256_LEN)) {
+      log_warn(LD_CONTROL,
+               "Got incorrect safe cookie authentication response");
+      errstr = "Safe cookie response did not match expected value.";
+      goto err;
+    }
+
+    tor_free(conn->safecookie_client_hash);
+    goto ok;
   }
 
   if (!options->CookieAuthentication && !options->HashedControlPassword &&
@@ -2758,8 +2790,10 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
       int passwd = (options->HashedControlPassword != NULL ||
                     options->HashedControlSessionPassword != NULL);
       smartlist_t *mlist = smartlist_create();
-      if (cookies)
+      if (cookies) {
         smartlist_add(mlist, (char*)"COOKIE");
+        smartlist_add(mlist, (char*)"SAFECOOKIE");
+      }
       if (passwd)
         smartlist_add(mlist, (char*)"HASHEDPASSWORD");
       if (!cookies && !passwd)
@@ -2784,6 +2818,121 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
+  return 0;
+}
+
+/** Called when we get an AUTHCHALLENGE command. */
+static int
+handle_control_authchallenge(control_connection_t *conn, uint32_t len,
+                             const char *body)
+{
+  const char *cp = body;
+  char *client_nonce;
+  size_t client_nonce_len;
+  char server_hash[DIGEST256_LEN];
+  char server_hash_encoded[HEX_DIGEST256_LEN+1];
+  char server_nonce[SAFECOOKIE_SERVER_NONCE_LEN];
+  char server_nonce_encoded[(2*SAFECOOKIE_SERVER_NONCE_LEN) + 1];
+
+  cp += strspn(cp, " \t\n\r");
+  if (!strcasecmpstart(cp, "SAFECOOKIE")) {
+    cp += strlen("SAFECOOKIE");
+  } else {
+    connection_write_str_to_buf("513 AUTHCHALLENGE only supports SAFECOOKIE "
+                                "authentication", conn);
+    connection_mark_for_close(TO_CONN(conn));
+    return -1;
+  }
+
+  if (!authentication_cookie_is_set) {
+    connection_write_str_to_buf("515 Cookie authentication is disabled", conn);
+    connection_mark_for_close(TO_CONN(conn));
+    return -1;
+  }
+
+  cp += strspn(cp, " \t\n\r");
+  if (*cp == '"') {
+    const char *newcp =
+      decode_escaped_string(cp, len - (cp - body),
+                            &client_nonce, &client_nonce_len);
+    if (newcp == NULL) {
+      connection_write_str_to_buf("513 Invalid quoted client nonce",
+                                  conn);
+      connection_mark_for_close(TO_CONN(conn));
+      return -1;
+    }
+    cp = newcp;
+  } else {
+    size_t client_nonce_encoded_len = strspn(cp, "0123456789ABCDEFabcdef");
+
+    client_nonce_len = client_nonce_encoded_len / 2;
+    client_nonce = tor_malloc_zero(client_nonce_len);
+
+    if (base16_decode(client_nonce, client_nonce_len,
+                      cp, client_nonce_encoded_len) < 0) {
+      connection_write_str_to_buf("513 Invalid base16 client nonce",
+                                  conn);
+      connection_mark_for_close(TO_CONN(conn));
+      return -1;
+    }
+
+    cp += client_nonce_encoded_len;
+  }
+
+  cp += strspn(cp, " \t\n\r");
+  if (*cp != '\0' ||
+      cp != body + len) {
+    connection_write_str_to_buf("513 Junk at end of AUTHCHALLENGE command",
+                                conn);
+    connection_mark_for_close(TO_CONN(conn));
+    tor_free(client_nonce);
+    return -1;
+  }
+
+  tor_assert(!crypto_rand(server_nonce, SAFECOOKIE_SERVER_NONCE_LEN));
+
+  /* Now compute and send the server-to-controller response, and the
+   * server's nonce. */
+  tor_assert(authentication_cookie != NULL);
+
+  {
+    size_t tmp_len = (AUTHENTICATION_COOKIE_LEN +
+                      client_nonce_len +
+                      SAFECOOKIE_SERVER_NONCE_LEN);
+    char *tmp = tor_malloc_zero(tmp_len);
+    char *client_hash = tor_malloc_zero(DIGEST256_LEN);
+    memcpy(tmp, authentication_cookie, AUTHENTICATION_COOKIE_LEN);
+    memcpy(tmp + AUTHENTICATION_COOKIE_LEN, client_nonce, client_nonce_len);
+    memcpy(tmp + AUTHENTICATION_COOKIE_LEN + client_nonce_len,
+           server_nonce, SAFECOOKIE_SERVER_NONCE_LEN);
+
+    crypto_hmac_sha256(server_hash,
+                       SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT,
+                       strlen(SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT),
+                       tmp,
+                       tmp_len);
+
+    crypto_hmac_sha256(client_hash,
+                       SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT,
+                       strlen(SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT),
+                       tmp,
+                       tmp_len);
+
+    conn->safecookie_client_hash = client_hash;
+
+    tor_free(tmp);
+  }
+
+  base16_encode(server_hash_encoded, sizeof(server_hash_encoded),
+                server_hash, sizeof(server_hash));
+  base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
+                server_nonce, sizeof(server_nonce));
+
+  connection_printf_to_buf(conn,
+                           "250 AUTHCHALLENGE SERVERHASH=%s "
+                           "SERVERNONCE=%s\r\n",
+                           server_hash_encoded,
+                           server_nonce_encoded);
   return 0;
 }
 
@@ -2888,7 +3037,10 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
   if (conn->_base.state == CONTROL_CONN_STATE_OPEN)
     return 1;
   if (!strcasecmp(cmd, "PROTOCOLINFO"))
-    return !conn->have_sent_protocolinfo;
+    return (!conn->have_sent_protocolinfo &&
+            conn->safecookie_client_hash == NULL);
+  if (!strcasecmp(cmd, "AUTHCHALLENGE"))
+    return (conn->safecookie_client_hash == NULL);
   if (!strcasecmp(cmd, "AUTHENTICATE") ||
       !strcasecmp(cmd, "QUIT"))
     return 1;
@@ -3103,6 +3255,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "PROTOCOLINFO")) {
     if (handle_control_protocolinfo(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "AUTHCHALLENGE")) {
+    if (handle_control_authchallenge(conn, cmd_data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
