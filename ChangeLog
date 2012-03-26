@@ -1,15 +1,21 @@
-Changes in version 0.2.3.13-alpha - 2012-03-1?
+Changes in version 0.2.3.13-alpha - 2012-03-26
+  Tor 0.2.3.13-alpha fixes a variety of stability and correctness bugs
+  in managed pluggable transports, as well as providing other cleanups
+  that get us closer to a release candidate.
+
   o Directory authority changes:
     - Change IP address for maatuska (v3 directory authority).
 
   o Security fixes:
-    - Never use a bridge as an exit, even if it claims to be one. Found by
-      wanoskarnet. Fixes bug 5342. Bugfix on ????.
+    - Never use a bridge or a controller-supplied node as an exit, even
+      if its exit policy allows it. Found by wanoskarnet. Fixes bug
+      5342. Bugfix on 0.1.1.15-rc (for controller-purpose descriptors)
+      and 0.2.0.3-alpha (for bridge-purpose descriptors).
     - Only build circuits if we have a sufficient threshold of the total
-      descriptors marked in the consensus with the "Exit" flag. This
-      mitigates an attack proposed by wanoskarnet, in which all of
-      a client's bridges collude to restrict the exit nodes that the
-      client knows about. Fixes bug 5343.
+      descriptors that are marked in the consensus with the "Exit"
+      flag. This mitigates an attack proposed by wanoskarnet, in which
+      all of a client's bridges collude to restrict the exit nodes that
+      the client knows about. Fixes bug 5343.
 
   o Major bugfixes (on Tor 0.2.3.x):
     - Avoid an assert when managed proxies like obfsproxy are configured,
@@ -37,7 +43,7 @@ Changes in version 0.2.3.13-alpha - 2012-03-1?
       0.1.0.1-rc which introduced cannibalization.
     - Detect and reject certain misformed escape sequences in
       configuration values. Previously, these values would cause us
-      to crash if received in a torrc file or over an (authenticated)
+      to crash if received in a torrc file or over an authenticated
       control port. Bug found by Esteban Manchado Velázquez, and
       independently by Robert Connolly from Matta Consulting who further
       noted that it allows a post-authentication heap overflow. Patch
@@ -45,13 +51,13 @@ Changes in version 0.2.3.13-alpha - 2012-03-1?
       on 0.2.0.16-alpha.
     - Fix a compile warning when using the --enable-openbsd-malloc
       configure option. Fixes bug 5340; bugfix on 0.2.0.20-rc.
-    - Directory caches no longer refuse to clean out descriptors when
-      because of missing v2 networkstatus documents, unless they're
-      actually trying to retrieve v2 networkstatus documents. Fixes bug
-      4838; bugfix on 0.2.2.26-beta. Patch by Daniel Bryg.
+    - Directory caches no longer refuse to clean out descriptors because
+      of missing v2 networkstatus documents, unless they're configured
+      to retrieve v2 networkstatus documents. Fixes bug 4838; bugfix on
+      0.2.2.26-beta. Patch by Daniel Bryg.
     - Update to the latest version of the tinytest unit testing framework.
       This includes a couple of bugfixes that can be relevant for
-      running forked unit tests on Windows, and a removal of all reserved
+      running forked unit tests on Windows, and removes all reserved
       identifiers.
 
   o Minor bugfixes (on 0.2.3.x):
@@ -64,13 +70,13 @@ Changes in version 0.2.3.13-alpha - 2012-03-1?
       option, so that the IP stack doesn't decide to use it for IPv4
       too. Fixes bug 4760; bugfix on 0.2.3.9-alpha.
     - Ensure that variables set in Tor's environment cannot override
-      environment variables which Tor tries to pass to a managed
+      environment variables that Tor passes to a managed
       pluggable-transport proxy. Previously, Tor would pass every
-      variable in its environment to managed proxies along with the
-      new ones, in such a way that on many operating systems, the
-      inherited environment variables would override those which Tor
-      tried to explicitly set. Bugfix on 0.2.3.12-alpha for most
-      Unixoid systems; bugfix on 0.2.3.9-alpha for Windows.
+      variable in its environment to managed proxies along with the new
+      ones, in such a way that on many operating systems, the inherited
+      environment variables would override those which Tor tried to
+      explicitly set. Bugfix on 0.2.3.12-alpha for most Unixoid systems;
+      bugfix on 0.2.3.9-alpha for Windows.
 
   o Minor features:
     - A wide variety of new unit tests by Esteban Manchado Velázquez.
