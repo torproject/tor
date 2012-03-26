@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Allow running the unit tests in gdb again. This was accidentally made
-      impossible when the DisableDebuggerAttachment option was introduced.
-      Fixes bug 5448; bugfix on 0.2.3.9-alpha.
-
