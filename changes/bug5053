@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Resolve IPv6 addresses in bridge and entry statistics to country code
+      "??" which means we at least count them. Fixes bug 5053; bugfix on
+      0.2.3.9-alpha.
+
