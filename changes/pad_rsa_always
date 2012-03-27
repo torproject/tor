@@ -1,0 +1,3 @@
+  o Code removal:
+    - Remove all internal support for unpadded RSA. We never used it, and
+      it would be a bad idea to start.

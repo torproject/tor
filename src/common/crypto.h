@@ -69,11 +69,9 @@
  * signs removed. */
 #define BASE64_DIGEST256_LEN 43
 
-/** Constants used to indicate no padding for public-key encryption */
-#define PK_NO_PADDING         60000
-/** Constants used to indicate PKCS1 padding for public-key encryption */
+/** Constant used to indicate PKCS1 padding for public-key encryption */
 #define PK_PKCS1_PADDING      60001
-/** Constants used to indicate OAEP padding for public-key encryption */
+/** Constant used to indicate OAEP padding for public-key encryption */
 #define PK_PKCS1_OAEP_PADDING 60002
 
 /** Number of bytes added for PKCS1 padding. */

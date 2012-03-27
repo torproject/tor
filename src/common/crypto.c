@@ -140,7 +140,6 @@ crypto_get_rsa_padding_overhead(int padding)
 {
   switch (padding)
     {
-    case RSA_NO_PADDING: return 0;
     case RSA_PKCS1_OAEP_PADDING: return 42;
     case RSA_PKCS1_PADDING: return 11;
     default: tor_assert(0); return -1;
@@ -154,7 +153,6 @@ crypto_get_rsa_padding(int padding)
 {
   switch (padding)
     {
-    case PK_NO_PADDING: return RSA_NO_PADDING;
     case PK_PKCS1_PADDING: return RSA_PKCS1_PADDING;
     case PK_PKCS1_OAEP_PADDING: return RSA_PKCS1_OAEP_PADDING;
     default: tor_assert(0); return -1;
@@ -991,8 +989,6 @@ crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
  * bytes of data from <b>from</b>, with padding type 'padding',
  * storing the results on <b>to</b>.
  *
- * (Padding is required; the PK_NO_PADDING value is not supported.)
- *
  * Returns the number of bytes written on success, -1 on failure.
  *
  * The encrypted data consists of:
@@ -1019,7 +1015,6 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
-  tor_assert(padding != PK_NO_PADDING);
 
   overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
