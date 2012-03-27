@@ -47,8 +47,8 @@ Changes in version 0.2.3.13-alpha - 2012-03-26
       control port. Bug found by Esteban Manchado Velázquez, and
       independently by Robert Connolly from Matta Consulting who further
       noted that it allows a post-authentication heap overflow. Patch
-      by "flupzor". Fixes bugs 5090 and 5402 (CVE 2012-1668); bugfix
-      on 0.2.0.16-alpha.
+      by Alexander Schrijver. Fixes bugs 5090 and 5402 (CVE 2012-1668);
+      bugfix on 0.2.0.16-alpha.
     - Fix a compile warning when using the --enable-openbsd-malloc
       configure option. Fixes bug 5340; bugfix on 0.2.0.20-rc.
     - Directory caches no longer refuse to clean out descriptors because
