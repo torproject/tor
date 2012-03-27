@@ -115,13 +115,58 @@ node_get_or_create(const char *identity_digest)
   return node;
 }
 
-/** Add <b>ri</b> to the nodelist. */
+/** Replace <b>old</b> router with <b>new</b> in nodelist.  If
+ *  <b>old</b> and <b>new</b> in fact are the same relays (having the
+ *  same identity_digest) the node_t of <b>old</b> is used for
+ *  <b>new</b>.  Otherwise the node_t of <b>old</b> is dropped and
+ *  <b>new</b> gets a new one (which might be a recycled node_t in
+ *  case we already have one matching its identity).
+ */
 node_t *
-nodelist_add_routerinfo(routerinfo_t *ri)
+nodelist_replace_routerinfo(routerinfo_t *old, routerinfo_t *new)
 {
-  node_t *node;
-  init_nodelist();
-  node = node_get_or_create(ri->cache_info.identity_digest);
+  node_t *node = NULL;
+  tor_assert(old);
+  tor_assert(new);
+
+  if (tor_memeq(old->cache_info.identity_digest,
+                new->cache_info.identity_digest, DIGEST_LEN)) {
+    /* NEW == OLD, reuse node_t.  */
+    node = node_get_mutable_by_id(old->cache_info.identity_digest);
+    if (node) {
+      tor_assert(node->ri == old);
+      /* XXXX prop186 we may have more than one address.  */
+      if (!routers_have_same_or_addr(old, new)) {
+        /* These mustn't carry over when the address and orport
+           change. */
+        node->last_reachable = 0;
+        node->testing_since = 0;
+      }
+    }
+  } else {
+    /* NEW != OLD, get a new node_t.  */
+    nodelist_remove_routerinfo(old);
+  }
+  node = nodelist_add_routerinfo(node, new);
+
+  return node;
+}
+
+
+/** Add <b>ri</b> to the nodelist.  If <b>node_in</b> is not NULL, use
+    that node rather than creating a new.  */
+node_t *
+nodelist_add_routerinfo(node_t *node_in, routerinfo_t *ri)
+{
+  node_t *node = NULL;
+
+  if (node_in) {
+    node = node_in;
+  } else {
+    tor_assert(ri);
+    init_nodelist();
+    node = node_get_or_create(ri->cache_info.identity_digest);
+  }
   node->ri = ri;
 
   if (node->country == -1)

@@ -1,0 +1,3 @@
+  o Code refactoring:
+    - Move last_reachable and testing_since from routerinfo_t to
+      node_t.  Implements enhancement 5529.

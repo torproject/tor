@@ -1793,15 +1793,6 @@ typedef struct {
    * things; see notes on ROUTER_PURPOSE_* macros above.
    */
   uint8_t purpose;
-
-  /* The below items are used only by authdirservers for
-   * reachability testing. */
-
-  /** When was the last time we could reach this OR? */
-  time_t last_reachable;
-  /** When did we start testing reachability for this OR? */
-  time_t testing_since;
-
 } routerinfo_t;
 
 /** Information needed to keep and cache a signed extra-info document. */
@@ -2037,6 +2028,14 @@ typedef struct node_t {
 
   /** According to the geoip db what country is this router in? */
   country_t country;
+
+  /* The below items are used only by authdirservers for
+   * reachability testing. */
+
+  /** When was the last time we could reach this OR? */
+  time_t last_reachable;        /* IPv4 */
+  /** When did we start testing reachability for this OR? */
+  time_t testing_since;         /* IPv4 */
 } node_t;
 
 /** How many times will we try to download a router's descriptor before giving

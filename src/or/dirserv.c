@@ -988,7 +988,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     answer = ! we_are_hibernating();
   } else if (router->is_hibernating &&
              (router->cache_info.published_on +
-              HIBERNATION_PUBLICATION_SKEW) > router->last_reachable) {
+              HIBERNATION_PUBLICATION_SKEW) > node->last_reachable) {
     /* A hibernating router is down unless we (somehow) had contact with it
      * since it declared itself to be hibernating. */
     answer = 0;
@@ -998,7 +998,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   } else {
     /* Otherwise, a router counts as up if we found it reachable in the last
        REACHABLE_TIMEOUT seconds. */
-    answer = (now < router->last_reachable + REACHABLE_TIMEOUT);
+    answer = (now < node->last_reachable + REACHABLE_TIMEOUT);
   }
 
   if (!answer && running_long_enough_to_decide_unreachable()) {
@@ -1010,9 +1010,9 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
        it.
      */
     time_t when = now;
-    if (router->last_reachable &&
-        router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD < now)
-      when = router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD;
+    if (node->last_reachable &&
+        node->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD < now)
+      when = node->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD;
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, when);
   }
 
@@ -3277,15 +3277,17 @@ dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd)
 {
-  routerinfo_t *ri;
+  node_t *node = NULL;
+  routerinfo_t *ri = NULL;
   time_t now = time(NULL);
   tor_assert(address);
   tor_assert(digest_rcvd);
 
-  ri = router_get_mutable_by_digest(digest_rcvd);
-
-  if (ri == NULL)
+  node = node_get_mutable_by_id(digest_rcvd);
+  if (node == NULL)
     return;
+  ri = node->ri;
+  tor_assert(ri);
 
   if (!strcasecmp(address, ri->address) && or_port == ri->or_port) {
     /* Found the right router.  */
@@ -3302,7 +3304,7 @@ dirserv_orconn_tls_done(const char *address,
       else
         log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);
       rep_hist_note_router_reachable(digest_rcvd, addrp, or_port, now);
-      ri->last_reachable = now;
+      node->last_reachable = now;
     }
   }
 }
@@ -3338,12 +3340,17 @@ dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 void
 dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 {
+  node_t *node = NULL;
   tor_addr_t router_addr;
+
+  tor_assert(router);
+  node = node_get_mutable_by_id(router->cache_info.identity_digest);
+  tor_assert(node);
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
             router->nickname, router->address, router->or_port);
   /* Remember when we started trying to determine reachability */
-  if (!router->testing_since)
-    router->testing_since = now;
+  if (!node->testing_since)
+    node->testing_since = now;
   tor_addr_from_ipv4h(&router_addr, router->addr);
   connection_or_connect(&router_addr, router->or_port,
                         router->cache_info.identity_digest);

@@ -2875,7 +2875,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
               &ri->cache_info);
   smartlist_add(rl->routers, ri);
   ri->cache_info.routerlist_index = smartlist_len(rl->routers) - 1;
-  nodelist_add_routerinfo(ri);
+  nodelist_add_routerinfo(NULL, ri);
   router_dir_info_changed();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
@@ -3104,8 +3104,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri_old);
 
-  nodelist_remove_routerinfo(ri_old);
-  nodelist_add_routerinfo(ri_new);
+  nodelist_replace_routerinfo(ri_old, ri_new);
 
   router_dir_info_changed();
   if (idx >= 0) {
@@ -3442,11 +3441,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* Same key, and either new, or listed in the consensus. */
       log_debug(LD_DIR, "Replacing entry for router %s",
                 router_describe(router));
-      if (routers_have_same_or_addr(router, old_router)) {
-        /* these carry over when the address and orport are unchanged. */
-        router->last_reachable = old_router->last_reachable;
-        router->testing_since = old_router->testing_since;
-      }
       routerlist_replace(routerlist, old_router, router);
       if (!from_cache) {
         signed_desc_append_to_journal(&router->cache_info,
