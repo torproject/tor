@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - In the testsuite, provide a large enough buffer in the tor_sscanf
+      unit test. We'd otherwise overrun that buffer and crash during the
+      unit tests. Fixes bug 5449; bugfix on 0.2.3.12-alpha. Thanks weasel
+      for spotting the bug.
+

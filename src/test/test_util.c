@@ -1376,7 +1376,7 @@ static void
 test_util_sscanf(void)
 {
   unsigned u1, u2, u3;
-  char s1[10], s2[10], s3[10], ch;
+  char s1[20], s2[10], s3[10], ch;
   int r;
 
   /* Simple tests (malformed patterns, literal matching, ...) */
