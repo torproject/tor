@@ -7,6 +7,13 @@ Changes in version 0.2.3.13-alpha - 2012-03-26
     - Change IP address for maatuska (v3 directory authority).
 
   o Security fixes:
+    - Provide controllers with a safer way to implement the cookie
+      authentication mechanism. With the old method, if another locally
+      running program could convince a controller that it was the Tor
+      process, then that program could trick the contoller into telling
+      it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
+      authentication method uses a challenge-response approach to prevent
+      this attack. Fixes bug 5185, implements proposal 193.
     - Never use a bridge or a controller-supplied node as an exit, even
       if its exit policy allows it. Found by wanoskarnet. Fixes bug
       5342. Bugfix on 0.1.1.15-rc (for controller-purpose descriptors)
