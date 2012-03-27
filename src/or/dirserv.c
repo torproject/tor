@@ -3264,8 +3264,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
  * router listening at <b>address</b>:<b>or_port</b>, and has yielded
  * a certificate with digest <b>digest_rcvd</b>.
  *
- * Also, if as_advertised is 1, then inform the reachability checker
- * that we could get to this guy.
+ * If as_advertised is 1, then inform the reachability checker that we
+ * could get to this guy.
  */
 void
 dirserv_orconn_tls_done(const char *address,
@@ -3273,37 +3273,40 @@ dirserv_orconn_tls_done(const char *address,
                         const char *digest_rcvd,
                         int as_advertised)
 {
-  routerlist_t *rl = router_get_routerlist();
+  routerinfo_t *ri = NULL;
   time_t now = time(NULL);
-  int bridge_auth = authdir_mode_bridge(get_options());
   tor_assert(address);
   tor_assert(digest_rcvd);
 
-  /* XXX023 Doing a loop like this is stupid.  We should just look up the
-   * router by digest_rcvd, and see if address, orport, and as_advertised
-   * match up. -NM */
-  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
-    if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
-        as_advertised &&
-        fast_memeq(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
-      /* correct digest. mark this router reachable! */
-      if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
-        tor_addr_t addr, *addrp=NULL;
-        log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
-                 router_describe(ri),
-                 address, ri->or_port);
-        if (tor_addr_parse(&addr, ri->address) != -1)
-          addrp = &addr;
-        else
-          log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);
-        rep_hist_note_router_reachable(digest_rcvd, addrp, or_port, now);
-        ri->last_reachable = now;
-      }
-    }
-  } SMARTLIST_FOREACH_END(ri);
   /* FFFF Maybe we should reinstate the code that dumps routers with the same
    * addr/port but with nonmatching keys, but instead of dumping, we should
    * skip testing. */
+
+  if (!as_advertised)
+    return;
+
+  ri = router_get_mutable_by_digest(digest_rcvd);
+  if (ri == NULL)
+    return;
+
+  if (!strcasecmp(address, ri->address) && or_port == ri->or_port) {
+    /* Found the right router.  */
+    if (!authdir_mode_bridge(get_options()) ||
+        ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+      /* This is a bridge or we're not a bridge authorititative --
+         mark it as reachable.  */
+      tor_addr_t addr, *addrp=NULL;
+      log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
+               router_describe(ri),
+               address, ri->or_port);
+      if (tor_addr_parse(&addr, ri->address) != -1)
+        addrp = &addr;
+      else
+        log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);
+      rep_hist_note_router_reachable(digest_rcvd, addrp, or_port, now);
+      ri->last_reachable = now;
+    }
+  }
 }
 
 /** Called when we, as an authority, receive a new router descriptor either as
