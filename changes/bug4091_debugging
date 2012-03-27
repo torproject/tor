@@ -1,0 +1,5 @@
+  o Minor features:
+    - Add more information to a log statement that might help track down
+      bug 4091. If you're seeing "Bug: tor_addr_is_internal() called with a
+      non-IP address" messages (or any Bug messages, for that matter!),
+      please let us know about it.

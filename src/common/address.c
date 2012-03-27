@@ -355,7 +355,9 @@ tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
 
   /* unknown address family... assume it's not safe for external use */
   /* rather than tor_assert(0) */
-  log_warn(LD_BUG, "tor_addr_is_internal() called with a non-IP address.");
+  log_warn(LD_BUG, "tor_addr_is_internal() called with a non-IP address of "
+           "type %d", (int)v_family);
+  tor_fragile_assert();
   return 1;
 }
 
