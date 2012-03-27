@@ -38,6 +38,8 @@ typedef struct tor_addr_port_t
   uint16_t port;
 } tor_addr_port_t;
 
+#define TOR_ADDR_NULL {AF_UNSPEC, {{0}}};
+
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);

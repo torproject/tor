@@ -2802,6 +2802,7 @@ static uint32_t last_resolved_addr = 0;
  * set *<b>hostname_out</b> to a new string holding the hostname we used to
  * get the address. Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
+ * XXXX ipv6
  */
 int
 resolve_my_address(int warn_severity, const or_options_t *options,

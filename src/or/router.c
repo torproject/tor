@@ -1775,21 +1775,20 @@ check_descriptor_bandwidth_changed(time_t now)
 /** Note at log level severity that our best guess of address has changed from
  * <b>prev</b> to <b>cur</b>. */
 static void
-log_addr_has_changed(int severity, uint32_t prev, uint32_t cur,
+log_addr_has_changed(int severity,
+                     const tor_addr_t *prev,
+                     const tor_addr_t *cur,
                      const char *source)
 {
-  char addrbuf_prev[INET_NTOA_BUF_LEN];
-  char addrbuf_cur[INET_NTOA_BUF_LEN];
-  struct in_addr in_prev;
-  struct in_addr in_cur;
+  char addrbuf_prev[TOR_ADDR_BUF_LEN];
+  char addrbuf_cur[TOR_ADDR_BUF_LEN];
 
-  in_prev.s_addr = htonl(prev);
-  tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
+  if (tor_addr_to_str(addrbuf_prev, prev, sizeof(addrbuf_prev), 1) == NULL)
+    strlcpy(addrbuf_prev, "???", TOR_ADDR_BUF_LEN);
+  if (tor_addr_to_str(addrbuf_cur, cur, sizeof(addrbuf_cur), 1) == NULL)
+    strlcpy(addrbuf_cur, "???", TOR_ADDR_BUF_LEN);
 
-  in_cur.s_addr = htonl(cur);
-  tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
-
-  if (prev)
+  if (!tor_addr_is_null(prev))
     log_fn(severity, LD_GENERAL,
            "Our IP Address has changed from %s to %s; "
            "rebuilding descriptor (source: %s).",
@@ -1813,6 +1812,7 @@ check_descriptor_ipaddress_changed(time_t now)
   if (!desc_routerinfo)
     return;
 
+  /* XXXX ipv6 */
   prev = desc_routerinfo->addr;
   if (resolve_my_address(LOG_INFO, options, &cur, NULL) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
@@ -1820,14 +1820,17 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 
   if (prev != cur) {
-    log_addr_has_changed(LOG_NOTICE, prev, cur, "resolve");
+    tor_addr_t tmp_prev, tmp_cur;
+    tor_addr_from_ipv4h(&tmp_prev, prev);
+    tor_addr_from_ipv4h(&tmp_cur, cur);
+    log_addr_has_changed(LOG_NOTICE, &tmp_prev, &tmp_cur, "resolve");
     ip_address_changed(0);
   }
 }
 
 /** The most recently guessed value of our IP address, based on directory
  * headers. */
-static uint32_t last_guessed_ip = 0;
+static tor_addr_t last_guessed_ip = TOR_ADDR_NULL;
 
 /** A directory server <b>d_conn</b> told us our IP address is
  * <b>suggestion</b>.
@@ -1837,35 +1840,36 @@ void
 router_new_address_suggestion(const char *suggestion,
                               const dir_connection_t *d_conn)
 {
-  uint32_t addr, cur = 0;
-  struct in_addr in;
+  tor_addr_t addr;
+  uint32_t cur = 0;             /* Current IPv4 address.  */
   const or_options_t *options = get_options();
 
   /* first, learn what the IP address actually is */
-  if (!tor_inet_aton(suggestion, &in)) {
+  if (tor_addr_parse(&addr, suggestion) == -1) {
     log_debug(LD_DIR, "Malformed X-Your-Address-Is header %s. Ignoring.",
               escaped(suggestion));
     return;
   }
-  addr = ntohl(in.s_addr);
 
   log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
 
   if (!server_mode(options)) {
-    last_guessed_ip = addr; /* store it in case we need it later */
+    tor_addr_copy(&last_guessed_ip, &addr);
     return;
   }
 
+  /* XXXX ipv6 */
   if (resolve_my_address(LOG_INFO, options, &cur, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
-    last_guessed_ip = cur; /* store it in case we need it later */
+    tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
+                                                   need it later */
     return;
   }
-  if (is_internal_IP(addr, 0)) {
+  if (tor_addr_is_internal(&addr, 0)) {
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
     return;
   }
-  if (tor_addr_eq_ipv4h(&d_conn->_base.addr, addr)) {
+  if (tor_addr_eq(&d_conn->_base.addr, &addr)) {
     /* Don't believe anybody who says our IP is their IP. */
     log_debug(LD_DIR, "A directory server told us our IP address is %s, "
               "but he's just reporting his own IP address. Ignoring.",
@@ -1876,14 +1880,15 @@ router_new_address_suggestion(const char *suggestion,
   /* Okay.  We can't resolve our own address, and X-Your-Address-Is is giving
    * us an answer different from what we had the last time we managed to
    * resolve it. */
-  if (last_guessed_ip != addr) {
+  if (!tor_addr_eq(&last_guessed_ip, &addr)) {
     control_event_server_status(LOG_NOTICE,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=DIRSERV",
                                 suggestion);
-    log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr,
+    log_addr_has_changed(LOG_NOTICE, &last_guessed_ip, &addr,
                          d_conn->_base.address);
     ip_address_changed(0);
-    last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
+    tor_addr_copy(&last_guessed_ip, &addr); /* router_rebuild_descriptor()
+                                               will fetch it */
   }
 }
 
@@ -1894,8 +1899,8 @@ router_new_address_suggestion(const char *suggestion,
 static int
 router_guess_address_from_dir_headers(uint32_t *guess)
 {
-  if (last_guessed_ip) {
-    *guess = last_guessed_ip;
+  if (!tor_addr_is_null(&last_guessed_ip)) {
+    *guess = tor_addr_to_ipv4h(&last_guessed_ip);
     return 0;
   }
   return -1;
