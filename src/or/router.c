@@ -1997,7 +1997,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     if (a) {
       tor_asprintf(&extra_or_address,
                    "or-address %s:%d\n", a, router->ipv6_orport);
-      log_notice(LD_OR, "My line is <%s>", extra_or_address);
+      log_debug(LD_OR, "My or-address line is <%s>", extra_or_address);
     }
   }
 

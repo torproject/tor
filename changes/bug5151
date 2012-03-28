@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix bug stomping on ORPort option NoListen and ignoring option
+      NoAdvertise. Fixes bug 5151.
+    - Move a debug printout from notice to debug level.
