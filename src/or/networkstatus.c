@@ -89,7 +89,7 @@ static time_t last_networkstatus_download_attempted = 0;
 /** A time before which we shouldn't try to replace the current consensus:
  * this will be at some point after the next consensus becomes valid, but
  * before the current consensus becomes invalid. */
-static time_t time_to_download_next_consensus = 0;
+static time_t time_to_download_next_consensus[N_CONSENSUS_FLAVORS];
 /** Download status for the current consensus networkstatus. */
 static download_status_t consensus_dl_status[N_CONSENSUS_FLAVORS];
 
@@ -1220,18 +1220,23 @@ update_consensus_networkstatus_downloads(time_t now)
   int i;
   const or_options_t *options = get_options();
 
-  if (!networkstatus_get_live_consensus(now))
-    time_to_download_next_consensus = now; /* No live consensus? Get one now!*/
-  if (time_to_download_next_consensus > now)
-    return; /* Wait until the current consensus is older. */
-
   for (i=0; i < N_CONSENSUS_FLAVORS; ++i) {
     /* XXXX need some way to download unknown flavors if we are caching. */
     const char *resource;
     consensus_waiting_for_certs_t *waiting;
+    networkstatus_t *c;
 
     if (! we_want_to_fetch_flavor(options, i))
       continue;
+
+    c = networkstatus_get_latest_consensus_by_flavor(i);
+    if (! (c && c->valid_after <= now && now <= c->valid_until)) {
+      /* No live consensus? Get one now!*/
+      time_to_download_next_consensus[i] = now;
+    }
+
+    if (time_to_download_next_consensus[i] > now)
+      return; /* Wait until the current consensus is older. */
 
     resource = networkstatus_get_flavor_name(i);
 
@@ -1284,13 +1289,17 @@ networkstatus_consensus_download_failed(int status_code, const char *flavname)
 #define CONSENSUS_MIN_SECONDS_BEFORE_CACHING 120
 
 /** Update the time at which we'll consider replacing the current
- * consensus. */
-void
-update_consensus_networkstatus_fetch_time(time_t now)
+ * consensus of flavor <b>flav</b> */
+static void
+update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
 {
   const or_options_t *options = get_options();
-  networkstatus_t *c = networkstatus_get_live_consensus(now);
-  if (c) {
+  networkstatus_t *c = networkstatus_get_latest_consensus_by_flavor(flav);
+  const char *flavor = networkstatus_get_flavor_name(flav);
+  if (! we_want_to_fetch_flavor(get_options(), flav))
+    return;
+
+  if (c && c->valid_after <= now && now <= c->valid_until) {
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
     long min_sec_before_caching = CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
@@ -1339,22 +1348,36 @@ update_consensus_networkstatus_fetch_time(time_t now)
     tor_assert(c->fresh_until < start);
     /* We must download the next one before c is invalid: */
     tor_assert(start+dl_interval < c->valid_until);
-    time_to_download_next_consensus = start +crypto_rand_int((int)dl_interval);
+    time_to_download_next_consensus[flav] =
+      start + crypto_rand_int((int)dl_interval);
     {
       char tbuf1[ISO_TIME_LEN+1];
       char tbuf2[ISO_TIME_LEN+1];
       char tbuf3[ISO_TIME_LEN+1];
       format_local_iso_time(tbuf1, c->fresh_until);
       format_local_iso_time(tbuf2, c->valid_until);
-      format_local_iso_time(tbuf3, time_to_download_next_consensus);
-      log_info(LD_DIR, "Live consensus %s the most recent until %s and will "
+      format_local_iso_time(tbuf3, time_to_download_next_consensus[flav]);
+      log_info(LD_DIR, "Live %s consensus %s the most recent until %s and will "
                "expire at %s; fetching the next one at %s.",
-               (c->fresh_until > now) ? "will be" : "was",
+               flavor, (c->fresh_until > now) ? "will be" : "was",
                tbuf1, tbuf2, tbuf3);
     }
   } else {
-    time_to_download_next_consensus = now;
-    log_info(LD_DIR, "No live consensus; we should fetch one immediately.");
+    time_to_download_next_consensus[flav] = now;
+    log_info(LD_DIR, "No live %s consensus; we should fetch one immediately.",
+             flavor);
+  }
+}
+
+/** Update the time at which we'll consider replacing the current
+ * consensus of flavor 'flavor' */
+void
+update_consensus_networkstatus_fetch_time(time_t now)
+{
+  int i;
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    if (we_want_to_fetch_flavor(get_options(), i))
+      update_consensus_networkstatus_fetch_time_impl(now, i);
   }
 }
 
