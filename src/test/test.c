@@ -1392,13 +1392,11 @@ test_geoip(void)
   const char *bridge_stats_1 =
       "bridge-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "bridge-ips zz=24,xy=8\n"
-      "bridge-ip-versions v4=11,v6=9\n",
+      "bridge-ip-versions v4=16,v6=16\n",
   *dirreq_stats_1 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips ab=8\n"
       "dirreq-v2-ips \n"
-      "dirreq-v3-ip-versions v4=1,v6=0\n"
-      "dirreq-v2-ip-versions v4=0,v6=0\n"
       "dirreq-v3-reqs ab=8\n"
       "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
@@ -1413,8 +1411,6 @@ test_geoip(void)
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
       "dirreq-v2-ips \n"
-      "dirreq-v3-ip-versions v4=0,v6=0\n"
-      "dirreq-v2-ip-versions v4=0,v6=0\n"
       "dirreq-v3-reqs \n"
       "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
@@ -1429,8 +1425,6 @@ test_geoip(void)
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
       "dirreq-v2-ips \n"
-      "dirreq-v3-ip-versions v4=0,v6=0\n"
-      "dirreq-v2-ip-versions v4=0,v6=0\n"
       "dirreq-v3-reqs \n"
       "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
@@ -1445,8 +1439,6 @@ test_geoip(void)
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
       "dirreq-v2-ips \n"
-      "dirreq-v3-ip-versions v4=0,v6=0\n"
-      "dirreq-v2-ip-versions v4=0,v6=0\n"
       "dirreq-v3-reqs \n"
       "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
@@ -1459,12 +1451,10 @@ test_geoip(void)
       "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
   *entry_stats_1 =
       "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-      "entry-ips ab=8\n"
-      "entry-ip-versions v4=1,v6=0\n",
+      "entry-ips ab=8\n",
   *entry_stats_2 =
       "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-      "entry-ips \n"
-      "entry-ip-versions v4=0,v6=0\n";
+      "entry-ips \n";
   tor_addr_t addr;
   struct in6_addr in6;
   int total_ipv4, total_ipv6;
@@ -1554,7 +1544,7 @@ test_geoip(void)
   test_assert(s);
   test_streq("zz=24,ab=16,xy=8", s);
   test_eq(total_ipv4, 16);
-  test_eq(total_ipv6, 13);
+  test_eq(total_ipv6, 16);
   tor_free(s);
 
   /* Now clear out all the AB observations. */
@@ -1562,8 +1552,8 @@ test_geoip(void)
   s = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
   test_assert(s);
   test_streq("zz=24,xy=8", s);
-  test_eq(total_ipv4, 11);
-  test_eq(total_ipv6, 9);
+  test_eq(total_ipv4, 16);
+  test_eq(total_ipv6, 16);
 
   /* Start testing bridge statistics by making sure that we don't output
    * bridge stats without initializing them. */

@@ -1027,9 +1027,9 @@ geoip_get_client_history(geoip_client_action_t action, int *total_ipv4, int *tot
     }
   }
   if (total_ipv4)
-      (*total_ipv4) = ipv4_count;
+      (*total_ipv4) = round_to_next_multiple_of(ipv4_count, granularity);
   if (total_ipv6)
-      (*total_ipv6) = ipv6_count;
+      (*total_ipv6) = round_to_next_multiple_of(ipv6_count, granularity);
   /* Don't record anything if we haven't seen enough IPs. */
   if (total < MIN_IPS_TO_NOTE_ANYTHING)
     goto done;
@@ -1185,9 +1185,6 @@ geoip_format_dirreq_stats(time_t now)
        *v3_direct_dl_string, *v2_direct_dl_string,
        *v3_tunneled_dl_string, *v2_tunneled_dl_string;
   char *result;
-  int networkstatus_v2_ipv4, networkstatus_v2_ipv6,
-    networkstatus_v3_ipv4, networkstatus_v3_ipv6;
-    
 
   if (!start_of_dirreq_stats_interval)
     return NULL; /* Not initialized. */
@@ -1195,8 +1192,10 @@ geoip_format_dirreq_stats(time_t now)
   tor_assert(now >= start_of_dirreq_stats_interval);
 
   format_iso_time(t, now);
-  v2_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2, &networkstatus_v2_ipv4, &networkstatus_v2_ipv6);
-  v3_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS, &networkstatus_v3_ipv4, &networkstatus_v3_ipv6);
+  v2_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
+                                           NULL, NULL);
+  v3_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS,
+                                           NULL, NULL);
   v2_reqs_string = geoip_get_request_history(
                    GEOIP_CLIENT_NETWORKSTATUS_V2);
   v3_reqs_string = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
@@ -1231,8 +1230,6 @@ geoip_format_dirreq_stats(time_t now)
   tor_asprintf(&result, "dirreq-stats-end %s (%d s)\n"
               "dirreq-v3-ips %s\n"
               "dirreq-v2-ips %s\n"
-	      "dirreq-v3-ip-versions v4=%d,v6=%d\n"
-	      "dirreq-v2-ip-versions v4=%d,v6=%d\n"
               "dirreq-v3-reqs %s\n"
               "dirreq-v2-reqs %s\n"
               "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
@@ -1249,8 +1246,6 @@ geoip_format_dirreq_stats(time_t now)
               (unsigned) (now - start_of_dirreq_stats_interval),
               v3_ips_string ? v3_ips_string : "",
               v2_ips_string ? v2_ips_string : "",
-	      networkstatus_v3_ipv4, networkstatus_v3_ipv6,
-	      networkstatus_v2_ipv4, networkstatus_v2_ipv6,
               v3_reqs_string ? v3_reqs_string : "",
               v2_reqs_string ? v2_reqs_string : "",
               ns_v3_responses[GEOIP_SUCCESS],
@@ -1443,7 +1438,7 @@ format_bridge_stats_controller(time_t now)
   (void) now;
 
   format_iso_time(started, start_of_bridge_stats_interval);
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, 0, 0);
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, NULL, NULL);
 
   tor_asprintf(&out,
                "TimeStarted=\"%s\" CountrySummary=%s",
@@ -1579,11 +1574,10 @@ geoip_format_entry_stats(time_t now)
   data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
   format_iso_time(t, now);
   tor_asprintf(&result,
-	       "entry-stats-end %s (%u s)\n"
-	       "entry-ips %s\n"
-	       "entry-ip-versions v4=%d,v6=%d\n",
-	       t, (unsigned) (now - start_of_entry_stats_interval),
-	       data ? data : "", total_ipv4, total_ipv6);
+               "entry-stats-end %s (%u s)\n"
+               "entry-ips %s\n",
+               t, (unsigned) (now - start_of_entry_stats_interval),
+               data ? data : "");
   tor_free(data);
   return result;
 }
