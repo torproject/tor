@@ -484,6 +484,8 @@ static const config_var_t testing_tor_network_defaults[] = {
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
 static config_var_t _state_vars[] = {
+  /* Remember to document these in state-contents.txt ! */
+
   V(AccountingBytesReadInInterval,    MEMUNIT,  NULL),
   V(AccountingBytesWrittenInInterval, MEMUNIT,  NULL),
   V(AccountingExpectedUsage,          MEMUNIT,  NULL),
