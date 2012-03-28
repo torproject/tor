@@ -1,6 +1,6 @@
 # Last updated based on February 22 2012 Maxmind GeoLite IPv6 Country
 # wget http://geolite.maxmind.com/download/geoip/database/GeoIPv6.csv.gz
-# cut -d, -f1,2,6 < GeoIPv6.csv|sed 's/[ "]//g' > geoip6
+# cut -d, -f1,2,5 < GeoIPv6.csv|sed 's/[ "]//g' > geoip6
 2001:200::,2001:200:ffff:ffff:ffff:ffff:ffff:ffff,JP
 2001:208::,2001:208:ffff:ffff:ffff:ffff:ffff:ffff,SG
 2001:218::,2001:218:ffff:ffff:ffff:ffff:ffff:ffff,JP

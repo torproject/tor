@@ -1483,6 +1483,8 @@ test_geoip(void)
   test_eq(0, geoip_ipv6_parse_entry("::a,::32,AB"));
   test_eq(0, geoip_ipv6_parse_entry("::34,::5a,XY"));
   test_eq(0, geoip_ipv6_parse_entry("::5f,::64,AB"));
+  /* XXX5053 If we plan to support parsing Maxmind's GeoIPv6.csv format,
+   * we should test it here.  If not, remove this comment. -KL */
   test_eq(0, geoip_ipv6_parse_entry("::69,::8c,ZZ"));
   test_eq(0, geoip_ipv6_parse_entry("::96,::be,XY"));
   test_eq(0, geoip_ipv6_parse_entry("::c8,::fa,AB"));
@@ -1535,7 +1537,7 @@ test_geoip(void)
     SET_TEST_ADDRESS(i);
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
   }
-  SET_TEST_ADDRESS(i);
+  SET_TEST_ADDRESS(225);
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
   /* and 3 observations in XY, several times. */
   for (j=0; j < 10; ++j)

@@ -48,7 +48,8 @@ static smartlist_t *geoip_countries = NULL;
  * The index is encoded in the pointer, and 1 is added so that NULL can mean
  * not found. */
 static strmap_t *country_idxplus1_by_lc_code = NULL;
-/** A list of all known geoip_ipv4_entry_t, sorted by ip_low. */
+/** Lists of all known geoip_ipv4_entry_t and geoip_ipv6_entry_t, sorted
+ * by their respective ip_low. */
 static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 
 /** SHA1 digest of the GeoIP file to include in extra-info descriptors. */
@@ -203,7 +204,11 @@ geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high, const char *coun
 }
 
 /** Add an entry to the GeoIP ipv6 table, parsing it from <b>line</b>.  The
- * format is as for geoip_ipv6_load_file(). */
+ * format is as for geoip_load_file(). */
+/* XXX5053 Should this code also support parsing Maxmind's GeoIPv6.csv
+ * format directly, similar to how their v4 format is also accepted?  That
+ * would enable people to use their commercial IPv6 databases instead of
+ * our free one, if they wanted. -KL */
 /*private*/ int
 geoip_ipv6_parse_entry(const char *line)
 {
@@ -260,10 +265,13 @@ _geoip_ipv6_compare_entries(const void **_a, const void **_b)
 }
 
 /** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6 (a pointer
- * to a in6_addr in host order) to a geoip_ipv4_entry_t */
+ * to a in6_addr in host order) to a geoip_ipv6_entry_t */
 static int
 _geoip_ipv6_compare_key_to_entry(const void *_key, const void **_member)
 {
+  /* XXX5053 The following comment isn't correct anymore and I'm not 100%
+   * certain how to fix it, because I don't know what alignment issues
+   * there could be. -KL */
   /* No alignment issue here, since _key really is a pointer to uint32_t */
   const struct in6_addr *addr = (struct in6_addr *)_key;
   const geoip_ipv6_entry_t *entry = *_member;
@@ -374,6 +382,10 @@ geoip_load_file(sa_family_t family, const char *filename, const or_options_t *op
 
   /* Remember file digest so that we can include it in our extra-info
    * descriptors. */
+  /* XXX5053 This is a bug!  We overwrite geoip_digest with whichever file
+   * we parse last.  We'll want to add a separate geoip6_digest and write
+   * a geoip6-db-digest line to our extra-info descriptor.  Needs a
+   * dir-spec.txt patch, too. -KL */
   crypto_digest_get_digest(geoip_digest_env, geoip_digest, DIGEST_LEN);
   crypto_digest_free(geoip_digest_env);
 
@@ -396,6 +408,11 @@ geoip_get_country_by_ipv4(uint32_t ipaddr)
   return ent ? (int)ent->country : 0;
 }
 
+/** Given an IPv6 address, return a number representing the country to
+ * which that address belongs, -1 for "No geoip information available", or
+ * 0 for the 'unknown country'.  The return value will always be less than
+ * geoip_get_n_countries().  To decode it, call geoip_get_country_name().
+ */
 int
 geoip_get_country_by_ipv6(const struct in6_addr *addr)
 {
@@ -450,6 +467,9 @@ geoip_get_country_name(country_t num)
 int
 geoip_is_loaded(void)
 {
+  /* XXX5053 Saying that we have loaded a GeoIP database if have _either_
+   * a v4 or v6 database might be problematic.  Maybe we need to add an
+   * address parameter to this function? -KL */
   return geoip_countries != NULL && (geoip_ipv4_entries != NULL || geoip_ipv6_entries != NULL);
 }
 

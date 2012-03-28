@@ -1535,8 +1535,9 @@ options_act(const or_options_t *old_options)
       ((!old_options || !opt_streq(old_options->GeoIPv6File, options->GeoIPv6File))
        || !geoip_is_loaded())) {
     /* XXXX Don't use this "<default>" junk; make our filename options
-     * understand prefixes somehow. -NM */
-    /* XXXX023 Reload GeoIPFile on SIGHUP. -NM */
+     * understand prefixes somehow.  See also comment for GeoIPFile. */
+    /* XXXX024 Reload GeoIPV6File on SIGHUP.  See also comment for
+     * GeoIPFile. */
     char *actual_fname = tor_strdup(options->GeoIPv6File);
 #ifdef _WIN32
     if (!strcmp(actual_fname, "<default>")) {
