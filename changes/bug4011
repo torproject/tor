@@ -1,0 +1,8 @@
+  o Major bugfixes:
+
+    - Do not allow the presence of one consensus flavor to keep us from
+      downloading another. Previously, we had one "time to download a
+      consensus" timer, which didn't understand the idea of having one
+      consensus but wanting to download another. Fixes bug 4011; fix on
+      0.2.3.1-alpha.
+
