@@ -4887,7 +4887,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
       if (tor_memeq(ipos_encrypted + pos, client_id,
                   REND_BASIC_AUTH_CLIENT_ID_LEN)) {
         /* Attempt to decrypt introduction points. */
-        cipher = crypto_create_init_cipher(descriptor_cookie, 0);
+        cipher = crypto_cipher_new(descriptor_cookie);
         if (crypto_cipher_decrypt(cipher, session_key, ipos_encrypted
                                   + pos + REND_BASIC_AUTH_CLIENT_ID_LEN,
                                   CIPHER_KEY_LEN) < 0) {
@@ -4896,13 +4896,13 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
           return -1;
         }
         crypto_cipher_free(cipher);
-        cipher = crypto_create_init_cipher(session_key, 0);
+
         len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
         dec = tor_malloc(len);
-        declen = crypto_cipher_decrypt_with_iv(cipher, dec, len,
+        declen = crypto_cipher_decrypt_with_iv(session_key, dec, len,
             ipos_encrypted + 2 + client_entries_len,
             ipos_encrypted_size - 2 - client_entries_len);
-        crypto_cipher_free(cipher);
+
         if (declen < 0) {
           log_warn(LD_REND, "Could not decrypt introduction point string.");
           tor_free(dec);
@@ -4923,7 +4923,6 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
              "check your authorization for this service!");
     return -1;
   } else if (ipos_encrypted[0] == (int)REND_STEALTH_AUTH) {
-    crypto_cipher_t *cipher;
     char *dec;
     int declen;
     if (ipos_encrypted_size < CIPHER_IV_LEN + 2) {
@@ -4932,13 +4931,13 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
       return -1;
     }
     dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1);
-    cipher = crypto_create_init_cipher(descriptor_cookie, 0);
-    declen = crypto_cipher_decrypt_with_iv(cipher, dec,
+
+    declen = crypto_cipher_decrypt_with_iv(descriptor_cookie, dec,
                                            ipos_encrypted_size -
                                                CIPHER_IV_LEN - 1,
                                            ipos_encrypted + 1,
                                            ipos_encrypted_size - 1);
-    crypto_cipher_free(cipher);
+
     if (declen < 0) {
       log_warn(LD_REND, "Decrypting introduction points failed!");
       tor_free(dec);
