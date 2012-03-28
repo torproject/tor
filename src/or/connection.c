@@ -913,7 +913,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 #endif
       /* We need to set IPV6_V6ONLY so that this socket can't get used for
        * IPv4 connections. */
-      if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY, (void*)&one, sizeof(one))<0) {
+      if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY,
+                     (void*)&one, sizeof(one))<0) {
         int e = tor_socket_errno(s);
         log_warn(LD_NET, "Error setting IPV6_V6ONLY flag: %s",
                  tor_socket_strerror(e));

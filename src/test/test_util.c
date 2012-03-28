@@ -50,7 +50,6 @@ test_util_time(void)
 
   test_eq(-1005000L, tv_udiff(&start, &end));
 
-
   /* Test tor_timegm */
 
   /* The test values here are confirmed to be correct on a platform
@@ -76,7 +75,6 @@ test_util_time(void)
   a_time.tm_mon = -1;          /* Wrong month */
   a_time.tm_mday = 10;
   test_eq((time_t) -1, tor_timegm(&a_time));
-
 
   /* Test {format,parse}_rfc1123_time */
 
@@ -110,7 +108,6 @@ test_util_time(void)
   test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:61 GMT", &t_res));
 #endif
 
-
   /* Test parse_iso_time */
 
   t_res = 0;
@@ -140,7 +137,6 @@ test_util_time(void)
   test_eq(-1, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
   test_eq(-1, parse_iso_time("2011-03-30 23:59", &t_res));
 
-
   /* Test tor_gettimeofday */
 
   end.tv_sec = 4;
@@ -153,7 +149,6 @@ test_util_time(void)
   tor_gettimeofday(&end);
   /* We might've timewarped a little. */
   tt_int_op(tv_udiff(&start, &end), >=, -5000);
-
 
   /* Test format_iso_time */
 
@@ -910,7 +905,8 @@ test_util_strmisc(void)
 
     wrap_string(sl, "A test of string wrapping...", 6, "### ", "# ");
     cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "### A\n# test\n# of\n# stri\n# ng\n# wrap\n# ping\n# ...\n");
+    test_streq(cp,
+               "### A\n# test\n# of\n# stri\n# ng\n# wrap\n# ping\n# ...\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_clear(sl);
@@ -924,7 +920,8 @@ test_util_strmisc(void)
 
     wrap_string(sl, "Small test", 6, "### ", "#### ");
     cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "### Sm\n#### a\n#### l\n#### l\n#### t\n#### e\n#### s\n#### t\n");
+    test_streq(cp, "### Sm\n#### a\n#### l\n#### l\n#### t\n#### e"
+                   "\n#### s\n#### t\n");
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_clear(sl);

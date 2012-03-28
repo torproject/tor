@@ -1357,8 +1357,8 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
       format_local_iso_time(tbuf1, c->fresh_until);
       format_local_iso_time(tbuf2, c->valid_until);
       format_local_iso_time(tbuf3, time_to_download_next_consensus[flav]);
-      log_info(LD_DIR, "Live %s consensus %s the most recent until %s and will "
-               "expire at %s; fetching the next one at %s.",
+      log_info(LD_DIR, "Live %s consensus %s the most recent until %s and "
+               "will expire at %s; fetching the next one at %s.",
                flavor, (c->fresh_until > now) ? "will be" : "was",
                tbuf1, tbuf2, tbuf3);
     }
