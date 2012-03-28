@@ -2000,8 +2000,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       if (options->ClientRejectInternalAddresses &&
           !conn->use_begindir && !conn->chosen_exit_name && !circ) {
         tor_addr_t addr;
-        if (tor_addr_parse(&addr, socks->address) >= 0 &&
-            tor_addr_is_internal(&addr, 0)) {
+        if (tor_addr_hostname_is_local(socks->address) ||
+            (tor_addr_parse(&addr, socks->address) >= 0 &&
+             tor_addr_is_internal(&addr, 0))) {
           /* If this is an explicit private address with no chosen exit node,
            * then we really don't want to try to connect to it.  That's
            * probably an error. */

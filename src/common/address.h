@@ -191,6 +191,8 @@ int tor_addr_is_loopback(const tor_addr_t *addr);
 int tor_addr_port_split(int severity, const char *addrport,
                         char **address_out, uint16_t *port_out);
 
+int tor_addr_hostname_is_local(const char *name);
+
 /* IPv4 helpers */
 int is_internal_IP(uint32_t ip, int for_listening);
 int addr_port_lookup(int severity, const char *addrport, char **address,
