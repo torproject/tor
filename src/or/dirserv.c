@@ -3264,14 +3264,12 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
  * router listening at <b>address</b>:<b>or_port</b>, and has yielded
  * a certificate with digest <b>digest_rcvd</b>.
  *
- * If as_advertised is 1, then inform the reachability checker that we
- * could get to this guy.
+ * Inform the reachability checker that we could get to this guy.
  */
 void
 dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
-                        const char *digest_rcvd,
-                        int as_advertised)
+                        const char *digest_rcvd)
 {
   routerinfo_t *ri = NULL;
   time_t now = time(NULL);
@@ -3281,9 +3279,6 @@ dirserv_orconn_tls_done(const char *address,
   /* FFFF Maybe we should reinstate the code that dumps routers with the same
    * addr/port but with nonmatching keys, but instead of dumping, we should
    * skip testing. */
-
-  if (!as_advertised)
-    return;
 
   ri = router_get_mutable_by_digest(digest_rcvd);
   if (ri == NULL)
