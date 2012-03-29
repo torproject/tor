@@ -144,6 +144,8 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## different networks. You declare it here so Tor clients can avoid
 ## using more than one of your relays in a single circuit. See
 ## https://www.torproject.org/docs/faq#MultipleRelays
+## However, you should never include a bridge's fingerprint here, as it would
+## break its concealability and potentionally reveal its IP/TCP address.
 #MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
