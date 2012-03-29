@@ -3271,16 +3271,11 @@ dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd)
 {
-  routerinfo_t *ri = NULL;
+  routerinfo_t *ri = router_get_mutable_by_digest(digest_rcvd);
   time_t now = time(NULL);
   tor_assert(address);
   tor_assert(digest_rcvd);
 
-  /* FFFF Maybe we should reinstate the code that dumps routers with the same
-   * addr/port but with nonmatching keys, but instead of dumping, we should
-   * skip testing. */
-
-  ri = router_get_mutable_by_digest(digest_rcvd);
   if (ri == NULL)
     return;
 
