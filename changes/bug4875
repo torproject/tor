@@ -1,0 +1,3 @@
+  o Minor bugfixes
+    - Relays now understand an IPv6 address when they get one from a
+      directory server.  Fixes bug 4875.
