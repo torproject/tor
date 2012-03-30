@@ -3271,10 +3271,12 @@ dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd)
 {
-  routerinfo_t *ri = router_get_mutable_by_digest(digest_rcvd);
+  routerinfo_t *ri;
   time_t now = time(NULL);
   tor_assert(address);
   tor_assert(digest_rcvd);
+
+  ri = router_get_mutable_by_digest(digest_rcvd);
 
   if (ri == NULL)
     return;
