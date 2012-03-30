@@ -1,0 +1,3 @@
+  o Documentation fixes:
+    - Stop mentioning the deprecated *ListenAddress options in
+      torrc.sample. Fixes bug 5438.

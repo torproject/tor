@@ -15,13 +15,12 @@
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
 ## relay, and not make any local application connections yourself.
-SocksPort 9050 # what port to open for local application connections
-SocksListenAddress 127.0.0.1 # accept connections only from localhost
-#SocksListenAddress 192.168.0.1:9100 # listen on this IP:port also
+#SocksPort 9050 # Default: Bind to localhost:9050 for local connections.
+#SocksPort 192.168.0.1:9100 # Bind to this adddress:port too.
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
-## all (and only) requests from SocksListenAddress. Untrusted users who
+## all (and only) requests that reach a SocksPort. Untrusted users who
 ## can access your SocksPort may be able to learn about the connections
 ## you make.
 #SocksPolicy accept 192.168.0.0/16
@@ -82,11 +81,12 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ## Required: what port to advertise for incoming Tor connections.
 #ORPort 9001
-## If you want to listen on a port other than the one advertised
-## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment the
-## line below too. You'll need to do ipchains or other port forwarding
+## If you want to listen on a port other than the one advertised in
+## ORPort (e.g. to advertise 443 but bind to 9090), you can do it as
+## follows.  You'll need to do ipchains or other port forwarding
 ## yourself to make this work.
-#ORListenAddress 0.0.0.0:9090
+#ORPort 443 NoListen
+#ORPort 127.0.0.1:9090 NoAdvertise
 
 ## The IP address or full DNS name for incoming connections to your
 ## relay. Leave commented out and Tor will guess.
@@ -128,11 +128,12 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## Uncomment this to mirror directory information for others. Please do
 ## if you have enough bandwidth.
 #DirPort 9030 # what port to advertise for directory connections
-## If you want to listen on a port other than the one advertised
-## in DirPort (e.g. to advertise 80 but bind to 9091), uncomment the line
-## below too. You'll need to do ipchains or other port forwarding yourself
-## to make this work.
-#DirListenAddress 0.0.0.0:9091
+## If you want to listen on a port other than the one advertised in
+## DirPort (e.g. to advertise 80 but bind to 9091), you can do it as
+## follows.  below too. You'll need to do ipchains or other port
+## forwarding yourself to make this work.
+#DirPort 80 NoListen
+#DirPort 127.0.0.1:9091 NoAdvertise
 ## Uncomment to return an arbitrary blob of html on your DirPort. Now you
 ## can explain what Tor is if anybody wonders why your IP address is
 ## contacting them. See contrib/tor-exit-notice.html in Tor's source
