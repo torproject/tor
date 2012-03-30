@@ -1,0 +1,5 @@
+  o Minor features:
+    - Make the code that clients use to detect an address change be
+      IPv6-aware, so that it won't fill clients' logs with error
+      messages when trying to get the IPv4 address of an IPv6
+      connection. Implements ticket 5537.
