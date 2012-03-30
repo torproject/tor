@@ -1055,7 +1055,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
     memset(buf, 0, pkeylen);
     tor_free(buf);
   }
-  if (cipher) crypto_cipher_free(cipher);
+  crypto_cipher_free(cipher);
   return -1;
 }
 
@@ -1112,7 +1112,7 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_t *env,
  err:
   memset(buf,0,pkeylen);
   tor_free(buf);
-  if (cipher) crypto_cipher_free(cipher);
+  crypto_cipher_free(cipher);
   return -1;
 }
 
