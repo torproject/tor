@@ -906,6 +906,11 @@ tor_parse_long(const char *s, int base, long min, long max,
   char *endptr;
   long r;
 
+  if (base < 0) {
+    if (ok)
+      *ok = 0;
+    return 0;
+  }
   r = strtol(s, &endptr, base);
   CHECK_STRTOX_RESULT();
 }
@@ -918,6 +923,11 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   char *endptr;
   unsigned long r;
 
+  if (base < 0) {
+    if (ok)
+      *ok = 0;
+    return 0;
+  }
   r = strtoul(s, &endptr, base);
   CHECK_STRTOX_RESULT();
 }
@@ -941,6 +951,12 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 {
   char *endptr;
   uint64_t r;
+
+  if (base < 0) {
+    if (ok)
+      *ok = 0;
+    return 0;
+  }
 
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
