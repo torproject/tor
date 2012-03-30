@@ -1262,7 +1262,7 @@ dump_distinct_digest_count(int severity)
  * s through end into the signed_descriptor_body of the resulting
  * routerinfo_t.
  *
- * If <b>end</b> is NULL, <b>s</b> must be properly NULL-terminated.
+ * If <b>end</b> is NULL, <b>s</b> must be properly NUL-terminated.
  *
  * If <b>allow_annotations</b>, it's okay to encounter annotations in <b>s</b>
  * before the router; if it's false, reject the router if it's annotated.  If
