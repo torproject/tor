@@ -2657,6 +2657,8 @@ rep_hist_format_desc_stats(time_t now)
     return NULL;
 
   size =  digestmap_size(served_descs);
+  if (size == 0)
+    return NULL;
   vals = tor_malloc(size * sizeof(int));
 
   for (iter = digestmap_iter_init(served_descs); !digestmap_iter_done(iter);

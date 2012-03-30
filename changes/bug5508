@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a bug where a bridge authority crashes (on a failed assert)
+      if it has seen no directory requests when it's time to write
+      statistics to disk.
