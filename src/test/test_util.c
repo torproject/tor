@@ -1735,32 +1735,56 @@ test_util_strtok(void)
 {
   char buf[128];
   char buf2[128];
+  int i;
   char *cp1, *cp2;
-  strlcpy(buf, "Graved on the dark in gestures of descent", sizeof(buf));
-  strlcpy(buf2, "they.seemed;their!own;most.perfect;monument", sizeof(buf2));
-  /*  -- "Year's End", Richard Wilbur */
 
-  test_streq("Graved", tor_strtok_r_impl(buf, " ", &cp1));
-  test_streq("they", tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+  for (i = 0; i < 3; i++) {
+    const char *pad1, *pad2;
+    switch (i) {
+    case 0:
+      pad1 = pad2 = "";
+      break;
+    case 1:
+      pad1 = " ";
+      pad2 = "!";
+      break;
+    case 2:
+      pad1 = "  ";
+      pad2 = ";!";
+      break;
+    }
+    tor_snprintf(buf, sizeof(buf), "%s", pad1);
+    tor_snprintf(buf2, sizeof(buf2), "%s", pad2);
+    test_assert(NULL == tor_strtok_r_impl(buf, " ", &cp1));
+    test_assert(NULL == tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+
+    tor_snprintf(buf, sizeof(buf),
+                 "%sGraved on the dark  in gestures of descent%s", pad1, pad1);
+    tor_snprintf(buf2, sizeof(buf2),
+                 "%sthey.seemed;;their!.own;most.perfect;monument%s",pad2,pad2);
+    /*  -- "Year's End", Richard Wilbur */
+
+    test_streq("Graved", tor_strtok_r_impl(buf, " ", &cp1));
+    test_streq("they", tor_strtok_r_impl(buf2, ".!..;!", &cp2));
 #define S1() tor_strtok_r_impl(NULL, " ", &cp1)
 #define S2() tor_strtok_r_impl(NULL, ".!..;!", &cp2)
-  test_streq("on", S1());
-  test_streq("the", S1());
-  test_streq("dark", S1());
-  test_streq("seemed", S2());
-  test_streq("their", S2());
-  test_streq("own", S2());
-  test_streq("in", S1());
-  test_streq("gestures", S1());
-  test_streq("of", S1());
-  test_streq("most", S2());
-  test_streq("perfect", S2());
-  test_streq("descent", S1());
-  test_streq("monument", S2());
-  test_eq_ptr(NULL, S1());
-  test_eq_ptr(NULL, S2());
+    test_streq("on", S1());
+    test_streq("the", S1());
+    test_streq("dark", S1());
+    test_streq("seemed", S2());
+    test_streq("their", S2());
+    test_streq("own", S2());
+    test_streq("in", S1());
+    test_streq("gestures", S1());
+    test_streq("of", S1());
+    test_streq("most", S2());
+    test_streq("perfect", S2());
+    test_streq("descent", S1());
+    test_streq("monument", S2());
+    test_eq_ptr(NULL, S1());
+    test_eq_ptr(NULL, S2());
+  }
 
-#if 0
   buf[0] = 0;
   test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
   test_eq_ptr(NULL, tor_strtok_r_impl(buf, "!", &cp1));
@@ -1773,12 +1797,10 @@ test_util_strtok(void)
   test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
   strlcpy(buf, "  ", sizeof(buf));
   test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
-#endif
 
   strlcpy(buf, "something  ", sizeof(buf));
   test_streq("something", tor_strtok_r_impl(buf, " ", &cp1));
-  test_streq(" ", tor_strtok_r_impl(NULL, ";", &cp1));
-  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, " ", &cp1));
+  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, ";", &cp1));
  done:
   ;
 }
