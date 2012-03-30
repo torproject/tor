@@ -1252,6 +1252,15 @@ directory_caches_v2_dir_info(const or_options_t *options)
   return options->DirPort != NULL;
 }
 
+/** Return true iff we want to fetch and keep certificates for authorities
+ * that we don't acknowledge as aurthorities ourself.
+ */
+int
+directory_caches_unknown_auth_certs(const or_options_t *options)
+{
+  return options->DirPort || options->BridgeRelay;
+}
+
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
  * and we're willing to serve them to others. Else return 0.
  */
