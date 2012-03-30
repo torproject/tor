@@ -3020,6 +3020,7 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
       connection_write_str_to_buf("513 Invalid base16 client nonce",
                                   conn);
       connection_mark_for_close(TO_CONN(conn));
+      tor_free(client_nonce);
       return -1;
     }
 
