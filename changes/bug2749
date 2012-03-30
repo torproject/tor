@@ -1,0 +1,8 @@
+  o Changed parameters (authorities):
+    - Authorities are now a little more lenient at accepting older
+      router descriptors, or newer router descriptors that don't make
+      big changes. This should help ameliorate past and future issues
+      where routers think they have uploaded valid descriptors, but the
+      authorities don't think so. Fix for ticket 2479.
+
+
