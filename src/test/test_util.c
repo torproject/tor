@@ -388,6 +388,8 @@ test_util_config_line_comment_character(void)
   test_streq(v, "some value");
   tor_free(k); tor_free(v);
 
+  test_streq(str, "k3 /home/user/myTorNetwork#2\n");
+
 #if 0
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k3");
@@ -499,6 +501,7 @@ test_util_config_line_escaped_content(void)
   test_streq(k, "Mix");
   test_streq(v, "This is a \"star\":\t'*'\nAnd second line");
   tor_free(k); tor_free(v);
+  test_streq(str, "");
 
   str = buf2;
 
