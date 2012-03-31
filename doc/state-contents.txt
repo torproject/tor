@@ -60,10 +60,10 @@ Recognized fields are:
 
      One or more of these may be present.
 
-     The format is "transportname addr:port", to remember the address at
-     which a pluggable transport was listening.
-
-     [XXXX why?]
+     The format is "transportname addr:port", to remember the address
+     at which a pluggable transport was listening. Tor bridges use
+     this information to spawn pluggable transport listeners in the
+     same IP address and TCP port even after tor client restarts.
 
   BWHistoryReadEnds           (ISO time)
   BWHistoryReadInterval       (integer, number of seconds)
