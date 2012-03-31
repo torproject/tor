@@ -957,8 +957,6 @@ get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
 static process_environment_t *
 create_managed_proxy_environment(const managed_proxy_t *mp)
 {
-  const or_options_t *options = get_options();
-
   /* Environment variables to be added to or set in mp's environment. */
   smartlist_t *envs = smartlist_new();
   /* XXXX The next time someone touches this code, shorten the name of
@@ -993,8 +991,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
   }
 
   if (mp->is_server) {
-    smartlist_add_asprintf(envs, "TOR_PT_ORPORT=127.0.0.1:%s",
-                           options->ORPort->value);
+    {
+      char *orport_tmp = get_first_listener_addrport_for_pt(CONN_TYPE_OR_LISTENER);
+      smartlist_add_asprintf(envs, "TOR_PT_ORPORT=%s", orport_tmp);
+      tor_free(orport_tmp);
+    }
 
     {
       char *bindaddr_tmp = get_bindaddr_for_server_proxy(mp);

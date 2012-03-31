@@ -72,6 +72,8 @@ int get_first_advertised_port_by_type_af(int listener_type,
 #define get_primary_dir_port() \
   (get_first_advertised_port_by_type_af(CONN_TYPE_DIR_LISTENER, AF_INET))
 
+char *get_first_listener_addrport_for_pt(int listener_type);
+
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
 

@@ -6026,6 +6026,59 @@ get_configured_ports(void)
   return configured_ports;
 }
 
+/** Return an <address>:<port> string representation of the address
+ *  where the first <b>listener_type</b> listener waits for
+ *  connections. Return NULL if we couldn't find a listener. The
+ *  string is allocated on the heap and it's the responsibility of the
+ *  caller to free it after use.
+ *
+ *  This function is meant to be used by the pluggable transport proxy
+ *  spawning code. */
+char *
+get_first_listener_addrport_for_pt(int listener_type)
+{
+  static const char *ipv4_localhost = "127.0.0.1";
+  static const char *ipv6_localhost = "[::1]";
+  const char *address;
+  uint16_t port;
+  char *string = NULL;
+
+  if (!configured_ports)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
+
+    if (cfg->type == listener_type &&
+        tor_addr_family(&cfg->addr) != AF_UNSPEC) {
+
+      /* We found the first listener of the type we are interested in! */
+
+      /* If a listener is listening on INADDR_ANY, assume that it's
+         also listening on 127.0.0.1, and point the transport proxy
+         there: */
+      if (tor_addr_is_null(&cfg->addr))
+        address = tor_addr_is_v4(&cfg->addr) ? ipv4_localhost : ipv6_localhost;
+      else
+        address = fmt_and_decorate_addr(&cfg->addr);
+
+      /* If a listener is configured with port 'auto', we are forced
+         to iterate all listener connections and find out in which
+         port it ended up listening: */
+      if (cfg->port == CFG_AUTO_PORT)
+        port = router_get_active_listener_port_by_type(listener_type);
+      else
+        port = cfg->port;
+
+      tor_asprintf(&string, "%s:%u", address, port);
+
+      return string;
+    }
+
+  } SMARTLIST_FOREACH_END(cfg);
+
+  return NULL;
+}
+
 /** Return the first advertised port of type <b>listener_type</b> in
     <b>address_family</b>.  */
 int
