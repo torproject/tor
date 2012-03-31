@@ -991,11 +991,11 @@ tor_dup_addr(const tor_addr_t *addr)
  * <b>fmt_addr</b> invalidates the last result of the function.  This
  * function is not thread-safe. */
 const char *
-fmt_addr(const tor_addr_t *addr)
+fmt_addr_impl(const tor_addr_t *addr, int decorate)
 {
   static char buf[TOR_ADDR_BUF_LEN];
   if (!addr) return "<null>";
-  if (tor_addr_to_str(buf, addr, sizeof(buf), 0))
+  if (tor_addr_to_str(buf, addr, sizeof(buf), decorate))
     return buf;
   else
     return "???";
