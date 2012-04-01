@@ -2489,10 +2489,11 @@ typedef struct {
                                * that aggregates bridge descriptors? */
 
   /** If set on a bridge authority, it will answer requests on its dirport
-   * for bridge statuses -- but only if the requests use this password.
-   * If set on a bridge user, request bridge statuses, and use this password
-   * when doing so. */
+   * for bridge statuses -- but only if the requests use this password. */
   char *BridgePassword;
+  /** If BridgePassword is set, this is a SHA256 digest of the basic http
+   * authenticator for it. */
+  char *BridgePassword_AuthDigest;
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */

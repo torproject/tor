@@ -713,6 +713,7 @@ or_options_free(or_options_t *options)
     return;
 
   routerset_free(options->_ExcludeExitNodesUnion);
+  tor_free(options->BridgePassword_AuthDigest);
   config_free(&options_format, options);
 }
 
@@ -1297,6 +1298,24 @@ options_act(or_options_t *old_options)
 
   /* Change the cell EWMA settings */
   cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+
+  /* Update the BridgePassword's hashed version as needed.  We store this as a
+   * digest so that we can do side-channel-proof comparisons on it.
+   */
+  if (options->BridgePassword) {
+    char *http_authenticator;
+    http_authenticator = alloc_http_authenticator(options->BridgePassword);
+    if (!http_authenticator) {
+      log_warn(LD_BUG, "Unable to allocate HTTP authenticator. Not setting "
+               "BridgePassword.");
+      return -1;
+    }
+    options->BridgePassword_AuthDigest = tor_malloc(DIGEST256_LEN);
+    crypto_digest256(options->BridgePassword_AuthDigest,
+                     http_authenticator, strlen(http_authenticator),
+                     DIGEST_SHA256);
+    tor_free(http_authenticator);
+  }
 
   /* Check for transitions that need action. */
   if (old_options) {

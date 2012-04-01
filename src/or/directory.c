@@ -3069,22 +3069,23 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (options->BridgeAuthoritativeDir &&
-      options->BridgePassword &&
+      options->BridgePassword_AuthDigest &&
       connection_dir_is_encrypted(conn) &&
       !strcmp(url,"/tor/networkstatus-bridges")) {
     char *status;
-    char *secret = alloc_http_authenticator(options->BridgePassword);
+    char digest[DIGEST256_LEN];
 
     header = http_get_header(headers, "Authorization: Basic ");
+    if (header)
+      crypto_digest256(digest, header, strlen(header), DIGEST_SHA256);
 
     /* now make sure the password is there and right */
-    if (!header || strcmp(header, secret)) {
+    if (!header ||
+        tor_memneq(digest, options->BridgePassword_AuthDigest, DIGEST256_LEN)) {
       write_http_status_line(conn, 404, "Not found");
-      tor_free(secret);
       tor_free(header);
       goto done;
     }
-    tor_free(secret);
     tor_free(header);
 
     /* all happy now. send an answer. */
