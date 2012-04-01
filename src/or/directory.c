@@ -3217,7 +3217,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (options->BridgeAuthoritativeDir &&
-      options->BridgePassword_AuthDigest &&
+      options->_BridgePassword_AuthDigest &&
       connection_dir_is_encrypted(conn) &&
       !strcmp(url,"/tor/networkstatus-bridges")) {
     char *status;
@@ -3229,7 +3229,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     /* now make sure the password is there and right */
     if (!header ||
-        tor_memneq(digest, options->BridgePassword_AuthDigest, DIGEST256_LEN)) {
+        tor_memneq(digest,
+                   options->_BridgePassword_AuthDigest, DIGEST256_LEN)) {
       write_http_status_line(conn, 404, "Not found");
       tor_free(header);
       goto done;

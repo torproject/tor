@@ -3048,8 +3048,8 @@ typedef struct {
    * for bridge statuses -- but only if the requests use this password. */
   char *BridgePassword;
   /** If BridgePassword is set, this is a SHA256 digest of the basic http
-   * authenticator for it. */
-  char *BridgePassword_AuthDigest;
+   * authenticator for it. Used so we can do a time-independent comparison. */
+  char *_BridgePassword_AuthDigest;
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */

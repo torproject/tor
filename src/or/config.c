@@ -813,7 +813,7 @@ or_options_free(or_options_t *options)
                       rs, routerset_free(rs));
     smartlist_free(options->NodeFamilySets);
   }
-  tor_free(options->BridgePassword_AuthDigest);
+  tor_free(options->_BridgePassword_AuthDigest);
   config_free(&options_format, options);
 }
 
@@ -1559,8 +1559,8 @@ options_act(const or_options_t *old_options)
                "BridgePassword.");
       return -1;
     }
-    options->BridgePassword_AuthDigest = tor_malloc(DIGEST256_LEN);
-    crypto_digest256(options->BridgePassword_AuthDigest,
+    options->_BridgePassword_AuthDigest = tor_malloc(DIGEST256_LEN);
+    crypto_digest256(options->_BridgePassword_AuthDigest,
                      http_authenticator, strlen(http_authenticator),
                      DIGEST_SHA256);
     tor_free(http_authenticator);
