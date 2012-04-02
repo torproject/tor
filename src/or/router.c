@@ -1738,8 +1738,10 @@ mark_my_descriptor_dirty_if_too_old(time_t now)
 void
 mark_my_descriptor_dirty(const char *reason)
 {
+  const or_options_t *options = get_options();
+  if (server_mode(options) && options->_PublishServerDescriptor)
+    log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
   desc_clean_since = 0;
-  log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
   if (!desc_dirty_reason)
     desc_dirty_reason = reason;
 }

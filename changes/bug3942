@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Don't log that we have "decided to publish new relay descriptor" unless
+      we are actually publishing a descriptor. Fix for bug 3942; bugfix on
+      0.2.3.2-alpha.
