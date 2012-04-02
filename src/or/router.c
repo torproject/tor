@@ -2089,6 +2089,8 @@ check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
   const or_options_t *options = get_options();
+  char *hostname = NULL;
+
   (void) now;
 
   if (!desc_routerinfo)
@@ -2096,18 +2098,26 @@ check_descriptor_ipaddress_changed(time_t now)
 
   /* XXXX ipv6 */
   prev = desc_routerinfo->addr;
-  if (resolve_my_address(LOG_INFO, options, &cur, NULL) < 0) {
+  if (resolve_my_address(LOG_INFO, options, &cur, &hostname) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
 
   if (prev != cur) {
+    char *source;
     tor_addr_t tmp_prev, tmp_cur;
+
     tor_addr_from_ipv4h(&tmp_prev, prev);
     tor_addr_from_ipv4h(&tmp_cur, cur);
-    log_addr_has_changed(LOG_NOTICE, &tmp_prev, &tmp_cur, "resolve");
+
+    tor_asprintf(&source, "resolved from %s", hostname);
+    log_addr_has_changed(LOG_NOTICE, &tmp_prev, &tmp_cur, source);
+    tor_free(source);
+
     ip_address_changed(0);
   }
+
+  tor_free(hostname);
 }
 
 /** The most recently guessed value of our IP address, based on directory
