@@ -1384,7 +1384,6 @@ test_util_sscanf(void)
   test_eq(-1, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
   test_eq(-1, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
   test_eq(-1, tor_sscanf("prettylongstring", "%999999s", s1));
-  test_eq(-1, tor_sscanf("We're the 99 monkeys", "We're the 99%%"));
 #if 0
   /* GCC thinks these two are illegal. */
   test_eq(-1, tor_sscanf("prettylongstring", "%0s", s1));
@@ -1468,6 +1467,11 @@ test_util_sscanf(void)
   /* Literal '%' (ie. '%%') */
   test_eq(1, tor_sscanf("99% fresh", "%3u%% fresh", &u1));
   test_eq(99, u1);
+  test_eq(0, tor_sscanf("99 fresh", "%% %3u %s", &u1, s1));
+  test_eq(1, tor_sscanf("99 fresh", "%3u%% %s", &u1, s1));
+  test_eq(2, tor_sscanf("99 fresh", "%3u %5s %%", &u1, s1));
+  test_eq(99, u1);
+  test_streq(s1, "fresh");
   test_eq(1, tor_sscanf("% boo", "%% %3s", s1));
   test_streq("boo", s1);
 

@@ -2773,7 +2773,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
         ++n_matched;
       } else if (*pattern == '%') {
         if (*buf != '%')
-          return -1;
+          return n_matched;
         ++buf;
         ++pattern;
       } else {

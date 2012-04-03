@@ -1,0 +1,3 @@
+  o Minor bugfixes
+    - Enforce correct return behavior of tor_vsscanf(), when the '%%'
+      pattern is used. Fixes bug 5558.
