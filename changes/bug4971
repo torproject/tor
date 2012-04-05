@@ -1,0 +1,2 @@
+ o Minor Feature:
+   - Provide default values for all options via "GETINFO config/defaults"

@@ -2123,6 +2123,9 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("config/", config, "Current configuration values."),
   DOC("config/names",
       "List of configuration options, types, and documentation."),
+  DOC("config/defaults",
+      "List of default values for configuration options. "
+      "See also config/names"),
   ITEM("info/names", misc,
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,
