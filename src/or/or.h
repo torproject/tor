@@ -1254,6 +1254,12 @@ typedef struct control_connection_t {
    * connection. */
   unsigned int is_owning_control_connection:1;
 
+  /** If we have sent an AUTHCHALLENGE reply on this connection and
+   * have not received a successful AUTHENTICATE command, points to
+   * the value which the client must send to authenticate itself;
+   * otherwise, NULL. */
+  char *safecookie_client_hash;
+
   /** Amount of space allocated in incoming_cmd. */
   uint32_t incoming_cmd_len;
   /** Number of bytes currently stored in incoming_cmd. */
@@ -2483,10 +2489,11 @@ typedef struct {
                                * that aggregates bridge descriptors? */
 
   /** If set on a bridge authority, it will answer requests on its dirport
-   * for bridge statuses -- but only if the requests use this password.
-   * If set on a bridge user, request bridge statuses, and use this password
-   * when doing so. */
+   * for bridge statuses -- but only if the requests use this password. */
   char *BridgePassword;
+  /** If BridgePassword is set, this is a SHA256 digest of the basic http
+   * authenticator for it. Used so we can do a time-independent comparison. */
+  char *_BridgePassword_AuthDigest;
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */

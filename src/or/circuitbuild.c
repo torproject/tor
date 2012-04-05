@@ -2704,7 +2704,11 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
     }
-
+    if (router->purpose != ROUTER_PURPOSE_GENERAL) {
+      /* never pick a non-general node as a random exit. */
+      n_supported[i] = -1;
+      continue;
+    }
     if (options->_ExcludeExitNodesUnion &&
         routerset_contains_router(options->_ExcludeExitNodesUnion, router)) {
       n_supported[i] = -1;

@@ -713,6 +713,7 @@ or_options_free(or_options_t *options)
     return;
 
   routerset_free(options->_ExcludeExitNodesUnion);
+  tor_free(options->_BridgePassword_AuthDigest);
   config_free(&options_format, options);
 }
 
@@ -808,8 +809,9 @@ add_default_trusted_dir_authorities(authority_type_t type)
       "194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
     "Tonga orport=443 bridge no-v2 82.94.251.203:80 "
       "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
-    "ides orport=9090 no-v2 v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
-      "216.224.124.114:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
+    "turtles orport=9090 no-v2 "
+      "v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
+      "76.73.17.194:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
     "gabelmoo orport=443 no-v2 "
       "v3ident=ED03BB616EB2F60BEC80151114BB25CEF515B226 "
       "212.112.245.170:80 F204 4413 DAC2 E02E 3D6B CF47 35A1 9BCA 1DE9 7281",
@@ -1297,6 +1299,24 @@ options_act(or_options_t *old_options)
 
   /* Change the cell EWMA settings */
   cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+
+  /* Update the BridgePassword's hashed version as needed.  We store this as a
+   * digest so that we can do side-channel-proof comparisons on it.
+   */
+  if (options->BridgePassword) {
+    char *http_authenticator;
+    http_authenticator = alloc_http_authenticator(options->BridgePassword);
+    if (!http_authenticator) {
+      log_warn(LD_BUG, "Unable to allocate HTTP authenticator. Not setting "
+               "BridgePassword.");
+      return -1;
+    }
+    options->_BridgePassword_AuthDigest = tor_malloc(DIGEST256_LEN);
+    crypto_digest256(options->_BridgePassword_AuthDigest,
+                     http_authenticator, strlen(http_authenticator),
+                     DIGEST_SHA256);
+    tor_free(http_authenticator);
+  }
 
   /* Check for transitions that need action. */
   if (old_options) {

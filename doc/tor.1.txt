@@ -1297,8 +1297,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
 
 **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
-    serve all requested bridge information.  Used for debugging.  (Default:
-    not set.)
+    serve all requested bridge information. Used by the (only partially
+    implemented) "bridge community" design, where a community of bridge
+    relay operators all use an alternate bridge directory authority,
+    and their target user audience can periodically fetch the list of
+    available community bridges to stay up-to-date. (Default: not set.)
 
 **V3AuthVotingInterval** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred voting
