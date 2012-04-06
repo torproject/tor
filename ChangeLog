@@ -1,4 +1,4 @@
-Changes in version 0.2.2.36 - 2012-01-0?
+Changes in version 0.2.2.36 - 2012-04-??
   o Major security workaround:
     - When building or running with any version of OpenSSL earlier
       than 0.9.8s or 1.0.0f, disable SSLv3 support. These OpenSSL
@@ -16,8 +16,8 @@ Changes in version 0.2.2.36 - 2012-01-0?
     - Correct our replacements for the timeradd() and timersub() functions
       on platforms that lack them (for example, Windows). The timersub()
       function is used when expiring circuits, while timeradd() is
-      currently unused. Bug report and patch by Vektor. Bugfix on
-      0.2.2.24-alpha; fixes bug 4778.
+      currently unused. Bug report and patch by Vektor. Fixes bug 4778;
+      bugfix on 0.2.2.24-alpha and 0.2.3.1-alpha.
 
   o Minor bugfixes:
     - Older Linux kernels erroneously respond to strange nmap behavior
@@ -31,9 +31,9 @@ Changes in version 0.2.2.36 - 2012-01-0?
       controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta.
 
   o Minor features:
-    - Directory servers now reject versions of Tor older than 0.2.1.30,
-      and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
-      (inclusive). These versions accounted for only a small fraction of
+    - Directory authorities now reject versions of Tor older than
+      0.2.1.30, and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
+      inclusive. These versions accounted for only a small fraction of
       the Tor network, and have numerous known security issues. Resolves
       issue 4788.
     - Update to the January 3 2012 Maxmind GeoLite Country database.
