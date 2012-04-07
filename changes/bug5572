@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Make sure we create the keys directory if it doesn't exist and we're
+      about to store the dynamic diffie hellman parameters. Fixes bug 5572;
+      bugfix on 0.2.3.13-alpha.
+

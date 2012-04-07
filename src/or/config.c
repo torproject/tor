@@ -1332,7 +1332,6 @@ options_act(const or_options_t *old_options)
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
-  char *keydir;
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
 
@@ -1459,35 +1458,18 @@ options_act(const or_options_t *old_options)
   }
 
   /* If needed, generate a new TLS DH prime according to the current torrc. */
-  if (server_mode(options)) {
-    if (!old_options) {
-      if (options->DynamicDHGroups) {
-        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
-        keydir = get_datadir_fname("keys");
-        if (check_private_dir(keydir, CPD_CREATE, options->User)) {
-          tor_free(keydir);
-          return -1;
-        }
-        tor_free(keydir);
-        crypto_set_tls_dh_prime(fname);
-        tor_free(fname);
-      } else {
-        crypto_set_tls_dh_prime(NULL);
-      }
-    } else {
-      if (options->DynamicDHGroups && !old_options->DynamicDHGroups) {
-        char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
-        keydir = get_datadir_fname("keys");
-        if (check_private_dir(keydir, CPD_CREATE, options->User)) {
-          tor_free(keydir);
-          return -1;
-        }
-        tor_free(keydir);
-        crypto_set_tls_dh_prime(fname);
-        tor_free(fname);
-      } else if (!options->DynamicDHGroups && old_options->DynamicDHGroups) {
-        crypto_set_tls_dh_prime(NULL);
-      }
+  if (server_mode(options) && options->DynamicDHGroups) {
+    char *keydir = get_datadir_fname("keys");
+    if (check_private_dir(keydir, CPD_CREATE, options->User)) {
+      tor_free(keydir);
+      return -1;
+    }
+    tor_free(keydir);
+
+    if (!old_options || !old_options->DynamicDHGroups) {
+      char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
+      crypto_set_tls_dh_prime(fname);
+      tor_free(fname);
     }
   } else { /* clients don't need a dynamic DH prime. */
     crypto_set_tls_dh_prime(NULL);
