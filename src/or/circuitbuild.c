@@ -4802,10 +4802,11 @@ validate_pluggable_transports_config(void)
          pluggable transports. We should warn the user in such case,
          since it's probably misconfiguration. */
       if (!transport_get_by_name(b->transport_name))
-        log_warn(LD_CONFIG, "You have a Bridge line using the %s "
-                 "pluggable transport, but there doesn't seem to be a "
-                 "corresponding ClientTransportPlugin line.",
-                 b->transport_name);
+        log_warn(LD_CONFIG, "We can't find a pluggable transport proxy "
+                 "that supports '%s' for bridge '%s:%u'. This can happen "
+                 "if you haven't provided a ClientTransportPlugin line, or "
+                 "if your pluggable transport proxy stopped working.",
+                 b->transport_name, fmt_addr(&b->addr), b->port);
     } SMARTLIST_FOREACH_END(b);
 
     return 0;
