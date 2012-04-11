@@ -1773,8 +1773,16 @@ do_hup(void)
     }
     options = get_options(); /* they have changed now */
   } else {
+    char *msg = NULL;
     log_notice(LD_GENERAL, "Not reloading config file: the controller told "
                "us not to.");
+    /* Make stuff get rescanned, reloaded, etc. */
+    if (set_options((or_options_t*)options, &msg) < 0) {
+      if (!msg)
+        msg = tor_strdup("Unknown error");
+      log_warn(LD_GENERAL, "Unable to re-set previous options: %s", msg);
+      tor_free(msg);
+    }
   }
   if (authdir_mode_handles_descs(options, -1)) {
     /* reload the approved-routers file */
