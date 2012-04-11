@@ -309,18 +309,18 @@ bench_dmap(void)
          NANOCOUNT(pt3, pt4, iters*elts));
 
   for (i = 0; i < iters; ++i) {
-    SMARTLIST_FOREACH(sl, const char *, cp, n += digestset_isin(ds, cp));
-    SMARTLIST_FOREACH(sl2, const char *, cp, n += digestset_isin(ds, cp));
+    SMARTLIST_FOREACH(sl, const char *, cp, n += digestset_contains(ds, cp));
+    SMARTLIST_FOREACH(sl2, const char *, cp, n += digestset_contains(ds, cp));
   }
   end = perftime();
-  printf("digestset_isin: %.2f ns per element.\n",
+  printf("digestset_contains: %.2f ns per element.\n",
          NANOCOUNT(pt4, end, iters*elts*2));
   /* We need to use this, or else the whole loop gets optimized out. */
   printf("Hits == %d\n", n);
 
   for (i = 0; i < fpostests; ++i) {
     crypto_rand(d, 20);
-    if (digestset_isin(ds, d)) ++fp;
+    if (digestset_contains(ds, d)) ++fp;
   }
   printf("False positive rate on digestset: %.2f%%\n",
          (fp/(double)fpostests)*100);

@@ -762,7 +762,7 @@ entry_guards_set_from_config(const or_options_t *options)
                     smartlist_add(entry_fps, (void*)node->identity));
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
-    if (smartlist_digest_isin(entry_fps, e->identity))
+    if (smartlist_contains_digest(entry_fps, e->identity))
       smartlist_add(old_entry_guards_on_list, e);
     else
       smartlist_add(old_entry_guards_not_on_list, e);
@@ -901,7 +901,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       }
       if (node == chosen_exit)
         continue; /* don't pick the same node for entry and exit */
-      if (consider_exit_family && smartlist_isin(exit_family, node))
+      if (consider_exit_family && smartlist_contains(exit_family, node))
         continue; /* avoid relays that are family members of our exit */
 #if 0 /* since EntryNodes is always strict now, this clause is moot */
       if (options->EntryNodes &&

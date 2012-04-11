@@ -774,7 +774,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   }
 
   if (requested_fingerprints) {
-    if (smartlist_string_isin(requested_fingerprints, fp)) {
+    if (smartlist_contains_string(requested_fingerprints, fp)) {
       smartlist_string_remove(requested_fingerprints, fp);
     } else {
       if (source != NS_FROM_DIR_ALL) {

@@ -1218,7 +1218,7 @@ is_test_address(const char *address)
 {
   const or_options_t *options = get_options();
   return options->ServerDNSTestAddresses &&
-    smartlist_string_isin_case(options->ServerDNSTestAddresses, address);
+    smartlist_contains_string_case(options->ServerDNSTestAddresses, address);
 }
 
 /** Called on the OR side when the eventdns library tells us the outcome of a
@@ -1843,7 +1843,7 @@ wildcard_increment_answer(const char *id)
 
   if (*ip > 5 && n_wildcard_requests > 10) {
     if (!dns_wildcard_list) dns_wildcard_list = smartlist_new();
-    if (!smartlist_string_isin(dns_wildcard_list, id)) {
+    if (!smartlist_contains_string(dns_wildcard_list, id)) {
     log(dns_wildcard_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider has given \"%s\" as an answer for %d different "
         "invalid addresses. Apparently they are hijacking DNS failures. "
@@ -1866,7 +1866,7 @@ add_wildcarded_test_address(const char *address)
   if (!dns_wildcarded_test_address_list)
     dns_wildcarded_test_address_list = smartlist_new();
 
-  if (smartlist_string_isin_case(dns_wildcarded_test_address_list, address))
+  if (smartlist_contains_string_case(dns_wildcarded_test_address_list, address))
     return;
 
   n_test_addrs = get_options()->ServerDNSTestAddresses ?
@@ -2104,7 +2104,7 @@ dns_reset_correctness_checks(void)
 static int
 answer_is_wildcarded(const char *ip)
 {
-  return dns_wildcard_list && smartlist_string_isin(dns_wildcard_list, ip);
+  return dns_wildcard_list && smartlist_contains_string(dns_wildcard_list, ip);
 }
 
 /** Exit with an assertion if <b>resolve</b> is corrupt. */

@@ -374,7 +374,7 @@ addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
   tor_addr_from_ipv4h(&tar, addr);
   country = geoip_get_country_by_addr(&tar);
   name = geoip_get_country_name(country);
-  return smartlist_string_isin_case(cc_list, name);
+  return smartlist_contains_string_case(cc_list, name);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> is permitted to publish to our

@@ -2758,7 +2758,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
   EnterCriticalSection(&cond->mutex);
 
   tor_assert(WaitForSingleObject(event, 0) == WAIT_TIMEOUT);
-  tor_assert(!smartlist_isin(cond->events, event));
+  tor_assert(!smartlist_contains(cond->events, event));
   smartlist_add(cond->events, event);
 
   LeaveCriticalSection(&cond->mutex);

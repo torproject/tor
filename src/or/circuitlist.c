@@ -1611,10 +1611,10 @@ assert_circuit_ok(const circuit_t *c)
   }
   if (c->state == CIRCUIT_STATE_CHAN_WAIT && !c->marked_for_close) {
     tor_assert(circuits_pending_chans &&
-               smartlist_isin(circuits_pending_chans, c));
+               smartlist_contains(circuits_pending_chans, c));
   } else {
     tor_assert(!circuits_pending_chans ||
-               !smartlist_isin(circuits_pending_chans, c));
+               !smartlist_contains(circuits_pending_chans, c));
   }
   if (origin_circ && origin_circ->cpath) {
     assert_cpath_ok(origin_circ->cpath);

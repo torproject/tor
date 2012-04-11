@@ -66,8 +66,8 @@ test_container_smartlist_basic(void)
   test_eq(4, smartlist_len(sl));
 
   /* test isin. */
-  test_assert(smartlist_isin(sl, (void*)3));
-  test_assert(!smartlist_isin(sl, (void*)99));
+  test_assert(smartlist_contains(sl, (void*)3));
+  test_assert(!smartlist_contains(sl, (void*)99));
 
  done:
   smartlist_free(sl);
@@ -195,13 +195,13 @@ test_container_smartlist_strings(void)
   tor_free(cp_alloc);
   smartlist_shuffle(sl);
   test_eq(7, smartlist_len(sl));
-  test_assert(smartlist_string_isin(sl, "and"));
-  test_assert(smartlist_string_isin(sl, "router"));
-  test_assert(smartlist_string_isin(sl, "by"));
-  test_assert(smartlist_string_isin(sl, "nickm"));
-  test_assert(smartlist_string_isin(sl, "onion"));
-  test_assert(smartlist_string_isin(sl, "arma"));
-  test_assert(smartlist_string_isin(sl, "the"));
+  test_assert(smartlist_contains_string(sl, "and"));
+  test_assert(smartlist_contains_string(sl, "router"));
+  test_assert(smartlist_contains_string(sl, "by"));
+  test_assert(smartlist_contains_string(sl, "nickm"));
+  test_assert(smartlist_contains_string(sl, "onion"));
+  test_assert(smartlist_contains_string(sl, "arma"));
+  test_assert(smartlist_contains_string(sl, "the"));
 
   /* Test bsearch. */
   smartlist_sort(sl, compare_strs_);
@@ -279,12 +279,12 @@ test_container_smartlist_strings(void)
   tor_free(cp_alloc);
 
   /* Test string_isin and isin_case and num_isin */
-  test_assert(smartlist_string_isin(sl, "noon"));
-  test_assert(!smartlist_string_isin(sl, "noonoon"));
-  test_assert(smartlist_string_isin_case(sl, "nOOn"));
-  test_assert(!smartlist_string_isin_case(sl, "nooNooN"));
-  test_assert(smartlist_string_num_isin(sl, 50));
-  test_assert(!smartlist_string_num_isin(sl, 60));
+  test_assert(smartlist_contains_string(sl, "noon"));
+  test_assert(!smartlist_contains_string(sl, "noonoon"));
+  test_assert(smartlist_contains_string_case(sl, "nOOn"));
+  test_assert(!smartlist_contains_string_case(sl, "nooNooN"));
+  test_assert(smartlist_contains_int_as_string(sl, 50));
+  test_assert(!smartlist_contains_int_as_string(sl, 60));
 
   /* Test smartlist_choose */
   {
@@ -292,12 +292,12 @@ test_container_smartlist_strings(void)
     int allsame = 1;
     int allin = 1;
     void *first = smartlist_choose(sl);
-    test_assert(smartlist_isin(sl, first));
+    test_assert(smartlist_contains(sl, first));
     for (i = 0; i < 100; ++i) {
       void *second = smartlist_choose(sl);
       if (second != first)
         allsame = 0;
-      if (!smartlist_isin(sl, second))
+      if (!smartlist_contains(sl, second))
         allin = 0;
     }
     test_assert(!allsame);
@@ -365,15 +365,15 @@ test_container_smartlist_overlap(void)
   smartlist_add_all(sl, odds);
   smartlist_intersect(sl, primes);
   test_eq(smartlist_len(sl), 3);
-  test_assert(smartlist_isin(sl, (void*)3));
-  test_assert(smartlist_isin(sl, (void*)5));
-  test_assert(smartlist_isin(sl, (void*)7));
+  test_assert(smartlist_contains(sl, (void*)3));
+  test_assert(smartlist_contains(sl, (void*)5));
+  test_assert(smartlist_contains(sl, (void*)7));
 
   /* subtract */
   smartlist_add_all(sl, primes);
   smartlist_subtract(sl, odds);
   test_eq(smartlist_len(sl), 1);
-  test_assert(smartlist_isin(sl, (void*)2));
+  test_assert(smartlist_contains(sl, (void*)2));
 
  done:
   smartlist_free(odds);
@@ -393,10 +393,10 @@ test_container_smartlist_digests(void)
   smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
-  test_eq(0, smartlist_digest_isin(NULL, "AAAAAAAAAAAAAAAAAAAA"));
-  test_assert(smartlist_digest_isin(sl, "AAAAAAAAAAAAAAAAAAAA"));
-  test_assert(smartlist_digest_isin(sl, "\00090AAB2AAAAaasdAAAAA"));
-  test_eq(0, smartlist_digest_isin(sl, "\00090AAB2AAABaasdAAAAA"));
+  test_eq(0, smartlist_contains_digest(NULL, "AAAAAAAAAAAAAAAAAAAA"));
+  test_assert(smartlist_contains_digest(sl, "AAAAAAAAAAAAAAAAAAAA"));
+  test_assert(smartlist_contains_digest(sl, "\00090AAB2AAAAaasdAAAAA"));
+  test_eq(0, smartlist_contains_digest(sl, "\00090AAB2AAABaasdAAAAA"));
 
   /* sort digests */
   smartlist_sort_digests(sl);
@@ -445,11 +445,11 @@ test_container_smartlist_join(void)
   } SMARTLIST_FOREACH_JOIN_END(cp1, cp2);
 
   SMARTLIST_FOREACH(sl3, const char *, cp,
-                    test_assert(smartlist_isin(sl2, cp) &&
-                                !smartlist_string_isin(sl, cp)));
+                    test_assert(smartlist_contains(sl2, cp) &&
+                                !smartlist_contains_string(sl, cp)));
   SMARTLIST_FOREACH(sl4, const char *, cp,
-                    test_assert(smartlist_isin(sl, cp) &&
-                                smartlist_string_isin(sl2, cp)));
+                    test_assert(smartlist_contains(sl, cp) &&
+                                smartlist_contains_string(sl2, cp)));
   joined = smartlist_join_strings(sl3, ",", 0, NULL);
   test_streq(joined, "Anemias,Anemias,Crossbowmen,Work");
   tor_free(joined);
@@ -528,18 +528,18 @@ test_container_digestset(void)
   }
   set = digestset_new(1000);
   SMARTLIST_FOREACH(included, const char *, cp,
-                    if (digestset_isin(set, cp))
+                    if (digestset_contains(set, cp))
                       ok = 0);
   test_assert(ok);
   SMARTLIST_FOREACH(included, const char *, cp,
                     digestset_add(set, cp));
   SMARTLIST_FOREACH(included, const char *, cp,
-                    if (!digestset_isin(set, cp))
+                    if (!digestset_contains(set, cp))
                       ok = 0);
   test_assert(ok);
   for (i = 0; i < 1000; ++i) {
     crypto_rand(d, DIGEST_LEN);
-    if (digestset_isin(set, d))
+    if (digestset_contains(set, d))
       ++false_positives;
   }
   test_assert(false_positives < 50); /* Should be far lower. */

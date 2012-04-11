@@ -3110,7 +3110,7 @@ dirvote_compute_consensuses(void)
   }
   tor_assert(pending_vote_list);
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
-    if (smartlist_string_isin(v->vote->known_flags, "Running"))
+    if (smartlist_contains_string(v->vote->known_flags, "Running"))
       n_vote_running++;
   });
   if (!n_vote_running) {
