@@ -804,7 +804,8 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
   const node_t *exitnode;
   int num=0;
   time_t now = time(NULL);
-  int need_uptime = smartlist_contains_int_as_string(get_options()->LongLivedPorts,
+  int need_uptime = smartlist_contains_int_as_string(
+                                   get_options()->LongLivedPorts,
                                    conn ? conn->socks_request->port : port);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {

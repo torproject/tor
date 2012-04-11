@@ -1866,7 +1866,8 @@ add_wildcarded_test_address(const char *address)
   if (!dns_wildcarded_test_address_list)
     dns_wildcarded_test_address_list = smartlist_new();
 
-  if (smartlist_contains_string_case(dns_wildcarded_test_address_list, address))
+  if (smartlist_contains_string_case(dns_wildcarded_test_address_list,
+                                     address))
     return;
 
   n_test_addrs = get_options()->ServerDNSTestAddresses ?

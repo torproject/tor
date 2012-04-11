@@ -2809,7 +2809,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                hs_dir->or_port);
       tor_free(hs_dir_ip);
       /* Remember successful upload to this router for next time. */
-      if (!smartlist_contains_digest(successful_uploads, hs_dir->identity_digest))
+      if (!smartlist_contains_digest(successful_uploads,
+                                     hs_dir->identity_digest))
         smartlist_add(successful_uploads, hs_dir->identity_digest);
     }
     smartlist_clear(responsible_dirs);

@@ -278,7 +278,7 @@ test_container_smartlist_strings(void)
   test_streq(cp_alloc, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp_alloc);
 
-  /* Test string_isin and isin_case and num_isin */
+  /* Test contains_string, contains_string_case and contains_int_as_string */
   test_assert(smartlist_contains_string(sl, "noon"));
   test_assert(!smartlist_contains_string(sl, "noonoon"));
   test_assert(smartlist_contains_string_case(sl, "nOOn"));
@@ -389,7 +389,7 @@ test_container_smartlist_digests(void)
 {
   smartlist_t *sl = smartlist_new();
 
-  /* digest_isin. */
+  /* contains_digest */
   smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
