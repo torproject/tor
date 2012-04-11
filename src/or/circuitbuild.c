@@ -4793,26 +4793,25 @@ int
 validate_pluggable_transports_config(void)
 {
   /* Don't validate if managed proxies are not yet fully configured. */
-  if (bridge_list && !pt_proxies_configuration_pending()) {
-    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
-      /* Skip bridges without transports. */
-      if (!b->transport_name)
-        continue;
-      /* See if the user has Bridges that specify nonexistent
-         pluggable transports. We should warn the user in such case,
-         since it's probably misconfiguration. */
-      if (!transport_get_by_name(b->transport_name))
-        log_warn(LD_CONFIG, "We can't find a pluggable transport proxy "
-                 "that supports '%s' for bridge '%s:%u'. This can happen "
-                 "if you haven't provided a ClientTransportPlugin line, or "
-                 "if your pluggable transport proxy stopped working.",
-                 b->transport_name, fmt_addr(&b->addr), b->port);
-    } SMARTLIST_FOREACH_END(b);
-
-    return 0;
-  } else {
+  if (!bridge_list || pt_proxies_configuration_pending())
     return -1;
-  }
+
+  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, b) {
+    /* Skip bridges without transports. */
+    if (!b->transport_name)
+      continue;
+    /* See if the user has Bridges that specify nonexistent
+       pluggable transports. We should warn the user in such case,
+       since it's probably misconfiguration. */
+    if (!transport_get_by_name(b->transport_name))
+      log_warn(LD_CONFIG, "We can't find a pluggable transport proxy "
+               "that supports '%s' for bridge '%s:%u'. This can happen "
+               "if you haven't provided a ClientTransportPlugin line, or "
+               "if your pluggable transport proxy stopped working.",
+               b->transport_name, fmt_addr(&b->addr), b->port);
+  } SMARTLIST_FOREACH_END(b);
+
+  return 0;
 }
 
 /** Return a bridge pointer if <b>ri</b> is one of our known bridges
