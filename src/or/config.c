@@ -295,8 +295,7 @@ static config_var_t _option_vars[] = {
   V(GeoIPFile,                   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
 #endif
-  V(GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays,
-                                 BOOL,     "0"),
+  OBSOLETE("GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays"),
   OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),

@@ -3270,10 +3270,6 @@ typedef struct {
                                      * number of servers per IP address shared
                                      * with an authority. */
 
-  /** Should we assign the Guard flag to relays which would allow
-   * exploitation of CVE-2011-2768 against their clients? */
-  int GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays;
-
   /** If non-zero, always vote the Fast flag for any relay advertising
    * this amount of capacity or more. */
   uint64_t AuthDirFastGuarantee;
