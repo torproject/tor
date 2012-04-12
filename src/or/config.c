@@ -6033,9 +6033,10 @@ get_configured_ports(void)
  *  caller to free it after use.
  *
  *  This function is meant to be used by the pluggable transport proxy
- *  spawning code. */
+ *  spawning code, please make sure that it fits your purposes before
+ *  using it. */
 char *
-get_first_listener_addrport_for_pt(int listener_type)
+get_first_listener_addrport_string(int listener_type)
 {
   static const char *ipv4_localhost = "127.0.0.1";
   static const char *ipv6_localhost = "[::1]";
@@ -6047,6 +6048,8 @@ get_first_listener_addrport_for_pt(int listener_type)
     return NULL;
 
   SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
+    if (cfg->no_listen)
+      continue;
 
     if (cfg->type == listener_type &&
         tor_addr_family(&cfg->addr) != AF_UNSPEC) {
@@ -6064,10 +6067,13 @@ get_first_listener_addrport_for_pt(int listener_type)
       /* If a listener is configured with port 'auto', we are forced
          to iterate all listener connections and find out in which
          port it ended up listening: */
-      if (cfg->port == CFG_AUTO_PORT)
+      if (cfg->port == CFG_AUTO_PORT) {
         port = router_get_active_listener_port_by_type(listener_type);
-      else
+        if (!port)
+          return NULL;
+      } else {
         port = cfg->port;
+      }
 
       tor_asprintf(&string, "%s:%u", address, port);
 

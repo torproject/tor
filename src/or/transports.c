@@ -992,7 +992,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
   if (mp->is_server) {
     {
-      char *orport_tmp = get_first_listener_addrport_for_pt(CONN_TYPE_OR_LISTENER);
+      char *orport_tmp = get_first_listener_addrport_string(CONN_TYPE_OR_LISTENER);
       smartlist_add_asprintf(envs, "TOR_PT_ORPORT=%s", orport_tmp);
       tor_free(orport_tmp);
     }

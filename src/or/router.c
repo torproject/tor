@@ -1218,6 +1218,8 @@ consider_publishable_server(int force)
 
 /** Return the port of the first active listener of type
  *  <b>listener_type</b>. */
+/** XXX not a very good interface. it's not reliable when there are
+    multiple listeners. */
 uint16_t
 router_get_active_listener_port_by_type(int listener_type)
 {

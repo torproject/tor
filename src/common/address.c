@@ -986,10 +986,15 @@ tor_dup_addr(const tor_addr_t *addr)
   }
 }
 
-/** Return a string representing the address <b>addr</b>.  This string is
- * statically allocated, and must not be freed.  Each call to
- * <b>fmt_addr</b> invalidates the last result of the function.  This
- * function is not thread-safe. */
+/** Return a string representing the address <b>addr</b>.  This string
+ * is statically allocated, and must not be freed.  Each call to
+ * <b>fmt_addr_impl</b> invalidates the last result of the function.
+ * This function is not thread-safe. If <b>decorate</b> is set, add
+ * brackets to IPv6 addresses.
+ *
+ * It's better to use the wrapper macros of this function:
+ * <b>fmt_addr()</b> and <b>fmt_and_decorate_addr()</b>.
+ */
 const char *
 fmt_addr_impl(const tor_addr_t *addr, int decorate)
 {
