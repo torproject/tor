@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - When sending an HTTP/1.1 proxy request, include a Host header.
+      Fixes bug 5593; bugfix on 0.2.2.1-alpha.
