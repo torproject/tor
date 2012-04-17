@@ -354,6 +354,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
+  int require_authority = 0;
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   dirinfo_type_t type;
   time_t if_modified_since = 0;
@@ -369,6 +370,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       type = V2_DIRINFO;
       prefer_authority = 1; /* Only v2 authorities have these anyway. */
+      require_authority = 1; /* Don't fallback to asking a non-authority */
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_DIRINFO :
@@ -468,6 +470,11 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                       "are in use.");
             return;
           }
+        }
+        if (rs == NULL && require_authority) {
+          log_info(LD_DIR, "No authorities were available for %s: will try "
+                   "later.", dir_conn_purpose_to_string(dir_purpose));
+          return;
         }
       }
       if (!rs && type != BRIDGE_DIRINFO) {

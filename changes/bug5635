@@ -1,0 +1,6 @@
+  o Major bugfixes (directory authorities):
+    - If authorities are unable to get a set of v2 consensus documents
+      from other directory authorities, they no longer fail-back and try
+      to fetch them from regular directory caches. This is a bugfix on
+      0.2.2.26-beta, where routers stopped downloading v2 consensus
+      documents entirely. Fix for bug #5635.
