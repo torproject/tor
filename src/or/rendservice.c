@@ -2270,14 +2270,6 @@ rend_services_introduce(void)
 
     if (!intro_point_set_changed &&
         (n_intro_points_unexpired >= service->n_intro_points_wanted)) {
-      /* We have enough intro circuits in progress, and none of our
-       * intro circuits have died since the last call to
-       * rend_services_introduce!  Start a fresh period and reset the
-       * circuit count.
-       *
-       * XXXX WTF? */
-      service->intro_period_started = now;
-      service->n_intro_circuits_launched = 0;
       continue;
     }
 
