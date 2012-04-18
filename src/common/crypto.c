@@ -1051,10 +1051,9 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   tor_assert(outlen+symlen < INT_MAX);
   return (int)(outlen + symlen);
  err:
-  if (buf) {
-    memset(buf, 0, pkeylen);
-    tor_free(buf);
-  }
+
+  memset(buf, 0, pkeylen);
+  tor_free(buf);
   crypto_cipher_free(cipher);
   return -1;
 }
