@@ -1,4 +1,4 @@
-  o Major bugfixes
+  o Major bugfixes:
     - Prevent a client-side assertion failure when receiving an
       INTRODUCE2 cell by an exit relay, in a general purpose
       circuit. Fixes bug 5644; bugfix on tor-0.2.1.6-alpha
