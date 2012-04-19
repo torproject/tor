@@ -5171,9 +5171,9 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     /* The size of descriptor_cookie_tmp needs to be REND_DESC_COOKIE_LEN+2,
      * because a base64 encoding of length 24 does not fit into 16 bytes in all
      * cases. */
-    if ((base64_decode(descriptor_cookie_tmp, REND_DESC_COOKIE_LEN+2,
-                       tok->args[0], REND_DESC_COOKIE_LEN_BASE64+2+1)
-           != REND_DESC_COOKIE_LEN)) {
+    if (base64_decode(descriptor_cookie_tmp, sizeof(descriptor_cookie_tmp),
+                      tok->args[0], strlen(tok->args[0]))
+        != REND_DESC_COOKIE_LEN) {
       log_warn(LD_REND, "Descriptor cookie contains illegal characters: "
                "%s", escaped(tok->args[0]));
       goto err;
