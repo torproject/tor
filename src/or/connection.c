@@ -1812,12 +1812,20 @@ connection_read_proxy_handshake(connection_t *conn)
 static int
 retry_listener_ports(smartlist_t *old_conns,
                      const smartlist_t *ports,
-                     smartlist_t *new_conns)
+                     smartlist_t *new_conns,
+                     int close_all_noncontrol)
 {
   smartlist_t *launch = smartlist_new();
   int r = 0;
 
-  smartlist_add_all(launch, ports);
+  if (close_all_noncontrol) {
+    SMARTLIST_FOREACH(ports, port_cfg_t *, p, {
+        if (p->type == CONN_TYPE_CONTROL_LISTENER)
+          smartlist_add(launch, p);
+    });
+  } else {
+    smartlist_add_all(launch, ports);
+  }
 
   /* Iterate through old_conns, comparing it to launch: remove from both lists
    * each pair of elements that corresponds to the same port. */
@@ -1920,7 +1928,7 @@ retry_listener_ports(smartlist_t *old_conns,
  */
 int
 retry_all_listeners(smartlist_t *replaced_conns,
-                    smartlist_t *new_conns)
+                    smartlist_t *new_conns, int close_all_noncontrol)
 {
   smartlist_t *listeners = smartlist_new();
   const or_options_t *options = get_options();
@@ -1935,7 +1943,8 @@ retry_all_listeners(smartlist_t *replaced_conns,
 
   if (retry_listener_ports(listeners,
                            get_configured_ports(),
-                           new_conns) < 0)
+                           new_conns,
+                           close_all_noncontrol) < 0)
     retval = -1;
 
   /* Any members that were still in 'listeners' don't correspond to

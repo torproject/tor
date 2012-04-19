@@ -1428,7 +1428,7 @@ run_scheduled_events(time_t now)
 
   /** 3d. And every 60 seconds, we relaunch listeners if any died. */
   if (!net_is_disabled() && time_to_check_listeners < now) {
-    retry_all_listeners(NULL, NULL);
+    retry_all_listeners(NULL, NULL, 0);
     time_to_check_listeners = now+60;
   }
 

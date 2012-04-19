@@ -64,7 +64,8 @@ int get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
                        const connection_t *conn);
 
 int retry_all_listeners(smartlist_t *replaced_conns,
-                        smartlist_t *new_conns);
+                        smartlist_t *new_conns,
+                        int close_all_noncontrol);
 
 void connection_mark_all_noncontrol_listeners(void);
 void connection_mark_all_noncontrol_connections(void);
