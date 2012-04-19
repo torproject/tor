@@ -5056,7 +5056,6 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   while (!strcmpstart(current_entry, "client-name ")) {
     rend_authorized_client_t *parsed_entry;
     size_t len;
-    char descriptor_cookie_base64[REND_DESC_COOKIE_LEN_BASE64+2+1];
     char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
     /* Determine end of string. */
     const char *eos = strstr(current_entry, "\nclient-name ");
@@ -5125,7 +5124,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
                        tok->args[0], REND_DESC_COOKIE_LEN_BASE64+2+1)
            != REND_DESC_COOKIE_LEN)) {
       log_warn(LD_REND, "Descriptor cookie contains illegal characters: "
-                        "%s", descriptor_cookie_base64);
+               "%s", escaped(tok->args[0]));
       goto err;
     }
     memcpy(parsed_entry->descriptor_cookie, descriptor_cookie_tmp,
