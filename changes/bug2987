@@ -1,3 +1,0 @@
-  o Documentation
-    - Begin a state-contents.txt file in doc to explain the contents of the
-      Tor state file. Fixes bug 2987.

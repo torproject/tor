@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a small memory leak when trying to decode incorrect base16
-      authenticator during SAFECOOKIE authentication. Found by
-      Coverity Scan. Fixes CID 507. Bugfix on 0.2.3.13-alpha.

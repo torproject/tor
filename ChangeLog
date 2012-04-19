@@ -1,3 +1,98 @@
+Changes in version 0.2.3.14-alpha - 2012-04-??
+
+  o Directory authority changes:
+    - Change IP address for ides (v3 directory authority), and rename
+      it to turtles.
+
+  o Security fixes:
+    - When using the debuging BridgePassword field, a bridge authority
+      now compares alleged passwords by hashing them, then comparing
+      the result to a digest of the expected authenticator. This avoids
+      a potential side-channel attack in the previous code, which
+      had foolishly used strcmp().  Fortunately, the BridgePassword field
+      *is not in use*, but if it had been, the timing
+      behavior of strcmp() might have allowed an adversary to guess the
+      BridgePassword value, and enumerate the bridges. Bugfix on
+      0.2.0.14-alpha. Fixes bug 5543.
+
+  o Major bugfixes:
+    - Do not allow the presence of one consensus flavor to keep us from
+      downloading another. Previously, we had one "time to download a
+      consensus" timer, which didn't understand the idea of having one
+      consensus but wanting to download another. Fixes bug 4011; fix on
+      0.2.3.1-alpha.
+    - If authorities are unable to get a set of v2 consensus documents
+      from other directory authorities, they no longer fail-back and
+      try to fetch them from regular directory caches. Fixes bug 5635;
+      bugfix on 0.2.2.26-beta, where routers stopped downloading v2
+      consensus documents entirely.
+    - Prevent a client-side assertion failure when receiving an INTRODUCE2
+      cell on a general purpose circuit. Fixes bug 5644; bugfix on
+      0.2.1.6-alpha.
+    - Avoid logging uninitialized data when unable to decode a hidden
+      service descriptor cookie.  Fixes bug 5647; bugfix on 0.2.1.5-alpha.
+
+  o Major features (performance):
+    - When built to use the newly OpenSSL 1.0.1, and built for an x86 or
+      x86_64 instruction set, take advantage of OpenSSL's AESNI,
+      bitsliced, or vectorized AES implementations as appropriate. These
+      can be much, much faster than other AES implementations.
+
+  o Minor bugfixes:
+    - Don't log that we have "decided to publish new relay descriptor"
+      unless we are actually publishing a descriptor. Fixes bug 3942;
+      bugfix on 0.2.3.2-alpha.
+    - Fix bug stomping on ORPort option NoListen and ignoring option
+      NoAdvertise. Fixes bug 5151; bugfix on 0.2.3.9-alpha.
+    - In the testsuite, provide a large enough buffer in the tor_sscanf
+      unit test. We'd otherwise overrun that buffer and crash during the
+      unit tests. Fixes bug 5449; bugfix on 0.2.3.12-alpha. Thanks weasel
+      for spotting the bug.
+    - Fix a bug where a bridge authority crashes (on a failed assert)
+      if it has seen no directory requests when it's time to write
+      statistics to disk. Fixes bug 5508. Bugfix on 0.2.3.6-alpha.
+    - Enforce correct return behavior of tor_vsscanf(), when the '%%'
+      pattern is used. Fixes bug 5558. Bugfix on 0.2.1.13.
+    - Make sure we create the keys directory if it doesn't exist and we're
+      about to store the dynamic diffie hellman parameters. Fixes bug 5572;
+      bugfix on 0.2.3.13-alpha.
+    - When sending an HTTP/1.1 proxy request, include a Host header.
+      Fixes bug 5593; bugfix on 0.2.2.1-alpha.
+    - Fix a small memory leak when trying to decode incorrect base16
+      authenticator during SAFECOOKIE authentication. Found by
+      Coverity Scan. Fixes CID 507. Bugfix on 0.2.3.13-alpha.
+
+  o Minor features:
+    - Add more information to a log statement that might help track down
+      bug 4091. If you're seeing "Bug: tor_addr_is_internal() called with a
+      non-IP address" messages (or any Bug messages, for that matter!),
+      please let us know about it.
+    - Relays now understand an IPv6 address when they get one from a
+      directory server. Resolves ticket 4875.
+    - Resolve IPv6 addresses in bridge and entry statistics to country
+      code "??" which means we at least count them. Resolves ticket 5053;
+      improves on 0.2.3.9-alpha.
+    - Update to the April 3 2012 Maxmind GeoLite Country database.
+
+  o Documentation:
+    - Begin a state-contents.txt file in doc to explain the contents
+      of the Tor state file. Fixes bug 2987.
+    - Document unit of bandwidth related options in sample torrc.
+      Fixes bug 5621.
+
+  o Removed features:
+    - The "torify" script no longer supports the "tsocks" sockifier
+      tool, since it doesn't support DNS and UDP right for Tor.
+      Everyone should be using torsocks instead. Fixes bugs 3530 and
+      5180. Based on a patch by "ugh".
+
+  o Code refactoring:
+    - Change the symmetric cipher interface so that creating and
+      initializing a stream cipher are no longer separate functions.
+    - Remove all internal support for unpadded RSA. We never used it, and
+      it would be a bad idea to start.
+
+
 Changes in version 0.2.3.13-alpha - 2012-03-26
   Tor 0.2.3.13-alpha fixes a variety of stability and correctness bugs
   in managed pluggable transports, as well as providing other cleanups

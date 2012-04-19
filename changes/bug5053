@@ -1,5 +1,0 @@
-  o Minor features:
-    - Resolve IPv6 addresses in bridge and entry statistics to country
-      code "??" which means we at least count them. Resolves ticket 5053;
-      improves on 0.2.3.9-alpha.
-

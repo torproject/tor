@@ -1,3 +1,0 @@
-  o Minor features:
-    - Relays now understand an IPv6 address when they get one from a
-      directory server. Resolves ticket 4875.

@@ -1,6 +1,0 @@
-  o Removed features:
-    - The "torify" script no longer supports the "tsocks" sockifier
-      tool, since it doesn't support DNS and UDP right for Tor.
-      Everyone should be using torsocks instead. Fixes bugs 3530 and
-      5180. Based on a patch by "ugh".
-

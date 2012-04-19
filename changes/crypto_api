@@ -1,3 +1,0 @@
-  o Code refactoring:
-    - Change the symmetric cipher interface so that creating and
-      initializing a stream cipher are no longer separate functions.
