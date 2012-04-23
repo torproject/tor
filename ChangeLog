@@ -1,23 +1,26 @@
-Changes in version 0.2.3.14-alpha - 2012-04-2?
+Changes in version 0.2.3.14-alpha - 2012-04-23
+  Tor 0.2.3.14-alpha fixes yet more bugs to get us closer to a release
+  candidate. It also dramatically speeds up AES: fast relays should
+  consider switching to the newer OpenSSL library.
 
   o Directory authority changes:
     - Change IP address for ides (v3 directory authority), and rename
       it to turtles.
 
   o Major bugfixes:
-    - When we start a Tor client with a normal consensus already cached,
-      be willing to download a microdescriptor consensus. Fixes bug 4011;
-      fix on 0.2.3.1-alpha.
+    - Avoid logging uninitialized data when unable to decode a hidden
+      service descriptor cookie. Fixes bug 5647; bugfix on 0.2.1.5-alpha.
+    - Avoid a client-side assertion failure when receiving an INTRODUCE2
+      cell on a general purpose circuit. Fixes bug 5644; bugfix on
+      0.2.1.6-alpha.
     - If authorities are unable to get a v2 consensus document from other
       directory authorities, they no longer fall back to fetching
       them from regular directory caches. Fixes bug 5635; bugfix on
       0.2.2.26-beta, where routers stopped downloading v2 consensus
       documents entirely.
-    - Avoid a client-side assertion failure when receiving an INTRODUCE2
-      cell on a general purpose circuit. Fixes bug 5644; bugfix on
-      0.2.1.6-alpha.
-    - Avoid logging uninitialized data when unable to decode a hidden
-      service descriptor cookie. Fixes bug 5647; bugfix on 0.2.1.5-alpha.
+    - When we start a Tor client with a normal consensus already cached,
+      be willing to download a microdescriptor consensus. Fixes bug 4011;
+      fix on 0.2.3.1-alpha.
 
   o Major features (performance):
     - When built to use OpenSSL 1.0.1, and built for an x86 or x86_64
