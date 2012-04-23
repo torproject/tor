@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 8 February 2012 for Tor 0.2.3.12-alpha.
+## Last updated 22 April 2012 for Tor 0.2.3.14-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -12,9 +12,9 @@
 ## Tor will look for this file in various places based on your platform:
 ## https://www.torproject.org/docs/faq#torrc
 
-
-## Replace this with "SocksPort 0" if you plan to run Tor only as a
-## relay, and not make any local application connections yourself.
+## Tor opens a socks proxy on port 9050 by default -- even if you don't
+## configure one below. Set "SocksPort 0" if you plan to run Tor only
+## as a relay, and not make any local application connections yourself.
 #SocksPort 9050 # Default: Bind to localhost:9050 for local connections.
 #SocksPort 192.168.0.1:9100 # Bind to this adddress:port too.
 
