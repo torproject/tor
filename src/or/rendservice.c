@@ -909,19 +909,19 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t *access_time;
   or_options_t *options = get_options();
 
-  tor_assert(circuit->rend_data);
-
-  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
-  log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
-           escaped(serviceid), circuit->_base.n_circ_id);
-
   if (circuit->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
     log_warn(LD_PROTOCOL,
              "Got an INTRODUCE2 over a non-introduction circuit %d.",
              circuit->_base.n_circ_id);
     return -1;
   }
+
+  tor_assert(circuit->rend_data);
+
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+  log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
+           escaped(serviceid), circuit->_base.n_circ_id);
 
   /* min key length plus digest length plus nickname length */
   if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+

@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Avoid logging uninitialized data when unable to decode a hidden
+      service descriptor cookie.  Fixes bug 5647; bugfix on 0.2.1.5-alpha.
+
