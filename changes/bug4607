@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-
-    - Don't launch more than 10 (service-side) introduction-point
-      circuits for a hidden service in five minutes.  Previously, we
-      would consider launching more introduction-point circuits if at
-      least one second had passed without any introduction-point
-      circuits failing.  Fixes bug 4607; bugfix on 0.0.7rc1.
-
-

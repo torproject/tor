@@ -26,6 +26,11 @@ Changes in version 0.2.3.14-alpha - 2012-04-2?
       much faster than other AES implementations.
 
   o Minor bugfixes (0.2.2.x and earlier):
+    - Don't launch more than 10 service-side introduction-point circuits
+      for a hidden service in five minutes. Previously, we would consider
+      launching more introduction-point circuits if at least one second
+      had passed without any introduction-point circuits failing. Fixes
+      bug 4607; bugfix on 0.0.7pre1.
     - Change the BridgePassword feature (part of the "bridge community"
       design, which is not yet implemented) to use a time-independent
       comparison. The old behavior might have allowed an adversary
@@ -67,10 +72,15 @@ Changes in version 0.2.3.14-alpha - 2012-04-2?
       code "??" which means we at least count them. Resolves ticket 5053;
       improves on 0.2.3.9-alpha.
     - Update to the April 3 2012 Maxmind GeoLite Country database.
-
-  o Documentation:
     - Begin a doc/state-contents.txt file to explain the contents of
       the Tor state file. Fixes bug 2987.
+
+  o Default torrc changes:
+    - Stop listing "socksport 9050" in torrc.sample. We open a socks
+      port on 9050 by default anyway, so this should not change anything
+      in practice.
+    - Stop mentioning the deprecated *ListenAddress options in
+      torrc.sample. Fixes bug 5438.
     - Document unit of bandwidth related options in sample torrc.
       Fixes bug 5621.
 
