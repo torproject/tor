@@ -1,0 +1,6 @@
+  o Removed features
+    - Remove the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays option;
+      authorities needed to use it for a while to keep the network working
+      as people upgraded to 0.2.1.31, 0.2.2.34, or 0.2.3.6-alpha, but that
+      was six months ago.  As of now, it should no longer be needed or used.
+
