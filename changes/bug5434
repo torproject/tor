@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix compilation with miniupnpc version 1.6; patch from
+      Anthony G. Basile. Fixes bug 5434.
