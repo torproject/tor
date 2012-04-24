@@ -1,10 +1,12 @@
 Changes in version 0.2.2.36 - 2012-04-??
+  Tor 0.2.2.36 updates the addresses for two of the eight directory
+  authorities, fixes some potential anonymity and security issues,
+  and fixes several crash bugs.
 
-  With this release, we remind everyone that 0.2.1.x has reached its
-  formal end-of-life. Those Tor versions have many known flaws, and
-  nobody should be using them. You should upgrade. If you're using a
-  Linux or BSD and its packages are obsolete, stop using those packages
-  and upgrade anyway.
+  Tor 0.2.1.x has reached its end-of-life. Those Tor versions have many
+  known flaws, and nobody should be using them. You should upgrade. If
+  you're using a Linux or BSD and its packages are obsolete, stop using
+  those packages and upgrade anyway.
 
   o Directory authority changes:
     - Change IP address for maatuska (v3 directory authority).

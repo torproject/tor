@@ -3,6 +3,129 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.2.36 - 2012-04-??
+  Tor 0.2.2.36 updates the addresses for two of the eight directory
+  authorities, fixes some potential anonymity and security issues,
+  and fixes several crash bugs.
+
+  Tor 0.2.1.x has reached its end-of-life. Those Tor versions have many
+  known flaws, and nobody should be using them. You should upgrade. If
+  you're using a Linux or BSD and its packages are obsolete, stop using
+  those packages and upgrade anyway.
+
+  o Directory authority changes:
+    - Change IP address for maatuska (v3 directory authority).
+    - Change IP address for ides (v3 directory authority), and rename
+      it to turtles.
+
+  o Security fixes:
+    - When building or running with any version of OpenSSL earlier
+      than 0.9.8s or 1.0.0f, disable SSLv3 support. These OpenSSL
+      versions have a bug (CVE-2011-4576) in which their block cipher
+      padding includes uninitialized data, potentially leaking sensitive
+      information to any peer with whom they make a SSLv3 connection. Tor
+      does not use SSL v3 by default, but a hostile client or server
+      could force an SSLv3 connection in order to gain information that
+      they shouldn't have been able to get. The best solution here is to
+      upgrade to OpenSSL 0.9.8s or 1.0.0f (or later). But when building
+      or running with a non-upgraded OpenSSL, we disable SSLv3 entirely
+      to make sure that the bug can't happen.
+    - Never use a bridge or a controller-supplied node as an exit, even
+      if its exit policy allows it. Found by wanoskarnet. Fixes bug
+      5342. Bugfix on 0.1.1.15-rc (for controller-purpose descriptors)
+      and 0.2.0.3-alpha (for bridge-purpose descriptors).
+    - Only build circuits if we have a sufficient threshold of the total
+      descriptors that are marked in the consensus with the "Exit"
+      flag. This mitigates an attack proposed by wanoskarnet, in which
+      all of a client's bridges collude to restrict the exit nodes that
+      the client knows about. Fixes bug 5343.
+    - Provide controllers with a safer way to implement the cookie
+      authentication mechanism. With the old method, if another locally
+      running program could convince a controller that it was the Tor
+      process, then that program could trick the contoller into telling
+      it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
+      authentication method uses a challenge-response approach to prevent
+      this attack. Fixes bug 5185, implements proposal 193.
+
+  o Major bugfixes:
+    - Avoid logging uninitialized data when unable to decode a hidden
+      service descriptor cookie. Fixes bug 5647; bugfix on 0.2.1.5-alpha.
+    - Avoid a client-side assertion failure when receiving an INTRODUCE2
+      cell on a general purpose circuit. Fixes bug 5644; bugfix on
+      0.2.1.6-alpha.
+    - Fix builds when the path to sed, openssl, or sha1sum contains
+      spaces, which is pretty common on Windows. Fixes bug 5065; bugfix
+      on 0.2.2.1-alpha.
+    - Correct our replacements for the timeradd() and timersub() functions
+      on platforms that lack them (for example, Windows). The timersub()
+      function is used when expiring circuits, while timeradd() is
+      currently unused. Bug report and patch by Vektor. Fixes bug 4778;
+      bugfix on 0.2.2.24-alpha.
+    - Fix the SOCKET_OK test that we use to tell when socket
+      creation fails so that it works on Win64. Fixes part of bug 4533;
+      bugfix on 0.2.2.29-beta. Bug found by wanoskarnet.
+
+  o Minor bugfixes:
+    - Older Linux kernels erroneously respond to strange nmap behavior
+      by having accept() return successfully with a zero-length
+      socket. When this happens, just close the connection. Previously,
+      we would try harder to learn the remote address: but there was
+      no such remote address to learn, and our method for trying to
+      learn it was incorrect. Fixes bugs 1240, 4745, and 4747. Bugfix
+      on 0.1.0.3-rc. Reported and diagnosed by "r1eo".
+    - Change the BridgePassword feature (part of the "bridge community"
+      design, which is not yet implemented) to use a time-independent
+      comparison. The old behavior might have allowed an adversary
+      to use timing to guess the BridgePassword value. Fixes bug 5543;
+      bugfix on 0.2.0.14-alpha.
+    - Detect and reject certain misformed escape sequences in
+      configuration values. Previously, these values would cause us
+      to crash if received in a torrc file or over an authenticated
+      control port. Bug found by Esteban Manchado Velázquez, and
+      independently by Robert Connolly from Matta Consulting who further
+      noted that it allows a post-authentication heap overflow. Patch
+      by Alexander Schrijver. Fixes bugs 5090 and 5402 (CVE 2012-1668);
+      bugfix on 0.2.0.16-alpha.
+    - Fix a compile warning when using the --enable-openbsd-malloc
+      configure option. Fixes bug 5340; bugfix on 0.2.0.20-rc.
+    - During configure, detect when we're building with clang version
+      3.0 or lower and disable the -Wnormalized=id and -Woverride-init
+      CFLAGS. clang doesn't support them yet.
+    - When sending an HTTP/1.1 proxy request, include a Host header.
+      Fixes bug 5593; bugfix on 0.2.2.1-alpha.
+
+  o Minor bugfixes (documentation and log messages):
+    - Fix a typo in a log message in rend_service_rendezvous_has_opened().
+      Fixes bug 4856; bugfix on Tor 0.0.6.
+    - Update "ClientOnly" man page entry to explain that there isn't
+      really any point to messing with it. Resolves ticket 5005.
+    - Document the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays
+      directory authority option (introduced in Tor 0.2.2.34).
+    - Downgrade the "We're missing a certificate" message from notice
+      to info: people kept mistaking it for a real problem, whereas it
+      is seldom the problem even when we are failing to bootstrap. Fixes
+      bug 5067; bugfix on 0.2.0.10-alpha.
+    - Correctly spell "connect" in a log message on failure to create a
+      controlsocket. Fixes bug 4803; bugfix on 0.2.2.26-beta.
+
+  o Minor features:
+    - Directory authorities now reject versions of Tor older than
+      0.2.1.30, and Tor versions between 0.2.2.1-alpha and 0.2.2.20-alpha
+      inclusive. These versions accounted for only a small fraction of
+      the Tor network, and have numerous known security issues. Resolves
+      issue 4788.
+    - Update to the April 3 2012 Maxmind GeoLite Country database.
+
+  - Feature removal:
+    - When sending or relaying a RELAY_EARLY cell, we used to convert
+      it to a RELAY cell if the connection was using the v1 link
+      protocol. This was a workaround for older versions of Tor, which
+      didn't handle RELAY_EARLY cells properly. Now that all supported
+      versions can handle RELAY_EARLY cells, and now that we're enforcing
+      the "no RELAY_EXTEND commands except in RELAY_EARLY cells" rule,
+      remove this workaround. Addresses bug 4786.
+
+
 Changes in version 0.2.2.35 - 2011-12-16
   Tor 0.2.2.35 fixes a critical heap-overflow security issue in Tor's
   buffers code. Absolutely everybody should upgrade.
