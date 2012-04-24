@@ -74,10 +74,14 @@ static void connection_send_socks5_connect(connection_t *conn);
 static const char *proxy_type_to_string(int proxy_type);
 static int get_proxy_type(void);
 
-/** The last IPv4 address that our network interface seemed to have been
- * binding to, in host order.  We use this to detect when our IP changes. */
-static uint32_t last_interface_ip = 0;
-/** A list of uint32_ts for addresses we've used in outgoing connections.
+/** The last addresses that our network interface seemed to have been
+ * binding to.  We use this as one way to detect when our IP changes.
+ *
+ * XXX024 We should really use the entire list of interfaces here.
+ **/
+static tor_addr_t *last_interface_ipv4 = NULL;
+static tor_addr_t *last_interface_ipv6 = NULL;
+/** A list of tor_addr_t for addresses we've used in outgoing connections.
  * Used to detect IP address changes. */
 static smartlist_t *outgoing_addrs = NULL;
 
@@ -3694,47 +3698,62 @@ alloc_http_authenticator(const char *authenticator)
 static void
 client_check_address_changed(tor_socket_t sock)
 {
-  uint32_t iface_ip, ip_out; /* host order */
-  struct sockaddr_in out_addr;
-  socklen_t out_addr_len = (socklen_t) sizeof(out_addr);
-  uint32_t *ip; /* host order */
+  struct sockaddr_storage out_sockaddr;
+  socklen_t out_addr_len = (socklen_t) sizeof(out_sockaddr);
+  tor_addr_t out_addr, iface_addr;
+  tor_addr_t **last_interface_ip_ptr;
+  sa_family_t family;
 
-  if (!last_interface_ip)
-    get_interface_address(LOG_INFO, &last_interface_ip);
   if (!outgoing_addrs)
     outgoing_addrs = smartlist_new();
 
-  if (getsockname(sock, (struct sockaddr*)&out_addr, &out_addr_len)<0) {
+  if (getsockname(sock, (struct sockaddr*)&out_sockaddr, &out_addr_len)<0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "getsockname() to check for address change failed: %s",
              tor_socket_strerror(e));
     return;
   }
+  tor_addr_from_sockaddr(&out_addr, (struct sockaddr*)&out_sockaddr, NULL);
+  family = tor_addr_family(&out_addr);
+
+  if (family == AF_INET)
+    last_interface_ip_ptr = &last_interface_ipv4;
+  else if (family == AF_INET6)
+    last_interface_ip_ptr = &last_interface_ipv6;
+  else
+    return;
+
+  if (! *last_interface_ip_ptr) {
+    tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+    if (get_interface_address6(LOG_INFO, family, a)==0) {
+      *last_interface_ip_ptr = a;
+    } else {
+      tor_free(a);
+    }
+  }
 
   /* If we've used this address previously, we're okay. */
-  ip_out = ntohl(out_addr.sin_addr.s_addr);
-  SMARTLIST_FOREACH(outgoing_addrs, uint32_t*, ip_ptr,
-                    if (*ip_ptr == ip_out) return;
+  SMARTLIST_FOREACH(outgoing_addrs, const tor_addr_t *, a_ptr,
+                    if (tor_addr_eq(a_ptr, &out_addr))
+                      return;
                     );
 
   /* Uh-oh.  We haven't connected from this address before. Has the interface
    * address changed? */
-  if (get_interface_address(LOG_INFO, &iface_ip)<0)
+  if (get_interface_address6(LOG_INFO, family, &iface_addr)<0)
     return;
-  ip = tor_malloc(sizeof(uint32_t));
-  *ip = ip_out;
 
-  if (iface_ip == last_interface_ip) {
+  if (tor_addr_eq(&iface_addr, *last_interface_ip_ptr)) {
     /* Nope, it hasn't changed.  Add this address to the list. */
-    smartlist_add(outgoing_addrs, ip);
+    smartlist_add(outgoing_addrs, tor_memdup(&out_addr, sizeof(tor_addr_t)));
   } else {
     /* The interface changed.  We're a client, so we need to regenerate our
      * keys.  First, reset the state. */
     log(LOG_NOTICE, LD_NET, "Our IP address has changed.  Rotating keys...");
-    last_interface_ip = iface_ip;
-    SMARTLIST_FOREACH(outgoing_addrs, void*, ip_ptr, tor_free(ip_ptr));
+    tor_addr_copy(*last_interface_ip_ptr, &iface_addr);
+    SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t*, a_ptr, tor_free(a_ptr));
     smartlist_clear(outgoing_addrs);
-    smartlist_add(outgoing_addrs, ip);
+    smartlist_add(outgoing_addrs, tor_memdup(&out_addr, sizeof(tor_addr_t)));
     /* Okay, now change our keys. */
     ip_address_changed(1);
   }
@@ -4234,7 +4253,7 @@ connection_free_all(void)
   SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
 
   if (outgoing_addrs) {
-    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
+    SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t *, addr, tor_free(addr));
     smartlist_free(outgoing_addrs);
     outgoing_addrs = NULL;
   }
