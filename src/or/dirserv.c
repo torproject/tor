@@ -2417,7 +2417,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
         routerbw >= options->AuthDirGuardBWGuarantee) ||
        routerbw >= MIN(guard_bandwidth_including_exits,
                        guard_bandwidth_excluding_exits)) &&
-      (is_router_version_good_for_possible_guard(ri->platform))) {
+      is_router_version_good_for_possible_guard(ri->platform)) {
     long tk = rep_hist_get_weighted_time_known(
                                       node->identity, now);
     double wfu = rep_hist_get_weighted_fractional_uptime(
