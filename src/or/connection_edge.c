@@ -3368,8 +3368,12 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
     }
   }
 
-  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
-      !conn->use_begindir) {
+  if (conn->use_begindir) {
+    /* Internal directory fetches do not count as exiting. */
+    return 1;
+  }
+
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
     struct in_addr in;
     tor_addr_t addr, *addrp = NULL;
     addr_policy_result_t r;

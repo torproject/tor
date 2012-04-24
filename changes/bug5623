@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - After we pick a directory mirror, we would refuse to use it if
+      it's in our ExcludeExitNodes list, resulting in mysterious failures
+      to bootstrap for people who just wanted to avoid exiting from
+      certain locations. Fixes bug 5623; bugfix on 0.2.2.25-alpha.
+
