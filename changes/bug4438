@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Fix a dirauth-only exit on sighup that could happen during some
+      configuration state transitions. We now don't treat it as a fatal
+      error when the new descriptor we just generated in init_keys
+      isn't accepted. Fixes bug 4438; bugfix on 0.2.1.9-alpha.
+

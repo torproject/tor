@@ -651,15 +651,27 @@ init_keys(void)
       return -1;
     }
     if (mydesc) {
+      was_router_added_t added;
       ri = router_parse_entry_from_string(mydesc, NULL, 1, 0, NULL);
       if (!ri) {
         log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
         return -1;
       }
-      if (!WRA_WAS_ADDED(dirserv_add_descriptor(ri, &m, "self"))) {
-        log_err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
-                m?m:"<unknown error>");
-        return -1;
+      added = dirserv_add_descriptor(ri, &m, "self");
+      if (!WRA_WAS_ADDED(added)) {
+        if (!WRA_WAS_OUTDATED(added)) {
+          log_err(LD_GENERAL, "Unable to add own descriptor to directory: %s",
+                  m?m:"<unknown error>");
+          return -1;
+        } else {
+          /* If the descriptor was outdated, that's ok. This can happen
+           * when some config options are toggled that affect workers, but
+           * we don't really need new keys yet so the descriptor doesn't
+           * change and the old one is still fresh. */
+          log_info(LD_GENERAL, "Couldn't add own descriptor to directory "
+                   "after key init: %s. This is usually not a problem.",
+                   m?m:"<unknown error>");
+        }
       }
     }
   }
