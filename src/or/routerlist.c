@@ -5082,7 +5082,7 @@ router_reset_descriptor_download_failures(void)
 
 /** Any changes in a router descriptor's publication time larger than this are
  * automatically non-cosmetic. */
-#define ROUTER_MAX_COSMETIC_TIME_DIFFERENCE (12*60*60)
+#define ROUTER_MAX_COSMETIC_TIME_DIFFERENCE (2*60*60)
 
 /** We allow uptime to vary from how much it ought to be by this much. */
 #define ROUTER_ALLOW_UPTIME_DRIFT (6*60*60)
