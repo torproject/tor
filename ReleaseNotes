@@ -123,6 +123,29 @@ Changes in version 0.2.2.35 - 2011-12-16
       by removing an absolute path from makensis.exe command.
 
 
+Changes in version 0.2.1.32 - 2011-12-16
+  Tor 0.2.1.32 backports important security and privacy fixes for
+  oldstable. This release is intended only for package maintainers and
+  others who cannot use the 0.2.2 stable series. All others should be
+  using Tor 0.2.2.x or newer.
+
+  The Tor 0.2.1.x series will reach formal end-of-life some time in
+  early 2012; we will stop releasing patches for it then.
+
+  o Major bugfixes (also included in 0.2.2.x):
+    - Correctly sanity-check that we don't underflow on a memory
+      allocation (and then assert) for hidden service introduction
+      point decryption. Bug discovered by Dan Rosenberg. Fixes bug 4410;
+      bugfix on 0.2.1.5-alpha.
+    - Fix a heap overflow bug that could occur when trying to pull
+      data into the first chunk of a buffer, when that chunk had
+      already had some data drained from it. Fixes CVE-2011-2778;
+      bugfix on 0.2.0.16-alpha. Reported by "Vektor".
+
+  o Minor features:
+    - Update to the December 6 2011 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.2.34 - 2011-10-26
   Tor 0.2.2.34 fixes a critical anonymity vulnerability where an attacker
   can deanonymize Tor users. Everybody should upgrade.
