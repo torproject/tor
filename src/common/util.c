@@ -31,7 +31,7 @@
 #include <direct.h>
 #include <process.h>
 #include <tchar.h>
-#include <Winbase.h>
+#include <winbase.h>
 #else
 #include <dirent.h>
 #include <pwd.h>

@@ -540,7 +540,7 @@ test_util_config_line_escaped_content(void)
   tor_free(v);
 }
 
-#ifndef MS_WINDOWS
+#ifndef _WIN32
 static void
 test_util_expand_filename(void)
 {
@@ -1525,21 +1525,19 @@ test_util_path_is_relative(void)
   test_eq(0, path_is_relative("/dir/"));
 
   /* Windows */
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   /* I don't have Windows so I can't test this, hence the "#ifdef
      0". These are tests that look useful, so please try to get them
      running and uncomment if it all works as it should */
-#ifdef 0
   test_eq(1, path_is_relative("dir"));
   test_eq(1, path_is_relative("dir\\"));
   test_eq(1, path_is_relative("dir\\a:"));
   test_eq(1, path_is_relative("dir\\a:\\"));
+  test_eq(1, path_is_relative("http:\\dir"));
 
   test_eq(0, path_is_relative("\\dir"));
   test_eq(0, path_is_relative("a:\\dir"));
   test_eq(0, path_is_relative("z:\\dir"));
-  test_eq(0, path_is_relative("http:\\dir"));
-#endif
 #endif
 
  done:
@@ -1926,7 +1924,7 @@ test_util_listdir(void *ptr)
   test_eq(0, write_str_to_file(fname1, "X\n", 0));
   test_eq(0, write_str_to_file(fname2, "Y\n", 0));
   test_eq(0, write_str_to_file(fname3, "Z\n", 0));
-#ifdef MS_WINDOWS
+#ifdef _WIN32
   r = mkdir(dir1);
 #else
   r = mkdir(dir1, 0700);
@@ -2887,7 +2885,9 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
+#ifndef _WIN32
   UTIL_LEGACY(expand_filename),
+#endif
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
