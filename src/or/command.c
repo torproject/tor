@@ -160,9 +160,11 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
   if (handshaking && cell->command != CELL_VERSIONS &&
       cell->command != CELL_NETINFO) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received unexpected cell command %d in state %s; ignoring it.",
+           "Received unexpected cell command %d in state %s; closing the "
+           "connection",
            (int)cell->command,
            conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
+    connection_mark_for_close(TO_CONN(conn));
     return;
   }
 
@@ -258,8 +260,15 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
   switch (conn->_base.state)
   {
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
-      if (cell->command != CELL_VERSIONS)
+      if (cell->command != CELL_VERSIONS) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Received a cell with command %d in state %s; "
+               "closing the connection.",
+               (int)cell->command,
+               conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
+        connection_mark_for_close(TO_CONN(conn));
         return;
+      }
       break;
     case OR_CONN_STATE_TLS_HANDSHAKING:
       /* If we're using bufferevents, it's entirely possible for us to
@@ -272,9 +281,10 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
       if (! command_allowed_before_handshake(cell->command)) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Received a cell with command %d in state %s; "
-               "ignoring it.",
+               "closing the connection.",
                (int)cell->command,
                conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
+        connection_mark_for_close(TO_CONN(conn));
         return;
       } else {
         if (enter_v3_handshake_with_cell(cell, conn)<0)
