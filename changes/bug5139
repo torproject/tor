@@ -1,0 +1,6 @@
+  o Minor features (bridges):
+    - Tag a bridge's descriptor as "never to be sent
+      unencrypted". This shouldn't matter, since bridges don't open
+      non-anonymous connections to the bridge authority and don't
+      allow unencrypted directory connections from clients, but we
+      might as well make sure. Closes bug 5139.

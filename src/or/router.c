@@ -1672,12 +1672,15 @@ router_rebuild_descriptor(int force)
 
   ri->purpose =
     options->BridgeRelay ? ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
-  ri->cache_info.send_unencrypted = 1;
-  /* Let bridges serve their own descriptors unencrypted, so they can
-   * pass reachability testing. (If they want to be harder to notice,
-   * they can always leave the DirPort off). */
-  if (ei && !options->BridgeRelay)
-    ei->cache_info.send_unencrypted = 1;
+  if (options->BridgeRelay) {
+    /* Bridges shouldn't be able to send their descriptors unencrypted,
+       anyway, since they don't have a DirPort, and always connect to the
+       bridge authority anonymously.  But just in case they somehow think of
+       sending them on an unencrypted connection, don't allow them to try. */
+    ri->cache_info.send_unencrypted = ei->cache_info.send_unencrypted = 0;
+  } else {
+    ri->cache_info.send_unencrypted = ei->cache_info.send_unencrypted = 1;
+  }
 
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
                          strlen(ri->cache_info.signed_descriptor_body),
