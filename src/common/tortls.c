@@ -965,7 +965,9 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 
   /* Now check the cipher list. */
   if (tor_tls_client_is_using_v2_ciphers(ssl, ADDR(tls))) {
-    /*XXXX_TLS keep this from happening more than once! */
+    if (tls->wasV2Handshake)
+      return; /* We already turned this stuff off for the first handshake;
+               * This is a renegotiation. */
 
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */

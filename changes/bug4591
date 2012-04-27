@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - If the client fails to set a reasonable set of ciphersuites
+      during its v2 handshake renegotiation, allow the renegotiation
+      to continue nevertheless (i.e., send all the required
+      certificates). Fix for bug 4591; bugfix on 0.2.0.20-rc.
+
