@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When fetching a bridge descriptor from a bridge authority,
+      always do so anonymously, whether we have been able to open
+      circuits or not. Partial fix for bug 1938; bugfix on 2.0.7-alpha.
