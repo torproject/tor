@@ -1,3 +1,0 @@
-  o Minor bugfixes (build):
-    - When building with --enable-static-tor on OpenBSD, do not
-      erroneously attempt to link -lrt.

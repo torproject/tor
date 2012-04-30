@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - When Tor is built with kernel headers from a recent (last few
-      years) Linux kernel, do not fail to run on older (pre-2.6.28
-      Linux kernels). Fixes bug 5112; bugfix on 0.2.3.1-alpha.
-      

@@ -1,6 +1,0 @@
-
-   o Minor bugfixes:
-     - Make sure that there are no unhandled pending TLS errors before
-       reading from a TLS stream. We had checks in 0.1.0.3-rc, but
-       lost them in 0.1.0.5-rc when we refactored read_to_buf_tls().
-       Bugfix on 0.1.0.5-rc; fixes bug 4528.

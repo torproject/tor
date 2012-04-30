@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix compilation on platforms without unistd.h, or where environ
-      is defined in stdlib.h. Fixes bug 5704; bugfix on
-      0.2.3.13-alpha.

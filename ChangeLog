@@ -1,3 +1,55 @@
+Changes in version 0.2.3.15-alpha - 2012-04-30
+  Tor 0.2.3.15-alpha fixes a variety of smaller bugs, including making
+  the development branch build on Windows again.
+
+  o Minor bugfixes (on 0.2.2.x and earlier):
+    - Make sure that there are no unhandled pending TLS errors before
+      reading from a TLS stream. We had checks in 0.1.0.3-rc, but
+      lost them in 0.1.0.5-rc when we refactored read_to_buf_tls().
+      Bugfix on 0.1.0.5-rc; fixes bug 4528.
+    - Fix an assert that directory authorities could trigger on sighup
+      during some configuration state transitions. We now don't treat
+      it as a fatal error when the new descriptor we just generated in
+      init_keys() isn't accepted. Fixes bug 4438; bugfix on 0.2.1.9-alpha.
+    - After we pick a directory mirror, we would refuse to use it if
+      it's in our ExcludeExitNodes list, resulting in mysterious failures
+      to bootstrap for people who just wanted to avoid exiting from
+      certain locations. Fixes bug 5623; bugfix on 0.2.2.25-alpha.
+    - When building with --enable-static-tor on OpenBSD, do not
+      erroneously attempt to link -lrt. Fixes bug 5103.
+
+  o Minor bugfixes (on 0.2.3.x):
+    - When Tor is built with kernel headers from a recent (last few
+      years) Linux kernel, do not fail to run on older (pre-2.6.28
+      Linux kernels). Fixes bug 5112; bugfix on 0.2.3.1-alpha.
+    - Fix cross-compilation isssues with mingw. Bugfixes on 0.2.3.6-alpha
+      and 0.2.3.12-alpha.
+    - Fix compilation with miniupnpc version 1.6; patch from
+      Anthony G. Basile. Fixes bug 5434; bugfix on 0.2.3.12-alpha.
+    - Fix compilation with MSVC, which had defined MS_WINDOWS. Bugfix
+      on 0.2.3.13-alpha; found and fixed by Gisle Vanem.
+    - Fix compilation on platforms without unistd.h, or where environ
+      is defined in stdlib.h. Fixes bug 5704; bugfix on 0.2.3.13-alpha.
+
+  o Minor features:
+    - Directory authorities are now a little more lenient at accepting
+      older router descriptors, or newer router descriptors that don't
+      make big changes. This should help ameliorate past and future
+      issues where routers think they have uploaded valid descriptors,
+      but the authorities don't think so. Fix for ticket 2479.
+    - Make the code that clients use to detect an address change be
+      IPv6-aware, so that it won't fill clients' logs with error
+      messages when trying to get the IPv4 address of an IPv6
+      connection. Implements ticket 5537.
+
+  o Removed features:
+    - Remove the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays option;
+      authorities needed to use it for a while to keep the network working
+      as people upgraded to 0.2.1.31, 0.2.2.34, or 0.2.3.6-alpha, but
+      that was six months ago. As of now, it should no longer be needed
+      or used.
+
+
 Changes in version 0.2.3.14-alpha - 2012-04-23
   Tor 0.2.3.14-alpha fixes yet more bugs to get us closer to a release
   candidate. It also dramatically speeds up AES: fast relays should

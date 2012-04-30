@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix cross-compilation isssues with mingw. Bugfixes on
-      0.2.3.6-alpha and 0.2.3.12-alpha.
-    - Fix compilation with MSVC, which had defined MS_WINDOWS.  Bugfix
-      on 0.2.3.13-alpha; found and fixed by Gisle Vanem.
