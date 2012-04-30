@@ -1116,7 +1116,10 @@ AC_CACHE_CHECK([whether we have extern char **environ already declared],
 /* We define _GNU_SOURCE here because it is also defined in compat.c.
  * Without it environ doesn't get declared. */
 #define _GNU_SOURCE
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#include <stdlib.h>
 int main(int c, char **v) { char **t = environ; }])],
   tor_cv_have_environ_declared=yes,
   tor_cv_have_environ_declared=no))
