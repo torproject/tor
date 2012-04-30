@@ -1138,7 +1138,7 @@ if test "$tor_cv_have_FUNCTION_macro" = 'yes'; then
 fi
 
 if test "$tor_cv_have_environ_declared" = 'yes'; then
-  AC_DEFINE(HAVE_EXTERN_ENVIRON_DECLARED__, 1,
+  AC_DEFINE(HAVE_EXTERN_ENVIRON_DECLARED, 1,
            [Defined if we have extern char **environ already declared])
 fi
 

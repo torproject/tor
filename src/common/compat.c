@@ -1712,7 +1712,7 @@ make_path_absolute(char *fname)
 }
 
 #ifndef HAVE__NSGETENVIRON
-#ifndef HAVE_EXTERN_ENVIRON_DECLARED__
+#ifndef HAVE_EXTERN_ENVIRON_DECLARED
 /* Some platforms declare environ under some circumstances, others don't. */
 extern char **environ;
 #endif
