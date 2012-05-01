@@ -2745,7 +2745,7 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
                    answer_type == RESOLVED_TYPE_HOSTNAME)) {
     return; /* we already told the controller. */
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
-    char *cp = tor_dup_ip(get_uint32(answer));
+    char *cp = tor_dup_ip(ntohl(get_uint32(answer)));
     control_event_address_mapped(conn->socks_request->address,
                                  cp, expires, NULL);
     tor_free(cp);
