@@ -340,11 +340,12 @@ pt_configure_remaining_proxies(void)
       /* This proxy is marked by a SIGHUP. Check whether we need to
          restart it. */
       if (proxy_needs_restart(mp)) {
-        log_info(LD_GENERAL, "Preparing managed proxy for restart.");
+        log_info(LD_GENERAL, "Preparing managed proxy '%s' for restart.",
+                 mp->argv[0]);
         proxy_prepare_for_restart(mp);
       } else { /* it doesn't need to be restarted. */
-        log_info(LD_GENERAL, "Nothing changed for managed proxy after HUP: "
-                 "not restarting.");
+        log_info(LD_GENERAL, "Nothing changed for managed proxy '%s' after HUP: "
+                 "not restarting.", mp->argv[0]);
       }
 
       continue;
@@ -387,7 +388,8 @@ configure_proxy(managed_proxy_t *mp)
   pos = tor_read_all_handle(tor_process_get_stdout_pipe(mp->process_handle),
                             stdout_buf, sizeof(stdout_buf) - 1, NULL);
   if (pos < 0) {
-    log_notice(LD_GENERAL, "Failed to read data from managed proxy");
+    log_notice(LD_GENERAL, "Failed to read data from managed proxy '%s'.",
+               mp->argv[0]);
     mp->conf_state = PT_PROTO_BROKEN;
     goto done;
   }
@@ -449,11 +451,13 @@ configure_proxy(managed_proxy_t *mp)
     } else if (r == IO_STREAM_EAGAIN) { /* check back later */
       return;
     } else if (r == IO_STREAM_CLOSED || r == IO_STREAM_TERM) { /* snap! */
-      log_notice(LD_GENERAL, "Managed proxy stream closed. "
-                 "Most probably application stopped running");
+      log_warn(LD_GENERAL, "Our communication channel with the managed proxy "
+               "'%s' closed. Most probably application stopped running.",
+               mp->argv[0]);
       mp->conf_state = PT_PROTO_BROKEN;
     } else { /* unknown stream status */
-      log_notice(LD_GENERAL, "Unknown stream status while configuring proxy.");
+      log_warn(LD_BUG, "Unknown stream status '%d' while configuring managed "
+               "proxy '%s'.", r, mp->argv[0]);
     }
 
     /* if the proxy finished configuring, exit the loop. */
@@ -586,8 +590,8 @@ handle_finished_proxy(managed_proxy_t *mp)
   case PT_PROTO_ACCEPTING_METHODS:
   case PT_PROTO_COMPLETED:
   default:
-    log_warn(LD_CONFIG, "Unexpected managed proxy state in "
-             "handle_finished_proxy().");
+    log_warn(LD_CONFIG, "Unexpected state '%d' of managed proxy '%s'.",
+             mp->conf_state, mp->argv[0]);
     tor_assert(0);
   }
 
@@ -612,11 +616,13 @@ handle_methods_done(const managed_proxy_t *mp)
   tor_assert(mp->transports);
 
   if (smartlist_len(mp->transports) == 0)
-    log_notice(LD_GENERAL, "Proxy was spawned successfully, "
-               "but it didn't laucn any pluggable transport listeners!");
+    log_notice(LD_GENERAL, "Managed proxy '%s' was spawned successfully, "
+               "but it didn't launch any pluggable transport listeners!",
+               mp->argv[0]);
 
-  log_info(LD_CONFIG, "%s managed proxy configuration completed!",
-           mp->is_server ? "Server" : "Client");
+  log_info(LD_CONFIG, "%s managed proxy '%s' configuration completed!",
+           mp->is_server ? "Server" : "Client",
+           mp->argv[0]);
 }
 
 /** Handle a configuration protocol <b>line</b> received from a
@@ -624,7 +630,8 @@ handle_methods_done(const managed_proxy_t *mp)
 void
 handle_proxy_line(const char *line, managed_proxy_t *mp)
 {
-  log_debug(LD_GENERAL, "Got a line from managed proxy: %s", line);
+  log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)",
+           mp->argv[0], line);
 
   if (strlen(line) < SMALLEST_MANAGED_LINE_SIZE) {
     log_warn(LD_GENERAL, "Managed proxy configuration line is too small. "
@@ -710,7 +717,7 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
  err:
   mp->conf_state = PT_PROTO_BROKEN;
   log_warn(LD_CONFIG, "Managed proxy at '%s' failed the configuration protocol"
-           " and will be destroyed.", mp->argv ? mp->argv[0] : "");
+           " and will be destroyed.", mp->argv[0]);
 }
 
 /** Parses an ENV-ERROR <b>line</b> and warns the user accordingly. */
