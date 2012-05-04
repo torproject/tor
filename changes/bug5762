@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Work correctly on Linux systems with accept4 support advertised in
+      their headers, but without accept4 support in the kernel. Fix
+      by murb. Fixes bug 5762; bugfix on 0.2.3.1-alpha.

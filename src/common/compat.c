@@ -1013,10 +1013,11 @@ tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr, socklen_t *len)
   s = accept4(sockfd, addr, len, SOCK_CLOEXEC);
   if (SOCKET_OK(s))
     goto socket_ok;
-  /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
+  /* If we got an error, see if it is ENOSYS. ENOSYS indicates that,
    * event though we were built on a system with accept4 support, we
-   * are running on one without. */
-  if (errno != EINVAL)
+   * are running on one without. Also, check for EINVAL, which indicates that
+   * we are missing SOCK_CLOEXEC support. */
+  if (errno != EINVAL && errno != ENOSYS)
     return s;
 #endif
 
