@@ -1096,6 +1096,34 @@ The following options are useful only for clients (that is, if
     "auto" (recommended) then it is on for all clients that do not set
     FetchUselessDescriptors. (Default: auto)
 
+**PathBiasCircTheshold** __NUM__ +
+
+**PathBiasNoticeRate** __NUM.__ +
+
+**PathBiasDisableRate** __NUM__ +
+
+**PathBiasScaleThreshold** __NUM__ +
+
+**PathBiasScaleFactor** __NUM__::
+    These options override the default behavior of Tor's (**currently
+    experimental**) path bias detection algorithm. To try to find broken or
+    misbehaving guard nodes, Tor looks for nodes where more than a certain
+    fraction of circuits through that node fail after the first hop.  The
+    PathBiasCircThreshold option controls how many circuits we need to build
+    through a guard before we make these checks.  The PathBiasNoticeRate and
+    PathBiasDisableRate options control what fraction of circuits must
+    succeed through a guard before we will warn about it or disable it,
+    respectively.  When we have seen more than PathBiasScaleThreshold
+    circuits through a guard, we divide our observations by
+    PathBiasScaleFactor, so that new observations don't get swamped by old
+    ones. +
+ +
+    By default, or if a negative value is provided for one of these options,
+    Tor uses reasonable defaults from the networkstatus consensus document.
+    If no defaults are available there, these options default to 20, .70,
+    .50, 200, and 4 respectively.
+
+
 SERVER OPTIONS
 --------------
 

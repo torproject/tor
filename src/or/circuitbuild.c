@@ -70,6 +70,10 @@ typedef struct {
                                   * router, 1 if we have. */
   unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
                                * in spite of having it marked as unreachable?*/
+  unsigned int path_bias_notice : 1; /**< Did we alert the user about path bias
+                                      * for this node already? */
+  unsigned int path_bias_disabled : 1; /**< Have we disabled this node because
+                                        * of path bias issues? */
   time_t bad_since; /**< 0 if this guard is currently usable, or the time at
                       * which it was observed to become (according to the
                       * directory or the user configuration) unusable. */
@@ -78,6 +82,10 @@ typedef struct {
                              * connect to it. */
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
+
+  unsigned first_hops; /**< Number of first hops this guard has completed */
+  unsigned circuit_successes; /**< Number of successfully built circuits using
+                               * this guard as first hop. */
 } entry_guard_t;
 
 /** Information about a configured bridge. Currently this just matches the
@@ -123,6 +131,7 @@ static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
+static entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
 
 static void bridge_free(bridge_info_t *bridge);
 
@@ -2276,8 +2285,28 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       }
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
-      if (circ->build_state->onehop_tunnel)
+      /* Don't count cannibalized or onehop circs for path bias */
+      if (circ->build_state->onehop_tunnel || circ->has_opened) {
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
+      } else {
+        entry_guard_t *guard =
+          entry_guard_get_by_id_digest(circ->_base.n_conn->identity_digest);
+
+        if (guard) {
+          guard->circuit_successes++;
+
+          log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s",
+                   guard->circuit_successes, guard->first_hops,
+                   guard->nickname);
+
+          if (guard->first_hops < guard->circuit_successes) {
+            log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
+                     "for guard %s",
+                     guard->circuit_successes, guard->first_hops,
+                     guard->nickname);
+          }
+        }
+      }
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
         can_complete_circuit=1;
@@ -2532,6 +2561,115 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
   return 0;
 }
 
+/** The minimum number of first hop completions before we start
+  * thinking about warning about path bias and dropping guards */
+static int
+pathbias_get_min_circs(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_MIN_CIRC 20
+  if (options->PathBiasCircThreshold >= 5)
+    return options->PathBiasCircThreshold;
+  else
+    return networkstatus_get_param(NULL, "pb_mincircs",
+                                   DFLT_PATH_BIAS_MIN_CIRC,
+                                   5, INT32_MAX);
+}
+
+static double
+pathbias_get_notice_rate(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_NOTICE_PCT 70
+  if (options->PathBiasNoticeRate >= 0.0)
+    return options->PathBiasNoticeRate;
+  else
+    return networkstatus_get_param(NULL, "pb_noticepct",
+                                   DFLT_PATH_BIAS_NOTICE_PCT, 0, 100)/100.0;
+}
+
+static double
+pathbias_get_disable_rate(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_DISABLE_PCT 50
+  if (options->PathBiasDisableRate >= 0.0)
+    return options->PathBiasDisableRate;
+  else
+    return networkstatus_get_param(NULL, "pb_disablepct",
+                                   DFLT_PATH_BIAS_DISABLE_PCT, 0, 100)/100.0;
+}
+
+static int
+pathbias_get_scale_threshold(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_SCALE_THRESHOLD 200
+  if (options->PathBiasScaleThreshold >= 2)
+    return options->PathBiasScaleThreshold;
+  else
+    return networkstatus_get_param(NULL, "pb_scalecircs",
+                                   DFLT_PATH_BIAS_SCALE_THRESHOLD, 10,
+                                   INT32_MAX);
+}
+
+static int
+pathbias_get_scale_factor(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_SCALE_FACTOR 4
+  if (options->PathBiasScaleFactor >= 1)
+    return options->PathBiasScaleFactor;
+  else
+    return networkstatus_get_param(NULL, "pb_scalefactor",
+                                DFLT_PATH_BIAS_SCALE_THRESHOLD, 1, INT32_MAX);
+}
+
+/** Increment the number of times we successfully extended a circuit to
+ * 'guard', first checking if the failure rate is high enough that we should
+ * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
+ * guard looks fine. */
+static int
+entry_guard_inc_first_hop_count(entry_guard_t *guard)
+{
+  const or_options_t *options = get_options();
+
+  entry_guards_changed();
+
+  if (guard->first_hops > (unsigned)pathbias_get_min_circs(options)) {
+    /* Note: We rely on the < comparison here to allow us to set a 0
+     * rate and disable the feature entirely. If refactoring, don't
+     * change to <= */
+    if (guard->circuit_successes/((double)guard->first_hops)
+        < pathbias_get_disable_rate(options)) {
+
+      log_warn(LD_PROTOCOL,
+               "Extremely low circuit success rate %u/%u for guard %s=%s. "
+               "This might indicate an attack, or a bug.",
+               guard->circuit_successes, guard->first_hops, guard->nickname,
+               hex_str(guard->identity, DIGEST_LEN));
+
+      guard->path_bias_disabled = 1;
+      guard->bad_since = approx_time();
+      return -1;
+    } else if (guard->circuit_successes/((double)guard->first_hops)
+               < pathbias_get_notice_rate(options)
+               && !guard->path_bias_notice) {
+      guard->path_bias_notice = 1;
+      log_notice(LD_PROTOCOL,
+                 "Low circuit success rate %u/%u for guard %s=%s.",
+                 guard->circuit_successes, guard->first_hops, guard->nickname,
+                 hex_str(guard->identity, DIGEST_LEN));
+    }
+  }
+
+  /* If we get a ton of circuits, just scale everything down */
+  if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
+    const int scale_factor = pathbias_get_scale_factor(options);
+    guard->first_hops /= scale_factor;
+    guard->circuit_successes /= scale_factor;
+  }
+  guard->first_hops++;
+  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s",
+           guard->circuit_successes, guard->first_hops, guard->nickname);
+  return 0;
+}
+
 /** A created or extended cell came back to us on the circuit, and it included
  * <b>reply</b> as its body.  (If <b>reply_type</b> is CELL_CREATED, the body
  * contains (the second DH key, plus KH).  If <b>reply_type</b> is
@@ -2549,9 +2687,22 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
 
-  if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS)
+  if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     hop = circ->cpath;
-  else {
+    /* Don't count cannibalized or onehop circs for path bias */
+    if (!circ->has_opened && !circ->build_state->onehop_tunnel) {
+      entry_guard_t *guard;
+
+      guard = entry_guard_get_by_id_digest(
+              circ->_base.n_conn->identity_digest);
+      if (guard) {
+        if (entry_guard_inc_first_hop_count(guard) < 0) {
+          /* Bogus guard; we already warned. */
+          return -END_CIRC_REASON_TORPROTOCOL;
+        }
+      }
+    }
+  } else {
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */
       log_warn(LD_PROTOCOL,"got extended when circ already built? Closing.");
@@ -3630,6 +3781,8 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
     *reason = "not recommended as a guard";
   else if (routerset_contains_node(options->ExcludeNodes, node))
     *reason = "excluded";
+  else if (e->path_bias_disabled)
+    *reason = "path-biased";
 
   if (*reason && ! e->bad_since) {
     /* Router is newly bad. */
@@ -3694,6 +3847,10 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   const or_options_t *options = get_options();
   tor_assert(msg);
 
+  if (e->path_bias_disabled) {
+    *msg = "path-biased";
+    return NULL;
+  }
   if (e->bad_since) {
     *msg = "bad";
     return NULL;
@@ -3757,8 +3914,8 @@ num_live_entry_guards(void)
 
 /** If <b>digest</b> matches the identity of any node in the
  * entry_guards list, return that node. Else return NULL. */
-static INLINE entry_guard_t *
-is_an_entry_guard(const char *digest)
+static entry_guard_t *
+entry_guard_get_by_id_digest(const char *digest)
 {
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
                     if (tor_memeq(digest, entry->identity, DIGEST_LEN))
@@ -3844,7 +4001,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend)
 
   if (chosen) {
     node = chosen;
-    entry = is_an_entry_guard(node->identity);
+    entry = entry_guard_get_by_id_digest(node->identity);
     if (entry) {
       if (reset_status) {
         entry->bad_since = 0;
@@ -3988,6 +4145,7 @@ remove_dead_entry_guards(time_t now)
   for (i = 0; i < smartlist_len(entry_guards); ) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
     if (entry->bad_since &&
+        ! entry->path_bias_disabled &&
         entry->bad_since + ENTRY_GUARD_REMOVE_AFTER < now) {
 
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
@@ -4253,7 +4411,7 @@ entry_guards_set_from_config(const or_options_t *options)
   /* Remove all currently configured guard nodes, excluded nodes, unreachable
    * nodes, or non-Guard nodes from entry_nodes. */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
-    if (is_an_entry_guard(node->identity)) {
+    if (entry_guard_get_by_id_digest(node->identity)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (routerset_contains_node(options->ExcludeNodes, node)) {
@@ -4539,6 +4697,31 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         continue;
       }
       digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
+    } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
+      const or_options_t *options = get_options();
+      unsigned hop_cnt, success_cnt;
+
+      if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
+        log_warn(LD_GENERAL, "Unable to parse guard path bias info: "
+                 "Misformated EntryGuardPathBias %s", escaped(line->value));
+        continue;
+      }
+
+      node->first_hops = hop_cnt;
+      node->circuit_successes = success_cnt;
+      log_info(LD_GENERAL, "Read %u/%u path bias for node %s",
+               node->circuit_successes, node->first_hops, node->nickname);
+      /* Note: We rely on the < comparison here to allow us to set a 0
+       * rate and disable the feature entirely. If refactoring, don't
+       * change to <= */
+      if (node->circuit_successes/((double)node->first_hops)
+          < pathbias_get_disable_rate(options)) {
+        node->path_bias_disabled = 1;
+        log_info(LD_GENERAL,
+                 "Path bias is too high (%u/%u); disabling node %s",
+                 node->circuit_successes, node->first_hops, node->nickname);
+      }
+
     } else {
       log_warn(LD_BUG, "Unexpected key %s", line->key);
     }
@@ -4563,6 +4746,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
          e->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
        }
      }
+     if (node->path_bias_disabled && !node->bad_since)
+       node->bad_since = time(NULL);
    });
 
   if (*msg || !set) {
@@ -4658,6 +4843,14 @@ entry_guards_update_state(or_state_t *state)
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
+      if (e->first_hops) {
+        *next = line = tor_malloc_zero(sizeof(config_line_t));
+        line->key = tor_strdup("EntryGuardPathBias");
+        tor_asprintf(&line->value, "%u %u",
+                     e->circuit_successes, e->first_hops);
+        next = &(line->next);
+      }
+
     });
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);

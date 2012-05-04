@@ -3550,6 +3550,17 @@ typedef struct {
    * control ports. */
   int DisableNetwork;
 
+  /**
+   * Parameters for path-bias detection.
+   * @{
+   */
+  int PathBiasCircThreshold;
+  double PathBiasNoticeRate;
+  double PathBiasDisableRate;
+  int PathBiasScaleThreshold;
+  int PathBiasScaleFactor;
+  /** @} */
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

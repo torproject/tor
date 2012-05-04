@@ -50,6 +50,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
   CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
+  CONFIG_TYPE_INT,          /**< Any integer. */
   CONFIG_TYPE_PORT,         /**< A port from 1...65535, 0 for "not set", or
                              * "auto".  */
   CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
@@ -354,6 +355,13 @@ static config_var_t _option_vars[] = {
   V(ORListenAddress,             LINELIST, NULL),
   V(ORPort,                      LINELIST, NULL),
   V(OutboundBindAddress,         STRING,   NULL),
+
+  V(PathBiasCircThreshold,       INT,      "-1"),
+  V(PathBiasNoticeRate,          DOUBLE,   "-1"),
+  V(PathBiasDisableRate,         DOUBLE,   "-1"),
+  V(PathBiasScaleThreshold,      INT,      "-1"),
+  V(PathBiasScaleFactor,         INT,      "-1"),
+
   OBSOLETE("PathlenCoinWeight"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
   V(PerConnBWRate,               MEMUNIT,  "0"),
@@ -498,6 +506,7 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuardPathBias",      LINELIST_S,  EntryGuards,             NULL),
   V(EntryGuards,                 LINELIST_V,  NULL),
 
   VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
@@ -2114,8 +2123,10 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
       break;
     }
     /* fall through */
+  case CONFIG_TYPE_INT:
   case CONFIG_TYPE_UINT:
-    i = (int)tor_parse_long(c->value, 10, 0,
+    i = (int)tor_parse_long(c->value, 10,
+                            var->type==CONFIG_TYPE_INT ? INT_MIN : 0,
                             var->type==CONFIG_TYPE_PORT ? 65535 : INT_MAX,
                             &ok, NULL);
     if (!ok) {
@@ -2498,6 +2509,7 @@ get_assigned_option(const config_format_t *fmt, const void *options,
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_INT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
       tor_asprintf(&result->value, "%d", *(int*)value);
@@ -2741,6 +2753,7 @@ option_clear(const config_format_t *fmt, or_options_t *options,
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_INT:
     case CONFIG_TYPE_PORT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
@@ -7142,6 +7155,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_INT: type = "SignedInteger"; break;
         case CONFIG_TYPE_PORT: type = "Port"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_MSEC_INTERVAL: type = "TimeMsecInterval"; break;
