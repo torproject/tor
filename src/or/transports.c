@@ -457,7 +457,7 @@ configure_proxy(managed_proxy_t *mp)
       mp->conf_state = PT_PROTO_BROKEN;
     } else { /* unknown stream status */
       log_warn(LD_BUG, "Unknown stream status '%d' while configuring managed "
-               "proxy '%s'.", r, mp->argv[0]);
+               "proxy '%s'.", (int)r, mp->argv[0]);
     }
 
     /* if the proxy finished configuring, exit the loop. */
@@ -591,7 +591,7 @@ handle_finished_proxy(managed_proxy_t *mp)
   case PT_PROTO_COMPLETED:
   default:
     log_warn(LD_CONFIG, "Unexpected state '%d' of managed proxy '%s'.",
-             mp->conf_state, mp->argv[0]);
+             (int)mp->conf_state, mp->argv[0]);
     tor_assert(0);
   }
 
