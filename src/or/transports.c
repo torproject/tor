@@ -1034,8 +1034,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 }
 
 /** Create and return a new managed proxy for <b>transport</b> using
- *  <b>proxy_argv</b>. If <b>is_server</b> is true, it's a server
- *  managed proxy. */
+ *  <b>proxy_argv</b>.  Also, add it to the global managed proxy list. If
+ *  <b>is_server</b> is true, it's a server managed proxy.  Takes ownership of
+ *  <b>proxy_argv</b>.
+ *
+ * Requires that proxy_argv have at least one element. */
 static managed_proxy_t *
 managed_proxy_create(const smartlist_t *transport_list,
                      char **proxy_argv, int is_server)
@@ -1063,13 +1066,23 @@ managed_proxy_create(const smartlist_t *transport_list,
 
 /** Register proxy with <b>proxy_argv</b>, supporting transports in
  *  <b>transport_list</b>, to the managed proxy subsystem.
- *  If <b>is_server</b> is true, then the proxy is a server proxy. */
+ *  If <b>is_server</b> is true, then the proxy is a server proxy.
+ *
+ * Takes ownership of proxy_argv.
+ *
+ * Requires that proxy_argv be a NULL-terminated array of command-line
+ * elements, containing at least one element.
+ **/
 void
 pt_kickstart_proxy(const smartlist_t *transport_list,
                    char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp=NULL;
   transport_t *old_transport = NULL;
+
+  if (!proxy_argv || !proxy_argv[0]) {
+    return;
+  }
 
   mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
