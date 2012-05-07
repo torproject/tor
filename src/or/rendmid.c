@@ -293,7 +293,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  base16_encode(hexid, 9, (char*)request, 4);
+  base16_encode(hexid, sizeof(hexid), (const char*)request, 4);
 
   log_info(LD_REND,
            "Got request for rendezvous from circuit %d to cookie %s.",
