@@ -283,6 +283,21 @@ test_util_strmisc(void)
   test_assert(i == 1);
   }
 
+  {
+    /* Test tor_parse_* where we overflow/underflow the underlying type. */
+    /* This string should overflow 64-bit ints. */
+#define TOOBIG "100000000000000000000000000"
+    test_eq(0L, tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    test_eq(i, 0);
+    test_eq(0L, tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    test_eq(i, 0);
+    test_eq(0UL, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
+    test_eq(i, 0);
+    test_eq(U64_LITERAL(0), tor_parse_uint64(TOOBIG, 10,
+                                             0, UINT64_MAX, &i, NULL));
+    test_eq(i, 0);
+  }
+
   /* Test failing snprintf cases */
   test_eq(-1, tor_snprintf(buf, 0, "Foo"));
   test_eq(-1, tor_snprintf(buf, 2, "Foo"));
