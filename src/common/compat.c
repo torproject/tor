@@ -129,7 +129,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
   if (fd >= 0)
     return fd;
   /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
-   * event though we were built on a system with O_CLOEXEC support, we
+   * even though we were built on a system with O_CLOEXEC support, we
    * are running on one without. */
   if (errno != EINVAL)
     return -1;
@@ -980,7 +980,7 @@ tor_open_socket(int domain, int type, int protocol)
   if (SOCKET_OK(s))
     goto socket_ok;
   /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
-   * event though we were built on a system with SOCK_CLOEXEC support, we
+   * even though we were built on a system with SOCK_CLOEXEC support, we
    * are running on one without. */
   if (errno != EINVAL)
     return s;
@@ -1014,7 +1014,7 @@ tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr, socklen_t *len)
   if (SOCKET_OK(s))
     goto socket_ok;
   /* If we got an error, see if it is ENOSYS. ENOSYS indicates that,
-   * event though we were built on a system with accept4 support, we
+   * even though we were built on a system with accept4 support, we
    * are running on one without. Also, check for EINVAL, which indicates that
    * we are missing SOCK_CLOEXEC support. */
   if (errno != EINVAL && errno != ENOSYS)
@@ -1092,7 +1092,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   if (r == 0)
     goto sockets_ok;
   /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
-   * event though we were built on a system with SOCK_CLOEXEC support, we
+   * even though we were built on a system with SOCK_CLOEXEC support, we
    * are running on one without. */
   if (errno != EINVAL)
     return -errno;
