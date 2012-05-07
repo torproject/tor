@@ -1005,7 +1005,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
   /* We cast down the weights to 32 bit ints on the assumption that
    * weight_scale is ~= 10000. We need to ensure a rogue authority
    * doesn't break this assumption to rig our weights */
-  tor_assert(0 < weight_scale && weight_scale < INT32_MAX);
+  tor_assert(0 < weight_scale && weight_scale <= INT32_MAX);
 
   /*
    * Provide Wgm=Wgg, Wmm=1, Wem=Wee, Weg=Wed. May later determine
@@ -1233,7 +1233,7 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
   /* We cast down the weights to 32 bit ints on the assumption that
    * weight_scale is ~= 10000. We need to ensure a rogue authority
    * doesn't break this assumption to rig our weights */
-  tor_assert(0 < weight_scale && weight_scale < INT32_MAX);
+  tor_assert(0 < weight_scale && weight_scale <= INT32_MAX);
 
   if (Wgg < 0 || Wgg > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wgg="I64_FORMAT"! G="I64_FORMAT
@@ -2019,7 +2019,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int ok=0;
       char *eq = strchr(bw_weight_param, '=');
       if (eq) {
-        weight_scale = tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok,
+        weight_scale = tor_parse_long(eq+1, 10, 1, INT32_MAX, &ok,
                                          NULL);
         if (!ok) {
           log_warn(LD_DIR, "Bad element '%s' in bw weight param",
