@@ -1,0 +1,5 @@
+  o Code refactoring:
+    - Defensively refactor rend_mid_rendezvous() so that protocol
+      violations and length checks happen in the beginning. Fixes bug
+      5645.
+
