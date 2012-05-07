@@ -1,0 +1,7 @@
+  o Major bugfixes (directory authority):
+    - Check more thoroughly to prevent a rogue authority from
+      double-voting on any consensus directory parameter.  Previously,
+      authorities would crash in this case if the total number of votes
+      for any parameter exceeded the number of active voters, but would
+      let it pass otherwise.  Partial fix for bug 5786; bugfix on
+      0.2.2.2-alpha.

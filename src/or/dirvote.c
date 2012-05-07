@@ -668,10 +668,10 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
     const char *next_param;
     int ok=0;
     eq = strchr(param, '=');
-    tor_assert(i<n_votes);
+    tor_assert(i<n_votes); /* Make sure we prevented vote-stuffing. */
     vals[i++] = (int32_t)
       tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok, NULL);
-    tor_assert(ok);
+    tor_assert(ok); /* Already checked these when parsing. */
 
     if (param_sl_idx+1 == smartlist_len(param_list))
       next_param = NULL;

@@ -2821,6 +2821,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   int i, inorder, n_signatures = 0;
   memarea_t *area = NULL, *rs_area = NULL;
   consensus_flavor_t flav = FLAV_NS;
+  char *last_kwd=NULL;
 
   tor_assert(s);
 
@@ -2977,15 +2978,18 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   tok = find_opt_by_keyword(tokens, K_PARAMS);
   if (tok) {
+    int any_dups = 0;
     inorder = 1;
     ns->net_params = smartlist_new();
     for (i = 0; i < tok->n_args; ++i) {
       int ok=0;
       char *eq = strchr(tok->args[i], '=');
+      size_t eq_pos;
       if (!eq) {
         log_warn(LD_DIR, "Bad element '%s' in params", escaped(tok->args[i]));
         goto err;
       }
+      eq_pos = eq-tok->args[i];
       tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_DIR, "Bad element '%s' in params", escaped(tok->args[i]));
@@ -2995,10 +2999,22 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
         inorder = 0;
       }
+      if (last_kwd && eq_pos == strlen(last_kwd) &&
+          fast_memeq(last_kwd, tok->args[i], eq_pos)) {
+        log_warn(LD_DIR, "Duplicate value for %s parameter",
+                 escaped(tok->args[i]));
+        any_dups = 1;
+      }
+      tor_free(last_kwd);
+      last_kwd = tor_strndup(tok->args[i], eq_pos);
       smartlist_add(ns->net_params, tor_strdup(tok->args[i]));
     }
     if (!inorder) {
       log_warn(LD_DIR, "params not in order");
+      goto err;
+    }
+    if (any_dups) {
+      log_warn(LD_DIR, "Duplicate in parameters");
       goto err;
     }
   }
@@ -3339,6 +3355,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
   if (rs_area)
     memarea_drop_all(rs_area);
+  tor_free(last_kwd);
 
   return ns;
 }
