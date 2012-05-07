@@ -5099,7 +5099,7 @@ parse_client_transport_line(const char *line, int validate_only)
         *tmp++ = smartlist_get(items, 2);
         smartlist_del_keeporder(items, 2);
       }
-      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
+      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
 
       /* kickstart the thing */
       pt_kickstart_client_proxy(transport_list, proxy_argv);
@@ -5222,7 +5222,7 @@ parse_server_transport_line(const char *line, int validate_only)
         *tmp++ = smartlist_get(items, 2);
         smartlist_del_keeporder(items, 2);
       }
-      *tmp = NULL; /*terminated with NUL pointer, just like execve() likes it*/
+      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
 
       /* kickstart the thing */
       pt_kickstart_server_proxy(transport_list, proxy_argv);
