@@ -344,8 +344,8 @@ pt_configure_remaining_proxies(void)
                  mp->argv[0]);
         proxy_prepare_for_restart(mp);
       } else { /* it doesn't need to be restarted. */
-        log_info(LD_GENERAL, "Nothing changed for managed proxy '%s' after HUP: "
-                 "not restarting.", mp->argv[0]);
+        log_info(LD_GENERAL, "Nothing changed for managed proxy '%s' after "
+                 "HUP: not restarting.", mp->argv[0]);
       }
 
       continue;
