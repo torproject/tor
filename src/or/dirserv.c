@@ -3284,10 +3284,9 @@ dirserv_orconn_tls_done(const char *address,
   tor_assert(digest_rcvd);
 
   node = node_get_mutable_by_id(digest_rcvd);
-  if (node == NULL)
+  if (node == NULL || node->ri == NULL)
     return;
   ri = node->ri;
-  tor_assert(ri);
 
   if (!strcasecmp(address, ri->address) && or_port == ri->or_port) {
     /* Found the right router.  */
