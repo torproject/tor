@@ -2088,6 +2088,21 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     return 0;
 
   cp = buf + strlen(buf);
+
+  /* Possible "a" line, not included in consensus for now. */
+  if (!tor_addr_is_null(&rs->ipv6_addr)) {
+    char buf[TOR_ADDR_BUF_LEN];
+    r = tor_snprintf(cp, buf_len - (cp-buf),
+                     "a %s:%d\n",
+                     tor_addr_to_str(buf, &rs->ipv6_addr, sizeof(buf), 1),
+                     (int)rs->ipv6_orport);
+    if (r<0) {
+      log_warn(LD_BUG, "Not enough space in buffer.");
+      return -1;
+    }
+    cp += strlen(cp);
+  }
+
   /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),
                    "s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
@@ -2453,6 +2468,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
+  tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
+  rs->ipv6_orport = ri->ipv6_orport;
 }
 
 /** Routerstatus <b>rs</b> is part of a group of routers that are on
