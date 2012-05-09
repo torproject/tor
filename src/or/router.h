@@ -93,6 +93,8 @@ void router_get_pref_orport(const routerinfo_t *router,
 void router_get_pref_ipv6_orport(const routerinfo_t *router,
                                  tor_addr_port_t *addr_port_out);
 int router_ipv6_preferred(const routerinfo_t *router);
+int router_has_addr(const routerinfo_t *router, const tor_addr_t *addr);
+int router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_t *ident_key);
 int is_legal_nickname(const char *s);

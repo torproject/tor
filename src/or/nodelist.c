@@ -139,8 +139,8 @@ nodelist_replace_routerinfo(routerinfo_t *old, routerinfo_t *new)
       if (!routers_have_same_or_addr(old, new)) {
         /* These mustn't carry over when the address and orport
            change. */
-        node->last_reachable = 0;
-        node->testing_since = 0;
+        node->last_reachable = node->last_reachable6 = 0;
+        node->testing_since = node->testing_since6 = 0;
       }
     }
   } else {

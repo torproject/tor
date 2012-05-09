@@ -1345,7 +1345,9 @@ mark_all_trusteddirservers_up(void)
 int
 routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2)
 {
-  return r1->addr == r2->addr && r1->or_port == r2->or_port;
+  return r1->addr == r2->addr && r1->or_port == r2->or_port &&
+    tor_addr_eq(&r1->ipv6_addr, &r2->ipv6_addr) &&
+    r1->ipv6_orport == r2->ipv6_orport;
 }
 
 /** Reset all internal variables used to count failed downloads of network

@@ -1997,13 +1997,13 @@ typedef struct node_t {
   routerstatus_t *rs;
 
   /* local info: copied from routerstatus, then possibly frobbed based
-   * on experience.  Authorities set this stuff directly. */
+   * on experience.  Authorities set this stuff directly.  Note that
+   * these reflect knowledge of the primary (IPv4) OR port only.  */
 
   unsigned int is_running:1; /**< As far as we know, is this OR currently
                               * running? */
   unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
-                               *  (For Authdir: Have we validated this OR?)
-                               */
+                            *  (For Authdir: Have we validated this OR?) */
   unsigned int is_fast:1; /** Do we think this is a fast OR? */
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
@@ -2027,15 +2027,19 @@ typedef struct node_t {
   /* Local info: derived. */
 
   /** According to the geoip db what country is this router in? */
+  /* XXXprop186 what is this suppose to mean with multiple OR ports? */
   country_t country;
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
 
   /** When was the last time we could reach this OR? */
-  time_t last_reachable;        /* IPv4 */
+  time_t last_reachable;        /* IPv4. */
+  time_t last_reachable6;       /* IPv6. */
+
   /** When did we start testing reachability for this OR? */
-  time_t testing_since;         /* IPv4 */
+  time_t testing_since;         /* IPv4. */
+  time_t testing_since6;        /* IPv6. */
 } node_t;
 
 /** How many times will we try to download a router's descriptor before giving

@@ -3273,14 +3273,15 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
  * Inform the reachability checker that we could get to this guy.
  */
 void
-dirserv_orconn_tls_done(const char *address,
+dirserv_orconn_tls_done(const tor_addr_t *addr,
                         uint16_t or_port,
                         const char *digest_rcvd)
 {
   node_t *node = NULL;
+  tor_addr_port_t orport;
   routerinfo_t *ri = NULL;
   time_t now = time(NULL);
-  tor_assert(address);
+  tor_assert(addr);
   tor_assert(digest_rcvd);
 
   node = node_get_mutable_by_id(digest_rcvd);
@@ -3288,22 +3289,26 @@ dirserv_orconn_tls_done(const char *address,
     return;
   ri = node->ri;
 
-  if (!strcasecmp(address, ri->address) && or_port == ri->or_port) {
+  tor_addr_copy(&orport.addr, addr);
+  orport.port = or_port;
+  if (router_has_orport(ri, &orport)) {
     /* Found the right router.  */
     if (!authdir_mode_bridge(get_options()) ||
         ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+      char addrstr[TOR_ADDR_BUF_LEN];
       /* This is a bridge or we're not a bridge authorititative --
          mark it as reachable.  */
-      tor_addr_t addr, *addrp=NULL;
       log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
                router_describe(ri),
-               address, ri->or_port);
-      if (tor_addr_parse(&addr, ri->address) != -1)
-        addrp = &addr;
-      else
-        log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);
-      rep_hist_note_router_reachable(digest_rcvd, addrp, or_port, now);
-      node->last_reachable = now;
+               tor_addr_to_str(addrstr, addr, sizeof(addrstr), 1),
+               ri->or_port);
+      if (tor_addr_family(addr) == AF_INET) {
+        rep_hist_note_router_reachable(digest_rcvd, addr, or_port, now);
+        node->last_reachable = now;
+      } else if (tor_addr_family(addr) == AF_INET6) {
+        /* No rephist for IPv6.  */
+        node->last_reachable6 = now;
+      }
     }
   }
 }
@@ -3345,6 +3350,8 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_assert(router);
   node = node_get_mutable_by_id(router->cache_info.identity_digest);
   tor_assert(node);
+
+  /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
             router->nickname, router->address, router->or_port);
   /* Remember when we started trying to determine reachability */
@@ -3353,6 +3360,19 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   tor_addr_from_ipv4h(&router_addr, router->addr);
   connection_or_connect(&router_addr, router->or_port,
                         router->cache_info.identity_digest);
+
+  /* Possible IPv6. */
+  if (!tor_addr_is_null(&router->ipv6_addr)) {
+    char addrstr[TOR_ADDR_BUF_LEN];
+    log_debug(LD_OR, "Testing reachability of %s at %s:%u.",
+              router->nickname,
+              tor_addr_to_str(addrstr, &router->ipv6_addr, sizeof(addrstr), 1),
+              router->ipv6_orport);
+    if (!node->testing_since6)
+      node->testing_since6 = now;
+    connection_or_connect(&router->ipv6_addr, router->ipv6_orport,
+                          router->cache_info.identity_digest);
+  }
 }
 
 /** Auth dir server only: load balance such that we only
