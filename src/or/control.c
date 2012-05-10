@@ -2986,13 +2986,13 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
     cp += strlen("SAFECOOKIE");
   } else {
     connection_write_str_to_buf("513 AUTHCHALLENGE only supports SAFECOOKIE "
-                                "authentication", conn);
+                                "authentication\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
 
   if (!authentication_cookie_is_set) {
-    connection_write_str_to_buf("515 Cookie authentication is disabled", conn);
+    connection_write_str_to_buf("515 Cookie authentication is disabled\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
@@ -3003,7 +3003,7 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
       decode_escaped_string(cp, len - (cp - body),
                             &client_nonce, &client_nonce_len);
     if (newcp == NULL) {
-      connection_write_str_to_buf("513 Invalid quoted client nonce",
+      connection_write_str_to_buf("513 Invalid quoted client nonce\r\n",
                                   conn);
       connection_mark_for_close(TO_CONN(conn));
       return -1;
@@ -3017,7 +3017,7 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
 
     if (base16_decode(client_nonce, client_nonce_len,
                       cp, client_nonce_encoded_len) < 0) {
-      connection_write_str_to_buf("513 Invalid base16 client nonce",
+      connection_write_str_to_buf("513 Invalid base16 client nonce\r\n",
                                   conn);
       connection_mark_for_close(TO_CONN(conn));
       tor_free(client_nonce);
@@ -3030,7 +3030,7 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
   cp += strspn(cp, " \t\n\r");
   if (*cp != '\0' ||
       cp != body + len) {
-    connection_write_str_to_buf("513 Junk at end of AUTHCHALLENGE command",
+    connection_write_str_to_buf("513 Junk at end of AUTHCHALLENGE command\r\n",
                                 conn);
     connection_mark_for_close(TO_CONN(conn));
     tor_free(client_nonce);
