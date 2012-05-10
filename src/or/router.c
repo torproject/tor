@@ -1655,6 +1655,7 @@ router_rebuild_descriptor(int force)
     ei->cache_info.signed_descriptor_len =
       strlen(ei->cache_info.signed_descriptor_body);
     router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
+                              ei->cache_info.signed_descriptor_len,
                               ei->cache_info.signed_descriptor_digest);
   }
 
@@ -2359,7 +2360,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   }
 
   memset(sig, 0, sizeof(sig));
-  if (router_get_extrainfo_hash(s, digest) < 0 ||
+  if (router_get_extrainfo_hash(s, strlen(s), digest) < 0 ||
       router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
                                      ident_key) < 0) {
     log_warn(LD_BUG, "Could not append signature to extra-info "

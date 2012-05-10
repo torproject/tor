@@ -19,7 +19,7 @@ int router_get_networkstatus_v2_hash(const char *s, char *digest);
 int router_get_networkstatus_v3_hash(const char *s, char *digest,
                                      digest_algorithm_t algorithm);
 int router_get_networkstatus_v3_hashes(const char *s, digests_t *digests);
-int router_get_extrainfo_hash(const char *s, char *digest);
+int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
 #define DIROBJ_MAX_SIG_LEN 256
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,

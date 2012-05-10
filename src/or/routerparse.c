@@ -682,12 +682,12 @@ router_get_networkstatus_v3_hash(const char *s, char *digest,
                               ' ', alg);
 }
 
-/** Set <b>digest</b> to the SHA-1 digest of the hash of the extrainfo
- * string in <b>s</b>.  Return 0 on success, -1 on failure. */
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the <b>s_len</b>-byte
+ * extrainfo string at <b>s</b>.  Return 0 on success, -1 on failure. */
 int
-router_get_extrainfo_hash(const char *s, char *digest)
+router_get_extrainfo_hash(const char *s, size_t s_len, char *digest)
 {
-  return router_get_hash_impl(s, strlen(s), digest, "extra-info",
+  return router_get_hash_impl(s, s_len, digest, "extra-info",
                               "\nrouter-signature",'\n', DIGEST_SHA1);
 }
 
@@ -1643,7 +1643,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
 
-  if (router_get_extrainfo_hash(s, digest) < 0) {
+  if (router_get_extrainfo_hash(s, end-s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
     goto err;
   }
