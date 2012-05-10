@@ -2992,7 +2992,8 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
   }
 
   if (!authentication_cookie_is_set) {
-    connection_write_str_to_buf("515 Cookie authentication is disabled\r\n", conn);
+    connection_write_str_to_buf("515 Cookie authentication is disabled\r\n",
+                                conn);
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
