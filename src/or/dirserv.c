@@ -2468,8 +2468,14 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
-  tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
-  rs->ipv6_orport = ri->ipv6_orport;
+  if (!tor_addr_is_null(&ri->ipv6_addr) &&
+      node->last_reachable6 >= now - REACHABLE_TIMEOUT) {
+    /* There's an IPv6 OR port and it's reachable so copy it to the
+       routerstatus.  FIXME: If we're not on IPv6, copy it regardless
+       of reachability.  */
+    tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
+    rs->ipv6_orport = ri->ipv6_orport;
+  }
 }
 
 /** Routerstatus <b>rs</b> is part of a group of routers that are on
