@@ -61,6 +61,13 @@ Changes in version 0.2.2.36 - 2012-04-??
       bugfix on 0.2.2.29-beta. Bug found by wanoskarnet.
 
   o Minor bugfixes:
+    - Make our number-parsing functions always treat too-large values
+      as an error, even when those values exceed the width of the
+      underlying type. Previously, if the caller provided these
+      functions with minima or maxima set to the extreme values of the
+      underlying integer type, these functions would return those
+      values on overflow rather than treating overflow as an error.
+      Fixes part of bug 5786; bugfix on 0.0.9.
     - Older Linux kernels erroneously respond to strange nmap behavior
       by having accept() return successfully with a zero-length
       socket. When this happens, just close the connection. Previously,

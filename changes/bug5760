@@ -1,3 +1,0 @@
-  o Major bugfixes:
-    - End AUTHCHALLENGE error response messages with a CRLF. Fixes bug 5760;
-      bugfix on 0.2.3.16-alpha, and backported to maint-0.2.2
