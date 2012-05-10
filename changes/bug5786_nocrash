@@ -1,0 +1,7 @@
+  o Major bugfixes (directory authorties):
+    - When computing weight parameters, behave more robustly in the
+      presence of a bad bwweightscale value.  Previously, the
+      authorities would crash if they agreed on a sufficiently browken
+      weight_scale value: now, they use a reasonable default and carry
+      on. Partial fix for 5786; bugfix on 0.2.2.17-alpha.
+
