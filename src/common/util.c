@@ -764,6 +764,9 @@ tor_digest256_is_zero(const char *digest)
 /* Helper: common code to check whether the result of a strtol or strtoul or
  * strtoll is correct. */
 #define CHECK_STRTOX_RESULT()                           \
+  /* Did an overflow occur? */                          \
+  if (errno == ERANGE)                                  \
+    goto err;                                           \
   /* Was at least one character converted? */           \
   if (endptr == s)                                      \
     goto err;                                           \
@@ -800,6 +803,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   char *endptr;
   long r;
 
+  errno = 0;
   r = strtol(s, &endptr, base);
   CHECK_STRTOX_RESULT();
 }
@@ -812,6 +816,7 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   char *endptr;
   unsigned long r;
 
+  errno = 0;
   r = strtoul(s, &endptr, base);
   CHECK_STRTOX_RESULT();
 }
@@ -823,6 +828,7 @@ tor_parse_double(const char *s, double min, double max, int *ok, char **next)
   char *endptr;
   double r;
 
+  errno = 0;
   r = strtod(s, &endptr);
   CHECK_STRTOX_RESULT();
 }
@@ -836,6 +842,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   char *endptr;
   uint64_t r;
 
+  errno = 0;
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
 #elif defined(MS_WINDOWS)
