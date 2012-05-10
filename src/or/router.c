@@ -1530,10 +1530,18 @@ router_rebuild_descriptor(int force)
       if (p->type == CONN_TYPE_OR_LISTENER &&
           ! p->no_advertise &&
           ! p->ipv4_only &&
-          tor_addr_family(&p->addr) == AF_INET6 &&
-          ! tor_addr_is_internal(&p->addr, 1)) {
-        ipv6_orport = p;
-        break;
+          tor_addr_family(&p->addr) == AF_INET6) {
+        if (! tor_addr_is_internal(&p->addr, 0)) {
+          ipv6_orport = p;
+          break;
+        } else {
+          char addrbuf[TOR_ADDR_BUF_LEN];
+          log_warn(LD_CONFIG,
+                   "Unable to use configured IPv6 address \"%s\" in a "
+                   "descriptor. Skipping it. "
+                   "Try specifying a globally reachable address explicitly. ",
+                   tor_addr_to_str(addrbuf, &p->addr, sizeof(addrbuf), 1));
+        }
       }
     } SMARTLIST_FOREACH_END(p);
     if (ipv6_orport) {
