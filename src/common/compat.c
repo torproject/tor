@@ -2030,8 +2030,7 @@ get_uname(void)
 #ifdef HAVE_UNAME
     if (uname(&u) != -1) {
       /* (Linux says 0 is success, Solaris says 1 is success) */
-      tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
-               u.sysname, u.machine);
+      strlcpy(uname_result, u.sysname, sizeof(uname_result));
     } else
 #endif
       {
@@ -2039,8 +2038,6 @@ get_uname(void)
         OSVERSIONINFOEX info;
         int i;
         const char *plat = NULL;
-        const char *extra = NULL;
-        char acsd[MAX_PATH] = {0};
         static struct {
           unsigned major; unsigned minor; const char *version;
         } win_version_table[] = {
@@ -2065,20 +2062,11 @@ get_uname(void)
           uname_result_is_set = 1;
           return uname_result;
         }
-#ifdef UNICODE
-        wcstombs(acsd, info.szCSDVersion, MAX_PATH);
-#else
-        strlcpy(acsd, info.szCSDVersion, sizeof(acsd));
-#endif
         if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
           if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
             plat = "Windows NT 4.0";
           else
             plat = "Windows 95";
-          if (acsd[1] == 'B')
-            extra = "OSR2 (B)";
-          else if (acsd[1] == 'C')
-            extra = "OSR2 (C)";
         } else {
           for (i=0; win_version_table[i].major>0; ++i) {
             if (win_version_table[i].major == info.dwMajorVersion &&
@@ -2088,39 +2076,26 @@ get_uname(void)
             }
           }
         }
-        if (plat && !strcmp(plat, "Windows 98")) {
-          if (acsd[1] == 'A')
-            extra = "SE (A)";
-          else if (acsd[1] == 'B')
-            extra = "SE (B)";
-        }
         if (plat) {
-          if (!extra)
-            extra = acsd;
-          tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
-                       plat, extra);
+          strlcpy(uname_result, plat, sizeof(uname_result));
         } else {
           if (info.dwMajorVersion > 6 ||
               (info.dwMajorVersion==6 && info.dwMinorVersion>2))
             tor_snprintf(uname_result, sizeof(uname_result),
-                      "Very recent version of Windows [major=%d,minor=%d] %s",
-                      (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                      acsd);
+                         "Very recent version of Windows [major=%d,minor=%d]",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
+                         );
           else
             tor_snprintf(uname_result, sizeof(uname_result),
-                      "Unrecognized version of Windows [major=%d,minor=%d] %s",
-                      (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                      acsd);
+                         "Unrecognized version of Windows [major=%d,minor=%d]",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
         }
 #if !defined (WINCE)
-#ifdef VER_SUITE_BACKOFFICE
-        if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
-          strlcat(uname_result, " [domain controller]", sizeof(uname_result));
-        } else if (info.wProductType == VER_NT_SERVER) {
-          strlcat(uname_result, " [server]", sizeof(uname_result));
-        } else if (info.wProductType == VER_NT_WORKSTATION) {
-          strlcat(uname_result, " [workstation]", sizeof(uname_result));
-        }
+#ifdef VER_NT_SERVER
+      if (info.wProductType == VER_NT_SERVER ||
+          info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
+        strlcat(uname_result, " [server]", sizeof(uname_result));
+      }
 #endif
 #endif
 #else

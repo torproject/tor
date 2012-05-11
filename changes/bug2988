@@ -1,0 +1,6 @@
+  o Minor features:
+    - The advertised platform of a router now includes only its
+      operating system's name (e.g., "Linux", "Darwin", "Windows 7"),
+      and not its service pack level (for Windows), or its CPU
+      architecture (for Unix). This is part of ticket 2988.
+
