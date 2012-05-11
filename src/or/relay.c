@@ -761,7 +761,7 @@ connection_ap_process_end_not_open(
         /* rewrite it to an IP if we learned one. */
         if (addressmap_rewrite(conn->socks_request->address,
                                sizeof(conn->socks_request->address),
-                               NULL)) {
+                               NULL, NULL)) {
           control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
         }
         if (conn->chosen_exit_optional ||

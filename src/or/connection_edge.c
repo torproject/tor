@@ -1095,13 +1095,17 @@ addressmap_match_superdomains(char *address)
  * address changed; false otherwise.  Set *<b>expires_out</b> to the
  * expiry time of the result, or to <b>time_max</b> if the result does
  * not expire.
+ *
+ * DOCDOC exit_source_out;
  */
 int
-addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
+addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
+                   addressmap_entry_source_t *exit_source_out)
 {
   addressmap_entry_t *ent;
   int rewrites;
   time_t expires = TIME_MAX;
+  addressmap_entry_source_t exit_source = ADDRMAPSRC_NONE;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
     int exact_match = 0;
@@ -1117,9 +1121,7 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
         /* This is a rule like *.example.com example.com, and we just got
          * "example.com" */
         tor_free(addr_orig);
-        if (expires_out)
-          *expires_out = expires;
-        return rewrites > 0;
+        goto done;
       }
 
       exact_match = 1;
@@ -1127,9 +1129,7 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 
     if (!ent || !ent->new_address) {
       tor_free(addr_orig);
-      if (expires_out)
-        *expires_out = expires;
-      return (rewrites > 0); /* done, no rewrite needed */
+      goto done;
     }
 
     if (ent->dst_wildcard && !exact_match) {
@@ -1137,6 +1137,12 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
       strlcat(address, ent->new_address, maxlen);
     } else {
       strlcpy(address, ent->new_address, maxlen);
+    }
+
+    if (!strcmpend(address, ".exit") &&
+        strcmpend(addr_orig, ".exit") &&
+        exit_source == ADDRMAPSRC_NONE) {
+      exit_source = ent->source;
     }
 
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
@@ -1149,9 +1155,13 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
            escaped_safe_str_client(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
+
+ done:
+  if (exit_source_out)
+    *exit_source_out = exit_source;
   if (expires_out)
     *expires_out = TIME_MAX;
-  return 1;
+  return (rewrites > 0);
 }
 
 /** If we have a cached reverse DNS entry for the address stored in the
@@ -1782,17 +1792,25 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
   time_t map_expires = TIME_MAX;
-  /* This will be set to true iff the address starts out as a non-.exit
-     address, and we remap it to one because of an entry in the addressmap. */
-  int remapped_to_exit = 0;
   time_t now = time(NULL);
   connection_t *base_conn = ENTRY_TO_CONN(conn);
+  addressmap_entry_source_t exit_source = ADDRMAPSRC_NONE;
 
   tor_strlower(socks->address); /* normalize it */
   strlcpy(orig_address, socks->address, sizeof(orig_address));
   log_debug(LD_APP,"Client asked for %s:%d",
             safe_str_client(socks->address),
             socks->port);
+
+  if (!strcmpend(socks->address, ".exit") && !options->AllowDotExit) {
+    log_warn(LD_APP, "The  \".exit\" notation is disabled in Tor due to "
+             "security risks. Set AllowDotExit in your torrc to enable "
+             "it (at your own risk).");
+    control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                escaped(socks->address));
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+    return -1;
+  }
 
   if (! conn->original_dest_address)
     conn->original_dest_address = tor_strdup(conn->socks_request->address);
@@ -1854,16 +1872,11 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       }
     }
   } else if (!automap) {
-    int started_without_chosen_exit = strcasecmpend(socks->address, ".exit");
     /* For address map controls, remap the address. */
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           &map_expires)) {
+                           &map_expires, &exit_source)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
-      if (started_without_chosen_exit &&
-          !strcasecmpend(socks->address, ".exit") &&
-          map_expires < TIME_MAX)
-        remapped_to_exit = 1;
     }
   }
 
@@ -1882,8 +1895,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
-  addresstype = parse_extended_hostname(socks->address,
-                         remapped_to_exit || options->AllowDotExit);
+  addresstype = parse_extended_hostname(socks->address);
 
   if (addresstype == BAD_HOSTNAME) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
@@ -1902,14 +1914,42 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       options->_ExcludeExitNodesUnion : options->ExcludeExitNodes;
     const node_t *node;
 
+    if (exit_source == ADDRMAPSRC_AUTOMAP && !options->AllowDotExit) {
+      /* Whoops; this one is stale.  It must have gotten added earlier,
+       * when AllowDotExit was on. */
+      log_warn(LD_APP,"Stale automapped address for '%s.exit', with "
+               "AllowDotExit disabled. Refusing.",
+               safe_str_client(socks->address));
+      control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                  escaped(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+
+    if (exit_source == ADDRMAPSRC_DNS ||
+        (exit_source == ADDRMAPSRC_NONE && !options->AllowDotExit)) {
+      /* It shouldn't be possible to get a .exit address from any of these
+       * sources. */
+      log_warn(LD_BUG,"Address '%s.exit', with impossible source for the .exit "
+               "part. Refusing.",
+               safe_str_client(socks->address));
+      control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                  escaped(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+
     tor_assert(!automap);
     if (s) {
       /* The address was of the form "(stuff).(name).exit */
       if (s[1] != '\0') {
         conn->chosen_exit_name = tor_strdup(s+1);
         node = node_get_by_nickname(conn->chosen_exit_name, 1);
-        if (remapped_to_exit) /* 5 tries before it expires the addressmap */
+
+        if (exit_source == ADDRMAPSRC_TRACKEXIT) {
+          /* We 5 tries before it expires the addressmap */
           conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
+        }
         *s = 0;
       } else {
         /* Oops, the address was (stuff)..exit.  That's not okay. */
@@ -3407,17 +3447,14 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
  * If address is of the form "y.onion" with a badly-formed handle y:
  *     Return BAD_HOSTNAME and log a message.
  *
- * If address is of the form "y.exit" and <b>allowdotexit</b> is true:
+ * If address is of the form "y.exit":
  *     Put a NUL after y and return EXIT_HOSTNAME.
- *
- * If address is of the form "y.exit" and <b>allowdotexit</b> is false:
- *     Return BAD_HOSTNAME and log a message.
  *
  * Otherwise:
  *     Return NORMAL_HOSTNAME and change nothing.
  */
 hostname_type_t
-parse_extended_hostname(char *address, int allowdotexit)
+parse_extended_hostname(char *address)
 {
     char *s;
     char query[REND_SERVICE_ID_LEN_BASE32+1];
@@ -3426,16 +3463,8 @@ parse_extended_hostname(char *address, int allowdotexit)
     if (!s)
       return NORMAL_HOSTNAME; /* no dot, thus normal */
     if (!strcmp(s+1,"exit")) {
-      if (allowdotexit) {
-        *s = 0; /* NUL-terminate it */
-        return EXIT_HOSTNAME; /* .exit */
-      } else {
-        log_warn(LD_APP, "The \".exit\" notation is disabled in Tor due to "
-                 "security risks. Set AllowDotExit in your torrc to enable "
-                 "it.");
-        /* FFFF send a controller event too to notify Vidalia users */
-        return BAD_HOSTNAME;
-      }
+      *s = 0; /* NUL-terminate it */
+      return EXIT_HOSTNAME; /* .exit */
     }
     if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */

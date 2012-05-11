@@ -3856,6 +3856,9 @@ typedef enum {
   /** We're remapping this address because we got a DNS resolution from a
    * Tor server that told us what its value was. */
   ADDRMAPSRC_DNS,
+
+  /** DOCDOC */
+  ADDRMAPSRC_NONE
 } addressmap_entry_source_t;
 
 /********************************* control.c ***************************/
