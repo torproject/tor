@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Make our replacement implementation of strtok_r compatible with
+      the standard behavior of strtok_r. Patch by nils. Fixes bug
+      5091; bugfix on 0.2.2.1-alpha.
