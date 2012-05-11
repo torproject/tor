@@ -41,6 +41,40 @@ AC_DEFUN([TOR_DEFINE_CODEPATH],
   AC_SUBST(TOR_LDFLAGS_$2)
 ])
 
+dnl 1:flags
+AC_DEFUN([TOR_CHECK_CFLAGS], [
+  AS_VAR_PUSHDEF([VAR],[tor_cv_cflags_$1])
+  AC_CACHE_CHECK([whether the compiler accepts $1], VAR, [
+    tor_saved_CFLAGS="$CFLAGS"
+    CFLAGS="$CFLAGS $1"
+    AC_TRY_COMPILE([], [return 0;],
+                   [AS_VAR_SET(VAR,yes)],
+                   [AS_VAR_SET(VAR,no)])
+    CFLAGS="$tor_saved_CFLAGS"
+  ])
+  if test x$VAR = xyes; then
+    CFLAGS="$CFLAGS $1"
+  fi
+  AS_VAR_POPDEF([VAR])
+])
+
+dnl 1:flags
+AC_DEFUN([TOR_CHECK_LDFLAGS], [
+  AS_VAR_PUSHDEF([VAR],[tor_cv_ldflags_$1])
+  AC_CACHE_CHECK([whether the linker accepts $1], VAR, [
+    tor_saved_LDFLAGS="$LDFLAGS"
+    LDFLAGS="$LDFLAGS $1"
+    AC_TRY_LINK([], [return 0;],
+                   [AS_VAR_SET(VAR,yes)],
+                   [AS_VAR_SET(VAR,no)])
+    LDFLAGS="$tor_saved_LDFLAGS"
+  ])
+  if test x$VAR = xyes; then
+    LDFLAGS="$LDFLAGS $1"
+  fi
+  AS_VAR_POPDEF([VAR])
+])
+
 dnl 1:libname
 AC_DEFUN([TOR_WARN_MISSING_LIB], [
 h=""

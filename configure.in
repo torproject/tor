@@ -122,25 +122,12 @@ dnl -D_FORTIFY_SOURCE=2 -fstack-protector-all
 dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
 dnl This requires that we use gcc and that we add -O2 to the CFLAGS.
 AC_ARG_ENABLE(gcc-hardening,
-    AS_HELP_STRING(--disable-gcc-hardening, disable compiler security checks),
-    [],
-    [enableval=yes;])
-[if test x$enableval = xyes; then
-    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -fstack-protector-all"
-    CFLAGS="$CFLAGS -fwrapv -fPIE -Wstack-protector"
-    CFLAGS="$CFLAGS --param ssp-buffer-size=1"
-    LDFLAGS="$LDFLAGS -pie"
-fi]
+    AS_HELP_STRING(--disable-gcc-hardening, disable compiler security checks))
 
 dnl Linker hardening options
 dnl Currently these options are ELF specific - you can't use this with MacOSX
 AC_ARG_ENABLE(linker-hardening,
-    AS_HELP_STRING(--disable-linker-hardening, disable linker security fixups),
-    [],
-    [enableval=yes;])
-AC_CHECK_HEADER([elf.h], [if test x$enableval = xyes; then
-    LDFLAGS="$LDFLAGS -z relro -z now"
-fi])
+    AS_HELP_STRING(--disable-linker-hardening, disable linker security fixups))
 
 AC_ARG_ENABLE(local-appdata,
    AS_HELP_STRING(--enable-local-appdata, default to host local application data paths on Windows))
@@ -183,6 +170,20 @@ AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || test x$upnp = xtrue)
 AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
+
+if test x$enable_gcc_hardening != xno; then
+    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
+    TOR_CHECK_CFLAGS(-fstack-protector-all)
+    TOR_CHECK_CFLAGS(-Wstack-protector)
+    TOR_CHECK_CFLAGS(-fwrapv)
+    TOR_CHECK_CFLAGS(-fPIE)
+    TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
+    TOR_CHECK_LDFLAGS(-pie)
+fi
+
+if test x$enable_linker_hardening != xno; then
+    TOR_CHECK_LDFLAGS(-z relro -z now)
+fi
 
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
 AC_C_FLEXIBLE_ARRAY_MEMBER
