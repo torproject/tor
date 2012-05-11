@@ -49,6 +49,7 @@ const char *rep_hist_get_router_stability_doc(time_t now);
 
 void rep_hist_note_used_port(time_t now, uint16_t port);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
+void rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports);
 void rep_hist_note_used_resolve(time_t now);
 void rep_hist_note_used_internal(time_t now, int need_uptime,
                                  int need_capacity);

@@ -2847,6 +2847,10 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       if (node)
         break;
       smartlist_clear(supporting);
+      /* If we reach this point, we can't actually support any unhandled
+       * predicted ports, so clear all the remaining ones. */
+      if (smartlist_len(needed_ports))
+        rep_hist_remove_predicted_ports(needed_ports);
     }
     SMARTLIST_FOREACH(needed_ports, uint16_t *, cp, tor_free(cp));
     smartlist_free(needed_ports);
