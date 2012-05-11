@@ -1228,6 +1228,22 @@ consider_publishable_server(int force)
   }
 }
 
+/** Return the port of the first active listener of type
+ *  <b>listener_type</b>. */
+/** XXX not a very good interface. it's not reliable when there are
+    multiple listeners. */
+uint16_t
+router_get_active_listener_port_by_type(int listener_type)
+{
+  /* Iterate all connections, find one of the right kind and return
+     the port. Not very sophisticated or fast, but effective. */
+  const connection_t *c = connection_get_by_type(listener_type);
+  if (c)
+    return c->port;
+
+  return 0;
+}
+
 /** Return the port that we should advertise as our ORPort; this is either
  * the one configured in the ORPort option, or the one we actually bound to
  * if ORPort is "auto".
@@ -1238,12 +1254,11 @@ router_get_advertised_or_port(const or_options_t *options)
   int port = get_primary_or_port();
   (void)options;
 
-  if (port == CFG_AUTO_PORT) {
-    connection_t *c = connection_get_by_type(CONN_TYPE_OR_LISTENER);
-    if (c)
-      return c->port;
-    return 0;
-  }
+  /* If the port is in 'auto' mode, we have to use
+     router_get_listener_port_by_type(). */
+  if (port == CFG_AUTO_PORT)
+    return router_get_active_listener_port_by_type(CONN_TYPE_OR_LISTENER);
+
   return port;
 }
 
@@ -1260,12 +1275,10 @@ router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 
   if (!dirport_configured)
     return dirport;
-  if (dirport_configured == CFG_AUTO_PORT) {
-    connection_t *c = connection_get_by_type(CONN_TYPE_DIR_LISTENER);
-    if (c)
-      return c->port;
-    return 0;
-  }
+
+  if (dirport_configured == CFG_AUTO_PORT)
+    return router_get_active_listener_port_by_type(CONN_TYPE_DIR_LISTENER);
+
   return dirport_configured;
 }
 
