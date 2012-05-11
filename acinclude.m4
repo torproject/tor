@@ -46,7 +46,7 @@ AC_DEFUN([TOR_CHECK_CFLAGS], [
   AS_VAR_PUSHDEF([VAR],[tor_cv_cflags_$1])
   AC_CACHE_CHECK([whether the compiler accepts $1], VAR, [
     tor_saved_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS $1"
+    CFLAGS="$CFLAGS -pedantic $1"
     AC_TRY_COMPILE([], [return 0;],
                    [AS_VAR_SET(VAR,yes)],
                    [AS_VAR_SET(VAR,no)])
@@ -63,7 +63,7 @@ AC_DEFUN([TOR_CHECK_LDFLAGS], [
   AS_VAR_PUSHDEF([VAR],[tor_cv_ldflags_$1])
   AC_CACHE_CHECK([whether the linker accepts $1], VAR, [
     tor_saved_LDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS $1"
+    LDFLAGS="$LDFLAGS -pedantic $1"
     AC_TRY_LINK([], [return 0;],
                    [AS_VAR_SET(VAR,yes)],
                    [AS_VAR_SET(VAR,no)])

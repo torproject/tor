@@ -173,6 +173,7 @@ AM_PROG_CC_C_O
 
 if test x$enable_gcc_hardening != xno; then
     CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
+    TOR_CHECK_CFLAGS(-Qunused-arguments)
     TOR_CHECK_CFLAGS(-fstack-protector-all)
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(-fwrapv)
