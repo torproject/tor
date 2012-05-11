@@ -22,6 +22,7 @@ const char *safe_str(const char *address);
 const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
 const char *get_version(void);
+const char *get_short_version(void);
 
 int config_get_lines(const char *string, config_line_t **result, int extended);
 void config_free_lines(config_line_t *front);

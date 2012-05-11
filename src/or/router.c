@@ -1949,7 +1949,7 @@ router_guess_address_from_dir_headers(uint32_t *guess)
 void
 get_platform_str(char *platform, size_t len)
 {
-  tor_snprintf(platform, len, "Tor %s on %s", get_version(), get_uname());
+  tor_snprintf(platform, len, "Tor %s on %s", get_short_version(), get_uname());
 }
 
 /* XXX need to audit this thing and count fenceposts. maybe
