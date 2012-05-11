@@ -1778,7 +1778,7 @@ test_util_strtok(void)
     tor_snprintf(buf, sizeof(buf),
                  "%sGraved on the dark  in gestures of descent%s", pad1, pad1);
     tor_snprintf(buf2, sizeof(buf2),
-                 "%sthey.seemed;;their!.own;most.perfect;monument%s",pad2,pad2);
+                "%sthey.seemed;;their!.own;most.perfect;monument%s",pad2,pad2);
     /*  -- "Year's End", Richard Wilbur */
 
     test_streq("Graved", tor_strtok_r_impl(buf, " ", &cp1));
