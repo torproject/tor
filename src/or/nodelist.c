@@ -135,8 +135,7 @@ nodelist_replace_routerinfo(routerinfo_t *old, routerinfo_t *new)
     node = node_get_mutable_by_id(old->cache_info.identity_digest);
     if (node) {
       tor_assert(node->ri == old);
-      /* XXXX prop186 we may have more than one address.  */
-      if (!routers_have_same_or_addr(old, new)) {
+      if (!routers_have_same_or_addrs(old, new)) {
         /* These mustn't carry over when the address and orport
            change. */
         node->last_reachable = node->last_reachable6 = 0;

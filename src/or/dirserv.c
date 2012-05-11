@@ -3356,7 +3356,7 @@ dirserv_should_launch_reachability_test(const routerinfo_t *ri,
     /* It just came out of hibernation; launch a reachability test */
     return 1;
   }
-  if (! routers_have_same_or_addr(ri, ri_old)) {
+  if (! routers_have_same_or_addrs(ri, ri_old)) {
     /* Address or port changed; launch a reachability test */
     return 1;
   }
