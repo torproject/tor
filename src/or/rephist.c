@@ -2478,8 +2478,9 @@ char *
 rep_hist_format_buffer_stats(time_t now)
 {
 #define SHARES 10
-  int processed_cells[SHARES], circs_in_share[SHARES],
-      number_of_circuits, i;
+  uint64_t processed_cells[SHARES];
+  uint32_t circs_in_share[SHARES];
+  int number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
   smartlist_t *processed_cells_strings, *queued_cells_strings,
               *time_in_queue_strings;
@@ -2494,8 +2495,8 @@ rep_hist_format_buffer_stats(time_t now)
   tor_assert(now >= start_of_buffer_stats_interval);
 
   /* Calculate deciles if we saw at least one circuit. */
-  memset(processed_cells, 0, SHARES * sizeof(int));
-  memset(circs_in_share, 0, SHARES * sizeof(int));
+  memset(processed_cells, 0, SHARES * sizeof(uint64_t));
+  memset(circs_in_share, 0, SHARES * sizeof(uint32_t));
   memset(queued_cells, 0, SHARES * sizeof(double));
   memset(time_in_queue, 0, SHARES * sizeof(double));
   if (!circuits_for_buffer_stats)
@@ -2523,8 +2524,9 @@ rep_hist_format_buffer_stats(time_t now)
   time_in_queue_strings = smartlist_new();
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(processed_cells_strings,
-                           "%d", !circs_in_share[i] ? 0 :
-                              processed_cells[i] / circs_in_share[i]);
+                           U64_FORMAT, !circs_in_share[i] ? 0 :
+                           U64_PRINTF_ARG(processed_cells[i] /
+                           circs_in_share[i]));
   }
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(queued_cells_strings, "%.2f",
