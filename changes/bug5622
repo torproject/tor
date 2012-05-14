@@ -1,0 +1,4 @@
+  o Removed files:
+    - Remove the torrc.bridge file: we don't use it for anything, and
+      it had become badly desynchronized from torrc.sample.  Resolves
+      bug 5622.
