@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Remove bogus definition of "_WIN32" from src/win32/orconfig.h, to
+      unbreak the MSVC build. Fies bug 5858; bugfix on 0.2.3.12-alpha.
+
