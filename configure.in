@@ -796,7 +796,7 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
 #include <sys/socket.h>
 #endif
 #ifdef _WIN32
-#define _WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x0501
 #define WIN32_LEAN_AND_MEAN
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 #include <winsock.h>
@@ -820,7 +820,7 @@ AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct s
 #include <sys/socket.h>
 #endif
 #ifdef _WIN32
-#define _WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x0501
 #define WIN32_LEAN_AND_MEAN
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 #include <winsock.h>
