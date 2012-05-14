@@ -22,9 +22,6 @@
 
 #include <assert.h>
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
- #ifndef WIN32_WINNT
- #define WIN32_WINNT 0x400
- #endif
  #ifndef _WIN32_WINNT
  #define _WIN32_WINNT 0x400
  #endif

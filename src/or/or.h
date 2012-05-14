@@ -23,9 +23,6 @@
 #endif
 
 #ifdef _WIN32
-#ifndef WIN32_WINNT
-#define WIN32_WINNT 0x400
-#endif
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x400
 #endif
