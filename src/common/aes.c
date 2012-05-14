@@ -10,6 +10,23 @@
  **/
 
 #include "orconfig.h"
+
+#ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
+ #ifndef WIN32_WINNT
+ #define WIN32_WINNT 0x400
+ #endif
+ #ifndef _WIN32_WINNT
+ #define _WIN32_WINNT 0x400
+ #endif
+ #define WIN32_LEAN_AND_MEAN
+ #if defined(_MSC_VER) && (_MSC_VER < 1300)
+    #include <winsock.h>
+ #else
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+ #endif
+#endif
+
 #include <openssl/opensslv.h>
 #include <assert.h>
 #include <stdlib.h>
