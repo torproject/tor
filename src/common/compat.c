@@ -2083,8 +2083,7 @@ get_uname(void)
               (info.dwMajorVersion==6 && info.dwMinorVersion>2))
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Very recent version of Windows [major=%d,minor=%d]",
-                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                         );
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
           else
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Unrecognized version of Windows [major=%d,minor=%d]",
