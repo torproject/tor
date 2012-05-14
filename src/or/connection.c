@@ -778,7 +778,8 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
          "Unix domain sockets not supported, yet we tried to create one.");
   *len_out = 0;
   tor_assert(0);
-};
+  return NULL;
+}
 #endif /* HAVE_SYS_UN_H */
 
 /** Warn that an accept or a connect has failed because we're running up

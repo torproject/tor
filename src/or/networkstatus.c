@@ -1463,8 +1463,10 @@ networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
     return current_ns_consensus;
   else if (f == FLAV_MICRODESC)
     return current_md_consensus;
-  else
+  else {
     tor_assert(0);
+    return NULL;
+  }
 }
 
 /** Return the most recent consensus that we have downloaded, or NULL if it is
