@@ -34,7 +34,7 @@ int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
 
 void rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
-                                    uint16_t at_port, time_t when);
+                                    const uint16_t at_port, time_t when);
 void rep_hist_note_router_unreachable(const char *id, time_t when);
 int rep_hist_record_mtbf_data(time_t now, int missing_means_down);
 int rep_hist_load_mtbf_data(time_t now);
