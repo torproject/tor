@@ -1,0 +1,4 @@
+  o Major features:
+    - Update cipher cipher list to match Firefox 8 and later. Fix for
+      issue 4744.
+

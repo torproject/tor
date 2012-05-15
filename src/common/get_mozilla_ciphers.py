@@ -2,6 +2,7 @@
 # coding=utf-8
 # Copyright 2011, The Tor Project, Inc
 # original version by Arturo Filastò
+# See LICENSE for licensing information
 
 # This script parses Firefox and OpenSSL sources, and uses this information
 # to generate a ciphers.inc file.
