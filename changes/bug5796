@@ -1,0 +1,4 @@
+  o Minor bugfixes (controller):
+    - Fix a NULL-pointer derefernce on a badly formed
+      SETCIRCUITPURPOSE command. Found by mikeyc. Fixes bug 5796;
+      bugfix on 0.2.2.9-alpha.
