@@ -593,6 +593,9 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  * our OpenSSL doesn't know about. */
 static const char CLIENT_CIPHER_LIST[] =
 #include "./ciphers.inc"
+  /* Tell it not to use SSLv2 ciphers, so that it can select an SSLv3 version
+   * of any cipher we say. */
+  "!SSLv2"
   ;
 #undef CIPHER
 #undef XCIPHER
@@ -984,11 +987,35 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 }
 #endif
 
+/** Explain which ciphers we're missing. */
+static void
+log_unsupported_ciphers(smartlist_t *unsupported)
+{
+  char *joined;
+
+  log_notice(LD_NET, "We weren't able to find support for all of the "
+             "TLS ciphersuites that we wanted to advertise. This won't "
+             "hurt security, but it might make your Tor (if run as a client) "
+             "more easy for censors to block.");
+
+  if (SSLeay() < 0x10000000L) {
+    log_notice(LD_NET, "To correct this, use a more recent OpenSSL, "
+               "built without disabling any secure ciphers or features.");
+  } else {
+    log_notice(LD_NET, "To correct this, use a version of OpenSSL "
+               "built with none of its ciphers disabled.");
+  }
+
+  joined = smartlist_join_strings(unsupported, ":", 0, NULL);
+  log_info(LD_NET, "The unsupported ciphers were: %s", joined);
+  tor_free(joined);
+}
+
 /** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
- * a list designed to mimic a common web browser.  Some of the ciphers in the
- * list won't actually be implemented by OpenSSL: that's okay so long as the
- * server doesn't select them, and the server won't select anything besides
- * what's in SERVER_CIPHER_LIST.
+ * a list designed to mimic a common web browser.  We might not be able to do
+ * that if OpenSSL doesn't support all the ciphers we want.  Some of the
+ * ciphers in the list won't actually be implemented by OpenSSL: that's okay
+ * so long as the server doesn't select them.
  *
  * [If the server <b>does</b> select a bogus cipher, we won't crash or
  * anything; we'll just fail later when we try to look up the cipher in
@@ -1000,14 +1027,17 @@ rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
 #ifdef V2_HANDSHAKE_CLIENT
   if (PREDICT_UNLIKELY(!CLIENT_CIPHER_STACK)) {
     /* We need to set CLIENT_CIPHER_STACK to an array of the ciphers
-     * we want.*/
+     * we want to use/advertise. */
     int i = 0, j = 0;
+    smartlist_t *unsupported = smartlist_create();
 
     /* First, create a dummy SSL_CIPHER for every cipher. */
     CLIENT_CIPHER_DUMMIES =
       tor_malloc_zero(sizeof(SSL_CIPHER)*N_CLIENT_CIPHERS);
     for (i=0; i < N_CLIENT_CIPHERS; ++i) {
       CLIENT_CIPHER_DUMMIES[i].valid = 1;
+      /* The "3<<24" here signifies that the cipher is supposed to work with
+       * SSL3 and TLS1. */
       CLIENT_CIPHER_DUMMIES[i].id = CLIENT_CIPHER_INFO_LIST[i].id | (3<<24);
       CLIENT_CIPHER_DUMMIES[i].name = CLIENT_CIPHER_INFO_LIST[i].name;
     }
@@ -1022,27 +1052,49 @@ rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
     }
 
     /* Then copy as many ciphers as we can from the good list, inserting
-     * dummies as needed. */
-    j=0;
-    for (i = 0; i < N_CLIENT_CIPHERS; ) {
+     * dummies as needed. Let j be an index into list of ciphers we have
+     * (*ciphers) and let i be an index into the ciphers we want
+     * (CLIENT_INFO_CIPHER_LIST).  We are building a list of ciphers in
+     * CLIENT_CIPHER_STACK.
+     */
+    for (i = j = 0; i < N_CLIENT_CIPHERS; ) {
       SSL_CIPHER *cipher = NULL;
       if (j < sk_SSL_CIPHER_num(*ciphers))
         cipher = sk_SSL_CIPHER_value(*ciphers, j);
       if (cipher && ((cipher->id >> 24) & 0xff) != 3) {
-        log_debug(LD_NET, "Skipping v2 cipher %s", cipher->name);
+        /* Skip over non-v3 ciphers entirely.  (This should no longer be
+         * needed, thanks to saying !SSLv2 above.) */
+        log_debug(LD_NET, "Skipping v%d cipher %s",
+                  (int)((cipher->id>>24) & 0xff),
+                  cipher->name);
         ++j;
       } else if (cipher &&
                  (cipher->id & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
+        /* "cipher" is the cipher we expect. Put it on the list. */
         log_debug(LD_NET, "Found cipher %s", cipher->name);
         sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, cipher);
         ++j;
         ++i;
-      } else {
+      } else if (!strcmp(CLIENT_CIPHER_DUMMIES[i].name,
+                         "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA")) {
+        /* We found bogus cipher 0xfeff, which OpenSSL doesn't support and
+         * never has.  For this one, we need a dummy. */
         log_debug(LD_NET, "Inserting fake %s", CLIENT_CIPHER_DUMMIES[i].name);
         sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, &CLIENT_CIPHER_DUMMIES[i]);
         ++i;
+      } else {
+        /* OpenSSL doesn't have this one. */
+        log_debug(LD_NET, "Completely omitting unsupported cipher %s",
+                  CLIENT_CIPHER_INFO_LIST[i].name);
+        smartlist_add(unsupported, (char*) CLIENT_CIPHER_INFO_LIST[i].name);
+        ++i;
       }
     }
+
+    if (smartlist_len(unsupported))
+      log_unsupported_ciphers(unsupported);
+
+    smartlist_free(unsupported);
   }
 
   sk_SSL_CIPHER_free(*ciphers);
