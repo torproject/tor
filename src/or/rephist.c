@@ -2650,24 +2650,30 @@ rep_hist_format_desc_stats(time_t now)
   const char *key;
   void *val;
   unsigned size;
-  int *vals;
+  int *vals, max = 0, q3 = 0, md = 0, q1 = 0, min = 0;
   int n = 0;
 
   if (!start_of_served_descs_stats_interval)
     return NULL;
 
-  size =  digestmap_size(served_descs);
-  if (size == 0)
-    return NULL;
-  vals = tor_malloc(size * sizeof(int));
-
-  for (iter = digestmap_iter_init(served_descs); !digestmap_iter_done(iter);
-      iter = digestmap_iter_next(served_descs, iter) ) {
-    uintptr_t count;
-    digestmap_iter_get(iter, &key, &val);
-    count = (uintptr_t)val;
-    vals[n++] = (int)count;
-    (void)key;
+  size = digestmap_size(served_descs);
+  if (size > 0) {
+    vals = tor_malloc(size * sizeof(int));
+    for (iter = digestmap_iter_init(served_descs);
+         !digestmap_iter_done(iter);
+         iter = digestmap_iter_next(served_descs, iter)) {
+      uintptr_t count;
+      digestmap_iter_get(iter, &key, &val);
+      count = (uintptr_t)val;
+      vals[n++] = (int)count;
+      (void)key;
+    }
+    max = find_nth_int(vals, size, size-1);
+    q3 = find_nth_int(vals, size, (3*size-1)/4);
+    md = find_nth_int(vals, size, (size-1)/2);
+    q1 = find_nth_int(vals, size, (size-1)/4);
+    min = find_nth_int(vals, size, 0);
+    tor_free(vals);
   }
 
   format_iso_time(t, now);
@@ -2678,14 +2684,8 @@ rep_hist_format_desc_stats(time_t now)
                t,
                (unsigned) (now - start_of_served_descs_stats_interval),
                total_descriptor_downloads,
-               size,
-               find_nth_int(vals, size, size-1),
-               find_nth_int(vals, size, (3*size-1)/4),
-               find_nth_int(vals, size, (size-1)/2),
-               find_nth_int(vals, size, (size-1)/4),
-               find_nth_int(vals, size, 0));
+               size, max, q3, md, q1, min);
 
-  tor_free(vals);
   return result;
 }
 
@@ -2705,6 +2705,7 @@ rep_hist_desc_stats_write(time_t now)
     return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
 
   str = rep_hist_format_desc_stats(now);
+  tor_assert(str != NULL);
 
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
