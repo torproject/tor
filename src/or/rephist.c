@@ -2705,6 +2705,7 @@ rep_hist_desc_stats_write(time_t now)
     return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
 
   str = rep_hist_format_desc_stats(now);
+  tor_assert(str != NULL);
 
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
