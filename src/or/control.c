@@ -2389,6 +2389,10 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
 
   {
     const char *purp = find_element_starting_with(args,1,"PURPOSE=");
+    if (!purp) {
+      connection_write_str_to_buf("552 No purpose given\r\n", conn);
+      goto done;
+    }
     new_purpose = circuit_purpose_from_string(purp);
     if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
