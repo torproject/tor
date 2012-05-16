@@ -838,7 +838,7 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
       format_iso_time(time_buf, hist->start_of_run);
       t = time_buf;
     }
-    PRINTF((f, "+MTBF %lu %.5lf%s%s\n",
+    PRINTF((f, "+MTBF %lu %.5f%s%s\n",
             hist->weighted_run_length, hist->total_run_weights,
             t ? " S=" : "", t ? t : ""));
     t = NULL;
@@ -888,10 +888,10 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
   tor_asprintf(&cp,
                "%s%s%s"
                "%s%s%s"
-               "wfu %0.3lf\n"
+               "wfu %0.3f\n"
                " weighted-time %lu\n"
                " weighted-uptime %lu\n"
-               "mtbf %0.1lf\n"
+               "mtbf %0.1f\n"
                " weighted-run-length %lu\n"
                " total-run-weights %f\n",
                up?"uptime-started ":"", up?sor_buf:"", up?" UTC\n":"",

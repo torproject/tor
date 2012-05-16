@@ -1026,9 +1026,9 @@ geoip_dirreq_stats_write(time_t now)
   memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
   memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
   if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    if (fprintf(out, "dirreq-v2-share %0.2lf%%\n", v2_share*100) < 0)
+    if (fprintf(out, "dirreq-v2-share %0.2f%%\n", v2_share*100) < 0)
       goto done;
-    if (fprintf(out, "dirreq-v3-share %0.2lf%%\n", v3_share*100) < 0)
+    if (fprintf(out, "dirreq-v3-share %0.2f%%\n", v3_share*100) < 0)
       goto done;
   }
 
