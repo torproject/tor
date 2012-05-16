@@ -1268,7 +1268,7 @@ format_rfc1123_time(char *buf, time_t t)
   tor_assert(tm.tm_wday >= 0);
   tor_assert(tm.tm_wday <= 6);
   memcpy(buf, WEEKDAY_NAMES[tm.tm_wday], 3);
-  tor_assert(tm.tm_wday >= 0);
+  tor_assert(tm.tm_mon >= 0);
   tor_assert(tm.tm_mon <= 11);
   memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
@@ -1298,7 +1298,8 @@ parse_rfc1123_time(const char *buf, time_t *t)
     tor_free(esc);
     return -1;
   }
-  if (tm_mday > 31 || tm_hour > 23 || tm_min > 59 || tm_sec > 61) {
+  if (tm_mday < 1 || tm_mday > 31 || tm_hour > 23 || tm_min > 59 ||
+      tm_sec > 60) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
     tor_free(esc);
@@ -1368,7 +1369,7 @@ int
 parse_iso_time(const char *cp, time_t *t)
 {
   struct tm st_tm;
-  unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
+  unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
   if (tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
     char *esc = esc_for_log(cp);
@@ -1377,7 +1378,7 @@ parse_iso_time(const char *cp, time_t *t)
     return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-          hour > 23 || minute > 59 || second > 61) {
+          hour > 23 || minute > 59 || second > 60) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was nonsensical", esc);
     tor_free(esc);
@@ -1417,12 +1418,15 @@ parse_http_time(const char *date, struct tm *tm)
   /* First, try RFC1123 or RFC850 format: skip the weekday.  */
   if ((cp = strchr(date, ','))) {
     ++cp;
-    if (tor_sscanf(date, "%2u %3s %4u %2u:%2u:%2u GMT",
+    if (*cp != ' ')
+      return -1;
+    ++cp;
+    if (tor_sscanf(cp, "%2u %3s %4u %2u:%2u:%2u GMT",
                &tm_mday, month, &tm_year,
                &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc1123-date */
       tm_year -= 1900;
-    } else if (tor_sscanf(date, "%2u-%3s-%2u %2u:%2u:%2u GMT",
+    } else if (tor_sscanf(cp, "%2u-%3s-%2u %2u:%2u:%2u GMT",
                       &tm_mday, month, &tm_year,
                       &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc850-date */
@@ -1447,18 +1451,20 @@ parse_http_time(const char *date, struct tm *tm)
 
   month[3] = '\0';
   /* Okay, now decode the month. */
+  /* set tm->tm_mon to dummy value so the check below fails. */
+  tm->tm_mon = -1;
   for (i = 0; i < 12; ++i) {
     if (!strcasecmp(MONTH_NAMES[i], month)) {
-      tm->tm_mon = i+1;
+      tm->tm_mon = i;
     }
   }
 
   if (tm->tm_year < 0 ||
-      tm->tm_mon < 1  || tm->tm_mon > 12 ||
-      tm->tm_mday < 0 || tm->tm_mday > 31 ||
+      tm->tm_mon < 0  || tm->tm_mon > 11 ||
+      tm->tm_mday < 1 || tm->tm_mday > 31 ||
       tm->tm_hour < 0 || tm->tm_hour > 23 ||
       tm->tm_min < 0  || tm->tm_min > 59 ||
-      tm->tm_sec < 0  || tm->tm_sec > 61)
+      tm->tm_sec < 0  || tm->tm_sec > 60)
     return -1; /* Out of range, or bad month. */
 
   return 0;
