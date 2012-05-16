@@ -841,7 +841,8 @@ The following options are useful only for clients (that is, if
         If no other isolation rules would prevent it, allow streams
         on this port to share circuits with streams from every other
         port with the same session group.  (By default, streams received
-        on different ports are always isolated from one another.)
+        on different SOCKSPorts, TransPorts, etc are always isolated from one
+        another. This option overrides that behavior.)
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
