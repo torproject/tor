@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Exit nodes don't need to fetch certificates for authorities that
+      they don't recognize; only directory authorities, bridges, and
+      caches need to do that. Fix related to bug 2297; bugfix on
+      0.2.2.11-alpha.
+

@@ -229,7 +229,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                "signing key %s", from_store ? "cached" : "downloaded",
                ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
     } else {
-      int adding = directory_caches_dir_info(get_options());
+      int adding = directory_caches_unknown_auth_certs(get_options());
       log_info(LD_DIR, "%s %s certificate for unrecognized directory "
                "authority with signing key %s",
                adding ? "Adding" : "Not adding",
@@ -480,7 +480,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
   smartlist_t *missing_digests;
   char *resource = NULL;
   cert_list_t *cl;
-  const int cache = directory_caches_dir_info(get_options());
+  const int cache = directory_caches_unknown_auth_certs(get_options());
 
   if (should_delay_dir_fetches(get_options()))
     return;
