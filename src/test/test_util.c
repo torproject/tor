@@ -2263,6 +2263,9 @@ test_util_spawn_background_ok(void *ptr)
 static void
 test_util_spawn_background_fail(void *ptr)
 {
+#ifndef BUILDDIR
+#define BUILDDIR "."
+#endif
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_err = "";
   char expected_out[1024];

@@ -1,0 +1,20 @@
+all: test.exe
+
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or
+
+LIBS = ..\..\..\build-alpha\lib\libevent.lib \
+ ..\..\..\build-alpha\lib\libcrypto.lib \
+ ..\..\..\build-alpha\lib\libssl.lib \
+ ..\..\..\build-alpha\lib\libz.lib \
+ ..\or\libtor.lib \
+ ws2_32.lib advapi32.lib shell32.lib
+
+TEST_OBJECTS = test.obj test_addr.obj test_containers.obj \
+	test_crypto.obj test_data.obj test_dir.obj test_microdesc.obj \
+	test_pt.obj test_util.obj test_config.obj tinytest.obj
+
+test.exe: $(TEST_OBJECTS)
+	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib $(TEST_OBJECTS)
+
+clean:
+	del $(TEST_OBJECTS) *.lib test.exe

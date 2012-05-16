@@ -71,6 +71,9 @@ int have_failed = 0;
 /** Temporary directory (set up by setup_directory) under which we store all
  * our files during testing. */
 static char temp_dir[256];
+#ifdef _WIN32
+#define pid_t unsigned
+#endif
 static pid_t temp_dir_setup_in_pid = 0;
 
 /** Select and create the temporary directory we'll use to run our unit tests.
