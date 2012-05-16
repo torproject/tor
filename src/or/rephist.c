@@ -1868,6 +1868,26 @@ rep_hist_get_predicted_ports(time_t now)
   return out;
 }
 
+/**
+ * Take a list of uint16_t *, and remove every port in the list from the
+ * current list of predicted ports.
+ */
+void
+rep_hist_remove_predicted_ports(const smartlist_t *rmv_ports)
+{
+  /* Let's do this on O(N), not O(N^2). */
+  bitarray_t *remove_ports = bitarray_init_zero(UINT16_MAX);
+  SMARTLIST_FOREACH(rmv_ports, const uint16_t *, p,
+                    bitarray_set(remove_ports, *p));
+  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
+    if (bitarray_is_set(remove_ports, pp->port)) {
+      tor_free(pp);
+      SMARTLIST_DEL_CURRENT(predicted_ports_list, pp);
+    }
+  } SMARTLIST_FOREACH_END(pp);
+  bitarray_free(remove_ports);
+}
+
 /** The user asked us to do a resolve. Rather than keeping track of
  * timings and such of resolves, we fake it for now by treating
  * it the same way as a connection to port 80. This way we will continue
