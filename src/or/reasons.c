@@ -184,6 +184,8 @@ errno_to_stream_end_reason(int e)
     S_CASE(ENOBUFS):
     case ENOMEM:
     case ENFILE:
+    S_CASE(EADDRINUSE):
+    S_CASE(EADDRNOTAVAIL):
     E_CASE(EMFILE):
       return END_STREAM_REASON_RESOURCELIMIT;
     default:
