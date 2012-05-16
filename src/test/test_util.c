@@ -174,6 +174,76 @@ test_util_time(void)
 }
 
 static void
+test_util_parse_http_time(void *arg)
+{
+  struct tm a_time;
+  char b[ISO_TIME_LEN+1];
+  (void)arg;
+
+#define T(s) do {                               \
+    format_iso_time(b, tor_timegm(&a_time));    \
+    tt_str_op(b, ==, (s));                      \
+    b[0]='\0';                                  \
+  } while (0)
+
+  /* Test parse_http_time */
+
+  test_eq(-1, parse_http_time("", &a_time));
+  test_eq(-1, parse_http_time("Sunday, 32 Aug 2004 00:48:22 GMT", &a_time));
+  test_eq(-1, parse_http_time("Sunday, 3 Aug 1869 00:48:22 GMT", &a_time));
+  test_eq(-1, parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
+  test_eq(-1, parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
+  test_eq(-1, parse_http_time("Sunday, August the third", &a_time));
+  test_eq(-1, parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
+
+  test_eq(0, parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Wednesday, 4 Aug 1994 0:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Miercoles, 4 Aug 1994 0:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Miercoles, 4-Aug-94 0:48:22 GMT", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Wed Aug 04 00:48:22 1994", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Wed Aug 4 0:48:22 1994", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Mie Aug 4 0:48:22 1994", &a_time));
+  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  T("1994-08-04 00:48:22");
+  test_eq(0, parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
+  test_eq((time_t)1325376000UL, tor_timegm(&a_time));
+  T("2012-01-01 00:00:00");
+  test_eq(0, parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
+  test_eq((time_t)1356912000UL, tor_timegm(&a_time));
+  T("2012-12-31 00:00:00");
+  test_eq(-1, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-03-30 23:60:00 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-03-30 23:59:62 GMT", &a_time));
+  test_eq(-1, parse_http_time("1969-03-30 23:59:59 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-00-30 23:59:59 GMT", &a_time));
+  test_eq(-1, parse_http_time("2011-03-30 23:59", &a_time));
+
+#undef T
+ done:
+  ;
+}
+
+static void
 test_util_config_line(void)
 {
   char buf[1024];
@@ -2921,6 +2991,7 @@ test_util_set_env_var_in_sl(void *ptr)
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
+  UTIL_TEST(parse_http_time, 0),
   UTIL_LEGACY(config_line),
   UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(config_line_comment_character),
