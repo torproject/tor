@@ -417,6 +417,8 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h netinet/in6.h malloc.h sys/syslimits.h malloc/malloc.h linux/types.h sys/file.h malloc_np.h sys/prctl.h)
 
+AC_CHECK_HEADERS(sys/param.h)
+
 TOR_CHECK_PROTOTYPE(malloc_good_size, HAVE_MALLOC_GOOD_SIZE_PROTOTYPE,
 [#ifdef HAVE_MALLOC_H
 #include <malloc.h>
