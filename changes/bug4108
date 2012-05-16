@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Avoid a "double-reply" warning when replying to a SOCKS request
+      with a parse error. Patch from Fabian Keil. Fix for bug 4108;
+      bugfix on 0.2.3.4-alpha.
