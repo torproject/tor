@@ -3737,7 +3737,9 @@ entry_guard_free(entry_guard_t *e)
 
 /** Remove any entry guard which was selected by an unknown version of Tor,
  * or which was selected by a version of Tor that's known to select
- * entry guards badly. */
+ * entry guards badly, or which was selected more 2 months ago. */
+/* XXXX The "obsolete guards" and "chosen long ago guards" things should
+ * probably be different functions. */
 static int
 remove_obsolete_entry_guards(time_t now)
 {
