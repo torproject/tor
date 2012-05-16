@@ -1463,15 +1463,20 @@ if DirPort is non-zero):
     Minimum uptime of a v2 hidden service directory to be accepted as such by
     authoritative directories. (Default: 25 hours)
 
-**DirPort** __PORT__|**auto**::
+**DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  (Default: 0)
++
+    The same flags are supported here as are supported by ORPort.
 
 **DirListenAddress** __IP__[:__PORT__]::
     Bind the directory service to this address. If you specify a port, bind to
     this port rather than the one specified in DirPort.  (Default: 0.0.0.0)
     This directive can be specified multiple times  to bind to multiple
     addresses/ports.
++
+    This option is deprecated; you can get the same behavior with DirPort now
+    that it supports NoAdvertise and explicit addresses.
 
 **DirPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
