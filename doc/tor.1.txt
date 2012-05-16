@@ -1202,16 +1202,41 @@ is non-zero):
     parallelizable operations.  If this is set to 0, Tor will try to detect
     how many CPUs you have, defaulting to 1 if it can't tell.  (Default: 0)
 
-**ORPort** __PORT__|**auto**::
+**ORPort** \['address':]__PORT__|**auto** [_flags_]::
     Advertise this port to listen for connections from Tor clients and
     servers.  This option is required to be a Tor server.
-    Set it to "auto" to have Tor pick a port for you. (Default: 0).
+    Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
+    run an ORPort at all.  This option can occur mroe than once (Default: 0).
++
+    Tor recognizes these flags on each ORPort:
+    **NoAdvertise**::
+        By default, we bind to a port and tell our users about it. If
+        NoAdvertise is specified, we don't advertise, but listen anyway.  This
+        can be useful if the port everybody will be connecting to (for
+        example, one that's opened on our firewall) is somewhere else.
+    **NoListen**::
+        By default, we bind to a port and tell our users about it. If
+        NoListen is specified, we don't bind, but advertise anyway.  This
+        can be useful if something else  (for example, a firewall's port
+        forwarding configuration) is causing connections to reach us.
+    **IPv4Only**::
+        If the address is absent, or resolves to both an IPv4 and an IPv6
+        address, only listen to the IPv4 address.
+    **IPv6Only**::
+        If the address is absent, or resolves to both an IPv4 and an IPv6
+        address, only listen to the IPv6 address.
++
+    For obvious reasons, NoAdvertise and NoListen are mutually exclusive, and
+    IPv4Only and IPv6Only are mutually exclusive.
 
 **ORListenAddress** __IP__[:__PORT__]::
     Bind to this IP address to listen for connections from Tor clients and
     servers. If you specify a port, bind to this port rather than the one
     specified in ORPort. (Default: 0.0.0.0) This directive can be specified
     multiple times to bind to multiple addresses/ports.
++
+    This option is deprecated; you can get the same behavior with ORPort now
+    that it supports NoAdvertise and explicit addresses.
 
 **PortForwarding** **0**|**1**::
     Attempt to automatically forward the DirPort and ORPort on a NAT router
