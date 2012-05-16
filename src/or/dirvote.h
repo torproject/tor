@@ -20,7 +20,7 @@
 #define MIN_VOTE_INTERVAL 300
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 16
+#define MAX_SUPPORTED_CONSENSUS_METHOD 17
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -51,6 +51,10 @@
 /** Lowest consensus method where microdescs may include an onion-key-ntor
  * line */
 #define MIN_METHOD_FOR_NTOR_KEY 16
+
+/** Lowest consensus method that ensures that authorities output an
+ * Unmeasured=1 flag for unmeasured bandwidths */
+#define MIN_METHOD_TO_CLIP_UNMEASURED_BW 17
 
 void dirvote_free_all(void);
 

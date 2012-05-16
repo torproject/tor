@@ -1388,6 +1388,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
   const char *flavor_name;
+#define DEFAULT_MAX_UNMEASURED_BW 20
+  uint32_t max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
   int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
@@ -1585,6 +1587,30 @@ networkstatus_compute_consensus(smartlist_t *votes,
     SMARTLIST_FOREACH(dir_sources, dir_src_ent_t *, e, tor_free(e));
     smartlist_free(dir_sources);
   }
+
+  if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
+    char *max_unmeasured_param = NULL;
+    if (params) {
+      if (strcmpstart(params, "maxunmeasuredbw=") == 0)
+        max_unmeasured_param = params;
+      else
+        max_unmeasured_param = strstr(params, " maxunmeasuredbw=");
+    }
+    if (max_unmeasured_param) {
+      int ok = 0;
+      char *eq = strchr(max_unmeasured_param, '=');
+      if (eq) {
+        max_unmeasured_bw = (uint32_t)
+          tor_parse_ulong(eq+1, 10, 1, UINT32_MAX, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_DIR, "Bad element '%s' in max unmeasured bw param",
+                   escaped(max_unmeasured_param));
+          max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
+        }
+      }
+    }
+  }
+
 
   /* Add the actual router entries. */
   {
@@ -1867,6 +1893,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
+          /* Cap non-measured bandwidths to 20k. */
+          if (rs_out.bandwidth > max_unmeasured_bw)
+            rs_out.bandwidth = max_unmeasured_bw;
+        }
       }
 
       /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
