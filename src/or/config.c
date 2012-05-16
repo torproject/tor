@@ -748,7 +748,7 @@ set_options(or_options_t *new_val, char **msg)
   }
   /* Issues a CONF_CHANGED event to notify controller of the change. If Tor is
    * just starting up then the old_options will be undefined. */
-  if (old_options) {
+  if (old_options && old_options != global_options) {
     elements = smartlist_new();
     for (i=0; options_format.vars[i].name; ++i) {
       const config_var_t *var = &options_format.vars[i];
@@ -774,7 +774,9 @@ set_options(or_options_t *new_val, char **msg)
     control_event_conf_changed(elements);
     smartlist_free(elements);
   }
-  config_free(&options_format, old_options);
+
+  if (old_options != global_options)
+    config_free(&options_format, old_options);
 
   return 0;
 }
