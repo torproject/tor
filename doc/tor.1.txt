@@ -1206,7 +1206,7 @@ is non-zero):
     Advertise this port to listen for connections from Tor clients and
     servers.  This option is required to be a Tor server.
     Set it to "auto" to have Tor pick a port for you. Set it to 0 to not
-    run an ORPort at all.  This option can occur mroe than once (Default: 0).
+    run an ORPort at all. This option can occur more than once. (Default: 0)
 +
     Tor recognizes these flags on each ORPort:
     **NoAdvertise**::
@@ -1465,7 +1465,8 @@ if DirPort is non-zero):
 
 **DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
-    Set it to "auto" to have Tor pick a port for you.  (Default: 0)
+    Set it to "auto" to have Tor pick a port for you.  This option can occur
+    more than once. (Default: 0)
 +
     The same flags are supported here as are supported by ORPort.
 
