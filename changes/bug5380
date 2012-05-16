@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Check our entry guards for having been picked too long ago when
+      we get a new consensus. (Previously, we only did this check at
+      startup, which could lead to us holding a guard indefinitely,
+      and give weird results.) Fixes bug 5380; bugfix on 0.2.1.14-rc.

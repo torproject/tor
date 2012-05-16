@@ -3868,6 +3868,8 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
 
   if (remove_dead_entry_guards(now))
     changed = 1;
+  if (remove_obsolete_entry_guards(now))
+    changed = 1;
 
   if (changed) {
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
