@@ -4302,7 +4302,7 @@ static char *
 get_windows_conf_root(void)
 {
   static int is_set = 0;
-  static char path[MAX_PATH+1];
+  static char path[MAX_PATH*2+1];
   TCHAR tpath[MAX_PATH] = {0};
 
   LPITEMIDLIST idl;
@@ -4332,7 +4332,8 @@ get_windows_conf_root(void)
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
   result = SHGetPathFromIDList(idl, tpath);
 #ifdef UNICODE
-  wcstombs(path,tpath,MAX_PATH);
+  wcstombs(path,tpath,sizeof(path));
+  path[sizeof(path)-1] = '\0';
 #else
   strlcpy(path,tpath,sizeof(path));
 #endif

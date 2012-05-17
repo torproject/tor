@@ -2855,7 +2855,7 @@ tor_listdir(const char *dirname)
 #ifdef _WIN32
   char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
-  char name[MAX_PATH] = {0};
+  char name[MAX_PATH*2+1] = {0};
   HANDLE handle;
   WIN32_FIND_DATA findData;
   tor_asprintf(&pattern, "%s\\*", dirname);
@@ -2872,6 +2872,7 @@ tor_listdir(const char *dirname)
   while (1) {
 #ifdef UNICODE
     wcstombs(name,findData.cFileName,MAX_PATH);
+    name[sizeof(name)-1] = '\0';
 #else
     strlcpy(name,findData.cFileName,sizeof(name));
 #endif
