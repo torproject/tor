@@ -2815,6 +2815,13 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
                      ri->cache_info.signed_descriptor_digest,
                      &(ri->cache_info));
   if (sd_old) {
+    int idx = sd_old->routerlist_index;
+    sd_old->routerlist_index = -1;
+    smartlist_del(rl->old_routers, idx);
+    if (idx < smartlist_len(rl->old_routers)) {
+       signed_descriptor_t *d = smartlist_get(rl->old_routers, idx);
+       d->routerlist_index = idx;
+    }
     rl->desc_store.bytes_dropped += sd_old->signed_descriptor_len;
     sdmap_remove(rl->desc_by_eid_map, sd_old->extra_info_digest);
     signed_descriptor_free(sd_old);
