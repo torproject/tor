@@ -99,12 +99,6 @@ test_pt_protocol(void)
 
   /* various wrong protocol runs: */
 
-  strcpy(line, "TEST TEST");
-  handle_proxy_line(line, mp);
-  test_assert(mp->conf_state == PT_PROTO_BROKEN);
-
-  reset_mp(mp);
-
   strcpy(line,"VERSION 1");
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
