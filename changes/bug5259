@@ -1,3 +1,0 @@
-  o Documentation fixes:
-    - Clarify the behavior of MaxCircuitDirtiness with hidden service
-      circuits. Fix for issue 5259.

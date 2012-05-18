@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - If we hit the error case where routerlist_insert() replaces an
-      existing (old) server descriptor, make sure to remove that
-      server descriptor from the old_routers list. Fix related to bug
-      1776. Bugfix on 0.2.2.18-alpha.
