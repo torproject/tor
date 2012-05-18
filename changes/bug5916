@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Fix a memory leak when trying to launch a DNS request when the
+      network is disabled or the nameservers are unconfigurable.  Fix
+      for bug 5916; bugfix on Tor 0.1.2.1-alpha (for the
+      unconfigurable namesrever case) and on 0.2.3.9-alpha (for the
+      DisableNetwork case).
