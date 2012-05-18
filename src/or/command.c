@@ -591,13 +591,14 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
   int reason;
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
-  reason = (uint8_t)cell->payload[0];
   if (!circ) {
     log_info(LD_OR,"unknown circuit %d on connection from %s:%d. Dropping.",
              cell->circ_id, conn->_base.address, conn->_base.port);
     return;
   }
   log_debug(LD_OR,"Received for circID %d.",cell->circ_id);
+
+  reason = (uint8_t)cell->payload[0];
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
