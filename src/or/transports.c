@@ -119,10 +119,6 @@ static INLINE void free_execve_args(char **arg);
 #define PROTO_CMETHODS_DONE "CMETHODS DONE"
 #define PROTO_SMETHODS_DONE "SMETHODS DONE"
 
-/* The smallest valid managed proxy protocol line that can
-   appear. It's the size of "VERSION 1" */
-#define SMALLEST_MANAGED_LINE_SIZE 9
-
 /** Number of environment variables for managed proxy clients/servers. */
 #define ENVIRON_SIZE_CLIENT 3
 #define ENVIRON_SIZE_SERVER 7 /* XXX known to be too high, but that's ok */
@@ -633,12 +629,6 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
   log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)",
            mp->argv[0], line);
 
-  if (strlen(line) < SMALLEST_MANAGED_LINE_SIZE) {
-    log_warn(LD_GENERAL, "Managed proxy configuration line is too small. "
-             "Discarding");
-    goto err;
-  }
-
   if (!strcmpstart(line, PROTO_ENV_ERROR)) {
     if (mp->conf_state != PT_PROTO_LAUNCHED)
       goto err;
@@ -712,7 +702,8 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
     return;
   }
 
-  log_warn(LD_CONFIG, "Unknown line received by managed proxy. (%s)", line);
+  log_notice(LD_GENERAL, "Unknown line received by managed proxy (%s).", line);
+  return;
 
  err:
   mp->conf_state = PT_PROTO_BROKEN;
