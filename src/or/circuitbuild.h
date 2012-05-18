@@ -157,6 +157,9 @@ void transport_free(transport_t *transport);
 transport_t *transport_new(const tor_addr_t *addr, uint16_t port,
                                       const char *name, int socks_ver);
 
+const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
+                                                   uint16_t port);
+
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const transport_t **transport);
 transport_t *transport_get_by_name(const char *name);
