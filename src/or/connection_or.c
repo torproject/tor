@@ -1051,8 +1051,27 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
       conn->_base.proxy_state = PROXY_INFANT;
     }
   } else {
-    log_warn(LD_GENERAL, "Tried to connect through proxy, but proxy address "
-             "could not be found.");
+    /* get_proxy_addrport() might fail if we have a Bridge line that
+       references a transport, but no ClientTransportPlugin lines
+       defining its transport proxy. If this is the case, let's try to
+       output a useful log message to the user. */
+    const char *transport_name =
+      find_transport_name_by_bridge_addrport(&TO_CONN(conn)->addr,
+                                             TO_CONN(conn)->port);
+
+    if (transport_name) {
+      log_warn(LD_GENERAL, "We were supposed to connect to bridge '%s:%u' "
+               "using pluggable transport '%s', but it seems that we can't "
+               "find a pluggable transport proxy supporting '%s'. Please make "
+               "sure that your configuration file is valid.",
+               fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port,
+               transport_name, transport_name);
+    } else {
+      log_warn(LD_GENERAL, "Tried to connect to '%s:%u' through a proxy, but "
+               "the proxy address could not be found.",
+               fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port);
+    }
+
     connection_free(TO_CONN(conn));
     return NULL;
   }
