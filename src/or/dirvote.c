@@ -1590,6 +1590,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
     char *max_unmeasured_param = NULL;
+    /* XXXX Extract this code into a common function */
     if (params) {
       if (strcmpstart(params, "maxunmeasuredbw=") == 0)
         max_unmeasured_param = params;
@@ -2097,6 +2098,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     // Parse params, extract BW_WEIGHT_SCALE if present
     // DO NOT use consensus_param_bw_weight_scale() in this code!
     // The consensus is not formed yet!
+    /* XXXX Extract this code into a common function */
     if (params) {
       if (strcmpstart(params, "bwweightscale=") == 0)
         bw_weight_param = params;
