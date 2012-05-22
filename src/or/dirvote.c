@@ -1638,6 +1638,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int *named_flag; /* Index of the flag "Named" for votes[j] */
     int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
     int chosen_named_idx;
+    int n_authorities_measuring_bandwidth;
 
     strmap_t *name_to_id_map = strmap_new();
     char conflict[DIGEST_LEN];
@@ -1725,6 +1726,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
         } SMARTLIST_FOREACH_END(rs);
       } SMARTLIST_FOREACH_END(v);
     }
+
+    /* We need to know how many votes measure bandwidth. */
+    n_authorities_measuring_bandwidth = 0;
+    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
+       if (v->has_measured_bws) {
+         ++n_authorities_measuring_bandwidth;
+       }
+    );
 
     /* Now go through all the votes */
     flag_counts = tor_malloc(sizeof(int) * smartlist_len(flags));
@@ -1889,14 +1898,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Pick a bandwidth */
       if (consensus_method >= 6 && num_mbws > 2) {
         rs_out.has_bandwidth = 1;
+        rs_out.has_measured_bw = 1;
         rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
-        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
-          /* Cap non-measured bandwidths to 20k. */
-          if (rs_out.bandwidth > max_unmeasured_bw)
+        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
+            n_authorities_measuring_bandwidth > 2) {
+          /* Cap non-measured bandwidths. */
+          if (rs_out.bandwidth > max_unmeasured_bw) {
             rs_out.bandwidth = max_unmeasured_bw;
+          }
         }
       }
 
@@ -2039,7 +2051,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        smartlist_add_asprintf(chunks, "w Bandwidth=%d\n", rs_out.bandwidth);
+        int unmeasured = ! rs_out.has_measured_bw &&
+          consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n", rs_out.bandwidth,
+                               unmeasured?" Unmeasured=1":"");
       }
 
       /*     Now the exitpolicy summary line. */

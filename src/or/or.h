@@ -2383,6 +2383,9 @@ typedef enum {
 typedef struct networkstatus_t {
   ENUM_BF(networkstatus_type_t) type : 8; /**< Vote, consensus, or opinion? */
   ENUM_BF(consensus_flavor_t) flavor : 8; /**< If a consensus, what kind? */
+  unsigned int has_measured_bws : 1;/**< True iff this networkstatus contains
+                                     * measured= bandwidth values. */
+
   time_t published; /**< Vote only: Time when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
   time_t fresh_until; /**< Time before which this is the most recent vote or

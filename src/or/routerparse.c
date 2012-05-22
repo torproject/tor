@@ -1985,6 +1985,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
           goto err;
         }
         rs->has_measured_bw = 1;
+        vote->has_measured_bws = 1;
       }
     }
   }
