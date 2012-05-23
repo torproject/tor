@@ -249,7 +249,6 @@ typedef struct tor_mmap_t {
   size_t mapping_size; /**< Size of the actual mapping. (This is this file
                         * size, rounded up to the nearest page.) */
 #elif defined MS_WINDOWS
-  HANDLE file_handle;
   HANDLE mmap_handle;
 #endif
 
