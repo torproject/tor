@@ -1286,26 +1286,30 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
             return; /* ???? */
           }
         }
-      } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
-        /* v2 or v3 handshake, as a server. Only got one handshake, so
-         * wait for the next one. */
-        tor_tls_set_renegotiate_callback(conn->tls,
-                                         connection_or_tls_renegotiated_cb,
-                                         conn);
-        conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
-        /* return 0; */
-        return; /* ???? */
       } else {
         const int handshakes = tor_tls_get_num_server_handshakes(conn->tls);
-        tor_assert(handshakes >= 2);
-        if (handshakes == 2) {
+
+        if (handshakes == 1) {
+          /* v2 or v3 handshake, as a server. Only got one handshake, so
+           * wait for the next one. */
+          tor_tls_set_renegotiate_callback(conn->tls,
+                                           connection_or_tls_renegotiated_cb,
+                                           conn);
+          conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
+          /* return 0; */
+          return; /* ???? */
+        } else if (handshakes == 2) {
           /* v2 handshake, as a server.  Two handshakes happened already,
            * so we treat renegotiation as done.
            */
           connection_or_tls_renegotiated_cb(conn->tls, conn);
-        } else {
+        } else if (handshakes > 2) {
           log_warn(LD_OR, "More than two handshakes done on connection. "
                    "Closing.");
+          connection_mark_for_close(TO_CONN(conn));
+        } else {
+          log_warn(LD_BUG, "We were unexpectedly unexpectedly told that "
+                   "a connection got %d handshakes. Closing.", handshakes);
           connection_mark_for_close(TO_CONN(conn));
         }
         return;

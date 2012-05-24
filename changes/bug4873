@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Turn an assertion (that the number of handshakes received as a
+      server is not < 1) into a warning. Bug 4873.
