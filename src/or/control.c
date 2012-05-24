@@ -28,6 +28,7 @@
 #include "networkstatus.h"
 #include "policies.h"
 #include "reasons.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
@@ -1408,6 +1409,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = options_dump(get_options(), 1);
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
+  } else if (!strcmp(question, "dormant")) {
+    int dormant = rep_hist_circbuilding_dormant(time(NULL));
+    *answer = tor_strdup(dormant ? "1" : "0");
   } else if (!strcmp(question, "events/names")) {
     *answer = tor_strdup("CIRC STREAM ORCONN BW DEBUG INFO NOTICE WARN ERR "
                          "NEWDESC ADDRMAP AUTHDIR_NEWDESCS DESCCHANGED "
@@ -2007,12 +2011,13 @@ static const getinfo_item_t getinfo_items[] = {
          "Brief summary of router status by nickname (v2 directory format)."),
   PREFIX("ns/purpose/", networkstatus,
          "Brief summary of router status by purpose (v2 directory format)."),
-
   ITEM("network-status", dir,
        "Brief summary of router status (v1 directory format)"),
   ITEM("circuit-status", events, "List of current circuits originating here."),
   ITEM("stream-status", events,"List of current streams."),
   ITEM("orconn-status", events, "A list of current OR connections."),
+  ITEM("dormant", misc,
+       "Is Tor dormant (not building circuits because it's idle)?"),
   PREFIX("address-mappings/", events, NULL),
   DOC("address-mappings/all", "Current address mappings."),
   DOC("address-mappings/cache", "Current cached DNS replies."),
