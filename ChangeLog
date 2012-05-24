@@ -1,4 +1,4 @@
-Changes in version 0.2.2.36 - 2012-04-??
+Changes in version 0.2.2.36 - 2012-05-24
   Tor 0.2.2.36 updates the addresses for two of the eight directory
   authorities, fixes some potential anonymity and security issues,
   and fixes several crash bugs.
@@ -40,7 +40,7 @@ Changes in version 0.2.2.36 - 2012-04-??
       process, then that program could trick the contoller into telling
       it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
       authentication method uses a challenge-response approach to prevent
-      this attack. Fixes bug 5185, implements proposal 193.
+      this attack. Fixes bug 5185; implements proposal 193.
 
   o Major bugfixes:
     - Avoid logging uninitialized data when unable to decode a hidden
