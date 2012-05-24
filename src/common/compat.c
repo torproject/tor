@@ -175,6 +175,8 @@ tor_mmap_file(const char *filename)
   TCHAR tfilename[MAX_PATH]= {0};
   tor_mmap_t *res = tor_malloc_zero(sizeof(tor_mmap_t));
   int empty = 0;
+  DWORD size_low, size_high;
+  uint64_t real_size;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
 #ifdef UNICODE
@@ -192,23 +194,29 @@ tor_mmap_file(const char *filename)
   if (res->file_handle == INVALID_HANDLE_VALUE)
     goto win_err;
 
-  res->size = GetFileSize(res->file_handle, NULL);
+  size_low = GetFileSize(res->file_handle, &size_high);
 
-  if (res->size == 0) {
+  if (size_low == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) {
+    log_warn(LD_FS,"Error getting size of \"%s\".",filename);
+    goto win_err;
+  }
+  if (size_low == 0 && size_high == 0) {
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
     empty = 1;
     goto err;
   }
+  real_size = (((uint64_t)size_high)<<32) | size_low;
+  if (real_size > SIZE_MAX) {
+    log_warn(LD_FS,"File \"%s\" is too big to map; not trying.",filename);
+    goto err;
+  }
+  res->size = real_size;
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
                                        PAGE_READONLY,
-#if SIZEOF_SIZE_T > 4
-                                       (res->base.size >> 32),
-#else
-                                       0,
-#endif
-                                       (res->size & 0xfffffffful),
+                                       size_high,
+                                       size_low,
                                        NULL);
   if (res->mmap_handle == NULL)
     goto win_err;
