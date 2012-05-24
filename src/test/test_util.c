@@ -1299,11 +1299,12 @@ test_util_parent_dir(void *ptr)
 
   T("/home/wombat/knish", 0, "/home/wombat");
   T("/home/wombat/knish/", 0, "/home/wombat");
+  T("/home", 0, "/");
   T("./home/wombat/knish/", 0, "./home/wombat");
   T("./wombat", 0, ".");
   T("", -1, "");
-  T("/", -1, "");
-  T("////", -1, "");
+  T("/", 0, "/");
+  T("////", 0, "/");
 
  done:
   tor_free(cp);
