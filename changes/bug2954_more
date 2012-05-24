@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - If we fail to write a microdescriptor to disk, do not continue
+      replacing the old microdescriptor file. Fix for bug 2954; bugfix
+      on 0.2.2.6-alpha.
