@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a compile warning in crypto.c when compiling with clang 3.1.
+      Fixes bug 5969, bugfix on 0.2.3.9-alpha.
+

@@ -1806,7 +1806,6 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
   char *contents = NULL;
   const char *contents_tmp = NULL;
   int dh_codes;
-  char *fname_new = NULL;
   DH *stored_dh = NULL;
   BIGNUM *dynamic_dh_modulus = NULL;
   int length = 0;
@@ -1881,12 +1880,10 @@ crypto_get_stored_dynamic_dh_modulus(const char *fname)
 
  err:
 
-  { /* move broken prime to $filename.broken */
-    fname_new = tor_malloc(strlen(fname) + 8);
-
-    /* no can do if these functions return error */
-    strlcpy(fname_new, fname, strlen(fname) + 8);
-    strlcat(fname_new, ".broken", strlen(fname) + 8);
+  {
+    /* move broken prime to $filename.broken */
+    char *fname_new=NULL;
+    tor_asprintf(&fname_new, "%s.broken", fname);
 
     log_warn(LD_CRYPTO, "Moving broken dynamic DH prime to '%s'.", fname_new);
 
