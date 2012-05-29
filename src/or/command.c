@@ -161,7 +161,7 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
       cell->command != CELL_NETINFO) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received unexpected cell command %d in state %s; closing the "
-           "connection",
+           "connection.",
            (int)cell->command,
            conn_state_to_string(CONN_TYPE_OR,conn->_base.state));
     connection_mark_for_close(TO_CONN(conn));
