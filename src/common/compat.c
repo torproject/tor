@@ -1654,7 +1654,8 @@ alloc_getcwd(void)
         path = tor_realloc(path, path_length);
       } else {
         tor_free(path);
-        return NULL;
+        path = NULL;
+        break;
       }
     }
     errno = saved_errno;
