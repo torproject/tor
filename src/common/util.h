@@ -211,7 +211,11 @@ const char *escaped(const char *string);
 struct smartlist_t;
 void wrap_string(struct smartlist_t *out, const char *string, size_t width,
                  const char *prefix0, const char *prefixRest);
-int tor_vsscanf(const char *buf, const char *pattern, va_list ap);
+int tor_vsscanf(const char *buf, const char *pattern, va_list ap)
+#ifdef __GNUC__
+  __attribute__((format(scanf, 2, 0)))
+#endif
+  ;
 int tor_sscanf(const char *buf, const char *pattern, ...)
 #ifdef __GNUC__
   __attribute__((format(scanf, 2, 3)))
