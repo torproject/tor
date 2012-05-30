@@ -1807,18 +1807,21 @@ connection_read_proxy_handshake(connection_t *conn)
  * entry in <b>ports</b>.  Add to <b>new_conns</b> new every connection we
  * launch.
  *
+ * If <b>control_listeners_only</b> is true, then we only open control
+ * listeners, and we do not remove any noncontrol listeners from old_conns.
+ *
  * Return 0 on success, -1 on failure.
  **/
 static int
 retry_listener_ports(smartlist_t *old_conns,
                      const smartlist_t *ports,
                      smartlist_t *new_conns,
-                     int close_all_noncontrol)
+                     int control_listeners_only)
 {
   smartlist_t *launch = smartlist_new();
   int r = 0;
 
-  if (close_all_noncontrol) {
+  if (control_listeners_only) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p, {
         if (p->type == CONN_TYPE_CONTROL_LISTENER)
           smartlist_add(launch, p);
@@ -1925,6 +1928,9 @@ retry_listener_ports(smartlist_t *old_conns,
  *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
+ *
+ * If <b>close_all_noncontrol</b> is true, then we only open control
+ * listeners, and we close all other listeners.
  */
 int
 retry_all_listeners(smartlist_t *replaced_conns,
