@@ -1,0 +1,3 @@
+  o Minor features:
+    - Close any connection that sends unrecognized junk before the
+      handshake.  Solves an issue noted in bug 4369.
