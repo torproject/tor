@@ -1389,7 +1389,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 static int
 launch_resolve(edge_connection_t *exitconn)
 {
-  char *addr = tor_strdup(exitconn->_base.address);
+  char *addr;
   struct evdns_request *req = NULL;
   tor_addr_t a;
   int r;
@@ -1407,6 +1407,8 @@ launch_resolve(edge_connection_t *exitconn)
       return -1;
     }
   }
+
+  addr = tor_strdup(exitconn->_base.address);
 
   r = tor_addr_parse_PTR_name(
                             &a, exitconn->_base.address, AF_UNSPEC, 0);
