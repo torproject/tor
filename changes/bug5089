@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Correctly handle checking the permissions on the parent
+      directory of a control socket in the root directory. Bug found
+      by Esteban Manchado Velázquez. Fix for bug 5089; bugfix on Tor
+      0.2.2.26-beta.

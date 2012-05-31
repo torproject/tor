@@ -1656,7 +1656,11 @@ get_user_homedir(const char *username)
 }
 #endif
 
-/** Modify <b>fname</b> to contain the name of the directory */
+/** Modify <b>fname</b> to contain the name of its parent directory.  Doesn't
+ * actually examine the filesystem; does a purely syntactic modification.
+ *
+ * The parent of the root director is considered to be iteself.
+ * */
 int
 get_parent_directory(char *fname)
 {
@@ -1678,13 +1682,18 @@ get_parent_directory(char *fname)
    */
   cp = fname + strlen(fname);
   at_end = 1;
-  while (--cp > fname) {
+  while (--cp >= fname) {
     int is_sep = (*cp == '/'
 #ifdef _WIN32
                   || *cp == '\\'
 #endif
                   );
     if (is_sep) {
+      if (cp == fname) {
+        /* This is the first separator in the file name; don't remove it! */
+        cp[1] = '\0';
+        return 0;
+      }
       *cp = '\0';
       if (! at_end)
         return 0;

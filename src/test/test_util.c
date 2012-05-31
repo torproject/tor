@@ -2084,10 +2084,8 @@ test_util_parent_dir(void *ptr)
   T("/home/wombat", 0, "/home/wombat/knish/");
   T("/home/wombat", 0, "/home/wombat/knish///");
   T("./home/wombat", 0, "./home/wombat/knish/");
-#if 0
   T("/", 0, "/home");
   T("/", 0, "/home//");
-#endif
   T(".", 0, "./wombat");
   T(".", 0, "./wombat/");
   T(".", 0, "./wombat//");
@@ -2101,14 +2099,12 @@ test_util_parent_dir(void *ptr)
   T("wombat", 0, "wombat/.foo");
   T("wombat", 0, "wombat/.foo/");
 
-  T("", -1, "");
-  T("", -1, ".");
-  T("", -1, "..");
-  T("", -1, "../");
-  T("", -1, "/");
-  T("", -1, "////");
-  T("", -1, "wombat");
-  T("", -1, "wombat/");
+  T("wombat", -1, "");
+  T("w", -1, "");
+  T("wombat", 0, "wombat/knish");
+
+  T("/", 0, "/");
+  T("/", 0, "////");
 
  done:
   tor_free(cp);
