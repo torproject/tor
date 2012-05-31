@@ -259,11 +259,12 @@ void tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 int tor_snprintf(char *str, size_t size, const char *format, ...)
   CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
-  ATTR_NONNULL((1,3));
+  CHECK_PRINTF(3,0) ATTR_NONNULL((1,3));
 
 int tor_asprintf(char **strp, const char *fmt, ...)
   CHECK_PRINTF(2,3);
-int tor_vasprintf(char **strp, const char *fmt, va_list args);
+int tor_vasprintf(char **strp, const char *fmt, va_list args)
+  CHECK_PRINTF(2,0);
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen) ATTR_NONNULL((1,3));

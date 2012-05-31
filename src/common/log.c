@@ -137,6 +137,13 @@ static void close_log(logfile_t *victim);
 
 static char *domain_to_string(log_domain_mask_t domain,
                              char *buf, size_t buflen);
+static INLINE char *format_msg(char *buf, size_t buf_len,
+           log_domain_mask_t domain, int severity, const char *funcname,
+           const char *format, va_list ap, size_t *msg_len_out)
+  CHECK_PRINTF(6,0);
+static void logv(int severity, log_domain_mask_t domain, const char *funcname,
+                 const char *format, va_list ap)
+  CHECK_PRINTF(4,0);
 
 /** Name of the application: used to generate the message we write at the
  * start of each new log. */
