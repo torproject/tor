@@ -1302,6 +1302,9 @@ test_util_parent_dir(void *ptr)
   T("/home", 0, "/");
   T("./home/wombat/knish/", 0, "./home/wombat");
   T("./wombat", 0, ".");
+  T("wombat", -1, "");
+  T("w", -1, "");
+  T("wombat/knish", 0, "wombat");
   T("", -1, "");
   T("/", 0, "/");
   T("////", 0, "/");
