@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+
+    - Don't check for whether the address we're using for outbound
+      connections has changed until after the outbound connection has
+      completed. On Windows, getsockname() doesn't succeed until the
+      connection is finished. Fix for bug 5374; bugfix on
+      0.1.1.14-alpha.

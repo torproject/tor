@@ -1416,9 +1416,6 @@ connection_connect(connection_t *conn, const char *address,
     }
   }
 
-  if (!server_mode(options))
-    client_check_address_changed(s);
-
   /* it succeeded. we're connected. */
   log_fn(inprogress?LOG_DEBUG:LOG_INFO, LD_NET,
          "Connection to %s:%u %s (sock %d).",
@@ -3898,6 +3895,14 @@ static int
 connection_finished_connecting(connection_t *conn)
 {
   tor_assert(conn);
+
+  if (!server_mode(get_options())) {
+    /* See whether getsockname() says our address changed.  We need to do this
+     * now that the connection has finished, because getsockname() on Windows
+     * won't work until then. */
+    client_check_address_changed(conn->s);
+  }
+
   switch (conn->type)
     {
     case CONN_TYPE_OR:
