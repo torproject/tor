@@ -1296,8 +1296,6 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
                                            connection_or_tls_renegotiated_cb,
                                            conn);
           conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
-          /* return 0; */
-          return; /* ???? */
         } else if (handshakes == 2) {
           /* v2 handshake, as a server.  Two handshakes happened already,
            * so we treat renegotiation as done.
