@@ -183,11 +183,11 @@ tor_mmap_file(const char *filename)
   strlcpy(tfilename,filename,MAX_PATH);
 #endif
   file_handle = CreateFile(tfilename,
-                                GENERIC_READ, FILE_SHARE_READ,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
-                                0);
+                           GENERIC_READ, FILE_SHARE_READ,
+                           NULL,
+                           OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL,
+                           0);
 
   if (file_handle == INVALID_HANDLE_VALUE)
     goto win_err;
