@@ -227,24 +227,24 @@ tor_mmap_file(const char *filename)
   TCHAR tfilename[MAX_PATH]= {0};
   tor_mmap_t *res = tor_malloc_zero(sizeof(tor_mmap_t));
   int empty = 0;
-  res->file_handle = INVALID_HANDLE_VALUE;
+  HANDLE file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
 #ifdef UNICODE
   mbstowcs(tfilename,filename,MAX_PATH);
 #else
   strlcpy(tfilename,filename,MAX_PATH);
 #endif
-  res->file_handle = CreateFile(tfilename,
-                                GENERIC_READ, FILE_SHARE_READ,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
-                                0);
+  file_handle = CreateFile(tfilename,
+                           GENERIC_READ, FILE_SHARE_READ,
+                           NULL,
+                           OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL,
+                           0);
 
-  if (res->file_handle == INVALID_HANDLE_VALUE)
+  if (file_handle == INVALID_HANDLE_VALUE)
     goto win_err;
 
-  res->size = GetFileSize(res->file_handle, NULL);
+  res->size = GetFileSize(file_handle, NULL);
 
   if (res->size == 0) {
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
@@ -252,7 +252,7 @@ tor_mmap_file(const char *filename)
     goto err;
   }
 
-  res->mmap_handle = CreateFileMapping(res->file_handle,
+  res->mmap_handle = CreateFileMapping(file_handle,
                                        NULL,
                                        PAGE_READONLY,
 #if SIZEOF_SIZE_T > 4
@@ -270,6 +270,7 @@ tor_mmap_file(const char *filename)
   if (!res->data)
     goto win_err;
 
+  CloseHandle(file_handle);
   return res;
  win_err: {
     DWORD e = GetLastError();
@@ -286,6 +287,8 @@ tor_mmap_file(const char *filename)
  err:
   if (empty)
     errno = ERANGE;
+  if (file_handle != INVALID_HANDLE_VALUE)
+    CloseHandle(file_handle);
   tor_munmap_file(res);
   return NULL;
 }
@@ -299,8 +302,6 @@ tor_munmap_file(tor_mmap_t *handle)
 
   if (handle->mmap_handle != NULL)
     CloseHandle(handle->mmap_handle);
-  if (handle->file_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(handle->file_handle);
   tor_free(handle);
 }
 #else
