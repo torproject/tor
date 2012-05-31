@@ -1306,8 +1306,8 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
                    "Closing.");
           connection_mark_for_close(TO_CONN(conn));
         } else {
-          log_warn(LD_BUG, "We were unexpectedly unexpectedly told that "
-                   "a connection got %d handshakes. Closing.", handshakes);
+          log_warn(LD_BUG, "We were unexpectedly told that a connection "
+                   "got %d handshakes. Closing.", handshakes);
           connection_mark_for_close(TO_CONN(conn));
         }
         return;
