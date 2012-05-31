@@ -1125,8 +1125,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
-        connection_mark_for_close(TO_CONN(conn));
+        if (conn) {
+          /* XXXX Do we actually need to do this?  Will killing the circuit
+           * not send an END and mark the stream for close as appropriate? */
+          connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
+          connection_mark_for_close(TO_CONN(conn));
+        }
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       log_debug(domain,"circ deliver_window now %d.", layer_hint ?

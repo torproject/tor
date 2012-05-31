@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Prevent a null-pointer dereference when receiving a data cell
+      for a nonexistent stream when the circuit in question has an
+      empty deliver window. We don't believe this is triggerable,
+      since we don't currently allow deliver windows to become empty,
+      but the logic is tricky enough that it's better to make the code
+      robust. Fixes bug 5541; bugfix on 0.0.2pre14.
+
