@@ -5004,7 +5004,14 @@ update_router_have_minimum_dir_info(void)
   count_usable_descriptors(&num_exit_present, &num_exit_usable,
                            consensus, options, now, options->ExitNodes, 1);
 
-  if (num_present < num_usable/4) {
+/* What fraction of desired server descriptors do we need before we will
+ * build circuits? */
+#define FRACTION_USABLE_NEEDED .75
+/* What fraction of desired _exit_ server descriptors do we need before we
+ * will build circuits? */
+#define FRACTION_EXIT_USABLE_NEEDED .5
+
+  if (num_present < num_usable * FRACTION_USABLE_NEEDED) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
                  "We have only %d/%d usable %sdescriptors.",
                  num_present, num_usable, using_md ? "micro" : "");
@@ -5017,7 +5024,7 @@ update_router_have_minimum_dir_info(void)
                  num_present, using_md ? "micro" : "", num_present ? "" : "s");
     res = 0;
     goto done;
-  } else if (num_exit_present < num_exit_usable / 3) {
+  } else if (num_exit_present < num_exit_usable * FRACTION_EXIT_USABLE_NEEDED) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
                  "We have only %d/%d usable exit node descriptors.",
                  num_exit_present, num_exit_usable);
