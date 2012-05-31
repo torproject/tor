@@ -1694,6 +1694,39 @@ get_parent_directory(char *fname)
   return -1;
 }
 
+#ifndef _WIN32
+/** Return a newly allocated string containing the output of getcwd(). Return
+ * NULL on failure. (We can't just use getcwd() into a PATH_MAX buffer, since
+ * Hurd hasn't got a PATH_MAX.)
+ */
+static char *
+alloc_getcwd(void)
+{
+    int saved_errno = errno;
+/* We use this as a starting path length. Not too large seems sane. */
+#define START_PATH_LENGTH 128
+/* Nobody has a maxpath longer than this, as far as I know.  And if they
+ * do, they shouldn't. */
+#define MAX_SANE_PATH_LENGTH 4096
+    size_t path_length = START_PATH_LENGTH;
+    char *path = tor_malloc(path_length);
+
+    errno = 0;
+    while (getcwd(path, path_length) == NULL) {
+      if (errno == ERANGE && path_length < MAX_SANE_PATH_LENGTH) {
+        path_length*=2;
+        path = tor_realloc(path, path_length);
+      } else {
+        tor_free(path);
+        path = NULL;
+        break;
+      }
+    }
+    errno = saved_errno;
+    return path;
+}
+#endif
+
 /** Expand possibly relative path <b>fname</b> to an absolute path.
  * Return a newly allocated string, possibly equal to <b>fname</b>. */
 char *
@@ -1709,23 +1742,25 @@ make_path_absolute(char *fname)
 
   return absfname;
 #else
-  char path[PATH_MAX+1];
-  char *absfname = NULL;
+  char *absfname = NULL, *path = NULL;
 
   tor_assert(fname);
 
   if (fname[0] == '/') {
     absfname = tor_strdup(fname);
   } else {
-    if (getcwd(path, PATH_MAX) != NULL) {
+    path = alloc_getcwd();
+    if (path) {
       tor_asprintf(&absfname, "%s/%s", path, fname);
+      tor_free(path);
     } else {
       /* If getcwd failed, the best we can do here is keep using the
        * relative path.  (Perhaps / isn't readable by this UID/GID.) */
+      log_warn(LD_GENERAL, "Unable to find current working directory: %s",
+               strerror(errno));
       absfname = tor_strdup(fname);
     }
   }
-
   return absfname;
 #endif
 }
