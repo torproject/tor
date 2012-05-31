@@ -1412,7 +1412,13 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
   need_uptime = !conn->want_onehop && !conn->use_begindir &&
                 smartlist_string_num_isin(options->LongLivedPorts,
                                           conn->socks_request->port);
-  need_internal = desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL;
+
+  if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)
+    need_internal = 1;
+  else if (conn->use_begindir || conn->want_onehop)
+    need_internal = 1;
+  else
+    need_internal = 0;
 
   circ = circuit_get_best(conn, 1, desired_circuit_purpose,
                           need_uptime, need_internal);
