@@ -2259,7 +2259,7 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
   return 0;
 }
 
-/** Mark every linelist in <b>options<b> "fragile", so that fresh assignments
+/** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
  * to it will replace old ones. */
 static void
 config_mark_lists_fragile(const config_format_t *fmt, or_options_t *options)
@@ -6082,7 +6082,7 @@ get_configured_ports(void)
   return configured_ports;
 }
 
-/** Return an <address>:<port> string representation of the address
+/** Return an address:port string representation of the address
  *  where the first <b>listener_type</b> listener waits for
  *  connections. Return NULL if we couldn't find a listener. The
  *  string is allocated on the heap and it's the responsibility of the

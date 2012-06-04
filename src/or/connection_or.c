@@ -1652,7 +1652,7 @@ or_handshake_state_free(or_handshake_state_t *state)
 
 /**
  * Remember that <b>cell</b> has been transmitted (if <b>incoming</b> is
- * false) or received (if <b>incoming is true) during a V3 handshake using
+ * false) or received (if <b>incoming</b> is true) during a V3 handshake using
  * <b>state</b>.
  *
  * (We don't record the cell, but we keep a digest of everything sent or
@@ -1691,8 +1691,8 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
 }
 
 /** Remember that a variable-length <b>cell</b> has been transmitted (if
- * <b>incoming</b> is false) or received (if <b>incoming is true) during a V3
- * handshake using <b>state</b>.
+ * <b>incoming</b> is false) or received (if <b>incoming</b> is true) during a
+ * V3 handshake using <b>state</b>.
  *
  * (We don't record the cell, but we keep a digest of everything sent or
  * received during the v3 handshake, and the client signs it in an

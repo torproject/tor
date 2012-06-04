@@ -1430,7 +1430,7 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
 }
 
 /** Given a <b>router</b>, add every node_t in its family (including the
- * node itself</b>) to <b>sl</b>.
+ * node itself!) to <b>sl</b>.
  *
  * Note the type mismatch: This function takes a routerinfo, but adds nodes
  * to the smartlist!

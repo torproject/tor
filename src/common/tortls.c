@@ -795,7 +795,7 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
   return newcert;
 }
 
-/** Set *<b>encoded_out</b> and *<b>size_out/b> to <b>cert</b>'s encoded DER
+/** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
  * representation and length, respectively. */
 void
 tor_cert_get_der(const tor_cert_t *cert,
