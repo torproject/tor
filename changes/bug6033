@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Work around a bug in OpenSSL that broke renegotiation with
+      TLS 1.1 and TLS 1.2.  Without this workaround, all attempts
+      to speak the v2 Tor network protocol when both sides were
+      using OpenSSL 1.0.1 would fail.  Fix for bug 6033, which is
+      not a bug in Tor.
