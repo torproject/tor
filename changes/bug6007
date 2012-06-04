@@ -1,0 +1,5 @@
+  o Major bugfixes (security):
+    - When waiting for a client to renegotiate, don't allow it to add
+      any bytes to the input buffer. This fixes a DoS issue. Fix for
+      bugs 6007 and 5934; bugfix on 0.2.0.20-rc.
+
