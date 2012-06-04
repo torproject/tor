@@ -1826,10 +1826,9 @@ test_util_strtok(void)
   char *cp1, *cp2;
 
   for (i = 0; i < 3; i++) {
-    const char *pad1, *pad2;
+    const char *pad1="", *pad2="";
     switch (i) {
     case 0:
-      pad1 = pad2 = "";
       break;
     case 1:
       pad1 = " ";
