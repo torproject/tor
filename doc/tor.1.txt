@@ -738,8 +738,10 @@ The following options are useful only for clients (that is, if
     A list of ports for services that tend to have long-running connections
     (e.g. chat and interactive shells). Circuits for streams that use these
     ports will contain only high-uptime nodes, to reduce the chance that a node
-    will go down before the stream is finished. (Default: 21, 22, 706, 1863,
-    5050, 5190, 5222, 5223, 6523, 6667, 6697, 8300)
+    will go down before the stream is finished. Note that the list is also
+    honored for circuits (both client and service side) involving hidden
+    services whose virtual port is in this list. (Default: 21, 22, 706,
+    1863, 5050, 5190, 5222, 5223, 6523, 6667, 6697, 8300)
 
 **MapAddress** __address__ __newaddress__::
     When a request for address arrives to Tor, it will transform to newaddress
