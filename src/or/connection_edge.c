@@ -1096,7 +1096,12 @@ addressmap_match_superdomains(char *address)
  * expiry time of the result, or to <b>time_max</b> if the result does
  * not expire.
  *
- * DOCDOC exit_source_out;
+ * If <b>exit_source_out</b> is non-null, we set it as follows.  If we the
+ * address starts out as a non-exit address, and we remap it to an .exit
+ * address at any point, then set *<b>exit_source_out</b> to the
+ * address_entry_source_t of the first such rule.  Set *<b>exit_source_out</b>
+ * to ADDRMAPSRC_NONE if there is no such rewrite.
+ *
  */
 int
 addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
