@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  Copyright (c) 2008 The Tor Project, Inc.
+#  Copyright (c) 2008-2012 The Tor Project, Inc.
 #  See LICENSE for licensing information.
 #
 # Hi!
@@ -37,6 +37,8 @@ SKIP_FILES = [ "OpenBSD_malloc_Linux.c",
                "eventdns.h",
                "strlcat.c",
                "strlcpy.c",
+               "sha256.c",
+               "sha256.h",
                "aes.c",
                "aes.h" ]
 
@@ -46,8 +48,8 @@ SKIP_NAME_PATTERNS = [ r'^.*_c_id$',
 
 # Which types of things should get DOCDOC comments added if they are
 # missing documentation?  Recognized types are in KINDS below.
-#ADD_DOCDOCS_TO_TYPES = [ 'function', 'type', 'typedef' ]
-ADD_DOCDOCS_TO_TYPES = [ 'variable' ]
+ADD_DOCDOCS_TO_TYPES = [ 'function', 'type', 'typedef' ]
+ADD_DOCDOCS_TO_TYPES += [ 'variable', ]
 
 # ====================
 # The rest of this should not need hacking.
@@ -55,11 +57,12 @@ ADD_DOCDOCS_TO_TYPES = [ 'variable' ]
 import re
 import sys
 
-KINDS = [ "type", "field", "typedef", "define", "function", "variable" ]
+KINDS = [ "type", "field", "typedef", "define", "function", "variable",
+          "enumeration" ]
 
 NODOC_LINE_RE = re.compile(r'^([^:]+):(\d+): (\w+): (.*) is not documented\.$')
 
-THING_RE = re.compile(r'^Member ([a-zA-Z0-9_]+).*\((typedef|define|function|variable)\) of (file|class) ')
+THING_RE = re.compile(r'^Member ([a-zA-Z0-9_]+).*\((typedef|define|function|variable|enumeration)\) of (file|class) ')
 
 SKIP_NAMES = [re.compile(s) for s in SKIP_NAME_PATTERNS]
 
@@ -72,7 +75,7 @@ def parsething(thing):
     else:
         m = THING_RE.match(thing)
         if not m:
-            print thing
+            print thing, "???? Format didn't match."
             return None, None
         else:
             name, tp, parent = m.groups()
@@ -92,7 +95,7 @@ def read():
         m = NODOC_LINE_RE.match(line)
         if m:
             file, line, tp, thing = m.groups()
-            assert tp == 'Warning'
+            assert tp.lower() == 'warning'
             name, kind = parsething(thing)
             errs.setdefault(file, []).append((int(line), name, kind))
 
