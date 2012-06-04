@@ -72,6 +72,7 @@
 /* Memory management */
 void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
+/* DOCDOC _tor_malloc_roundup */
 void *_tor_malloc_roundup(size_t *size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
@@ -382,6 +383,7 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 
 int environment_variable_names_equal(const char *s1, const char *s2);
 
+/* DOCDOC process_environment_t */
 struct process_environment_t {
   /** A pointer to a sorted empty-string-terminated sequence of
    * NUL-terminated strings of the form "NAME=VALUE". */

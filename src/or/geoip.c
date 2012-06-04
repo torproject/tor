@@ -613,6 +613,7 @@ dirreq_map_ent_eq(const dirreq_map_entry_t *a,
   return a->dirreq_id == b->dirreq_id && a->type == b->type;
 }
 
+/* DOCDOC dirreq_map_ent_hash */
 static unsigned
 dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
 {

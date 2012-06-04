@@ -519,6 +519,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
   END_OF_TABLE
 };
 
+/* DOCDOC microdesc_token_table */
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
@@ -4200,6 +4201,7 @@ find_all_exitpolicy(smartlist_t *s)
   return out;
 }
 
+/* DOCDOC router_get_hash_impl_helper */
 static int
 router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,

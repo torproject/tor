@@ -920,10 +920,12 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/* DOCDOC control_event_t */
 struct control_event_t {
   uint16_t event_code;
   const char *event_name;
 };
+/* DOCDOC control_event_table */
 static const struct control_event_t control_event_table[] = {
   { EVENT_CIRCUIT_STATUS, "CIRC" },
   { EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR" },
@@ -3215,6 +3217,7 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
  * interfaces is broken. */
 #define MAX_COMMAND_LINE_LENGTH (1024*1024)
 
+/* DOCDOC peek_connection_has_control0_command */
 static int
 peek_connection_has_control0_command(connection_t *conn)
 {

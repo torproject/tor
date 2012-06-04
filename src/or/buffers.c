@@ -108,7 +108,7 @@ chunk_repack(chunk_t *chunk)
   chunk->data = &chunk->mem[0];
 }
 
-#ifdef ENABLE_BUF_FREELISTS
+#if defined(ENABLE_BUF_FREELISTS) || defined(RUNNING_DOXYGEN)
 /** A freelist of chunks. */
 typedef struct chunk_freelist_t {
   size_t alloc_size; /**< What size chunks does this freelist hold? */

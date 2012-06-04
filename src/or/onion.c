@@ -29,9 +29,11 @@ typedef struct onion_queue_t {
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
 /** First and last elements in the linked list of circuits waiting for CPU
- * workers, or NULL if the list is empty. */
+ * workers, or NULL if the list is empty.
+ * @{ */
 static onion_queue_t *ol_list=NULL;
 static onion_queue_t *ol_tail=NULL;
+/**@}*/
 /** Length of ol_list */
 static int ol_length=0;
 

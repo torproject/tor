@@ -153,7 +153,7 @@ void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
 #define log tor_log /* hack it so we don't conflict with log() as much */
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
 extern int _log_global_min_severity;
 
 void _log_fn(int severity, log_domain_mask_t domain,

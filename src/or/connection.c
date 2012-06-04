@@ -80,6 +80,7 @@ static int get_proxy_type(void);
  * XXX024 We should really use the entire list of interfaces here.
  **/
 static tor_addr_t *last_interface_ipv4 = NULL;
+/* DOCDOC last_interface_ipv6 */
 static tor_addr_t *last_interface_ipv6 = NULL;
 /** A list of tor_addr_t for addresses we've used in outgoing connections.
  * Used to detect IP address changes. */
@@ -731,7 +732,7 @@ connection_expire_held_open(void)
   });
 }
 
-#ifdef HAVE_SYS_UN_H
+#if defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN)
 /** Create an AF_UNIX listenaddr struct.
  * <b>listenaddress</b> provides the path to the Unix socket.
  *
@@ -2730,6 +2731,7 @@ connection_handle_read_impl(connection_t *conn)
   return 0;
 }
 
+/* DOCDOC connection_handle_read */
 int
 connection_handle_read(connection_t *conn)
 {
@@ -3322,6 +3324,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   return 0;
 }
 
+/* DOCDOC connection_handle_write */
 int
 connection_handle_write(connection_t *conn, int force)
 {

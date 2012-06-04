@@ -14,6 +14,7 @@
 
 typedef struct tor_process_monitor_t tor_process_monitor_t;
 
+/* DOCDOC tor_procmon_callback_t */
 typedef void (*tor_procmon_callback_t)(void *);
 
 int tor_validate_process_specifier(const char *process_spec,

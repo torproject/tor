@@ -64,6 +64,7 @@ static struct timeval cached_time_hires = {0, 0};
  * cells. */
 #define CELL_QUEUE_LOWWATER_SIZE 64
 
+/* DOCDOC tor_gettimeofday_cached */
 static void
 tor_gettimeofday_cached(struct timeval *tv)
 {
@@ -73,6 +74,7 @@ tor_gettimeofday_cached(struct timeval *tv)
   *tv = cached_time_hires;
 }
 
+/* DOCDOC tor_gettimeofday_cache_clear */
 void
 tor_gettimeofday_cache_clear(void)
 {
@@ -2090,6 +2092,7 @@ cell_ewma_get_tick(void)
  * has value ewma_scale_factor ** N.)
  */
 static double ewma_scale_factor = 0.1;
+/* DOCDOC ewma_enabled */
 static int ewma_enabled = 0;
 
 #define EPSILON 0.00001

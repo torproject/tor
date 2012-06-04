@@ -2438,7 +2438,8 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
                              cache_lifetime);
 }
 
-#ifdef INSTRUMENT_DOWNLOADS
+#if defined(INSTRUMENT_DOWNLOADS) || defined(RUNNING_DOXYGEN)
+/* DOCDOC */
 typedef struct request_t {
   uint64_t bytes; /**< How many bytes have we transferred? */
   uint64_t count; /**< How many requests have we made? */
@@ -2796,7 +2797,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
           want_fps = url+strlen(CONSENSUS_URL_PREFIX);
       }
 
-      /* XXXX MICRODESC NM NM should check document of correct flavor */
+      /* XXXX023 MICRODESC NM NM should check document of correct flavor */
       if (v && want_fps &&
           !client_likes_consensus(v, want_fps)) {
         write_http_status_line(conn, 404, "Consensus not signed by sufficient "

@@ -97,6 +97,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
 
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t log_mutex;
+/* DOCDOC log_mutex_initialized */
 static int log_mutex_initialized = 0;
 
 /** Linked list of logfile_t. */

@@ -457,7 +457,7 @@ connection_edge_about_to_close(edge_connection_t *edge_conn)
   }
 }
 
-/* Called when we're about to finally unlink and free an AP (client)
+/** Called when we're about to finally unlink and free an AP (client)
  * connection: perform necessary accounting and cleanup */
 void
 connection_ap_about_to_close(entry_connection_t *entry_conn)
@@ -492,7 +492,7 @@ connection_ap_about_to_close(entry_connection_t *entry_conn)
     circuit_detach_stream(circ, edge_conn);
 }
 
-/* Called when we're about to finally unlink and free an exit
+/** Called when we're about to finally unlink and free an exit
  * connection: perform necessary accounting and cleanup */
 void
 connection_exit_about_to_close(edge_connection_t *edge_conn)

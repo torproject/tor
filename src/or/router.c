@@ -484,6 +484,7 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
+/* DOCDOC router_initialize_tls_context */
 int
 router_initialize_tls_context(void)
 {

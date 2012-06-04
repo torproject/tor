@@ -1065,6 +1065,7 @@ typedef struct connection_t {
   uint64_t dirreq_id;
 } connection_t;
 
+/* DOCDOC listener_connection_t */
 typedef struct listener_connection_t {
   connection_t _base;
 

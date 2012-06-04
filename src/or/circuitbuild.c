@@ -236,6 +236,7 @@ circuit_build_times_quantile_cutoff(void)
   return num/100.0;
 }
 
+/* DOCDOC circuit_build_times_get_bw_scale */
 int
 circuit_build_times_get_bw_scale(networkstatus_t *ns)
 {
@@ -4972,6 +4973,7 @@ find_bridge_by_digest(const char *digest)
   return NULL;
 }
 
+/* DOCDOC find_transport_name_by_bridge_addrport */
 const char *
 find_transport_name_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 {

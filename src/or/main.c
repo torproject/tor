@@ -94,7 +94,9 @@ static int stats_prev_global_read_bucket;
 static int stats_prev_global_write_bucket;
 #endif
 
+/* DOCDOC stats_prev_n_read */
 static uint64_t stats_prev_n_read = 0;
+/* DOCDOC stats_prev_n_written */
 static uint64_t stats_prev_n_written = 0;
 
 /* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
@@ -443,6 +445,7 @@ get_bytes_read(void)
   return stats_n_bytes_read;
 }
 
+/* DOCDOC get_bytes_written */
 uint64_t
 get_bytes_written(void)
 {

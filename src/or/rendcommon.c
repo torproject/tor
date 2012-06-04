@@ -797,6 +797,7 @@ rend_cache_entry_free(rend_cache_entry_t *e)
   tor_free(e);
 }
 
+/* DOCDOC _rend_cache_entry_free */
 static void
 _rend_cache_entry_free(void *p)
 {

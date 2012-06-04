@@ -69,7 +69,7 @@
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8) && !defined(RUNNING_DOXYGEN)
 /** @{ */
 /** On OpenSSL versions before 0.9.8, there is no working SHA256
  * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
@@ -404,6 +404,8 @@ crypto_cipher_new_with_iv(const char *key, const char *iv)
   return env;
 }
 
+/** Return a new crypto_cipher_t with the provided <b>key</b> and an IV of all
+ * zero bytes.  */
 crypto_cipher_t *
 crypto_cipher_new(const char *key)
 {

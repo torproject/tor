@@ -1772,6 +1772,7 @@ rep_hist_load_state(or_state_t *state, char **err)
 
 /*********************************************************************/
 
+/* DOCDOC predicted_port_t */
 typedef struct predicted_port_t {
   uint16_t port;
   time_t time;
@@ -2745,6 +2746,7 @@ rep_hist_desc_stats_write(time_t now)
   return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
+/* DOCDOC rep_hist_note_desc_served */
 void
 rep_hist_note_desc_served(const char * desc)
 {
@@ -2786,27 +2788,27 @@ rep_hist_conn_stats_init(time_t now)
  * connection stats. */
 #define BIDI_INTERVAL 10
 
-/* Start of next BIDI_INTERVAL second interval. */
+/** Start of next BIDI_INTERVAL second interval. */
 static time_t bidi_next_interval = 0;
 
-/* Number of connections that we read and wrote less than BIDI_THRESHOLD
+/** Number of connections that we read and wrote less than BIDI_THRESHOLD
  * bytes from/to in BIDI_INTERVAL seconds. */
 static uint32_t below_threshold = 0;
 
-/* Number of connections that we read at least BIDI_FACTOR times more
+/** Number of connections that we read at least BIDI_FACTOR times more
  * bytes from than we wrote to in BIDI_INTERVAL seconds. */
 static uint32_t mostly_read = 0;
 
-/* Number of connections that we wrote at least BIDI_FACTOR times more
+/** Number of connections that we wrote at least BIDI_FACTOR times more
  * bytes to than we read from in BIDI_INTERVAL seconds. */
 static uint32_t mostly_written = 0;
 
-/* Number of connections that we read and wrote at least BIDI_THRESHOLD
+/** Number of connections that we read and wrote at least BIDI_THRESHOLD
  * bytes from/to, but not BIDI_FACTOR times more in either direction in
  * BIDI_INTERVAL seconds. */
 static uint32_t both_read_and_written = 0;
 
-/* Entry in a map from connection ID to the number of read and written
+/** Entry in a map from connection ID to the number of read and written
  * bytes on this connection in a BIDI_INTERVAL second interval. */
 typedef struct bidi_map_entry_t {
   HT_ENTRY(bidi_map_entry_t) node;
@@ -2826,6 +2828,7 @@ bidi_map_ent_eq(const bidi_map_entry_t *a, const bidi_map_entry_t *b)
   return a->conn_id == b->conn_id;
 }
 
+/* DOCDOC bidi_map_ent_hash */
 static unsigned
 bidi_map_ent_hash(const bidi_map_entry_t *entry)
 {
@@ -2837,6 +2840,7 @@ HT_PROTOTYPE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
 HT_GENERATE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
             bidi_map_ent_eq, 0.6, malloc, realloc, free);
 
+/* DOCDOC bidi_map_free */
 static void
 bidi_map_free(void)
 {

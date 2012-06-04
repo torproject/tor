@@ -33,6 +33,7 @@ typedef struct pending_consensus_t {
   networkstatus_t *consensus;
 } pending_consensus_t;
 
+/* DOCDOC dirvote_add_signatures_to_all_pending_consensuses */
 static int dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
                        const char *source,
@@ -2679,6 +2680,7 @@ static smartlist_t *pending_vote_list = NULL;
  * build a consensus, the votes go here for the next period. */
 static smartlist_t *previous_vote_list = NULL;
 
+/* DOCDOC pending_consensuses */
 static pending_consensus_t pending_consensuses[N_CONSENSUS_FLAVORS];
 
 /** The detached signatures for the consensus that we're currently

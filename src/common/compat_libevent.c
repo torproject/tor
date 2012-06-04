@@ -6,9 +6,8 @@
  * \brief Wrappers to handle porting between different versions of libevent.
  *
  * In an ideal world, we'd just use Libevent 2.0 from now on.  But as of June
- * 2009, Libevent 2.0 is still in alpha, and we will have old versions of
- * Libevent for the forseeable future.
- **/
+ * 2012, Libevent 1.4 is still all over, and some poor souls are stuck on
+ * Libevent 1.3e. */
 
 #include "orconfig.h"
 #include "compat.h"
@@ -57,7 +56,7 @@ typedef uint32_t le_version_t;
 
 static le_version_t tor_get_libevent_version(const char **v_out);
 
-#ifdef HAVE_EVENT_SET_LOG_CALLBACK
+#if defined(HAVE_EVENT_SET_LOG_CALLBACK) || defined(RUNNING_DOXYGEN)
 /** A string which, if it appears in a libevent log, should be ignored. */
 static const char *suppress_msg = NULL;
 /** Callback function passed to event_set_log() so we can intercept

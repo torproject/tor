@@ -508,7 +508,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   return 0;
 }
 
-/* Called when we're about to finally unlink and free an OR connection:
+/** Called when we're about to finally unlink and free an OR connection:
  * perform necessary accounting and cleanup */
 void
 connection_or_about_to_close(or_connection_t *or_conn)

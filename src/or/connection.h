@@ -92,8 +92,10 @@ int connection_flush(connection_t *conn);
 
 void _connection_write_to_buf_impl(const char *string, size_t len,
                                    connection_t *conn, int zlib);
+/* DOCDOC connection_write_to_buf */
 static void connection_write_to_buf(const char *string, size_t len,
                                     connection_t *conn);
+/* DOCDOC connection_write_to_buf_zlib */
 static void connection_write_to_buf_zlib(const char *string, size_t len,
                                          dir_connection_t *conn, int done);
 static INLINE void
@@ -108,7 +110,9 @@ connection_write_to_buf_zlib(const char *string, size_t len,
   _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
 }
 
+/* DOCDOC connection_get_inbuf_len */
 static size_t connection_get_inbuf_len(connection_t *conn);
+/* DOCDOC connection_get_outbuf_len */
 static size_t connection_get_outbuf_len(connection_t *conn);
 
 static INLINE size_t

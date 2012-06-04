@@ -951,6 +951,7 @@ list_single_server_status(const routerinfo_t *desc, int is_live)
   return tor_strdup(buf);
 }
 
+/* DOCDOC running_long_enough_to_decide_unreachable */
 static INLINE int
 running_long_enough_to_decide_unreachable(void)
 {

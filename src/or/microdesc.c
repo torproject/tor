@@ -187,7 +187,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
   return added;
 }
 
-/* As microdescs_add_to_cache, but takes a list of micrdescriptors instead of
+/** As microdescs_add_to_cache, but takes a list of micrdescriptors instead of
  * a string to decode.  Frees any members of <b>descriptors</b> that it does
  * not add. */
 smartlist_t *

@@ -104,9 +104,12 @@ static time_t last_descriptor_download_attempted = 0;
 /** When we last computed the weights to use for bandwidths on directory
  * requests, what were the total weighted bandwidth, and our share of that
  * bandwidth?  Used to determine what fraction of directory requests we should
- * expect to see. */
+ * expect to see.
+ *
+ * @{ */
 static uint64_t sl_last_total_weighted_bw = 0,
   sl_last_weighted_bw_of_me = 0;
+/**@}*/
 
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
@@ -2294,7 +2297,7 @@ hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
   return tor_memeq(digest, identity_digest, DIGEST_LEN);
 }
 
-/* Return true iff <b>router</b> is listed as named in the current
+/** Return true iff <b>router</b> is listed as named in the current
  * consensus. */
 int
 router_is_named(const routerinfo_t *router)

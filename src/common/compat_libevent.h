@@ -59,6 +59,7 @@ struct timeval;
 int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
 #endif
 
+/* DOCDOC tor_libevent_cfg */
 typedef struct tor_libevent_cfg {
   int disable_iocp;
   int num_cpus;

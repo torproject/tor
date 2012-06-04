@@ -1,6 +1,7 @@
 
 const char *tor_get_digests(void);
 
+/** DOCDOC */
 const char *
 tor_get_digests(void)
 {

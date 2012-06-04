@@ -225,6 +225,7 @@ static int check_cert_lifetime_internal(int severity, const X509 *cert,
 /** Global TLS contexts. We keep them here because nobody else needs
  * to touch them. */
 static tor_tls_context_t *server_tls_context = NULL;
+/* DOCDOC client_tls_context */
 static tor_tls_context_t *client_tls_context = NULL;
 
 /** True iff tor_tls_init() has been called. */
@@ -268,6 +269,7 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
   tor_snprintf(buf, sz, "%s%s", ssl_state, tortls_state);
 }
 
+/* DOCDOC tor_tls_log_one_error */
 void
 tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                   int severity, int domain, const char *doing)
@@ -1342,6 +1344,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
+/* DOCDOC tor_tls_debug_state_callback */
 static void
 tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
@@ -1621,6 +1624,7 @@ tor_tls_block_renegotiation(tor_tls_t *tls)
   tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 }
 
+/* DOCDOC tor_tls_assert_renegotiation_unblocked */
 void
 tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 {

@@ -3303,6 +3303,7 @@ tor_process_get_stdout_pipe(process_handle_t *process_handle)
   return process_handle->stdout_pipe;
 }
 #else
+/* DOCDOC tor_process_get_stdout_pipe */
 FILE *
 tor_process_get_stdout_pipe(process_handle_t *process_handle)
 {
@@ -3310,6 +3311,7 @@ tor_process_get_stdout_pipe(process_handle_t *process_handle)
 }
 #endif
 
+/* DOCDOC process_handle_new */
 static process_handle_t *
 process_handle_new(void)
 {
@@ -4289,6 +4291,7 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
   return IO_STREAM_TERM;
 }
 
+/* DOCDOC tor_check_port_forwarding */
 void
 tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
                           time_t now)

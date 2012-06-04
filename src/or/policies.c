@@ -535,6 +535,7 @@ typedef struct policy_map_ent_t {
   addr_policy_t *policy;
 } policy_map_ent_t;
 
+/* DOCDOC policy_root */
 static HT_HEAD(policy_map, policy_map_ent_t) policy_root = HT_INITIALIZER();
 
 /** Return true iff a and b are equal. */

@@ -103,6 +103,7 @@ static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
 }
+/* DOCDOC WRA_WAS_REJECTED */
 static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);

@@ -156,7 +156,7 @@ tor_fopen_cloexec(const char *path, const char *mode)
   return result;
 }
 
-#ifdef HAVE_SYS_MMAN_H
+#if defined(HAVE_SYS_MMAN_H) || defined(RUNNING_DOXYGEN)
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
  * "empty file". */
@@ -501,10 +501,13 @@ tor_memmem(const void *_haystack, size_t hlen,
 #endif
 }
 
-/* Tables to implement ctypes-replacement TOR_IS*() functions.  Each table
+/**
+ * Tables to implement ctypes-replacement TOR_IS*() functions.  Each table
  * has 256 bits to look up whether a character is in some set or not.  This
  * fails on non-ASCII platforms, but it is hard to find a platform whose
  * character set is not a superset of ASCII nowadays. */
+
+/**@{*/
 const uint32_t TOR_ISALPHA_TABLE[8] =
   { 0, 0, 0x7fffffe, 0x7fffffe, 0, 0, 0, 0 };
 const uint32_t TOR_ISALNUM_TABLE[8] =
@@ -517,8 +520,10 @@ const uint32_t TOR_ISPRINT_TABLE[8] =
   { 0, 0xffffffff, 0xffffffff, 0x7fffffff, 0, 0, 0, 0x0 };
 const uint32_t TOR_ISUPPER_TABLE[8] = { 0, 0, 0x7fffffe, 0, 0, 0, 0, 0 };
 const uint32_t TOR_ISLOWER_TABLE[8] = { 0, 0, 0, 0x7fffffe, 0, 0, 0, 0 };
-/* Upper-casing and lowercasing tables to map characters to upper/lowercase
- * equivalents. */
+
+/** Upper-casing and lowercasing tables to map characters to upper/lowercase
+ * equivalents.  Used by tor_toupper() and tor_tolower(). */
+/**@{*/
 const char TOR_TOUPPER_TABLE[256] = {
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
@@ -555,6 +560,7 @@ const char TOR_TOLOWER_TABLE[256] = {
   224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
   240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
 };
+/**@}*/
 
 /** Helper for tor_strtok_r_impl: Advances cp past all characters in
  * <b>sep</b>, and returns its new value. */
@@ -1779,7 +1785,9 @@ make_path_absolute(char *fname)
 #ifndef HAVE__NSGETENVIRON
 #ifndef HAVE_EXTERN_ENVIRON_DECLARED
 /* Some platforms declare environ under some circumstances, others don't. */
+#ifndef RUNNING_DOXYGEN
 extern char **environ;
+#endif
 #endif
 #endif
 
@@ -2356,6 +2364,7 @@ tor_gettimeofday(struct timeval *timeval)
 #define TIME_FNS_NEED_LOCKS
 #endif
 
+/* DOCDOC correct_tm */
 static struct tm *
 correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
            struct tm *r)

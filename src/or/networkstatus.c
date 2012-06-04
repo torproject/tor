@@ -78,6 +78,7 @@ typedef struct consensus_waiting_for_certs_t {
   int dl_failed;
 } consensus_waiting_for_certs_t;
 
+/* DOCDOC consensus_waiting_for_certs */
 static consensus_waiting_for_certs_t
        consensus_waiting_for_certs[N_CONSENSUS_FLAVORS];
 
@@ -1006,8 +1007,8 @@ networkstatus_get_v2_list(void)
   return networkstatus_v2_list;
 }
 
-/* As router_get_consensus_status_by_descriptor_digest, but does not return
- * a const pointer */
+/** As router_get_consensus_status_by_descriptor_digest, but does not return
+ * a const pointer. */
 routerstatus_t *
 router_get_mutable_consensus_status_by_descriptor_digest(
                                                  networkstatus_t *consensus,
@@ -2194,6 +2195,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   tor_free(status);
 }
 
+/* DOCDOC get_net_param_from_list */
 static int32_t
 get_net_param_from_list(smartlist_t *net_params, const char *param_name,
                         int32_t default_val, int32_t min_val, int32_t max_val)
