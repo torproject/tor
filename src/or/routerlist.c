@@ -4188,9 +4188,9 @@ any_trusted_dir_is_v1_authority(void)
 
 /** For every current directory connection whose purpose is <b>purpose</b>,
  * and where the resource being downloaded begins with <b>prefix</b>, split
- * rest of the resource into base16 fingerprints, decode them, and set the
+ * rest of the resource into base16 fingerprints (or base64 fingerprints if
+ * purpose==DIR_PURPPOSE_FETCH_MICRODESC), decode them, and set the
  * corresponding elements of <b>result</b> to a nonzero value.
- * DOCDOC purpose==microdesc
  */
 static void
 list_pending_downloads(digestmap_t *result,
@@ -4235,8 +4235,13 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
   list_pending_downloads(result, purpose, "d/");
 }
 
-/** DOCDOC */
-/*XXXX NM should use digest256, if one comes into being. */
+/** For every microdescriptor we are currently downloading by descriptor
+ * digest, set result[d] to (void*)1.   (Note that microdescriptor digests
+ * are 256-bit, and digestmap_t only holds 160-bit digests, so we're only
+ * getting the first 20 bytes of each digest here.)
+ *
+ * XXXX Let there be a digestmap256_t, and use that instead.
+ */
 void
 list_pending_microdesc_downloads(digestmap_t *result)
 {

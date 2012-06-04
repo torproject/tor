@@ -1251,7 +1251,8 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
 #else
-  /** DOCDOC */
+  /** A rate-limiting configuration object to determine how this connection
+   * set its read- and write- limits. */
   /* XXXX we could share this among all connections. */
   struct ev_token_bucket_cfg *bucket_cfg;
 #endif
@@ -1729,7 +1730,7 @@ typedef struct {
   uint16_t or_port; /**< Port for TLS connections. */
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
-  /* DOCDOC */
+  /** A router's IPv6 address, if it has one. */
   /* XXXXX187 Actually these should probably be part of a list of addresses,
    * not just a special case.  Use abstractions to access these; don't do it
    * directly. */

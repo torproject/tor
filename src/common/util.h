@@ -409,8 +409,10 @@ void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
 #define PROCESS_STATUS_ERROR -1
 
 #ifdef UTIL_PRIVATE
-/*DOCDOC*/
+/** Structure to represent the state of a process with which Tor is
+ * communicating. The contents of this structure are private to util.c */
 struct process_handle_t {
+  /** One of the PROCESS_STATUS_* values */
   int status;
 #ifdef _WIN32
   HANDLE stdout_pipe;

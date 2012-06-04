@@ -3323,7 +3323,15 @@ process_handle_new(void)
   return out;
 }
 
-/*DOCDOC*/
+/**
+ * @name child-process states
+ *
+ * Each of these values represents a possible state that a child process can
+ * be in.  They're used to determine what to say when telling the parent how
+ * far along we were before failure.
+ *
+ * @{
+ */
 #define CHILD_STATE_INIT 0
 #define CHILD_STATE_PIPE 1
 #define CHILD_STATE_MAXFD 2
@@ -3334,7 +3342,7 @@ process_handle_new(void)
 #define CHILD_STATE_CLOSEFD 7
 #define CHILD_STATE_EXEC 8
 #define CHILD_STATE_FAILEXEC 9
-
+/** @} */
 /** Start a program in the background. If <b>filename</b> contains a '/', then
  * it will be treated as an absolute or relative path.  Otherwise, on
  * non-Windows systems, the system path will be searched for <b>filename</b>.

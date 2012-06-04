@@ -3788,7 +3788,10 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/* DOCDOC NM */
+/** Called when a connection to download microdescriptors has failed in whole
+ * or in part. <b>failed</b> is a list of every microdesc digest we didn't
+ * get. <b>status_code</b> is the http status code we received. Reschedule the
+ * microdesc downloads as appropriate. */
 static void
 dir_microdesc_download_failed(smartlist_t *failed,
                               int status_code)

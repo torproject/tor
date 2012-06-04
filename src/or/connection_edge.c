@@ -2673,12 +2673,12 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   return 0;
 }
 
-/** Make an AP connection_t, make a new linked connection pair, and attach
- * one side to the conn, connection_add it, initialize it to circuit_wait,
- * and call connection_ap_handshake_attach_circuit(conn) on it.
+/** Make an AP connection_t linked to the connection_t <b>partner</b>. make a
+ * new linked connection pair, and attach one side to the conn, connection_add
+ * it, initialize it to circuit_wait, and call
+ * connection_ap_handshake_attach_circuit(conn) on it.
  *
- * Return the other end of the linked connection pair, or -1 if error.
- * DOCDOC partner.
+ * Return the newly created end of the linked connection pair, or -1 if error.
  */
 entry_connection_t *
 connection_ap_make_link(connection_t *partner,

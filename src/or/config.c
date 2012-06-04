@@ -675,11 +675,12 @@ static const config_format_t state_format = {
 
 /** Command-line and config-file options. */
 static or_options_t *global_options = NULL;
-/** DOCDOC */
+/** The fallback options_t object; this is where we look for options not
+ * in torrc before we fall back to Tor's defaults. */
 static or_options_t *global_default_options = NULL;
 /** Name of most recently read torrc file. */
 static char *torrc_fname = NULL;
-/** DOCDOC */
+/** Name of the most recently read torrc-defaults file.*/
 static char *torrc_defaults_fname;
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
@@ -4345,8 +4346,8 @@ get_windows_conf_root(void)
 }
 #endif
 
-/** Return the default location for our torrc file.
- * DOCDOC defaults_file */
+/** Return the default location for our torrc file (if <b>defaults_file</b> is
+ * false), or for the torrc-defaults file (if <b>defaults_file</b> is true). */
 static const char *
 get_default_conf_file(int defaults_file)
 {
@@ -4396,12 +4397,21 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   return r;
 }
 
-/** Learn config file name from command line arguments, or use the default,
- * DOCDOC defaults_file */
+/** Learn config file name from command line arguments, or use the default.
+ *
+ * If <b>defaults_file</b> is true, we're looking for torrc-defaults;
+ * otherwise, we're looking for the regular torrc_file.
+ *
+ * Set *<b>using_default_fname</b> to true if we're using the default
+ * configuration file name; or false if we've set it from the command line.
+ *
+ * Set *<b>ignore_missing_torrc</b> to true if we should ignore the resulting
+ * filename if it doesn't exist.
+ */
 static char *
 find_torrc_filename(int argc, char **argv,
                     int defaults_file,
-                    int *using_default_torrc, int *ignore_missing_torrc)
+                    int *using_default_fname, int *ignore_missing_torrc)
 {
   char *fname=NULL;
   int i;
@@ -4427,14 +4437,14 @@ find_torrc_filename(int argc, char **argv,
         fname = absfname;
       }
 
-      *using_default_torrc = 0;
+      *using_default_fname = 0;
       ++i;
     } else if (ignore_opt && !strcmp(argv[i],ignore_opt)) {
       *ignore_missing_torrc = 1;
     }
   }
 
-  if (*using_default_torrc) {
+  if (*using_default_fname) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file(defaults_file);
     if (dflt && file_status(dflt) == FN_FILE) {
@@ -4458,8 +4468,13 @@ find_torrc_filename(int argc, char **argv,
   return fname;
 }
 
-/** Load torrc from disk, setting torrc_fname if successful.
- * DOCDOC defaults_file */
+/** Load a configuration file from disk, setting torrc_fname or
+ * torrc_defaults_fname if successful.
+ *
+ * If <b>defaults_file</b> is true, load torrc-defaults; otherwise load torrc.
+ *
+ * Return the contents of the file on success, and NULL on failure.
+ */
 static char *
 load_torrc_from_disk(int argc, char **argv, int defaults_file)
 {
@@ -5455,7 +5470,10 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
   } SMARTLIST_FOREACH_END(port);
 }
 
-/** DOCDOC */
+/** Given a list of port_cfg_t in <b>ports</b>, warn any controller port there
+ * is listening on any non-loopback address.  If <b>forbid</b> is true,
+ * then emit a stronger warning and remove the port from the list.
+ */
 static void
 warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
 {
@@ -5839,10 +5857,12 @@ parse_port_config(smartlist_t *out,
   return retval;
 }
 
-/** DOCDOC */
+/** Parse a list of config_line_t for an AF_UNIX unix socket listener option
+ * from <b>cfg</b> and add them to <b>out</b>.  No fancy options are
+ * supported: the line contains nothing but the path to the AF_UNIX socket. */
 static int
-parse_socket_config(smartlist_t *out, const config_line_t *cfg,
-                    int listener_type)
+parse_unix_socket_config(smartlist_t *out, const config_line_t *cfg,
+                         int listener_type)
 {
 
   if (!out)
@@ -5928,9 +5948,9 @@ parse_ports(const or_options_t *options, int validate_only,
                         "configuration");
       goto err;
     }
-    if (parse_socket_config(ports,
-                            options->ControlSocket,
-                            CONN_TYPE_CONTROL_LISTENER) < 0) {
+    if (parse_unix_socket_config(ports,
+                                 options->ControlSocket,
+                                 CONN_TYPE_CONTROL_LISTENER) < 0) {
       *msg = tor_strdup("Invalid ControlSocket configuration");
       goto err;
     }
@@ -5980,7 +6000,8 @@ parse_ports(const or_options_t *options, int validate_only,
   return retval;
 }
 
-/** DOCDOC */
+/** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
+ * consistency and warn as appropriate. */
 static int
 check_server_ports(const smartlist_t *ports,
                    const or_options_t *options)

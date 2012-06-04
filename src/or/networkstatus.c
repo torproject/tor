@@ -1183,7 +1183,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Return true iff, given the options listed in <b>options</b>, <b>flavor</b>
+ *  is the flavor of a consensus networkstatus that we would like to fetch. */
 static int
 we_want_to_fetch_flavor(const or_options_t *options, int flavor)
 {
@@ -1455,7 +1456,8 @@ networkstatus_get_latest_consensus(void)
   return current_consensus;
 }
 
-/** DOCDOC */
+/** Return the latest consensus we have whose flavor matches <b>f</b>, or NULL
+ * if we don't have one. */
 networkstatus_t *
 networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
 {

@@ -1659,7 +1659,8 @@ connection_send_socks5_connect(connection_t *conn)
   conn->proxy_state = PROXY_SOCKS5_WANT_CONNECT_OK;
 }
 
-/** DOCDOC */
+/** Wrapper around fetch_from_(buf/evbuffer)_socks_client: see those functions
+ * for documentation of its behavior. */
 static int
 connection_fetch_from_buf_socks_client(connection_t *conn,
                                        int state, char **reason)
@@ -2239,7 +2240,9 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   return 0;
 }
 
-/** DOCDOC */
+/** Helper: adjusts our bandwidth history and informs the controller as
+ * appropriate, given that we have just read <b>num_read</b> bytes and written
+ * <b>num_written</b> bytes on <b>conn</b>. */
 static void
 record_num_bytes_transferred_impl(connection_t *conn,
                              time_t now, size_t num_read, size_t num_written)
@@ -2270,7 +2273,8 @@ record_num_bytes_transferred_impl(connection_t *conn,
 }
 
 #ifdef USE_BUFFEREVENTS
-/** DOCDOC */
+/** Wrapper around fetch_from_(buf/evbuffer)_socks_client: see those functions
+ * for documentation of its behavior. */
 static void
 record_num_bytes_transferred(connection_t *conn,
                              time_t now, size_t num_read, size_t num_written)
@@ -2592,7 +2596,8 @@ connection_get_rate_limit_totals(uint64_t *read_out, uint64_t *written_out)
   }
 }
 
-/** DOCDOC */
+/** Perform whatever operations are needed on <b>conn</b> to enable
+ * rate-limiting. */
 void
 connection_enable_rate_limiting(connection_t *conn)
 {

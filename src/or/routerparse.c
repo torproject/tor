@@ -4169,7 +4169,10 @@ _find_by_keyword(smartlist_t *s, directory_keyword keyword,
   return tok;
 }
 
-/** DOCDOC */
+/** If there are any directory_token_t entries in <b>s</b> whose keyword is
+ * <b>k</b>, return a newly allocated smartlist_t containing all such entries,
+ * in the same order in which they occur in <b>s</b>.  Otherwise return
+ * NULL. */
 static smartlist_t *
 find_all_by_keyword(smartlist_t *s, directory_keyword k)
 {

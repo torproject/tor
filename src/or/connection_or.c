@@ -2099,7 +2099,8 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
  *
  * If <b>server</b> is false and <b>signing_key</b> is provided, calculate the
  * entire authenticator, signed with <b>signing_key</b>.
- * DOCDOC return value
+ *
+ * Return the length of the cell body on success, and -1 on failure.
  */
 int
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
