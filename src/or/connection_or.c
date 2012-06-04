@@ -358,7 +358,12 @@ connection_or_reached_eof(or_connection_t *conn)
 int
 connection_or_process_inbuf(or_connection_t *conn)
 {
-  int ret;
+  /** Don't let the inbuf of a nonopen OR connection grow beyond this many
+   * bytes: it's either a broken client, a non-Tor client, or a DOS
+   * attempt. */
+#define MAX_OR_INBUF_WHEN_NONOPEN 0
+
+  int ret = 0;
   tor_assert(conn);
 
   switch (conn->_base.state) {
@@ -389,8 +394,27 @@ connection_or_process_inbuf(or_connection_t *conn)
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
       return connection_or_process_cells_from_inbuf(conn);
     default:
-      return 0; /* don't do anything */
+      break; /* don't do anything */
   }
+
+  /* This check was necessary with 0.2.2, when the TLS_SERVER_RENEGOTIATING
+   * check would otherwise just let data accumulate.  It serves no purpose
+   * in 0.2.3.
+   *
+   * XXX023 Remove this check once we verify that the above paragraph is
+   * 100% true. */
+  if (buf_datalen(conn->_base.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "
+	   "on nonopen OR connection %s %s:%u in state %s; closing.",
+	   (int)buf_datalen(conn->_base.inbuf),
+	   connection_or_nonopen_was_started_here(conn) ? "to" : "from",
+	   conn->_base.address, conn->_base.port,
+	   conn_state_to_string(conn->_base.type, conn->_base.state));
+    connection_mark_for_close(TO_CONN(conn));
+    ret = -1;
+  }
+
+  return ret;
 }
 
 /** When adding cells to an OR connection's outbuf, keep adding until the
