@@ -1,3 +1,0 @@
-  o Minor bugfixes (performance):
-    - Avoid O(n^2) performance characteristics when parsing a large
-      extrainfo cache. Fixes bug 5828; bugfix on 0.2.0.1-alpha.

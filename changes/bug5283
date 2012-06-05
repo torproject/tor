@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Fix an edge case where if we fetch or publish a hidden service
-      descriptor, we might build a 4-hop circuit and then use that circuit
-      for exiting afterwards -- even if the new last hop doesn't obey our
-      ExitNodes config option. Fixes bug 5283; bugfix on 0.2.0.10-alpha.
-

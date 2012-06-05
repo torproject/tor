@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When we receive a SIGHUP and the controller-use __ReloadTorrcOnSIGHUP
-      option is set to 0, perform other actions that SIGHUP usually causes
-      (like reopening the logs). Fixes bug 5095; bugfix on 0.2.1.9-alpha.

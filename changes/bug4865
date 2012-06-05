@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Pass correct OR address to managed proxies, even when
-      ORListenAddress is used. Fixes bug #4865; bugfix on
-      0.2.3.9-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Don't try to open non-control listeners when DisableNetwork is set.
-      Previousy, we'd open all listeners, then immediately close them.
-      Fixes bug 5604; bugfix on 0.2.3.9-alpha.

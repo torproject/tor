@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - When told to add a bridge with the same addr:port as a
-      preexisting bridge but a different transport, change the
-      transport as requested. Previously we would not notice the
-      change. Fix for bug 5603; fix on 0.2.3.2-alpha.
-    - When told to add a bridge with the same digest as a
-      preexisting bridge but a different addr:port, change the
-      addr:port as requested. Previously we would not notice the
-      change. Fix for bug 5603; fix on 0.2.2.26-beta.

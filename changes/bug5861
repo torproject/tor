@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Set _WIN32_WINNT to 0x0501 consistently throughout the code, so
-      that IPv6 stuff will compile on MSVC, and compilation issues
-      will be easier to track down. Fix for bug 5861.

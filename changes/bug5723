@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Format IPv4 addresses correctly in ADDRMAP events. (Previously,
-      we had reversed them when the answer was cached.) Fixes bug
-      5723; bugfix on 0.2.3.1-alpha.

@@ -1,4 +1,0 @@
-  o Documentation:
-    - Document the changes to the ORPort and DirPort options, and the
-      fact that {OR/Dir}ListenAddress is now unnecessary (and
-      therefore deprecated).

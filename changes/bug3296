@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - If we are unable to find any exit that supports our predicted
-      ports, stop calling them predicted, so that we don't loop and
-      build hopeless circuits indefinitely. Fix for bug 3296; bugfix
-      on 0.0.9pre6, which introduced predicted ports.

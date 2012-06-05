@@ -1,5 +1,0 @@
-  o Minor features (controller):
-    - Expose our view of whether we have gone dormant to the
-      controller, via a new "GETINFO dormant" value. Due to bug 4718,
-      torbutton needs this to avoid excessive version checking. Fixes
-      bug 5954.

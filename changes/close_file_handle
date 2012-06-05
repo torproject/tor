@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Don't hold a windows file handle open for every file mapping;
-      the file mapping handle is sufficient. Fix for bug 5951; bugfix on
-      0.1.2.1-alpha.

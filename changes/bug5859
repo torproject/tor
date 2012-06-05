@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Resolve numerous small warnings and build issues with MSVC. Resolves
-      bug 5859.

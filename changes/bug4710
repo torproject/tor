@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Exit nodes now correcly report EADDRINUSE and EADDRNOTAVAIL as
-      resource exhaustion, so that clients can adjust their load to
-      try other exits. Fix for bug 4710; bugfix on 0.1.0.1-rc, which
-      started using END_STREAM_REASON_RESOURCELIMIT.

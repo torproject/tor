@@ -1,7 +1,0 @@
-  o Minor features:
-    - Raise the threshold of server descriptors needed (75%) and exit
-      server descriptors needed (50%) before we will declare ourselves
-      bootstrapped. This will make clients declare completion a little
-      later, but makes the initially constructed circuits less weird
-      and less in conflict with directory connections. Fixes ticket
-      #3196.

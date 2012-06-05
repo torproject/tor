@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix a bug where a bridge authority crashes if it has seen no
-      directory requests when it's time to write statistics to disk.
-      Fixes bug 5891.  Also fixes bug 5508 in a better way.
-

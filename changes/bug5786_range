@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Make our number-parsing functions always treat too-large values
-      as an error, even when those values exceed the width of the
-      underlying type. Previously, if the caller provided these
-      functions with minima or maxima set to the extreme values of the
-      underlying integer type, these functions would return those
-      values on overflow rather than treating overflow as an error.
-      Fix for part of bug 5786; bugfix on Tor 0.0.9.
