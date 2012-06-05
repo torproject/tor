@@ -920,12 +920,13 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/* DOCDOC control_event_t */
+/** Helper structure: maps event values to their names. */
 struct control_event_t {
   uint16_t event_code;
   const char *event_name;
 };
-/* DOCDOC control_event_table */
+/** Table mapping event values to their names.  Used to implement SETEVENTS
+ * and GETINFO events/names, and to keep they in sync. */
 static const struct control_event_t control_event_table[] = {
   { EVENT_CIRCUIT_STATUS, "CIRC" },
   { EVENT_CIRCUIT_STATUS_MINOR, "CIRC_MINOR" },
@@ -3217,7 +3218,10 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
  * interfaces is broken. */
 #define MAX_COMMAND_LINE_LENGTH (1024*1024)
 
-/* DOCDOC peek_connection_has_control0_command */
+/** Wrapper around peek_(evbuffer|buf)_has_control0 command: presents the same
+ * interface as those underlying functions, but takes a connection_t intead of
+ * an evbuffer or a buf_t.
+ */
 static int
 peek_connection_has_control0_command(connection_t *conn)
 {

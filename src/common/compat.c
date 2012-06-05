@@ -2364,7 +2364,12 @@ tor_gettimeofday(struct timeval *timeval)
 #define TIME_FNS_NEED_LOCKS
 #endif
 
-/* DOCDOC correct_tm */
+/** Helper: Deal with confused or out-of-bounds values from localtime_r and
+ * friends.  (On some platforms, they can give out-of-bounds values or can
+ * return NULL.)  If <b>islocal</b>, this is a localtime result; otherwise
+ * it's from gmtime.  The function returned <b>r</b>, when given <b>timep</b>
+ * as its input. If we need to store new results, store them in
+ * <b>resultbuf</b>. */
 static struct tm *
 correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
            struct tm *r)

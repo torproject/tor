@@ -1065,7 +1065,7 @@ typedef struct connection_t {
   uint64_t dirreq_id;
 } connection_t;
 
-/* DOCDOC listener_connection_t */
+/** Subtype of connection_t; used for a listener socket. */
 typedef struct listener_connection_t {
   connection_t _base;
 

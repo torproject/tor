@@ -59,10 +59,15 @@ struct timeval;
 int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
 #endif
 
-/* DOCDOC tor_libevent_cfg */
+/** Defines a configuration for using libevent with Tor: passed as an argument
+ * to tor_libevent_initialize() to describe how we want to set up. */
 typedef struct tor_libevent_cfg {
+  /** Flag: if true, disable IOCP (assuming that it could be enabled). */
   int disable_iocp;
+  /** How many CPUs should we use (relevant only with IOCP). */
   int num_cpus;
+  /** How many milliseconds should we allow between updating bandwidth limits?
+   * (relevant only with bufferevents). */
   int msec_per_tick;
 } tor_libevent_cfg;
 

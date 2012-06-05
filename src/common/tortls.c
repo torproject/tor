@@ -223,10 +223,12 @@ static int check_cert_lifetime_internal(int severity, const X509 *cert,
                                    int past_tolerance, int future_tolerance);
 
 /** Global TLS contexts. We keep them here because nobody else needs
- * to touch them. */
+ * to touch them.
+ *
+ * @{ */
 static tor_tls_context_t *server_tls_context = NULL;
-/* DOCDOC client_tls_context */
 static tor_tls_context_t *client_tls_context = NULL;
+/**@}*/
 
 /** True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;
@@ -269,7 +271,9 @@ tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz)
   tor_snprintf(buf, sz, "%s%s", ssl_state, tortls_state);
 }
 
-/* DOCDOC tor_tls_log_one_error */
+/** Log a single error <b>err</b> as returned by ERR_get_error(), which was
+ * received while performing an operation <b>doing</b> on <b>tls</b>.  Log
+ * the message at <b>severity</b>, in log domain <b>domain</b>. */
 void
 tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                   int severity, int domain, const char *doing)
@@ -314,8 +318,8 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
   }
 }
 
-/** Log all pending tls errors at level <b>severity</b>.  Use
- * <b>doing</b> to describe our current activities.
+/** Log all pending tls errors at level <b>severity</b> in log domain
+ * <b>domain</b>.  Use <b>doing</b> to describe our current activities.
  */
 static void
 tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
@@ -1344,7 +1348,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
-/* DOCDOC tor_tls_debug_state_callback */
+/** Invoked when a TLS state changes: log the change at severity 'debug' */
 static void
 tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
@@ -1624,7 +1628,7 @@ tor_tls_block_renegotiation(tor_tls_t *tls)
   tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 }
 
-/* DOCDOC tor_tls_assert_renegotiation_unblocked */
+/** Assert that the flags that allow legacy renegotiation are still set */
 void
 tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 {

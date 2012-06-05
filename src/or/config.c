@@ -786,7 +786,8 @@ extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
 static char *the_tor_version = NULL;
-/* DOCDOC the_short_tor_version */
+/** A shorter version of this Tor process's version, for export in our router
+ *  descriptor.  (Does not include the git version, if any.) */
 static char *the_short_tor_version = NULL;
 
 /** Return the current Tor version. */

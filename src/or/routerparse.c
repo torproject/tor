@@ -263,7 +263,7 @@ typedef struct token_rule_t {
 /* Argument multiplicity: exactly <b>n</b> arguments. */
 #define EQ(n)       n,n,0
 
-/** List of tokens allowable in router descriptors */
+/** List of tokens recognized in router descriptors */
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
@@ -296,7 +296,7 @@ static token_rule_t routerdesc_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in extra-info documents. */
+/** List of tokens recognized in extra-info documents. */
 static token_rule_t extrainfo_token_table[] = {
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
@@ -333,7 +333,7 @@ static token_rule_t extrainfo_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in the body part of v2 and v3 networkstatus
+/** List of tokens recognized in the body part of v2 and v3 networkstatus
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
   T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
@@ -346,7 +346,7 @@ static token_rule_t rtrstatus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in the header part of v2 networkstatus documents.
+/** List of tokens recognized in the header part of v2 networkstatus documents.
  */
 static token_rule_t netstatus_token_table[] = {
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
@@ -364,14 +364,14 @@ static token_rule_t netstatus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
+/** List of tokens recognized in the footer of v1/v2 directory/networkstatus
  * footers. */
 static token_rule_t dir_footer_token_table[] = {
   T1("directory-signature", K_DIRECTORY_SIGNATURE, EQ(1), NEED_OBJ ),
   END_OF_TABLE
 };
 
-/** List of tokens allowable in v1 directory headers/footers. */
+/** List of tokens recognized in v1 directory headers/footers. */
 static token_rule_t dir_token_table[] = {
   /* don't enforce counts; this is obsolete. */
   T( "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ ),
@@ -403,14 +403,14 @@ static token_rule_t dir_token_table[] = {
                                                      NO_ARGS,     NEED_OBJ), \
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
 
-/** List of tokens allowable in V3 authority certificates. */
+/** List of tokens recognized in V3 authority certificates. */
 static token_rule_t dir_key_certificate_table[] = {
   CERTIFICATE_MEMBERS
   T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };
 
-/** List of tokens allowable in rendezvous service descriptors */
+/** List of tokens recognized in rendezvous service descriptors */
 static token_rule_t desc_token_table[] = {
   T1_START("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR,
            EQ(1), NO_OBJ),
@@ -424,7 +424,7 @@ static token_rule_t desc_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowed in the (encrypted) list of introduction points of
+/** List of tokens recognized in the (encrypted) list of introduction points of
  * rendezvous service descriptors */
 static token_rule_t ipo_token_table[] = {
   T1_START("introduction-point", R_IPO_IDENTIFIER, EQ(1), NO_OBJ),
@@ -435,7 +435,7 @@ static token_rule_t ipo_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowed in the (possibly encrypted) list of introduction
+/** List of tokens recognized in the (possibly encrypted) list of introduction
  * points of rendezvous service descriptors */
 static token_rule_t client_keys_token_table[] = {
   T1_START("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
@@ -444,7 +444,7 @@ static token_rule_t client_keys_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowed in V3 networkstatus votes. */
+/** List of tokens recognized in V3 networkstatus votes. */
 static token_rule_t networkstatus_token_table[] = {
   T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -472,7 +472,7 @@ static token_rule_t networkstatus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowed in V3 networkstatus consensuses. */
+/** List of tokens recognized in V3 networkstatus consensuses. */
 static token_rule_t networkstatus_consensus_token_table[] = {
   T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -498,7 +498,7 @@ static token_rule_t networkstatus_consensus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
+/** List of tokens recognized in the footer of v1/v2 directory/networkstatus
  * footers. */
 static token_rule_t networkstatus_vote_footer_token_table[] = {
   T01("directory-footer",    K_DIRECTORY_FOOTER,    NO_ARGS,   NO_OBJ ),
@@ -507,7 +507,7 @@ static token_rule_t networkstatus_vote_footer_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in detached networkstatus signature documents. */
+/** List of tokens recognized in detached networkstatus signature documents. */
 static token_rule_t networkstatus_detached_signature_token_table[] = {
   T1_START("consensus-digest", K_CONSENSUS_DIGEST, GE(1),       NO_OBJ ),
   T("additional-digest",       K_ADDITIONAL_DIGEST,GE(3),       NO_OBJ ),
@@ -519,7 +519,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
   END_OF_TABLE
 };
 
-/* DOCDOC microdesc_token_table */
+/** List of tokens recognized in microdescriptors */
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
@@ -4201,7 +4201,13 @@ find_all_exitpolicy(smartlist_t *s)
   return out;
 }
 
-/* DOCDOC router_get_hash_impl_helper */
+/** Helper function for <b>router_get_hash_impl</b>: given <b>s</b>,
+ * <b>s_len</b>, <b>start_str</b>, <b>end_str</b>, and <b>end_c</b> with the
+ * same semantics as in that function, set *<b>start_out</b> (inclusive) and
+ * *<b>end_out</b> (exclusive) to the boundaries of the string to be hashed.
+ *
+ * Return 0 on success and -1 on failure.
+ */
 static int
 router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,

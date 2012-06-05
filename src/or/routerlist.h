@@ -85,14 +85,16 @@ void router_set_status(const char *digest, int up);
 static int WRA_WAS_ADDED(was_router_added_t s);
 static int WRA_WAS_OUTDATED(was_router_added_t s);
 static int WRA_WAS_REJECTED(was_router_added_t s);
-/** Return true iff the descriptor was added. It might still be necessary to
- * check whether the descriptor generator should be notified.
+/** Return true iff the outcome code in <b>s</b> indicates that the descriptor
+ * was added. It might still be necessary to check whether the descriptor
+ * generator should be notified.
  */
 static INLINE int
 WRA_WAS_ADDED(was_router_added_t s) {
   return s == ROUTER_ADDED_SUCCESSFULLY || s == ROUTER_ADDED_NOTIFY_GENERATOR;
 }
-/** Return true iff the descriptor was not added because it was either:
+/** Return true iff the outcome code in <b>s</b> indicates that the descriptor
+ * was not added because it was either:
  * - not in the consensus
  * - neither in the consensus nor in any networkstatus document
  * - it was outdated.
@@ -103,7 +105,8 @@ static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
 }
-/* DOCDOC WRA_WAS_REJECTED */
+/** Return true iff the outcome code in <b>s</b> indicates that the descriptor
+ * was flat-out rejected. */
 static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);

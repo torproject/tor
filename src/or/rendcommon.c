@@ -797,7 +797,8 @@ rend_cache_entry_free(rend_cache_entry_t *e)
   tor_free(e);
 }
 
-/* DOCDOC _rend_cache_entry_free */
+/** Helper: deallocate a rend_cache_entry_t.  (Used with strmap_free(), which
+ * requires a function pointer whose argument is void*). */
 static void
 _rend_cache_entry_free(void *p)
 {

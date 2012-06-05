@@ -1772,9 +1772,13 @@ rep_hist_load_state(or_state_t *state, char **err)
 
 /*********************************************************************/
 
-/* DOCDOC predicted_port_t */
+/** A single predicted port: used to remember which ports we've made
+ * connections to, so that we can try to keep making circuits that can handle
+ * those ports. */
 typedef struct predicted_port_t {
+  /** The port we connected to */
   uint16_t port;
+  /** The time at which we last used it */
   time_t time;
 } predicted_port_t;
 

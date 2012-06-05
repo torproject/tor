@@ -484,7 +484,8 @@ v3_authority_check_key_expiry(void)
   last_warned = now;
 }
 
-/* DOCDOC router_initialize_tls_context */
+/** Set up Tor's TLS contexts, based on our configuration and keys. Return 0
+ * on success, and -1 on failure. */
 int
 router_initialize_tls_context(void)
 {

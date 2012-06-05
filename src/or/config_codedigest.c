@@ -1,7 +1,8 @@
 
 const char *tor_get_digests(void);
 
-/** DOCDOC */
+/** Return a string describing the digest of the source files in src/or/
+ */
 const char *
 tor_get_digests(void)
 {

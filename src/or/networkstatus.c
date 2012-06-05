@@ -78,7 +78,9 @@ typedef struct consensus_waiting_for_certs_t {
   int dl_failed;
 } consensus_waiting_for_certs_t;
 
-/* DOCDOC consensus_waiting_for_certs */
+/** An array, for each flavor of consensus we might want, of consensuses that
+ * we have downloaded, but which we cannot verify due to having insufficient
+ * authority certificates. */
 static consensus_waiting_for_certs_t
        consensus_waiting_for_certs[N_CONSENSUS_FLAVORS];
 
