@@ -4912,52 +4912,34 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
   }
 }
 
-/** Returns true if <b>bridge</b> has the same identity digest as
- *  <b>digest</b>. <b>digest</b> is optional in which case it matches
- *  bridges without identity digests. */
+/** Return true if <b>bridge</b> has the same identity digest as
+ *  <b>digest</b>. If <b>digest</b> is NULL, it matches
+ *  bridges with unspecified identity digests. */
 static int
 bridge_has_digest(const bridge_info_t *bridge, const char *digest)
 {
-  if (!digest && tor_digest_is_zero(bridge->identity))
-    return 1;
-  if (digest && tor_memeq(digest, bridge->identity, DIGEST_LEN))
-    return 1;
-  return 0;
+  if (digest)
+    return tor_memeq(digest, bridge->identity, DIGEST_LEN);
+  else
+    return tor_digest_is_zero(bridge->identity);
 }
 
-/** Returns true if <b>bridge</b> uses the same pluggable transport as
- *  <b>transport_name</b>. <b>transport_name</b> is optional in which
- *  case it matches bridges without pluggable transports. */
-static int
-bridge_has_transport_name(const bridge_info_t *bridge,
-                          const char *transport_name)
-{
-  if (!transport_name && !bridge->transport_name)
-    return 1;
-  if (transport_name && !strcmp(transport_name, bridge->transport_name))
-    return 1;
-  return 0;
-}
-
-/** We want to add a new bridge at <b>addr</b>:<b>port</b>, with
- *  optional <b>digest</b> and <b>transport_name</b>. See if this
- *  generates any conflicts with already registered bridges, try to
- *  resolve them and warn the user.
- *
- *  This function might end up marking already registered bridges to
- *  be deleted.
+/** We are about to add a new bridge at <b>addr</b>:<b>port</b>, with optional
+ * <b>digest</b> and <b>transport_name</b>. Mark for removal any previously
+ * existing bridge with the same address and port, and warn the user as
+ * appropriate.
  */
 static void
 bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
                          const char *digest, const char *transport_name)
 {
-  /** Iterate the already-registered bridge list:
+  /* Iterate the already-registered bridge list:
 
-      If you find a bridge with the same adress and port, mark it for
-      removal. It doesn't make sense to have two active bridges with
-      the same IP:PORT. If the bridge in question has a different
-      digest or transport than <b>digest</b>/<b>transport_name</b>,
-      it's probably a misconfiguration and we should warn the user.
+     If you find a bridge with the same adress and port, mark it for
+     removal. It doesn't make sense to have two active bridges with
+     the same IP:PORT. If the bridge in question has a different
+     digest or transport than <b>digest</b>/<b>transport_name</b>,
+     it's probably a misconfiguration and we should warn the user.
   */
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
     if (bridge->marked_for_removal)
@@ -4968,7 +4950,7 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
       bridge->marked_for_removal = 1;
 
       if (!bridge_has_digest(bridge, digest) ||
-          !bridge_has_transport_name(bridge, transport_name)) {
+          strcmp_opt(bridge->transport_name, transport_name)) {
         /* warn the user */
         char *bridge_description_new, *bridge_description_old;
         tor_asprintf(&bridge_description_new, "%s:%u:%s:%s",
