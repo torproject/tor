@@ -1,4 +1,9 @@
 Changes in version 0.2.3.16-alpha - 2012-06-05
+  Tor 0.2.3.16-alpha introduces a workaround for a critical renegotiation
+  bug in OpenSSL 1.0.1 (where 20% of the Tor network can't talk to itself
+  currently). It also fixes a variety of smaller bugs and other cleanups$
+  that get us closer to a release candidate.
+
   o Major bugfixes (general):
     - Work around a bug in OpenSSL that broke renegotiation with TLS
       1.1 and TLS 1.2. Without this workaround, all attempts to speak
