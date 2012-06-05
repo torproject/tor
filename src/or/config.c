@@ -3936,6 +3936,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
+  if (options->MyFamily && options->BridgeRelay) {
+    log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "
+             "supported: it can reveal bridge fingerprints to censors. "
+             "You should also make sure you aren't listing this bridge's "
+             "fingerprint in any other MyFamily.");
+  }
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {

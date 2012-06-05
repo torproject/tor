@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - If the configuration tries to set MyFamily on a bridge, refuse to
+      do so, and warn about the security implications. Fix for bug 4657;
+      bugfix on 0.2.0.3-alpha.

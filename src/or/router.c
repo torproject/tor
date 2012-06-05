@@ -1598,7 +1598,7 @@ router_rebuild_descriptor(int force)
     ri->is_valid = ri->is_named = 1; /* believe in yourself */
 #endif
 
-  if (options->MyFamily) {
+  if (options->MyFamily && ! options->BridgeRelay) {
     smartlist_t *family;
     if (!warned_nonexistent_family)
       warned_nonexistent_family = smartlist_new();
