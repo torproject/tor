@@ -1,4 +1,4 @@
-Changes in version 0.2.3.16-alpha - 2012-06-0?
+Changes in version 0.2.3.16-alpha - 2012-06-05
   o Major bugfixes (general):
     - Work around a bug in OpenSSL that broke renegotiation with TLS
       1.1 and TLS 1.2. Without this workaround, all attempts to speak
