@@ -126,6 +126,13 @@ typedef int event_format_t;
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
   CHECK_PRINTF(2,3);
+static void send_control_event_impl(uint16_t event, event_format_t which,
+                                    const char *format, va_list ap)
+  CHECK_PRINTF(3,0);
+static int control_event_status(int type, int severity, const char *format,
+                                va_list args)
+  CHECK_PRINTF(3,0);
+
 static void send_control_done(control_connection_t *conn);
 static void send_control_event(uint16_t event, event_format_t which,
                                const char *format, ...)
@@ -3918,6 +3925,7 @@ control_event_my_descriptor_changed(void)
 static int
 control_event_status(int type, int severity, const char *format, va_list args)
 {
+  char *user_buf = NULL;
   char format_buf[160];
   const char *status, *sev;
 
@@ -3949,13 +3957,15 @@ control_event_status(int type, int severity, const char *format, va_list args)
       log_warn(LD_BUG, "Unrecognized status severity %d", severity);
       return -1;
   }
-  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s %s\r\n",
-                   status, sev, format)<0) {
+  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s\r\n",
+                   status, sev)<0) {
     log_warn(LD_BUG, "Format string too long.");
     return -1;
   }
+  tor_vasprintf(&user_buf, format, args);
 
-  send_control_event_impl(type, ALL_FORMATS, format_buf, args);
+  send_control_event(type, ALL_FORMATS, "%s %s", format_buf, user_buf);
+  tor_free(user_buf);
   return 0;
 }
 
