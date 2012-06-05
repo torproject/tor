@@ -778,7 +778,7 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
   log_fn(LOG_ERR, LD_BUG,
          "Unix domain sockets not supported, yet we tried to create one.");
   *len_out = 0;
-  tor_assert(0);
+  tor_fragile_assert();
   return NULL;
 }
 #endif /* HAVE_SYS_UN_H */
