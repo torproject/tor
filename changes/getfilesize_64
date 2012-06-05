@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - On Windows, correctly detect errors and large file sizes from
+      GetFileSize. Fixes bug 5957; bugfix on Tor 0.1.2.1-alpha.
