@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Disable writing on marked-for-close connections when they are
+      blocked on bandwidth, to prevent busy-looping in Libevent. Fixes
+      bug 5263; bugfix on 0.0.2pre13, where we first added a special
+      case for flushing marked connections.
