@@ -72,7 +72,7 @@ int have_failed = 0;
  * our files during testing. */
 static char temp_dir[256];
 #ifdef _WIN32
-#define pid_t unsigned
+#define pid_t int
 #endif
 static pid_t temp_dir_setup_in_pid = 0;
 

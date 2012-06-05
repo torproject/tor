@@ -2274,8 +2274,13 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   test_assert(process_handle != NULL);
   test_eq(expected_status, process_handle->status);
 
+#ifdef _WIN32
+  test_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
+  test_assert(process_handle->stderr_pipe != INVALID_HANDLE_VALUE);
+#else
   test_assert(process_handle->stdout_pipe > 0);
   test_assert(process_handle->stderr_pipe > 0);
+#endif
 
   /* Check stdout */
   pos = tor_read_all_from_process_stdout(process_handle, stdout_buf,

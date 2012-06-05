@@ -26,6 +26,8 @@ typedef struct tor_addr_t
 {
   sa_family_t family;
   union {
+    uint32_t dummy_; /* This field is here so we have something to initialize
+                      * with a reliable cross-platform type. */
     struct in_addr in_addr;
     struct in6_addr in6_addr;
   } addr;
@@ -38,7 +40,7 @@ typedef struct tor_addr_port_t
   uint16_t port;
 } tor_addr_port_t;
 
-#define TOR_ADDR_NULL {AF_UNSPEC, {{0}}};
+#define TOR_ADDR_NULL {AF_UNSPEC, {0}};
 
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);

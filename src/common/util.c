@@ -3317,7 +3317,10 @@ process_handle_new(void)
 {
   process_handle_t *out = tor_malloc_zero(sizeof(process_handle_t));
 
-#ifndef _WIN32
+#ifdef _WIN32
+  out->stdout_pipe = INVALID_HANDLE_VALUE;
+  out->stderr_pipe = INVALID_HANDLE_VALUE;
+#else
   out->stdout_pipe = -1;
   out->stderr_pipe = -1;
 #endif

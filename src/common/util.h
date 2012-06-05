@@ -17,6 +17,10 @@
 #include "di_ops.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+/* for the correct alias to struct stat */
+#include <sys/stat.h>
+#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -350,7 +354,9 @@ int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
 /** Flag for read_file_to_str: it's okay if the file doesn't exist. */
 #define RFTS_IGNORE_MISSING 2
 
+#ifndef _WIN32
 struct stat;
+#endif
 char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   ATTR_MALLOC;
 const char *parse_config_line_from_str(const char *line,
