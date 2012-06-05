@@ -1995,7 +1995,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   log(LOG_INFO, LD_DIRSERV,
       "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
       "For Fast: %lu bytes/sec. "
-      "For Guard: WFU %.03lf%%, time-known %lu sec, "
+      "For Guard: WFU %.03f%%, time-known %lu sec, "
       "and bandwidth %lu or %lu bytes/sec. We%s have enough stability data.",
       (unsigned long)stable_uptime,
       (unsigned long)stable_mtbf,

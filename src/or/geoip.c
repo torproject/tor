@@ -1025,9 +1025,9 @@ geoip_format_dirreq_stats(time_t now)
 #undef RESPONSE_GRANULARITY
 
   if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    tor_asprintf(&v2_share_string, "dirreq-v2-share %0.2lf%%\n",
+    tor_asprintf(&v2_share_string, "dirreq-v2-share %0.2f%%\n",
                  v2_share*100);
-    tor_asprintf(&v3_share_string, "dirreq-v3-share %0.2lf%%\n",
+    tor_asprintf(&v3_share_string, "dirreq-v3-share %0.2f%%\n",
                  v3_share*100);
   }
 

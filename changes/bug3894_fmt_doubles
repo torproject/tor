@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Format more doubles with %f, not %lf. Patch from grarpamp to make
+      Tor build correctly on older BSDs again. Fixes bug 3894; bugfix on
+      Tor 0.2.0.8-alpha.
