@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2012, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.3.16-alpha)
+AM_INIT_AUTOMAKE(tor, 0.2.3.16-alpha-dev)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
