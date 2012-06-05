@@ -1,3 +1,5 @@
+/* Copyright (c) 2011-2012, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
 /**
  * \file procmon.h

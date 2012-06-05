@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, The Tor Project, Inc. */
+/* Copyright (c) 2008-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /** \file memarea.c

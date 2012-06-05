@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, The Tor Project, Inc. */
+/* Copyright (c) 2009-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* This SHA256 implementation is adapted from the public domain one in
    LibTomCrypt, version 1.6.  Tor uses it on platforms where OpenSSL doesn't

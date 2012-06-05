@@ -1,3 +1,5 @@
+/* Copyright (c) 2008-2012, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
 #define CRYPTO_PRIVATE
 
