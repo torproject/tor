@@ -1696,3 +1696,4 @@ tor_addr_hostname_is_local(const char *name)
     !strcasecmp(name, "local") ||
     !strcasecmpend(name, ".local");
 }
+

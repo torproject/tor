@@ -820,7 +820,6 @@ get_short_version(void)
   return the_short_tor_version;
 }
 
-
 /** Release additional memory allocated in options
  */
 static void

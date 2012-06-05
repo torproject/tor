@@ -69,7 +69,8 @@
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8) && !defined(RUNNING_DOXYGEN)
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8) && \
+  !defined(RUNNING_DOXYGEN)
 /** @{ */
 /** On OpenSSL versions before 0.9.8, there is no working SHA256
  * implementation, so we use Tom St Denis's nice speedy one, slightly adapted

@@ -2007,8 +2007,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
            * then we really don't want to try to connect to it.  That's
            * probably an error. */
           if (conn->is_transparent_ap) {
-#define WARN_INTERVAL_LOOP 300
-            static ratelim_t loop_warn_limit = RATELIM_INIT(WARN_INTERVAL_LOOP);
+#define WARN_INTRVL_LOOP 300
+            static ratelim_t loop_warn_limit = RATELIM_INIT(WARN_INTRVL_LOOP);
             char *m;
             if ((m = rate_limit_log(&loop_warn_limit, approx_time()))) {
               log_warn(LD_NET,
@@ -2019,8 +2019,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
               tor_free(m);
             }
           } else {
-#define WARN_INTERVAL_PRIV 300
-            static ratelim_t priv_warn_limit = RATELIM_INIT(WARN_INTERVAL_PRIV);
+#define WARN_INTRVL_PRIV 300
+            static ratelim_t priv_warn_limit = RATELIM_INIT(WARN_INTRVL_PRIV);
             char *m;
             if ((m = rate_limit_log(&priv_warn_limit, approx_time()))) {
               log_warn(LD_NET,

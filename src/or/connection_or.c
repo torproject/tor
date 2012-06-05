@@ -405,11 +405,11 @@ connection_or_process_inbuf(or_connection_t *conn)
    * 100% true. */
   if (buf_datalen(conn->_base.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "
-	   "on nonopen OR connection %s %s:%u in state %s; closing.",
-	   (int)buf_datalen(conn->_base.inbuf),
-	   connection_or_nonopen_was_started_here(conn) ? "to" : "from",
-	   conn->_base.address, conn->_base.port,
-	   conn_state_to_string(conn->_base.type, conn->_base.state));
+           "on nonopen OR connection %s %s:%u in state %s; closing.",
+           (int)buf_datalen(conn->_base.inbuf),
+           connection_or_nonopen_was_started_here(conn) ? "to" : "from",
+           conn->_base.address, conn->_base.port,
+           conn_state_to_string(conn->_base.type, conn->_base.state));
     connection_mark_for_close(TO_CONN(conn));
     ret = -1;
   }
