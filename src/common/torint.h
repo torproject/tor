@@ -191,6 +191,16 @@ typedef unsigned __int64 uint64_t;
 #endif
 #endif
 
+#ifndef SIZE_MAX
+#if SIZEOF_SIZE_T == 8
+#define SIZE_MAX UINT64_MAX
+#elif  SIZEOF_SIZE_T == 4
+#define SIZE_MAX UINT32_MAX
+#else
+#error "Can't define SIZE_MAX"
+#endif
+#endif
+
 #ifndef HAVE_SSIZE_T
 #if SIZEOF_SIZE_T == 8
 typedef int64_t ssize_t;

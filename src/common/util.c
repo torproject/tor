@@ -80,7 +80,7 @@
 #include <malloc/malloc.h>
 #endif
 #ifdef HAVE_MALLOC_H
-#ifndef OPENBSD
+#if !defined(OPENBSD) && !defined(__FreeBSD__)
 /* OpenBSD has a malloc.h, but for our purposes, it only exists in order to
  * scold us for being so stupid as to autodetect its presence.  To be fair,
  * they've done this since 1996, when autoconf was only 5 years old. */

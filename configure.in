@@ -680,6 +680,8 @@ AC_CHECK_HEADERS(
         utime.h
 )
 
+AC_CHECK_HEADERS(sys/param.h)
+
 TOR_CHECK_PROTOTYPE(malloc_good_size, HAVE_MALLOC_GOOD_SIZE_PROTOTYPE,
 [#ifdef HAVE_MALLOC_H
 #include <malloc.h>
