@@ -4913,6 +4913,71 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
   }
 }
 
+/** Return true if <b>bridge</b> has the same identity digest as
+ *  <b>digest</b>. If <b>digest</b> is NULL, it matches
+ *  bridges with unspecified identity digests. */
+static int
+bridge_has_digest(const bridge_info_t *bridge, const char *digest)
+{
+  if (digest)
+    return tor_memeq(digest, bridge->identity, DIGEST_LEN);
+  else
+    return tor_digest_is_zero(bridge->identity);
+}
+
+/** We are about to add a new bridge at <b>addr</b>:<b>port</b>, with optional
+ * <b>digest</b> and <b>transport_name</b>. Mark for removal any previously
+ * existing bridge with the same address and port, and warn the user as
+ * appropriate.
+ */
+static void
+bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
+                         const char *digest, const char *transport_name)
+{
+  /* Iterate the already-registered bridge list:
+
+     If you find a bridge with the same adress and port, mark it for
+     removal. It doesn't make sense to have two active bridges with
+     the same IP:PORT. If the bridge in question has a different
+     digest or transport than <b>digest</b>/<b>transport_name</b>,
+     it's probably a misconfiguration and we should warn the user.
+  */
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge) {
+    if (bridge->marked_for_removal)
+      continue;
+
+    if (tor_addr_eq(&bridge->addr, addr) && (bridge->port == port)) {
+
+      bridge->marked_for_removal = 1;
+
+      if (!bridge_has_digest(bridge, digest) ||
+          strcmp_opt(bridge->transport_name, transport_name)) {
+        /* warn the user */
+        char *bridge_description_new, *bridge_description_old;
+        tor_asprintf(&bridge_description_new, "%s:%u:%s:%s",
+                     fmt_addr(addr), port,
+                     digest ? hex_str(digest, DIGEST_LEN) : "",
+                     transport_name ? transport_name : "");
+        tor_asprintf(&bridge_description_old, "%s:%u:%s:%s",
+                     fmt_addr(&bridge->addr), bridge->port,
+                     tor_digest_is_zero(bridge->identity) ?
+                     "" : hex_str(bridge->identity,DIGEST_LEN),
+                     bridge->transport_name ? bridge->transport_name : "");
+
+        log_warn(LD_GENERAL,"Tried to add bridge '%s', but we found a conflict"
+                 " with the already registered bridge '%s'. We will discard"
+                 " the old bridge and keep '%s'. If this is not what you"
+                 " wanted, please change your configuration file accordingly.",
+                 bridge_description_new, bridge_description_old,
+                 bridge_description_new);
+
+        tor_free(bridge_description_new);
+        tor_free(bridge_description_old);
+      }
+    }
+  } SMARTLIST_FOREACH_END(bridge);
+}
+
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
  * is set, it tells us the identity key too.  If we already had the
  * bridge in our list, unmark it, and don't actually add anything new.
@@ -4924,10 +4989,7 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
 {
   bridge_info_t *b;
 
-  if ((b = get_configured_bridge_by_addr_port_digest(addr, port, digest))) {
-    b->marked_for_removal = 0;
-    return;
-  }
+  bridge_resolve_conflicts(addr, port, digest, transport_name);
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
   tor_addr_copy(&b->addr, addr);
