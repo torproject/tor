@@ -266,7 +266,7 @@ Other options can be specified either on the command-line (--option
     If this option is set to 1, when running as a server, generate our
     own Diffie-Hellman group instead of using the one from Apache's mod_ssl.
     This option may help circumvent censorship based on static
-    Diffie-Hellman parameters. (Default: 1).
+    Diffie-Hellman parameters. (Default: 0).
 
 **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
