@@ -91,7 +91,7 @@ tor_upnp_init(tor_fw_options_t *options, void *backend_state)
   assert(options);
   r = UPNP_GetValidIGD(devlist, &(state->urls), &(state->data),
                        state->lanaddr, UPNP_LANADDR_SZ);
-  fprintf(stdout, "tor-fw-helper: UPnP GetValidIGD returned: %d (%s)\n", r,
+  fprintf(stderr, "tor-fw-helper: UPnP GetValidIGD returned: %d (%s)\n", r,
           r==UPNP_SUCCESS?"SUCCESS":"FAILED");
 
   freeUPNPDevlist(devlist);
@@ -141,7 +141,7 @@ tor_upnp_fetch_public_ip(tor_fw_options_t *options, void *backend_state)
     goto err;
 
   if (externalIPAddress[0]) {
-    fprintf(stdout, "tor-fw-helper: ExternalIPAddress = %s\n",
+    fprintf(stderr, "tor-fw-helper: ExternalIPAddress = %s\n",
             externalIPAddress); tor_upnp_cleanup(options, state);
     options->public_ip_status = 1;
     return UPNP_ERR_SUCCESS;

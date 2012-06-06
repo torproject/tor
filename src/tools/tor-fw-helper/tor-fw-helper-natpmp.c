@@ -60,15 +60,15 @@ tor_natpmp_init(tor_fw_options_t *tor_fw_options, void *backend_state)
   state->lease = NATPMP_DEFAULT_LEASE;
 
   if (tor_fw_options->verbose)
-    fprintf(stdout, "V: natpmp init...\n");
+    fprintf(stderr, "V: natpmp init...\n");
 
   r = initnatpmp(&(state->natpmp), 0, 0);
   if (r == 0) {
     state->init = 1;
-    fprintf(stdout, "tor-fw-helper: natpmp initialized...\n");
+    fprintf(stderr, "V: natpmp initialized...\n");
     return r;
   } else {
-    fprintf(stderr, "tor-fw-helper: natpmp failed to initialize...\n");
+    fprintf(stderr, "V: natpmp failed to initialize...\n");
     return r;
   }
 }
@@ -80,10 +80,10 @@ tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state)
   natpmp_state_t *state = (natpmp_state_t *) backend_state;
   int r = 0;
   if (tor_fw_options->verbose)
-    fprintf(stdout, "V: natpmp cleanup...\n");
+    fprintf(stderr, "V: natpmp cleanup...\n");
   r = closenatpmp(&(state->natpmp));
   if (tor_fw_options->verbose)
-    fprintf(stdout, "V: closing natpmp socket: %d\n", r);
+    fprintf(stderr, "V: closing natpmp socket: %d\n", r);
   return r;
 }
 
@@ -101,7 +101,7 @@ wait_until_fd_readable(tor_socket_t fd, struct timeval *timeout)
   FD_SET(fd, &fds);
   r = select(fd+1, &fds, NULL, NULL, timeout);
   if (r == -1) {
-    fprintf(stdout, "V: select failed in wait_until_fd_readable: %s\n",
+    fprintf(stderr, "V: select failed in wait_until_fd_readable: %s\n",
             strerror(errno));
     return -1;
   }
@@ -185,7 +185,7 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
   struct timeval timeout;
 
   r = sendpublicaddressrequest(&(state->natpmp));
-  fprintf(stdout, "tor-fw-helper: NAT-PMP sendpublicaddressrequest returned"
+  fprintf(stderr, "tor-fw-helper: NAT-PMP sendpublicaddressrequest returned"
           " %d (%s)\n", r, r==2?"SUCCESS":"FAILED");
 
   do {
@@ -196,12 +196,12 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
       return -1;
 
     if (tor_fw_options->verbose)
-      fprintf(stdout, "V: NAT-PMP attempting to read reponse...\n");
+      fprintf(stderr, "V: NAT-PMP attempting to read reponse...\n");
     r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
     sav_errno = errno;
 
     if (tor_fw_options->verbose)
-      fprintf(stdout, "V: NAT-PMP readnatpmpresponseorretry returned"
+      fprintf(stderr, "V: NAT-PMP readnatpmpresponseorretry returned"
               " %d\n", r);
 
     if ( r < 0 && r != NATPMP_TRYAGAIN) {
@@ -219,15 +219,15 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
     return r;
   }
 
-  fprintf(stdout, "tor-fw-helper: ExternalIPAddress = %s\n",
+  fprintf(stderr, "tor-fw-helper: ExternalIPAddress = %s\n",
           inet_ntoa((state->response).pnu.publicaddress.addr));
   tor_fw_options->public_ip_status = 1;
 
   if (tor_fw_options->verbose) {
-    fprintf(stdout, "V: result = %u\n", r);
-    fprintf(stdout, "V: type = %u\n", (state->response).type);
-    fprintf(stdout, "V: resultcode = %u\n", (state->response).resultcode);
-    fprintf(stdout, "V: epoch = %u\n", (state->response).epoch);
+    fprintf(stderr, "V: result = %u\n", r);
+    fprintf(stderr, "V: type = %u\n", (state->response).type);
+    fprintf(stderr, "V: resultcode = %u\n", (state->response).resultcode);
+    fprintf(stderr, "V: epoch = %u\n", (state->response).epoch);
   }
 
   return r;

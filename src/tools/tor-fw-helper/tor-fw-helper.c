@@ -125,7 +125,7 @@ log_commandline_options(int argc, char **argv)
     if (retval < 0)
       goto error;
 
-    retval = fprintf(stdout, "ARG: %d: %s\n", i, argv[i]);
+    retval = fprintf(stderr, "ARG: %d: %s\n", i, argv[i]);
     if (retval < 0)
       goto error;
   }
@@ -152,19 +152,19 @@ tor_fw_fetch_public_ip(tor_fw_options_t *tor_fw_options,
   int r = 0;
 
   if (tor_fw_options->verbose)
-    fprintf(stdout, "V: tor_fw_fetch_public_ip\n");
+    fprintf(stderr, "V: tor_fw_fetch_public_ip\n");
 
   for (i=0; i<backends->n_backends; ++i) {
     if (tor_fw_options->verbose) {
-        fprintf(stdout, "V: running backend_state now: %i\n", i);
-        fprintf(stdout, "V: size of backend state: %u\n",
+        fprintf(stderr, "V: running backend_state now: %i\n", i);
+        fprintf(stderr, "V: size of backend state: %u\n",
                 (int)(backends->backend_ops)[i].state_len);
-        fprintf(stdout, "V: backend state name: %s\n",
+        fprintf(stderr, "V: backend state name: %s\n",
                 (char *)(backends->backend_ops)[i].name);
       }
     r = backends->backend_ops[i].fetch_public_ip(tor_fw_options,
                                                  backends->backend_state[i]);
-    fprintf(stdout, "tor-fw-helper: tor_fw_fetch_public_ip backend %s "
+    fprintf(stderr, "tor-fw-helper: tor_fw_fetch_public_ip backend %s "
             " returned: %i\n", (char *)(backends->backend_ops)[i].name, r);
   }
 }
