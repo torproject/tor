@@ -20,6 +20,7 @@
 #include <getopt.h>
 #include <time.h>
 #include <string.h>
+#include <assert.h>
 
 #include "container.h"
 
@@ -168,65 +169,123 @@ tor_fw_fetch_public_ip(tor_fw_options_t *tor_fw_options,
   }
 }
 
-/** Iterate over each of the supported <b>backends</b> and attempt to add a
- * port forward for the OR port stored in <b>tor_fw_options</b>. */
+/** Print a spec-conformant string to stdout describing the results of
+ *  the TCP port forwarding operation from <b>external_port</b> to
+ *  <b>internal_port</b>. */
 static void
-tor_fw_add_or_port(tor_fw_options_t *tor_fw_options,
-                       backends_t *backends)
+tor_fw_helper_report_port_fw_results(uint16_t internal_port,
+                                     uint16_t external_port,
+                                     int succeded,
+                                     const char *message)
 {
+  char *report_string = NULL;
+
+  tor_asprintf(&report_string, "%s %s %u %u %s %s\n",
+               "tor-fw-helper",
+               "tcp-forward",
+               external_port, internal_port,
+               succeded ? "SUCCESS" : "FAIL",
+               message);
+  fprintf(stdout, "%s", report_string);
+  fflush(stdout);
+  tor_free(report_string);
+}
+
+#define tor_fw_helper_report_port_fw_fail(i, e, m) \
+  tor_fw_helper_report_port_fw_results((i), (e), 0, (m))
+
+#define tor_fw_helper_report_port_fw_success(i, e, m) \
+  tor_fw_helper_report_port_fw_results((i), (e), 1, (m))
+
+/** Return a heap-allocated string containing the list of our
+ *  backends. It can be used in log messages. Be sure to free it
+ *  afterwards! */
+static char *
+get_list_of_backends_string(backends_t *backends)
+{
+  char *backend_names = NULL;
   int i;
-  int r = 0;
+  smartlist_t *backend_names_sl = smartlist_new();
 
-  if (tor_fw_options->verbose)
-    fprintf(stdout, "V: tor_fw_add_or_port\n");
+  assert(backends->n_backends);
 
-  for (i=0; i<backends->n_backends; ++i) {
-    if (tor_fw_options->verbose) {
-      fprintf(stdout, "V: running backend_state now: %i\n", i);
-      fprintf(stdout, "V: size of backend state: %u\n",
-              (int)(backends->backend_ops)[i].state_len);
-      fprintf(stdout, "V: backend state name: %s\n",
-              (const char *) backends->backend_ops[i].name);
-    }
-    r = backends->backend_ops[i].add_tcp_mapping(tor_fw_options,
-                                                 backends->backend_state[i]);
-    fprintf(stdout, "tor-fw-helper: tor_fw_add_or_port backend %s "
-            "returned: %i\n", (const char *) backends->backend_ops[i].name, r);
-  }
+  for (i=0; i<backends->n_backends; ++i)
+    smartlist_add(backend_names_sl, (char *) backends->backend_ops[i].name);
+
+  backend_names = smartlist_join_strings(backend_names_sl, ", ", 0, NULL);
+  smartlist_free(backend_names_sl);
+
+  return backend_names;
 }
 
 /** Iterate over each of the supported <b>backends</b> and attempt to add a
- * port forward for the Dir port stored in <b>tor_fw_options</b>. */
+ *  port forward for the port stored in <b>tor_fw_options</b>. */
 static void
-tor_fw_add_dir_port(tor_fw_options_t *tor_fw_options,
-                       backends_t *backends)
+tor_fw_add_ports(tor_fw_options_t *tor_fw_options,
+                 backends_t *backends)
 {
   int i;
   int r = 0;
+  int succeeded = 0;
 
   if (tor_fw_options->verbose)
-    fprintf(stdout, "V: tor_fw_add_dir_port\n");
+    fprintf(stderr, "V: %s\n", __func__);
 
-  for (i=0; i<backends->n_backends; ++i) {
-    if (tor_fw_options->verbose) {
-      fprintf(stdout, "V: running backend_state now: %i\n", i);
-      fprintf(stdout, "V: size of backend state: %u\n",
-              (int)(backends->backend_ops)[i].state_len);
-      fprintf(stdout, "V: backend state name: %s\n",
-              (char *)(backends->backend_ops)[i].name);
+  /** Loop all ports that need to be forwarded, and try to use our
+   *  backends for each port. If a backend succeeds, break the loop,
+   *  report success and get to the next port. If all backends fail,
+   *  report failure for that port. */
+  SMARTLIST_FOREACH_BEGIN(tor_fw_options->ports_to_forward,
+                          port_to_forward_t *, port_to_forward) {
+
+    succeeded = 0;
+
+    for (i=0; i<backends->n_backends; ++i) {
+      if (tor_fw_options->verbose) {
+        fprintf(stderr, "V: running backend_state now: %i\n", i);
+        fprintf(stderr, "V: size of backend state: %u\n",
+                (int)(backends->backend_ops)[i].state_len);
+        fprintf(stderr, "V: backend state name: %s\n",
+                (const char *) backends->backend_ops[i].name);
+      }
+
+      r = backends->backend_ops[i].add_tcp_mapping(port_to_forward->internal_port,
+                                                   port_to_forward->external_port,
+                                                   tor_fw_options->verbose,
+                                                   backends->backend_state[i]);
+      if (r == 0) { /* backend success */
+        tor_fw_helper_report_port_fw_success(port_to_forward->internal_port,
+                                             port_to_forward->external_port,
+                                             backends->backend_ops[i].name);
+        succeeded = 1;
+        break;
+      }
+
+      fprintf(stderr, "tor-fw-helper: tor_fw_add_port backend %s "
+              "returned: %i\n",
+              (const char *) backends->backend_ops[i].name, r);
     }
-    r = backends->backend_ops[i].add_tcp_mapping(tor_fw_options,
-                                                 backends->backend_state[i]);
-    fprintf(stdout, "tor-fw-helper: tor_fw_add_dir_port backend %s "
-            "returned: %i\n", (const char *)backends->backend_ops[i].name, r);
-  }
+
+    if (!succeeded) { /* all backends failed */
+      char *list_of_backends_str = get_list_of_backends_string(backends);
+      char *fail_msg = NULL;
+      tor_asprintf(&fail_msg, "All port forwarding backends (%s) failed.",
+                   list_of_backends_str);
+      tor_fw_helper_report_port_fw_fail(port_to_forward->internal_port,
+                                        port_to_forward->external_port,
+                                        fail_msg);
+      tor_free(list_of_backends_str);
+      tor_free(fail_msg);
+    }
+
+  } SMARTLIST_FOREACH_END(port_to_forward);
 }
 
 /** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
  * initialized.) (from common/compat.c) */
 static int
-network_init(void)
+tor_fw_helper_network_init(void)
 {
 #ifdef _WIN32
   /* This silly exercise is necessary before windows will allow
@@ -288,6 +347,33 @@ parse_port(const char *arg)
   smartlist_free(sl);
 
   return port_to_forward;
+}
+
+/** Report a failure of epic proportions: We didn't manage to
+ *  initialize any port forwarding backends. */
+static void
+report_full_fail(const smartlist_t *ports_to_forward, backends_t *backends)
+{
+  char *list_of_backends_str = NULL;
+  char *fail_msg = NULL;
+
+  if (!ports_to_forward)
+    return;
+
+  list_of_backends_str = get_list_of_backends_string(backends);
+  tor_asprintf(&fail_msg,
+               "Port forwarding backends (%s) could not be initialized.",
+               list_of_backends_str);
+
+  SMARTLIST_FOREACH_BEGIN(ports_to_forward,
+                          const port_to_forward_t *, port_to_forward) {
+    tor_fw_helper_report_port_fw_fail(port_to_forward->internal_port,
+                                      port_to_forward->external_port,
+                                      fail_msg);
+  } SMARTLIST_FOREACH_END(port_to_forward);
+
+  tor_free(list_of_backends_str);
+  tor_free(fail_msg);
 }
 
 int
