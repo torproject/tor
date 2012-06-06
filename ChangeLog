@@ -201,7 +201,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
       Fixes bug 5891; bugfix on 0.2.3.6-alpha. Also fixes bug 5508 in
       a better way.
     - Don't try to open non-control listeners when DisableNetwork is set.
-      Previousy, we'd open all listeners, then immediately close them.
+      Previously, we'd open all listeners, then immediately close them.
       Fixes bug 5604; bugfix on 0.2.3.9-alpha.
     - Don't abort the managed proxy protocol if the managed proxy
       sends us an unrecognized line; ignore it instead. Fixes bug
@@ -211,7 +211,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
     - Fix a compilation issue on GNU Hurd, which doesn't have PATH_MAX.
       Fixes bug 5355; bugfix on 0.2.3.11-alpha.
     - Remove bogus definition of "_WIN32" from src/win32/orconfig.h, to
-      unbreak the MSVC build. Fies bug 5858; bugfix on 0.2.3.12-alpha.
+      unbreak the MSVC build. Fixes bug 5858; bugfix on 0.2.3.12-alpha.
     - Resolve numerous small warnings and build issues with MSVC. Resolves
       bug 5859.
 
@@ -268,7 +268,7 @@ Changes in version 0.2.2.36 - 2012-05-24
     - Provide controllers with a safer way to implement the cookie
       authentication mechanism. With the old method, if another locally
       running program could convince a controller that it was the Tor
-      process, then that program could trick the contoller into telling
+      process, then that program could trick the controller into telling
       it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
       authentication method uses a challenge-response approach to prevent
       this attack. Fixes bug 5185; implements proposal 193.
@@ -397,7 +397,7 @@ Changes in version 0.2.3.15-alpha - 2012-04-30
     - When Tor is built with kernel headers from a recent (last few
       years) Linux kernel, do not fail to run on older (pre-2.6.28
       Linux kernels). Fixes bug 5112; bugfix on 0.2.3.1-alpha.
-    - Fix cross-compilation isssues with mingw. Bugfixes on 0.2.3.6-alpha
+    - Fix cross-compilation issues with mingw. Bugfixes on 0.2.3.6-alpha
       and 0.2.3.12-alpha.
     - Fix compilation with miniupnpc version 1.6; patch from
       Anthony G. Basile. Fixes bug 5434; bugfix on 0.2.3.12-alpha.
@@ -539,7 +539,7 @@ Changes in version 0.2.3.13-alpha - 2012-03-26
     - Provide controllers with a safer way to implement the cookie
       authentication mechanism. With the old method, if another locally
       running program could convince a controller that it was the Tor
-      process, then that program could trick the contoller into telling
+      process, then that program could trick the controller into telling
       it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
       authentication method uses a challenge-response approach to prevent
       this attack. Fixes bug 5185, implements proposal 193.

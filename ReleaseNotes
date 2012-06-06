@@ -42,7 +42,7 @@ Changes in version 0.2.2.36 - 2012-05-24
     - Provide controllers with a safer way to implement the cookie
       authentication mechanism. With the old method, if another locally
       running program could convince a controller that it was the Tor
-      process, then that program could trick the contoller into telling
+      process, then that program could trick the controller into telling
       it the contents of an arbitrary 32-byte file. The new "SAFECOOKIE"
       authentication method uses a challenge-response approach to prevent
       this attack. Fixes bug 5185; implements proposal 193.
