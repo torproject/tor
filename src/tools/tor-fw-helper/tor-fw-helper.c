@@ -21,6 +21,8 @@
 #include <time.h>
 #include <string.h>
 
+#include "container.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
@@ -244,6 +246,50 @@ network_init(void)
   return 0;
 }
 
+/** Parse the '-p' argument of tor-fw-helper. Its format is
+ *  [<external port>]:<internal port>, and <external port> is optional.
+ *  Return NULL if <b>arg</b> was c0rrupted. */
+static port_to_forward_t *
+parse_port(const char *arg)
+{
+  smartlist_t *sl = smartlist_new();
+  port_to_forward_t *port_to_forward = NULL;
+  char *port_str = NULL;
+  int ok;
+  int port;
+
+  smartlist_split_string(sl, arg, ":", 0, 0);
+  if (smartlist_len(sl) != 2)
+    goto err;
+
+  port_to_forward = tor_malloc(sizeof(port_to_forward_t));
+  if (!port_to_forward)
+    goto err;
+
+  port_str = smartlist_get(sl, 0); /* macroify ? */
+  port = (int)tor_parse_long(port_str, 10, 1, 65536, &ok, NULL);
+  if (!ok && strlen(port_str)) /* ":1555" is valid */
+    goto err;
+  port_to_forward->external_port = port;
+
+  port_str = smartlist_get(sl, 1);
+  port = (int)tor_parse_long(port_str, 10, 1, 65536, &ok, NULL);
+  if (!ok)
+    goto err;
+  port_to_forward->internal_port = port;
+
+  goto done;
+
+ err:
+  tor_free(port_to_forward);
+
+ done:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+
+  return port_to_forward;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -283,6 +329,16 @@ main(int argc, char **argv)
           fprintf(stderr, "E: Failed to parse '%s'.\n", optarg);
           usage();
           exit(1);
+        }
+
+        /* If no external port was given (it's optional), set it to be
+         * equal with the internal port. */
+        if (!port_to_forward->external_port) {
+          assert(port_to_forward->internal_port);
+          if (tor_fw_options.verbose)
+            fprintf(stderr, "V: No external port was given. Setting to %u.\n",
+                    port_to_forward->internal_port);
+          port_to_forward->external_port = port_to_forward->internal_port;
         }
 
         if (!tor_fw_options.ports_to_forward)
