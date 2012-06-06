@@ -110,27 +110,25 @@ wait_until_fd_readable(tor_socket_t fd, struct timeval *timeout)
   return 0;
 }
 
-/** Add a TCP port mapping for a single port stored in <b>tor_fw_options</b>
- * using the <b>natpmp_t</b> stored in <b>backend_state</b>. */
 int
-tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
-                           void *backend_state)
+tor_natpmp_add_tcp_mapping(uint16_t internal_port, uint16_t external_port,
+                           int is_verbose, void *backend_state)
 {
-  natpmp_state_t *state = (natpmp_state_t *) backend_state;
   int r = 0;
   int x = 0;
   int sav_errno;
+  natpmp_state_t *state = (natpmp_state_t *) backend_state;
 
   struct timeval timeout;
 
-  if (tor_fw_options->verbose)
-    fprintf(stdout, "V: sending natpmp portmapping request...\n");
+  if (is_verbose)
+    fprintf(stderr, "V: sending natpmp portmapping request...\n");
   r = sendnewportmappingrequest(&(state->natpmp), state->protocol,
-                                tor_fw_options->internal_port,
-                                tor_fw_options->external_port,
+                                internal_port,
+                                external_port,
                                 state->lease);
-  if (tor_fw_options->verbose)
-    fprintf(stdout, "tor-fw-helper: NAT-PMP sendnewportmappingrequest "
+  if (is_verbose)
+    fprintf(stderr, "tor-fw-helper: NAT-PMP sendnewportmappingrequest "
             "returned %d (%s)\n", r, r==12?"SUCCESS":"FAILED");
 
   do {
@@ -139,8 +137,8 @@ tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
     if (x == -1)
       return -1;
 
-    if (tor_fw_options->verbose)
-      fprintf(stdout, "V: attempting to readnatpmpreponseorretry...\n");
+    if (is_verbose)
+      fprintf(stderr, "V: attempting to readnatpmpreponseorretry...\n");
     r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
     sav_errno = errno;
 
@@ -163,16 +161,14 @@ tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
   }
 
   if (r == NATPMP_SUCCESS) {
-    fprintf(stdout, "tor-fw-helper: NAT-PMP mapped public port %hu to"
+    fprintf(stderr, "tor-fw-helper: NAT-PMP mapped public port %hu to"
             " localport %hu liftime %u\n",
             (state->response).pnu.newportmapping.mappedpublicport,
             (state->response).pnu.newportmapping.privateport,
             (state->response).pnu.newportmapping.lifetime);
   }
 
-  tor_fw_options->nat_pmp_status = 1;
-
-  return r;
+  return (r == NATPMP_SUCCESS) ? 0 : -1;
 }
 
 /** Fetch our likely public IP from our upstream NAT-PMP enabled NAT device.

@@ -52,8 +52,8 @@ typedef struct tor_fw_backend_t {
   int (*init)(tor_fw_options_t *options, void *backend_state);
   int (*cleanup)(tor_fw_options_t *options, void *backend_state);
   int (*fetch_public_ip)(tor_fw_options_t *options, void *backend_state);
-  int (*add_tcp_mapping)(tor_fw_options_t *options, void *backend_state);
+  int (*add_tcp_mapping)(uint16_t internal_port, uint16_t external_port,
+                         int is_verbose, void *backend_state);
 } tor_fw_backend_t;
-
 #endif
 
