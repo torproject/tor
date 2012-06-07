@@ -137,6 +137,10 @@ const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
 struct transport_t;
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const struct transport_t **transport);
+const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
+                                                   uint16_t port);
+
+int validate_pluggable_transports_config(void);
 
 #endif
 

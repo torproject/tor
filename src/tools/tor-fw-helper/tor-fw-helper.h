@@ -17,7 +17,7 @@
 #include <time.h>
 
 /** The current version of tor-fw-helper. */
-#define tor_fw_version "0.1"
+#define tor_fw_version "0.2"
 
 /** This is an arbitrary hard limit - We currently have two (NAT-PMP and UPnP).
  We're likely going to add the Intel UPnP library but nothing else comes to
@@ -36,7 +36,7 @@ typedef struct {
   int verbose;
   int help;
   int test_commandline;
-  smartlist_t *ports_to_forward;
+  struct smartlist_t *ports_to_forward;
   int fetch_public_ip;
   int nat_pmp_status;
   int upnp_status;
