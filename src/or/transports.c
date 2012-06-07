@@ -585,15 +585,12 @@ pt_configure_remaining_proxies(void)
     mark_my_descriptor_dirty("configured managed proxies");
 }
 
-#ifdef _WIN32
-
 /** Attempt to continue configuring managed proxy <b>mp</b>. */
 static void
 configure_proxy(managed_proxy_t *mp)
 {
-  int pos;
-  char stdout_buf[200];
-  smartlist_t *lines = NULL;
+  smartlist_t *proxy_output = NULL;
+  enum stream_status stream_status = 0;
 
   /* if we haven't launched the proxy yet, do it now */
   if (mp->conf_state == PT_PROTO_INFANT) {
@@ -607,28 +604,18 @@ configure_proxy(managed_proxy_t *mp)
   tor_assert(mp->conf_state != PT_PROTO_INFANT);
   tor_assert(mp->process_handle);
 
-  pos = tor_read_all_handle(tor_process_get_stdout_pipe(mp->process_handle),
-                            stdout_buf, sizeof(stdout_buf) - 1, NULL);
-  if (pos < 0) {
-    log_notice(LD_GENERAL, "Failed to read data from managed proxy '%s'.",
-               mp->argv[0]);
-    mp->conf_state = PT_PROTO_BROKEN;
+  proxy_output =
+    tor_get_lines_from_handle(tor_process_get_stdout_pipe(mp->process_handle),
+                              &stream_status);
+  if (!proxy_output) { /* failed to get input from proxy */
+    if (stream_status != IO_STREAM_EAGAIN)
+      mp->conf_state = PT_PROTO_BROKEN;
+
     goto done;
   }
 
-  if (pos == 0) /* proxy has nothing interesting to say. */
-    return;
-
-  /* End with a null even if there isn't a \r\n at the end */
-  /* TODO: What if this is a partial line? */
-  stdout_buf[pos] = '\0';
-
-  /* Split up the buffer */
-  lines = smartlist_new();
-  tor_split_lines(lines, stdout_buf, pos);
-
   /* Handle lines. */
-  SMARTLIST_FOREACH_BEGIN(lines, const char *, line) {
+  SMARTLIST_FOREACH_BEGIN(proxy_output, const char *, line) {
     handle_proxy_line(line, mp);
     if (proxy_configuration_finished(mp))
       goto done;
@@ -639,58 +626,11 @@ configure_proxy(managed_proxy_t *mp)
   if (proxy_configuration_finished(mp))
     handle_finished_proxy(mp);
 
-  if (lines)
-    smartlist_free(lines);
-}
-
-#else /* _WIN32 */
-
-/** Attempt to continue configuring managed proxy <b>mp</b>. */
-static void
-configure_proxy(managed_proxy_t *mp)
-{
-  enum stream_status r;
-  char stdout_buf[200];
-
-  /* if we haven't launched the proxy yet, do it now */
-  if (mp->conf_state == PT_PROTO_INFANT) {
-    if (launch_managed_proxy(mp) < 0) { /* launch fail */
-      mp->conf_state = PT_PROTO_FAILED_LAUNCH;
-      handle_finished_proxy(mp);
-    }
-    return;
-  }
-
-  tor_assert(mp->conf_state != PT_PROTO_INFANT);
-  tor_assert(mp->process_handle);
-
-  while (1) {
-    r = get_string_from_pipe(tor_process_get_stdout_pipe(mp->process_handle),
-                             stdout_buf, sizeof(stdout_buf) - 1);
-
-    if (r  == IO_STREAM_OKAY) { /* got a line; handle it! */
-      handle_proxy_line((const char *)stdout_buf, mp);
-    } else if (r == IO_STREAM_EAGAIN) { /* check back later */
-      return;
-    } else if (r == IO_STREAM_CLOSED || r == IO_STREAM_TERM) { /* snap! */
-      log_warn(LD_GENERAL, "Our communication channel with the managed proxy "
-               "'%s' closed. Most probably application stopped running.",
-               mp->argv[0]);
-      mp->conf_state = PT_PROTO_BROKEN;
-    } else { /* unknown stream status */
-      log_warn(LD_BUG, "Unknown stream status '%d' while configuring managed "
-               "proxy '%s'.", (int)r, mp->argv[0]);
-    }
-
-    /* if the proxy finished configuring, exit the loop. */
-    if (proxy_configuration_finished(mp)) {
-      handle_finished_proxy(mp);
-      return;
-    }
+  if (proxy_output) {
+    SMARTLIST_FOREACH(proxy_output, char *, cp, tor_free(cp));
+    smartlist_free(proxy_output);
   }
 }
-
-#endif /* _WIN32 */
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
