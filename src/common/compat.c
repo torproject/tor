@@ -143,7 +143,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
   return fd;
 }
 
-/** As fpoen(path,mode), but ensures that the O_CLOEXEC bit is set on the
+/** As fopen(path,mode), but ensures that the O_CLOEXEC bit is set on the
  * underlying file handle. */
 FILE *
 tor_fopen_cloexec(const char *path, const char *mode)
