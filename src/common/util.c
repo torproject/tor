@@ -3381,7 +3381,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   process_handle_t *process_handle;
   int status;
 
-  STARTUPINFO siStartInfo;
+  STARTUPINFOA siStartInfo;
   BOOL retval = FALSE;
 
   SECURITY_ATTRIBUTES saAttr;
@@ -3442,7 +3442,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   /* Create the child process */
 
-  retval = CreateProcess(filename,      // module name
+  retval = CreateProcessA(filename,      // module name
                  joined_argv,   // command line
   /* TODO: should we set explicit security attributes? (#2046, comment 5) */
                  NULL,          // process security attributes
