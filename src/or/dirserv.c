@@ -1855,7 +1855,7 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
    * *clients* suffering from bug 2722 are obsolete.  The first version
    * to fix the bug was 0.2.2.25-alpha. */
   return (router->wants_to_be_hs_dir && router->dir_port &&
-          uptime > get_options()->MinUptimeHidServDirectoryV2 &&
+          uptime >= get_options()->MinUptimeHidServDirectoryV2 &&
           node->is_running);
 }
 
