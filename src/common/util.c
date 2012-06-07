@@ -4369,6 +4369,50 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
 }
 
 #ifdef _WIN32
+
+/** Return a smartlist containing lines outputted from
+ *  <b>handle</b>. Return NULL on error, and set
+ *  <b>stream_status_out</b> appropriately. */
+smartlist_t *
+tor_get_lines_from_handle(HANDLE *handle,
+                          enum stream_status *stream_status_out)
+{
+  int pos;
+  char stdout_buf[600] = {0};
+  smartlist_t *lines = NULL;
+
+  tor_assert(stream_status);
+
+  *stream_status = IO_STREAM_TERM;
+
+  pos = tor_read_all_handle(handle, stdout_buf, sizeof(stdout_buf) - 1, NULL);
+  if (pos < 0) {
+    *stream_status = IO_STREAM_TERM;
+    return NULL;
+  }
+  if (pos == 0) {
+    *stream_status = IO_STREAM_EAGAIN;
+    return NULL;
+  }
+
+  /* End with a null even if there isn't a \r\n at the end */
+  /* TODO: What if this is a partial line? */
+  stdout_buf[pos] = '\0';
+
+  /* Split up the buffer */
+  lines = smartlist_new();
+  tor_split_lines(lines, stdout_buf, pos);
+
+  /* Currently 'lines' is populated with strings residing on the
+     stack. Replace them with their exact copies on the heap: */
+  SMARTLIST_FOREACH(lines, char *, line,
+                    SMARTLIST_REPLACE_CURRENT(lines, line, tor_strdup(line)));
+
+  *stream_status = IO_STREAM_OKAY;
+
+  return lines;
+}
+
 /** Read from stream, and send lines to log at the specified log level.
  * Returns -1 if there is a error reading, and 0 otherwise.
  * If the generated stream is flushed more often than on new lines, or
@@ -4415,6 +4459,33 @@ log_from_handle(HANDLE *pipe, int severity)
 }
 
 #else
+
+/** Return a smartlist containing lines outputted from
+ *  <b>handle</b>. Return NULL on error, and set <b>stream_status</b>
+ *  appropriately. */
+smartlist_t *
+tor_get_lines_from_handle(FILE *handle, enum stream_status *stream_status_out)
+{
+  enum stream_status stream_status;
+  char stdout_buf[400];
+  smartlist_t *lines = NULL;
+
+  while (1) {
+    memset(stdout_buf, 0, sizeof(stdout_buf));
+
+    stream_status = get_string_from_pipe(handle,
+                                         stdout_buf, sizeof(stdout_buf) - 1);
+    if (stream_status != IO_STREAM_OKAY)
+      goto done;
+
+    if (!lines) lines = smartlist_new();
+    smartlist_add(lines, tor_strdup(stdout_buf));
+  }
+
+ done:
+  *stream_status_out = stream_status;
+  return lines;
+}
 
 /** Read from stream, and send lines to log at the specified log level.
  * Returns 1 if stream is closed normally, -1 if there is a error reading, and

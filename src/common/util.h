@@ -464,6 +464,16 @@ HANDLE tor_process_get_stdout_pipe(process_handle_t *process_handle);
 FILE *tor_process_get_stdout_pipe(process_handle_t *process_handle);
 #endif
 
+#ifdef _WIN32
+struct smartlist_t *
+tor_get_lines_from_handle(HANDLE *handle,
+                          enum stream_status *stream_status);
+#else
+struct smartlist_t *
+tor_get_lines_from_handle(FILE *handle,
+                          enum stream_status *stream_status);
+#endif
+
 int tor_terminate_process(process_handle_t *process_handle);
 void tor_process_handle_destroy(process_handle_t *process_handle,
                                 int also_terminate_process);
