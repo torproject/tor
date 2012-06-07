@@ -373,7 +373,8 @@ void write_pidfile(char *filename);
 
 /* Port forwarding */
 void tor_check_port_forwarding(const char *filename,
-                               int dir_port, int or_port, time_t now);
+                               struct smartlist_t *ports_to_forward,
+                               time_t now);
 
 typedef struct process_handle_t process_handle_t;
 typedef struct process_environment_t process_environment_t;

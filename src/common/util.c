@@ -4605,9 +4605,128 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
   return IO_STREAM_TERM;
 }
 
-/* DOCDOC tor_check_port_forwarding */
+/** Parse a <b>line</b> from tor-fw-helper and issue an appropriate
+ *  log message to our user. */
+static void
+handle_fw_helper_line(const char *line)
+{
+  smartlist_t *tokens = smartlist_new();
+  char *message = NULL;
+  char *message_for_log = NULL;
+  const char *external_port = NULL;
+  const char *internal_port = NULL;
+  const char *result = NULL;
+  int port = 0;
+  int success = 0;
+
+  smartlist_split_string(tokens, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(tokens) < 5)
+    goto err;
+
+  if (strcmp(smartlist_get(tokens, 0), "tor-fw-helper") ||
+      strcmp(smartlist_get(tokens, 1), "tcp-forward"))
+    goto err;
+
+  external_port = smartlist_get(tokens, 2);
+  internal_port = smartlist_get(tokens, 3);
+  result = smartlist_get(tokens, 4);
+
+  if (smartlist_len(tokens) > 5) {
+    /* If there are more than 5 tokens, they are part of [<message>].
+       Let's use a second smartlist to form the whole message;
+       strncat loops suck. */
+    int i;
+    int message_words_n = smartlist_len(tokens) - 5;
+    smartlist_t *message_sl = smartlist_new();
+    for (i = 0; i < message_words_n; i++)
+      smartlist_add(message_sl, smartlist_get(tokens, 5+i));
+
+    tor_assert(smartlist_len(message_sl) > 0);
+    message = smartlist_join_strings(message_sl, " ", 0, NULL);
+
+    /* wrap the message in log-friendly wrapping */
+    tor_asprintf(&message_for_log, " ('%s')", message);
+
+    smartlist_free(message_sl);
+  }
+
+  port = atoi(external_port);
+  if (port < 1 || port > 65535)
+    goto err;
+
+  port = atoi(internal_port);
+  if (port < 1 || port > 65535)
+    goto err;
+
+  if (!strcmp(result, "SUCCESS"))
+    success = 1;
+  else if (!strcmp(result, "FAIL"))
+    success = 0;
+  else
+    goto err;
+
+  if (!success) {
+    log_warn(LD_GENERAL, "Tor was unable to forward TCP port '%s' to '%s'%s. "
+             "Please make sure that your router supports port "
+             "forwarding protocols (like NAT-PMP). Note that if '%s' is "
+             "your ORPort, your relay will be unable to receive inbound "
+             "traffic.", external_port, internal_port,
+             message_for_log ? message_for_log : "",
+             internal_port);
+  } else {
+    log_notice(LD_GENERAL,
+               "Tor successfully forwarded TCP port '%s' to '%s'%s.",
+               external_port, internal_port,
+               message_for_log ? message_for_log : "");
+  }
+
+  goto done;
+
+ err:
+  log_warn(LD_GENERAL, "tor-fw-helper sent us a string we could not "
+           "parse (%s).", line);
+
+ done:
+  SMARTLIST_FOREACH(tokens, char *, cp, tor_free(cp));
+  smartlist_free(tokens);
+  tor_free(message);
+  tor_free(message_for_log);
+}
+
+/** Read what tor-fw-helper has to say in its stdout and handle it
+ *  appropriately */
+static int
+handle_fw_helper_output(process_handle_t *process_handle)
+{
+  smartlist_t *fw_helper_output = NULL;
+  enum stream_status stream_status = 0;
+
+  fw_helper_output =
+    tor_get_lines_from_handle(tor_process_get_stdout_pipe(process_handle),
+                              &stream_status);
+  if (!fw_helper_output) { /* didn't get any output from tor-fw-helper */
+    /* if EAGAIN we should retry in the future */
+    return (stream_status == IO_STREAM_EAGAIN) ? 0 : -1;
+  }
+
+  /* Handle the lines we got: */
+  SMARTLIST_FOREACH_BEGIN(fw_helper_output, char *, line) {
+    handle_fw_helper_line(line);
+    tor_free(line);
+  } SMARTLIST_FOREACH_END(line);
+
+  smartlist_free(fw_helper_output);
+
+  return 0;
+}
+
+/** Spawn tor-fw-helper and ask it to forward the ports in
+ *  <b>ports_to_forward</b>. */
 void
-tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
+tor_check_port_forwarding(const char *filename,
+                          smartlist_t *ports_to_forward,
                           time_t now)
 {
 /* When fw-helper succeeds, how long do we wait until running it again */
@@ -4621,32 +4740,33 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
   static process_handle_t *child_handle=NULL;
 
   static time_t time_to_run_helper = 0;
-  int stdout_status, stderr_status, retval;
-  const char *argv[10];
-  char s_dirport[6], s_orport[6];
+  int stderr_status, retval;
+  int stdout_status = 0;
 
   tor_assert(filename);
-
-  /* Set up command line for tor-fw-helper */
-  snprintf(s_dirport, sizeof s_dirport, "%d", dir_port);
-  snprintf(s_orport, sizeof s_orport, "%d", or_port);
-
-  /* TODO: Allow different internal and external ports */
-  argv[0] = filename;
-  argv[1] = "--internal-or-port";
-  argv[2] = s_orport;
-  argv[3] = "--external-or-port";
-  argv[4] = s_orport;
-  argv[5] = "--internal-dir-port";
-  argv[6] = s_dirport;
-  argv[7] = "--external-dir-port";
-  argv[8] = s_dirport;
-  argv[9] = NULL;
 
   /* Start the child, if it is not already running */
   if ((!child_handle || child_handle->status != PROCESS_STATUS_RUNNING) &&
       time_to_run_helper < now) {
+    /* tor-fw-helper cli looks like this: tor_fw_helper -p :5555 -p 4555:1111 */
+    const char **argv; /* cli arguments */
+    /* Number of cli arguments: one for the filename, two for each
+       smartlist element (one for "-p" and one for the ports), and one
+       for the final NULL. */
+    int args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
+    int argv_index = 0; /* index inside 'argv' */
     int status;
+
+    tor_assert(smartlist_len(ports_to_forward) > 0);
+
+    argv = tor_malloc_zero(sizeof(char*)*args_n);
+
+    argv[argv_index++] = filename;
+    SMARTLIST_FOREACH_BEGIN(ports_to_forward, const char *, port) {
+      argv[argv_index++] = "-p";
+      argv[argv_index++] = port;
+    } SMARTLIST_FOREACH_END(port);
+    argv[argv_index] = NULL;
 
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
@@ -4662,6 +4782,8 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 #else
     status = tor_spawn_background(filename, argv, NULL, &child_handle);
 #endif
+
+    tor_free(argv);
 
     if (PROCESS_STATUS_ERROR == status) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
@@ -4680,16 +4802,17 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     /* Read from stdout/stderr and log result */
     retval = 0;
 #ifdef _WIN32
-    stdout_status = log_from_handle(child_handle->stdout_pipe, LOG_INFO);
-    stderr_status = log_from_handle(child_handle->stderr_pipe, LOG_WARN);
-    /* If we got this far (on Windows), the process started */
-    retval = 0;
+    stderr_status = log_from_handle(child_handle->stderr_pipe, LOG_INFO);
 #else
-    stdout_status = log_from_pipe(child_handle->stdout_handle,
-                    LOG_INFO, filename, &retval);
     stderr_status = log_from_pipe(child_handle->stderr_handle,
-                    LOG_WARN, filename, &retval);
+                                  LOG_INFO, filename, &retval);
 #endif
+    if (handle_fw_helper_output(child_handle) < 0) {
+      log_warn(LD_GENERAL, "Failed to handle fw helper output.");
+      stdout_status = -1;
+      retval = -1;
+    }
+
     if (retval) {
       /* There was a problem in the child process */
       time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
