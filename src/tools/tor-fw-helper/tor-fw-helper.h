@@ -24,17 +24,19 @@
  mind at the moment. */
 #define MAX_BACKENDS 23
 
+/** Forward traffic received in port <b>external_port</b> in the
+ *  external side of our NAT to <b>internal_port</b> in this host. */
+typedef struct {
+  uint16_t external_port;
+  uint16_t internal_port;
+} port_to_forward_t;
+
 /** This is where we store parsed commandline options. */
 typedef struct {
   int verbose;
   int help;
   int test_commandline;
-  uint16_t private_dir_port;
-  uint16_t private_or_port;
-  uint16_t public_dir_port;
-  uint16_t public_or_port;
-  uint16_t internal_port;
-  uint16_t external_port;
+  smartlist_t *ports_to_forward;
   int fetch_public_ip;
   int nat_pmp_status;
   int upnp_status;

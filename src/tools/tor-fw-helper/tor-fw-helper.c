@@ -45,7 +45,7 @@ typedef struct backends_t {
   void *backend_state[MAX_BACKENDS];
 } backends_t;
 
-/** Initalize each backend helper with the user input stored in <b>options</b>
+/** Initialize each backend helper with the user input stored in <b>options</b>
  * and put the results in the <b>backends</b> struct. */
 static int
 init_backends(tor_fw_options_t *options, backends_t *backends)
@@ -97,10 +97,7 @@ usage(void)
           " [-T|--Test]\n"
           " [-v|--verbose]\n"
           " [-g|--fetch-public-ip]\n"
-          " -i|--internal-or-port [TCP port]\n"
-          " [-e|--external-or-port [TCP port]]\n"
-          " [-d|--internal-dir-port [TCP port]\n"
-          " [-p|--external-dir-port [TCP port]]]\n");
+          " [-p|--forward-port ([<external port>]:<internal port>])\n");
 }
 
 /** Log commandline options to a hardcoded file <b>tor-fw-helper.log</b> in the
@@ -259,22 +256,20 @@ main(int argc, char **argv)
   memset(&tor_fw_options, 0, sizeof(tor_fw_options));
   memset(&backend_state, 0, sizeof(backend_state));
 
+  // Parse CLI arguments.
   while (1) {
     int option_index = 0;
     static struct option long_options[] =
       {
         {"verbose", 0, 0, 'v'},
         {"help", 0, 0, 'h'},
-        {"internal-or-port", 1, 0, 'i'},
-        {"external-or-port", 1, 0, 'e'},
-        {"internal-dir-port", 1, 0, 'd'},
-        {"external-dir-port", 1, 0, 'p'},
+        {"port", 1, 0, 'p'},
         {"fetch-public-ip", 0, 0, 'g'},
         {"test-commandline", 0, 0, 'T'},
         {0, 0, 0, 0}
       };
 
-    c = getopt_long(argc, argv, "vhi:e:d:p:gT",
+    c = getopt_long(argc, argv, "vhp:gT",
                     long_options, &option_index);
     if (c == -1)
       break;
@@ -282,14 +277,21 @@ main(int argc, char **argv)
     switch (c) {
       case 'v': tor_fw_options.verbose = 1; break;
       case 'h': tor_fw_options.help = 1; usage(); exit(1); break;
-      case 'i': sscanf(optarg, "%hu", &tor_fw_options.private_or_port);
+      case 'p': {
+        port_to_forward_t *port_to_forward = parse_port(optarg);
+        if (!port_to_forward) {
+          fprintf(stderr, "E: Failed to parse '%s'.\n", optarg);
+          usage();
+          exit(1);
+        }
+
+        if (!tor_fw_options.ports_to_forward)
+          tor_fw_options.ports_to_forward = smartlist_new();
+
+        smartlist_add(tor_fw_options.ports_to_forward, port_to_forward);
+
         break;
-      case 'e': sscanf(optarg, "%hu", &tor_fw_options.public_or_port);
-        break;
-      case 'd': sscanf(optarg, "%hu", &tor_fw_options.private_dir_port);
-        break;
-      case 'p': sscanf(optarg, "%hu", &tor_fw_options.public_dir_port);
-        break;
+      }
       case 'g': tor_fw_options.fetch_public_ip = 1; break;
       case 'T': tor_fw_options.test_commandline = 1; break;
       case '?': break;
@@ -297,100 +299,69 @@ main(int argc, char **argv)
     }
   }
 
-  if (tor_fw_options.verbose) {
-    fprintf(stderr, "V: tor-fw-helper version %s\n"
-            "V: We were called with the following arguments:\n"
-            "V: verbose = %d, help = %d, pub or port = %u, "
-            "priv or port = %u\n"
-            "V: pub dir port =  %u, priv dir port = %u\n"
-            "V: fetch_public_ip = %u\n",
-            tor_fw_version, tor_fw_options.verbose, tor_fw_options.help,
-            tor_fw_options.private_or_port, tor_fw_options.public_or_port,
-            tor_fw_options.private_dir_port, tor_fw_options.public_dir_port,
-            tor_fw_options.fetch_public_ip);
+  { // Verbose output
+
+    if (tor_fw_options.verbose)
+      fprintf(stderr, "V: tor-fw-helper version %s\n"
+              "V: We were called with the following arguments:\n"
+              "V: verbose = %d, help = %d, fetch_public_ip = %u\n",
+              tor_fw_version, tor_fw_options.verbose, tor_fw_options.help,
+              tor_fw_options.fetch_public_ip);
+
+    if (tor_fw_options.verbose && tor_fw_options.ports_to_forward) {
+      fprintf(stderr, "V: TCP forwarding:\n");
+      SMARTLIST_FOREACH(tor_fw_options.ports_to_forward,
+                        const port_to_forward_t *, port_to_forward,
+                        fprintf(stderr, "V: External: %u, Internal: %u\n",
+                                port_to_forward->external_port,
+                                port_to_forward->internal_port));
+    }
   }
 
   if (tor_fw_options.test_commandline) {
     return log_commandline_options(argc, argv);
   }
 
-  /* At the very least, we require an ORPort;
-     Given a private ORPort, we can ask for a mapping that matches the port
-     externally.
-  */
-  if (!tor_fw_options.private_or_port && !tor_fw_options.fetch_public_ip) {
-    fprintf(stderr, "E: We require an ORPort or fetch_public_ip"
-            " request!\n");
+  // See if the user actually wants us to do something.
+  if (!tor_fw_options.fetch_public_ip && !tor_fw_options.ports_to_forward) {
+    fprintf(stderr, "E: We require a port to be forwarded or "
+            "fetch_public_ip request!\n");
     usage();
     exit(1);
-  } else {
-    /* When we only have one ORPort, internal/external are
-       set to be the same.*/
-    if (!tor_fw_options.public_or_port && tor_fw_options.private_or_port) {
-      if (tor_fw_options.verbose)
-        fprintf(stdout, "V: We're setting public_or_port = "
-                "private_or_port.\n");
-      tor_fw_options.public_or_port = tor_fw_options.private_or_port;
-    }
-  }
-  if (!tor_fw_options.private_dir_port) {
-    if (tor_fw_options.verbose)
-      fprintf(stdout, "V: We have no DirPort; no hole punching for "
-              "DirPorts\n");
-
-  } else {
-    /* When we only have one DirPort, internal/external are
-       set to be the same.*/
-    if (!tor_fw_options.public_dir_port && tor_fw_options.private_dir_port) {
-      if (tor_fw_options.verbose)
-        fprintf(stdout, "V: We're setting public_or_port = "
-                "private_or_port.\n");
-
-      tor_fw_options.public_dir_port = tor_fw_options.private_dir_port;
-    }
-  }
-
-  if (tor_fw_options.verbose) {
-    fprintf(stdout, "V: pub or port = %u, priv or port = %u\n"
-            "V: pub dir port =  %u, priv dir port = %u\n",
-            tor_fw_options.private_or_port, tor_fw_options.public_or_port,
-            tor_fw_options.private_dir_port,
-            tor_fw_options.public_dir_port);
   }
 
   // Initialize networking
-  if (network_init())
+  if (tor_fw_helper_network_init())
     exit(1);
 
   // Initalize the various fw-helper backend helpers
   r = init_backends(&tor_fw_options, &backend_state);
-  if (r)
-    printf("tor-fw-helper: %i NAT traversal helper(s) loaded\n", r);
+  if (!r) { // all backends failed:
+    // report our failure
+    report_full_fail(tor_fw_options.ports_to_forward, &backend_state);
+    fprintf(stderr, "V: tor-fw-helper: All backends failed.\n");
+    exit(1);
+  } else { // some backends succeeded:
+    fprintf(stderr, "tor-fw-helper: %i NAT traversal helper(s) loaded\n", r);
+  }
 
+  // Forward TCP ports.
+  if (tor_fw_options.ports_to_forward) {
+    tor_fw_add_ports(&tor_fw_options, &backend_state);
+  }
+
+  // Fetch our public IP.
   if (tor_fw_options.fetch_public_ip) {
     tor_fw_fetch_public_ip(&tor_fw_options, &backend_state);
   }
 
-  if (tor_fw_options.private_or_port) {
-    tor_fw_options.internal_port = tor_fw_options.private_or_port;
-    tor_fw_options.external_port = tor_fw_options.private_or_port;
-    tor_fw_add_or_port(&tor_fw_options, &backend_state);
-  }
-
-  if (tor_fw_options.private_dir_port) {
-    tor_fw_options.internal_port = tor_fw_options.private_dir_port;
-    tor_fw_options.external_port = tor_fw_options.private_dir_port;
-    tor_fw_add_dir_port(&tor_fw_options, &backend_state);
-  }
-
-  r = (((tor_fw_options.nat_pmp_status | tor_fw_options.upnp_status)
-        |tor_fw_options.public_ip_status));
-  if (r > 0) {
-    fprintf(stdout, "tor-fw-helper: SUCCESS\n");
-  } else {
-    fprintf(stderr, "tor-fw-helper: FAILURE\n");
+  // Cleanup and exit.
+  if (tor_fw_options.ports_to_forward) {
+    SMARTLIST_FOREACH(tor_fw_options.ports_to_forward,
+                      port_to_forward_t *, port,
+                      tor_free(port));
+    smartlist_free(tor_fw_options.ports_to_forward);
   }
 
   exit(r);
 }
-
