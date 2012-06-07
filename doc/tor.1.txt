@@ -1372,9 +1372,9 @@ is non-zero):
     cells spend in circuit queues to disk every 24 hours. (Default: 0)
 
 **DirReqStatistics** **0**|**1**::
-    When this option is enabled, Tor writes statistics on the number and
-    response time of network status requests to disk every 24 hours.
-    (Default: 0)
+    When this option is enabled, a Tor directory writes statistics on the
+    number and response time of network status requests to disk every 24
+    hours. (Default: 1).
 
 **EntryStatistics** **0**|**1**::
     When this option is enabled, Tor writes statistics on the number of
@@ -1391,7 +1391,7 @@ is non-zero):
 **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
-    (Default: 0)
+    (Default: 1)
 
 DIRECTORY SERVER OPTIONS
 ------------------------
