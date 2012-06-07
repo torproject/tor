@@ -22,7 +22,7 @@ Changes in version 0.2.2.37 - 2012-06-06
       ExitNodes config option. Fixes bug 5283; bugfix on 0.2.0.10-alpha.
 
   o Minor bugfixes:
-    - Fix a build warning with Clang 3.1 related to our use of vasprint.
+    - Fix a build warning with Clang 3.1 related to our use of vasprintf.
       Fixes bug 5969. Bugfix on 0.2.2.11-alpha.
 
   o Minor features:
