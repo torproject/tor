@@ -1547,7 +1547,7 @@ run_scheduled_events(time_t now)
       options->PortForwarding &&
       is_server) {
 #define PORT_FORWARDING_CHECK_INTERVAL 5
-    smartlist_t *ports_to_forward = NULL;//get_list_of_ports_to_forward();
+    smartlist_t *ports_to_forward = get_list_of_ports_to_forward();
     if (ports_to_forward) {
       tor_check_port_forwarding(options->PortForwardingHelper,
                                 ports_to_forward,

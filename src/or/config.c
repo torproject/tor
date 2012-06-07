@@ -7254,6 +7254,41 @@ remove_file_if_very_old(const char *fname, time_t now)
   }
 }
 
+/** Return a smartlist of ports that must be forwarded by
+ *  tor-fw-helper. The smartlist contains the ports in a string format
+ *  that is understandable by tor-fw-helper. */
+smartlist_t *
+get_list_of_ports_to_forward(void)
+{
+  smartlist_t *ports_to_forward = smartlist_new();
+  int port = 0;
+
+  /** XXX TODO tor-fw-helper does not support forwarding ports to
+      other hosts than the local one. If the user is binding to a
+      different IP address, tor-fw-helper won't work.  */
+  port = get_primary_or_port();  /* Get ORPort */
+  if (port)
+    smartlist_add_asprintf(ports_to_forward, "%d:%d", port, port);
+
+  port = get_primary_dir_port(); /* Get DirPort */
+  if (port)
+    smartlist_add_asprintf(ports_to_forward, "%d:%d", port, port);
+
+  /* Get ports of transport proxies */
+  smartlist_t *transport_ports = get_transport_proxy_ports();
+  if (transport_ports) {
+    smartlist_add_all(ports_to_forward, transport_ports);
+    smartlist_free(transport_ports);
+  }
+
+  if (!smartlist_len(ports_to_forward)) {
+    smartlist_free(ports_to_forward);
+    ports_to_forward = NULL;
+  }
+
+  return ports_to_forward;
+}
+
 /** Helper to implement GETINFO functions about configuration variables (not
  * their values).  Given a "config/names" question, set *<b>answer</b> to a
  * new string describing the supported configuration variables and their

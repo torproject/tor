@@ -1324,6 +1324,33 @@ pt_prepare_proxy_list_for_config_read(void)
   tor_assert(unconfigured_proxies_n == 0);
 }
 
+/** Return a smartlist containing the ports where our pluggable
+ *  transports are listening. */
+smartlist_t *
+get_transport_proxy_ports(void)
+{
+  smartlist_t *sl = NULL;
+
+  if (!managed_proxy_list)
+    return NULL;
+
+  /** XXX assume that external proxy ports have been forwarded
+      manually */
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, const managed_proxy_t *, mp) {
+    if (!mp->is_server || mp->conf_state != PT_PROTO_COMPLETED)
+      continue;
+
+    if (!sl) sl = smartlist_new();
+
+    tor_assert(mp->transports);
+    SMARTLIST_FOREACH(mp->transports, const transport_t *, t,
+                      smartlist_add_asprintf(sl, "%u:%u", t->port, t->port));
+
+  } SMARTLIST_FOREACH_END(mp);
+
+  return sl;
+}
+
 /** Return the pluggable transport string that we should display in
  *  our extra-info descriptor. If we shouldn't display such a string,
  *  or we have nothing to display, return NULL. The string is
