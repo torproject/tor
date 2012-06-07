@@ -131,7 +131,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
     - Fix a NULL-pointer dereference on a badly formed
       SETCIRCUITPURPOSE command. Found by mikeyc. Fixes bug 5796;
       bugfix on 0.2.2.9-alpha.
-    - Fix a build warning with Clang 3.1 related to our use of vasprint.
+    - Fix a build warning with Clang 3.1 related to our use of vasprintf.
       Fixes bug 5969. Bugfix on 0.2.2.11-alpha.
     - Defensively refactor rend_mid_rendezvous() so that protocol
       violations and length checks happen in the beginning. Fixes
