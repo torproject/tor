@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Downgrade "eventdns rejected address" message to LOG_PROTOCOL_WARN.
+      Fixes bug 5932; bugfix on 0.2.2.7-alpha.

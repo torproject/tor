@@ -1437,7 +1437,7 @@ launch_resolve(edge_connection_t *exitconn)
 
   r = 0;
   if (!req) {
-    log_warn(LD_EXIT, "eventdns rejected address %s.",
+    log_fn(LOG_PROTOCOL_WARN, LD_EXIT, "eventdns rejected address %s.",
              escaped_safe_str(addr));
     r = -1;
     tor_free(addr); /* There is no evdns request in progress; stop
