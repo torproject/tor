@@ -3957,14 +3957,14 @@ control_event_status(int type, int severity, const char *format, va_list args)
       log_warn(LD_BUG, "Unrecognized status severity %d", severity);
       return -1;
   }
-  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s\r\n",
+  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s",
                    status, sev)<0) {
     log_warn(LD_BUG, "Format string too long.");
     return -1;
   }
   tor_vasprintf(&user_buf, format, args);
 
-  send_control_event(type, ALL_FORMATS, "%s %s", format_buf, user_buf);
+  send_control_event(type, ALL_FORMATS, "%s %s\r\n", format_buf, user_buf);
   tor_free(user_buf);
   return 0;
 }
