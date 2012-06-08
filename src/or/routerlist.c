@@ -1847,8 +1847,8 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
       static ratelim_t zero_bandwidth_warning_limit =
         RATELIM_INIT(ZERO_BANDWIDTH_WARNING_INTERVAL);
       char *msg;
-      if ( ( msg = rate_limit_log( &zero_bandwidth_warning_limit,
-                                 approx_time() ) ) ) {
+      if ((msg = rate_limit_log(&zero_bandwidth_warning_limit,
+                                approx_time()))) {
         log_warn(LD_CIRC,
                  "Weighted bandwidth is %f in node selection for rule %s "
                  "(unweighted was %f) %s",

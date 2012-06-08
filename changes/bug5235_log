@@ -1,0 +1,4 @@
+  o Minor features:
+    - Rate-limit the "Weighted bandwidth is 0.000000" message, and add
+      more information to it, so that we can track it down in case it
+      returns again. Mitigates bug 5235.
