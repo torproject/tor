@@ -1699,7 +1699,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   int64_t rand_bw;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
-  double weighted_bw = 0;
+  double weighted_bw = 0, unweighted_bw = 0;
   double *bandwidths;
   double tmp = 0;
   unsigned int i;
@@ -1826,6 +1826,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
 
     bandwidths[node_sl_idx] = weight*this_bw;
     weighted_bw += weight*this_bw;
+    unweighted_bw += this_bw;
     if (is_me)
       sl_last_weighted_bw_of_me = weight*this_bw;
   } SMARTLIST_FOREACH_END(node);
@@ -1841,10 +1842,20 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   /* If there is no bandwidth, choose at random */
   if (DBL_TO_U64(weighted_bw) == 0) {
     /* Don't warn when using bridges/relays not in the consensus */
-    if (!have_unknown)
-      log_warn(LD_CIRC,
-               "Weighted bandwidth is %f in node selection for rule %s",
-               weighted_bw, bandwidth_weight_rule_to_string(rule));
+    if (!have_unknown) {
+#define ZERO_BANDWIDTH_WARNING_INTERVAL (15)
+      static ratelim_t zero_bandwidth_warning_limit =
+        RATELIM_INIT(ZERO_BANDWIDTH_WARNING_INTERVAL);
+      char *msg;
+      if ( ( msg = rate_limit_log( &zero_bandwidth_warning_limit,
+                                 approx_time() ) ) ) {
+        log_warn(LD_CIRC,
+                 "Weighted bandwidth is %f in node selection for rule %s "
+                 "(unweighted was %f) %s",
+                 weighted_bw, bandwidth_weight_rule_to_string(rule),
+                 unweighted_bw, msg);
+      }
+    }
     tor_free(bandwidths);
     return smartlist_choose(sl);
   }
