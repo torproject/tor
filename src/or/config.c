@@ -3320,6 +3320,13 @@ compute_publishserverdescriptor(or_options_t *options)
  * expose more information than we're comfortable with. */
 #define MIN_HEARTBEAT_PERIOD (30*60)
 
+/** Lowest recommended value for CircuitBuildTimeout; if it is set too low
+ * and LearnCircuitBuildTimeout is off, the failure rate for circuit
+ * construction may be very high.  In that case, if it is set below this
+ * threshold emit a warning.
+ * */
+#define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
+
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
  * permissible transition from <b>old_options</b>. Else return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -3714,6 +3721,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_notice(LD_CONFIG,"Tor2webMode is enabled; turning "
                "LearnCircuitBuildTimeout off.");
     options->LearnCircuitBuildTimeout = 0;
+  }
+
+  if (!(options->LearnCircuitBuildTimeout) &&
+        options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
+    log_warn(LD_CONFIG,
+        "CircuitBuildTimeout is shorter (%d seconds) than recommended "
+        "(%d seconds), and LearnCircuitBuildTimeout is disabled.",
+        options->CircuitBuildTimeout,
+        RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
