@@ -2855,7 +2855,7 @@ tor_listdir(const char *dirname)
 #ifdef _WIN32
   char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
-  char name[MAX_PATH] = {0};
+  char name[MAX_PATH*2+1] = {0};
   HANDLE handle;
   WIN32_FIND_DATA findData;
   tor_asprintf(&pattern, "%s\\*", dirname);
@@ -2872,6 +2872,7 @@ tor_listdir(const char *dirname)
   while (1) {
 #ifdef UNICODE
     wcstombs(name,findData.cFileName,MAX_PATH);
+    name[sizeof(name)-1] = '\0';
 #else
     strlcpy(name,findData.cFileName,sizeof(name));
 #endif
@@ -3380,7 +3381,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   process_handle_t *process_handle;
   int status;
 
-  STARTUPINFO siStartInfo;
+  STARTUPINFOA siStartInfo;
   BOOL retval = FALSE;
 
   SECURITY_ATTRIBUTES saAttr;
@@ -3441,7 +3442,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   /* Create the child process */
 
-  retval = CreateProcess(filename,      // module name
+  retval = CreateProcessA(filename,      // module name
                  joined_argv,   // command line
   /* TODO: should we set explicit security attributes? (#2046, comment 5) */
                  NULL,          // process security attributes

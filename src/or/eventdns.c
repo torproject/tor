@@ -3213,7 +3213,7 @@ static int
 config_nameserver_from_reg_key(HKEY key, const TCHAR *subkey)
 {
 	char *buf;
-  char ansibuf[MAX_PATH] = {0};
+	char ansibuf[MAX_PATH] = {0};
 	DWORD bufsz = 0, type = 0;
 	int status = 0;
 
@@ -3226,6 +3226,7 @@ config_nameserver_from_reg_key(HKEY key, const TCHAR *subkey)
 	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
 		== ERROR_SUCCESS && bufsz > 1) {
 		wcstombs(ansibuf,(wchar_t*)buf,MAX_PATH);/*XXXX UNICODE */
+		abuf[MAX_PATH-1] = '\0';
 		status = evdns_nameserver_ip_add_line(ansibuf);
 	}
 

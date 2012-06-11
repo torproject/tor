@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - When building Tor on Windows with -DUNICODE (not default),
+      ensure that error messages, filenames, and DNS server names are
+      always NUL-terminated when we convert them to a single-byte
+      encoding.  Fixes bug 5909; bugfix on 0.2.2.16-alpha.

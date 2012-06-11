@@ -91,7 +91,7 @@ setup_directory(void)
     char buf[MAX_PATH];
     const char *tmp = buf;
     /* If this fails, we're probably screwed anyway */
-    if (!GetTempPath(sizeof(buf),buf))
+    if (!GetTempPathA(sizeof(buf),buf))
       tmp = "c:\\windows\\temp";
     tor_snprintf(temp_dir, sizeof(temp_dir),
                  "%s\\tor_test_%d", tmp, (int)getpid());

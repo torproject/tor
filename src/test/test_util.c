@@ -14,6 +14,10 @@
 #include "mempool.h"
 #include "memarea.h"
 
+#ifdef _WIN32
+#include <tchar.h>
+#endif
+
 static void
 test_util_time(void)
 {
@@ -2113,7 +2117,7 @@ test_util_parent_dir(void *ptr)
 static void
 test_util_load_win_lib(void *ptr)
 {
-  HANDLE h = load_windows_system_library("advapi32.dll");
+  HANDLE h = load_windows_system_library(_T("advapi32.dll"));
   (void) ptr;
 
   tt_assert(h);
