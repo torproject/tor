@@ -526,7 +526,6 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
-echo "tor_cv_library_openssl_dir is $tor_cv_library_openssl_dir"
 if test "$enable_static_openssl" = "yes"; then
    if test "$tor_cv_library_openssl_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
@@ -558,7 +557,6 @@ if test "$enable_static_zlib" = "yes"; then
  using --enable-static-zlib")
    else
      TOR_ZLIB_LIBS="$TOR_LIBDIR_zlib/libz.a"
-     echo "$TOR_LIBDIR_zlib/libz.a"
    fi
 else
      TOR_ZLIB_LIBS="-lz"
