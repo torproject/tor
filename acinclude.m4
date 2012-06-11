@@ -46,7 +46,7 @@ AC_DEFUN([TOR_CHECK_CFLAGS], [
   AS_VAR_PUSHDEF([VAR],[tor_cv_cflags_$1])
   AC_CACHE_CHECK([whether the compiler accepts $1], VAR, [
     tor_saved_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS -pedantic $1"
+    CFLAGS="$CFLAGS -pedantic -Werror $1"
     AC_TRY_COMPILE([], [return 0;],
                    [AS_VAR_SET(VAR,yes)],
                    [AS_VAR_SET(VAR,no)])
@@ -59,15 +59,23 @@ AC_DEFUN([TOR_CHECK_CFLAGS], [
 ])
 
 dnl 1:flags
+dnl 2:extra ldflags
+dnl 3:extra libraries
 AC_DEFUN([TOR_CHECK_LDFLAGS], [
   AS_VAR_PUSHDEF([VAR],[tor_cv_ldflags_$1])
   AC_CACHE_CHECK([whether the linker accepts $1], VAR, [
+    tor_saved_CFLAGS="$CFLAGS"
     tor_saved_LDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS -pedantic $1"
+    tor_saved_LIBS="$LIBS"
+    CFLAGS="$CFLAGS -pedantic -Werror"
+    LDFLAGS="$LDFLAGS $2 $1"
+    LIBS="$LIBS $3"
     AC_TRY_LINK([], [return 0;],
                    [AS_VAR_SET(VAR,yes)],
                    [AS_VAR_SET(VAR,no)])
+    CFLAGS="$tor_saved_CFLAGS"
     LDFLAGS="$tor_saved_LDFLAGS"
+    LIBS="$tor_saved_LIBS"
   ])
   if test x$VAR = xyes; then
     LDFLAGS="$LDFLAGS $1"

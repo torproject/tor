@@ -171,21 +171,6 @@ AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
 
-if test x$enable_gcc_hardening != xno; then
-    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
-    TOR_CHECK_CFLAGS(-Qunused-arguments)
-    TOR_CHECK_CFLAGS(-fstack-protector-all)
-    TOR_CHECK_CFLAGS(-Wstack-protector)
-    TOR_CHECK_CFLAGS(-fwrapv)
-    TOR_CHECK_CFLAGS(-fPIE)
-    TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
-    TOR_CHECK_LDFLAGS(-pie)
-fi
-
-if test x$enable_linker_hardening != xno; then
-    TOR_CHECK_LDFLAGS(-z relro -z now)
-fi
-
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
 AC_C_FLEXIBLE_ARRAY_MEMBER
 ], [
@@ -566,8 +551,29 @@ else
 fi
 AC_SUBST(TOR_ZLIB_LIBS)
 
-dnl Make sure to enable support for large off_t if available.
+dnl ---------------------------------------------------------------------
+dnl Now that we know about our major libraries, we can check for compiler
+dnl and linker hardening options.  We need to do this with the libraries known,
+dnl since sometimes the linker will like an option but not be willing to
+dnl use it with a build of a library.
 
+all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
+
+if test x$enable_gcc_hardening != xno; then
+    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
+    TOR_CHECK_CFLAGS(-Qunused-arguments)
+    TOR_CHECK_CFLAGS(-fstack-protector-all)
+    TOR_CHECK_CFLAGS(-Wstack-protector)
+    TOR_CHECK_CFLAGS(-fwrapv)
+    TOR_CHECK_CFLAGS(-fPIE)
+    TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
+    TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
+fi
+
+if test x$enable_linker_hardening != xno; then
+    TOR_CHECK_LDFLAGS(-z relro -z now, "$all_ldflags_for_check", "$all_libs_for_check")
+fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, libnatpmp?  And how do we call you?
@@ -609,6 +615,7 @@ if test "$upnp" = "true"; then
         [/usr/lib/])
 fi
 
+dnl Make sure to enable support for large off_t if available.
 AC_SYS_LARGEFILE
 
 AC_CHECK_HEADERS(
