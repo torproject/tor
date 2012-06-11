@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Check CircuitBuildTimeout and LearnCircuitBuildTimeout in
+      options_validate(); warn if LearnCircuitBuildTimeout is disabled
+      and CircuitBuildTimeout is set unreasonably low.
