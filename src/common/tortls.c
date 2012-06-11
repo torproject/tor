@@ -1372,7 +1372,8 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 
   if (type != SSL_CB_ACCEPT_LOOP)
     return;
-  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
+  if ((ssl->state != SSL3_ST_SW_SRVR_HELLO_A) &&
+      (ssl->state != SSL3_ST_SW_SRVR_HELLO_B))
     return;
 
   tls = tor_tls_get_by_ssl(ssl);
