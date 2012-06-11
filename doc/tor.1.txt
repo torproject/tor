@@ -167,7 +167,7 @@ Other options can be specified either on the command-line (--option
     You should **not** enable this feature unless you encounter the "no buffer
     space available" issue. Reducing the TCP buffers affects window size for
     the TCP stream and will reduce throughput in proportion to round trip
-    time on long paths. (Default: 0.)
+    time on long paths. (Default: 0)
 
 **ConstrainedSockSize** __N__ **bytes**|**KB**::
     When **ConstrainedSockets** is enabled the receive and transmit buffers for
@@ -183,15 +183,15 @@ Other options can be specified either on the command-line (--option
     host to control it. (Setting both authentication methods means either
     method is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
-    Set it to "auto" to have Tor pick a port for you. (Default: 0).
+    Set it to "auto" to have Tor pick a port for you. (Default: 0)
 
 **ControlListenAddress** __IP__[:__PORT__]::
     Bind the controller listener to this address. If you specify a port, bind
     to this port rather than the one specified in ControlPort. We strongly
     recommend that you leave this alone unless you know what you're doing,
     since giving attackers access to your control listener is really
-    dangerous. (Default: 127.0.0.1) This directive can be specified multiple
-    times to bind to multiple addresses/ports.
+    dangerous. This directive can be specified multiple
+    times to bind to multiple addresses/ports.  (Default: 127.0.0.1) 
 
 **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
@@ -224,7 +224,7 @@ Other options can be specified either on the command-line (--option
     If this option is set to 0, don't allow the filesystem group to read the
     cookie file. If the option is set to 1, make the cookie file readable by
     the default GID. [Making the file readable by other groups is not yet
-    implemented; let us know if you need this for some reason.] (Default: 0).
+    implemented; let us know if you need this for some reason.] (Default: 0)
 
 **ControlPortWriteToFile** __Path__::
     If set, Tor writes the address and port of any control port it opens to
@@ -234,7 +234,7 @@ Other options can be specified either on the command-line (--option
 **ControlPortFileGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
     control port file. If the option is set to 1, make the control port
-    file readable by the default GID. (Default: 0).
+    file readable by the default GID. (Default: 0)
 
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
@@ -266,7 +266,7 @@ Other options can be specified either on the command-line (--option
     If this option is set to 1, when running as a server, generate our
     own Diffie-Hellman group instead of using the one from Apache's mod_ssl.
     This option may help circumvent censorship based on static
-    Diffie-Hellman parameters. (Default: 1).
+    Diffie-Hellman parameters. (Default: 1)
 
 **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
@@ -497,7 +497,7 @@ Other options can be specified either on the command-line (--option
     CircuitPriorityHalflife value (in seconds). If this option is not set at
     all, we use the behavior recommended in the current consensus
     networkstatus. This is an advanced option; you generally shouldn't have
-    to mess with it. (Default: not set.)
+    to mess with it. (Default: not set)
 
 **DisableIOCP** **0**|**1**::
     If Tor was built to use the Libevent's "bufferevents" networking code
@@ -568,7 +568,7 @@ The following options are useful only for clients (that is, if
     open in that time, give up on it. If LearnCircuitBuildTimeout is 1, this
     value serves as the initial value to use before a timeout is learned. If
     LearnCircuitBuildTimeout is 0, this value is the only value used.
-    (Default: 60 seconds.)
+    (Default: 60 seconds)
 
 **CircuitIdleTimeout** __NUM__::
     If we have kept a clean (never used) circuit around for NUM seconds, then
@@ -576,7 +576,7 @@ The following options are useful only for clients (that is, if
     of its circuits, and then expire its TLS connections. Also, if we end up
     making a circuit that is not useful for exiting any of the requests we're
     receiving, it won't forever take up a slot in the circuit list. (Default: 1
-    hour.)
+    hour)
 
 **CircuitStreamTimeout** __NUM__::
     If non-zero, this option overrides our internal timeout schedule for how
@@ -864,14 +864,14 @@ The following options are useful only for clients (that is, if
 **SocksTimeout** __NUM__::
     Let a socks connection wait NUM seconds handshaking, and NUM seconds
     unattached waiting for an appropriate circuit, before we fail it. (Default:
-    2 minutes.)
+    2 minutes)
 
 **TokenBucketRefillInterval** __NUM__ [**msec**|**second**]::
     Set the refill interval of Tor's token bucket to NUM milliseconds.
     NUM must be between 1 and 1000, inclusive.  Note that the configured
     bandwidth limits are still expressed in bytes per second: this
     option only affects the frequency with which Tor checks to see whether
-    previously exhausted connections may read again. (Default: 100 msec.)
+    previously exhausted connections may read again. (Default: 100 msec)
 
 **TrackHostExits** __host__,__.domain__,__...__::
     For each value in the comma separated list, Tor will track recent
@@ -904,18 +904,18 @@ The following options are useful only for clients (that is, if
     If this option is set to 1, we pick a few long-term entry servers, and try
     to stick with them. This is desirable because constantly changing servers
     increases the odds that an adversary who owns some servers will observe a
-    fraction of your paths. (Defaults to 1.)
+    fraction of your paths. (Default: 1)
 
 **NumEntryGuards** __NUM__::
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
-    as long-term entries for our circuits. (Defaults to 3.)
+    as long-term entries for our circuits. (Default: 3)
 
 **SafeSocks** **0**|**1**::
     When this option is enabled, Tor will reject application connections that
     use unsafe variants of the socks protocol -- ones that only provide an IP
     address, meaning the application is doing a DNS resolve first.
     Specifically, these are socks4 and socks5 when not doing remote DNS.
-    (Defaults to 0.)
+    (Default: 0)
 
 **TestSocks** **0**|**1**::
     When this option is enabled, Tor will make a notice-level log entry for
@@ -975,7 +975,7 @@ The following options are useful only for clients (that is, if
     Linux's IPTables. If you're planning to use Tor as a transparent proxy for
     a network, you'll want to examine and change VirtualAddrNetwork from the
     default setting. You'll also want to set the TransListenAddress option for
-    the network you'd like to proxy. (Default: 0).
+    the network you'd like to proxy. (Default: 0)
 
 **TransListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for transparent proxy connections. (Default:
@@ -1008,7 +1008,7 @@ The following options are useful only for clients (that is, if
     that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
     unused virtual address to that address, and return the new virtual address. 
     This is handy for making ".onion" addresses work with applications that
-    resolve an address and then connect to it. (Default: 0).
+    resolve an address and then connect to it. (Default: 0)
 
 **AutomapHostsSuffixes** __SUFFIX__,__SUFFIX__,__...__::
     A comma-separated list of suffixes to use with **AutomapHostsOnResolve**.
@@ -1019,7 +1019,7 @@ The following options are useful only for clients (that is, if
     them anonymously.  Set the port to "auto" to have Tor pick a port for
     you. This directive can be specified multiple times to bind to multiple
     addresses/ports. See SOCKSPort for an explanation of isolation
-    flags. (Default: 0).
+    flags. (Default: 0)
 
 **DNSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for DNS connections. (DEPRECATED: As of
@@ -1032,35 +1032,35 @@ The following options are useful only for clients (that is, if
     If true, Tor does not believe any anonymously retrieved DNS answer that
     tells it that an address resolves to an internal address (like 127.0.0.1 or
     192.168.0.1). This option prevents certain browser-based attacks; don't
-    turn it off unless you know what you're doing. (Default: 1).
+    turn it off unless you know what you're doing. (Default: 1)
 
 **ClientRejectInternalAddresses** **0**|**1**::
     If true, Tor does not try to fulfill requests to connect to an internal
     address (like 127.0.0.1 or 192.168.0.1) __unless a exit node is
     specifically requested__ (for example, via a .exit hostname, or a
-    controller request).  (Default: 1).
+    controller request).  (Default: 1)
 
 **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
     contain information about servers other than the information in their
     regular router descriptors. Tor does not use this information for anything
-    itself; to save bandwidth, leave this option turned off. (Default: 0).
+    itself; to save bandwidth, leave this option turned off. (Default: 0)
 
 **FallbackNetworkstatusFile** __FILENAME__::
     If Tor doesn't have a cached networkstatus file, it starts out using this
     one instead. Even if this file is out of date, Tor can still use it to
     learn about directory mirrors, so it doesn't need to put load on the
-    authorities. (Default: None).
+    authorities. (Default: None)
 
 **WarnPlaintextPorts** __port__,__port__,__...__::
     Tells Tor to issue a warnings whenever the user tries to make an anonymous
     connection to one of these ports. This option is designed to alert users
     to services that risk sending passwords in the clear. (Default:
-    23,109,110,143).
+    23,109,110,143)
 
 **RejectPlaintextPorts** __port__,__port__,__...__::
     Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
-    will instead refuse to make the connection. (Default: None).
+    will instead refuse to make the connection. (Default: None)
 
 **AllowSingleHopCircuits** **0**|**1**::
     When this option is set, the attached Tor controller can use relays
@@ -1300,14 +1300,14 @@ is non-zero):
     of the __dayth__ day of one week to the same day and time of the next week,
     with Monday as day 1 and Sunday as day 7. If **day** is given, each
     accounting period runs from the time __HH:MM__ each day to the same time on
-    the next day. All times are local, and given in 24-hour time. (Defaults to
-    "month 1 0:00".)
+    the next day. All times are local, and given in 24-hour time. (Default:
+    "month 1 0:00")
 
 **RefuseUnknownExits** **0**|**1**|**auto**::
     Prevent nodes that don't appear in the consensus from exiting using this
     relay.  If the option is 1, we always block exit attempts from such
     nodes; if it's 0, we never do, and if the option is "auto", then we do
-    whatever the authorities suggest in the consensus. (Defaults to auto.)
+    whatever the authorities suggest in the consensus. (Default: auto)
 
 **ServerDNSResolvConfFile** __filename__::
     Overrides the default DNS configuration with the configuration in
@@ -1320,28 +1320,28 @@ is non-zero):
     If this option is false, Tor exits immediately if there are problems
     parsing the system DNS configuration or connecting to nameservers.
     Otherwise, Tor continues to periodically retry the system nameservers until
-    it eventually succeeds. (Defaults to "1".)
+    it eventually succeeds. (Default: 1)
 
 **ServerDNSSearchDomains** **0**|**1**::
     If set to 1, then we will search for addresses in the local search domain.
     For example, if this system is configured to believe it is in
     "example.com", and a client tries to connect to "www", the client will be
     connected to "www.example.com". This option only affects name lookups that
-    your server does on behalf of clients. (Defaults to "0".)
+    your server does on behalf of clients. (Default: 0)
 
 **ServerDNSDetectHijacking** **0**|**1**::
     When this option is set to 1, we will test periodically to determine
     whether our local nameservers have been configured to hijack failing DNS
     requests (usually to an advertising site). If they are, we will attempt to
     correct this. This option only affects name lookups that your server does
-    on behalf of clients. (Defaults to "1".)
+    on behalf of clients. (Default: 1)
 
 **ServerDNSTestAddresses** __address__,__address__,__...__::
     When we're detecting DNS hijacking, make sure that these __valid__ addresses
     aren't getting redirected. If they are, then our DNS is completely useless,
     and we'll reset our exit policy to "reject *:*". This option only affects
-    name lookups that your server does on behalf of clients. (Defaults to
-    "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org".)
+    name lookups that your server does on behalf of clients. (Default:
+    "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org")
 
 **ServerDNSAllowNonRFC953Hostnames** **0**|**1**::
     When this option is disabled, Tor does not try to resolve hostnames
@@ -1372,9 +1372,9 @@ is non-zero):
     cells spend in circuit queues to disk every 24 hours. (Default: 0)
 
 **DirReqStatistics** **0**|**1**::
-    When this option is enabled, Tor writes statistics on the number and
-    response time of network status requests to disk every 24 hours.
-    (Default: 0)
+    When this option is enabled, a Tor directory writes statistics on the
+    number and response time of network status requests to disk every 24
+    hours. (Default: 1)
 
 **EntryStatistics** **0**|**1**::
     When this option is enabled, Tor writes statistics on the number of
@@ -1391,7 +1391,7 @@ is non-zero):
 **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
-    (Default: 0)
+    (Default: 1)
 
 DIRECTORY SERVER OPTIONS
 ------------------------
@@ -1488,7 +1488,7 @@ if DirPort is non-zero):
 **FetchV2Networkstatus** **0**|**1**::
     If set, we try to fetch the (obsolete, unused) version 2 network status
     consensus documents from the directory authorities. No currently
-    supported Tor version uses them.  (Default: 0.)
+    supported Tor version uses them.  (Default: 0)
 
 
 DIRECTORY AUTHORITY SERVER OPTIONS
@@ -1522,7 +1522,7 @@ DIRECTORY AUTHORITY SERVER OPTIONS
 **DirAllowPrivateAddresses** **0**|**1**::
     If set to 1, Tor will accept router descriptors with arbitrary "Address"
     elements. Otherwise, if the address is not an IP address or is a private IP
-    address, it will reject the router descriptor. Defaults to 0.
+    address, it will reject the router descriptor. (Default: 0)
 
 **AuthDirBadDir** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
@@ -1601,7 +1601,7 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     implemented) "bridge community" design, where a community of bridge
     relay operators all use an alternate bridge directory authority,
     and their target user audience can periodically fetch the list of
-    available community bridges to stay up-to-date. (Default: not set.)
+    available community bridges to stay up-to-date. (Default: not set)
 
 **V3AuthVotingInterval** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred voting
@@ -1613,14 +1613,14 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     V3 authoritative directories only. Configures the server's preferred delay
     between publishing its vote and assuming it has all the votes from all the
     other authorities. Note that the actual time used is not the server's
-    preferred time, but the consensus of all preferences. (Default: 5 minutes.)
+    preferred time, but the consensus of all preferences. (Default: 5 minutes)
 
 **V3AuthDistDelay** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred  delay
     between publishing its consensus and signature and assuming  it has all the
     signatures from all the other authorities. Note that the actual time used
     is not the server's preferred time,  but the consensus of all preferences.
-    (Default: 5 minutes.)
+    (Default: 5 minutes)
 
 **V3AuthNIntervalsValid** __NUM__::
     V3 authoritative directories only. Configures the number of VotingIntervals
@@ -1628,18 +1628,18 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     increases network partitioning risks; choosing low numbers increases
     directory traffic. Note that the actual number of intervals used is not the
     server's preferred number, but the consensus of all preferences. Must be at
-    least 2. (Default: 3.)
+    least 2. (Default: 3)
 
 **V3BandwidthsFile** __FILENAME__::
     V3 authoritative directories only. Configures the location of the
     bandiwdth-authority generated file storing information on relays' measured
-    bandwidth capacities. (Default: unset.)
+    bandwidth capacities. (Default: unset)
 
 **V3AuthUseLegacyKey** **0**|**1**::
     If set, the directory authority will sign consensuses not only with its
     own signing key, but also with a "legacy" key and certificate with a
     different identity.  This feature is used to migrate directory authority
-    keys in the event of a compromise.  (Default: 0.)
+    keys in the event of a compromise.  (Default: 0)
 
 **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Tells an authority, or other node tracking node reliability and history,
