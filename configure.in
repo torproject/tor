@@ -566,9 +566,11 @@ if test x$enable_gcc_hardening != xno; then
     TOR_CHECK_CFLAGS(-fstack-protector-all)
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(-fwrapv)
-    TOR_CHECK_CFLAGS(-fPIE)
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
-    TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
+    if test "$bwin32" = "false"; then
+       TOR_CHECK_CFLAGS(-fPIE)
+       TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
+    fi
 fi
 
 if test x$enable_linker_hardening != xno; then
