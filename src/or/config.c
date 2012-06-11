@@ -3727,7 +3727,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
         options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,
         "CircuitBuildTimeout is shorter (%d seconds) than recommended "
-        "(%d seconds), and LearnCircuitBuildTimeout is disabled.",
+        "(%d seconds), and LearnCircuitBuildTimeout is disabled.  "
+        "If tor isn't working, raise this value or enable "
+        "LearnCircuitBuildTimeout.",
         options->CircuitBuildTimeout,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
   }
