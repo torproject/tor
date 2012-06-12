@@ -1935,8 +1935,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         (exit_source == ADDRMAPSRC_NONE && !options->AllowDotExit)) {
       /* It shouldn't be possible to get a .exit address from any of these
        * sources. */
-      log_warn(LD_BUG,"Address '%s.exit', with impossible source for the .exit "
-               "part. Refusing.",
+      log_warn(LD_BUG,"Address '%s.exit', with impossible source for the "
+               ".exit part. Refusing.",
                safe_str_client(socks->address));
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
