@@ -1,5 +1,0 @@
-  o Changed defaults:
-    - Change the default value for DynamicDHGroups to 0. This feature can
-      make Tor relays less identifiable by their use of the mod_ssl DH
-      group, but at the cost of some usability (#4721) and bridge tracing
-      (#6087) regressions. Resolves ticket #5598.

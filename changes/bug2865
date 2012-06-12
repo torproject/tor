@@ -1,4 +1,0 @@
-  o Documentation fixes:
-    - Correct the manpage's descriptions for the default values of 
-      DirReqStatistics and ExtraInfoStatistics. Fixes bug 2865; bugfix
-      on 0.2.3.1-alpha.

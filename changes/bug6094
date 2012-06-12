@@ -1,8 +1,0 @@
-  o Major bugfixes:
-
-    - Send a CRLF at the end of each STATUS_* control-port event.  A
-      change introduced in 0.2.3.16-alpha caused Tor to emit the CRLF
-      in the middle of a STATUS_* event; among other things, this
-      caused Vidalia to freeze.  Fixes bug 6094; bugfix on
-      0.2.3.16-alpha.
-

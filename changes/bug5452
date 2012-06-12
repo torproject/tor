@@ -1,4 +1,0 @@
-  o Minor features:
-    - Check CircuitBuildTimeout and LearnCircuitBuildTimeout in
-      options_validate(); warn if LearnCircuitBuildTimeout is disabled
-      and CircuitBuildTimeout is set unreasonably low. Fixes bug 5452.

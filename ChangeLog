@@ -1,3 +1,41 @@
+Changes in version 0.2.3.17-alpha - 2012-06-??
+
+  o Major bugfixes:
+    - When building Tor on Windows with -DUNICODE (not default), ensure
+      that error messages, filenames, and DNS server names are always
+      NUL-terminated when we convert them to a single-byte encoding.
+      Fixes bug 5909; bugfix on 0.2.2.16-alpha.
+    - Change the default value for DynamicDHGroups (introduced in
+      0.2.3.9-alpha) to 0. This feature can make Tor relays less
+      identifiable by their use of the mod_ssl DH group, but at
+      the cost of some usability (#4721) and bridge tracing (#6087)
+      regressions. Resolves ticket 5598.
+    - Send a CRLF at the end of each STATUS_* control protocol event. This
+      bug tickled a bug in Vidalia which would make it freeze. Fixes
+      bug 6094; bugfix on 0.2.3.16-alpha.
+
+  o Minor bugfixes:
+    - Detect SSL handshake even when the initial attempt to write the
+      server hello fails. Fixes bug 4592; bugfix on 0.2.0.13-alpha.
+    - Make Tor build correctly again with -DUNICODE -D_UNICODE defined.
+      Fixes bug 6097; bugfix on 0.2.2.16-alpha.
+    - Fix an edge case where TestingTorNetwork is set but the authorities
+      and relays all have an uptime of zero, where the private Tor network
+      could briefly lack support for hidden services. Fixes bug 3886;
+      bugfix on 0.2.2.18-alpha.
+    - Correct the manpage's descriptions for the default values of 
+      DirReqStatistics and ExtraInfoStatistics. Fixes bug 2865; bugfix
+      on 0.2.3.1-alpha.
+
+  o Minor features:
+    - Rate-limit the "Weighted bandwidth is 0.000000" message, and add
+      more information to it, so that we can track it down in case it
+      returns again. Mitigates bug 5235.
+    - Check CircuitBuildTimeout and LearnCircuitBuildTimeout in
+      options_validate(); warn if LearnCircuitBuildTimeout is disabled and
+      CircuitBuildTimeout is set unreasonably low. Resolves ticket 5452.
+
+
 Changes in version 0.2.3.16-alpha - 2012-06-05
   Tor 0.2.3.16-alpha introduces a workaround for a critical renegotiation
   bug in OpenSSL 1.0.1 (where 20% of the Tor network can't talk to itself

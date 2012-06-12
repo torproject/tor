@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Detect SSL handshake even when the initial attempt to write the
-      server hello fails. Fix for bug 4592; bugfix on 0.2.0.13-alpha.
