@@ -1598,6 +1598,12 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   long prev_timeout = tor_lround(cbt->timeout_ms/1000);
   double timeout_rate;
 
+  /*
+   * Just return if we aren't using adaptive timeouts
+   */
+  if (circuit_build_times_disabled())
+    return;
+
   if (!circuit_build_times_set_timeout_worker(cbt))
     return;
 
