@@ -3,6 +3,33 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.2.37 - 2012-06-06
+  Tor 0.2.2.37 introduces a workaround for a critical renegotiation
+  bug in OpenSSL 1.0.1 (where 20% of the Tor network can't talk to itself
+  currently).
+
+  o Major bugfixes:
+    - Work around a bug in OpenSSL that broke renegotiation with TLS
+      1.1 and TLS 1.2. Without this workaround, all attempts to speak
+      the v2 Tor connection protocol when both sides were using OpenSSL
+      1.0.1 would fail. Resolves ticket 6033.
+    - When waiting for a client to renegotiate, don't allow it to add
+      any bytes to the input buffer. This fixes a potential DoS issue.
+      Fixes bugs 5934 and 6007; bugfix on 0.2.0.20-rc.
+    - Fix an edge case where if we fetch or publish a hidden service
+      descriptor, we might build a 4-hop circuit and then use that circuit
+      for exiting afterwards -- even if the new last hop doesn't obey our
+      ExitNodes config option. Fixes bug 5283; bugfix on 0.2.0.10-alpha.
+
+  o Minor bugfixes:
+    - Fix a build warning with Clang 3.1 related to our use of vasprintf.
+      Fixes bug 5969. Bugfix on 0.2.2.11-alpha.
+
+  o Minor features:
+    - Tell GCC and Clang to check for any errors in format strings passed
+      to the tor_v*(print|scan)f functions.
+
+
 Changes in version 0.2.2.36 - 2012-05-24
   Tor 0.2.2.36 updates the addresses for two of the eight directory
   authorities, fixes some potential anonymity and security issues,
