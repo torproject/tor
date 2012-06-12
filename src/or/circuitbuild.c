@@ -156,6 +156,11 @@ circuit_build_times_disabled(void)
                state_disabled);
       return 1;
     } else {
+      log_debug(LD_BUG,
+                "CircuitBuildTime learning is not disabled. "
+                "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
+                consensus_disabled, config_disabled, dirauth_disabled,
+                state_disabled);
       return 0;
     }
   }
@@ -171,10 +176,21 @@ circuit_build_times_disabled(void)
 static int32_t
 circuit_build_times_max_timeouts(void)
 {
-  return networkstatus_get_param(NULL, "cbtmaxtimeouts",
+  int32_t cbt_maxtimeouts;
+
+  cbt_maxtimeouts = networkstatus_get_param(NULL, "cbtmaxtimeouts",
                                  CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT,
                                  CBT_MIN_MAX_RECENT_TIMEOUT_COUNT,
                                  CBT_MAX_MAX_RECENT_TIMEOUT_COUNT);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_max_timeouts() called, cbtmaxtimeouts is"
+              " %d",
+              cbt_maxtimeouts);
+  }
+
+  return cbt_maxtimeouts;
 }
 
 /**
@@ -193,6 +209,14 @@ circuit_build_times_default_num_xm_modes(void)
                                         CBT_DEFAULT_NUM_XM_MODES,
                                         CBT_MIN_NUM_XM_MODES,
                                         CBT_MAX_NUM_XM_MODES);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_default_num_xm_modes() called, cbtnummodes"
+              " is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -209,6 +233,14 @@ circuit_build_times_min_circs_to_observe(void)
                                         CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE,
                                         CBT_MIN_MIN_CIRCUITS_TO_OBSERVE,
                                         CBT_MAX_MIN_CIRCUITS_TO_OBSERVE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_min_circs_to_observe() called, cbtmincircs"
+              " is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -233,6 +265,14 @@ circuit_build_times_quantile_cutoff(void)
                                         CBT_DEFAULT_QUANTILE_CUTOFF,
                                         CBT_MIN_QUANTILE_CUTOFF,
                                         CBT_MAX_QUANTILE_CUTOFF);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_quantile_cutoff() called, cbtquantile"
+              " is %d",
+              num);
+  }
+
   return num/100.0;
 }
 
@@ -263,6 +303,13 @@ circuit_build_times_close_quantile(void)
              CBT_DEFAULT_CLOSE_QUANTILE,
              CBT_MIN_CLOSE_QUANTILE,
              CBT_MAX_CLOSE_QUANTILE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_close_quantile() called, cbtclosequantile"
+              " is %d", param);
+  }
+
   if (param < min) {
     log_warn(LD_DIR, "Consensus parameter cbtclosequantile is "
              "too small, raising to %d", min);
@@ -285,6 +332,13 @@ circuit_build_times_test_frequency(void)
                                         CBT_DEFAULT_TEST_FREQUENCY,
                                         CBT_MIN_TEST_FREQUENCY,
                                         CBT_MAX_TEST_FREQUENCY);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_test_frequency() called, cbttestfreq is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -302,6 +356,13 @@ circuit_build_times_min_timeout(void)
                                         CBT_DEFAULT_TIMEOUT_MIN_VALUE,
                                         CBT_MIN_TIMEOUT_MIN_VALUE,
                                         CBT_MAX_TIMEOUT_MIN_VALUE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_min_timeout() called, cbtmintimeout is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -319,6 +380,14 @@ circuit_build_times_initial_timeout(void)
                                           CBT_DEFAULT_TIMEOUT_INITIAL_VALUE,
                                           CBT_MIN_TIMEOUT_INITIAL_VALUE,
                                           CBT_MAX_TIMEOUT_INITIAL_VALUE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_initial_timeout() called, "
+              "cbtinitialtimeout is %d",
+              param);
+  }
+
   if (param < min) {
     log_warn(LD_DIR, "Consensus parameter cbtinitialtimeout is too small, "
              "raising to %d", min);
@@ -337,10 +406,20 @@ circuit_build_times_initial_timeout(void)
 static int32_t
 circuit_build_times_recent_circuit_count(networkstatus_t *ns)
 {
-  return networkstatus_get_param(ns, "cbtrecentcount",
-                                 CBT_DEFAULT_RECENT_CIRCUITS,
-                                 CBT_MIN_RECENT_CIRCUITS,
-                                 CBT_MAX_RECENT_CIRCUITS);
+  int32_t num;
+  num = networkstatus_get_param(ns, "cbtrecentcount",
+                                CBT_DEFAULT_RECENT_CIRCUITS,
+                                CBT_MIN_RECENT_CIRCUITS,
+                                CBT_MAX_RECENT_CIRCUITS);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_recent_circuit_count() called, "
+              "cbtrecentcount is %d",
+              num);
+  }
+
+  return num;
 }
 
 /**
