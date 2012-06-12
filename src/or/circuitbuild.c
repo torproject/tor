@@ -535,16 +535,27 @@ static double
 circuit_build_times_get_initial_timeout(void)
 {
   double timeout;
-  if (!unit_tests && get_options()->CircuitBuildTimeout) {
-    timeout = get_options()->CircuitBuildTimeout*1000;
-    if (timeout < circuit_build_times_min_timeout()) {
-      log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
-               circuit_build_times_min_timeout()/1000);
-      timeout = circuit_build_times_min_timeout();
+
+  /*
+   * Check if we have LearnCircuitBuildTimeout, and if we don't,
+   * always use CircuitBuildTimeout, no questions asked.
+   */
+  if (get_options()->LearnCircuitBuildTimeout) {
+    if (!unit_tests && get_options()->CircuitBuildTimeout) {
+      timeout = get_options()->CircuitBuildTimeout*1000;
+      if (timeout < circuit_build_times_min_timeout()) {
+        log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
+                 circuit_build_times_min_timeout()/1000);
+        timeout = circuit_build_times_min_timeout();
+      }
+    } else {
+      timeout = circuit_build_times_initial_timeout();
     }
-  } else {
-    timeout = circuit_build_times_initial_timeout();
   }
+  else {
+    timeout = get_options()->CircuitBuildTimeout*1000;
+  }
+
   return timeout;
 }
 
