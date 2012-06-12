@@ -432,41 +432,91 @@ void
 circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                          networkstatus_t *ns)
 {
-  int32_t num = circuit_build_times_recent_circuit_count(ns);
+  int32_t num;
 
-  if (num > 0 && num != cbt->liveness.num_recent_circs) {
-    int8_t *recent_circs;
-    log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
-               "circuits we must track to detect network failures from %d "
-               "to %d.", cbt->liveness.num_recent_circs, num);
+  /*
+   * First check if we're doing adaptive timeouts at all; nothing to
+   * update if we aren't.
+   */
 
-    tor_assert(cbt->liveness.timeouts_after_firsthop);
+  if (!circuit_build_times_disabled()) {
+    num = circuit_build_times_recent_circuit_count(ns);
 
+    if (num > 0) {
+      if (num != cbt->liveness.num_recent_circs) {
+        int8_t *recent_circs;
+        log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
+                   "circuits we must track to detect network failures from %d "
+                   "to %d.", cbt->liveness.num_recent_circs, num);
+
+        tor_assert(cbt->liveness.timeouts_after_firsthop ||
+                   cbt->liveness.num_recent_circs == 0);
+
+        /*
+         * Technically this is a circular array that we are reallocating
+         * and memcopying. However, since it only consists of either 1s
+         * or 0s, and is only used in a statistical test to determine when
+         * we should discard our history after a sufficient number of 1's
+         * have been reached, it is fine if order is not preserved or
+         * elements are lost.
+         *
+         * cbtrecentcount should only be changing in cases of severe network
+         * distress anyway, so memory correctness here is paramount over
+         * doing acrobatics to preserve the array.
+         */
+        recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
+        if (cbt->liveness.timeouts_after_firsthop &&
+            cbt->liveness.num_recent_circs > 0) {
+          memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
+                 sizeof(int8_t)*MIN(num, cbt->liveness.num_recent_circs));
+        }
+
+        // Adjust the index if it needs it.
+        if (num < cbt->liveness.num_recent_circs) {
+          cbt->liveness.after_firsthop_idx = MIN(num-1,
+                  cbt->liveness.after_firsthop_idx);
+        }
+
+        tor_free(cbt->liveness.timeouts_after_firsthop);
+        cbt->liveness.timeouts_after_firsthop = recent_circs;
+        cbt->liveness.num_recent_circs = num;
+      }
+      /* else no change, nothing to do */
+    }
+    else { /* num == 0 */
+      /*
+       * Weird.  This probably shouldn't happen, so log a warning, but try
+       * to do something sensible anyway.
+       */
+
+      log_warn(LD_CIRC,
+               "The cbtrecentcircs consensus parameter came back zero!  "
+               "This disables adaptive timeouts since we can't keep track of "
+               "any recent circuits.");
+
+      if (cbt->liveness.timeouts_after_firsthop) {
+        tor_free(cbt->liveness.timeouts_after_firsthop);
+        cbt->liveness.timeouts_after_firsthop = NULL;
+      }
+
+      cbt->liveness.num_recent_circs = num;
+    }
+  }
+  else {
     /*
-     * Technically this is a circular array that we are reallocating
-     * and memcopying. However, since it only consists of either 1s
-     * or 0s, and is only used in a statistical test to determine when
-     * we should discard our history after a sufficient number of 1's
-     * have been reached, it is fine if order is not preserved or
-     * elements are lost.
-     *
-     * cbtrecentcount should only be changing in cases of severe network
-     * distress anyway, so memory correctness here is paramount over
-     * doing acrobatics to preserve the array.
+     * Adaptive timeouts are disabled; this might be because of the
+     * LearnCircuitBuildTimes config parameter, and hence permanent, or
+     * the cbtdisabled consensus parameter, so it may be a new condition.
+     * Treat it like getting num == 0 above and free the circuit history
+     * if we have any.
      */
-    recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
-    memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
-           sizeof(int8_t)*MIN(num, cbt->liveness.num_recent_circs));
 
-    // Adjust the index if it needs it.
-    if (num < cbt->liveness.num_recent_circs) {
-      cbt->liveness.after_firsthop_idx = MIN(num-1,
-              cbt->liveness.after_firsthop_idx);
+    if (cbt->liveness.timeouts_after_firsthop) {
+      tor_free(cbt->liveness.timeouts_after_firsthop);
+      cbt->liveness.timeouts_after_firsthop = NULL;
     }
 
-    tor_free(cbt->liveness.timeouts_after_firsthop);
-    cbt->liveness.timeouts_after_firsthop = recent_circs;
-    cbt->liveness.num_recent_circs = num;
+    cbt->liveness.num_recent_circs = 0;
   }
 }
 
@@ -523,10 +573,20 @@ void
 circuit_build_times_init(circuit_build_times_t *cbt)
 {
   memset(cbt, 0, sizeof(*cbt));
-  cbt->liveness.num_recent_circs =
+  /*
+   * Check if we really are using adaptive timeouts, and don't keep
+   * track of this stuff if not.
+   */
+  if (!circuit_build_times_disabled()) {
+    cbt->liveness.num_recent_circs =
       circuit_build_times_recent_circuit_count(NULL);
-  cbt->liveness.timeouts_after_firsthop = tor_malloc_zero(sizeof(int8_t)*
-                                      cbt->liveness.num_recent_circs);
+    cbt->liveness.timeouts_after_firsthop =
+      tor_malloc_zero(sizeof(int8_t)*cbt->liveness.num_recent_circs);
+  }
+  else {
+    cbt->liveness.num_recent_circs = 0;
+    cbt->liveness.timeouts_after_firsthop = NULL;
+  }
   cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 }
@@ -1213,9 +1273,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 {
-  cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx] = 0;
-  cbt->liveness.after_firsthop_idx++;
-  cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  /* Check for NULLness because we might not be using adaptive timeouts */
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]
+      = 0;
+    cbt->liveness.after_firsthop_idx++;
+    cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  }
 }
 
 /**
@@ -1230,10 +1295,15 @@ static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop)
 {
-  if (did_onehop) {
-    cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]=1;
-    cbt->liveness.after_firsthop_idx++;
-    cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  /* Check for NULLness because we might not be using adaptive timeouts */
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    if (did_onehop) {
+      cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]
+        = 1;
+      cbt->liveness.after_firsthop_idx++;
+      cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+    }
   }
 }
 
@@ -1319,10 +1389,13 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   int timeout_count=0;
   int i;
 
-  /* how many of our recent circuits made it to the first hop but then
-   * timed out? */
-  for (i = 0; i < cbt->liveness.num_recent_circs; i++) {
-    timeout_count += cbt->liveness.timeouts_after_firsthop[i];
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    /* how many of our recent circuits made it to the first hop but then
+     * timed out? */
+    for (i = 0; i < cbt->liveness.num_recent_circs; i++) {
+      timeout_count += cbt->liveness.timeouts_after_firsthop[i];
+    }
   }
 
   /* If 80% of our recent circuits are timing out after the first hop,
@@ -1332,9 +1405,12 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   }
 
   circuit_build_times_reset(cbt);
-  memset(cbt->liveness.timeouts_after_firsthop, 0,
-          sizeof(*cbt->liveness.timeouts_after_firsthop)*
-          cbt->liveness.num_recent_circs);
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    memset(cbt->liveness.timeouts_after_firsthop, 0,
+            sizeof(*cbt->liveness.timeouts_after_firsthop)*
+            cbt->liveness.num_recent_circs);
+  }
   cbt->liveness.after_firsthop_idx = 0;
 
   /* Check to see if this has happened before. If so, double the timeout
