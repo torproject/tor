@@ -231,7 +231,8 @@ int tor_sscanf(const char *buf, const char *pattern, ...)
 void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
   CHECK_PRINTF(2, 3);
 void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
-                             va_list args);
+                             va_list args)
+  CHECK_PRINTF(2, 0);
 
 int hex_decode_digit(char c);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
