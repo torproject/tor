@@ -563,9 +563,16 @@ dnl use it with a build of a library.
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
 all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
 
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__clang__)
+#error
+#endif])], have_clang=yes, have_clang=no)
+
 if test x$enable_gcc_hardening != xno; then
     CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
-    TOR_CHECK_CFLAGS(-Qunused-arguments)
+    if test x$have_clang = xyes; then
+        TOR_CHECK_CFLAGS(-Qunused-arguments)
+    fi
     TOR_CHECK_CFLAGS(-fstack-protector-all)
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(-fwrapv)
@@ -1242,11 +1249,6 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 #if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
 #error
 #endif])], have_gcc43=yes, have_gcc43=no)
-
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__clang__)
-#error
-#endif])], have_clang=yes, have_clang=no)
 
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
