@@ -1,0 +1,2 @@
+  o Security fixes:
+    - Enable gcc and ld hardening by default. Fixes bug 5210.
