@@ -3889,6 +3889,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("You have configured more than one proxy type. "
            "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
 
+  /* Check if the proxies will give surprising behavior. */
+  if (options->HTTPProxy && !(options->Socks4Proxy ||
+                              options->Socks5Proxy ||
+                              options->HTTPSProxy)) {
+    log_warn(LD_CONFIG, "HTTPProxy configured, but no SOCKS proxy or "
+             "HTTPS proxy configured. Watch out: this configuration will "
+             "proxy unencrypted directory connections only.");
+  }
+
   if (options->Socks5ProxyUsername) {
     size_t len;
 
