@@ -156,6 +156,11 @@ circuit_build_times_disabled(void)
                state_disabled);
       return 1;
     } else {
+      log_debug(LD_BUG,
+                "CircuitBuildTime learning is not disabled. "
+                "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
+                consensus_disabled, config_disabled, dirauth_disabled,
+                state_disabled);
       return 0;
     }
   }
@@ -171,10 +176,21 @@ circuit_build_times_disabled(void)
 static int32_t
 circuit_build_times_max_timeouts(void)
 {
-  return networkstatus_get_param(NULL, "cbtmaxtimeouts",
+  int32_t cbt_maxtimeouts;
+
+  cbt_maxtimeouts = networkstatus_get_param(NULL, "cbtmaxtimeouts",
                                  CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT,
                                  CBT_MIN_MAX_RECENT_TIMEOUT_COUNT,
                                  CBT_MAX_MAX_RECENT_TIMEOUT_COUNT);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_max_timeouts() called, cbtmaxtimeouts is"
+              " %d",
+              cbt_maxtimeouts);
+  }
+
+  return cbt_maxtimeouts;
 }
 
 /**
@@ -193,6 +209,14 @@ circuit_build_times_default_num_xm_modes(void)
                                         CBT_DEFAULT_NUM_XM_MODES,
                                         CBT_MIN_NUM_XM_MODES,
                                         CBT_MAX_NUM_XM_MODES);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_default_num_xm_modes() called, cbtnummodes"
+              " is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -209,6 +233,14 @@ circuit_build_times_min_circs_to_observe(void)
                                         CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE,
                                         CBT_MIN_MIN_CIRCUITS_TO_OBSERVE,
                                         CBT_MAX_MIN_CIRCUITS_TO_OBSERVE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_min_circs_to_observe() called, cbtmincircs"
+              " is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -233,6 +265,14 @@ circuit_build_times_quantile_cutoff(void)
                                         CBT_DEFAULT_QUANTILE_CUTOFF,
                                         CBT_MIN_QUANTILE_CUTOFF,
                                         CBT_MAX_QUANTILE_CUTOFF);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_quantile_cutoff() called, cbtquantile"
+              " is %d",
+              num);
+  }
+
   return num/100.0;
 }
 
@@ -263,6 +303,13 @@ circuit_build_times_close_quantile(void)
              CBT_DEFAULT_CLOSE_QUANTILE,
              CBT_MIN_CLOSE_QUANTILE,
              CBT_MAX_CLOSE_QUANTILE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_close_quantile() called, cbtclosequantile"
+              " is %d", param);
+  }
+
   if (param < min) {
     log_warn(LD_DIR, "Consensus parameter cbtclosequantile is "
              "too small, raising to %d", min);
@@ -285,6 +332,13 @@ circuit_build_times_test_frequency(void)
                                         CBT_DEFAULT_TEST_FREQUENCY,
                                         CBT_MIN_TEST_FREQUENCY,
                                         CBT_MAX_TEST_FREQUENCY);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_test_frequency() called, cbttestfreq is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -302,6 +356,13 @@ circuit_build_times_min_timeout(void)
                                         CBT_DEFAULT_TIMEOUT_MIN_VALUE,
                                         CBT_MIN_TIMEOUT_MIN_VALUE,
                                         CBT_MAX_TIMEOUT_MIN_VALUE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_min_timeout() called, cbtmintimeout is %d",
+              num);
+  }
+
   return num;
 }
 
@@ -319,6 +380,14 @@ circuit_build_times_initial_timeout(void)
                                           CBT_DEFAULT_TIMEOUT_INITIAL_VALUE,
                                           CBT_MIN_TIMEOUT_INITIAL_VALUE,
                                           CBT_MAX_TIMEOUT_INITIAL_VALUE);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_initial_timeout() called, "
+              "cbtinitialtimeout is %d",
+              param);
+  }
+
   if (param < min) {
     log_warn(LD_DIR, "Consensus parameter cbtinitialtimeout is too small, "
              "raising to %d", min);
@@ -337,10 +406,20 @@ circuit_build_times_initial_timeout(void)
 static int32_t
 circuit_build_times_recent_circuit_count(networkstatus_t *ns)
 {
-  return networkstatus_get_param(ns, "cbtrecentcount",
-                                 CBT_DEFAULT_RECENT_CIRCUITS,
-                                 CBT_MIN_RECENT_CIRCUITS,
-                                 CBT_MAX_RECENT_CIRCUITS);
+  int32_t num;
+  num = networkstatus_get_param(ns, "cbtrecentcount",
+                                CBT_DEFAULT_RECENT_CIRCUITS,
+                                CBT_MIN_RECENT_CIRCUITS,
+                                CBT_MAX_RECENT_CIRCUITS);
+
+  if (!(get_options()->LearnCircuitBuildTimeout)) {
+    log_debug(LD_BUG,
+              "circuit_build_times_recent_circuit_count() called, "
+              "cbtrecentcount is %d",
+              num);
+  }
+
+  return num;
 }
 
 /**
@@ -353,41 +432,79 @@ void
 circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                          networkstatus_t *ns)
 {
-  int32_t num = circuit_build_times_recent_circuit_count(ns);
+  int32_t num;
 
-  if (num > 0 && num != cbt->liveness.num_recent_circs) {
-    int8_t *recent_circs;
-    log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
-               "circuits we must track to detect network failures from %d "
-               "to %d.", cbt->liveness.num_recent_circs, num);
+  /*
+   * First check if we're doing adaptive timeouts at all; nothing to
+   * update if we aren't.
+   */
 
-    tor_assert(cbt->liveness.timeouts_after_firsthop);
+  if (!circuit_build_times_disabled()) {
+    num = circuit_build_times_recent_circuit_count(ns);
 
-    /*
-     * Technically this is a circular array that we are reallocating
-     * and memcopying. However, since it only consists of either 1s
-     * or 0s, and is only used in a statistical test to determine when
-     * we should discard our history after a sufficient number of 1's
-     * have been reached, it is fine if order is not preserved or
-     * elements are lost.
-     *
-     * cbtrecentcount should only be changing in cases of severe network
-     * distress anyway, so memory correctness here is paramount over
-     * doing acrobatics to preserve the array.
-     */
-    recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
-    memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
-           sizeof(int8_t)*MIN(num, cbt->liveness.num_recent_circs));
+    if (num > 0) {
+      if (num != cbt->liveness.num_recent_circs) {
+        int8_t *recent_circs;
+        log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
+                   "circuits we must track to detect network failures from %d "
+                   "to %d.", cbt->liveness.num_recent_circs, num);
 
-    // Adjust the index if it needs it.
-    if (num < cbt->liveness.num_recent_circs) {
-      cbt->liveness.after_firsthop_idx = MIN(num-1,
-              cbt->liveness.after_firsthop_idx);
+        tor_assert(cbt->liveness.timeouts_after_firsthop ||
+                   cbt->liveness.num_recent_circs == 0);
+
+        /*
+         * Technically this is a circular array that we are reallocating
+         * and memcopying. However, since it only consists of either 1s
+         * or 0s, and is only used in a statistical test to determine when
+         * we should discard our history after a sufficient number of 1's
+         * have been reached, it is fine if order is not preserved or
+         * elements are lost.
+         *
+         * cbtrecentcount should only be changing in cases of severe network
+         * distress anyway, so memory correctness here is paramount over
+         * doing acrobatics to preserve the array.
+         */
+        recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
+        if (cbt->liveness.timeouts_after_firsthop &&
+            cbt->liveness.num_recent_circs > 0) {
+          memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
+                 sizeof(int8_t)*MIN(num, cbt->liveness.num_recent_circs));
+        }
+
+        // Adjust the index if it needs it.
+        if (num < cbt->liveness.num_recent_circs) {
+          cbt->liveness.after_firsthop_idx = MIN(num-1,
+                  cbt->liveness.after_firsthop_idx);
+        }
+
+        tor_free(cbt->liveness.timeouts_after_firsthop);
+        cbt->liveness.timeouts_after_firsthop = recent_circs;
+        cbt->liveness.num_recent_circs = num;
+      }
+      /* else no change, nothing to do */
+    } else { /* num == 0 */
+      /*
+       * Weird.  This probably shouldn't happen, so log a warning, but try
+       * to do something sensible anyway.
+       */
+
+      log_warn(LD_CIRC,
+               "The cbtrecentcircs consensus parameter came back zero!  "
+               "This disables adaptive timeouts since we can't keep track of "
+               "any recent circuits.");
+
+      circuit_build_times_free_timeouts(cbt);
     }
+  } else {
+    /*
+     * Adaptive timeouts are disabled; this might be because of the
+     * LearnCircuitBuildTimes config parameter, and hence permanent, or
+     * the cbtdisabled consensus parameter, so it may be a new condition.
+     * Treat it like getting num == 0 above and free the circuit history
+     * if we have any.
+     */
 
-    tor_free(cbt->liveness.timeouts_after_firsthop);
-    cbt->liveness.timeouts_after_firsthop = recent_circs;
-    cbt->liveness.num_recent_circs = num;
+    circuit_build_times_free_timeouts(cbt);
   }
 }
 
@@ -406,16 +523,26 @@ static double
 circuit_build_times_get_initial_timeout(void)
 {
   double timeout;
-  if (!unit_tests && get_options()->CircuitBuildTimeout) {
-    timeout = get_options()->CircuitBuildTimeout*1000;
-    if (timeout < circuit_build_times_min_timeout()) {
-      log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
-               circuit_build_times_min_timeout()/1000);
-      timeout = circuit_build_times_min_timeout();
+
+  /*
+   * Check if we have LearnCircuitBuildTimeout, and if we don't,
+   * always use CircuitBuildTimeout, no questions asked.
+   */
+  if (get_options()->LearnCircuitBuildTimeout) {
+    if (!unit_tests && get_options()->CircuitBuildTimeout) {
+      timeout = get_options()->CircuitBuildTimeout*1000;
+      if (timeout < circuit_build_times_min_timeout()) {
+        log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
+                 circuit_build_times_min_timeout()/1000);
+        timeout = circuit_build_times_min_timeout();
+      }
+    } else {
+      timeout = circuit_build_times_initial_timeout();
     }
   } else {
-    timeout = circuit_build_times_initial_timeout();
+    timeout = get_options()->CircuitBuildTimeout*1000;
   }
+
   return timeout;
 }
 
@@ -444,12 +571,38 @@ void
 circuit_build_times_init(circuit_build_times_t *cbt)
 {
   memset(cbt, 0, sizeof(*cbt));
-  cbt->liveness.num_recent_circs =
+  /*
+   * Check if we really are using adaptive timeouts, and don't keep
+   * track of this stuff if not.
+   */
+  if (!circuit_build_times_disabled()) {
+    cbt->liveness.num_recent_circs =
       circuit_build_times_recent_circuit_count(NULL);
-  cbt->liveness.timeouts_after_firsthop = tor_malloc_zero(sizeof(int8_t)*
-                                      cbt->liveness.num_recent_circs);
+    cbt->liveness.timeouts_after_firsthop =
+      tor_malloc_zero(sizeof(int8_t)*cbt->liveness.num_recent_circs);
+  } else {
+    cbt->liveness.num_recent_circs = 0;
+    cbt->liveness.timeouts_after_firsthop = NULL;
+  }
   cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
+}
+
+/**
+ * Free the saved timeouts, if the cbtdisabled consensus parameter got turned
+ * on or something.
+ */
+
+void
+circuit_build_times_free_timeouts(circuit_build_times_t *cbt)
+{
+  if (!cbt) return;
+
+  if (cbt->liveness.timeouts_after_firsthop) {
+    tor_free(cbt->liveness.timeouts_after_firsthop);
+  }
+
+  cbt->liveness.num_recent_circs = 0;
 }
 
 #if 0
@@ -1134,9 +1287,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 {
-  cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx] = 0;
-  cbt->liveness.after_firsthop_idx++;
-  cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  /* Check for NULLness because we might not be using adaptive timeouts */
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]
+      = 0;
+    cbt->liveness.after_firsthop_idx++;
+    cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  }
 }
 
 /**
@@ -1151,10 +1309,15 @@ static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop)
 {
-  if (did_onehop) {
-    cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]=1;
-    cbt->liveness.after_firsthop_idx++;
-    cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+  /* Check for NULLness because we might not be using adaptive timeouts */
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    if (did_onehop) {
+      cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]
+        = 1;
+      cbt->liveness.after_firsthop_idx++;
+      cbt->liveness.after_firsthop_idx %= cbt->liveness.num_recent_circs;
+    }
   }
 }
 
@@ -1240,10 +1403,13 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   int timeout_count=0;
   int i;
 
-  /* how many of our recent circuits made it to the first hop but then
-   * timed out? */
-  for (i = 0; i < cbt->liveness.num_recent_circs; i++) {
-    timeout_count += cbt->liveness.timeouts_after_firsthop[i];
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    /* how many of our recent circuits made it to the first hop but then
+     * timed out? */
+    for (i = 0; i < cbt->liveness.num_recent_circs; i++) {
+      timeout_count += cbt->liveness.timeouts_after_firsthop[i];
+    }
   }
 
   /* If 80% of our recent circuits are timing out after the first hop,
@@ -1253,9 +1419,12 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   }
 
   circuit_build_times_reset(cbt);
-  memset(cbt->liveness.timeouts_after_firsthop, 0,
-          sizeof(*cbt->liveness.timeouts_after_firsthop)*
-          cbt->liveness.num_recent_circs);
+  if (cbt->liveness.timeouts_after_firsthop &&
+      cbt->liveness.num_recent_circs > 0) {
+    memset(cbt->liveness.timeouts_after_firsthop, 0,
+            sizeof(*cbt->liveness.timeouts_after_firsthop)*
+            cbt->liveness.num_recent_circs);
+  }
   cbt->liveness.after_firsthop_idx = 0;
 
   /* Check to see if this has happened before. If so, double the timeout
@@ -1435,6 +1604,12 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 {
   long prev_timeout = tor_lround(cbt->timeout_ms/1000);
   double timeout_rate;
+
+  /*
+   * Just return if we aren't using adaptive timeouts
+   */
+  if (circuit_build_times_disabled())
+    return;
 
   if (!circuit_build_times_set_timeout_worker(cbt))
     return;

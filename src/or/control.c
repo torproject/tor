@@ -4109,10 +4109,12 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                         buildtimeout_set_event_t type)
 {
   const char *type_string = NULL;
-  double qnt = circuit_build_times_quantile_cutoff();
+  double qnt;
 
   if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
     return 0;
+
+  qnt = circuit_build_times_quantile_cutoff();
 
   switch (type) {
     case BUILDTIMEOUT_SET_EVENT_COMPUTED:
