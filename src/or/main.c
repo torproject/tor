@@ -848,6 +848,30 @@ conn_close_if_marked(int i)
                            "Holding conn (fd %d) open for more flushing.",
                            (int)conn->s));
         conn->timestamp_lastwritten = now; /* reset so we can flush more */
+      } else if (sz == 0) { /* retval is also 0 */
+    	/* Connection must flush before closing, but it's being rate-limited.
+    	   Let's remove from Libevent, and mark it as blocked on bandwidth so it
+    	   will be re-added on next token bucket refill. Prevents busy Libevent
+    	   loops where we keep ending up here and returning 0 until we are no
+    	   longer blocked on bandwidth. */
+        if (connection_is_writing(conn)) {
+          conn->write_blocked_on_bw = 1;
+          connection_stop_writing(conn);
+        }
+        if (connection_is_reading(conn)) {
+#define MARKED_READING_RATE 180
+          static ratelim_t marked_read_lim = RATELIM_INIT(MARKED_READING_RATE);
+          char *m;
+          if ((m = rate_limit_log(&marked_read_lim, now))) {
+            log_warn(LD_BUG, "Marked connection (fd %d, type %s, state %s) "
+                     "is still reading; that shouldn't happen.%s",
+                     (int)conn->s, conn_type_to_string(conn->type),
+                     conn_state_to_string(conn->type, conn->state), m);
+            tor_free(m);
+          }
+          conn->read_blocked_on_bw = 1;
+          connection_stop_reading(conn);
+        }
       }
       return 0;
     }
