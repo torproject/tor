@@ -482,8 +482,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
         cbt->liveness.num_recent_circs = num;
       }
       /* else no change, nothing to do */
-    }
-    else { /* num == 0 */
+    } else { /* num == 0 */
       /*
        * Weird.  This probably shouldn't happen, so log a warning, but try
        * to do something sensible anyway.
@@ -501,8 +500,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
 
       cbt->liveness.num_recent_circs = num;
     }
-  }
-  else {
+  } else {
     /*
      * Adaptive timeouts are disabled; this might be because of the
      * LearnCircuitBuildTimes config parameter, and hence permanent, or
@@ -551,8 +549,7 @@ circuit_build_times_get_initial_timeout(void)
     } else {
       timeout = circuit_build_times_initial_timeout();
     }
-  }
-  else {
+  } else {
     timeout = get_options()->CircuitBuildTimeout*1000;
   }
 
@@ -593,8 +590,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
       circuit_build_times_recent_circuit_count(NULL);
     cbt->liveness.timeouts_after_firsthop =
       tor_malloc_zero(sizeof(int8_t)*cbt->liveness.num_recent_circs);
-  }
-  else {
+  } else {
     cbt->liveness.num_recent_circs = 0;
     cbt->liveness.timeouts_after_firsthop = NULL;
   }
