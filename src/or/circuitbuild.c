@@ -493,12 +493,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                "This disables adaptive timeouts since we can't keep track of "
                "any recent circuits.");
 
-      if (cbt->liveness.timeouts_after_firsthop) {
-        tor_free(cbt->liveness.timeouts_after_firsthop);
-        cbt->liveness.timeouts_after_firsthop = NULL;
-      }
-
-      cbt->liveness.num_recent_circs = num;
+      circuit_build_times_free_timeouts(cbt);
     }
   } else {
     /*
@@ -509,12 +504,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
      * if we have any.
      */
 
-    if (cbt->liveness.timeouts_after_firsthop) {
-      tor_free(cbt->liveness.timeouts_after_firsthop);
-      cbt->liveness.timeouts_after_firsthop = NULL;
-    }
-
-    cbt->liveness.num_recent_circs = 0;
+    circuit_build_times_free_timeouts(cbt);
   }
 }
 
@@ -596,6 +586,21 @@ circuit_build_times_init(circuit_build_times_t *cbt)
   }
   cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
+}
+
+/**
+ * Free the saved timeouts, if the cbtdisabled consensus parameter got turned
+ * on or something.
+ */
+
+void circuit_build_times_free_timeouts(circuit_build_times_t *cbt) {
+  if (!cbt) return;
+
+  if (cbt->liveness.timeouts_after_firsthop) {
+    tor_free(cbt->liveness.timeouts_after_firsthop);
+  }
+
+  cbt->liveness.num_recent_circs = 0;
 }
 
 #if 0
