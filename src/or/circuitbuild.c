@@ -2589,7 +2589,8 @@ pathbias_get_notice_rate(const or_options_t *options)
 static double
 pathbias_get_disable_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_DISABLE_PCT 50
+// XXX: This needs tuning based on use + experimentation before we set it
+#define DFLT_PATH_BIAS_DISABLE_PCT 0
   if (options->PathBiasDisableRate >= 0.0)
     return options->PathBiasDisableRate;
   else
