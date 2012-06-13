@@ -3855,6 +3855,11 @@ typedef enum {
   /** We're remapping this address because we got a DNS resolution from a
    * Tor server that told us what its value was. */
   ADDRMAPSRC_DNS,
+
+  /** No remapping has occurred.  This isn't a possible value for an
+   * addrmap_entry_t; it's used as a null value when we need to answer "Why
+   * did this remapping happen." */
+  ADDRMAPSRC_NONE
 } addressmap_entry_source_t;
 
 /********************************* control.c ***************************/
