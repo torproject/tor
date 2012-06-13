@@ -593,7 +593,9 @@ circuit_build_times_init(circuit_build_times_t *cbt)
  * on or something.
  */
 
-void circuit_build_times_free_timeouts(circuit_build_times_t *cbt) {
+void
+circuit_build_times_free_timeouts(circuit_build_times_t *cbt)
+{
   if (!cbt) return;
 
   if (cbt->liveness.timeouts_after_firsthop) {
