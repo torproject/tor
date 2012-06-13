@@ -1460,7 +1460,7 @@ rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
     /* We need to set CLIENT_CIPHER_STACK to an array of the ciphers
      * we want to use/advertise. */
     int i = 0, j = 0;
-    smartlist_t *unsupported = smartlist_create();
+    smartlist_t *unsupported = smartlist_new();
 
     /* First, create a dummy SSL_CIPHER for every cipher. */
     CLIENT_CIPHER_DUMMIES =
