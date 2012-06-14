@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix compilation warning with clang 3.1. Fixes bug 6141; bugfix on
-      0.2.3.11-alpha.
-

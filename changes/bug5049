@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Make sure circuitbuild.c checks LearnCircuitBuildTimeout in all the
-      right places and never depends on the consensus parameters or computes
-      adaptive timeouts when it is disabled.

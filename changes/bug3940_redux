@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Change the AllowDotExit rules so they should actually work.
-      We now enforce AllowDotExit only immediately after receiving
-      an address via SOCKS or DNSPort: other sources are free to provide
-      .exit addresses after the resolution occurs.

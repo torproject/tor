@@ -1,6 +1,24 @@
-Changes in version 0.2.3.17-alpha - 2012-06-??
+Changes in version 0.2.3.17-beta - 2012-06-1?
+  o Major features:
+    - Enable gcc and ld hardening by default. Resolves ticket 5210.
+    - Update TLS cipher list to match Firefox 8 and later. Resolves
+      ticket 4744.
+    - Implement the client side of proposal 198: remove support for
+      clients falsely claiming to support standard ciphersuites that
+      they can actually provide. As of modern OpenSSL versions, it's not
+      necessary to fake any standard ciphersuite, and doing so prevents
+      us from using better ciphersuites in the future, since servers
+      can't know whether an advertised ciphersuite is really supported or
+      not. Some hosts -- notably, ones with very old versions of OpenSSL
+      or where OpenSSL has been built with ECC disabled -- will stand
+      out because of this change; TBB users should not be affected.
 
   o Major bugfixes:
+    - Change the AllowDotExit rules so they should actually work.
+      We now enforce AllowDotExit only immediately after receiving an
+      address via SOCKS or DNSPort: other sources are free to provide
+      .exit addresses after the resolution occurs. Fixes bug 3940;
+      bugfix on 0.2.2.1-alpha.
     - When building Tor on Windows with -DUNICODE (not default), ensure
       that error messages, filenames, and DNS server names are always
       NUL-terminated when we convert them to a single-byte encoding.
@@ -15,8 +33,18 @@ Changes in version 0.2.3.17-alpha - 2012-06-??
       bug 6094; bugfix on 0.2.3.16-alpha.
 
   o Minor bugfixes:
+    - Disable writing on marked-for-close connections when they are
+      blocked on bandwidth, to prevent busy-looping in Libevent. Fixes
+      bug 5263; bugfix on 0.0.2pre13, where we first added a special
+      case for flushing marked connections.
     - Detect SSL handshake even when the initial attempt to write the
       server hello fails. Fixes bug 4592; bugfix on 0.2.0.13-alpha.
+    - Fix a (harmless) integer overflow in cell statistics reported by
+      some fast relays. Fixes bug 5849; bugfix on 0.2.2.1-alpha.
+    - Make sure circuitbuild.c checks LearnCircuitBuildTimeout in all the
+      right places and never depends on the consensus parameters or
+      computes adaptive timeouts when it is disabled. Fixes bug 5049;
+      bugfix on 0.2.2.14-alpha.
     - Make Tor build correctly again with -DUNICODE -D_UNICODE defined.
       Fixes bug 6097; bugfix on 0.2.2.16-alpha.
     - Fix an edge case where TestingTorNetwork is set but the authorities
@@ -26,6 +54,8 @@ Changes in version 0.2.3.17-alpha - 2012-06-??
     - Correct the manpage's descriptions for the default values of 
       DirReqStatistics and ExtraInfoStatistics. Fixes bug 2865; bugfix
       on 0.2.3.1-alpha.
+    - Fix compilation warning with clang 3.1. Fixes bug 6141; bugfix on
+      0.2.3.11-alpha.
 
   o Minor features:
     - Rate-limit the "Weighted bandwidth is 0.000000" message, and add
@@ -34,6 +64,11 @@ Changes in version 0.2.3.17-alpha - 2012-06-??
     - Check CircuitBuildTimeout and LearnCircuitBuildTimeout in
       options_validate(); warn if LearnCircuitBuildTimeout is disabled and
       CircuitBuildTimeout is set unreasonably low. Resolves ticket 5452.
+    - Warn the user when HTTPProxy, but no other proxy type, is
+      configured. This can cause surprising behavior: it doesn't send
+      all of Tor's traffic over the HTTPProxy -- it sends unencrypted
+      directory traffic only. Resolves ticket 4663.
+    - Update to the June 6 2012 Maxmind GeoLite Country database.
 
 
 Changes in version 0.2.2.37 - 2012-06-06

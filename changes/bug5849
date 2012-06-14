@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix a (harmless) integer overflow in cell statistics reported by
-      some fast relays.  Fixes bug 5849; bugfix on 0.2.2.1-alpha.

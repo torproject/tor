@@ -1,5 +1,0 @@
-  o Minor features:
-    - Warn the user when HTTPProxy, but no other proxy type, is
-      configured. This can cause surprising behavior: it doesn't send
-      all of Tor's traffic over the HTTPProxy--it sends unencrypted
-      directory traffic only. Resolves ticket 4663.
