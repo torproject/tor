@@ -1,0 +1,12 @@
+  o Security fixes:
+
+    - Try to leak less information about what relays a client is
+      choosing to a side-channel attacker.  Previously, a Tor client
+      would stop iterating through the list of available relays as
+      soon as it had chosen one, thus leaking information about which
+      relays it picked for a circuit to a timing attack.  (Tor is
+      likely to still leak information about which relays it has
+      chosen for a circuit to other processes on the same computer,
+      through e.g. which cache lines it loads while building the
+      circuit.)
+
