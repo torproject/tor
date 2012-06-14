@@ -1085,9 +1085,10 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
 
     if (transport_name) {
       log_warn(LD_GENERAL, "We were supposed to connect to bridge '%s:%u' "
-               "using pluggable transport '%s', but it seems that we can't "
-               "find a pluggable transport proxy supporting '%s'. Please make "
-               "sure that your configuration file is valid.",
+               "using pluggable transport '%s', but we can't find a pluggable "
+               "transport proxy supporting '%s'. This can happen if you "
+               "haven't provided a ClientTransportPlugin line, or if "
+               "your pluggable transport proxy stopped running.",
                fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port,
                transport_name, transport_name);
     } else {

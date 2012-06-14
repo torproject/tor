@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Remove validate_pluggable_transports_config(): its warning
+      message is now handled by connection_or_connect().
