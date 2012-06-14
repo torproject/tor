@@ -14,15 +14,6 @@ Changes in version 0.2.3.17-beta - 2012-06-1?
       out because of this change; TBB users should not be affected.
 
   o Major bugfixes:
-    - Change the AllowDotExit rules so they should actually work.
-      We now enforce AllowDotExit only immediately after receiving an
-      address via SOCKS or DNSPort: other sources are free to provide
-      .exit addresses after the resolution occurs. Fixes bug 3940;
-      bugfix on 0.2.2.1-alpha.
-    - When building Tor on Windows with -DUNICODE (not default), ensure
-      that error messages, filenames, and DNS server names are always
-      NUL-terminated when we convert them to a single-byte encoding.
-      Fixes bug 5909; bugfix on 0.2.2.16-alpha.
     - Change the default value for DynamicDHGroups (introduced in
       0.2.3.9-alpha) to 0. This feature can make Tor relays less
       identifiable by their use of the mod_ssl DH group, but at
@@ -39,12 +30,21 @@ Changes in version 0.2.3.17-beta - 2012-06-1?
       case for flushing marked connections.
     - Detect SSL handshake even when the initial attempt to write the
       server hello fails. Fixes bug 4592; bugfix on 0.2.0.13-alpha.
+    - Change the AllowDotExit rules so they should actually work.
+      We now enforce AllowDotExit only immediately after receiving an
+      address via SOCKS or DNSPort: other sources are free to provide
+      .exit addresses after the resolution occurs. Fixes bug 3940;
+      bugfix on 0.2.2.1-alpha.
     - Fix a (harmless) integer overflow in cell statistics reported by
       some fast relays. Fixes bug 5849; bugfix on 0.2.2.1-alpha.
     - Make sure circuitbuild.c checks LearnCircuitBuildTimeout in all the
       right places and never depends on the consensus parameters or
       computes adaptive timeouts when it is disabled. Fixes bug 5049;
       bugfix on 0.2.2.14-alpha.
+    - When building Tor on Windows with -DUNICODE (not default), ensure
+      that error messages, filenames, and DNS server names are always
+      NUL-terminated when we convert them to a single-byte encoding.
+      Fixes bug 5909; bugfix on 0.2.2.16-alpha.
     - Make Tor build correctly again with -DUNICODE -D_UNICODE defined.
       Fixes bug 6097; bugfix on 0.2.2.16-alpha.
     - Fix an edge case where TestingTorNetwork is set but the authorities
