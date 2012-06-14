@@ -1983,9 +1983,10 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     if (is_guard)
       bitarray_set(guard_bits, i);
     if (is_known) {
-      bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX
-      // XXX this is no longer true! We don't always cap the bw anymore. Can
-      // a consensus make us overflow?-sh
+      bandwidths[i] = (int32_t) this_bw;
+      /* Casting this_bw to int32_t is safe because both kb_to_bytes
+         and bridge_get_advertised_bandwidth_bounded limit it to below
+         INT32_MAX. */
       tor_assert(bandwidths[i] >= 0);
       if (is_guard)
         total_guard_bw += this_bw;
