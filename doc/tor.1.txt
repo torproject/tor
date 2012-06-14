@@ -62,10 +62,13 @@ OPTIONS
 **--version**::
     Display Tor version and exit.
 
-**--quiet**::
-    Do not start Tor with a console log unless explicitly requested to do so.
-    (By default, Tor starts out logging messages at level "notice" or higher to
-    the console, until it has parsed its configuration.)
+**--quiet**|**--hush**::
+    Override the default console log.  By default, Tor starts out logging
+    messages at level "notice" and higher to the console.  It stops doing so
+    after it parses its configuration, if the configuration tells it to log
+    anywhere else.  You can override this behavior with the **--hush** option,
+    which tells Tor to only send warnings and errors to the console, or with
+    the **--quiet** option, which tells Tor not to log to the console at all.
 
 Other options can be specified either on the command-line (--option
     value), or in the configuration file (option value or option "value").

@@ -1,0 +1,3 @@
+  o Documentation:
+    - Fix the documentation for the --hush and --quiet command line options,
+      which changed their behavior back in 0.2.3.3-alpha.
