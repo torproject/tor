@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Remove a non-bug log messages about running with circuit timeout
+      learning enabled from LD_BUG. Fixes bug 6169; bugfix on
+      0.2.3.17-beta.

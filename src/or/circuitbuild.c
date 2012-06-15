@@ -158,14 +158,14 @@ circuit_build_times_disabled(void)
 
     if (consensus_disabled || config_disabled || dirauth_disabled ||
            state_disabled) {
-      log_info(LD_CIRC,
+      log_debug(LD_CIRC,
                "CircuitBuildTime learning is disabled. "
                "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
                consensus_disabled, config_disabled, dirauth_disabled,
                state_disabled);
       return 1;
     } else {
-      log_debug(LD_BUG,
+      log_debug(LD_CIRC,
                 "CircuitBuildTime learning is not disabled. "
                 "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
                 consensus_disabled, config_disabled, dirauth_disabled,
