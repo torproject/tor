@@ -76,7 +76,7 @@ _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
    * being attached to a circuit, assume that an attempt to connect to
    * the destination hidden service has just ended.
    *
-   * XXX023 This condition doesn't limit to only streams failing
+   * XXXX This condition doesn't limit to only streams failing
    * without ever being attached.  That sloppiness should be harmless,
    * but we should fix it someday anyway. */
   if ((edge_conn->on_circuit != NULL || edge_conn->edge_has_sent_end) &&
@@ -622,7 +622,7 @@ connection_ap_expire_beginning(void)
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */
-    /* XXXX023 this is a kludgy way to do this. */
+    /* XXXX024 this is a kludgy way to do this. */
     tor_assert(circ->timestamp_dirty);
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 'cutoff' seconds to try */
@@ -664,7 +664,7 @@ connection_ap_attach_pending(void)
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to
  * <b>failed_digest</b> that they are going to fail. */
-/* XXX023 We should get rid of this function, and instead attach
+/* XXX024 We should get rid of this function, and instead attach
  * one-hop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
@@ -1991,7 +1991,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
-    /* XXXX022-1090 Should we also allow foo.bar.exit if ExitNodes is set and
+    /* XXXX024-1090 Should we also allow foo.bar.exit if ExitNodes is set and
        Bar is not listed in it?  I say yes, but our revised manpage branch
        implies no. */
   }
@@ -2572,12 +2572,12 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 
   edge_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (edge_conn->stream_id==0) {
-    /* XXXX023 Instead of closing this stream, we should make it get
+    /* XXXX024 Instead of closing this stream, we should make it get
      * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 
     /* Mark this circuit "unusable for new streams". */
-    /* XXXX023 this is a kludgy way to do this. */
+    /* XXXX024 this is a kludgy way to do this. */
     tor_assert(circ->_base.timestamp_dirty);
     circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
@@ -2657,12 +2657,12 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
   edge_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (edge_conn->stream_id==0) {
-    /* XXXX023 Instead of closing this stream, we should make it get
+    /* XXXX024 Instead of closing this stream, we should make it get
      * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 
     /* Mark this circuit "unusable for new streams". */
-    /* XXXX023 this is a kludgy way to do this. */
+    /* XXXX024 this is a kludgy way to do this. */
     tor_assert(circ->_base.timestamp_dirty);
     circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
@@ -2834,7 +2834,7 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
  * certain errors or for values that didn't come via DNS.  <b>expires</b> is
  * a time when the answer expires, or -1 or TIME_MAX if there's a good TTL.
  **/
-/* XXXX023 the use of the ttl and expires fields is nutty.  Let's make this
+/* XXXX the use of the ttl and expires fields is nutty.  Let's make this
  * interface and those that use it less ugly. */
 void
 connection_ap_handshake_socks_resolved(entry_connection_t *conn,

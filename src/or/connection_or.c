@@ -401,7 +401,7 @@ connection_or_process_inbuf(or_connection_t *conn)
    * check would otherwise just let data accumulate.  It serves no purpose
    * in 0.2.3.
    *
-   * XXX023 Remove this check once we verify that the above paragraph is
+   * XXX024 Remove this check once we verify that the above paragraph is
    * 100% true. */
   if (buf_datalen(conn->_base.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "

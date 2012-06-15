@@ -1435,11 +1435,8 @@ run_scheduled_events(time_t now)
    *    We do this before step 4, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
-  /* XXXX022 If our circuit build timeout is much lower than a second, maybe
-   * we should do this more often? -NM
-   * It can't be lower than 1.5 seconds currently; see
-   * circuit_build_times_min_timeout(). -RD
-   */
+  /* (If our circuit build timeout can ever become lower than a second (which
+   * it can't, currently), we should do this more often.) */
   circuit_expire_building();
 
   /** 3b. Also look at pending streams and prune the ones that 'began'

@@ -799,7 +799,7 @@ connection_ap_process_end_not_open(
           /* We haven't retried too many times; reattach the connection. */
           circuit_log_path(LOG_INFO,LD_APP,circ);
           /* Mark this circuit "unusable for new streams". */
-          /* XXXX023 this is a kludgy way to do this. */
+          /* XXXX024 this is a kludgy way to do this. */
           tor_assert(circ->_base.timestamp_dirty);
           circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
@@ -1462,7 +1462,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   stats_n_data_cells_packaged += 1;
 
   if (PREDICT_UNLIKELY(sending_from_optimistic)) {
-    /* XXX023 We could be more efficient here by sometimes packing
+    /* XXXX We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
     generic_buffer_get(entry_conn->sending_optimistic_data, payload, length);

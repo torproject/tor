@@ -1363,7 +1363,7 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
 
 /* ======
  * IPv4 helpers
- * XXXX023 IPv6 deprecate some of these.
+ * XXXX024 IPv6 deprecate some of these.
  */
 
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,

@@ -1033,7 +1033,7 @@ rend_service_note_removing_intro_point(rend_service_t *service,
 /** Respond to an INTRODUCE2 cell by launching a circuit to the chosen
  * rendezvous point.
  */
- /* XXX022 this function sure could use some organizing. -RD */
+ /* XXXX024 this function sure could use some organizing. -RD */
 int
 rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                        size_t request_len)
@@ -2255,7 +2255,7 @@ rend_services_introduce(void)
          *
          * Unfortunately, we can't find out when the new descriptor
          * has actually been uploaded, so we'll have to settle for a
-         * five-minute timer.  Start it.  XXX023 This sucks. */
+         * five-minute timer.  Start it.  XXXX024 This sucks. */
         intro->time_expiring = now;
 
         intro_point_set_changed = 1;

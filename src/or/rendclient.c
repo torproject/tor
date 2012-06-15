@@ -830,7 +830,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
   /* Set timestamp_dirty, because circuit_expire_building expects it
    * to specify when a circuit entered the _C_REND_READY state. */
   circ->_base.timestamp_dirty = time(NULL);
-  /* XXXX023 This is a pretty brute-force approach. It'd be better to
+  /* XXXX This is a pretty brute-force approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. See comments bug 743. */
   /* If we already have the introduction circuit built, make sure we send

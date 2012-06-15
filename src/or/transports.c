@@ -1002,7 +1002,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
       tor_free(bindaddr_tmp);
     }
 
-    /* XXX023 Remove the '=' here once versions of obfsproxy which
+    /* XXX024 Remove the '=' here once versions of obfsproxy which
      * assert that this env var exists are sufficiently dead.
      *
      * (If we remove this line entirely, some joker will stick this

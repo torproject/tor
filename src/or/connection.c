@@ -2280,7 +2280,7 @@ static void
 record_num_bytes_transferred(connection_t *conn,
                              time_t now, size_t num_read, size_t num_written)
 {
-  /* XXX023 check if this is necessary */
+  /* XXX024 check if this is necessary */
   if (num_written >= INT_MAX || num_read >= INT_MAX) {
     log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
              "connection type=%s, state=%s",
@@ -2925,7 +2925,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
     connection_consider_empty_read_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX022 check for overflow*/
+      /*XXXX024 check for overflow*/
       edge_conn->n_read += (int)info->n_added;
     }
   }
@@ -2946,7 +2946,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
     connection_consider_empty_write_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX022 check for overflow*/
+      /*XXXX024 check for overflow*/
       edge_conn->n_written += (int)info->n_deleted;
     }
   }

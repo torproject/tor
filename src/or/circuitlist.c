@@ -1180,7 +1180,7 @@ circuit_mark_all_unused_circs(void)
  * This is useful for letting the user change pseudonyms, so new
  * streams will not be linkable to old streams.
  */
-/* XXX023 this is a bad name for what this function does */
+/* XXX024 this is a bad name for what this function does */
 void
 circuit_expire_all_dirty_circs(void)
 {
@@ -1191,7 +1191,7 @@ circuit_expire_all_dirty_circs(void)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->timestamp_dirty)
-      /* XXXX023 This is a screwed-up way to say "This is too dirty
+      /* XXXX024 This is a screwed-up way to say "This is too dirty
        * for new circuits. */
       circ->timestamp_dirty -= options->MaxCircuitDirtiness;
   }

@@ -1831,7 +1831,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
       sl_last_weighted_bw_of_me = weight*this_bw;
   } SMARTLIST_FOREACH_END(node);
 
-  /* XXXX023 this is a kludge to expose these values. */
+  /* XXXX this is a kludge to expose these values. */
   sl_last_total_weighted_bw = weighted_bw;
 
   log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
@@ -1960,7 +1960,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
       if (node->rs->has_bandwidth) {
         this_bw = kb_to_bytes(node->rs->bandwidth);
       } else { /* guess */
-        /* XXX023 once consensuses always list bandwidths, we can take
+        /* XXX024 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
         is_known = 0;
         flags = node->rs->is_fast ? 1 : 0;
@@ -2079,7 +2079,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     }
   }
 
-  /* XXXX023 this is a kludge to expose these values. */
+  /* XXXX this is a kludge to expose these values. */
   sl_last_total_weighted_bw = total_bw;
 
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
@@ -4753,7 +4753,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 
 /** How often should we launch a server/authority request to be sure of getting
  * a guess for our IP? */
-/*XXXX023 this info should come from netinfo cells or something, or we should
+/*XXXX024 this info should come from netinfo cells or something, or we should
  * do this only when we aren't seeing incoming data. see bug 652. */
 #define DUMMY_DOWNLOAD_INTERVAL (20*60)
 
@@ -4764,7 +4764,7 @@ launch_dummy_descriptor_download_as_needed(time_t now,
                                            const or_options_t *options)
 {
   static time_t last_dummy_download = 0;
-  /* XXXX023 we could be smarter here; see notes on bug 652. */
+  /* XXXX024 we could be smarter here; see notes on bug 652. */
   /* If we're a server that doesn't have a configured address, we rely on
    * directory fetches to learn when our address changes.  So if we haven't
    * tried to get any routerdescs in a long time, try a dummy fetch now. */
