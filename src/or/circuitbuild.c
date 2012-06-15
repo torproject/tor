@@ -2295,9 +2295,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         if (guard) {
           guard->circuit_successes++;
 
-          log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s",
+          log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
                    guard->circuit_successes, guard->first_hops,
-                   guard->nickname);
+                   guard->nickname, hex_str(guard->identity, DIGEST_LEN));
 
           if (guard->first_hops < guard->circuit_successes) {
             log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
