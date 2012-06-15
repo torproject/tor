@@ -1,4 +1,10 @@
 Changes in version 0.2.3.17-beta - 2012-06-15
+  Tor 0.2.3.17-beta enables compiler and linker hardening by default,
+  gets our TLS handshake back on track for being able to blend in with
+  Firefox, fixes a big bug in 0.2.3.16-alpha that broke Tor's interaction
+  with Vidalia, and otherwise continues to get us closer to a release
+  candidate.
+
   o Major features:
     - Enable gcc and ld hardening by default. Resolves ticket 5210.
     - Update TLS cipher list to match Firefox 8 and later. Resolves
