@@ -28,13 +28,21 @@ Users bounce their TCP streams -- web traffic, ftp, ssh, etc -- around the
 routers, and recipients, observers, and even the routers themselves have
 difficulty tracking the source of the stream.
 
-OPTIONS
--------
+COMMAND-LINE OPTIONS
+--------------------
 **-h**, **-help**::
     Display a short help message and exit.
 
 **-f** __FILE__::
-    FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
+    Specify a new configuration file to contain further Tor configuration
+    options. (Default: $HOME/.torrc, or @CONFDIR@/torrc if that file is not
+    found)
+
+**--defaults-torrc** __FILE__::
+    Specify a file in which to find default values for Tor options.  The
+    contents of this file are overridden by those in the regular
+    configuration file, and by those on the command line. (Default:
+    @CONFDIR@/torrc-defaults.)
 
 **--hash-password**::
     Generates a hashed password for control port access.
@@ -70,14 +78,49 @@ OPTIONS
     which tells Tor to only send warnings and errors to the console, or with
     the **--quiet** option, which tells Tor not to log to the console at all.
 
-Other options can be specified either on the command-line (--option
-    value), or in the configuration file (option value or option "value").
-    Options are case-insensitive. C-style escaped characters are allowed inside
-    quoted values.   Options on the command line take precedence over
-    options found in the configuration file, except indicated otherwise.  To
-    split one configuration entry into multiple lines, use a single \ before
-    the end of the line.  Comments can be used in such multiline entries, but
-    they must start at the beginning of a line.
+Other options can be specified on the command-line in the format "--option
+value", in the format "option value", or in a configuration file.  For
+instance, you can tell Tor to start listening for SOCKS connections on port
+9999 by passing --SOCKSPort 9999 or SOCKPort 9999 to it on the command line,
+or by putting "SOCKSPort 9999" in the configuration file.  You will need to
+quote options with spaces in them: if you want Tor to log all debugging
+messages to debug.log, you will probably need to say --Log 'debug file
+debug.log'.
+
+Options on the command line override those in configuration files. See the
+next section for more information.
+
+THE CONFIGURATION FILE FORMAT
+-----------------------------
+
+All configuration options in a configuration are written on a single line by
+default.  They take the form of an option name and a value, or an option name
+and a quoted value (option value or option "value"). Anything after a #
+character is treated as a comment.  Options are
+case-insensitive. C-style escaped characters are allowed inside quoted
+values. To split one configuration entry into multiple lines, use a single
+backslash character (\) before the end of the line.  Comments can be used in
+such multiline entries, but they must start at the beginning of a line.
+
+By default, an option on the command line overrides an option found in the
+configuration file, and an option in a configuration file overrides one in
+the defaults file.
+
+This rule is simple for options that take a single value, but it can become
+complicated for options that are allowed to occur more than once: if you
+specify four SOCKSPorts in your configuration file, and one more SOCKSPort on
+the command line, the option on the command line will replace __all__ of the
+SOCKSPorts in the configuration file.  If this isn't what you want, prefix
+the option name with a plus sign, and it will be appended to the previous set
+of options instead.
+
+Alternatively, you might want to remove every instance of an option in the
+configuration file, and not replace it at all: you might want to say on the
+command line that you want no SOCKSPorts at all.  To do that, prefix the
+option name with a forward slash.
+
+GENERAL OPTIONS
+---------------
 
 **BandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**::
     A token bucket limits the average incoming bandwidth usage on this node to
