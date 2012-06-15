@@ -849,11 +849,12 @@ conn_close_if_marked(int i)
                            (int)conn->s));
         conn->timestamp_lastwritten = now; /* reset so we can flush more */
       } else if (sz == 0) { /* retval is also 0 */
-    	/* Connection must flush before closing, but it's being rate-limited.
-    	   Let's remove from Libevent, and mark it as blocked on bandwidth so it
-    	   will be re-added on next token bucket refill. Prevents busy Libevent
-    	   loops where we keep ending up here and returning 0 until we are no
-    	   longer blocked on bandwidth. */
+        /* Connection must flush before closing, but it's being rate-limited.
+         * Let's remove from Libevent, and mark it as blocked on bandwidth
+         * so it will be re-added on next token bucket refill. Prevents
+         * busy Libevent loops where we keep ending up here and returning
+         * 0 until we are no longer blocked on bandwidth.
+         */
         if (connection_is_writing(conn)) {
           conn->write_blocked_on_bw = 1;
           connection_stop_writing(conn);
