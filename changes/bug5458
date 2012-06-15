@@ -1,4 +1,6 @@
  o Minor features
    - Issue a notice if a guard completes less than 40% of your circuits.
      Threshold is configurable by torrc option PathBiasNoticeRate
-     and consensus parameter pb_noticepct.
+     and consensus parameter pb_noticepct. There is additional, off-by-
+     default code to disable guards which fail too many circuits.
+     Addresses ticket 5458.
