@@ -1311,7 +1311,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     limit = rlim.rlim_max;
     if (limit > INT_MAX)
       limit = INT_MAX;
-    *max_out = limit - ULIMIT_BUFFER;
+    *max_out = (int)limit - ULIMIT_BUFFER;
     return 0;
   }
   if (rlim.rlim_max < limit) {
