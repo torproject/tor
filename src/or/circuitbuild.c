@@ -2578,7 +2578,7 @@ pathbias_get_min_circs(const or_options_t *options)
 static double
 pathbias_get_notice_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_NOTICE_PCT 70
+#define DFLT_PATH_BIAS_NOTICE_PCT 40
   if (options->PathBiasNoticeRate >= 0.0)
     return options->PathBiasNoticeRate;
   else
