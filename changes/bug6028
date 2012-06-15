@@ -1,0 +1,4 @@
+ o Minor bugfixes:
+   - Make sure to set *socket_error in all error cases in
+     connection_connect(), so it can't produce a warning about errno being
+     zero from errno_to_orconn_end_reason().  Resolves ticket 6028.
