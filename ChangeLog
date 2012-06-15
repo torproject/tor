@@ -1,4 +1,4 @@
-Changes in version 0.2.3.17-beta - 2012-06-1?
+Changes in version 0.2.3.17-beta - 2012-06-15
   o Major features:
     - Enable gcc and ld hardening by default. Resolves ticket 5210.
     - Update TLS cipher list to match Firefox 8 and later. Resolves
@@ -54,6 +54,8 @@ Changes in version 0.2.3.17-beta - 2012-06-1?
     - Correct the manpage's descriptions for the default values of 
       DirReqStatistics and ExtraInfoStatistics. Fixes bug 2865; bugfix
       on 0.2.3.1-alpha.
+    - Fix the documentation for the --hush and --quiet command line
+      options, which changed their behavior back in 0.2.3.3-alpha.
     - Fix compilation warning with clang 3.1. Fixes bug 6141; bugfix on
       0.2.3.11-alpha.
 
@@ -68,7 +70,16 @@ Changes in version 0.2.3.17-beta - 2012-06-1?
       configured. This can cause surprising behavior: it doesn't send
       all of Tor's traffic over the HTTPProxy -- it sends unencrypted
       directory traffic only. Resolves ticket 4663.
+    - Issue a notice if a guard completes less than 40% of your circuits.
+      Threshold is configurable by torrc option PathBiasNoticeRate and
+      consensus parameter pb_noticepct. There is additional, off-by-
+      default code to disable guards which fail too many circuits.
+      Addresses ticket 5458.
     - Update to the June 6 2012 Maxmind GeoLite Country database.
+
+  o Code simplifications and refactoring:
+    - Remove validate_pluggable_transports_config(): its warning
+      message is now handled by connection_or_connect().
 
 
 Changes in version 0.2.2.37 - 2012-06-06
@@ -217,7 +228,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
       network is disabled or the nameservers are unconfigurable. Fixes
       bug 5916; bugfix on Tor 0.1.2.1-alpha (for the unconfigurable
       nameserver case) and on 0.2.3.9-alpha (for the DisableNetwork case).
-    - Don't hold a windows file handle open for every file mapping;
+    - Don't hold a Windows file handle open for every file mapping;
       the file mapping handle is sufficient. Fixes bug 5951; bugfix on
       0.1.2.1-alpha.
     - Avoid O(n^2) performance characteristics when parsing a large
