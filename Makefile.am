@@ -24,23 +24,18 @@ EXTRA_DIST = \
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
 
-# Assume a tarball is in .. for now.
-dist-rpm:
-	RPM_BUILD_DIR="/tmp/tor-rpm-build-$$$$";                \
-	rm -rf $$RPM_BUILD_DIR;                                 \
-	mkdir $$RPM_BUILD_DIR || exit 1;                        \
-	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do        \
-	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
-	done;                                                   \
-	mkdir $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION);           \
-	cp -R ./ $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION)/;       \
-	pushd $$RPM_BUILD_DIR/SOURCES/;                         \
-	tar zcf tor-$(VERSION).tar.gz ./;                       \
-	popd;                                                   \
-	LIBS=-lrt rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR" tor.spec; \
-	mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
-	mv $$RPM_BUILD_DIR/RPMS/* .;                            \
-	rm -rf $$RPM_BUILD_DIR
+# Use automake's dist-gzip target to build the tarball
+dist-rpm: dist-gzip
+	TIMESTAMP=$$(date +"%Y-%m-%d_%H.%M.%S"); 				\
+	RPM_BUILD_DIR=$$(mktemp -d "/tmp/tor-rpm-build-$$TIMESTAMP-XXXX");	\
+	mkdir -p "$$RPM_BUILD_DIR"/{BUILD,RPMS,SOURCES/"tor-$(VERSION)",SPECS,SRPMS}; \
+	cp -fa "$(distdir).tar.gz" "$$RPM_BUILD_DIR"/SOURCES/;			\
+	LIBS=-lrt rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR" tor.spec; 	\
+	cp -fa "$$RPM_BUILD_DIR"/SRPMS/* .;                           		\
+	cp -fa "$$RPM_BUILD_DIR"/RPMS/* .;                            		\
+	rm -rf "$$RPM_BUILD_DIR";						\
+	echo "RPM build finished";						\
+	#end of dist-rpm
 
 dist: check
 
