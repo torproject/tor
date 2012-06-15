@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When checking for requested signatures on the latest consensus before
+      serving it to a client, make sure to check the right consensus flavor.
+      Bugfix on 0.2.2.6-alpha.
