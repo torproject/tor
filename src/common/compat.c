@@ -15,7 +15,7 @@
 /* This is required on rh7 to make strptime not complain.
  * We also need it to make memmem get defined (where available)
  */
-/* XXXX023 We should just use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
+/* XXXX024 We should just  use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
  * and get this (and other important stuff!) automatically. Once we do that,
  * make sure to also change the extern char **environ detection in
  * configure.in, because whether that is declared or not depends on whether
@@ -1258,12 +1258,15 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
  * tell Tor it's allowed to use. */
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
 
-/** Learn the maximum allowed number of file descriptors. (Some systems
- * have a low soft limit.
+/** Learn the maximum allowed number of file descriptors, and tell the system
+ * we want to use up to that number. (Some systems have a low soft limit, and
+ * let us set it higher.)
  *
  * We compute this by finding the largest number that we can use.
  * If we can't find a number greater than or equal to <b>limit</b>,
  * then we fail: return -1.
+ *
+ * If <b>limit</b> is 0, then do not adjust the current maximum.
  *
  * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>.*/
 int
@@ -1297,14 +1300,20 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   limit = MAX_CONNECTIONS;
 #else /* HAVE_GETRLIMIT */
   struct rlimit rlim;
-  tor_assert(limit > 0);
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_warn(LD_NET, "Could not get maximum number of file descriptors: %s",
              strerror(errno));
     return -1;
   }
-
+  if (limit == 0) {
+    /* If limit == 0, return the maximum value without setting it. */
+    limit = rlim.rlim_max;
+    if (limit > INT_MAX)
+      limit = INT_MAX;
+    *max_out = limit - ULIMIT_BUFFER;
+    return 0;
+  }
   if (rlim.rlim_max < limit) {
     log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
              "limited to %lu. Please change your ulimit -n.",

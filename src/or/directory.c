@@ -2775,10 +2775,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       else
         request_type = "/tor/status/?";
     } else {
-      networkstatus_t *v = networkstatus_get_latest_consensus();
+      networkstatus_t *v;
       time_t now = time(NULL);
       const char *want_fps = NULL;
       char *flavor = NULL;
+      int flav = FLAV_NS;
       #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
       #define CONSENSUS_FLAVORED_PREFIX "/tor/status-vote/current/consensus-"
       /* figure out the flavor if any, and who we wanted to sign the thing */
@@ -2792,12 +2793,16 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         } else {
           flavor = tor_strdup(f);
         }
+        flav = networkstatus_parse_flavor_name(flavor);
+        if (flav < 0)
+          flav = FLAV_NS;
       } else {
         if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
           want_fps = url+strlen(CONSENSUS_URL_PREFIX);
       }
 
-      /* XXXX023 MICRODESC NM NM should check document of correct flavor */
+      v = networkstatus_get_latest_consensus_by_flavor(flav);
+
       if (v && want_fps &&
           !client_likes_consensus(v, want_fps)) {
         write_http_status_line(conn, 404, "Consensus not signed by sufficient "

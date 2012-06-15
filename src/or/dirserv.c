@@ -975,7 +975,7 @@ running_long_enough_to_decide_unreachable(void)
 void
 dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 {
-  /*XXXX023 This function is a mess.  Separate out the part that calculates
+  /*XXXX024 This function is a mess.  Separate out the part that calculates
     whether it's reachable and the part that tells rephist that the router was
     unreachable.
    */
@@ -1793,7 +1793,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 {
   if (need_uptime) {
     if (!enough_mtbf_info) {
-      /* XXX023 Once most authorities are on v3, we should change the rule from
+      /* XXX024 Once most authorities are on v3, we should change the rule from
        * "use uptime if we don't have mtbf data" to "don't advertise Stable on
        * v3 if we don't have enough mtbf data."  Or maybe not, since if we ever
        * hit a point where we need to reset a lot of authorities at once,
@@ -2321,7 +2321,7 @@ is_router_version_good_for_possible_guard(const char *platform)
 
   tor_version_t router_version;
 
-  /* XXX023 This block should be extracted into its own function. */
+  /* XXX024 This block should be extracted into its own function. */
   /* XXXX Begin code copied from tor_version_as_new_as (in routerparse.c) */
   {
     char *s, *s2, *start;
@@ -3402,7 +3402,7 @@ lookup_cached_dir_by_fp(const char *fp)
     d = strmap_get(cached_consensuses, "ns");
   else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses &&
            (d = strmap_get(cached_consensuses, fp))) {
-    /* this here interface is a nasty hack XXXX023 */;
+    /* this here interface is a nasty hack XXXX024 */;
   } else if (router_digest_is_me(fp) && the_v2_networkstatus)
     d = the_v2_networkstatus;
   else if (cached_v2_networkstatus)
@@ -3613,7 +3613,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     }
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
-      /* XXXX022 This 'last' business should actually happen on the last
+      /* XXXX024 This 'last' business should actually happen on the last
        * routerinfo, not on the last fingerprint. */
       int last = ! smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(body, sd->signed_descriptor_len, conn,
@@ -3656,7 +3656,7 @@ connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
     if (!md)
       continue;
     if (conn->zlib_state) {
-      /* XXXX022 This 'last' business should actually happen on the last
+      /* XXXX024 This 'last' business should actually happen on the last
        * routerinfo, not on the last fingerprint. */
       int last = !smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(md->body, md->bodylen, conn, last);

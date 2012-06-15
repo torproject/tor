@@ -1836,7 +1836,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     struct in_addr in;
     char *address = NULL;
     tor_assert(tok->n_args);
-    /* XXX023 use some tor_addr parse function below instead. -RD */
+    /* XXX024 use some tor_addr parse function below instead. -RD */
     if (tor_addr_port_split(LOG_WARN, tok->args[0], &address,
                             &cert->dir_port) < 0 ||
         tor_inet_aton(address, &in) == 0) {

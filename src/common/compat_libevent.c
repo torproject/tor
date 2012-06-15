@@ -689,3 +689,37 @@ tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
 }
 #endif
 
+#if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,1,1)
+void
+tor_gettimeofday_cached(struct timeval *tv)
+{
+  event_base_gettimeofday_cached(the_event_base, tv);
+}
+void
+tor_gettimeofday_cache_clear(void)
+{
+  event_base_update_cache_time(the_event_base);
+}
+#else
+/** Cache the current hi-res time; the cache gets reset when libevent
+ * calls us. */
+static struct timeval cached_time_hires = {0, 0};
+
+/** Return a fairly recent view of the current time. */
+void
+tor_gettimeofday_cached(struct timeval *tv)
+{
+  if (cached_time_hires.tv_sec == 0) {
+    tor_gettimeofday(&cached_time_hires);
+  }
+  *tv = cached_time_hires;
+}
+
+/** Reset the cached view of the current time, so that the next time we try
+ * to learn it, we will get an up-to-date value. */
+void
+tor_gettimeofday_cache_clear(void)
+{
+  cached_time_hires.tv_sec = 0;
+}
+#endif

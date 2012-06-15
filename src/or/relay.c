@@ -52,35 +52,12 @@ static int circuit_consider_stop_edge_reading(circuit_t *circ,
                                               crypt_path_t *layer_hint);
 static int circuit_queue_streams_are_blocked(circuit_t *circ);
 
-/* XXXX023 move this all to compat_libevent */
-/** Cache the current hi-res time; the cache gets reset when libevent
- * calls us. */
-static struct timeval cached_time_hires = {0, 0};
-
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
 #define CELL_QUEUE_HIGHWATER_SIZE 256
 /** Start reading from edge connections again when we get down to this many
  * cells. */
 #define CELL_QUEUE_LOWWATER_SIZE 64
-
-/** Return a fairly recent view of the current time. */
-static void
-tor_gettimeofday_cached(struct timeval *tv)
-{
-  if (cached_time_hires.tv_sec == 0) {
-    tor_gettimeofday(&cached_time_hires);
-  }
-  *tv = cached_time_hires;
-}
-
-/** Reset the cached view of the current time, so that the next time we try
- * to learn it, we will get an up-to-date value. */
-void
-tor_gettimeofday_cache_clear(void)
-{
-  cached_time_hires.tv_sec = 0;
-}
 
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?
@@ -799,7 +776,7 @@ connection_ap_process_end_not_open(
           /* We haven't retried too many times; reattach the connection. */
           circuit_log_path(LOG_INFO,LD_APP,circ);
           /* Mark this circuit "unusable for new streams". */
-          /* XXXX023 this is a kludgy way to do this. */
+          /* XXXX024 this is a kludgy way to do this. */
           tor_assert(circ->_base.timestamp_dirty);
           circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
@@ -1462,7 +1439,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   stats_n_data_cells_packaged += 1;
 
   if (PREDICT_UNLIKELY(sending_from_optimistic)) {
-    /* XXX023 We could be more efficient here by sometimes packing
+    /* XXXX We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
     generic_buffer_get(entry_conn->sending_optimistic_data, payload, length);

@@ -1836,7 +1836,7 @@ networkstatus_set_current_consensus(const char *consensus,
     routerstatus_list_update_named_server_map();
     cell_ewma_set_scale_factor(options, current_consensus);
 
-    /* XXXX023 this call might be unnecessary here: can changing the
+    /* XXXX024 this call might be unnecessary here: can changing the
      * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 

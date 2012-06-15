@@ -1692,7 +1692,7 @@ options_act(const or_options_t *old_options)
        || !geoip_is_loaded())) {
     /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow. -NM */
-    /* XXXX023 Reload GeoIPFile on SIGHUP. -NM */
+    /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
     char *actual_fname = tor_strdup(options->GeoIPFile);
 #ifdef _WIN32
     if (!strcmp(actual_fname, "<default>")) {
@@ -4103,7 +4103,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "ignore you.");
   }
 
-  /*XXXX023 checking for defaults manually like this is a bit fragile.*/
+  /*XXXX checking for defaults manually like this is a bit fragile.*/
 
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */

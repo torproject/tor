@@ -1048,7 +1048,12 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (port_cfg->session_group >= 0) {
       lis_conn->session_group = port_cfg->session_group;
     } else {
-      /* XXXX023 This can wrap after ~INT_MAX ports are opened. */
+      /* This can wrap afuter ~INT_MAX listeners are opened.  But I don't
+       * believe that matters, since you would need to open a ridiculous
+       * number of listeners while keeping the early ones open before you ever
+       * hit this.  An OR with a dozen ports open, for example, would have to
+       * close and re-open its listers every second for 4 years nonstop.
+       */
       lis_conn->session_group = global_next_session_group--;
     }
   }
@@ -2280,7 +2285,7 @@ static void
 record_num_bytes_transferred(connection_t *conn,
                              time_t now, size_t num_read, size_t num_written)
 {
-  /* XXX023 check if this is necessary */
+  /* XXX024 check if this is necessary */
   if (num_written >= INT_MAX || num_read >= INT_MAX) {
     log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
              "connection type=%s, state=%s",
@@ -2925,7 +2930,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
     connection_consider_empty_read_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX022 check for overflow*/
+      /*XXXX024 check for overflow*/
       edge_conn->n_read += (int)info->n_added;
     }
   }
@@ -2946,7 +2951,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
     connection_consider_empty_write_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX022 check for overflow*/
+      /*XXXX024 check for overflow*/
       edge_conn->n_written += (int)info->n_deleted;
     }
   }
