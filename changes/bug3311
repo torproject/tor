@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Replace "Sending publish request" log messages with "Launching
+      upload", so that they no longer confusingly imply that we're
+      sending somtheing to a directory we might not even be connected
+      to yet. Fixes bug 3311; bugfix on 0.2.0.10-alpha.
