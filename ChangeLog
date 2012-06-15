@@ -57,7 +57,7 @@ Changes in version 0.2.3.17-beta - 2012-06-15
       and relays all have an uptime of zero, where the private Tor network
       could briefly lack support for hidden services. Fixes bug 3886;
       bugfix on 0.2.2.18-alpha.
-    - Correct the manpage's descriptions for the default values of 
+    - Correct the manpage's descriptions for the default values of
       DirReqStatistics and ExtraInfoStatistics. Fixes bug 2865; bugfix
       on 0.2.3.1-alpha.
     - Fix the documentation for the --hush and --quiet command line
