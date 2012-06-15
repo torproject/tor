@@ -1466,26 +1466,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       }
     #endif
   } else if (!strcmp(question, "process/descriptor-limit")) {
-    /** platform specifc limits are from the set_max_file_descriptors function
-      * of src/common/compat.c */
-    /* XXXX023 This is duplicated code from compat.c; it should turn into a
-     * function.  */
-    #ifdef HAVE_GETRLIMIT
-      struct rlimit descriptorLimit;
-
-      if (getrlimit(RLIMIT_NOFILE, &descriptorLimit) == 0) {
-        tor_asprintf(answer, U64_FORMAT,
-                     U64_PRINTF_ARG(descriptorLimit.rlim_max));
-      } else {
-        *answer = tor_strdup("-1");
-      }
-    #elif defined(CYGWIN) || defined(__CYGWIN__)
-      *answer = tor_strdup("3200");
-    #elif defined(_WIN32)
-      *answer = tor_strdup("15000");
-    #else
-      *answer = tor_strdup("15000");
-    #endif
+    int max_fds=-1;
+    set_max_file_descriptors(0, &max_fds);
+    tor_asprintf(answer, "%d", max_fds);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
