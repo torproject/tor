@@ -232,7 +232,7 @@
 #define USING_TWOS_COMPLEMENT
 
 /* Version number of package */
-#define VERSION "0.2.3.17-beta"
+#define VERSION "0.2.3.17-beta-dev"
 
 
 
