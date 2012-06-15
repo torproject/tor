@@ -643,8 +643,13 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
       continue;
     if (skip && digestmap_get(skip, rs->descriptor_digest))
       continue;
-    if (tor_mem_is_zero(rs->descriptor_digest, DIGEST256_LEN))
-      continue; /* This indicates a bug somewhere XXXX023*/
+    if (tor_mem_is_zero(rs->descriptor_digest, DIGEST256_LEN)) {
+      log_info(LD_BUG, "Found an entry in networktatus with no microdescriptor "
+               "digest. (Router %s=%s at %s:%d.)", rs->nickname,
+               hex_str(rs->identity_digest, DIGEST_LEN),
+               fmt_addr32(rs->addr), rs->or_port);
+      continue;
+    }
     /* XXXX Also skip if we're a noncache and wouldn't use this router.
      * XXXX NM Microdesc
      */
