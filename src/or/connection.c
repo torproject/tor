@@ -1048,11 +1048,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (port_cfg->session_group >= 0) {
       lis_conn->session_group = port_cfg->session_group;
     } else {
-      /* This can wrap afuter ~INT_MAX listeners are opened.  But I don't
+      /* This can wrap after around INT_MAX listeners are opened.  But I don't
        * believe that matters, since you would need to open a ridiculous
        * number of listeners while keeping the early ones open before you ever
        * hit this.  An OR with a dozen ports open, for example, would have to
-       * close and re-open its listers every second for 4 years nonstop.
+       * close and re-open its listenerrs every second for 4 years nonstop.
        */
       lis_conn->session_group = global_next_session_group--;
     }
