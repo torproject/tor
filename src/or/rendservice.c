@@ -617,6 +617,8 @@ rend_service_load_keys(void)
   int r = 0;
   char fname[512];
   char buf[1500];
+  char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
+  char service_id[16+1];
 
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
     if (s->private_key)
@@ -709,8 +711,6 @@ rend_service_load_keys(void)
        * ones if a client is new. */
       SMARTLIST_FOREACH_BEGIN(s->clients, rend_authorized_client_t *, client)
       {
-        char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
-        char service_id[16+1];
         rend_authorized_client_t *parsed =
             strmap_get(parsed_clients, client->client_name);
         int written;
@@ -727,6 +727,9 @@ rend_service_load_keys(void)
                           REND_DESC_COOKIE_LEN) < 0) {
           log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
           strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+          /* Clear these here for the early error exit */
+          memset(desc_cook_out, 0, sizeof(desc_cook_out));
+          memset(service_id, 0, sizeof(service_id));
           return -1;
         }
         /* Copy client key from parsed entry or create new one if required. */
@@ -823,6 +826,9 @@ rend_service_load_keys(void)
       tor_free(client_keys_str);
       strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
       if (r<0) {
+        /* Clear these here for the early error exit */
+        memset(desc_cook_out, 0, sizeof(desc_cook_out));
+        memset(service_id, 0, sizeof(service_id));
         if (open_cfile)
           abort_writing_to_file(open_cfile);
         if (open_hfile)
@@ -833,7 +839,18 @@ rend_service_load_keys(void)
         finish_writing_to_file(open_hfile);
       }
     }
+
+    /*
+     * Clear stack buffers that held key-derived material; we do this here
+     * for each iteration so that we don't have to put this before all of
+     * the early error exits (check/create directory, check service file,
+     * and so forth) that otherwise might have leftover key from the
+     * previous iteration on the stack.
+     */
+    memset(desc_cook_out, 0, sizeof(desc_cook_out));
+    memset(service_id, 0, sizeof(service_id));
   } SMARTLIST_FOREACH_END(s);
+
   return r;
 }
 
