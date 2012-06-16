@@ -213,7 +213,7 @@ if [ ! -n "`/usr/bin/id -u %{toruser} 2>/dev/null`" ]; then
     # One would also like to default the UID, but doing that properly would
     # also require thought.
     if [ -x %{_sbindir}/nologin ]; then
-        %{_sbindir}/useradd -r -g %{torgroup} -d% {_localstatedir}/lib/%{name} -s %{_sbindir}/nologin %{toruser} 2> /dev/null
+        %{_sbindir}/useradd -r -g %{torgroup} -d %{_localstatedir}/lib/%{name} -s %{_sbindir}/nologin %{toruser} 2> /dev/null
     else
         %{_sbindir}/useradd -r -g %{torgroup} -d %{_localstatedir}/lib/%{name}  -s /bin/false %{toruser} 2> /dev/null
     fi
