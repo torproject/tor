@@ -132,6 +132,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   crypt_path_t *cpath;
   off_t dh_offset;
   crypto_pk_t *intro_key = NULL;
+  int status = 0;
 
   tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
@@ -161,7 +162,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       }
     }
 
-    return -1;
+    status = -1;
+    goto cleanup;
   }
 
   /* first 20 bytes of payload are the hash of Bob's pk */
@@ -184,13 +186,16 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              smartlist_len(entry->parsed->intro_nodes));
 
     if (rend_client_reextend_intro_circuit(introcirc)) {
+      status = -2;
       goto perm_err;
     } else {
-      return -1;
+      status = -1;
+      goto cleanup;
     }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
+    status = -2;
     goto perm_err;
   }
 
@@ -202,10 +207,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
       log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
+      status = -2;
       goto perm_err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
       log_warn(LD_BUG, "Internal error: couldn't generate g^x.");
+      status = -2;
       goto perm_err;
     }
   }
@@ -256,6 +263,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
+    status = -2;
     goto perm_err;
   }
 
@@ -269,6 +277,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
+    status = -2;
     goto perm_err;
   }
 
@@ -288,7 +297,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
     log_warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
-    return -2;
+    status = -2;
+    goto cleanup;
   }
 
   /* Now, we wait for an ACK or NAK on this circuit. */
@@ -299,12 +309,17 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
    * state. */
   introcirc->_base.timestamp_dirty = time(NULL);
 
-  return 0;
+  goto cleanup;
+
  perm_err:
   if (!introcirc->_base.marked_for_close)
     circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);
-  return -2;
+ cleanup:
+  memset(payload, 0, sizeof(payload));
+  memset(tmp, 0, sizeof(tmp));
+
+  return status;
 }
 
 /** Called when a rendezvous circuit is open; sends a establish
