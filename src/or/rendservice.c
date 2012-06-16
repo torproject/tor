@@ -1627,8 +1627,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
          this case, we might as well close the thing. */
       log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
                "circuit, but we already have enough.  Closing it.");
-      circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_NONE);
-      return;
+      reason = END_CIRC_REASON_NONE;
+      goto err;
     } else {
       tor_assert(circuit->build_state->is_internal);
       log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
@@ -1649,7 +1649,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
       }
 
       circuit_has_opened(circuit);
-      return;
+      goto done;
     }
   }
 
@@ -1695,9 +1695,16 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     goto err;
   }
 
-  return;
+  goto done;
+
  err:
   circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
+ done:
+  memset(buf, 0, sizeof(buf));
+  memset(auth, 0, sizeof(auth));
+  memset(serviceid, 0, sizeof(serviceid));
+
+  return;
 }
 
 /** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
