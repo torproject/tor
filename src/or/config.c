@@ -1266,7 +1266,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
   SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
   {
-    log_notice(LD_NET, "Closing partially-constructed listener %s on %s:%d",
+    log_notice(LD_NET, "Closing partially-constructed %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
     connection_close_immediate(conn);
     connection_mark_for_close(conn);
