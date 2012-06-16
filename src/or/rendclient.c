@@ -674,10 +674,17 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
                                 time(NULL), chosen_replica) < 0) {
       log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
                         "descriptor ID did not succeed.");
-      return;
+      /*
+       * Hmm, can this write anything to descriptor_id and still fail?
+       * Let's clear it just to be safe.
+       *
+       * From here on, any returns should goto done which clears
+       * descriptor_id so we don't leave key-derived material on the stack.
+       */
+      goto done;
     }
     if (directory_get_from_hs_dir(descriptor_id, rend_query) != 0)
-      return; /* either success or failure, but we're done */
+      goto done; /* either success or failure, but we're done */
   }
   /* If we come here, there are no hidden service directories left. */
   log_info(LD_REND, "Could not pick one of the responsible hidden "
@@ -685,6 +692,10 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
                     "we already tried them all unsuccessfully.");
   /* Close pending connections. */
   rend_client_desc_trynow(rend_query->onion_address);
+
+done:
+  memset(descriptor_id, 0, sizeof(descriptor_id));
+
   return;
 }
 
