@@ -2,18 +2,9 @@
 ##
 The process used to create the official rpms is as follows:
 
-Download latest stable libevent from
-http://libevent.org/
-
-The first step of compiling libevent is to configure it as follows:
-./configure --enable-static --disable-shared 
-
-Complete the "make" and "make install".  You will need to be root,
-or sudo -s, to complete the "make install".
-
-Check for a successful universal binary of libevent.a in, by default,
-/usr/local/lib by using the following command:
-	"file /usr/local/lib/libevent.a"
+You'll need to install libevent headers, usually located in package named
+libevent-devel. Alternatively, you could download latest libevent from
+http://libevent.org/ but that shouldn't be necessary.
 
 Download and Extract the latest tor source code from
 https://www.torproject.org/download
@@ -24,6 +15,9 @@ make dist-rpm
 
 You should have at least two, maybe three, rpms.  There should be the binary
 i386.rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
+
+This step suffices unless you want to create RPMs for distros other than the
+one you used for building.
 
 
 ## Instructions for building RPMs for multiple architectures or distributions
@@ -38,6 +32,23 @@ target architecture (the names come from files in /etc/mock, strip the .cfg
 extension in the -r parameter):
 
 mock --rebuild -r fedora-17-x86_64 tor-X.Y.Z.src.rpm
+
+Building for EL5 from newer distro (e.g. EL6 or Fedora 17) will fail due to bug
+(https://bugzilla.redhat.com/show_bug.cgi?id=490613).
+Here's a workaround:
+
+Before even building the source RPM, install fedora-packager and instruct
+the build system to use rpmbuild-md5 like this:
+
+yum install fedora-packager
+export RPMBUILD=rpmbuild-md5
+
+Then proceed as usual to create the source RPM and binary RPMs:
+
+LIBS=-lrt ./configure
+make dist-rpm
+mock --rebuild -r epel-5-x86_64 tor-X.Y.Z.src.rpm
+
 
 (Note: don't build under OpenVZ - it breaks unshare() syscall, which in turn
 breaks mock. It could save you several hours.)
