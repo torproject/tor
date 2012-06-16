@@ -1,0 +1,5 @@
+ o Minor bugfixes:
+   - Clear keys and key-derived material left on the stack in rendservice.c
+     and rendclient.c
+   - Check return value of crypto_pk_write_private_key_to_string() in
+     end_service_load_keys()
