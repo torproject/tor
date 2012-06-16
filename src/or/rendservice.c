@@ -1847,9 +1847,16 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* Change the circuit purpose. */
   circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_REND_JOINED);
 
-  return;
+  goto done;
+
  err:
   circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
+ done:
+  memset(buf, 0, sizeof(buf));
+  memset(serviceid, 0, sizeof(serviceid));
+  memset(hexcookie, 0, sizeof(hexcookie));
+
+  return;
 }
 
 /*
