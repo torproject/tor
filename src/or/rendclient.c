@@ -1198,11 +1198,11 @@ rend_parse_service_authorization(const or_options_t *options,
   strmap_t *parsed = strmap_new();
   smartlist_t *sl = smartlist_new();
   rend_service_authorization_t *auth = NULL;
+  char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
+  char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
 
   for (line = options->HidServAuth; line; line = line->next) {
     char *onion_address, *descriptor_cookie;
-    char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
-    char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
     int auth_type_val = 0;
     auth = NULL;
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
@@ -1279,6 +1279,8 @@ rend_parse_service_authorization(const or_options_t *options,
   } else {
     strmap_free(parsed, rend_service_authorization_strmap_item_free);
   }
+  memset(descriptor_cookie_tmp, 0, sizeof(descriptor_cookie_tmp));
+  memset(descriptor_cookie_base64ext, 0, sizeof(descriptor_cookie_base64ext));
   return res;
 }
 
