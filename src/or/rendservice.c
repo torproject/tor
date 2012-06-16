@@ -1055,6 +1055,7 @@ int
 rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                        size_t request_len)
 {
+  int status = 0;
   char *ptr, *r_cookie;
   extend_info_t *extend_info = NULL;
   char buf[RELAY_PAYLOAD_SIZE];
@@ -1085,7 +1086,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     log_warn(LD_PROTOCOL,
              "Got an INTRODUCE2 over a non-introduction circuit %d.",
              circuit->_base.n_circ_id);
-    return -1;
+    goto err;
   }
 
 #ifndef NON_ANONYMOUS_MODE_ENABLED
@@ -1103,7 +1104,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
       DH_KEY_LEN+42) {
     log_warn(LD_PROTOCOL, "Got a truncated INTRODUCE2 cell on circ %d.",
              circuit->_base.n_circ_id);
-    return -1;
+    goto err;
   }
 
   /* look up service depending on circuit. */
@@ -1113,7 +1114,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro "
              "circ for an unrecognized service %s.",
              escaped(serviceid));
-    return -1;
+    goto err;
   }
 
   /* use intro key instead of service key. */
@@ -1126,14 +1127,14 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                   (char*)request, REND_SERVICE_ID_LEN);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
              escaped(serviceid));
-    return -1;
+    goto err;
   }
 
   keylen = crypto_pk_keysize(intro_key);
   if (request_len < keylen+DIGEST_LEN) {
     log_warn(LD_PROTOCOL,
              "PK-encrypted portion of INTRODUCE2 cell was truncated.");
-    return -1;
+    goto err;
   }
 
   intro_point = find_intro_point(circuit);
@@ -1141,7 +1142,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     log_warn(LD_BUG, "Internal error: Got an INTRODUCE2 cell on an intro circ "
              "(for service %s) with no corresponding rend_intro_point_t.",
              escaped(serviceid));
-    return -1;
+    goto err;
   }
 
   if (!service->accepted_intro_dh_parts)
@@ -1160,7 +1161,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
       log_warn(LD_REND, "Possible replay detected! We received an "
                "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
                "Dropping cell.", (int)(now-*access_time));
-      return -1;
+      goto err;
     }
     access_time = tor_malloc(sizeof(time_t));
     *access_time = now;
@@ -1176,7 +1177,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
        PK_PKCS1_OAEP_PADDING,1);
   if (r<0) {
     log_warn(LD_PROTOCOL, "Couldn't decrypt INTRODUCE2 cell.");
-    return -1;
+    goto err;
   }
   len = r;
   if (*buf == 3) {
@@ -1191,7 +1192,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
         if (auth_len != REND_DESC_COOKIE_LEN) {
           log_info(LD_REND, "Wrong auth data size %d, should be %d.",
                    (int)auth_len, REND_DESC_COOKIE_LEN);
-          return -1;
+          goto err;
         }
         memcpy(auth_data, buf+4, sizeof(auth_data));
         v3_shift += 2+REND_DESC_COOKIE_LEN;
@@ -1252,12 +1253,12 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     if (!ptr || ptr == rp_nickname) {
       log_warn(LD_PROTOCOL,
                "Couldn't find a nul-padded nickname in INTRODUCE2 cell.");
-      return -1;
+      goto err;
     }
     if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
         (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname))) {
       log_warn(LD_PROTOCOL, "Bad nickname in INTRODUCE2 cell.");
-      return -1;
+      goto err;
     }
     /* Okay, now we know that a nickname is at the start of the buffer. */
     ptr = rp_nickname+nickname_field_len;
@@ -1421,15 +1422,24 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
   if (extend_info) extend_info_free(extend_info);
 
-  memset(keys, 0, sizeof(keys));
-  return 0;
+  goto done;
+
  err:
-  memset(keys, 0, sizeof(keys));
+  status = -1;
   if (dh) crypto_dh_free(dh);
   if (launched)
     circuit_mark_for_close(TO_CIRCUIT(launched), reason);
   if (extend_info) extend_info_free(extend_info);
-  return -1;
+ done:
+  memset(keys, 0, sizeof(keys));
+  memset(buf, 0, sizeof(buf));
+  memset(serviceid, 0, sizeof(serviceid));
+  memset(hexcookie, 0, sizeof(hexcookie));
+  memset(intro_key_digest, 0, sizeof(intro_key_digest));
+  memset(auth_data, 0, sizeof(auth_data));
+  memset(diffie_hellman_hash, 0, sizeof(diffie_hellman_hash));
+
+  return status;
 }
 
 /** Called when we fail building a rendezvous circuit at some point other
