@@ -693,7 +693,7 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
   /* Close pending connections. */
   rend_client_desc_trynow(rend_query->onion_address);
 
-done:
+ done:
   memset(descriptor_id, 0, sizeof(descriptor_id));
 
   return;
