@@ -619,6 +619,7 @@ rend_service_load_keys(void)
   char buf[1500];
   char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
   char service_id[16+1];
+  char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
 
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
     if (s->private_key)
@@ -765,15 +766,25 @@ rend_service_load_keys(void)
         }
         if (client->client_key) {
           char *client_key_out = NULL;
-          crypto_pk_write_private_key_to_string(client->client_key,
-                                                &client_key_out, &len);
+          if ( crypto_pk_write_private_key_to_string(client->client_key,
+                   &client_key_out, &len) != 0 ) {
+            log_warn(LD_BUG, "Internal error: "
+                "crypto_pk_write_private_key_to_string() failed.");
+            goto err;
+          }
           if (rend_get_service_id(client->client_key, service_id)<0) {
             log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
+            /*
+             * len is string length, not buffer length, but last byte is NUL
+             * anyway.
+             */
+            memset(client_key_out, 0, len);
             tor_free(client_key_out);
             goto err;
           }
           written = tor_snprintf(buf + written, sizeof(buf) - written,
                                  "client-key\n%s", client_key_out);
+          memset(client_key_out, 0, len);
           tor_free(client_key_out);
           if (written < 0) {
             log_warn(LD_BUG, "Could not write client entry.");
@@ -794,7 +805,6 @@ rend_service_load_keys(void)
           tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
                        s->service_id, desc_cook_out, client->client_name);
         } else {
-          char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
           memcpy(extended_desc_cookie, client->descriptor_cookie,
                  REND_DESC_COOKIE_LEN);
           extended_desc_cookie[REND_DESC_COOKIE_LEN] =
@@ -827,8 +837,11 @@ rend_service_load_keys(void)
       strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
       if (r<0) {
         /* Clear these here for the early error exit */
+        /* We have to clear buf because encoded keys can get written to it */
+        memset(buf, 0, sizeof(buf));
         memset(desc_cook_out, 0, sizeof(desc_cook_out));
         memset(service_id, 0, sizeof(service_id));
+        memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
         if (open_cfile)
           abort_writing_to_file(open_cfile);
         if (open_hfile)
@@ -847,8 +860,10 @@ rend_service_load_keys(void)
      * and so forth) that otherwise might have leftover key from the
      * previous iteration on the stack.
      */
+    memset(buf, 0, sizeof(buf));
     memset(desc_cook_out, 0, sizeof(desc_cook_out));
     memset(service_id, 0, sizeof(service_id));
+    memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
   } SMARTLIST_FOREACH_END(s);
 
   return r;
