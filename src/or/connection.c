@@ -1052,7 +1052,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
        * believe that matters, since you would need to open a ridiculous
        * number of listeners while keeping the early ones open before you ever
        * hit this.  An OR with a dozen ports open, for example, would have to
-       * close and re-open its listenerrs every second for 4 years nonstop.
+       * close and re-open its listeners every second for 4 years nonstop.
        */
       lis_conn->session_group = global_next_session_group--;
     }
