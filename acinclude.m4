@@ -71,9 +71,12 @@ AC_DEFUN([TOR_CHECK_LDFLAGS], [
     CFLAGS="$CFLAGS -pedantic -Werror"
     LDFLAGS="$LDFLAGS $2 $1"
     LIBS="$LIBS $3"
-    AC_TRY_LINK([], [return 0;],
-                   [AS_VAR_SET(VAR,yes)],
-                   [AS_VAR_SET(VAR,no)])
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([#include <stdio.h>], [fputs("", stdout)])],
+                  [AS_VAR_SET(VAR,yes)],
+                  [AS_VAR_SET(VAR,no)],
+	          [AC_TRY_LINK([], [return 0;],
+                                   [AS_VAR_SET(VAR,yes)],
+                                   [AS_VAR_SET(VAR,no)])])
     CFLAGS="$tor_saved_CFLAGS"
     LDFLAGS="$tor_saved_LDFLAGS"
     LIBS="$tor_saved_LIBS"
