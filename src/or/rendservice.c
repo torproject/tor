@@ -703,183 +703,183 @@ rend_service_load_auth_keys(rend_service_t *s)
   char service_id[16+1];
   char buf[1500];
 
-    /* Load client keys and descriptor cookies, if available. */
-    if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
-                     s->directory)<0) {
-      log_warn(LD_CONFIG, "Directory name too long to store client keys "
-               "file: \"%s\".", s->directory);
+  /* Load client keys and descriptor cookies, if available. */
+  if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
+                   s->directory)<0) {
+    log_warn(LD_CONFIG, "Directory name too long to store client keys "
+             "file: \"%s\".", s->directory);
+    goto err;
+  }
+  client_keys_str = read_file_to_str(cfname, RFTS_IGNORE_MISSING, NULL);
+  if (client_keys_str) {
+    if (rend_parse_client_keys(parsed_clients, client_keys_str) < 0) {
+      log_warn(LD_CONFIG, "Previously stored client_keys file could not "
+               "be parsed.");
       goto err;
+    } else {
+      log_info(LD_CONFIG, "Parsed %d previously stored client entries.",
+               strmap_size(parsed_clients));
+      tor_free(client_keys_str);
     }
-    client_keys_str = read_file_to_str(cfname, RFTS_IGNORE_MISSING, NULL);
-    if (client_keys_str) {
-      if (rend_parse_client_keys(parsed_clients, client_keys_str) < 0) {
-        log_warn(LD_CONFIG, "Previously stored client_keys file could not "
-                 "be parsed.");
+  }
+
+  /* Prepare client_keys and hostname files. */
+  if (!(cfile = start_writing_to_stdio_file(cfname,
+                                            OPEN_FLAGS_REPLACE | O_TEXT,
+                                            0600, &open_cfile))) {
+    log_warn(LD_CONFIG, "Could not open client_keys file %s",
+             escaped(cfname));
+    goto err;
+  }
+  if (!(hfile = start_writing_to_stdio_file(fname,
+                                            OPEN_FLAGS_REPLACE | O_TEXT,
+                                            0600, &open_hfile))) {
+    log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(fname));
+    goto err;
+  }
+
+  /* Either use loaded keys for configured clients or generate new
+   * ones if a client is new. */
+  SMARTLIST_FOREACH_BEGIN(s->clients, rend_authorized_client_t *, client) {
+    rend_authorized_client_t *parsed =
+      strmap_get(parsed_clients, client->client_name);
+    int written;
+    size_t len;
+    /* Copy descriptor cookie from parsed entry or create new one. */
+    if (parsed) {
+      memcpy(client->descriptor_cookie, parsed->descriptor_cookie,
+             REND_DESC_COOKIE_LEN);
+    } else {
+      crypto_rand(client->descriptor_cookie, REND_DESC_COOKIE_LEN);
+    }
+    if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
+                      client->descriptor_cookie,
+                      REND_DESC_COOKIE_LEN) < 0) {
+      log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+      strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+      /* Clear these here for the early error exit */
+      memset(desc_cook_out, 0, sizeof(desc_cook_out));
+      memset(service_id, 0, sizeof(service_id));
+      return -1;
+    }
+    /* Copy client key from parsed entry or create new one if required. */
+    if (parsed && parsed->client_key) {
+      client->client_key = crypto_pk_dup_key(parsed->client_key);
+    } else if (s->auth_type == REND_STEALTH_AUTH) {
+      /* Create private key for client. */
+      crypto_pk_t *prkey = NULL;
+      if (!(prkey = crypto_pk_new())) {
+        log_warn(LD_BUG,"Error constructing client key");
         goto err;
-      } else {
-        log_info(LD_CONFIG, "Parsed %d previously stored client entries.",
-                 strmap_size(parsed_clients));
-        tor_free(client_keys_str);
       }
+      if (crypto_pk_generate_key(prkey)) {
+        log_warn(LD_BUG,"Error generating client key");
+        crypto_pk_free(prkey);
+        goto err;
+      }
+      if (crypto_pk_check_key(prkey) <= 0) {
+        log_warn(LD_BUG,"Generated client key seems invalid");
+        crypto_pk_free(prkey);
+        goto err;
+      }
+      client->client_key = prkey;
     }
-
-    /* Prepare client_keys and hostname files. */
-    if (!(cfile = start_writing_to_stdio_file(cfname,
-                                              OPEN_FLAGS_REPLACE | O_TEXT,
-                                              0600, &open_cfile))) {
-      log_warn(LD_CONFIG, "Could not open client_keys file %s",
-               escaped(cfname));
+    /* Add entry to client_keys file. */
+    desc_cook_out[strlen(desc_cook_out)-1] = '\0'; /* Remove newline. */
+    written = tor_snprintf(buf, sizeof(buf),
+                           "client-name %s\ndescriptor-cookie %s\n",
+                           client->client_name, desc_cook_out);
+    if (written < 0) {
+      log_warn(LD_BUG, "Could not write client entry.");
       goto err;
     }
-    if (!(hfile = start_writing_to_stdio_file(fname,
-                                              OPEN_FLAGS_REPLACE | O_TEXT,
-                                              0600, &open_hfile))) {
-      log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(fname));
-      goto err;
-    }
-
-    /* Either use loaded keys for configured clients or generate new
-     * ones if a client is new. */
-    SMARTLIST_FOREACH_BEGIN(s->clients, rend_authorized_client_t *, client) {
-      rend_authorized_client_t *parsed =
-        strmap_get(parsed_clients, client->client_name);
-      int written;
-      size_t len;
-      /* Copy descriptor cookie from parsed entry or create new one. */
-      if (parsed) {
-        memcpy(client->descriptor_cookie, parsed->descriptor_cookie,
-               REND_DESC_COOKIE_LEN);
-      } else {
-        crypto_rand(client->descriptor_cookie, REND_DESC_COOKIE_LEN);
+    if (client->client_key) {
+      char *client_key_out = NULL;
+      if (crypto_pk_write_private_key_to_string(client->client_key,
+                                                &client_key_out, &len) != 0) {
+        log_warn(LD_BUG, "Internal error: "
+                 "crypto_pk_write_private_key_to_string() failed.");
+        goto err;
       }
-      if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
-                        client->descriptor_cookie,
-                        REND_DESC_COOKIE_LEN) < 0) {
-        log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-        strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
-        /* Clear these here for the early error exit */
-        memset(desc_cook_out, 0, sizeof(desc_cook_out));
-        memset(service_id, 0, sizeof(service_id));
-        return -1;
+      if (rend_get_service_id(client->client_key, service_id)<0) {
+        log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
+        /*
+         * len is string length, not buffer length, but last byte is NUL
+         * anyway.
+         */
+        memset(client_key_out, 0, len);
+        tor_free(client_key_out);
+        goto err;
       }
-      /* Copy client key from parsed entry or create new one if required. */
-      if (parsed && parsed->client_key) {
-        client->client_key = crypto_pk_dup_key(parsed->client_key);
-      } else if (s->auth_type == REND_STEALTH_AUTH) {
-        /* Create private key for client. */
-        crypto_pk_t *prkey = NULL;
-        if (!(prkey = crypto_pk_new())) {
-          log_warn(LD_BUG,"Error constructing client key");
-          goto err;
-        }
-        if (crypto_pk_generate_key(prkey)) {
-          log_warn(LD_BUG,"Error generating client key");
-          crypto_pk_free(prkey);
-          goto err;
-        }
-        if (crypto_pk_check_key(prkey) <= 0) {
-          log_warn(LD_BUG,"Generated client key seems invalid");
-          crypto_pk_free(prkey);
-          goto err;
-        }
-        client->client_key = prkey;
-      }
-      /* Add entry to client_keys file. */
-      desc_cook_out[strlen(desc_cook_out)-1] = '\0'; /* Remove newline. */
-      written = tor_snprintf(buf, sizeof(buf),
-                             "client-name %s\ndescriptor-cookie %s\n",
-                             client->client_name, desc_cook_out);
+      written = tor_snprintf(buf + written, sizeof(buf) - written,
+                             "client-key\n%s", client_key_out);
+      memset(client_key_out, 0, len);
+      tor_free(client_key_out);
       if (written < 0) {
         log_warn(LD_BUG, "Could not write client entry.");
         goto err;
       }
-      if (client->client_key) {
-        char *client_key_out = NULL;
-        if (crypto_pk_write_private_key_to_string(client->client_key,
-                   &client_key_out, &len) != 0) {
-          log_warn(LD_BUG, "Internal error: "
-                   "crypto_pk_write_private_key_to_string() failed.");
-          goto err;
-        }
-        if (rend_get_service_id(client->client_key, service_id)<0) {
-          log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
-          /*
-           * len is string length, not buffer length, but last byte is NUL
-           * anyway.
-           */
-          memset(client_key_out, 0, len);
-          tor_free(client_key_out);
-          goto err;
-        }
-        written = tor_snprintf(buf + written, sizeof(buf) - written,
-                               "client-key\n%s", client_key_out);
-        memset(client_key_out, 0, len);
-        tor_free(client_key_out);
-        if (written < 0) {
-          log_warn(LD_BUG, "Could not write client entry.");
-          goto err;
-        }
-      }
-
-      if (fputs(buf, cfile) < 0) {
-        log_warn(LD_FS, "Could not append client entry to file: %s",
-                 strerror(errno));
-        goto err;
-      }
-
-      /* Add line to hostname file. */
-      if (s->auth_type == REND_BASIC_AUTH) {
-        /* Remove == signs (newline has been removed above). */
-        desc_cook_out[strlen(desc_cook_out)-2] = '\0';
-        tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
-                     s->service_id, desc_cook_out, client->client_name);
-      } else {
-        memcpy(extended_desc_cookie, client->descriptor_cookie,
-               REND_DESC_COOKIE_LEN);
-        extended_desc_cookie[REND_DESC_COOKIE_LEN] =
-          ((int)s->auth_type - 1) << 4;
-        if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
-                          extended_desc_cookie,
-                          REND_DESC_COOKIE_LEN+1) < 0) {
-          log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-          goto err;
-        }
-        desc_cook_out[strlen(desc_cook_out)-3] = '\0'; /* Remove A= and
-                                                          newline. */
-        tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
-                     service_id, desc_cook_out, client->client_name);
-      }
-
-      if (fputs(buf, hfile)<0) {
-        log_warn(LD_FS, "Could not append host entry to file: %s",
-                 strerror(errno));
-        goto err;
-      }
     }
-    SMARTLIST_FOREACH_END(client);
 
-    goto done;
-  err:
-    r = -1;
-  done:
-    tor_free(client_keys_str);
-    strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
-    if (r<0) {
-      /* Clear these here for the early error exit */
-      /* We have to clear buf because encoded keys can get written to it */
-      memset(buf, 0, sizeof(buf));
-      memset(desc_cook_out, 0, sizeof(desc_cook_out));
-      memset(service_id, 0, sizeof(service_id));
-      memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
-      if (open_cfile)
-        abort_writing_to_file(open_cfile);
-      if (open_hfile)
-        abort_writing_to_file(open_hfile);
-      return r;
+    if (fputs(buf, cfile) < 0) {
+      log_warn(LD_FS, "Could not append client entry to file: %s",
+               strerror(errno));
+      goto err;
+    }
+
+    /* Add line to hostname file. */
+    if (s->auth_type == REND_BASIC_AUTH) {
+      /* Remove == signs (newline has been removed above). */
+      desc_cook_out[strlen(desc_cook_out)-2] = '\0';
+      tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
+                   s->service_id, desc_cook_out, client->client_name);
     } else {
-      finish_writing_to_file(open_cfile);
-      finish_writing_to_file(open_hfile);
+      memcpy(extended_desc_cookie, client->descriptor_cookie,
+             REND_DESC_COOKIE_LEN);
+      extended_desc_cookie[REND_DESC_COOKIE_LEN] =
+        ((int)s->auth_type - 1) << 4;
+      if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
+                        extended_desc_cookie,
+                        REND_DESC_COOKIE_LEN+1) < 0) {
+        log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+        goto err;
+      }
+      desc_cook_out[strlen(desc_cook_out)-3] = '\0'; /* Remove A= and
+                                                        newline. */
+      tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
+                   service_id, desc_cook_out, client->client_name);
     }
+
+    if (fputs(buf, hfile)<0) {
+      log_warn(LD_FS, "Could not append host entry to file: %s",
+               strerror(errno));
+      goto err;
+    }
+  }
+  SMARTLIST_FOREACH_END(client);
+
+  goto done;
+ err:
+  r = -1;
+ done:
+  tor_free(client_keys_str);
+  strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+  if (r<0) {
+    /* Clear these here for the early error exit */
+    /* We have to clear buf because encoded keys can get written to it */
+    memset(buf, 0, sizeof(buf));
+    memset(desc_cook_out, 0, sizeof(desc_cook_out));
+    memset(service_id, 0, sizeof(service_id));
+    memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
+    if (open_cfile)
+      abort_writing_to_file(open_cfile);
+    if (open_hfile)
+      abort_writing_to_file(open_hfile);
+    return r;
+  } else {
+    finish_writing_to_file(open_cfile);
+    finish_writing_to_file(open_hfile);
+  }
 
   /*
    * Clear stack buffers that held key-derived material; we do this here
