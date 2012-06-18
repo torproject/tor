@@ -33,7 +33,8 @@ static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
 struct rend_service_t;
 static int rend_service_load_keys(struct rend_service_t *s);
-static int rend_service_load_auth_keys(struct rend_service_t *s);
+static int rend_service_load_auth_keys(struct rend_service_t *s,
+                                       const char *hfname);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -670,6 +671,7 @@ rend_service_load_keys(rend_service_t *s)
              " \"%s\".", s->directory);
     return -1;
   }
+
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
   if (write_str_to_file(fname,buf,0)<0) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
@@ -680,7 +682,7 @@ rend_service_load_keys(rend_service_t *s)
 
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
-    if (rend_service_load_auth_keys(s) < 0)
+    if (rend_service_load_auth_keys(s, fname) < 0)
       return -1;
   }
 
@@ -688,12 +690,13 @@ rend_service_load_keys(rend_service_t *s)
 }
 
 /** Load and/or generate client authorization keys for the hidden service
- * <b>s</b>.  Return 0 on success, -1 on failure. */
+ * <b>s</b>, which stores its hostname in <b>hfname</b>.  Return 0 on success,
+ * -1 on failure. */
 static int
-rend_service_load_auth_keys(rend_service_t *s)
+rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
 {
   int r = 0;
-  char fname[512], cfname[512];
+  char cfname[512];
   char *client_keys_str = NULL;
   strmap_t *parsed_clients = strmap_new();
   FILE *cfile, *hfile;
@@ -731,10 +734,11 @@ rend_service_load_auth_keys(rend_service_t *s)
              escaped(cfname));
     goto err;
   }
-  if (!(hfile = start_writing_to_stdio_file(fname,
+
+  if (!(hfile = start_writing_to_stdio_file(hfname,
                                             OPEN_FLAGS_REPLACE | O_TEXT,
                                             0600, &open_hfile))) {
-    log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(fname));
+    log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(hfname));
     goto err;
   }
 
@@ -756,11 +760,7 @@ rend_service_load_auth_keys(rend_service_t *s)
                       client->descriptor_cookie,
                       REND_DESC_COOKIE_LEN) < 0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-      strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
-      /* Clear these here for the early error exit */
-      memset(desc_cook_out, 0, sizeof(desc_cook_out));
-      memset(service_id, 0, sizeof(service_id));
-      return -1;
+      goto err;
     }
     /* Copy client key from parsed entry or create new one if required. */
     if (parsed && parsed->client_key) {
@@ -855,39 +855,26 @@ rend_service_load_auth_keys(rend_service_t *s)
                strerror(errno));
       goto err;
     }
-  }
-  SMARTLIST_FOREACH_END(client);
+  } SMARTLIST_FOREACH_END(client);
+
+  finish_writing_to_file(open_cfile);
+  finish_writing_to_file(open_hfile);
 
   goto done;
  err:
   r = -1;
+  if (open_cfile)
+    abort_writing_to_file(open_cfile);
+  if (open_hfile)
+    abort_writing_to_file(open_hfile);
  done:
+  /* XXXX zero these two as well */
   tor_free(client_keys_str);
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
-  if (r<0) {
-    /* Clear these here for the early error exit */
-    /* We have to clear buf because encoded keys can get written to it */
-    memset(buf, 0, sizeof(buf));
-    memset(desc_cook_out, 0, sizeof(desc_cook_out));
-    memset(service_id, 0, sizeof(service_id));
-    memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
-    if (open_cfile)
-      abort_writing_to_file(open_cfile);
-    if (open_hfile)
-      abort_writing_to_file(open_hfile);
-    return r;
-  } else {
-    finish_writing_to_file(open_cfile);
-    finish_writing_to_file(open_hfile);
-  }
 
-  /*
-   * Clear stack buffers that held key-derived material; we do this here
-   * for each iteration so that we don't have to put this before all of
-   * the early error exits (check/create directory, check service file,
-   * and so forth) that otherwise might have leftover key from the
-   * previous iteration on the stack.
-   */
+  memset(cfname, 0, sizeof(cfname));
+
+  /* Clear stack buffers that held key-derived material. */
   memset(buf, 0, sizeof(buf));
   memset(desc_cook_out, 0, sizeof(desc_cook_out));
   memset(service_id, 0, sizeof(service_id));
