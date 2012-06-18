@@ -33,6 +33,7 @@ static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
 struct rend_service_t;
 static int rend_service_load_keys(struct rend_service_t *s);
+static int rend_service_load_auth_keys(struct rend_service_t *s);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -634,12 +635,8 @@ rend_service_load_all_keys(void)
 static int
 rend_service_load_keys(rend_service_t *s)
 {
-  int r = 0;
   char fname[512];
-  char buf[1500];
-  char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
-  char service_id[16+1];
-  char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
+  char buf[128];
 
   /* Check/create directory */
   if (check_private_dir(s->directory, CPD_CREATE, get_options()->User) < 0)
@@ -676,16 +673,35 @@ rend_service_load_keys(rend_service_t *s)
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
   if (write_str_to_file(fname,buf,0)<0) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
+    memset(buf, 0, sizeof(buf));
     return -1;
   }
+  memset(buf, 0, sizeof(buf));
 
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
-    char *client_keys_str = NULL;
-    strmap_t *parsed_clients = strmap_new();
-    char cfname[512];
-    FILE *cfile, *hfile;
-    open_file_t *open_cfile = NULL, *open_hfile = NULL;
+    if (rend_service_load_auth_keys(s) < 0)
+      return -1;
+  }
+
+  return 0;
+}
+
+/** Load and/or generate client authorization keys for the hidden service
+ * <b>s</b>.  Return 0 on success, -1 on failure. */
+static int
+rend_service_load_auth_keys(rend_service_t *s)
+{
+  int r = 0;
+  char fname[512], cfname[512];
+  char *client_keys_str = NULL;
+  strmap_t *parsed_clients = strmap_new();
+  FILE *cfile, *hfile;
+  open_file_t *open_cfile = NULL, *open_hfile = NULL;
+  char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
+  char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
+  char service_id[16+1];
+  char buf[1500];
 
     /* Load client keys and descriptor cookies, if available. */
     if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
@@ -864,7 +880,6 @@ rend_service_load_keys(rend_service_t *s)
       finish_writing_to_file(open_cfile);
       finish_writing_to_file(open_hfile);
     }
-  }
 
   /*
    * Clear stack buffers that held key-derived material; we do this here
