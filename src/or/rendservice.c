@@ -1918,7 +1918,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
         continue;
       node = node_get_by_id(hs_dir->identity_digest);
       if (!node || !node_has_descriptor(node)) {
-        log_info(LD_REND, "Not sending publish request for v2 descriptor to "
+        log_info(LD_REND, "Not launching upload for for v2 descriptor to "
                           "hidden service directory %s; we don't have its "
                           "router descriptor. Queuing for later upload.",
                  safe_str_client(routerstatus_describe(hs_dir)));
@@ -1934,7 +1934,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc->desc_id, DIGEST_LEN);
       hs_dir_ip = tor_dup_ip(hs_dir->addr);
-      log_info(LD_REND, "Sending publish request for v2 descriptor for "
+      log_info(LD_REND, "Launching upload for v2 descriptor for "
                         "service '%s' with descriptor ID '%s' with validity "
                         "of %d seconds to hidden service directory '%s' on "
                         "%s:%d.",
@@ -2032,7 +2032,7 @@ upload_service_descriptor(rend_service_t *service)
         }
         /* Post the current descriptors to the hidden service directories. */
         rend_get_service_id(service->desc->pk, serviceid);
-        log_info(LD_REND, "Sending publish request for hidden service %s",
+        log_info(LD_REND, "Launching upload for hidden service %s",
                      serviceid);
         directory_post_to_hs_dir(service->desc, descs, serviceid,
                                  seconds_valid);
