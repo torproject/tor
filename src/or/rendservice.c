@@ -31,6 +31,8 @@ static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
 static int intro_point_accepted_intro_count(rend_intro_point_t *intro);
 static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
+struct rend_service_t;
+static int rend_service_load_keys(struct rend_service_t *s);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -609,10 +611,28 @@ rend_service_update_descriptor(rend_service_t *service)
 
 /** Load and/or generate private keys for all hidden services, possibly
  * including keys for client authorization.  Return 0 on success, -1 on
- * failure.
- */
+ * failure. */
 int
-rend_service_load_keys(void)
+rend_service_load_all_keys(void)
+{
+  SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
+    if (s->private_key)
+      continue;
+    log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
+             s->directory);
+
+    if (rend_service_load_keys(s) < 0)
+      return -1;
+  } SMARTLIST_FOREACH_END(s);
+
+  return 0;
+}
+
+/** Load and/or generate private keys for the hidden service <b>s</b>,
+ * possibly including keys for client authorization.  Return 0 on success, -1
+ * on failure. */
+static int
+rend_service_load_keys(rend_service_t *s)
 {
   int r = 0;
   char fname[512];
@@ -620,12 +640,6 @@ rend_service_load_keys(void)
   char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
   char service_id[16+1];
   char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
-
-  SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
-    if (s->private_key)
-      continue;
-    log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
-             s->directory);
 
     /* Check/create directory */
     if (check_private_dir(s->directory, CPD_CREATE, get_options()->User) < 0)
@@ -864,7 +878,6 @@ rend_service_load_keys(void)
     memset(desc_cook_out, 0, sizeof(desc_cook_out));
     memset(service_id, 0, sizeof(service_id));
     memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
-  } SMARTLIST_FOREACH_END(s);
 
   return r;
 }
