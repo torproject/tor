@@ -1336,6 +1336,7 @@ connection_connect(connection_t *conn, const char *address,
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     warn_too_many_conns();
+    *socket_error = ENOBUFS;
     return -1;
   }
 
@@ -1428,8 +1429,11 @@ connection_connect(connection_t *conn, const char *address,
          escaped_safe_str_client(address),
          port, inprogress?"in progress":"established", s);
   conn->s = s;
-  if (connection_add_connecting(conn) < 0) /* no space, forget it */
+  if (connection_add_connecting(conn) < 0) {
+    /* no space, forget it */
+    *socket_error = ENOBUFS;
     return -1;
+  }
   return inprogress ? 0 : 1;
 }
 
