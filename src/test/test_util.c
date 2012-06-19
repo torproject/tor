@@ -2143,11 +2143,11 @@ test_util_exit_status(void *ptr)
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0, hex_errno);
-  test_streq("         0/0\n", hex_errno);
+  test_streq("0/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
-  test_streq("  0/7FFFFFFF\n", hex_errno);
+  test_streq("0/7FFFFFFF\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0xFF, -0x80000000, hex_errno);
@@ -2155,11 +2155,11 @@ test_util_exit_status(void *ptr)
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x7F, 0, hex_errno);
-  test_streq("        7F/0\n", hex_errno);
+  test_streq("7F/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x08, -0x242, hex_errno);
-  test_streq("      8/-242\n", hex_errno);
+  test_streq("8/-242\n", hex_errno);
 
  done:
   ;
@@ -2357,7 +2357,7 @@ test_util_spawn_background_fail(void *ptr)
   tor_snprintf(code, sizeof(code), "%x/%x",
     9 /* CHILD_STATE_FAILEXEC */ , ENOENT);
   tor_snprintf(expected_out, sizeof(expected_out),
-    "ERR: Failed to spawn background process - code %12s\n", code);
+    "ERR: Failed to spawn background process - code %s\n", code);
 
   run_util_spawn_background(argv, expected_out, expected_err, 255,
                             expected_status);

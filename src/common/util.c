@@ -3208,8 +3208,9 @@ void
 format_helper_exit_status(unsigned char child_state, int saved_errno,
                           char *hex_errno)
 {
-  unsigned int unsigned_errno;
-  char *cur;
+  unsigned int unsigned_errno, len, tmp_uint;
+  char *cur, *tmp;
+  unsigned char tmp_uchar;
   size_t i;
 
   /* Fill hex_errno with spaces, and a trailing newline (memset may
@@ -3225,35 +3226,88 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
     unsigned_errno = (unsigned int) saved_errno;
   }
 
-  /* Convert errno to hex (start before \n) */
-  cur = hex_errno + HEX_ERRNO_SIZE - 2;
+  /* How many chars do we need for child_state ? */
+  if ( child_state > 0 ) {
+    len = 0;
+    tmp_uchar = child_state;
+    while (tmp_uchar > 0) {
+      tmp_uchar >>= 4;
+      ++len;
+    }
+  }
+  else len = 1;
 
-  /* Check for overflow on first iteration of the loop */
-  if (cur < hex_errno)
-    return;
+  /* Bail if we would go past the end (on this or the '/') */
+  if ( len + 2 > HEX_ERRNO_SIZE)
+    goto err;
 
-  do {
-    *cur-- = "0123456789ABCDEF"[unsigned_errno % 16];
-    unsigned_errno /= 16;
-  } while (unsigned_errno != 0 && cur >= hex_errno);
-
-  /* Prepend the minus sign if errno was negative */
-  if (saved_errno < 0 && cur >= hex_errno)
-    *cur-- = '-';
-
-  /* Leave a gap */
-  if (cur >= hex_errno)
-    *cur-- = '/';
-
-  /* Check for overflow on first iteration of the loop */
-  if (cur < hex_errno)
-    return;
+  /* Point to last one */
+  cur = hex_errno + len - 1;
 
   /* Convert child_state to hex */
   do {
-    *cur-- = "0123456789ABCDEF"[child_state % 16];
-    child_state /= 16;
+    *cur-- = "0123456789ABCDEF"[child_state & 0xf];
+    child_state >>= 4;
   } while (child_state != 0 && cur >= hex_errno);
+
+  /* Check for overflow on first iteration of the loop */
+  if (cur + 1 < hex_errno)
+    goto err;
+
+  /* Now the '/' */
+  hex_errno[len] = '/';
+
+  /* Save a pointer to the start of second number */
+  tmp = hex_errno + len;
+
+  /* How many chars do we need for unsigned_errno? */
+  if ( unsigned_errno > 0 ) {
+    len = 0;
+    tmp_uint = unsigned_errno;
+    while (tmp_uint > 0) {
+      tmp_uint >>= 4;
+      ++len;
+    }
+  }
+  else len = 1;
+
+  /* Need minus? */
+  if (saved_errno < 0) {
+    if ( tmp + 1 - hex_errno > (ptrdiff_t)(HEX_ERRNO_SIZE) )
+      goto err;
+
+    *(++tmp) = '-';
+  }
+
+  /* Last check for space */
+  if ( tmp + len + 2 - hex_errno > (ptrdiff_t)(HEX_ERRNO_SIZE) )
+    goto err;
+
+  /* Point to last one */
+  cur = tmp + len;
+
+  /* Convert unsigned_errno to hex */
+  do {
+    *cur-- = "0123456789ABCDEF"[unsigned_errno & 0xf];
+    unsigned_errno >>= 4;
+  } while (unsigned_errno != 0 && cur >= tmp);
+
+  /* Emit the newline and NUL */
+  cur = tmp + len;
+  *(++cur) = '\n';
+  *(++cur) = '\0';
+
+  goto done;
+
+err:
+  /*
+   * In error exit, just write a '\0' in the first char so whatever called
+   * this at least won't fall off the end.
+   */
+  *hex_errno = '\0';
+
+done:
+  return;
 }
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
