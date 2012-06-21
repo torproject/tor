@@ -14,14 +14,16 @@ LIBS=-lrt ./configure
 make dist-rpm
 
 You should have at least two, maybe three, rpms.  There should be the binary
-i386.rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
+(i686|x86_64).rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
+The debuginfo rpms are created if package redhat-rpm-config is installed (case
+of redhat distros).
 
 This step suffices unless you want to create RPMs for distros other than the
 one you used for building.
 
 
 ## Instructions for building RPMs for multiple architectures or distributions
-## using 'mock'
+## using 'mock' on Fedora or RHEL (and clones)
 
 Make sure you have mock installed and configured, see following HOWTOs for setup:
 https://fedoraproject.org/wiki/How_to_create_an_RPM_package

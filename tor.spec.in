@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 0
+%define specver 1
 
 ## Things users may want to change
 #
@@ -108,17 +108,14 @@ License: 3-clause BSD
 Vendor: The Tor Project (https://torproject.org)
 Packager: Erinn Clark <erinn@torproject.org>
 
-%if %{is_suse}
-Requires: openssl >= 0.9.7, libevent >= 1.4.13
-BuildRequires: openssl-devel >= 0.9.7, rpm >= 4.0, zlib-devel, libevent-devel >= 1.4.13, asciidoc
-%else 
 Requires: openssl >= 0.9.7, libevent >= 1.4.13
 BuildRequires: openssl-devel >= 0.9.7, libevent-devel >= 1.4.13, asciidoc
-%endif
-%if %{is_fc}
-BuildRequires: rpm-build >= 4.0
+
+# Fedora 16 and RHEL 5 have following conflicting packages according to rpm search
+%if %{is_rh}
 Conflicts: tor-core, tor-lsb, tor-upstart
 %endif
+
 Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
@@ -287,6 +284,14 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+* Thu Jun 21 2012 Ondrej Mikle <ondrej.mikle@gmail.com>
+- fixed to work with both rpmbuild and mock on RHEL/Fedora
+- removed unnecessary files from rpm such as .git repo
+- fixed build dependencies and package conflicts
+- fixed creating _tor user on Fedora 17 (ancient typo)
+- added/updated build instructions for RPM creation
+- confirmed to build and run on EL5, EL6, Fedora 16/17, OpenSuse 12.1
+
 * Fri Aug 20 2010 Erinn Clark <erinn@torproject.org>
 - add conflicts for Fedora packages
 - add logic for SuSE since it requires special doc handling
