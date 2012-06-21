@@ -2465,6 +2465,44 @@ test_util_spawn_background_partial_read(void *ptr)
 }
 
 /**
+ * Test for format_hex_number_for_helper_exit_status()
+ */
+
+static void
+test_util_format_hex_number(void *ptr)
+{
+  int i, len;
+  char buf[HEX_ERRNO_SIZE + 1];
+  const struct {
+    const char *str;
+    unsigned int x;
+  } test_data[] = {
+    {"0", 0},
+    {"1", 1},
+    {"273A", 0x273a},
+    {"FFFF", 0xffff},
+#if UINT_MAX >= 0xffffffff
+    {"31BC421D", 0x31bc421d},
+    {"FFFFFFFF", 0xffffffff},
+#endif
+    {NULL, 0}
+  };
+
+  (void)ptr;
+
+  for (i = 0; test_data[i].str != NULL; ++i) {
+    len = format_hex_number_for_helper_exit_status(test_data[i].x,
+        buf, HEX_ERRNO_SIZE);
+    test_neq(len, 0);
+    buf[len] = '\0';
+    test_streq(buf, test_data[i].str);
+  }
+
+ done:
+  return;
+}
+
+/**
  * Test that we can properly format q Windows command line
  */
 static void
@@ -3031,6 +3069,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
+  UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),
