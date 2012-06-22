@@ -1526,7 +1526,7 @@ parse_port_range(const char *port, uint16_t *port_min_out,
     } else if (endptr && *endptr == '-') {
       port = endptr+1;
       endptr = NULL;
-      port_max = (int)tor_parse_long(port, 10, 1, 65536, &ok, &endptr);
+      port_max = (int)tor_parse_long(port, 10, 1, 65535, &ok, &endptr);
       if (!ok) {
         log_warn(LD_GENERAL,
                  "Malformed port %s on address range; rejecting.",
