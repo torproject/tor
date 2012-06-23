@@ -3197,6 +3197,9 @@ tor_join_win_cmdline(const char *argv[])
  * buf, up to max_len digits, and returns the actual number of digits written.
  * If there is insufficient space, it will write nothing and return 0.
  *
+ * This function DOES NOT add a terminating NUL character to its output: be
+ * careful!
+ *
  * This accepts an unsigned int because format_helper_exit_status() needs to
  * call it with a signed int and an unsigned char, and since the C standard
  * does not guarantee that an int is wider than a char (an int must be at
@@ -3204,8 +3207,11 @@ tor_join_win_cmdline(const char *argv[])
  * can't assume a signed int is sufficient to accomodate an unsigned char.
  * Thus, format_helper_exit_status() will still need to emit any require '-'
  * on its own.
+ *
+ * For most purposes, you'd want to use tor_snprintf("%x") instead of this
+ * function; it's designed to be used in code paths where you can't call
+ * arbitrary C functions.
  */
-
 int
 format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
                                          int max_len)
@@ -3226,8 +3232,9 @@ format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
       tmp >>= 4;
       ++len;
     }
+  } else {
+    len = 1;
   }
-  else len = 1;
 
   /* Bail if we would go past the end of the buffer */
   if (len > max_len)
@@ -3258,7 +3265,6 @@ format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
  * CHILD_STATE_* macros for definition), and SAVED_ERRNO is the value of
  * errno when the failure occurred.
  */
-
 void
 format_helper_exit_status(unsigned char child_state, int saved_errno,
                           char *hex_errno)
