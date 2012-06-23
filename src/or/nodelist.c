@@ -689,8 +689,7 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   if (node->ri) {
     router_get_prim_orport(node->ri, ap_out);
-  }
-  else if (node->rs) {
+  } else if (node->rs) {
     tor_addr_from_ipv4h(&ap_out->addr, node->rs->addr);
     ap_out->port = node->rs->or_port;
   }

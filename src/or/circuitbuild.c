@@ -5602,8 +5602,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
-    if (!tor_addr_is_null(&ri->ipv6_addr))
-    {
+    if (!tor_addr_is_null(&ri->ipv6_addr)) {
       tor_addr_port_t ap;
       router_get_pref_orport(ri, &ap);
       log_notice(LD_CONFIG,

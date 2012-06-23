@@ -2597,8 +2597,7 @@ tor_main(int argc, char *argv[])
   // a file on a folder shared by the wm emulator.
   // if no flashcard (real or emulated) is present,
   // log files will be written in the root folder
-  if (find_flashcard_path(path,MAX_PATH) == -1)
-  {
+  if (find_flashcard_path(path,MAX_PATH) == -1) {
     redir = _wfreopen( L"\\stdout.log", L"w", stdout );
     redirdbg = _wfreopen( L"\\stderr.log", L"w", stderr );
   } else {
