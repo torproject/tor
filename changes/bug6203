@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Disable a spurious warning about reading on a marked and flushing
+      connection. We shouldn't be doing that, but apparently we
+      sometimes do. Fix for bug 6203; bugfix on 0.2.3.17-beta.
+
