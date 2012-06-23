@@ -1100,8 +1100,8 @@ addressmap_match_superdomains(char *address)
  * address starts out as a non-exit address, and we remap it to an .exit
  * address at any point, then set *<b>exit_source_out</b> to the
  * address_entry_source_t of the first such rule.  Set *<b>exit_source_out</b>
- * to ADDRMAPSRC_NONE if there is no such rewrite.
- *
+ * to ADDRMAPSRC_NONE if there is no such rewrite, or if the original address
+ * was a .exit.
  */
 int
 addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
@@ -1111,10 +1111,12 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
   int rewrites;
   time_t expires = TIME_MAX;
   addressmap_entry_source_t exit_source = ADDRMAPSRC_NONE;
+  char *addr_orig = tor_strdup(address);
+  char *log_addr_orig = NULL;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
     int exact_match = 0;
-    char *addr_orig = tor_strdup(escaped_safe_str_client(address));
+    log_addr_orig = tor_strdup(escaped_safe_str_client(address));
 
     ent = strmap_get(addressmap, address);
 
@@ -1125,7 +1127,6 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
           !strcasecmp(address, ent->new_address)) {
         /* This is a rule like *.example.com example.com, and we just got
          * "example.com" */
-        tor_free(addr_orig);
         goto done;
       }
 
@@ -1133,7 +1134,6 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
     }
 
     if (!ent || !ent->new_address) {
-      tor_free(addr_orig);
       goto done;
     }
 
@@ -1151,10 +1151,11 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
     }
 
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
-             addr_orig, escaped_safe_str_client(address));
+             log_addr_orig, escaped_safe_str_client(address));
     if (ent->expires > 1 && ent->expires < expires)
       expires = ent->expires;
-    tor_free(addr_orig);
+
+    tor_free(log_addr_orig);
   }
   log_warn(LD_CONFIG,
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
@@ -1162,6 +1163,8 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
   /* it's fine to rewrite a rewrite, but don't loop forever */
 
  done:
+  tor_free(addr_orig);
+  tor_free(log_addr_orig);
   if (exit_source_out)
     *exit_source_out = exit_source;
   if (expires_out)
