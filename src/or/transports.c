@@ -697,7 +697,19 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
 
     return;
   } else if (!strcmpstart(line, SPAWN_ERROR_MESSAGE)) {
-    log_warn(LD_GENERAL, "Could not launch managed proxy executable!");
+    /* managed proxy launch failed: parse error message to learn why. */
+    int retval, child_state, saved_errno;
+    retval = tor_sscanf(line, SPAWN_ERROR_MESSAGE "%x/%x",
+                        &child_state, &saved_errno);
+    if (retval == 2) {
+      log_warn(LD_GENERAL,
+               "Could not launch managed proxy executable at '%s' ('%s').",
+               mp->argv[0], strerror(saved_errno));
+    } else { /* failed to parse error message */
+      log_warn(LD_GENERAL,"Could not launch managed proxy executable at '%s'.",
+               mp->argv[0]);
+    }
+
     mp->conf_state = PT_PROTO_FAILED_LAUNCH;
     return;
   }
