@@ -32,10 +32,18 @@ for $fn (@ARGV) {
         if ($C && /\s(?:if|while|for|switch)\(/) {
             print "      KW(:$fn:$.\n";
         }
-        ## Warn about #else #if instead of #elif. 
+        ## Warn about #else #if instead of #elif.
         if (($lastline =~ /^\# *else/) and ($_ =~ /^\# *if/)) {
             print " #else#if:$fn:$.\n";
         }
+        ## Warn about some K&R violations
+        if (/^\s+\{/ and $lastline =~ /^\s*(if|while|for|else if)/ and
+	    $lastline !~ /\{$/) {
+            print "non-K&R {:$fn:$.\n";
+	}
+        if (/^\s*else/ and $lastline =~ /\}$/) {
+	    print "  }\\nelse:$fn:$.\n";
+	}
         $lastline = $_;
         ## Warn about unnecessary empty lines.
         if ($lastnil && /^\s*}\n/) {
