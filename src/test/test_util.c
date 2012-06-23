@@ -2143,11 +2143,11 @@ test_util_exit_status(void *ptr)
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0, hex_errno);
-  test_streq("         0/0\n", hex_errno);
+  test_streq("0/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
-  test_streq("  0/7FFFFFFF\n", hex_errno);
+  test_streq("0/7FFFFFFF\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0xFF, -0x80000000, hex_errno);
@@ -2155,11 +2155,11 @@ test_util_exit_status(void *ptr)
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x7F, 0, hex_errno);
-  test_streq("        7F/0\n", hex_errno);
+  test_streq("7F/0\n", hex_errno);
 
   clear_hex_errno(hex_errno);
   format_helper_exit_status(0x08, -0x242, hex_errno);
-  test_streq("      8/-242\n", hex_errno);
+  test_streq("8/-242\n", hex_errno);
 
  done:
   ;
@@ -2357,7 +2357,7 @@ test_util_spawn_background_fail(void *ptr)
   tor_snprintf(code, sizeof(code), "%x/%x",
     9 /* CHILD_STATE_FAILEXEC */ , ENOENT);
   tor_snprintf(expected_out, sizeof(expected_out),
-    "ERR: Failed to spawn background process - code %12s\n", code);
+    "ERR: Failed to spawn background process - code %s\n", code);
 
   run_util_spawn_background(argv, expected_out, expected_err, 255,
                             expected_status);
@@ -2462,6 +2462,44 @@ test_util_spawn_background_partial_read(void *ptr)
 
  done:
   tor_process_handle_destroy(process_handle, 1);
+}
+
+/**
+ * Test for format_hex_number_for_helper_exit_status()
+ */
+
+static void
+test_util_format_hex_number(void *ptr)
+{
+  int i, len;
+  char buf[HEX_ERRNO_SIZE + 1];
+  const struct {
+    const char *str;
+    unsigned int x;
+  } test_data[] = {
+    {"0", 0},
+    {"1", 1},
+    {"273A", 0x273a},
+    {"FFFF", 0xffff},
+#if UINT_MAX >= 0xffffffff
+    {"31BC421D", 0x31bc421d},
+    {"FFFFFFFF", 0xffffffff},
+#endif
+    {NULL, 0}
+  };
+
+  (void)ptr;
+
+  for (i = 0; test_data[i].str != NULL; ++i) {
+    len = format_hex_number_for_helper_exit_status(test_data[i].x,
+        buf, HEX_ERRNO_SIZE);
+    test_neq(len, 0);
+    buf[len] = '\0';
+    test_streq(buf, test_data[i].str);
+  }
+
+ done:
+  return;
 }
 
 /**
@@ -3031,6 +3069,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
+  UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),

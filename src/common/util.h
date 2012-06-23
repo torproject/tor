@@ -471,6 +471,8 @@ void tor_process_handle_destroy(process_handle_t *process_handle,
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
 
+int format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
+                                             int max_len);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 

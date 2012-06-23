@@ -3191,6 +3191,68 @@ tor_join_win_cmdline(const char *argv[])
   return joined_argv;
 }
 
+/**
+ * Helper function to output hex numbers, called by
+ * format_helper_exit_status().  This writes the hexadecimal digits of x into
+ * buf, up to max_len digits, and returns the actual number of digits written.
+ * If there is insufficient space, it will write nothing and return 0.
+ *
+ * This function DOES NOT add a terminating NUL character to its output: be
+ * careful!
+ *
+ * This accepts an unsigned int because format_helper_exit_status() needs to
+ * call it with a signed int and an unsigned char, and since the C standard
+ * does not guarantee that an int is wider than a char (an int must be at
+ * least 16 bits but it is permitted for a char to be that wide as well), we
+ * can't assume a signed int is sufficient to accomodate an unsigned char.
+ * Thus, format_helper_exit_status() will still need to emit any require '-'
+ * on its own.
+ *
+ * For most purposes, you'd want to use tor_snprintf("%x") instead of this
+ * function; it's designed to be used in code paths where you can't call
+ * arbitrary C functions.
+ */
+int
+format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
+                                         int max_len)
+{
+  int len;
+  unsigned int tmp;
+  char *cur;
+
+  /* Sanity check */
+  if (!buf || max_len <= 0)
+    return 0;
+
+  /* How many chars do we need for x? */
+  if (x > 0) {
+    len = 0;
+    tmp = x;
+    while (tmp > 0) {
+      tmp >>= 4;
+      ++len;
+    }
+  } else {
+    len = 1;
+  }
+
+  /* Bail if we would go past the end of the buffer */
+  if (len > max_len)
+    return 0;
+
+  /* Point to last one */
+  cur = buf + len - 1;
+
+  /* Convert x to hex */
+  do {
+    *cur-- = "0123456789ABCDEF"[x & 0xf];
+    x >>= 4;
+  } while (x != 0 && cur >= buf);
+
+  /* Return len */
+  return len;
+}
+
 /** Format <b>child_state</b> and <b>saved_errno</b> as a hex string placed in
  * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler
  * safe.
@@ -3203,12 +3265,12 @@ tor_join_win_cmdline(const char *argv[])
  * CHILD_STATE_* macros for definition), and SAVED_ERRNO is the value of
  * errno when the failure occurred.
  */
-
 void
 format_helper_exit_status(unsigned char child_state, int saved_errno,
                           char *hex_errno)
 {
   unsigned int unsigned_errno;
+  int written, left;
   char *cur;
   size_t i;
 
@@ -3225,35 +3287,73 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
     unsigned_errno = (unsigned int) saved_errno;
   }
 
-  /* Convert errno to hex (start before \n) */
-  cur = hex_errno + HEX_ERRNO_SIZE - 2;
+  /*
+   * Count how many chars of space we have left, and keep a pointer into the
+   * current point in the buffer.
+   */
+  left = HEX_ERRNO_SIZE;
+  cur = hex_errno;
 
-  /* Check for overflow on first iteration of the loop */
-  if (cur < hex_errno)
-    return;
+  /* Emit child_state */
+  written = format_hex_number_for_helper_exit_status(child_state,
+                                                     cur, left);
+  if (written <= 0)
+    goto err;
 
-  do {
-    *cur-- = "0123456789ABCDEF"[unsigned_errno % 16];
-    unsigned_errno /= 16;
-  } while (unsigned_errno != 0 && cur >= hex_errno);
+  /* Adjust left and cur */
+  left -= written;
+  cur += written;
+  if (left <= 0)
+    goto err;
 
-  /* Prepend the minus sign if errno was negative */
-  if (saved_errno < 0 && cur >= hex_errno)
-    *cur-- = '-';
+  /* Now the '/' */
+  *cur = '/';
 
-  /* Leave a gap */
-  if (cur >= hex_errno)
-    *cur-- = '/';
+  /* Adjust left and cur */
+  ++cur;
+  --left;
+  if (left <= 0)
+    goto err;
 
-  /* Check for overflow on first iteration of the loop */
-  if (cur < hex_errno)
-    return;
+  /* Need minus? */
+  if (saved_errno < 0) {
+    *cur = '-';
+    ++cur;
+    --left;
+    if (left <= 0)
+      goto err;
+  }
 
-  /* Convert child_state to hex */
-  do {
-    *cur-- = "0123456789ABCDEF"[child_state % 16];
-    child_state /= 16;
-  } while (child_state != 0 && cur >= hex_errno);
+  /* Emit unsigned_errno */
+  written = format_hex_number_for_helper_exit_status(unsigned_errno,
+                                                     cur, left);
+
+  if (written <= 0)
+    goto err;
+
+  /* Adjust left and cur */
+  left -= written;
+  cur += written;
+
+  /* Check that we have enough space left for a newline */
+  if (left <= 0)
+    goto err;
+
+  /* Emit the newline and NUL */
+  *cur++ = '\n';
+  *cur++ = '\0';
+
+  goto done;
+
+ err:
+  /*
+   * In error exit, just write a '\0' in the first char so whatever called
+   * this at least won't fall off the end.
+   */
+  *hex_errno = '\0';
+
+ done:
+  return;
 }
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
