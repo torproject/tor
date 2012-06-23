@@ -473,8 +473,8 @@ void tor_process_handle_destroy(process_handle_t *process_handle,
 
 int format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
                                              int max_len);
-void format_helper_exit_status(unsigned char child_state,
-                               int saved_errno, char *hex_errno);
+int format_helper_exit_status(unsigned char child_state,
+                              int saved_errno, char *hex_errno);
 
 /* Space for hex values of child state, a slash, saved_errno (with
    leading minus) and newline (no null) */

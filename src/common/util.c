@@ -3264,8 +3264,11 @@ format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
  * in the processs of starting the child process did the failure occur (see
  * CHILD_STATE_* macros for definition), and SAVED_ERRNO is the value of
  * errno when the failure occurred.
+ *
+ * On success return the number of characters added to hex_errno, not counting
+ * the terminating NUL; return -1 on error.
  */
-void
+int
 format_helper_exit_status(unsigned char child_state, int saved_errno,
                           char *hex_errno)
 {
@@ -3273,6 +3276,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   int written, left;
   char *cur;
   size_t i;
+  int res = -1;
 
   /* Fill hex_errno with spaces, and a trailing newline (memset may
      not be signal handler safe, so we can't use it) */
@@ -3343,6 +3347,8 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   *cur++ = '\n';
   *cur++ = '\0';
 
+  res = cur - hex_errno - 1;
+
   goto done;
 
  err:
@@ -3353,7 +3359,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   *hex_errno = '\0';
 
  done:
-  return;
+  return res;
 }
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
@@ -3695,15 +3701,20 @@ tor_spawn_background(const char *const filename, const char **argv,
     child_state = CHILD_STATE_FAILEXEC;
 
   error:
-    /* XXX: are we leaking fds from the pipe? */
+    {
+      /* XXX: are we leaking fds from the pipe? */
+      int n;
 
-    format_helper_exit_status(child_state, errno, hex_errno);
+      n = format_helper_exit_status(child_state, errno, hex_errno);
 
-    /* Write the error message. GCC requires that we check the return
-       value, but there is nothing we can do if it fails */
-    /* TODO: Don't use STDOUT, use a pipe set up just for this purpose */
-    nbytes = write(STDOUT_FILENO, error_message, error_message_length);
-    nbytes = write(STDOUT_FILENO, hex_errno, sizeof(hex_errno));
+      if (n >= 0) {
+        /* Write the error message. GCC requires that we check the return
+           value, but there is nothing we can do if it fails */
+        /* TODO: Don't use STDOUT, use a pipe set up just for this purpose */
+        nbytes = write(STDOUT_FILENO, error_message, error_message_length);
+        nbytes = write(STDOUT_FILENO, hex_errno, n);
+      }
+    }
 
     (void) nbytes;
 
