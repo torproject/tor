@@ -4386,7 +4386,10 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
     }
   } else {
     len = strlen(buf_out);
-    tor_assert(len>0);
+    if (len == 0) {
+      /* this probably means we got a NUL at the start of the string. */
+      return IO_STREAM_EAGAIN;
+    }
 
     if (buf_out[len - 1] == '\n') {
       /* Remove the trailing newline */
