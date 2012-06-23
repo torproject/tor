@@ -287,7 +287,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
       0.2.2.11-alpha.
     - Correctly handle checking the permissions on the parent
       directory of a control socket in the root directory. Bug found
-      by Esteban Manchado VelÃ¡zquez. Fixes bug 5089; bugfix on Tor
+      by Esteban Manchado Velázquez. Fixes bug 5089; bugfix on Tor
       0.2.2.26-beta.
     - When told to add a bridge with the same digest as a preexisting
       bridge but a different addr:port, change the addr:port as
