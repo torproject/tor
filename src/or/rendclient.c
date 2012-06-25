@@ -132,6 +132,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   crypt_path_t *cpath;
   off_t dh_offset;
   crypto_pk_t *intro_key = NULL;
+  int status = 0;
 
   tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
@@ -161,7 +162,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       }
     }
 
-    return -1;
+    status = -1;
+    goto cleanup;
   }
 
   /* first 20 bytes of payload are the hash of Bob's pk */
@@ -184,13 +186,16 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              smartlist_len(entry->parsed->intro_nodes));
 
     if (rend_client_reextend_intro_circuit(introcirc)) {
+      status = -2;
       goto perm_err;
     } else {
-      return -1;
+      status = -1;
+      goto cleanup;
     }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
+    status = -2;
     goto perm_err;
   }
 
@@ -202,10 +207,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
       log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
+      status = -2;
       goto perm_err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
       log_warn(LD_BUG, "Internal error: couldn't generate g^x.");
+      status = -2;
       goto perm_err;
     }
   }
@@ -256,6 +263,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
+    status = -2;
     goto perm_err;
   }
 
@@ -269,6 +277,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
+    status = -2;
     goto perm_err;
   }
 
@@ -288,7 +297,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
     log_warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
-    return -2;
+    status = -2;
+    goto cleanup;
   }
 
   /* Now, we wait for an ACK or NAK on this circuit. */
@@ -299,12 +309,17 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
    * state. */
   introcirc->_base.timestamp_dirty = time(NULL);
 
-  return 0;
+  goto cleanup;
+
  perm_err:
   if (!introcirc->_base.marked_for_close)
     circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);
-  return -2;
+ cleanup:
+  memset(payload, 0, sizeof(payload));
+  memset(tmp, 0, sizeof(tmp));
+
+  return status;
 }
 
 /** Called when a rendezvous circuit is open; sends a establish
@@ -659,10 +674,17 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
                                 time(NULL), chosen_replica) < 0) {
       log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
                         "descriptor ID did not succeed.");
-      return;
+      /*
+       * Hmm, can this write anything to descriptor_id and still fail?
+       * Let's clear it just to be safe.
+       *
+       * From here on, any returns should goto done which clears
+       * descriptor_id so we don't leave key-derived material on the stack.
+       */
+      goto done;
     }
     if (directory_get_from_hs_dir(descriptor_id, rend_query) != 0)
-      return; /* either success or failure, but we're done */
+      goto done; /* either success or failure, but we're done */
   }
   /* If we come here, there are no hidden service directories left. */
   log_info(LD_REND, "Could not pick one of the responsible hidden "
@@ -670,6 +692,10 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
                     "we already tried them all unsuccessfully.");
   /* Close pending connections. */
   rend_client_desc_trynow(rend_query->onion_address);
+
+ done:
+  memset(descriptor_id, 0, sizeof(descriptor_id));
+
   return;
 }
 
@@ -1172,11 +1198,11 @@ rend_parse_service_authorization(const or_options_t *options,
   strmap_t *parsed = strmap_new();
   smartlist_t *sl = smartlist_new();
   rend_service_authorization_t *auth = NULL;
+  char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
+  char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
 
   for (line = options->HidServAuth; line; line = line->next) {
     char *onion_address, *descriptor_cookie;
-    char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
-    char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
     int auth_type_val = 0;
     auth = NULL;
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
@@ -1253,6 +1279,8 @@ rend_parse_service_authorization(const or_options_t *options,
   } else {
     strmap_free(parsed, rend_service_authorization_strmap_item_free);
   }
+  memset(descriptor_cookie_tmp, 0, sizeof(descriptor_cookie_tmp));
+  memset(descriptor_cookie_base64ext, 0, sizeof(descriptor_cookie_base64ext));
   return res;
 }
 

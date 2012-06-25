@@ -1,0 +1,9 @@
+ o Minor features (security):
+   - Clear keys and key-derived material left on the stack in
+     rendservice.c and rendclient.c. This should make us more
+     forward-secure against cold-boot attacks and the like. Fix for
+     bug 2385.
+
+   - Check return value of crypto_pk_write_private_key_to_string() in
+     end_service_load_keys(). This should make us more forward-secure
+     against cold-boot attacks and the like. Fix for bug 2385.
