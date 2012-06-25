@@ -790,7 +790,8 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   char *method_name=NULL;
 
   char *addrport=NULL;
-  tor_addr_t addr;
+  tor_addr_t tor_addr;
+  char *address=NULL;
   uint16_t port = 0;
 
   transport_t *transport=NULL;
@@ -814,7 +815,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   }
 
   addrport = smartlist_get(items, 2);
-  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
+  if (tor_addr_port_split(LOG_PROTOCOL_WARN, addrport, &address, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing transport "
              "address '%s'", addrport);
     goto err;
@@ -826,7 +827,12 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_new(&addr, port, method_name, PROXY_NONE);
+  if (tor_addr_parse(&tor_addr, address) < 0) {
+    log_warn(LD_CONFIG, "Error parsing transport address '%s'", address);
+    goto err;
+  }
+
+  transport = transport_new(&tor_addr, port, method_name, PROXY_NONE);
   if (!transport)
     goto err;
 
@@ -835,7 +841,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   /* For now, notify the user so that he knows where the server
      transport is listening. */
   log_info(LD_CONFIG, "Server transport %s at %s:%d.",
-           method_name, fmt_addr(&addr), (int)port);
+           method_name, address, (int)port);
 
   r=0;
   goto done;
@@ -846,6 +852,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  tor_free(address);
   return r;
 }
 
@@ -863,7 +870,8 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   int socks_ver=PROXY_NONE;
 
   char *addrport=NULL;
-  tor_addr_t addr;
+  tor_addr_t tor_addr;
+  char *address=NULL;
   uint16_t port = 0;
 
   transport_t *transport=NULL;
@@ -899,7 +907,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   }
 
   addrport = smartlist_get(items, 3);
-  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
+  if (tor_addr_port_split(LOG_PROTOCOL_WARN, addrport, &address, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing transport "
              "address '%s'", addrport);
     goto err;
@@ -911,7 +919,12 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_new(&addr, port, method_name, socks_ver);
+  if (tor_addr_parse(&tor_addr, address) < 0) {
+    log_warn(LD_CONFIG, "Error parsing transport address '%s'", address);
+    goto err;
+  }
+
+  transport = transport_new(&tor_addr, port, method_name, socks_ver);
   if (!transport)
     goto err;
 
@@ -919,7 +932,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
 
   log_info(LD_CONFIG, "Transport %s at %s:%d with SOCKS %d. "
            "Attached to managed proxy.",
-           method_name, fmt_addr(&addr), (int)port, socks_ver);
+           method_name, address, (int)port, socks_ver);
 
   r=0;
   goto done;
@@ -930,6 +943,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  tor_free(address);
   return r;
 }
 
