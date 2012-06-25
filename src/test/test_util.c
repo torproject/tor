@@ -2138,28 +2138,34 @@ test_util_exit_status(void *ptr)
 {
   /* Leave an extra byte for a \0 so we can do string comparison */
   char hex_errno[HEX_ERRNO_SIZE + 1];
+  int n;
 
   (void)ptr;
 
   clear_hex_errno(hex_errno);
-  format_helper_exit_status(0, 0, hex_errno);
+  n = format_helper_exit_status(0, 0, hex_errno);
   test_streq("0/0\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
-  format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
+  n = format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
   test_streq("0/7FFFFFFF\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
-  format_helper_exit_status(0xFF, -0x80000000, hex_errno);
+  n = format_helper_exit_status(0xFF, -0x80000000, hex_errno);
   test_streq("FF/-80000000\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
-  format_helper_exit_status(0x7F, 0, hex_errno);
+  n = format_helper_exit_status(0x7F, 0, hex_errno);
   test_streq("7F/0\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
-  format_helper_exit_status(0x08, -0x242, hex_errno);
+  n = format_helper_exit_status(0x08, -0x242, hex_errno);
   test_streq("8/-242\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
 
  done:
   ;
