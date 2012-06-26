@@ -1186,7 +1186,7 @@ test_util_threads(void)
 #ifndef _WIN32
   struct timeval tv;
   tv.tv_sec=0;
-  tv.tv_usec=10;
+  tv.tv_usec=100*1000;
 #endif
 #ifndef TOR_IS_MULTITHREADED
   /* Skip this test if we aren't threading. We should be threading most
@@ -1213,7 +1213,7 @@ test_util_threads(void)
     if (strmap_get(_thread_test_strmap, "thread 1") &&
         strmap_get(_thread_test_strmap, "thread 2")) {
       done = 1;
-    } else if (time(NULL) > started + 25) {
+    } else if (time(NULL) > started + 150) {
       timedout = done = 1;
     }
     tor_mutex_release(_thread_test_mutex);
