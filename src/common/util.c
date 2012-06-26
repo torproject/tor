@@ -3887,13 +3887,26 @@ tor_get_exit_code(const process_handle_t *process_handle,
   return PROCESS_EXIT_EXITED;
 }
 
+/** Helper: return the number of characters in <b>s</b> preceding the first
+ * occurence of <b>ch</b>. If <b>ch</b> does not occur in <b>s</b>, return
+ * the length of <b>s</b>. Should be equivalent to strspn(s, "ch"). */
+static INLINE size_t
+str_num_before(const char *s, char ch)
+{
+  const char *cp = strchr(s, ch);
+  if (cp)
+    return cp - s;
+  else
+    return strlen(s);
+}
+
 /** Return non-zero iff getenv would consider <b>s1</b> and <b>s2</b>
  * to have the same name as strings in a process's environment. */
 int
 environment_variable_names_equal(const char *s1, const char *s2)
 {
-  size_t s1_name_len = strcspn(s1, "=");
-  size_t s2_name_len = strcspn(s2, "=");
+  size_t s1_name_len = str_num_before(s1, '=');
+  size_t s2_name_len = str_num_before(s2, '=');
 
   return (s1_name_len == s2_name_len &&
           tor_memeq(s1, s2, s1_name_len));
@@ -3968,7 +3981,7 @@ process_environment_make(struct smartlist_t *env_vars)
     for (i = 0; i < n_env_vars; ++i) {
       const char *s = smartlist_get(env_vars_sorted, i);
       size_t slen = strlen(s);
-      size_t s_name_len = strcspn(s, "=");
+      size_t s_name_len = str_num_before(s, '=');
 
       if (s_name_len == slen) {
         log_warn(LD_GENERAL,
