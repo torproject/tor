@@ -2869,6 +2869,39 @@ test_util_sl_new_from_text_lines(void *ptr)
   }
 }
 
+static void
+test_util_envnames(void *ptr)
+{
+  (void) ptr;
+
+  tt_assert(environment_variable_names_equal("abc", "abc"));
+  tt_assert(environment_variable_names_equal("abc", "abc="));
+  tt_assert(environment_variable_names_equal("abc", "abc=def"));
+  tt_assert(environment_variable_names_equal("abc=def", "abc"));
+  tt_assert(environment_variable_names_equal("abc=def", "abc=ghi"));
+
+  tt_assert(environment_variable_names_equal("abc", "abc"));
+  tt_assert(environment_variable_names_equal("abc", "abc="));
+  tt_assert(environment_variable_names_equal("abc", "abc=def"));
+  tt_assert(environment_variable_names_equal("abc=def", "abc"));
+  tt_assert(environment_variable_names_equal("abc=def", "abc=ghi"));
+
+  tt_assert(!environment_variable_names_equal("abc", "abcd"));
+  tt_assert(!environment_variable_names_equal("abc=", "abcd"));
+  tt_assert(!environment_variable_names_equal("abc=", "abcd"));
+  tt_assert(!environment_variable_names_equal("abc=", "def"));
+  tt_assert(!environment_variable_names_equal("abc=", "def="));
+  tt_assert(!environment_variable_names_equal("abc=x", "def=x"));
+
+  tt_assert(!environment_variable_names_equal("", "a=def"));
+  /* A bit surprising. */
+  tt_assert(environment_variable_names_equal("", "=def"));
+  tt_assert(environment_variable_names_equal("=y", "=x"));
+
+ done:
+  ;
+}
+
 /** Test process_environment_make */
 static void
 test_util_make_environment(void *ptr)
@@ -3081,6 +3114,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(n_bits_set, 0),
   UTIL_TEST(eat_whitespace, 0),
   UTIL_TEST(sl_new_from_text_lines, 0),
+  UTIL_TEST(envnames, 0),
   UTIL_TEST(make_environment, 0),
   UTIL_TEST(set_env_var_in_sl, 0),
   END_OF_TESTCASES

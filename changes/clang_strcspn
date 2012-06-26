@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Avoid a warning caused by using strcspn from glibc with clang 3.0.
+      Bugfix on 0.2.3.13-alpha.
