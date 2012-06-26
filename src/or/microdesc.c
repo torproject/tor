@@ -373,8 +373,8 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
   }
 
   if (dropped) {
-    log_notice(LD_DIR, "Removed %d/%d microdescriptors as old.",
-               dropped,dropped+kept);
+    log_info(LD_DIR, "Removed %d/%d microdescriptors as old.",
+             dropped,dropped+kept);
     cache->bytes_dropped += bytes_dropped;
   }
 }
