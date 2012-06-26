@@ -3347,7 +3347,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   *cur++ = '\n';
   *cur++ = '\0';
 
-  res = cur - hex_errno - 1;
+  res = (int)(cur - hex_errno - 1);
 
   goto done;
 
