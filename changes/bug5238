@@ -1,0 +1,3 @@
+ o Minor bugfixes:
+   - Downgrade "Got a certificate, but we already have it" log mesages from
+     warning to info, except when we're a dirauth.
