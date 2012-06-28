@@ -1472,7 +1472,7 @@ test_util_control_formats(void)
     } else {                                                       \
       TT_FAIL(("%s ~~ %s: %f != %f",#value1,#value2,v1,v2)); \
     }                                                              \
-  } while(0)
+  } while (0)
 
 static void
 test_util_sscanf(void)
