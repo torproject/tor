@@ -1244,6 +1244,27 @@ handle_control_saveconf(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+struct signal_t {
+  int sig;
+  const char *signal_name;
+};
+
+static const struct signal_t signal_table[] = {
+  { SIGHUP, "RELOAD" },
+  { SIGHUP, "HUP" },
+  { SIGINT, "SHUTDOWN" },
+  { SIGUSR1, "DUMP" },
+  { SIGUSR1, "USR1" },
+  { SIGUSR2, "DEBUG" },
+  { SIGUSR2, "USR2" },
+  { SIGTERM, "HALT" },
+  { SIGTERM, "TERM" },
+  { SIGTERM, "INT" },
+  { SIGNEWNYM, "NEWNYM" },
+  { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
+  { 0, NULL },
+};
+
 /** Called when we get a SIGNAL command. React to the provided signal, and
  * report success or failure. (If the signal results in a shutdown, success
  * may not be reported.) */
@@ -1251,7 +1272,8 @@ static int
 handle_control_signal(control_connection_t *conn, uint32_t len,
                       const char *body)
 {
-  int sig;
+  int sig = -1;
+  int i;
   int n = 0;
   char *s;
 
@@ -1260,27 +1282,19 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   while (body[n] && ! TOR_ISSPACE(body[n]))
     ++n;
   s = tor_strndup(body, n);
-  if (!strcasecmp(s, "RELOAD") || !strcasecmp(s, "HUP"))
-    sig = SIGHUP;
-  else if (!strcasecmp(s, "SHUTDOWN") || !strcasecmp(s, "INT"))
-    sig = SIGINT;
-  else if (!strcasecmp(s, "DUMP") || !strcasecmp(s, "USR1"))
-    sig = SIGUSR1;
-  else if (!strcasecmp(s, "DEBUG") || !strcasecmp(s, "USR2"))
-    sig = SIGUSR2;
-  else if (!strcasecmp(s, "HALT") || !strcasecmp(s, "TERM"))
-    sig = SIGTERM;
-  else if (!strcasecmp(s, "NEWNYM"))
-    sig = SIGNEWNYM;
-  else if (!strcasecmp(s, "CLEARDNSCACHE"))
-    sig = SIGCLEARDNSCACHE;
-  else {
+
+  for (i = 0; signal_table[i].signal_name != NULL; ++i) {
+    if (!strcasecmp(s, signal_table[i].signal_name)) {
+      sig = signal_table[i].sig;
+      break;
+    }
+  }
+
+  if (sig < 0)
     connection_printf_to_buf(conn, "552 Unrecognized signal code \"%s\"\r\n",
                              s);
-    sig = -1;
-  }
   tor_free(s);
-  if (sig<0)
+  if (sig < 0)
     return 0;
 
   send_control_done(conn);
@@ -1432,6 +1446,16 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = smartlist_join_strings(event_names, " ", 0, NULL);
 
     smartlist_free(event_names);
+  } else if (!strcmp(question, "signal/names")) {
+    smartlist_t *signal_names = smartlist_new();
+    int j;
+    for (j = 0; signal_table[j].signal_name != NULL; ++j) {
+      smartlist_add(signal_names, (char*)signal_table[j].signal_name);
+    }
+
+    *answer = smartlist_join_strings(signal_names, " ", 0, NULL);
+
+    smartlist_free(signal_names);
   } else if (!strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {
@@ -2130,6 +2154,7 @@ static const getinfo_item_t getinfo_items[] = {
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,
        "Events that the controller can ask for with SETEVENTS."),
+  ITEM("signal/names", misc, "Signal names recognized by the SIGNAL command"),
   ITEM("features/names", misc, "What arguments can USEFEATURE take?"),
   PREFIX("desc/id/", dir, "Router descriptors by ID."),
   PREFIX("desc/name/", dir, "Router descriptors by nickname."),
