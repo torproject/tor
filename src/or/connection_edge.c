@@ -1702,17 +1702,22 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
          addressmap_ent_remove(key, val);
          continue;
        } else if (val->new_address) {
+         const char *src_wc = val->src_wildcard ? "*." : "";
+         const char *dst_wc = val->dst_wildcard ? "*." : "";
          if (want_expiry) {
            if (val->expires < 3 || val->expires == TIME_MAX)
-             smartlist_add_asprintf(sl, "%s %s NEVER", key, val->new_address);
+             smartlist_add_asprintf(sl, "%s%s %s%s NEVER",
+                                    src_wc, key, dst_wc, val->new_address);
            else {
              char time[ISO_TIME_LEN+1];
              format_iso_time(time, val->expires);
-             smartlist_add_asprintf(sl, "%s %s \"%s\"", key, val->new_address,
-                          time);
+             smartlist_add_asprintf(sl, "%s%s %s%s \"%s\"",
+                                    src_wc, key, dst_wc, val->new_address,
+                                    time);
            }
          } else {
-           smartlist_add_asprintf(sl, "%s %s", key, val->new_address);
+           smartlist_add_asprintf(sl, "%s%s %s%s",
+                                  src_wc, key, dst_wc, val->new_address);
          }
        }
      }
