@@ -1461,12 +1461,28 @@ test_util_control_formats(void)
   tor_free(out);
 }
 
+#define test_feq(value1,value2) do {                               \
+    double v1 = (value1), v2=(value2);                             \
+    double tf_diff = v1-v2;                                        \
+    double tf_tolerance = ((v1+v2)/2.0)/1e8;                       \
+    if (tf_diff<0) tf_diff=-tf_diff;                               \
+    if (tf_tolerance<0) tf_tolerance=-tf_tolerance;                \
+    if (tf_diff<tf_tolerance) {                                    \
+      TT_BLATHER(("%s ~~ %s: %f ~~ %f",#value1,#value2,v1,v2));  \
+    } else {                                                       \
+      TT_FAIL(("%s ~~ %s: %f != %f",#value1,#value2,v1,v2)); \
+    }                                                              \
+  } while(0)
+
 static void
 test_util_sscanf(void)
 {
   unsigned u1, u2, u3;
   char s1[20], s2[10], s3[10], ch;
   int r;
+  long lng1,lng2;
+  int int1, int2;
+  double d1,d2,d3,d4;
 
   /* Simple tests (malformed patterns, literal matching, ...) */
   test_eq(-1, tor_sscanf("123", "%i", &r)); /* %i is not supported */
@@ -1594,6 +1610,65 @@ test_util_sscanf(void)
   test_eq(3, tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
   test_eq(4, tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
   test_eq(' ', ch);
+
+  r = tor_sscanf("12345 -67890 -1", "%d %ld %d", &int1, &lng1, &int2);
+  test_eq(r,3);
+  test_eq(int1, 12345);
+  test_eq(lng1, -67890);
+  test_eq(int2, -1);
+
+#if SIZEOF_INT == 4
+  r = tor_sscanf("-2147483648. 2147483647.", "%d. %d.", &int1, &int2);
+  test_eq(r,2);
+  test_eq(int1, -2147483648);
+  test_eq(int2, 2147483647);
+
+  r = tor_sscanf("-2147483679.", "%d.", &int1);
+  test_eq(r,0);
+
+  r = tor_sscanf("2147483678.", "%d.", &int1);
+  test_eq(r,0);
+#elif SIZEOF_INT == 8
+  r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,2);
+  test_eq(int1, -9223372036854775808);
+  test_eq(int2, 9223372036854775807);
+
+  r = tor_sscanf("-9223372036854775809.", "%d.", &int1);
+  test_eq(r,0);
+
+  r = tor_sscanf("9223372036854775808.", "%d.", &int1);
+  test_eq(r,0);
+#endif
+
+#if SIZEOF_LONG == 4
+  r = tor_sscanf("-2147483648. 2147483647.", "%ld. %ld.", &lng1, &lng2)
+  test_eq(r,2);
+  test_eq(lng1, -2147483647 - 1);
+  test_eq(lng2, 2147483647);
+#elif SIZEOF_LONG == 8
+  r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,2);
+  test_eq(lng1, -9223372036854775807L - 1);
+  test_eq(lng2, 9223372036854775807L);
+
+  r = tor_sscanf("-9223372036854775808. 9223372036854775808.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,1);
+  r = tor_sscanf("-9223372036854775809. 9223372036854775808.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,0);
+#endif
+
+  r = tor_sscanf("123.456 .000007 -900123123.2000787 00003.2",
+                 "%lf %lf %lf %lf", &d1,&d2,&d3,&d4);
+  test_eq(r,4);
+  test_feq(d1, 123.456);
+  test_feq(d2, .000007);
+  test_feq(d3, -900123123.2000787);
+  test_feq(d4, 3.2);
 
  done:
   ;

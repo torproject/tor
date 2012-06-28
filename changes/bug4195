@@ -1,0 +1,6 @@
+  o Minor features:
+    - Enhance our internal sscanf replacement so that we can eliminate
+      the last remaining uses of the system sscanf. (Though those uses
+      of sscanf were safe, sscanf itself is generally error prone, so
+      we want to eliminate when we can.) Fixes ticket 4195 and Coverity
+      CID 448.
