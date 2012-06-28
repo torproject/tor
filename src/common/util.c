@@ -4031,7 +4031,7 @@ tor_get_exit_code(const process_handle_t *process_handle,
 }
 
 /** Helper: return the number of characters in <b>s</b> preceding the first
- * occurence of <b>ch</b>. If <b>ch</b> does not occur in <b>s</b>, return
+ * occurrence of <b>ch</b>. If <b>ch</b> does not occur in <b>s</b>, return
  * the length of <b>s</b>. Should be equivalent to strspn(s, "ch"). */
 static INLINE size_t
 str_num_before(const char *s, char ch)

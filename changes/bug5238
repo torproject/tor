@@ -1,4 +1,0 @@
- o Minor bugfixes:
-   - Downgrade "Got a certificate, but we already have it" log mesages from
-     warning to info, except when we're a dirauth. Fixes bug #5238; bugfix
-     on 0.2.1.7-alpha.

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When formatting wildcarded address mappings for the controller,
-      be sure to include "*." as appropriate. Partial fix for bug 6244;
-      bugfix on 0.2.3.9-alpha.

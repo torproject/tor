@@ -3503,7 +3503,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
-    /* This is request for an entry server to use for a regular circuit,
+    /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
     return choose_random_entry(state);
   }
