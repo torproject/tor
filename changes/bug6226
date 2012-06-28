@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Don't do DNS lookups when parsing corrupted managed proxy
-      protocol messages. Fixes bug 6226; bugfix on 0.2.3.6-alpha.

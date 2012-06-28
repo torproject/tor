@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Allow wildcarded mapaddress targets to be specified on the controlport.
+      Partial fix for bug 6244; bugfix on 0.2.3.9-alpha.
+

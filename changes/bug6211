@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a bug that stopped AllowDotExit from working on addresses
-      that had an entry in the DNS cache. Fixes bug 6211; bugfix on
-      0.2.3.17-beta.

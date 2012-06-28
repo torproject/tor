@@ -1,4 +1,0 @@
-  o Documentation:
-    - Document the --defaults-torrc option, and the new (in 0.2.3)
-      semantics for overriding, extending, and clearing lists of
-      options. Closes bug 4748.

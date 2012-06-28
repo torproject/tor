@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Move tor_gettimeofday_cached() into compat_libevent.c, and use
-      Libevent's notion of cached time when possible.
