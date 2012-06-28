@@ -1,3 +1,0 @@
-  o Minor bugfixes
-    - Make format_helper_exit_status() avoid unnecessary space padding and
-      stop confusing log_from_pipe().  Fixes ticket 5557.

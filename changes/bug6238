@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Downgrade a message about cleaning the microdescriptor cache to
-      "info" from "notice". Fixes bug 6238; bugfix on 0.2.3.1-alpha.

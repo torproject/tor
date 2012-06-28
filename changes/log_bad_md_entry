@@ -1,3 +1,0 @@
-  o Minor features (debugging):
-    - Log a BUG message at INFO if we have a networkstatus with a missing
-      entry for some microdescriptor.

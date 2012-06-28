@@ -1,2 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove duplicate code for invoking getrlimit() from control.c.

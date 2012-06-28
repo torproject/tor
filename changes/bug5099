@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Improve log message issued when a managed proxy fails to
-      launch. Fixes bug 5099; bugfix on 0.2.3.6-alpha.

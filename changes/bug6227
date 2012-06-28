@@ -1,3 +1,0 @@
-  o Minor bugfixes (unit tests):
-    - Avoid a false positive in the util/threads unit test by increasing
-      the maximum timeout time. Fixes bug 6227; bugfix on 0.2.0.4-alpha.

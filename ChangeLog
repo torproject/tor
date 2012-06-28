@@ -1,3 +1,62 @@
+Changes in version 0.2.3.18-rc - 2012-06-28
+
+  o Major bugfixes:
+    - Make our linker option detection code more robust against linkers
+      such as on FreeBSD 8, where a bad combination of options completes
+      successfully but makes an unrunnable binary. Fixes bug 6173;
+      bugfix on 0.2.3.17-beta.
+
+  o Minor bugfixes (on 0.2.2.x and earlier):
+    - Avoid a false positive in the util/threads unit test by increasing
+      the maximum timeout time. Fixes bug 6227; bugfix on 0.2.0.4-alpha.
+    - Replace "Sending publish request" log messages with "Launching
+      upload", so that they no longer confusingly imply that we're
+      sending somtheing to a directory we might not even be connected
+      to yet. Fixes bug 3311; bugfix on 0.2.0.10-alpha.
+    - When checking for requested signatures on the latest consensus
+      before serving it to a client, make sure to check the right
+      consensus flavor. Bugfix on 0.2.2.6-alpha.
+    - Downgrade "eventdns rejected address" message to LOG_PROTOCOL_WARN.
+      Fixes bug 5932; bugfix on 0.2.2.7-alpha.
+
+  o Minor bugfixes (on 0.2.3.x):
+    - Downgrade a message about cleaning the microdescriptor cache to
+      "info" from "notice". Fixes bug 6238; bugfix on 0.2.3.1-alpha.
+    - Improve log message issued when a managed proxy fails to
+      launch. Fixes bug 5099; bugfix on 0.2.3.6-alpha.
+    - Don't do DNS lookups when parsing corrupted managed proxy protocol
+      messages. Fixes bug 6226; bugfix on 0.2.3.6-alpha.
+    - Avoid a warning caused by using strcspn() from glibc with clang 3.0.
+      Bugfix on 0.2.3.13-alpha.
+    - Make format_helper_exit_status() avoid unnecessary space padding and
+      stop confusing log_from_pipe(). Fixes ticket 5557.
+    - Make sure to set *socket_error in all error cases in
+      connection_connect(), so it can't produce a warning about errno
+      being zero from errno_to_orconn_end_reason(). Resolves ticket 6028.
+    - Remove non-bug log messages about running with circuit timeout
+      learning enabled from LD_BUG. Fixes bug 6169; bugfix on
+      0.2.3.17-beta.
+    - Disable a spurious warning about reading on a marked and flushing
+      connection. We shouldn't be doing that, but apparently we
+      sometimes do. Fixes bug 6203; bugfix on 0.2.3.17-beta.
+    - Fix a bug that stopped AllowDotExit from working on addresses
+      that had an entry in the DNS cache. Fixes bug 6211; bugfix on
+      0.2.3.17-beta.
+    - Log a BUG message at INFO if we have a networkstatus with a missing
+      entry for some microdescriptor.
+
+  o Code simplification, refactoring, unit tests:
+    - Move tor_gettimeofday_cached() into compat_libevent.c, and use
+      Libevent's notion of cached time when possible.
+    - Remove duplicate code for invoking getrlimit() from control.c.
+    - Add a unit test for the environment_variable_names_equal function.
+
+  o Documentation:
+    - Document the --defaults-torrc option, and the new (in 0.2.3)
+      semantics for overriding, extending, and clearing lists of
+      options. Closes bug 4748.
+
+
 Changes in version 0.2.3.17-beta - 2012-06-15
   Tor 0.2.3.17-beta enables compiler and linker hardening by default,
   gets our TLS handshake back on track for being able to blend in with

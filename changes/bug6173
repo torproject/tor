@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Make our linker option detection code more robust against linkers
-      where a bad combination of options completes successfully but
-      makes an unrunnable binary. Fixes bug 6173; bugfix on 0.2.3.17-beta.
-
