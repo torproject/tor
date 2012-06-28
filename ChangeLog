@@ -1,4 +1,7 @@
 Changes in version 0.2.3.18-rc - 2012-06-28
+  Tor 0.2.3.18-rc is the first release candidate for the Tor 0.2.3.x
+  series. It fixes a few smaller bugs, but generally appears stable.
+  Please test it and let us know whether it is!
 
   o Major bugfixes:
     - Allow wildcarded mapaddress targets to be specified on the
@@ -15,6 +18,10 @@ Changes in version 0.2.3.18-rc - 2012-06-28
       upload", so that they no longer confusingly imply that we're
       sending something to a directory we might not even be connected
       to yet. Fixes bug 3311; bugfix on 0.2.0.10-alpha.
+    - Make sure to set *socket_error in all error cases in
+      connection_connect(), so it can't produce a warning about
+      errno being zero from errno_to_orconn_end_reason(). Bugfix on
+      0.2.1.1-alpha; resolves ticket 6028.
     - Downgrade "Got a certificate, but we already have it" log messages
       from warning to info, except when we're a dirauth. Fixes bug 5238;
       bugfix on 0.2.1.7-alpha.
@@ -25,10 +32,16 @@ Changes in version 0.2.3.18-rc - 2012-06-28
       Fixes bug 5932; bugfix on 0.2.2.7-alpha.
 
   o Minor bugfixes (on 0.2.3.x):
+    - Make format_helper_exit_status() avoid unnecessary space padding
+      and stop confusing log_from_pipe(). Fixes ticket 5557; bugfix
+      on 0.2.3.1-alpha.
     - Downgrade a message about cleaning the microdescriptor cache to
       "info" from "notice". Fixes bug 6238; bugfix on 0.2.3.1-alpha.
-    - Improve log message issued when a managed proxy fails to
-      launch. Fixes bug 5099; bugfix on 0.2.3.6-alpha.
+    - Log a BUG message at severity INFO if we have a networkstatus with
+      a missing entry for some microdescriptor. Continues on a patch
+      to 0.2.3.2-alpha.
+    - Improve the log message when a managed proxy fails to launch. Fixes
+      bug 5099; bugfix on 0.2.3.6-alpha.
     - Don't do DNS lookups when parsing corrupted managed proxy protocol
       messages. Fixes bug 6226; bugfix on 0.2.3.6-alpha.
     - When formatting wildcarded address mappings for the controller,
@@ -36,22 +49,14 @@ Changes in version 0.2.3.18-rc - 2012-06-28
       bugfix on 0.2.3.9-alpha.
     - Avoid a warning caused by using strcspn() from glibc with clang 3.0.
       Bugfix on 0.2.3.13-alpha.
-    - Make format_helper_exit_status() avoid unnecessary space padding and
-      stop confusing log_from_pipe(). Fixes ticket 5557.
-    - Make sure to set *socket_error in all error cases in
-      connection_connect(), so it can't produce a warning about errno
-      being zero from errno_to_orconn_end_reason(). Resolves ticket 6028.
-    - Remove non-bug log messages about running with circuit timeout
-      learning enabled from LD_BUG. Fixes bug 6169; bugfix on
-      0.2.3.17-beta.
+    - Stop logging messages about running with circuit timeout learning
+      enabled at severity LD_BUG. Fixes bug 6169; bugfix on 0.2.3.17-beta.
     - Disable a spurious warning about reading on a marked and flushing
       connection. We shouldn't be doing that, but apparently we
       sometimes do. Fixes bug 6203; bugfix on 0.2.3.17-beta.
     - Fix a bug that stopped AllowDotExit from working on addresses
       that had an entry in the DNS cache. Fixes bug 6211; bugfix on
       0.2.3.17-beta.
-    - Log a BUG message at INFO if we have a networkstatus with a missing
-      entry for some microdescriptor.
 
   o Code simplification, refactoring, unit tests:
     - Move tor_gettimeofday_cached() into compat_libevent.c, and use
