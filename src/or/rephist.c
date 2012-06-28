@@ -1531,7 +1531,7 @@ rep_hist_get_bandwidth_lines(void)
   const char *desc = NULL;
   size_t len;
 
-  /* opt [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
+  /* [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
 /* The n,n,n part above. Largest representation of a uint64_t is 20 chars
  * long, plus the comma. */
 #define MAX_HIST_VALUE_LEN 21*NUM_TOTALS

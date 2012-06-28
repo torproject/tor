@@ -1,0 +1,4 @@
+  o Removed code:
+    - No longer include the "opt" prefix when generating routerinfos
+      or v2 directories: it has been needless since Tor 0.1.2. Closes
+      ticket 5124.

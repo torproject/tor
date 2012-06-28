@@ -2053,9 +2053,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "router %s %s %d 0 %d\n"
                     "%s"
                     "platform %s\n"
-                    "opt protocols Link 1 2 Circuit 1\n"
+                    "protocols Link 1 2 Circuit 1\n"
                     "published %s\n"
-                    "opt fingerprint %s\n"
+                    "fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "%s%s%s%s"
@@ -2074,15 +2074,15 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
-    has_extra_info_digest ? "opt extra-info-digest " : "",
+    has_extra_info_digest ? "extra-info-digest " : "",
     has_extra_info_digest ? extra_info_digest : "",
     has_extra_info_digest ? "\n" : "",
-    options->DownloadExtraInfo ? "opt caches-extra-info\n" : "",
+    options->DownloadExtraInfo ? "caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
     family_line,
-    we_are_hibernating() ? "opt hibernating 1\n" : "",
-    options->HidServDirectoryV2 ? "opt hidden-service-dir\n" : "",
-    options->AllowSingleHopExits ? "opt allow-single-hop-exits\n" : "");
+    we_are_hibernating() ? "hibernating 1\n" : "",
+    options->HidServDirectoryV2 ? "hidden-service-dir\n" : "",
+    options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
 
   tor_free(family_line);
   tor_free(onion_pkey);

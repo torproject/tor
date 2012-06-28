@@ -2114,7 +2114,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   /* length of "opt v \n" */
 #define V_LINE_OVERHEAD 7
   if (version && strlen(version) < MAX_V_LINE_LEN - V_LINE_OVERHEAD) {
-    if (tor_snprintf(cp, buf_len - (cp-buf), "opt v %s\n", version)<0) {
+    if (tor_snprintf(cp, buf_len - (cp-buf), "v %s\n", version)<0) {
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
     }

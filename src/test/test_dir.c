@@ -147,9 +147,9 @@ test_dir_formats(void)
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
-          "opt protocols Link 1 2 Circuit 1\n"
+          "protocols Link 1 2 Circuit 1\n"
           "published 1970-01-01 00:00:00\n"
-          "opt fingerprint ", sizeof(buf2));
+          "fingerprint ", sizeof(buf2));
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
   strlcat(buf2, fingerprint, sizeof(buf2));
   strlcat(buf2, "\nuptime 0\n"
@@ -161,7 +161,7 @@ test_dir_formats(void)
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
-  strlcat(buf2, "opt hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
   strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
