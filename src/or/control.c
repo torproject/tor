@@ -1313,6 +1313,17 @@ handle_control_takeownership(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** Return true iff <b>addr</b> is unusable as a mapaddress target because of
+ * containing funny characters. */
+static int
+address_is_invalid_mapaddress_target(const char *addr)
+{
+  if (!strcmpstart(addr, "*."))
+    return address_is_invalid_destination(addr+2, 1);
+  else
+    return address_is_invalid_destination(addr, 1);
+}
+
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failure. */
 static int
@@ -1331,14 +1342,13 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   reply = smartlist_new();
   smartlist_split_string(lines, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(lines, char *, line,
-  {
+  SMARTLIST_FOREACH_BEGIN(lines, char *, line) {
     tor_strlower(line);
     smartlist_split_string(elts, line, "=", 0, 2);
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
-      if (address_is_invalid_destination(to, 1)) {
+      if (address_is_invalid_mapaddress_target(to)) {
         smartlist_add_asprintf(reply,
                      "512-syntax error: invalid address '%s'", to);
         log_warn(LD_CONTROL,
@@ -1370,7 +1380,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
-  });
+  } SMARTLIST_FOREACH_END(line);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);
   smartlist_free(elts);
