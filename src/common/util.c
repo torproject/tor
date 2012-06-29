@@ -2872,7 +2872,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
           unsigned *out = va_arg(ap, unsigned *);
           if (u > UINT_MAX)
             return n_matched;
-          *out = u;
+          *out = (unsigned) u;
         }
         ++pattern;
         ++n_matched;
