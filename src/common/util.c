@@ -4676,10 +4676,10 @@ handle_fw_helper_line(const char *line)
              message_for_log ? message_for_log : "",
              internal_port);
   } else {
-    log_notice(LD_GENERAL,
-               "Tor successfully forwarded TCP port '%s' to '%s'%s.",
-               external_port, internal_port,
-               message_for_log ? message_for_log : "");
+    log_info(LD_GENERAL,
+             "Tor successfully forwarded TCP port '%s' to '%s'%s.",
+             external_port, internal_port,
+             message_for_log ? message_for_log : "");
   }
 
   goto done;
@@ -4723,7 +4723,9 @@ handle_fw_helper_output(process_handle_t *process_handle)
 }
 
 /** Spawn tor-fw-helper and ask it to forward the ports in
- *  <b>ports_to_forward</b>. */
+ *  <b>ports_to_forward</b>. <b>ports_to_forward</b> contains strings
+ *  of the form "<external port>:<internal port>", which is the format
+ *  that tor-fw-helper expects. */
 void
 tor_check_port_forwarding(const char *filename,
                           smartlist_t *ports_to_forward,
@@ -4748,17 +4750,35 @@ tor_check_port_forwarding(const char *filename,
   /* Start the child, if it is not already running */
   if ((!child_handle || child_handle->status != PROCESS_STATUS_RUNNING) &&
       time_to_run_helper < now) {
-    /* tor-fw-helper cli looks like this: tor_fw_helper -p :5555 -p 4555:1111 */
+    /*tor-fw-helper cli looks like this: tor_fw_helper -p :5555 -p 4555:1111 */
     const char **argv; /* cli arguments */
-    /* Number of cli arguments: one for the filename, two for each
-       smartlist element (one for "-p" and one for the ports), and one
-       for the final NULL. */
-    int args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
+    int args_n, status;
     int argv_index = 0; /* index inside 'argv' */
-    int status;
 
     tor_assert(smartlist_len(ports_to_forward) > 0);
 
+    /* check for overflow during 'argv' allocation:
+       (len(ports_to_forward)*2 + 2)*sizeof(char*) > SIZE_MAX ==
+       len(ports_to_forward) > (((SIZE_MAX/sizeof(char*)) - 2)/2) */
+    if ((size_t) smartlist_len(ports_to_forward) >
+        (((SIZE_MAX/sizeof(char*)) - 2)/2)) {
+      log_warn(LD_GENERAL,
+               "Overflow during argv allocation. This shouldn't happen.");
+      return;
+    }
+    /* check for overflow during 'argv_index' increase:
+       ((len(ports_to_forward)*2 + 2) > INT_MAX) ==
+       len(ports_to_forward) > (INT_MAX - 2)/2 */
+    if (smartlist_len(ports_to_forward) > (INT_MAX - 2)/2) {
+      log_warn(LD_GENERAL,
+               "Overflow during argv_index increase. This shouldn't happen.");
+      return;
+    }
+
+    /* Calculate number of cli arguments: one for the filename, two
+       for each smartlist element (one for "-p" and one for the
+       ports), and one for the final NULL. */
+    args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
     argv = tor_malloc_zero(sizeof(char*)*args_n);
 
     argv[argv_index++] = filename;

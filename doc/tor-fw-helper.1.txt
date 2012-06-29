@@ -41,18 +41,8 @@ OPTIONS
 **-g** or **--fetch-public-ip**::
     Fetch the the public ip address for each supported NAT helper method.
 
-**-i** or **--internal-or-port** __port__::
-    Inform **tor-fw-helper** of your internal OR port. This is the only
-    required argument.
-
-**-e** or **--external-or-port** __port__::
-    Inform **tor-fw-helper** of your external OR port.
-
-**-d** or **--internal-dir-port** __port__::
-    Inform **tor-fw-helper** of your internal Dir port.
-
-**-p** or **--external-dir-port** __port__::
-    Inform **tor-fw-helper** of your external Dir port.
+**-p** or **--forward-port** __external_port__:__internal_port__::
+    Forward external_port to internal_port.
 
 BUGS
 ----

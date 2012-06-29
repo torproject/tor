@@ -1,0 +1,3 @@
+  o Major features:
+    - Automatically forward the TCP ports of pluggable transport
+      proxies using tor-fw-helper if PortForwarding is enabled.

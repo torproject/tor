@@ -7275,10 +7275,12 @@ get_list_of_ports_to_forward(void)
     smartlist_add_asprintf(ports_to_forward, "%d:%d", port, port);
 
   /* Get ports of transport proxies */
-  smartlist_t *transport_ports = get_transport_proxy_ports();
-  if (transport_ports) {
-    smartlist_add_all(ports_to_forward, transport_ports);
-    smartlist_free(transport_ports);
+  {
+    smartlist_t *transport_ports = get_transport_proxy_ports();
+    if (transport_ports) {
+      smartlist_add_all(ports_to_forward, transport_ports);
+      smartlist_free(transport_ports);
+    }
   }
 
   if (!smartlist_len(ports_to_forward)) {

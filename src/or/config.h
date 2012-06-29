@@ -82,6 +82,8 @@ void save_transport_to_state(const char *transport_name,
                              const tor_addr_t *addr, uint16_t port);
 char *get_stored_bindaddr_for_server_transport(const char *transport);
 
+smartlist_t *get_list_of_ports_to_forward(void);
+
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer,
                           const char **errmsg);

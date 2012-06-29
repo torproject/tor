@@ -249,10 +249,11 @@ tor_fw_add_ports(tor_fw_options_t *tor_fw_options,
                 (const char *) backends->backend_ops[i].name);
       }
 
-      r = backends->backend_ops[i].add_tcp_mapping(port_to_forward->internal_port,
-                                                   port_to_forward->external_port,
-                                                   tor_fw_options->verbose,
-                                                   backends->backend_state[i]);
+      r =
+       backends->backend_ops[i].add_tcp_mapping(port_to_forward->internal_port,
+                                                port_to_forward->external_port,
+                                                tor_fw_options->verbose,
+                                                backends->backend_state[i]);
       if (r == 0) { /* backend success */
         tor_fw_helper_report_port_fw_success(port_to_forward->internal_port,
                                              port_to_forward->external_port,
@@ -326,13 +327,13 @@ parse_port(const char *arg)
     goto err;
 
   port_str = smartlist_get(sl, 0); /* macroify ? */
-  port = (int)tor_parse_long(port_str, 10, 1, 65536, &ok, NULL);
+  port = (int)tor_parse_long(port_str, 10, 1, 65535, &ok, NULL);
   if (!ok && strlen(port_str)) /* ":1555" is valid */
     goto err;
   port_to_forward->external_port = port;
 
   port_str = smartlist_get(sl, 1);
-  port = (int)tor_parse_long(port_str, 10, 1, 65536, &ok, NULL);
+  port = (int)tor_parse_long(port_str, 10, 1, 65535, &ok, NULL);
   if (!ok)
     goto err;
   port_to_forward->internal_port = port;
@@ -507,3 +508,4 @@ main(int argc, char **argv)
 
   exit(r);
 }
+

@@ -1697,7 +1697,6 @@ tor_addr_hostname_is_local(const char *name)
     !strcasecmpend(name, ".local");
 }
 
-
 /** Return a newly allocated tor_addr_port_t with <b>addr</b> and
     <b>port</b> filled in. */
 tor_addr_port_t *
