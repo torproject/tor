@@ -724,7 +724,6 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     } else {
       log_info(LD_CONFIG, "Parsed %d previously stored client entries.",
                strmap_size(parsed_clients));
-      tor_free(client_keys_str);
     }
   }
 
@@ -870,8 +869,10 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   if (open_hfile)
     abort_writing_to_file(open_hfile);
  done:
-  tor_strclear(client_keys_str);
-  tor_free(client_keys_str);
+  if (client_keys_str) {
+    tor_strclear(client_keys_str);
+    tor_free(client_keys_str);
+  }
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
 
   memset(cfname, 0, sizeof(cfname));
