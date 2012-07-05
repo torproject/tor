@@ -1,0 +1,3 @@
+  o Minor features:
+    - Add replaycache_t structure, functions and unit tests, for future use
+      in refactoring rend_service_introduce() for bug 6177.

@@ -20,6 +20,7 @@ test_SOURCES = \
 	test_dir.c \
 	test_microdesc.c \
 	test_pt.c \
+	test_replay.c \
 	test_util.c \
 	test_config.c \
 	tinytest.c

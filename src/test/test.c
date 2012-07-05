@@ -1863,6 +1863,7 @@ extern struct testcase_t dir_tests[];
 extern struct testcase_t microdesc_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t config_tests[];
+extern struct testcase_t replaycache_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1875,6 +1876,7 @@ static struct testgroup_t testgroups[] = {
   { "dir/md/", microdesc_tests },
   { "pt/", pt_tests },
   { "config/", config_tests },
+  { "replaycache/", replaycache_tests },
   END_OF_GROUPS
 };
 

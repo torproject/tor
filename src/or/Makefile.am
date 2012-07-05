@@ -48,6 +48,7 @@ libtor_a_SOURCES = \
 	rendmid.c				\
 	rendservice.c				\
 	rephist.c				\
+	replaycache.c				\
 	router.c				\
 	routerlist.c				\
 	routerparse.c				\
