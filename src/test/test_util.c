@@ -1643,7 +1643,7 @@ test_util_sscanf(void)
 #endif
 
 #if SIZEOF_LONG == 4
-  r = tor_sscanf("-2147483648. 2147483647.", "%ld. %ld.", &lng1, &lng2)
+  r = tor_sscanf("-2147483648. 2147483647.", "%ld. %ld.", &lng1, &lng2);
   test_eq(r,2);
   test_eq(lng1, -2147483647 - 1);
   test_eq(lng2, 2147483647);
