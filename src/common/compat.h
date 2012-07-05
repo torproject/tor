@@ -500,6 +500,8 @@ int network_init(void);
  * the actual errno after a socket operation fails.
  */
 #if defined(_WIN32)
+/** Expands to WSA<b>e</b> on Windows, and to <b>e</b> elsewhere. */
+#define SOCK_ERRNO(e) WSA##e
 /** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EINPROGRESS or the local equivalent. */
@@ -520,6 +522,7 @@ int network_init(void);
 int tor_socket_errno(tor_socket_t sock);
 const char *tor_socket_strerror(int e);
 #else
+#define SOCK_ERRNO(e) e
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
