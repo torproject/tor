@@ -1263,7 +1263,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'connected' received, no conn attached anymore. Ignoring.");
       return 0;
     case RELAY_COMMAND_SENDME:
-      if (!conn) {
+      if (!rh.stream_id) {
         if (layer_hint) {
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
           log_debug(LD_APP,"circ-level sendme at origin, packagewindow %d.",
@@ -1276,6 +1276,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                     circ->package_window);
           circuit_resume_edge_reading(circ, layer_hint);
         }
+        return 0;
+      }
+      if (!conn) {
+        log_info(domain,"sendme cell dropped, unknown stream (streamid %d).",
+                 rh.stream_id);
         return 0;
       }
       conn->package_window += STREAMWINDOW_INCREMENT;
