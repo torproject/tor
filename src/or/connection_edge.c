@@ -2813,6 +2813,9 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
 /** If address is of the form "y.onion" with a well-formed handle y:
  *     Put a NUL after y, lower-case it, and return ONION_HOSTNAME.
  *
+ *  If address is of the form "x.y.onion" with a well-formed handle x:
+ *     Drop "x.", put a NUL after y, lower-case it, and return ONION_HOSTNAME.
+ *
  * If address is of the form "y.onion" with a badly-formed handle y:
  *     Return BAD_HOSTNAME and log a message.
  *
@@ -2826,6 +2829,7 @@ hostname_type_t
 parse_extended_hostname(char *address)
 {
     char *s;
+    char *q;
     char query[REND_SERVICE_ID_LEN_BASE32+1];
 
     s = strrchr(address,'.');
@@ -2840,9 +2844,18 @@ parse_extended_hostname(char *address)
 
     /* so it is .onion */
     *s = 0; /* NUL-terminate it */
-    if (strlcpy(query, address, REND_SERVICE_ID_LEN_BASE32+1) >=
+    /* locate a 'sub-domain' component, in order to remove it */
+    q = strrchr(address, '.');
+    if (q == address) {
+      goto failed; /* reject sub-domain, as DNS does */
+    }
+    q = (NULL == q) ? address : q + 1;
+    if (strlcpy(query, q, REND_SERVICE_ID_LEN_BASE32+1) >=
         REND_SERVICE_ID_LEN_BASE32+1)
       goto failed;
+    if (q != address) {
+      memmove(address, q, strlen(q) + 1 /* also get \0 */);
+    }
     if (rend_valid_service_id(query)) {
       return ONION_HOSTNAME; /* success */
     }

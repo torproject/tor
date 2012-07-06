@@ -1412,11 +1412,20 @@ test_rend_fns(void)
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   char address3[] = "fooaddress.exit";
   char address4[] = "www.torproject.org";
+  char address5[] = "foo.abcdefghijklmnop.onion";
+  char address6[] = "foo.bar.abcdefghijklmnop.onion";
+  char address7[] = ".abcdefghijklmnop.onion";
 
   test_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
   test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
+  test_streq(address2, "aaaaaaaaaaaaaaaa");
   test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
   test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
+  test_assert(ONION_HOSTNAME == parse_extended_hostname(address5));
+  test_streq(address5, "abcdefghijklmnop");
+  test_assert(ONION_HOSTNAME == parse_extended_hostname(address6));
+  test_streq(address6, "abcdefghijklmnop");
+  test_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
