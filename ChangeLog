@@ -1,15 +1,19 @@
 Changes in version 0.2.3.19-rc - 2012-07-06
-   o Major bugfixes:
-     - Fix a bug handling SENDME cells on nonexistent streams that could
-       result in bizarre window values. Report and patch contributed
-       pseudonymously. Fixes part of bug 6271. This bug was introduced
-       before the first Tor release, in svn commit r152.
-     - Instead of ENOBUFS on Windows, say WSAENOBUFS. Fixes compilation
-       on Windows. Fixes bug 6296; bugfix on 0.2.3.18-rc.
+  o Major bugfixes:
+    - Fix a bug handling SENDME cells on nonexistent streams that could
+      result in bizarre window values. Report and patch contributed
+      pseudonymously. Fixes part of bug 6271. This bug was introduced
+      before the first Tor release, in svn commit r152.
+    - Revert to the May 1 2012 Maxmind GeoLite Country database. In the
+      June 2012 database, Maxmind marked many Tor relays as country "A1",
+      which will cause risky behavior for clients that set EntryNodes
+      or ExitNodes. Addresses bug 6334; bugfix on 0.2.3.17-beta.
+    - Instead of ENOBUFS on Windows, say WSAENOBUFS. Fixes compilation
+      on Windows. Fixes bug 6296; bugfix on 0.2.3.18-rc.
 
-   o Minor bugfixes:
-     - Fix wrong TCP port range in parse_port_range(). Fixes bug 6218;
-       bugfix on 0.2.1.10-alpha.
+  o Minor bugfixes:
+    - Fix wrong TCP port range in parse_port_range(). Fixes bug 6218;
+      bugfix on 0.2.1.10-alpha.
 
 
 Changes in version 0.2.3.18-rc - 2012-06-28
