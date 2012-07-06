@@ -1,4 +1,0 @@
-   o Minor bugfixes:
-
-     - Instead of ENOBUFS on Windows, say WSAENOBUFS. Fixes
-       compilation on Windows.  Fixes bug 6296; bugfix on 0.2.3.18-rc.

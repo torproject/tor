@@ -1,7 +1,0 @@
-   o Major bugfixes
-
-     - Fix a bug handling SENDME cells on nonexistent streams that
-       could result in bizarre window values. Report and patch
-       contributed pseudymously.  Fixes part of bug 6271. This bug
-       was introduced before the first Tor release, in svn commit
-       r152.

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix wrong TCP port range in parse_port_range(). Fixes bug 6218;
-      bugfix on 0.2.1.10-alpha.

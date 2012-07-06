@@ -1,3 +1,17 @@
+Changes in version 0.2.3.19-rc - 2012-07-06
+   o Major bugfixes:
+     - Fix a bug handling SENDME cells on nonexistent streams that could
+       result in bizarre window values. Report and patch contributed
+       pseudonymously. Fixes part of bug 6271. This bug was introduced
+       before the first Tor release, in svn commit r152.
+
+   o Minor bugfixes:
+     - Instead of ENOBUFS on Windows, say WSAENOBUFS. Fixes compilation
+       on Windows. Fixes bug 6296; bugfix on 0.2.3.18-rc.
+     - Fix wrong TCP port range in parse_port_range(). Fixes bug 6218;
+       bugfix on 0.2.1.10-alpha.
+
+
 Changes in version 0.2.3.18-rc - 2012-06-28
   Tor 0.2.3.18-rc is the first release candidate for the Tor 0.2.3.x
   series. It fixes a few smaller bugs, but generally appears stable.
