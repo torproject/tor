@@ -1,4 +1,9 @@
 Changes in version 0.2.3.19-rc - 2012-07-06
+  Tor 0.2.3.19-rc is the second release candidate for the Tor 0.2.3.x
+  series. It fixes the compile on Windows, reverts to a GeoIP database
+  that isn't as broken, and fixes a flow control bug that has been around
+  since the beginning of Tor.
+
   o Major bugfixes:
     - Fix a bug handling SENDME cells on nonexistent streams that could
       result in bizarre window values. Report and patch contributed
