@@ -21,6 +21,7 @@
 #include "router.h"
 #include "relay.h"
 #include "rephist.h"
+#include "replaycache.h"
 #include "routerlist.h"
 #include "routerparse.h"
 
@@ -95,16 +96,12 @@ typedef struct rend_service_t {
                          * up-to-date. */
   time_t next_upload_time; /**< Scheduled next hidden service descriptor
                             * upload time. */
-  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t
-   * of when they were received.  Clients may send INTRODUCE1 cells
-   * for the same rendezvous point through two or more different
-   * introduction points; when they do, this digestmap keeps us from
-   * launching multiple simultaneous attempts to connect to the same
-   * rend point. */
-  digestmap_t *accepted_intro_dh_parts;
-  /** Time at which we last removed expired values from
-   * accepted_intro_dh_parts. */
-  time_t last_cleaned_accepted_intro_dh_parts;
+  /** Replay cache for Diffie-Hellman values of INTRODUCE2 cells, to
+   * detect repeats.  Clients may send INTRODUCE1 cells for the same
+   * rendezvous point through two or more different introduction points;
+   * when they do, this keeps us from launching multiple simultaneous attempts
+   * to connect to the same rend point. */
+  replaycache_t *accepted_intro_dh_parts;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -177,7 +174,9 @@ rend_service_free(rend_service_t *service)
       rend_authorized_client_free(c););
     smartlist_free(service->clients);
   }
-  digestmap_free(service->accepted_intro_dh_parts, _tor_free);
+  if (service->accepted_intro_dh_parts) {
+    replaycache_free(service->accepted_intro_dh_parts);
+  }
   tor_free(service);
 }
 
@@ -955,26 +954,6 @@ rend_check_authorization(rend_service_t *service,
   return 1;
 }
 
-/** Remove elements from <b>service</b>'s replay cache that are old enough to
- * be noticed by timestamp checking. */
-static void
-clean_accepted_intro_dh_parts(rend_service_t *service, time_t now)
-{
-  const time_t cutoff = now - REND_REPLAY_TIME_INTERVAL;
-
-  service->last_cleaned_accepted_intro_dh_parts = now;
-  if (!service->accepted_intro_dh_parts)
-    return;
-
-  DIGESTMAP_FOREACH_MODIFY(service->accepted_intro_dh_parts, digest,
-                           time_t *, t) {
-    if (*t < cutoff) {
-      tor_free(t);
-      MAP_DEL_CURRENT(digest);
-    }
-  } DIGESTMAP_FOREACH_END;
-}
-
 /** Called when <b>intro</b> will soon be removed from
  * <b>service</b>'s list of intro points. */
 static void
@@ -1108,10 +1087,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   int auth_type;
   size_t auth_len = 0;
   char auth_data[REND_DESC_COOKIE_LEN];
-  crypto_digest_t *digest = NULL;
   time_t now = time(NULL);
   char diffie_hellman_hash[DIGEST_LEN];
-  time_t *access_time;
+  time_t elapsed;
+  int replay;
   const or_options_t *options = get_options();
 
   if (circuit->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
@@ -1177,29 +1156,31 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     goto err;
   }
 
-  if (!service->accepted_intro_dh_parts)
-    service->accepted_intro_dh_parts = digestmap_new();
-
-  if (!intro_point->accepted_intro_rsa_parts)
-    intro_point->accepted_intro_rsa_parts = digestmap_new();
-
-  {
-    char pkpart_digest[DIGEST_LEN];
-    /* Check for replay of PK-encrypted portion. */
-    crypto_digest(pkpart_digest, (char*)request+DIGEST_LEN, keylen);
-    access_time = digestmap_get(intro_point->accepted_intro_rsa_parts,
-                                pkpart_digest);
-    if (access_time != NULL) {
-      log_warn(LD_REND, "Possible replay detected! We received an "
-               "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
-               "Dropping cell.", (int)(now-*access_time));
-      goto err;
-    }
-    access_time = tor_malloc(sizeof(time_t));
-    *access_time = now;
-    digestmap_set(intro_point->accepted_intro_rsa_parts,
-                  pkpart_digest, access_time);
+  if (!service->accepted_intro_dh_parts) {
+    service->accepted_intro_dh_parts =
+      replaycache_new(REND_REPLAY_TIME_INTERVAL,
+                      REND_REPLAY_TIME_INTERVAL);
   }
+
+  if (!intro_point->accepted_intro_rsa_parts) {
+    intro_point->accepted_intro_rsa_parts = replaycache_new(0, 0);
+  }
+
+  /* Check for replay of PK-encrypted portion. */
+  replay = replaycache_add_test_and_elapsed(
+      intro_point->accepted_intro_rsa_parts,
+      ((char*)request)+DIGEST_LEN, keylen,
+      &elapsed);
+
+  if (replay) {
+    log_warn(LD_REND, "Possible replay detected! We received an "
+             "INTRODUCE2 cell with same PK-encrypted part %d seconds ago. "
+             "Dropping cell.", (int)elapsed);
+    goto err;
+  }
+
+  /* Increment INTRODUCE2 counter */
+  ++(intro_point->accepted_introduce2_count);
 
   /* Next N bytes is encrypted with service key */
   note_crypto_pk_op(REND_SERVER);
@@ -1327,17 +1308,14 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   r_cookie = ptr;
   base16_encode(hexcookie,9,r_cookie,4);
 
-  /* Determine hash of Diffie-Hellman, part 1 to detect replays. */
-  digest = crypto_digest_new();
-  crypto_digest_add_bytes(digest, ptr+REND_COOKIE_LEN, DH_KEY_LEN);
-  crypto_digest_get_digest(digest, diffie_hellman_hash, DIGEST_LEN);
-  crypto_digest_free(digest);
-
   /* Check whether there is a past request with the same Diffie-Hellman,
    * part 1. */
-  access_time = digestmap_get(service->accepted_intro_dh_parts,
-                              diffie_hellman_hash);
-  if (access_time != NULL) {
+  replay = replaycache_add_test_and_elapsed(
+      service->accepted_intro_dh_parts,
+      ptr+REND_COOKIE_LEN, DH_KEY_LEN,
+      &elapsed);
+
+  if (replay) {
     /* A Tor client will send a new INTRODUCE1 cell with the same rend
      * cookie and DH public key as its previous one if its intro circ
      * times out while in state CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT .
@@ -1349,20 +1327,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
              "INTRODUCE2 cell with same first part of "
              "Diffie-Hellman handshake %d seconds ago. Dropping "
              "cell.",
-             (int) (now - *access_time));
+             (int) elapsed);
     goto err;
   }
-
-  /* Add request to access history, including time and hash of Diffie-Hellman,
-   * part 1, and possibly remove requests from the history that are older than
-   * one hour. */
-  access_time = tor_malloc(sizeof(time_t));
-  *access_time = now;
-  digestmap_set(service->accepted_intro_dh_parts,
-                diffie_hellman_hash, access_time);
-  if (service->last_cleaned_accepted_intro_dh_parts + REND_REPLAY_TIME_INTERVAL
-      < now)
-    clean_accepted_intro_dh_parts(service, now);
 
   /* If the service performs client authorization, check included auth data. */
   if (service->clients) {
@@ -2164,11 +2131,7 @@ upload_service_descriptor(rend_service_t *service)
 static int
 intro_point_accepted_intro_count(rend_intro_point_t *intro)
 {
-  if (intro->accepted_intro_rsa_parts == NULL) {
-    return 0;
-  } else {
-    return digestmap_size(intro->accepted_intro_rsa_parts);
-  }
+  return intro->accepted_introduce2_count;
 }
 
 /** Return non-zero iff <b>intro</b> should 'expire' now (i.e. we

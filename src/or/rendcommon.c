@@ -439,7 +439,7 @@ rend_intro_point_free(rend_intro_point_t *intro)
   crypto_pk_free(intro->intro_key);
 
   if (intro->accepted_intro_rsa_parts != NULL) {
-    digestmap_free(intro->accepted_intro_rsa_parts, _tor_free);
+    replaycache_free(intro->accepted_intro_rsa_parts);
   }
 
   tor_free(intro);
