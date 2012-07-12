@@ -39,13 +39,17 @@
  * transport_t structs.
  *
  * When the managed proxy stops spitting METHOD lines (signified by a
- * '{S,C}METHODS DONE' message) we register all the transports
- * collected to the circuitbuild.c subsystem. At this point, the
- * pointers to transport_t can be transformed into dangling pointers
- * at any point by the circuitbuild.c subsystem, and so we replace all
- * transport_t pointers with strings describing the transport names.
- * We can still go from a transport name to a transport_t using the
- * fact that each transport name uniquely identifies a transport_t.
+ * '{S,C}METHODS DONE' message) we pass copies of its transports to
+ * the bridge subsystem. We keep copies of the 'transport_t's on the
+ * managed proxy to be able to associate the proxy with its
+ * transports, and we pass copies to the bridge subsystem so that
+ * transports can be associated with bridges.
+ * [ XXX We should try see whether the two copies are really needed
+ * and maybe cut it into a single copy of the 'transport_t' shared
+ * between the managed proxy and the bridge subsystem. Preliminary
+ * analysis shows that both copies are needed with the current code
+ * logic, because of race conditions that can cause dangling
+ * pointers. ]
  *
  * <b>In even more detail, this is what happens when a SIGHUP
  * occurs:</b>
@@ -530,6 +534,7 @@ launch_managed_proxy(managed_proxy_t *mp)
 void
 pt_configure_remaining_proxies(void)
 {
+  int at_least_a_proxy_config_finished = 0;
   smartlist_t *tmp = smartlist_new();
 
   log_debug(LD_CONFIG, "Configuring remaining managed proxies (%d)!",
@@ -567,13 +572,16 @@ pt_configure_remaining_proxies(void)
     if (!proxy_configuration_finished(mp))
       configure_proxy(mp);
 
+    if (proxy_configuration_finished(mp))
+      at_least_a_proxy_config_finished = 1;
+
   } SMARTLIST_FOREACH_END(mp);
 
   smartlist_free(tmp);
   check_if_restarts_needed = 0;
   assert_unconfigured_count_ok();
 
-  if (!pt_proxies_configuration_pending())
+  if (at_least_a_proxy_config_finished)
     mark_my_descriptor_dirty("configured managed proxies");
 }
 
@@ -1400,9 +1408,22 @@ pt_get_extra_info_descriptor_string(void)
     tor_assert(mp->transports);
 
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+      /* If the transport proxy returned "0.0.0.0" as its address, and
+       * we know our external IP address, use it. Otherwise, use the
+       * returned address. */
+      const char *addr_str = fmt_addr(&t->addr);
+      uint32_t external_ip_address = 0;
+      if (tor_addr_is_null(&t->addr) &&
+          router_pick_published_address(get_options(),
+                                        &external_ip_address) >= 0) {
+        /* returned addr was 0.0.0.0 and we found our external IP
+           address: use it. */
+        addr_str = fmt_addr32(external_ip_address);
+      }
+
       smartlist_add_asprintf(string_chunks,
                              "transport %s %s:%u",
-                             t->name, fmt_addr(&t->addr), t->port);
+                             t->name, addr_str, t->port);
     } SMARTLIST_FOREACH_END(t);
 
   } SMARTLIST_FOREACH_END(mp);

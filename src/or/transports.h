@@ -12,12 +12,13 @@
 #define TOR_TRANSPORTS_H
 
 /** Represents a pluggable transport used by a bridge. */
-typedef struct {
+typedef struct transport_t {
   /** SOCKS version: One of PROXY_SOCKS4, PROXY_SOCKS5. */
   int socks_version;
   /** Name of pluggable transport protocol */
   char *name;
-  /** Address of proxy */
+  /** The IP address where the transport bound and is waiting for
+   * connections. */
   tor_addr_t addr;
   /** Port of proxy */
   uint16_t port;

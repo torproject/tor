@@ -12,8 +12,6 @@
 #ifndef _TOR_CIRCUITBUILD_H
 #define _TOR_CIRCUITBUILD_H
 
-#include "transports.h"
-
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,
@@ -136,6 +134,10 @@ void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 /* DOCDOC circuit_build_times_get_bw_scale */
 int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 
+/* DOCDOC find_transport_name_by_bridge_addrport */
+const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
+                                                   uint16_t port);
+typedef struct transport_t transport_t;
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const transport_t **transport);
 
