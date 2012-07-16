@@ -4728,8 +4728,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     }
   }
 
-  SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e,
-   {
+  SMARTLIST_FOREACH_BEGIN(new_entry_guards, entry_guard_t *, e) {
      char *sp;
      char *val = digestmap_get(added_by, e->identity);
      if (val && (sp = strchr(val, ' '))) {
@@ -4747,9 +4746,10 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
          e->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
        }
      }
-     if (node->path_bias_disabled && !node->bad_since)
-       node->bad_since = time(NULL);
-   });
+     if (e->path_bias_disabled && !e->bad_since)
+       e->bad_since = time(NULL);
+    }
+  SMARTLIST_FOREACH_END(e);
 
   if (*msg || !set) {
     SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e,

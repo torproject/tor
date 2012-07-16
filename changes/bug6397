@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - When disabling guards for having too high a proportion of failed
+      circuits, make sure to look at each guard. Fix for bug 6397; bugfix
+      on 0.2.3.17-beta.
