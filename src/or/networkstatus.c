@@ -128,12 +128,12 @@ networkstatus_reset_download_failures(void)
 {
   int i;
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-     SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-       {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
          if (!router_get_by_descriptor_digest(rs->descriptor_digest))
            rs->need_to_mirror = 1;
-       }));;
+    } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END(ns);
 
   for (i=0; i < N_CONSENSUS_FLAVORS; ++i)
     download_status_reset(&consensus_dl_status[i]);
