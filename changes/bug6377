@@ -1,0 +1,4 @@
+ o Testing:
+   - Make it possible to set the TestingTorNetwork configuration
+     option using AlternateDirAuthority and AlternateBridgeAuthority
+     as an alternative to setting DirServer.

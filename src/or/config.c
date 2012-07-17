@@ -4091,9 +4091,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     });
   }
 
-  if (options->TestingTorNetwork && !options->DirServers) {
+  if (options->TestingTorNetwork &&
+      !(options->DirServers ||
+        (options->AlternateDirAuthority &&
+         options->AlternateBridgeAuthority))) {
     REJECT("TestingTorNetwork may only be configured in combination with "
-           "a non-default set of DirServers.");
+           "a non-default set of DirServer or both of AlternateDirAuthority "
+           "and AlternateBridgeAuthority configured.");
   }
 
   if (options->AllowSingleHopExits && !options->DirServers) {
