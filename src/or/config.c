@@ -5642,7 +5642,7 @@ parse_port_config(smartlist_t *out,
         mainport = (int)tor_parse_long(ports->value, 10, 0, 65535, &ok, NULL);
         if (!ok) {
           log_warn(LD_CONFIG, "%sListenAddress can only be used with a single "
-                   "%sPort with value \"auto\" or 1-65535.",
+                   "%sPort with value \"auto\" or 1-65535 and no options set.",
                    portname, portname);
           return -1;
         }
