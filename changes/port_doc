@@ -1,0 +1,3 @@
+  o Minor features (usability):
+    - Try to make the warning when giving an obsolete SOCKSListenAddress
+      a littel more useful.
