@@ -34,6 +34,7 @@
 #include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
+#include "transports.h"
 #include "routerparse.h"
 
 #ifdef USE_BUFFEREVENTS

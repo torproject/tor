@@ -1,0 +1,3 @@
+  o Major features:
+    - Bridges now report the pluggable transports they support to the
+      bridge authority. Implements ticket 3589.

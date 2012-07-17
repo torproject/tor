@@ -39,13 +39,17 @@
  * transport_t structs.
  *
  * When the managed proxy stops spitting METHOD lines (signified by a
- * '{S,C}METHODS DONE' message) we register all the transports
- * collected to the circuitbuild.c subsystem. At this point, the
- * pointers to transport_t can be transformed into dangling pointers
- * at any point by the circuitbuild.c subsystem, and so we replace all
- * transport_t pointers with strings describing the transport names.
- * We can still go from a transport name to a transport_t using the
- * fact that each transport name uniquely identifies a transport_t.
+ * '{S,C}METHODS DONE' message) we pass copies of its transports to
+ * the bridge subsystem. We keep copies of the 'transport_t's on the
+ * managed proxy to be able to associate the proxy with its
+ * transports, and we pass copies to the bridge subsystem so that
+ * transports can be associated with bridges.
+ * [ XXX We should try see whether the two copies are really needed
+ * and maybe cut it into a single copy of the 'transport_t' shared
+ * between the managed proxy and the bridge subsystem. Preliminary
+ * analysis shows that both copies are needed with the current code
+ * logic, because of race conditions that can cause dangling
+ * pointers. ]
  *
  * <b>In even more detail, this is what happens when a SIGHUP
  * occurs:</b>
@@ -126,6 +130,219 @@ static INLINE void free_execve_args(char **arg);
 /** The first and only supported - at the moment - configuration
     protocol version. */
 #define PROTO_VERSION_ONE 1
+
+/** A list of pluggable transports found in torrc. */
+static smartlist_t *transport_list = NULL;
+
+/** Returns a transport_t struct for a transport proxy supporting the
+    protocol <b>name</b> listening at <b>addr</b>:<b>port</b> using
+    SOCKS version <b>socks_ver</b>. */
+static transport_t *
+transport_new(const tor_addr_t *addr, uint16_t port,
+              const char *name, int socks_ver)
+{
+  transport_t *t = tor_malloc_zero(sizeof(transport_t));
+
+  tor_addr_copy(&t->addr, addr);
+  t->port = port;
+  t->name = tor_strdup(name);
+  t->socks_version = socks_ver;
+
+  return t;
+}
+
+/** Free the pluggable transport struct <b>transport</b>. */
+void
+transport_free(transport_t *transport)
+{
+  if (!transport)
+    return;
+
+  tor_free(transport->name);
+  tor_free(transport);
+}
+
+/** Mark every entry of the transport list to be removed on our next call to
+ * sweep_transport_list unless it has first been un-marked. */
+void
+mark_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_new();
+  SMARTLIST_FOREACH(transport_list, transport_t *, t,
+                    t->marked_for_removal = 1);
+}
+
+/** Remove every entry of the transport list that was marked with
+ * mark_transport_list if it has not subsequently been un-marked. */
+void
+sweep_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, t) {
+    if (t->marked_for_removal) {
+      SMARTLIST_DEL_CURRENT(transport_list, t);
+      transport_free(t);
+    }
+  } SMARTLIST_FOREACH_END(t);
+}
+
+/** Initialize the pluggable transports list to empty, creating it if
+ *  needed. */
+static void
+clear_transport_list(void)
+{
+  if (!transport_list)
+    transport_list = smartlist_new();
+  SMARTLIST_FOREACH(transport_list, transport_t *, t, transport_free(t));
+  smartlist_clear(transport_list);
+}
+
+/** Return a deep copy of <b>transport</b>. */
+static transport_t *
+transport_copy(const transport_t *transport)
+{
+  transport_t *new_transport = NULL;
+
+  tor_assert(transport);
+
+  new_transport = tor_malloc_zero(sizeof(transport_t));
+
+  new_transport->socks_version = transport->socks_version;
+  new_transport->name = tor_strdup(transport->name);
+  tor_addr_copy(&new_transport->addr, &transport->addr);
+  new_transport->port = transport->port;
+  new_transport->marked_for_removal = transport->marked_for_removal;
+
+  return new_transport;
+}
+
+/** Returns the transport in our transport list that has the name <b>name</b>.
+ *  Else returns NULL. */
+transport_t *
+transport_get_by_name(const char *name)
+{
+  tor_assert(name);
+
+  if (!transport_list)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(transport_list, transport_t *, transport) {
+    if (!strcmp(transport->name, name))
+      return transport;
+  } SMARTLIST_FOREACH_END(transport);
+
+  return NULL;
+}
+
+/** Resolve any conflicts that the insertion of transport <b>t</b>
+ *  might cause.
+ *  Return 0 if <b>t</b> is OK and should be registered, 1 if there is
+ *  a transport identical to <b>t</b> already registered and -1 if
+ *  <b>t</b> cannot be added due to conflicts. */
+static int
+transport_resolve_conflicts(const transport_t *t)
+{
+  /* This is how we resolve transport conflicts:
+
+     If there is already a transport with the same name and addrport,
+     we either have duplicate torrc lines OR we are here post-HUP and
+     this transport was here pre-HUP as well. In any case, mark the
+     old transport so that it doesn't get removed and ignore the new
+     one. Our caller has to free the new transport so we return '1' to
+     signify this.
+
+     If there is already a transport with the same name but different
+     addrport:
+     * if it's marked for removal, it means that it either has a lower
+     priority than 't' in torrc (otherwise the mark would have been
+     cleared by the paragraph above), or it doesn't exist at all in
+     the post-HUP torrc. We destroy the old transport and register 't'.
+     * if it's *not* marked for removal, it means that it was newly
+     added in the post-HUP torrc or that it's of higher priority, in
+     this case we ignore 't'. */
+  transport_t *t_tmp = transport_get_by_name(t->name);
+  if (t_tmp) { /* same name */
+    if (tor_addr_eq(&t->addr, &t_tmp->addr) && (t->port == t_tmp->port)) {
+      /* same name *and* addrport */
+      t_tmp->marked_for_removal = 0;
+      return 1;
+    } else { /* same name but different addrport */
+      if (t_tmp->marked_for_removal) { /* marked for removal */
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "but there was already a transport marked for deletion at "
+                   "'%s:%u'. We deleted the old transport and registered the "
+                   "new one.", t->name, fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
+        smartlist_remove(transport_list, t_tmp);
+        transport_free(t_tmp);
+      } else { /* *not* marked for removal */
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+                   "but the same transport already exists at '%s:%u'. "
+                   "Skipping.", t->name, fmt_addr(&t->addr), t->port,
+                   fmt_addr(&t_tmp->addr), t_tmp->port);
+        return -1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+/** Add transport <b>t</b> to the internal list of pluggable
+ *  transports.
+ *  Returns 0 if the transport was added correctly, 1 if the same
+ *  transport was already registered (in this case the caller must
+ *  free the transport) and -1 if there was an error.  */
+static int
+transport_add(transport_t *t)
+{
+  int r;
+  tor_assert(t);
+
+  r = transport_resolve_conflicts(t);
+
+  switch (r) {
+  case 0: /* should register transport */
+    if (!transport_list)
+      transport_list = smartlist_new();
+    smartlist_add(transport_list, t);
+    return 0;
+  default: /* let our caller know the return code */
+    return r;
+  }
+}
+
+/** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
+ *  <b>name</b> is set to the name of the protocol this proxy uses.
+ *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
+int
+transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+                          const char *name, int socks_ver)
+{
+  transport_t *t = transport_new(addr, port, name, socks_ver);
+
+  int r = transport_add(t);
+
+  switch (r) {
+  case -1:
+  default:
+    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
+               t->name, fmt_addr(&t->addr), t->port);
+    transport_free(t);
+    return -1;
+  case 1:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+     transport_free(t); /* falling */
+     return 0;
+  case 0:
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
+             t->name, fmt_addr(&t->addr), t->port);
+    return 0;
+  }
+}
 
 /** List of unconfigured managed proxies. */
 static smartlist_t *managed_proxy_list = NULL;
@@ -217,11 +434,11 @@ proxy_needs_restart(const managed_proxy_t *mp)
 {
   /* mp->transport_to_launch is populated with the names of the
      transports that must be launched *after* the SIGHUP.
-     mp->transports is populated with the names of the transports that
-     were launched *before* the SIGHUP.
+     mp->transports is populated with the transports that were
+     launched *before* the SIGHUP.
 
-     If the two lists contain the same strings, we don't need to
-     restart the proxy, since it already does what we want. */
+     Check if all the transports that need to be launched are already
+     launched: */
 
   tor_assert(smartlist_len(mp->transports_to_launch) > 0);
   tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
@@ -229,11 +446,11 @@ proxy_needs_restart(const managed_proxy_t *mp)
   if (smartlist_len(mp->transports_to_launch) != smartlist_len(mp->transports))
     goto needs_restart;
 
-  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, char *, t_t_l) {
-    if (!smartlist_string_isin(mp->transports, t_t_l))
+  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+    if (!smartlist_string_isin(mp->transports_to_launch, t->name))
       goto needs_restart;
 
-  } SMARTLIST_FOREACH_END(t_t_l);
+  } SMARTLIST_FOREACH_END(t);
 
   return 0;
 
@@ -245,6 +462,7 @@ proxy_needs_restart(const managed_proxy_t *mp)
  *  preparations and then flag its state so that it will be relaunched
  *  in the next tick. */
 static void
+
 proxy_prepare_for_restart(managed_proxy_t *mp)
 {
   transport_t *t_tmp = NULL;
@@ -255,16 +473,17 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   tor_process_handle_destroy(mp->process_handle, 1);
   mp->process_handle = NULL;
 
-  /* destroy all its old transports. we no longer use them. */
-  SMARTLIST_FOREACH_BEGIN(mp->transports, const char *, t_name) {
-    t_tmp = transport_get_by_name(t_name);
+  /* destroy all its registered transports, since we will no longer
+     use them. */
+  SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+    t_tmp = transport_get_by_name(t->name);
     if (t_tmp)
       t_tmp->marked_for_removal = 1;
-  } SMARTLIST_FOREACH_END(t_name);
+  } SMARTLIST_FOREACH_END(t);
   sweep_transport_list();
 
-  /* free the transport names in mp->transports */
-  SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
+  /* free the transport in mp->transports */
+  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
   smartlist_clear(mp->transports);
 
   /* flag it as an infant proxy so that it gets launched on next tick */
@@ -315,6 +534,7 @@ launch_managed_proxy(managed_proxy_t *mp)
 void
 pt_configure_remaining_proxies(void)
 {
+  int at_least_a_proxy_config_finished = 0;
   smartlist_t *tmp = smartlist_new();
 
   log_debug(LD_CONFIG, "Configuring remaining managed proxies (%d)!",
@@ -352,11 +572,17 @@ pt_configure_remaining_proxies(void)
     if (!proxy_configuration_finished(mp))
       configure_proxy(mp);
 
+    if (proxy_configuration_finished(mp))
+      at_least_a_proxy_config_finished = 1;
+
   } SMARTLIST_FOREACH_END(mp);
 
   smartlist_free(tmp);
   check_if_restarts_needed = 0;
   assert_unconfigured_count_ok();
+
+  if (at_least_a_proxy_config_finished)
+    mark_my_descriptor_dirty("configured managed proxies");
 }
 
 #ifdef _WIN32
@@ -468,68 +694,48 @@ configure_proxy(managed_proxy_t *mp)
 
 /** Register server managed proxy <b>mp</b> transports to state */
 static void
-register_server_proxy(managed_proxy_t *mp)
+register_server_proxy(const managed_proxy_t *mp)
 {
-  /* After we register this proxy's transports, we switch its
-     mp->transports to a list containing strings of its transport
-     names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_new();
-
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
+
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
     log_notice(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
                t->name, fmt_addr(&t->addr), (int)t->port);
-    smartlist_add(sm_tmp, tor_strdup(t->name));
   } SMARTLIST_FOREACH_END(t);
-
-  /* Since server proxies don't register their transports in the
-     circuitbuild.c subsystem, it's our duty to free them when we
-     switch mp->transports to strings. */
-  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
-  smartlist_free(mp->transports);
-
-  mp->transports = sm_tmp;
 }
 
 /** Register all the transports supported by client managed proxy
  *  <b>mp</b> to the bridge subsystem. */
 static void
-register_client_proxy(managed_proxy_t *mp)
+register_client_proxy(const managed_proxy_t *mp)
 {
   int r;
-  /* After we register this proxy's transports, we switch its
-     mp->transports to a list containing strings of its transport
-     names. (See transports.h) */
-  smartlist_t *sm_tmp = smartlist_new();
 
   tor_assert(mp->conf_state != PT_PROTO_COMPLETED);
+
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
-    r = transport_add(t);
+    transport_t *transport_tmp = transport_copy(t);
+    r = transport_add(transport_tmp);
     switch (r) {
     case -1:
       log_notice(LD_GENERAL, "Could not add transport %s. Skipping.", t->name);
-      transport_free(t);
+      transport_free(transport_tmp);
       break;
     case 0:
       log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
-      smartlist_add(sm_tmp, tor_strdup(t->name));
       break;
     case 1:
       log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
-      smartlist_add(sm_tmp, tor_strdup(t->name));
-      transport_free(t);
+      transport_free(transport_tmp);
       break;
     }
   } SMARTLIST_FOREACH_END(t);
-
-  smartlist_free(mp->transports);
-  mp->transports = sm_tmp;
 }
 
 /** Register the transports of managed proxy <b>mp</b>. */
 static INLINE void
-register_proxy(managed_proxy_t *mp)
+register_proxy(const managed_proxy_t *mp)
 {
   if (mp->is_server)
     register_server_proxy(mp);
@@ -542,10 +748,7 @@ static void
 managed_proxy_destroy(managed_proxy_t *mp,
                       int also_terminate_process)
 {
-  if (mp->conf_state != PT_PROTO_COMPLETED)
-    SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
-  else
-    SMARTLIST_FOREACH(mp->transports, char *, t_name, tor_free(t_name));
+  SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
 
   /* free the transports smartlist */
   smartlist_free(mp->transports);
@@ -1181,6 +1384,64 @@ pt_prepare_proxy_list_for_config_read(void)
   tor_assert(unconfigured_proxies_n == 0);
 }
 
+/** Return the pluggable transport string that we should display in
+ *  our extra-info descriptor. If we shouldn't display such a string,
+ *  or we have nothing to display, return NULL. The string is
+ *  allocated on the heap and it's the responsibility of the caller to
+ *  free it. */
+char *
+pt_get_extra_info_descriptor_string(void)
+{
+  char *the_string = NULL;
+  smartlist_t *string_chunks = NULL;
+
+  if (!managed_proxy_list)
+    return NULL;
+
+  string_chunks = smartlist_new();
+
+  /* For each managed proxy, add its transports to the chunks list. */
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list,  const managed_proxy_t *, mp) {
+    if ((!mp->is_server) || (mp->conf_state != PT_PROTO_COMPLETED))
+      continue;
+
+    tor_assert(mp->transports);
+
+    SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+      /* If the transport proxy returned "0.0.0.0" as its address, and
+       * we know our external IP address, use it. Otherwise, use the
+       * returned address. */
+      const char *addr_str = fmt_addr(&t->addr);
+      uint32_t external_ip_address = 0;
+      if (tor_addr_is_null(&t->addr) &&
+          router_pick_published_address(get_options(),
+                                        &external_ip_address) >= 0) {
+        /* returned addr was 0.0.0.0 and we found our external IP
+           address: use it. */
+        addr_str = fmt_addr32(external_ip_address);
+      }
+
+      smartlist_add_asprintf(string_chunks,
+                             "transport %s %s:%u",
+                             t->name, addr_str, t->port);
+    } SMARTLIST_FOREACH_END(t);
+
+  } SMARTLIST_FOREACH_END(mp);
+
+  if (smartlist_len(string_chunks) == 0) {
+    smartlist_free(string_chunks);
+    return NULL;
+  }
+
+  /* Join all the chunks into the final string. */
+  the_string = smartlist_join_strings(string_chunks, "\n", 1, NULL);
+
+  SMARTLIST_FOREACH(string_chunks, char *, s, tor_free(s));
+  smartlist_free(string_chunks);
+
+  return the_string;
+}
+
 /** The tor config was read.
  *  Destroy all managed proxies that were marked by a previous call to
  *  prepare_proxy_list_for_config_read() and are not used by the new
@@ -1204,6 +1465,12 @@ sweep_proxy_list(void)
 void
 pt_free_all(void)
 {
+  if (transport_list) {
+    clear_transport_list();
+    smartlist_free(transport_list);
+    transport_list = NULL;
+  }
+
   if (managed_proxy_list) {
     /* If the proxy is in PT_PROTO_COMPLETED, it has registered its
        transports and it's the duty of the circuitbuild.c subsystem to

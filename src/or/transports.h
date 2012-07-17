@@ -11,6 +11,30 @@
 #ifndef TOR_TRANSPORTS_H
 #define TOR_TRANSPORTS_H
 
+/** Represents a pluggable transport used by a bridge. */
+typedef struct transport_t {
+  /** SOCKS version: One of PROXY_SOCKS4, PROXY_SOCKS5. */
+  int socks_version;
+  /** Name of pluggable transport protocol */
+  char *name;
+  /** The IP address where the transport bound and is waiting for
+   * connections. */
+  tor_addr_t addr;
+  /** Port of proxy */
+  uint16_t port;
+  /** Boolean: We are re-parsing our transport list, and we are going to remove
+   * this one if we don't find it in the list of configured transports. */
+  unsigned marked_for_removal : 1;
+} transport_t;
+
+void mark_transport_list(void);
+void sweep_transport_list(void);
+int transport_add_from_config(const tor_addr_t *addr, uint16_t port,
+                               const char *name, int socks_ver);
+void transport_free(transport_t *transport);
+
+transport_t *transport_get_by_name(const char *name);
+
 void pt_kickstart_proxy(const smartlist_t *transport_list, char **proxy_argv,
                         int is_server);
 
@@ -22,6 +46,8 @@ void pt_kickstart_proxy(const smartlist_t *transport_list, char **proxy_argv,
 void pt_configure_remaining_proxies(void);
 
 int pt_proxies_configuration_pending(void);
+
+char *pt_get_extra_info_descriptor_string(void);
 
 void pt_free_all(void);
 
@@ -68,28 +94,7 @@ typedef struct {
   smartlist_t *transports_to_launch;
 
   /* The 'transports' list contains all the transports this proxy has
-     launched.
-
-     Before a managed_proxy_t reaches the PT_PROTO_COMPLETED phase,
-     this smartlist contains a 'transport_t' for every transport it
-     has launched.
-
-     When the managed_proxy_t reaches the PT_PROTO_COMPLETED phase, it
-     registers all its transports to the circuitbuild.c subsystem. At
-     that point the 'transport_t's are owned by the circuitbuild.c
-     subsystem.
-
-     To avoid carrying dangling 'transport_t's in this smartlist,
-     right before the managed_proxy_t reaches the PT_PROTO_COMPLETED
-     phase we replace all 'transport_t's with strings of their
-     transport names.
-
-     So, tl;dr:
-     When (conf_state != PT_PROTO_COMPLETED) this list carries
-     (transport_t *).
-     When (conf_state == PT_PROTO_COMPLETED) this list carries
-     (char *).
-   */
+     launched. */
   smartlist_t *transports;
 } managed_proxy_t;
 
