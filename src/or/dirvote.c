@@ -372,8 +372,7 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
 {
   char *cur = NULL;
   int count = 0;
-  SMARTLIST_FOREACH(in, char *, cp,
-  {
+  SMARTLIST_FOREACH_BEGIN(in, char *, cp) {
     if (cur && !strcmp(cp, cur)) {
       ++count;
     } else {
@@ -382,7 +381,7 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
       cur = cp;
       count = 1;
     }
-  });
+  } SMARTLIST_FOREACH_END(cp);
   if (count > min)
     smartlist_add(out, cur);
 }
@@ -445,8 +444,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
    * date cannot tie, we use the descriptor with the smaller digest.
    */
   smartlist_sort(votes, _compare_vote_rs);
-  SMARTLIST_FOREACH(votes, vote_routerstatus_t *, rs,
-  {
+  SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
     if (cur && !compare_vote_rs(cur, rs)) {
       ++cur_n;
     } else {
@@ -460,7 +458,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
       cur_n = 1;
       cur = rs;
     }
-  });
+  } SMARTLIST_FOREACH_END(rs);
 
   if (cur_n > most_n ||
       (cur && cur_n == most_n && cur->status.published_on > most_published)) {
@@ -1599,12 +1597,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     chosen_named_idx = smartlist_string_pos(flags, "Named");
 
     /* Build the flag index. */
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-    {
+    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       flag_map[v_sl_idx] = tor_malloc_zero(
                            sizeof(int)*smartlist_len(v->known_flags));
-      SMARTLIST_FOREACH(v->known_flags, const char *, fl,
-      {
+      SMARTLIST_FOREACH_BEGIN(v->known_flags, const char *, fl) {
         int p = smartlist_string_pos(flags, fl);
         tor_assert(p >= 0);
         flag_map[v_sl_idx][fl_sl_idx] = p;
@@ -1613,21 +1609,21 @@ networkstatus_compute_consensus(smartlist_t *votes,
           named_flag[v_sl_idx] = fl_sl_idx;
         if (!strcmp(fl, "Unnamed"))
           unnamed_flag[v_sl_idx] = fl_sl_idx;
-      });
+      } SMARTLIST_FOREACH_END(fl);
       n_voter_flags[v_sl_idx] = smartlist_len(v->known_flags);
       size[v_sl_idx] = smartlist_len(v->routerstatus_list);
-    });
+    } SMARTLIST_FOREACH_END(v);
 
     /* Named and Unnamed get treated specially */
     if (consensus_method >= 2) {
-      SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-      {
+      SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
         uint64_t nf;
         if (named_flag[v_sl_idx]<0)
           continue;
         nf = U64_LITERAL(1) << named_flag[v_sl_idx];
-        SMARTLIST_FOREACH(v->routerstatus_list, vote_routerstatus_t *, rs,
-        {
+        SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
+                                vote_routerstatus_t *, rs) {
+
           if ((rs->flags & nf) != 0) {
             const char *d = strmap_get_lc(name_to_id_map, rs->status.nickname);
             if (!d) {
@@ -1642,16 +1638,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
               /* It's already a conflict, or it's already this ID. */
             }
           }
-        });
-      });
-      SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-      {
+        } SMARTLIST_FOREACH_END(rs);
+      } SMARTLIST_FOREACH_END(v);
+
+      SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
         uint64_t uf;
         if (unnamed_flag[v_sl_idx]<0)
           continue;
         uf = U64_LITERAL(1) << unnamed_flag[v_sl_idx];
-        SMARTLIST_FOREACH(v->routerstatus_list, vote_routerstatus_t *, rs,
-        {
+        SMARTLIST_FOREACH_BEGIN(v->routerstatus_list,
+                                vote_routerstatus_t *, rs) {
           if ((rs->flags & uf) != 0) {
             const char *d = strmap_get_lc(name_to_id_map, rs->status.nickname);
             if (d == conflict || d == unknown) {
@@ -1666,8 +1662,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
               /* It's mapped to a different name. */
             }
           }
-        });
-      });
+        } SMARTLIST_FOREACH_END(rs);
+      } SMARTLIST_FOREACH_END(v);
     }
 
     /* Now go through all the votes */
@@ -1789,8 +1785,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Set the flags. */
       smartlist_add(chosen_flags, (char*)"s"); /* for the start of the line. */
-      SMARTLIST_FOREACH(flags, const char *, fl,
-      {
+      SMARTLIST_FOREACH_BEGIN(flags, const char *, fl) {
         if (!strcmp(fl, "Named")) {
           if (is_named)
             smartlist_add(chosen_flags, (char*)fl);
@@ -1810,7 +1805,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
               is_bad_exit = 1;
           }
         }
-      });
+      } SMARTLIST_FOREACH_END(fl);
 
       /* Starting with consensus method 4 we do not list servers
        * that are not running in a consensus.  See Proposal 138 */
@@ -1875,7 +1870,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
          * that list previously */
         const char *chosen_exitsummary = NULL;
         smartlist_clear(exitsummaries);
-        SMARTLIST_FOREACH(matching_descs, vote_routerstatus_t *, vsr, {
+        SMARTLIST_FOREACH_BEGIN(matching_descs, vote_routerstatus_t *, vsr) {
           /* Check if the vote where this status comes from had the
            * proper descriptor */
           tor_assert(fast_memeq(rs_out.identity_digest,
@@ -1895,7 +1890,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
               exitsummary_disagreement = 1;
             }
           }
-        });
+        } SMARTLIST_FOREACH_END(vsr);
 
         if (exitsummary_disagreement) {
           char id[HEX_DIGEST_LEN+1];
@@ -2747,9 +2742,8 @@ dirvote_fetch_missing_votes(void)
   smartlist_t *missing_fps = smartlist_new();
   char *resource;
 
-  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
-    {
+  SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
+                          trusted_dir_server_t *, ds) {
       if (!(ds->type & V3_DIRINFO))
         continue;
       if (!dirvote_get_vote(ds->v3_identity_digest,
@@ -2759,7 +2753,7 @@ dirvote_fetch_missing_votes(void)
                       DIGEST_LEN);
         smartlist_add(missing_fps, cp);
       }
-    });
+  } SMARTLIST_FOREACH_END(ds);
 
   if (!smartlist_len(missing_fps)) {
     smartlist_free(missing_fps);
@@ -2961,7 +2955,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   update_consensus_router_descriptor_downloads(time(NULL), 1, vote);
 
   /* Now see whether we already have a vote from this authority. */
-  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+  SMARTLIST_FOREACH_BEGIN(pending_vote_list, pending_vote_t *, v) {
       if (fast_memeq(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,
                    DIGEST_LEN)) {
@@ -2996,7 +2990,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
           goto err;
         }
       }
-  });
+  } SMARTLIST_FOREACH_END(v);
 
   pending_vote = tor_malloc_zero(sizeof(pending_vote_t));
   pending_vote->vote_body = new_cached_dir(tor_strndup(vote_body,
@@ -3180,8 +3174,7 @@ dirvote_compute_consensuses(void)
     int n_sigs = 0;
     /* we may have gotten signatures for this consensus before we built
      * it ourself.  Add them now. */
-    SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
-      {
+    SMARTLIST_FOREACH_BEGIN(pending_consensus_signature_list, char *, sig) {
         const char *msg = NULL;
         int r = dirvote_add_signatures_to_all_pending_consensuses(sig,
                                                      "pending", &msg);
@@ -3192,7 +3185,7 @@ dirvote_compute_consensuses(void)
                    "Could not add queued signature to new consensus: %s",
                    msg);
         tor_free(sig);
-      });
+    } SMARTLIST_FOREACH_END(sig);
     if (n_sigs)
       log_notice(LD_DIR, "Added %d pending signatures while building "
                  "consensus.", n_sigs);

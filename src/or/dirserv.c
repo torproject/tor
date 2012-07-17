@@ -2293,8 +2293,7 @@ get_possible_sybil_list(const smartlist_t *routers)
 
   last_addr = 0;
   addr_count = 0;
-  SMARTLIST_FOREACH(routers_by_ip, routerinfo_t *, ri,
-    {
+  SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
       if (last_addr != ri->addr) {
         last_addr = ri->addr;
         addr_count = 1;
@@ -2303,7 +2302,7 @@ get_possible_sybil_list(const smartlist_t *routers)
             addr_count > max_with_same_addr_on_authority)
           digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
       }
-    });
+  } SMARTLIST_FOREACH_END(ri);
 
   smartlist_free(routers_by_ip);
   return omit_as_sybil;
@@ -2964,7 +2963,7 @@ generate_v2_networkstatus_opinion(void)
 
   omit_as_sybil = get_possible_sybil_list(routers);
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t rs;
       char *version = version_from_platform(ri->platform);
@@ -2988,7 +2987,7 @@ generate_v2_networkstatus_opinion(void)
       tor_free(version);
       outp += strlen(outp);
     }
-  });
+  } SMARTLIST_FOREACH_END(ri);
 
   if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
                    options->Nickname)<0) {
@@ -3106,8 +3105,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     cached_v2_networkstatus = digestmap_new();
 
   dirserv_get_networkstatus_v2_fingerprints(fingerprints, key);
-  SMARTLIST_FOREACH(fingerprints, const char *, fp,
-    {
+  SMARTLIST_FOREACH_BEGIN(fingerprints, const char *, fp) {
       if (router_digest_is_me(fp) && should_generate_v2_networkstatus())
         generate_v2_networkstatus_opinion();
       cached = digestmap_get(cached_v2_networkstatus, fp);
@@ -3119,7 +3117,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
         log_info(LD_DIRSERV, "Don't know about any network status with "
                  "fingerprint '%s'", hexbuf);
       }
-    });
+  } SMARTLIST_FOREACH_END(fp);
   SMARTLIST_FOREACH(fingerprints, char *, cp, tor_free(cp));
   smartlist_free(fingerprints);
 }
@@ -3238,8 +3236,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     key += strlen("/tor/server/fp/");
     dir_split_resource_into_fingerprints(key, digests, NULL,
                                          DSR_HEX|DSR_SORT_UNIQ);
-    SMARTLIST_FOREACH(digests, const char *, d,
-       {
+    SMARTLIST_FOREACH_BEGIN(digests, const char *, d) {
          if (router_digest_is_me(d)) {
            /* make sure desc_routerinfo exists */
            const routerinfo_t *ri = router_get_my_routerinfo();
@@ -3254,7 +3251,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
            if (ri && ri->cache_info.published_on > cutoff)
              smartlist_add(descs_out, (void*) &(ri->cache_info));
          }
-       });
+    } SMARTLIST_FOREACH_END(d);
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
     smartlist_free(digests);
   } else {
@@ -3420,8 +3417,7 @@ int
 dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
 {
   int found_any = 0;
-  SMARTLIST_FOREACH(fps, char *, digest,
-  {
+  SMARTLIST_FOREACH_BEGIN(fps, char *, digest) {
     cached_dir_t *d = lookup_cached_dir_by_fp(digest);
     if (!d)
       continue;
@@ -3430,7 +3426,7 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
       tor_free(digest);
       SMARTLIST_DEL_CURRENT(fps, digest);
     }
-  });
+  } SMARTLIST_FOREACH_END(digest);
 
   return found_any;
 }
@@ -3469,7 +3465,7 @@ int
 dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
 {
   time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
-  SMARTLIST_FOREACH(fps, const char *, fp, {
+  SMARTLIST_FOREACH_BEGIN(fps, const char *, fp) {
       switch (spool_src)
       {
         case DIR_SPOOL_EXTRA_BY_DIGEST:
@@ -3485,7 +3481,7 @@ dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
             return 1;
           break;
       }
-  });
+  } SMARTLIST_FOREACH_END(fp);
   return 0;
 }
 

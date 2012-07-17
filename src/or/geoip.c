@@ -906,7 +906,7 @@ geoip_get_request_history(geoip_client_action_t action)
     return NULL;
 
   entries = smartlist_new();
-  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+  SMARTLIST_FOREACH_BEGIN(geoip_countries, geoip_country_t *, c) {
       uint32_t tot = 0;
       c_hist_t *ent;
       tot = (action == GEOIP_CLIENT_NETWORKSTATUS) ?
@@ -917,7 +917,7 @@ geoip_get_request_history(geoip_client_action_t action)
       strlcpy(ent->country, c->countrycode, sizeof(ent->country));
       ent->total = round_to_next_multiple_of(tot, granularity);
       smartlist_add(entries, ent);
-  });
+  } SMARTLIST_FOREACH_END(c);
   smartlist_sort(entries, _c_hist_compare);
 
   strings = smartlist_new();

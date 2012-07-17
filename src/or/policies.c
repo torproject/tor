@@ -77,8 +77,7 @@ policy_expand_private(smartlist_t **policy)
 
   tmp = smartlist_new();
 
-  SMARTLIST_FOREACH(*policy, addr_policy_t *, p,
-  {
+  SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, p) {
      if (! p->is_private) {
        smartlist_add(tmp, p);
        continue;
@@ -95,7 +94,7 @@ policy_expand_private(smartlist_t **policy)
        smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
      }
      addr_policy_free(p);
-  });
+  } SMARTLIST_FOREACH_END(p);
 
   smartlist_free(*policy);
   *policy = tmp;
@@ -127,8 +126,7 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    SMARTLIST_FOREACH(entries, const char *, ent,
-    {
+    SMARTLIST_FOREACH_BEGIN(entries, const char *, ent) {
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
       item = router_parse_addr_policy_item_from_string(ent, assume_action);
       if (item) {
@@ -137,7 +135,7 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
         log_warn(LD_CONFIG,"Malformed policy '%s'.", ent);
         r = -1;
       }
-    });
+    } SMARTLIST_FOREACH_END(ent);
     SMARTLIST_FOREACH(entries, char *, ent, tor_free(ent));
     smartlist_clear(entries);
   }
@@ -912,7 +910,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
   char subnet_status[256];
 
   memset(subnet_status, 0, sizeof(subnet_status));
-  SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
+  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
     if (tor_addr_family(&p->addr) != AF_INET)
       continue; /* IPv4 only for now */
     if (p->prt_min > port || p->prt_max < port)
@@ -943,7 +941,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
         subnet_status[i] = 1;
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(p);
   return 0;
 }
 

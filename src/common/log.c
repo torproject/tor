@@ -1005,8 +1005,7 @@ parse_log_severity_config(const char **cfg_ptr,
       smartlist_split_string(domains_list, domains_str, ",", SPLIT_SKIP_SPACE,
                              -1);
       tor_free(domains_str);
-      SMARTLIST_FOREACH(domains_list, const char *, domain,
-          {
+      SMARTLIST_FOREACH_BEGIN(domains_list, const char *, domain) {
             if (!strcmp(domain, "*")) {
               domains = ~0u;
             } else {
@@ -1027,7 +1026,7 @@ parse_log_severity_config(const char **cfg_ptr,
                   domains |= d;
               }
             }
-          });
+      } SMARTLIST_FOREACH_END(domain);
       SMARTLIST_FOREACH(domains_list, char *, d, tor_free(d));
       smartlist_free(domains_list);
       if (err)

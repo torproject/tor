@@ -647,8 +647,7 @@ connection_ap_attach_pending(void)
 {
   entry_connection_t *entry_conn;
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
@@ -659,7 +658,7 @@ connection_ap_attach_pending(void)
         connection_mark_unattached_ap(entry_conn,
                                       END_STREAM_REASON_CANT_ATTACH);
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to

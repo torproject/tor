@@ -706,8 +706,7 @@ connection_expire_held_open(void)
 
   now = time(NULL);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     /* If we've been holding the connection open, but we haven't written
      * for 15 seconds...
      */
@@ -729,7 +728,7 @@ connection_expire_held_open(void)
         conn->hold_open_until_flushed = 0;
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 #if defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN)
@@ -2477,8 +2476,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                   "global_relayed_write_bucket");
 
   /* refill the per-connection buckets */
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       int orbandwidthrate = or_conn->bandwidthrate;
@@ -2525,7 +2523,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
       conn->write_blocked_on_bw = 0;
       connection_start_writing(conn);
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Is the <b>bucket</b> for connection <b>conn</b> low enough that we
@@ -3974,8 +3972,7 @@ connection_dump_buffer_mem_stats(int severity)
   memset(alloc_by_type, 0, sizeof(alloc_by_type));
   memset(n_conns_by_type, 0, sizeof(n_conns_by_type));
 
-  SMARTLIST_FOREACH(conns, connection_t *, c,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
     int tp = c->type;
     ++n_conns_by_type[tp];
     if (c->inbuf) {
@@ -3986,7 +3983,7 @@ connection_dump_buffer_mem_stats(int severity)
       used_by_type[tp] += buf_datalen(c->outbuf);
       alloc_by_type[tp] += buf_allocation(c->outbuf);
     }
-  });
+  } SMARTLIST_FOREACH_END(c);
   for (i=0; i <= _CONN_TYPE_MAX; ++i) {
     total_used += used_by_type[i];
     total_alloc += alloc_by_type[i];
