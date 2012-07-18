@@ -115,63 +115,48 @@ node_get_or_create(const char *identity_digest)
   return node;
 }
 
-/** Replace <b>old</b> router with <b>new</b> in nodelist.  If
- *  <b>old</b> and <b>new</b> in fact are the same relays (having the
- *  same identity_digest) the node_t of <b>old</b> is used for
- *  <b>new</b>.  Otherwise the node_t of <b>old</b> is dropped and
- *  <b>new</b> gets a new one (which might be a recycled node_t in
- *  case we already have one matching its identity).
- */
-node_t *
-nodelist_replace_routerinfo(routerinfo_t *old, routerinfo_t *new)
+/** Called when a node's address changes. */
+static void
+node_addrs_changed(node_t *node)
 {
-  node_t *node = NULL;
-  tor_assert(old);
-  tor_assert(new);
-
-  if (tor_memeq(old->cache_info.identity_digest,
-                new->cache_info.identity_digest, DIGEST_LEN)) {
-    /* NEW == OLD, reuse node_t.  */
-    node = node_get_mutable_by_id(old->cache_info.identity_digest);
-    if (node) {
-      tor_assert(node->ri == old);
-      if (!routers_have_same_or_addrs(old, new)) {
-        /* These mustn't carry over when the address and orport
-           change. */
-        node->last_reachable = node->last_reachable6 = 0;
-        node->testing_since = node->testing_since6 = 0;
-      }
-    }
-  } else {
-    /* NEW != OLD, get a new node_t.  */
-    nodelist_remove_routerinfo(old);
-  }
-  node = nodelist_add_routerinfo(node, new);
-
-  return node;
+  node->last_reachable = node->last_reachable6 = 0;
+  node->testing_since = node->testing_since6 = 0;
+  node->country = -1;
 }
 
-
-/** Add <b>ri</b> to the nodelist.  If <b>node_in</b> is not NULL, use
-    that node rather than creating a new.  */
+/** Add <b>ri</b> to an appropriate node in the nodelist.  If we replace an
+ * old routerinfo, and <b>ri_old_out</b> is not NULL, set *<b>ri_old_out</b>
+ * to the previous routerinfo.
+ */
 node_t *
-nodelist_add_routerinfo(node_t *node_in, routerinfo_t *ri)
+nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
 {
-  node_t *node = NULL;
+  node_t *node;
+  const char *id_digest;
+  int had_router = 0;
+  tor_assert(ri);
 
-  if (node_in) {
-    node = node_in;
+  init_nodelist();
+  id_digest = ri->cache_info.identity_digest;
+  node = node_get_or_create(id_digest);
+
+  if (node->ri) {
+    if (!routers_have_same_or_addrs(node->ri, ri)) {
+      node_addrs_changed(node);
+    }
+    had_router = 1;
+    if (ri_old_out)
+      *ri_old_out = node->ri;
   } else {
-    tor_assert(ri);
-    init_nodelist();
-    node = node_get_or_create(ri->cache_info.identity_digest);
+    if (ri_old_out)
+      *ri_old_out = NULL;
   }
   node->ri = ri;
 
   if (node->country == -1)
     node_set_country(node);
 
-  if (authdir_mode(get_options())) {
+  if (authdir_mode(get_options()) && !had_router) {
     const char *discard=NULL;
     uint32_t status = dirserv_router_get_status(ri, &discard);
     dirserv_set_node_flags_from_authoritative_status(node, status);

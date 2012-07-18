@@ -2877,7 +2877,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
               &ri->cache_info);
   smartlist_add(rl->routers, ri);
   ri->cache_info.routerlist_index = smartlist_len(rl->routers) - 1;
-  nodelist_add_routerinfo(NULL, ri);
+  nodelist_set_routerinfo(ri, NULL);
   router_dir_info_changed();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
@@ -3106,7 +3106,11 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri_old);
 
-  nodelist_replace_routerinfo(ri_old, ri_new);
+  {
+    routerinfo_t *ri_old_tmp=NULL;
+    nodelist_set_routerinfo(ri_new, &ri_old_tmp);
+    tor_assert(ri_old == ri_old_tmp);
+  }
 
   router_dir_info_changed();
   if (idx >= 0) {
