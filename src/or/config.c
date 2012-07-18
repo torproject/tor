@@ -1464,7 +1464,7 @@ options_act(const or_options_t *old_options)
     }
   }
 
-  if (options->ServerTransportPlugin) {
+  if (options->ServerTransportPlugin && server_mode(options)) {
     for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
       if (parse_server_transport_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
@@ -4017,6 +4017,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
     if (parse_server_transport_line(cl->value, 1)<0)
       REJECT("Server transport line did not parse. See logs for details.");
+  }
+
+  if (options->ServerTransportPlugin && !server_mode(options)) {
+    log_notice(LD_GENERAL, "Tor is not configured as a relay but you specified"
+               " a ServerTransportPlugin line (%s). The ServerTransportPlugin "
+               "line will be ignored.",
+               esc_for_log(options->ServerTransportPlugin->value));
   }
 
   if (options->ConstrainedSockets) {
