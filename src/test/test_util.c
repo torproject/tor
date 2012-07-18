@@ -2604,8 +2604,7 @@ test_util_split_lines(void *ptr)
     j = 0;
     log_info(LD_GENERAL, "Splitting test %d of length %d",
              i, tests[i].orig_length);
-    SMARTLIST_FOREACH(sl, const char *, line,
-    {
+    SMARTLIST_FOREACH_BEGIN(sl, const char *, line) {
       /* Check we have not got too many lines */
       test_assert(j < MAX_SPLIT_LINE_COUNT);
       /* Check that there actually should be a line here */
@@ -2615,7 +2614,7 @@ test_util_split_lines(void *ptr)
       /* Check that the line is as expected */
       test_streq(line, tests[i].split_line[j]);
       j++;
-    });
+    } SMARTLIST_FOREACH_END(line);
     /* Check that we didn't miss some lines */
     test_eq_ptr(NULL, tests[i].split_line[j]);
     tor_free(orig_line);

@@ -4323,7 +4323,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
      * came back? We should give our earlier entries another try too,
      * and close this connection so we don't use it before we've given
      * the others a shot. */
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
+    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
         if (e == entry)
           break;
         if (e->made_contact) {
@@ -4334,7 +4334,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
             e->can_retry = 1;
           }
         }
-      });
+    } SMARTLIST_FOREACH_END(e);
     if (refuse_conn) {
       log_info(LD_CIRC,
                "Connected to new entry guard '%s' (%s). Marking earlier "
@@ -4804,8 +4804,7 @@ entry_guards_update_state(or_state_t *state)
   *next = NULL;
   if (!entry_guards)
     entry_guards = smartlist_new();
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
-    {
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
       char dbuf[HEX_DIGEST_LEN+1];
       if (!e->made_contact)
         continue; /* don't write this one to disk */
@@ -4852,7 +4851,7 @@ entry_guards_update_state(or_state_t *state)
         next = &(line->next);
       }
 
-    });
+  } SMARTLIST_FOREACH_END(e);
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
   entry_guards_dirty = 0;
@@ -5687,8 +5686,7 @@ int
 any_pending_bridge_descriptor_fetches(void)
 {
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         TO_DIR_CONN(conn)->router_purpose == ROUTER_PURPOSE_BRIDGE &&
@@ -5698,7 +5696,7 @@ any_pending_bridge_descriptor_fetches(void)
       log_debug(LD_DIR, "found one: %s", conn->address);
       return 1;
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
   return 0;
 }
 

@@ -2105,8 +2105,7 @@ dumpstats(int severity)
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
-  SMARTLIST_FOREACH(connection_array, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(connection_array, connection_t *, conn) {
     int i = conn_sl_idx;
     log(severity, LD_GENERAL,
         "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
@@ -2144,7 +2143,7 @@ dumpstats(int severity)
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */
-  });
+  } SMARTLIST_FOREACH_END(conn);
   log(severity, LD_NET,
       "Cells processed: "U64_FORMAT" padding\n"
       "                 "U64_FORMAT" create\n"

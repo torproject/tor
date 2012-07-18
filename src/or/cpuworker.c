@@ -417,8 +417,7 @@ cull_wedged_cpuworkers(void)
 {
   time_t now = time(NULL);
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (!conn->marked_for_close &&
         conn->type == CONN_TYPE_CPUWORKER &&
         conn->state == CPUWORKER_STATE_BUSY_ONION &&
@@ -429,7 +428,7 @@ cull_wedged_cpuworkers(void)
       num_cpuworkers--;
       connection_mark_for_close(conn);
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Try to tell a cpuworker to perform the public key operations necessary to

@@ -820,8 +820,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   (void) body_len; /* body is NUL-terminated; so we can ignore len. */
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(questions, const char *, q,
-  {
+  SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
     if (!option_is_recognized(q)) {
       smartlist_add(unrecognized, (char*) q);
     } else {
@@ -843,7 +842,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
         answer = next;
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(q);
 
   if ((len = smartlist_len(unrecognized))) {
     for (i=0; i < len-1; ++i)
@@ -1644,8 +1643,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_new();
     if (routerlist && routerlist->routers) {
-      SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
-      {
+      SMARTLIST_FOREACH_BEGIN(routerlist->routers, const routerinfo_t *, ri) {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         signed_descriptor_t *ei = extrainfo_get_by_descriptor_digest(
                                      ri->cache_info.extra_info_digest);
@@ -1656,7 +1654,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
           smartlist_add(sl,
                   tor_strndup(body, ri->cache_info.signed_descriptor_len));
         }
-      });
+      } SMARTLIST_FOREACH_END(ri);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
@@ -2450,8 +2448,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   smartlist_free(args);
 
   nodes = smartlist_new();
-  SMARTLIST_FOREACH(router_nicknames, const char *, n,
-  {
+  SMARTLIST_FOREACH_BEGIN(router_nicknames, const char *, n) {
     const node_t *node = node_get_by_nickname(n, 1);
     if (!node) {
       connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
@@ -2462,7 +2459,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
     smartlist_add(nodes, (void*)node);
-  });
+  } SMARTLIST_FOREACH_END(n);
   if (!smartlist_len(nodes)) {
     connection_write_str_to_buf("512 No router names provided\r\n", conn);
     goto done;
@@ -2686,8 +2683,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
 
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(args, char *, option,
-  {
+  SMARTLIST_FOREACH_BEGIN(args, char *, option) {
     if (!strcasecmpstart(option, "purpose=")) {
       option += strlen("purpose=");
       purpose = router_purpose_from_string(option);
@@ -2712,7 +2708,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
         "512 Unexpected argument \"%s\" to postdescriptor\r\n", option);
       goto done;
     }
-  });
+  } SMARTLIST_FOREACH_END(option);
 
   read_escaped_data(cp, len-(cp-body), &desc);
 
@@ -3110,7 +3106,7 @@ handle_control_usefeature(control_connection_t *conn,
   args = smartlist_new();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(args, const char *, arg, {
+  SMARTLIST_FOREACH_BEGIN(args, const char *, arg) {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         ;
       else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
@@ -3121,7 +3117,7 @@ handle_control_usefeature(control_connection_t *conn,
         bad = 1;
         break;
       }
-    });
+  } SMARTLIST_FOREACH_END(arg);
 
   if (!bad) {
     send_control_done(conn);
