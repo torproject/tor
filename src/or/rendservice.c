@@ -506,16 +506,16 @@ rend_config_services(const or_options_t *options, int validate_only)
     /* Copy introduction points to new services. */
     /* XXXX This is O(n^2), but it's only called on reconfigure, so it's
      * probably ok? */
-    SMARTLIST_FOREACH(rend_service_list, rend_service_t *, new, {
-      SMARTLIST_FOREACH(old_service_list, rend_service_t *, old, {
+    SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, new) {
+      SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
         if (!strcmp(old->directory, new->directory)) {
           smartlist_add_all(new->intro_nodes, old->intro_nodes);
           smartlist_clear(old->intro_nodes);
           smartlist_add(surviving_services, old);
           break;
         }
-      });
-    });
+      } SMARTLIST_FOREACH_END(old);
+    } SMARTLIST_FOREACH_END(new);
 
     /* Close introduction circuits of services we don't serve anymore. */
     /* XXXX it would be nicer if we had a nicer abstraction to use here,

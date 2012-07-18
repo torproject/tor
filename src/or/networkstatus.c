@@ -128,12 +128,12 @@ networkstatus_reset_download_failures(void)
 {
   int i;
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-     SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-       {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
          if (!router_get_by_descriptor_digest(rs->descriptor_digest))
            rs->need_to_mirror = 1;
-       }));;
+    } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END(ns);
 
   for (i=0; i < N_CONSENSUS_FLAVORS; ++i)
     download_status_reset(&consensus_dl_status[i]);
@@ -177,7 +177,7 @@ router_reload_v2_networkstatus(void)
     return 0;
   }
   tor_free(filename);
-  SMARTLIST_FOREACH(entries, const char *, fn, {
+  SMARTLIST_FOREACH_BEGIN(entries, const char *, fn) {
       char buf[DIGEST_LEN];
       if (maybe_delete) {
         filename = get_datadir_fname2("cached-status", fn);
@@ -201,7 +201,7 @@ router_reload_v2_networkstatus(void)
         tor_free(s);
       }
       tor_free(filename);
-    });
+  } SMARTLIST_FOREACH_END(fn);
   SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
   smartlist_free(entries);
   networkstatus_v2_list_clean(time(NULL));
@@ -881,8 +881,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
 
   {
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
-    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-    {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
       signed_descriptor_t *sd =
         router_get_by_descriptor_digest(rs->descriptor_digest);
       if (sd) {
@@ -891,7 +890,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
       } else {
         rs->need_to_mirror = 1;
       }
-    });
+    } SMARTLIST_FOREACH_END(rs);
   }
 
   log_info(LD_DIR, "Setting networkstatus %s %s (published %s)",
@@ -2014,9 +2013,8 @@ routerstatus_list_update_named_server_map(void)
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
-  SMARTLIST_FOREACH(current_consensus->routerstatus_list,
-                                                   const routerstatus_t *, rs,
-    {
+  SMARTLIST_FOREACH_BEGIN(current_consensus->routerstatus_list,
+                          const routerstatus_t *, rs) {
       if (rs->is_named) {
         strmap_set_lc(named_server_map, rs->nickname,
                       tor_memdup(rs->identity_digest, DIGEST_LEN));
@@ -2024,7 +2022,7 @@ routerstatus_list_update_named_server_map(void)
       if (rs->is_unnamed) {
         strmap_set_lc(unnamed_server_map, rs->nickname, (void*)1);
       }
-    });
+  } SMARTLIST_FOREACH_END(rs);
 }
 
 /** Given a list <b>routers</b> of routerinfo_t *, update each status field
@@ -2082,7 +2080,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   } SMARTLIST_FOREACH_JOIN_END(rs, router);
 
   /* Now update last_listed_as_valid_until from v2 networkstatuses. */
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
     SMARTLIST_FOREACH_JOIN(ns->entries, const routerstatus_t *, rs,
                          routers, routerinfo_t *, ri,
@@ -2095,7 +2093,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
           ri->cache_info.last_listed_as_valid_until = live_until;
       }
     } SMARTLIST_FOREACH_JOIN_END(rs, ri);
-  });
+  } SMARTLIST_FOREACH_END(ns);
 
   router_dir_info_changed();
 }
@@ -2162,7 +2160,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   }
 
   statuses = smartlist_new();
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
     node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
     if (!node)
       continue;
@@ -2175,7 +2173,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
     /* then generate and write out status lines for each of them */
     set_routerstatus_from_routerinfo(&rs, node, ri, now, 0, 0, 0, 0);
     smartlist_add(statuses, networkstatus_getinfo_helper_single(&rs));
-  });
+  } SMARTLIST_FOREACH_END(ri);
 
   answer = smartlist_join_strings(statuses, "", 0, NULL);
   SMARTLIST_FOREACH(statuses, char *, cp, tor_free(cp));

@@ -535,9 +535,8 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
   tor_assert(dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
              dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES);
 
-  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
-    {
+  SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
+                          trusted_dir_server_t *, ds) {
       routerstatus_t *rs;
       if (router_digest_is_me(ds->digest))
         continue;
@@ -546,7 +545,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
       rs = &ds->fake_status;
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
                                               0, resource, NULL, 0, 0);
-    });
+  } SMARTLIST_FOREACH_END(ds);
 }
 
 /** Same as directory_initiate_command_routerstatus(), but accepts
@@ -1092,9 +1091,8 @@ directory_get_consensus_url(int supports_conditional_consensus,
     char *authority_id_list;
     smartlist_t *authority_digests = smartlist_new();
 
-    SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                      trusted_dir_server_t *, ds,
-      {
+    SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
+                            trusted_dir_server_t *, ds) {
         char *hex;
         if (!(ds->type & V3_DIRINFO))
           continue;
@@ -1103,7 +1101,7 @@ directory_get_consensus_url(int supports_conditional_consensus,
         base16_encode(hex, 2*CONDITIONAL_CONSENSUS_FPR_LEN+1,
                       ds->v3_identity_digest, CONDITIONAL_CONSENSUS_FPR_LEN);
         smartlist_add(authority_digests, hex);
-      });
+    } SMARTLIST_FOREACH_END(ds);
     smartlist_sort(authority_digests, _compare_strs);
     authority_id_list = smartlist_join_strings(authority_digests,
                                                "+", 0, NULL);
@@ -3603,8 +3601,7 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 {
   if (status_code == 503)
     return;
-  SMARTLIST_FOREACH(failed, const char *, fp,
-  {
+  SMARTLIST_FOREACH_BEGIN(failed, const char *, fp) {
     char digest[DIGEST_LEN];
     trusted_dir_server_t *dir;
     if (base16_decode(digest, DIGEST_LEN, fp, strlen(fp))<0) {
@@ -3616,7 +3613,7 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 
     if (dir)
       download_status_failed(&dir->v2_ns_dl_status, status_code);
-  });
+  } SMARTLIST_FOREACH_END(fp);
 }
 
 /** Schedule for when servers should download things in general. */
@@ -3770,8 +3767,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     }
     return; /* FFFF should implement for other-than-router-purpose someday */
   }
-  SMARTLIST_FOREACH(failed, const char *, cp,
-  {
+  SMARTLIST_FOREACH_BEGIN(failed, const char *, cp) {
     download_status_t *dls = NULL;
     if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp)) < 0) {
       log_warn(LD_BUG, "Malformed fingerprint in list: %s", escaped(cp));
@@ -3788,7 +3784,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     if (!dls || dls->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     download_status_increment_failure(dls, status_code, cp, server, now);
-  });
+  } SMARTLIST_FOREACH_END(cp);
 
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */

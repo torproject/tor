@@ -731,8 +731,7 @@ router_rebuild_store(int flags, desc_store_t *store)
   smartlist_sort(signed_descriptors, _compare_signed_descriptors_by_age);
 
   /* Now, add the appropriate members to chunk_list */
-  SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
-    {
+  SMARTLIST_FOREACH_BEGIN(signed_descriptors, signed_descriptor_t *, sd) {
       sized_chunk_t *c;
       const char *body = signed_descriptor_get_body_impl(sd, 1);
       if (!body) {
@@ -748,7 +747,7 @@ router_rebuild_store(int flags, desc_store_t *store)
       c->len = sd->signed_descriptor_len + sd->annotations_len;
       total_expected_len += c->len;
       smartlist_add(chunk_list, c);
-    });
+  } SMARTLIST_FOREACH_END(sd);
 
   if (write_chunks_to_file(fname_tmp, chunk_list, 1)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
@@ -787,8 +786,7 @@ router_rebuild_store(int flags, desc_store_t *store)
   log_info(LD_DIR, "Reconstructing pointers into cache");
 
   offset = 0;
-  SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
-    {
+  SMARTLIST_FOREACH_BEGIN(signed_descriptors, signed_descriptor_t *, sd) {
       if (sd->do_not_cache)
         continue;
       sd->saved_location = SAVED_IN_CACHE;
@@ -798,7 +796,7 @@ router_rebuild_store(int flags, desc_store_t *store)
       }
       offset += sd->signed_descriptor_len + sd->annotations_len;
       signed_descriptor_get_body(sd); /* reconstruct and assert */
-    });
+  } SMARTLIST_FOREACH_END(sd);
 
   tor_free(fname);
   fname = get_datadir_fname_suffix(store->fname_base, ".new");
@@ -1329,8 +1327,7 @@ mark_all_trusteddirservers_up(void)
          node->is_running = 1;
     });
   if (trusted_dir_servers) {
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
-    {
+    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, dir) {
       routerstatus_t *rs;
       dir->is_running = 1;
       download_status_reset(&dir->v2_ns_dl_status);
@@ -1339,7 +1336,7 @@ mark_all_trusteddirservers_up(void)
         rs->last_dir_503_at = 0;
         control_event_networkstatus_changed_single(rs);
       }
-    });
+    } SMARTLIST_FOREACH_END(dir);
   }
   router_dir_info_changed();
 }
@@ -3676,8 +3673,7 @@ routerlist_remove_old_routers(void)
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ lists. */
   if (caches && networkstatus_v2_list) {
-    SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-    {
+    SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
       /* XXXX The inner loop here gets pretty expensive, and actually shows up
        * on some profiles.  It may be the reason digestmap_set shows up in
        * profiles too.  If instead we kept a per-descriptor digest count of
@@ -3686,10 +3682,11 @@ routerlist_remove_old_routers(void)
        * improvement, possibly 1-4% if it also removes digestmap_set from the
        * profile.  Not worth it for 0.1.2.x, though.  The new directory
        * system will obsolete this whole thing in 0.2.0.x. */
-      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
+      SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
         if (rs->published_on >= cutoff)
-          digestset_add(retain, rs->descriptor_digest));
-    });
+          digestset_add(retain, rs->descriptor_digest);
+      } SMARTLIST_FOREACH_END(rs);
+    } SMARTLIST_FOREACH_END(ns);
   }
 
   /* Retain anything listed in the consensus. */
@@ -3979,7 +3976,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
-  SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei, {
+  SMARTLIST_FOREACH_BEGIN(extrainfo_list, extrainfo_t *, ei) {
       was_router_added_t added =
         router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
       if (WRA_WAS_ADDED(added) && requested_fingerprints) {
@@ -3994,7 +3991,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
          * all the extrainfos we want, and we never actually act on them
          * inside Tor, this should be harmless. */
       }
-    });
+  } SMARTLIST_FOREACH_END(ei);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, &router_get_routerlist()->extrainfo_store);
@@ -4524,8 +4521,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
    * descriptor from the corresponding authority.
    */
   n_download = 0;
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-    {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
       trusted_dir_server_t *ds;
       smartlist_t *dl;
       dl = downloadable[ns_sl_idx] = smartlist_new();
@@ -4547,8 +4543,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
       if (ds && !ds->is_running)
         continue;
 
-      SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,
-        {
+      SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t * , rs) {
           if (!rs->need_to_mirror)
             continue;
           if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
@@ -4569,8 +4564,8 @@ update_router_descriptor_cache_downloads_v2(time_t now)
             smartlist_add(dl, rs->descriptor_digest);
             ++n_download;
           }
-        });
-    });
+      } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END(ns);
 
   /* At random, assign descriptors to authorities such that:
    * - if d is a member of some downloadable[x], d is a member of some
@@ -4727,7 +4722,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
     log_info(LD_DIR, "%d router descriptors listed in consensus are "
              "currently in old_routers; making them current.",
              smartlist_len(no_longer_old));
-    SMARTLIST_FOREACH(no_longer_old, signed_descriptor_t *, sd, {
+    SMARTLIST_FOREACH_BEGIN(no_longer_old, signed_descriptor_t *, sd) {
         const char *msg;
         was_router_added_t r;
         routerinfo_t *ri = routerlist_reparse_old(rl, sd);
@@ -4740,7 +4735,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
           log_warn(LD_DIR, "Couldn't add re-parsed router: %s",
                    msg?msg:"???");
         }
-      });
+    } SMARTLIST_FOREACH_END(sd);
     routerlist_assert_ok(rl);
   }
 
@@ -5294,8 +5289,7 @@ routerlist_assert_ok(const routerlist_t *rl)
   signed_descriptor_t *sd2;
   if (!rl)
     return;
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
-  {
+  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, r) {
     r2 = rimap_get(rl->identity_map, r->cache_info.identity_digest);
     tor_assert(r == r2);
     sd2 = sdmap_get(rl->desc_digest_map,
@@ -5325,9 +5319,8 @@ routerlist_assert_ok(const routerlist_t *rl)
       tor_assert(sd3 == &(r->cache_info));
     }
     */
-  });
-  SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
-  {
+  } SMARTLIST_FOREACH_END(r);
+  SMARTLIST_FOREACH_BEGIN(rl->old_routers, signed_descriptor_t *, sd) {
     r2 = rimap_get(rl->identity_map, sd->identity_digest);
     tor_assert(sd != &(r2->cache_info));
     sd2 = sdmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
@@ -5340,7 +5333,7 @@ routerlist_assert_ok(const routerlist_t *rl)
       tor_assert(sd3 == sd);
     }
     */
-  });
+  } SMARTLIST_FOREACH_END(sd);
 
   RIMAP_FOREACH(rl->identity_map, d, r) {
     tor_assert(tor_memeq(r->cache_info.identity_digest, d, DIGEST_LEN));
