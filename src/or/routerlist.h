@@ -36,7 +36,7 @@ const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
-int routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2);
+int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
 int router_nickname_is_in_list(const routerinfo_t *router, const char *list);
 const routerinfo_t *routerlist_find_my_routerinfo(void);
 const node_t *router_find_exact_exit_enclave(const char *address,

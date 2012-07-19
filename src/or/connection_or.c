@@ -1540,7 +1540,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     return -1;
   }
   if (authdir_mode_tests_reachability(options)) {
-    dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
+    dirserv_orconn_tls_done(&conn->_base.addr, conn->_base.port,
                             (const char*)peer_id);
   }
 

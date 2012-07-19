@@ -107,7 +107,7 @@ int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                                         int is_extrainfo);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
-void dirserv_orconn_tls_done(const char *address,
+void dirserv_orconn_tls_done(const tor_addr_t *addr,
                              uint16_t or_port,
                              const char *digest_rcvd);
 int dirserv_should_launch_reachability_test(const routerinfo_t *ri,

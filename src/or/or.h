@@ -1793,15 +1793,6 @@ typedef struct {
    * things; see notes on ROUTER_PURPOSE_* macros above.
    */
   uint8_t purpose;
-
-  /* The below items are used only by authdirservers for
-   * reachability testing. */
-
-  /** When was the last time we could reach this OR? */
-  time_t last_reachable;
-  /** When did we start testing reachability for this OR? */
-  time_t testing_since;
-
 } routerinfo_t;
 
 /** Information needed to keep and cache a signed extra-info document. */
@@ -1833,6 +1824,8 @@ typedef struct routerstatus_t {
   uint32_t addr; /**< IPv4 address for this router. */
   uint16_t or_port; /**< OR port for this router. */
   uint16_t dir_port; /**< Directory port for this router. */
+  tor_addr_t ipv6_addr; /**< IPv6 address for this router. */
+  uint16_t ipv6_orport; /**<IPV6 OR port for this router. */
   unsigned int is_authority:1; /**< True iff this router is an authority. */
   unsigned int is_exit:1; /**< True iff this router is a good exit. */
   unsigned int is_stable:1; /**< True iff this router stays up a long time. */
@@ -2006,13 +1999,13 @@ typedef struct node_t {
   routerstatus_t *rs;
 
   /* local info: copied from routerstatus, then possibly frobbed based
-   * on experience.  Authorities set this stuff directly. */
+   * on experience.  Authorities set this stuff directly.  Note that
+   * these reflect knowledge of the primary (IPv4) OR port only.  */
 
   unsigned int is_running:1; /**< As far as we know, is this OR currently
                               * running? */
   unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
-                               *  (For Authdir: Have we validated this OR?)
-                               */
+                            *  (For Authdir: Have we validated this OR?) */
   unsigned int is_fast:1; /** Do we think this is a fast OR? */
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
@@ -2036,7 +2029,19 @@ typedef struct node_t {
   /* Local info: derived. */
 
   /** According to the geoip db what country is this router in? */
+  /* XXXprop186 what is this suppose to mean with multiple OR ports? */
   country_t country;
+
+  /* The below items are used only by authdirservers for
+   * reachability testing. */
+
+  /** When was the last time we could reach this OR? */
+  time_t last_reachable;        /* IPv4. */
+  time_t last_reachable6;       /* IPv6. */
+
+  /** When did we start testing reachability for this OR? */
+  time_t testing_since;         /* IPv4. */
+  time_t testing_since6;        /* IPv6. */
 } node_t;
 
 /** How many times will we try to download a router's descriptor before giving
@@ -3268,6 +3273,8 @@ typedef struct {
   int AuthDirMaxServersPerAuthAddr; /**< Do not permit more than this
                                      * number of servers per IP address shared
                                      * with an authority. */
+  int AuthDirHasIPv6Connectivity; /**< Autoboolean: are we on IPv6?  */
+  int AuthDirPublishIPv6; /**< Boolean: should we list IPv6 OR ports? */
 
   /** If non-zero, always vote the Fast flag for any relay advertising
    * this amount of capacity or more. */

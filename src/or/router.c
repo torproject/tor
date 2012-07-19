@@ -2230,6 +2230,26 @@ router_get_pref_ipv6_orport(const routerinfo_t *router,
   ap_out->port = router->ipv6_orport;
 }
 
+/** Return 1 if any of <b>router</b>'s addresses are <b>addr</b>.
+ *   Otherwise return 0. */
+int
+router_has_addr(const routerinfo_t *router, const tor_addr_t *addr)
+{
+  return
+    tor_addr_eq_ipv4h(addr, router->addr) ||
+    tor_addr_eq(&router->ipv6_addr, addr);
+}
+
+int
+router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
+{
+  return
+    (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
+     orport->port == router->or_port) ||
+    (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
+     orport->port == router->ipv6_orport);
+}
+
 /** Load the contents of <b>filename</b>, find the last line starting with
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
