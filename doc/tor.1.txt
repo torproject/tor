@@ -1736,6 +1736,12 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     ports.  When set to auto, Tor tries to find out if the authority
     relay has IPv6 connectivity or not. (Default: auto)
 
+**AuthDirPublishIPv6** **0**|**1**::
+
+    Authoritative directories only. When set to 0, Tor will not
+    include IPv6 OR ports in votes. When set to 1, Tor will vote for
+    IPv6 OR ports. (Default: 0).
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
