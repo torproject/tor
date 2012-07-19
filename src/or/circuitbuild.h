@@ -137,9 +137,9 @@ int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 /* DOCDOC find_transport_name_by_bridge_addrport */
 const char *find_transport_name_by_bridge_addrport(const tor_addr_t *addr,
                                                    uint16_t port);
-typedef struct transport_t transport_t;
+struct transport_t;
 int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                      const transport_t **transport);
+                                      const struct transport_t **transport);
 
 #endif
 
