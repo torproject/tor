@@ -115,6 +115,7 @@ noinst_HEADERS = \
 	rendmid.h				\
 	rendservice.h				\
 	rephist.h				\
+	replaycache.h				\
 	router.h				\
 	routerlist.h				\
 	routerparse.h				\
