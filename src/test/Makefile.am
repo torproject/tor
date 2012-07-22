@@ -18,6 +18,7 @@ test_SOURCES = \
 	test_crypto.c \
 	test_data.c \
 	test_dir.c \
+	test_introduce.c \
 	test_microdesc.c \
 	test_pt.c \
 	test_replay.c \
