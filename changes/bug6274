@@ -1,0 +1,3 @@
+ o Minor bugfixes:
+   - Ignore ServerTransportPlugin lines when Tor is not configured as
+     a relay. Fixes bug 6274; bugfix on 0.2.3.6-alpha.
