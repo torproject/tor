@@ -4025,7 +4025,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_notice(LD_GENERAL, "Tor is not configured as a relay but you specified"
                " a ServerTransportPlugin line (%s). The ServerTransportPlugin "
                "line will be ignored.",
-               esc_for_log(options->ServerTransportPlugin->value));
+               escaped(options->ServerTransportPlugin->value));
   }
 
   if (options->ConstrainedSockets) {
