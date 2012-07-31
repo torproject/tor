@@ -319,11 +319,14 @@ GENERAL OPTIONS
 **AlternateHSAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
 **AlternateBridgeAuthority** [__nickname__] [**flags**] __address__:__port__ __ fingerprint__::
-    As DirServer, but replaces less of the default directory authorities. Using
+    These options behave as DirServer, but they replace fewer of the
+    default directory authorities. Using
     AlternateDirAuthority replaces the default Tor directory authorities, but
-    leaves the hidden service authorities and bridge authorities in place.
-    Similarly, Using AlternateHSAuthority replaces the default hidden service
-    authorities, but not the directory or bridge authorities.
+    leaves the default hidden service authorities and bridge authorities in
+    place.  Similarly, AlternateHSAuthority replaces the default hidden
+    service authorities, but not the directory or bridge authorities; and
+    AlternateBridgeAuthority replaces the default bridge authority,
+    but leaves the directory and hidden service authorities alone.
 
 **DisableAllSwap** **0**|**1**::
     If set to 1, Tor will attempt to lock all current and future memory pages,

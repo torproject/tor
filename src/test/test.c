@@ -131,8 +131,7 @@ rm_rf(const char *dir)
 
   elements = tor_listdir(dir);
   if (elements) {
-    SMARTLIST_FOREACH(elements, const char *, cp,
-       {
+    SMARTLIST_FOREACH_BEGIN(elements, const char *, cp) {
          char *tmp = NULL;
          tor_asprintf(&tmp, "%s"PATH_SEPARATOR"%s", dir, cp);
          if (0 == stat(tmp,&st) && (st.st_mode & S_IFDIR)) {
@@ -143,7 +142,7 @@ rm_rf(const char *dir)
            }
          }
          tor_free(tmp);
-       });
+    } SMARTLIST_FOREACH_END(cp);
     SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
   }

@@ -775,7 +775,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
     goto done;
   }
 
-  SMARTLIST_FOREACH(version_sl, const char *, cp, {
+  SMARTLIST_FOREACH_BEGIN(version_sl, const char *, cp) {
     if (!strcmpstart(cp, "Tor "))
       cp += 4;
 
@@ -797,7 +797,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
         found_older = 1;
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(cp);
 
   /* We didn't find the listed version. Is it new or old? */
   if (found_any_in_series && !found_newer_in_series && found_newer) {

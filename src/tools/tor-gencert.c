@@ -497,7 +497,12 @@ generate_certificate(void)
     return 1;
   }
 
-  fputs(buf, f);
+  if (fputs(buf, f) < 0) {
+    log_err(LD_GENERAL, "Couldn't write to %s: %s",
+            certificate_file, strerror(errno));
+    fclose(f);
+    return 1;
+  }
   fclose(f);
   return 0;
 }

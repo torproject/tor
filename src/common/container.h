@@ -142,9 +142,9 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
 /** Iterate over the items in a smartlist <b>sl</b>, in order.  For each item,
  * assign it to a new local variable of type <b>type</b> named <b>var</b>, and
- * execute the statement <b>cmd</b>.  Inside the loop, the loop index can
- * be accessed as <b>var</b>_sl_idx and the length of the list can be accessed
- * as <b>var</b>_sl_len.
+ * execute the statements inside the loop body.  Inside the loop, the loop
+ * index can be accessed as <b>var</b>_sl_idx and the length of the list can
+ * be accessed as <b>var</b>_sl_len.
  *
  * NOTE: Do not change the length of the list while the loop is in progress,
  * unless you adjust the _sl_len variable correspondingly.  See second example
@@ -153,23 +153,21 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  * Example use:
  * <pre>
  *   smartlist_t *list = smartlist_split("A:B:C", ":", 0, 0);
- *   SMARTLIST_FOREACH(list, char *, cp,
- *   {
+ *   SMARTLIST_FOREACH_BEGIN(list, char *, cp) {
  *     printf("%d: %s\n", cp_sl_idx, cp);
  *     tor_free(cp);
- *   });
+ *   } SMARTLIST_FOREACH_END(cp);
  *   smartlist_free(list);
  * </pre>
  *
  * Example use (advanced):
  * <pre>
- *   SMARTLIST_FOREACH(list, char *, cp,
- *   {
+ *   SMARTLIST_FOREACH_BEGIN(list, char *, cp) {
  *     if (!strcmp(cp, "junk")) {
  *       tor_free(cp);
  *       SMARTLIST_DEL_CURRENT(list, cp);
  *     }
- *   });
+ *   } SMARTLIST_FOREACH_END(cp);
  * </pre>
  */
 /* Note: these macros use token pasting, and reach into smartlist internals.
@@ -218,6 +216,14 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
     var = NULL;                                 \
   } STMT_END
 
+/**
+ * An alias for SMARTLIST_FOREACH_BEGIN and SMARTLIST_FOREACH_END, using
+ * <b>cmd</b> as the loop body.  This wrapper is here for convenience with
+ * very short loops.
+ *
+ * By convention, we do not use this for loops which nest, or for loops over
+ * 10 lines or so.  Use SMARTLIST_FOREACH_{BEGIN,END} for those.
+ */
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   SMARTLIST_FOREACH_BEGIN(sl,type,var) {                        \
     cmd;                                                        \
