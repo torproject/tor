@@ -1,8 +1,0 @@
-  o Code simplification and refactoring:
-    - Do not use SMARTLIST_FOREACH for any loop whose body exceeds
-      10 lines. Doing so in the past has led to hard-to-debug code.
-      The new style is to use the SMARTLIST_FOREACH_{BEGIN,END} pair.
-      Issue 6400.
-    - Do not nest SMARTLIST_FOREACH blocks within one another. Any
-      nested block ought to be using SMARTLIST_FOREACH_{BEGIN,END}.
-      Issue 6400.

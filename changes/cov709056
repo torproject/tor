@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Check return value of fputs() when writing authority certificate
-      file. Fixes Coverity issue 709056; bugfix on 0.2.0.1-alpha.
-

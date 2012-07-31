@@ -1,3 +1,0 @@
- o Minor features:
-   - Terminate active server managed proxies if Tor stops being a
-     relay. Addresses parts of bug 6274; bugfix on 0.2.3.6-alpha.
