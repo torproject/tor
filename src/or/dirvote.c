@@ -54,7 +54,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 12
+#define MAX_SUPPORTED_CONSENSUS_METHOD 13
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -71,6 +71,10 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 /** Lowest consensus method that ensures a majority of authorities voted
   * for a param. */
 #define MIN_METHOD_FOR_MAJORITY_PARAMS 12
+
+/** Lowest consensus method where microdesc consensuses omit any entry
+ * with no microdesc. */
+#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
 
 /* =====
  * Voting
@@ -1933,6 +1937,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
           /* yea, discards the const */
           rs_out.exitsummary = (char *)chosen_exitsummary;
         }
+      }
+
+      if (flavor == FLAV_MICRODESC &&
+          consensus_method >= MIN_METHOD_FOR_MANDATORY_MICRODESC &&
+          tor_digest256_is_zero(microdesc_digest)) {
+        /* With no microdescriptor digest, we omit the entry entirely. */
+        continue;
       }
 
       {
