@@ -10,3 +10,7 @@
       agree on a microdescriptor.  Partial fix for bug 6404; fix on
       0.2.2.6-alpha.
 
+    - Move log message when unable to find a microdesc in a
+      routerstatus entry to parse time. Previously we'd spam this
+      warning every time we tried to figure out which microdescriptors
+      to download. Partial fix for bug 6404; fix on 0.2.3.18-rc.
