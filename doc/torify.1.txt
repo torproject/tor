@@ -21,7 +21,7 @@ DESCRIPTION
 wrapper available on a system. It calls torsocks or tsocks with a tor specific
 configuration file. +
 
-torsocks is an improved wrapper that explictly rejects UDP, safely resolves DNS
+torsocks is an improved wrapper that explicitly rejects UDP, safely resolves DNS
 lookups and properly socksifies your TCP connections. +
 
 tsocks itself is a wrapper between the tsocks library and the application that
