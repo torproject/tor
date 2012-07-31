@@ -1,0 +1,4 @@
+  o Minor features:
+    - Warn when Tor is configured to use accounting in a way that will
+      link a hidden service to some other hidden service or public
+      address. Fix for bug 6490.

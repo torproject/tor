@@ -594,6 +594,7 @@ static void option_reset(const config_format_t *fmt, or_options_t *options,
                          const config_var_t *var, int use_defaults);
 static void config_free(const config_format_t *fmt, void *options);
 static int config_lines_eq(config_line_t *a, config_line_t *b);
+static int config_count_key(const config_line_t *a, const char *key);
 static int option_is_same(const config_format_t *fmt,
                           const or_options_t *o1, const or_options_t *o2,
                           const char *name);
@@ -3066,6 +3067,20 @@ config_lines_eq(config_line_t *a, config_line_t *b)
   return 1;
 }
 
+/** Return the number of lines in <b>a</b> whose key is <b>key</b>. */
+static int
+config_count_key(const config_line_t *a, const char *key)
+{
+  int n = 0;
+  while (a) {
+    if (!strcasecmp(a->key, key)) {
+      ++n;
+    }
+    a = a->next;
+  }
+  return n;
+}
+
 /** Return true iff the option <b>name</b> has the same value in <b>o1</b>
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
@@ -3847,6 +3862,20 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (accounting_parse_options(options, 1)<0)
     REJECT("Failed to parse accounting options. See logs for details.");
+
+  if (options->AccountingMax) {
+    if (options->RendConfigLines && server_mode(options)) {
+      log_warn(LD_CONFIG, "Using accounting with a hidden service and an "
+               "ORPort is risky: your hidden service(s) and your public "
+               "address will all turn off at the same time, which may alert "
+               "observers that they are being run by the same party.");
+    } else if (config_count_key(options->RendConfigLines,
+                                "HiddenServiceDir") > 1) {
+      log_warn(LD_CONFIG, "Using accounting with multiple hidden services is "
+               "risky: they will all turn off at the same time, which may "
+               "alert observers that they are being run by the same party.");
+    }
+  }
 
   if (options->HTTPProxy) { /* parse it now */
     if (tor_addr_port_lookup(options->HTTPProxy,
