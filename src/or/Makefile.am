@@ -48,6 +48,7 @@ libtor_a_SOURCES = \
 	rendmid.c				\
 	rendservice.c				\
 	rephist.c				\
+	replaycache.c				\
 	router.c				\
 	routerlist.c				\
 	routerparse.c				\
@@ -114,6 +115,7 @@ noinst_HEADERS = \
 	rendmid.h				\
 	rendservice.h				\
 	rephist.h				\
+	replaycache.h				\
 	router.h				\
 	routerlist.h				\
 	routerparse.h				\

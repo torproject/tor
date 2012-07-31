@@ -98,6 +98,7 @@
 #include "address.h"
 #include "compat_libevent.h"
 #include "ht.h"
+#include "replaycache.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -4214,12 +4215,15 @@ typedef struct rend_intro_point_t {
    * intro point. */
   unsigned int rend_service_note_removing_intro_point_called : 1;
 
-  /** (Service side only) A digestmap recording the INTRODUCE2 cells
-   * this intro point's circuit has received.  Each key is the digest
-   * of the RSA-encrypted part of a received INTRODUCE2 cell; each
-   * value is a pointer to the time_t at which the cell was received.
-   * This digestmap is used to prevent replay attacks. */
-  digestmap_t *accepted_intro_rsa_parts;
+  /** (Service side only) A replay cache recording the RSA-encrypted parts
+   * of INTRODUCE2 cells this intro point's circuit has received.  This is
+   * used to prevent replay attacks. */
+  replaycache_t *accepted_intro_rsa_parts;
+
+  /** (Service side only) Count of INTRODUCE2 cells accepted from this
+   * intro point.
+   */
+  int accepted_introduce2_count;
 
   /** (Service side only) The time at which this intro point was first
    * published, or -1 if this intro point has not yet been

@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Add replaycache_t structure, functions and unit tests, for future use
+      in refactoring rend_service_introduce() for bug 6177.
+    - Refactor rend_service_introduce() to be more clear to read, improve,
+      debug, and test. Bug 6177.
