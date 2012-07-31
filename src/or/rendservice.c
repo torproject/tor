@@ -1182,7 +1182,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
-  
+
   stage_descr = "early validation";
   /* Early validation of pk/ciphertext part */
   result = rend_service_validate_intro_early(parsed_req, &err_msg);
@@ -1217,7 +1217,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
              (int)elapsed);
      goto err;
   }
-  
+
   stage_descr = "decryption";
   /* Now try to decrypt it */
   result = rend_service_decrypt_intro(parsed_req, intro_key, &err_msg);
@@ -1463,11 +1463,14 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
       }
 
       goto err;
+    } else {
+      need_free = 1;
     }
-    else need_free = 1;
-  } else if (intro->version == 2) rp = intro->u.v2.extend_info;
-  else if (intro->version == 3) rp = intro->u.v3.extend_info;
-  else {
+  } else if (intro->version == 2) {
+    rp = intro->u.v2.extend_info;
+  } else if (intro->version == 3) {
+    rp = intro->u.v3.extend_info;
+  } else {
     if (err_msg_out) {
       tor_asprintf(&err_msg,
                    "Unknown version %d in INTRODUCE2 cell",
@@ -1864,8 +1867,7 @@ rend_service_parse_intro_for_v3(
   if (intro->u.v3.auth_type != REND_NO_AUTH) {
     intro->u.v3.auth_len = ntohs(get_uint16(buf + 2));
     ts_offset = 4 + intro->u.v3.auth_len;
-  }
-  else {
+  } else {
     intro->u.v3.auth_len = 0;
     ts_offset = 2;
   }
