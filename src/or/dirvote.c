@@ -3502,7 +3502,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
 {
   microdesc_t *result = NULL;
   char *key = NULL, *summary = NULL, *family = NULL;
-  char buf[1024];
+  char buf[2048];
   size_t keylen;
   char *out = buf, *end = buf+sizeof(buf);
 
