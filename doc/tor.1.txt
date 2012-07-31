@@ -169,7 +169,7 @@ GENERAL OPTIONS
     duty of that proxy to properly forward the traffic to the bridge. +
  +
     In its second form, when set along with a corresponding Bridge line, the Tor
-    client launches the pluggable transport proxy exacutable in
+    client launches the pluggable transport proxy executable in
     __path-to-binary__ using __options__ as its command-line options, and
     forwards its traffic to it. It's the duty of that proxy to properly forward
     the traffic to the bridge.
@@ -1709,7 +1709,7 @@ DIRECTORY AUTHORITY SERVER OPTIONS
 
 **V3BandwidthsFile** __FILENAME__::
     V3 authoritative directories only. Configures the location of the
-    bandiwdth-authority generated file storing information on relays' measured
+    bandwidth-authority generated file storing information on relays' measured
     bandwidth capacities. (Default: unset)
 
 **V3AuthUseLegacyKey** **0**|**1**::
