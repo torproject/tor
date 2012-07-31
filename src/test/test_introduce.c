@@ -291,10 +291,8 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
   /* Get a key */
   k = crypto_pk_new();
   test_assert(k);
-  if (!k) goto done;
   r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_1, -1);
   test_assert(!r);
-  if (r) goto done;
 
   /* Get digest for future comparison */
   r = crypto_pk_get_digest(k, digest);
@@ -306,7 +304,6 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
       k, (void **)(&cell));
   test_assert(r > 0);
   test_assert(cell);
-  if (!(cell && r > 0)) goto done;
   cell_len = r;
 
   /* Do early parsing */
