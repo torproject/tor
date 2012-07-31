@@ -1,0 +1,6 @@
+  o Packaging (RPM):
+    - Our default RPM spec files have been updated to work with mock
+      and rpmbuild on RHEL/Fedora. They have an updated set of
+      dependencies and conflicts, a fix for an ancient typo when creating
+      the "_tor" user, and better instructions. Thanks to Ondrej
+      Mikle for the patch series; fix for bug 6043.
