@@ -248,120 +248,37 @@ static uint8_t v3_basic_auth_test_plaintext[] =
 static void do_decrypt_test(uint8_t *plaintext, size_t plaintext_len);
 static void do_early_parse_test(uint8_t *plaintext, size_t plaintext_len);
 static void do_late_parse_test(uint8_t *plaintext, size_t plaintext_len);
+static void do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase);
 static ssize_t make_intro_from_plaintext(
     void *buf, size_t len, crypto_pk_t *key, void **cell_out);
 
-/** Decryption test utility function
- */
-
-static void
-do_decrypt_test(uint8_t *plaintext, size_t plaintext_len)
-{
-  crypto_pk_t *k = NULL;
-  int r;
-  uint8_t *cell = NULL;
-  size_t cell_len;
-  rend_intro_cell_t *parsed_req = NULL;
-  char *err_msg = NULL;
-  char digest[DIGEST_LEN];
-  
-  /* Get a key */
-  k = crypto_pk_new();
-  test_assert(k);
-  if (!k) goto done;
-  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_1, -1);
-  test_assert(!r);
-  if (r) goto done;
-
-  /* Get digest for future comparison */
-  r = crypto_pk_get_digest(k, digest);
-  test_assert(r >= 0);
-
-  /* Make a cell out of it */
-  r = make_intro_from_plaintext(
-      plaintext, plaintext_len,
-      k, (void **)(&cell));
-  test_assert(r > 0);
-  test_assert(cell);
-  if (!(cell && r > 0)) goto done;
-  cell_len = r;
-
-  /* Do early parsing */
-  parsed_req = rend_service_begin_parse_intro(cell, cell_len, 2, &err_msg);
-  test_assert(parsed_req);
-  test_assert(!err_msg);
-  test_memeq(parsed_req->pk, digest, DIGEST_LEN);
-  test_assert(parsed_req->ciphertext);
-  test_assert(parsed_req->ciphertext_len > 0);
-
-  /* Do decryption */
-  r = rend_service_decrypt_intro(parsed_req, k, &err_msg);
-  test_assert(!r);
-  test_assert(!err_msg);
-  test_assert(parsed_req->plaintext);
-  test_assert(parsed_req->plaintext_len > 0);
-
- done:
-  tor_free(cell);
-  crypto_pk_free(k);
-  rend_service_free_intro(parsed_req);
-  tor_free(err_msg);
-}
-
-/** Early parsing test utility function
- */
+#define EARLY_PARSE_ONLY 1
+#define DECRYPT_ONLY 2
+#define ALL_PARSING 3
 
 static void
 do_early_parse_test(uint8_t *plaintext, size_t plaintext_len)
 {
-  crypto_pk_t *k = NULL;
-  int r;
-  uint8_t *cell = NULL;
-  size_t cell_len;
-  rend_intro_cell_t *parsed_req = NULL;
-  char *err_msg = NULL;
-  char digest[DIGEST_LEN];
-  
-  /* Get a key */
-  k = crypto_pk_new();
-  test_assert(k);
-  if (!k) goto done;
-  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_1, -1);
-  test_assert(!r);
-  if (r) goto done;
-
-  /* Get digest for future comparison */
-  r = crypto_pk_get_digest(k, digest);
-  test_assert(r >= 0);
-
-  /* Make a cell out of it */
-  r = make_intro_from_plaintext(
-      plaintext, plaintext_len,
-      k, (void **)(&cell));
-  test_assert(r > 0);
-  test_assert(cell);
-  if (!(cell && r > 0)) goto done;
-  cell_len = r;
-
-  /* Do early parsing */
-  parsed_req = rend_service_begin_parse_intro(cell, cell_len, 2, &err_msg);
-  test_assert(parsed_req);
-  test_memeq(parsed_req->pk, digest, DIGEST_LEN);
-  test_assert(parsed_req->ciphertext);
-  test_assert(parsed_req->ciphertext_len > 0);
-
- done:
-  tor_free(cell);
-  crypto_pk_free(k);
-  rend_service_free_intro(parsed_req);
-  tor_free(err_msg);
+  do_parse_test(plaintext, plaintext_len, EARLY_PARSE_ONLY);
 }
 
-/** Late parsing test utility function
- */
+static void
+do_decrypt_test(uint8_t *plaintext, size_t plaintext_len)
+{
+  do_parse_test(plaintext, plaintext_len, DECRYPT_ONLY);
+}
 
 static void
 do_late_parse_test(uint8_t *plaintext, size_t plaintext_len)
+{
+  do_parse_test(plaintext, plaintext_len, ALL_PARSING);
+}
+
+/** Test utility function: checks that the <b>plaintext_len</b>-byte string at
+ * <b>plaintext</b> is at least superficially parseable.
+ */
+static void
+do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
 {
   crypto_pk_t *k = NULL;
   int r;
@@ -370,7 +287,7 @@ do_late_parse_test(uint8_t *plaintext, size_t plaintext_len)
   rend_intro_cell_t *parsed_req = NULL;
   char *err_msg = NULL;
   char digest[DIGEST_LEN];
-  
+
   /* Get a key */
   k = crypto_pk_new();
   test_assert(k);
@@ -400,12 +317,18 @@ do_late_parse_test(uint8_t *plaintext, size_t plaintext_len)
   test_assert(parsed_req->ciphertext);
   test_assert(parsed_req->ciphertext_len > 0);
 
+  if (phase == EARLY_PARSE_ONLY)
+    goto done;
+
   /* Do decryption */
   r = rend_service_decrypt_intro(parsed_req, k, &err_msg);
   test_assert(!r);
   test_assert(!err_msg);
   test_assert(parsed_req->plaintext);
   test_assert(parsed_req->plaintext_len > 0);
+
+  if (phase == DECRYPT_ONLY)
+    goto done;
 
   /* Do late parsing */
   r = rend_service_parse_intro_plaintext(parsed_req, &err_msg);
