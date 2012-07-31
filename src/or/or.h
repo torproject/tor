@@ -1202,29 +1202,19 @@ typedef struct or_connection_t {
   int tls_error; /**< Last tor_tls error code. */
   /** When we last used this conn for any client traffic. If not
    * recent, we can rate limit it further. */
-  time_t client_used;
 
   tor_addr_t real_addr; /**< The actual address that this connection came from
                        * or went to.  The <b>addr</b> field is prone to
                        * getting overridden by the address from the router
                        * descriptor matching <b>identity_digest</b>. */
 
-  circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
-                                  * connection, which half of the space should
-                                  * we use? */
   /** Should this connection be used for extending circuits to the server
    * matching the <b>identity_digest</b> field?  Set to true if we're pretty
    * sure we aren't getting MITMed, either because we're connected to an
    * address listed in a server descriptor, or because an authenticated
    * NETINFO cell listed the address we're connected to as recognized. */
   unsigned int is_canonical:1;
-  /** True iff this connection shouldn't get any new circs attached to it,
-   * because the connection is too old, or because there's a better one.
-   * More generally, this flag is used to note an unhealthy connection;
-   * for example, if a bad connection fails we shouldn't assume that the
-   * router itself has a problem.
-   */
-  unsigned int is_bad_for_new_circs:1;
+
   /** True iff we have decided that the other end of this connection
    * is a client.  Connections with this flag set should never be used
    * to satisfy an EXTEND request.  */
@@ -1234,9 +1224,6 @@ typedef struct or_connection_t {
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
-  circid_t next_circ_id; /**< Which circ_id do we try to use next on
-                          * this connection?  This is always in the
-                          * range 0..1<<15-1. */
 
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
@@ -1261,21 +1248,6 @@ typedef struct or_connection_t {
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
 
-  /** Double-linked ring of circuits with queued cells waiting for room to
-   * free up on this connection's outbuf.  Every time we pull cells from a
-   * circuit, we advance this pointer to the next circuit in the ring. */
-  struct circuit_t *active_circuits;
-  /** Priority queue of cell_ewma_t for circuits with queued cells waiting for
-   * room to free up on this connection's outbuf.  Kept in heap order
-   * according to EWMA.
-   *
-   * This is redundant with active_circuits; if we ever decide only to use the
-   * cell_ewma algorithm for choosing circuits, we can remove active_circuits.
-   */
-  smartlist_t *active_circuit_pqueue;
-  /** The tick on which the cell_ewma_ts in active_circuit_pqueue last had
-   * their ewma values rescaled. */
-  unsigned active_circuit_pqueue_last_recalibrated;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
 } or_connection_t;
@@ -1547,6 +1519,98 @@ static INLINE listener_connection_t *TO_LISTENER_CONN(connection_t *c)
   tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
   return DOWNCAST(listener_connection_t, c);
 }
+
+/* channel_t typedef; struct channel_s is in channel.h */
+
+typedef struct channel_s channel_t;
+
+/* channel states for channel_t */
+
+typedef enum {
+  /*
+   * Closed state - channel is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_LISTENING
+   *   - CHANNEL_STATE_OPENING
+   */
+  CHANNEL_STATE_CLOSED = 0,
+  /*
+   * Listening state - channel is listening for incoming connections
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_LISTENING,
+  /*
+   * Opening state - channel is trying to connect
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_OPENING,
+  /*
+   * Open state - channel is active and ready for use
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_MAINT
+   */
+  CHANNEL_STATE_OPEN,
+  /*
+   * Maintenance state - channel is temporarily offline for subclass specific
+   *   maintenance activities such as TLS renegotiation.
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_MAINT,
+  /*
+   * Closing state - channel is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSED,
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_CLOSING,
+  /*
+   * Error state - channel has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_LISTENING
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_STATE_LAST
+} channel_state_t;
 
 /* Conditional macros to help write code that works whether bufferevents are
    disabled or not.
@@ -2478,8 +2542,8 @@ typedef struct {
   /** The EWMA of the cell count. */
   double cell_count;
   /** True iff this is the cell count for a circuit's previous
-   * connection. */
-  unsigned int is_for_p_conn : 1;
+   * channel. */
+  unsigned int is_for_p_chan : 1;
   /** The position of the circuit within the OR connection's priority
    * queue. */
   int heap_index;
@@ -2589,7 +2653,7 @@ typedef struct circuit_t {
   uint64_t dirreq_id;
 
   /** The EWMA count for the number of cells flushed from the
-   * n_conn_cells queue.  Used to determine which circuit to flush from next.
+   * n_chan_cells queue.  Used to determine which circuit to flush from next.
    */
   cell_ewma_t n_cell_ewma;
 } circuit_t;
