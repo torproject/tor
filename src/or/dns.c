@@ -567,7 +567,7 @@ send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
   // log_notice(LD_EXIT, "Sent");
 }
 
-/** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
+/** See if we have a cache entry for <b>exitconn</b>-\>address. If so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, free exitconn and return -1.
  *
