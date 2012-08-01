@@ -86,13 +86,18 @@ int router_pick_published_address(const or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_t *ident_key);
-int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
-                             crypto_pk_t *ident_key);
 void router_get_prim_orport(const routerinfo_t *router,
-                            tor_addr_port_t *ap_out);
+                            tor_addr_port_t *addr_port_out);
+void router_get_pref_orport(const routerinfo_t *router,
+                            tor_addr_port_t *addr_port_out);
+void router_get_pref_ipv6_orport(const routerinfo_t *router,
+                                 tor_addr_port_t *addr_port_out);
+int router_ipv6_preferred(const routerinfo_t *router);
 int router_has_addr(const routerinfo_t *router, const tor_addr_t *addr);
 int router_has_orport(const routerinfo_t *router,
                       const tor_addr_port_t *orport);
+int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
+                             crypto_pk_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
