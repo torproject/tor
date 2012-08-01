@@ -879,6 +879,102 @@ typedef uint16_t circid_t;
 /** Identifies a stream on a circuit */
 typedef uint16_t streamid_t;
 
+/* channel_t typedef; struct channel_s is in channel.h */
+
+typedef struct channel_s channel_t;
+
+/* channel states for channel_t */
+
+typedef enum {
+  /*
+   * Closed state - channel is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_LISTENING
+   *   - CHANNEL_STATE_OPENING
+   */
+  CHANNEL_STATE_CLOSED = 0,
+  /*
+   * Listening state - channel is listening for incoming connections
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_LISTENING,
+  /*
+   * Opening state - channel is trying to connect
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_OPENING,
+  /*
+   * Open state - channel is active and ready for use
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_MAINT
+   */
+  CHANNEL_STATE_OPEN,
+  /*
+   * Maintenance state - channel is temporarily offline for subclass specific
+   *   maintenance activities such as TLS renegotiation.
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_ERROR
+   *   - CHANNEL_STATE_OPEN
+   */
+  CHANNEL_STATE_MAINT,
+  /*
+   * Closing state - channel is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - CHANNEL_STATE_CLOSED,
+   *   - CHANNEL_STATE_ERROR
+   */
+  CHANNEL_STATE_CLOSING,
+  /*
+   * Error state - channel has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_LISTENING
+   *   - CHANNEL_STATE_MAINT
+   *   - CHANNEL_STATE_OPENING
+   *   - CHANNEL_STATE_OPEN
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_STATE_LAST
+} channel_state_t;
+
+/* TLS channel stuff */
+
+typedef struct channel_tls_s channel_tls_t;
+
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
@@ -1061,9 +1157,6 @@ typedef struct connection_t {
 
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
-
-  /** Unique ID for measuring tunneled network status requests. */
-  uint64_t dirreq_id;
 } connection_t;
 
 /** Subtype of connection_t; used for a listener socket. */
@@ -1203,6 +1296,9 @@ typedef struct or_connection_t {
   /** When we last used this conn for any client traffic. If not
    * recent, we can rate limit it further. */
 
+  /* Channel using this connection */
+  channel_tls_t *chan;
+
   tor_addr_t real_addr; /**< The actual address that this connection came from
                        * or went to.  The <b>addr</b> field is prone to
                        * getting overridden by the address from the router
@@ -1245,8 +1341,6 @@ typedef struct or_connection_t {
   /* XXXX we could share this among all connections. */
   struct ev_token_bucket_cfg *bucket_cfg;
 #endif
-  int n_circuits; /**< How many circuits use this connection as p_conn or
-                   * n_conn ? */
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
@@ -1299,6 +1393,10 @@ typedef struct edge_connection_t {
    * cells. */
   unsigned int edge_blocked_on_circ:1;
 
+  /** Unique ID for directory requests; this used to be in connection_t, but
+   * that's going away and being used on channels instead.  We still tag
+   * edge connections with dirreq_id from circuits, so it's copied here. */
+  uint64_t dirreq_id;
 } edge_connection_t;
 
 /** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
@@ -1421,6 +1519,10 @@ typedef struct dir_connection_t {
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
 
+  /** Unique ID for directory requests; this used to be in connection_t, but
+   * that's going away and being used on channels instead.  The dirserver still
+   * needs this for the incoming side, so it's moved here. */
+  uint64_t dirreq_id;
 } dir_connection_t;
 
 /** Subtype of connection_t for an connection to a controller. */
@@ -1519,98 +1621,6 @@ static INLINE listener_connection_t *TO_LISTENER_CONN(connection_t *c)
   tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
   return DOWNCAST(listener_connection_t, c);
 }
-
-/* channel_t typedef; struct channel_s is in channel.h */
-
-typedef struct channel_s channel_t;
-
-/* channel states for channel_t */
-
-typedef enum {
-  /*
-   * Closed state - channel is inactive
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSING
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_LISTENING
-   *   - CHANNEL_STATE_OPENING
-   */
-  CHANNEL_STATE_CLOSED = 0,
-  /*
-   * Listening state - channel is listening for incoming connections
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSED
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   */
-  CHANNEL_STATE_LISTENING,
-  /*
-   * Opening state - channel is trying to connect
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSED
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_OPEN
-   */
-  CHANNEL_STATE_OPENING,
-  /*
-   * Open state - channel is active and ready for use
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPENING
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_MAINT
-   */
-  CHANNEL_STATE_OPEN,
-  /*
-   * Maintenance state - channel is temporarily offline for subclass specific
-   *   maintenance activities such as TLS renegotiation.
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   *   - CHANNEL_STATE_OPEN
-   */
-  CHANNEL_STATE_MAINT,
-  /*
-   * Closing state - channel is shutting down
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSED,
-   *   - CHANNEL_STATE_ERROR
-   */
-  CHANNEL_STATE_CLOSING,
-  /*
-   * Error state - channel has experienced a permanent error
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_LISTENING
-   *   - CHANNEL_STATE_MAINT
-   *   - CHANNEL_STATE_OPENING
-   *   - CHANNEL_STATE_OPEN
-   * Permitted transitions to:
-   *   - None
-   */
-  CHANNEL_STATE_ERROR,
-  /*
-   * Placeholder for maximum state value
-   */
-  CHANNEL_STATE_LAST
-} channel_state_t;
 
 /* Conditional macros to help write code that works whether bufferevents are
    disabled or not.
@@ -4199,10 +4209,10 @@ typedef enum {
   /** Flushed last cell from queue of the circuit that initiated a
     * tunneled request to the outbuf of the OR connection. */
   DIRREQ_CIRC_QUEUE_FLUSHED = 3,
-  /** Flushed last byte from buffer of the OR connection belonging to the
+  /** Flushed last byte from buffer of the channel belonging to the
     * circuit that initiated a tunneled request; completes a tunneled
     * request. */
-  DIRREQ_OR_CONN_BUFFER_FLUSHED = 4
+  DIRREQ_CHANNEL_BUFFER_FLUSHED = 4
 } dirreq_state_t;
 
 #define WRITE_STATS_INTERVAL (24*60*60)
