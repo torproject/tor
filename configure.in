@@ -1318,8 +1318,6 @@ CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_z
 AC_CONFIG_FILES([
         Doxyfile
         Makefile
-        contrib/Makefile
-        contrib/suse/Makefile
         contrib/suse/tor.sh
         contrib/tor.logrotate
         contrib/tor.sh
