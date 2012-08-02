@@ -1090,7 +1090,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
  * nmap does).  We want to detect that, and not go on with the connection.
  */
 static int
-check_sockaddr(struct sockaddr *sa, int len, int level)
+check_sockaddr(const struct sockaddr *sa, int len, int level)
 {
   int ok = 1;
 
