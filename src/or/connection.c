@@ -1203,11 +1203,6 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       return 0;
     }
 
-    if (check_sockaddr_family_match(remote->sa_family, conn) < 0) {
-      tor_close_socket(news);
-      return 0;
-    }
-
     tor_addr_from_sockaddr(&addr, remote, &port);
 
     /* process entrance policies here, before we even create the connection */
