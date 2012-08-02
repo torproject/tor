@@ -18,7 +18,7 @@ demand($TOR_NSI);
 open(F, $CONFIGURE_IN) or die "$!";
 $version = undef;
 while (<F>) {
-    if (/AM_INIT_AUTOMAKE\(tor,\s*([^\)]*)\)/) {
+    if (/AC_INIT\(\[tor\],\s*\[([^\]]*)\]\)/) {
 	$version = $1;
 	last;
     }

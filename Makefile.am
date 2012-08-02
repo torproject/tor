@@ -7,11 +7,21 @@
 # 1.7 means we require automake vesion 1.7
 AUTOMAKE_OPTIONS = foreign 1.7
 
-SUBDIRS = src doc contrib
+noinst_LIBRARIES=
+EXTRA_DIST=
+noinst_HEADERS=
+bin_PROGRAMS=
+CLEANFILES=
+TESTS=
+noinst_PROGRAMS=
+DISTCLEANFILES=
+bin_SCRIPTS=
+include src/include.am
+include doc/include.am
+include contrib/include.am
 
-DIST_SUBDIRS = src doc contrib
 
-EXTRA_DIST = \
+EXTRA_DIST+= \
 	ChangeLog					\
 	INSTALL						\
 	LICENSE						\

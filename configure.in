@@ -3,8 +3,9 @@ dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl Copyright (c) 2007-2012, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
-AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.4.0-alpha-dev)
+AC_INIT([tor],[0.2.4.0-alpha-dev])
+AC_CONFIG_SRCDIR([src/or/main.c])
+AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AM_CONFIG_HEADER(orconfig.h)
 
@@ -1324,16 +1325,7 @@ AC_CONFIG_FILES([
         contrib/tor.sh
         contrib/torctl
         contrib/torify
-        doc/Makefile
-        src/Makefile
-        src/common/Makefile
-        src/config/Makefile
         src/config/torrc.sample
-        src/or/Makefile
-        src/test/Makefile
-        src/tools/Makefile
-        src/tools/tor-fw-helper/Makefile
-        src/win32/Makefile
         tor.spec
 ])
 

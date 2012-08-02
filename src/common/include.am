@@ -1,0 +1,70 @@
+
+noinst_LIBRARIES+= src/common/libor.a src/common/libor-crypto.a src/common/libor-event.a
+
+EXTRA_DIST+= \
+  src/common/common_sha1.i	\
+  src/common/sha256.c		\
+  src/common/Makefile.nmake
+
+#CFLAGS  = -Wall -Wpointer-arith -O2
+
+if USE_OPENBSD_MALLOC
+libor_extra_source=src/common/OpenBSD_malloc_Linux.c
+else
+libor_extra_source=
+endif
+
+src_common_libor_a_SOURCES = \
+  src/common/address.c					\
+  src/common/compat.c					\
+  src/common/container.c				\
+  src/common/di_ops.c					\
+  src/common/log.c					\
+  src/common/memarea.c					\
+  src/common/mempool.c					\
+  src/common/procmon.c					\
+  src/common/util.c					\
+  src/common/util_codedigest.c				\
+  $(libor_extra_source)
+
+src_common_libor_crypto_a_SOURCES = \
+  src/common/aes.c		\
+  src/common/crypto.c		\
+  src/common/torgzip.c		\
+  src/common/tortls.c
+
+src_common_libor_event_a_SOURCES = src/common/compat_libevent.c
+
+noinst_HEADERS+= 				\
+  src/common/address.h				\
+  src/common/aes.h				\
+  src/common/ciphers.inc			\
+  src/common/compat.h				\
+  src/common/compat_libevent.h			\
+  src/common/container.h			\
+  src/common/crypto.h				\
+  src/common/di_ops.h				\
+  src/common/ht.h				\
+  src/common/memarea.h				\
+  src/common/mempool.h				\
+  src/common/procmon.h				\
+  src/common/strlcat.c				\
+  src/common/strlcpy.c				\
+  src/common/torgzip.h				\
+  src/common/torint.h				\
+  src/common/torlog.h				\
+  src/common/tortls.h				\
+  src/common/util.h
+
+src_common_common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
+	if test "@SHA1SUM@" != none; then \
+	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/common/common_sha1.i; \
+	elif test "@OPENSSL@" != none; then \
+	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_common_libor_SOURCES) $(src_Common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > src/common/common_sha1.i; \
+	else \
+	  rm src/common/common_sha1.i; \
+	  touch src/common/common_sha1.i; \
+	fi
+
+src_common_util_codedigest.o: src/common/common_sha1.i
+src_common_crypto.o: src/common/sha256.c
