@@ -5,6 +5,7 @@ dnl See LICENSE for licensing information
 
 AC_INIT
 AM_INIT_AUTOMAKE(tor, 0.2.4.0-alpha-dev)
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST

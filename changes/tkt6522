@@ -1,0 +1,5 @@
+  o Build changes:
+    - Where available, we now use automake's "silent" make rules by
+      default, so that warnings are easier to spot.  You can get the
+      old behavior with "make V=1". Patch by Stewart Smith for ticket
+      6522.
