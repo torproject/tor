@@ -125,7 +125,7 @@ noinst_HEADERS+= \
 	src/or/status.h					\
 	src/or/micro-revision.i			
 
-src/or/config_codedigest.c: src/or/or_sha1.i
+src/or/config_codedigest.o: src/or/or_sha1.i
 
 src/or/micro-revision.i: FORCE
 	@rm -f src/or/micro-revision.tmp;				\
