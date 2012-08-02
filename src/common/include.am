@@ -56,7 +56,7 @@ noinst_HEADERS+= 				\
   src/common/tortls.h				\
   src/common/util.h
 
-src_common_common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
+src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
 	if test "@SHA1SUM@" != none; then \
 	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/common/common_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
@@ -66,5 +66,5 @@ src_common_common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HE
 	  touch src/common/common_sha1.i; \
 	fi
 
-src_common_util_codedigest.o: src/common/common_sha1.i
-src_common_crypto.o: src/common/sha256.c
+src/common/util_codedigest.c: src/common/common_sha1.i
+src/common/crypto.c: src/common/sha256.c

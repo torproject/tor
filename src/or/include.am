@@ -125,7 +125,7 @@ noinst_HEADERS+= \
 	src/or/status.h					\
 	src/or/micro-revision.i			
 
-src_or_config_codedigest.o: src/or/or_sha1.i
+src/or/config_codedigest.c: src/or/or_sha1.i
 
 src/or/micro-revision.i: FORCE
 	@rm -f src/or/micro-revision.tmp;				\
@@ -143,7 +143,7 @@ src/or/micro-revision.i: FORCE
 	  mv src/or/micro-revision.tmp src/or/micro-revision.i;		\
 	fi; true
 
-src_or_or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)
+src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)
 	if test "@SHA1SUM@" != none; then \
 	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)) | \
 	  "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/or/or_sha1.i; \
