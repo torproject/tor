@@ -239,7 +239,16 @@ dir_connection_new(int socket_family)
 }
 
 /** Allocate and return a new or_connection_t, initialized as by
- * connection_init(). */
+ * connection_init(). 
+ *
+ * Set timestamp_last_added_nonpadding to now.
+ *
+ * Assign a pseudorandom next_circ_id between 0 and 2**15.
+ *
+ * Initialize active_circuit_pqueue.
+ *
+ * Set active_circuit_pqueue_last_recalibrated to current cell_ewma tick.
+ */
 or_connection_t *
 or_connection_new(int socket_family)
 {
@@ -257,7 +266,10 @@ or_connection_new(int socket_family)
 }
 
 /** Allocate and return a new entry_connection_t, initialized as by
- * connection_init(). */
+ * connection_init().
+ *
+ * Allocate space to store the socks_request.
+ */
 entry_connection_t *
 entry_connection_new(int type, int socket_family)
 {
@@ -339,13 +351,10 @@ connection_new(int type, int socket_family)
 /** Initializes conn. (you must call connection_add() to link it into the main
  * array).
  *
+ * Set conn-\>magic to the correct value.
+ *
  * Set conn-\>type to <b>type</b>. Set conn-\>s and conn-\>conn_array_index to
  * -1 to signify they are not yet assigned.
- *
- * If conn is not a listener type, allocate buffers for it. If it's
- * an AP type, allocate space to store the socks_request.
- *
- * Assign a pseudorandom next_circ_id between 0 and 2**15.
  *
  * Initialize conn's timestamps to now.
  */
