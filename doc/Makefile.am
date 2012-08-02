@@ -47,7 +47,7 @@ asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 # Generate the html documentation from asciidoc, but don't do
 # machine-specific replacements yet
 $(html_in) :
-	$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ $(top_srcdir)/doc/$@
+	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ $(top_srcdir)/doc/$@
 
 tor.html.in : tor.1.txt
 torify.html.in : torify.1.txt
@@ -58,7 +58,7 @@ tor-fw-helper.html.in : tor-fw-helper.1.txt
 # Generate the manpage from asciidoc, but don't do
 # machine-specific replacements yet
 $(man_in) :
-	$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ $(top_srcdir)/doc/$@
+	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ $(top_srcdir)/doc/$@
 
 tor.1.in : tor.1.txt
 torify.1.in : torify.1.txt
@@ -69,10 +69,10 @@ tor-fw-helper.1.in : tor-fw-helper.1.txt
 # use ../config.status to swap all machine-specific magic strings
 # in the asciidoc with their replacements.
 $(asciidoc_product) :
-	if test -e $(top_srcdir)/doc/$@.in && ! test -e ./$@.in ; then \
+	$(AM_V_GEN)if test -e $(top_srcdir)/doc/$@.in && ! test -e ./$@.in ; then \
 		cp $(top_srcdir)/doc/$@.in .; \
 	fi
-	../config.status --file=$@;
+	$(AM_V_GEN)../config.status --file=$@;
 
 tor.1 : tor.1.in
 torify.1 : torify.1.in
