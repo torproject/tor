@@ -1620,7 +1620,7 @@ test_util_sscanf(void)
 #if SIZEOF_INT == 4
   r = tor_sscanf("-2147483648. 2147483647.", "%d. %d.", &int1, &int2);
   test_eq(r,2);
-  test_eq(int1, -2147483648);
+  test_eq(int1, -2147483647-1);
   test_eq(int2, 2147483647);
 
   r = tor_sscanf("-2147483679.", "%d.", &int1);
@@ -1632,7 +1632,7 @@ test_util_sscanf(void)
   r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
                  "%d. %d.", &int1, &int2);
   test_eq(r,2);
-  test_eq(int1, -9223372036854775808);
+  test_eq(int1, -9223372036854775807-1);
   test_eq(int2, 9223372036854775807);
 
   r = tor_sscanf("-9223372036854775809.", "%d.", &int1);
