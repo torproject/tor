@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Avoid read-from-freed-RAM bug and related double-free bug that
+      could occur when a DNS request fails while launching it.  Fixes
+      bug 6480; bugfix on 0.2.0.1-alpha.
+

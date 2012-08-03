@@ -168,7 +168,8 @@ static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
 static int dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
-                            or_circuit_t *oncirc, char **resolved_to_hostname);
+                            or_circuit_t *oncirc, char **resolved_to_hostname,
+                            int *made_connection_pending_out);
 #ifdef DEBUG_DNS_CACHE
 static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
@@ -596,10 +597,12 @@ dns_resolve(edge_connection_t *exitconn)
 {
   or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
   int is_resolve, r;
+  int made_connection_pending = 0;
   char *hostname = NULL;
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
-  r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
+  r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname,
+                       &made_connection_pending);
 
   switch (r) {
     case 1:
@@ -639,16 +642,11 @@ dns_resolve(edge_connection_t *exitconn)
 
       dns_cancel_pending_resolve(exitconn->_base.address);
 
-      if (!exitconn->_base.marked_for_close) {
+      if (!made_connection_pending && !exitconn->_base.marked_for_close) {
+        /* If we made the connection pending, then we freed it already in
+         * dns_cancel_pending_resolve().  If we marked it for close, it'll
+         * get freed from the main loop.  Otherwise, can free it now. */
         connection_free(TO_CONN(exitconn));
-        // XXX ... and we just leak exitconn otherwise? -RD
-        // If it's marked for close, it's on closeable_connection_lst in
-        // main.c.  If it's on the closeable list, it will get freed from
-        // main.c. -NM
-        // "<armadev> If that's true, there are other bugs around, where we
-        //  don't check if it's marked, and will end up double-freeing."
-        // On the other hand, I don't know of any actual bugs here, so this
-        // shouldn't be holding up the rc. -RD
       }
       break;
     default:
@@ -667,10 +665,15 @@ dns_resolve(edge_connection_t *exitconn)
  * Return -2 on a transient error. If it's a reverse resolve and it's
  * successful, sets *<b>hostname_out</b> to a newly allocated string
  * holding the cached reverse DNS value.
+ *
+ * Set *<b>made_connection_pending_out</b> to true if we have placed
+ * <b>exitconn</b> on the list of pending connections for some resolve; set it
+ * to false otherwise.
  */
 static int
 dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
-                 or_circuit_t *oncirc, char **hostname_out)
+                 or_circuit_t *oncirc, char **hostname_out,
+                 int *made_connection_pending_out)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
@@ -684,6 +687,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   tor_assert(!SOCKET_OK(exitconn->_base.s));
   assert_cache_ok();
   tor_assert(oncirc);
+  *made_connection_pending_out = 0;
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
@@ -757,6 +761,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
+        *made_connection_pending_out = 1;
         log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
                   "resolve of %s", exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
@@ -797,6 +802,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   pending_connection = tor_malloc_zero(sizeof(pending_connection_t));
   pending_connection->conn = exitconn;
   resolve->pending_connections = pending_connection;
+  *made_connection_pending_out = 1;
 
   /* Add this resolve to the cache and priority queue. */
   HT_INSERT(cache_map, &cache_root, resolve);
