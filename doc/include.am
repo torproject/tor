@@ -61,7 +61,7 @@ $(asciidoc_product) : $(txt_in) $(man_in)
 	$(AM_V_GEN)if test -e $(top_srcdir)/$@.in && ! test -e $@.in ; then \
 		cp $(top_srcdir)/$@.in $@; \
 	fi
-	$(AM_V_GEN)$(CONFIG_STATUS) --file=$@;
+	$(AM_V_GEN)./config.status --file=$@;
 
 CLEANFILES+= $(asciidoc_product) config.log
 DISTCLEANFILES+= $(html_in) $(man_in)
