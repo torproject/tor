@@ -1,4 +1,5 @@
-  o Major bugfixes:
+  o Major security fixes:
     - Avoid a read of uninitializd RAM when reading a vote or consensus
-      document with an unrecognized flavor name.  Fixes bug 6530; bugfix on
-      0.2.2.6-alpha.
+      document with an unrecognized flavor name. This could lead to a
+      remote crash bug. Fixes bug 6530; bugfix on 0.2.2.6-alpha.
+      
