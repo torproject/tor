@@ -1709,6 +1709,8 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   double *bandwidths;
   double tmp = 0;
   unsigned int i;
+  unsigned int i_chosen;
+  unsigned int i_has_been_chosen;
   int have_unknown = 0; /* true iff sl contains element not in consensus. */
 
   /* Can't choose exit and guard at same time */
@@ -1871,12 +1873,17 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
               * from 1 below. See bug 1203 for details. */
 
   /* Last, count through sl until we get to the element we picked */
+  i_chosen = (unsigned)smartlist_len(sl);
+  i_has_been_chosen = 0;
   tmp = 0.0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     tmp += bandwidths[i];
-    if (tmp >= rand_bw)
-      break;
+    if (tmp >= rand_bw && !i_has_been_chosen) {
+      i_chosen = i;
+      i_has_been_chosen = 1;
+    }
   }
+  i = i_chosen;
 
   if (i == (unsigned)smartlist_len(sl)) {
     /* This was once possible due to round-off error, but shouldn't be able
@@ -1909,7 +1916,9 @@ static const node_t *
 smartlist_choose_node_by_bandwidth(smartlist_t *sl,
                                    bandwidth_weight_rule_t rule)
 {
-  unsigned i;
+  unsigned int i;
+  unsigned int i_chosen;
+  unsigned int i_has_been_chosen;
   int32_t *bandwidths;
   int is_exit;
   int is_guard;
@@ -2109,6 +2118,8 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
+  i_chosen = (unsigned)smartlist_len(sl);
+  i_has_been_chosen = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     is_exit = bitarray_is_set(exit_bits, i);
     is_guard = bitarray_is_set(guard_bits, i);
@@ -2123,9 +2134,12 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     else
       tmp += bandwidths[i];
 
-    if (tmp >= rand_bw)
-      break;
+    if (tmp >= rand_bw && !i_has_been_chosen) {
+      i_chosen = i;
+      i_has_been_chosen = 1;
+    }
   }
+  i = i_chosen;
   if (i == (unsigned)smartlist_len(sl)) {
     /* This was once possible due to round-off error, but shouldn't be able
      * to occur any longer. */
