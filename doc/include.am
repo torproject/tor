@@ -17,10 +17,10 @@ all_mans = $(regular_mans) doc/tor-fw-helper
 
 if USE_ASCIIDOC
 if USE_FW_HELPER
-nodist_man_MANS = $(all_mans:=.1)
+man_MANS = $(all_mans:=.1)
 doc_DATA = $(all_mans:=.html)
 else
-nodist_man_MANS = $(regular_mans:=.1)
+man_MANS = $(regular_mans:=.1)
 doc_DATA = $(regular_mans:=.html)
 endif
 html_in = $(all_mans:=.html.in)
@@ -30,7 +30,7 @@ else
 html_in =
 man_in =
 txt_in =
-nodist_man_MANS =
+man_MANS =
 doc_DATA =
 endif
 
@@ -42,48 +42,26 @@ EXTRA_DIST+= doc/HACKING doc/asciidoc-helper.sh			\
 
 docdir = @docdir@
 
-asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
+asciidoc_product = $(man_MANS) $(doc_DATA)
 
 # Generate the html documentation from asciidoc, but don't do
 # machine-specific replacements yet
-$(html_in) :
+$(html_in) : $(txt_in)
 	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ $(top_srcdir)/$@
-
-doc/tor.html.in : doc/tor.1.txt
-doc/torify.html.in : doc/torify.1.txt
-doc/tor-gencert.html.in : doc/tor-gencert.1.txt
-doc/tor-resolve.html.in : doc/tor-resolve.1.txt
-doc/tor-fw-helper.html.in : doc/tor-fw-helper.1.txt
 
 # Generate the manpage from asciidoc, but don't do
 # machine-specific replacements yet
-$(man_in) :
+$(man_in) : $(txt_in)
 	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ $(top_srcdir)/$@
-
-doc/tor.1.in : doc/tor.1.txt
-doc/torify.1.in : doc/torify.1.txt
-doc/tor-gencert.1.in : doc/tor-gencert.1.txt
-doc/tor-resolve.1.in : doc/tor-resolve.1.txt
-doc/tor-fw-helper.1.in : doc/tor-fw-helper.1.txt
 
 # use ../config.status to swap all machine-specific magic strings
 # in the asciidoc with their replacements.
-$(asciidoc_product) :
+$(asciidoc_product) : $(txt_in) $(man_in)
+	$(MKDIR_P) $(@D)
 	$(AM_V_GEN)if test -e $(top_srcdir)/$@.in && ! test -e $@.in ; then \
-		cp $(top_srcdir)/$@.in doc/.; \
+		cp $(top_srcdir)/$@.in $@; \
 	fi
-	$(AM_V_GEN)$(top_srcdir)/config.status --file=$@;
-
-doc/tor.1 : doc/tor.1.in
-doc/torify.1 : doc/torify.1.in
-doc/tor-gencert.1 : doc/tor-gencert.1.in
-doc/tor-resolve.1 : doc/tor-resolve.1.in
-doc/tor-fw-helper.1 : doc/tor-fw-helper.1.in
-doc/tor.html : doc/tor.html.in
-doc/torify.html : doc/torify.html.in
-doc/tor-gencert.html : doc/tor-gencert.html.in
-doc/tor-resolve.html : doc/tor-resolve.html.in
-doc/tor-fw-helper.html : doc/tor-fw-helper.html.in
+	$(AM_V_GEN)$(CONFIG_STATUS) --file=$@;
 
 CLEANFILES+= $(asciidoc_product) config.log
 DISTCLEANFILES+= $(html_in) $(man_in)
