@@ -2821,7 +2821,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     int flavor = networkstatus_parse_flavor_name(tok->args[1]);
     if (flavor < 0) {
       log_warn(LD_DIR, "Can't parse document with unknown flavor %s",
-               escaped(tok->args[2]));
+               escaped(tok->args[1]));
       goto err;
     }
     ns->flavor = flav = flavor;
