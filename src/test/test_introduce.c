@@ -281,7 +281,7 @@ static void
 do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
 {
   crypto_pk_t *k = NULL;
-  int r;
+  ssize_t r;
   uint8_t *cell = NULL;
   size_t cell_len;
   rend_intro_cell_t *parsed_req = NULL;

@@ -44,7 +44,7 @@ test_replaycache_miss(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
  done:
@@ -65,12 +65,12 @@ test_replaycache_hit(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 1);
 
  done:
@@ -91,17 +91,17 @@ test_replaycache_age(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
  done:
@@ -123,12 +123,12 @@ test_replaycache_elapsed(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        strlen(test_buffer), &elapsed);
+        (int)strlen(test_buffer), &elapsed);
   test_eq(result, 1);
   test_eq(elapsed, 100);
 
@@ -150,17 +150,17 @@ test_replaycache_noexpire(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
-        strlen(test_buffer), NULL);
+        (int)strlen(test_buffer), NULL);
   test_eq(result, 1);
 
  done:
