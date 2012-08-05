@@ -1,4 +1,8 @@
 Changes in version 0.2.3.20-rc - 2012-08-05
+  Tor 0.2.3.20-rc is the third release candidate for the Tor 0.2.3.x
+  series. It fixes a pair of code security bugs and a potential anonymity
+  issue, updates our RPM spec files, and cleans up other smaller issues.
+
   o Security fixes:
     - Avoid read-from-freed-memory and double-free bugs that could occur
       when a DNS request fails while launching it. Fixes bug 6480;
@@ -37,7 +41,6 @@ Changes in version 0.2.3.20-rc - 2012-08-05
     - When disabling guards for having too high a proportion of failed
       circuits, make sure to look at each guard. Fixes bug 6397; bugfix
       on 0.2.3.17-beta.
-    - Fix some typos in the manpages. Patch from A. Costa. Fixes bug 6500.
 
   o Packaging (RPM):
     - Update our default RPM spec files to work with mock and rpmbuild
@@ -54,6 +57,7 @@ Changes in version 0.2.3.20-rc - 2012-08-05
   o Documentation:
     - Clarify the documentation for the Alternate*Authority options.
       Fixes bug 6387.
+    - Fix some typos in the manpages. Patch from A. Costa. Fixes bug 6500.
 
   o Code simplification and refactoring:
     - Do not use SMARTLIST_FOREACH for any loop whose body exceeds
