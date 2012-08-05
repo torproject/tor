@@ -1,22 +1,50 @@
-Changes in version 0.2.3.20-rc - 2012-08-??
-  o Major bugfixes:
-    - When disabling guards for having too high a proportion of failed
-      circuits, make sure to look at each guard. Fixes bug 6397; bugfix
-      on 0.2.3.17-beta.
+Changes in version 0.2.3.20-rc - 2012-08-05
+  o Security fixes:
+    - Avoid read-from-freed-memory and double-free bugs that could occur
+      when a DNS request fails while launching it. Fixes bug 6480;
+      bugfix on 0.2.0.1-alpha.
+    - Avoid an uninitialized memory read when reading a vote or consensus
+      document that has an unrecognized flavor name. This read could
+      lead to a remote crash bug. Fixes bug 6530; bugfix on 0.2.2.6-alpha.
+    - Try to leak less information about what relays a client is
+      choosing to a side-channel attacker. Previously, a Tor client would
+      stop iterating through the list of available relays as soon as it
+      had chosen one, thus finishing a little earlier when it picked
+      a router earlier in the list. If an attacker can recover this
+      timing information (nontrivial but not proven to be impossible),
+      they could learn some coarse-grained information about which relays
+      a client was picking (middle nodes in particular are likelier to
+      be affected than exits). The timing attack might be mitigated by
+      other factors (see bug 6537 for some discussion), but it's best
+      not to take chances. Fixes bug 6537; bugfix on 0.0.8rc1.
 
   o Minor features:
+    - Try to make the warning when giving an obsolete SOCKSListenAddress
+      a little more useful.
     - Terminate active server managed proxies if Tor stops being a
       relay. Addresses parts of bug 6274; bugfix on 0.2.3.6-alpha.
     - Provide a better error message about possible OSX Asciidoc failure
-      reasons. Fix for bug 6436.
-    - Try to make the warning when giving an obsolete SOCKSListenAddress
-      a little more useful.
+      reasons. Fixes bug 6436.
+    - Warn when Tor is configured to use accounting in a way that can
+      link a hidden service to some other hidden service or public
+      address. Resolves ticket 6490.
 
   o Minor bugfixes:
     - Check return value of fputs() when writing authority certificate
       file. Fixes Coverity issue 709056; bugfix on 0.2.0.1-alpha.
     - Ignore ServerTransportPlugin lines when Tor is not configured as
       a relay. Fixes bug 6274; bugfix on 0.2.3.6-alpha.
+    - When disabling guards for having too high a proportion of failed
+      circuits, make sure to look at each guard. Fixes bug 6397; bugfix
+      on 0.2.3.17-beta.
+    - Fix some typos in the manpages. Patch from A. Costa. Fixes bug 6500.
+
+  o Packaging (RPM):
+    - Update our default RPM spec files to work with mock and rpmbuild
+      on RHEL/Fedora. They have an updated set of dependencies and
+      conflicts, a fix for an ancient typo when creating the "_tor"
+      user, and better instructions. Thanks to Ondrej Mikle for the
+      patch series. Fixes bug 6043.
 
   o Testing:
     - Make it possible to set the TestingTorNetwork configuration
