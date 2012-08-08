@@ -45,15 +45,15 @@ void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
 
-void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
+void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                                   cell_t *cell, cell_direction_t direction,
                                   streamid_t fromstream);
-void connection_or_unlink_all_active_circs(or_connection_t *conn);
-int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
-                                                  int max, time_t now);
+void channel_unlink_all_active_circs(channel_t *chan);
+int channel_flush_from_first_active_circuit(channel_t *conn,
+                                            int max, time_t now);
 void assert_active_circuits_ok(or_connection_t *orconn);
-void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
-void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
+void make_circuit_inactive_on_chan(circuit_t *circ, channel_t *chan);
+void make_circuit_active_on_chan(circuit_t *circ, channel_t *chan);
 
 int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
 const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
@@ -62,7 +62,7 @@ const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
 unsigned cell_ewma_get_tick(void);
 void cell_ewma_set_scale_factor(const or_options_t *options,
                                 const networkstatus_t *consensus);
-void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
+void circuit_clear_cell_queue(circuit_t *circ, channel_t *chan);
 
 #ifdef RELAY_PRIVATE
 int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,

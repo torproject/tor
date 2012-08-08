@@ -445,9 +445,9 @@ typedef enum {
 #define CIRCUIT_STATE_BUILDING 0
 /** Circuit state: Waiting to process the onionskin. */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1
-/** Circuit state: I'd like to deliver a create, but my n_conn is still
+/** Circuit state: I'd like to deliver a create, but my n_chan is still
  * connecting. */
-#define CIRCUIT_STATE_OR_WAIT 2
+#define CIRCUIT_STATE_CHAN_WAIT 2
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
 #define CIRCUIT_STATE_OPEN 3
 
@@ -674,7 +674,7 @@ typedef enum {
 #define END_CIRC_REASON_RESOURCELIMIT   5
 #define END_CIRC_REASON_CONNECTFAILED   6
 #define END_CIRC_REASON_OR_IDENTITY     7
-#define END_CIRC_REASON_OR_CONN_CLOSED  8
+#define END_CIRC_REASON_CHANNEL_CLOSED  8
 #define END_CIRC_REASON_FINISHED        9
 #define END_CIRC_REASON_TIMEOUT         10
 #define END_CIRC_REASON_DESTROYED       11
@@ -2590,9 +2590,9 @@ typedef struct circuit_t {
                    * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
   /** Queue of cells waiting to be transmitted on n_conn. */
-  cell_queue_t n_conn_cells;
-  /** The OR connection that is next in this circuit. */
-  or_connection_t *n_conn;
+  cell_queue_t n_chan_cells;
+  /** The channel that is next in this circuit. */
+  channel_t *n_chan;
   /** The circuit_id used in the next (forward) hop of this circuit. */
   circid_t n_circ_id;
 
@@ -2600,12 +2600,12 @@ typedef struct circuit_t {
    * the circuit has attached to a connection. */
   extend_info_t *n_hop;
 
-  /** True iff we are waiting for n_conn_cells to become less full before
+  /** True iff we are waiting for n_chan_cells to become less full before
    * allowing p_streams to add any more cells. (Origin circuit only.) */
-  unsigned int streams_blocked_on_n_conn : 1;
-  /** True iff we are waiting for p_conn_cells to become less full before
+  unsigned int streams_blocked_on_n_chan : 1;
+  /** True iff we are waiting for p_chan_cells to become less full before
    * allowing n_streams to add any more cells. (OR circuit only.) */
-  unsigned int streams_blocked_on_p_conn : 1;
+  unsigned int streams_blocked_on_p_chan : 1;
 
   uint8_t state; /**< Current status of this circuit. */
   uint8_t purpose; /**< Why are we creating this circuit? */
@@ -2620,10 +2620,10 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
-  /** For storage while n_conn is pending
-    * (state CIRCUIT_STATE_OR_WAIT). When defined, it is always
+  /** For storage while n_chan is pending
+    * (state CIRCUIT_STATE_CHAN_WAIT). When defined, it is always
     * length ONIONSKIN_CHALLENGE_LEN. */
-  char *n_conn_onionskin;
+  char *n_chan_onionskin;
 
   /** When was this circuit created?  We keep this timestamp with a higher
    * resolution than most so that the circuit-build-time tracking code can
@@ -2652,11 +2652,11 @@ typedef struct circuit_t {
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
-  struct circuit_t *next_active_on_n_conn;
+  struct circuit_t *next_active_on_n_chan;
   /** Previous circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
-  struct circuit_t *prev_active_on_n_conn;
+  struct circuit_t *prev_active_on_n_chan;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 
   /** Unique ID for measuring tunneled network status requests. */
@@ -2828,20 +2828,20 @@ typedef struct or_circuit_t {
   circuit_t _base;
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_conn.  NULL if we have no cells pending, or if we're not
+   * cells to p_chan.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
-  struct circuit_t *next_active_on_p_conn;
+  struct circuit_t *next_active_on_p_chan;
   /** Previous circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_conn.  NULL if we have no cells pending, or if we're not
+   * cells to p_chan.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
-  struct circuit_t *prev_active_on_p_conn;
+  struct circuit_t *prev_active_on_p_chan;
 
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;
   /** Queue of cells waiting to be transmitted on p_conn. */
-  cell_queue_t p_conn_cells;
-  /** The OR connection that is previous in this circuit. */
-  or_connection_t *p_conn;
+  cell_queue_t p_chan_cells;
+  /** The channel that is previous in this circuit. */
+  channel_t *p_chan;
   /** Linked list of Exit streams associated with this circuit. */
   edge_connection_t *n_streams;
   /** Linked list of Exit streams associated with this circuit that are

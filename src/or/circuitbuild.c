@@ -12,9 +12,11 @@
 #define CIRCUIT_PRIVATE
 
 #include "or.h"
+#include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "command.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
@@ -125,6 +127,9 @@ static int unit_tests = 0;
 
 /********* END VARIABLES ************/
 
+static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
+                                               uint16_t port,
+                                               const char *id_digest);
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        uint8_t cell_type, const char *payload);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
@@ -140,6 +145,22 @@ static void bridge_free(bridge_info_t *bridge);
 
 static int entry_guard_inc_first_hop_count(entry_guard_t *guard);
 static void pathbias_count_success(origin_circuit_t *circ);
+
+/** This function tries to get a channel to the specified endpoint,
+ * and then calls command_setup_channel() to give it the right
+ * callbacks.
+ */
+static channel_t *
+channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
+                            const char *id_digest)
+{
+  channel_t *chan;
+
+  chan = channel_connect(addr, port, id_digest);
+  if (chan) command_setup_channel(chan);
+
+  return chan;
+}
 
 /**
  * This function decides if CBT learning should be disabled. It returns
@@ -1683,26 +1704,30 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
  * Return it, or 0 if can't get a unique circ_id.
  */
 static circid_t
-get_unique_circ_id_by_conn(or_connection_t *conn)
+get_unique_circ_id_by_chan(channel_t *chan)
 {
   circid_t test_circ_id;
   circid_t attempts=0;
   circid_t high_bit;
 
-  tor_assert(conn);
-  if (conn->circ_id_type == CIRC_ID_TYPE_NEITHER) {
-    log_warn(LD_BUG, "Trying to pick a circuit ID for a connection from "
+  tor_assert(chan);
+  tor_assert(!(chan->is_listener));
+
+  if (chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_NEITHER) {
+    log_warn(LD_BUG,
+             "Trying to pick a circuit ID for a connection from "
              "a client with no identity.");
     return 0;
   }
-  high_bit = (conn->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
+  high_bit =
+    (chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
      * circID such that (high_bit|test_circ_id) is not already used. */
-    test_circ_id = conn->next_circ_id++;
+    test_circ_id = chan->u.cell_chan.next_circ_id++;
     if (test_circ_id == 0 || test_circ_id >= 1<<15) {
       test_circ_id = 1;
-      conn->next_circ_id = 2;
+      chan->u.cell_chan.next_circ_id = 2;
     }
     if (++attempts > 1<<15) {
       /* Make sure we don't loop forever if all circ_id's are used. This
@@ -1712,7 +1737,7 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
       return 0;
     }
     test_circ_id |= high_bit;
-  } while (circuit_id_in_use_on_orconn(test_circ_id, conn));
+  } while (circuit_id_in_use_on_channel(test_circ_id, chan));
   return test_circ_id;
 }
 
@@ -1891,9 +1916,9 @@ onion_populate_cpath(origin_circuit_t *circ)
 origin_circuit_t *
 origin_circuit_init(uint8_t purpose, int flags)
 {
-  /* sets circ->p_circ_id and circ->p_conn */
+  /* sets circ->p_circ_id and circ->p_chan */
   origin_circuit_t *circ = origin_circuit_new();
-  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OR_WAIT);
+  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_CHAN_WAIT);
   circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   circ->build_state->onehop_tunnel =
     ((flags & CIRCLAUNCH_ONEHOP_TUNNEL) ? 1 : 0);
@@ -1945,7 +1970,7 @@ int
 circuit_handle_first_hop(origin_circuit_t *circ)
 {
   crypt_path_t *firsthop;
-  or_connection_t *n_conn;
+  channel_t *n_chan;
   int err_reason = 0;
   const char *msg = NULL;
   int should_launch = 0;
@@ -1959,12 +1984,12 @@ circuit_handle_first_hop(origin_circuit_t *circ)
             fmt_addr(&firsthop->extend_info->addr),
             firsthop->extend_info->port);
 
-  n_conn = connection_or_get_for_extend(firsthop->extend_info->identity_digest,
-                                        &firsthop->extend_info->addr,
-                                        &msg,
-                                        &should_launch);
+  n_chan = channel_get_for_extend(firsthop->extend_info->identity_digest,
+                                  &firsthop->extend_info->addr,
+                                  &msg,
+                                  &should_launch);
 
-  if (!n_conn) {
+  if (!n_chan) {
     /* not currently connected in a useful way. */
     log_info(LD_CIRC, "Next router is %s: %s",
              safe_str_client(extend_info_describe(firsthop->extend_info)),
@@ -1974,10 +1999,11 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     if (should_launch) {
       if (circ->build_state->onehop_tunnel)
         control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
-      n_conn = connection_or_connect(&firsthop->extend_info->addr,
-                                     firsthop->extend_info->port,
-                                     firsthop->extend_info->identity_digest);
-      if (!n_conn) { /* connect failed, forget the whole thing */
+      n_chan = channel_connect_for_circuit(
+          &firsthop->extend_info->addr,
+          firsthop->extend_info->port,
+          firsthop->extend_info->identity_digest);
+      if (!n_chan) { /* connect failed, forget the whole thing */
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
       }
@@ -1985,13 +2011,13 @@ circuit_handle_first_hop(origin_circuit_t *circ)
 
     log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
     /* return success. The onion/circuit/etc will be taken care of
-     * automatically (may already have been) whenever n_conn reaches
+     * automatically (may already have been) whenever n_chan reaches
      * OR_CONN_STATE_OPEN.
      */
     return 0;
   } else { /* it's already open. use it. */
     tor_assert(!circ->_base.n_hop);
-    circ->_base.n_conn = n_conn;
+    circ->_base.n_chan = n_chan;
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
@@ -2007,48 +2033,51 @@ circuit_handle_first_hop(origin_circuit_t *circ)
  * Status is 1 if connect succeeded, or 0 if connect failed.
  */
 void
-circuit_n_conn_done(or_connection_t *or_conn, int status)
+circuit_n_chan_done(channel_t *chan, int status)
 {
   smartlist_t *pending_circs;
   int err_reason = 0;
 
-  log_debug(LD_CIRC,"or_conn to %s/%s, status=%d",
-            or_conn->nickname ? or_conn->nickname : "NULL",
-            or_conn->_base.address, status);
+  tor_assert(chan);
+  tor_assert(!(chan->is_listener));
+
+  log_debug(LD_CIRC,"chan to %s/%s, status=%d",
+            chan->u.cell_chan.nickname ?
+              chan->u.cell_chan.nickname : "NULL",
+            channel_get_canonical_remote_descr(chan), status);
 
   pending_circs = smartlist_new();
-  circuit_get_all_pending_on_or_conn(pending_circs, or_conn);
+  circuit_get_all_pending_on_channel(pending_circs, chan);
 
   SMARTLIST_FOREACH_BEGIN(pending_circs, circuit_t *, circ)
     {
       /* These checks are redundant wrt get_all_pending_on_or_conn, but I'm
        * leaving them in in case it's possible for the status of a circuit to
        * change as we're going down the list. */
-      if (circ->marked_for_close || circ->n_conn || !circ->n_hop ||
-          circ->state != CIRCUIT_STATE_OR_WAIT)
+      if (circ->marked_for_close || circ->n_chan || !circ->n_hop ||
+          circ->state != CIRCUIT_STATE_CHAN_WAIT)
         continue;
 
       if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
         /* Look at addr/port. This is an unkeyed connection. */
-        if (!tor_addr_eq(&circ->n_hop->addr, &or_conn->_base.addr) ||
-            circ->n_hop->port != or_conn->_base.port)
+        if (!channel_matches_extend_info(chan, circ->n_hop))
           continue;
       } else {
         /* We expected a key. See if it's the right one. */
-        if (tor_memneq(or_conn->identity_digest,
+        if (tor_memneq(chan->u.cell_chan.identity_digest,
                    circ->n_hop->identity_digest, DIGEST_LEN))
           continue;
       }
-      if (!status) { /* or_conn failed; close circ */
-        log_info(LD_CIRC,"or_conn failed. Closing circ.");
-        circuit_mark_for_close(circ, END_CIRC_REASON_OR_CONN_CLOSED);
+      if (!status) { /* chan failed; close circ */
+        log_info(LD_CIRC,"Channel failed; closing circ.");
+        circuit_mark_for_close(circ, END_CIRC_REASON_CHANNEL_CLOSED);
         continue;
       }
       log_debug(LD_CIRC, "Found circ, sending create cell.");
       /* circuit_deliver_create_cell will set n_circ_id and add us to
-       * orconn_circuid_circuit_map, so we don't need to call
-       * set_circid_orconn here. */
-      circ->n_conn = or_conn;
+       * chan_circuid_circuit_map, so we don't need to call
+       * set_circid_chan here. */
+      circ->n_chan = chan;
       extend_info_free(circ->n_hop);
       circ->n_hop = NULL;
 
@@ -2064,13 +2093,13 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
         }
       } else {
         /* pull the create cell out of circ->onionskin, and send it */
-        tor_assert(circ->n_conn_onionskin);
+        tor_assert(circ->n_chan_onionskin);
         if (circuit_deliver_create_cell(circ,CELL_CREATE,
-                                        circ->n_conn_onionskin)<0) {
+                                        circ->n_chan_onionskin)<0) {
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
-        tor_free(circ->n_conn_onionskin);
+        tor_free(circ->n_chan_onionskin);
         circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
     }
@@ -2079,7 +2108,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
   smartlist_free(pending_circs);
 }
 
-/** Find a new circid that isn't currently in use on the circ->n_conn
+/** Find a new circid that isn't currently in use on the circ->n_chan
  * for the outgoing
  * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
  * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
@@ -2094,29 +2123,29 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   circid_t id;
 
   tor_assert(circ);
-  tor_assert(circ->n_conn);
+  tor_assert(circ->n_chan);
   tor_assert(payload);
   tor_assert(cell_type == CELL_CREATE || cell_type == CELL_CREATE_FAST);
 
-  id = get_unique_circ_id_by_conn(circ->n_conn);
+  id = get_unique_circ_id_by_chan(circ->n_chan);
   if (!id) {
     log_warn(LD_CIRC,"failed to get unique circID.");
     return -1;
   }
   log_debug(LD_CIRC,"Chosen circID %u.", id);
-  circuit_set_n_circid_orconn(circ, id, circ->n_conn);
+  circuit_set_n_circid_chan(circ, id, circ->n_chan);
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = cell_type;
   cell.circ_id = circ->n_circ_id;
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
-  append_cell_to_circuit_queue(circ, circ->n_conn, &cell,
+  append_cell_to_circuit_queue(circ, circ->n_chan, &cell,
                                CELL_DIRECTION_OUT, 0);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     /* mark it so it gets better rate limiting treatment. */
-    circ->n_conn->client_used = time(NULL);
+    channel_timestamp_client(circ->n_chan);
   }
 
   return 0;
@@ -2218,7 +2247,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     else
       control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
 
-    node = node_get_by_id(circ->_base.n_conn->identity_digest);
+    tor_assert(!(circ->_base.n_chan->is_listener));
+    node = node_get_by_id(circ->_base.n_chan->u.cell_chan.identity_digest);
     fast = should_use_create_fast_for_circuit(circ);
     if (!fast) {
       /* We are an OR and we know the right onion key: we should
@@ -2386,7 +2416,7 @@ circuit_note_clock_jumped(int seconds_elapsed)
 int
 circuit_extend(cell_t *cell, circuit_t *circ)
 {
-  or_connection_t *n_conn;
+  channel_t *n_chan;
   relay_header_t rh;
   char *onionskin;
   char *id_digest=NULL;
@@ -2396,9 +2426,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   const char *msg = NULL;
   int should_launch = 0;
 
-  if (circ->n_conn) {
+  if (circ->n_chan) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "n_conn already set. Bug/attack. Closing.");
+           "n_chan already set. Bug/attack. Closing.");
     return -1;
   }
   if (circ->n_hop) {
@@ -2457,19 +2487,22 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
-  if (tor_memeq(id_digest, TO_OR_CIRCUIT(circ)->p_conn->identity_digest,
-              DIGEST_LEN)) {
+  tor_assert(!(TO_OR_CIRCUIT(circ)->p_chan->is_listener));
+  if (tor_memeq(id_digest,
+                TO_OR_CIRCUIT(circ)->p_chan->
+                  u.cell_chan.identity_digest,
+                DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop.");
     return -1;
   }
 
-  n_conn = connection_or_get_for_extend(id_digest,
-                                        &n_addr,
-                                        &msg,
-                                        &should_launch);
+  n_chan = channel_get_for_extend(id_digest,
+                                  &n_addr,
+                                  &msg,
+                                  &should_launch);
 
-  if (!n_conn) {
+  if (!n_chan) {
     log_debug(LD_CIRC|LD_OR,"Next router (%s:%d): %s",
               fmt_addr(&n_addr), (int)n_port, msg?msg:"????");
 
@@ -2478,31 +2511,32 @@ circuit_extend(cell_t *cell, circuit_t *circ)
                                     NULL /*onion_key*/,
                                     &n_addr, n_port);
 
-    circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
-    circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
+    circ->n_chan_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
+    memcpy(circ->n_chan_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
+    circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
 
     if (should_launch) {
       /* we should try to open a connection */
-      n_conn = connection_or_connect(&n_addr, n_port, id_digest);
-      if (!n_conn) {
-        log_info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
+      n_chan = channel_connect_for_circuit(&n_addr, n_port, id_digest);
+      if (!n_chan) {
+        log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
         return 0;
       }
       log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
     }
     /* return success. The onion/circuit/etc will be taken care of
-     * automatically (may already have been) whenever n_conn reaches
+     * automatically (may already have been) whenever n_chan reaches
      * OR_CONN_STATE_OPEN.
      */
     return 0;
   }
 
   tor_assert(!circ->n_hop); /* Connection is already established. */
-  circ->n_conn = n_conn;
-  log_debug(LD_CIRC,"n_conn is %s:%u",
-            n_conn->_base.address,n_conn->_base.port);
+  circ->n_chan = n_chan;
+  log_debug(LD_CIRC,
+            "n_chan is %s",
+            channel_get_canonical_remote_descr(n_chan));
 
   if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
     return -1;
@@ -2699,8 +2733,9 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     if (!circ->has_opened) {
       entry_guard_t *guard;
 
+      tor_assert(!(circ->_base.n_chan->is_listener));
       guard = entry_guard_get_by_id_digest(
-              circ->_base.n_conn->identity_digest);
+                circ->_base.n_chan->u.cell_chan.identity_digest);
       if (guard) {
         if (circ->path_state == PATH_STATE_NEW_CIRC) {
           circ->path_state = PATH_STATE_DID_FIRST_HOP;
@@ -2770,6 +2805,7 @@ pathbias_count_success(origin_circuit_t *circ)
   static ratelim_t success_notice_limit =
     RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
   char *rate_msg = NULL;
+  entry_guard_t *guard = NULL;
 
   /* We can't do path bias accounting without entry guards.
    * Testing and controller circuits also have no guards. */
@@ -2804,8 +2840,10 @@ pathbias_count_success(origin_circuit_t *circ)
 
   /* Don't count cannibalized/reused circs for path bias */
   if (!circ->has_opened) {
-    entry_guard_t *guard =
-      entry_guard_get_by_id_digest(circ->_base.n_conn->identity_digest);
+    tor_assert(!(circ->_base.n_chan->is_listener));
+    guard =
+      entry_guard_get_by_id_digest(circ->_base.n_chan->
+                                     u.cell_chan.identity_digest);
 
     if (guard) {
       if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
@@ -3021,7 +3059,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
    *     just give up.
    */
   circuit_mark_for_close(TO_CIRCUIT(circ),
-          END_CIRC_REASON_FLAG_REMOTE|reason);
+          END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_CHANNEL_CLOSED|reason);
   return 0;
 
 #if 0
@@ -3095,12 +3133,12 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
   circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
 
   append_cell_to_circuit_queue(TO_CIRCUIT(circ),
-                               circ->p_conn, &cell, CELL_DIRECTION_IN, 0);
+                               circ->p_chan, &cell, CELL_DIRECTION_IN, 0);
   log_debug(LD_CIRC,"Finished sending '%s' cell.",
             circ->is_first_hop ? "created_fast" : "created");
 
-  if (!is_local_addr(&circ->p_conn->_base.addr) &&
-      !connection_or_nonopen_was_started_here(circ->p_conn)) {
+  if (!channel_is_local(circ->p_chan) &&
+      !channel_is_outgoing(circ->p_chan)) {
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
      * can reach us too. */
