@@ -2,3 +2,11 @@
     - Switch weighted node selection rule from using a list of doubles
       to using a list of int64_t. This should make the process slightly
       easier to debug and maintain. Needed for fix for bug 6538.
+
+  o Security features:
+    - Switch to a completely time-invariant approach for picking nodes
+      weighted by bandwidth. Our old approach would run through the
+      part of the loop after it had made its choice slightly slower
+      than it ran through the part of the loop before it had made its
+      choice. Fix for bug 6538.
+

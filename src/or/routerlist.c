@@ -1710,7 +1710,6 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   uint64_t tmp;
   unsigned int i;
   unsigned int i_chosen;
-  unsigned int i_has_been_chosen;
   int have_unknown = 0; /* true iff sl contains element not in consensus. */
 
   /* Can't choose exit and guard at same time */
@@ -1881,13 +1880,12 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
 
   /* Last, count through sl until we get to the element we picked */
   i_chosen = (unsigned)smartlist_len(sl);
-  i_has_been_chosen = 0;
   tmp = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     tmp += bandwidths[i];
-    if (tmp >= rand_bw && !i_has_been_chosen) {
+    if (tmp >= rand_bw) {
       i_chosen = i;
-      i_has_been_chosen = 1;
+      rand_bw = UINT64_MAX;
     }
   }
   i = i_chosen;
@@ -1926,7 +1924,6 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 {
   unsigned int i;
   unsigned int i_chosen;
-  unsigned int i_has_been_chosen;
   int32_t *bandwidths;
   int is_exit;
   int is_guard;
@@ -2127,7 +2124,6 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   i_chosen = (unsigned)smartlist_len(sl);
-  i_has_been_chosen = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     is_exit = bitarray_is_set(exit_bits, i);
     is_guard = bitarray_is_set(guard_bits, i);
@@ -2142,9 +2138,9 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     else
       tmp += bandwidths[i];
 
-    if (tmp >= rand_bw && !i_has_been_chosen) {
+    if (tmp >= rand_bw) {
       i_chosen = i;
-      i_has_been_chosen = 1;
+      rand_bw = UINT64_MAX;
     }
   }
   i = i_chosen;
