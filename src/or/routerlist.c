@@ -1875,15 +1875,13 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   }
 
   rand_bw = crypto_rand_uint64(weighted_bw);
-  rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
-              * from 1 below. See bug 1203 for details. */
 
   /* Last, count through sl until we get to the element we picked */
   i_chosen = (unsigned)smartlist_len(sl);
   tmp = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     tmp += bandwidths[i];
-    if (tmp >= rand_bw) {
+    if (tmp > rand_bw) {
       i_chosen = i;
       rand_bw = UINT64_MAX;
     }
@@ -2118,8 +2116,6 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 
   /* Almost done: choose a random value from the bandwidth weights. */
   rand_bw = crypto_rand_uint64(total_bw);
-  rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
-              * from 1 below. See bug 1203 for details. */
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
@@ -2138,7 +2134,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     else
       tmp += bandwidths[i];
 
-    if (tmp >= rand_bw) {
+    if (tmp > rand_bw) {
       i_chosen = i;
       rand_bw = UINT64_MAX;
     }
