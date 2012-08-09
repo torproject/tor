@@ -3013,19 +3013,21 @@ typedef struct {
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
-  config_line_t *SocksPort_lines; /**< Ports to listen on for SOCKS connections. */
+  /** Ports to listen on for SOCKS connections. */
+  config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
   config_line_t *TransPort_lines;
   config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
                             * connections. */
-  config_line_t *ControlPort_lines; /**< Port to listen on for control
+  config_line_t *ControlPort_lines; /**< Ports to listen on for control
                                * connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
 
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
-  config_line_t *DirPort_lines; /**< Port to listen on for directory connections. */
-  config_line_t *DNSPort_lines; /**< Port to listen on for DNS requests. */
+  /** Ports to listen on for directory connections. */
+  config_line_t *DirPort_lines;
+  config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
 
   /** @name port booleans
    *

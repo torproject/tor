@@ -1653,7 +1653,7 @@ options_act(const or_options_t *old_options)
       int was_relay = 0;
       if (options->BridgeRelay) {
         time_t int_start = time(NULL);
-        if (config_lines_eq(old_options->ORPort_lines, options->ORPort_lines)) {
+        if (config_lines_eq(old_options->ORPort_lines,options->ORPort_lines)) {
           int_start += RELAY_BRIDGE_STATS_DELAY;
           was_relay = 1;
         }
@@ -4361,8 +4361,10 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
-      !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
-      !config_lines_eq(old_options->DirPort_lines, new_options->DirPort_lines) ||
+      !config_lines_eq(old_options->ORPort_lines,
+                       new_options->ORPort_lines) ||
+      !config_lines_eq(old_options->DirPort_lines,
+                       new_options->DirPort_lines) ||
       old_options->ClientOnly != new_options->ClientOnly ||
       old_options->DisableNetwork != new_options->DisableNetwork ||
       old_options->_PublishServerDescriptor !=
@@ -6019,26 +6021,26 @@ parse_ports(or_options_t *options, int validate_only,
     goto err;
   }
   if (parse_port_config(ports,
-                               options->DNSPort_lines, options->DNSListenAddress,
-                               "DNS", CONN_TYPE_AP_DNS_LISTENER,
-                               "127.0.0.1", 0,
-                               CL_PORT_WARN_NONLOCAL) < 0) {
+                        options->DNSPort_lines, options->DNSListenAddress,
+                        "DNS", CONN_TYPE_AP_DNS_LISTENER,
+                        "127.0.0.1", 0,
+                        CL_PORT_WARN_NONLOCAL) < 0) {
     *msg = tor_strdup("Invalid DNSPort/DNSListenAddress configuration");
     goto err;
   }
   if (parse_port_config(ports,
-                               options->TransPort_lines, options->TransListenAddress,
-                               "Trans", CONN_TYPE_AP_TRANS_LISTENER,
-                               "127.0.0.1", 0,
-                               CL_PORT_WARN_NONLOCAL) < 0) {
+                        options->TransPort_lines, options->TransListenAddress,
+                        "Trans", CONN_TYPE_AP_TRANS_LISTENER,
+                        "127.0.0.1", 0,
+                        CL_PORT_WARN_NONLOCAL) < 0) {
     *msg = tor_strdup("Invalid TransPort/TransListenAddress configuration");
     goto err;
   }
   if (parse_port_config(ports,
-                               options->NATDPort_lines, options->NATDListenAddress,
-                               "NATD", CONN_TYPE_AP_NATD_LISTENER,
-                               "127.0.0.1", 0,
-                               CL_PORT_WARN_NONLOCAL) < 0) {
+                        options->NATDPort_lines, options->NATDListenAddress,
+                        "NATD", CONN_TYPE_AP_NATD_LISTENER,
+                        "127.0.0.1", 0,
+                        CL_PORT_WARN_NONLOCAL) < 0) {
     *msg = tor_strdup("Invalid NatdPort/NatdListenAddress configuration");
     goto err;
   }
@@ -6051,7 +6053,8 @@ parse_ports(or_options_t *options, int validate_only,
       control_port_flags |= CL_PORT_FORBID_NONLOCAL;
 
     if (parse_port_config(ports,
-                          options->ControlPort_lines, options->ControlListenAddress,
+                          options->ControlPort_lines,
+                          options->ControlListenAddress,
                           "Control", CONN_TYPE_CONTROL_LISTENER,
                           "127.0.0.1", 0,
                           control_port_flags) < 0) {
