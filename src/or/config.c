@@ -5667,6 +5667,7 @@ parse_port_config(smartlist_t *out,
   const unsigned forbid_nonlocal = flags & CL_PORT_FORBID_NONLOCAL;
   const unsigned allow_spurious_listenaddr =
     flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
+  int got_zero_port=0, got_nonzero_port=0;
 
   /* FooListenAddress is deprecated; let's make it work like it used to work,
    * though. */
@@ -5919,6 +5920,11 @@ parse_port_config(smartlist_t *out,
       } SMARTLIST_FOREACH_END(elt);
     }
 
+    if (port)
+      got_nonzero_port = 1;
+    else
+      got_zero_port = 1;
+
     if (out && port) {
       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
       tor_addr_copy(&cfg->addr, &addr);
@@ -5943,6 +5949,13 @@ parse_port_config(smartlist_t *out,
       warn_nonlocal_controller_ports(out, forbid_nonlocal);
     else
       warn_nonlocal_client_ports(out, portname);
+  }
+
+  if (got_zero_port && got_nonzero_port) {
+    log_warn(LD_CONFIG, "You specified a nonzero %sPort along with '%sPort 0' "
+             "in the same configuration. Did you mean to disable %sPort or "
+             "not?", portname, portname, portname);
+    goto err;
   }
 
   retval = 0;
