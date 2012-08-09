@@ -1922,15 +1922,17 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 {
   unsigned int i;
   unsigned int i_chosen;
-  int32_t *bandwidths;
+  uint64_t *bandwidths;
   int is_exit;
   int is_guard;
+  int is_fast;
   uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
   uint64_t total_nonguard_bw = 0, total_guard_bw = 0;
   uint64_t rand_bw, tmp;
   double exit_weight;
   double guard_weight;
   int n_unknown = 0;
+  bitarray_t *fast_bits;
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
   int me_idx = -1;
@@ -1954,10 +1956,9 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
   }
 
   /* First count the total bandwidth weight, and make a list
-   * of each value.  <0 means "unknown; no routerinfo."  We use the
-   * bits of negative values to remember whether the router was fast (-x)&1
-   * and whether it was an exit (-x)&2 or guard (-x)&4.  Yes, it's a hack. */
-  bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
+   * of each value.  We use UINT64_MAX to indicate "unknown". */
+  bandwidths = tor_malloc_zero(sizeof(uint64_t)*smartlist_len(sl));
+  fast_bits = bitarray_init_zero(smartlist_len(sl));
   exit_bits = bitarray_init_zero(smartlist_len(sl));
   guard_bits = bitarray_init_zero(smartlist_len(sl));
 
@@ -1965,7 +1966,6 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
     /* first, learn what bandwidth we think i has */
     int is_known = 1;
-    int32_t flags = 0;
     uint32_t this_bw = 0;
     i = node_sl_idx;
 
@@ -1978,12 +1978,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
       if (node->rs->has_bandwidth) {
         this_bw = kb_to_bytes(node->rs->bandwidth);
       } else { /* guess */
-        /* XXX024 once consensuses always list bandwidths, we can take
-         * this guessing business out. -RD */
         is_known = 0;
-        flags = node->rs->is_fast ? 1 : 0;
-        flags |= is_exit ? 2 : 0;
-        flags |= is_guard ? 4 : 0;
       }
     } else if (node->ri) {
       /* Must be a bridge if we're willing to use it */
@@ -1994,12 +1989,11 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
       bitarray_set(exit_bits, i);
     if (is_guard)
       bitarray_set(guard_bits, i);
+    if (node->is_fast)
+      bitarray_set(fast_bits, i);
+
     if (is_known) {
-      bandwidths[i] = (int32_t) this_bw;
-      /* Casting this_bw to int32_t is safe because both kb_to_bytes
-         and bridge_get_advertised_bandwidth_bounded limit it to below
-         INT32_MAX. */
-      tor_assert(bandwidths[i] >= 0);
+      bandwidths[i] = this_bw;
       if (is_guard)
         total_guard_bw += this_bw;
       else
@@ -2010,7 +2004,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
         total_nonexit_bw += this_bw;
     } else {
       ++n_unknown;
-      bandwidths[node_sl_idx] = -flags;
+      bandwidths[i] = UINT64_MAX;
     }
   } SMARTLIST_FOREACH_END(node);
 
@@ -2028,12 +2022,12 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
       avg_slow = 20000;
     }
     for (i=0; i<(unsigned)smartlist_len(sl); ++i) {
-      int32_t bw = bandwidths[i];
-      if (bw>=0)
+      if (bandwidths[i] != UINT64_MAX)
         continue;
-      is_exit = ((-bw)&2);
-      is_guard = ((-bw)&4);
-      bandwidths[i] = ((-bw)&1) ? avg_fast : avg_slow;
+      is_fast = bitarray_is_set(fast_bits, i);
+      is_exit = bitarray_is_set(exit_bits, i);
+      is_guard = bitarray_is_set(guard_bits, i);
+      bandwidths[i] = is_fast ? avg_fast : avg_slow;
       if (is_exit)
         total_exit_bw += bandwidths[i];
       else
@@ -2048,6 +2042,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
   /* If there's no bandwidth at all, pick at random. */
   if (!(total_exit_bw+total_nonexit_bw)) {
     tor_free(bandwidths);
+    tor_free(fast_bits);
     tor_free(exit_bits);
     tor_free(guard_bits);
     return smartlist_choose(sl);
@@ -2081,20 +2076,20 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     total_bw = 0;
     sl_last_weighted_bw_of_me = 0;
     for (i=0; i < (unsigned)smartlist_len(sl); i++) {
-      uint64_t bw;
+      tor_assert(bandwidths[i] < UINT64_MAX);
+
       is_exit = bitarray_is_set(exit_bits, i);
       is_guard = bitarray_is_set(guard_bits, i);
       if (is_exit && is_guard)
-        bw = ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
+        bandwidths[i] = tor_llround(bandwidths[i] * exit_weight * guard_weight);
       else if (is_guard)
-        bw = ((uint64_t)(bandwidths[i] * guard_weight));
+        bandwidths[i] = tor_llround(bandwidths[i] * guard_weight);
       else if (is_exit)
-        bw = ((uint64_t)(bandwidths[i] * exit_weight));
-      else
-        bw = bandwidths[i];
-      total_bw += bw;
+        bandwidths[i] = tor_llround(bandwidths[i] * exit_weight);
+
+      total_bw += bandwidths[i];
       if (i == (unsigned) me_idx)
-        sl_last_weighted_bw_of_me = bw;
+        sl_last_weighted_bw_of_me = bandwidths[i];
     }
   }
 
@@ -2121,18 +2116,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
   tmp = 0;
   i_chosen = (unsigned)smartlist_len(sl);
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
-    is_exit = bitarray_is_set(exit_bits, i);
-    is_guard = bitarray_is_set(guard_bits, i);
-
-    /* Weights can be 0 if not counting guards/exits */
-    if (is_exit && is_guard)
-      tmp += ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
-    else if (is_guard)
-      tmp += ((uint64_t)(bandwidths[i] * guard_weight));
-    else if (is_exit)
-      tmp += ((uint64_t)(bandwidths[i] * exit_weight));
-    else
-      tmp += bandwidths[i];
+    tmp += bandwidths[i];
 
     if (tmp > rand_bw) {
       i_chosen = i;
@@ -2151,6 +2135,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
              U64_PRINTF_ARG(rand_bw), U64_PRINTF_ARG(total_bw));
   }
   tor_free(bandwidths);
+  tor_free(fast_bits);
   tor_free(exit_bits);
   tor_free(guard_bits);
   return smartlist_get(sl, i);
