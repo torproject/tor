@@ -10,3 +10,7 @@
       than it ran through the part of the loop before it had made its
       choice. Fix for bug 6538.
 
+  o Code simplifications and refactoring:
+    - Move the core of our "choose a weighted element at random" logic
+      into its own function, and give it unit tests.  Now the logic is
+      testable, and a little less fragile too.

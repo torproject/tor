@@ -216,5 +216,10 @@ int hex_digest_nickname_decode(const char *hexdigest,
                                char *nickname_qualifier_out,
                                char *nickname_out);
 
+#ifdef ROUTERLIST_PRIVATE
+int choose_array_element_by_weight(const uint64_t *entries, int n_entries,
+                                   uint64_t *total_out);
+#endif
+
 #endif
 

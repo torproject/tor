@@ -65,6 +65,10 @@
 
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, ==, hex)
 
+#define tt_double_op(a,op,b)                                            \
+  tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%f",   \
+                      TT_EXIT_TEST_FUNCTION)
+
 const char *get_fname(const char *name);
 crypto_pk_t *pk_generate(int idx);
 
