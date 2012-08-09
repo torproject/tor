@@ -168,6 +168,9 @@ typedef struct config_var_t {
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
+#define VPORT(member,conftype,initvalue)                                    \
+  VAR(#member, conftype, member ## _lines, initvalue)
+
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
@@ -229,7 +232,7 @@ static config_var_t _option_vars[] = {
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
   V(ContactInfo,                 STRING,   NULL),
   V(ControlListenAddress,        LINELIST, NULL),
-  V(ControlPort,                 LINELIST, NULL),
+  VPORT(ControlPort,                 LINELIST, NULL),
   V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
@@ -246,7 +249,7 @@ static config_var_t _option_vars[] = {
   V(DirListenAddress,            LINELIST, NULL),
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
-  V(DirPort,                     LINELIST, NULL),
+  VPORT(DirPort,                     LINELIST, NULL),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
   OBSOLETE("DirRecordUsageByCountry"),
@@ -259,7 +262,7 @@ static config_var_t _option_vars[] = {
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
   V(DynamicDHGroups,             BOOL,     "0"),
-  V(DNSPort,                     LINELIST, NULL),
+  VPORT(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
@@ -345,7 +348,7 @@ static config_var_t _option_vars[] = {
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   V(NATDListenAddress,           LINELIST, NULL),
-  V(NATDPort,                    LINELIST, NULL),
+  VPORT(NATDPort,                    LINELIST, NULL),
   V(Nickname,                    STRING,   NULL),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   OBSOLETE("NoPublish"),
@@ -353,7 +356,7 @@ static config_var_t _option_vars[] = {
   V(NumCPUs,                     UINT,     "0"),
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
-  V(ORPort,                      LINELIST, NULL),
+  VPORT(ORPort,                      LINELIST, NULL),
   V(OutboundBindAddress,         STRING,   NULL),
 
   V(PathBiasCircThreshold,       INT,      "-1"),
@@ -406,7 +409,7 @@ static config_var_t _option_vars[] = {
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
-  V(SocksPort,                   LINELIST, NULL),
+  VPORT(SocksPort,                   LINELIST, NULL),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
   OBSOLETE("StatusFetchPeriod"),
   V(StrictNodes,                 BOOL,     "0"),
@@ -419,7 +422,7 @@ static config_var_t _option_vars[] = {
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
-  V(TransPort,                   LINELIST, NULL),
+  VPORT(TransPort,                   LINELIST, NULL),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
@@ -622,7 +625,7 @@ static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
 static void port_cfg_free(port_cfg_t *port);
-static int parse_ports(const or_options_t *options, int validate_only,
+static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out);
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options);
@@ -1167,7 +1170,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
   /* Open /dev/pf before dropping privileges. */
-  if (options->TransPort) {
+  if (options->TransPort_set) {
     if (get_pf_socket() < 0) {
       *msg = tor_strdup("Unable to open /dev/pf for transparent proxy.");
       goto rollback;
@@ -1650,7 +1653,7 @@ options_act(const or_options_t *old_options)
       int was_relay = 0;
       if (options->BridgeRelay) {
         time_t int_start = time(NULL);
-        if (config_lines_eq(old_options->ORPort, options->ORPort)) {
+        if (config_lines_eq(old_options->ORPort_lines, options->ORPort_lines)) {
           int_start += RELAY_BRIDGE_STATS_DELAY;
           was_relay = 1;
         }
@@ -1734,7 +1737,7 @@ options_act(const or_options_t *old_options)
       } else {
         options->DirReqStatistics = 0;
         /* Don't warn Tor clients, they don't use statistics */
-        if (options->ORPort)
+        if (options->ORPort_set)
           log_notice(LD_CONFIG, "Configured to measure directory request "
                                 "statistics, but no GeoIP database found. "
                                 "Please specify a GeoIP database using the "
@@ -3448,7 +3451,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "Tor will still run, but probably won't do anything.");
 
 #ifndef USE_TRANSPARENT
-  if (options->TransPort || options->TransListenAddress)
+  /* XXXX024 I think we can remove this TransListenAddress */
+  if (options->TransPort_set || options->TransListenAddress)
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
@@ -3518,10 +3522,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->AuthoritativeDir && !options->DirPort)
+  if (options->AuthoritativeDir && !options->DirPort_set)
     REJECT("Running as authoritative directory, but no DirPort set.");
 
-  if (options->AuthoritativeDir && !options->ORPort)
+  if (options->AuthoritativeDir && !options->ORPort_set)
     REJECT("Running as authoritative directory, but no ORPort set.");
 
   if (options->AuthoritativeDir && options->ClientOnly)
@@ -3708,11 +3712,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "PublishServerDescriptor line.");
   }
 
-  if (options->BridgeRelay && options->DirPort) {
+  if (options->BridgeRelay && options->DirPort_set) {
     log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "
              "DirPort");
-    config_free_lines(options->DirPort);
-    options->DirPort = NULL;
+    config_free_lines(options->DirPort_lines);
+    options->DirPort_lines = NULL;
+    options->DirPort_set = 0;
   }
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {
@@ -3987,7 +3992,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->ControlPort && !options->HashedControlPassword &&
+  if (options->ControlPort_set && !options->HashedControlPassword &&
       !options->HashedControlSessionPassword &&
       !options->CookieAuthentication) {
     log_warn(LD_CONFIG, "ControlPort is open, but no authentication method "
@@ -4067,7 +4072,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
           MIN_CONSTRAINED_TCP_BUFFER, MAX_CONSTRAINED_TCP_BUFFER);
       return -1;
     }
-    if (options->DirPort) {
+    if (options->DirPort_set) {
       /* Providing cached directory entries while system TCP buffers are scarce
        * will exacerbate the socket errors.  Suggest that this be disabled. */
       COMPLAIN("You have requested constrained socket buffers while also "
@@ -4226,7 +4231,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
         }
     });
 
-  if (options->BridgeRelay == 1 && ! options->ORPort)
+  if (options->BridgeRelay == 1 && ! options->ORPort_set)
       REJECT("BridgeRelay is 1, ORPort is not set. This is an invalid "
              "combination.");
 
@@ -4326,7 +4331,7 @@ options_transition_affects_workers(const or_options_t *old_options,
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCPUs != new_options->NumCPUs ||
-      !config_lines_eq(old_options->ORPort, new_options->ORPort) ||
+      !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||
       old_options->_SafeLogging != new_options->_SafeLogging ||
@@ -4356,8 +4361,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
-      !config_lines_eq(old_options->ORPort, new_options->ORPort) ||
-      !config_lines_eq(old_options->DirPort, new_options->DirPort) ||
+      !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
+      !config_lines_eq(old_options->DirPort_lines, new_options->DirPort_lines) ||
       old_options->ClientOnly != new_options->ClientOnly ||
       old_options->DisableNetwork != new_options->DisableNetwork ||
       old_options->_PublishServerDescriptor !=
@@ -5643,13 +5648,13 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
  */
 static int
 parse_port_config(smartlist_t *out,
-                         const config_line_t *ports,
-                         const config_line_t *listenaddrs,
-                         const char *portname,
-                         int listener_type,
-                         const char *defaultaddr,
-                         int defaultport,
-                         unsigned flags)
+                  const config_line_t *ports,
+                  const config_line_t *listenaddrs,
+                  const char *portname,
+                  int listener_type,
+                  const char *defaultaddr,
+                  int defaultport,
+                  unsigned flags)
 {
   smartlist_t *elts;
   int retval = -1;
@@ -5687,7 +5692,7 @@ parse_port_config(smartlist_t *out,
 
     if (mainport == 0) {
       if (allow_spurious_listenaddr)
-        return 1;
+        return 1; /*DOCDOC*/
       log_warn(LD_CONFIG, "%sPort must be defined if %sListenAddress is used",
                portname, portname);
       return -1;
@@ -5968,16 +5973,34 @@ parse_unix_socket_config(smartlist_t *out, const config_line_t *cfg,
   return 0;
 }
 
+/** Return the number of ports which are actually going to listen with type
+ * <b>listenertype</b>.  Do not count no_listen ports.  Do not count unix
+ * sockets. */
+static int
+count_real_listeners(const smartlist_t *ports, int listenertype)
+{
+  int n = 0;
+  SMARTLIST_FOREACH_BEGIN(ports, port_cfg_t *, port) {
+    if (port->no_listen || port->is_unix_addr)
+      continue;
+    if (port->type != listenertype)
+      continue;
+    ++n;
+  } SMARTLIST_FOREACH_END(port);
+  return n;
+}
+
 /** Parse all client port types (Socks, DNS, Trans, NATD) from
- * <b>options</b>. On success, set *<b>n_ports_out</b> to the number of
- * ports that are listed and return 0.  On failure, set *<b>msg</b> to a
+ * <b>options</b>. On success, set *<b>n_ports_out</b> to the number
+ * of ports that are listed, update the *Port_set values in
+ * <b>options</b>, and return 0.  On failure, set *<b>msg</b> to a
  * description of the problem and return -1.
  *
  * If <b>validate_only</b> is false, set configured_client_ports to the
  * new list of ports parsed from <b>options</b>.
  **/
 static int
-parse_ports(const or_options_t *options, int validate_only,
+parse_ports(or_options_t *options, int validate_only,
             char **msg, int *n_ports_out)
 {
   smartlist_t *ports;
@@ -5988,7 +6011,7 @@ parse_ports(const or_options_t *options, int validate_only,
   *n_ports_out = 0;
 
   if (parse_port_config(ports,
-             options->SocksPort, options->SocksListenAddress,
+             options->SocksPort_lines, options->SocksListenAddress,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
              CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR) < 0) {
@@ -5996,7 +6019,7 @@ parse_ports(const or_options_t *options, int validate_only,
     goto err;
   }
   if (parse_port_config(ports,
-                               options->DNSPort, options->DNSListenAddress,
+                               options->DNSPort_lines, options->DNSListenAddress,
                                "DNS", CONN_TYPE_AP_DNS_LISTENER,
                                "127.0.0.1", 0,
                                CL_PORT_WARN_NONLOCAL) < 0) {
@@ -6004,7 +6027,7 @@ parse_ports(const or_options_t *options, int validate_only,
     goto err;
   }
   if (parse_port_config(ports,
-                               options->TransPort, options->TransListenAddress,
+                               options->TransPort_lines, options->TransListenAddress,
                                "Trans", CONN_TYPE_AP_TRANS_LISTENER,
                                "127.0.0.1", 0,
                                CL_PORT_WARN_NONLOCAL) < 0) {
@@ -6012,7 +6035,7 @@ parse_ports(const or_options_t *options, int validate_only,
     goto err;
   }
   if (parse_port_config(ports,
-                               options->NATDPort, options->NATDListenAddress,
+                               options->NATDPort_lines, options->NATDListenAddress,
                                "NATD", CONN_TYPE_AP_NATD_LISTENER,
                                "127.0.0.1", 0,
                                CL_PORT_WARN_NONLOCAL) < 0) {
@@ -6028,7 +6051,7 @@ parse_ports(const or_options_t *options, int validate_only,
       control_port_flags |= CL_PORT_FORBID_NONLOCAL;
 
     if (parse_port_config(ports,
-                          options->ControlPort, options->ControlListenAddress,
+                          options->ControlPort_lines, options->ControlListenAddress,
                           "Control", CONN_TYPE_CONTROL_LISTENER,
                           "127.0.0.1", 0,
                           control_port_flags) < 0) {
@@ -6045,7 +6068,7 @@ parse_ports(const or_options_t *options, int validate_only,
   }
   if (! options->ClientOnly) {
     if (parse_port_config(ports,
-                          options->ORPort, options->ORListenAddress,
+                          options->ORPort_lines, options->ORListenAddress,
                           "OR", CONN_TYPE_OR_LISTENER,
                           "0.0.0.0", 0,
                           CL_PORT_SERVER_OPTIONS) < 0) {
@@ -6053,7 +6076,7 @@ parse_ports(const or_options_t *options, int validate_only,
       goto err;
     }
     if (parse_port_config(ports,
-                          options->DirPort, options->DirListenAddress,
+                          options->DirPort_lines, options->DirListenAddress,
                           "Dir", CONN_TYPE_DIR_LISTENER,
                           "0.0.0.0", 0,
                           CL_PORT_SERVER_OPTIONS) < 0) {
@@ -6069,6 +6092,25 @@ parse_ports(const or_options_t *options, int validate_only,
 
   *n_ports_out = smartlist_len(ports);
 
+  retval = 0;
+
+  /* Update the *Port_set options.  The !! here is to force a boolean out of
+     an integer. */
+  options->ORPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER);
+  options->SocksPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
+  options->TransPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER);
+  options->NATDPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER);
+  options->ControlPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER);
+  options->DirPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER);
+  options->DNSPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
+
   if (!validate_only) {
     if (configured_ports) {
       SMARTLIST_FOREACH(configured_ports,
@@ -6079,7 +6121,6 @@ parse_ports(const or_options_t *options, int validate_only,
     ports = NULL; /* prevent free below. */
   }
 
-  retval = 0;
  err:
   if (ports) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p, port_cfg_free(p));
@@ -6620,7 +6661,7 @@ init_libevent(const or_options_t *options)
   suppress_libevent_log_msg(NULL);
 
   tor_check_libevent_version(tor_libevent_get_method(),
-                             get_options()->ORPort != NULL,
+                             server_mode(get_options()),
                              &badness);
   if (badness) {
     const char *v = tor_libevent_get_version_str();
