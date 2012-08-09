@@ -378,6 +378,21 @@ tor_lround(double d)
 #endif
 }
 
+/** Return the 64-bit integer closest to d.  We define this wrapper here so
+ * that not all users of math.h need to use the right incancations to get the
+ * c99 functions. */
+int64_t
+tor_llround(double d)
+{
+#if defined(HAVE_LLROUND)
+  return (int64_t)llround(d);
+#elif defined(HAVE_RINT)
+  return (int64_t)rint(d);
+#else
+  return (int64_t)(d > 0 ? d + 0.5 : ceil(d - 0.5));
+#endif
+}
+
 /** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */
 int
 tor_log2(uint64_t u64)

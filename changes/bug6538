@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Switch weighted node selection rule from using a list of doubles
+      to using a list of int64_t. This should make the process slightly
+      easier to debug and maintain. Needed for fix for bug 6538.

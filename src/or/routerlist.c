@@ -1702,12 +1702,12 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
                                            bandwidth_weight_rule_t rule)
 {
   int64_t weight_scale;
-  int64_t rand_bw;
+  uint64_t rand_bw;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
-  double weighted_bw = 0, unweighted_bw = 0;
-  double *bandwidths;
-  double tmp = 0;
+  uint64_t weighted_bw = 0, unweighted_bw = 0;
+  uint64_t *bandwidths;
+  uint64_t tmp;
   unsigned int i;
   unsigned int i_chosen;
   unsigned int i_has_been_chosen;
@@ -1792,7 +1792,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   Web /= weight_scale;
   Wdb /= weight_scale;
 
-  bandwidths = tor_malloc_zero(sizeof(double)*smartlist_len(sl));
+  bandwidths = tor_malloc_zero(sizeof(uint64_t)*smartlist_len(sl));
 
   // Cycle through smartlist and total the bandwidth.
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
@@ -1831,24 +1831,30 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
     } else { // middle
       weight = (is_dir ? Wmb*Wm : Wm);
     }
+    /* These should be impossible; but overflows here would be bad, so let's
+     * make sure. */
+    if (this_bw < 0)
+      this_bw = 0;
+    if (weight < 0.0)
+      weight = 0.0;
 
-    bandwidths[node_sl_idx] = weight*this_bw;
-    weighted_bw += weight*this_bw;
+    bandwidths[node_sl_idx] = tor_llround(weight*this_bw + 0.5);
+    weighted_bw += bandwidths[node_sl_idx];
     unweighted_bw += this_bw;
     if (is_me)
-      sl_last_weighted_bw_of_me = weight*this_bw;
+      sl_last_weighted_bw_of_me = bandwidths[node_sl_idx];
   } SMARTLIST_FOREACH_END(node);
 
   /* XXXX this is a kludge to expose these values. */
   sl_last_total_weighted_bw = weighted_bw;
 
   log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
-            "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
+            "Wg=%f Wm=%f We=%f Wd=%f with total bw "U64_FORMAT,
             bandwidth_weight_rule_to_string(rule),
-            Wg, Wm, We, Wd, weighted_bw);
+            Wg, Wm, We, Wd, U64_PRINTF_ARG(weighted_bw));
 
   /* If there is no bandwidth, choose at random */
-  if (DBL_TO_U64(weighted_bw) == 0) {
+  if (weighted_bw == 0) {
     /* Don't warn when using bridges/relays not in the consensus */
     if (!have_unknown) {
 #define ZERO_BANDWIDTH_WARNING_INTERVAL (15)
@@ -1858,24 +1864,25 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
       if ((msg = rate_limit_log(&zero_bandwidth_warning_limit,
                                 approx_time()))) {
         log_warn(LD_CIRC,
-                 "Weighted bandwidth is %f in node selection for rule %s "
-                 "(unweighted was %f) %s",
-                 weighted_bw, bandwidth_weight_rule_to_string(rule),
-                 unweighted_bw, msg);
+                 "Weighted bandwidth is "U64_FORMAT" in node selection for "
+                 "rule %s (unweighted was "U64_FORMAT") %s",
+                 U64_PRINTF_ARG(weighted_bw),
+                 bandwidth_weight_rule_to_string(rule),
+                 U64_PRINTF_ARG(unweighted_bw), msg);
       }
     }
     tor_free(bandwidths);
     return smartlist_choose(sl);
   }
 
-  rand_bw = crypto_rand_uint64(DBL_TO_U64(weighted_bw));
+  rand_bw = crypto_rand_uint64(weighted_bw);
   rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
               * from 1 below. See bug 1203 for details. */
 
   /* Last, count through sl until we get to the element we picked */
   i_chosen = (unsigned)smartlist_len(sl);
   i_has_been_chosen = 0;
-  tmp = 0.0;
+  tmp = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     tmp += bandwidths[i];
     if (tmp >= rand_bw && !i_has_been_chosen) {
@@ -1892,8 +1899,9 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
              " which router we chose. Please tell the developers. "
-             "%f " U64_FORMAT " %f", tmp, U64_PRINTF_ARG(rand_bw),
-             weighted_bw);
+             U64_FORMAT" "U64_FORMAT" "U64_FORMAT,
+             U64_PRINTF_ARG(tmp), U64_PRINTF_ARG(rand_bw),
+             U64_PRINTF_ARG(weighted_bw));
   }
   tor_free(bandwidths);
   return smartlist_get(sl, i);

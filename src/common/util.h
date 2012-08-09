@@ -161,6 +161,7 @@ void tor_log_mallinfo(int severity);
 /* Math functions */
 double tor_mathlog(double d) ATTR_CONST;
 long tor_lround(double d) ATTR_CONST;
+int64_t tor_llround(double d) ATTR_CONST;
 int tor_log2(uint64_t u64) ATTR_CONST;
 uint64_t round_to_power_of_2(uint64_t u64);
 unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
