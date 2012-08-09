@@ -1265,11 +1265,25 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_SENDME:
       if (!rh.stream_id) {
         if (layer_hint) {
+          if (layer_hint->package_window + CIRCWINDOW_INCREMENT >
+                CIRCWINDOW_START_MAX) {
+            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                   "Bug/attack: unexpected sendme cell from exit relay. "
+                   "Closing circ.");
+            return -END_CIRC_REASON_TORPROTOCOL;
+          }
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
           log_debug(LD_APP,"circ-level sendme at origin, packagewindow %d.",
                     layer_hint->package_window);
           circuit_resume_edge_reading(circ, layer_hint);
         } else {
+          if (circ->package_window + CIRCWINDOW_INCREMENT >
+                CIRCWINDOW_START_MAX) {
+            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                   "Bug/attack: unexpected sendme cell from client. "
+                   "Closing circ.");
+            return -END_CIRC_REASON_TORPROTOCOL;
+          }
           circ->package_window += CIRCWINDOW_INCREMENT;
           log_debug(LD_APP,
                     "circ-level sendme at non-origin, packagewindow %d.",
