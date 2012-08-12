@@ -4,6 +4,10 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.2.38 - 2012-08-12
+  Tor 0.2.2.38 fixes a rare race condition that can crash exit relays;
+  fixes a remotely triggerable crash bug; and fixes a timing attack that
+  could in theory leak path information.
+
   o Security fixes:
     - Avoid read-from-freed-memory and double-free bugs that could occur
       when a DNS request fails while launching it. Fixes bug 6480;
