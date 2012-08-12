@@ -1,4 +1,4 @@
-Changes in version 0.2.2.38 - 2012-08-??
+Changes in version 0.2.2.38 - 2012-08-12
   o Security fixes:
     - Avoid read-from-freed-memory and double-free bugs that could occur
       when a DNS request fails while launching it. Fixes bug 6480;

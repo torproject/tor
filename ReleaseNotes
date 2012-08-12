@@ -3,7 +3,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.2.38 - 2012-08-??
+Changes in version 0.2.2.38 - 2012-08-12
   o Security fixes:
     - Avoid read-from-freed-memory and double-free bugs that could occur
       when a DNS request fails while launching it. Fixes bug 6480;
