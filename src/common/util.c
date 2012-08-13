@@ -290,37 +290,6 @@ _tor_free(void *mem)
   tor_free(mem);
 }
 
-#if defined(HAVE_MALLOC_GOOD_SIZE) && !defined(HAVE_MALLOC_GOOD_SIZE_PROTOTYPE)
-/* Some version of Mac OSX have malloc_good_size in their libc, but not
- * actually defined in malloc/malloc.h.  We detect this and work around it by
- * prototyping.
- */
-extern size_t malloc_good_size(size_t size);
-#endif
-
-/** Allocate and return a chunk of memory of size at least *<b>size</b>, using
- * the same resources we would use to malloc *<b>sizep</b>.  Set *<b>sizep</b>
- * to the number of usable bytes in the chunk of memory. */
-void *
-_tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
-{
-#ifdef HAVE_MALLOC_GOOD_SIZE
-  tor_assert(*sizep < SIZE_T_CEILING);
-  *sizep = malloc_good_size(*sizep);
-  return _tor_malloc(*sizep DMALLOC_FN_ARGS);
-#elif 0 && defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
-  /* Never use malloc_usable_size(); it makes valgrind really unhappy,
-   * and doesn't win much in terms of usable space where it exists. */
-  void *result;
-  tor_assert(*sizep < SIZE_T_CEILING);
-  result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
-  *sizep = malloc_usable_size(result);
-  return result;
-#else
-  return _tor_malloc(*sizep DMALLOC_FN_ARGS);
-#endif
-}
-
 /** Call the platform malloc info function, and dump the results to the log at
  * level <b>severity</b>.  If no such function exists, do nothing. */
 void

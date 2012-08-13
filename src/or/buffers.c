@@ -192,8 +192,6 @@ chunk_new_with_alloc_size(size_t alloc)
       freelist->lowest_length = freelist->cur_length;
     ++freelist->n_hit;
   } else {
-    /* XXXX take advantage of tor_malloc_roundup, once we know how that
-     * affects freelists. */
     if (freelist)
       ++freelist->n_alloc;
     else
@@ -216,7 +214,7 @@ static INLINE chunk_t *
 chunk_new_with_alloc_size(size_t alloc)
 {
   chunk_t *ch;
-  ch = tor_malloc_roundup(&alloc);
+  ch = tor_malloc(alloc);
   ch->next = NULL;
   ch->datalen = 0;
   ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);

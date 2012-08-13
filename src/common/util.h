@@ -76,7 +76,6 @@
 /* Memory management */
 void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *_tor_malloc_roundup(size_t *size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
 char *_tor_strdup(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));

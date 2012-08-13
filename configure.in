@@ -317,18 +317,6 @@ AC_CHECK_FUNCS(
         vasprintf \
 )
 
-using_custom_malloc=no
-if test x$enable_openbsd_malloc = xyes ; then
-   AC_DEFINE(HAVE_MALLOC_GOOD_SIZE, 1, [Defined if we have the malloc_good_size function])
-   using_custom_malloc=yes
-fi
-if test x$tcmalloc = xyes ; then
-   using_custom_malloc=yes
-fi
-if test $using_custom_malloc = no ; then
-   AC_CHECK_FUNCS(mallinfo malloc_good_size malloc_usable_size)
-fi
-
 if test "$enable_threads" = "yes"; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
@@ -703,14 +691,6 @@ AC_CHECK_HEADERS(
 
 AC_CHECK_HEADERS(sys/param.h)
 
-TOR_CHECK_PROTOTYPE(malloc_good_size, HAVE_MALLOC_GOOD_SIZE_PROTOTYPE,
-[#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-#ifdef HAVE_MALLOC_MALLOC_H
-#include <malloc/malloc.h>
-#endif])
-
 AC_CHECK_HEADERS(net/if.h, net_if_found=1, net_if_found=0,
 [#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -1030,6 +1010,17 @@ AC_ARG_WITH(tcmalloc,
 
 if test x$tcmalloc = xyes ; then
    LDFLAGS="-ltcmalloc $LDFLAGS"
+fi
+
+using_custom_malloc=no
+if test x$enable_openbsd_malloc = xyes ; then
+   using_custom_malloc=yes
+fi
+if test x$tcmalloc = xyes ; then
+   using_custom_malloc=yes
+fi
+if test $using_custom_malloc = no ; then
+   AC_CHECK_FUNCS(mallinfo)
 fi
 
 # By default, we're going to assume we don't have mlockall()

@@ -118,7 +118,7 @@ alloc_chunk(size_t sz, int freelist_ok)
     size_t chunk_size = freelist_ok ? CHUNK_SIZE : sz;
     memarea_chunk_t *res;
     chunk_size += SENTINEL_LEN;
-    res = tor_malloc_roundup(&chunk_size);
+    res = tor_malloc(chunk_size);
     res->next_chunk = NULL;
     res->mem_size = chunk_size - CHUNK_HEADER_SIZE - SENTINEL_LEN;
     res->next_mem = res->u.mem;

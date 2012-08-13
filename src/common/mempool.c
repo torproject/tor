@@ -70,7 +70,6 @@
 #define ASSERT(x) tor_assert(x)
 #undef ALLOC_CAN_RETURN_NULL
 #define TOR
-//#define ALLOC_ROUNDUP(p) tor_malloc_roundup(p)
 /* End Tor dependencies */
 #else
 /* If you're not building this as part of Tor, you'll want to define the
@@ -165,25 +164,16 @@ static mp_chunk_t *
 mp_chunk_new(mp_pool_t *pool)
 {
   size_t sz = pool->new_chunk_capacity * pool->item_alloc_size;
-#ifdef ALLOC_ROUNDUP
-  size_t alloc_size = CHUNK_OVERHEAD + sz;
-  mp_chunk_t *chunk = ALLOC_ROUNDUP(&alloc_size);
-#else
   mp_chunk_t *chunk = ALLOC(CHUNK_OVERHEAD + sz);
-#endif
+
 #ifdef MEMPOOL_STATS
   ++pool->total_chunks_allocated;
 #endif
   CHECK_ALLOC(chunk);
   memset(chunk, 0, sizeof(mp_chunk_t)); /* Doesn't clear the whole thing. */
   chunk->magic = MP_CHUNK_MAGIC;
-#ifdef ALLOC_ROUNDUP
-  chunk->mem_size = alloc_size - CHUNK_OVERHEAD;
-  chunk->capacity = chunk->mem_size / pool->item_alloc_size;
-#else
   chunk->capacity = pool->new_chunk_capacity;
   chunk->mem_size = sz;
-#endif
   chunk->next_mem = chunk->mem;
   chunk->pool = pool;
   return chunk;
