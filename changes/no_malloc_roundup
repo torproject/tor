@@ -1,0 +1,8 @@
+  o Code simplification and refactoring:
+    - Finally remove support for malloc_good_size and malloc_usable_size.
+      We had hoped that these functions would let us eke a little more
+      memory out of our malloc implementation. Unfortunately, the only
+      implementations that provided these functions are also ones that
+      are already efficient about not overallocation: they never got us
+      more than 7 or so bytes per allocation. Removing them saves us
+      a little code complexity and a nontrivial amount of code complexity. 
