@@ -5,4 +5,4 @@
       implementations that provided these functions are also ones that
       are already efficient about not overallocation: they never got us
       more than 7 or so bytes per allocation. Removing them saves us
-      a little code complexity and a nontrivial amount of code complexity. 
+      a little code complexity and a nontrivial amount of build complexity. 
