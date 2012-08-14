@@ -2053,7 +2053,7 @@ version_from_platform(const char *platform)
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
  * failure.
  *
- * The format argument has three possible values:
+ * The format argument has one of the following values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
  *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
@@ -2092,17 +2092,18 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
   }
+  cp = buf + strlen(buf);
 
   /* TODO: Maybe we want to pass in what we need to build the rest of
    * this here, instead of in the caller. Then we could use the
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
-  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
+
+  /* V3 microdesc consensuses don't have "a" lines. */
+  if (format == NS_V3_CONSENSUS_MICRODESC)
     return 0;
 
-  cp = buf + strlen(buf);
-
-  /* Possible "a" line, not included in consensus for now. */
+  /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {
     const char *addr_str = fmt_and_decorate_addr(&rs->ipv6_addr);
     r = tor_snprintf(cp, buf_len - (cp-buf),
@@ -2115,6 +2116,9 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     }
     cp += strlen(cp);
   }
+
+  if (format == NS_V3_CONSENSUS)
+    return 0;
 
   /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),

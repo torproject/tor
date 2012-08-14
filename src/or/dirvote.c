@@ -54,7 +54,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 13
+#define MAX_SUPPORTED_CONSENSUS_METHOD 14
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -75,6 +75,9 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
 #define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
+
+/** Lowest consensus method that contains "a" lines. */
+#define MIN_METHOD_FOR_A_LINES 14
 
 /* =====
  * Voting
@@ -430,6 +433,21 @@ _compare_vote_rs(const void **_a, const void **_b)
   return compare_vote_rs(a,b);
 }
 
+/** Helper for sorting OR ports. */
+static int
+_compare_orports(const void **_a, const void **_b)
+{
+  const tor_addr_port_t *a = *_a, *b = *_b;
+  int r;
+
+  if ((r = tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
+    return r;
+  if ((r = (((int) b->port) - ((int) a->port))))
+    return r;
+
+  return 0;
+}
+
 /** Given a list of vote_routerstatus_t, all for the same router identity,
  * return whichever is most frequent, breaking ties in favor of more
  * recently published vote_routerstatus_t and in case of ties there,
@@ -437,7 +455,8 @@ _compare_vote_rs(const void **_a, const void **_b)
  */
 static vote_routerstatus_t *
 compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
-                               char *microdesc_digest256_out)
+                               char *microdesc_digest256_out,
+                               tor_addr_port_t *best_alt_orport_out)
 {
   vote_routerstatus_t *most = NULL, *cur = NULL;
   int most_n = 0, cur_n = 0;
@@ -472,6 +491,42 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   }
 
   tor_assert(most);
+
+  /* If we're producing "a" lines, vote on potential alternative (sets
+   * of) OR port(s) in the winning routerstatuses.
+   *
+   * XXX prop186 There's at most one alternative OR port (_the_ IPv6
+   * port) for now. */
+  if (consensus_method >= MIN_METHOD_FOR_A_LINES && best_alt_orport_out) {
+    smartlist_t *alt_orports = smartlist_new();
+    const tor_addr_port_t *most_alt_orport = NULL;
+
+    SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
+      if (compare_vote_rs(most, rs) == 0 &&
+          !tor_addr_is_null(&rs->status.ipv6_addr)
+          && rs->status.ipv6_orport) {
+        smartlist_add(alt_orports, tor_addr_port_alloc(&rs->status.ipv6_addr,
+                                                       rs->status.ipv6_orport));
+        log_debug(LD_DIR, "picking %s:%d (%s) for voting on \"a\" lines", /* FIXME: remove */
+                  fmt_and_decorate_addr(&rs->status.ipv6_addr), rs->status.ipv6_orport,
+                  rs->status.nickname);
+      }
+    } SMARTLIST_FOREACH_END(rs);
+
+    smartlist_sort(alt_orports, _compare_orports);
+    most_alt_orport = smartlist_get_most_frequent(alt_orports, _compare_orports);
+    if (most_alt_orport) {
+      memcpy(best_alt_orport_out, most_alt_orport, sizeof(tor_addr_port_t));
+
+      log_debug(LD_DIR, "\"a\" line winner for %s is %s:%d",
+                most->status.nickname,
+                fmt_and_decorate_addr(&most_alt_orport->addr),
+                most_alt_orport->port);
+    }
+
+    SMARTLIST_FOREACH(alt_orports, tor_addr_port_t *, ap, tor_free(ap));
+    smartlist_free(alt_orports);
+  }
 
   if (consensus_method >= MIN_METHOD_FOR_MICRODESC &&
       microdesc_digest256_out) {
@@ -1685,6 +1740,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int n_listing = 0;
       int i;
       char microdesc_digest[DIGEST256_LEN];
+      tor_addr_port_t alt_orport = {TOR_ADDR_NULL, 0};
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
       SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
@@ -1754,7 +1810,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * routerinfo and its contents are. */
       memset(microdesc_digest, 0, sizeof(microdesc_digest));
       rs = compute_routerstatus_consensus(matching_descs, consensus_method,
-                                          microdesc_digest);
+                                          microdesc_digest, &alt_orport);
       /* Copy bits of that into rs_out. */
       memset(&rs_out, 0, sizeof(rs_out));
       tor_assert(fast_memeq(lowest_id, rs->status.identity_digest,DIGEST_LEN));
@@ -1765,6 +1821,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
+      if (consensus_method >= MIN_METHOD_FOR_A_LINES) {
+        tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
+        rs_out.ipv6_orport = alt_orport.port;
+      }
       rs_out.has_bandwidth = 0;
       rs_out.has_exitsummary = 0;
 

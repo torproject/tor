@@ -1,0 +1,3 @@
+  o Major features:
+    - Directory authorities vote on IPv6 OR ports using new consensus
+      method 14. Implements ticket 6363.

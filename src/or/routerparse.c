@@ -67,6 +67,7 @@ typedef enum {
   K_OR_ADDRESS,
   K_P,
   K_R,
+  K_A,
   K_S,
   K_V,
   K_W,
@@ -338,6 +339,7 @@ static token_rule_t extrainfo_token_table[] = {
 static token_rule_t rtrstatus_token_table[] = {
   T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
   T1( "r",                   K_R,                   GE(7),   NO_OBJ ),
+  T0N("a",                   K_A,                   GE(1),   NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
@@ -1257,6 +1259,42 @@ dump_distinct_digest_count(int severity)
 #endif
 }
 
+/** Try to find an IPv6 OR port in <b>list</b> of directory_token_t's
+ * with at least one argument (use GE(1) in setup). If found, store
+ * address and port number to <b>addr_out</b> and
+ * <b>port_out</b>. Return number of OR ports found. */
+static int
+find_single_ipv6_orport(const smartlist_t *list,
+                        tor_addr_t *addr_out,
+                        uint16_t *port_out)
+{
+  int ret = 0;
+  tor_assert(list != NULL);
+  tor_assert(addr_out != NULL);
+  tor_assert(port_out != NULL);
+
+  SMARTLIST_FOREACH_BEGIN(list, directory_token_t *, t) {
+    tor_addr_t a;
+    maskbits_t bits;
+    uint16_t port_min, port_max;
+    tor_assert(t->n_args >= 1);
+    /* XXXX Prop186 the full spec allows much more than this. */
+    if (tor_addr_parse_mask_ports(t->args[0], &a, &bits, &port_min,
+                                  &port_max) == AF_INET6 &&
+        bits == 128 &&
+        port_min == port_max) {
+      /* Okay, this is one we can understand. Use it and ignore
+         any potential more addresses in list. */
+      tor_addr_copy(addr_out, &a);
+      *port_out = port_min;
+      ret = 1;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(t);
+
+  return ret;
+}
+
 /** Helper function: reads a single router entry from *<b>s</b> ...
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
  * returns NULL.  If <b>cache_copy</b> is true, duplicate the contents of
@@ -1513,21 +1551,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   {
     smartlist_t *or_addresses = find_all_by_keyword(tokens, K_OR_ADDRESS);
     if (or_addresses) {
-      SMARTLIST_FOREACH_BEGIN(or_addresses, directory_token_t *, t) {
-        tor_addr_t a;
-        maskbits_t bits;
-        uint16_t port_min, port_max;
-        /* XXXX Prop186 the full spec allows much more than this. */
-        if (tor_addr_parse_mask_ports(t->args[0], &a, &bits, &port_min,
-                                      &port_max) == AF_INET6 &&
-            bits == 128 &&
-            port_min == port_max) {
-          /* Okay, this is one we can understand. */
-          tor_addr_copy(&router->ipv6_addr, &a);
-          router->ipv6_orport = port_min;
-          break;
-        }
-      } SMARTLIST_FOREACH_END(t);
+      find_single_ipv6_orport(or_addresses, &router->ipv6_addr,
+                              &router->ipv6_orport);
       smartlist_free(or_addresses);
     }
   }
@@ -2059,6 +2084,14 @@ routerstatus_parse_entry_from_string(memarea_t *area,
                                          10,0,65535,NULL,NULL);
   rs->dir_port = (uint16_t) tor_parse_long(tok->args[7+offset],
                                            10,0,65535,NULL,NULL);
+
+  {
+    smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);
+    if (a_lines) {
+      find_single_ipv6_orport(a_lines, &rs->ipv6_addr, &rs->ipv6_orport);
+      smartlist_free(a_lines);
+    }
+  }
 
   tok = find_opt_by_keyword(tokens, K_S);
   if (tok && vote) {
