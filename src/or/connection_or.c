@@ -1988,12 +1988,19 @@ connection_or_send_netinfo(or_connection_t *conn)
   if ((public_server_mode(get_options()) || !conn->is_outgoing) &&
       (me = router_get_my_routerinfo())) {
     tor_addr_t my_addr;
-    *out++ = 1; /* only one address is supported. */
+    *out++ = 1 + !tor_addr_is_null(&me->ipv6_addr);
 
     tor_addr_from_ipv4h(&my_addr, me->addr);
     len = append_address_to_payload(out, &my_addr);
     if (len < 0)
       return -1;
+    out += len;
+
+    if (!tor_addr_is_null(&me->ipv6_addr)) {
+      len = append_address_to_payload(out, &me->ipv6_addr);
+      if (len < 0)
+        return -1;
+    }
   } else {
     *out = 0;
   }
