@@ -1,7 +1,7 @@
   o Minor bugfixes:
 
-    - Increase the maximum length of microdescriptor we are willing to
-      generate from 1K to 2K. Occasionally this is needed for routers
+    - Remove the maximum length of microdescriptor we are willing to
+      generate. Occasionally this is needed for routers
       with complex policies or family declarations. Partial fix for
       bug 6404; fix on 0.2.2.6-alpha.
 
