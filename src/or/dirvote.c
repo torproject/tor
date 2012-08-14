@@ -3515,7 +3515,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   char *key = NULL, *summary = NULL, *family = NULL;
   size_t keylen;
   smartlist_t *chunks = smartlist_new();
-  char *output;
+  char *output = NULL;
 
   if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
     goto done;
@@ -3547,6 +3547,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   }
 
  done:
+  tor_free(output);
   tor_free(key);
   tor_free(summary);
   tor_free(family);
