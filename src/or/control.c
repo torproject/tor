@@ -1366,9 +1366,18 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
           smartlist_add_asprintf(reply, "250-%s=%s", address, to);
         }
       } else {
-        addressmap_register(from, tor_strdup(to), 1,
-                            ADDRMAPSRC_CONTROLLER, 0, 0);
-        smartlist_add_asprintf(reply, "250-%s", line);
+        const char *msg;
+        if (addressmap_register_auto(from, to, 1,
+                                     ADDRMAPSRC_CONTROLLER, &msg) < 0) {
+          smartlist_add_asprintf(reply,
+                                 "512-syntax error: invalid address mapping "
+                                 " '%s': %s", line, msg);
+          log_warn(LD_CONTROL,
+                   "Skipping invalid argument '%s' in MapAddress msg: %s",
+                   line, msg);
+        } else {
+          smartlist_add_asprintf(reply, "250-%s", line);
+        }
       }
     } else {
       smartlist_add_asprintf(reply, "512-syntax error: mapping '%s' is "
