@@ -1175,7 +1175,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_EXTEND: {
       static uint64_t total_n_extend=0, total_nonearly=0;
       total_n_extend++;
-      if (conn) {
+      if (rh.stream_id) {
         log_fn(LOG_PROTOCOL_WARN, domain,
                "'extend' cell received for non-zero stream. Dropping.");
         return 0;
