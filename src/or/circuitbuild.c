@@ -2293,18 +2293,34 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
           entry_guard_get_by_id_digest(circ->_base.n_conn->identity_digest);
 
         if (guard) {
-          guard->circuit_successes++;
+          if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
+            circ->path_state = PATH_STATE_SUCCEEDED;
+            guard->circuit_successes++;
 
-          log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
-                   guard->circuit_successes, guard->first_hops,
-                   guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+            log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+                     guard->circuit_successes, guard->first_hops,
+                     guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+          } else {
+            log_info(LD_BUG,
+                     "Succeeded circuit has strange path state %d. "
+                     "Circuit is a %s currently %s.",
+                     circ->path_state,
+                     circuit_purpose_to_string(circ->_base.purpose),
+                     circuit_state_to_string(circ->_base.state));
+          }
 
           if (guard->first_hops < guard->circuit_successes) {
             log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
-                     "for guard %s",
+                     "for guard %s=%s",
                      guard->circuit_successes, guard->first_hops,
-                     guard->nickname);
+                     guard->nickname, hex_str(guard->identity, DIGEST_LEN));
           }
+        } else {
+          log_info(LD_BUG,
+                  "Completed circuit has no known guard. "
+                  "Circuit is a %s currently %s.",
+                  circuit_purpose_to_string(circ->_base.purpose),
+                  circuit_state_to_string(circ->_base.state));
         }
       }
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
@@ -2666,8 +2682,9 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
     guard->circuit_successes /= scale_factor;
   }
   guard->first_hops++;
-  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s",
-           guard->circuit_successes, guard->first_hops, guard->nickname);
+  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+           guard->circuit_successes, guard->first_hops, guard->nickname,
+           hex_str(guard->identity, DIGEST_LEN));
   return 0;
 }
 
@@ -2690,6 +2707,16 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
 
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     hop = circ->cpath;
+
+    /* Help track down the real cause of bug #6475: */
+    if (circ->has_opened && circ->path_state == PATH_STATE_NEW_CIRC) {
+      log_info(LD_BUG,
+              "Opened circuit seems new. "
+              "Circuit is a %s currently %s.",
+              circuit_purpose_to_string(circ->_base.purpose),
+              circuit_state_to_string(circ->_base.state));
+    }
+
     /* Don't count cannibalized or onehop circs for path bias */
     if (!circ->has_opened && !circ->build_state->onehop_tunnel) {
       entry_guard_t *guard;
@@ -2697,13 +2724,40 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
       guard = entry_guard_get_by_id_digest(
               circ->_base.n_conn->identity_digest);
       if (guard) {
-        if (entry_guard_inc_first_hop_count(guard) < 0) {
-          /* Bogus guard; we already warned. */
-          return -END_CIRC_REASON_TORPROTOCOL;
+        if (circ->path_state == PATH_STATE_NEW_CIRC) {
+          circ->path_state = PATH_STATE_DID_FIRST_HOP;
+
+          if (entry_guard_inc_first_hop_count(guard) < 0) {
+            /* Bogus guard; we already warned. */
+            return -END_CIRC_REASON_TORPROTOCOL;
+          }
+        } else {
+          log_info(LD_BUG,
+                   "Unopened circuit has strange path state %d. "
+                   "Circuit is a %s currently %s.",
+                   circ->path_state,
+                   circuit_purpose_to_string(circ->_base.purpose),
+                   circuit_state_to_string(circ->_base.state));
         }
+      } else {
+        log_info(LD_BUG,
+                "Opened circuit has no known guard. "
+                "Circuit is a %s currently %s.",
+                circuit_purpose_to_string(circ->_base.purpose),
+                circuit_state_to_string(circ->_base.state));
       }
     }
   } else {
+    /* Help track down the real cause of bug #6475: */
+    if (circ->path_state == PATH_STATE_NEW_CIRC) {
+      log_info(LD_BUG,
+              "New circuit is in cpath state %d (opened: %d). "
+              "Circuit is a %s currently %s.",
+              circ->cpath->state, circ->has_opened, 
+              circuit_purpose_to_string(circ->_base.purpose),
+              circuit_state_to_string(circ->_base.state));
+    }
+
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */
       log_warn(LD_PROTOCOL,"got extended when circ already built? Closing.");

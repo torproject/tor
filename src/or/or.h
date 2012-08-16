@@ -2596,6 +2596,12 @@ typedef struct circuit_t {
  * circuit. */
 #define MAX_RELAY_EARLY_CELLS_PER_CIRCUIT 8
 
+typedef enum {
+    PATH_STATE_NEW_CIRC = 0,
+    PATH_STATE_DID_FIRST_HOP = 1,
+    PATH_STATE_SUCCEEDED = 2,
+} path_state_t;
+
 /** An origin_circuit_t holds data necessary to build and use a circuit.
  */
 typedef struct origin_circuit_t {
@@ -2628,6 +2634,10 @@ typedef struct origin_circuit_t {
   /** Set if this circuit has already been opened. Used to detect
    * cannibalized circuits. */
   unsigned int has_opened : 1;
+
+  /** Kludge to help us prevent the warn in bug #6475 and eventually
+   * debug why we are not seeing first hops in some cases. */
+  path_state_t path_state;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has
