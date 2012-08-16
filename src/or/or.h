@@ -2596,9 +2596,20 @@ typedef struct circuit_t {
  * circuit. */
 #define MAX_RELAY_EARLY_CELLS_PER_CIRCUIT 8
 
+/**
+ * Describes the circuit building process in simplified terms based
+ * on the path bias accounting state for a circuit. Created to prevent
+ * overcounting due to unknown cases of circuit reuse. See Bug #6475.
+ */
 typedef enum {
+    /** This circuit is "new". It has not yet completed a first hop
+     * or been counted by the path bias code. */
     PATH_STATE_NEW_CIRC = 0,
+    /** This circuit has completed a first hop, and has been counted by
+     * the path bias logic. */
     PATH_STATE_DID_FIRST_HOP = 1,
+    /** This circuit has been completely built, and has been counted as
+     * successful by the path bias logic. */
     PATH_STATE_SUCCEEDED = 2,
 } path_state_t;
 
@@ -2637,7 +2648,7 @@ typedef struct origin_circuit_t {
 
   /** Kludge to help us prevent the warn in bug #6475 and eventually
    * debug why we are not seeing first hops in some cases. */
-  path_state_t path_state;
+  path_state_t path_state : 2;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has
