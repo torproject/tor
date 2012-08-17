@@ -14,6 +14,10 @@
  * ----------------------------------------------------------------------------
  */
 
+/* We use this macro to remove some code that we don't actually want,
+ * rather than to fix its warnings. */
+#define BUILDING_FOR_TOR
+
 /*
  * Defining MALLOC_EXTRA_SANITY will enable extra checks which are
  * related to internal conditions and consistency in malloc.c. This has
@@ -79,6 +83,7 @@ static size_t g_alignment = 0;
 
 extern int __libc_enable_secure;
 
+#ifndef HAVE_ISSETUGID
 static int issetugid(void)
 {
 	if (__libc_enable_secure) return 1;
@@ -86,8 +91,10 @@ static int issetugid(void)
 	if (getgid() != getegid()) return 1;
 	return 0;
 }
+#endif
 
 #define PGSHIFT 12
+#undef MADV_FREE
 #define MADV_FREE MADV_DONTNEED
 #include <pthread.h>
 static pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -443,6 +450,7 @@ extern char	*__progname;
 static void
 wrterror(const char *p)
 {
+#ifndef BUILDING_FOR_TOR
 	const char		*q = " error: ";
 	struct iovec	iov[5];
 
@@ -457,7 +465,9 @@ wrterror(const char *p)
 	iov[4].iov_base = (char*)"\n";
 	iov[4].iov_len = 1;
 	writev(STDERR_FILENO, iov, 5);
-
+#else
+        (void)p;
+#endif
 	suicide = 1;
 #ifdef MALLOC_STATS
 	if (malloc_stats)
@@ -471,14 +481,17 @@ wrterror(const char *p)
 static void
 wrtwarning(const char *p)
 {
+#ifndef BUILDING_FOR_TOR
 	const char		*q = " warning: ";
 	struct iovec	iov[5];
+#endif
 
 	if (malloc_abort)
 		wrterror(p);
 	else if (malloc_silent)
 		return;
 
+#ifndef BUILDING_FOR_TOR
 	iov[0].iov_base = __progname;
 	iov[0].iov_len = strlen(__progname);
 	iov[1].iov_base = (char*)malloc_func;
@@ -489,8 +502,11 @@ wrtwarning(const char *p)
 	iov[3].iov_len = strlen(p);
 	iov[4].iov_base = (char*)"\n";
 	iov[4].iov_len = 1;
-	
-	writev(STDERR_FILENO, iov, 5);
+
+	(void) writev(STDERR_FILENO, iov, 5);
+#else
+        (void)p;
+#endif
 }
 
 #ifdef MALLOC_STATS
@@ -665,7 +681,7 @@ malloc_init(void)
 	for (i = 0; i < 3; i++) {
 		switch (i) {
 		case 0:
-			j = readlink("/etc/malloc.conf", b, sizeof b - 1);
+			j = (int) readlink("/etc/malloc.conf", b, sizeof b - 1);
 			if (j <= 0)
 				continue;
 			b[j] = '\0';
@@ -1145,9 +1161,10 @@ malloc_bytes(size_t size)
 	if (size == 0)
 		j = 0;
 	else {
+		size_t ii;
 		j = 1;
-		i = size - 1;
-		while (i >>= 1)
+		ii = size - 1;
+		while (ii >>= 1)
 			j++;
 	}
 
@@ -1971,6 +1988,7 @@ calloc(size_t num, size_t size)
 	return(p);
 }
 
+#ifndef BUILDING_FOR_TOR
 static int ispowerof2 (size_t a) {
 	size_t b;
 	for (b = 1ULL << (sizeof(size_t)*NBBY - 1); b > 1; b >>= 1)
@@ -1978,7 +1996,9 @@ static int ispowerof2 (size_t a) {
 		return 1;
 	return 0;
 }
+#endif
 
+#ifndef BUILDING_FOR_TOR
 int posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	void *r;
@@ -2015,18 +2035,20 @@ void *valloc(size_t size)
 	posix_memalign(&r, malloc_pagesize, size);
 	return r;
 }
+#endif
 
 size_t malloc_good_size(size_t size)
 {
 	if (size == 0) {
 		return 1;
 	} else if (size <= malloc_maxsize) {
-		int i, j;
+		int j;
+		size_t ii;
 		/* round up to the nearest power of 2, with same approach
 		 * as malloc_bytes() uses. */
 		j = 1;
-		i = size - 1;
-		while (i >>= 1)
+		ii = size - 1;
+		while (ii >>= 1)
 			j++;
 		return ((size_t)1) << j;
 	} else {
