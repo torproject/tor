@@ -3039,19 +3039,40 @@ typedef struct {
   int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
-  config_line_t *ORPort; /**< Ports to listen on for OR connections. */
-  config_line_t *SocksPort; /**< Ports to listen on for SOCKS connections. */
+  config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
+  /** Ports to listen on for SOCKS connections. */
+  config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
-  config_line_t *TransPort;
-  config_line_t *NATDPort; /**< Ports to listen on for transparent natd
+  config_line_t *TransPort_lines;
+  config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
                             * connections. */
-  config_line_t *ControlPort; /**< Port to listen on for control
+  config_line_t *ControlPort_lines; /**< Ports to listen on for control
                                * connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
+
   int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
-  config_line_t *DirPort; /**< Port to listen on for directory connections. */
-  config_line_t *DNSPort; /**< Port to listen on for DNS requests. */
+  /** Ports to listen on for directory connections. */
+  config_line_t *DirPort_lines;
+  config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
+
+  /** @name port booleans
+   *
+   * Derived booleans: True iff there is a non-listener port on an AF_INET or
+   * AF_INET6 address of the given type configured in one of the _lines
+   * options above.
+   *
+   * @{
+   */
+  unsigned int ORPort_set : 1;
+  unsigned int SocksPort_set : 1;
+  unsigned int TransPort_set : 1;
+  unsigned int NATDPort_set : 1;
+  unsigned int ControlPort_set : 1;
+  unsigned int DirPort_set : 1;
+  unsigned int DNSPort_set : 1;
+  /**@}*/
+
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory

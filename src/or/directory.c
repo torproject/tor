@@ -3732,7 +3732,7 @@ download_status_reset(download_status_t *dls)
   const int *schedule;
   size_t schedule_len;
 
-  find_dl_schedule_and_len(dls, get_options()->DirPort != NULL,
+  find_dl_schedule_and_len(dls, get_options()->DirPort_set,
                            &schedule, &schedule_len);
 
   dls->n_download_failures = 0;
