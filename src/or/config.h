@@ -96,6 +96,12 @@ or_options_t *options_new(void);
 #endif
 
 void config_register_addressmaps(const or_options_t *options);
+/* XXXX024 move to connection_edge.h */
+int addressmap_register_auto(const char *from, const char *to,
+                             time_t expires,
+                             addressmap_entry_source_t addrmap_source,
+                             const char **msg);
+
 
 #endif
 

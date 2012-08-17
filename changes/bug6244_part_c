@@ -1,0 +1,6 @@
+  o Major bugfixes (controller):
+    - Make wildcarded addresses (that is, ones beginning with *.) work when
+      provided via the controller's MapAddress command.  Previously, they
+      were accepted, but we never actually noticed that they were wildcards.
+      Fix for bug 6244; bugfix on 0.2.3.9-alpha.
+
