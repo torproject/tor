@@ -4871,12 +4871,11 @@ config_register_addressmaps(const or_options_t *options)
 {
   smartlist_t *elts;
   config_line_t *opt;
-  char *from, *to;
+  const char *from, *to, *msg;
 
   addressmap_clear_configured();
   elts = smartlist_new();
   for (opt = options->AddressMap; opt; opt = opt->next) {
-    int from_wildcard = 0, to_wildcard = 0;
     smartlist_split_string(elts, opt->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
     if (smartlist_len(elts) < 2) {
@@ -4894,10 +4893,38 @@ config_register_addressmaps(const or_options_t *options)
       goto cleanup;
     }
 
-    if (!strcmp(to, "*") || !strcmp(from, "*")) {
-      log_warn(LD_CONFIG,"MapAddress '%s' is unsupported - can't remap from "
-               "or to *. Ignoring.",opt->value);
+    if (addressmap_register_auto(from, to, 0, ADDRMAPSRC_TORRC, &msg) < 0) {
+      log_warn(LD_CONFIG,"MapAddress '%s' failed: %s. Ignoring.", opt->value,
+               msg);
       goto cleanup;
+    }
+
+    if (smartlist_len(elts) > 2)
+      log_warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
+
+  cleanup:
+    SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
+    smartlist_clear(elts);
+  }
+  smartlist_free(elts);
+}
+
+/** As addressmap_register(), but detect the wildcarded status of "from" and
+ * "to", and do not steal a reference to <b>to</b>. */
+/* XXXX024 move to connection_edge.c */
+int
+addressmap_register_auto(const char *from, const char *to,
+                         time_t expires,
+                         addressmap_entry_source_t addrmap_source,
+                         const char **msg)
+{
+  int from_wildcard = 0, to_wildcard = 0;
+
+  *msg = "whoops, forgot the error message";
+  if (1) {
+    if (!strcmp(to, "*") || !strcmp(from, "*")) {
+      *msg = "can't remap from or to *";
+      return -1;
     }
     /* Detect asterisks in expressions of type: '*.example.com' */
     if (!strncmp(from,"*.",2)) {
@@ -4910,30 +4937,20 @@ config_register_addressmaps(const or_options_t *options)
     }
 
     if (to_wildcard && !from_wildcard) {
-      log_warn(LD_CONFIG,
-                "Skipping invalid argument '%s' to MapAddress: "
-                "can only use wildcard (i.e. '*.') if 'from' address "
-                "uses wildcard also", opt->value);
-      goto cleanup;
+      *msg =  "can only use wildcard (i.e. '*.') if 'from' address "
+        "uses wildcard also";
+      return -1;
     }
 
     if (address_is_invalid_destination(to, 1)) {
-      log_warn(LD_CONFIG,
-                "Skipping invalid argument '%s' to MapAddress", opt->value);
-      goto cleanup;
+      *msg = "destination is invalid";
+      return -1;
     }
 
-    addressmap_register(from, tor_strdup(to), 0, ADDRMAPSRC_TORRC,
+    addressmap_register(from, tor_strdup(to), expires, addrmap_source,
                         from_wildcard, to_wildcard);
-
-    if (smartlist_len(elts) > 2)
-      log_warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
-
-  cleanup:
-    SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
-    smartlist_clear(elts);
   }
-  smartlist_free(elts);
+  return 0;
 }
 
 /**
