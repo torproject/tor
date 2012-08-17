@@ -450,6 +450,7 @@ extern char	*__progname;
 static void
 wrterror(const char *p)
 {
+#ifndef BUILDING_FOR_TOR
 	const char		*q = " error: ";
 	struct iovec	iov[5];
 
@@ -463,8 +464,10 @@ wrterror(const char *p)
 	iov[3].iov_len = strlen(p);
 	iov[4].iov_base = (char*)"\n";
 	iov[4].iov_len = 1;
-	(void) writev(STDERR_FILENO, iov, 5);
-
+	writev(STDERR_FILENO, iov, 5);
+#else
+        (void)p;
+#endif
 	suicide = 1;
 #ifdef MALLOC_STATS
 	if (malloc_stats)
@@ -478,14 +481,17 @@ wrterror(const char *p)
 static void
 wrtwarning(const char *p)
 {
+#ifndef BUILDING_FOR_TOR
 	const char		*q = " warning: ";
 	struct iovec	iov[5];
+#endif
 
 	if (malloc_abort)
 		wrterror(p);
 	else if (malloc_silent)
 		return;
 
+#ifndef BUILDING_FOR_TOR
 	iov[0].iov_base = __progname;
 	iov[0].iov_len = strlen(__progname);
 	iov[1].iov_base = (char*)malloc_func;
@@ -498,6 +504,9 @@ wrtwarning(const char *p)
 	iov[4].iov_len = 1;
 
 	(void) writev(STDERR_FILENO, iov, 5);
+#else
+        (void)p;
+#endif
 }
 
 #ifdef MALLOC_STATS
