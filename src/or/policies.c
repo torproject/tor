@@ -1004,8 +1004,7 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
   else
     addrpart = addrbuf;
 
-  result = tor_snprintf(buf, buflen, "%s%s%s %s",
-                        (is_ip6&&format_for_desc)?"opt ":"",
+  result = tor_snprintf(buf, buflen, "%s%s %s",
                         is_accept ? "accept" : "reject",
                         (is_ip6&&format_for_desc)?"6":"",
                         addrpart);
