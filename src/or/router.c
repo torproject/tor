@@ -797,7 +797,7 @@ int
 check_whether_dirport_reachable(void)
 {
   const or_options_t *options = get_options();
-  return !options->DirPort ||
+  return !options->DirPort_set ||
          options->AssumeReachable ||
          net_is_disabled() ||
          can_reach_dir_port;
@@ -1115,7 +1115,8 @@ int
 server_mode(const or_options_t *options)
 {
   if (options->ClientOnly) return 0;
-  return (options->ORPort || options->ORListenAddress);
+  /* XXXX024 I believe we can kill off ORListenAddress here.*/
+  return (options->ORPort_set || options->ORListenAddress);
 }
 
 /** Return true iff we are trying to be a non-bridge server.

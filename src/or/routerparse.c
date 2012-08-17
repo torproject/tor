@@ -962,7 +962,7 @@ router_parse_runningrouters(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the list. */
-  if (get_options()->DirPort && !authdir_mode_v1(get_options()))
+  if (get_options()->DirPort_set && !authdir_mode_v1(get_options()))
     dirserv_set_cached_directory(str, published_on, 1);
 
   r = 0;
