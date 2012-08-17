@@ -2609,21 +2609,20 @@ pathbias_get_scale_factor(const or_options_t *options)
                                 DFLT_PATH_BIAS_SCALE_THRESHOLD, 1, INT32_MAX);
 }
 
-const char *
+static const char *
 pathbias_state_to_string(path_state_t state)
 {
-  switch(state) {
+  switch (state) {
     case PATH_STATE_NEW_CIRC:
-      return "new"; 
+      return "new";
     case PATH_STATE_DID_FIRST_HOP:
-      return "first hop"; 
+      return "first hop";
     case PATH_STATE_SUCCEEDED:
       return "succeeded";
   }
 
   return "unknown";
 }
-
 
 /**
  * Check our circuit state to see if this is a successful first hop.
@@ -2635,7 +2634,8 @@ static int
 pathbias_count_first_hop(origin_circuit_t *circ)
 {
 #define FIRST_HOP_NOTICE_INTERVAL (600)
-  static ratelim_t first_hop_notice_limit = RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
+  static ratelim_t first_hop_notice_limit =
+    RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
   /* Completely ignore one hop circuits */
@@ -2706,7 +2706,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
             "A %s circuit is in cpath state %d (opened: %d). "
             "Circuit is a %s currently %s. %s",
             pathbias_state_to_string(circ->path_state),
-            circ->cpath->state, circ->has_opened, 
+            circ->cpath->state, circ->has_opened,
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
@@ -2728,7 +2728,8 @@ static void
 pathbias_count_success(origin_circuit_t *circ)
 {
 #define SUCCESS_NOTICE_INTERVAL (600)
-  static ratelim_t success_notice_limit = RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
+  static ratelim_t success_notice_limit =
+    RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
   /* Ignore one hop circuits */
@@ -2795,7 +2796,6 @@ pathbias_count_success(origin_circuit_t *circ)
     }
   }
 }
-
 
 /** Increment the number of times we successfully extended a circuit to
  * 'guard', first checking if the failure rate is high enough that we should
@@ -2866,7 +2866,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   crypt_path_t *hop;
   int rv;
 
-  if((rv = pathbias_count_first_hop(circ)) < 0)
+  if ((rv = pathbias_count_first_hop(circ)) < 0)
     return rv;
 
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
