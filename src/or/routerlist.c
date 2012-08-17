@@ -5160,6 +5160,8 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
   if (strcasecmp(r1->address, r2->address) ||
       strcasecmp(r1->nickname, r2->nickname) ||
       r1->or_port != r2->or_port ||
+      !tor_addr_eq(&r1->ipv6_addr, &r2->ipv6_addr) ||
+      r1->ipv6_orport != r2->ipv6_orport ||
       r1->dir_port != r2->dir_port ||
       r1->purpose != r2->purpose ||
       crypto_pk_cmp_keys(r1->onion_pkey, r2->onion_pkey) ||
