@@ -3365,13 +3365,6 @@ connection_flush(connection_t *conn)
   return connection_handle_write(conn, 1);
 }
 
-/** OpenSSL TLS record size is 16383; this is close. The goal here is to
- * push data out as soon as we know there's enough for a TLS record, so
- * during periods of high load we won't read entire megabytes from
- * input before pushing any data out. It also has the feature of not
- * growing huge outbufs unless something is slow. */
-#define MIN_TLS_FLUSHLEN 15872
-
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
  *
@@ -3380,10 +3373,9 @@ connection_flush(connection_t *conn)
  * negative, this is the last data to be compressed, and the connection's zlib
  * state should be flushed.
  *
- * If it's an OR conn and an entire TLS record is ready, then try to
- * flush the record now. Similarly, if it's a local control connection
- * and a 64k chunk is ready, try to flush it all, so we don't end up with
- * many megabytes of controller info queued at once.
+ * If it's a local control connection and a 64k chunk is ready, try to flush
+ * it all, so we don't end up with many megabytes of controller info queued at
+ * once.
  */
 void
 _connection_write_to_buf_impl(const char *string, size_t len,
@@ -3451,7 +3443,6 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   if (zlib) {
     conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
   } else {
-    ssize_t extra = 0;
     conn->outbuf_flushlen += len;
 
     /* Should we try flushing the outbuf now? */
@@ -3461,14 +3452,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
       return;
     }
 
-    if (conn->type == CONN_TYPE_OR &&
-        conn->outbuf_flushlen-len < MIN_TLS_FLUSHLEN &&
-        conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
-      /* We just pushed outbuf_flushlen to MIN_TLS_FLUSHLEN or above;
-       * we can send out a full TLS frame now if we like. */
-      extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
-      conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
-    } else if (conn->type == CONN_TYPE_CONTROL &&
+    if (conn->type == CONN_TYPE_CONTROL &&
                !connection_is_rate_limited(conn) &&
                conn->outbuf_flushlen-len < 1<<16 &&
                conn->outbuf_flushlen >= 1<<16) {
@@ -3487,10 +3471,6 @@ _connection_write_to_buf_impl(const char *string, size_t len,
         connection_close_immediate(conn);
       }
       return;
-    }
-    if (extra) {
-      conn->outbuf_flushlen += extra;
-      connection_start_writing(conn);
     }
   }
 }
