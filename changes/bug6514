@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Add a (probably redundant) memory clear between iterations of
+      the router status voting loop, to prevent future coding errors
+      where data might leak between iterations of the loop. Resolves
+      ticket 6514.

@@ -1752,6 +1752,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs = compute_routerstatus_consensus(matching_descs, consensus_method,
                                           microdesc_digest);
       /* Copy bits of that into rs_out. */
+      memset(&rs_out, 0, sizeof(rs_out));
       tor_assert(fast_memeq(lowest_id, rs->status.identity_digest,DIGEST_LEN));
       memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
