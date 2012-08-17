@@ -135,6 +135,9 @@ static entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
 
 static void bridge_free(bridge_info_t *bridge);
 
+static int entry_guard_inc_first_hop_count(entry_guard_t *guard);
+static void pathbias_count_success(origin_circuit_t *circ);
+
 /**
  * This function decides if CBT learning should be disabled. It returns
  * true if one or more of the following four conditions are met:
@@ -2285,28 +2288,11 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       }
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
-      /* Don't count cannibalized or onehop circs for path bias */
+
       if (circ->build_state->onehop_tunnel || circ->has_opened) {
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
-      } else {
-        entry_guard_t *guard =
-          entry_guard_get_by_id_digest(circ->_base.n_conn->identity_digest);
-
-        if (guard) {
-          guard->circuit_successes++;
-
-          log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
-                   guard->circuit_successes, guard->first_hops,
-                   guard->nickname, hex_str(guard->identity, DIGEST_LEN));
-
-          if (guard->first_hops < guard->circuit_successes) {
-            log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
-                     "for guard %s",
-                     guard->circuit_successes, guard->first_hops,
-                     guard->nickname);
-          }
-        }
       }
+
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
         can_complete_circuit=1;
@@ -2322,6 +2308,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
           consider_testing_reachability(1, 1);
         }
       }
+
+      pathbias_count_success(circ);
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */
 
@@ -2621,6 +2609,194 @@ pathbias_get_scale_factor(const or_options_t *options)
                                 DFLT_PATH_BIAS_SCALE_THRESHOLD, 1, INT32_MAX);
 }
 
+static const char *
+pathbias_state_to_string(path_state_t state)
+{
+  switch (state) {
+    case PATH_STATE_NEW_CIRC:
+      return "new";
+    case PATH_STATE_DID_FIRST_HOP:
+      return "first hop";
+    case PATH_STATE_SUCCEEDED:
+      return "succeeded";
+  }
+
+  return "unknown";
+}
+
+/**
+ * Check our circuit state to see if this is a successful first hop.
+ * If so, record it in the current guard's path bias first_hop count.
+ *
+ * Also check for several potential error cases for bug #6475.
+ */
+static int
+pathbias_count_first_hop(origin_circuit_t *circ)
+{
+#define FIRST_HOP_NOTICE_INTERVAL (600)
+  static ratelim_t first_hop_notice_limit =
+    RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
+  char *rate_msg = NULL;
+
+  /* Completely ignore one hop circuits */
+  if (circ->build_state->onehop_tunnel) {
+    tor_assert(circ->build_state->desired_path_len == 1);
+    return 0;
+  }
+
+  if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
+    /* Help track down the real cause of bug #6475: */
+    if (circ->has_opened && circ->path_state != PATH_STATE_DID_FIRST_HOP) {
+      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+                                     approx_time()))) {
+        log_notice(LD_BUG,
+                "Opened circuit is in strange path state %s. "
+                "Circuit is a %s currently %s. %s",
+                pathbias_state_to_string(circ->path_state),
+                circuit_purpose_to_string(circ->_base.purpose),
+                circuit_state_to_string(circ->_base.state),
+                rate_msg);
+      }
+    }
+
+    /* Don't count cannibalized circs for path bias */
+    if (!circ->has_opened) {
+      entry_guard_t *guard;
+
+      guard = entry_guard_get_by_id_digest(
+              circ->_base.n_conn->identity_digest);
+      if (guard) {
+        if (circ->path_state == PATH_STATE_NEW_CIRC) {
+          circ->path_state = PATH_STATE_DID_FIRST_HOP;
+
+          if (entry_guard_inc_first_hop_count(guard) < 0) {
+            /* Bogus guard; we already warned. */
+            return -END_CIRC_REASON_TORPROTOCOL;
+          }
+        } else {
+          if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+                  approx_time()))) {
+            log_notice(LD_BUG,
+                   "Unopened circuit has strange path state %s. "
+                   "Circuit is a %s currently %s. %s",
+                   pathbias_state_to_string(circ->path_state),
+                   circuit_purpose_to_string(circ->_base.purpose),
+                   circuit_state_to_string(circ->_base.state),
+                   rate_msg);
+          }
+        }
+      } else {
+        if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+                approx_time()))) {
+          log_notice(LD_BUG,
+              "Unopened circuit has no known guard. "
+              "Circuit is a %s currently %s. %s",
+              circuit_purpose_to_string(circ->_base.purpose),
+              circuit_state_to_string(circ->_base.state),
+              rate_msg);
+        }
+      }
+    }
+  } else {
+    /* Help track down the real cause of bug #6475: */
+    if (circ->path_state == PATH_STATE_NEW_CIRC) {
+      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+                approx_time()))) {
+        log_notice(LD_BUG,
+            "A %s circuit is in cpath state %d (opened: %d). "
+            "Circuit is a %s currently %s. %s",
+            pathbias_state_to_string(circ->path_state),
+            circ->cpath->state, circ->has_opened,
+            circuit_purpose_to_string(circ->_base.purpose),
+            circuit_state_to_string(circ->_base.state),
+            rate_msg);
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Check our circuit state to see if this is a successful circuit
+ * completion. If so, record it in the current guard's path bias
+ * success count.
+ *
+ * Also check for several potential error cases for bug #6475.
+ */
+static void
+pathbias_count_success(origin_circuit_t *circ)
+{
+#define SUCCESS_NOTICE_INTERVAL (600)
+  static ratelim_t success_notice_limit =
+    RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
+  char *rate_msg = NULL;
+
+  /* Ignore one hop circuits */
+  if (circ->build_state->onehop_tunnel) {
+    tor_assert(circ->build_state->desired_path_len == 1);
+    return;
+  }
+
+  /* Don't count cannibalized/reused circs for path bias */
+  if (!circ->has_opened) {
+    entry_guard_t *guard =
+      entry_guard_get_by_id_digest(circ->_base.n_conn->identity_digest);
+
+    if (guard) {
+      if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
+        circ->path_state = PATH_STATE_SUCCEEDED;
+        guard->circuit_successes++;
+
+        log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+                 guard->circuit_successes, guard->first_hops,
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+      } else {
+        if ((rate_msg = rate_limit_log(&success_notice_limit,
+                approx_time()))) {
+          log_notice(LD_BUG,
+              "Succeeded circuit is in strange path state %s. "
+              "Circuit is a %s currently %s. %s",
+              pathbias_state_to_string(circ->path_state),
+              circuit_purpose_to_string(circ->_base.purpose),
+              circuit_state_to_string(circ->_base.state),
+              rate_msg);
+        }
+      }
+
+      if (guard->first_hops < guard->circuit_successes) {
+        log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
+                 "for guard %s=%s",
+                 guard->circuit_successes, guard->first_hops,
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+      }
+    } else {
+      if ((rate_msg = rate_limit_log(&success_notice_limit,
+              approx_time()))) {
+        log_notice(LD_BUG,
+            "Completed circuit has no known guard. "
+            "Circuit is a %s currently %s. %s",
+            circuit_purpose_to_string(circ->_base.purpose),
+            circuit_state_to_string(circ->_base.state),
+            rate_msg);
+      }
+    }
+  } else {
+    if (circ->path_state != PATH_STATE_SUCCEEDED) {
+      if ((rate_msg = rate_limit_log(&success_notice_limit,
+              approx_time()))) {
+        log_notice(LD_BUG,
+            "Opened circuit is in strange path state %s. "
+            "Circuit is a %s currently %s. %s",
+            pathbias_state_to_string(circ->path_state),
+            circuit_purpose_to_string(circ->_base.purpose),
+            circuit_state_to_string(circ->_base.state),
+            rate_msg);
+      }
+    }
+  }
+}
+
 /** Increment the number of times we successfully extended a circuit to
  * 'guard', first checking if the failure rate is high enough that we should
  * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
@@ -2666,8 +2842,9 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
     guard->circuit_successes /= scale_factor;
   }
   guard->first_hops++;
-  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s",
-           guard->circuit_successes, guard->first_hops, guard->nickname);
+  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+           guard->circuit_successes, guard->first_hops, guard->nickname,
+           hex_str(guard->identity, DIGEST_LEN));
   return 0;
 }
 
@@ -2687,22 +2864,13 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
 {
   char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
+  int rv;
+
+  if ((rv = pathbias_count_first_hop(circ)) < 0)
+    return rv;
 
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     hop = circ->cpath;
-    /* Don't count cannibalized or onehop circs for path bias */
-    if (!circ->has_opened && !circ->build_state->onehop_tunnel) {
-      entry_guard_t *guard;
-
-      guard = entry_guard_get_by_id_digest(
-              circ->_base.n_conn->identity_digest);
-      if (guard) {
-        if (entry_guard_inc_first_hop_count(guard) < 0) {
-          /* Bogus guard; we already warned. */
-          return -END_CIRC_REASON_TORPROTOCOL;
-        }
-      }
-    }
   } else {
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */

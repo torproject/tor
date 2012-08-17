@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+     - Add internal circuit construction state to protect against
+       the noisy warn message "Unexpectedly high circuit_successes".
+       Also add some additional rate-limited notice messages to help
+       determine the root cause of the warn. Fixes bug 6475.
+       Bugfix against 0.2.3.17-beta.
