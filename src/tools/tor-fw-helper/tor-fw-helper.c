@@ -353,28 +353,18 @@ parse_port(const char *arg)
 /** Report a failure of epic proportions: We didn't manage to
  *  initialize any port forwarding backends. */
 static void
-report_full_fail(const smartlist_t *ports_to_forward, backends_t *backends)
+report_full_fail(const smartlist_t *ports_to_forward)
 {
-  char *list_of_backends_str = NULL;
-  char *fail_msg = NULL;
-
   if (!ports_to_forward)
     return;
-
-  list_of_backends_str = get_list_of_backends_string(backends);
-  tor_asprintf(&fail_msg,
-               "Port forwarding backends (%s) could not be initialized.",
-               list_of_backends_str);
 
   SMARTLIST_FOREACH_BEGIN(ports_to_forward,
                           const port_to_forward_t *, port_to_forward) {
     tor_fw_helper_report_port_fw_fail(port_to_forward->internal_port,
                                       port_to_forward->external_port,
-                                      fail_msg);
+                                      "All backends (NAT-PMP, UPnP) failed "
+                                      "to initialize!"); /* XXX hardcoded */
   } SMARTLIST_FOREACH_END(port_to_forward);
-
-  tor_free(list_of_backends_str);
-  tor_free(fail_msg);
 }
 
 int
@@ -481,8 +471,8 @@ main(int argc, char **argv)
   r = init_backends(&tor_fw_options, &backend_state);
   if (!r) { // all backends failed:
     // report our failure
-    report_full_fail(tor_fw_options.ports_to_forward, &backend_state);
-    fprintf(stderr, "V: tor-fw-helper: All backends failed.\n");
+    report_full_fail(tor_fw_options.ports_to_forward);
+    fprintf(stderr, "tor-fw-helper: All backends failed.\n");
     exit(1);
   } else { // some backends succeeded:
     fprintf(stderr, "tor-fw-helper: %i NAT traversal helper(s) loaded\n", r);

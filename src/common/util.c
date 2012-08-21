@@ -4381,17 +4381,17 @@ tor_get_lines_from_handle(HANDLE *handle,
   char stdout_buf[600] = {0};
   smartlist_t *lines = NULL;
 
-  tor_assert(stream_status);
+  tor_assert(stream_status_out);
 
-  *stream_status = IO_STREAM_TERM;
+  *stream_status_out = IO_STREAM_TERM;
 
   pos = tor_read_all_handle(handle, stdout_buf, sizeof(stdout_buf) - 1, NULL);
   if (pos < 0) {
-    *stream_status = IO_STREAM_TERM;
+    *stream_status_out = IO_STREAM_TERM;
     return NULL;
   }
   if (pos == 0) {
-    *stream_status = IO_STREAM_EAGAIN;
+    *stream_status_out = IO_STREAM_EAGAIN;
     return NULL;
   }
 
@@ -4408,7 +4408,7 @@ tor_get_lines_from_handle(HANDLE *handle,
   SMARTLIST_FOREACH(lines, char *, line,
                     SMARTLIST_REPLACE_CURRENT(lines, line, tor_strdup(line)));
 
-  *stream_status = IO_STREAM_OKAY;
+  *stream_status_out = IO_STREAM_OKAY;
 
   return lines;
 }
@@ -4461,8 +4461,8 @@ log_from_handle(HANDLE *pipe, int severity)
 #else
 
 /** Return a smartlist containing lines outputted from
- *  <b>handle</b>. Return NULL on error, and set <b>stream_status</b>
- *  appropriately. */
+ *  <b>handle</b>. Return NULL on error, and set
+ *  <b>stream_status_out</b> appropriately. */
 smartlist_t *
 tor_get_lines_from_handle(FILE *handle, enum stream_status *stream_status_out)
 {
