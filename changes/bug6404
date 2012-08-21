@@ -1,0 +1,16 @@
+  o Minor bugfixes:
+
+    - Remove the maximum length of microdescriptor we are willing to
+      generate. Occasionally this is needed for routers
+      with complex policies or family declarations. Partial fix for
+      bug 6404; fix on 0.2.2.6-alpha.
+
+    - Authorities no longer include any router in their
+      microdescriptor consensuses for which they couldn't generate or
+      agree on a microdescriptor.  Partial fix for bug 6404; fix on
+      0.2.2.6-alpha.
+
+    - Move log message when unable to find a microdesc in a
+      routerstatus entry to parse time. Previously we'd spam this
+      warning every time we tried to figure out which microdescriptors
+      to download. Partial fix for bug 6404; fix on 0.2.3.18-rc.

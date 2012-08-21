@@ -54,7 +54,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 12
+#define MAX_SUPPORTED_CONSENSUS_METHOD 13
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -71,6 +71,10 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 /** Lowest consensus method that ensures a majority of authorities voted
   * for a param. */
 #define MIN_METHOD_FOR_MAJORITY_PARAMS 12
+
+/** Lowest consensus method where microdesc consensuses omit any entry
+ * with no microdesc. */
+#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
 
 /* =====
  * Voting
@@ -1936,6 +1940,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
       }
 
+      if (flavor == FLAV_MICRODESC &&
+          consensus_method >= MIN_METHOD_FOR_MANDATORY_MICRODESC &&
+          tor_digest256_is_zero(microdesc_digest)) {
+        /* With no microdescriptor digest, we omit the entry entirely. */
+        continue;
+      }
+
       {
         char buf[4096];
         /* Okay!! Now we can write the descriptor... */
@@ -3503,9 +3514,9 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
 {
   microdesc_t *result = NULL;
   char *key = NULL, *summary = NULL, *family = NULL;
-  char buf[1024];
   size_t keylen;
-  char *out = buf, *end = buf+sizeof(buf);
+  smartlist_t *chunks = smartlist_new();
+  char *output = NULL;
 
   if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
     goto done;
@@ -3513,23 +3524,19 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   if (ri->declared_family)
     family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
 
-  if (tor_snprintf(out, end-out, "onion-key\n%s", key)<0)
-    goto done;
-  out += strlen(out);
-  if (family) {
-    if (tor_snprintf(out, end-out, "family %s\n", family)<0)
-      goto done;
-    out += strlen(out);
-  }
-  if (summary && strcmp(summary, "reject 1-65535")) {
-    if (tor_snprintf(out, end-out, "p %s\n", summary)<0)
-      goto done;
-    out += strlen(out);
-  }
-  *out = '\0'; /* Make sure it's nul-terminated.  This should be a no-op */
+  smartlist_add_asprintf(chunks, "onion-key\n%s", key);
+
+  if (family)
+    smartlist_add_asprintf(chunks, "family %s\n", family);
+
+  if (summary && strcmp(summary, "reject 1-65535"))
+    smartlist_add_asprintf(chunks, "p %s\n", summary);
+
+  output = smartlist_join_strings(chunks, "", 0, NULL);
 
   {
-    smartlist_t *lst = microdescs_parse_from_string(buf, out, 0, 1);
+    smartlist_t *lst = microdescs_parse_from_string(output,
+                                                 output+strlen(output), 0, 1);
     if (smartlist_len(lst) != 1) {
       log_warn(LD_DIR, "We generated a microdescriptor we couldn't parse.");
       SMARTLIST_FOREACH(lst, microdesc_t *, md, microdesc_free(md));
@@ -3541,9 +3548,14 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   }
 
  done:
+  tor_free(output);
   tor_free(key);
   tor_free(summary);
   tor_free(family);
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+    smartlist_free(chunks);
+  }
   return result;
 }
 
