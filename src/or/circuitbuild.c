@@ -2638,6 +2638,14 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
+  /* We can't do path bias accounting without entry guards.
+   * Testing and controller circuits also have no guards. */
+  if (get_options()->UseEntryGuards == 0 ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+    return 0;
+  }
+
   /* Completely ignore one hop circuits */
   if (circ->build_state->onehop_tunnel) {
     tor_assert(circ->build_state->desired_path_len == 1);
@@ -2732,6 +2740,14 @@ pathbias_count_success(origin_circuit_t *circ)
     RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
+  /* We can't do path bias accounting without entry guards.
+   * Testing and controller circuits also have no guards. */
+  if (get_options()->UseEntryGuards == 0 ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+    return;
+  }
+
   /* Ignore one hop circuits */
   if (circ->build_state->onehop_tunnel) {
     tor_assert(circ->build_state->desired_path_len == 1);
@@ -2770,7 +2786,10 @@ pathbias_count_success(origin_circuit_t *circ)
                  guard->circuit_successes, guard->first_hops,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
-    } else {
+    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
+     * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
+     * No need to log that case. */
+    } else if (circ->_base.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
         log_notice(LD_BUG,
