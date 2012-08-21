@@ -1177,8 +1177,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   /* Early parsing pass (get pk, ciphertext); type 2 is INTRODUCE2 */
   parsed_req =
     rend_service_begin_parse_intro(request, request_len, 2, &err_msg);
-  if (!parsed_req) goto err;
-  else if (err_msg) {
+  if (!parsed_req) {
+    goto log_error;
+  } else if (err_msg) {
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
@@ -1186,8 +1187,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   stage_descr = "early validation";
   /* Early validation of pk/ciphertext part */
   result = rend_service_validate_intro_early(parsed_req, &err_msg);
-  if (result < 0) goto err;
-  else if (err_msg) {
+  if (result < 0) {
+    goto log_error;
+  } else if (err_msg) {
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
@@ -1215,14 +1217,15 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
              "INTRODUCE2 cell with same PK-encrypted part %d "
              "seconds ago.  Dropping cell.",
              (int)elapsed);
-     goto err;
+    goto err;
   }
 
   stage_descr = "decryption";
   /* Now try to decrypt it */
   result = rend_service_decrypt_intro(parsed_req, intro_key, &err_msg);
-  if (result < 0) goto err;
-  else if (err_msg) {
+  if (result < 0) {
+    goto log_error;
+  } else if (err_msg) {
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
@@ -1230,8 +1233,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   stage_descr = "late parsing";
   /* Parse the plaintext */
   result = rend_service_parse_intro_plaintext(parsed_req, &err_msg);
-  if (result < 0) goto err;
-  else if (err_msg) {
+  if (result < 0) {
+    goto log_error;
+  } else if (err_msg) {
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
@@ -1239,8 +1243,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   stage_descr = "late validation";
   /* Validate the parsed plaintext parts */
   result = rend_service_validate_intro_late(parsed_req, &err_msg);
-  if (result < 0) goto err;
-  else if (err_msg) {
+  if (result < 0) {
+    goto log_error;
+  } else if (err_msg) {
     log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
     tor_free(err_msg);
   }
@@ -1251,7 +1256,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* Find the rendezvous point */
   rp = find_rp_for_intro(parsed_req, &need_rp_free, &err_msg);
-  if (!rp) goto err;
+  if (!rp)
+    goto log_error;
 
   /* Check if we'd refuse to talk to this router */
   if (options->StrictNodes &&
@@ -1379,21 +1385,23 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   goto done;
 
- err:
-  status = -1;
+ log_error:
   if (!err_msg) {
     if (stage_descr) {
       tor_asprintf(&err_msg,
                    "unknown %s error for INTRODUCE2", stage_descr);
-     } else {
+    } else {
       err_msg = tor_strdup("unknown error for INTRODUCE2");
-     }
+    }
   }
+
+  log_warn(LD_REND, "%s on circ %d", err_msg, circuit->_base.n_circ_id);
+ err:
+  status = -1;
   if (dh) crypto_dh_free(dh);
   if (launched) {
     circuit_mark_for_close(TO_CIRCUIT(launched), reason);
   }
-  log_warn(LD_REND, "%s on circ %d", err_msg, circuit->_base.n_circ_id);
   tor_free(err_msg);
 
  done:
