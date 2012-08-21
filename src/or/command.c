@@ -808,7 +808,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   time_t now = time(NULL);
 
   long apparent_skew = 0;
-  uint32_t my_apparent_addr = 0;
+  tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
 
   if (conn->link_proto < 2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
@@ -868,7 +868,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     connection_mark_for_close(TO_CONN(conn));
     return;
   } else if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
-    my_apparent_addr = ntohl(get_uint32(my_addr_ptr));
+    tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
+  } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
+    tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
   }
 
   n_other_addrs = (uint8_t) *cp++;
@@ -921,7 +923,6 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
 
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently
    * trustworthy. */
-  (void)my_apparent_addr;
 
   if (connection_or_set_state_open(conn)<0) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got good NETINFO cell from %s:%d; but "
@@ -931,10 +932,13 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     connection_mark_for_close(TO_CONN(conn));
   } else {
     log_info(LD_OR, "Got good NETINFO cell from %s:%d; OR connection is now "
-             "open, using protocol version %d. Its ID digest is %s",
+             "open, using protocol version %d. Its ID digest is %s. "
+             "Our address is apparently %s.",
              safe_str_client(conn->_base.address),
              conn->_base.port, (int)conn->link_proto,
-             hex_str(conn->identity_digest, DIGEST_LEN));
+             hex_str(conn->identity_digest, DIGEST_LEN),
+             tor_addr_is_null(&my_apparent_addr) ?
+             "<none>" : fmt_and_decorate_addr(&my_apparent_addr));
   }
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
