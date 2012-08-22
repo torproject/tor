@@ -1,0 +1,10 @@
+
+  o Documentation fix:
+    Remove the following entry from the 0.2.2.38 changelog, since the patch
+    was not, in fact, included in 0.2.2.38:
+    .
+    - Avoid read-from-freed-memory and double-free bugs that could occur
+      when a DNS request fails while launching it. Fixes bug 6480;
+      bugfix on 0.2.0.1-alpha.
+    .
+    Fixes bug 6657; bugfix on 0.2.2.38.
