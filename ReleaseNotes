@@ -9,9 +9,6 @@ Changes in version 0.2.2.38 - 2012-08-12
   could in theory leak path information.
 
   o Security fixes:
-    - Avoid read-from-freed-memory and double-free bugs that could occur
-      when a DNS request fails while launching it. Fixes bug 6480;
-      bugfix on 0.2.0.1-alpha.
     - Avoid an uninitialized memory read when reading a vote or consensus
       document that has an unrecognized flavor name. This read could
       lead to a remote crash bug. Fixes bug 6530; bugfix on 0.2.2.6-alpha.
