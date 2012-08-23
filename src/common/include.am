@@ -59,7 +59,7 @@ noinst_HEADERS+= 				\
 DISTCLEANFILES+= src/common/common_sha1.i
 
 src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
-	if test "@SHA1SUM@" != none; then \
+	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
 	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > $@; \
 	elif test "@OPENSSL@" != none; then \
 	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_common_libor_SOURCES) $(src_Common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > $@; \

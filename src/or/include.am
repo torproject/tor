@@ -144,7 +144,7 @@ src/or/micro-revision.i: FORCE
 	fi; true
 
 src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)
-	if test "@SHA1SUM@" != none; then \
+	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
 	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)) | \
 	  "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/or/or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
