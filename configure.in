@@ -7,7 +7,7 @@ AC_INIT([tor],[0.2.4.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-AM_CONFIG_HEADER(orconfig.h)
+AC_CONFIG_HEADERS([orconfig.h])
 
 AC_CANONICAL_HOST
 
@@ -1332,4 +1332,3 @@ AC_OUTPUT
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
   ./contrib/updateVersions.pl
 fi
-
