@@ -63,5 +63,7 @@ $(asciidoc_product) : $(txt_in) $(man_in)
 	fi
 	$(AM_V_GEN)./config.status --file=$@;
 
+$(doc_DATA) : $(html_in)
+
 CLEANFILES+= $(asciidoc_product) config.log
 DISTCLEANFILES+= $(html_in) $(man_in)
