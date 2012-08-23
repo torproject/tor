@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring
+    - Move ipv6_preferred from routerinfo_t to node_t.
+      Addresses bug 4620.

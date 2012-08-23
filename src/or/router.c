@@ -880,6 +880,21 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
   return advertising ? dir_port : 0;
 }
 
+/** Allocate and return a new extend_info_t that can be used to build
+ * a circuit to or through the router <b>r</b>. Use the primary
+ * address of the router unless <b>for_direct_connect</b> is true, in
+ * which case the preferred address is used instead. */
+static extend_info_t *
+extend_info_from_router(const routerinfo_t *r)
+{
+  tor_addr_port_t ap;
+  tor_assert(r);
+
+  router_get_prim_orport(r, &ap);
+  return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
+                           r->onion_pkey, &ap.addr, ap.port);
+}
+
 /** Some time has passed, or we just got new directory information.
  * See if we currently believe our ORPort or DirPort to be
  * unreachable. If so, launch a new test for it.
@@ -921,12 +936,11 @@ consider_testing_reachability(int test_or, int test_dir)
   }
 
   if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-    extend_info_t *ei;
+    extend_info_t *ei = extend_info_from_router(me);
+    /* XXX IPv6 self testing */
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
-    /* XXX IPv6 self testing IPv6 orports will need pref_addr */
-    ei = extend_info_from_router(me, 0);
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
     extend_info_free(ei);
@@ -2195,42 +2209,6 @@ router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
   ap_out->port = router->or_port;
 }
 
-/** Return 1 if we prefer the IPv6 address and OR TCP port of
- * <b>router</b>, else 0.
- *
- *  We prefer the IPv6 address if the router has one and
- *  i) the routerinfo_t says so
- *  or
- *  ii) the router has no IPv4 address.  */
-int
-router_ipv6_preferred(const routerinfo_t *router)
-{
-  return (!tor_addr_is_null(&router->ipv6_addr)
-          && (router->ipv6_preferred || router->addr == 0));
-}
-
-/** Copy the preferred OR port (IP address and TCP port) for
- * <b>router</b> into *<b>addr_out</b>.  */
-void
-router_get_pref_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
-{
-  if (router_ipv6_preferred(router))
-    router_get_pref_ipv6_orport(router, ap_out);
-  else
-    router_get_prim_orport(router, ap_out);
-}
-
-/** Copy the preferred IPv6 OR port (IP address and TCP port) for
- * <b>router</b> into *<b>ap_out</b>. */
-void
-router_get_pref_ipv6_orport(const routerinfo_t *router,
-                            tor_addr_port_t *ap_out)
-{
-  tor_assert(ap_out != NULL);
-  tor_addr_copy(&ap_out->addr, &router->ipv6_addr);
-  ap_out->port = router->ipv6_orport;
-}
-
 /** Return 1 if any of <b>router</b>'s addresses are <b>addr</b>.
  *   Otherwise return 0. */
 int
@@ -2782,3 +2760,29 @@ router_free_all(void)
   }
 }
 
+/** Return a smartlist of tor_addr_port_t's with all the OR ports of
+    <b>ri</b>. Note that freeing of the items in the list as well as
+    the smartlist itself is the callers responsibility.
+
+    XXX duplicating code from node_get_all_orports(). */
+smartlist_t *
+router_get_all_orports(const routerinfo_t *ri)
+{
+  smartlist_t *sl = smartlist_new();
+  tor_assert(ri);
+
+  if (ri->addr != 0) {
+    tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
+    tor_addr_from_ipv4h(&ap->addr, ri->addr);
+    ap->port = ri->or_port;
+    smartlist_add(sl, ap);
+  }
+  if (!tor_addr_is_null(&ri->ipv6_addr)) {
+    tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
+    tor_addr_copy(&ap->addr, &ri->ipv6_addr);
+    ap->port = ri->or_port;
+    smartlist_add(sl, ap);
+  }
+
+  return sl;
+}

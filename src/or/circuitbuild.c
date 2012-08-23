@@ -3825,24 +3825,6 @@ extend_info_alloc(const char *nickname, const char *digest,
   return info;
 }
 
-/** Allocate and return a new extend_info_t that can be used to build
- * a circuit to or through the router <b>r</b>. Use the primary
- * address of the router unless <b>for_direct_connect</b> is true, in
- * which case the preferred address is used instead. */
-extend_info_t *
-extend_info_from_router(const routerinfo_t *r, int for_direct_connect)
-{
-  tor_addr_port_t ap;
-  tor_assert(r);
-
-  if (for_direct_connect)
-    router_get_pref_orport(r, &ap);
-  else
-    router_get_prim_orport(r, &ap);
-  return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, &ap.addr, ap.port);
-}
-
 /** Allocate and return a new extend_info that can be used to build a
  * circuit to or through the node <b>node</b>. Use the primary address
  * of the node unless <b>for_direct_connect</b> is true, in which case
@@ -3854,7 +3836,14 @@ extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
 {
   if (node->ri) {
-    return extend_info_from_router(node->ri, for_direct_connect);
+    const routerinfo_t *r = node->ri;
+    tor_addr_port_t ap;
+    if (for_direct_connect)
+      node_get_pref_orport(node, &ap);
+    else
+      node_get_prim_orport(node, &ap);
+    return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
+                             r->onion_pkey, &ap.addr, ap.port);
   } else if (node->rs && node->md) {
     tor_addr_t addr;
     tor_addr_from_ipv4h(&addr, node->rs->addr);
@@ -5137,10 +5126,36 @@ bridge_free(bridge_info_t *bridge)
   tor_free(bridge);
 }
 
+/** Return a bridge pointer if either <b>digest</b>, if possible, or
+ * any of the tor_addr_port_t's in <b>orports</b>, if necessary,
+ * matches any of our known bridges.  Else return NULL. */
+static bridge_info_t *
+get_configured_bridge_by_orports_digest(const char *digest,
+                                        const smartlist_t *orports)
+{
+  if (!bridge_list)
+    return NULL;
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
+    {
+      if (tor_digest_is_zero(bridge->identity)) {
+        SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, ap)
+          {
+            if (tor_addr_compare(&bridge->addr, &ap->addr, CMP_EXACT) == 0 &&
+                bridge->port == ap->port)
+              return bridge;
+          }
+        SMARTLIST_FOREACH_END(ap);
+      }
+      if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
+        return bridge;
+    }
+  SMARTLIST_FOREACH_END(bridge);
+  return NULL;
+}
 
-/** Return a bridge pointer if <b>ri</b> is one of our known bridges
- * (either by comparing keys if possible, else by comparing addr/port).
- * Else return NULL. */
+/** Return a bridge pointer if <b>digest</b>, if possible, or
+ * <b>addr</b> and <b>port</b>, if necessary, matches any of our known
+ * bridges.  Else return NULL. */
 static bridge_info_t *
 get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
                                           uint16_t port,
@@ -5166,11 +5181,13 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
 static bridge_info_t *
 get_configured_bridge_by_routerinfo(const routerinfo_t *ri)
 {
-  tor_addr_port_t ap;
-
-  router_get_pref_orport(ri, &ap);
-  return get_configured_bridge_by_addr_port_digest(&ap.addr, ap.port,
-                                               ri->cache_info.identity_digest);
+  bridge_info_t *bi = NULL;
+  smartlist_t *orports = router_get_all_orports(ri);
+  bi = get_configured_bridge_by_orports_digest(ri->cache_info.identity_digest,
+                                               orports);
+  SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
+  smartlist_free(orports);
+  return bi;
 }
 
 /** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
@@ -5184,30 +5201,12 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 int
 node_is_a_configured_bridge(const node_t *node)
 {
-  int retval = 0;               /* Negative.  */
-  smartlist_t *orports = NULL;
-
-  if (!node)
-    goto out;
-
-  orports = node_get_all_orports(node);
-  if (orports == NULL)
-    goto out;
-
-  SMARTLIST_FOREACH_BEGIN(orports, tor_addr_port_t *, orport) {
-    if (get_configured_bridge_by_addr_port_digest(&orport->addr, orport->port,
-                                                  node->identity) != NULL) {
-      retval = 1;
-      goto out;
-    }
-  } SMARTLIST_FOREACH_END(orport);
-
- out:
-  if (orports != NULL) {
-    SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
-    smartlist_free(orports);
-    orports = NULL;
-  }
+  int retval = 0;
+  smartlist_t *orports = node_get_all_orports(node);
+  retval = get_configured_bridge_by_orports_digest(node->identity,
+                                                   orports) != NULL;
+  SMARTLIST_FOREACH(orports, tor_addr_port_t *, p, tor_free(p));
+  smartlist_free(orports);
   return retval;
 }
 
@@ -5572,18 +5571,18 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     /* Indicate that we prefer connecting to this bridge over the
        protocol that the bridge address indicates.  Last bridge
        descriptor handled wins.  */
-    ri->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
+    node->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
     if (!tor_addr_is_null(&ri->ipv6_addr)) {
       tor_addr_port_t ap;
-      router_get_pref_orport(ri, &ap);
+      node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
                  "Will prefer using its %s address (%s:%d).",
                  ri->nickname,
-                 ri->ipv6_preferred ? "IPv6" : "IPv4",
+                 node->ipv6_preferred ? "IPv6" : "IPv4",
                  fmt_addr(&ap.addr), ap.port);
     }
   }

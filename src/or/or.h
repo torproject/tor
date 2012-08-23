@@ -1770,8 +1770,6 @@ typedef struct {
   /** True if, after we have added this router, we should re-launch
    * tests for it. */
   unsigned int needs_retest_if_added:1;
-  /** True if ipv6_addr:ipv6_orport is preferred.  */
-  unsigned int ipv6_preferred:1;
 
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
@@ -2028,6 +2026,9 @@ typedef struct node_t {
   unsigned int rejects_all:1;
 
   /* Local info: derived. */
+
+  /** True if the IPv6 OR port is preferred over the IPv4 OR port.  */
+  unsigned int ipv6_preferred:1;
 
   /** According to the geoip db what country is this router in? */
   /* XXXprop186 what is this suppose to mean with multiple OR ports? */

@@ -5,12 +5,22 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file microdesc.h
- * \brief Header file for microdesc.c.
+ * \file nodelist.h
+ * \brief Header file for nodelist.c.
  **/
 
 #ifndef _TOR_NODELIST_H
 #define _TOR_NODELIST_H
+
+/* XXX duplicating code from tor_assert(). */
+#define node_assert_ok(n) STMT_BEGIN                            \
+  if (PREDICT_UNLIKELY((n)->ri == NULL && (n)->rs == NULL)) {   \
+    log_err(LD_BUG, "%s:%d: %s: Node is invalid; aborting.",    \
+            _SHORT_FILE_, __LINE__, __func__);                  \
+    fprintf(stderr, "%s:%d: %s: Node is invalid; aborting.\n",  \
+            _SHORT_FILE_, __LINE__, __func__);                  \
+    abort();                                                    \
+  } STMT_END
 
 node_t *node_get_mutable_by_id(const char *identity_digest);
 const node_t *node_get_by_id(const char *identity_digest);
@@ -38,10 +48,9 @@ int node_get_purpose(const node_t *node);
 int node_is_me(const node_t *node);
 int node_exit_policy_rejects_all(const node_t *node);
 smartlist_t *node_get_all_orports(const node_t *node);
-void node_get_prim_orport(const node_t *node, tor_addr_port_t *addr_port_out);
-void node_get_pref_orport(const node_t *node, tor_addr_port_t *addr_port_out);
-void node_get_pref_ipv6_orport(const node_t *node,
-                               tor_addr_port_t *addr_port_out);
+void node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out);
+void node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out);
+void node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out);
 uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 int node_allows_single_hop_exits(const node_t *node);
 const char *node_get_nickname(const node_t *node);
@@ -50,6 +59,7 @@ void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
 time_t node_get_published_on(const node_t *node);
 const smartlist_t *node_get_declared_family(const node_t *node);
+int node_ipv6_preferred(const node_t *node);
 
 smartlist_t *nodelist_get_list(void);
 
