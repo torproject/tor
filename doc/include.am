@@ -57,11 +57,11 @@ $(man_in) : $(txt_in)
 # use ../config.status to swap all machine-specific magic strings
 # in the asciidoc with their replacements.
 $(asciidoc_product) : $(txt_in) $(man_in)
-	$(MKDIR_P) $(@D)
-	$(AM_V_GEN)if test -e $(top_srcdir)/$@.in && ! test -e $@.in ; then \
+	$(AM_V_GEN)$(MKDIR_P) $(@D) && \
+	if test -e $(top_srcdir)/$@.in && ! test -e $@.in ; then \
 		cp $(top_srcdir)/$@.in $@; \
-	fi
-	$(AM_V_GEN)./config.status --file=$@;
+	fi && \
+	./config.status -q --file=$@;
 
 $(doc_DATA) : $(html_in)
 
