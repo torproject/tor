@@ -450,16 +450,17 @@ purge_expired_resolves(time_t now)
     if (resolve->pending_connections) {
       log_debug(LD_EXIT,
                 "Closing pending connections on timed-out DNS resolve!");
-      tor_fragile_assert();
       while (resolve->pending_connections) {
         pend = resolve->pending_connections;
         resolve->pending_connections = pend->next;
         /* Connections should only be pending if they have no socket. */
         tor_assert(!SOCKET_OK(pend->conn->_base.s));
         pendconn = pend->conn;
-        connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
-        circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
-        connection_free(TO_CONN(pendconn));
+        if (!pendconn->_base.marked_for_close) {
+          connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
+          circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
+          connection_free(TO_CONN(pendconn));
+        }
         tor_free(pend);
       }
     }
@@ -1091,6 +1092,13 @@ dns_found_answer(const char *address, uint8_t is_reverse, uint32_t addr,
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
     assert_connection_ok(TO_CONN(pendconn),time(NULL));
+    if (pendconn->_base.marked_for_close) {
+      /* prevent double-remove. */
+      pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
+      resolve->pending_connections = pend->next;
+      tor_free(pend);
+      continue;
+    }
     tor_addr_from_ipv4h(&pendconn->_base.addr, addr);
     pendconn->address_ttl = ttl;
 
