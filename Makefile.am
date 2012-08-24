@@ -4,8 +4,8 @@
 # See LICENSE for licensing information
 
 # "foreign" means we don't follow GNU package layout standards
-# 1.7 means we require automake vesion 1.7
-AUTOMAKE_OPTIONS = foreign 1.7 subdir-objects
+# 1.9 means we require automake vesion 1.9
+AUTOMAKE_OPTIONS = foreign 1.9 subdir-objects
 
 noinst_LIBRARIES=
 EXTRA_DIST=
