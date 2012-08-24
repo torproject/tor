@@ -5126,9 +5126,10 @@ bridge_free(bridge_info_t *bridge)
   tor_free(bridge);
 }
 
-/** Return a bridge pointer if either <b>digest</b>, if possible, or
- * any of the tor_addr_port_t's in <b>orports</b>, if necessary,
- * matches any of our known bridges.  Else return NULL. */
+/** If we have a bridge configured whose digest matches <b>digest</b>, or a
+ * bridge with no known digest whose address matches any of the
+ * tor_addr_port_t's in <b>orports</b>, return that bridge.  Else return
+ * NULL. */
 static bridge_info_t *
 get_configured_bridge_by_orports_digest(const char *digest,
                                         const smartlist_t *orports)
@@ -5153,9 +5154,9 @@ get_configured_bridge_by_orports_digest(const char *digest,
   return NULL;
 }
 
-/** Return a bridge pointer if <b>digest</b>, if possible, or
- * <b>addr</b> and <b>port</b>, if necessary, matches any of our known
- * bridges.  Else return NULL. */
+/** If we have a bridge configured whose digest matches <b>digest</b>, or a
+ * bridge with no known digest whose address matches <b>addr</b>:<b>/port</b>,
+ * return that bridge.  Else return NULL. */
 static bridge_info_t *
 get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
                                           uint16_t port,
