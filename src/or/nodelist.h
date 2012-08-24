@@ -12,14 +12,8 @@
 #ifndef _TOR_NODELIST_H
 #define _TOR_NODELIST_H
 
-/* XXX duplicating code from tor_assert(). */
-#define node_assert_ok(n) STMT_BEGIN                            \
-  if (PREDICT_UNLIKELY((n)->ri == NULL && (n)->rs == NULL)) {   \
-    log_err(LD_BUG, "%s:%d: %s: Node is invalid; aborting.",    \
-            _SHORT_FILE_, __LINE__, __func__);                  \
-    fprintf(stderr, "%s:%d: %s: Node is invalid; aborting.\n",  \
-            _SHORT_FILE_, __LINE__, __func__);                  \
-    abort();                                                    \
+#define node_assert_ok(n) STMT_BEGIN {                          \
+    tor_assert((n)->ri || (n)->rs);                             \
   } STMT_END
 
 node_t *node_get_mutable_by_id(const char *identity_digest);
