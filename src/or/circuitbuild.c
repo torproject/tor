@@ -2601,12 +2601,12 @@ pathbias_get_scale_threshold(const or_options_t *options)
 static int
 pathbias_get_scale_factor(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_SCALE_FACTOR 4
+#define DFLT_PATH_BIAS_SCALE_FACTOR 2
   if (options->PathBiasScaleFactor >= 1)
     return options->PathBiasScaleFactor;
   else
     return networkstatus_get_param(NULL, "pb_scalefactor",
-                                DFLT_PATH_BIAS_SCALE_THRESHOLD, 1, INT32_MAX);
+                                DFLT_PATH_BIAS_SCALE_FACTOR, 1, INT32_MAX);
 }
 
 static const char *
@@ -2859,13 +2859,18 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
   /* If we get a ton of circuits, just scale everything down */
   if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
-    log_info(LD_PROTOCOL,
-             "Scaling pathbias counts to (%u/%u)/%d for guard %s=%s",
-             guard->circuit_successes, guard->first_hops,
-             scale_factor, guard->nickname, hex_str(guard->identity,
-             DIGEST_LEN));
-    guard->first_hops /= scale_factor;
-    guard->circuit_successes /= scale_factor;
+    /* For now, only scale if there will be no rounding error...
+     * XXX024: We want to switch to a real moving average for 0.2.4. */
+    if ((guard->first_hops % scale_factor) == 0 &&
+        (guard->circuit_successes % scale_factor) == 0) {
+      log_info(LD_PROTOCOL,
+               "Scaling pathbias counts to (%u/%u)/%d for guard %s=%s",
+               guard->circuit_successes, guard->first_hops,
+               scale_factor, guard->nickname, hex_str(guard->identity,
+               DIGEST_LEN));
+      guard->first_hops /= scale_factor;
+      guard->circuit_successes /= scale_factor;
+    }
   }
   guard->first_hops++;
   log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
