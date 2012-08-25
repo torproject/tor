@@ -41,6 +41,9 @@ void free_cell_pool(void);
 void clean_cell_pool(void);
 void dump_cell_pool_usage(int severity);
 
+/* For channeltls.c */
+void packed_cell_free(packed_cell_t *cell);
+
 void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
@@ -49,9 +52,8 @@ void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                                   cell_t *cell, cell_direction_t direction,
                                   streamid_t fromstream);
 void channel_unlink_all_active_circs(channel_t *chan);
-int channel_flush_from_first_active_circuit(channel_t *conn,
-                                            int max, time_t now);
-void assert_active_circuits_ok(or_connection_t *orconn);
+int channel_flush_from_first_active_circuit(channel_t *chan, int max);
+void assert_active_circuits_ok(channel_t *chan);
 void make_circuit_inactive_on_chan(circuit_t *circ, channel_t *chan);
 void make_circuit_active_on_chan(circuit_t *circ, channel_t *chan);
 
