@@ -1,0 +1,3 @@
+  o Major features:
+    - All kind of relays, not only bridges, can now advertise an IPv6
+      OR port. Implements ticket 6362.
