@@ -2608,12 +2608,12 @@ pathbias_get_scale_threshold(const or_options_t *options)
 static int
 pathbias_get_scale_factor(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_SCALE_FACTOR 4
+#define DFLT_PATH_BIAS_SCALE_FACTOR 2
   if (options->PathBiasScaleFactor >= 1)
     return options->PathBiasScaleFactor;
   else
     return networkstatus_get_param(NULL, "pb_scalefactor",
-                                DFLT_PATH_BIAS_SCALE_THRESHOLD, 1, INT32_MAX);
+                                DFLT_PATH_BIAS_SCALE_FACTOR, 1, INT32_MAX);
 }
 
 static const char *
@@ -2645,6 +2645,14 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
+  /* We can't do path bias accounting without entry guards.
+   * Testing and controller circuits also have no guards. */
+  if (get_options()->UseEntryGuards == 0 ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+    return 0;
+  }
+
   /* Completely ignore one hop circuits */
   if (circ->build_state->onehop_tunnel) {
     tor_assert(circ->build_state->desired_path_len == 1);
@@ -2656,7 +2664,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     if (circ->has_opened && circ->path_state != PATH_STATE_DID_FIRST_HOP) {
       if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
                                      approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
                 "Opened circuit is in strange path state %s. "
                 "Circuit is a %s currently %s. %s",
                 pathbias_state_to_string(circ->path_state),
@@ -2683,7 +2691,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
         } else {
           if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
                   approx_time()))) {
-            log_notice(LD_BUG,
+            log_info(LD_BUG,
                    "Unopened circuit has strange path state %s. "
                    "Circuit is a %s currently %s. %s",
                    pathbias_state_to_string(circ->path_state),
@@ -2695,7 +2703,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
       } else {
         if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
                 approx_time()))) {
-          log_notice(LD_BUG,
+          log_info(LD_BUG,
               "Unopened circuit has no known guard. "
               "Circuit is a %s currently %s. %s",
               circuit_purpose_to_string(circ->_base.purpose),
@@ -2709,7 +2717,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     if (circ->path_state == PATH_STATE_NEW_CIRC) {
       if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
                 approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
             "A %s circuit is in cpath state %d (opened: %d). "
             "Circuit is a %s currently %s. %s",
             pathbias_state_to_string(circ->path_state),
@@ -2739,6 +2747,14 @@ pathbias_count_success(origin_circuit_t *circ)
     RATELIM_INIT(SUCCESS_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
+  /* We can't do path bias accounting without entry guards.
+   * Testing and controller circuits also have no guards. */
+  if (get_options()->UseEntryGuards == 0 ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+    return;
+  }
+
   /* Ignore one hop circuits */
   if (circ->build_state->onehop_tunnel) {
     tor_assert(circ->build_state->desired_path_len == 1);
@@ -2761,7 +2777,7 @@ pathbias_count_success(origin_circuit_t *circ)
       } else {
         if ((rate_msg = rate_limit_log(&success_notice_limit,
                 approx_time()))) {
-          log_notice(LD_BUG,
+          log_info(LD_BUG,
               "Succeeded circuit is in strange path state %s. "
               "Circuit is a %s currently %s. %s",
               pathbias_state_to_string(circ->path_state),
@@ -2772,15 +2788,18 @@ pathbias_count_success(origin_circuit_t *circ)
       }
 
       if (guard->first_hops < guard->circuit_successes) {
-        log_warn(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
+        log_notice(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
                  "for guard %s=%s",
                  guard->circuit_successes, guard->first_hops,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
-    } else {
+    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
+     * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
+     * No need to log that case. */
+    } else if (circ->_base.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
             "Completed circuit has no known guard. "
             "Circuit is a %s currently %s. %s",
             circuit_purpose_to_string(circ->_base.purpose),
@@ -2792,7 +2811,7 @@ pathbias_count_success(origin_circuit_t *circ)
     if (circ->path_state != PATH_STATE_SUCCEEDED) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
             "Opened circuit is in strange path state %s. "
             "Circuit is a %s currently %s. %s",
             pathbias_state_to_string(circ->path_state),
@@ -2822,9 +2841,11 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
     if (guard->circuit_successes/((double)guard->first_hops)
         < pathbias_get_disable_rate(options)) {
 
+      /* This message is currently disabled by default. */
       log_warn(LD_PROTOCOL,
                "Extremely low circuit success rate %u/%u for guard %s=%s. "
-               "This might indicate an attack, or a bug.",
+               "This indicates either an overloaded guard, an attack, or "
+               "a bug.",
                guard->circuit_successes, guard->first_hops, guard->nickname,
                hex_str(guard->identity, DIGEST_LEN));
 
@@ -2845,8 +2866,18 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
   /* If we get a ton of circuits, just scale everything down */
   if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
-    guard->first_hops /= scale_factor;
-    guard->circuit_successes /= scale_factor;
+    /* For now, only scale if there will be no rounding error...
+     * XXX024: We want to switch to a real moving average for 0.2.4. */
+    if ((guard->first_hops % scale_factor) == 0 &&
+        (guard->circuit_successes % scale_factor) == 0) {
+      log_info(LD_PROTOCOL,
+               "Scaling pathbias counts to (%u/%u)/%d for guard %s=%s",
+               guard->circuit_successes, guard->first_hops,
+               scale_factor, guard->nickname, hex_str(guard->identity,
+               DIGEST_LEN));
+      guard->first_hops /= scale_factor;
+      guard->circuit_successes /= scale_factor;
+    }
   }
   guard->first_hops++;
   log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
