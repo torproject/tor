@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Downgrade "set buildtimeout to low value" messages to INFO
+      severity; they were never an actual problem, there was never
+      anything reasonable to do about them, and they tended to spam
+      logs from time to time. Fix for bug 6251; bugfix on
+      0.2.2.2-alpha.
