@@ -870,3 +870,4 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
     ap_out->port = node->rs->ipv6_orport;
   }
 }
+

@@ -2788,3 +2788,4 @@ router_get_all_orports(const routerinfo_t *ri)
 
   return sl;
 }
+

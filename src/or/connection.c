@@ -239,7 +239,7 @@ dir_connection_new(int socket_family)
 }
 
 /** Allocate and return a new or_connection_t, initialized as by
- * connection_init(). 
+ * connection_init().
  *
  * Set timestamp_last_added_nonpadding to now.
  *
