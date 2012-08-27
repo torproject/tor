@@ -276,6 +276,7 @@ static config_var_t _option_vars[] = {
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
+  V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
 
 #if defined (WINCE)
@@ -473,6 +474,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
+  V(ExtendAllowPrivateAddresses, BOOL,     "1"),
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
   V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
