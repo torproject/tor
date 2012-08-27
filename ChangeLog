@@ -1,7 +1,6 @@
 Changes in version 0.2.2.38 - 2012-08-12
-  Tor 0.2.2.38 fixes a rare race condition that can crash exit relays;
-  fixes a remotely triggerable crash bug; and fixes a timing attack that
-  could in theory leak path information.
+  Tor 0.2.2.38 fixes a remotely triggerable crash bug, and fixes a timing
+  attack that could in theory leak path information.
 
   o Security fixes:
     - Avoid an uninitialized memory read when reading a vote or consensus
