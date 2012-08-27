@@ -2432,6 +2432,13 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
+  if (tor_addr_is_internal(&n_addr, 0) &&
+      !get_options()->ExtendAllowPrivateAddresses) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend to a private address");
+    return -1;
+  }
+
   /* Check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
    * but we don't want to let people send us extend cells for empty

@@ -1472,6 +1472,11 @@ is non-zero):
     its extra-info documents that it uploads to the directory authorities.
     (Default: 1)
 
+**ExtendAllowPrivateAddresses** **0**|**1**::
+    When this option is enabled, Tor routers allow EXTEND request to
+    localhost, RFC1918 addresses, and so on. This can create security issues;
+    you should probably leave it off. (Default: 0)
+
 DIRECTORY SERVER OPTIONS
 ------------------------
 
@@ -1811,6 +1816,7 @@ The following options are used for running a testing Tor network.
        ClientRejectInternalAddresses 0
        CountPrivateBandwidth 1
        ExitPolicyRejectPrivate 0
+       ExtendAllowPrivateAddresses 1
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds

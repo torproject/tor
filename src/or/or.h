@@ -3036,8 +3036,10 @@ typedef struct {
   config_line_t *RecommendedVersions;
   config_line_t *RecommendedClientVersions;
   config_line_t *RecommendedServerVersions;
-  /** Whether dirservers refuse router descriptors with private IPs. */
+  /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
+  /** Whether routers accept EXTEND cells to routers with private IPs. */
+  int ExtendAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   config_line_t *ORPort_lines; /**< Ports to listen on for OR connections. */
