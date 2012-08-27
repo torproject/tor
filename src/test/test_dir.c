@@ -4,6 +4,8 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
+#include <math.h>
+
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
@@ -1383,11 +1385,50 @@ test_dir_v3_networkstatus(void)
 }
 
 static void
+test_dir_scale_bw(void *testdata)
+{
+  double v[8] = { 2.0/3,
+                  7.0,
+                  1.0,
+                  3.0,
+                  1.0/5,
+                  1.0/7,
+                  12.0,
+                  24.0 };
+  u64_dbl_t vals[8];
+  uint64_t total;
+  int i;
+
+  (void) testdata;
+
+  for (i=0; i<8; ++i)
+    vals[i].dbl = v[i];
+
+  scale_array_elements_to_u64(vals, 8, &total);
+
+  tt_int_op((int)total, ==, 48);
+  total = 0;
+  for (i=0; i<8; ++i) {
+    total += vals[i].u64;
+  }
+  tt_assert(total >= (U64_LITERAL(1)<<60));
+  tt_assert(total <= (U64_LITERAL(1)<<62));
+
+  for (i=0; i<8; ++i) {
+    double ratio = ((double)vals[i].u64) / vals[2].u64;
+    tt_double_op(fabs(ratio - v[i]), <, .00001);
+  }
+
+ done:
+  ;
+}
+
+static void
 test_dir_random_weighted(void *testdata)
 {
   int histogram[10];
   uint64_t vals[10] = {3,1,2,4,6,0,7,5,8,9}, total=0;
-  uint64_t zeros[5] = {0,0,0,0,0};
+  u64_dbl_t inp[10];
   int i, choice;
   const int n = 50000;
   double max_sq_error;
@@ -1396,13 +1437,13 @@ test_dir_random_weighted(void *testdata)
   /* Try a ten-element array with values from 0 through 10. The values are
    * in a scrambled order to make sure we don't depend on order. */
   memset(histogram,0,sizeof(histogram));
-  for (i=0; i<10; ++i)
+  for (i=0; i<10; ++i) {
+    inp[i].u64 = vals[i];
     total += vals[i];
+  }
   tt_int_op(total, ==, 45);
   for (i=0; i<n; ++i) {
-    uint64_t t;
-    choice = choose_array_element_by_weight(vals, 10, &t);
-    tt_int_op(t, ==, total);
+    choice = choose_array_element_by_weight(inp, 10);
     tt_int_op(choice, >=, 0);
     tt_int_op(choice, <, 10);
     histogram[choice]++;
@@ -1429,16 +1470,16 @@ test_dir_random_weighted(void *testdata)
 
   /* Now try a singleton; do we choose it? */
   for (i = 0; i < 100; ++i) {
-    choice = choose_array_element_by_weight(vals, 1, NULL);
+    choice = choose_array_element_by_weight(inp, 1);
     tt_int_op(choice, ==, 0);
   }
 
   /* Now try an array of zeros.  We should choose randomly. */
   memset(histogram,0,sizeof(histogram));
+  for (i = 0; i < 5; ++i)
+    inp[i].u64 = 0;
   for (i = 0; i < n; ++i) {
-    uint64_t t;
-    choice = choose_array_element_by_weight(zeros, 5, &t);
-    tt_int_op(t, ==, 0);
+    choice = choose_array_element_by_weight(inp, 5);
     tt_int_op(choice, >=, 0);
     tt_int_op(choice, <, 5);
     histogram[choice]++;
@@ -1477,6 +1518,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(param_voting),
   DIR_LEGACY(v3_networkstatus),
   DIR(random_weighted),
+  DIR(scale_bw),
   END_OF_TESTCASES
 };
 
