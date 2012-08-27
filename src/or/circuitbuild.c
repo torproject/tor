@@ -3792,12 +3792,10 @@ onion_extend_cpath(origin_circuit_t *circ)
   } else if (cur_len == 0) { /* picking first node */
     const node_t *r = choose_good_entry_server(purpose, state);
     if (r) {
-      /* If we're extending to a bridge, use the preferred address
-         rather than the primary, for potentially extending to an IPv6
-         bridge.  */
-      int use_pref_addr = (r->ri != NULL &&
-                           r->ri->purpose == ROUTER_PURPOSE_BRIDGE);
-      info = extend_info_from_node(r, use_pref_addr);
+      /* If we're a client, use the preferred address rather than the
+         primary address, for potentially connecting to an IPv6 OR
+         port. */
+      info = extend_info_from_node(r, server_mode(get_options()) == 0);
       tor_assert(info);
     }
   } else {
@@ -3865,10 +3863,11 @@ extend_info_alloc(const char *nickname, const char *digest,
 
 /** Allocate and return a new extend_info that can be used to build a
  * circuit to or through the node <b>node</b>. Use the primary address
- * of the node unless <b>for_direct_connect</b> is true, in which case
- * the preferred address is used instead. May return NULL if there is
- * not enough info about <b>node</b> to extend to it--for example, if
- * there is no routerinfo_t or microdesc_t.
+ * of the node (i.e. its IPv4 address) unless
+ * <b>for_direct_connect</b> is true, in which case the preferred
+ * address is used instead. May return NULL if there is not enough
+ * info about <b>node</b> to extend to it--for example, if there is no
+ * routerinfo_t or microdesc_t.
  **/
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
@@ -5607,10 +5606,15 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       }
     }
 
-    /* Indicate that we prefer connecting to this bridge over the
-       protocol that the bridge address indicates.  Last bridge
-       descriptor handled wins.  */
-    node->ipv6_preferred = tor_addr_family(&bridge->addr) == AF_INET6;
+    /* Mark bridge as preferably connected to over IPv6 if its IPv6
+       address is in a Bridge line and ClientPreferIPv6ORPort is
+       set. Unless both is true, a potential IPv6 OR port of this
+       bridge won't get selected.
+
+       XXX ipv6_preferred is never reset (#6757) */
+    if (get_options()->ClientPreferIPv6ORPort == 1 &&
+        tor_addr_family(&bridge->addr) == AF_INET6)
+      node->ipv6_preferred = 1;
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */

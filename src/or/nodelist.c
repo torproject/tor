@@ -242,6 +242,8 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_bad_directory = rs->is_bad_directory;
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
+      if (options->ClientPreferIPv6ORPort == 1)
+        node->ipv6_preferred = !tor_addr_is_null(&rs->ipv6_addr);
     }
 
   } SMARTLIST_FOREACH_END(rs);
@@ -849,7 +851,13 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   tor_assert(ap_out);
 
-  if (node_ipv6_preferred(node))
+  /* Cheap implementation of config option ClientUseIPv6 -- simply
+     don't prefer IPv6 when ClientUseIPv6 is not set. (See #4455 for
+     more on this subject.) Note that this filter is too strict since
+     we're hindering not only clients! Erring on the safe side
+     shouldn't be a problem though. XXX move this check to where
+     outgoing connections are made? -LN */
+  if (get_options()->ClientUseIPv6 == 1 && node_ipv6_preferred(node))
     node_get_pref_ipv6_orport(node, ap_out);
   else
     node_get_prim_orport(node, ap_out);
