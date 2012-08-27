@@ -1,0 +1,3 @@
+  o Minor features:
+    - A relay with an IPv6 OR port now sends that address in NETINFO
+      cells. Fix for bug 6364.
