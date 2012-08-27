@@ -1,0 +1,6 @@
+  o Major bugfixes (security):
+    - Reject any attempt to extend to an internal address. Without
+      this fix, a router could be used to probe addresses on an
+      internal network to see whether they were accepting
+      connections. Fix for bug 6710; bugfix on 0.0.8pre1.
+
