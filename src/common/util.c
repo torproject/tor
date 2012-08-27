@@ -364,7 +364,7 @@ tor_mathlog(double d)
 }
 
 /** Return the long integer closest to d.  We define this wrapper here so
- * that not all users of math.h need to use the right incancations to get
+ * that not all users of math.h need to use the right intancations to get
  * the c99 functions. */
 long
 tor_lround(double d)
@@ -379,7 +379,7 @@ tor_lround(double d)
 }
 
 /** Return the 64-bit integer closest to d.  We define this wrapper here so
- * that not all users of math.h need to use the right incancations to get the
+ * that not all users of math.h need to use the right incantations to get the
  * c99 functions. */
 int64_t
 tor_llround(double d)
