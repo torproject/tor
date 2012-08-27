@@ -1,0 +1,69 @@
+# We use a two-step process to generate documentation from asciidoc files.
+#
+# First, we use asciidoc/a2x to process the asciidoc files into .1.in and
+# .html.in files (see the asciidoc-helper.sh script). These are the same as
+# the regular .1 and .html files, except that they still have some autoconf
+# variables set in them.
+#
+# Second, we use config.status to turn .1.in files into .1 files and
+# .html.in files into .html files.
+#
+# We do the steps in this order so that we can ship the .*.in files as
+# part of the source distribution, so that people without asciidoc can
+# just use the .1 and .html files.
+
+regular_mans = doc/tor doc/tor-gencert doc/tor-resolve doc/torify
+all_mans = $(regular_mans) doc/tor-fw-helper
+
+if USE_ASCIIDOC
+if USE_FW_HELPER
+nodist_man1_MANS = $(all_mans:=.1)
+doc_DATA = $(all_mans:=.html)
+else
+nodist_man1_MANS = $(regular_mans:=.1)
+doc_DATA = $(regular_mans:=.html)
+endif
+html_in = $(all_mans:=.html.in)
+man_in = $(all_mans:=.1.in)
+txt_in = $(all_mans:=.1.txt)
+else
+html_in =
+man_in =
+txt_in =
+nodist_man1_MANS =
+doc_DATA =
+endif
+
+EXTRA_DIST+= doc/HACKING doc/asciidoc-helper.sh			\
+             $(html_in) $(man_in) $(txt_in)			\
+             doc/tor-rpm-creation.txt				\
+             doc/tor-win32-mingw-creation.txt doc/spec/README	\
+             doc/state-contents.txt
+
+docdir = @docdir@
+
+asciidoc_product = $(nodist_man1_MANS) $(doc_DATA)
+
+# Generate the html documentation from asciidoc, but don't do
+# machine-specific replacements yet
+$(html_in) : $(txt_in)
+	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ $(top_srcdir)/$@
+
+# Generate the manpage from asciidoc, but don't do
+# machine-specific replacements yet
+$(man_in) : $(txt_in)
+	$(AM_V_GEN)$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ $(top_srcdir)/$@
+
+# use ../config.status to swap all machine-specific magic strings
+# in the asciidoc with their replacements.
+$(asciidoc_product) : $(txt_in) $(man_in)
+	$(AM_V_GEN)$(MKDIR_P) $(@D)
+	$(AM_V_at)if test -e $(top_srcdir)/$@.in && ! test -e $@.in ; then \
+		cp $(top_srcdir)/$@.in $@; \
+	fi
+	$(AM_V_at)./config.status -q --file=$@;
+
+$(doc_DATA) : $(html_in)
+
+CLEANFILES+= $(asciidoc_product) config.log
+DISTCLEANFILES+= $(html_in) $(man_in)

@@ -1,0 +1,55 @@
+TESTS+= src/test/test
+
+noinst_PROGRAMS+= src/test/test src/test/test-child src/test/bench
+
+src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
+        -DLOCALSTATEDIR="\"$(localstatedir)\"" \
+        -DBINDIR="\"$(bindir)\""	       \
+	-I"$(top_srcdir)/src/or"
+
+# -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
+# This seems to matter nowhere but on Windows, but I assure you that it
+# matters a lot there, and is quite hard to debug if you forget to do it.
+
+src_test_test_SOURCES = \
+	src/test/test.c \
+	src/test/test_addr.c \
+	src/test/test_containers.c \
+	src/test/test_crypto.c \
+	src/test/test_data.c \
+	src/test/test_dir.c \
+	src/test/test_introduce.c \
+	src/test/test_microdesc.c \
+	src/test/test_pt.c \
+	src/test/test_replay.c \
+	src/test/test_util.c \
+	src/test/test_config.c \
+	src/test/tinytest.c
+
+src_test_test_CPPFLAGS= $(src_test_AM_CPPFLAGS)
+
+src_test_bench_SOURCES = \
+	src/test/bench.c
+
+src_test_bench_CPPFLAGS= $(src_test_AM_CPPFLAGS)
+
+src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+        @TOR_LDFLAGS_libevent@
+src_test_test_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a \
+	src/common/libor-event.a \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
+
+src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+        @TOR_LDFLAGS_libevent@
+src_test_bench_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a \
+	src/common/libor-event.a \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
+
+noinst_HEADERS+= \
+	src/test/tinytest.h \
+	src/test/tinytest_macros.h \
+	src/test/test.h
+
+

@@ -4,14 +4,25 @@
 # See LICENSE for licensing information
 
 # "foreign" means we don't follow GNU package layout standards
-# 1.7 means we require automake vesion 1.7
-AUTOMAKE_OPTIONS = foreign 1.7
+# 1.9 means we require automake vesion 1.9
+AUTOMAKE_OPTIONS = foreign 1.9 subdir-objects
 
-SUBDIRS = src doc contrib
+noinst_LIBRARIES=
+EXTRA_DIST=
+noinst_HEADERS=
+bin_PROGRAMS=
+CLEANFILES=
+TESTS=
+noinst_PROGRAMS=
+DISTCLEANFILES=
+bin_SCRIPTS=
+AM_CPPFLAGS=
+include src/include.am
+include doc/include.am
+include contrib/include.am
 
-DIST_SUBDIRS = src doc contrib
 
-EXTRA_DIST = \
+EXTRA_DIST+= \
 	ChangeLog					\
 	INSTALL						\
 	LICENSE						\

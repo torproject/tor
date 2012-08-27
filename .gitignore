@@ -21,6 +21,7 @@
 *.log
 # Autotools stuff
 .deps
+.dirstamp
 # Stuff made by our makefiles
 *.bak
 
@@ -41,6 +42,7 @@
 /config.guess
 /config.sub
 /conftest*
+/micro-revision.*
 /patch-stamp
 /stamp-h
 /stamp-h.in
@@ -140,7 +142,6 @@
 /src/or/Makefile
 /src/or/Makefile.in
 /src/or/or_sha1.i
-/src/or/micro-revision.*
 /src/or/tor
 /src/or/tor.exe
 /src/or/libtor.a
