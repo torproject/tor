@@ -16,6 +16,7 @@ TESTS=
 noinst_PROGRAMS=
 DISTCLEANFILES=
 bin_SCRIPTS=
+AM_CPPFLAGS=
 include src/include.am
 include doc/include.am
 include contrib/include.am
