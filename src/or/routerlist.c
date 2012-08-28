@@ -1681,6 +1681,20 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
 #undef SCALE_TO_U64_MAX
 }
 
+/** Time-invariant 64-bit greater-than; works on two integers in the range
+ * (0,INT64_MAX). */
+#if SIZEOF_VOID_P == 8
+#define gt_i64_timei(a,b) ((a) > (b))
+#else
+static INLINE int
+gt_i64_timei(uint64_t a, uint64_t b)
+{
+  int64_t diff = (int64_t) (b - a);
+  int res = diff >> 63;
+  return res & 1;
+}
+#endif
+
 /** Pick a random element of <b>n_entries</b>-element array <b>entries</b>,
  * choosing each element with a probability proportional to its (uint64_t)
  * value, and return the index of that element.  If all elements are 0, choose
@@ -1703,16 +1717,18 @@ choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries)
   if (total == 0)
     return crypto_rand_int(n_entries);
 
+  tor_assert(total < INT64_MAX);
+
   rand_val = crypto_rand_uint64(total);
 
   for (i = 0; i < n_entries; ++i) {
     total_so_far += entries[i].u64;
-    if (total_so_far > rand_val) {
+    if (gt_i64_timei(total_so_far, rand_val)) {
       i_chosen = i;
       n_chosen++;
-      /* Set rand_val to UINT_MAX rather than stopping the loop. This way,
+      /* Set rand_val to INT64_MAX rather than stopping the loop. This way,
        * the time we spend in the loop does not leak which element we chose. */
-      rand_val = UINT64_MAX;
+      rand_val = INT64_MAX;
     }
   }
   tor_assert(total_so_far == total);
