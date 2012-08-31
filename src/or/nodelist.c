@@ -260,7 +260,8 @@ nodelist_set_consensus(networkstatus_t *ns)
           node->is_valid = node->is_running = node->is_hs_dir =
             node->is_fast = node->is_stable =
             node->is_possible_guard = node->is_exit =
-            node->is_bad_exit = node->is_bad_directory = 0;
+            node->is_bad_exit = node->is_bad_directory =
+            node->ipv6_preferred = 0;
         }
       }
     } SMARTLIST_FOREACH_END(node);
