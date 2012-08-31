@@ -19,6 +19,32 @@
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
+/** The highest consensus method that we currently support. */
+#define MAX_SUPPORTED_CONSENSUS_METHOD 14
+
+/** Lowest consensus method that contains a 'directory-footer' marker */
+#define MIN_METHOD_FOR_FOOTER 9
+
+/** Lowest consensus method that contains bandwidth weights */
+#define MIN_METHOD_FOR_BW_WEIGHTS 9
+
+/** Lowest consensus method that contains consensus params */
+#define MIN_METHOD_FOR_PARAMS 7
+
+/** Lowest consensus method that generates microdescriptors */
+#define MIN_METHOD_FOR_MICRODESC 8
+
+/** Lowest consensus method that ensures a majority of authorities voted
+  * for a param. */
+#define MIN_METHOD_FOR_MAJORITY_PARAMS 12
+
+/** Lowest consensus method where microdesc consensuses omit any entry
+ * with no microdesc. */
+#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
+
+/** Lowest consensus method that contains "a" lines. */
+#define MIN_METHOD_FOR_A_LINES 14
+
 void dirvote_free_all(void);
 
 /* vote manipulation */
@@ -70,10 +96,11 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);
 
-microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri);
+microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method);
 ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
-                                       const microdesc_t *md);
-
+                                           const microdesc_t *md,
+                                           int consensus_method_low,
+                                           int consensus_method_high);
 int vote_routerstatus_find_microdesc_hash(char *digest256_out,
                                           const vote_routerstatus_t *vrs,
                                           int method,

@@ -53,32 +53,6 @@ static int dirvote_compute_consensuses(void);
 static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
-/** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 14
-
-/** Lowest consensus method that contains a 'directory-footer' marker */
-#define MIN_METHOD_FOR_FOOTER 9
-
-/** Lowest consensus method that contains bandwidth weights */
-#define MIN_METHOD_FOR_BW_WEIGHTS 9
-
-/** Lowest consensus method that contains consensus params */
-#define MIN_METHOD_FOR_PARAMS 7
-
-/** Lowest consensus method that generates microdescriptors */
-#define MIN_METHOD_FOR_MICRODESC 8
-
-/** Lowest consensus method that ensures a majority of authorities voted
-  * for a param. */
-#define MIN_METHOD_FOR_MAJORITY_PARAMS 12
-
-/** Lowest consensus method where microdesc consensuses omit any entry
- * with no microdesc. */
-#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
-
-/** Lowest consensus method that contains "a" lines. */
-#define MIN_METHOD_FOR_A_LINES 14
-
 /* =====
  * Voting
  * =====*/
@@ -3570,7 +3544,7 @@ dirvote_get_vote(const char *fp, int flags)
  * particular method.
  **/
 microdesc_t *
-dirvote_create_microdescriptor(const routerinfo_t *ri)
+dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 {
   microdesc_t *result = NULL;
   char *key = NULL, *summary = NULL, *family = NULL;
@@ -3585,6 +3559,12 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
     family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
 
   smartlist_add_asprintf(chunks, "onion-key\n%s", key);
+
+  if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
+      !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
+    smartlist_add_asprintf(chunks, "a %s:%d\n",
+                           fmt_and_decorate_addr(&ri->ipv6_addr),
+                           ri->ipv6_orport);
 
   if (family)
     smartlist_add_asprintf(chunks, "family %s\n", family);
@@ -3619,33 +3599,36 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   return result;
 }
 
-/** Cached space-separated string to hold */
-static char *microdesc_consensus_methods = NULL;
-
 /** Format the appropriate vote line to describe the microdescriptor <b>md</b>
  * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
  * in <b>out</b>.  Return -1 on failure and the number of characters written
  * on success. */
 ssize_t
-dirvote_format_microdesc_vote_line(char *out, size_t out_len,
-                                   const microdesc_t *md)
+dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
+                                   const microdesc_t *md,
+                                   int consensus_method_low,
+                                   int consensus_method_high)
 {
+  int ret = -1;
   char d64[BASE64_DIGEST256_LEN+1];
-  if (!microdesc_consensus_methods) {
-    microdesc_consensus_methods =
-      make_consensus_method_list(MIN_METHOD_FOR_MICRODESC,
-                                 MAX_SUPPORTED_CONSENSUS_METHOD,
-                                 ",");
-    tor_assert(microdesc_consensus_methods);
-  }
+  char *microdesc_consensus_methods =
+    make_consensus_method_list(consensus_method_low,
+                               consensus_method_high,
+                               ",");
+  tor_assert(microdesc_consensus_methods);
+
   if (digest256_to_base64(d64, md->digest)<0)
-    return -1;
+    goto out;
 
-  if (tor_snprintf(out, out_len, "m %s sha256=%s\n",
+  if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)
-    return -1;
+    goto out;
 
-  return strlen(out);
+  ret = strlen(out_buf);
+
+ out:
+  tor_free(microdesc_consensus_methods);
+  return ret;
 }
 
 /** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
