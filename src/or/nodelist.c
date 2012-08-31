@@ -206,6 +206,7 @@ nodelist_set_consensus(networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  int client = !server_mode(options);
 
   init_nodelist();
   if (ns->flavor == FLAV_MICRODESC)
@@ -242,8 +243,11 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_bad_directory = rs->is_bad_directory;
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
-      if (options->ClientPreferIPv6ORPort == 1)
-        node->ipv6_preferred = !tor_addr_is_null(&rs->ipv6_addr);
+      node->ipv6_preferred = 0;
+      if (client && options->ClientPreferIPv6ORPort == 1 &&
+          (tor_addr_is_null(&rs->ipv6_addr) == 0 ||
+           (node->md && tor_addr_is_null(&node->md->ipv6_addr) == 0)))
+        node->ipv6_preferred = 1;
     }
 
   } SMARTLIST_FOREACH_END(rs);
