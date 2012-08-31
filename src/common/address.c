@@ -1697,3 +1697,15 @@ tor_addr_hostname_is_local(const char *name)
     !strcasecmpend(name, ".local");
 }
 
+
+/** Return a newly allocated tor_addr_port_t with <b>addr</b> and
+    <b>port</b> filled in. */
+tor_addr_port_t *
+tor_addr_port_new(const tor_addr_t *addr, uint16_t port)
+{
+  tor_addr_port_t *ap = tor_malloc_zero(sizeof(tor_addr_port_t));
+  if (addr)
+    tor_addr_copy(&ap->addr, addr);
+  ap->port = port;
+  return ap;
+}

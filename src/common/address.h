@@ -221,5 +221,7 @@ int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 int get_interface_address(int severity, uint32_t *addr);
 
+tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
+
 #endif
 
