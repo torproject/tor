@@ -3872,26 +3872,34 @@ extend_info_alloc(const char *nickname, const char *digest,
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
 {
-  if (node->ri) {
-    const routerinfo_t *r = node->ri;
-    tor_addr_port_t ap;
-    if (for_direct_connect)
-      node_get_pref_orport(node, &ap);
-    else
-      node_get_prim_orport(node, &ap);
-    return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                             r->onion_pkey, &ap.addr, ap.port);
-  } else if (node->rs && node->md) {
-    tor_addr_t addr;
-    tor_addr_from_ipv4h(&addr, node->rs->addr);
+  tor_addr_port_t ap;
+
+  if (node->ri == NULL && (node->rs == NULL || node->md == NULL))
+    return NULL;
+
+  if (for_direct_connect)
+    node_get_pref_orport(node, &ap);
+  else
+    node_get_prim_orport(node, &ap);
+
+  log_debug(LD_CIRC, "using %s:%d for %s",
+            fmt_and_decorate_addr(&ap.addr), ap.port,
+            node->ri ? node->ri->nickname : node->rs->nickname);
+
+  if (node->ri)
+    return extend_info_alloc(node->ri->nickname,
+                             node->identity,
+                             node->ri->onion_pkey,
+                             &ap.addr,
+                             ap.port);
+  else if (node->rs && node->md)
     return extend_info_alloc(node->rs->nickname,
                              node->identity,
                              node->md->onion_pkey,
-                             &addr,
-                             node->rs->or_port);
-  } else {
+                             &ap.addr,
+                             ap.port);
+  else
     return NULL;
-  }
 }
 
 /** Release storage held by an extend_info_t struct. */
