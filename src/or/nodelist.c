@@ -196,7 +196,7 @@ nodelist_add_microdesc(microdesc_t *md)
   return node;
 }
 
-/** Tell the nodelist that the current usable consensus to <b>ns</b>.
+/** Tell the nodelist that the current usable consensus is <b>ns</b>.
  * This makes the nodelist change all of the routerstatus entries for
  * the nodes, drop nodes that no longer have enough info to get used,
  * and grab microdescriptors into nodes as appropriate.
