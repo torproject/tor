@@ -1,0 +1,3 @@
+  o Documentation:
+    - Add missing documentation for consensus and microdesc files. Fix for
+      bug 6732.
