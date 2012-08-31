@@ -19,7 +19,7 @@ my $look_for_type = "merged";
 if (! @ARGV) {
     print <<EOF
 Usage:
-   findMergedChanges.pl [--merged/--unmerged/--weird/--list] changes/*
+   findMergedChanges.pl [--merged/--unmerged/--weird/--list] [--branch=<branchname] changes/*
 
 A change is "merged" if it has ever been merged to release-0.2.2 and it has had
 no subsequent changes in master.
