@@ -1,3 +1,0 @@
-  o Minor features:
-    - Provide a better error message about possible OSX Asciidoc failure
-      reasons. Fix for bug 6436.

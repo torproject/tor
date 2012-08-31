@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Revert to the May 1 2012 Maxmind GeoLite Country database. In the
-      June 2012 database, Maxmind marked many Tor relays as country "A1",
-      which will cause risky behavior for clients that set EntryNodes
-      or ExitNodes. Addresses bug 6334; bugfix on 0.2.3.17-beta.
-
