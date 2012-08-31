@@ -1898,7 +1898,10 @@ FILES
 __DataDirectory__**/cached-status/**::
     The most recently downloaded network status document for each authority.
     Each file holds one such document; the filenames are the hexadecimal
-    identity key fingerprints of the directory authorities.
+    identity key fingerprints of the directory authorities.  Mostly obsolete.
+
+__DataDirectory__**/cached-consensus** and/or **cached-microdesc-consensus**::
+    The most recent consensus network status document we've downloaded.
 
 __DataDirectory__**/cached-descriptors** and **cached-descriptors.new**::
     These files hold downloaded router statuses. Some routers may appear more
@@ -1906,6 +1909,12 @@ __DataDirectory__**/cached-descriptors** and **cached-descriptors.new**::
     beginning with @-signs are annotations that contain more information about
     a given router. The ".new" file is an append-only journal; when it gets
     too large, all entries are merged into a new cached-descriptors file.
+
+__DataDirectory__**/cached-microdescs** and **cached-microdescs.new**::
+    These files hold downloaded microdescriptors.  Lines beginning with
+    @-signs are annotations that contain more information about a given
+    router. The ".new" file is an append-only journal; when it gets too
+    large, all entries are merged into a new cached-microdescs file.
 
 __DataDirectory__**/cached-routers** and **cached-routers.new**::
     Obsolete versions of cached-descriptors and cached-descriptors.new. When
