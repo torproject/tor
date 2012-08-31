@@ -1960,6 +1960,10 @@ typedef struct microdesc_t {
 
   /** As routerinfo_t.onion_pkey */
   crypto_pk_t *onion_pkey;
+  /** As routerinfo_t.ipv6_add */
+  tor_addr_t ipv6_addr;
+  /** As routerinfo_t.ipv6_orport */
+  uint16_t ipv6_orport;
   /** As routerinfo_t.family */
   smartlist_t *family;
   /** Exit policy summary */

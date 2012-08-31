@@ -522,6 +522,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
 /** List of tokens recognized in microdescriptors */
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
+  T0N("a",                     K_A,                GE(1),       NO_OBJ ),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
   A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
@@ -4420,6 +4421,14 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
     md->onion_pkey = tok->key;
     tok->key = NULL;
+
+    {
+      smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);
+      if (a_lines) {
+        find_single_ipv6_orport(a_lines, &md->ipv6_addr, &md->ipv6_orport);
+        smartlist_free(a_lines);
+      }
+    }
 
     if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
       int i;
