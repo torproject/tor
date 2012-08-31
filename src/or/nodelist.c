@@ -888,9 +888,17 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
+  /* We prefer the microdesc over a potential routerstatus here. They
+     are not being synchronised atm so there might be a chance that
+     they differ at some point, f.ex. when flipping
+     UseMicrodescriptors? -LN */
+
   if (node->ri) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
     ap_out->port = node->ri->ipv6_orport;
+  } else if (node->md) {
+    tor_addr_copy(&ap_out->addr, &node->md->ipv6_addr);
+    ap_out->port = node->md->ipv6_orport;
   } else if (node->rs) {
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
     ap_out->port = node->rs->ipv6_orport;
