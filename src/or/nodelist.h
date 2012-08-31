@@ -51,7 +51,7 @@ long node_get_declared_uptime(const node_t *node);
 time_t node_get_published_on(const node_t *node);
 const smartlist_t *node_get_declared_family(const node_t *node);
 int node_ipv6_preferred(const node_t *node);
-void node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out);
+int node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out);
 

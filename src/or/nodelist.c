@@ -821,31 +821,44 @@ node_get_declared_family(const node_t *node)
 int
 node_ipv6_preferred(const node_t *node)
 {
+  tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
-  if (node->ri)
-    return (!tor_addr_is_null(&node->ri->ipv6_addr)
-            && (node->ipv6_preferred || node->ri->addr == 0));
-  if (node->rs)
-    return (!tor_addr_is_null(&node->rs->ipv6_addr)
-            && (node->ipv6_preferred || node->rs->addr == 0));
+
+  if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)) {
+    if (node->ri)
+      return !tor_addr_is_null(&node->ri->ipv6_addr);
+    if (node->md)
+      return !tor_addr_is_null(&node->md->ipv6_addr);
+    if (node->rs)
+      return !tor_addr_is_null(&node->rs->ipv6_addr);
+  }
   return 0;
 }
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>node</b> into *<b>ap_out</b>. */
-void
+ * <b>node</b> into *<b>ap_out</b>. Return 0 if a valid address and
+ * port was copied, else return non-zero.*/
+int
 node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   node_assert_ok(node);
   tor_assert(ap_out);
 
   if (node->ri) {
+    if (node->ri->addr == 0 || node->ri->or_port == 0)
+      return -1;
     tor_addr_from_ipv4h(&ap_out->addr, node->ri->addr);
     ap_out->port = node->ri->or_port;
-  } else if (node->rs) {
+    return 0;
+  }
+  if (node->rs) {
+    if (node->rs->addr == 0 || node->rs->or_port == 0)
+      return -1;
     tor_addr_from_ipv4h(&ap_out->addr, node->rs->addr);
     ap_out->port = node->rs->or_port;
+    return 0;
   }
+  return -1;
 }
 
 /** Copy the preferred OR port (IP address and TCP port) for
