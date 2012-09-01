@@ -337,7 +337,7 @@ Changes in version 0.2.3.16-alpha - 2012-06-05
       indefinitely. Fixes bug 5380; bugfix on 0.2.1.14-rc.
     - When fetching a bridge descriptor from a bridge authority,
       always do so anonymously, whether we have been able to open
-      circuits or not. Partial fix for bug 1938; bugfix on 2.0.7-alpha.
+      circuits or not. Partial fix for bug 1938; bugfix on 0.2.0.7-alpha.
       This behavior makes it *safer* to use UpdateBridgesFromAuthority,
       but we'll need to wait for bug 6010 before it's actually usable.
 
