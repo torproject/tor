@@ -718,7 +718,7 @@ get_dirportfrontpage(void)
 
 /** Allocate an empty configuration object of a given format type. */
 static void *
-config_alloc(const config_format_t *fmt)
+config_new(const config_format_t *fmt)
 {
   void *opts = tor_malloc_zero(fmt->size);
   *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
@@ -3118,7 +3118,7 @@ options_dup(const config_format_t *fmt, const or_options_t *old)
   int i;
   config_line_t *line;
 
-  newopts = config_alloc(fmt);
+  newopts = config_new(fmt);
   for (i=0; fmt->vars[i].name; ++i) {
     if (fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
@@ -3143,7 +3143,7 @@ options_dup(const config_format_t *fmt, const or_options_t *old)
 or_options_t *
 options_new(void)
 {
-  return config_alloc(&options_format);
+  return config_new(&options_format);
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
@@ -3189,7 +3189,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
   char *msg = NULL;
 
   if (defaults == NULL) {
-    defaults = defaults_tmp = config_alloc(fmt);
+    defaults = defaults_tmp = config_new(fmt);
     config_init(fmt, defaults_tmp);
   }
 
