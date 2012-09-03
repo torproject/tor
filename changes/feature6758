@@ -1,0 +1,5 @@
+  o Minor features:
+    - Omit the first heartbeat log message, because it never has anything
+      useful to say, and it clutters up the bootstrapping messages.
+      Resolves ticket 6758.
+
