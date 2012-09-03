@@ -653,7 +653,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
   return result;
 }
 
-/** Launch download requests for mircodescriptors as appropriate.
+/** Launch download requests for microdescriptors as appropriate.
  *
  * Specifically, we should launch download requests if we are configured to
  * download mirodescriptors, and there are some microdescriptors listed the
