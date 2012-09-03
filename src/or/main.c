@@ -953,7 +953,8 @@ directory_info_has_arrived(time_t now, int from_cache)
   const or_options_t *options = get_options();
 
   if (!router_have_minimum_dir_info()) {
-    int quiet = directory_too_idle_to_fetch_descriptors(options, now);
+    int quiet = from_cache ||
+                directory_too_idle_to_fetch_descriptors(options, now);
     log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "I learned some more directory information, but not enough to "
         "build a circuit: %s", get_dir_info_status_string());
