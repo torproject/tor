@@ -1835,7 +1835,7 @@ packed_cell_free_unchecked(packed_cell_t *cell)
 
 /** Allocate and return a new packed_cell_t. */
 static INLINE packed_cell_t *
-packed_cell_alloc(void)
+packed_cell_new(void)
 {
   ++total_cells_allocated;
   return mp_pool_get(cell_pool);
@@ -1864,7 +1864,7 @@ dump_cell_pool_usage(int severity)
 static INLINE packed_cell_t *
 packed_cell_copy(const cell_t *cell)
 {
-  packed_cell_t *c = packed_cell_alloc();
+  packed_cell_t *c = packed_cell_new();
   cell_pack(c, cell);
   c->next = NULL;
   return c;
