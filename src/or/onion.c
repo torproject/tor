@@ -106,7 +106,7 @@ onion_next_task(char **onionskin_out)
     return NULL; /* no onions pending, we're done */
 
   tor_assert(ol_list->circ);
-  tor_assert(ol_list->circ->p_conn); /* make sure it's still valid */
+  tor_assert(ol_list->circ->p_chan); /* make sure it's still valid */
   tor_assert(ol_length > 0);
   circ = ol_list->circ;
   *onionskin_out = ol_list->onionskin;
