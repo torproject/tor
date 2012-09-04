@@ -255,6 +255,19 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
+
+    if (SSLeay() == OPENSSL_VERSION_NUMBER &&
+        !strcmp(SSLeay_version(SSLEAY_VERSION), OPENSSL_VERSION_TEXT)) {
+      log_info(LD_CRYPTO, "OpenSSL version matches version from headers "
+                 "(%lx: %s).", SSLeay(), SSLeay_version(SSLEAY_VERSION));
+    } else {
+      log_warn(LD_CRYPTO, "OpenSSL version from headers does not match the "
+               "version we're running with. If you get weird crashes, that "
+               "might be why. (Compiled with %lx: %s; running with %lx: %s).",
+               (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
+               SSLeay(), SSLeay_version(SSLEAY_VERSION));
+    }
+
     if (useAccel > 0) {
 #ifdef DISABLE_ENGINES
       (void)accelName;
