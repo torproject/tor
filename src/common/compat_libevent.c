@@ -266,7 +266,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
-  log(LOG_NOTICE, LD_GENERAL,
+  log(LOG_INFO, LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), tor_libevent_get_method());
 #else

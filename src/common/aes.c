@@ -212,11 +212,11 @@ evaluate_evp_for_aes(int force_val)
   e = ENGINE_get_cipher_engine(NID_aes_128_ecb);
 
   if (e) {
-    log_notice(LD_CRYPTO, "AES engine \"%s\" found; using EVP_* functions.",
+    log_info(LD_CRYPTO, "AES engine \"%s\" found; using EVP_* functions.",
                ENGINE_get_name(e));
     should_use_EVP = 1;
   } else {
-    log_notice(LD_CRYPTO, "No AES engine found; using AES_* functions.");
+    log_info(LD_CRYPTO, "No AES engine found; using AES_* functions.");
     should_use_EVP = 0;
   }
 #endif
@@ -263,12 +263,12 @@ evaluate_ctr_for_aes(void)
                "not using it.");
   } else {
     /* Counter mode is okay */
-    log_notice(LD_CRYPTO, "This OpenSSL has a good implementation of counter "
+    log_info(LD_CRYPTO, "This OpenSSL has a good implementation of counter "
                "mode; using it.");
     should_use_openssl_CTR = 1;
   }
 #else
-  log_notice(LD_CRYPTO, "This version of OpenSSL has a slow implementation of "
+  log_info(LD_CRYPTO, "This version of OpenSSL has a slow implementation of "
              "counter mode; not using it.");
 #endif
   return 0;

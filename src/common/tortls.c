@@ -478,7 +478,7 @@ tor_tls_init(void)
      * a test of intelligence and determination.
      */
     if (version > OPENSSL_V(0,9,8,'k') && version <= OPENSSL_V(0,9,8,'l')) {
-      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l, but "
+      log_info(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l, but "
                  "some vendors have backported renegotiation code from "
                  "0.9.8m without updating the version number. "
                  "I will try SSL3_FLAGS and SSL_OP to enable renegotation.",
@@ -486,12 +486,12 @@ tor_tls_init(void)
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;
     } else if (version > OPENSSL_V(0,9,8,'l')) {
-      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8m or later; "
+      log_info(LD_GENERAL, "OpenSSL %s looks like version 0.9.8m or later; "
                  "I will try SSL_OP to enable renegotiation",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_op = 1;
     } else if (version <= OPENSSL_V(0,9,8,'k')) {
-      log_notice(LD_GENERAL, "OpenSSL %s [%lx] looks like it's older than "
+      log_info(LD_GENERAL, "OpenSSL %s [%lx] looks like it's older than "
                  "0.9.8l, but some vendors have backported 0.9.8l's "
                  "renegotiation code to earlier versions, and some have "
                  "backported the code from 0.9.8m or 0.9.8n.  I'll set both "
