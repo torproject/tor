@@ -1,0 +1,3 @@
+ o Minor features:
+   - Consider new, removed or changed IPv6 OR ports a non cosmetic
+     change.

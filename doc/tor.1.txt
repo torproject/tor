@@ -1470,6 +1470,11 @@ is non-zero):
     its extra-info documents that it uploads to the directory authorities.
     (Default: 1)
 
+**ExtendAllowPrivateAddresses** **0**|**1**::
+    When this option is enabled, Tor routers allow EXTEND request to
+    localhost, RFC1918 addresses, and so on. This can create security issues;
+    you should probably leave it off. (Default: 0)
+
 DIRECTORY SERVER OPTIONS
 ------------------------
 
@@ -1795,6 +1800,7 @@ The following options are used for running a testing Tor network.
        ClientRejectInternalAddresses 0
        CountPrivateBandwidth 1
        ExitPolicyRejectPrivate 0
+       ExtendAllowPrivateAddresses 1
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds
@@ -1876,7 +1882,10 @@ FILES
 __DataDirectory__**/cached-status/**::
     The most recently downloaded network status document for each authority.
     Each file holds one such document; the filenames are the hexadecimal
-    identity key fingerprints of the directory authorities.
+    identity key fingerprints of the directory authorities.  Mostly obsolete.
+
+__DataDirectory__**/cached-consensus** and/or **cached-microdesc-consensus**::
+    The most recent consensus network status document we've downloaded.
 
 __DataDirectory__**/cached-descriptors** and **cached-descriptors.new**::
     These files hold downloaded router statuses. Some routers may appear more
@@ -1884,6 +1893,12 @@ __DataDirectory__**/cached-descriptors** and **cached-descriptors.new**::
     beginning with @-signs are annotations that contain more information about
     a given router. The ".new" file is an append-only journal; when it gets
     too large, all entries are merged into a new cached-descriptors file.
+
+__DataDirectory__**/cached-microdescs** and **cached-microdescs.new**::
+    These files hold downloaded microdescriptors.  Lines beginning with
+    @-signs are annotations that contain more information about a given
+    router. The ".new" file is an append-only journal; when it gets too
+    large, all entries are merged into a new cached-microdescs file.
 
 __DataDirectory__**/cached-routers** and **cached-routers.new**::
     Obsolete versions of cached-descriptors and cached-descriptors.new. When

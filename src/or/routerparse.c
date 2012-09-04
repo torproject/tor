@@ -962,7 +962,7 @@ router_parse_runningrouters(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the list. */
-  if (get_options()->DirPort && !authdir_mode_v1(get_options()))
+  if (get_options()->DirPort_set && !authdir_mode_v1(get_options()))
     dirserv_set_cached_directory(str, published_on, 1);
 
   r = 0;
@@ -2201,6 +2201,11 @@ routerstatus_parse_entry_from_string(memarea_t *area,
                  escaped(tok->args[0]));
         goto err;
       }
+    } else {
+      log_info(LD_BUG, "Found an entry in networkstatus with no "
+               "microdescriptor digest. (Router %s=%s at %s:%d.)",
+               rs->nickname, hex_str(rs->identity_digest, DIGEST_LEN),
+               fmt_addr32(rs->addr), rs->or_port);
     }
   }
 

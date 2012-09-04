@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Fix build warnings from --enable-openbsd-malloc with gcc warnings
+      enabled. Fixes bug 6379.
+    - Fix 64-bit warnings from --enable-openbsd-malloc. Fixes bug 6379.
+      Bugfix on 0.2.0.20-rc.
+
