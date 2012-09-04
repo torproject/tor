@@ -4484,9 +4484,9 @@ launch_descriptor_downloads(int purpose,
       rtr_plural = "s";
 
     log_info(LD_DIR,
-             "Launching %d request%s for %d router%s, %d at a time",
-             CEIL_DIV(n_downloadable, n_per_request),
-             req_plural, n_downloadable, rtr_plural, n_per_request);
+             "Launching %d request%s for %d %s%s, %d at a time",
+             CEIL_DIV(n_downloadable, n_per_request), req_plural,
+             n_downloadable, descname, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
       initiate_descriptor_downloads(source, purpose,
