@@ -372,7 +372,7 @@ circuit_expire_building(void)
   } while (0)
 
   SET_CUTOFF(general_cutoff, circ_times.timeout_ms);
-  SET_CUTOFF(begindir_cutoff, circ_times.timeout_ms / 2.0);
+  SET_CUTOFF(begindir_cutoff, circ_times.timeout_ms);
   SET_CUTOFF(fourhop_cutoff, circ_times.timeout_ms * (4/3.0));
   SET_CUTOFF(cannibalize_cutoff, circ_times.timeout_ms / 2.0);
   SET_CUTOFF(close_cutoff, circ_times.close_ms);
