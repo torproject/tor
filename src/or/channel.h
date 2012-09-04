@@ -38,11 +38,6 @@ struct channel_s {
    */
   unsigned int is_listener:1;
 
-  /** Unique ID for measuring direct network status requests;vtunneled ones
-   * come over a circuit_t, which has a dirreq_id field as well, but is a
-   * distinct namespace. */
-  uint64_t dirreq_id;
-
   /** Why did we close?
    */
   enum {

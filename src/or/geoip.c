@@ -578,7 +578,7 @@ _c_hist_compare(const void **_a, const void **_b)
  * failed, the others as still running. */
 #define DIRREQ_TIMEOUT (10*60)
 
-/** Entry in a map from either conn->global_identifier for direct requests
+/** Entry in a map from either chan->global_identifier for direct requests
  * or a unique circuit identifier for tunneled requests to request time,
  * response size, and completion time of a network status request. Used to
  * measure download times of requests to derive average client
@@ -586,7 +586,7 @@ _c_hist_compare(const void **_a, const void **_b)
 typedef struct dirreq_map_entry_t {
   HT_ENTRY(dirreq_map_entry_t) node;
   /** Unique identifier for this network status request; this is either the
-   * conn->global_identifier of the dir conn (direct request) or a new
+   * chan->global_identifier of the dir channel (direct request) or a new
    * locally unique identifier of a circuit (tunneled request). This ID is
    * only unique among other direct or tunneled requests, respectively. */
   uint64_t dirreq_id;
@@ -705,7 +705,7 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
   if ((type == DIRREQ_DIRECT &&
          new_state == DIRREQ_FLUSHING_DIR_CONN_FINISHED) ||
       (type == DIRREQ_TUNNELED &&
-         new_state == DIRREQ_OR_CONN_BUFFER_FLUSHED)) {
+         new_state == DIRREQ_CHANNEL_BUFFER_FLUSHED)) {
     tor_gettimeofday(&ent->completion_time);
     ent->completed = 1;
   }
