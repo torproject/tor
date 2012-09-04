@@ -1,3 +1,0 @@
-  o Disabeled features
-    - Downgrade path-bias warning messages to INFO. We'll try to get them
-      working better in 0.2.4. Fixes bug 6475; bugfix on 0.2.3.17-beta.
