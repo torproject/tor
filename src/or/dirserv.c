@@ -2695,8 +2695,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
 }
 
 /** Return a new networkstatus_t* containing our current opinion. (For v3
- * authorities)
- */
+ * authorities) */
 networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert)
