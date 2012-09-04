@@ -35,7 +35,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
            "Received an ESTABLISH_INTRO request on circuit %d",
            circ->p_circ_id);
 
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_chan) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
     reason = END_CIRC_REASON_TORPROTOCOL;
@@ -142,7 +142,7 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
   log_info(LD_REND, "Received an INTRODUCE1 request on circuit %d",
            circ->p_circ_id);
 
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_chan) {
     log_warn(LD_PROTOCOL,
              "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
              circ->p_circ_id);
@@ -224,7 +224,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   log_info(LD_REND, "Received an ESTABLISH_RENDEZVOUS request on circuit %d",
            circ->p_circ_id);
 
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_chan) {
     log_warn(LD_PROTOCOL,
              "Tried to establish rendezvous on non-OR or non-edge circuit.");
     goto err;
@@ -277,7 +277,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   char hexid[9];
   int reason = END_CIRC_REASON_INTERNAL;
 
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_chan) {
     log_info(LD_REND,
              "Tried to complete rendezvous on non-OR or non-edge circuit %d.",
              circ->p_circ_id);
