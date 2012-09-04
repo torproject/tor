@@ -2798,7 +2798,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
           vote_microdesc_hash_t *h;
           dirvote_format_microdesc_vote_line(buf, sizeof(buf), md,
                                              cmr->low, cmr->high);
-          h = tor_malloc(sizeof(vote_microdesc_hash_t));
+          h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
           h->microdesc_hash_line = tor_strdup(buf);
           h->next = vrs->microdesc;
           vrs->microdesc = h;
