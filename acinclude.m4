@@ -1,4 +1,4 @@
-dnl Helper macros for Tor configure.in
+dnl Helper macros for Tor configure.ac
 dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl Copyright (c) 2007-2008, Roger Dingledine, Nick Mathewson

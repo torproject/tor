@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-$CONFIGURE_IN = './configure.in';
+$CONFIGURE_IN = './configure.ac';
 $ORCONFIG_H = './src/win32/orconfig.h';
 $TOR_NSI = './contrib/tor-mingw.nsi.in';
 
@@ -13,7 +13,7 @@ demand($CONFIGURE_IN);
 demand($ORCONFIG_H);
 demand($TOR_NSI);
 
-# extract version from configure.in
+# extract version from configure.ac
 
 open(F, $CONFIGURE_IN) or die "$!";
 $version = undef;
