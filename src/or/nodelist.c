@@ -206,6 +206,7 @@ nodelist_set_consensus(networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  int client = !server_mode(options);
 
   init_nodelist();
   if (ns->flavor == FLAV_MICRODESC)
@@ -242,6 +243,11 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_bad_directory = rs->is_bad_directory;
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
+      node->ipv6_preferred = 0;
+      if (client && options->ClientPreferIPv6ORPort == 1 &&
+          (tor_addr_is_null(&rs->ipv6_addr) == 0 ||
+           (node->md && tor_addr_is_null(&node->md->ipv6_addr) == 0)))
+        node->ipv6_preferred = 1;
     }
 
   } SMARTLIST_FOREACH_END(rs);
@@ -815,31 +821,44 @@ node_get_declared_family(const node_t *node)
 int
 node_ipv6_preferred(const node_t *node)
 {
+  tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
-  if (node->ri)
-    return (!tor_addr_is_null(&node->ri->ipv6_addr)
-            && (node->ipv6_preferred || node->ri->addr == 0));
-  if (node->rs)
-    return (!tor_addr_is_null(&node->rs->ipv6_addr)
-            && (node->ipv6_preferred || node->rs->addr == 0));
+
+  if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)) {
+    if (node->ri)
+      return !tor_addr_is_null(&node->ri->ipv6_addr);
+    if (node->md)
+      return !tor_addr_is_null(&node->md->ipv6_addr);
+    if (node->rs)
+      return !tor_addr_is_null(&node->rs->ipv6_addr);
+  }
   return 0;
 }
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>node</b> into *<b>ap_out</b>. */
-void
+ * <b>node</b> into *<b>ap_out</b>. Return 0 if a valid address and
+ * port was copied, else return non-zero.*/
+int
 node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   node_assert_ok(node);
   tor_assert(ap_out);
 
   if (node->ri) {
+    if (node->ri->addr == 0 || node->ri->or_port == 0)
+      return -1;
     tor_addr_from_ipv4h(&ap_out->addr, node->ri->addr);
     ap_out->port = node->ri->or_port;
-  } else if (node->rs) {
+    return 0;
+  }
+  if (node->rs) {
+    if (node->rs->addr == 0 || node->rs->or_port == 0)
+      return -1;
     tor_addr_from_ipv4h(&ap_out->addr, node->rs->addr);
     ap_out->port = node->rs->or_port;
+    return 0;
   }
+  return -1;
 }
 
 /** Copy the preferred OR port (IP address and TCP port) for
@@ -849,7 +868,13 @@ node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
   tor_assert(ap_out);
 
-  if (node_ipv6_preferred(node))
+  /* Cheap implementation of config option ClientUseIPv6 -- simply
+     don't prefer IPv6 when ClientUseIPv6 is not set. (See #4455 for
+     more on this subject.) Note that this filter is too strict since
+     we're hindering not only clients! Erring on the safe side
+     shouldn't be a problem though. XXX move this check to where
+     outgoing connections are made? -LN */
+  if (get_options()->ClientUseIPv6 == 1 && node_ipv6_preferred(node))
     node_get_pref_ipv6_orport(node, ap_out);
   else
     node_get_prim_orport(node, ap_out);
@@ -863,9 +888,17 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
   node_assert_ok(node);
   tor_assert(ap_out);
 
+  /* We prefer the microdesc over a potential routerstatus here. They
+     are not being synchronised atm so there might be a chance that
+     they differ at some point, f.ex. when flipping
+     UseMicrodescriptors? -LN */
+
   if (node->ri) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
     ap_out->port = node->ri->ipv6_orport;
+  } else if (node->md) {
+    tor_addr_copy(&ap_out->addr, &node->md->ipv6_addr);
+    ap_out->port = node->md->ipv6_orport;
   } else if (node->rs) {
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
     ap_out->port = node->rs->ipv6_orport;

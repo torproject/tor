@@ -1171,6 +1171,18 @@ The following options are useful only for clients (that is, if
     If no defaults are available there, these options default to 20, .70,
     0.0, 200, and 4 respectively.
 
+**ClientUseIPv6** **0**|**1**::
+    If this option is set to 1, Tor might connect to entry nodes over
+    IPv6. Note that clients configured with an IPv6 address in a
+    **Bridge** option will try connecting over IPv6 if even if
+    **ClientUseIPv6** is set to 0. (Default: 0)
+
+**ClientPreferIPv6ORPort** **0**|**1**::
+    If this option is set to 1, Tor prefers an OR port with an IPv6
+    address over one with IPv4 if a given entry node has both. Other
+    things may influence the choice. This option breaks a tie to the
+    favor of IPv6. (Default: 0)
+
 
 SERVER OPTIONS
 --------------

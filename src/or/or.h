@@ -1960,6 +1960,10 @@ typedef struct microdesc_t {
 
   /** As routerinfo_t.onion_pkey */
   crypto_pk_t *onion_pkey;
+  /** As routerinfo_t.ipv6_add */
+  tor_addr_t ipv6_addr;
+  /** As routerinfo_t.ipv6_orport */
+  uint16_t ipv6_orport;
   /** As routerinfo_t.family */
   smartlist_t *family;
   /** Exit policy summary */
@@ -3486,6 +3490,13 @@ typedef struct {
   /** If true, do not accept any requests to connect to internal addresses
    * over randomly chosen exits. */
   int ClientRejectInternalAddresses;
+
+  /** If true, clients may connect over IPv6. XXX we don't really
+      enforce this -- clients _may_ set up outgoing IPv6 connections
+      even when this option is not set. */
+  int ClientUseIPv6;
+  /** If true, prefer an IPv6 OR port over an IPv4 one. */
+  int ClientPreferIPv6ORPort;
 
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
