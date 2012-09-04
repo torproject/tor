@@ -481,9 +481,6 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
           && rs->status.ipv6_orport) {
         smartlist_add(alt_orports, tor_addr_port_new(&rs->status.ipv6_addr,
                                                      rs->status.ipv6_orport));
-        log_debug(LD_DIR, "picking %s:%d (%s) for voting on \"a\" lines", /* FIXME: remove */
-                  fmt_and_decorate_addr(&rs->status.ipv6_addr), rs->status.ipv6_orport,
-                  rs->status.nickname);
       }
     } SMARTLIST_FOREACH_END(rs);
 
