@@ -1,0 +1,6 @@
+  o Minor features:
+    - Don't log "I learned some more directory information" when we're
+      reading cached directory information. Reserve it for when new
+      directory information arrives in response to a fetch. Resolves
+      ticket 6760.
+
