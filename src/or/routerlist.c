@@ -4440,11 +4440,6 @@ launch_descriptor_downloads(int purpose,
       }
     }
   }
-  /* XXX should we consider having even the dir mirrors delay
-   * a little bit, so we don't load the authorities as much? -RD
-   * I don't think so.  If we do, clients that want those descriptors may
-   * not actually find them if the caches haven't got them yet. -NM
-   */
 
   if (! should_delay && n_downloadable) {
     int i, n_per_request;
