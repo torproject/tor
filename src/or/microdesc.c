@@ -323,8 +323,8 @@ microdesc_cache_reload(microdesc_cache_t *cache)
     }
     tor_free(journal_content);
   }
-  log_notice(LD_DIR, "Reloaded microdescriptor cache.  Found %d descriptors.",
-             total);
+  log_info(LD_DIR, "Reloaded microdescriptor cache. Found %d descriptors.",
+           total);
 
   microdesc_cache_rebuild(cache, 0 /* don't force */);
 
@@ -653,7 +653,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
   return result;
 }
 
-/** Launch download requests for mircodescriptors as appropriate.
+/** Launch download requests for microdescriptors as appropriate.
  *
  * Specifically, we should launch download requests if we are configured to
  * download mirodescriptors, and there are some microdescriptors listed the

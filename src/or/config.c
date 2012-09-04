@@ -466,7 +466,7 @@ static config_var_t _option_vars[] = {
 /** Override default values with these if the user sets the TestingTorNetwork
  * option. */
 static const config_var_t testing_tor_network_defaults[] = {
-  V(ServerDNSAllowBrokenConfig,  BOOL,  "1"),
+  V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),

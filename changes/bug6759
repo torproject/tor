@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Don't log about reloading the microdescriptor cache at startup. Our
+      bootstrap warnings are supposed to tell the user when there's a
+      problem, and our bootstrap notices say when there isn't. Fixes
+      bug 6759; bugfix on 0.2.2.6-alpha.
+
