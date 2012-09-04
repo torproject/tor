@@ -62,6 +62,16 @@ static cached_dir_t *the_directory = NULL;
 /** For authoritative directories: the current (v1) network status. */
 static cached_dir_t the_runningrouters;
 
+/** Array of start and end of consensus methods used for supported
+    microdescriptor formats. */
+static const struct consensus_method_range_t {
+  int low;
+  int high;
+} microdesc_consensus_methods[] = {
+  {MIN_METHOD_FOR_MICRODESC, MIN_METHOD_FOR_A_LINES - 1},
+  {MIN_METHOD_FOR_A_LINES, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {-1, -1}};
+
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
@@ -2053,7 +2063,7 @@ version_from_platform(const char *platform)
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
  * failure.
  *
- * The format argument has three possible values:
+ * The format argument has one of the following values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
  *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
@@ -2092,17 +2102,18 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
   }
+  cp = buf + strlen(buf);
 
   /* TODO: Maybe we want to pass in what we need to build the rest of
    * this here, instead of in the caller. Then we could use the
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
-  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
+
+  /* V3 microdesc consensuses don't have "a" lines. */
+  if (format == NS_V3_CONSENSUS_MICRODESC)
     return 0;
 
-  cp = buf + strlen(buf);
-
-  /* Possible "a" line, not included in consensus for now. */
+  /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {
     const char *addr_str = fmt_and_decorate_addr(&rs->ipv6_addr);
     r = tor_snprintf(cp, buf_len - (cp-buf),
@@ -2115,6 +2126,9 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     }
     cp += strlen(cp);
   }
+
+  if (format == NS_V3_CONSENSUS)
+    return 0;
 
   /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),
@@ -2753,6 +2767,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   microdescriptors = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    const struct consensus_method_range_t *cmr = NULL;
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t *rs;
       vote_routerstatus_t *vrs;
@@ -2774,15 +2789,20 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
         rs->is_flagged_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
-      md = dirvote_create_microdescriptor(ri);
-      if (md) {
-        char buf[128];
-        vote_microdesc_hash_t *h;
-        dirvote_format_microdesc_vote_line(buf, sizeof(buf), md);
-        h = tor_malloc(sizeof(vote_microdesc_hash_t));
-        h->microdesc_hash_line = tor_strdup(buf);
-        h->next = NULL;
-        vrs->microdesc = h;
+      for (cmr = microdesc_consensus_methods;
+           cmr->low != -1 && cmr->high != -1;
+           cmr++) {
+        md = dirvote_create_microdescriptor(ri, cmr->low);
+        if (md) {
+          char buf[128];
+          vote_microdesc_hash_t *h;
+          dirvote_format_microdesc_vote_line(buf, sizeof(buf), md,
+                                             cmr->low, cmr->high);
+          h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+          h->microdesc_hash_line = tor_strdup(buf);
+          h->next = vrs->microdesc;
+          vrs->microdesc = h;
+        }
         md->last_listed = now;
         smartlist_add(microdescriptors, md);
       }

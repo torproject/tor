@@ -53,29 +53,6 @@ static int dirvote_compute_consensuses(void);
 static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
-/** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 13
-
-/** Lowest consensus method that contains a 'directory-footer' marker */
-#define MIN_METHOD_FOR_FOOTER 9
-
-/** Lowest consensus method that contains bandwidth weights */
-#define MIN_METHOD_FOR_BW_WEIGHTS 9
-
-/** Lowest consensus method that contains consensus params */
-#define MIN_METHOD_FOR_PARAMS 7
-
-/** Lowest consensus method that generates microdescriptors */
-#define MIN_METHOD_FOR_MICRODESC 8
-
-/** Lowest consensus method that ensures a majority of authorities voted
-  * for a param. */
-#define MIN_METHOD_FOR_MAJORITY_PARAMS 12
-
-/** Lowest consensus method where microdesc consensuses omit any entry
- * with no microdesc. */
-#define MIN_METHOD_FOR_MANDATORY_MICRODESC 13
-
 /* =====
  * Voting
  * =====*/
@@ -430,6 +407,21 @@ _compare_vote_rs(const void **_a, const void **_b)
   return compare_vote_rs(a,b);
 }
 
+/** Helper for sorting OR ports. */
+static int
+_compare_orports(const void **_a, const void **_b)
+{
+  const tor_addr_port_t *a = *_a, *b = *_b;
+  int r;
+
+  if ((r = tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
+    return r;
+  if ((r = (((int) b->port) - ((int) a->port))))
+    return r;
+
+  return 0;
+}
+
 /** Given a list of vote_routerstatus_t, all for the same router identity,
  * return whichever is most frequent, breaking ties in favor of more
  * recently published vote_routerstatus_t and in case of ties there,
@@ -437,7 +429,8 @@ _compare_vote_rs(const void **_a, const void **_b)
  */
 static vote_routerstatus_t *
 compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
-                               char *microdesc_digest256_out)
+                               char *microdesc_digest256_out,
+                               tor_addr_port_t *best_alt_orport_out)
 {
   vote_routerstatus_t *most = NULL, *cur = NULL;
   int most_n = 0, cur_n = 0;
@@ -472,6 +465,38 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   }
 
   tor_assert(most);
+
+  /* If we're producing "a" lines, vote on potential alternative (sets
+   * of) OR port(s) in the winning routerstatuses.
+   *
+   * XXX prop186 There's at most one alternative OR port (_the_ IPv6
+   * port) for now. */
+  if (consensus_method >= MIN_METHOD_FOR_A_LINES && best_alt_orport_out) {
+    smartlist_t *alt_orports = smartlist_new();
+    const tor_addr_port_t *most_alt_orport = NULL;
+
+    SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
+      if (compare_vote_rs(most, rs) == 0 &&
+          !tor_addr_is_null(&rs->status.ipv6_addr)
+          && rs->status.ipv6_orport) {
+        smartlist_add(alt_orports, tor_addr_port_new(&rs->status.ipv6_addr,
+                                                     rs->status.ipv6_orport));
+      }
+    } SMARTLIST_FOREACH_END(rs);
+
+    smartlist_sort(alt_orports, _compare_orports);
+    most_alt_orport = smartlist_get_most_frequent(alt_orports, _compare_orports);
+    if (most_alt_orport) {
+      memcpy(best_alt_orport_out, most_alt_orport, sizeof(tor_addr_port_t));
+      log_debug(LD_DIR, "\"a\" line winner for %s is %s:%d",
+                most->status.nickname,
+                fmt_and_decorate_addr(&most_alt_orport->addr),
+                most_alt_orport->port);
+    }
+
+    SMARTLIST_FOREACH(alt_orports, tor_addr_port_t *, ap, tor_free(ap));
+    smartlist_free(alt_orports);
+  }
 
   if (consensus_method >= MIN_METHOD_FOR_MICRODESC &&
       microdesc_digest256_out) {
@@ -1685,6 +1710,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int n_listing = 0;
       int i;
       char microdesc_digest[DIGEST256_LEN];
+      tor_addr_port_t alt_orport = {TOR_ADDR_NULL, 0};
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
       SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
@@ -1754,7 +1780,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * routerinfo and its contents are. */
       memset(microdesc_digest, 0, sizeof(microdesc_digest));
       rs = compute_routerstatus_consensus(matching_descs, consensus_method,
-                                          microdesc_digest);
+                                          microdesc_digest, &alt_orport);
       /* Copy bits of that into rs_out. */
       memset(&rs_out, 0, sizeof(rs_out));
       tor_assert(fast_memeq(lowest_id, rs->status.identity_digest,DIGEST_LEN));
@@ -1765,6 +1791,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
+      if (consensus_method >= MIN_METHOD_FOR_A_LINES) {
+        tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
+        rs_out.ipv6_orport = alt_orport.port;
+      }
       rs_out.has_bandwidth = 0;
       rs_out.has_exitsummary = 0;
 
@@ -3510,7 +3540,7 @@ dirvote_get_vote(const char *fp, int flags)
  * particular method.
  **/
 microdesc_t *
-dirvote_create_microdescriptor(const routerinfo_t *ri)
+dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 {
   microdesc_t *result = NULL;
   char *key = NULL, *summary = NULL, *family = NULL;
@@ -3525,6 +3555,12 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
     family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
 
   smartlist_add_asprintf(chunks, "onion-key\n%s", key);
+
+  if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
+      !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
+    smartlist_add_asprintf(chunks, "a %s:%d\n",
+                           fmt_and_decorate_addr(&ri->ipv6_addr),
+                           ri->ipv6_orport);
 
   if (family)
     smartlist_add_asprintf(chunks, "family %s\n", family);
@@ -3559,33 +3595,36 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
   return result;
 }
 
-/** Cached space-separated string to hold */
-static char *microdesc_consensus_methods = NULL;
-
 /** Format the appropriate vote line to describe the microdescriptor <b>md</b>
  * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
  * in <b>out</b>.  Return -1 on failure and the number of characters written
  * on success. */
 ssize_t
-dirvote_format_microdesc_vote_line(char *out, size_t out_len,
-                                   const microdesc_t *md)
+dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
+                                   const microdesc_t *md,
+                                   int consensus_method_low,
+                                   int consensus_method_high)
 {
+  int ret = -1;
   char d64[BASE64_DIGEST256_LEN+1];
-  if (!microdesc_consensus_methods) {
-    microdesc_consensus_methods =
-      make_consensus_method_list(MIN_METHOD_FOR_MICRODESC,
-                                 MAX_SUPPORTED_CONSENSUS_METHOD,
-                                 ",");
-    tor_assert(microdesc_consensus_methods);
-  }
+  char *microdesc_consensus_methods =
+    make_consensus_method_list(consensus_method_low,
+                               consensus_method_high,
+                               ",");
+  tor_assert(microdesc_consensus_methods);
+
   if (digest256_to_base64(d64, md->digest)<0)
-    return -1;
+    goto out;
 
-  if (tor_snprintf(out, out_len, "m %s sha256=%s\n",
+  if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)
-    return -1;
+    goto out;
 
-  return strlen(out);
+  ret = strlen(out_buf);
+
+ out:
+  tor_free(microdesc_consensus_methods);
+  return ret;
 }
 
 /** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
