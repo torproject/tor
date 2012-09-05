@@ -485,7 +485,8 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
     } SMARTLIST_FOREACH_END(rs);
 
     smartlist_sort(alt_orports, _compare_orports);
-    most_alt_orport = smartlist_get_most_frequent(alt_orports, _compare_orports);
+    most_alt_orport = smartlist_get_most_frequent(alt_orports,
+                                                  _compare_orports);
     if (most_alt_orport) {
       memcpy(best_alt_orport_out, most_alt_orport, sizeof(tor_addr_port_t));
       log_debug(LD_DIR, "\"a\" line winner for %s is %s:%d",

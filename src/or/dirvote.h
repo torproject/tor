@@ -96,7 +96,8 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);
 
-microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method);
+microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
+                                            int consensus_method);
 ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                            const microdesc_t *md,
                                            int consensus_method_low,
