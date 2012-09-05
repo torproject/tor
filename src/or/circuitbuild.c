@@ -4904,6 +4904,12 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       const or_options_t *options = get_options();
       unsigned hop_cnt, success_cnt;
 
+      if (!node) {
+        *msg = tor_strdup("Unable to parse entry nodes: "
+               "EntryGuardPathBias without EntryGuard");
+        break;
+      }
+
       if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
         log_warn(LD_GENERAL, "Unable to parse guard path bias info: "
                  "Misformated EntryGuardPathBias %s", escaped(line->value));
