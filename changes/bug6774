@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid crashing on a malformed state file where EntryGuardPathBias
-      precedes EntryGuard. Fix for bug 6774; bugfix on 0.2.3.17-beta.
-
