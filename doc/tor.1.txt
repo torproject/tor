@@ -128,8 +128,8 @@ GENERAL OPTIONS
     A token bucket limits the average incoming bandwidth usage on this node to
     the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value.  If you want to run a relay in the
-    public network, this needs to be _at the very least_ 20 KB (that is,
-    20480 bytes). (Default: 5 MB)
+    public network, this needs to be _at the very least_ 30 KB (that is,
+    30720 bytes). (Default: 5 MB)
 
 **BandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**::
     Limit the maximum token bucket size (also known as the burst) to the given
