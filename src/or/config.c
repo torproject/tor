@@ -7266,11 +7266,11 @@ get_list_of_ports_to_forward(void)
   /** XXX TODO tor-fw-helper does not support forwarding ports to
       other hosts than the local one. If the user is binding to a
       different IP address, tor-fw-helper won't work.  */
-  port = get_primary_or_port();  /* Get ORPort */
+  port = router_get_advertised_or_port(get_options());  /* Get ORPort */
   if (port)
     smartlist_add_asprintf(ports_to_forward, "%d:%d", port, port);
 
-  port = get_primary_dir_port(); /* Get DirPort */
+  port = router_get_advertised_dir_port(get_options(), 0); /* Get DirPort */
   if (port)
     smartlist_add_asprintf(ports_to_forward, "%d:%d", port, port);
 
