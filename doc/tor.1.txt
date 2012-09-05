@@ -1174,7 +1174,7 @@ The following options are useful only for clients (that is, if
 **ClientUseIPv6** **0**|**1**::
     If this option is set to 1, Tor might connect to entry nodes over
     IPv6. Note that clients configured with an IPv6 address in a
-    **Bridge** option will try connecting over IPv6 if even if
+    **Bridge** line will try connecting over IPv6 even if
     **ClientUseIPv6** is set to 0. (Default: 0)
 
 **ClientPreferIPv6ORPort** **0**|**1**::

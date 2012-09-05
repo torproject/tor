@@ -815,9 +815,9 @@ node_get_declared_family(const node_t *node)
  * <b>node</b>, else 0.
  *
  *  We prefer the IPv6 address if the router has an IPv6 address and
- *  i) the node_t says that we do prefer IPv6
+ *  i) the node_t says that it prefers IPv6
  *  or
- *  ii) the router has no IPv4 address.  */
+ *  ii) the router has no IPv4 address. */
 int
 node_ipv6_preferred(const node_t *node)
 {
