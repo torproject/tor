@@ -3324,7 +3324,6 @@ typedef struct {
                                      * number of servers per IP address shared
                                      * with an authority. */
   int AuthDirHasIPv6Connectivity; /**< Autoboolean: are we on IPv6?  */
-  int AuthDirPublishIPv6; /**< Boolean: should we list IPv6 OR ports? */
 
   /** If non-zero, always vote the Fast flag for any relay advertising
    * this amount of capacity or more. */

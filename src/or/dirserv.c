@@ -1017,7 +1017,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
        IPv6 OR port since that'd kill all dual stack relays until a
        majority of the dir auths have IPv6 connectivity. */
     answer = (now < node->last_reachable + REACHABLE_TIMEOUT &&
-              (options->AuthDirHasIPv6Connectivity == 0 ||
+              (options->AuthDirHasIPv6Connectivity != 1 ||
                tor_addr_is_null(&router->ipv6_addr) ||
                now < node->last_reachable6 + REACHABLE_TIMEOUT));
   }
@@ -2495,13 +2495,11 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
-  if (options->AuthDirPublishIPv6 == 1 &&
+  if (options->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&ri->ipv6_addr) &&
-      (options->AuthDirHasIPv6Connectivity == 0 ||
-       node->last_reachable6 >= now - REACHABLE_TIMEOUT)) {
-    /* We're configured for publishing IPv6 OR ports. There's an IPv6
-       OR port and it's reachable (or we know that we're not on IPv6)
-       so copy it to the routerstatus.  */
+      node->last_reachable6 >= now - REACHABLE_TIMEOUT) {
+    /* We're configured as having IPv6 connectivity. There's an IPv6
+       OR port and it's reachable so copy it to the routerstatus.  */
     tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
     rs->ipv6_orport = ri->ipv6_orport;
   }
