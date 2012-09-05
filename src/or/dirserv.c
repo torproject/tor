@@ -2800,9 +2800,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
           h->microdesc_hash_line = tor_strdup(buf);
           h->next = vrs->microdesc;
           vrs->microdesc = h;
+          md->last_listed = now;
+          smartlist_add(microdescriptors, md);
         }
-        md->last_listed = now;
-        smartlist_add(microdescriptors, md);
       }
 
       smartlist_add(routerstatuses, vrs);
