@@ -42,6 +42,13 @@ Changes in version 0.2.3.21-rc - 2012-09-05
       requests. Fixes bug 6472; bugfix on 0.0.7rc1.
     - Fix build and 64-bit compile warnings from --enable-openbsd-malloc.
       Fixes bug 6379. Bugfix on 0.2.0.20-rc.
+    - Allow one-hop directory fetching circuits the full "circuit build
+      timeout" period, rather than just half of it, before failing them
+      and marking the relay down. This fix should help reduce cases where
+      clients declare relays (or worse, bridges) unreachable because
+      the TLS handshake takes a few seconds to complete. Fixes bug 6743;
+      bugfix on 0.2.2.2-alpha, where we changed the timeout from a static
+      30 seconds.
     - Authorities no longer include any router in their microdescriptor
       consensuses for which they couldn't generate or agree on a
       microdescriptor. Fixes the second piece of bug 6404; fix on

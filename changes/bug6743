@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Allow one-hop directory fetching circuits the full "circuit build
-      timeout" period, rather than just half of it, before failing them
-      and marking the relay down. This fix should help reduce cases where
-      clients declare relays (or worse, bridges) unreachable because
-      the TLS handshake takes a few seconds to complete. Fixes bug 6743;
-      bugfix on 0.2.2.2-alpha, where we changed the timeout from a static
-      30 seconds.
-
