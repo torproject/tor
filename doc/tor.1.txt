@@ -1747,13 +1747,12 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     votes on whether to accept relays as hidden service directories.
     (Default: 1)
 
-**AuthDirHasIPv6Connectivity** **0**|**1**|**auto**::
+**AuthDirHasIPv6Connectivity** **0**|**1**::
 
     Authoritative directories only. When set to 0, OR ports with an
     IPv6 address are being accepted without reachability testing.
     When set to 1, IPv6 OR ports are being tested just like IPv4 OR
-    ports.  When set to auto, Tor tries to find out if the authority
-    relay has IPv6 connectivity or not. (Default: auto)
+    ports. (Default: 0)
 
 **AuthDirPublishIPv6** **0**|**1**::
 
