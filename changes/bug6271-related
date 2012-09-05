@@ -1,6 +1,0 @@
-  o Minor bugfixes (spec conformance):
-    - Reject EXTEND cells sent to nonexistent streams. According to the
-      spec, an EXTEND cell sent to _any_ nonzero stream ID is invalid, but
-      we were only checking for stream IDs that were currenty in use.
-      Found while hunting for more instances of bug 6271. Bugfix on
-      0.0.2pre8, which introduced incremental circuit construction.

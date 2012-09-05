@@ -1,3 +1,119 @@
+Changes in version 0.2.4.1-alpha - 2012-09-05
+  Tor 0.2.4.1-alpha adds ... XXX
+
+  This is the first alpha release in a new series, so expect there to
+  be bugs. Users who would rather test out a more stable branch should
+  stay with 0.2.3.x for now.
+
+  o Major features (bridges):
+    - Bridges now report the pluggable transports they support to the
+      bridge authority, so it can pass the supported transports on to
+      bridgedb and/or eventually do reachability testing. Implements
+      ticket 3589.
+
+  o Major features (IPv6):
+    - Bridge authorities now accept IPv6 bridge addresses and include
+      them in network status documents. Implements ticket 5534.
+    - Clients who set "ClientUseIPv6 1" may connect to entry nodes over
+      IPv6. Set "ClientPreferIPv6ORPort 1" to make this even more likely
+      to happen. Implements ticket 5535.
+    - All kind of relays, not just bridges, can now advertise an IPv6
+      OR port. Implements ticket 6362.
+    - Directory authorities vote on IPv6 OR ports using the new consensus
+      method 14. Implements ticket 6363.
+
+  o Major features (build):
+    - Switch to a nonrecursive Makefile structure. Now instead of each
+      Makefile.am invoking other Makefile.am's, there is a master
+      Makefile.am that includes the others. This change makes our build
+      process slightly more maintainable, and improves parallelism for
+      building with make -j. Original patch by Stewart Smith; various
+      fixes by Jim Meyering.
+    - Where available, we now use automake's "silent" make rules by
+      default, so that warnings are easier to spot. You can get the old
+      behavior with "make V=1". Patch by Stewart Smith for ticket 6522.
+
+  o Minor features (code security and spec conformance):
+    - Clear keys and key-derived material left on the stack in
+      rendservice.c and rendclient.c. Check return value of
+      crypto_pk_write_private_key_to_string() in end_service_load_keys().
+      These fixes should make us more forward-secure against cold-boot
+      attacks and the like. Fixes bug 2385.
+    - Reject EXTEND cells sent to nonexistent streams. According to the
+      spec, an EXTEND cell sent to _any_ nonzero stream ID is invalid, but
+      we were only checking for stream IDs that were currently in use.
+      Found while hunting for more instances of bug 6271. Bugfix on
+      0.0.2pre8, which introduced incremental circuit construction.
+
+  o Minor features (streamlining);
+    - No longer include the "opt" prefix when generating routerinfos
+      or v2 directories: it has been needless since Tor 0.1.2. Closes
+      ticket 5124.
+    - Remove some now-needless code that tried to aggressively flush
+      OR connections as data was added to them. Since 0.2.0.1-alpha, our
+      cell queue logic has saved us from the failure mode that this code
+      was supposed to prevent. Removing this code will limit the number
+      of baroque control flow paths through Tor's network logic. Reported
+      pseudonymously on IRC. Fixes bug 6468; bugfix on 0.2.0.1-alpha.
+
+  o Minor features (controller):
+    - Add a "GETINFO signal/names" control port command. Implements
+      ticket 3842.
+    - Provide default values for all options via "GETINFO config/defaults".
+      Implements ticket 4971.
+
+  o Minor features (IPv6):
+    - New config option "AuthDirHasIPv6Connectivity auto" that ... XXX
+      Implements feature 5974.
+    - A relay with an IPv6 OR port now sends that address in NETINFO
+      cells (in addition to its other address). Implements ticket 6364.
+    - New config option AuthDirPublishIPv6. Implements ticket 6406.
+
+  o Minor features (log messages):
+    - Omit the first heartbeat log message, because it never has anything
+      useful to say, and it clutters up the bootstrapping messages.
+      Resolves ticket 6758.
+    - Don't log about reloading the microdescriptor cache at startup. Our
+      bootstrap warnings are supposed to tell the user when there's a
+      problem, and our bootstrap notices say when there isn't. Resolves
+      ticket 6759; bugfix on 0.2.2.6-alpha.
+    - Don't log "I learned some more directory information" when we're
+      reading cached directory information. Reserve it for when new
+      directory information arrives in response to a fetch. Resolves
+      ticket 6760.
+    - Prevent rounding error in path bias counts when scaling
+      them down, and use the correct scale factor default. Also demote
+      some path bias related log messages down a level and make others
+      less scary sounding. Fixes bug 6647. Bugfix against 0.2.3.17-beta.
+    - We no longer warn so much when generating manpages from their
+      asciidoc source.
+
+  o Code simplifications and refactoring:
+    - Enhance our internal sscanf replacement so that we can eliminate
+      the last remaining uses of the system sscanf. (Though those uses
+      of sscanf were safe, sscanf itself is generally error prone, so
+      we want to eliminate when we can.) Fixes ticket 4195 and Coverity
+      CID 448.
+    - Move ipv6_preferred from routerinfo_t to node_t. Addresses bug 4620.
+    - Move last_reachable and testing_since from routerinfo_t to node_t.
+      Implements ticket 5529.
+    - Add replaycache_t structure, functions and unit tests, then refactor
+      rend_service_introduce() to be more clear to read, improve, debug,
+      and test. Resolves bug 6177.
+    - Finally remove support for malloc_good_size and malloc_usable_size.
+      We had hoped that these functions would let us eke a little more
+      memory out of our malloc implementation. Unfortunately, the only
+      implementations that provided these functions are also ones that
+      are already efficient about not overallocation: they never got us
+      more than 7 or so bytes per allocation. Removing them saves us a
+      little code complexity and a nontrivial amount of build complexity.
+
+  o New requirements:
+    - Tor maintainers now require Automake version 1.9 or later to build
+      Tor from the Git repository. (Automake is not required when building
+      from a source distribution.)
+
+
 Changes in version 0.2.3.21-rc - 2012-09-05
   Tor 0.2.3.21-rc is the fourth release candidate for the Tor 0.2.3.x
   series. It fixes a trio of potential security bugs, fixes a bug where

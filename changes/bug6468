@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Remove some now-needless code that tried to aggressively flush
-      OR connections as data was added to them. Since 0.2.0.1-alpha,
-      our cell queue logic has saved us from the failure mode that
-      this code was supposed to prevent. Removing this code will limit
-      the number of baroque control flow paths through Tor's network
-      logic.  Reported pseudonymously on IRC.  Fix for bug 6468;
-      bigfix on 0.2.0.1-alpha.

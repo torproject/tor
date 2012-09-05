@@ -1,5 +1,0 @@
-  o Major features:
-    - If configured with ClientUseIPv6, clients may connect to entry
-      nodes over IPv6. Another new config option, ClientPreferIPv6ORPort,
-      can be set to make this even more likely to happen.
-      Implements ticket 5535.

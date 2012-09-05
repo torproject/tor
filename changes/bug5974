@@ -1,4 +1,0 @@
-  o Minor features:
-
-    - Add new configure option AuthDirHasIPv6Connectivity.  Implements
-      feature #5974.

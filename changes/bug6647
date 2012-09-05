@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-     - Prevent rounding error in path bias counts when scaling
-       them down, and use the correct scale factor default.
-       Bugfix against 0.2.3.17-beta.
-     - Demote some path bias related log messages down a level
-       and make others less scary sounding.
-       Bugfix against 0.2.3.17-beta.

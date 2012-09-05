@@ -1,4 +1,0 @@
-  o Minor features:
-
-    - Add new configure option AuthDirPublishIPv6.  Implements
-      enhancement #6406.

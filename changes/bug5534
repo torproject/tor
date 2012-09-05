@@ -1,4 +1,0 @@
-  o Major features (IPv6):
-    Add support for bridge authorities to accept IPv6 bridge addresses
-    and include them in network status documents.  Implements
-    enhancement 5534.
