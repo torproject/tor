@@ -1,3 +1,96 @@
+Changes in version 0.2.3.21-rc - 2012-09-05
+  Tor 0.2.3.21-rc is the fourth release candidate for the Tor 0.2.3.x
+  series. It fixes a trio of potential security bugs, fixes a bug where
+  we were leaving some of the fast relays out of the microdescriptor
+  consensus, resumes interpreting "ORPort 0" and "DirPort 0" correctly,
+  and cleans up other smaller issues.
+
+  o Major bugfixes (security):
+    - Tear down the circuit if we get an unexpected SENDME cell. Clients
+      could use this trick to make their circuits receive cells faster
+      than our flow control would have allowed, or to gum up the network,
+      or possibly to do targeted memory denial-of-service attacks on
+      entry nodes. Fixes bug 6252. Bugfix on the 54th commit on Tor --
+      from July 2002, before the release of Tor 0.0.0. We had committed
+      this patch previously, but we had to revert it because of bug 6271.
+      Now that 6271 is fixed, this patch appears to work.
+    - Reject any attempt to extend to an internal address. Without
+      this fix, a router could be used to probe addresses on an internal
+      network to see whether they were accepting connections. Fixes bug
+      6710; bugfix on 0.0.8pre1.
+    - Do not crash when comparing an address with port value 0 to an
+      address policy. This bug could have been used to cause a remote
+      assertion failure by or against directory authorities, or to
+      allow some applications to crash clients. Fixes bug 6690; bugfix
+      on 0.2.1.10-alpha.
+
+  o Major bugfixes:
+    - Remove the upper bound on microdescriptor length. We were hitting
+      the limit for routers with complex exit policies or family
+      declarations, causing clients to not use them. Fixes the first
+      piece of bug 6404; fix on 0.2.2.6-alpha.
+    - Detect "ORPort 0" as meaning, uniformly, that we're not running
+      as a relay. Previously, some of our code would treat the presence
+      of any ORPort line as meaning that we should act like a relay,
+      even though our new listener code would correctly not open any
+      ORPorts for ORPort 0. Similar bugs in other Port options are also
+      fixed. Fixes the first half of bug 6507; bugfix on 0.2.3.3-alpha.
+
+  o Minor bugfixes:
+    - Avoid a pair of double-free and use-after-mark bugs that can
+      occur with certain timings in canceled and re-received DNS
+      requests. Fixes bug 6472; bugfix on 0.0.7rc1.
+    - Fix build and 64-bit compile warnings from --enable-openbsd-malloc.
+      Fixes bug 6379. Bugfix on 0.2.0.20-rc.
+    - Allow one-hop directory fetching circuits the full "circuit build
+      timeout" period, rather than just half of it, before failing them
+      and marking the relay down. This fix should help reduce cases where
+      clients declare relays (or worse, bridges) unreachable because
+      the TLS handshake takes a few seconds to complete. Fixes bug 6743;
+      bugfix on 0.2.2.2-alpha, where we changed the timeout from a static
+      30 seconds.
+    - Authorities no longer include any router in their microdescriptor
+      consensuses for which they couldn't generate or agree on a
+      microdescriptor. Fixes the second piece of bug 6404; fix on
+      0.2.2.6-alpha.
+    - Detect and reject attempts to specify both "FooPort" and
+      "FooPort 0" in the same configuration domain. (It's still okay
+      to have a FooPort in your configuration file, and use "FooPort 0"
+      on the command line to disable it.) Fixes the second half of bug
+      6507; bugfix on 0.2.3.3-alpha.
+    - Make wildcarded addresses (that is, ones beginning with "*.") work
+      when provided via the controller's MapAddress command. Previously,
+      they were accepted, but we never actually noticed that they were
+      wildcards. Fixes bug 6244; bugfix on 0.2.3.9-alpha.
+    - Add a (probably redundant) memory clear between iterations of
+      the router status voting loop, to prevent future coding errors
+      where data might leak between iterations of the loop. Resolves
+      ticket 6514.
+
+  o Minor bugfixes (log messages):
+    - Downgrade "set buildtimeout to low value" messages to "info"
+      severity; they were never an actual problem, there was never
+      anything reasonable to do about them, and they tended to spam logs
+      from time to time. Fixes bug 6251; bugfix on 0.2.2.2-alpha.
+    - Downgrade path-bias warning messages to "info". We'll try to get
+      them working better in 0.2.4. Add internal circuit construction
+      state to protect against the noisy warn message "Unexpectedly high
+      circuit_successes". Also add some additional rate-limited notice
+      messages to help determine the root cause of the warn. Fixes bug
+      6475. Bugfix against 0.2.3.17-beta.
+    - Move log message when unable to find a microdesc in a routerstatus
+      entry to parse time. Previously we'd spam this warning every time
+      we tried to figure out which microdescriptors to download. Fixes
+      the third piece of bug 6404; fix on 0.2.3.18-rc.
+
+  o Minor features:
+    - Consider new, removed or changed IPv6 OR ports a non-cosmetic
+      change when the authority is deciding whether to accept a newly
+      uploaded descriptor. Implements ticket 6423.
+    - Add missing documentation for consensus and microdesc files.
+      Resolves ticket 6732.
+
+
 Changes in version 0.2.2.38 - 2012-08-12
   Tor 0.2.2.38 fixes a remotely triggerable crash bug, and fixes a timing
   attack that could in theory leak path information.
