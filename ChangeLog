@@ -1,5 +1,7 @@
 Changes in version 0.2.4.1-alpha - 2012-09-05
-  Tor 0.2.4.1-alpha adds ... XXX
+  Tor 0.2.4.1-alpha lets bridges publish their pluggable transports to
+  bridgedb; lets relays use IPv6 addresses and directory authorities
+  advertise them; and switches to a cleaner build interface.
 
   This is the first alpha release in a new series, so expect there to
   be bugs. Users who would rather test out a more stable branch should
@@ -63,11 +65,11 @@ Changes in version 0.2.4.1-alpha - 2012-09-05
       Implements ticket 4971.
 
   o Minor features (IPv6):
-    - New config option "AuthDirHasIPv6Connectivity auto" that ... XXX
-      Implements feature 5974.
+    - New config option "AuthDirHasIPv6Connectivity 1" that directory
+      authorities should set if they have IPv6 connectivity and want to
+      do reachability tests for IPv6 relays. Implements feature 5974.
     - A relay with an IPv6 OR port now sends that address in NETINFO
       cells (in addition to its other address). Implements ticket 6364.
-    - New config option AuthDirPublishIPv6. Implements ticket 6406.
 
   o Minor features (log messages):
     - Omit the first heartbeat log message, because it never has anything
