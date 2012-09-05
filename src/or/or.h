@@ -3323,7 +3323,7 @@ typedef struct {
   int AuthDirMaxServersPerAuthAddr; /**< Do not permit more than this
                                      * number of servers per IP address shared
                                      * with an authority. */
-  int AuthDirHasIPv6Connectivity; /**< Autoboolean: are we on IPv6?  */
+  int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
 
   /** If non-zero, always vote the Fast flag for any relay advertising
    * this amount of capacity or more. */
