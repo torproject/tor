@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a pair of double-free and use-after-mark bugs that can
-      occur with certain timings in canceled and re-received DNS
-      requests. Fix for bug 6472; bugfix on 0.0.7rc1.

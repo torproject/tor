@@ -1,7 +1,0 @@
-  o Major bugfixes (security):
-    - Do not crash when comparing an address with port value 0 to an
-      address policy. This bug could have been used to cause a remote
-      assertion failure by or against directory authorities, or to
-      allow some applications to crash clients. Fixes bug 6690; bugfix
-      on 0.2.1.10-alpha.
-
