@@ -3606,7 +3606,7 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                    int consensus_method_low,
                                    int consensus_method_high)
 {
-  int ret = -1;
+  ssize_t ret = -1;
   char d64[BASE64_DIGEST256_LEN+1];
   char *microdesc_consensus_methods =
     make_consensus_method_list(consensus_method_low,

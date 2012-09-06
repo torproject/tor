@@ -1,0 +1,4 @@
+  o Minor build fixes:
+    - Fix a harmless (in this case) build warning for implicitly
+      converting a strlen() to an int. Bugfix on 0.2.4.1-alpha.
+
