@@ -727,7 +727,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
                "MAX_DESCRIPTOR_UPLOAD_SIZE (%d) constant is too low.",
                ri->nickname, source, (int)ri->cache_info.signed_descriptor_len,
                MAX_DESCRIPTOR_UPLOAD_SIZE);
-    *msg = "Router descriptor was too large";
+    *msg = "Router descriptor was too large.";
     control_event_or_authdir_new_descriptor("REJECTED",
                ri->cache_info.signed_descriptor_body,
                ri->cache_info.signed_descriptor_len, *msg);

@@ -672,7 +672,7 @@ init_keys(void)
            * we don't really need new keys yet so the descriptor doesn't
            * change and the old one is still fresh. */
           log_info(LD_GENERAL, "Couldn't add own descriptor to directory "
-                   "after key init: %s. This is usually not a problem.",
+                   "after key init: %s This is usually not a problem.",
                    m?m:"<unknown error>");
         }
       }
