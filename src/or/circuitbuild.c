@@ -2470,7 +2470,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     log_debug(LD_CIRC|LD_OR,"Next router (%s:%d): %s",
               fmt_addr(&n_addr), (int)n_port, msg?msg:"????");
 
-    circ->n_hop = extend_info_alloc(NULL /*nickname*/,
+    circ->n_hop = extend_info_new(NULL /*nickname*/,
                                     id_digest,
                                     NULL /*onion_key*/,
                                     &n_addr, n_port);
@@ -3846,7 +3846,7 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 
 /** Allocate a new extend_info object based on the various arguments. */
 extend_info_t *
-extend_info_alloc(const char *nickname, const char *digest,
+extend_info_new(const char *nickname, const char *digest,
                   crypto_pk_t *onion_key,
                   const tor_addr_t *addr, uint16_t port)
 {
@@ -3887,13 +3887,13 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
             node->ri ? node->ri->nickname : node->rs->nickname);
 
   if (node->ri)
-    return extend_info_alloc(node->ri->nickname,
+    return extend_info_new(node->ri->nickname,
                              node->identity,
                              node->ri->onion_pkey,
                              &ap.addr,
                              ap.port);
   else if (node->rs && node->md)
-    return extend_info_alloc(node->rs->nickname,
+    return extend_info_new(node->rs->nickname,
                              node->identity,
                              node->md->onion_pkey,
                              &ap.addr,
@@ -5382,7 +5382,7 @@ routerset_contains_bridge(const routerset_t *routerset,
   if (!routerset)
     return 0;
 
-  extinfo = extend_info_alloc(
+  extinfo = extend_info_new(
          NULL, bridge->identity, NULL, &bridge->addr, bridge->port);
   result = routerset_contains_extendinfo(routerset, extinfo);
   extend_info_free(extinfo);

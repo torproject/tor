@@ -1570,7 +1570,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                        escaped_safe_str_client(conn->socks_request->address));
               return -1;
             }
-            extend_info = extend_info_alloc(conn->chosen_exit_name+1,
+            extend_info = extend_info_new(conn->chosen_exit_name+1,
                                             digest, NULL, &addr,
                                             conn->socks_request->port);
           } else {

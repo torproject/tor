@@ -891,7 +891,7 @@ extend_info_from_router(const routerinfo_t *r)
   tor_assert(r);
 
   router_get_prim_orport(r, &ap);
-  return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
+  return extend_info_new(r->nickname, r->cache_info.identity_digest,
                            r->onion_pkey, &ap.addr, ap.port);
 }
 
