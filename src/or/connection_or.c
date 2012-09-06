@@ -327,7 +327,7 @@ var_cell_t *
 var_cell_new(uint16_t payload_len)
 {
   size_t size = STRUCT_OFFSET(var_cell_t, payload) + payload_len;
-  var_cell_t *cell = tor_malloc(size);
+  var_cell_t *cell = tor_malloc_zero(size);
   cell->payload_len = payload_len;
   cell->command = 0;
   cell->circ_id = 0;
