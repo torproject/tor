@@ -72,4 +72,4 @@ src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(COMMONHEA
 	fi
 
 src/common/util_codedigest.o: src/common/common_sha1.i
-src/common/crypto.c: src/common/sha256.c
+src/common/crypto.o: src/common/sha256.c

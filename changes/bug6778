@@ -1,3 +1,4 @@
   o Minor bugfixes:
     - Avoid a warning when building common_sha1.i out of tree. Fixes bug
       6778; bugfix on 0.2.4.1-alpha.
+    - Fix a mis-declared dependency on src/common/crypto.c.
