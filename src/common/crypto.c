@@ -221,6 +221,30 @@ try_load_engine(const char *path, const char *engine)
 }
 #endif
 
+static char *crypto_openssl_version_str = NULL;
+/* Return a human-readable version of the run-time openssl version number. */
+const char *
+crypto_openssl_get_version_str(void)
+{
+  if (crypto_openssl_version_str == NULL) {
+    const char *raw_version = SSLeay_version(SSLEAY_VERSION);
+    const char *end_of_version = NULL;
+    /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
+       trim that down. */
+    if (!strcmpstart(raw_version, "OpenSSL ")) {
+      raw_version += strlen("OpenSSL ");
+      end_of_version = strchr(raw_version, ' ');
+    }
+
+    if (end_of_version)
+      crypto_openssl_version_str = tor_strndup(raw_version,
+                                               end_of_version-raw_version);
+    else
+      crypto_openssl_version_str = tor_strdup(raw_version);
+  }
+  return crypto_openssl_version_str;
+}
+
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
@@ -231,6 +255,19 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
+
+    if (SSLeay() == OPENSSL_VERSION_NUMBER &&
+        !strcmp(SSLeay_version(SSLEAY_VERSION), OPENSSL_VERSION_TEXT)) {
+      log_info(LD_CRYPTO, "OpenSSL version matches version from headers "
+                 "(%lx: %s).", SSLeay(), SSLeay_version(SSLEAY_VERSION));
+    } else {
+      log_warn(LD_CRYPTO, "OpenSSL version from headers does not match the "
+               "version we're running with. If you get weird crashes, that "
+               "might be why. (Compiled with %lx: %s; running with %lx: %s).",
+               (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
+               SSLeay(), SSLeay_version(SSLEAY_VERSION));
+    }
+
     if (useAccel > 0) {
 #ifdef DISABLE_ENGINES
       (void)accelName;
@@ -3018,6 +3055,7 @@ crypto_global_cleanup(void)
     tor_free(ms);
   }
 #endif
+  tor_free(crypto_openssl_version_str);
   return 0;
 }
 

@@ -1,0 +1,3 @@
+  o Minor features:
+    - Log less at level notice about our OpenSSL and Libevent versions
+      when everything is going right. Partial fix for 6736.

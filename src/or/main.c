@@ -2308,12 +2308,16 @@ tor_init(int argc, char *argv[])
 
   {
     const char *version = get_version();
+    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s "
+               "and OpenSSL %s.", version,
 #ifdef USE_BUFFEREVENTS
-    log_notice(LD_GENERAL, "Tor v%s (with bufferevents) running on %s.",
-                version, get_uname());
+               "(with bufferevents) ",
 #else
-    log_notice(LD_GENERAL, "Tor v%s running on %s.", version, get_uname());
+               "",
 #endif
+               get_uname(),
+               tor_libevent_get_version_str(),
+               crypto_openssl_get_version_str());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
