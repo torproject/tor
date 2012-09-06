@@ -81,7 +81,7 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a 
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@
 
-noinst_HEADERS+= \
+ORHEADERS = \
 	src/or/buffers.h				\
 	src/or/circuitbuild.h				\
 	src/or/circuitlist.h				\
@@ -122,8 +122,9 @@ noinst_HEADERS+= \
 	src/or/router.h					\
 	src/or/routerlist.h				\
 	src/or/routerparse.h				\
-	src/or/status.h					\
-	micro-revision.i
+	src/or/status.h
+
+noinst_HEADERS+= $(ORHEADERS) micro-revision.i
 
 src/or/config_codedigest.o: src/or/or_sha1.i
 
@@ -143,12 +144,12 @@ micro-revision.i: FORCE
 	  mv micro-revision.tmp micro-revision.i;		\
 	fi; true
 
-src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)
+src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS)
 	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
-	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)) | \
+	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS) ) | \
 	  "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/or/or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES)) | \
+	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS)) | \
 	  "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > src/or/or_sha1.i; \
 	else \
 	  rm src/or/or_sha1.i; \
