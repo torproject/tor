@@ -17,24 +17,26 @@
 #include <time.h>
 
 /** The current version of tor-fw-helper. */
-#define tor_fw_version "0.1"
+#define tor_fw_version "0.2"
 
 /** This is an arbitrary hard limit - We currently have two (NAT-PMP and UPnP).
  We're likely going to add the Intel UPnP library but nothing else comes to
  mind at the moment. */
 #define MAX_BACKENDS 23
 
+/** Forward traffic received in port <b>external_port</b> in the
+ *  external side of our NAT to <b>internal_port</b> in this host. */
+typedef struct {
+  uint16_t external_port;
+  uint16_t internal_port;
+} port_to_forward_t;
+
 /** This is where we store parsed commandline options. */
 typedef struct {
   int verbose;
   int help;
   int test_commandline;
-  uint16_t private_dir_port;
-  uint16_t private_or_port;
-  uint16_t public_dir_port;
-  uint16_t public_or_port;
-  uint16_t internal_port;
-  uint16_t external_port;
+  struct smartlist_t *ports_to_forward;
   int fetch_public_ip;
   int nat_pmp_status;
   int upnp_status;
@@ -50,8 +52,8 @@ typedef struct tor_fw_backend_t {
   int (*init)(tor_fw_options_t *options, void *backend_state);
   int (*cleanup)(tor_fw_options_t *options, void *backend_state);
   int (*fetch_public_ip)(tor_fw_options_t *options, void *backend_state);
-  int (*add_tcp_mapping)(tor_fw_options_t *options, void *backend_state);
+  int (*add_tcp_mapping)(uint16_t internal_port, uint16_t external_port,
+                         int is_verbose, void *backend_state);
 } tor_fw_backend_t;
-
 #endif
 

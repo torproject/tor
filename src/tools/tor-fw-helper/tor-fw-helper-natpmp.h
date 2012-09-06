@@ -36,8 +36,8 @@ int tor_natpmp_init(tor_fw_options_t *tor_fw_options, void *backend_state);
 
 int tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state);
 
-int tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
-                               void *backend_state);
+int tor_natpmp_add_tcp_mapping(uint16_t internal_port, uint16_t external_port,
+                               int is_verbose, void *backend_state);
 
 int tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
                                void *backend_state);

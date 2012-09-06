@@ -54,6 +54,8 @@ void pt_free_all(void);
 void pt_prepare_proxy_list_for_config_read(void);
 void sweep_proxy_list(void);
 
+smartlist_t *get_transport_proxy_ports(void);
+
 #ifdef PT_PRIVATE
 /** State of the managed proxy configuration protocol. */
 enum pt_proto_state {

@@ -91,7 +91,7 @@ tor_upnp_init(tor_fw_options_t *options, void *backend_state)
   assert(options);
   r = UPNP_GetValidIGD(devlist, &(state->urls), &(state->data),
                        state->lanaddr, UPNP_LANADDR_SZ);
-  fprintf(stdout, "tor-fw-helper: UPnP GetValidIGD returned: %d (%s)\n", r,
+  fprintf(stderr, "tor-fw-helper: UPnP GetValidIGD returned: %d (%s)\n", r,
           r==UPNP_SUCCESS?"SUCCESS":"FAILED");
 
   freeUPNPDevlist(devlist);
@@ -141,7 +141,7 @@ tor_upnp_fetch_public_ip(tor_fw_options_t *options, void *backend_state)
     goto err;
 
   if (externalIPAddress[0]) {
-    fprintf(stdout, "tor-fw-helper: ExternalIPAddress = %s\n",
+    fprintf(stderr, "tor-fw-helper: ExternalIPAddress = %s\n",
             externalIPAddress); tor_upnp_cleanup(options, state);
     options->public_ip_status = 1;
     return UPNP_ERR_SUCCESS;
@@ -154,44 +154,40 @@ tor_upnp_fetch_public_ip(tor_fw_options_t *options, void *backend_state)
   return UPNP_ERR_GETEXTERNALIP;
 }
 
-/** Add a TCP port mapping for a single port stored in <b>tor_fw_options</b>
- * and store the results in <b>backend_state</b>. */
 int
-tor_upnp_add_tcp_mapping(tor_fw_options_t *options, void *backend_state)
+tor_upnp_add_tcp_mapping(uint16_t internal_port, uint16_t external_port,
+                         int is_verbose, void *backend_state)
 {
-  miniupnpc_state_t *state = (miniupnpc_state_t *) backend_state;
-  int r;
+  int retval;
   char internal_port_str[6];
   char external_port_str[6];
+  miniupnpc_state_t *state = (miniupnpc_state_t *) backend_state;
 
   if (!state->init) {
-    r = tor_upnp_init(options, state);
-    if (r != UPNP_ERR_SUCCESS)
-      return r;
+    fprintf(stderr, "E: %s but state is not initialized.\n", __func__);
+    return -1;
   }
 
-  if (options->verbose)
-    fprintf(stdout, "V: internal port: %d, external port: %d\n",
-            (int)options->internal_port, (int)options->external_port);
+  if (is_verbose)
+    fprintf(stderr, "V: UPnP: internal port: %u, external port: %u\n",
+            internal_port, external_port);
 
   tor_snprintf(internal_port_str, sizeof(internal_port_str),
-               "%d", (int)options->internal_port);
+               "%u", internal_port);
   tor_snprintf(external_port_str, sizeof(external_port_str),
-               "%d", (int)options->external_port);
+               "%u", external_port);
 
-  r = UPNP_AddPortMapping(state->urls.controlURL,
-                          state->data.first.servicetype,
-                          external_port_str, internal_port_str,
+  retval = UPNP_AddPortMapping(state->urls.controlURL,
+                               state->data.first.servicetype,
+                               external_port_str, internal_port_str,
 #ifdef MINIUPNPC15
-                          state->lanaddr, UPNP_DESC, "TCP", 0);
+                               state->lanaddr, UPNP_DESC, "TCP", 0);
 #else
-                          state->lanaddr, UPNP_DESC, "TCP", 0, 0);
+                               state->lanaddr, UPNP_DESC, "TCP", 0, 0);
 #endif
-  if (r != UPNPCOMMAND_SUCCESS)
-    return UPNP_ERR_ADDPORTMAPPING;
 
-  options->upnp_status = 1;
-  return UPNP_ERR_SUCCESS;
+  return (retval == UPNP_ERR_SUCCESS) ? 0 : -1;
 }
+
 #endif
 
