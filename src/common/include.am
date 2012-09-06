@@ -36,7 +36,7 @@ src_common_libor_crypto_a_SOURCES = \
 
 src_common_libor_event_a_SOURCES = src/common/compat_libevent.c
 
-noinst_HEADERS+= 				\
+COMMONHEADERS = \
   src/common/address.h				\
   src/common/aes.h				\
   src/common/ciphers.inc			\
@@ -57,17 +57,19 @@ noinst_HEADERS+= 				\
   src/common/tortls.h				\
   src/common/util.h
 
+noinst_HEADERS+= $(COMMONHEADERS)
+
 DISTCLEANFILES+= src/common/common_sha1.i
 
-src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
+src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(COMMONHEADERS)
 	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
-	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > $@; \
+	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(COMMONHEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > $@; \
 	elif test "@OPENSSL@" != none; then \
-	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_common_libor_SOURCES) $(src_Common_libor_crypto_a_SOURCES) $(noinst_HEADERS)) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > $@; \
+	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_common_libor_SOURCES) $(src_Common_libor_crypto_a_SOURCES) $(COMMONHEADERS)) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > $@; \
 	else \
 	  rm $@; \
 	  touch $@; \
 	fi
 
 src/common/util_codedigest.o: src/common/common_sha1.i
-src/common/crypto.c: src/common/sha256.c
+src/common/crypto.o: src/common/sha256.c
