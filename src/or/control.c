@@ -3829,7 +3829,7 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   } else {
     ncircs = 0;
   }
-  ncircs += conn->n_circuits;
+  ncircs += connection_or_get_num_circuits(conn);
   if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
     tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",
                  reason ? " " : "", ncircs);
