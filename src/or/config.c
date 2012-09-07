@@ -5514,8 +5514,8 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
 
   fingerprint = smartlist_join_strings(items, "", 0, NULL);
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
-    log_warn(LD_CONFIG, "Key digest for DirServer is wrong length %d.",
-             (int)strlen(fingerprint));
+    log_warn(LD_CONFIG, "Key digest '%s' for DirServer is wrong length %d.",
+             fingerprint, (int)strlen(fingerprint));
     goto err;
   }
   if (!strcmp(fingerprint, "E623F7625FBE0C87820F11EC5F6D5377ED816294")) {
