@@ -13,6 +13,8 @@
 #define MAIN_PRIVATE
 #include "or.h"
 #include "buffers.h"
+#include "channel.h"
+#include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -1046,7 +1048,8 @@ run_connection_housekeeping(int i, time_t now)
   tor_assert(conn->outbuf);
 #endif
 
-  if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
+  if (channel_is_bad_for_new_circs(TLS_CHAN_TO_BASE(or_conn->chan)) &&
+      !connection_or_get_num_circuits(or_conn)) {
     /* It's bad for new circuits, and has no unmarked circuits on it:
      * mark it now. */
     log_info(LD_OR,
@@ -1064,14 +1067,15 @@ run_connection_housekeeping(int i, time_t now)
                (int)conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
     }
-  } else if (we_are_hibernating() && !or_conn->n_circuits &&
+  } else if (we_are_hibernating() &&
+             !connection_or_get_num_circuits(or_conn) &&
              !connection_get_outbuf_len(conn)) {
     /* We're hibernating, there's no circuits, and nothing to flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);
     connection_mark_and_flush(conn);
-  } else if (!or_conn->n_circuits &&
+  } else if (!connection_or_get_num_circuits(or_conn) &&
              now >= or_conn->timestamp_last_added_nonpadding +
                                          IDLE_OR_CONN_TIMEOUT) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
