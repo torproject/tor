@@ -1,0 +1,7 @@
+  o Minor features (directory authority):
+    - Directory authorities no long accept descriptors for any version of
+      Tor before 0.2.2.35, or for any 0.2.3 release before 0.2.3.10-alpha.
+      These versions are insecure, unsupported, or both. Implements ticket
+      #6789.
+
+
