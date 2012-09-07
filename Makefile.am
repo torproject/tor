@@ -28,9 +28,7 @@ EXTRA_DIST+= \
 	LICENSE						\
 	Makefile.nmake					\
 	README						\
-	ReleaseNotes					\
-	tor.spec					\
-	tor.spec.in
+	ReleaseNotes					
 
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
