@@ -244,7 +244,7 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
 int
 directories_have_accepted_server_descriptor(void)
 {
-  smartlist_t *servers = router_get_trusted_dir_servers();
+  const smartlist_t *servers = router_get_trusted_dir_servers();
   const or_options_t *options = get_options();
   SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
     if ((d->type & options->PublishServerDescriptor_) &&
@@ -280,7 +280,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 {
   const or_options_t *options = get_options();
   int post_via_tor;
-  smartlist_t *dirservers = router_get_trusted_dir_servers();
+  const smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
   const int exclude_self = (dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
                             dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES);
@@ -716,7 +716,7 @@ connection_dir_download_v2_networkstatus_failed(dir_connection_t *conn,
     /* We're a non-authoritative directory cache; try again. Ignore status
      * code, since we don't want to keep trying forever in a tight loop
      * if all the authorities are shutting us out. */
-    smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
+    const smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
     SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
                       download_status_failed(&ds->v2_ns_dl_status, 0));
     directory_get_from_dirserver(conn->base_.purpose, conn->router_purpose,

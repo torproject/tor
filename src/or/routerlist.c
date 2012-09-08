@@ -918,7 +918,7 @@ router_reload_router_list(void)
  * known trusted dirservers.  Callers must not modify the list or its
  * contents.
  */
-smartlist_t *
+const smartlist_t *
 router_get_trusted_dir_servers(void)
 {
   if (!trusted_dir_servers)

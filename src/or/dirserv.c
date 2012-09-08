@@ -1478,7 +1478,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
                                     time_t published)
 {
   cached_dir_t *d, *old_d;
-  smartlist_t *trusted_dirs;
+  const smartlist_t *trusted_dirs;
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
