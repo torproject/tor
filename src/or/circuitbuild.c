@@ -5475,9 +5475,8 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   address = tor_dup_addr(&bridge->addr);
 
   directory_initiate_command(address, &bridge->addr,
-                             bridge->port, 0,
-                             0, /* does not matter */
-                             1, bridge->identity,
+                             bridge->port, 0/*no dirport*/,
+                             bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
                              0, "authority.z", NULL, 0, 0);

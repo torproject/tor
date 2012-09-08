@@ -1854,16 +1854,7 @@ typedef struct routerstatus_t {
    * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
   unsigned int version_known:1;
-  /** True iff this router is a version that supports BEGIN_DIR cells. */
-  unsigned int version_supports_begindir:1;
-  /** True iff this router is a version that supports conditional consensus
-   *  downloads (signed by list of authorities). */
-  unsigned int version_supports_conditional_consensus:1;
-  /** True iff this router is a version that we can post extrainfo docs to. */
-  unsigned int version_supports_extrainfo_upload:1;
-  /** True iff this router is a version that, if it caches directory info,
-   * we can get v3 downloads from. */
-  unsigned int version_supports_v3_dir:1;
+
   /** True iff this router is a version that, if it caches directory info,
    * we can get microdescriptors from. */
   unsigned int version_supports_microdesc_cache:1;

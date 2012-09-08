@@ -995,7 +995,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
     }
   }
 
-  if (rs->version_supports_v3_dir) {
+  {
     sl_last_total_weighted_bw = 0;
     router_pick_directory_server(V3_DIRINFO, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
@@ -1127,12 +1127,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
-    if (type & V3_DIRINFO) {
-      if (!(status->version_supports_v3_dir ||
-            router_digest_is_trusted_dir_type(node->identity,
-                                              V3_DIRINFO)))
-        continue;
-    }
     is_trusted = router_digest_is_trusted_dir(node->identity);
     if ((type & V2_DIRINFO) && !(node->rs->is_v2_dir || is_trusted))
       continue;
@@ -1155,7 +1149,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
 
     if (prefer_tunnel &&
-        status->version_supports_begindir &&
         (!fascistfirewall ||
          fascist_firewall_allows_address_or(&addr, status->or_port)))
       smartlist_add(is_trusted ? trusted_tunnel :
@@ -4158,11 +4151,6 @@ add_trusted_dir_server(const char *nickname, const char *address,
     ent->fake_status.nickname[0] = '\0';
   ent->fake_status.dir_port = ent->dir_port;
   ent->fake_status.or_port = ent->or_port;
-
-  if (ent->or_port)
-    ent->fake_status.version_supports_begindir = 1;
-
-  ent->fake_status.version_supports_conditional_consensus = 1;
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();

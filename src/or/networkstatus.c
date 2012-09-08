@@ -1530,13 +1530,7 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_bad_exit != b->is_bad_exit ||
          a->is_bad_directory != b->is_bad_directory ||
          a->is_hs_dir != b->is_hs_dir ||
-         a->version_known != b->version_known ||
-         a->version_supports_begindir != b->version_supports_begindir ||
-         a->version_supports_extrainfo_upload !=
-           b->version_supports_extrainfo_upload ||
-         a->version_supports_conditional_consensus !=
-           b->version_supports_conditional_consensus ||
-         a->version_supports_v3_dir != b->version_supports_v3_dir;
+         a->version_known != b->version_known;
 }
 
 /** Notify controllers of any router status entries that changed between

@@ -58,7 +58,6 @@
 static void directory_send_command(dir_connection_t *conn,
                              int purpose, int direct, const char *resource,
                              const char *payload, size_t payload_len,
-                             int supports_conditional_consensus,
                              time_t if_modified_since);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
@@ -89,8 +88,6 @@ static void directory_initiate_command_rend(const char *address,
                                             const tor_addr_t *addr,
                                             uint16_t or_port,
                                             uint16_t dir_port,
-                                            int supports_conditional_consensus,
-                                            int supports_begindir,
                                             const char *digest,
                                             uint8_t dir_purpose,
                                             uint8_t router_purpose,
@@ -227,16 +224,9 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
   if (node && node->ri) {
     if (node->ri->caches_extra_info)
       return 1;
-    if (is_authority && node->ri->platform &&
-        tor_version_as_new_as(node->ri->platform,
-                              "Tor 0.2.0.0-alpha-dev (r10070)"))
-      return 1;
   }
   if (is_authority) {
-    const routerstatus_t *rs =
-      router_get_consensus_status_by_id(identity_digest);
-    if (rs && rs->version_supports_extrainfo_upload)
-      return 1;
+    return 1;
   }
   return 0;
 }
@@ -431,8 +421,6 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
        * the behavior supported by our oldest bridge; see for example
        * any_bridges_dont_support_microdescriptors().
        */
-      /* XXX024 Not all bridges handle conditional consensus downloading,
-       * so, for now, never assume the server supports that. -PP */
       const node_t *node = choose_random_entry(NULL);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
@@ -440,9 +428,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
         routerinfo_t *ri = node->ri;
         node_get_addr(node, &addr);
         directory_initiate_command(ri->address, &addr,
-                                   ri->or_port, 0,
-                                   0, /* don't use conditional consensus url */
-                                   1, ri->cache_info.identity_digest,
+                                   ri->or_port, 0/*no dirport*/,
+                                   ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
                                    0, resource, NULL, 0, if_modified_since);
@@ -596,8 +583,6 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 
   directory_initiate_command_rend(address, &addr,
                              status->or_port, status->dir_port,
-                             status->version_supports_conditional_consensus,
-                             status->version_supports_begindir,
                              status->identity_digest,
                              dir_purpose, router_purpose,
                              anonymized_connection, resource,
@@ -855,16 +840,14 @@ directory_command_should_use_begindir(const or_options_t *options,
 void
 directory_initiate_command(const char *address, const tor_addr_t *_addr,
                            uint16_t or_port, uint16_t dir_port,
-                           int supports_conditional_consensus,
-                           int supports_begindir, const char *digest,
+                           const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            int anonymized_connection, const char *resource,
                            const char *payload, size_t payload_len,
                            time_t if_modified_since)
 {
   directory_initiate_command_rend(address, _addr, or_port, dir_port,
-                             supports_conditional_consensus,
-                             supports_begindir, digest, dir_purpose,
+                             digest, dir_purpose,
                              router_purpose, anonymized_connection,
                              resource, payload, payload_len,
                              if_modified_since, NULL);
@@ -889,8 +872,7 @@ is_sensitive_dir_purpose(uint8_t dir_purpose)
 static void
 directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                                 uint16_t or_port, uint16_t dir_port,
-                                int supports_conditional_consensus,
-                                int supports_begindir, const char *digest,
+                                const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
                                 int anonymized_connection,
                                 const char *resource,
@@ -901,8 +883,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   dir_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
-  int use_begindir = supports_begindir &&
-                     directory_command_should_use_begindir(options, _addr,
+  int use_begindir = directory_command_should_use_begindir(options, _addr,
                        or_port, router_purpose, anonymized_connection);
   tor_addr_t addr;
 
@@ -979,7 +960,6 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
         /* queue the command on the outbuf */
         directory_send_command(conn, dir_purpose, 1, resource,
                                payload, payload_len,
-                               supports_conditional_consensus,
                                if_modified_since);
         connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
         /* writable indicates finish, readable indicates broken link,
@@ -1024,7 +1004,6 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     /* queue the command on the outbuf */
     directory_send_command(conn, dir_purpose, 0, resource,
                            payload, payload_len,
-                           supports_conditional_consensus,
                            if_modified_since);
 
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
@@ -1074,8 +1053,7 @@ _compare_strs(const void **a, const void **b)
  * If 'resource' is provided, it is the name of a consensus flavor to request.
  */
 static char *
-directory_get_consensus_url(int supports_conditional_consensus,
-                            const char *resource)
+directory_get_consensus_url(const char *resource)
 {
   char *url = NULL;
   const char *hyphen, *flavor;
@@ -1087,7 +1065,7 @@ directory_get_consensus_url(int supports_conditional_consensus,
     hyphen = "-";
   }
 
-  if (supports_conditional_consensus) {
+  {
     char *authority_id_list;
     smartlist_t *authority_digests = smartlist_new();
 
@@ -1112,9 +1090,6 @@ directory_get_consensus_url(int supports_conditional_consensus,
     SMARTLIST_FOREACH(authority_digests, char *, cp, tor_free(cp));
     smartlist_free(authority_digests);
     tor_free(authority_id_list);
-  } else {
-    tor_asprintf(&url, "/tor/status-vote/current/consensus%s%s.z",
-                 hyphen, flavor);
   }
   return url;
 }
@@ -1126,7 +1101,6 @@ static void
 directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len,
-                       int supports_conditional_consensus,
                        time_t if_modified_since)
 {
   char proxystring[256];
@@ -1189,8 +1163,7 @@ directory_send_command(dir_connection_t *conn,
       /* resource is optional.  If present, it's a flavor name */
       tor_assert(!payload);
       httpcommand = "GET";
-      url = directory_get_consensus_url(supports_conditional_consensus,
-                                        resource);
+      url = directory_get_consensus_url(resource);
       log_info(LD_DIR, "Downloading consensus from %s using %s",
                hoststring, url);
       break;

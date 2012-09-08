@@ -51,8 +51,7 @@ int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_about_to_close(dir_connection_t *dir_conn);
 void directory_initiate_command(const char *address, const tor_addr_t *addr,
                                 uint16_t or_port, uint16_t dir_port,
-                                int supports_conditional_consensus,
-                                int supports_begindir, const char *digest,
+                                const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
                                 int anonymized_connection,
                                 const char *resource,
