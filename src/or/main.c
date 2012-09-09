@@ -400,6 +400,18 @@ connection_unlink(connection_t *conn)
   if (conn->type == CONN_TYPE_OR) {
     if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest))
       connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+    /* connection_unlink() can only get called if the connection
+     * was already on the closeable list, and it got there by
+     * connection_mark_for_close(), which was called from
+     * connection_or_close_normally() or
+     * connection_or_close_for_error(), so the channel should
+     * already be in CHANNEL_STATE_CLOSING, and then the
+     * connection_about_to_close_connection() goes to
+     * connection_or_about_to_close(), which calls channel_closed()
+     * to notify the channel_t layer, and closed the channel, so
+     * nothing more to do here to deal with the channel associated
+     * with an orconn.
+     */
   }
   connection_free(conn);
 }
@@ -1524,6 +1536,9 @@ run_scheduled_events(time_t now)
   /** 8b. And if anything in our state is ready to get flushed to disk, we
    * flush it. */
   or_state_save(now);
+
+  /** 8c. Do channel cleanup just like for connections */
+  channel_run_cleanup();
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
