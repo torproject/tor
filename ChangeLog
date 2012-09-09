@@ -1280,7 +1280,8 @@ Changes in version 0.2.3.11-alpha - 2012-01-22
       FastFlagMaxThreshold) to control the range of allowable bandwidths
       for the Fast directory flag. These allow authorities to run
       experiments on appropriate requirements for being a "Fast" node.
-      The AuthDirFastGuarantee config value still applies.
+      The AuthDirFastGuarantee config value still applies. Implements
+      ticket 3946.
     - Document the GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays
       directory authority option (introduced in Tor 0.2.2.34).
 
