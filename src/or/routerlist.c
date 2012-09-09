@@ -4965,7 +4965,8 @@ count_usable_descriptors(int *num_present, int *num_usable,
      }
   SMARTLIST_FOREACH_END(rs);
 
-  log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
+  log_debug(LD_DIR, "%d usable, %d present (%s).", *num_usable, *num_present,
+            md ? "microdescs" : "descs");
 }
 
 /** We just fetched a new set of descriptors. Compute how far through
