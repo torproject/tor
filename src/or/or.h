@@ -2517,6 +2517,8 @@ typedef enum {
   MICRODESC_DIRINFO=1 << 6,
 } dirinfo_type_t;
 
+#define ALL_DIRINFO ((dirinfo_type_t)((1<<7)-1))
+
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 /** Holds accounting information for a single step in the layered encryption

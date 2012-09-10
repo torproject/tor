@@ -53,7 +53,7 @@ static const routerstatus_t *router_pick_dirserver_generic(
 static void mark_all_dirservers_up(smartlist_t *server_list);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
-static void trusted_dir_server_free(dir_server_t *ds);
+static void dir_server_free(dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
@@ -3774,49 +3774,41 @@ router_exit_policy_rejects_all(const routerinfo_t *router)
   return router->policy_is_reject_star;
 }
 
-/** Add to the list of authoritative directory servers one at
- * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
- * <b>address</b> is NULL, add ourself.  Return the new trusted directory
- * server entry on success or NULL if we couldn't add it. */
-dir_server_t *
-add_trusted_dir_server(const char *nickname, const char *address,
-                       uint16_t dir_port, uint16_t or_port,
-                       const char *digest, const char *v3_auth_digest,
-                       dirinfo_type_t type)
+/** Create an directory server at <b>address</b>:<b>port</b>, with OR identity
+ * key <b>digest</b>.  If <b>address</b> is NULL, add ourself.  If
+ * <b>is_authority</b>, this is a directory authority.  Return the new
+ * directory server entry on success or NULL on failure. */
+static dir_server_t *
+dir_server_new(int is_authority,
+               const char *nickname,
+               const tor_addr_t *addr,
+               const char *hostname,
+               uint16_t dir_port, uint16_t or_port,
+               const char *digest, const char *v3_auth_digest,
+               dirinfo_type_t type)
 {
   dir_server_t *ent;
   uint32_t a;
-  char *hostname = NULL;
-  if (!trusted_dir_servers)
-    trusted_dir_servers = smartlist_new();
-  if (!fallback_dir_servers)
-    trusted_dir_servers = smartlist_new();
+  char *hostname_ = NULL;
 
-  if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(LOG_WARN, get_options(), &a, &hostname) < 0) {
-      log_warn(LD_CONFIG,
-               "Couldn't find a suitable address when adding ourself as a "
-               "trusted directory server.");
-      return NULL;
-    }
-  } else {
-    if (tor_lookup_hostname(address, &a)) {
-      log_warn(LD_CONFIG,
-               "Unable to lookup address for directory server at '%s'",
-               address);
-      return NULL;
-    }
-    hostname = tor_strdup(address);
-  }
+  if (tor_addr_family(addr) == AF_INET)
+    a = tor_addr_to_ipv4h(addr);
+  else
+    return NULL; /*XXXX Support IPv6 */
+
+  if (!hostname)
+    hostname_ = tor_dup_addr(addr);
+  else
+    hostname_ = tor_strdup(hostname);
 
   ent = tor_malloc_zero(sizeof(dir_server_t));
   ent->nickname = nickname ? tor_strdup(nickname) : NULL;
-  ent->address = hostname;
+  ent->address = hostname_;
   ent->addr = a;
   ent->dir_port = dir_port;
   ent->or_port = or_port;
   ent->is_running = 1;
-  ent->is_authority = 1;
+  ent->is_authority = is_authority;
   ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
   if (v3_auth_digest && (type & V3_DIRINFO))
@@ -3839,10 +3831,75 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->fake_status.dir_port = ent->dir_port;
   ent->fake_status.or_port = ent->or_port;
 
-  smartlist_add(trusted_dir_servers, ent);
+  return ent;
+}
+
+/** Create an authoritative directory server at
+ * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
+ * <b>address</b> is NULL, add ourself.  Return the new trusted directory
+ * server entry on success or NULL if we couldn't add it. */
+dir_server_t *
+trusted_dir_server_new(const char *nickname, const char *address,
+                       uint16_t dir_port, uint16_t or_port,
+                       const char *digest, const char *v3_auth_digest,
+                       dirinfo_type_t type)
+{
+  uint32_t a;
+  tor_addr_t addr;
+  char *hostname=NULL;
+  dir_server_t *result;
+
+  if (!address) { /* The address is us; we should guess. */
+    if (resolve_my_address(LOG_WARN, get_options(), &a, &hostname) < 0) {
+      log_warn(LD_CONFIG,
+               "Couldn't find a suitable address when adding ourself as a "
+               "trusted directory server.");
+      return NULL;
+    }
+  } else {
+    if (tor_lookup_hostname(address, &a)) {
+      log_warn(LD_CONFIG,
+               "Unable to lookup address for directory server at '%s'",
+               address);
+      return NULL;
+    }
+    hostname = tor_strdup(address);
+  }
+  tor_addr_from_ipv4h(&addr, a);
+
+  result = dir_server_new(1, nickname, &addr, hostname,
+                          dir_port, or_port, digest,
+                          v3_auth_digest, type);
+  tor_free(hostname);
+  return result;
+}
+
+/** Return a new dir_server_t for a fallback directory server at
+ * <b>addr</b>:<b>or_port</b>/<b>dir_port</b>, with identity key digest
+ * <b>id_digest</b> */
+dir_server_t *
+fallback_dir_server_new(const tor_addr_t *addr,
+                        uint16_t dir_port, uint16_t or_port,
+                        const char *id_digest)
+{
+  return dir_server_new(0, NULL, addr, NULL, dir_port, or_port, id_digest,
+                        NULL, ALL_DIRINFO);
+}
+
+/** Add a directory server to the global list(s). */
+void
+dir_server_add(dir_server_t *ent)
+{
+  if (!trusted_dir_servers)
+    trusted_dir_servers = smartlist_new();
+  if (!fallback_dir_servers)
+    fallback_dir_servers = smartlist_new();
+
+  if (ent->is_authority)
+    smartlist_add(trusted_dir_servers, ent);
+
   smartlist_add(fallback_dir_servers, ent);
   router_dir_info_changed();
-  return ent;
 }
 
 /** Free storage held in <b>cert</b>. */
@@ -3861,7 +3918,7 @@ authority_cert_free(authority_cert_t *cert)
 
 /** Free storage held in <b>ds</b>. */
 static void
-trusted_dir_server_free(dir_server_t *ds)
+dir_server_free(dir_server_t *ds)
 {
   if (!ds)
     return;
@@ -3878,7 +3935,7 @@ clear_dir_servers(void)
 {
   if (fallback_dir_servers) {
     SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ent,
-                      trusted_dir_server_free(ent));
+                      dir_server_free(ent));
     smartlist_clear(fallback_dir_servers);
   } else {
     fallback_dir_servers = smartlist_new();

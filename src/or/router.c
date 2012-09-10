@@ -732,7 +732,7 @@ init_keys(void)
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
-    ds = add_trusted_dir_server(options->Nickname, NULL,
+    ds = trusted_dir_server_new(options->Nickname, NULL,
                                 router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
                                 digest,
@@ -743,6 +743,7 @@ init_keys(void)
               "couldn't add ourselves to the authority list. Failing.");
       return -1;
     }
+    dir_server_add(ds);
   }
   if (ds->type != type) {
     log_warn(LD_DIR,  "Configured authority type does not match authority "

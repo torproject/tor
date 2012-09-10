@@ -471,8 +471,7 @@ static int parse_client_transport_line(const char *line, int validate_only);
 static int parse_server_transport_line(const char *line, int validate_only);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
-
-static int parse_dir_server_line(const char *line,
+static int parse_dir_authority_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
 static void port_cfg_free(port_cfg_t *port);
@@ -787,7 +786,7 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     NULL
   };
   for (i=0; dirservers[i]; i++) {
-    if (parse_dir_server_line(dirservers[i], type, 0)<0) {
+    if (parse_dir_authority_line(dirservers[i], type, 0)<0) {
       log_err(LD_BUG, "Couldn't parse internal dirserver line %s",
               dirservers[i]);
     }
@@ -832,16 +831,16 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
   /* Now go through the four ways you can configure an alternate
    * set of directory authorities, and make sure none are broken. */
   for (cl = options->DirAuthorities; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   return 0;
 }
@@ -885,16 +884,16 @@ consider_adding_dir_authorities(const or_options_t *options,
   }
 
   for (cl = options->DirAuthorities; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
+    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   return 0;
 }
@@ -4324,15 +4323,15 @@ parse_server_transport_line(const char *line, int validate_only)
   return r;
 }
 
-/** Read the contents of a DirServer line from <b>line</b>. If
+/** Read the contents of a DirAuthority line from <b>line</b>. If
  * <b>validate_only</b> is 0, and the line is well-formed, and it
  * shares any bits with <b>required_type</b> or <b>required_type</b>
  * is 0, then add the dirserver described in the line (minus whatever
  * bits it's missing) as a valid authority. Return 0 on success,
  * or -1 if the line isn't well-formed or if we can't add it. */
 static int
-parse_dir_server_line(const char *line, dirinfo_type_t required_type,
-                      int validate_only)
+parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
+                         int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -4433,14 +4432,16 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   }
 
   if (!validate_only && (!required_type || required_type & type)) {
+    dir_server_t *ds;
     if (required_type)
       type &= required_type; /* pare down what we think of them as an
                               * authority for. */
     log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
               address, (int)dir_port, (char*)smartlist_get(items,0));
-    if (!add_trusted_dir_server(nickname, address, dir_port, or_port,
-                                digest, v3_digest, type))
+    if (!(ds = trusted_dir_server_new(nickname, address, dir_port, or_port,
+                                      digest, v3_digest, type)))
       goto err;
+    dir_server_add(ds);
   }
 
   r = 0;

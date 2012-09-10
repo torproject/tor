@@ -132,11 +132,16 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
 void routerlist_retry_directory_downloads(time_t now);
 
 int router_exit_policy_rejects_all(const routerinfo_t *router);
-dir_server_t *add_trusted_dir_server(const char *nickname,
-                           const char *address,
-                           uint16_t dir_port, uint16_t or_port,
-                           const char *digest, const char *v3_auth_digest,
-                           dirinfo_type_t type);
+
+dir_server_t *trusted_dir_server_new(const char *nickname, const char *address,
+                       uint16_t dir_port, uint16_t or_port,
+                       const char *digest, const char *v3_auth_digest,
+                       dirinfo_type_t type);
+dir_server_t *fallback_dir_server_new(const tor_addr_t *addr,
+                                      uint16_t dir_port, uint16_t or_port,
+                                      const char *id_digest);
+void dir_server_add(dir_server_t *ent);
+
 void authority_cert_free(authority_cert_t *cert);
 void clear_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
