@@ -1,4 +1,8 @@
 Changes in version 0.2.4.2-alpha - 2012-09-10
+  Tor 0.2.4.2-alpha enables port forwarding for pluggable transports,
+  raises the default rate limiting even more, and makes the bootstrapping
+  log messages less noisy.
+
   o Major features:
     - Automatically forward the TCP ports of pluggable transport
       proxies using tor-fw-helper if PortForwarding is enabled. Implements
