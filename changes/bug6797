@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Don't follow the NULL pointer. Found by "f. tp.". Fixes bug
+      6797; bugfix on 0.2.4.1-alpha.
