@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Rename the (internal-use-only) UsingTestingNetworkDefaults option
+      to start with a triple-underscore so the controller won't touch it.
+      Patch by Meejah. Fixes bug 3155. Bugfix on 0.2.2.23-alpha.
