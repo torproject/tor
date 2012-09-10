@@ -1071,13 +1071,13 @@ run_connection_housekeeping(int i, time_t now)
       connection_or_connect_failed(TO_OR_CONN(conn),
                                    END_OR_CONN_REASON_TIMEOUT,
                                    "Tor gave up on the connection");
-    connection_mark_and_flush(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!connection_state_is_open(conn)) {
     if (past_keepalive) {
       /* We never managed to actually get this connection open and happy. */
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                (int)conn->s,conn->address, conn->port);
-      connection_mark_for_close(conn);
+      connection_or_close_normally(TO_OR_CONN(conn), 0);
     }
   } else if (we_are_hibernating() &&
              !connection_or_get_num_circuits(or_conn) &&
@@ -1086,14 +1086,14 @@ run_connection_housekeeping(int i, time_t now)
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);
-    connection_mark_and_flush(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!connection_or_get_num_circuits(or_conn) &&
              now >= or_conn->timestamp_last_added_nonpadding +
                                          IDLE_OR_CONN_TIMEOUT) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[idle %d].", (int)conn->s,conn->address, conn->port,
              (int)(now - or_conn->timestamp_last_added_nonpadding));
-    connection_mark_for_close(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (
       now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
       now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
@@ -1103,7 +1103,7 @@ run_connection_housekeeping(int i, time_t now)
            (int)conn->s, conn->address, conn->port,
            (int)connection_get_outbuf_len(conn),
            (int)(now-conn->timestamp_lastwritten));
-    connection_mark_for_close(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (past_keepalive && !connection_get_outbuf_len(conn)) {
     /* send a padding cell */
     log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
