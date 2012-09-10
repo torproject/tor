@@ -31,6 +31,9 @@ Changes in version 0.2.4.2-alpha - 2012-09-10
     - Rename the (internal-use-only) UsingTestingNetworkDefaults option
       to start with a triple-underscore so the controller won't touch it.
       Patch by Meejah. Fixes bug 3155. Bugfix on 0.2.2.23-alpha.
+    - Avoid segfault when starting up having run with an extremely old
+      version of Tor and parsing its state file. Fixes bug 6801; bugfix
+      on 0.2.2.23-alpha.
     - Rename the (testing-use-only) _UseFilteringSSLBufferevents option
       so it doesn't start with _. Fixes bug 3155. Bugfix on 0.2.3.1-alpha.
     - Don't follow the NULL pointer if microdescriptor generation fails.
