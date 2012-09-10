@@ -2062,7 +2062,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     /* We have a routerstatus for this router. */
     const char *digest = router->cache_info.identity_digest;
 
-    ds = router_get_trusteddirserver_by_digest(digest);
+    ds = router_get_fallback_dirserver_by_digest(digest);
 
     /* Is it the same descriptor, or only the same identity? */
     if (tor_memeq(router->cache_info.signed_descriptor_digest,

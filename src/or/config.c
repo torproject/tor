@@ -854,7 +854,8 @@ consider_adding_dir_authorities(const or_options_t *options,
 {
   config_line_t *cl;
   int need_to_update =
-    !smartlist_len(router_get_trusted_dir_servers()) || !old_options ||
+    !smartlist_len(router_get_trusted_dir_servers()) ||
+    !smartlist_len(router_get_fallback_dir_servers()) || !old_options ||
     !config_lines_eq(options->DirServers, old_options->DirServers) ||
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
@@ -867,7 +868,7 @@ consider_adding_dir_authorities(const or_options_t *options,
     return 0; /* all done */
 
   /* Start from a clean slate. */
-  clear_trusted_dir_servers();
+  clear_dir_servers();
 
   if (!options->DirServers) {
     /* then we may want some of the defaults */

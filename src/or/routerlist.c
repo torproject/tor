@@ -45,8 +45,12 @@
 static const routerstatus_t *router_pick_directory_server_impl(
                                            dirinfo_type_t auth, int flags);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
-                          dirinfo_type_t auth, int flags, int *n_busy_out);
-static void mark_all_trusteddirservers_up(void);
+                const smartlist_t *sourcelist, dirinfo_type_t auth,
+                int flags, int *n_busy_out);
+static const routerstatus_t *router_pick_dirserver_generic(
+                              smartlist_t *sourcelist,
+                              dirinfo_type_t type, int flags);
+static void mark_all_dirservers_up(smartlist_t *server_list);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
@@ -72,9 +76,12 @@ DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
 
 /****************************************************************************/
 
-/** Global list of a trusted_dir_server_t object for each trusted directory
- * server. */
+/** Global list of a trusted_dir_server_t object for each directory
+ * authority. */
 static smartlist_t *trusted_dir_servers = NULL;
+/** Global list of trusted_dir_server_t objects for all directory authorities
+ * and all fallback directory servers. */
+static smartlist_t *fallback_dir_servers = NULL;
 
 /** List of for a given authority, and download status for latest certificate.
  */
@@ -927,6 +934,15 @@ router_get_trusted_dir_servers(void)
   return trusted_dir_servers;
 }
 
+const smartlist_t *
+router_get_fallback_dir_servers(void)
+{
+  if (!fallback_dir_servers)
+    fallback_dir_servers = smartlist_new();
+
+  return fallback_dir_servers;
+}
+
 /** Try to find a running dirserver that supports operations of <b>type</b>.
  *
  * If there are no running dirservers in our routerlist and the
@@ -960,7 +976,7 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
            "No reachable router entries for dirservers. "
            "Trying them all again.");
   /* mark all authdirservers as up again */
-  mark_all_trusteddirservers_up();
+  mark_all_dirservers_up(fallback_dir_servers);
   /* try again */
   choice = router_pick_directory_server_impl(type, flags);
   return choice;
@@ -1025,6 +1041,24 @@ router_get_trusteddirserver_by_digest(const char *digest)
   return NULL;
 }
 
+/** Return the trusted_dir_server_t for the fallback dirserver whose identity
+ * key hashes to <b>digest</b>, or NULL if no such authority is known.
+ */
+trusted_dir_server_t *
+router_get_fallback_dirserver_by_digest(const char *digest)
+{
+  if (!trusted_dir_servers)
+    return NULL;
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+     {
+       if (tor_memeq(ds->digest, digest, DIGEST_LEN))
+         return ds;
+     });
+
+  return NULL;
+}
+
 /** Return the trusted_dir_server_t for the directory authority whose
  * v3 identity key hashes to <b>digest</b>, or NULL if no such authority
  * is known.
@@ -1045,18 +1079,37 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
   return NULL;
 }
 
-/** Try to find a running trusted dirserver.  Flags are as for
+/** Try to find a running directory authority. Flags are as for
  * router_pick_directory_server.
  */
 const routerstatus_t *
 router_pick_trusteddirserver(dirinfo_type_t type, int flags)
+{
+  return router_pick_dirserver_generic(trusted_dir_servers, type, flags);
+}
+
+/** Try to find a running fallback directory Flags are as for
+ * router_pick_directory_server.
+ */
+const routerstatus_t *
+router_pick_fallback_dirserver(dirinfo_type_t type, int flags)
+{
+  return router_pick_dirserver_generic(fallback_dir_servers, type, flags);
+}
+
+/** Try to find a running fallback directory Flags are as for
+ * router_pick_directory_server.
+ */
+static const routerstatus_t *
+router_pick_dirserver_generic(smartlist_t *sourcelist,
+                              dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   int busy = 0;
   if (get_options()->PreferTunneledDirConns)
     flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
 
-  choice = router_pick_trusteddirserver_impl(type, flags, &busy);
+  choice = router_pick_trusteddirserver_impl(sourcelist, type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
   if (busy) {
@@ -1069,9 +1122,9 @@ router_pick_trusteddirserver(dirinfo_type_t type, int flags)
   }
 
   log_info(LD_DIR,
-           "No trusted dirservers are reachable. Trying them all again.");
-  mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(type, flags, NULL);
+           "No dirservers are reachable. Trying them all again.");
+  mark_all_dirservers_up(sourcelist);
+  return router_pick_trusteddirserver_impl(sourcelist, type, flags, NULL);
 }
 
 /** How long do we avoid using a directory server after it's given us a 503? */
@@ -1196,11 +1249,12 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   return result ? result->rs : NULL;
 }
 
-/** Choose randomly from among the trusted dirservers that are up.  Flags
- * are as for router_pick_directory_server_impl().
+/** Choose randomly from among the trusted_dir_server_ts in sourcelist that
+ * are up. Flags are as for router_pick_directory_server_impl().
  */
 static const routerstatus_t *
-router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
+router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
+                                  dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
   const or_options_t *options = get_options();
@@ -1217,7 +1271,7 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
   int n_busy = 0;
   int try_excluding = 1, n_excluded = 0;
 
-  if (!trusted_dir_servers)
+  if (!sourcelist)
     return NULL;
 
  retry_without_exclude:
@@ -1227,7 +1281,7 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, d)
+  SMARTLIST_FOREACH_BEGIN(sourcelist, const trusted_dir_server_t *, d)
     {
       int is_overloaded =
           d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
@@ -1274,11 +1328,11 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
           (!fascistfirewall ||
            fascist_firewall_allows_address_or(&addr, d->or_port)))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
-                      &d->fake_status);
+                      (routerstatus_t*)&d->fake_status);
       else if (!fascistfirewall ||
                fascist_firewall_allows_address_dir(&addr, d->dir_port))
         smartlist_add(is_overloaded ? overloaded_direct : direct,
-                      &d->fake_status);
+                      (routerstatus_t*)&d->fake_status);
     }
   SMARTLIST_FOREACH_END(d);
 
@@ -1311,19 +1365,19 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
   return result;
 }
 
-/** Go through and mark the authoritative dirservers as up. */
+/** Mark as running every trusted_dir_server_t in <b>server_list</b>. */
 static void
-mark_all_trusteddirservers_up(void)
+mark_all_dirservers_up(smartlist_t *server_list)
 {
-  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node, {
-       if (router_digest_is_trusted_dir(node->identity))
-         node->is_running = 1;
-    });
-  if (trusted_dir_servers) {
-    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, dir) {
+  if (server_list) {
+    SMARTLIST_FOREACH_BEGIN(server_list, trusted_dir_server_t *, dir) {
       routerstatus_t *rs;
+      node_t *node;
       dir->is_running = 1;
       download_status_reset(&dir->v2_ns_dl_status);
+      node = node_get_mutable_by_id(dir->digest);
+      if (node)
+        node->is_running = 1;
       rs = router_get_mutable_consensus_status_by_id(dir->digest);
       if (rs) {
         rs->last_dir_503_at = 0;
@@ -1348,7 +1402,7 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
 void
 router_reset_status_download_failures(void)
 {
-  mark_all_trusteddirservers_up();
+  mark_all_dirservers_up(fallback_dir_servers);
 }
 
 /** Given a <b>router</b>, add every node_t in its family (including the
@@ -2910,12 +2964,10 @@ routerlist_free_all(void)
     smartlist_free(warned_nicknames);
     warned_nicknames = NULL;
   }
-  if (trusted_dir_servers) {
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-                      trusted_dir_server_free(ds));
-    smartlist_free(trusted_dir_servers);
-    trusted_dir_servers = NULL;
-  }
+  clear_dir_servers();
+  smartlist_free(trusted_dir_servers);
+  smartlist_free(fallback_dir_servers);
+  trusted_dir_servers = fallback_dir_servers = NULL;
   if (trusted_dir_certs) {
     DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
       SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
@@ -3737,6 +3789,8 @@ add_trusted_dir_server(const char *nickname, const char *address,
   char *hostname = NULL;
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_new();
+  if (!fallback_dir_servers)
+    trusted_dir_servers = smartlist_new();
 
   if (!address) { /* The address is us; we should guess. */
     if (resolve_my_address(LOG_WARN, get_options(), &a, &hostname) < 0) {
@@ -3762,6 +3816,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->dir_port = dir_port;
   ent->or_port = or_port;
   ent->is_running = 1;
+  ent->is_authority = 1;
   ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
   if (v3_auth_digest && (type & V3_DIRINFO))
@@ -3785,6 +3840,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->fake_status.or_port = ent->or_port;
 
   smartlist_add(trusted_dir_servers, ent);
+  smartlist_add(fallback_dir_servers, ent);
   router_dir_info_changed();
   return ent;
 }
@@ -3816,13 +3872,18 @@ trusted_dir_server_free(trusted_dir_server_t *ds)
   tor_free(ds);
 }
 
-/** Remove all members from the list of trusted dir servers. */
+/** Remove all members from the list of dir servers. */
 void
-clear_trusted_dir_servers(void)
+clear_dir_servers(void)
 {
-  if (trusted_dir_servers) {
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+  if (fallback_dir_servers) {
+    SMARTLIST_FOREACH(fallback_dir_servers, trusted_dir_server_t *, ent,
                       trusted_dir_server_free(ent));
+    smartlist_clear(fallback_dir_servers);
+  } else {
+    fallback_dir_servers = smartlist_new();
+  }
+  if (trusted_dir_servers) {
     smartlist_clear(trusted_dir_servers);
   } else {
     trusted_dir_servers = smartlist_new();

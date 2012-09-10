@@ -474,7 +474,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
         if (!rs) {
           log_info(LD_DIR, "No router found for %s; falling back to "
                    "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
-          rs = router_pick_trusteddirserver(type, pds_flags);
+          rs = router_pick_fallback_dirserver(type, pds_flags);
           if (!rs)
             get_via_tor = 1; /* last resort: try routing it via Tor */
         }
@@ -1665,7 +1665,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              conn->base_.port);
     if ((rs = router_get_mutable_consensus_status_by_id(id_digest)))
       rs->last_dir_503_at = now;
-    if ((ds = router_get_trusteddirserver_by_digest(id_digest)))
+    if ((ds = router_get_fallback_dirserver_by_digest(id_digest)))
       ds->fake_status.last_dir_503_at = now;
 
     tor_free(body); tor_free(headers); tor_free(reason);
@@ -3603,7 +3603,7 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
                escaped(fp));
       continue;
     }
-    dir = router_get_trusteddirserver_by_digest(digest);
+    dir = router_get_fallback_dirserver_by_digest(digest);
 
     if (dir)
       download_status_failed(&dir->v2_ns_dl_status, status_code);

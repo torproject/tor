@@ -4499,6 +4499,8 @@ typedef struct trusted_dir_server_t {
                                         * high-security) identity key. */
 
   unsigned int is_running:1; /**< True iff we think this server is running. */
+  unsigned int is_authority:1; /**< True iff this is a directory authority
+                                * of some kind. */
 
   /** True iff this server has accepted the most recent server descriptor
    * we tried to upload to it. */

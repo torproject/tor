@@ -26,13 +26,18 @@ void authority_certs_fetch_missing(networkstatus_t *status, time_t now);
 int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
 const smartlist_t *router_get_trusted_dir_servers(void);
+const smartlist_t *router_get_fallback_dir_servers(void);
 
 const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
+trusted_dir_server_t *router_get_fallback_dirserver_by_digest(
+                                                   const char *digest);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
 const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
                                                    int flags);
+const routerstatus_t *router_pick_fallback_dirserver(dirinfo_type_t type,
+                                                     int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
@@ -133,7 +138,7 @@ trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
                            const char *digest, const char *v3_auth_digest,
                            dirinfo_type_t type);
 void authority_cert_free(authority_cert_t *cert);
-void clear_trusted_dir_servers(void);
+void clear_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                                   networkstatus_t *consensus);
