@@ -1,0 +1,3 @@
+  o Renamed options:
+    - The DirServer option is now DirAuthority, for consistency with current
+      naming patterns.  You can still use the old DirServer form.

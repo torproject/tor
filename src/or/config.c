@@ -81,6 +81,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
+  { "DirServer", "DirAuthority", 0, 0}, /* XXXX024 later, make this warn? */
   { "MaxConn", "ConnLimit", 0, 1},
   { "ORBindAddress", "ORListenAddress", 0, 0},
   { "DirBindAddress", "DirListenAddress", 0, 0},
@@ -206,7 +207,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
   V(DirReqStatistics,            BOOL,     "1"),
-  VAR("DirServer",               LINELIST, DirServers, NULL),
+  VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
@@ -802,24 +803,24 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
 {
   config_line_t *cl;
 
-  if (options->DirServers &&
+  if (options->DirAuthorities &&
       (options->AlternateDirAuthority || options->AlternateBridgeAuthority ||
        options->AlternateHSAuthority)) {
     log_warn(LD_CONFIG,
-             "You cannot set both DirServers and Alternate*Authority.");
+             "You cannot set both DirAuthority and Alternate*Authority.");
     return -1;
   }
 
   /* do we want to complain to the user about being partitionable? */
-  if ((options->DirServers &&
+  if ((options->DirAuthorities &&
        (!old_options ||
-        !config_lines_eq(options->DirServers, old_options->DirServers))) ||
+        !config_lines_eq(options->DirAuthorities, old_options->DirAuthorities))) ||
       (options->AlternateDirAuthority &&
        (!old_options ||
         !config_lines_eq(options->AlternateDirAuthority,
                          old_options->AlternateDirAuthority)))) {
     log_warn(LD_CONFIG,
-             "You have used DirServer or AlternateDirAuthority to "
+             "You have used DirAuthority or AlternateDirAuthority to "
              "specify alternate directory authorities in "
              "your configuration. This is potentially dangerous: it can "
              "make you look different from all other Tor users, and hurt "
@@ -830,7 +831,7 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
 
   /* Now go through the four ways you can configure an alternate
    * set of directory authorities, and make sure none are broken. */
-  for (cl = options->DirServers; cl; cl = cl->next)
+  for (cl = options->DirAuthorities; cl; cl = cl->next)
     if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
@@ -856,7 +857,7 @@ consider_adding_dir_authorities(const or_options_t *options,
   int need_to_update =
     !smartlist_len(router_get_trusted_dir_servers()) ||
     !smartlist_len(router_get_fallback_dir_servers()) || !old_options ||
-    !config_lines_eq(options->DirServers, old_options->DirServers) ||
+    !config_lines_eq(options->DirAuthorities, old_options->DirAuthorities) ||
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
     !config_lines_eq(options->AlternateDirAuthority,
@@ -870,7 +871,7 @@ consider_adding_dir_authorities(const or_options_t *options,
   /* Start from a clean slate. */
   clear_dir_servers();
 
-  if (!options->DirServers) {
+  if (!options->DirAuthorities) {
     /* then we may want some of the defaults */
     dirinfo_type_t type = NO_DIRINFO;
     if (!options->AlternateBridgeAuthority)
@@ -883,7 +884,7 @@ consider_adding_dir_authorities(const or_options_t *options,
     add_default_trusted_dir_authorities(type);
   }
 
-  for (cl = options->DirServers; cl; cl = cl->next)
+  for (cl = options->DirAuthorities; cl; cl = cl->next)
     if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
@@ -1925,18 +1926,18 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   addr_string = tor_dup_ip(addr);
   if (is_internal_IP(addr, 0)) {
     /* make sure we're ok with publishing an internal IP */
-    if (!options->DirServers && !options->AlternateDirAuthority) {
-      /* if they are using the default dirservers, disallow internal IPs
+    if (!options->DirAuthorities && !options->AlternateDirAuthority) {
+      /* if they are using the default authorities, disallow internal IPs
        * always. */
       log_fn(warn_severity, LD_CONFIG,
              "Address '%s' resolves to private IP address '%s'. "
-             "Tor servers that use the default DirServers must have public "
+             "Tor servers that use the default DirAuthorities must have public "
              "IP addresses.", hostname, addr_string);
       tor_free(addr_string);
       return -1;
     }
     if (!explicit_ip) {
-      /* even if they've set their own dirservers, require an explicit IP if
+      /* even if they've set their own authorities, require an explicit IP if
        * they're using an internal address. */
       log_fn(warn_severity, LD_CONFIG, "Address '%s' resolves to private "
              "IP address '%s'. Please set the Address config option to be "
@@ -2963,7 +2964,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingTorNetwork &&
-      !(options->DirServers ||
+      !(options->DirAuthorities ||
         (options->AlternateDirAuthority &&
          options->AlternateBridgeAuthority))) {
     REJECT("TestingTorNetwork may only be configured in combination with "
@@ -2971,7 +2972,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "and AlternateBridgeAuthority configured.");
   }
 
-  if (options->AllowSingleHopExits && !options->DirServers) {
+  if (options->AllowSingleHopExits && !options->DirAuthorities) {
     COMPLAIN("You have set AllowSingleHopExits; now your relay will allow "
              "others to make one-hop exits. However, since by default most "
              "clients avoid relays that set this option, most clients will "

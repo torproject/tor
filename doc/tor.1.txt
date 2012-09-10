@@ -292,7 +292,7 @@ GENERAL OPTIONS
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 
-**DirServer** [__nickname__] [**flags**] __address__:__port__ __fingerprint__::
+**DirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
@@ -309,8 +309,8 @@ GENERAL OPTIONS
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. +
  +
-    If no **dirserver** line is given, Tor will use the default directory
-    servers. NOTE: this option is intended for setting up a private Tor
+    If no **DirAuthority** line is given, Tor will use the default directory
+    authorities. NOTE: this option is intended for setting up a private Tor
     network with its own directory authorities. If you use it, you will be
     distinguishable from other users, because you won't believe the same
     authorities they do.
@@ -326,7 +326,7 @@ GENERAL OPTIONS
 **AlternateHSAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
 **AlternateBridgeAuthority** [__nickname__] [**flags**] __address__:__port__ __ fingerprint__::
-    These options behave as DirServer, but they replace fewer of the
+    These options behave as DirAuthority, but they replace fewer of the
     default directory authorities. Using
     AlternateDirAuthority replaces the default Tor directory authorities, but
     leaves the default hidden service authorities and bridge authorities in

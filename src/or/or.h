@@ -3424,7 +3424,7 @@ typedef struct {
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
    * use the "Alternate*Authority" options below instead. */
-  config_line_t *DirServers;
+  config_line_t *DirAuthorities;
 
   /** If set, use these main (currently v3) directory authorities and
    * not the default ones. */
