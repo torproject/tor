@@ -130,6 +130,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "StrictEntryNodes", "StrictNodes", 0, 1},
   { "StrictExitNodes", "StrictNodes", 0, 1},
+  { "_UseFilteringSSLBufferevents", "UseFilteringSSLBufferevents", 0, 1},
   { NULL, NULL, 0, 0},
 };
 
@@ -449,7 +450,7 @@ static config_var_t _option_vars[] = {
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
-  V(_UseFilteringSSLBufferevents, BOOL,    "0"),
+  V(UseFilteringSSLBufferevents, BOOL,    "0"),
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
@@ -459,7 +460,7 @@ static config_var_t _option_vars[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
   V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
-  V(_UsingTestNetworkDefaults,   BOOL,     "0"),
+  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -487,7 +488,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  V(_UsingTestNetworkDefaults,   BOOL,     "1"),
+  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "1"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -7307,6 +7308,9 @@ getinfo_helper_config(control_connection_t *conn,
     for (i = 0; _option_vars[i].name; ++i) {
       const config_var_t *var = &_option_vars[i];
       const char *type;
+      /* don't tell controller about triple-underscore options */
+      if (!strncmp(_option_vars[i].name, "___", 3))
+	  continue;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;

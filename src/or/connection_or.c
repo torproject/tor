@@ -1152,7 +1152,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
 
 #ifdef USE_BUFFEREVENTS
   if (connection_type_uses_bufferevent(TO_CONN(conn))) {
-    const int filtering = get_options()->_UseFilteringSSLBufferevents;
+    const int filtering = get_options()->UseFilteringSSLBufferevents;
     struct bufferevent *b =
       tor_tls_init_bufferevent(conn->tls, conn->_base.bufev, conn->_base.s,
                                receiving, filtering);

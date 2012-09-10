@@ -3578,8 +3578,8 @@ typedef struct {
   /** If true, do not enable IOCP on windows with bufferevents, even if
    * we think we could. */
   int DisableIOCP;
-  /** For testing only: will go away in 0.2.3.x. */
-  int _UseFilteringSSLBufferevents;
+  /** For testing only: will go away eventually. */
+  int UseFilteringSSLBufferevents;
 
   /** Set to true if the TestingTorNetwork configuration option is set.
    * This is used so that options_validate() has a chance to realize that
