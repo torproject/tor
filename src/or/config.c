@@ -7310,7 +7310,7 @@ getinfo_helper_config(control_connection_t *conn,
       const char *type;
       /* don't tell controller about triple-underscore options */
       if (!strncmp(_option_vars[i].name, "___", 3))
-	  continue;
+        continue;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
