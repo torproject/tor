@@ -2435,8 +2435,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  int listbaddirs, int vote_on_hsdirs)
 {
   const or_options_t *options = get_options();
-  int unstable_version =
-    !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   uint32_t routerbw = router_get_advertised_bandwidth(ri);
 
   memset(rs, 0, sizeof(routerstatus_t));
@@ -2448,8 +2446,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_exit = node->is_exit;
   rs->is_stable = node->is_stable =
     router_is_active(ri, node, now) &&
-    !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
-    !unstable_version;
+    !dirserv_thinks_router_is_unreliable(now, ri, 1, 0);
   rs->is_fast = node->is_fast =
     router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
