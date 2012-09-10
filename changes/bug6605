@@ -1,7 +1,0 @@
-  o Major bugfixes:
-    - Raise the default BandwidthRate/BandwidthBurst values from 1MB/5MB
-      to 1GB/1GB. The previous defaults were intended to be "basically
-      infinite", but it turns out they're now limiting our 100mbit+
-      relays and bridges. Fixes bug 6605; bugfix on 0.2.0.10-alpha (the
-      last time we raised it).
-

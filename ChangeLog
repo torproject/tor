@@ -1,3 +1,56 @@
+Changes in version 0.2.4.2-alpha - 2012-09-10
+  o Major features:
+    - Automatically forward the TCP ports of pluggable transport
+      proxies using tor-fw-helper if PortForwarding is enabled. Implements
+      ticket 4567.
+
+  o Major bugfixes:
+    - Raise the default BandwidthRate/BandwidthBurst values from 5MB/10MB
+      to 1GB/1GB. The previous defaults were intended to be "basically
+      infinite", but it turns out they're now limiting our 100mbit+
+      relays and bridges. Fixes bug 6605; bugfix on 0.2.0.10-alpha (the
+      last time we raised it).
+
+  o Minor features:
+    - Detect when we're running with a version of OpenSSL other than the
+      one we compiled with. This has occasionally given people hard-to-
+      track-down errors.
+    - Log fewer lines at level "notice" about our OpenSSL and Libevent
+      versions and capabilities when everything is going right. Resolves
+      part of ticket 6736.
+    - Directory authorities no long accept descriptors for any version of
+      Tor before 0.2.2.35, or for any 0.2.3 release before 0.2.3.10-alpha.
+      These versions are insecure, unsupported, or both. Implements
+      ticket 6789.
+
+  o Minor bugfixes:
+    - Rename the (internal-use-only) UsingTestingNetworkDefaults option
+      to start with a triple-underscore so the controller won't touch it.
+      Patch by Meejah. Fixes bug 3155. Bugfix on 0.2.2.23-alpha.
+    - Rename the (testing-use-only) _UseFilteringSSLBufferevents option
+      so it doesn't start with _. Fixes bug 3155. Bugfix on 0.2.3.1-alpha.
+    - Don't follow the NULL pointer if microdescriptor generation fails.
+      (This does not appear to be triggerable, but it's best to be safe.)
+      Found by "f. tp.". Fixes bug 6797; bugfix on 0.2.4.1-alpha.
+    - Fix mis-declared dependencies on src/common/crypto.c and
+      src/or/tor_main.c that could break out-of-tree builds under some
+      circumstances. Fixes bug 6778; bugfix on 0.2.4.1-alpha.
+    - Avoid a warning when building common_sha1.i out of tree. Fixes bug
+      6778; bugfix on 0.2.4.1-alpha.
+    - Fix a harmless (in this case) build warning for implicitly
+      converting a strlen() to an int. Bugfix on 0.2.4.1-alpha.
+
+  o Removed features:
+    - Now that all versions before 0.2.2.x are disallowed, we no longer
+      need to work around their missing features. Thus we can remove a
+      bunch of compatibility code.
+
+  o Code refactoring:
+    - Tweak tor-fw-helper to accept an arbitrary amount of arbitrary
+      TCP ports to forward. In the past it only accepted two ports:
+      the ORPort and the DirPort.
+
+
 Changes in version 0.2.4.1-alpha - 2012-09-05
   Tor 0.2.4.1-alpha lets bridges publish their pluggable transports to
   bridgedb; lets relays use IPv6 addresses and directory authorities

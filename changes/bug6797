@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Don't follow the NULL pointer if microdescriptor generation fails.
-      (This does not appear to be triggerable, but it's best to be safe.)
-      Found by "f. tp.". Fixes bug 6797; bugfix on 0.2.4.1-alpha.
-      

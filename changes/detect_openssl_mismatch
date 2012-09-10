@@ -1,4 +1,0 @@
-  o Minor features:
-    - Detect when we're running with a version of OpenSSL other than the
-      one we compiled with. This has occasionally given people hard-to-
-      track-down errors.

@@ -1,4 +1,0 @@
-  o Removed features:
-    - Now that all versions before 0.2.2.x are disallowed, we no longer
-      need to work around their missing features. This allows us to remove
-      a bunch of compatibility code.

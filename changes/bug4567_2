@@ -1,4 +1,0 @@
-  o Code refactoring:
-    - Tweak tor-fw-helper to accept an arbitrary amount of arbitrary
-      TCP ports to forward. In the past it only accepted two ports:
-      the ORPort and the DirPort.
