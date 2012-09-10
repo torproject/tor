@@ -2,3 +2,5 @@
     - Rename the (internal-use-only) UsingTestingNetworkDefaults option
       to start with a triple-underscore so the controller won't touch it.
       Patch by Meejah. Fixes bug 3155. Bugfix on 0.2.2.23-alpha.
+    - Rename the (testing-use-only) _UseFilteringSSLBufferevents option
+      so it doesn't start with _. Fixes bug3155. Bugfix on 0.2.3.1-alpha.

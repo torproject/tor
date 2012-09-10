@@ -130,6 +130,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "StrictEntryNodes", "StrictNodes", 0, 1},
   { "StrictExitNodes", "StrictNodes", 0, 1},
+  { "_UseFilteringSSLBufferevents", "UseFilteringSSLBufferevents", 0, 1},
   { NULL, NULL, 0, 0},
 };
 
@@ -449,7 +450,7 @@ static config_var_t _option_vars[] = {
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
-  V(_UseFilteringSSLBufferevents, BOOL,    "0"),
+  V(UseFilteringSSLBufferevents, BOOL,    "0"),
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
