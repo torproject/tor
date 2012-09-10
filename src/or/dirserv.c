@@ -398,18 +398,18 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* Versions before Tor 0.2.1.30 have known security issues that
+  /* Versions before Tor 0.2.2.35 have known security issues that
    * make them unsuitable for the current network. */
-  if (platform && !tor_version_as_new_as(platform,"0.2.1.30")) {
+  if (platform && !tor_version_as_new_as(platform,"0.2.2.35")) {
     if (msg)
-      *msg = "Tor version is insecure. Please upgrade!";
+      *msg = "Tor version is insecure or unsupported. Please upgrade!";
     return FP_REJECT;
-  } else if (platform && tor_version_as_new_as(platform,"0.2.2.1-alpha")) {
-    /* Versions from 0.2.2.1-alpha...0.2.2.20-alpha have known security
+  } else if (platform && tor_version_as_new_as(platform,"0.2.3.0-alpha")) {
+    /* Versions from 0.2.3-alpha...0.2.3.9-alpha have known security
      * issues that make them unusable for the current network */
-    if (!tor_version_as_new_as(platform, "0.2.2.21-alpha")) {
+    if (!tor_version_as_new_as(platform, "0.2.3.10-alpha")) {
       if (msg)
-        *msg = "Tor version is insecure. Please upgrade!";
+        *msg = "Tor version is insecure or unsupported. Please upgrade!";
       return FP_REJECT;
     }
   }
