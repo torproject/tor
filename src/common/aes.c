@@ -134,8 +134,8 @@ int
 evaluate_evp_for_aes(int force_val)
 {
   (void) force_val;
-  log_notice(LD_CRYPTO, "This version of OpenSSL has a known-good EVP "
-             "counter-mode implementation. Using it.");
+  log_info(LD_CRYPTO, "This version of OpenSSL has a known-good EVP "
+           "counter-mode implementation. Using it.");
   return 0;
 }
 int
