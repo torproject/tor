@@ -53,7 +53,7 @@ static const routerstatus_t *router_pick_dirserver_generic(
 static void mark_all_dirservers_up(smartlist_t *server_list);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
-static void trusted_dir_server_free(trusted_dir_server_t *ds);
+static void trusted_dir_server_free(dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
@@ -76,10 +76,10 @@ DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
 
 /****************************************************************************/
 
-/** Global list of a trusted_dir_server_t object for each directory
+/** Global list of a dir_server_t object for each directory
  * authority. */
 static smartlist_t *trusted_dir_servers = NULL;
-/** Global list of trusted_dir_server_t objects for all directory authorities
+/** Global list of dir_server_t objects for all directory authorities
  * and all fallback directory servers. */
 static smartlist_t *fallback_dir_servers = NULL;
 
@@ -126,7 +126,7 @@ get_n_authorities(dirinfo_type_t type)
   int n = 0;
   if (!trusted_dir_servers)
     return 0;
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
                     if (ds->type & type)
                       ++n);
   return n;
@@ -197,7 +197,7 @@ int
 trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                                     int flush)
 {
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   const char *s, *eos;
   int failure_code = 0;
 
@@ -537,7 +537,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       } SMARTLIST_FOREACH_END(sig);
     } SMARTLIST_FOREACH_END(voter);
   }
-  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds) {
     int found = 0;
     if (!(ds->type & V3_DIRINFO))
       continue;
@@ -921,7 +921,7 @@ router_reload_router_list(void)
   return 0;
 }
 
-/** Return a smartlist containing a list of trusted_dir_server_t * for all
+/** Return a smartlist containing a list of dir_server_t * for all
  * known trusted dirservers.  Callers must not modify the list or its
  * contents.
  */
@@ -1023,16 +1023,16 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
   return 0;
 }
 
-/** Return the trusted_dir_server_t for the directory authority whose identity
+/** Return the dir_server_t for the directory authority whose identity
  * key hashes to <b>digest</b>, or NULL if no such authority is known.
  */
-trusted_dir_server_t *
+dir_server_t *
 router_get_trusteddirserver_by_digest(const char *digest)
 {
   if (!trusted_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
      {
        if (tor_memeq(ds->digest, digest, DIGEST_LEN))
          return ds;
@@ -1041,16 +1041,16 @@ router_get_trusteddirserver_by_digest(const char *digest)
   return NULL;
 }
 
-/** Return the trusted_dir_server_t for the fallback dirserver whose identity
+/** Return the dir_server_t for the fallback dirserver whose identity
  * key hashes to <b>digest</b>, or NULL if no such authority is known.
  */
-trusted_dir_server_t *
+dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
 {
   if (!trusted_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
      {
        if (tor_memeq(ds->digest, digest, DIGEST_LEN))
          return ds;
@@ -1059,17 +1059,17 @@ router_get_fallback_dirserver_by_digest(const char *digest)
   return NULL;
 }
 
-/** Return the trusted_dir_server_t for the directory authority whose
+/** Return the dir_server_t for the directory authority whose
  * v3 identity key hashes to <b>digest</b>, or NULL if no such authority
  * is known.
  */
-trusted_dir_server_t *
+dir_server_t *
 trusteddirserver_get_by_v3_auth_digest(const char *digest)
 {
   if (!trusted_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
      {
        if (tor_memeq(ds->v3_identity_digest, digest, DIGEST_LEN) &&
            (ds->type & V3_DIRINFO))
@@ -1249,7 +1249,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   return result ? result->rs : NULL;
 }
 
-/** Choose randomly from among the trusted_dir_server_ts in sourcelist that
+/** Choose randomly from among the dir_server_ts in sourcelist that
  * are up. Flags are as for router_pick_directory_server_impl().
  */
 static const routerstatus_t *
@@ -1281,7 +1281,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
 
-  SMARTLIST_FOREACH_BEGIN(sourcelist, const trusted_dir_server_t *, d)
+  SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {
       int is_overloaded =
           d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
@@ -1365,12 +1365,12 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   return result;
 }
 
-/** Mark as running every trusted_dir_server_t in <b>server_list</b>. */
+/** Mark as running every dir_server_t in <b>server_list</b>. */
 static void
 mark_all_dirservers_up(smartlist_t *server_list)
 {
   if (server_list) {
-    SMARTLIST_FOREACH_BEGIN(server_list, trusted_dir_server_t *, dir) {
+    SMARTLIST_FOREACH_BEGIN(server_list, dir_server_t *, dir) {
       routerstatus_t *rs;
       node_t *node;
       dir->is_running = 1;
@@ -2239,7 +2239,7 @@ router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
     return 0;
   if (authdir_mode(get_options()) && router_digest_is_me(digest))
     return 1;
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ent,
     if (tor_memeq(digest, ent->digest, DIGEST_LEN)) {
       return (!type) || ((type & ent->type) != 0);
     });
@@ -2253,7 +2253,7 @@ router_addr_is_trusted_dir(uint32_t addr)
 {
   if (!trusted_dir_servers)
     return 0;
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ent,
     if (ent->addr == addr)
       return 1;
     );
@@ -3778,13 +3778,13 @@ router_exit_policy_rejects_all(const routerinfo_t *router)
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
  * <b>address</b> is NULL, add ourself.  Return the new trusted directory
  * server entry on success or NULL if we couldn't add it. */
-trusted_dir_server_t *
+dir_server_t *
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
                        dirinfo_type_t type)
 {
-  trusted_dir_server_t *ent;
+  dir_server_t *ent;
   uint32_t a;
   char *hostname = NULL;
   if (!trusted_dir_servers)
@@ -3809,7 +3809,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
     hostname = tor_strdup(address);
   }
 
-  ent = tor_malloc_zero(sizeof(trusted_dir_server_t));
+  ent = tor_malloc_zero(sizeof(dir_server_t));
   ent->nickname = nickname ? tor_strdup(nickname) : NULL;
   ent->address = hostname;
   ent->addr = a;
@@ -3861,7 +3861,7 @@ authority_cert_free(authority_cert_t *cert)
 
 /** Free storage held in <b>ds</b>. */
 static void
-trusted_dir_server_free(trusted_dir_server_t *ds)
+trusted_dir_server_free(dir_server_t *ds)
 {
   if (!ds)
     return;
@@ -3877,7 +3877,7 @@ void
 clear_dir_servers(void)
 {
   if (fallback_dir_servers) {
-    SMARTLIST_FOREACH(fallback_dir_servers, trusted_dir_server_t *, ent,
+    SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ent,
                       trusted_dir_server_free(ent));
     smartlist_clear(fallback_dir_servers);
   } else {
@@ -4189,7 +4189,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
    */
   n_download = 0;
   SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
-      trusted_dir_server_t *ds;
+      dir_server_t *ds;
       smartlist_t *dl;
       dl = downloadable[ns_sl_idx] = smartlist_new();
       download_from[ns_sl_idx] = smartlist_new();
@@ -4264,7 +4264,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
   /* Now, we can actually launch our requests. */
   for (i=0; i<n; ++i) {
     networkstatus_v2_t *ns = smartlist_get(networkstatus_v2_list, i);
-    trusted_dir_server_t *ds =
+    dir_server_t *ds =
       router_get_trusteddirserver_by_digest(ns->identity_digest);
     smartlist_t *dl = download_from[i];
     int pds_flags = PDS_RETRY_IF_NO_SERVERS;
@@ -4317,7 +4317,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 
   if (is_vote) {
     /* where's it from, so we know whom to ask for descriptors */
-    trusted_dir_server_t *ds;
+    dir_server_t *ds;
     networkstatus_voter_info_t *voter = smartlist_get(consensus->voters, 0);
     tor_assert(voter);
     ds = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);

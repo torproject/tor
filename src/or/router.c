@@ -517,7 +517,7 @@ init_keys(void)
   const or_options_t *options = get_options();
   dirinfo_type_t type;
   time_t now = time(NULL);
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   int v3_digest_set = 0;
   authority_cert_t *cert = NULL;
 

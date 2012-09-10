@@ -2787,7 +2787,7 @@ dirvote_fetch_missing_votes(void)
   char *resource;
 
   SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
-                          trusted_dir_server_t *, ds) {
+                          dir_server_t *, ds) {
       if (!(ds->type & V3_DIRINFO))
         continue;
       if (!dirvote_get_vote(ds->v3_identity_digest,
@@ -2905,7 +2905,7 @@ list_v3_auth_ids(void)
   smartlist_t *known_v3_keys = smartlist_new();
   char *keys;
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
+                    dir_server_t *, ds,
     if ((ds->type & V3_DIRINFO) &&
         !tor_digest_is_zero(ds->v3_identity_digest))
       smartlist_add(known_v3_keys,
@@ -2926,7 +2926,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
   networkstatus_t *vote;
   networkstatus_voter_info_t *vi;
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   pending_vote_t *pending_vote = NULL;
   const char *end_of_vote = NULL;
   int any_failed = 0;

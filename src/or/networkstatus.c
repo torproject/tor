@@ -565,7 +565,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
 
   /* Now see whether we're missing any voters entirely. */
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
+                    dir_server_t *, ds,
     {
       if ((ds->type & V3_DIRINFO) &&
           !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
@@ -597,7 +597,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
-    SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
+    SMARTLIST_FOREACH(missing_authorities, dir_server_t *, ds,
       {
         log(severity, LD_DIR, "Consensus does not include configured "
                  "authority '%s' at %s:%d (identity %s)",
@@ -739,7 +739,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   int i, found;
   time_t now;
   int skewed = 0;
-  trusted_dir_server_t *trusted_dir = NULL;
+  dir_server_t *trusted_dir = NULL;
   const char *source_desc = NULL;
   char fp[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
@@ -1144,7 +1144,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
 
   if (authority) {
     /* An authority launches a separate connection for everybody. */
-    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds)
+    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds)
       {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
          tor_addr_t addr;
@@ -2042,7 +2042,7 @@ void
 routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
 {
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   networkstatus_t *ns = current_consensus;

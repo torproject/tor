@@ -4487,7 +4487,7 @@ typedef struct rend_cache_entry_t {
 /********************************* routerlist.c ***************************/
 
 /** Represents information about a single trusted directory server. */
-typedef struct trusted_dir_server_t {
+typedef struct dir_server_t {
   char *description;
   char *nickname;
   char *address; /**< Hostname. */
@@ -4519,7 +4519,7 @@ typedef struct trusted_dir_server_t {
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
                                **/
-} trusted_dir_server_t;
+} dir_server_t;
 
 #define ROUTER_REQUIRED_MIN_BANDWIDTH (20*1024)
 

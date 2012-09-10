@@ -3131,7 +3131,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
       }
     } else {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                  trusted_dir_server_t *, ds,
+                  dir_server_t *, ds,
                   if (ds->type & V2_DIRINFO)
                     smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
     }

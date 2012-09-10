@@ -30,10 +30,10 @@ const smartlist_t *router_get_fallback_dir_servers(void);
 
 const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);
-trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
-trusted_dir_server_t *router_get_fallback_dirserver_by_digest(
+dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
+dir_server_t *router_get_fallback_dirserver_by_digest(
                                                    const char *digest);
-trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
+dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
 const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
                                                    int flags);
 const routerstatus_t *router_pick_fallback_dirserver(dirinfo_type_t type,
@@ -132,7 +132,7 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
 void routerlist_retry_directory_downloads(time_t now);
 
 int router_exit_policy_rejects_all(const routerinfo_t *router);
-trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
+dir_server_t *add_trusted_dir_server(const char *nickname,
                            const char *address,
                            uint16_t dir_port, uint16_t or_port,
                            const char *digest, const char *v3_auth_digest,
