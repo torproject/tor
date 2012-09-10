@@ -292,6 +292,11 @@ GENERAL OPTIONS
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 
+**FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__::
+    When we're unable to connect to any directory cache for directory info
+    (usually because we don't know about any yet) we try a FallbackDir.
+    By default, the directory authorities are also FallbackDirs.
+
 **DirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
     and port, with the specified key fingerprint. This option can be repeated

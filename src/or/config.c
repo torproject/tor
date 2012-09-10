@@ -228,6 +228,7 @@ static config_var_t option_vars_[] = {
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
+  V(FallbackDir,                 LINELIST, NULL),
 
 #if defined (WINCE)
   V(FallbackNetworkstatusFile,   FILENAME, "fallback-consensus"),
@@ -474,6 +475,8 @@ static char *get_bindaddr_from_transport_listen_line(const char *line,
 static int parse_dir_authority_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
+static int parse_dir_fallback_line(const char *line,
+                                   int validate_only);
 static void port_cfg_free(port_cfg_t *port);
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out);
@@ -756,7 +759,7 @@ static void
 add_default_trusted_dir_authorities(dirinfo_type_t type)
 {
   int i;
-  const char *dirservers[] = {
+  const char *authorities[] = {
     "moria1 orport=9101 no-v2 "
       "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
       "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
@@ -785,10 +788,27 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
       "154.35.32.5:80 CF6D 0AAF B385 BE71 B8E1 11FC 5CFF 4B47 9237 33BC",
     NULL
   };
-  for (i=0; dirservers[i]; i++) {
-    if (parse_dir_authority_line(dirservers[i], type, 0)<0) {
-      log_err(LD_BUG, "Couldn't parse internal dirserver line %s",
-              dirservers[i]);
+  for (i=0; authorities[i]; i++) {
+    if (parse_dir_authority_line(authorities[i], type, 0)<0) {
+      log_err(LD_BUG, "Couldn't parse internal DirAuthority line %s",
+              authorities[i]);
+    }
+  }
+}
+
+/** Add the default fallback directory servers into the fallback directory
+ * server list. */
+static void
+add_default_fallback_dir_servers(void)
+{
+  int i;
+  const char *fallback[] = {
+    NULL
+  };
+  for (i=0; fallback[i]; i++) {
+    if (parse_dir_fallback_line(fallback[i], 0)<0) {
+      log_err(LD_BUG, "Couldn't parse internal FallbackDir line %s",
+              fallback[i]);
     }
   }
 }
@@ -798,7 +818,7 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
  * user if we changed any dangerous ones.
  */
 static int
-validate_dir_authorities(or_options_t *options, or_options_t *old_options)
+validate_dir_servers(or_options_t *options, or_options_t *old_options)
 {
   config_line_t *cl;
 
@@ -842,6 +862,9 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
+  for (cl = options->FallbackDir; cl; cl = cl->next)
+    if (parse_dir_fallback_line(cl->value, 1)<0)
+      return -1;
   return 0;
 }
 
@@ -849,14 +872,15 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
  * as appropriate.
  */
 static int
-consider_adding_dir_authorities(const or_options_t *options,
-                                const or_options_t *old_options)
+consider_adding_dir_servers(const or_options_t *options,
+                            const or_options_t *old_options)
 {
   config_line_t *cl;
   int need_to_update =
     !smartlist_len(router_get_trusted_dir_servers()) ||
     !smartlist_len(router_get_fallback_dir_servers()) || !old_options ||
     !config_lines_eq(options->DirAuthorities, old_options->DirAuthorities) ||
+    !config_lines_eq(options->FallbackDir, old_options->FallbackDir) ||
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
     !config_lines_eq(options->AlternateDirAuthority,
@@ -882,6 +906,8 @@ consider_adding_dir_authorities(const or_options_t *options,
       type |= HIDSERV_DIRINFO;
     add_default_trusted_dir_authorities(type);
   }
+  if (!options->FallbackDir)
+    add_default_fallback_dir_servers();
 
   for (cl = options->DirAuthorities; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
@@ -894,6 +920,9 @@ consider_adding_dir_authorities(const or_options_t *options,
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
+      return -1;
+  for (cl = options->FallbackDir; cl; cl = cl->next)
+    if (parse_dir_fallback_line(cl->value, 0)<0)
       return -1;
   return 0;
 }
@@ -1217,7 +1246,7 @@ options_act(const or_options_t *old_options)
       return -1;
   }
 
-  if (consider_adding_dir_authorities(options, old_options) < 0)
+  if (consider_adding_dir_servers(options, old_options) < 0)
     return -1;
 
 #ifdef NON_ANONYMOUS_MODE_ENABLED
@@ -2844,8 +2873,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (validate_addr_policies(options, msg) < 0)
     return -1;
 
-  if (validate_dir_authorities(options, old_options) < 0)
-    REJECT("Directory authority line did not parse. See logs for details.");
+  if (validate_dir_servers(options, old_options) < 0)
+    REJECT("Directory authority/fallback line did not parse. See logs "
+           "for details.");
 
   if (options->UseBridges && !options->Bridges)
     REJECT("If you set UseBridges, you must specify at least one bridge.");
@@ -4439,7 +4469,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
               address, (int)dir_port, (char*)smartlist_get(items,0));
     if (!(ds = trusted_dir_server_new(nickname, address, dir_port, or_port,
-                                      digest, v3_digest, type)))
+                                      digest, v3_digest, type, 1.0)))
       goto err;
     dir_server_add(ds);
   }
@@ -4457,6 +4487,88 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   tor_free(address);
   tor_free(nickname);
   tor_free(fingerprint);
+  return r;
+}
+
+/** Read the contents of a FallbackDir line from <b>line</b>. If
+ * <b>validate_only</b> is 0, and the line is well-formed, then add the
+ * dirserver described in the line as a fallback directory. Return 0 on
+ * success, or -1 if the line isn't well-formed or if we can't add it. */
+static int
+parse_dir_fallback_line(const char *line,
+                        int validate_only)
+{
+  int r = -1;
+  smartlist_t *items = smartlist_new(), *positional = smartlist_new();
+  int orport = -1;
+  uint16_t dirport;
+  tor_addr_t addr;
+  int ok;
+  char id[DIGEST_LEN];
+  char *address=NULL;
+
+  memset(id, 0, sizeof(id));
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  SMARTLIST_FOREACH_BEGIN(items, const char *, cp) {
+    const char *eq = strchr(cp, '=');
+    ok = 1;
+    if (! eq) {
+      smartlist_add(positional, (char*)cp);
+      continue;
+    }
+    if (!strcmpstart(cp, "orport="))
+      orport = (int)tor_parse_long(cp+strlen("orport="), 10,
+                                   1, 65535, &ok, NULL);
+    else if (!strcmpstart(cp, "id="))
+      ok = !base16_decode(id, DIGEST_LEN,
+                          cp+strlen("id="), strlen(cp)-strlen("id="));
+    if (!ok) {
+      log_warn(LD_CONFIG, "Bad FallbackDir option %s", escaped(cp));
+      goto end;
+    }
+  } SMARTLIST_FOREACH_END(cp);
+
+  if (smartlist_len(positional) != 1) {
+    log_warn(LD_CONFIG, "Couldn't parse FallbackDir line %s", escaped(line));
+    goto end;
+  }
+
+  if (tor_digest_is_zero(id)) {
+    log_warn(LD_CONFIG, "Missing identity on FallbackDir line");
+    goto end;
+  }
+
+  if (orport <= 0) {
+    log_warn(LD_CONFIG, "Missing orport on FallbackDir line");
+    goto end;
+  }
+
+  if (tor_addr_port_split(LOG_INFO, smartlist_get(positional, 0),
+                          &address, &dirport) < 0 ||
+      tor_addr_parse(&addr, address)<0) {
+    log_warn(LD_CONFIG, "Couldn't parse address:port %s on FallbackDir line",
+             (const char*)smartlist_get(positional, 0));
+    goto end;
+  }
+
+  if (!validate_only) {
+    dir_server_t *ds;
+    ds = fallback_dir_server_new(&addr, dirport, orport, id, 1.0);
+    if (!ds) {
+      log_warn(LD_CONFIG, "Couldn't create FallbackDir %s", escaped(line));
+      goto end;
+    }
+    dir_server_add(ds);
+  }
+
+  r = 0;
+
+ end:
+  SMARTLIST_FOREACH(items, char *, cp, tor_free(cp));
+  smartlist_free(items);
+  smartlist_free(positional);
+  tor_free(address);
   return r;
 }
 

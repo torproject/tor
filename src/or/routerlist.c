@@ -3785,11 +3785,15 @@ dir_server_new(int is_authority,
                const char *hostname,
                uint16_t dir_port, uint16_t or_port,
                const char *digest, const char *v3_auth_digest,
-               dirinfo_type_t type)
+               dirinfo_type_t type,
+               double weight)
 {
   dir_server_t *ent;
   uint32_t a;
   char *hostname_ = NULL;
+
+  if (weight < 0)
+    return NULL;
 
   if (tor_addr_family(addr) == AF_INET)
     a = tor_addr_to_ipv4h(addr);
@@ -3810,6 +3814,7 @@ dir_server_new(int is_authority,
   ent->is_running = 1;
   ent->is_authority = is_authority;
   ent->type = type;
+  ent->weight = weight;
   memcpy(ent->digest, digest, DIGEST_LEN);
   if (v3_auth_digest && (type & V3_DIRINFO))
     memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
@@ -3842,7 +3847,7 @@ dir_server_t *
 trusted_dir_server_new(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
-                       dirinfo_type_t type)
+                       dirinfo_type_t type, double weight)
 {
   uint32_t a;
   tor_addr_t addr;
@@ -3869,7 +3874,7 @@ trusted_dir_server_new(const char *nickname, const char *address,
 
   result = dir_server_new(1, nickname, &addr, hostname,
                           dir_port, or_port, digest,
-                          v3_auth_digest, type);
+                          v3_auth_digest, type, weight);
   tor_free(hostname);
   return result;
 }
@@ -3880,10 +3885,10 @@ trusted_dir_server_new(const char *nickname, const char *address,
 dir_server_t *
 fallback_dir_server_new(const tor_addr_t *addr,
                         uint16_t dir_port, uint16_t or_port,
-                        const char *id_digest)
+                        const char *id_digest, double weight)
 {
   return dir_server_new(0, NULL, addr, NULL, dir_port, or_port, id_digest,
-                        NULL, ALL_DIRINFO);
+                        NULL, ALL_DIRINFO, weight);
 }
 
 /** Add a directory server to the global list(s). */

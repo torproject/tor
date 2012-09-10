@@ -3428,6 +3428,9 @@ typedef struct {
    * use the "Alternate*Authority" options below instead. */
   config_line_t *DirAuthorities;
 
+  /** List of fallback directory servers */
+  config_line_t *FallbackDir;
+
   /** If set, use these main (currently v3) directory authorities and
    * not the default ones. */
   config_line_t *AlternateDirAuthority;
@@ -4496,6 +4499,7 @@ typedef struct dir_server_t {
   uint32_t addr; /**< IPv4 address. */
   uint16_t dir_port; /**< Directory port. */
   uint16_t or_port; /**< OR port: Used for tunneling connections. */
+  double weight; /** Weight used when selecting this node at random */
   char digest[DIGEST_LEN]; /**< Digest of identity key. */
   char v3_identity_digest[DIGEST_LEN]; /**< Digest of v3 (authority only,
                                         * high-security) identity key. */

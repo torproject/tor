@@ -737,7 +737,7 @@ init_keys(void)
                                 router_get_advertised_or_port(options),
                                 digest,
                                 v3_digest,
-                                type);
+                                type, 0.0);
     if (!ds) {
       log_err(LD_GENERAL,"We want to be a directory authority, but we "
               "couldn't add ourselves to the authority list. Failing.");
