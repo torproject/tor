@@ -1336,11 +1336,11 @@ n_leapdays(int y1, int y2)
 static const int days_per_month[] =
   { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-/** Return a time_t given a struct tm.  The result is given in GMT, and
- * does not account for leap seconds.
+/** Compute a time_t given a struct tm.  The result is given in GMT, and
+ * does not account for leap seconds.  Return 0 on success, -1 on failure.
  */
-time_t
-tor_timegm(struct tm *tm)
+int
+tor_timegm(const struct tm *tm, time_t *time_out)
 {
   /* This is a pretty ironclad timegm implementation, snarfed from Python2.2.
    * It's way more brute-force than fiddling with tzset().
@@ -1348,11 +1348,11 @@ tor_timegm(struct tm *tm)
   time_t year, days, hours, minutes, seconds;
   int i;
   year = tm->tm_year + 1900;
-  if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11) {
+  if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11 ||
+      tm->tm_year >= INT32_MAX-1900) {
     log_warn(LD_BUG, "Out-of-range argument to tor_timegm");
     return -1;
   }
-  tor_assert(year < INT_MAX);
   days = 365 * (year-1970) + n_leapdays(1970,(int)year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
@@ -1363,7 +1363,8 @@ tor_timegm(struct tm *tm)
 
   minutes = hours*60 + tm->tm_min;
   seconds = minutes*60 + tm->tm_sec;
-  return seconds;
+  *time_out = seconds;
+  return 0;
 }
 
 /* strftime is locale-specific, so we need to replace those parts */
@@ -1423,7 +1424,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
     return -1;
   }
   if (tm_mday < 1 || tm_mday > 31 || tm_hour > 23 || tm_min > 59 ||
-      tm_sec > 60) {
+      tm_sec > 60 || tm_year >= INT32_MAX || tm_year < 1970) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
     tor_free(esc);
@@ -1459,8 +1460,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
   }
   tm.tm_year -= 1900;
 
-  *t = tor_timegm(&tm);
-  return 0;
+  return tor_timegm(&tm, t);
 }
 
 /** Set <b>buf</b> to the ISO8601 encoding of the local value of <b>t</b>.
@@ -1522,13 +1522,13 @@ parse_iso_time(const char *cp, time_t *t)
     return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-          hour > 23 || minute > 59 || second > 60) {
+          hour > 23 || minute > 59 || second > 60 || year >= INT32_MAX) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was nonsensical", esc);
     tor_free(esc);
     return -1;
   }
-  st_tm.tm_year = year-1900;
+  st_tm.tm_year = (int)year-1900;
   st_tm.tm_mon = month-1;
   st_tm.tm_mday = day;
   st_tm.tm_hour = hour;
@@ -1541,8 +1541,7 @@ parse_iso_time(const char *cp, time_t *t)
     tor_free(esc);
     return -1;
   }
-  *t = tor_timegm(&st_tm);
-  return 0;
+  return tor_timegm(&st_tm, t);
 }
 
 /** Given a <b>date</b> in one of the three formats allowed by HTTP (ugh),
