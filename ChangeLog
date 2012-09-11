@@ -1,3 +1,33 @@
+Changes in version 0.2.3.22-rc - 2012-09-11
+  Tor 0.2.3.22-rc fixes another opportunity for a remotely triggerable
+  assertion.
+
+  o Security fixes:
+    - Fix an assertion failure in tor_timegm() that could be triggered
+      by a badly formatted directory object. Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+
+  o Minor bugfixes:
+    - Avoid segfault when starting up having run with an extremely old
+      version of Tor and parsing its state file. Fixes bug 6801; bugfix
+      on 0.2.2.23-alpha.
+
+
+Changes in version 0.2.2.39 - 2012-09-11
+  Tor 0.2.2.39 fixes two more opportunities for remotely triggerable
+  assertions.
+
+  o Security fixes:
+    - Fix an assertion failure in tor_timegm() that could be triggered
+      by a badly formatted directory object. Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+    - Do not crash when comparing an address with port value 0 to an
+      address policy. This bug could have been used to cause a remote
+      assertion failure by or against directory authorities, or to
+      allow some applications to crash clients. Fixes bug 6690; bugfix
+      on 0.2.1.10-alpha.
+
+
 Changes in version 0.2.4.2-alpha - 2012-09-10
   Tor 0.2.4.2-alpha enables port forwarding for pluggable transports,
   raises the default rate limiting even more, and makes the bootstrapping
