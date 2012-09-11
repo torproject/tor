@@ -244,7 +244,7 @@ int64_t tv_to_msec(const struct timeval *tv);
 int64_t tv_to_usec(const struct timeval *tv);
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
-time_t tor_timegm(struct tm *tm);
+int tor_timegm(const struct tm *tm, time_t *time_out);
 #define RFC1123_TIME_LEN 29
 void format_rfc1123_time(char *buf, time_t t);
 int parse_rfc1123_time(const char *buf, time_t *t);

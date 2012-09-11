@@ -2619,7 +2619,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if ((header = http_get_header(headers, "If-Modified-Since: "))) {
     struct tm tm;
     if (parse_http_time(header, &tm) == 0) {
-      if_modified_since = tor_timegm(&tm);
+      if (tor_timegm(&tm, &if_modified_since)<0)
+        if_modified_since = 0;
     }
     /* The correct behavior on a malformed If-Modified-Since header is to
      * act as if no If-Modified-Since header had been given. */
