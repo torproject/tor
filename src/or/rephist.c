@@ -1675,7 +1675,8 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
 
   uint64_t v, mv;
   int i,ok,ok_m;
-  int have_maxima = (smartlist_len(s_values) == smartlist_len(s_maxima));
+  int have_maxima = s_maxima && s_values &&
+    (smartlist_len(s_values) == smartlist_len(s_maxima));
 
   if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
     start = s_begins - s_interval*(smartlist_len(s_values));
