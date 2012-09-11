@@ -303,6 +303,7 @@ AC_CHECK_FUNCS(
         inet_aton \
         ioctl \
         issetugid \
+        llround \
         localtime_r \
         lround \
         memmem \

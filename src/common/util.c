@@ -333,7 +333,7 @@ tor_mathlog(double d)
 }
 
 /** Return the long integer closest to d.  We define this wrapper here so
- * that not all users of math.h need to use the right incancations to get
+ * that not all users of math.h need to use the right intancations to get
  * the c99 functions. */
 long
 tor_lround(double d)
@@ -344,6 +344,21 @@ tor_lround(double d)
   return (long)rint(d);
 #else
   return (long)(d > 0 ? d + 0.5 : ceil(d - 0.5));
+#endif
+}
+
+/** Return the 64-bit integer closest to d.  We define this wrapper here so
+ * that not all users of math.h need to use the right incantations to get the
+ * c99 functions. */
+int64_t
+tor_llround(double d)
+{
+#if defined(HAVE_LLROUND)
+  return (int64_t)llround(d);
+#elif defined(HAVE_RINT)
+  return (int64_t)rint(d);
+#else
+  return (int64_t)(d > 0 ? d + 0.5 : ceil(d - 0.5));
 #endif
 }
 

@@ -216,5 +216,19 @@ int hex_digest_nickname_decode(const char *hexdigest,
                                char *nickname_qualifier_out,
                                char *nickname_out);
 
+#ifdef ROUTERLIST_PRIVATE
+/** Helper type for choosing routers by bandwidth: contains a union of
+ * double and uint64_t. Before we call scale_array_elements_to_u64, it holds
+ * a double; after, it holds a uint64_t. */
+typedef union u64_dbl_t {
+  uint64_t u64;
+  double dbl;
+} u64_dbl_t;
+
+int choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries);
+void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
+                                 uint64_t *total_out);
+#endif
+
 #endif
 
