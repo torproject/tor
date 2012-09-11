@@ -1,3 +1,18 @@
+Changes in version 0.2.3.22-rc - 2012-09-11
+  Tor 0.2.3.22-rc fixes another opportunity for a remotely triggerable
+  assertion.
+
+  o Security fixes:
+    - Fix an assertion failure in tor_timegm() that could be triggered
+      by a badly formatted directory object. Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+
+  o Minor bugfixes:
+    - Avoid segfault when starting up having run with an extremely old
+      version of Tor and parsing its state file. Fixes bug 6801; bugfix
+      on 0.2.2.23-alpha.
+
+
 Changes in version 0.2.3.21-rc - 2012-09-05
   Tor 0.2.3.21-rc is the fourth release candidate for the Tor 0.2.3.x
   series. It fixes a trio of potential security bugs, fixes a bug where

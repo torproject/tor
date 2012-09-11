@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Avoid segfault when starting up having run with an extremely old
-      version of Tor and parsing its state file. Fixes bug 6801; bugfix on
-      0.2.2.23-alpha.
-
