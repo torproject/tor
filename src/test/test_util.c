@@ -13,6 +13,19 @@
 #include "mempool.h"
 #include "memarea.h"
 
+/* XXXX this is a minimal wrapper to make the unit tests compile with the
+ * changed tor_timegm interface. */
+static time_t
+tor_timegm_wrapper(const struct tm *tm)
+{
+  time_t t;
+  if (tor_timegm(tm, &t) < 0)
+    return -1;
+  return t;
+}
+
+#define tor_timegm tor_timegm_wrapper
+
 static void
 test_util_time(void)
 {
