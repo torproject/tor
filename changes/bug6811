@@ -1,0 +1,5 @@
+  o Major security fixes:
+    - Fix an assertion failure in tor_timegm that could be triggered
+      by a badly formatted directory object.  Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+      
