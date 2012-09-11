@@ -1,7 +1,21 @@
+Changes in version 0.2.2.39 - 2012-09-11
+  Tor 0.2.2.39 fixes two more opportunities for remotely triggerable
+  assertions.
+
+  o Security fixes:
+    - Fix an assertion failure in tor_timegm() that could be triggered
+      by a badly formatted directory object. Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+    - Do not crash when comparing an address with port value 0 to an
+      address policy. This bug could have been used to cause a remote
+      assertion failure by or against directory authorities, or to
+      allow some applications to crash clients. Fixes bug 6690; bugfix
+      on 0.2.1.10-alpha.
+
+
 Changes in version 0.2.2.38 - 2012-08-12
-  Tor 0.2.2.38 fixes a rare race condition that can crash exit relays;
-  fixes a remotely triggerable crash bug; and fixes a timing attack that
-  could in theory leak path information.
+  Tor 0.2.2.38 fixes a remotely triggerable crash bug, and fixes a timing
+  attack that could in theory leak path information.
 
   o Security fixes:
     - Avoid an uninitialized memory read when reading a vote or consensus
