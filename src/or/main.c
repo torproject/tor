@@ -46,6 +46,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "statefile.h"
 #include "status.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
@@ -2458,6 +2459,7 @@ tor_free_all(int postfork)
   microdesc_free_all();
   if (!postfork) {
     config_free_all();
+    or_state_free_all();
     router_free_all();
     policies_free_all();
   }

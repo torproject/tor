@@ -29,6 +29,7 @@ hibernating, phase 2:
 #include "hibernate.h"
 #include "main.h"
 #include "router.h"
+#include "statefile.h"
 
 extern long stats_n_seconds_working; /* published uptime */
 

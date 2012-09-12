@@ -27,6 +27,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "statefile.h"
 #include "transports.h"
 
 /**

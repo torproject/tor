@@ -59,10 +59,6 @@ char *options_get_datadir_fname2_suffix(const or_options_t *options,
 
 int get_num_cpus(const or_options_t *options);
 
-or_state_t *get_or_state(void);
-int did_last_state_file_write_fail(void);
-int or_state_save(time_t now);
-
 const smartlist_t *get_configured_ports(void);
 int get_first_advertised_port_by_type_af(int listener_type,
                                          int address_family);
@@ -75,10 +71,6 @@ char *get_first_listener_addrport_string(int listener_type);
 
 int options_need_geoip_info(const or_options_t *options,
                             const char **reason_out);
-
-void save_transport_to_state(const char *transport_name,
-                             const tor_addr_t *addr, uint16_t port);
-char *get_stored_bindaddr_for_server_transport(const char *transport);
 
 smartlist_t *get_list_of_ports_to_forward(void);
 
