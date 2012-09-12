@@ -332,9 +332,9 @@ tor_mathlog(double d)
   return log(d);
 }
 
-/** Return the long integer closest to d.  We define this wrapper here so
- * that not all users of math.h need to use the right intancations to get
- * the c99 functions. */
+/** Return the long integer closest to <b>d</b>. We define this wrapper
+ * here so that not all users of math.h need to use the right incantations
+ * to get the c99 functions. */
 long
 tor_lround(double d)
 {
