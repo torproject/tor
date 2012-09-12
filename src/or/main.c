@@ -2476,6 +2476,8 @@ tor_free_all(int postfork)
   circuit_free_all();
   entry_guards_free_all();
   pt_free_all();
+  channel_tls_free_all();
+  channel_free_all();
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
