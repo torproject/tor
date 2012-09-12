@@ -214,7 +214,7 @@ config_count_options(const config_format_t *fmt)
  * Called from config_assign_line() and option_reset().
  */
 static int
-config_assign_value(const config_format_t *fmt, or_options_t *options,
+config_assign_value(const config_format_t *fmt, void *options,
                     config_line_t *c, char **msg)
 {
   int i, ok;
@@ -387,7 +387,7 @@ config_assign_value(const config_format_t *fmt, or_options_t *options,
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
  * to it will replace old ones. */
 static void
-config_mark_lists_fragile(const config_format_t *fmt, or_options_t *options)
+config_mark_lists_fragile(const config_format_t *fmt, void *options)
 {
   int i;
   tor_assert(fmt);
@@ -416,7 +416,7 @@ config_mark_lists_fragile(const config_format_t *fmt, or_options_t *options)
  * Called from config_assign().
  */
 static int
-config_assign_line(const config_format_t *fmt, or_options_t *options,
+config_assign_line(const config_format_t *fmt, void *options,
                    config_line_t *c, int use_defaults,
                    int clear_first, bitarray_t *options_seen, char **msg)
 {
@@ -484,7 +484,7 @@ config_assign_line(const config_format_t *fmt, or_options_t *options,
 /** Restore the option named <b>key</b> in options to its default value.
  * Called from config_assign(). */
 static void
-config_reset_line(const config_format_t *fmt, or_options_t *options,
+config_reset_line(const config_format_t *fmt, void *options,
                   const char *key, int use_defaults)
 {
   const config_var_t *var;
@@ -937,7 +937,7 @@ config_is_same(const config_format_t *fmt,
 void *
 config_dup(const config_format_t *fmt, const void *old)
 {
-  or_options_t *newopts;
+  void *newopts;
   int i;
   config_line_t *line;
 
@@ -988,7 +988,7 @@ config_dump(const config_format_t *fmt, const void *default_options,
             int comment_defaults)
 {
   smartlist_t *elements;
-  const or_options_t *defaults = default_options;
+  const void *defaults = default_options;
   void *defaults_tmp = NULL;
   config_line_t *line, *assigned;
   char *result;
