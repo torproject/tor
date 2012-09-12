@@ -4491,7 +4491,8 @@ typedef struct rend_cache_entry_t {
 
 /********************************* routerlist.c ***************************/
 
-/** Represents information about a single trusted directory server. */
+/** Represents information about a single trusted or fallback directory
+ * server. */
 typedef struct dir_server_t {
   char *description;
   char *nickname;

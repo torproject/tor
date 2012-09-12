@@ -1249,6 +1249,28 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   return result ? result->rs : NULL;
 }
 
+/** Pick a random element from a list of dir_server_t, weighting by their
+ * <b>weight</b> field. */
+static const dir_server_t *
+dirserver_choose_by_weight(const smartlist_t *servers)
+{
+  int n = smartlist_len(servers);
+  int i;
+  u64_dbl_t *weights;
+  const dir_server_t *ds;
+
+  weights = tor_malloc(sizeof(u64_dbl_t) * n);
+  for (i = 0; i < n; ++i) {
+    ds = smartlist_get(servers, i);
+    weights[i].dbl = ds->weight;
+  }
+
+  scale_array_elements_to_u64(weights, n, NULL);
+  i = choose_array_element_by_weight(weights, n);
+  tor_free(weights);
+  return smartlist_get(servers, i);
+}
+
 /** Choose randomly from among the dir_server_ts in sourcelist that
  * are up. Flags are as for router_pick_directory_server_impl().
  */
@@ -1268,6 +1290,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   const int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
+  smartlist_t *pick_from;
   int n_busy = 0;
   int try_excluding = 1, n_excluded = 0;
 
@@ -1327,23 +1350,28 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
           d->or_port &&
           (!fascistfirewall ||
            fascist_firewall_allows_address_or(&addr, d->or_port)))
-        smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
-                      (routerstatus_t*)&d->fake_status);
+        smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
       else if (!fascistfirewall ||
                fascist_firewall_allows_address_dir(&addr, d->dir_port))
-        smartlist_add(is_overloaded ? overloaded_direct : direct,
-                      (routerstatus_t*)&d->fake_status);
+        smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
     }
   SMARTLIST_FOREACH_END(d);
 
   if (smartlist_len(tunnel)) {
-    result = smartlist_choose(tunnel);
+    pick_from = tunnel;
   } else if (smartlist_len(overloaded_tunnel)) {
-    result = smartlist_choose(overloaded_tunnel);
+    pick_from = overloaded_tunnel;
   } else if (smartlist_len(direct)) {
-    result = smartlist_choose(direct);
+    pick_from = direct;
   } else {
-    result = smartlist_choose(overloaded_direct);
+    pick_from = overloaded_direct;
+  }
+
+  {
+    const dir_server_t *selection = dirserver_choose_by_weight(pick_from);
+
+    if (selection)
+      result = &selection->fake_status;
   }
 
   if (n_busy_out)
