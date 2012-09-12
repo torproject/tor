@@ -322,6 +322,12 @@ GENERAL OPTIONS
     distinguishable from other users, because you won't believe the same
     authorities they do.
 
+**DirAuthorityFallbackRate** __NUM__::
+    When configured to use both directory authorities and fallback
+    directories, the directory authorities also work as fallbacks. They are
+    chosen with their regular weights, multiplied by this number, which
+    should be 1.0 or less. (Default: 1.0)
+
 **DynamicDHGroups** **0**|**1**::
     If this option is set to 1, when running as a server, generate our
     own Diffie-Hellman group instead of using the one from Apache's mod_ssl.

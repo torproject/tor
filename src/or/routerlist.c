@@ -1252,7 +1252,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 /** Pick a random element from a list of dir_server_t, weighting by their
  * <b>weight</b> field. */
 static const dir_server_t *
-dirserver_choose_by_weight(const smartlist_t *servers)
+dirserver_choose_by_weight(const smartlist_t *servers, double authority_weight)
 {
   int n = smartlist_len(servers);
   int i;
@@ -1263,6 +1263,8 @@ dirserver_choose_by_weight(const smartlist_t *servers)
   for (i = 0; i < n; ++i) {
     ds = smartlist_get(servers, i);
     weights[i].dbl = ds->weight;
+    if (ds->is_authority)
+      weights[i].dbl *= authority_weight;
   }
 
   scale_array_elements_to_u64(weights, n, NULL);
@@ -1290,6 +1292,8 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   const int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
+  const double auth_weight = (sourcelist == fallback_dir_servers) ?
+    options->DirAuthorityFallbackRate : 1.0;
   smartlist_t *pick_from;
   int n_busy = 0;
   int try_excluding = 1, n_excluded = 0;
@@ -1368,7 +1372,8 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   }
 
   {
-    const dir_server_t *selection = dirserver_choose_by_weight(pick_from);
+    const dir_server_t *selection =
+      dirserver_choose_by_weight(pick_from, auth_weight);
 
     if (selection)
       result = &selection->fake_status;

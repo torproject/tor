@@ -3431,6 +3431,10 @@ typedef struct {
   /** List of fallback directory servers */
   config_line_t *FallbackDir;
 
+  /** Weight to apply to all directory authority rates if considering them
+   * along with fallbackdirs */
+  double DirAuthorityFallbackRate;
+
   /** If set, use these main (currently v3) directory authorities and
    * not the default ones. */
   config_line_t *AlternateDirAuthority;

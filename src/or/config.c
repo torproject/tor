@@ -208,6 +208,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DirRecordUsageSaveInterval"),
   V(DirReqStatistics,            BOOL,     "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
+  V(DirAuthorityFallbackRate,    DOUBLE,   "1.0"),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
