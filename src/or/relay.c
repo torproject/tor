@@ -2480,7 +2480,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       tor_assert(tmp == cell_ewma);
       add_cell_ewma_to_conn(conn, cell_ewma);
     }
-    if (circ != conn->active_circuits) {
+    if (!ewma_enabled && circ != conn->active_circuits) {
       /* If this happens, the current circuit just got made inactive by
        * a call in connection_write_to_buf().  That's nothing to worry about:
        * circuit_make_inactive_on_conn() already advanced conn->active_circuits
