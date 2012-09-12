@@ -19,6 +19,117 @@
 #endif
 
 static void
+test_util_read_file_fifo_tiny_limit(void *arg)
+{
+#ifndef _WIN32
+  char *fifo_name = NULL;
+  char *str = NULL;
+  int fd = -1;
+  int read_fd = -1;
+  size_t sz;
+  (void)arg;
+
+  fifo_name = tor_strdup(get_fname("tor_test_fifo_tiny"));
+  fd = open(fifo_name, O_WRONLY | O_CREAT, 0600);
+  test_neq(fd, -1);
+  test_eq(write(fd, "short", 6), 6);
+  close(fd);
+
+  // purposely set limit shorter than what we wrote to the FIFO to
+  // test the maximum, and that it puts the NUL in the right spot
+
+  read_fd = open(fifo_name, O_RDONLY);
+  str = read_file_to_str_until_eof(read_fd, 4, &sz);
+  close(read_fd);
+
+  test_eq(str[0], 's');
+  test_eq(str[1], 'h');
+  test_eq(str[2], 'o');
+  test_eq(str[3], 'r');
+  test_eq(str[4], '\0');
+
+ done:
+  unlink(fifo_name);
+  tor_free(fifo_name);
+  tor_free(str);
+#endif
+}
+
+static void
+test_util_read_file_fifo_two_loops(void *arg)
+{
+#ifndef _WIN32
+  char *fifo_name = NULL;
+  char *str = NULL;
+  char data[2048];
+  int i = 0;
+  int fd = -1;
+  int read_fd = -1;
+  size_t sz;
+  (void)arg;
+
+  while (i < 2048) {
+    data[i] = (char)(i & 0xff);
+    ++i;
+  }
+
+  // write more than 1024 bytes to the FIFO to test two passes through
+  // the loop in the method; if the re-alloc size is changed this
+  // should be updated as well.
+
+  fifo_name = tor_strdup(get_fname("tor_fifo_test_2k"));
+  fd = open(fifo_name, O_WRONLY | O_CREAT, 0600);
+  test_neq(fd, -1);
+  test_eq(write(fd, data, 2048), 2048);
+  close(fd);
+
+  read_fd = open(fifo_name, O_RDONLY);
+  str = read_file_to_str_until_eof(read_fd, 1024*1024, &sz);
+  close(read_fd);
+
+  for (i = 0; i < 2048; ++i) {
+    test_eq(str[i], (char)(i & 0xff));
+  }
+
+ done:
+  unlink(fifo_name);
+  tor_free(fifo_name);
+  tor_free(str);
+#endif
+}
+
+static void
+test_util_read_file_fifo_zero_bytes(void *arg)
+{
+#ifndef _WIN32
+  char *fifo_name = NULL;
+  char *str = NULL;
+  int fd = -1;
+  int read_fd = -1;
+  size_t sz;
+  (void)arg;
+
+  fifo_name = tor_strdup(get_fname("tor_fifo_test_zero_bytes"));
+  // zero-byte fifo
+  fd = open(fifo_name, O_WRONLY | O_CREAT, 0600);
+  test_neq(fd, -1);
+  close(fd);
+
+  read_fd = open(fifo_name, O_RDONLY);
+  str = read_file_to_str_until_eof(read_fd, 1024, &sz);
+  close(read_fd);
+
+  test_neq(str, NULL);
+  test_eq(str[0], '\0');
+
+ done:
+  unlink(fifo_name);
+  tor_free(fifo_name);
+  tor_free(str);
+#endif
+}
+
+static void
 test_util_time(void)
 {
   struct timeval start, end;
@@ -3191,6 +3302,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(envnames, 0),
   UTIL_TEST(make_environment, 0),
   UTIL_TEST(set_env_var_in_sl, 0),
+  UTIL_TEST(read_file_fifo_tiny_limit, 0),
+  UTIL_TEST(read_file_fifo_two_loops, 0),
+  UTIL_TEST(read_file_fifo_zero_bytes, 0),
   END_OF_TESTCASES
 };
 
