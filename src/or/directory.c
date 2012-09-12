@@ -91,7 +91,7 @@ static void directory_initiate_command_rend(const char *address,
                                             const char *digest,
                                             uint8_t dir_purpose,
                                             uint8_t router_purpose,
-                                            int anonymized_connection,
+                                            dir_indirection_t indirection,
                                             const char *resource,
                                             const char *payload,
                                             size_t payload_len,
@@ -432,7 +432,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                                    ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
-                                   0, resource, NULL, 0, if_modified_since);
+                                   DIRIND_ONEHOP,
+                                   resource, NULL, 0, if_modified_since);
       } else
         log_notice(LD_DIR, "Ignoring directory request, since no bridge "
                            "nodes are available yet.");
@@ -493,13 +494,15 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     }
   }
 
-  if (rs)
+  if (rs) {
+    const dir_indirection_t indirection =
+      get_via_tor ? DIRIND_ANONYMOUS : DIRIND_ONEHOP;
     directory_initiate_command_routerstatus(rs, dir_purpose,
                                             router_purpose,
-                                            get_via_tor,
+                                            indirection,
                                             resource, NULL, 0,
                                             if_modified_since);
-  else {
+  } else {
     log_notice(LD_DIR,
                "While fetching directory info, "
                "no running dirservers known. Will try again later. "
@@ -531,8 +534,16 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
         continue;
       rs = &ds->fake_status;
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
-                                              0, resource, NULL, 0, 0);
+                                              DIRIND_ONEHOP, resource, NULL,
+                                              0, 0);
   } SMARTLIST_FOREACH_END(ds);
+}
+
+/** Return true iff <b>ind</b> requires a multihop circuit. */
+static int
+dirind_is_anon(dir_indirection_t ind)
+{
+  return ind == DIRIND_ANON_DIRPORT || ind == DIRIND_ANONYMOUS;
 }
 
 /** Same as directory_initiate_command_routerstatus(), but accepts
@@ -541,7 +552,7 @@ void
 directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                              uint8_t dir_purpose,
                                              uint8_t router_purpose,
-                                             int anonymized_connection,
+                                             dir_indirection_t indirection,
                                              const char *resource,
                                              const char *payload,
                                              size_t payload_len,
@@ -554,6 +565,7 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
   struct in_addr in;
   const char *address;
   tor_addr_t addr;
+  const int anonymized_connection = dirind_is_anon(indirection);
   node = node_get_by_id(status->identity_digest);
 
   if (!node && anonymized_connection) {
@@ -585,7 +597,7 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                              status->or_port, status->dir_port,
                              status->identity_digest,
                              dir_purpose, router_purpose,
-                             anonymized_connection, resource,
+                             indirection, resource,
                              payload, payload_len, if_modified_since,
                              rend_query);
 }
@@ -608,7 +620,7 @@ void
 directory_initiate_command_routerstatus(const routerstatus_t *status,
                                         uint8_t dir_purpose,
                                         uint8_t router_purpose,
-                                        int anonymized_connection,
+                                        dir_indirection_t indirection,
                                         const char *resource,
                                         const char *payload,
                                         size_t payload_len,
@@ -616,7 +628,7 @@ directory_initiate_command_routerstatus(const routerstatus_t *status,
 {
   directory_initiate_command_routerstatus_rend(status, dir_purpose,
                                           router_purpose,
-                                          anonymized_connection, resource,
+                                          indirection, resource,
                                           payload, payload_len,
                                           if_modified_since, NULL);
 }
@@ -818,11 +830,13 @@ static int
 directory_command_should_use_begindir(const or_options_t *options,
                                       const tor_addr_t *addr,
                                       int or_port, uint8_t router_purpose,
-                                      int anonymized_connection)
+                                      dir_indirection_t indirection)
 {
   if (!or_port)
     return 0; /* We don't know an ORPort -- no chance. */
-  if (!anonymized_connection)
+  if (indirection == DIRIND_DIRECT_CONN || indirection == DIRIND_ANON_DIRPORT)
+    return 0;
+  if (indirection == DIRIND_ONEHOP)
     if (!fascist_firewall_allows_address_or(addr, or_port) ||
         directory_fetches_from_authorities(options))
       return 0; /* We're firewalled or are acting like a relay -- also no. */
@@ -842,13 +856,13 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
                            uint16_t or_port, uint16_t dir_port,
                            const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
-                           int anonymized_connection, const char *resource,
+                           dir_indirection_t indirection, const char *resource,
                            const char *payload, size_t payload_len,
                            time_t if_modified_since)
 {
   directory_initiate_command_rend(address, _addr, or_port, dir_port,
                              digest, dir_purpose,
-                             router_purpose, anonymized_connection,
+                             router_purpose, indirection,
                              resource, payload, payload_len,
                              if_modified_since, NULL);
 }
@@ -874,7 +888,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                                 uint16_t or_port, uint16_t dir_port,
                                 const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
-                                int anonymized_connection,
+                                dir_indirection_t indirection,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since,
@@ -884,7 +898,8 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   const or_options_t *options = get_options();
   int socket_error = 0;
   int use_begindir = directory_command_should_use_begindir(options, _addr,
-                       or_port, router_purpose, anonymized_connection);
+                                     or_port, router_purpose, indirection);
+  const int anonymized_connection = dirind_is_anon(indirection);
   tor_addr_t addr;
 
   tor_assert(address);
@@ -930,6 +945,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   conn->_base.state = DIR_CONN_STATE_CONNECTING;
 
   /* decide whether we can learn our IP address from this conn */
+  /* XXXX This is a bad name for this field now. */
   conn->dirconn_direct = !anonymized_connection;
 
   /* copy rendezvous data, if any */

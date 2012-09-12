@@ -2782,7 +2782,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       directory_initiate_command_routerstatus(hs_dir,
                                               DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                               ROUTER_PURPOSE_GENERAL,
-                                              1, NULL, desc->desc_str,
+                                              DIRIND_ANONYMOUS, NULL,
+                                              desc->desc_str,
                                               strlen(desc->desc_str), 0);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc->desc_id, DIGEST_LEN);

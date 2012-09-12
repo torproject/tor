@@ -4326,7 +4326,7 @@ initiate_descriptor_downloads(const routerstatus_t *source,
     /* We know which authority we want. */
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
-                                            0, /* not private */
+                                            DIRIND_ONEHOP,
                                             resource, NULL, 0, 0);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,

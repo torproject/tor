@@ -617,7 +617,8 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_initiate_command_routerstatus_rend(hs_dir,
                                           DIR_PURPOSE_FETCH_RENDDESC_V2,
                                           ROUTER_PURPOSE_GENERAL,
-                                          !tor2web_mode, desc_id_base32,
+                                   tor2web_mode?DIRIND_ONEHOP:DIRIND_ANONYMOUS,
+                                          desc_id_base32,
                                           NULL, 0, 0,
                                           rend_query);
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
