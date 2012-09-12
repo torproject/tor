@@ -23,11 +23,9 @@ const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
 const char *get_version(void);
 const char *get_short_version(void);
-
-int config_get_lines(const char *string, config_line_t **result, int extended);
-void config_free_lines(config_line_t *front);
 setopt_err_t options_trial_assign(config_line_t *list, int use_defaults,
                                   int clear_first, char **msg);
+
 int resolve_my_address(int warn_severity, const or_options_t *options,
                        uint32_t *addr, char **hostname_out);
 int is_local_addr(const tor_addr_t *addr);

@@ -21,7 +21,8 @@ src_or_libtor_a_SOURCES = \
 	src/or/circuitlist.c				\
 	src/or/circuituse.c				\
 	src/or/command.c				\
-	src/or/config.c				\
+	src/or/config.c					\
+	src/or/confparse.c				\
 	src/or/connection.c				\
 	src/or/connection_edge.c			\
 	src/or/connection_or.c				\
@@ -88,6 +89,7 @@ ORHEADERS = \
 	src/or/circuituse.h				\
 	src/or/command.h				\
 	src/or/config.h					\
+	src/or/confparse.h				\
 	src/or/connection.h				\
 	src/or/connection_edge.h			\
 	src/or/connection_or.h				\

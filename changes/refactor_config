@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Move the generic "config" code into a new file, and have "config.c"
+      hold only torrc- and state-related code.
