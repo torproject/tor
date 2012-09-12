@@ -4371,6 +4371,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   char v3_digest[DIGEST_LEN];
   dirinfo_type_t type = V2_DIRINFO;
   int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
+  double weight = 1.0;
 
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
@@ -4406,6 +4407,14 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
       if (!ok)
         log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.",
                  portstring);
+    } else if (!strcmpstart(flag, "weight=")) {
+      int ok;
+      const char *wstring = flag + strlen("weight=");
+      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG, "Invalid weight '%s' on DirAuthority line.",flag);
+        weight=1.0;
+      }
     } else if (!strcasecmpstart(flag, "v3ident=")) {
       char *idstr = flag + strlen("v3ident=");
       if (strlen(idstr) != HEX_DIGEST_LEN ||
@@ -4469,7 +4478,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
               address, (int)dir_port, (char*)smartlist_get(items,0));
     if (!(ds = trusted_dir_server_new(nickname, address, dir_port, or_port,
-                                      digest, v3_digest, type, 1.0)))
+                                      digest, v3_digest, type, weight)))
       goto err;
     dir_server_add(ds);
   }
@@ -4506,6 +4515,7 @@ parse_dir_fallback_line(const char *line,
   int ok;
   char id[DIGEST_LEN];
   char *address=NULL;
+  double weight=1.0;
 
   memset(id, 0, sizeof(id));
   smartlist_split_string(items, line, NULL,
@@ -4517,12 +4527,22 @@ parse_dir_fallback_line(const char *line,
       smartlist_add(positional, (char*)cp);
       continue;
     }
-    if (!strcmpstart(cp, "orport="))
+    if (!strcmpstart(cp, "orport=")) {
       orport = (int)tor_parse_long(cp+strlen("orport="), 10,
                                    1, 65535, &ok, NULL);
-    else if (!strcmpstart(cp, "id="))
+    } else if (!strcmpstart(cp, "id=")) {
       ok = !base16_decode(id, DIGEST_LEN,
                           cp+strlen("id="), strlen(cp)-strlen("id="));
+    } else if (!strcmpstart(cp, "weight=")) {
+      int ok;
+      const char *wstring = cp + strlen("weight=");
+      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG, "Invalid weight '%s' on FallbackDir line.", cp);
+        weight=1.0;
+      }
+    }
+
     if (!ok) {
       log_warn(LD_CONFIG, "Bad FallbackDir option %s", escaped(cp));
       goto end;
@@ -4554,7 +4574,7 @@ parse_dir_fallback_line(const char *line,
 
   if (!validate_only) {
     dir_server_t *ds;
-    ds = fallback_dir_server_new(&addr, dirport, orport, id, 1.0);
+    ds = fallback_dir_server_new(&addr, dirport, orport, id, weight);
     if (!ds) {
       log_warn(LD_CONFIG, "Couldn't create FallbackDir %s", escaped(line));
       goto end;

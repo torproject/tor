@@ -292,7 +292,7 @@ GENERAL OPTIONS
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 
-**FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__::
+**FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a FallbackDir.
     By default, the directory authorities are also FallbackDirs.
@@ -310,7 +310,9 @@ GENERAL OPTIONS
     flag is set, or if the "v1" flag is set and the "no-hs" flag is **not** set.
     Tor will use this authority as a bridge authoritative directory if the
     "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
-    given port when opening encrypted tunnels to the dirserver. Lastly, if a
+    given port when opening encrypted tunnels to the dirserver. If a flag
+    "weight=**num**" is given, then the directory server is chosen randomly
+    with probability proportional to that weight (default 1.0). Lastly, if a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
     whose v3 long-term signing key has the fingerprint **fp**. +
  +
