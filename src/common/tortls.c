@@ -58,8 +58,8 @@
 #include "container.h"
 #include <string.h>
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,7)
-#error "We require OpenSSL >= 0.9.7"
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
+#error "We require OpenSSL >= 0.9.8"
 #endif
 
 /* Enable the "v2" TLS handshake.
@@ -778,13 +778,8 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
   if (certificate_len > INT_MAX)
     return NULL;
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
-  /* This ifdef suppresses a type warning.  Take out this case once everybody
-   * is using OpenSSL 0.9.8 or later. */
-  x509 = d2i_X509(NULL, (unsigned char**)&cp, (int)certificate_len);
-#else
   x509 = d2i_X509(NULL, &cp, (int)certificate_len);
-#endif
+
   if (!x509)
     return NULL; /* Couldn't decode */
   if (cp - certificate != (int)certificate_len) {

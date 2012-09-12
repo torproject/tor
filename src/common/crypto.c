@@ -57,8 +57,8 @@
 #include "container.h"
 #include "compat.h"
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,7)
-#error "We require OpenSSL >= 0.9.7"
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
+#error "We require OpenSSL >= 0.9.8"
 #endif
 
 #ifdef ANDROID
@@ -68,31 +68,6 @@
 
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
-
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8) && \
-  !defined(RUNNING_DOXYGEN)
-/** @{ */
-/** On OpenSSL versions before 0.9.8, there is no working SHA256
- * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
- * to our needs.  These macros make it usable by us. */
-#define SHA256_CTX sha256_state
-#define SHA256_Init sha256_init
-#define SHA256_Update sha256_process
-#define LTC_ARGCHK(x) tor_assert(x)
-/** @} */
-#include "sha256.c"
-#define SHA256_Final(a,b) sha256_done(b,a)
-
-static unsigned char *
-SHA256(const unsigned char *m, size_t len, unsigned char *d)
-{
-  SHA256_CTX ctx;
-  SHA256_Init(&ctx);
-  SHA256_Update(&ctx, m, len);
-  SHA256_Final(d, &ctx);
-  return d;
-}
-#endif
 
 /** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
@@ -478,11 +453,7 @@ crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
 
   if (env->key)
     RSA_free(env->key);
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
-  /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
-  env->key = RSA_generate_key(bits, 65537, NULL, NULL);
-#else
-  /* In OpenSSL 0.9.8, RSA_generate_key is deprecated. */
+
   {
     BIGNUM *e = BN_new();
     RSA *r = NULL;
@@ -503,8 +474,8 @@ crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
       BN_free(e);
     if (r)
       RSA_free(r);
-    }
-#endif
+  }
+
   if (!env->key) {
     crypto_log_errors(LOG_WARN, "generating RSA key");
     return -1;
@@ -1660,63 +1631,11 @@ crypto_hmac_sha256(char *hmac_out,
                    const char *key, size_t key_len,
                    const char *msg, size_t msg_len)
 {
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(0,9,8)
   /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
   tor_assert(key_len < INT_MAX);
   tor_assert(msg_len < INT_MAX);
   HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
        (unsigned char*)hmac_out, NULL);
-#else
-  /* OpenSSL doesn't have an EVP implementation for SHA256. We'll need
-     to do HMAC on our own.
-
-     HMAC isn't so hard: To compute HMAC(key, msg):
-      1. If len(key) > blocksize, key = H(key).
-      2. If len(key) < blocksize, right-pad key up to blocksize with 0 bytes.
-      3. let ipad = key xor 0x363636363636....36
-         let opad = key xor 0x5c5c5c5c5c5c....5c
-         The result is H(opad | H( ipad | msg ) )
-  */
-#define BLOCKSIZE 64
-#define DIGESTSIZE 32
-  uint8_t k[BLOCKSIZE];
-  uint8_t pad[BLOCKSIZE];
-  uint8_t d[DIGESTSIZE];
-  int i;
-  SHA256_CTX st;
-
-  tor_assert(key_len < INT_MAX);
-  tor_assert(msg_len < INT_MAX);
-
-  if (key_len <= BLOCKSIZE) {
-    memset(k, 0, sizeof(k));
-    memcpy(k, key, key_len); /* not time invariant in key_len */
-  } else {
-    SHA256((const uint8_t *)key, key_len, k);
-    memset(k+DIGESTSIZE, 0, sizeof(k)-DIGESTSIZE);
-  }
-  for (i = 0; i < BLOCKSIZE; ++i)
-    pad[i] = k[i] ^ 0x36;
-  SHA256_Init(&st);
-  SHA256_Update(&st, pad, BLOCKSIZE);
-  SHA256_Update(&st, (uint8_t*)msg, msg_len);
-  SHA256_Final(d, &st);
-
-  for (i = 0; i < BLOCKSIZE; ++i)
-    pad[i] = k[i] ^ 0x5c;
-  SHA256_Init(&st);
-  SHA256_Update(&st, pad, BLOCKSIZE);
-  SHA256_Update(&st, d, DIGESTSIZE);
-  SHA256_Final((uint8_t*)hmac_out, &st);
-
-  /* Now clear everything. */
-  memset(k, 0, sizeof(k));
-  memset(pad, 0, sizeof(pad));
-  memset(d, 0, sizeof(d));
-  memset(&st, 0, sizeof(st));
-#undef BLOCKSIZE
-#undef DIGESTSIZE
-#endif
 }
 
 /* DH */
@@ -2319,9 +2238,7 @@ crypto_dh_free(crypto_dh_t *dh)
  * that fd without checking whether it fit in the fd_set.  Thus, if the
  * system has not just been started up, it is unsafe to call */
 #define RAND_POLL_IS_SAFE                       \
-  ((OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,7,'j') &&        \
-    OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)) ||     \
-   OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,8,'c'))
+  (OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,8,'c'))
 
 /** Set the seed of the weak RNG to a random value. */
 static void
