@@ -1,3 +1,0 @@
-  o Documentation fixes:
-    - Resolve a typo in torrc.sample.in. Fixes bug 6819; bugfix on
-      0.2.3.14-alpha.
