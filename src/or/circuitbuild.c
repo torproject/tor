@@ -5479,7 +5479,7 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
-                             0, "authority.z", NULL, 0, 0);
+                             DIRIND_ONEHOP, "authority.z", NULL, 0, 0);
   tor_free(address);
 }
 

@@ -1168,7 +1168,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
          directory_initiate_command_routerstatus(
                &ds->fake_status, DIR_PURPOSE_FETCH_V2_NETWORKSTATUS,
                ROUTER_PURPOSE_GENERAL,
-               0, /* Not private */
+               DIRIND_ONEHOP,
                resource,
                NULL, 0 /* No payload. */,
                0 /* No I-M-S. */);

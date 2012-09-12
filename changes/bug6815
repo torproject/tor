@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Allow routers to correctly detect their own DirPorts as running.
+      When we removed support for versions_supports_begindir, we also
+      accidentally removed the mechanism we used to self-test our
+      DirPort. Diagnosed with help from kargig. Fixes bugs 6814 and
+      6815; bugfix on 0.2.4.2-alpha.

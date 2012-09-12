@@ -22,10 +22,24 @@ void directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);
+
+/** Enumeration of ways to connect to a directory server */
+typedef enum {
+  /** Default: connect over a one-hop Tor circuit but fall back to direct
+   * connection */
+  DIRIND_ONEHOP=0,
+  /** Connect over a multi-hop anonymizing Tor circuit */
+  DIRIND_ANONYMOUS=1,
+  /** Conncet to the DirPort directly */
+  DIRIND_DIRECT_CONN,
+  /** Connect over a multi-hop anonymizing Tor circuit to our dirport */
+  DIRIND_ANON_DIRPORT,
+} dir_indirection_t;
+
 void directory_initiate_command_routerstatus(const routerstatus_t *status,
                                              uint8_t dir_purpose,
                                              uint8_t router_purpose,
-                                             int anonymized_connection,
+                                             dir_indirection_t indirection,
                                              const char *resource,
                                              const char *payload,
                                              size_t payload_len,
@@ -33,7 +47,7 @@ void directory_initiate_command_routerstatus(const routerstatus_t *status,
 void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                                   uint8_t dir_purpose,
                                                   uint8_t router_purpose,
-                                                  int anonymized_connection,
+                                                  dir_indirection_t indirection,
                                                   const char *resource,
                                                   const char *payload,
                                                   size_t payload_len,
@@ -53,7 +67,7 @@ void directory_initiate_command(const char *address, const tor_addr_t *addr,
                                 uint16_t or_port, uint16_t dir_port,
                                 const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
-                                int anonymized_connection,
+                                dir_indirection_t indirection,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since);
