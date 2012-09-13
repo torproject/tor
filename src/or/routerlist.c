@@ -2182,104 +2182,11 @@ router_nickname_matches(const routerinfo_t *router, const char *nickname)
 const routerinfo_t *
 router_get_by_nickname(const char *nickname, int warn_if_unnamed)
 {
-#if 1
   const node_t *node = node_get_by_nickname(nickname, warn_if_unnamed);
   if (node)
     return node->ri;
   else
     return NULL;
-#else
-  int maybedigest;
-  char digest[DIGEST_LEN];
-  routerinfo_t *best_match=NULL;
-  int n_matches = 0;
-  const char *named_digest = NULL;
-
-  tor_assert(nickname);
-  if (!routerlist)
-    return NULL;
-  if (nickname[0] == '$')
-    return router_get_by_hexdigest(nickname);
-  if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
-    return NULL;
-
-  maybedigest = (strlen(nickname) >= HEX_DIGEST_LEN) &&
-    (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
-
-  if ((named_digest = networkstatus_get_router_digest_by_nickname(nickname))) {
-    return rimap_get(routerlist->identity_map, named_digest);
-  }
-  if (networkstatus_nickname_is_unnamed(nickname))
-    return NULL;
-
-  /* If we reach this point, there's no canonical value for the nickname. */
-
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
-  {
-    if (!strcasecmp(router->nickname, nickname)) {
-      ++n_matches;
-      if (n_matches <= 1 || router->is_running)
-        best_match = router;
-    } else if (maybedigest &&
-               tor_memeq(digest, router->cache_info.identity_digest,
-                         DIGEST_LEN)) {
-      if (router_hex_digest_matches(router, nickname))
-        return router;
-      /* If we reach this point, we have a ID=name syntax that matches the
-       * identity but not the name. That isn't an acceptable match. */
-    }
-  });
-
-  if (best_match) {
-    if (warn_if_unnamed && n_matches > 1) {
-      smartlist_t *fps = smartlist_new();
-      int any_unwarned = 0;
-      SMARTLIST_FOREACH_BEGIN(routerlist->routers, routerinfo_t *, router) {
-          routerstatus_t *rs;
-          char fp[HEX_DIGEST_LEN+1];
-          if (strcasecmp(router->nickname, nickname))
-            continue;
-          rs = router_get_mutable_consensus_status_by_id(
-                                          router->cache_info.identity_digest);
-          if (rs && !rs->name_lookup_warned) {
-            rs->name_lookup_warned = 1;
-            any_unwarned = 1;
-          }
-          base16_encode(fp, sizeof(fp),
-                        router->cache_info.identity_digest, DIGEST_LEN);
-          smartlist_add_asprintf(fps, "\"$%s\" for the one at %s:%d",
-                       fp, router->address, router->or_port);
-      } SMARTLIST_FOREACH_END(router);
-      if (any_unwarned) {
-        char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
-        log_warn(LD_CONFIG,
-                 "There are multiple matches for the nickname \"%s\","
-                 " but none is listed as named by the directory authorities. "
-                 "Choosing one arbitrarily. If you meant one in particular, "
-                 "you should say %s.", nickname, alternatives);
-        tor_free(alternatives);
-      }
-      SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
-      smartlist_free(fps);
-    } else if (warn_if_unnamed) {
-      routerstatus_t *rs = router_get_mutable_consensus_status_by_id(
-          best_match->cache_info.identity_digest);
-      if (rs && !rs->name_lookup_warned) {
-        char fp[HEX_DIGEST_LEN+1];
-        base16_encode(fp, sizeof(fp),
-                      best_match->cache_info.identity_digest, DIGEST_LEN);
-        log_warn(LD_CONFIG, "You specified a server \"%s\" by name, but this "
-             "name is not registered, so it could be used by any server, "
-             "not just the one you meant. "
-             "To make sure you get the same server in the future, refer to "
-             "it by key, as \"$%s\".", nickname, fp);
-        rs->name_lookup_warned = 1;
-      }
-    }
-    return best_match;
-  }
-  return NULL;
-#endif
 }
 
 /** Return true iff <b>digest</b> is the digest of the identity key of a
