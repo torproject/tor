@@ -49,8 +49,6 @@ const node_t *router_choose_random_node(smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
                                         router_crn_flags_t flags);
 
-const routerinfo_t *router_get_by_nickname(const char *nickname,
-                                     int warn_if_unnamed);
 int router_is_named(const routerinfo_t *router);
 int router_digest_is_trusted_dir_type(const char *digest,
                                       dirinfo_type_t type);
@@ -59,7 +57,6 @@ int router_digest_is_trusted_dir_type(const char *digest,
 
 int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);
-const routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 const routerinfo_t *router_get_by_id_digest(const char *digest);
 routerinfo_t *router_get_mutable_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);

@@ -2175,20 +2175,6 @@ router_nickname_matches(const routerinfo_t *router, const char *nickname)
   return router_hex_digest_matches(router, nickname);
 }
 
-/** Return the router in our routerlist whose (case-insensitive)
- * nickname or (case-sensitive) hexadecimal key digest is
- * <b>nickname</b>.  Return NULL if no such router is known.
- */
-const routerinfo_t *
-router_get_by_nickname(const char *nickname, int warn_if_unnamed)
-{
-  const node_t *node = node_get_by_nickname(nickname, warn_if_unnamed);
-  if (node)
-    return node->ri;
-  else
-    return NULL;
-}
-
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero, any authority is okay. */
@@ -2233,18 +2219,6 @@ hexdigest_to_digest(const char *hexdigest, char *digest)
       base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
     return -1;
   return 0;
-}
-
-/** Return the router in our routerlist whose hexadecimal key digest
- * is <b>hexdigest</b>.  Return NULL if no such router is known. */
-const routerinfo_t *
-router_get_by_hexdigest(const char *hexdigest)
-{
-  if (is_legal_nickname(hexdigest))
-    return NULL;
-
-  /* It's not a legal nickname, so it must be a hexdigest or nothing. */
-  return router_get_by_nickname(hexdigest, 1);
 }
 
 /** As router_get_by_id_digest,but return a pointer that you're allowed to
