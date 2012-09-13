@@ -47,6 +47,7 @@ channel_tls_t *channel_tls_listener = NULL;
 /* channel_tls_t method declarations */
 
 static void channel_tls_close_method(channel_t *chan);
+static const char * channel_tls_describe_transport_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
 static const char *
@@ -104,6 +105,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   channel_init_for_cells(chan);
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
+  chan->describe_transport = channel_tls_describe_transport_method;
   chan->u.cell_chan.get_remote_addr = channel_tls_get_remote_addr_method;
   chan->u.cell_chan.get_remote_descr = channel_tls_get_remote_descr_method;
   chan->u.cell_chan.has_queued_writes = channel_tls_has_queued_writes_method;
@@ -188,12 +190,15 @@ channel_tls_start_listener(void)
     channel_init_listener(lchan);
     lchan->state = CHANNEL_STATE_LISTENING;
     lchan->close = channel_tls_close_method;
+    lchan->describe_transport = channel_tls_describe_transport_method;
 
     channel_tls_listener = listener;
 
     log_debug(LD_CHANNEL,
               "Starting TLS listener channel %p with global id %lu",
               lchan, lchan->global_identifier);
+
+    channel_register(lchan);
   } else lchan = TLS_CHAN_TO_BASE(channel_tls_listener);
 
   return lchan;
@@ -245,6 +250,7 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   channel_init_for_cells(chan);
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
+  chan->describe_transport = channel_tls_describe_transport_method;
   chan->u.cell_chan.get_remote_descr = channel_tls_get_remote_descr_method;
   chan->u.cell_chan.has_queued_writes = channel_tls_has_queued_writes_method;
   chan->u.cell_chan.is_canonical = channel_tls_is_canonical_method;
@@ -332,6 +338,43 @@ channel_tls_close_method(channel_t *chan)
       channel_change_state(chan, CHANNEL_STATE_ERROR);
     }
   }
+}
+
+/**
+ * Describe the transport for a channel_tls_t
+ *
+ * This returns the string "TLS channel on connection <id>" to the upper
+ * layer.
+ */
+
+static const char *
+channel_tls_describe_transport_method(channel_t *chan)
+{
+  static char *buf = NULL;
+  uint64_t id;
+  channel_tls_t *tlschan;
+  const char *rv = NULL;
+
+  tor_assert(chan);
+
+  if (chan->is_listener) {
+    rv = "TLS channel (listening)";
+  } else {
+    tlschan = BASE_CHAN_TO_TLS(chan);
+
+    if (tlschan->conn) {
+      id = TO_CONN(tlschan->conn)->global_identifier;
+
+      if (buf) tor_free(buf);
+      tor_asprintf(&buf, "TLS channel (connection %lu)", id);
+
+      rv = buf;
+    } else {
+      rv = "TLS channel (no connection)";
+    }
+  }
+
+  return rv;
 }
 
 /**

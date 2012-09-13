@@ -57,6 +57,10 @@ struct channel_s {
   void (*free)(channel_t *);
   /* Close an open channel */
   void (*close)(channel_t *);
+  /* Describe the transport subclass for this channel */
+  const char * (*describe_transport)(channel_t *);
+  /* Optional method to dump transport-specific statistics on the channel */
+  void (*dumpstats)(channel_t *, int);
 
   union {
     struct {
@@ -65,6 +69,12 @@ struct channel_s {
 
       /* List of pending incoming connections */
       smartlist_t *incoming_list;
+
+      /* Timestamps for listeners */
+      time_t timestamp_accepted;
+
+      /* Counters for listeners */
+      uint64_t n_accepted;
     } listener;
     struct {
       /* Registered handlers for incoming cells */
@@ -126,12 +136,6 @@ struct channel_s {
 
       /* List of queued outgoing cells */
       smartlist_t *outgoing_queue;
-
-      /*
-       * When we last used this conn for any client traffic. If not
-       * recent, we can rate limit it further.
-       */
-      time_t client_used;
 
       /* Circuit stuff for use by relay.c */
 
@@ -210,6 +214,10 @@ struct channel_s {
        * come over a circuit_t, which has a dirreq_id field as well, but is a
        * distinct namespace. */
       uint64_t dirreq_id;
+
+      /** Channel counters for cell channels */
+      uint64_t n_cells_recved;
+      uint64_t n_cells_xmitted;
     } cell_chan;
   } u;
 };
@@ -257,6 +265,9 @@ void channel_run_cleanup(void);
 /* Close all channels and deallocate everything */
 void channel_free_all(void);
 
+/* Dump some statistics in the log */
+void channel_dumpstats(int severity);
+
 #ifdef _TOR_CHANNEL_INTERNAL
 
 /* Channel operations for subclasses and internal use only */
@@ -297,6 +308,7 @@ void channel_set_remote_end(channel_t *chan,
 
 /* Timestamp updates */
 void channel_timestamp_created(channel_t *chan);
+void channel_timestamp_accepted(channel_t *chan);
 void channel_timestamp_active(channel_t *chan);
 void channel_timestamp_drained(channel_t *chan);
 void channel_timestamp_recv(channel_t *chan);
@@ -368,6 +380,9 @@ channel_t * channel_prev_with_digest(channel_t *chan);
  * Metadata queries/updates
  */
 
+const char * channel_describe_transport(channel_t *chan);
+void channel_dump_statistics(channel_t *chan, int severity);
+void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
 int channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out);
 const char * channel_get_canonical_remote_descr(channel_t *chan);
@@ -389,11 +404,17 @@ void channel_timestamp_client(channel_t *chan);
 
 /* Timestamp queries */
 time_t channel_when_created(channel_t *chan);
+time_t channel_when_last_accepted(channel_t *chan);
 time_t channel_when_last_active(channel_t *chan);
 time_t channel_when_last_client(channel_t *chan);
 time_t channel_when_last_drained(channel_t *chan);
 time_t channel_when_last_recv(channel_t *chan);
 time_t channel_when_last_xmit(channel_t *chan);
+
+/* Counter queries */
+uint64_t channel_count_accepted(channel_t *chan);
+uint64_t channel_count_recved(channel_t *chan);
+uint64_t channel_count_xmitted(channel_t *chan);
 
 #endif
 

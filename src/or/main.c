@@ -2167,10 +2167,12 @@ dumpstats(int severity)
         }
       }
     }
-    /* TODO add dump for channels with circuit_dump_by_chan() */
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */
   } SMARTLIST_FOREACH_END(conn);
+
+  channel_dumpstats(severity);
+
   log(severity, LD_NET,
       "Cells processed: "U64_FORMAT" padding\n"
       "                 "U64_FORMAT" create\n"

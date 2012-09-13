@@ -1488,6 +1488,8 @@ channel_write_cell(channel_t *chan, cell_t *cell)
       channel_timestamp_xmit(chan);
       /* If we're here the queue is empty, so it's drained too */
       channel_timestamp_drained(chan);
+      /* Update the counter */
+      ++(chan->u.cell_chan.n_cells_xmitted);
     }
   }
 
@@ -1546,6 +1548,8 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
       channel_timestamp_xmit(chan);
       /* If we're here the queue is empty, so it's drained too */
       channel_timestamp_drained(chan);
+      /* Update the counter */
+      ++(chan->u.cell_chan.n_cells_xmitted);
     }
   }
 
@@ -1609,6 +1613,8 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
       channel_timestamp_xmit(chan);
       /* If we're here the queue is empty, so it's drained too */
       channel_timestamp_drained(chan);
+      /* Update the counter */
+      ++(chan->u.cell_chan.n_cells_xmitted);
     }
   }
 
@@ -1883,6 +1889,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
+                ++(chan->u.cell_chan.n_cells_xmitted);
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -1902,6 +1909,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
+                ++(chan->u.cell_chan.n_cells_xmitted);
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -1921,6 +1929,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
+                ++(chan->u.cell_chan.n_cells_xmitted);
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2179,6 +2188,11 @@ channel_queue_incoming(channel_t *listener, channel_t *incoming)
     listener->u.listener.incoming_list = smartlist_new();
   }
 
+  /* Bump the counter and timestamp it */
+  channel_timestamp_active(listener);
+  channel_timestamp_accepted(listener);
+  ++(listener->u.listener.n_accepted);
+
   /* If we don't need to queue, process it right away */
   if (!need_to_queue) {
     tor_assert(listener->u.listener.listener);
@@ -2301,6 +2315,9 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
   /* Timestamp for receiving */
   channel_timestamp_recv(chan);
 
+  /* Update the counter */
+  ++(chan->u.cell_chan.n_cells_recved);
+
   /* If we don't need to queue we can just call cell_handler */
   if (!need_to_queue) {
     tor_assert(chan->u.cell_chan.cell_handler);
@@ -2360,6 +2377,9 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
   /* Timestamp for receiving */
   channel_timestamp_recv(chan);
 
+  /* Update the counter */
+  ++(chan->u.cell_chan.n_cells_recved);
+
   /* If we don't need to queue we can just call cell_handler */
   if (!need_to_queue) {
     tor_assert(chan->u.cell_chan.var_cell_handler);
@@ -2414,6 +2434,41 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
   channel_write_cell(chan, &cell);
 
   return 0;
+}
+
+/**
+ * Channel statistics
+ *
+ * This is called from dumpstats() in main.c and spams the log with
+ * statistics on channels.
+ */
+
+void
+channel_dumpstats(int severity)
+{
+  if (all_channels && smartlist_len(all_channels) > 0) {
+    log(severity, LD_GENERAL,
+        "Dumping statistics about %d channels:",
+        smartlist_len(all_channels));
+    log(severity, LD_GENERAL,
+        "%d are active, %d are listeners, and %d are done and "
+        "waiting for cleanup",
+        (active_channels != NULL) ?
+          smartlist_len(active_channels) : 0,
+        (listening_channels != NULL) ?
+          smartlist_len(listening_channels) : 0,
+        (finished_channels != NULL) ?
+          smartlist_len(finished_channels) : 0);
+
+    SMARTLIST_FOREACH(all_channels, channel_t *, chan,
+                      channel_dump_statistics(chan, severity));
+
+    log(severity, LD_GENERAL,
+        "Done spamming about channels now");
+  } else {
+    log(severity, LD_GENERAL,
+        "No channels to dump");
+  }
 }
 
 /**
@@ -2785,6 +2840,265 @@ channel_get_for_extend(const char *digest,
 }
 
 /**
+ * Describe the transport subclass
+ *
+ * Invoke a method to get a string description of the lower-layer
+ * transport for this channel.
+ */
+
+const char *
+channel_describe_transport(channel_t *chan)
+{
+  tor_assert(chan);
+  tor_assert(chan->describe_transport);
+
+  return chan->describe_transport(chan);
+}
+
+/**
+ * Dump channel statistics
+ *
+ * Dump statistics for one channel to the log
+ */
+
+void
+channel_dump_statistics(channel_t *chan, int severity)
+{
+  double avg, interval, age;
+  time_t now = time(NULL);
+  tor_addr_t remote_addr;
+  int have_remote_addr;
+  char *remote_addr_str;
+
+  tor_assert(chan);
+
+  age = (double)(now - chan->timestamp_created);
+
+  log(severity, LD_GENERAL,
+      "Channel %lu (at %p) with transport %s is in state %s (%d) and %s",
+      chan->global_identifier, chan,
+      channel_describe_transport(chan),
+      channel_state_to_string(chan->state), chan->state,
+      chan->is_listener ?
+        "listens for incoming connections" :
+        "transports cells");
+  log(severity, LD_GENERAL,
+      " * Channel %lu was created at %lu (%lu seconds ago) and last active "
+      "at %lu (%lu seconds ago)",
+      chan->global_identifier,
+      chan->timestamp_created, now - chan->timestamp_created,
+      chan->timestamp_active, now - chan->timestamp_active);
+  if (chan->is_listener) {
+    log(severity, LD_GENERAL,
+        " * Listener channel %lu last accepted an incoming channel at %lu "
+        "(%lu seconds ago) and has accepted %lu channels in total",
+        chan->global_identifier,
+        chan->u.listener.timestamp_accepted,
+        now - chan->u.listener.timestamp_accepted,
+        chan->u.listener.n_accepted);
+
+    /*
+     * If it's sensible to do so, get the rate of incoming channels on this
+     * listener
+     */
+    if (now > chan->timestamp_created &&
+        chan->timestamp_created > 0 &&
+        chan->u.listener.n_accepted > 0) {
+      avg = (double)(chan->u.listener.n_accepted) / age;
+      if (avg >= 1.0) {
+        log(severity, LD_GENERAL,
+            " * Listener channel %lu has averaged %f incoming channels per "
+            "second",
+            chan->global_identifier, avg);
+      } else if (avg >= 0.0) {
+        interval = 1.0 / avg;
+        log(severity, LD_GENERAL,
+            " * Listener channel %lu has averaged %f seconds between "
+            "incoming channels",
+            chan->global_identifier, interval);
+      }
+    }
+  } else {
+    /* Handle digest and nickname */
+    if (!tor_digest_is_zero(chan->u.cell_chan.identity_digest)) {
+      if (chan->u.cell_chan.nickname) {
+        log(severity, LD_GENERAL,
+            " * Cell-bearing channel %lu says it is connected to an OR "
+            "with digest %s and nickname %s",
+            chan->global_identifier,
+            hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN),
+            chan->u.cell_chan.nickname);
+      } else {
+        log(severity, LD_GENERAL,
+            " * Cell-bearing channel %lu says it is connected to an OR "
+            "with digest %s and no known nickname",
+            chan->global_identifier,
+            hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
+      }
+    } else {
+      if (chan->u.cell_chan.nickname) {
+        log(severity, LD_GENERAL,
+            " * Cell-bearing channel %lu does not know the digest of the "
+            "OR it is connected to, but reports its nickname is %s",
+            chan->global_identifier,
+            chan->u.cell_chan.nickname);
+      } else {
+        log(severity, LD_GENERAL,
+            " * Cell-bearing channel %lu does not know the digest or the "
+            "nickname of the OR it is connected to",
+            chan->global_identifier);
+      }
+    }
+
+    /* Handle remote address and descriptions */
+    have_remote_addr = channel_get_addr_if_possible(chan, &remote_addr);
+    if (have_remote_addr) {
+      remote_addr_str = tor_dup_addr(&remote_addr);
+      log(severity, LD_GENERAL,
+          " * Cell-bearing channel %lu says its remote address is %s, "
+          "and gives a canonical description of \"%s\" and an "
+          "actual description of \"%s\"",
+          chan->global_identifier,
+          remote_addr_str,
+          channel_get_canonical_remote_descr(chan),
+          channel_get_actual_remote_descr(chan));
+      tor_free(remote_addr_str);
+    } else {
+      log(severity, LD_GENERAL,
+          " * Cell-bearing channel %lu does not know its remote address, "
+          "but gives a canonical description of \"%s\" and an "
+          "actual description of \"%s\"",
+          chan->global_identifier,
+          channel_get_canonical_remote_descr(chan),
+          channel_get_actual_remote_descr(chan));
+    }
+
+    /* Handle marks */
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu has these marks: %s %s %s "
+        "%s %s %s",
+        chan->global_identifier,
+        channel_is_bad_for_new_circs(chan) ?
+          "bad_for_new_circs" : "!bad_for_new_circs",
+        channel_is_canonical(chan) ?
+          "canonical" : "!canonical",
+        channel_is_canonical_is_reliable(chan) ?
+          "is_canonical_is_reliable" :
+          "!is_canonical_is_reliable",
+        channel_is_client(chan) ?
+          "client" : "!client",
+        channel_is_local(chan) ?
+          "local" : "!local",
+        channel_is_incoming(chan) ?
+          "incoming" : "outgoing");
+
+    /* Describe queues */
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu has %d queued incoming cells "
+        "and %d queued outgoing cells",
+        chan->global_identifier,
+        (chan->u.cell_chan.cell_queue != NULL) ?
+          smartlist_len(chan->u.cell_chan.cell_queue) : 0,
+        (chan->u.cell_chan.outgoing_queue != NULL) ?
+          smartlist_len(chan->u.cell_chan.outgoing_queue) : 0);
+
+    /* Describe circuits */
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu has %d active circuits out of %d"
+        " in total",
+        chan->global_identifier,
+        (chan->u.cell_chan.active_circuit_pqueue != NULL) ?
+          smartlist_len(chan->u.cell_chan.active_circuit_pqueue) : 0,
+        chan->u.cell_chan.n_circuits);
+    /* TODO better circuit info once circuit structure refactor is finished */
+
+    /* Describe timestamps */
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu was last used by a client at %lu "
+        "(%lu seconds ago)",
+        chan->global_identifier,
+        chan->u.cell_chan.timestamp_client,
+        now - chan->u.cell_chan.timestamp_client);
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu was last drained at %lu "
+        "(%lu seconds ago)",
+        chan->global_identifier,
+        chan->u.cell_chan.timestamp_drained,
+        now - chan->u.cell_chan.timestamp_drained);
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu last received a cell at %lu "
+        "(%lu seconds ago)",
+        chan->global_identifier,
+        chan->u.cell_chan.timestamp_recv,
+        now - chan->u.cell_chan.timestamp_recv);
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu last trasmitted a cell at %lu "
+        "(%lu seconds ago)",
+        chan->global_identifier,
+        chan->u.cell_chan.timestamp_xmit,
+        now - chan->u.cell_chan.timestamp_xmit);
+
+    /* Describe counters and rates */
+    log(severity, LD_GENERAL,
+        " * Cell-bearing channel %lu has received %lu cells and "
+        " transmitted %lu",
+        chan->global_identifier,
+        chan->u.cell_chan.n_cells_recved,
+        chan->u.cell_chan.n_cells_xmitted);
+    if (now > chan->timestamp_created &&
+        chan->timestamp_created > 0) {
+      if (chan->u.cell_chan.n_cells_recved > 0) {
+        avg = (double)(chan->u.cell_chan.n_cells_recved) / age;
+        if (avg >= 1.0) {
+          log(severity, LD_GENERAL,
+              " * Cell-bearing channel %lu has averaged %f cells received "
+              "per second",
+              chan->global_identifier, avg);
+        } else if (avg >= 0.0) {
+          interval = 1.0 / avg;
+          log(severity, LD_GENERAL,
+              " * Cell-bearing channel %lu has averaged %f seconds between "
+              "received cells",
+              chan->global_identifier, interval);
+        }
+      }
+      if (chan->u.cell_chan.n_cells_xmitted > 0) {
+        avg = (double)(chan->u.cell_chan.n_cells_xmitted) / age;
+        if (avg >= 1.0) {
+          log(severity, LD_GENERAL,
+              " * Cell-bearing channel %lu has averaged %f cells transmitted "
+              "per second",
+              chan->global_identifier, avg);
+        } else if (avg >= 0.0) {
+          interval = 1.0 / avg;
+          log(severity, LD_GENERAL,
+              " * Cell-bearing channel %lu has averaged %f seconds between "
+              "transmitted cells",
+              chan->global_identifier, interval);
+        }
+      }
+    }
+  }
+
+  /* Dump anything the lower layer has to say */
+  channel_dump_transport_statistics(chan, severity);
+}
+
+/**
+ * Invoke transport-specific stats dump
+ *
+ * If there is a lower-layer statistics dump method, invoke it
+ */
+
+void
+channel_dump_transport_statistics(channel_t *chan, int severity)
+{
+  tor_assert(chan);
+
+  if (chan->dumpstats) chan->dumpstats(chan, severity);
+}
+
+/**
  * Return text description of the remote endpoint
  *
  * This function return a test provided by the lower layer of the remote
@@ -3138,7 +3452,7 @@ channel_timestamp_created(channel_t *chan)
 /**
  * Update the last active timestamp.
  *
- * This function updates the channe's last active timestamp; it should be
+ * This function updates the channel's last active timestamp; it should be
  * called by the lower layer whenever there is activity on the channel which
  * does not lead to a cell being transmitted or received; the active timestamp
  * is also updated from channel_timestamp_recv() and channel_timestamp_xmit(),
@@ -3156,6 +3470,26 @@ channel_timestamp_active(channel_t *chan)
   tor_assert(chan);
 
   chan->timestamp_active = now;
+}
+
+/**
+ * Update the last accepted timestamp.
+ *
+ * This function updates the channel's last accepted timestamp; it should be
+ * called whenever a new incoming channel is accepted on a listener.
+ *
+ * @param chan Channel to update
+ */
+
+void
+channel_timestamp_accepted(channel_t *chan)
+{
+  time_t now = time(NULL);
+
+  tor_assert(chan);
+  tor_assert(chan->is_listener);
+
+  chan->u.listener.timestamp_accepted = now;
 }
 
 /**
@@ -3276,6 +3610,22 @@ channel_when_last_active(channel_t *chan)
 }
 
 /**
+ * Query last accepted timestamp
+ *
+ * @param chan Channel to query
+ * @return Last accepted timestamp value for chan
+ */
+
+time_t
+channel_when_last_accepted(channel_t *chan)
+{
+  tor_assert(chan);
+  tor_assert(chan->is_listener);
+
+  return chan->u.listener.timestamp_accepted;
+}
+
+/**
  * Query client timestamp
  *
  * @param chan Channel to query
@@ -3337,6 +3687,54 @@ channel_when_last_xmit(channel_t *chan)
   tor_assert(!(chan->is_listener));
 
   return chan->u.cell_chan.timestamp_xmit;
+}
+
+/**
+ * Query accepted counter
+ *
+ * @param chan Channel to query
+ * @return Number of incoming channels accepted by this listener
+ */
+
+uint64_t
+channel_count_accepted(channel_t *chan)
+{
+  tor_assert(chan);
+
+  if (chan->is_listener) return chan->u.listener.n_accepted;
+  else return 0;
+}
+
+/**
+ * Query received cell counter
+ *
+ * @param chan Channel to query
+ * @return Number of cells received by this channel
+ */
+
+uint64_t
+channel_count_recved(channel_t *chan)
+{
+  tor_assert(chan);
+
+  if (!(chan->is_listener)) return chan->u.cell_chan.n_cells_recved;
+  else return 0;
+}
+
+/**
+ * Query transmitted cell counter
+ *
+ * @param chan Channel to query
+ * @return Number of cells transmitted by this channel
+ */
+
+uint64_t
+channel_count_xmitted(channel_t *chan)
+{
+  tor_assert(chan);
+
+  if (!(chan->is_listener)) return chan->u.cell_chan.n_cells_xmitted;
+  else return 0;
 }
 
 /**
