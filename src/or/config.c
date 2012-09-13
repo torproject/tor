@@ -36,6 +36,7 @@
 #include "router.h"
 #include "util.h"
 #include "routerlist.h"
+#include "routerset.h"
 #include "statefile.h"
 #include "transports.h"
 #ifdef _WIN32

@@ -166,38 +166,6 @@ void routerlist_assert_ok(const routerlist_t *rl);
 const char *esc_router_info(const routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
-routerset_t *routerset_new(void);
-void routerset_refresh_countries(routerset_t *rs);
-int routerset_parse(routerset_t *target, const char *s,
-                    const char *description);
-void routerset_union(routerset_t *target, const routerset_t *source);
-int routerset_is_list(const routerset_t *set);
-int routerset_needs_geoip(const routerset_t *set);
-int routerset_is_empty(const routerset_t *set);
-int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
-                              country_t country);
-int routerset_contains_routerstatus(const routerset_t *set,
-                                    const routerstatus_t *rs,
-                                    country_t country);
-int routerset_contains_extendinfo(const routerset_t *set,
-                                  const extend_info_t *ei);
-
-int routerset_contains_node(const routerset_t *set, const node_t *node);
-void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
-                             const routerset_t *excludeset,
-                             int running_only);
-#if 0
-void routersets_get_node_disjunction(smartlist_t *target,
-                                const smartlist_t *source,
-                                const routerset_t *include,
-                                const routerset_t *exclude, int running_only);
-#endif
-void routerset_subtract_nodes(smartlist_t *out,
-                                const routerset_t *routerset);
-
-char *routerset_to_string(const routerset_t *routerset);
-int routerset_equal(const routerset_t *old, const routerset_t *new);
-void routerset_free(routerset_t *routerset);
 void refresh_all_country_info(void);
 
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,

@@ -29,6 +29,7 @@
 #include "routerparse.h"
 #include "statefile.h"
 #include "transports.h"
+#include "routerset.h"
 
 /**
  * \file router.c
