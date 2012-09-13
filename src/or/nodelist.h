@@ -61,11 +61,17 @@ smartlist_t *nodelist_get_list(void);
 void node_get_addr(const node_t *node, tor_addr_t *addr_out);
 #define node_get_addr_ipv4h(n) node_get_prim_addr_ipv4h((n))
 
-/* XXXX These need to move out of routerlist.c */
 void nodelist_refresh_countries(void);
 void node_set_country(node_t *node);
 void nodelist_add_node_and_family(smartlist_t *nodes, const node_t *node);
 int nodes_in_same_family(const node_t *node1, const node_t *node2);
+
+const node_t *router_find_exact_exit_enclave(const char *address,
+                                             uint16_t port);
+int node_is_unreliable(const node_t *router, int need_uptime,
+                         int need_capacity, int need_guard);
+int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
+                                        int need_uptime);
 
 #endif
 

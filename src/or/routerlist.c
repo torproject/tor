@@ -48,8 +48,6 @@ static const routerstatus_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
-static int node_nickname_matches(const node_t *router,
-                                 const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
@@ -1353,88 +1351,6 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
-/** Return true iff router1 and router2 have similar enough network addresses
- * that we should treat them as being in the same family */
-static INLINE int
-addrs_in_same_network_family(const tor_addr_t *a1,
-                             const tor_addr_t *a2)
-{
-  /* XXXX MOVE ? */
-  return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
-}
-
-/**
- * Add all the family of <b>node</b>, including <b>node</b> itself, to
- * the smartlist <b>sl</b>.
- *
- * This is used to make sure we don't pick siblings in a single path, or
- * pick more than one relay from a family for our entry guard list.
- * Note that a node may be added to <b>sl</b> more than once if it is
- * part of <b>node</b>'s family for more than one reason.
- */
-void
-nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
-{
-  /* XXXX MOVE */
-  const smartlist_t *all_nodes = nodelist_get_list();
-  const smartlist_t *declared_family;
-  const or_options_t *options = get_options();
-
-  tor_assert(node);
-
-  declared_family = node_get_declared_family(node);
-
-  /* Let's make sure that we have the node itself, if it's a real node. */
-  {
-    const node_t *real_node = node_get_by_id(node->identity);
-    if (real_node)
-      smartlist_add(sl, (node_t*)real_node);
-  }
-
-  /* First, add any nodes with similar network addresses. */
-  if (options->EnforceDistinctSubnets) {
-    tor_addr_t node_addr;
-    node_get_addr(node, &node_addr);
-
-    SMARTLIST_FOREACH_BEGIN(all_nodes, const node_t *, node2) {
-      tor_addr_t a;
-      node_get_addr(node2, &a);
-      if (addrs_in_same_network_family(&a, &node_addr))
-        smartlist_add(sl, (void*)node2);
-    } SMARTLIST_FOREACH_END(node2);
-  }
-
-  /* Now, add all nodes in the declared_family of this node, if they
-   * also declare this node to be in their family. */
-  if (declared_family) {
-    /* Add every r such that router declares familyness with node, and node
-     * declares familyhood with router. */
-    SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
-      const node_t *node2;
-      const smartlist_t *family2;
-      if (!(node2 = node_get_by_nickname(name, 0)))
-        continue;
-      if (!(family2 = node_get_declared_family(node2)))
-        continue;
-      SMARTLIST_FOREACH_BEGIN(family2, const char *, name2) {
-          if (node_nickname_matches(node, name2)) {
-            smartlist_add(sl, (void*)node2);
-            break;
-          }
-      } SMARTLIST_FOREACH_END(name2);
-    } SMARTLIST_FOREACH_END(name);
-  }
-
-  /* If the user declared any families locally, honor those too. */
-  if (options->NodeFamilySets) {
-    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
-      if (routerset_contains_node(rs, node)) {
-        routerset_get_all_nodes(sl, rs, NULL, 0);
-      }
-    });
-  }
-}
-
 /** Given a <b>router</b>, add every node_t in its family (including the
  * node itself!) to <b>sl</b>.
  *
@@ -1454,59 +1370,6 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
     node = &fake_node;
   }
   nodelist_add_node_and_family(sl, node);
-}
-
-/** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
-static INLINE int
-node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
-{
-  /* XXXX MOVE */
-  if (!lst) return 0;
-  SMARTLIST_FOREACH(lst, const char *, name, {
-    if (node_nickname_matches(node, name))
-      return 1;
-  });
-  return 0;
-}
-
-/** Return true iff r1 and r2 are in the same family, but not the same
- * router. */
-int
-nodes_in_same_family(const node_t *node1, const node_t *node2)
-{
-  /* XXXX MOVE */
-  const or_options_t *options = get_options();
-
-  /* Are they in the same family because of their addresses? */
-  if (options->EnforceDistinctSubnets) {
-    tor_addr_t a1, a2;
-    node_get_addr(node1, &a1);
-    node_get_addr(node2, &a2);
-    if (addrs_in_same_network_family(&a1, &a2))
-      return 1;
-  }
-
-  /* Are they in the same family because the agree they are? */
-  {
-    const smartlist_t *f1, *f2;
-    f1 = node_get_declared_family(node1);
-    f2 = node_get_declared_family(node2);
-    if (f1 && f2 &&
-        node_in_nickname_smartlist(f1, node2) &&
-        node_in_nickname_smartlist(f2, node1))
-      return 1;
-  }
-
-  /* Are they in the same option because the user says they are? */
-  if (options->NodeFamilySets) {
-    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
-        if (routerset_contains_node(rs, node1) &&
-            routerset_contains_node(rs, node2))
-          return 1;
-      });
-  }
-
-  return 0;
 }
 
 /** Return 1 iff any member of the (possibly NULL) comma-separated list
@@ -1570,56 +1433,6 @@ routerlist_find_my_routerinfo(void)
       return router;
   });
   return NULL;
-}
-
-/** Find a router that's up, that has this IP address, and
- * that allows exit to this address:port, or return NULL if there
- * isn't a good one.
- * Don't exit enclave to excluded relays -- it wouldn't actually
- * hurt anything, but this way there are fewer confused users.
- */
-const node_t *
-router_find_exact_exit_enclave(const char *address, uint16_t port)
-{/*XXXX MOVE*/
-  uint32_t addr;
-  struct in_addr in;
-  tor_addr_t a;
-  const or_options_t *options = get_options();
-
-  if (!tor_inet_aton(address, &in))
-    return NULL; /* it's not an IP already */
-  addr = ntohl(in.s_addr);
-
-  tor_addr_from_ipv4h(&a, addr);
-
-  SMARTLIST_FOREACH(nodelist_get_list(), const node_t *, node, {
-    if (node_get_addr_ipv4h(node) == addr &&
-        node->is_running &&
-        compare_tor_addr_to_node_policy(&a, port, node) ==
-          ADDR_POLICY_ACCEPTED &&
-        !routerset_contains_node(options->_ExcludeExitNodesUnion, node))
-      return node;
-  });
-  return NULL;
-}
-
-/** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
- * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
- * If <b>need_capacity</b> is non-zero, we require a minimum advertised
- * bandwidth.
- * If <b>need_guard</b>, we require that the router is a possible entry guard.
- */
-int
-node_is_unreliable(const node_t *node, int need_uptime,
-                   int need_capacity, int need_guard)
-{
-  if (need_uptime && !node->is_stable)
-    return 1;
-  if (need_capacity && !node->is_fast)
-    return 1;
-  if (need_guard && !node->is_possible_guard)
-    return 1;
-  return 0;
 }
 
 /** Return the smaller of the router's configured BandwidthRate
@@ -2302,7 +2115,7 @@ hex_digest_nickname_decode(const char *hexdigest,
  * combination of a router, encoded in hexadecimal, matches <b>hexdigest</b>
  * (which is optionally prefixed with a single dollar sign).  Return false if
  * <b>hexdigest</b> is malformed, or it doesn't match.  */
-static int
+int
 hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
                             const char *nickname, int is_named)
 {
@@ -2360,22 +2173,6 @@ router_nickname_matches(const routerinfo_t *router, const char *nickname)
   if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
     return 1;
   return router_hex_digest_matches(router, nickname);
-}
-
-/** Return true if <b>node</b>'s nickname matches <b>nickname</b>
- * (case-insensitive), or if <b>node's</b> identity key digest
- * matches a hexadecimal value stored in <b>nickname</b>.  Return
- * false otherwise. */
-static int
-node_nickname_matches(const node_t *node, const char *nickname)
-{
-  const char *n = node_get_nickname(node);
-  if (n && nickname[0]!='$' && !strcasecmp(n, nickname))
-    return 1;
-  return hex_digest_nickname_matches(nickname,
-                                     node->identity,
-                                     n,
-                                     node_is_named(node));
 }
 
 /** Return the router in our routerlist whose (case-insensitive)
@@ -4062,27 +3859,6 @@ routerlist_retry_directory_downloads(time_t now)
   update_all_descriptor_downloads(now);
 }
 
-/** Return 1 if all running sufficiently-stable routers we can use will reject
- * addr:port, return 0 if any might accept it. */
-int
-router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
-                                    int need_uptime)
-{ /* XXXX MOVE */
-  addr_policy_result_t r;
-
-  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    if (node->is_running &&
-        !node_is_unreliable(node, need_uptime, 0, 0)) {
-
-      r = compare_tor_addr_to_node_policy(addr, port, node);
-
-      if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
-        return 0; /* this one could be ok. good enough. */
-    }
-  } SMARTLIST_FOREACH_END(node);
-  return 1; /* all will reject. */
-}
-
 /** Return true iff <b>router</b> does not permit exit streams.
  */
 int
@@ -5430,28 +5206,6 @@ refresh_all_country_info(void)
     routerset_refresh_countries(options->_ExcludeExitNodesUnion);
 
   nodelist_refresh_countries();
-}
-
-/** Refresh the country code of <b>ri</b>.  This function MUST be called on
- * each router when the GeoIP database is reloaded, and on all new routers. */
-void
-node_set_country(node_t *node)
-{
-  if (node->rs)
-    node->country = geoip_get_country_by_ip(node->rs->addr);
-  else if (node->ri)
-    node->country = geoip_get_country_by_ip(node->ri->addr);
-  else
-    node->country = -1;
-}
-
-/** Set the country code of all routers in the routerlist. */
-void
-nodelist_refresh_countries(void) /* MOVE */
-{
-  smartlist_t *nodes = nodelist_get_list();
-  SMARTLIST_FOREACH(nodes, node_t *, node,
-                    node_set_country(node));
 }
 
 /** Determine the routers that are responsible for <b>id</b> (binary) and

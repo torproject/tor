@@ -39,10 +39,6 @@ void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
 int router_nickname_is_in_list(const routerinfo_t *router, const char *list);
 const routerinfo_t *routerlist_find_my_routerinfo(void);
-const node_t *router_find_exact_exit_enclave(const char *address,
-                                             uint16_t port);
-int node_is_unreliable(const node_t *router, int need_uptime,
-                         int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);
 uint32_t router_get_advertised_bandwidth_capped(const routerinfo_t *router);
 
@@ -133,8 +129,6 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        int descriptor_digests);
 
 void routerlist_retry_directory_downloads(time_t now);
-int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
-                                        int need_uptime);
 
 int router_exit_policy_rejects_all(const routerinfo_t *router);
 trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
@@ -183,6 +177,9 @@ int hex_digest_nickname_decode(const char *hexdigest,
                                char *digest_out,
                                char *nickname_qualifier_out,
                                char *nickname_out);
+int hex_digest_nickname_matches(const char *hexdigest,
+                                const char *identity_digest,
+                                const char *nickname, int is_named);
 
 #ifdef ROUTERLIST_PRIVATE
 /** Helper type for choosing routers by bandwidth: contains a union of
