@@ -2304,6 +2304,30 @@ networkstatus_parse_flavor_name(const char *flavname)
     return -1;
 }
 
+/** Return 0 if this routerstatus is obsolete, too new, isn't
+ * running, or otherwise not a descriptor that we would make any
+ * use of even if we had it. Else return 1. */
+int
+client_would_use_router(const routerstatus_t *rs, time_t now,
+                        const or_options_t *options)
+{
+  if (!rs->is_flagged_running && !options->FetchUselessDescriptors) {
+    /* If we had this router descriptor, we wouldn't even bother using it.
+     * But, if we want to have a complete list, fetch it anyway. */
+    return 0;
+  }
+  if (rs->published_on + options->TestingEstimatedDescriptorPropagationTime
+      > now) {
+    /* Most caches probably don't have this descriptor yet. */
+    return 0;
+  }
+  if (rs->published_on + OLD_ROUTER_DESC_MAX_AGE < now) {
+    /* We'd drop it immediately for being too old. */
+    return 0;
+  }
+  return 1;
+}
+
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate

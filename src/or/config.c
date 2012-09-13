@@ -28,6 +28,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "relay.h"
 #include "rendclient.h"

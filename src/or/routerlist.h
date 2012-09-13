@@ -73,7 +73,6 @@ void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old,
                        time_t now);
 void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
-void router_set_status(const char *digest, int up);
 
 static int WRA_WAS_ADDED(was_router_added_t s);
 static int WRA_WAS_OUTDATED(was_router_added_t s);
@@ -141,10 +140,6 @@ void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 void update_router_descriptor_downloads(time_t now);
 void update_all_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
-int router_have_minimum_dir_info(void);
-void router_dir_info_changed(void);
-const char *get_dir_info_status_string(void);
-int count_loading_descriptors_progress(void);
 void router_reset_descriptor_download_failures(void);
 int router_differences_are_cosmetic(const routerinfo_t *r1,
                                     const routerinfo_t *r2);
