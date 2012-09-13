@@ -7,6 +7,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "config.h"
+#include "confparse.h"
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"

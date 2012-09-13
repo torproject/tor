@@ -21,7 +21,8 @@ src_or_libtor_a_SOURCES = \
 	src/or/circuitlist.c				\
 	src/or/circuituse.c				\
 	src/or/command.c				\
-	src/or/config.c				\
+	src/or/config.c					\
+	src/or/confparse.c				\
 	src/or/connection.c				\
 	src/or/connection_edge.c			\
 	src/or/connection_or.c				\
@@ -52,6 +53,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/router.c					\
 	src/or/routerlist.c				\
 	src/or/routerparse.c				\
+	src/or/statefile.c				\
 	src/or/status.c					\
 	$(evdns_source)					\
 	$(tor_platform_source)				\
@@ -88,6 +90,7 @@ ORHEADERS = \
 	src/or/circuituse.h				\
 	src/or/command.h				\
 	src/or/config.h					\
+	src/or/confparse.h				\
 	src/or/connection.h				\
 	src/or/connection_edge.h			\
 	src/or/connection_or.h				\
@@ -122,6 +125,7 @@ ORHEADERS = \
 	src/or/router.h					\
 	src/or/routerlist.h				\
 	src/or/routerparse.h				\
+	src/or/statefile.h				\
 	src/or/status.h
 
 noinst_HEADERS+= $(ORHEADERS) micro-revision.i

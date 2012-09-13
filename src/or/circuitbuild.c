@@ -16,6 +16,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "confparse.h"
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
@@ -32,6 +33,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "statefile.h"
 #include "crypto.h"
 #undef log
 #include <math.h>
