@@ -2101,6 +2101,9 @@ typedef struct vote_microdesc_hash_t {
 typedef struct vote_routerstatus_t {
   routerstatus_t status; /**< Underlying 'status' object for this router.
                           * Flags are redundant. */
+  /** How many known-flags are allowed in a vote? This is the width of
+   * the flags field of vote_routerstatus_t */
+#define MAX_KNOWN_FLAGS_IN_VOTE 64
   uint64_t flags; /**< Bit-field for all recognized flags; index into
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is

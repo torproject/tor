@@ -3004,6 +3004,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     log_warn(LD_DIR, "known-flags not in order");
     goto err;
   }
+  if (ns->type != NS_TYPE_CONSENSUS &&
+      smartlist_len(ns->known_flags) > MAX_KNOWN_FLAGS_IN_VOTE) {
+    log_warn(LD_DIR, "Too many known-flags in consensus vote or opinion");
+    goto err;
+  }
 
   tok = find_opt_by_keyword(tokens, K_PARAMS);
   if (tok) {
