@@ -4279,14 +4279,17 @@ typedef struct rend_intro_point_t {
   time_t time_expiring;
 } rend_intro_point_t;
 
+#define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16
+
 /** Information used to connect to a hidden service.  Used on both the
  * service side and the client side. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_t *pk; /**< This service's public key. */
   int version; /**< Version of the descriptor format: 0 or 2. */
   time_t timestamp; /**< Time when the descriptor was generated. */
-  uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
-                       * (We allow bits '0', '1', and '2' to be set.) */
+  /** Bitmask: which rendezvous protocols are supported?
+   * (We allow bits '0', '1', and '2' to be set.) */
+  int protocols : REND_PROTOCOL_VERSION_BITMASK_WIDTH;
   /** List of the service's introduction points.  Elements are removed if
    * introduction attempts fail. */
   smartlist_t *intro_nodes;
