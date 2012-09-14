@@ -3923,13 +3923,15 @@ tor_process_handle_destroy(process_handle_t *process_handle,
 
   if (also_terminate_process) {
     if (tor_terminate_process(process_handle) < 0) {
+      const char *errstr =
+#ifdef _WIN32
+        format_win32_error(GetLastError());
+#else
+        strerror(errno);
+#endif
       log_notice(LD_GENERAL, "Failed to terminate process with "
                  "PID '%d' ('%s').", tor_process_get_pid(process_handle),
-#ifdef _WIN32
-                 format_win32_error(GetLastError()));
-#else
-                 strerror(errno));
-#endif
+                 errstr);
     } else {
       log_info(LD_GENERAL, "Terminated process with PID '%d'.",
                tor_process_get_pid(process_handle));
