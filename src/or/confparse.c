@@ -6,7 +6,7 @@
 
 #include "or.h"
 #include "confparse.h"
-#include "routerlist.h"
+#include "routerset.h"
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_msec_interval(const char *s, int *ok);

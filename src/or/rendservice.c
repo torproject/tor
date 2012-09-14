@@ -26,6 +26,7 @@
 #include "replaycache.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "routerset.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

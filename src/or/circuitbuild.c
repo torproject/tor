@@ -33,6 +33,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "routerset.h"
 #include "statefile.h"
 #include "crypto.h"
 #undef log

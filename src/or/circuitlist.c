@@ -26,6 +26,7 @@
 #include "rendcommon.h"
 #include "rephist.h"
 #include "routerlist.h"
+#include "routerset.h"
 #include "ht.h"
 
 /********* START VARIABLES **********/

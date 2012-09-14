@@ -5,19 +5,26 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "address.h"
 #include "config.h"
+#include "control.h"
 #include "dirserv.h"
+#include "geoip.h"
+#include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "rendservice.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerset.h"
 
 #include <string.h>
 
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
 static void node_free(node_t *node);
+static void update_router_have_minimum_dir_info(void);
 
 /** A nodelist_t holds a node_t object for every router we're "willing to use
  * for something".  Specifically, it should hold a node_t for every node that
@@ -903,5 +910,498 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
     ap_out->port = node->rs->ipv6_orport;
   }
+}
+
+/** Refresh the country code of <b>ri</b>.  This function MUST be called on
+ * each router when the GeoIP database is reloaded, and on all new routers. */
+void
+node_set_country(node_t *node)
+{
+  if (node->rs)
+    node->country = geoip_get_country_by_ip(node->rs->addr);
+  else if (node->ri)
+    node->country = geoip_get_country_by_ip(node->ri->addr);
+  else
+    node->country = -1;
+}
+
+/** Set the country code of all routers in the routerlist. */
+void
+nodelist_refresh_countries(void)
+{
+  smartlist_t *nodes = nodelist_get_list();
+  SMARTLIST_FOREACH(nodes, node_t *, node,
+                    node_set_country(node));
+}
+
+/** Return true iff router1 and router2 have similar enough network addresses
+ * that we should treat them as being in the same family */
+static INLINE int
+addrs_in_same_network_family(const tor_addr_t *a1,
+                             const tor_addr_t *a2)
+{
+  return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
+}
+
+/** Return true if <b>node</b>'s nickname matches <b>nickname</b>
+ * (case-insensitive), or if <b>node's</b> identity key digest
+ * matches a hexadecimal value stored in <b>nickname</b>.  Return
+ * false otherwise. */
+static int
+node_nickname_matches(const node_t *node, const char *nickname)
+{
+  const char *n = node_get_nickname(node);
+  if (n && nickname[0]!='$' && !strcasecmp(n, nickname))
+    return 1;
+  return hex_digest_nickname_matches(nickname,
+                                     node->identity,
+                                     n,
+                                     node_is_named(node));
+}
+
+/** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
+static INLINE int
+node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
+{
+  if (!lst) return 0;
+  SMARTLIST_FOREACH(lst, const char *, name, {
+    if (node_nickname_matches(node, name))
+      return 1;
+  });
+  return 0;
+}
+
+/** Return true iff r1 and r2 are in the same family, but not the same
+ * router. */
+int
+nodes_in_same_family(const node_t *node1, const node_t *node2)
+{
+  const or_options_t *options = get_options();
+
+  /* Are they in the same family because of their addresses? */
+  if (options->EnforceDistinctSubnets) {
+    tor_addr_t a1, a2;
+    node_get_addr(node1, &a1);
+    node_get_addr(node2, &a2);
+    if (addrs_in_same_network_family(&a1, &a2))
+      return 1;
+  }
+
+  /* Are they in the same family because the agree they are? */
+  {
+    const smartlist_t *f1, *f2;
+    f1 = node_get_declared_family(node1);
+    f2 = node_get_declared_family(node2);
+    if (f1 && f2 &&
+        node_in_nickname_smartlist(f1, node2) &&
+        node_in_nickname_smartlist(f2, node1))
+      return 1;
+  }
+
+  /* Are they in the same option because the user says they are? */
+  if (options->NodeFamilySets) {
+    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
+        if (routerset_contains_node(rs, node1) &&
+            routerset_contains_node(rs, node2))
+          return 1;
+      });
+  }
+
+  return 0;
+}
+
+/**
+ * Add all the family of <b>node</b>, including <b>node</b> itself, to
+ * the smartlist <b>sl</b>.
+ *
+ * This is used to make sure we don't pick siblings in a single path, or
+ * pick more than one relay from a family for our entry guard list.
+ * Note that a node may be added to <b>sl</b> more than once if it is
+ * part of <b>node</b>'s family for more than one reason.
+ */
+void
+nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
+{
+  const smartlist_t *all_nodes = nodelist_get_list();
+  const smartlist_t *declared_family;
+  const or_options_t *options = get_options();
+
+  tor_assert(node);
+
+  declared_family = node_get_declared_family(node);
+
+  /* Let's make sure that we have the node itself, if it's a real node. */
+  {
+    const node_t *real_node = node_get_by_id(node->identity);
+    if (real_node)
+      smartlist_add(sl, (node_t*)real_node);
+  }
+
+  /* First, add any nodes with similar network addresses. */
+  if (options->EnforceDistinctSubnets) {
+    tor_addr_t node_addr;
+    node_get_addr(node, &node_addr);
+
+    SMARTLIST_FOREACH_BEGIN(all_nodes, const node_t *, node2) {
+      tor_addr_t a;
+      node_get_addr(node2, &a);
+      if (addrs_in_same_network_family(&a, &node_addr))
+        smartlist_add(sl, (void*)node2);
+    } SMARTLIST_FOREACH_END(node2);
+  }
+
+  /* Now, add all nodes in the declared_family of this node, if they
+   * also declare this node to be in their family. */
+  if (declared_family) {
+    /* Add every r such that router declares familyness with node, and node
+     * declares familyhood with router. */
+    SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
+      const node_t *node2;
+      const smartlist_t *family2;
+      if (!(node2 = node_get_by_nickname(name, 0)))
+        continue;
+      if (!(family2 = node_get_declared_family(node2)))
+        continue;
+      SMARTLIST_FOREACH_BEGIN(family2, const char *, name2) {
+          if (node_nickname_matches(node, name2)) {
+            smartlist_add(sl, (void*)node2);
+            break;
+          }
+      } SMARTLIST_FOREACH_END(name2);
+    } SMARTLIST_FOREACH_END(name);
+  }
+
+  /* If the user declared any families locally, honor those too. */
+  if (options->NodeFamilySets) {
+    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
+      if (routerset_contains_node(rs, node)) {
+        routerset_get_all_nodes(sl, rs, NULL, 0);
+      }
+    });
+  }
+}
+
+/** Find a router that's up, that has this IP address, and
+ * that allows exit to this address:port, or return NULL if there
+ * isn't a good one.
+ * Don't exit enclave to excluded relays -- it wouldn't actually
+ * hurt anything, but this way there are fewer confused users.
+ */
+const node_t *
+router_find_exact_exit_enclave(const char *address, uint16_t port)
+{/*XXXX MOVE*/
+  uint32_t addr;
+  struct in_addr in;
+  tor_addr_t a;
+  const or_options_t *options = get_options();
+
+  if (!tor_inet_aton(address, &in))
+    return NULL; /* it's not an IP already */
+  addr = ntohl(in.s_addr);
+
+  tor_addr_from_ipv4h(&a, addr);
+
+  SMARTLIST_FOREACH(nodelist_get_list(), const node_t *, node, {
+    if (node_get_addr_ipv4h(node) == addr &&
+        node->is_running &&
+        compare_tor_addr_to_node_policy(&a, port, node) ==
+          ADDR_POLICY_ACCEPTED &&
+        !routerset_contains_node(options->_ExcludeExitNodesUnion, node))
+      return node;
+  });
+  return NULL;
+}
+
+/** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
+ * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
+ * If <b>need_capacity</b> is non-zero, we require a minimum advertised
+ * bandwidth.
+ * If <b>need_guard</b>, we require that the router is a possible entry guard.
+ */
+int
+node_is_unreliable(const node_t *node, int need_uptime,
+                   int need_capacity, int need_guard)
+{
+  if (need_uptime && !node->is_stable)
+    return 1;
+  if (need_capacity && !node->is_fast)
+    return 1;
+  if (need_guard && !node->is_possible_guard)
+    return 1;
+  return 0;
+}
+
+/** Return 1 if all running sufficiently-stable routers we can use will reject
+ * addr:port, return 0 if any might accept it. */
+int
+router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
+                                    int need_uptime)
+{
+  addr_policy_result_t r;
+
+  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
+    if (node->is_running &&
+        !node_is_unreliable(node, need_uptime, 0, 0)) {
+
+      r = compare_tor_addr_to_node_policy(addr, port, node);
+
+      if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
+        return 0; /* this one could be ok. good enough. */
+    }
+  } SMARTLIST_FOREACH_END(node);
+  return 1; /* all will reject. */
+}
+
+/** Mark the router with ID <b>digest</b> as running or non-running
+ * in our routerlist. */
+void
+router_set_status(const char *digest, int up)
+{
+  node_t *node;
+  tor_assert(digest);
+
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, d,
+                    if (tor_memeq(d->digest, digest, DIGEST_LEN))
+                      d->is_running = up);
+
+  node = node_get_mutable_by_id(digest);
+  if (node) {
+#if 0
+    log_debug(LD_DIR,"Marking router %s as %s.",
+              node_describe(node), up ? "up" : "down");
+#endif
+    if (!up && node_is_me(node) && !net_is_disabled())
+      log_warn(LD_NET, "We just marked ourself as down. Are your external "
+               "addresses reachable?");
+    node->is_running = up;
+  }
+
+  router_dir_info_changed();
+}
+
+/** True iff, the last time we checked whether we had enough directory info
+ * to build circuits, the answer was "yes". */
+static int have_min_dir_info = 0;
+/** True iff enough has changed since the last time we checked whether we had
+ * enough directory info to build circuits that our old answer can no longer
+ * be trusted. */
+static int need_to_update_have_min_dir_info = 1;
+/** String describing what we're missing before we have enough directory
+ * info. */
+static char dir_info_status[128] = "";
+
+/** Return true iff we have enough networkstatus and router information to
+ * start building circuits.  Right now, this means "more than half the
+ * networkstatus documents, and at least 1/4 of expected routers." */
+//XXX should consider whether we have enough exiting nodes here.
+int
+router_have_minimum_dir_info(void)
+{
+  if (PREDICT_UNLIKELY(need_to_update_have_min_dir_info)) {
+    update_router_have_minimum_dir_info();
+    need_to_update_have_min_dir_info = 0;
+  }
+  return have_min_dir_info;
+}
+
+/** Called when our internal view of the directory has changed.  This can be
+ * when the authorities change, networkstatuses change, the list of routerdescs
+ * changes, or number of running routers changes.
+ */
+void
+router_dir_info_changed(void)
+{
+  need_to_update_have_min_dir_info = 1;
+  rend_hsdir_routers_changed();
+}
+
+/** Return a string describing what we're missing before we have enough
+ * directory info. */
+const char *
+get_dir_info_status_string(void)
+{
+  return dir_info_status;
+}
+
+/** Iterate over the servers listed in <b>consensus</b>, and count how many of
+ * them seem like ones we'd use, and how many of <em>those</em> we have
+ * descriptors for.  Store the former in *<b>num_usable</b> and the latter in
+ * *<b>num_present</b>.  If <b>in_set</b> is non-NULL, only consider those
+ * routers in <b>in_set</b>.  If <b>exit_only</b> is true, only consider nodes
+ * with the Exit flag.
+ */
+static void
+count_usable_descriptors(int *num_present, int *num_usable,
+                         const networkstatus_t *consensus,
+                         const or_options_t *options, time_t now,
+                         routerset_t *in_set, int exit_only)
+{
+  const int md = (consensus->flavor == FLAV_MICRODESC);
+  *num_present = 0, *num_usable=0;
+
+  SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, routerstatus_t *, rs)
+    {
+       if (exit_only && ! rs->is_exit)
+         continue;
+       if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
+         continue;
+       if (client_would_use_router(rs, now, options)) {
+         const char * const digest = rs->descriptor_digest;
+         int present;
+         ++*num_usable; /* the consensus says we want it. */
+         if (md)
+           present = NULL != microdesc_cache_lookup_by_digest256(NULL, digest);
+         else
+           present = NULL != router_get_by_descriptor_digest(digest);
+         if (present) {
+           /* we have the descriptor listed in the consensus. */
+           ++*num_present;
+         }
+       }
+     }
+  SMARTLIST_FOREACH_END(rs);
+
+  log_debug(LD_DIR, "%d usable, %d present (%s).", *num_usable, *num_present,
+            md ? "microdescs" : "descs");
+}
+
+/** We just fetched a new set of descriptors. Compute how far through
+ * the "loading descriptors" bootstrapping phase we are, so we can inform
+ * the controller of our progress. */
+int
+count_loading_descriptors_progress(void)
+{
+  int num_present = 0, num_usable=0;
+  time_t now = time(NULL);
+  const networkstatus_t *consensus =
+    networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
+  double fraction;
+
+  if (!consensus)
+    return 0; /* can't count descriptors if we have no list of them */
+
+  count_usable_descriptors(&num_present, &num_usable,
+                           consensus, get_options(), now, NULL, 0);
+
+  if (num_usable == 0)
+    return 0; /* don't div by 0 */
+  fraction = num_present / (num_usable/4.);
+  if (fraction > 1.0)
+    return 0; /* it's not the number of descriptors holding us back */
+  return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS + (int)
+    (fraction*(BOOTSTRAP_STATUS_CONN_OR-1 -
+               BOOTSTRAP_STATUS_LOADING_DESCRIPTORS));
+}
+
+/** Change the value of have_min_dir_info, setting it true iff we have enough
+ * network and router information to build circuits.  Clear the value of
+ * need_to_update_have_min_dir_info. */
+static void
+update_router_have_minimum_dir_info(void)
+{
+  int num_present = 0, num_usable=0;
+  int num_exit_present = 0, num_exit_usable = 0;
+  time_t now = time(NULL);
+  int res;
+  const or_options_t *options = get_options();
+  const networkstatus_t *consensus =
+    networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
+  int using_md;
+
+  if (!consensus) {
+    if (!networkstatus_get_latest_consensus())
+      strlcpy(dir_info_status, "We have no usable consensus.",
+              sizeof(dir_info_status));
+    else
+      strlcpy(dir_info_status, "We have no recent usable consensus.",
+              sizeof(dir_info_status));
+    res = 0;
+    goto done;
+  }
+
+  if (should_delay_dir_fetches(get_options())) {
+    log_notice(LD_DIR, "no known bridge descriptors running yet; stalling");
+    strlcpy(dir_info_status, "No live bridge descriptors.",
+            sizeof(dir_info_status));
+    res = 0;
+    goto done;
+  }
+
+  using_md = consensus->flavor == FLAV_MICRODESC;
+
+  count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
+                           NULL, 0);
+  count_usable_descriptors(&num_exit_present, &num_exit_usable,
+                           consensus, options, now, options->ExitNodes, 1);
+
+/* What fraction of desired server descriptors do we need before we will
+ * build circuits? */
+#define FRAC_USABLE_NEEDED .75
+/* What fraction of desired _exit_ server descriptors do we need before we
+ * will build circuits? */
+#define FRAC_EXIT_USABLE_NEEDED .5
+
+  if (num_present < num_usable * FRAC_USABLE_NEEDED) {
+    tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                 "We have only %d/%d usable %sdescriptors.",
+                 num_present, num_usable, using_md ? "micro" : "");
+    res = 0;
+    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
+    goto done;
+  } else if (num_present < 2) {
+    tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                 "Only %d %sdescriptor%s here and believed reachable!",
+                 num_present, using_md ? "micro" : "", num_present ? "" : "s");
+    res = 0;
+    goto done;
+  } else if (num_exit_present < num_exit_usable * FRAC_EXIT_USABLE_NEEDED) {
+    tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                 "We have only %d/%d usable exit node descriptors.",
+                 num_exit_present, num_exit_usable);
+    res = 0;
+    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
+    goto done;
+  }
+
+  /* Check for entry nodes. */
+  if (options->EntryNodes) {
+    count_usable_descriptors(&num_present, &num_usable, consensus, options,
+                             now, options->EntryNodes, 0);
+
+    if (!num_usable || !num_present) {
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We have only %d/%d usable entry node %sdescriptors.",
+                   num_present, num_usable, using_md?"micro":"");
+      res = 0;
+      goto done;
+    }
+  }
+
+  res = 1;
+
+ done:
+  if (res && !have_min_dir_info) {
+    log(LOG_NOTICE, LD_DIR,
+        "We now have enough directory information to build circuits.");
+    control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
+    control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0);
+  }
+  if (!res && have_min_dir_info) {
+    int quiet = directory_too_idle_to_fetch_descriptors(options, now);
+    log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
+        "Our directory information is no longer up-to-date "
+        "enough to build circuits: %s", dir_info_status);
+
+    /* a) make us log when we next complete a circuit, so we know when Tor
+     * is back up and usable, and b) disable some activities that Tor
+     * should only do while circuits are working, like reachability tests
+     * and fetching bridge descriptors only over circuits. */
+    can_complete_circuit = 0;
+
+    control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
+  }
+  have_min_dir_info = res;
+  need_to_update_have_min_dir_info = 0;
 }
 

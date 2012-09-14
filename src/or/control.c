@@ -1639,10 +1639,13 @@ getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)
 {
-  const routerinfo_t *ri;
+  const node_t *node;
+  const routerinfo_t *ri = NULL;
   (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
-    ri = router_get_by_hexdigest(question+strlen("desc/id/"));
+    node = node_get_by_hex_id(question+strlen("desc/id/"));
+    if (node)
+      ri = node->ri;
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
@@ -1651,7 +1654,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "desc/name/")) {
     /* XXX023 Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
-    ri = router_get_by_nickname(question+strlen("desc/name/"),1);
+    node = node_get_by_nickname(question+strlen("desc/name/"), 1);
+    if (node)
+      ri = node->ri;
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
@@ -1713,8 +1718,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
       *answer = tor_strndup(md->body, md->bodylen);
     }
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
-    ri = router_get_by_hexdigest(question+
-                                 strlen("desc-annotations/id/"));
+    node = node_get_by_hex_id(question+strlen("desc-annotations/id/"));
+    if (node)
+      ri = node->ri;
     if (ri) {
       const char *annotations =
         signed_descriptor_get_annotations(&ri->cache_info);
