@@ -3004,6 +3004,16 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     log_warn(LD_DIR, "known-flags not in order");
     goto err;
   }
+  if (ns->type != NS_TYPE_CONSENSUS &&
+      smartlist_len(ns->known_flags) > MAX_KNOWN_FLAGS_IN_VOTE) {
+    /* If we allowed more than 64 flags in votes, then parsing them would make
+     * us invoke undefined behavior whenever we used 1<<flagnum to do a
+     * bit-shift. This is only for votes and opinions: consensus users don't
+     * care about flags they don't recognize, and so don't build a bitfield
+     * for them. */
+    log_warn(LD_DIR, "Too many known-flags in consensus vote or opinion");
+    goto err;
+  }
 
   tok = find_opt_by_keyword(tokens, K_PARAMS);
   if (tok) {
