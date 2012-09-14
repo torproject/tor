@@ -83,7 +83,7 @@ COMMAND-LINE OPTIONS
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
 instance, you can tell Tor to start listening for SOCKS connections on port
-9999 by passing --SOCKSPort 9999 or SOCKPort 9999 to it on the command line,
+9999 by passing --SOCKSPort 9999 or SOCKSPort 9999 to it on the command line,
 or by putting "SOCKSPort 9999" in the configuration file.  You will need to
 quote options with spaces in them: if you want Tor to log all debugging
 messages to debug.log, you will probably need to say --Log 'debug file
