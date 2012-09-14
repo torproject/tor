@@ -1109,6 +1109,7 @@ test_util_pow2(void)
   test_eq(tor_log2(64), 6);
   test_eq(tor_log2(65), 6);
   test_eq(tor_log2(63), 5);
+  test_eq(tor_log2(0), 0); /* incorrect mathematically, but as specified */
   test_eq(tor_log2(1), 0);
   test_eq(tor_log2(2), 1);
   test_eq(tor_log2(3), 1);
@@ -1123,7 +1124,17 @@ test_util_pow2(void)
   test_eq(round_to_power_of_2(130), 128);
   test_eq(round_to_power_of_2(U64_LITERAL(40000000000000000)),
           U64_LITERAL(1)<<55);
-  test_eq(round_to_power_of_2(0), 2);
+  test_eq(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)),
+          U64_LITERAL(1)<<63);
+  test_eq(round_to_power_of_2(0), 1);
+  test_eq(round_to_power_of_2(1), 1);
+  test_eq(round_to_power_of_2(2), 2);
+  test_eq(round_to_power_of_2(3), 2);
+  test_eq(round_to_power_of_2(4), 4);
+  test_eq(round_to_power_of_2(4), 4);
+  test_eq(round_to_power_of_2(5), 4);
+  test_eq(round_to_power_of_2(6), 4);
+  test_eq(round_to_power_of_2(7), 8);
 
  done:
   ;

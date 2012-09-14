@@ -394,12 +394,24 @@ tor_log2(uint64_t u64)
   return r;
 }
 
-/** Return the power of 2 closest to <b>u64</b>. */
+/** Return the power of 2 in range [1,UINT64_MAX] closest to <b>u64</b>.  If
+ * there are two powers of 2 equally close, round down. */
 uint64_t
 round_to_power_of_2(uint64_t u64)
 {
-  int lg2 = tor_log2(u64);
-  uint64_t low = U64_LITERAL(1) << lg2, high = U64_LITERAL(1) << (lg2+1);
+  int lg2;
+  uint64_t low;
+  uint64_t high;
+  if (u64 == 0)
+    return 1;
+
+  lg2 = tor_log2(u64);
+  low = U64_LITERAL(1) << lg2;
+
+  if (lg2 == 63)
+    return low;
+
+  high = U64_LITERAL(1) << (lg2+1);
   if (high - u64 < u64 - low)
     return high;
   else
