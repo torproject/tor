@@ -1131,7 +1131,6 @@ test_util_pow2(void)
   test_eq(round_to_power_of_2(2), 2);
   test_eq(round_to_power_of_2(3), 2);
   test_eq(round_to_power_of_2(4), 4);
-  test_eq(round_to_power_of_2(4), 4);
   test_eq(round_to_power_of_2(5), 4);
   test_eq(round_to_power_of_2(6), 4);
   test_eq(round_to_power_of_2(7), 8);
