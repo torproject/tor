@@ -2322,7 +2322,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   }
   string[r] = '\0'; /* NUL-terminate the result. */
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
   if (!bin && strchr(string, '\r')) {
     log_debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped "
               "when reading %s. Coping.",
