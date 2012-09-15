@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Fix a possible crash bug when checking for deactivated circuits
-      in connection_or_flush_from_first_active_circuit(). Fixes bug 
-      6341; bugfix on 0.2.2.7-alpha. Bug report and fix received
-      pseudonymously.

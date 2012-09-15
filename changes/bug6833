@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authority):
-    - Reject consensus votes with more than 64 known-flags. We aren't even
-      close to that limit yet, and our code doesn't handle it
-      correctly. Fixes bug 6833; bugfix on 0.2.0.1-alpha.

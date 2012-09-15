@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix building with older versions of GCC that don't like preprocessor
-      directives inside macro arguments. Found by grarpamp. Fixes bug 6842;
-      bugfix on 0.2.4.2-alpha.
-     

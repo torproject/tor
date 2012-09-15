@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix round_to_power_of_2 so it doesn't invoke undefined behavior
-      with large values. This was untriggered, but nevertheless incorrect.
-      Fixes bug 6831; bugfix on 0.2.0.1-alpha.

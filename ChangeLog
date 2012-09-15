@@ -1,3 +1,60 @@
+Changes in version 0.2.4.3-alpha - 2012-09-??
+  o Security fixes:
+    - Fix an assertion failure in tor_timegm() that could be triggered
+      by a badly formatted directory object. Bug found by fuzzing with
+      Radamsa. Fixes bug 6811; bugfix on 0.2.0.20-rc.
+
+  o Major bugfixes:
+    - Fix a possible crash bug when checking for deactivated circuits
+      in connection_or_flush_from_first_active_circuit(). Fixes bug 6341;
+      bugfix on 0.2.2.7-alpha. Bug report and fix received pseudonymously.
+    - Allow routers to detect that their own DirPorts are running. When
+      we removed support for versions_supports_begindir, we also
+      accidentally removed the mechanism we used to self-test our
+      DirPort. Diagnosed with help from kargig. Fixes bugs 6814 and 6815;
+      bugfix on 0.2.4.2-alpha.
+
+  o Security features:
+    - Switch to a completely time-invariant approach for picking nodes
+      weighted by bandwidth. Our old approach would run through the
+      part of the loop after it had made its choice slightly slower
+      than it ran through the part of the loop before it had made its
+      choice. Addresses ticket 6538.
+
+  o Minor bugfixes:
+    - Correct file sizes when reading binary files on Cygwin, to avoid
+      a bug where Tor would fail to read its state file. Fixes bug 6844;
+      bugfix on 0.1.2.7-alpha.
+    - Fix round_to_power_of_2() so it doesn't invoke undefined behavior
+      with large values. This situation was untriggered, but nevertheless
+      incorrect. Fixes bug 6831; bugfix on 0.2.0.1-alpha.
+    - Reject consensus votes with more than 64 known-flags. We aren't even
+      close to that limit yet, and our code doesn't handle it correctly.
+      Fixes bug 6833; bugfix on 0.2.0.1-alpha.
+    - Avoid undefined behaviour when parsing the list of supported
+      rendezvous/introduction protocols in a hidden service descriptor.
+      Previously, Tor would have confused (as-yet-unused) protocol version
+      numbers greater than 32 with lower ones on many platforms. Fixes
+      bug 6827; bugfix on 0.2.0.10-alpha. Found by George Kadianakis.
+    - Fix building with older versions of GCC that don't like preprocessor
+      directives inside macro arguments. Found by grarpamp. Fixes bug
+      6842; bugfix on 0.2.4.2-alpha.
+    - Switch weighted node selection rule from using a list of doubles
+      to using a list of int64_t. This change should make the process
+      slightly easier to debug and maintain. Needed to finish ticket 6538.
+
+  o Code simplification and refactoring:
+    - Move the generic "config" code into a new file, and have "config.c"
+      hold only torrc- and state-related code. Resolves ticket 6823.
+    - Move the core of our "choose a weighted element at random" logic
+      into its own function, and give it unit tests. Now the logic is
+      testable, and a little less fragile too.
+
+  o Documentation fixes:
+    - Resolve a typo in torrc.sample.in. Fixes bug 6819; bugfix on
+      0.2.3.14-alpha.
+
+
 Changes in version 0.2.3.22-rc - 2012-09-11
   Tor 0.2.3.22-rc fixes another opportunity for a remotely triggerable
   assertion.
