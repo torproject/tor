@@ -748,19 +748,23 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
   return BN_is_word(env->key->e, 65537);
 }
 
-/** Compare the public-key components of a and b.  Return -1 if a\<b, 0
- * if a==b, and 1 if a\>b.
+/** Compare the public-key components of a and b.  Return -1 if a\<b,
+ * 0 if a==b, and 1 if a\>b.  A NULL key is considered to be less than
+ * all non-NULL keys, and equal to itself.
+ *
+ * Note that this may leak information about the keys through timing.
  */
 int
 crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
 {
   int result;
+  char a_is_non_null = (a != NULL) && (a->key != NULL);
+  char b_is_non_null = (b != NULL) && (b->key != NULL);
+  char an_argument_is_null = !a_is_non_null | !b_is_non_null;
 
-  if (!a || !b)
-    return -1;
-
-  if (!a->key || !b->key)
-    return -1;
+  result = tor_memcmp(&a_is_non_null, &b_is_non_null, sizeof(a_is_non_null));
+  if (an_argument_is_null)
+    return result;
 
   tor_assert(PUBLIC_KEY_OK(a));
   tor_assert(PUBLIC_KEY_OK(b));
