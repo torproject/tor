@@ -4529,8 +4529,8 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       r1->ipv6_orport != r2->ipv6_orport ||
       r1->dir_port != r2->dir_port ||
       r1->purpose != r2->purpose ||
-      crypto_pk_cmp_keys(r1->onion_pkey, r2->onion_pkey) ||
-      crypto_pk_cmp_keys(r1->identity_pkey, r2->identity_pkey) ||
+      !crypto_pk_eq_keys(r1->onion_pkey, r2->onion_pkey) ||
+      !crypto_pk_eq_keys(r1->identity_pkey, r2->identity_pkey) ||
       strcasecmp(r1->platform, r2->platform) ||
       (r1->contact_info && !r2->contact_info) || /* contact_info is optional */
       (!r1->contact_info && r2->contact_info) ||

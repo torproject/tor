@@ -2730,7 +2730,7 @@ find_intro_point(origin_circuit_t *circ)
   if (service == NULL) return NULL;
 
   SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro_point,
-    if (crypto_pk_cmp_keys(intro_point->intro_key, circ->intro_key) == 0) {
+    if (crypto_pk_eq_keys(intro_point->intro_key, circ->intro_key)) {
       return intro_point;
     });
 

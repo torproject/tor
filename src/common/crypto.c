@@ -774,6 +774,18 @@ crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
   return BN_cmp((a->key)->e, (b->key)->e);
 }
 
+/** Compare the public-key components of a and b.  Return non-zero iff
+ * a==b.  A NULL key is considered to be distinct from all non-NULL
+ * keys, and equal to itself.
+ *
+ *  Note that this may leak information about the keys through timing.
+ */
+int
+crypto_pk_eq_keys(crypto_pk_t *a, crypto_pk_t *b)
+{
+  return (crypto_pk_cmp_keys(a, b) == 0);
+}
+
 /** Return the size of the public key modulus in <b>env</b>, in bytes. */
 size_t
 crypto_pk_keysize(crypto_pk_t *env)

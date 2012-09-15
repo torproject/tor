@@ -87,7 +87,7 @@ static authority_cert_t *legacy_key_certificate = NULL;
 static void
 set_onion_key(crypto_pk_t *k)
 {
-  if (onionkey && !crypto_pk_cmp_keys(onionkey, k)) {
+  if (onionkey && crypto_pk_eq_keys(onionkey, k)) {
     /* k is already our onion key; free it and return */
     crypto_pk_free(k);
     return;
@@ -155,12 +155,11 @@ assert_identity_keys_ok(void)
   if (public_server_mode(get_options())) {
     /* assert that we have set the client and server keys to be equal */
     tor_assert(server_identitykey);
-    tor_assert(0==crypto_pk_cmp_keys(client_identitykey, server_identitykey));
+    tor_assert(crypto_pk_eq_keys(client_identitykey, server_identitykey));
   } else {
     /* assert that we have set the client and server keys to be unequal */
     if (server_identitykey)
-      tor_assert(0!=crypto_pk_cmp_keys(client_identitykey,
-                                       server_identitykey));
+      tor_assert(!crypto_pk_eq_keys(client_identitykey, server_identitykey));
   }
 }
 
@@ -400,7 +399,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
     log_warn(LD_DIR, "Unable to parse certificate in %s", fname);
     goto done;
   }
-  if (crypto_pk_cmp_keys(signing_key, parsed->signing_key) != 0) {
+  if (!crypto_pk_eq_keys(signing_key, parsed->signing_key)) {
     log_warn(LD_DIR, "Stored signing key does not match signing key in "
              "certificate");
     goto done;
@@ -2008,7 +2007,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   const or_options_t *options = get_options();
 
   /* Make sure the identity key matches the one in the routerinfo. */
-  if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
+  if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
     log_warn(LD_BUG,"Tried to sign a router with a private key that didn't "
              "match router's public key!");
     return -1;
