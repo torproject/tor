@@ -3416,7 +3416,8 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
                         router->cache_info.identity_digest);
 
   /* Possible IPv6. */
-  if (!tor_addr_is_null(&router->ipv6_addr)) {
+  if (get_options()->AuthDirHasIPv6Connectivity == 1 &&
+      !tor_addr_is_null(&router->ipv6_addr)) {
     char addrstr[TOR_ADDR_BUF_LEN];
     log_debug(LD_OR, "Testing reachability of %s at %s:%u.",
               router->nickname,
