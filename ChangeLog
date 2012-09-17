@@ -36,9 +36,9 @@ Changes in version 0.2.4.3-alpha - 2012-09-??
       Previously, Tor would have confused (as-yet-unused) protocol version
       numbers greater than 32 with lower ones on many platforms. Fixes
       bug 6827; bugfix on 0.2.0.10-alpha. Found by George Kadianakis.
-    - Fix building with older versions of GCC that don't like preprocessor
-      directives inside macro arguments. Found by grarpamp. Fixes bug
-      6842; bugfix on 0.2.4.2-alpha.
+    - Fix building with older versions of GCC (2.95, for one) that don't
+      like preprocessor directives inside macro arguments. Found by
+      grarpamp. Fixes bug 6842; bugfix on 0.2.4.2-alpha.
     - Switch weighted node selection rule from using a list of doubles
       to using a list of int64_t. This change should make the process
       slightly easier to debug and maintain. Needed to finish ticket 6538.
