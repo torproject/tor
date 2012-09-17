@@ -2067,7 +2067,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     for (i=0; i < tok->n_args; ++i) {
       int p = smartlist_string_pos(vote->known_flags, tok->args[i]);
       if (p >= 0) {
-        vote_rs->flags |= (1<<p);
+        vote_rs->flags |= (U64_LITERAL(1)<<p);
       } else {
         log_warn(LD_DIR, "Flags line had a flag %s not listed in known_flags.",
                  escaped(tok->args[i]));
