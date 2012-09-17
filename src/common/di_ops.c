@@ -123,7 +123,7 @@ tor_memeq(const void *a, const void *b, size_t sz)
    *
    * If any_difference != 0:
    *            0 < any_difference < 256, so
-   *            0 < any_difference - 1 < 255
+   *            0 <= any_difference - 1 < 255
    *            (any_difference - 1) >> 8 == 0
    *            1 & ((any_difference - 1) >> 8) == 0
    */
