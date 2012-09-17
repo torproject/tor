@@ -1833,6 +1833,10 @@ file_status(const char *fname)
     return FN_DIR;
   else if (st.st_mode & S_IFREG)
     return FN_FILE;
+#ifndef _WIN32
+  else if (st.st_mode & S_IFIFO)
+    return FN_FILE;
+#endif
   else
     return FN_ERROR;
 }
@@ -2263,6 +2267,46 @@ write_bytes_to_new_file(const char *fname, const char *str, size_t len,
                                   (bin?O_BINARY:O_TEXT));
 }
 
+/**
+ * Read the contents of the open file <b>fd</b> presuming it is a FIFO
+ * (or similar) file descriptor for which the size of the file isn't
+ * known ahead of time. Return NULL on failure, and a NUL-terminated
+ * string on success.  On success, set <b>sz_out</b> to the number of
+ * bytes read.
+ */
+char *
+read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
+{
+  ssize_t r;
+  size_t pos = 0;
+  char *string = NULL;
+  size_t string_max = 0;
+
+  if (max_bytes_to_read+1 >= SIZE_T_CEILING)
+    return NULL;
+
+  do {
+    /* XXXX This "add 1K" approach is a little goofy; if we care about
+     * performance here, we should be doubling.  But in practice we shouldn't
+     * be using this function on big files anyway. */
+    string_max = pos + 1024;
+    if (string_max > max_bytes_to_read)
+      string_max = max_bytes_to_read + 1;
+    string = tor_realloc(string, string_max);
+    r = read(fd, string + pos, string_max - pos - 1);
+    if (r < 0) {
+      tor_free(string);
+      return NULL;
+    }
+
+    pos += r;
+  } while (r > 0 && pos < max_bytes_to_read);
+
+  *sz_out = pos;
+  string[pos] = '\0';
+  return string;
+}
+
 /** Read the contents of <b>filename</b> into a newly allocated
  * string; return the string on success or NULL on failure.
  *
@@ -2310,6 +2354,22 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
     errno = save_errno;
     return NULL;
   }
+
+#ifndef _WIN32
+/** When we detect that we're reading from a FIFO, don't read more than
+ * this many bytes.  It's insane overkill for most uses. */
+#define FIFO_READ_MAX (1024*1024)
+  if (S_ISFIFO(statbuf.st_mode)) {
+    size_t sz = 0;
+    string = read_file_to_str_until_eof(fd, FIFO_READ_MAX, &sz);
+    if (string && stat_out) {
+      statbuf.st_size = sz;
+      memcpy(stat_out, &statbuf, sizeof(struct stat));
+    }
+    close(fd);
+    return string;
+  }
+#endif
 
   if ((uint64_t)(statbuf.st_size)+1 >= SIZE_T_CEILING)
     return NULL;

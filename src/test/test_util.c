@@ -32,6 +32,74 @@ tor_timegm_wrapper(const struct tm *tm)
 #define tor_timegm tor_timegm_wrapper
 
 static void
+test_util_read_until_eof_impl(const char *fname, size_t file_len,
+                              size_t read_limit)
+{
+  char *fifo_name = NULL;
+  char *test_str = NULL;
+  char *str = NULL;
+  size_t sz = 9999999;
+  int fd = -1;
+  int r;
+
+  fifo_name = tor_strdup(get_fname(fname));
+  test_str = tor_malloc(file_len);
+  crypto_rand(test_str, file_len);
+
+  r = write_bytes_to_file(fifo_name, test_str, file_len, 1);
+  tt_int_op(r, ==, 0);
+
+  fd = open(fifo_name, O_RDONLY|O_BINARY);
+  tt_int_op(fd, >=, 0);
+  str = read_file_to_str_until_eof(fd, read_limit, &sz);
+  close(fd);
+  tt_assert(str != NULL);
+
+  if (read_limit < file_len)
+    tt_int_op(sz, ==, read_limit);
+  else
+    tt_int_op(sz, ==, file_len);
+
+  test_mem_op(test_str, ==, str, sz);
+  test_assert(str[sz] == '\0');
+
+ done:
+  unlink(fifo_name);
+  tor_free(fifo_name);
+  tor_free(test_str);
+  tor_free(str);
+}
+
+static void
+test_util_read_file_eof_tiny_limit(void *arg)
+{
+  (void)arg;
+  // purposely set limit shorter than what we wrote to the FIFO to
+  // test the maximum, and that it puts the NUL in the right spot
+
+  test_util_read_until_eof_impl("tor_test_fifo_tiny", 5, 4);
+}
+
+static void
+test_util_read_file_eof_two_loops(void *arg)
+{
+  (void)arg;
+  // write more than 1024 bytes to the FIFO to test two passes through
+  // the loop in the method; if the re-alloc size is changed this
+  // should be updated as well.
+
+  test_util_read_until_eof_impl("tor_test_fifo_2k", 2048, 10000);
+}
+
+static void
+test_util_read_file_eof_zero_bytes(void *arg)
+{
+  (void)arg;
+  // zero-byte fifo
+  test_util_read_until_eof_impl("tor_test_fifo_empty", 0, 10000);
+}
+
+static void
 test_util_time(void)
 {
   struct timeval start, end;
@@ -3214,6 +3282,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(envnames, 0),
   UTIL_TEST(make_environment, 0),
   UTIL_TEST(set_env_var_in_sl, 0),
+  UTIL_TEST(read_file_eof_tiny_limit, 0),
+  UTIL_TEST(read_file_eof_two_loops, 0),
+  UTIL_TEST(read_file_eof_zero_bytes, 0),
   END_OF_TESTCASES
 };
 

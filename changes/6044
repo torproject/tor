@@ -1,0 +1,5 @@
+  o Minor features:
+    - Enable Tor to read configuration, state, and key information from
+      a FIFO. Previously Tor would only read from files with a positive
+      stat.st_size. Code from meejah; fixes bug 6044.
+
