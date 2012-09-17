@@ -748,9 +748,9 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
   return BN_is_word(env->key->e, 65537);
 }
 
-/** Compare the public-key components of a and b.  Return -1 if a\<b,
- * 0 if a==b, and 1 if a\>b.  A NULL key is considered to be less than
- * all non-NULL keys, and equal to itself.
+/** Compare the public-key components of a and b.  Return less than 0
+ * if a\<b, 0 if a==b, and greater than 0 if a\>b.  A NULL key is
+ * considered to be less than all non-NULL keys, and equal to itself.
  *
  * Note that this may leak information about the keys through timing.
  */
