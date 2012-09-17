@@ -427,6 +427,11 @@ test_crypto_pk(void)
   test_assert(! crypto_pk_read_public_key_from_string(pk2, encoded, size));
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
 
+  /* comparison between keys and NULL */
+  tt_int_op(crypto_pk_cmp_keys(NULL, pk1), <, 0);
+  tt_int_op(crypto_pk_cmp_keys(NULL, NULL), ==, 0);
+  tt_int_op(crypto_pk_cmp_keys(pk1, NULL), >, 0);
+
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(1024, crypto_pk_num_bits(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
