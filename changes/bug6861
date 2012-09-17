@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix handling of rendezvous client authorization types over 8.
+      Fixes bug 6841; bugfix on 0.2.1.5-alpha.

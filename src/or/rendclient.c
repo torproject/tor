@@ -1250,7 +1250,7 @@ rend_parse_service_authorization(const or_options_t *options,
                descriptor_cookie);
       goto err;
     }
-    auth_type_val = (descriptor_cookie_tmp[16] >> 4) + 1;
+    auth_type_val = (((uint8_t)descriptor_cookie_tmp[16]) >> 4) + 1;
     if (auth_type_val < 1 || auth_type_val > 2) {
       log_warn(LD_CONFIG, "Authorization cookie has unknown authorization "
                           "type encoded.");
