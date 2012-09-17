@@ -1,0 +1,3 @@
+  o Minor bugfixes (directory authority):
+    - Correctly handle votes with more than 31 flags. Fixes bug 6853;
+      bugfix on 0.2.0.3-alpha.
