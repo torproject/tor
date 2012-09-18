@@ -1,4 +1,4 @@
   o Minor bugfixes (client):
     - Correct log printout about which address family is preferred
       when connecting to a bridge with both an IPv4 and IPv6 OR port.
-      Fixes bug 6884.
+      Fixes bug 6884; bugfix on 0.2.4.1-alpha.
