@@ -2646,11 +2646,11 @@ pathbias_count_first_hop(origin_circuit_t *circ)
   char *rate_msg = NULL;
 
   /* Completely ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel || 
-          circ->build_state->desired_path_len == 1) {
+  if (circ->build_state->onehop_tunnel ||
+      circ->build_state->desired_path_len == 1) {
     /* Check for inconsistency */
-    if (circ->build_state->desired_path_len != 1 || 
-            !circ->build_state->onehop_tunnel) {
+    if (circ->build_state->desired_path_len != 1 ||
+        !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
               approx_time()))) {
         log_info(LD_BUG,
@@ -2756,11 +2756,11 @@ pathbias_count_success(origin_circuit_t *circ)
   char *rate_msg = NULL;
 
   /* Ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel || 
-          circ->build_state->desired_path_len == 1) {
+  if (circ->build_state->onehop_tunnel ||
+      circ->build_state->desired_path_len == 1) {
     /* Check for consistency */
-    if (circ->build_state->desired_path_len != 1 || 
-            !circ->build_state->onehop_tunnel) {
+    if (circ->build_state->desired_path_len != 1 ||
+        !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
         log_info(LD_BUG,
