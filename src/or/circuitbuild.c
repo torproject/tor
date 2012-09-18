@@ -5641,7 +5641,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
                  "Will prefer using its %s address (%s:%d).",
                  ri->nickname,
-                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 tor_addr_family(&ap.addr) == AF_INET6 ? "IPv6" : "IPv4",
                  fmt_addr(&ap.addr), ap.port);
     }
   }
