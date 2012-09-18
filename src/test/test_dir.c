@@ -223,24 +223,6 @@ test_dir_formats(void)
     add_fingerprint_to_dir("Fred", buf, fingerprint_list);
   }
 
-  {
-  char d[DIGEST_LEN];
-  const char *m;
-  /* XXXX NM re-enable. */
-  /* Make sure routers aren't too far in the past any more. */
-  r1->cache_info.published_on = time(NULL);
-  r2->cache_info.published_on = time(NULL)-3*60*60;
-  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
-  test_eq(dirserv_add_descriptor(buf,&m,""), ROUTER_ADDED_NOTIFY_GENERATOR);
-  test_assert(router_dump_router_to_string(buf, 2048, r2, pk1)>0);
-  test_eq(dirserv_add_descriptor(buf,&m,""), ROUTER_ADDED_NOTIFY_GENERATOR);
-  get_options()->Nickname = tor_strdup("DirServer");
-  test_assert(!dirserv_dump_directory_to_string(&cp,pk3, 0));
-  crypto_pk_get_digest(pk3, d);
-  test_assert(!router_parse_directory(cp));
-  test_eq(2, smartlist_len(dir1->routers));
-  tor_free(cp);
-  }
 #endif
   dirserv_free_fingerprint_list();
 

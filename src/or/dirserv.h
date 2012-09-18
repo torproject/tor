@@ -87,8 +87,6 @@ void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);
 cached_dir_t *dirserv_get_consensus(const char *flavor_name);
-void dirserv_set_cached_directory(const char *directory, time_t when,
-                                  int is_running_routers);
 void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);

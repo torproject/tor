@@ -31,8 +31,6 @@ int router_parse_list_from_string(const char **s, const char *eos,
                                   int is_extrainfo,
                                   int allow_annotations,
                                   const char *prepend_annotations);
-int router_parse_runningrouters(const char *str);
-int router_parse_directory(const char *str);
 
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              int cache_copy,

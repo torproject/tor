@@ -1,0 +1,3 @@
+  o Removed code:
+    - Removed unused code to parse v1 directories and "running routers"
+      documents. Fixes bug 6887.
