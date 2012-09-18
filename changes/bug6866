@@ -2,3 +2,7 @@
     - Convert an assert in the pathbias code to a log message. Assert
       appears to only be triggerable by Tor2Web mode. Fixes bug 6866;
       bugfix on 0.2.3.17-beta.
+    - Disable the use of Guard nodes when in Tor2WebMode. Guard usage
+      by Tor2Web clients allows hidden services to identity tor2web
+      clients through their repeated selection of the same rendezvous
+      and introduction point circuit endpoints (their guards).

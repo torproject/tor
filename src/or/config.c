@@ -2522,6 +2522,22 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->LearnCircuitBuildTimeout = 0;
   }
 
+  if (options->Tor2webMode && options->UseEntryGuards) {
+    /* Tor2WebMode is incompatible with EntryGuards in two ways:
+     *
+     * - Tor2WebMode uses its guard nodes as rend and intro points.
+     *   This makes tor2web users fingerprintable by their continued
+     *   selection of the same 3 nodes for these circuits (their guard
+     *   nodes).
+     *
+     * - Tor2WebMode makes unexpected use of circuit path lengths
+     *   in ways that prevent us from applying the PathBias defense.
+     */
+    log_notice(LD_CONFIG,
+               "Tor2WebMode is enabled; disabling UseEntryGuards.");
+    options->UseEntryGuards = 0;
+  }
+
   if (!(options->LearnCircuitBuildTimeout) &&
         options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,
