@@ -2523,15 +2523,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->Tor2webMode && options->UseEntryGuards) {
-    /* Tor2WebMode is incompatible with EntryGuards in two ways:
-     *
-     * - Tor2WebMode uses its guard nodes as rend and intro points.
-     *   This makes tor2web users fingerprintable by their continued
-     *   selection of the same 3 nodes for these circuits (their guard
-     *   nodes).
-     *
-     * - Tor2WebMode makes unexpected use of circuit path lengths
-     *   in ways that prevent us from applying the PathBias defense.
+    /* tor2web mode clients do not (and should not) use entry guards
+     * in any meaningful way.  Further, tor2web mode causes the hidden
+     * service client code to do things which break the path bias
+     * detector, and it's far easier to turn off entry guards (and
+     * thus the path bias detector with it) than to figure out how to
+     * make a piece of code which cannot possibly help tor2web mode
+     * users compatible with tor2web mode.
      */
     log_notice(LD_CONFIG,
                "Tor2WebMode is enabled; disabling UseEntryGuards.");
