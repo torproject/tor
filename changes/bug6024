@@ -1,0 +1,2 @@
+  o Documentation fixes:
+    - Clarify that hidden services are TCP only. Fixes bug 6024.
