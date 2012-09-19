@@ -4,6 +4,8 @@ $CONFIGURE_IN = './configure.ac';
 $ORCONFIG_H = './src/win32/orconfig.h';
 $TOR_NSI = './contrib/tor-mingw.nsi.in';
 
+$quiet = 1;
+
 sub demand {
     my $fn = shift;
     die "Missing file $fn" unless (-f $fn);
@@ -24,7 +26,7 @@ while (<F>) {
     }
 }
 die "No version found" unless $version;
-print "Tor version is $version\n";
+print "Tor version is $version\n" unless $quiet;
 close F;
 
 sub correctversion {
@@ -36,7 +38,7 @@ sub correctversion {
     if ($s =~ /^$defchar(?:)define\s+VERSION\s+\"([^\"]+)\"/m) {
 	$oldver = $1;
 	if ($oldver ne $version) {
-	    print "Version mismatch in $fn: It thinks that the version is $oldver.  Fixing.\n";
+	    print "Version mismatch in $fn: It thinks that the version is $oldver.  I think it's $version.  Fixing.\n";
 	    $line = $defchar . "define VERSION \"$version\"";
 	    open(F, ">$fn.bak");
 	    print F $s;
@@ -44,9 +46,9 @@ sub correctversion {
 	    $s =~ s/^$defchar(?:)define\s+VERSION.*?$/$line/m;
 	    open(F, ">$fn");
 	    print F $s;
-	    close F;	    
+	    close F;
 	} else {
-	    print "$fn has the correct version. Good.\n";
+	    print "$fn has the correct version. Good.\n" unless $quiet;
 	}
     } else {
 	print "Didn't find a version line in $fn -- uh oh.\n";
