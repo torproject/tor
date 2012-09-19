@@ -5654,15 +5654,9 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       }
     }
 
-    /* Mark bridge as preferably connected to over IPv6 if its IPv6
-       address is in a Bridge line and ClientPreferIPv6ORPort is
-       set. Unless both is true, a potential IPv6 OR port of this
-       bridge won't get selected.
-
-       XXX ipv6_preferred is never reset (#6757) */
-    if (get_options()->ClientPreferIPv6ORPort == 1 &&
-        tor_addr_family(&bridge->addr) == AF_INET6)
-      node->ipv6_preferred = 1;
+    /* Mark which address to use based on which bridge_t we got. */
+    node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+                            !tor_addr_is_null(&node->ri->ipv6_addr));
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
