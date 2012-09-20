@@ -1377,23 +1377,34 @@ connection_connect(connection_t *conn, const char *address,
 
   make_socket_reuseable(s);
 
-  if (options->OutboundBindAddress && !tor_addr_is_loopback(addr)) {
-    struct sockaddr_in ext_addr;
-
-    memset(&ext_addr, 0, sizeof(ext_addr));
-    ext_addr.sin_family = AF_INET;
-    ext_addr.sin_port = 0;
-    if (!tor_inet_aton(options->OutboundBindAddress, &ext_addr.sin_addr)) {
-      log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
-               options->OutboundBindAddress);
-    } else {
-      if (bind(s, (struct sockaddr*)&ext_addr,
-               (socklen_t)sizeof(ext_addr)) < 0) {
-        *socket_error = tor_socket_errno(s);
-        log_warn(LD_NET,"Error binding network socket: %s",
-                 tor_socket_strerror(*socket_error));
-        tor_close_socket(s);
-        return -1;
+  if (!tor_addr_is_loopback(addr)) {
+    const tor_addr_t *ext_addr = NULL;
+    if (protocol_family == AF_INET &&
+        !tor_addr_is_null(&options->_OutboundBindAddressIPv4))
+      ext_addr = &options->_OutboundBindAddressIPv4;
+    else if (protocol_family == AF_INET6 &&
+             !tor_addr_is_null(&options->_OutboundBindAddressIPv6))
+      ext_addr = &options->_OutboundBindAddressIPv6;
+    if (ext_addr) {
+      struct sockaddr_storage ext_addr_sa;
+      socklen_t ext_addr_len = 0;
+      memset(&ext_addr_sa, 0, sizeof(ext_addr_sa));
+      ext_addr_len = tor_addr_to_sockaddr(ext_addr, 0,
+                                          (struct sockaddr *) &ext_addr_sa,
+                                          sizeof(ext_addr_sa));
+      if (ext_addr_len == 0) {
+        log_warn(LD_NET,
+                 "Error converting OutboundBindAddress %s into sockaddr. "
+                 "Ignoring.", fmt_addr(ext_addr));
+      } else {
+        if (bind(s, (struct sockaddr *) &ext_addr_sa, ext_addr_len) < 0) {
+          *socket_error = tor_socket_errno(s);
+          log_warn(LD_NET,"Error binding network socket to %s: %s",
+                   fmt_addr(ext_addr),
+                   tor_socket_strerror(*socket_error));
+          tor_close_socket(s);
+          return -1;
+        }
       }
     }
   }
