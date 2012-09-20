@@ -1159,7 +1159,6 @@ options_act(const or_options_t *old_options)
   config_line_t *cl;
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
-  char *msg;
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
 
@@ -1328,7 +1327,7 @@ options_act(const or_options_t *old_options)
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
-  parse_virtual_addr_network(options->VirtualAddrNetwork, 0, &msg);
+  parse_virtual_addr_network(options->VirtualAddrNetwork, 0, NULL);
 
   /* Update address policies. */
   if (policies_parse_from_options(options) < 0) {
