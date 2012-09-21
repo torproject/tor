@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - When complaining about a client port on a public address, log
+      which address we're complaining about. Fixes bug 4020; bugfix on
+      0.2.3.3-alpha. Patch by Tom Fitzhenry.
+  
