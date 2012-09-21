@@ -51,11 +51,10 @@ void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
 void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                                   cell_t *cell, cell_direction_t direction,
                                   streamid_t fromstream);
-void channel_unlink_all_active_circs(channel_t *chan);
+void channel_unlink_all_circuits(channel_t *chan);
 int channel_flush_from_first_active_circuit(channel_t *chan, int max);
-void assert_active_circuits_ok(channel_t *chan);
-void make_circuit_inactive_on_chan(circuit_t *circ, channel_t *chan);
-void make_circuit_active_on_chan(circuit_t *circ, channel_t *chan);
+void assert_circuit_mux_okay(channel_t *chan);
+void update_circuit_on_cmux(circuit_t *circ, cell_direction_t direction);
 
 int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
 const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,

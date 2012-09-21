@@ -19,6 +19,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "connection_or.h" /* For var_cell_free() */
+#include "circuitmux.h"
 #include "geoip.h"
 #include "nodelist.h"
 #include "relay.h"
@@ -813,9 +814,10 @@ channel_free(channel_t *chan)
 
   channel_clear_remote_end(chan);
 
-  if (chan->active_circuit_pqueue) {
-    smartlist_free(chan->active_circuit_pqueue);
-    chan->active_circuit_pqueue = NULL;
+  if (chan->cmux) {
+    circuitmux_detach_all_circuits(chan->cmux);
+    circuitmux_free(chan->cmux);
+    chan->cmux = NULL;
   }
 
   /* We're in CLOSED or ERROR, so the cell queue is already empty */
@@ -866,7 +868,6 @@ channel_force_free(channel_t *chan)
   if (chan->free) chan->free(chan);
 
   channel_clear_remote_end(chan);
-  smartlist_free(chan->active_circuit_pqueue);
 
   /* We might still have a cell queue; kill it */
   if (chan->incoming_queue) {
@@ -2031,12 +2032,13 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
         (unlimited ? -1 : num_cells - flushed));
     if (!unlimited && num_cells <= flushed) goto done;
 
-    if (chan->active_circuits) {
+    if (circuitmux_num_cells(chan->cmux) > 0) {
       /* Try to get more cells from any active circuits */
-      num_cells_from_circs =
-        channel_flush_from_first_active_circuit(chan,
-            (unlimited ? MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED :
-                         (num_cells - flushed)));
+      num_cells_from_circs = channel_flush_from_first_active_circuit(
+          chan,
+          (unlimited ?
+             MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED :
+             (num_cells - flushed)));
 
       /* If it claims we got some, process the queue again */
       if (num_cells_from_circs > 0) {
@@ -2227,7 +2229,7 @@ channel_more_to_flush(channel_t *chan)
       smartlist_len(chan->incoming_queue) > 0) return 1;
 
   /* Check if any circuits would like to queue some */
-  if (chan->active_circuits) return 1;
+  if (circuitmux_num_cells(chan->cmux) > 0) return 1;
 
   /* Else no */
   return 0;
@@ -2935,8 +2937,8 @@ channel_is_better(time_t now, channel_t *a, channel_t *b,
    * one that has no circuits is in its grace period.
    */
 
-  a_has_circs = (a->n_circuits > 0);
-  b_has_circs = (b->n_circuits > 0);
+  a_has_circs = (channel_num_circuits(a) > 0);
+  b_has_circs = (channel_num_circuits(b) > 0);
   a_grace = (forgive_new_connections &&
              (now < channel_when_created(a) + NEW_CHAN_GRACE_PERIOD));
   b_grace = (forgive_new_connections &&
@@ -3223,9 +3225,10 @@ channel_dump_statistics(channel_t *chan, int severity)
       " * Channel " U64_FORMAT " has %d active circuits out of"
       " %d in total",
       U64_PRINTF_ARG(chan->global_identifier),
-      (chan->active_circuit_pqueue != NULL) ?
-        smartlist_len(chan->active_circuit_pqueue) : 0,
-      chan->n_circuits);
+      (chan->cmux != NULL) ?
+         circuitmux_num_active_circuits(chan->cmux) : 0,
+      (chan->cmux != NULL) ?
+         circuitmux_num_circuits(chan->cmux) : 0);
 
   /* Describe timestamps */
   log(severity, LD_GENERAL,
@@ -4005,6 +4008,22 @@ channel_matches_target_addr_for_extend(channel_t *chan,
   tor_assert(target);
 
   return chan->matches_target(chan, target);
+}
+
+/**
+ * Return the total number of circuits used by a channel
+ *
+ * @param chan Channel to query
+ * @return Number of circuits using this as n_chan or p_chan
+ */
+
+unsigned int
+channel_num_circuits(channel_t *chan)
+{
+  tor_assert(chan);
+
+  return chan->num_n_circuits +
+         chan->num_p_circuits;
 }
 
 /**

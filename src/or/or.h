@@ -2634,8 +2634,6 @@ typedef struct circuit_t {
   uint32_t magic; /**< For memory and type debugging: must equal
                    * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
-  /** Queue of cells waiting to be transmitted on n_conn. */
-  cell_queue_t n_chan_cells;
   /** The channel that is next in this circuit. */
   channel_t *n_chan;
 
@@ -2643,13 +2641,36 @@ typedef struct circuit_t {
    * The circuit_id used in the next (forward) hop of this circuit;
    * this is unique to n_chan, but this ordered pair is globally
    * unique:
+<<<<<<< HEAD
    *
+=======
+   * 
+>>>>>>> f1e8169... Use circuitmux_t in channels and when relaying cells
    * (n_chan->global_identifier, n_circ_id)
    */
   circid_t n_circ_id;
 
-  /** The hop to which we want to extend this circuit.  Should be NULL if
-   * the circuit has attached to a connection. */
+  /**
+   * Circuit mux associated with n_chan to which this circuit is attached;
+   * NULL if we have no n_chan.
+   */
+  circuitmux_t *mux;
+
+  /** Queue of cells waiting to be transmitted on n_chan */
+  cell_queue_t n_chan_cells;
+
+  /**
+   * The hop to which we want to extend this circuit.  Should be NULL if
+   * the circuit has attached to a connection.
+   *
+   * TODO:
+   *  - If this is NULL, we have extended.  Is it true that if this is
+   *    NULL then n_chan is not NULL?
+   *  - If n_chan is NULL, then what is n_circ_id?
+   *  - It doesn't matter, because we'll only ever attach to a circuitmux_t
+   *    when n_chan is not NULL, and that's what needs to use a unique ID
+   *    for circuits.
+   */
   extend_info_t *n_hop;
 
   /** True iff we are waiting for n_chan_cells to become less full before
@@ -2701,6 +2722,15 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t dirreq_id;
+
+  /** TODO is this *all* circuits or all circuits on n_chan? */
+  struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
+
+  /** TODO all this from here on down should go away in favor of
+   * circuitmux_t.
+   */
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
@@ -2709,10 +2739,6 @@ typedef struct circuit_t {
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_chan;
-  struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
-
-  /** Unique ID for measuring tunneled network status requests. */
-  uint64_t dirreq_id;
 
   /** The EWMA count for the number of cells flushed from the
    * n_chan_cells queue.  Used to determine which circuit to flush from next.

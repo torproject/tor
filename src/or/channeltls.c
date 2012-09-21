@@ -16,6 +16,7 @@
 #include "or.h"
 #include "channel.h"
 #include "channeltls.h"
+#include "circuitmux.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -127,8 +128,11 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   if (is_local_addr(addr)) channel_mark_local(chan);
   channel_mark_outgoing(chan);
 
-  chan->active_circuit_pqueue = smartlist_new();
-  chan->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
+  chan->cmux = circuitmux_alloc();
+  /* TODO get rid of this and set policy once we have them
+  chan->cmux->active_circuit_pqueue_last_recalibrated =
+    cell_ewma_get_tick();
+   */
 
   /* Set up or_connection stuff */
   tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
@@ -146,7 +150,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   goto done;
 
  err:
-  smartlist_free(chan->active_circuit_pqueue);
+  circuitmux_free(chan->cmux);
   tor_free(tlschan);
   chan = NULL;
 
@@ -260,8 +264,11 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   if (is_local_addr(&(TO_CONN(orconn)->addr))) channel_mark_local(chan);
   channel_mark_incoming(chan);
 
-  chan->active_circuit_pqueue = smartlist_new();
-  chan->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
+  chan->cmux = circuitmux_alloc();
+  /* TODO set cmux policy 
+  chan->active_circuit_pqueue_last_recalibrated =
+    cell_ewma_get_tick();
+   */
 
   /* If we got one, we should register it */
   if (chan) channel_register(chan);
