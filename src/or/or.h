@@ -1016,6 +1016,10 @@ typedef enum {
 
 typedef struct channel_tls_s channel_tls_t;
 
+/* circuitmux_t typedef; struct circuitmux_s is in circuitmux.h */
+
+typedef struct circuitmux_s circuitmux_t;
+
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
@@ -2634,7 +2638,14 @@ typedef struct circuit_t {
   cell_queue_t n_chan_cells;
   /** The channel that is next in this circuit. */
   channel_t *n_chan;
-  /** The circuit_id used in the next (forward) hop of this circuit. */
+
+  /**
+   * The circuit_id used in the next (forward) hop of this circuit;
+   * this is unique to n_chan, but this ordered pair is globally
+   * unique:
+   *
+   * (n_chan->global_identifier, n_circ_id)
+   */
   circid_t n_circ_id;
 
   /** The hop to which we want to extend this circuit.  Should be NULL if
