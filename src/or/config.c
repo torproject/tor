@@ -760,6 +760,9 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     "maatuska orport=80 no-v2 "
       "v3ident=49015F787433103580E3B66A1707A00E60F2D15B "
       "171.25.193.9:443 BD6A 8292 55CB 08E6 6FBE 7D37 4836 3586 E46B 3810",
+    "Faravahar orport=443 no-v2 "
+      "v3ident=EFCBE720AB3A82B99F9E953CD5BF50F7EEFC7B97 "
+      "154.35.32.5:80 CF6D 0AAF B385 BE71 B8E1 11FC 5CFF 4B47 9237 33BC",
     NULL
   };
   for (i=0; dirservers[i]; i++) {
