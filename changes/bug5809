@@ -1,3 +1,0 @@
-  o Removed code:
-    - Removed the testing_since field of node_t, which hasn't been used
-      for anything since 0.2.0.9-alpha.

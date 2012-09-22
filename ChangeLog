@@ -1,4 +1,8 @@
-Changes in version 0.2.4.3-alpha - 2012-09-??
+Changes in version 0.2.4.3-alpha - 2012-09-22
+  Tor 0.2.4.3-alpha fixes another opportunity for a remotely triggerable
+  assertion, resumes letting relays test reachability of their DirPort,
+  and cleans up a bunch of smaller bugs.
+
   o Security fixes:
     - Fix an assertion failure in tor_timegm() that could be triggered
       by a badly formatted directory object. Bug found by fuzzing with
@@ -20,11 +24,40 @@ Changes in version 0.2.4.3-alpha - 2012-09-??
       part of the loop after it had made its choice slightly slower
       than it ran through the part of the loop before it had made its
       choice. Addresses ticket 6538.
+    - Disable the use of Guard nodes when in Tor2WebMode. Guard usage
+      by tor2web clients allows hidden services to identity tor2web
+      clients through their repeated selection of the same rendezvous
+      and introduction point circuit endpoints (their guards). Resolves
+      ticket 6888.
+
+  o Minor features:
+    - Enable Tor to read configuration, state, and key information from
+      a FIFO. Previously Tor would only read from files with a positive
+      stat.st_size. Code from meejah; fixes bug 6044.
 
   o Minor bugfixes:
     - Correct file sizes when reading binary files on Cygwin, to avoid
       a bug where Tor would fail to read its state file. Fixes bug 6844;
       bugfix on 0.1.2.7-alpha.
+    - Correctly handle votes with more than 31 flags. Fixes bug 6853;
+      bugfix on 0.2.0.3-alpha.
+    - When complaining about a client port on a public address, log
+      which address we're complaining about. Fixes bug 4020; bugfix on
+      0.2.3.3-alpha. Patch by Tom Fitzhenry.
+    - Convert an assert in the pathbias code to a log message. The assert
+      appears to only be triggerable by Tor2Web mode. Fixes bug 6866;
+      bugfix on 0.2.3.17-beta.
+    - Our new buildsystem was overzealous about rebuilding manpages: it
+      would rebuild them all whenever any one of them changed. Now our
+      dependency checking should be correct. Fixes bug 6843; bugfix on
+      0.2.4.1-alpha.
+    - Don't do reachability testing over IPv6 unless AuthDirPublishIPv6
+      is set. Fixes bug 6880. Bugfix on 0.2.4.1-alpha.
+    - Correct log printout about which address family is preferred
+      when connecting to a bridge with both an IPv4 and IPv6 OR port.
+      Fixes bug 6884; bugfix on 0.2.4.1-alpha.
+
+  o Minor bugfixes (code cleanliness):
     - Fix round_to_power_of_2() so it doesn't invoke undefined behavior
       with large values. This situation was untriggered, but nevertheless
       incorrect. Fixes bug 6831; bugfix on 0.2.0.1-alpha.
@@ -36,6 +69,8 @@ Changes in version 0.2.4.3-alpha - 2012-09-??
       Previously, Tor would have confused (as-yet-unused) protocol version
       numbers greater than 32 with lower ones on many platforms. Fixes
       bug 6827; bugfix on 0.2.0.10-alpha. Found by George Kadianakis.
+    - Fix handling of rendezvous client authorization types over 8.
+      Fixes bug 6861; bugfix on 0.2.1.5-alpha.
     - Fix building with older versions of GCC (2.95, for one) that don't
       like preprocessor directives inside macro arguments. Found by
       grarpamp. Fixes bug 6842; bugfix on 0.2.4.2-alpha.
@@ -49,8 +84,11 @@ Changes in version 0.2.4.3-alpha - 2012-09-??
     - Move the core of our "choose a weighted element at random" logic
       into its own function, and give it unit tests. Now the logic is
       testable, and a little less fragile too.
+    - Removed the testing_since field of node_t, which hasn't been used
+      for anything since 0.2.0.9-alpha.
 
   o Documentation fixes:
+    - Clarify that hidden services are TCP only. Fixes bug 6024.
     - Resolve a typo in torrc.sample.in. Fixes bug 6819; bugfix on
       0.2.3.14-alpha.
 

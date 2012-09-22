@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Don't do reachability testing over IPv6 unless
-      AuthDirPublishIPv6 is set.  Fix for bug 6880.

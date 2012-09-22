@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Our new buildsystem was overzealous about rebuilding manpages: it
-      would rebuild them all whenever any one of them changed. Now our
-      dependency checking should be correct. Fixes bug 6843; bugfix on
-      0.2.4.1-alpha.
