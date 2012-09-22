@@ -3400,6 +3400,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 {
   node_t *node = NULL;
   tor_addr_t router_addr;
+  (void) now;
 
   tor_assert(router);
   node = node_get_mutable_by_id(router->cache_info.identity_digest);
@@ -3408,9 +3409,6 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
             router->nickname, router->address, router->or_port);
-  /* Remember when we started trying to determine reachability */
-  if (!node->testing_since)
-    node->testing_since = now;
   tor_addr_from_ipv4h(&router_addr, router->addr);
   connection_or_connect(&router_addr, router->or_port,
                         router->cache_info.identity_digest);
@@ -3423,8 +3421,6 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
               router->nickname,
               tor_addr_to_str(addrstr, &router->ipv6_addr, sizeof(addrstr), 1),
               router->ipv6_orport);
-    if (!node->testing_since6)
-      node->testing_since6 = now;
     connection_or_connect(&router->ipv6_addr, router->ipv6_orport,
                           router->cache_info.identity_digest);
   }

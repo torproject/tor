@@ -2036,9 +2036,6 @@ typedef struct node_t {
   time_t last_reachable;        /* IPv4. */
   time_t last_reachable6;       /* IPv6. */
 
-  /** When did we start testing reachability for this OR? */
-  time_t testing_since;         /* IPv4. */
-  time_t testing_since6;        /* IPv6. */
 } node_t;
 
 /** How many times will we try to download a router's descriptor before giving
