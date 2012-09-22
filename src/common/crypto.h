@@ -51,7 +51,7 @@
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
 /** Length of the output of our second (improved) message digests.  (For now
- * this is just sha256, but any it can be any other 256-byte digest). */
+ * this is just sha256, but it could be any other 256-bit digest.) */
 #define DIGEST256_LEN 32
 /** Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
