@@ -1893,7 +1893,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * listed that descriptor will have the same summary.  If not then
        * something is fishy and we'll use the most common one (breaking
        * ties in favor of lexicographically larger one (only because it
-       * lets me reuse more existing code.
+       * lets me reuse more existing code)).
        *
        * The other case that can happen is that no authority that voted
        * for that descriptor has an exit policy summary.  That's
