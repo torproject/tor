@@ -1972,38 +1972,6 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
-/** Return a pointer to the "next_active_on_{n,p}_chan" pointer of <b>circ</b>,
- * depending on whether <b>chan</b> matches n_chan or p_chan. */
-static INLINE circuit_t **
-next_circ_on_chan_p(circuit_t *circ, channel_t *chan)
-{
-  tor_assert(circ);
-  tor_assert(chan);
-  if (chan == circ->n_chan) {
-    return &circ->next_active_on_n_chan;
-  } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
-    tor_assert(chan == orcirc->p_chan);
-    return &orcirc->next_active_on_p_chan;
-  }
-}
-
-/** Return a pointer to the "prev_active_on_{n,p}_chan" pointer of <b>circ</b>,
- * depending on whether <b>chan</b> matches n_chan or p_chan. */
-static INLINE circuit_t **
-prev_circ_on_chan_p(circuit_t *circ, channel_t *chan)
-{
-  tor_assert(circ);
-  tor_assert(chan);
-  if (chan == circ->n_chan) {
-    return &circ->prev_active_on_n_chan;
-  } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
-    tor_assert(chan == orcirc->p_chan);
-    return &orcirc->prev_active_on_p_chan;
-  }
-}
-
 #if 0
 /** Helper for sorting cell_ewma_t values in their priority queue. */
 static int
