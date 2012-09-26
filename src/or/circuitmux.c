@@ -8,6 +8,7 @@
 
 #include "or.h"
 #include "channel.h"
+#include "circuitlist.h"
 #include "circuitmux.h"
 
 /*
@@ -195,6 +196,74 @@ circuitmux_alloc(void)
   HT_INIT(chanid_circid_muxinfo_map, rv->chanid_circid_map);
 
   return rv;
+}
+
+/**
+ * Detach all circuits from a circuitmux (use before circuitmux_free())
+ */
+
+void
+circuitmux_detach_all_circuits(circuitmux_t *cmux)
+{
+  chanid_circid_muxinfo_t **i = NULL, *to_remove;
+  channel_t *chan = NULL;
+  circuit_t *circ = NULL;
+
+  tor_assert(cmux);
+
+  i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
+  while (i) {
+    to_remove = *i;
+    i = HT_NEXT_RMV(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
+    if (to_remove) {
+      /* Find a channel and circuit */
+      chan = channel_find_by_global_id(to_remove->chan_id);
+      if (chan) {
+        circ = circuit_get_by_circid_channel(to_remove->circ_id, chan);
+        if (circ) {
+          /* Clear the circuit's mux for this direction */
+          if (to_remove->muxinfo.direction == CELL_DIRECTION_OUT) {
+            /* Clear n_mux */
+            circ->n_mux = NULL;
+          } else if (circ->magic == OR_CIRCUIT_MAGIC) {
+            /*
+             * It has a sensible p_chan and direction == CELL_DIRECTION_IN,
+             * so clear p_mux.
+             */
+            TO_OR_CIRCUIT(circ)->p_mux = NULL;
+          } else {
+            /* Complain and move on */
+            log_warn(LD_CIRC,
+                     "Circuit %d/channel " U64_FORMAT " had direction == "
+                     "CELL_DIRECTION_IN, but isn't an or_circuit_t",
+                     to_remove->circ_id,
+                     U64_PRINTF_ARG(to_remove->chan_id));
+          }
+
+          /* TODO update active_circuits / active_circuit_pqueue */
+        } else {
+          /* Complain and move on */
+          log_warn(LD_CIRC,
+                   "Couldn't find circuit %d (for channel " U64_FORMAT ")",
+                   to_remove->circ_id,
+                   U64_PRINTF_ARG(to_remove->chan_id));
+        }
+      } else {
+        /* Complain and move on */
+        log_warn(LD_CIRC,
+                 "Couldn't find channel " U64_FORMAT " (for circuit id %d)",
+                 U64_PRINTF_ARG(to_remove->chan_id),
+                 to_remove->circ_id);
+      }
+
+      /* Free it */
+      tor_free(to_remove);
+    }
+  }
+
+  cmux->n_circuits = 0;
+  cmux->n_active_circuits = 0;
+  cmux->n_cells = 0;
 }
 
 /**
