@@ -443,98 +443,60 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
   }
 }
 
-/*
- * Circuitmux/circuit attachment status inquiry functions
- */
-
 /**
- * Query the direction of an attached circuit
+ * Detach a circuit from a circuitmux and update all counters as needed;
+ * no-op if not attached.
  */
 
-cell_direction_t
-circuitmux_attached_circuit_direction(circuitmux_t *cmux, circuit_t *circ)
-{
-  chanid_circid_muxinfo_t *hashent = NULL;
-
-  /* Try to find a map entry */
-  hashent = circuitmux_find_map_entry(cmux, circ);
-
-  /*
-   * This function should only be called on attached circuits; assert that
-   * we had a map entry.
-   */
-  tor_assert(hashent);
-
-  /* Return the direction from the map entry */
-  return hashent->muxinfo.direction;
-}
-
-/**
- * Find an entry in the cmux's map for this circuit or return NULL if there
- * is none.
- */
-
-static chanid_circid_muxinfo_t *
-circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ)
+void
+circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
 {
   chanid_circid_muxinfo_t search, *hashent = NULL;
+  /*
+   * Use this to keep track of whether we found it for n_chan or
+   * p_chan for consistency checking.
+   */
+  cell_direction_t last_searched_direction;
 
-  /* Sanity-check parameters */
   tor_assert(cmux);
   tor_assert(cmux->chanid_circid_map);
   tor_assert(circ);
   tor_assert(circ->n_chan);
 
-  /* Okay, let's see if it's attached for n_chan/n_circ_id */
+  /* See if we have it for n_chan/n_circ_id */
   search.chan_id = circ->n_chan->global_identifier;
   search.circ_id = circ->n_circ_id;
+  hashent = HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                      &search);
+  last_searched_direction = CELL_DIRECTION_OUT;
 
-  /* Query */
-  hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                    &search);
-
-  /* Found something? */
-  if (hashent) {
-    /*
-     * Assert that the direction makes sense for a hashent we found by
-     * n_chan/n_circ_id before we return it.
-     */
-    tor_assert(hashent->muxinfo.direction == CELL_DIRECTION_OUT);
-  } else {
-    /* Not there, have we got a p_chan/p_circ_id to try? */
+  /* Got one? If not, see if it's an or_circuit_t and try p_chan/p_circ_id */
+  if (!hashent) {
     if (circ->magic == OR_CIRCUIT_MAGIC) {
       search.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
-      /* Check for p_chan */
       if (TO_OR_CIRCUIT(circ)->p_chan) {
         search.chan_id = TO_OR_CIRCUIT(circ)->p_chan->global_identifier;
-        /* Okay, search for that */
-        hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                          &search);
-        /* Find anything? */
-        if (hashent) {
-          /* Assert that the direction makes sense before we return it */
-          tor_assert(hashent->muxinfo.direction == CELL_DIRECTION_IN);
-        }
+        hashent = HT_REMOVE(chanid_circid_muxinfo_map,
+                            cmux->chanid_circid_map,
+                            &search);
+        last_searched_direction = CELL_DIRECTION_IN;
       }
     }
   }
 
-  /* Okay, hashent is it if it was there */
-  return hashent;
-}
+  /* If hashent isn't NULL, we just removed it from the map */
+  if (hashent) {
+    /* Update counters */
+    --(cmux->n_circuits);
+    if (hashent->muxinfo.cell_count > 0) --(cmux->n_active_circuits);
+    cmux->n_cells -= hashent->muxinfo.cell_count;
+    /* TODO update active_circuits / active_circuit_pqueue */
 
-/**
- * Query whether a circuit is attached to a circuitmux
- */
+    /* Consistency check: the direction must match the direction searched */
+    tor_assert(last_searched_direction == hashent->muxinfo.direction);
 
-int
-circuitmux_is_circuit_attached(circuitmux_t *cmux, circuit_t *circ)
-{
-  chanid_circid_muxinfo_t *hashent = NULL;
-
-  /* Look if it's in the circuit map */
-  hashent = circuitmux_find_map_entry(cmux, circ);
-
-  return (hashent != NULL);
+    /* Free the hash entry */
+    tor_free(hashent);
+  }
 }
 
