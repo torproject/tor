@@ -2650,7 +2650,7 @@ typedef struct circuit_t {
    * Circuit mux associated with n_chan to which this circuit is attached;
    * NULL if we have no n_chan.
    */
-  circuitmux_t *mux;
+  circuitmux_t *n_mux;
 
   /** Queue of cells waiting to be transmitted on n_chan */
   cell_queue_t n_chan_cells;
@@ -2916,6 +2916,11 @@ typedef struct or_circuit_t {
   cell_queue_t p_chan_cells;
   /** The channel that is previous in this circuit. */
   channel_t *p_chan;
+  /**
+   * Circuit mux associated with p_chan to which this circuit is attached;
+   * NULL if we have no p_chan.
+   */
+  circuitmux_t *p_mux;
   /** Linked list of Exit streams associated with this circuit. */
   edge_connection_t *n_streams;
   /** Linked list of Exit streams associated with this circuit that are
