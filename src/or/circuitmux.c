@@ -315,6 +315,91 @@ circuitmux_is_circuit_attached(circuitmux_t *cmux, circuit_t *circ)
   return (hashent != NULL);
 }
 
+/**
+ * Query whether a circuit is active on a circuitmux
+ */
+
+int
+circuitmux_is_circuit_active(circuitmux_t *cmux, circuit_t *circ)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+  int is_active = 0;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+
+  /* Look if it's in the circuit map */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+  if (hashent) {
+    /* Check the number of cells on this circuit */
+    is_active = (hashent->muxinfo.cell_count > 0);
+  }
+  /* else not attached, so not active */
+
+  return is_active;
+}
+
+/**
+ * Query number of available cells for a circuit on a circuitmux
+ */
+
+unsigned int
+circuitmux_num_cells_for_circuit(circuitmux_t *cmux, circuit_t *circ)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+  unsigned int n_cells = 0;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+
+  /* Look if it's in the circuit map */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+  if (hashent) {
+    /* Just get the cell count for this circuit */
+    n_cells = hashent->muxinfo.cell_count;
+  }
+  /* else not attached, so 0 cells */
+
+  return n_cells;
+}
+
+
+/**
+ * Query total number of available cells on a circuitmux
+ */
+
+unsigned int
+circuitmux_num_cells(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  return cmux->n_cells;
+}
+
+/**
+ * Query total number of circuits active on a circuitmux
+ */
+
+unsigned int
+circuitmux_num_active_circuits(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  return cmux->n_active_circuits;
+}
+
+/**
+ * Query total number of circuits attached to a circuitmux
+ */
+
+unsigned int
+circuitmux_num_circuits(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  return cmux->n_circuits;
+}
+
 /*
  * Functions for circuit code to call to update circuit status
  */
