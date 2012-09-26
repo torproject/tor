@@ -2641,11 +2641,7 @@ typedef struct circuit_t {
    * The circuit_id used in the next (forward) hop of this circuit;
    * this is unique to n_chan, but this ordered pair is globally
    * unique:
-<<<<<<< HEAD
    *
-=======
-   * 
->>>>>>> f1e8169... Use circuitmux_t in channels and when relaying cells
    * (n_chan->global_identifier, n_circ_id)
    */
   circid_t n_circ_id;

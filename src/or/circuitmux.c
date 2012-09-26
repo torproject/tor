@@ -7,6 +7,7 @@
  **/
 
 #include "or.h"
+#include "channel.h"
 #include "circuitmux.h"
 
 /*
@@ -63,12 +64,15 @@ typedef struct circuit_muxinfo_s circuit_muxinfo_t;
  *   TODO
  *
  * General status inquiries?
- *     
+ *
  */
 
 struct circuitmux_s {
   /* Keep count of attached, active circuits */
   unsigned int n_circuits, n_active_circuits;
+
+  /* Total number of queued cells on all circuits */
+  unsigned int n_cells;
 
   /*
    * Map from (channel ID, circuit ID) pairs to circuit_muxinfo_t
@@ -102,11 +106,14 @@ struct circuitmux_s {
 
 /*
  * This struct holds whatever we want to store per attached circuit on a
- * circuitmux_t; right now, just the count of queued cells.
+ * circuitmux_t; right now, just the count of queued cells and the direction.
  */
 
 struct circuit_muxinfo_s {
+  /* Count of cells on this circuit at last update */
   unsigned int cell_count;
+  /* Direction of flow */
+  cell_direction_t direction;
 };
 
 /*
@@ -168,6 +175,10 @@ HT_GENERATE(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,
             chanid_circid_entry_hash, chanid_circid_entries_eq, 0.6,
             malloc, realloc, free);
 
+/*
+ * Circuitmux alloc/free functions
+ */
+
 /**
  * Allocate a new circuitmux_t
  */
@@ -205,5 +216,228 @@ circuitmux_free(circuitmux_t *cmux)
   }
 
   tor_free(cmux);
+}
+
+/*
+ * Circuitmux/circuit attachment status inquiry functions
+ */
+
+/**
+ * Query the direction of an attached circuit
+ */
+
+cell_direction_t
+circuitmux_attached_circuit_direction(circuitmux_t *cmux, circuit_t *circ)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+
+  /* Try to find a map entry */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+
+  /*
+   * This function should only be called on attached circuits; assert that
+   * we had a map entry.
+   */
+  tor_assert(hashent);
+
+  /* Return the direction from the map entry */
+  return hashent->muxinfo.direction;
+}
+
+/**
+ * Find an entry in the cmux's map for this circuit or return NULL if there
+ * is none.
+ */
+
+static chanid_circid_muxinfo_t *
+circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ)
+{
+  chanid_circid_muxinfo_t search, *hashent = NULL;
+
+  /* Sanity-check parameters */
+  tor_assert(cmux);
+  tor_assert(cmux->chanid_circid_map);
+  tor_assert(circ);
+  tor_assert(circ->n_chan);
+
+  /* Okay, let's see if it's attached for n_chan/n_circ_id */
+  search.chan_id = circ->n_chan->global_identifier;
+  search.circ_id = circ->n_circ_id;
+
+  /* Query */
+  hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                    &search);
+
+  /* Found something? */
+  if (hashent) {
+    /*
+     * Assert that the direction makes sense for a hashent we found by
+     * n_chan/n_circ_id before we return it.
+     */
+    tor_assert(hashent->muxinfo.direction == CELL_DIRECTION_OUT);
+  } else {
+    /* Not there, have we got a p_chan/p_circ_id to try? */
+    if (circ->magic == OR_CIRCUIT_MAGIC) {
+      search.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
+      /* Check for p_chan */
+      if (TO_OR_CIRCUIT(circ)->p_chan) {
+        search.chan_id = TO_OR_CIRCUIT(circ)->p_chan->global_identifier;
+        /* Okay, search for that */
+        hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                          &search);
+        /* Find anything? */
+        if (hashent) {
+          /* Assert that the direction makes sense before we return it */
+          tor_assert(hashent->muxinfo.direction == CELL_DIRECTION_IN);
+        }
+      }
+    }
+  }
+
+  /* Okay, hashent is it if it was there */
+  return hashent;
+}
+
+/**
+ * Query whether a circuit is attached to a circuitmux
+ */
+
+int
+circuitmux_is_circuit_attached(circuitmux_t *cmux, circuit_t *circ)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+
+  /* Look if it's in the circuit map */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+
+  return (hashent != NULL);
+}
+
+/*
+ * Functions for circuit code to call to update circuit status
+ */
+
+/**
+ * Attach a circuit to a circuitmux, for the specified direction.
+ */
+
+void
+circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
+                          cell_direction_t direction)
+{
+  channel_t *chan = NULL;
+  uint64_t channel_id;
+  circid_t circ_id;
+  chanid_circid_muxinfo_t search, *hashent = NULL;
+  unsigned int cell_count;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+  tor_assert(direction == CELL_DIRECTION_IN ||
+             direction == CELL_DIRECTION_OUT);
+
+  /*
+   * Figure out which channel we're using, and get the circuit's current
+   * cell count and circuit ID.
+   */
+  if (direction == CELL_DIRECTION_OUT) {
+    /* It's n_chan */
+    chan = circ->n_chan;
+    cell_count = circ->n_chan_cells.n;
+    circ_id = circ->n_circ_id;
+  } else {
+    /* We want p_chan */
+    chan = TO_OR_CIRCUIT(circ)->p_chan;
+    cell_count = TO_OR_CIRCUIT(circ)->p_chan_cells.n;
+    circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
+  }
+  /* Assert that we did get a channel */
+  tor_assert(chan);
+  /* Assert that the circuit ID is sensible */
+  tor_assert(circ_id != 0);
+
+  /* Get the channel ID */
+  channel_id = chan->global_identifier;
+
+  /* See if we already have this one */
+  search.chan_id = channel_id;
+  search.circ_id = circ_id;
+  hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                    &search);
+
+  if (hashent) {
+    /*
+     * This circuit was already attached to this cmux; make sure the
+     * directions match and update the cell count and active circuit count.
+     */
+    log_info(LD_CIRC,
+             "Circuit %u on channel " U64_FORMAT " was already attached to "
+             "cmux %p (trying to attach to %p)",
+             circ_id, U64_PRINTF_ARG(channel_id),
+             circ->mux, cmux);
+
+    /*
+     * The mux pointer on the circuit should match this cmux, and the
+     * direction in result should match; otherwise assert.
+     */
+    tor_assert(circ->mux == cmux);
+    tor_assert(hashent->muxinfo.direction == direction);
+
+    /*
+     * Looks okay; just update the cell count and active circuits if we must
+     */
+    if (hashent->muxinfo.cell_count > 0 && cell_count == 0) {
+      --(cmux->n_active_circuits);
+    } else if (hashent->muxinfo.cell_count == 0 && cell_count > 0) {
+      ++(cmux->n_active_circuits);
+    }
+    cmux->n_cells -= hashent->muxinfo.cell_count;
+    cmux->n_cells += cell_count;
+    hashent->muxinfo.cell_count = cell_count;
+
+    /* TODO update active_circuits / active_circuit_pqueue */
+  } else {
+    /*
+     * New circuit; add an entry and update the circuit/active circuit
+     * counts.
+     */
+    log_debug(LD_CIRC,
+             "Attaching circuit %u on channel " U64_FORMAT " to cmux %p",
+             circ_id, U64_PRINTF_ARG(channel_id), cmux);
+
+    /* Assert that the circuit doesn't already have a mux */
+    tor_assert(circ->mux == NULL);
+
+    /* Insert it in the map */
+    hashent = tor_malloc_zero(sizeof(*hashent));
+    hashent->chan_id = channel_id;
+    hashent->circ_id = circ_id;
+    hashent->muxinfo.cell_count = cell_count;
+    hashent->muxinfo.direction = direction;
+    HT_INSERT(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+              hashent);
+
+    /* Set the circuit's mux */
+    circ->mux = cmux;
+
+    /* Make sure the next/prev pointers are NULL */
+    if (direction == CELL_DIRECTION_OUT) {
+      circ->next_active_on_n_chan = NULL;
+      circ->prev_active_on_n_chan = NULL;
+    } else {
+      TO_OR_CIRCUIT(circ)->next_active_on_p_chan = NULL;
+      TO_OR_CIRCUIT(circ)->prev_active_on_p_chan = NULL;
+    }
+
+    /* Update counters */
+    ++(cmux->n_circuits);
+    if (cell_count > 0) {
+      ++(cmux->n_active_circuits);
+      circuitmux_make_circuit_active(cmux, circ, direction);
+    }
+    cmux->n_cells += cell_count;
+
+    /* TODO update active_circuits / active_circuit_pqueue */
+  }
 }
 
