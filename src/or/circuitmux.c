@@ -512,3 +512,53 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
   }
 }
 
+/**
+ * Clear the cell counter for a circuit on a circuitmux
+ */
+
+void
+circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ)
+{
+  /* This is the same as setting the cell count to zero */
+  circuitmux_set_num_cells(cmux, circ, 0);
+}
+
+/**
+ * Set the cell counter for a circuit on a circuitmux
+ */
+
+void
+circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
+                         unsigned int n_cells)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+
+  /* Search for this circuit's entry */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+  /* Assert that we found one */
+  tor_assert(hashent);
+
+  /* Update cmux cell counter */
+  cmux->n_cells -= hashent->muxinfo.cell_count;
+  cmux->n_cells += n_cells;
+
+  /*
+   * Update cmux active circuit counter: is the old cell count > 0 and the
+   * new cell count == 0 ?
+   */
+  if (hashent->muxinfo.cell_count > 0 && n_cells == 0) {
+    --(cmux->n_active_circuits);
+    /* TODO update active_circuits / active_circuit_pqueue */
+  /* Is the old cell count == 0 and the new cell count > 0 ? */
+  } else if (hashent->muxinfo.cell_count == 0 && n_cells > 0) {
+    ++(cmux->n_active_circuits);
+    /* TODO update active_circuits / active_circuit_pqueue */
+  }
+
+  /* Update hash entry cell counter */
+  hashent->muxinfo.cell_count = n_cells;
+}
+
