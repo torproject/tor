@@ -155,6 +155,11 @@ circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
  * Linked list helpers
  */
 
+/**
+ * Move an active circuit to the tail of the cmux's active circuits list;
+ * used by circuitmux_notify_xmit_cells().
+ */
+
 static INLINE void
 circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
                                     cell_direction_t direction)
