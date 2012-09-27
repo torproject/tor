@@ -42,6 +42,17 @@ struct circuitmux_policy_s {
                                circuitmux_policy_data_t *pol_data,
                                circuit_t *circ,
                                circuitmux_policy_circ_data_t *pol_circ_data);
+  /* Notify of arriving/transmitted cells on a circuit */
+  void (*notify_set_n_cells)(circuitmux_t *cmux,
+                             circuitmux_policy_data_t *pol_data,
+                             circuit_t *circ,
+                             circuitmux_policy_circ_data_t *pol_circ_data,
+                             unsigned int n_cells);
+  void (*notify_xmit_cells)(circuitmux_t *cmux,
+                            circuitmux_policy_data_t *pol_data,
+                            circuit_t *circ,
+                            circuitmux_policy_circ_data_t *pol_circ_data,
+                            unsigned int n_cells);
 };
 
 /*

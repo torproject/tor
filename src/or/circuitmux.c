@@ -995,6 +995,19 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   cmux->n_cells -= hashent->muxinfo.cell_count;
   cmux->n_cells += n_cells;
 
+  /* Do we need to notify a cmux policy? */
+  if (cmux->policy && cmux->policy_data &&
+      cmux->policy->notify_set_n_cells) {
+    /* Yeah; assert that we have circuit policy data */
+    tor_assert(hashent->muxinfo.policy_data);
+    /* ... and call notify_set_n_cells */
+    cmux->policy->notify_set_n_cells(cmux,
+                                     cmux->policy_data,
+                                     circ,
+                                     hashent->muxinfo.policy_data,
+                                     n_cells);
+  }
+
   /*
    * Update cmux active circuit counter: is the old cell count > 0 and the
    * new cell count == 0 ?
