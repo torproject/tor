@@ -343,7 +343,13 @@ circuitmux_free(circuitmux_t *cmux)
   tor_assert(cmux->n_circuits == 0);
   tor_assert(cmux->n_active_circuits == 0);
 
-  /* Free policy-specific data if we have any */
+  /*
+   * Free policy-specific data if we have any; we don't
+   * need to do circuitmux_set_policy(cmux, NULL) to cover
+   * the circuits because they would have been handled in
+   * circuitmux_detach_all_circuits() before this was
+   * called.
+   */
   if (cmux->policy && cmux->policy->free_cmux_data) {
     if (cmux->policy_data) {
       cmux->policy->free_cmux_data(cmux, cmux->policy_data);
@@ -357,6 +363,157 @@ circuitmux_free(circuitmux_t *cmux)
   }
 
   tor_free(cmux);
+}
+
+/*
+ * Circuitmux policy control functions
+ */
+
+/**
+ * Remove any policy installed on cmux; all policy data will be freed and
+ * cmux behavior will revert to the built-in round-robin active_circuits
+ * mechanism.
+ */
+
+void
+circuitmux_clear_policy(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  /* Internally, this is just setting policy to NULL */
+  if (cmux->policy) {
+    circuitmux_set_policy(cmux, NULL);
+  }
+}
+
+/**
+ * Return the policy currently installed on a circuitmux_t
+ */
+
+const circuitmux_policy_t *
+circuitmux_get_policy(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  return cmux->policy;
+}
+
+/**
+ * Set policy; allocate for new policy, detach all circuits from old policy
+ * if any, attach them to new policy, and free old policy data.
+ */
+
+void
+circuitmux_set_policy(circuitmux_t *cmux,
+                      const circuitmux_policy_t *pol)
+{
+  const circuitmux_policy_t *old_pol = NULL, *new_pol = NULL;
+  circuitmux_policy_data_t *old_pol_data = NULL, *new_pol_data = NULL;
+  chanid_circid_muxinfo_t **i = NULL;
+  channel_t *chan = NULL;
+  uint64_t last_chan_id_searched = 0;
+  circuit_t *circ = NULL;
+
+  tor_assert(cmux);
+
+  /* Set up variables */
+  old_pol = cmux->policy;
+  old_pol_data = cmux->policy_data;
+  new_pol = pol;
+
+  /* Check if this is the trivial case */
+  if (old_pol == new_pol) return;
+
+  /* Allocate data for new policy, if any */
+  if (new_pol && new_pol->alloc_cmux_data) {
+    /*
+     * If alloc_cmux_data is not null, then we expect to get some policy
+     * data.  Assert that we also have free_cmux_data so we can free it
+     * when the time comes, and allocate it.
+     */
+    tor_assert(new_pol->free_cmux_data);
+    new_pol_data = new_pol->alloc_cmux_data(cmux);
+    tor_assert(new_pol_data);
+  }
+
+  /* Install new policy and new policy data on cmux */
+  cmux->policy = new_pol;
+  cmux->policy_data = new_pol_data;
+
+  /* Iterate over all circuits, attaching/detaching each one */
+  i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
+  while (i) {
+    /* Assert that this entry isn't NULL */
+    tor_assert(*i);
+
+    /*
+     * Get the channel; since normal case is all circuits on the mux share a
+     * channel, we cache last_chan_id_searched
+     */
+    if (!chan || last_chan_id_searched != (*i)->chan_id) {
+      chan = channel_find_by_global_id((*i)->chan_id);
+      last_chan_id_searched = (*i)->chan_id;
+    }
+    tor_assert(chan);
+
+    /* Get the circuit */
+    circ = circuit_get_by_circid_channel((*i)->circ_id, chan);
+    tor_assert(circ);
+
+    /* Need to tell old policy it becomes inactive (i.e., it is active) ? */
+    if (old_pol && old_pol->notify_circ_inactive &&
+        (*i)->muxinfo.cell_count > 0) {
+      old_pol->notify_circ_inactive(cmux, old_pol_data, circ,
+                                    (*i)->muxinfo.policy_data);
+    }
+
+    /* Need to free old policy data? */
+    if ((*i)->muxinfo.policy_data) {
+      /* Assert that we have the means to free it if we have policy data */
+      tor_assert(old_pol);
+      tor_assert(old_pol->free_circ_data);
+      /* Free it */
+      old_pol->free_circ_data(cmux, old_pol_data, circ,
+                             (*i)->muxinfo.policy_data);
+      (*i)->muxinfo.policy_data = NULL;
+    }
+
+    /* Need to allocate new policy data? */
+    if (new_pol && new_pol->alloc_circ_data) {
+      /*
+       * If alloc_circ_data is not null, we expect to get some per-circuit
+       * policy data.  Assert that we also have free_circ_data so we can
+       * free it when the time comes, and allocate it.
+       */
+      tor_assert(new_pol->free_circ_data);
+      (*i)->muxinfo.policy_data =
+        new_pol->alloc_circ_data(cmux, new_pol_data, circ,
+                                 (*i)->muxinfo.direction,
+                                 (*i)->muxinfo.cell_count);
+    }
+
+    /* Need to make active on new policy? */
+    if (new_pol && new_pol->notify_circ_active &&
+        (*i)->muxinfo.cell_count > 0) {
+      new_pol->notify_circ_active(cmux, new_pol_data, circ,
+                                  (*i)->muxinfo.policy_data);
+    }
+
+    /* Advance to next circuit map entry */
+    i = HT_NEXT(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
+  }
+
+  /* Free data for old policy, if any */
+  if (old_pol_data) {
+    /*
+     * If we had old policy data, we should have an old policy and a free
+     * function for it.
+     */
+    tor_assert(old_pol);
+    tor_assert(old_pol->free_cmux_data);
+    old_pol->free_cmux_data(cmux, old_pol_data);
+    old_pol_data = NULL;
+  }
 }
 
 /*
