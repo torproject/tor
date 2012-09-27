@@ -260,7 +260,10 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
           if (to_remove->muxinfo.direction == CELL_DIRECTION_OUT) {
             /* Clear n_mux */
             circ->n_mux = NULL;
-            /* Update active_circuits et al. */
+            /*
+             * Update active_circuits et al.; this does policy notifies, so
+             * comes before freeing policy data
+             */
             circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_OUT);
           } else if (circ->magic == OR_CIRCUIT_MAGIC) {
             /*
@@ -268,7 +271,10 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
              * so clear p_mux.
              */
             TO_OR_CIRCUIT(circ)->p_mux = NULL;
-            /* Update active_circuits et al. */
+            /*
+             * Update active_circuits et al.; this does policy notifies, so
+             * comes before freeing policy data
+             */
             circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
           } else {
             /* Complain and move on */
@@ -277,6 +283,24 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
                      "CELL_DIRECTION_IN, but isn't an or_circuit_t",
                      to_remove->circ_id,
                      U64_PRINTF_ARG(to_remove->chan_id));
+          }
+
+
+          /* Free policy-specific data if we have it */
+          if (to_remove->muxinfo.policy_data) {
+            /*
+             * If we have policy data, assert that we have the means to
+             * free it
+             */
+            tor_assert(cmux->policy);
+            tor_assert(cmux->policy_data);
+            tor_assert(cmux->policy->free_circ_data);
+            /* Call free_circ_data() */
+            cmux->policy->free_circ_data(cmux,
+                                         cmux->policy_data,
+                                         circ,
+                                         to_remove->muxinfo.policy_data);
+            to_remove->muxinfo.policy_data = NULL;
           }
         } else {
           /* Complain and move on */
@@ -292,6 +316,9 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
                  U64_PRINTF_ARG(to_remove->chan_id),
                  to_remove->circ_id);
       }
+
+      /* Assert that we don't have un-freed policy data for this circuit */
+      tor_assert(to_remove->muxinfo.policy_data == NULL);
 
       /* Free it */
       tor_free(to_remove);
@@ -620,6 +647,18 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
     hashent->circ_id = circ_id;
     hashent->muxinfo.cell_count = cell_count;
     hashent->muxinfo.direction = direction;
+    /* Allocate policy specific circuit data if we need it */
+    if (cmux->policy && cmux->policy_data &&
+        cmux->policy->alloc_circ_data) {
+      hashent->muxinfo.policy_data =
+        cmux->policy->alloc_circ_data(cmux,
+                                      cmux->policy_data,
+                                      circ,
+                                      direction,
+                                      cell_count);
+      /* If we wanted policy data, it's an error  not to get any */
+      tor_assert(hashent->muxinfo.policy_data);
+    }
     HT_INSERT(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
               hashent);
 
@@ -693,9 +732,24 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
     --(cmux->n_circuits);
     if (hashent->muxinfo.cell_count > 0) {
       --(cmux->n_active_circuits);
+      /* This does policy notifies, so comes before freeing policy data */
       circuitmux_make_circuit_inactive(cmux, circ, last_searched_direction);
     }
     cmux->n_cells -= hashent->muxinfo.cell_count;
+
+    /* Free policy-specific data if we have it */
+    if (hashent->muxinfo.policy_data) {
+      /* If we have policy data, assert that we have the means to free it */
+      tor_assert(cmux->policy);
+      tor_assert(cmux->policy_data);
+      tor_assert(cmux->policy->free_circ_data);
+      /* Call free_circ_data() */
+      cmux->policy->free_circ_data(cmux,
+                                   cmux->policy_data,
+                                   circ,
+                                   hashent->muxinfo.policy_data);
+      hashent->muxinfo.policy_data = NULL;
+    }
 
     /* Consistency check: the direction must match the direction searched */
     tor_assert(last_searched_direction == hashent->muxinfo.direction);
