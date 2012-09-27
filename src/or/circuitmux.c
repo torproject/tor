@@ -1254,6 +1254,11 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
  * notify that cells have been transmitted.
  */
 
+/**
+ * Notify the circuitmux that cells have been sent on a circuit; this
+ * is called from channel.c.
+ */
+
 void
 circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
                              unsigned int n_cells)
