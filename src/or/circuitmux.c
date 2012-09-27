@@ -141,6 +141,9 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
 static void
 circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
                                  cell_direction_t direction);
+static INLINE void
+circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
+                                    cell_direction_t direction);
 static INLINE circuit_t **
 circuitmux_next_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 static INLINE circuit_t **
@@ -151,6 +154,72 @@ circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 /**
  * Linked list helpers
  */
+
+static INLINE void
+circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
+                                    cell_direction_t direction)
+{
+  circuit_t **next_p = NULL, **prev_p = NULL;
+  circuit_t **next_prev = NULL, **prev_next = NULL;
+  or_circuit_t *or_circ = NULL;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+
+  /* Figure out our next_p and prev_p for this cmux/direction */
+  if (direction) {
+    if (direction == CELL_DIRECTION_OUT) {
+      tor_assert(circ->n_mux == cmux);
+      next_p = &(circ->next_active_on_n_chan);
+      prev_p = &(circ->prev_active_on_n_chan);
+    } else {
+      or_circ = TO_OR_CIRCUIT(circ);
+      tor_assert(or_circ->p_mux == cmux);
+      next_p = &(or_circ->next_active_on_p_chan);
+      prev_p = &(or_circ->prev_active_on_p_chan);
+    }
+  } else {
+    if (circ->n_mux == cmux) {
+      next_p = &(circ->next_active_on_n_chan);
+      prev_p = &(circ->prev_active_on_n_chan);
+      direction = CELL_DIRECTION_OUT;
+    } else {
+      or_circ = TO_OR_CIRCUIT(circ);
+      tor_assert(or_circ->p_mux == cmux);
+      next_p = &(or_circ->next_active_on_p_chan);
+      prev_p = &(or_circ->prev_active_on_p_chan);
+      direction = CELL_DIRECTION_IN;
+    }
+  }
+  tor_assert(next_p);
+  tor_assert(prev_p);
+
+  /* Check if this really is an active circuit */
+  if ((*next_p == NULL && *prev_p == NULL) &&
+      !(circ == cmux->active_circuits_head ||
+        circ == cmux->active_circuits_tail)) {
+    /* Not active, no-op */
+    return;
+  }
+
+  /* Check if this is already the tail */
+  if (circ == cmux->active_circuits_tail) return;
+
+  /* Okay, we have to move it; figure out next_prev and prev_next */
+  if (*next_p) next_prev = circuitmux_prev_active_circ_p(cmux, *next_p);
+  if (*prev_p) prev_next = circuitmux_next_active_circ_p(cmux, *prev_p);
+  /* Adjust the previous node's next pointer, if any */
+  if (prev_next) *prev_next = *next_p;
+  /* Otherwise, we were the head */
+  else cmux->active_circuits_head = *next_p;
+  /* Adjust the next node's previous pointer, if any */
+  if (next_prev) *next_prev = *prev_p;
+  /* Adjust our next and prev pointers */
+  *next_p = NULL;
+  *prev_p = cmux->active_circuits_tail;
+  /* Set the tail to this circuit */
+  cmux->active_circuits_tail = circ;
+}
 
 static INLINE circuit_t **
 circuitmux_next_active_circ_p(circuitmux_t *cmux, circuit_t *circ)
@@ -1173,5 +1242,69 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
 
   /* Update hash entry cell counter */
   hashent->muxinfo.cell_count = n_cells;
+}
+
+/*
+ * Functions for channel code to call to get a circuit to transmit from or
+ * notify that cells have been transmitted.
+ */
+
+void
+circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
+                             unsigned int n_cells)
+{
+  chanid_circid_muxinfo_t *hashent = NULL;
+  int becomes_inactive = 0;
+
+  tor_assert(cmux);
+  tor_assert(circ);
+
+  if (n_cells == 0) return;
+
+  /*
+   * To handle this, we have to:
+   *
+   * 1.) Adjust the circuit's cell counter in the cmux hash table
+   * 2.) Move the circuit to the tail of the active_circuits linked list
+   *     for this cmux, or make the circuit inactive if the cell count
+   *     went to zero.
+   * 3.) Call cmux->policy->notify_xmit_cells(), if any
+   */
+
+  /* Find the hash entry */
+  hashent = circuitmux_find_map_entry(cmux, circ);
+  /* Assert that we found one */
+  tor_assert(hashent);
+
+  /* Adjust the cell counter and assert that we had that many cells to send */
+  tor_assert(n_cells <= hashent->muxinfo.cell_count);
+  hashent->muxinfo.cell_count -= n_cells;
+  /* Do we need to make the circuit inactive? */
+  if (hashent->muxinfo.cell_count == 0) becomes_inactive = 1;
+
+  /* If we aren't making it inactive later, move it to the tail of the list */
+  if (!becomes_inactive) {
+    circuitmux_move_active_circ_to_tail(cmux, circ,
+                                        hashent->muxinfo.direction);
+  }
+
+  /*
+   * We call notify_xmit_cells() before making the circuit inactive if needed,
+   * so the policy can always count on this coming in on an active circuit.
+   */
+  if (cmux->policy && cmux->policy->notify_xmit_cells) {
+    cmux->policy->notify_xmit_cells(cmux, cmux->policy_data, circ,
+                                    hashent->muxinfo.policy_data,
+                                    n_cells);
+  }
+
+  /*
+   * Now make the circuit inactive if needed; this will call the policy's
+   * notify_circ_inactive() if present. 
+   */
+  if (becomes_inactive) {
+    --(cmux->n_active_circuits);
+    circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
+  }
 }
 
