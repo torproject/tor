@@ -88,21 +88,14 @@ struct circuitmux_s {
   struct circuit_t *active_circuits_head, *active_circuits_tail;
 
   /*
-   * Priority queue of cell_ewma_t for circuits with queued cells waiting
-   * for room to free up on this connection's outbuf.  Kept in heap order
-   * according to EWMA.
-   *
-   * This is redundant with active_circuits; if we ever decide only to use
-   * the cell_ewma algorithm for choosing circuits, we can remove
-   * active_circuits.
+   * Circuitmux policy; if this is non-NULL, it can override the built-
+   * in round-robin active circuits behavior.  This is how EWMA works in
+   * the new circuitmux_t world.
    */
-  smartlist_t *active_circuit_pqueue;
+  const circuitmux_policy_t *policy;
 
-  /*
-   * The tick on which the cell_ewma_ts in active_circuit_pqueue last had
-   * their ewma values rescaled.
-   */
-  unsigned int active_circuit_pqueue_last_recalibrated;
+  /* Policy-specific data */
+  circuitmux_policy_data_t *policy_data;
 };
 
 /*
@@ -115,6 +108,8 @@ struct circuit_muxinfo_s {
   unsigned int cell_count;
   /* Direction of flow */
   cell_direction_t direction;
+  /* Policy-specific data */
+  circuitmux_policy_circ_data_t *policy_data;
 };
 
 /*
@@ -321,7 +316,13 @@ circuitmux_free(circuitmux_t *cmux)
   tor_assert(cmux->n_circuits == 0);
   tor_assert(cmux->n_active_circuits == 0);
 
-  smartlist_free(cmux->active_circuit_pqueue);
+  /* Free policy-specific data if we have any */
+  if (cmux->policy && cmux->policy->free_cmux_data) {
+    if (cmux->policy_data) {
+      cmux->policy->free_cmux_data(cmux, cmux->policy_data);
+      cmux->policy_data = NULL;
+    }
+  } else tor_assert(cmux->policy_data == NULL);
 
   if (cmux->chanid_circid_map) {
     HT_CLEAR(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
@@ -718,6 +719,7 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
 {
   circuit_t **next_active = NULL, **prev_active = NULL, **next_prev = NULL;
   circuitmux_t *circuit_cmux = NULL;
+  chanid_circid_muxinfo_t *hashent = NULL;
   channel_t *chan = NULL;
   circid_t circ_id;
   int already_active;
@@ -782,7 +784,19 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
   /* This becomes the new head of the list */
   cmux->active_circuits_head = circ;
 
-  /* TODO policy-specific notifications */
+  /* Policy-specific notification */
+  if (cmux->policy &&
+      cmux->policy->notify_circ_active &&
+      cmux->policy_data) {
+    /* Okay, we need to check the circuit for policy data now */
+    hashent = circuitmux_find_map_entry(cmux, circ);
+    /* We should have found something */
+    tor_assert(hashent);
+    /* Check for policy data for the circuit and notify */
+    if (hashent->muxinfo.policy_data)
+      cmux->policy->notify_circ_active(cmux, cmux->policy_data,
+                                       circ, hashent->muxinfo.policy_data);
+  }
 }
 
 /**
@@ -797,6 +811,7 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
   circuit_t **next_active = NULL, **prev_active = NULL;
   circuit_t **next_prev = NULL, **prev_next = NULL;
   circuitmux_t *circuit_cmux = NULL;
+  chanid_circid_muxinfo_t *hashent = NULL;
   channel_t *chan = NULL;
   circid_t circ_id;
   int already_inactive;
@@ -878,7 +893,19 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
   *prev_active = NULL;
   *next_active = NULL;
 
-  /* TODO policy-specific notifications */
+  /* Policy-specific notification */
+  if (cmux->policy &&
+      cmux->policy->notify_circ_inactive &&
+      cmux->policy_data) {
+    /* Okay, we need to check the circuit for policy data now */
+    hashent = circuitmux_find_map_entry(cmux, circ);
+    /* We should have found something */
+    tor_assert(hashent);
+    /* Check for policy data for the circuit and notify */
+    if (hashent->muxinfo.policy_data)
+      cmux->policy->notify_circ_inactive(cmux, cmux->policy_data,
+                                         circ, hashent->muxinfo.policy_data);
+  }
 }
 
 /**
