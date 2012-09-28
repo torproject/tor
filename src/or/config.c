@@ -1164,6 +1164,7 @@ options_act(const or_options_t *old_options)
   config_line_t *cl;
   or_options_t *options = get_options_mutable();
   int running_tor = options->command == CMD_RUN_TOR;
+  char *msg=NULL;
   const int transition_affects_workers =
     old_options && options_transition_affects_workers(old_options, options);
 
