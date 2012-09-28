@@ -3025,7 +3025,11 @@ typedef struct {
   /** Addresses to bind for listening for control connections. */
   config_line_t *ControlListenAddress;
   /** Local address to bind outbound sockets */
-  char *OutboundBindAddress;
+  config_line_t *OutboundBindAddress;
+  /** IPv4 address derived from OutboundBindAddress. */
+  tor_addr_t _OutboundBindAddressIPv4;
+  /** IPv6 address derived from OutboundBindAddress. */
+  tor_addr_t _OutboundBindAddressIPv6;
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
   config_line_t *RecommendedVersions;

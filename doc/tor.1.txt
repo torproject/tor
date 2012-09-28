@@ -472,8 +472,10 @@ GENERAL OPTIONS
 **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
     is only useful when you have multiple network interfaces, and you want all
-    of Tor's outgoing connections to use a single one.  This setting will be
-    ignored for connections to the loopback addresses (127.0.0.0/8 and ::1).
+    of Tor's outgoing connections to use a single one. This option may
+    be used twice, once with an IPv4 address and once with an IPv6 address.
+    This setting will be ignored for connections to the loopback addresses
+    (127.0.0.0/8 and ::1).
 
 **PidFile** __FILE__::
     On startup, write our PID to FILE. On clean shutdown, remove

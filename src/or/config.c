@@ -302,7 +302,7 @@ static config_var_t _option_vars[] = {
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
   VPORT(ORPort,                      LINELIST, NULL),
-  V(OutboundBindAddress,         STRING,   NULL),
+  V(OutboundBindAddress,         LINELIST,   NULL),
 
   V(PathBiasCircThreshold,       INT,      "-1"),
   V(PathBiasNoticeRate,          DOUBLE,   "-1"),
@@ -474,6 +474,8 @@ static int options_init_logs(or_options_t *options, int validate_only);
 
 static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
+static int parse_outbound_addresses(or_options_t *options, int validate_only,
+                                    char **msg);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -1392,6 +1394,12 @@ options_act(const or_options_t *old_options)
     tor_free(http_authenticator);
   }
 
+  if (parse_outbound_addresses(options, 0, &msg) < 0) {
+    log_warn(LD_BUG, "Failed parsing oubound bind addresses: %s", msg);
+    tor_free(msg);
+    return -1;
+  }
+
   /* Check for transitions that need action. */
   if (old_options) {
     int revise_trackexithosts = 0;
@@ -2164,6 +2172,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (parse_ports(options, 1, msg, &n_ports) < 0)
+    return -1;
+
+  if (parse_outbound_addresses(options, 1, msg) < 0)
     return -1;
 
   if (validate_data_directory(options)<0)
@@ -5491,6 +5502,60 @@ getinfo_helper_config(control_connection_t *conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+  }
+  return 0;
+}
+
+/** Parse outbound bind address option lines. If <b>validate_only</b>
+ * is not 0 update _OutboundBindAddressIPv4 and
+ * _OutboundBindAddressIPv6 in <b>options</b>. On failure, set
+ * <b>msg</b> (if provided) to a newly allocated string containing a
+ * description of the problem and return -1. */
+static int
+parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
+{
+  const config_line_t *lines = options->OutboundBindAddress;
+  int found_v4 = 0, found_v6 = 0;
+
+  if (!validate_only) {
+    memset(&options->_OutboundBindAddressIPv4, 0,
+           sizeof(options->_OutboundBindAddressIPv4));
+    memset(&options->_OutboundBindAddressIPv6, 0,
+           sizeof(options->_OutboundBindAddressIPv6));
+  }
+  while (lines) {
+    tor_addr_t addr, *dst_addr = NULL;
+    int af = tor_addr_parse(&addr, lines->value);
+    switch (af) {
+    case AF_INET:
+      if (found_v4) {
+        if (msg)
+          tor_asprintf(msg, "Multiple IPv4 outbound bind addresses "
+                       "configured: %s", lines->value);
+        return -1;
+      }
+      found_v4 = 1;
+      dst_addr = &options->_OutboundBindAddressIPv4;
+      break;
+    case AF_INET6:
+      if (found_v6) {
+        if (msg)
+          tor_asprintf(msg, "Multiple IPv6 outbound bind addresses "
+                       "configured: %s", lines->value);
+        return -1;
+      }
+      found_v6 = 1;
+      dst_addr = &options->_OutboundBindAddressIPv6;
+      break;
+    default:
+      if (msg)
+        tor_asprintf(msg, "Outbound bind address '%s' didn't parse.",
+                     lines->value);
+      return -1;
+    }
+    if (!validate_only)
+      tor_addr_copy(dst_addr, &addr);
+    lines = lines->next;
   }
   return 0;
 }
