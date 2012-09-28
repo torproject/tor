@@ -53,6 +53,9 @@ struct circuitmux_policy_s {
                             circuit_t *circ,
                             circuitmux_policy_circ_data_t *pol_circ_data,
                             unsigned int n_cells);
+  /* Choose a circuit */
+  circuit_t * (*pick_active_circuit)(circuitmux_t *cmux,
+                                     circuitmux_policy_data_t *pol_data);
 };
 
 /*

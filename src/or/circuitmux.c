@@ -359,7 +359,6 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
                      U64_PRINTF_ARG(to_remove->chan_id));
           }
 
-
           /* Free policy-specific data if we have it */
           if (to_remove->muxinfo.policy_data) {
             /*
@@ -1255,6 +1254,35 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
  */
 
 /**
+ * Pick a circuit to send from, using the active circuits list or a
+ * circuitmux policy if one is available.  This is called from channel.c.
+ */
+
+circuit_t *
+circuitmux_get_first_active_circuit(circuitmux_t *cmux)
+{
+  circuit_t *circ = NULL;
+
+  tor_assert(cmux);
+
+  if (cmux->n_active_circuits > 0) {
+    /* We also must have a cell available for this to be the case */
+    tor_assert(cmux->n_cells > 0);
+    /* Do we have a policy-provided circuit selector? */
+    if (cmux->policy && cmux->policy->pick_active_circuit) {
+      circ = cmux->policy->pick_active_circuit(cmux, cmux->policy_data);
+    }
+    /* Fall back on the head of the active circuits list */
+    if (!circ) {
+      tor_assert(cmux->active_circuits_head);
+      circ = cmux->active_circuits_head;
+    }
+  } else tor_assert(cmux->n_cells == 0);
+
+  return circ;
+}
+
+/**
  * Notify the circuitmux that cells have been sent on a circuit; this
  * is called from channel.c.
  */
@@ -1310,7 +1338,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
 
   /*
    * Now make the circuit inactive if needed; this will call the policy's
-   * notify_circ_inactive() if present. 
+   * notify_circ_inactive() if present.
    */
   if (becomes_inactive) {
     --(cmux->n_active_circuits);
