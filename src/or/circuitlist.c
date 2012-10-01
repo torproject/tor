@@ -131,11 +131,12 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   if (old_chan) {
     /*
      * If we're changing channels or ID and had an old channel and a non
-     * zero old ID (i.e., we should have been attached), detach the circuit.
-     * ID changes require this because circuitmux hashes on (channel_id,
-     * circuit_id).
+     * zero old ID and weren't marked for close (i.e., we should have been
+     * attached), detach the circuit. ID changes require this because
+     * circuitmux hashes on (channel_id, circuit_id).
      */
-    if (id != 0 && (old_chan != chan || old_id != id)) {
+    if (id != 0 && (old_chan != chan || old_id != id) &&
+        !(circ->marked_for_close)) {
       tor_assert(old_chan->cmux);
       circuitmux_detach_circuit(old_chan->cmux, circ);
     }
@@ -180,9 +181,11 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
 
   /*
    * Attach to the circuitmux if we're changing channels or IDs and
-   * have a new channel and ID to use.
+   * have a new channel and ID to use and the circuit is not marked for
+   * close.
    */
-  if (chan && id != 0 && (old_chan != chan || old_id != id)) {
+  if (chan && id != 0 && (old_chan != chan || old_id != id) &&
+      !(circ->marked_for_close)) {
     tor_assert(chan->cmux);
     circuitmux_attach_circuit(chan->cmux, circ, direction);
     attached = 1;
@@ -1398,6 +1401,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   if (circ->n_chan) {
     circuit_clear_cell_queue(circ, circ->n_chan);
     channel_send_destroy(circ->n_circ_id, circ->n_chan, reason);
+    circuitmux_detach_circuit(circ->n_chan->cmux, circ);
   }
 
   if (! CIRCUIT_IS_ORIGIN(circ)) {
@@ -1425,6 +1429,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     if (or_circ->p_chan) {
       circuit_clear_cell_queue(circ, or_circ->p_chan);
       channel_send_destroy(or_circ->p_circ_id, or_circ->p_chan, reason);
+      circuitmux_detach_circuit(or_circ->p_chan->cmux, circ);
     }
   } else {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
