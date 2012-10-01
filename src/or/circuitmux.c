@@ -1324,6 +1324,8 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   hashent->muxinfo.cell_count -= n_cells;
   /* Do we need to make the circuit inactive? */
   if (hashent->muxinfo.cell_count == 0) becomes_inactive = 1;
+  /* Adjust the mux cell counter */
+  cmux->n_cells -= n_cells;
 
   /* If we aren't making it inactive later, move it to the tail of the list */
   if (!becomes_inactive) {
