@@ -2293,6 +2293,9 @@ tor_init(int argc, char *argv[])
       quiet = 1;
     if (!strcmp(argv[i], "--quiet"))
       quiet = 2;
+    /* --version implies --quiet */
+    if (!strcmp(argv[i], "--version"))
+      quiet = 2;
   }
  /* give it somewhere to log to initially */
   switch (quiet) {
