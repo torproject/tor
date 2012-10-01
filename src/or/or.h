@@ -2581,29 +2581,6 @@ typedef struct {
   time_t expiry_time;
 } cpath_build_state_t;
 
-/**
- * The cell_ewma_t structure keeps track of how many cells a circuit has
- * transferred recently.  It keeps an EWMA (exponentially weighted moving
- * average) of the number of cells flushed from the circuit queue onto a
- * connection in connection_or_flush_from_first_active_circuit().
- */
-typedef struct {
-  /** The last 'tick' at which we recalibrated cell_count.
-   *
-   * A cell sent at exactly the start of this tick has weight 1.0. Cells sent
-   * since the start of this tick have weight greater than 1.0; ones sent
-   * earlier have less weight. */
-  unsigned last_adjusted_tick;
-  /** The EWMA of the cell count. */
-  double cell_count;
-  /** True iff this is the cell count for a circuit's previous
-   * channel. */
-  unsigned int is_for_p_chan : 1;
-  /** The position of the circuit within the OR connection's priority
-   * queue. */
-  int heap_index;
-} cell_ewma_t;
-
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
 
@@ -2721,12 +2698,8 @@ typedef struct circuit_t {
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
 
-  /** TODO is this *all* circuits or all circuits on n_chan? */
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 
-  /** TODO all this from here on down should go away in favor of
-   * circuitmux_t.
-   */
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
@@ -2735,11 +2708,6 @@ typedef struct circuit_t {
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_chan;
-
-  /** The EWMA count for the number of cells flushed from the
-   * n_chan_cells queue.  Used to determine which circuit to flush from next.
-   */
-  cell_ewma_t n_cell_ewma;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2977,10 +2945,6 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
-
-  /** The EWMA count for the number of cells flushed from the
-   * p_conn_cells queue. */
-  cell_ewma_t p_cell_ewma;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t. */
