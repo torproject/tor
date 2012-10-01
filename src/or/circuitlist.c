@@ -135,7 +135,7 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
      * attached), detach the circuit. ID changes require this because
      * circuitmux hashes on (channel_id, circuit_id).
      */
-    if (id != 0 && (old_chan != chan || old_id != id) &&
+    if (old_id != 0 && (old_chan != chan || old_id != id) &&
         !(circ->marked_for_close)) {
       tor_assert(old_chan->cmux);
       circuitmux_detach_circuit(old_chan->cmux, circ);
@@ -984,6 +984,18 @@ circuit_get_by_circid_channel(circid_t circ_id, channel_t *chan)
     return NULL;
   else
     return circ;
+}
+
+/** Return a circ such that:
+ *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
+ *  - circ is attached to <b>chan</b>, either as p_chan or n_chan.
+ * Return NULL if no such circuit exists.
+ */
+circuit_t *
+circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
+                                             channel_t *chan)
+{
+  return circuit_get_by_circid_channel_impl(circ_id, chan);
 }
 
 /** Return true iff the circuit ID <b>circ_id</b> is currently used by a

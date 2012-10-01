@@ -30,6 +30,9 @@ origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(circid_t p_circ_id, channel_t *p_chan);
 circuit_t *circuit_get_by_circid_channel(circid_t circ_id,
                                          channel_t *chan);
+circuit_t *
+circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
+                                             channel_t *chan);
 int circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_channel(channel_t *chan, int reason);
