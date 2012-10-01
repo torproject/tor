@@ -130,8 +130,6 @@ struct chanid_circid_muxinfo_t {
  * Internal-use #defines
  */
 
-#define CMUX_PARANOIA
-
 #ifdef CMUX_PARANOIA
 #define circuitmux_assert_okay_paranoid(cmux) \
   circuitmux_assert_okay(cmux)
@@ -341,7 +339,11 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
   circuit_t *circ = NULL;
 
   tor_assert(cmux);
-  circuitmux_assert_okay_paranoid(cmux);
+  /*
+   * Don't circuitmux_assert_okay_paranoid() here; this gets called when
+   * channels are being freed and have already been unregistered, so
+   * the channel ID lookups it does will fail.
+   */
 
   i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
   while (i) {
@@ -351,7 +353,9 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
       /* Find a channel and circuit */
       chan = channel_find_by_global_id(to_remove->chan_id);
       if (chan) {
-        circ = circuit_get_by_circid_channel(to_remove->circ_id, chan);
+        circ =
+          circuit_get_by_circid_channel_even_if_marked(to_remove->circ_id,
+                                                       chan);
         if (circ) {
           /* Clear the circuit's mux for this direction */
           if (to_remove->muxinfo.direction == CELL_DIRECTION_OUT) {
@@ -552,7 +556,7 @@ circuitmux_set_policy(circuitmux_t *cmux,
     tor_assert(chan);
 
     /* Get the circuit */
-    circ = circuit_get_by_circid_channel((*i)->circ_id, chan);
+    circ = circuit_get_by_circid_channel_even_if_marked((*i)->circ_id, chan);
     tor_assert(circ);
 
     /* Need to tell old policy it becomes inactive (i.e., it is active) ? */
@@ -1477,64 +1481,53 @@ circuitmux_assert_okay_pass_one(circuitmux_t *cmux)
     /* Find the channel and circuit, assert that they exist */
     chan = channel_find_by_global_id(chan_id);
     tor_assert(chan);
-    circ = circuit_get_by_circid_channel(circ_id, chan);
-    if (circ) {
-      /* Clear the circ_is_active bit to start */
-      circ_is_active = 0;
+    circ = circuit_get_by_circid_channel_even_if_marked(circ_id, chan);
+    tor_assert(circ);
+    /* Clear the circ_is_active bit to start */
+    circ_is_active = 0;
 
-      /* Assert that we know which direction this is going */
-      tor_assert((*i)->muxinfo.direction == CELL_DIRECTION_OUT ||
-                 (*i)->muxinfo.direction == CELL_DIRECTION_IN);
+    /* Assert that we know which direction this is going */
+    tor_assert((*i)->muxinfo.direction == CELL_DIRECTION_OUT ||
+               (*i)->muxinfo.direction == CELL_DIRECTION_IN);
 
-      if ((*i)->muxinfo.direction == CELL_DIRECTION_OUT) {
-        /* We should be n_mux on this circuit */
-        tor_assert(cmux == circ->n_mux);
-        tor_assert(chan == circ->n_chan);
-        /* Get next and prev for next test */
-        next_p = &(circ->next_active_on_n_chan);
-        prev_p = &(circ->prev_active_on_n_chan);
-      } else {
-        /* This should be an or_circuit_t and we should be p_mux */
-        or_circ = TO_OR_CIRCUIT(circ);
-        tor_assert(cmux == or_circ->p_mux);
-        tor_assert(chan == or_circ->p_chan);
-        /* Get next and prev for next test */
-        next_p = &(or_circ->next_active_on_p_chan);
-        prev_p = &(or_circ->prev_active_on_p_chan);
-      }
-
-      /*
-       * Should this circuit be active?  I.e., does the mux know about > 0
-       * cells on it?
-       */
-      circ_is_active = ((*i)->muxinfo.cell_count > 0);
-
-      /* It should be in the linked list iff it's active */
-      if (circ_is_active) {
-        /* Either we have a next link or we are the tail */
-        tor_assert(*next_p || (circ == cmux->active_circuits_tail));
-        /* Either we have a prev link or we are the head */
-        tor_assert(*prev_p || (circ == cmux->active_circuits_head));
-        /* Increment the active circuits counter */
-        ++n_active_circuits;
-      } else {
-        /* Shouldn't be in list, so no next or prev link */
-        tor_assert(!(*next_p));
-        tor_assert(!(*prev_p));
-        /* And can't be head or tail */
-        tor_assert(circ != cmux->active_circuits_head);
-        tor_assert(circ != cmux->active_circuits_tail);
-      }
+    if ((*i)->muxinfo.direction == CELL_DIRECTION_OUT) {
+      /* We should be n_mux on this circuit */
+      tor_assert(cmux == circ->n_mux);
+      tor_assert(chan == circ->n_chan);
+      /* Get next and prev for next test */
+      next_p = &(circ->next_active_on_n_chan);
+      prev_p = &(circ->prev_active_on_n_chan);
     } else {
-      /*
-       * circuit_get_by_circid_channel() doesn't want us to have a circuit
-       * that's marked for close, but we can test for that case with
-       * circuit_id_in_use_on_channel().  Assert if it really, really isn't
-       * there.
-       */
-      tor_assert(circuit_id_in_use_on_channel(circ_id, chan));
-      /* It definitely isn't active */
-      circ_is_active = 0;
+      /* This should be an or_circuit_t and we should be p_mux */
+      or_circ = TO_OR_CIRCUIT(circ);
+      tor_assert(cmux == or_circ->p_mux);
+      tor_assert(chan == or_circ->p_chan);
+      /* Get next and prev for next test */
+      next_p = &(or_circ->next_active_on_p_chan);
+      prev_p = &(or_circ->prev_active_on_p_chan);
+    }
+
+    /*
+     * Should this circuit be active?  I.e., does the mux know about > 0
+     * cells on it?
+     */
+    circ_is_active = ((*i)->muxinfo.cell_count > 0);
+
+    /* It should be in the linked list iff it's active */
+    if (circ_is_active) {
+      /* Either we have a next link or we are the tail */
+      tor_assert(*next_p || (circ == cmux->active_circuits_tail));
+      /* Either we have a prev link or we are the head */
+      tor_assert(*prev_p || (circ == cmux->active_circuits_head));
+      /* Increment the active circuits counter */
+      ++n_active_circuits;
+    } else {
+      /* Shouldn't be in list, so no next or prev link */
+      tor_assert(!(*next_p));
+      tor_assert(!(*prev_p));
+      /* And can't be head or tail */
+      tor_assert(circ != cmux->active_circuits_head);
+      tor_assert(circ != cmux->active_circuits_tail);
     }
 
     /* Increment the circuits counter */
