@@ -22,6 +22,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/circuitbuild.c				\
 	src/or/circuitlist.c				\
 	src/or/circuitmux.c				\
+	src/or/circuitmux_ewma.c			\
 	src/or/circuituse.c				\
 	src/or/command.c				\
 	src/or/config.c					\
@@ -94,6 +95,7 @@ ORHEADERS = \
 	src/or/circuitbuild.h				\
 	src/or/circuitlist.h				\
 	src/or/circuitmux.h				\
+	src/or/circuitmux_ewma.h			\
 	src/or/circuituse.h				\
 	src/or/command.h				\
 	src/or/config.h					\
