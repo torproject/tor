@@ -1779,7 +1779,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 
 #ifdef ACTIVE_CIRCUITS_PARANOIA
 #define assert_cmux_ok_paranoid(chan) \
-     assert_cmux_okay(chan)
+     assert_circuit_mux_okay(chan)
 #else
 #define assert_cmux_ok_paranoid(chan)
 #endif
@@ -2116,6 +2116,9 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
       queue = &TO_OR_CIRCUIT(circ)->p_chan_cells;
       streams_blocked = circ->streams_blocked_on_p_chan;
     }
+
+    /* Circuitmux told us this was active, so it should have cells */
+    tor_assert(queue->n > 0);
 
     /*
      * Get just one cell here; once we've sent it, that can change the circuit
