@@ -10,7 +10,6 @@
  *    receiving from circuits, plus queuing on circuits.
  **/
 
-#include <math.h>
 #define RELAY_PRIVATE
 #include "or.h"
 #include "buffers.h"
@@ -1972,245 +1971,6 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
-#if 0
-/** Helper for sorting cell_ewma_t values in their priority queue. */
-static int
-compare_cell_ewma_counts(const void *p1, const void *p2)
-{
-  const cell_ewma_t *e1=p1, *e2=p2;
-  if (e1->cell_count < e2->cell_count)
-    return -1;
-  else if (e1->cell_count > e2->cell_count)
-    return 1;
-  else
-    return 0;
-}
-
-/** Given a cell_ewma_t, return a pointer to the circuit containing it. */
-static circuit_t *
-cell_ewma_to_circuit(cell_ewma_t *ewma)
-{
-  if (ewma->is_for_p_chan) {
-    /* This is an or_circuit_t's p_cell_ewma. */
-    or_circuit_t *orcirc = SUBTYPE_P(ewma, or_circuit_t, p_cell_ewma);
-    return TO_CIRCUIT(orcirc);
-  } else {
-    /* This is some circuit's n_cell_ewma. */
-    return SUBTYPE_P(ewma, circuit_t, n_cell_ewma);
-  }
-}
-
-/* ==== Functions for scaling cell_ewma_t ====
-
-   When choosing which cells to relay first, we favor circuits that have been
-   quiet recently.  This gives better latency on connections that aren't
-   pushing lots of data, and makes the network feel more interactive.
-
-   Conceptually, we take an exponentially weighted mean average of the number
-   of cells a circuit has sent, and allow active circuits (those with cells to
-   relay) to send cells in reverse order of their exponentially-weighted mean
-   average (EWMA) cell count.  [That is, a cell sent N seconds ago 'counts'
-   F^N times as much as a cell sent now, for 0<F<1.0, and we favor the
-   circuit that has sent the fewest cells]
-
-   If 'double' had infinite precision, we could do this simply by counting a
-   cell sent at startup as having weight 1.0, and a cell sent N seconds later
-   as having weight F^-N.  This way, we would never need to re-scale
-   any already-sent cells.
-
-   To prevent double from overflowing, we could count a cell sent now as
-   having weight 1.0 and a cell sent N seconds ago as having weight F^N.
-   This, however, would mean we'd need to re-scale *ALL* old circuits every
-   time we wanted to send a cell.
-
-   So as a compromise, we divide time into 'ticks' (currently, 10-second
-   increments) and say that a cell sent at the start of a current tick is
-   worth 1.0, a cell sent N seconds before the start of the current tick is
-   worth F^N, and a cell sent N seconds after the start of the current tick is
-   worth F^-N.  This way we don't overflow, and we don't need to constantly
-   rescale.
- */
-
-/** How long does a tick last (seconds)? */
-#define EWMA_TICK_LEN 10
-
-/** The default per-tick scale factor, if it hasn't been overridden by a
- * consensus or a configuration setting.  zero means "disabled". */
-#define EWMA_DEFAULT_HALFLIFE 0.0
-
-/** Given a timeval <b>now</b>, compute the cell_ewma tick in which it occurs
- * and the fraction of the tick that has elapsed between the start of the tick
- * and <b>now</b>.  Return the former and store the latter in
- * *<b>remainder_out</b>.
- *
- * These tick values are not meant to be shared between Tor instances, or used
- * for other purposes. */
-static unsigned
-cell_ewma_tick_from_timeval(const struct timeval *now,
-                            double *remainder_out)
-{
-  unsigned res = (unsigned) (now->tv_sec / EWMA_TICK_LEN);
-  /* rem */
-  double rem = (now->tv_sec % EWMA_TICK_LEN) +
-    ((double)(now->tv_usec)) / 1.0e6;
-  *remainder_out = rem / EWMA_TICK_LEN;
-  return res;
-}
-
-/** Compute and return the current cell_ewma tick. */
-unsigned
-cell_ewma_get_tick(void)
-{
-  return ((unsigned)approx_time() / EWMA_TICK_LEN);
-}
-
-/** The per-tick scale factor to be used when computing cell-count EWMA
- * values.  (A cell sent N ticks before the start of the current tick
- * has value ewma_scale_factor ** N.)
- */
-static double ewma_scale_factor = 0.1;
-/* DOCDOC ewma_enabled */
-static int ewma_enabled = 0;
-
-/*DOCDOC*/
-#define EPSILON 0.00001
-/*DOCDOC*/
-#define LOG_ONEHALF -0.69314718055994529
-
-/** Adjust the global cell scale factor based on <b>options</b> */
-void
-cell_ewma_set_scale_factor(const or_options_t *options,
-                           const networkstatus_t *consensus)
-{
-  int32_t halflife_ms;
-  double halflife;
-  const char *source;
-  if (options && options->CircuitPriorityHalflife >= -EPSILON) {
-    halflife = options->CircuitPriorityHalflife;
-    source = "CircuitPriorityHalflife in configuration";
-  } else if (consensus && (halflife_ms = networkstatus_get_param(
-                 consensus, "CircuitPriorityHalflifeMsec",
-                 -1, -1, INT32_MAX)) >= 0) {
-    halflife = ((double)halflife_ms)/1000.0;
-    source = "CircuitPriorityHalflifeMsec in consensus";
-  } else {
-    halflife = EWMA_DEFAULT_HALFLIFE;
-    source = "Default value";
-  }
-
-  if (halflife <= EPSILON) {
-    /* The cell EWMA algorithm is disabled. */
-    ewma_scale_factor = 0.1;
-    ewma_enabled = 0;
-    log_info(LD_OR,
-             "Disabled cell_ewma algorithm because of value in %s",
-             source);
-  } else {
-    /* convert halflife into halflife-per-tick. */
-    halflife /= EWMA_TICK_LEN;
-    /* compute per-tick scale factor. */
-    ewma_scale_factor = exp( LOG_ONEHALF / halflife );
-    ewma_enabled = 1;
-    log_info(LD_OR,
-             "Enabled cell_ewma algorithm because of value in %s; "
-             "scale factor is %f per %d seconds",
-             source, ewma_scale_factor, EWMA_TICK_LEN);
-  }
-}
-
-/** Return the multiplier necessary to convert the value of a cell sent in
- * 'from_tick' to one sent in 'to_tick'. */
-static INLINE double
-get_scale_factor(unsigned from_tick, unsigned to_tick)
-{
-  /* This math can wrap around, but that's okay: unsigned overflow is
-     well-defined */
-  int diff = (int)(to_tick - from_tick);
-  return pow(ewma_scale_factor, diff);
-}
-
-/** Adjust the cell count of <b>ewma</b> so that it is scaled with respect to
- * <b>cur_tick</b> */
-static void
-scale_single_cell_ewma(cell_ewma_t *ewma, unsigned cur_tick)
-{
-  double factor = get_scale_factor(ewma->last_adjusted_tick, cur_tick);
-  ewma->cell_count *= factor;
-  ewma->last_adjusted_tick = cur_tick;
-}
-
-/** Adjust the cell count of every active circuit on <b>chan</b> so
- * that they are scaled with respect to <b>cur_tick</b> */
-static void
-scale_active_circuits(channel_t *chan, unsigned cur_tick)
-{
-  double factor;
-
-  tor_assert(chan);
-
-  factor =
-    get_scale_factor(
-      chan->active_circuit_pqueue_last_recalibrated,
-      cur_tick);
-  /** Ordinarily it isn't okay to change the value of an element in a heap,
-   * but it's okay here, since we are preserving the order. */
-  SMARTLIST_FOREACH_BEGIN(
-      chan->active_circuit_pqueue,
-      cell_ewma_t *, e) {
-      tor_assert(e->last_adjusted_tick ==
-                 chan->active_circuit_pqueue_last_recalibrated);
-      e->cell_count *= factor;
-      e->last_adjusted_tick = cur_tick;
-  } SMARTLIST_FOREACH_END(e);
-  chan->active_circuit_pqueue_last_recalibrated = cur_tick;
-}
-
-/** Rescale <b>ewma</b> to the same scale as <b>chan</b>, and add it to
- * <b>chan</b>'s priority queue of active circuits */
-static void
-add_cell_ewma_to_chan(channel_t *chan, cell_ewma_t *ewma)
-{
-  tor_assert(chan);
-  tor_assert(ewma);
-  tor_assert(ewma->heap_index == -1);
-
-  scale_single_cell_ewma(
-      ewma,
-      chan->active_circuit_pqueue_last_recalibrated);
-
-  smartlist_pqueue_add(chan->active_circuit_pqueue,
-                       compare_cell_ewma_counts,
-                       STRUCT_OFFSET(cell_ewma_t, heap_index),
-                       ewma);
-}
-
-/** Remove <b>ewma</b> from <b>chan</b>'s priority queue of active circuits */
-static void
-remove_cell_ewma_from_chan(channel_t *chan, cell_ewma_t *ewma)
-{
-  tor_assert(chan);
-  tor_assert(ewma);
-  tor_assert(ewma->heap_index != -1);
-
-  smartlist_pqueue_remove(chan->active_circuit_pqueue,
-                          compare_cell_ewma_counts,
-                          STRUCT_OFFSET(cell_ewma_t, heap_index),
-                          ewma);
-}
-
-/** Remove and return the first cell_ewma_t from chan's priority queue of
- * active circuits.  Requires that the priority queue is nonempty. */
-static cell_ewma_t *
-pop_first_cell_ewma_from_chan(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return smartlist_pqueue_pop(chan->active_circuit_pqueue,
-                              compare_cell_ewma_counts,
-                              STRUCT_OFFSET(cell_ewma_t, heap_index));
-}
-#endif
-
 /**
  * Update the number of cells available on the circuit's n_chan or p_chan's
  * circuit mux.
@@ -2335,15 +2095,6 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
   int streams_blocked;
   packed_cell_t *cell;
 
-#if 0
-  /* The current (hi-res) time */
-  struct timeval now_hires;
-
-  /* The EWMA cell counter for the circuit we're flushing. */
-  cell_ewma_t *cell_ewma = NULL;
-  double ewma_increment = -1;
-#endif
-
   /* Get the cmux */
   tor_assert(chan);
   tor_assert(chan->cmux);
@@ -2355,26 +2106,6 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
     /* If it returns NULL, no cells left to send */
     if (!circ) break;
     assert_cmux_ok_paranoid(chan);
-
-#if 0
-    /* This will go in circuitmux_get_first_active_circuit() */
-    /* See if we're doing the ewma circuit selection algorithm. */
-    if (ewma_enabled) {
-      unsigned tick;
-      double fractional_tick;
-      tor_gettimeofday_cached(&now_hires);
-      tick = cell_ewma_tick_from_timeval(&now_hires, &fractional_tick);
-
-      if (tick != chan->active_circuit_pqueue_last_recalibrated) {
-        scale_active_circuits(chan, tick);
-      }
-
-      ewma_increment = pow(ewma_scale_factor, -fractional_tick);
-
-      cell_ewma = smartlist_get(chan->active_circuit_pqueue, 0);
-      circ = cell_ewma_to_circuit(cell_ewma);
-    }
-#endif
 
     if (circ->n_chan == chan) {
       queue = &circ->n_chan_cells;
@@ -2459,28 +2190,6 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
      * to write to this circuit? */
     if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
       set_streams_blocked_on_circ(circ, chan, 0, 0); /* unblock streams */
-
-#if 0
-    if (cell_ewma) {
-      cell_ewma_t *tmp;
-      cell_ewma->cell_count += ewma_increment;
-      /* We pop and re-add the cell_ewma_t here, not above, since we need to
-       * re-add it immediately to keep the priority queue consistent with
-       * the linked-list implementation */
-      tmp = pop_first_cell_ewma_from_chan(chan);
-      tor_assert(tmp == cell_ewma);
-      add_cell_ewma_to_chan(chan, cell_ewma);
-    }
-    if (!ewma_enabled && circ != chan->active_circuits) {
-      /* If this happens, the current circuit just got made inactive by
-       * a call in connection_write_to_buf().  That's nothing to worry about:
-       * circuit_make_inactive_on_conn() already advanced chan->active_circuits
-       * for us.
-       */
-      assert_active_circuits_ok_paranoid(chan);
-      goto done;
-    }
-#endif
 
     /* If n_flushed < max still, loop around and pick another circuit */
   }
@@ -2635,47 +2344,6 @@ assert_circuit_mux_okay(channel_t *chan)
 
   circuitmux_assert_okay(chan->cmux);
 }
-
-#if 0
-/** Fail with an assert if the active circuits ring on <b>orconn</b> is
- * corrupt.  */
-void
-assert_active_circuits_ok(channel_t *chan)
-{
-  circuit_t *head = NULL, *cur = NULL;
-  int n = 0;
-
-  tor_assert(chan);
-
-  cur = head = chan->active_circuits;
-
-  if (! head)
-    return;
-  do {
-    circuit_t *next = *next_circ_on_chan_p(cur, chan);
-    circuit_t *prev = *prev_circ_on_chan_p(cur, chan);
-    cell_ewma_t *ewma;
-    tor_assert(next);
-    tor_assert(prev);
-    tor_assert(*next_circ_on_chan_p(prev, chan) == cur);
-    tor_assert(*prev_circ_on_chan_p(next, chan) == cur);
-    if (chan == cur->n_chan) {
-      ewma = &cur->n_cell_ewma;
-      tor_assert(!ewma->is_for_p_chan);
-    } else {
-      ewma = &TO_OR_CIRCUIT(cur)->p_cell_ewma;
-      tor_assert(ewma->is_for_p_chan);
-    }
-    tor_assert(ewma->heap_index != -1);
-    tor_assert(ewma == smartlist_get(chan->active_circuit_pqueue,
-                                     ewma->heap_index));
-    n++;
-    cur = next;
-  } while (cur != head);
-
-  tor_assert(n == smartlist_len(chan->active_circuit_pqueue));
-}
-#endif
 
 /** Return 1 if we shouldn't restart reading on this circuit, even if
  * we get a SENDME.  Else return 0.

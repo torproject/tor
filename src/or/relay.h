@@ -60,9 +60,6 @@ int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
 const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
                                         const uint8_t *payload,
                                         int payload_len);
-unsigned cell_ewma_get_tick(void);
-void cell_ewma_set_scale_factor(const or_options_t *options,
-                                const networkstatus_t *consensus);
 void circuit_clear_cell_queue(circuit_t *circ, channel_t *chan);
 
 #ifdef RELAY_PRIVATE
