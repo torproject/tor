@@ -655,15 +655,17 @@ circuitmux_find_map_entry(circuitmux_t *cmux, circuit_t *circ)
   tor_assert(cmux);
   tor_assert(cmux->chanid_circid_map);
   tor_assert(circ);
-  tor_assert(circ->n_chan);
 
-  /* Okay, let's see if it's attached for n_chan/n_circ_id */
-  search.chan_id = circ->n_chan->global_identifier;
-  search.circ_id = circ->n_circ_id;
+  /* Check if we have n_chan */
+  if (circ->n_chan) {
+    /* Okay, let's see if it's attached for n_chan/n_circ_id */
+    search.chan_id = circ->n_chan->global_identifier;
+    search.circ_id = circ->n_circ_id;
 
-  /* Query */
-  hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                    &search);
+    /* Query */
+    hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                      &search);
+  }
 
   /* Found something? */
   if (hashent) {
