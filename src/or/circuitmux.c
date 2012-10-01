@@ -110,6 +110,8 @@ struct circuit_muxinfo_s {
   cell_direction_t direction;
   /* Policy-specific data */
   circuitmux_policy_circ_data_t *policy_data;
+  /* Mark bit for consistency checker */
+  unsigned int mark:1;
 };
 
 /*
@@ -148,6 +150,9 @@ static INLINE circuit_t **
 circuitmux_next_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 static INLINE circuit_t **
 circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
+static void circuitmux_assert_okay_pass_one(circuitmux_t *cmux);
+static void circuitmux_assert_okay_pass_two(circuitmux_t *cmux);
+static void circuitmux_assert_okay_pass_three(circuitmux_t *cmux);
 
 /* Function definitions */
 
@@ -1343,6 +1348,287 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   if (becomes_inactive) {
     --(cmux->n_active_circuits);
     circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
+  }
+}
+
+/*
+ * Circuitmux consistency checking assertions
+ */
+
+/**
+ * Check that circuitmux data structures are consistent and fail with an
+ * assert if not.
+ */
+
+void
+circuitmux_assert_okay(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  /*
+   * Pass 1: iterate the hash table; for each entry:
+   *  a) Check that the circuit has this cmux for n_mux or p_mux
+   *  b) If the cell_count is > 0, set the mark bit; otherwise clear it
+   *  c) Also check activeness (cell_count > 0 should be active)
+   *  d) Count the number of circuits, active circuits and queued cells
+   *     and at the end check that they match the counters in the cmux.
+   *
+   * Pass 2: iterate the active circuits list; for each entry,
+   *         make sure the circuit is attached to this mux and appears
+   *         in the hash table.  Make sure the mark bit is 1, and clear
+   *         it in the hash table entry.  Consistency-check the linked
+   *         list pointers.
+   *
+   * Pass 3: iterate the hash table again; assert if any active circuits
+   *         (mark bit set to 1) are discovered that weren't cleared in pass 2
+   *         (don't appear in the linked list).
+   */
+
+  circuitmux_assert_okay_pass_one(cmux);
+  circuitmux_assert_okay_pass_two(cmux);
+  circuitmux_assert_okay_pass_three(cmux);
+}
+
+/**
+ * Do the first pass of circuitmux_assert_okay(); see the comment in that
+ * function.
+ */
+
+static void
+circuitmux_assert_okay_pass_one(circuitmux_t *cmux)
+{
+  chanid_circid_muxinfo_t **i = NULL;
+  uint64_t chan_id;
+  channel_t *chan;
+  circid_t circ_id;
+  circuit_t *circ;
+  or_circuit_t *or_circ;
+  unsigned int circ_is_active;
+  circuit_t **next_p, **prev_p;
+  unsigned int n_circuits, n_active_circuits, n_cells;
+
+  tor_assert(cmux);
+  tor_assert(cmux->chanid_circid_map);
+
+  /* Reset the counters */
+  n_circuits = n_active_circuits = n_cells = 0;
+  /* Start iterating the hash table */
+  i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
+  while (i) {
+    /* Assert that the hash table entry isn't null */
+    tor_assert(*i);
+
+    /* Get the channel and circuit id */
+    chan_id = (*i)->chan_id;
+    circ_id = (*i)->circ_id;
+
+    /* Find the channel and circuit, assert that they exist */
+    chan = channel_find_by_global_id(chan_id);
+    tor_assert(chan);
+    circ = circuit_get_by_circid_channel(circ_id, chan);
+    tor_assert(circ);
+
+    /* Clear the circ_is_active bit to start */
+    circ_is_active = 0;
+
+    /* Assert that we know which direction this is going */
+    tor_assert((*i)->muxinfo.direction == CELL_DIRECTION_OUT ||
+               (*i)->muxinfo.direction == CELL_DIRECTION_IN);
+
+    if ((*i)->muxinfo.direction == CELL_DIRECTION_OUT) {
+      /* We should be n_mux on this circuit */
+      tor_assert(cmux == circ->n_mux);
+      tor_assert(chan == circ->n_chan);
+      /* Get next and prev for next test */
+      next_p = &(circ->next_active_on_n_chan);
+      prev_p = &(circ->prev_active_on_n_chan);
+    } else {
+      /* This should be an or_circuit_t and we should be p_mux */
+      or_circ = TO_OR_CIRCUIT(circ);
+      tor_assert(cmux == or_circ->p_mux);
+      tor_assert(chan == or_circ->p_chan);
+      /* Get next and prev for next test */
+      next_p = &(or_circ->next_active_on_p_chan);
+      prev_p = &(or_circ->prev_active_on_p_chan);
+    }
+
+    /*
+     * Should this circuit be active?  I.e., does the mux know about > 0
+     * cells on it?
+     */
+    circ_is_active = ((*i)->muxinfo.cell_count > 0);
+
+    /* It should be in the linked list iff it's active */
+    if (circ_is_active) {
+      /* Either we have a next link or we are the tail */
+      tor_assert(*next_p || (circ == cmux->active_circuits_tail));
+      /* Either we have a prev link or we are the head */
+      tor_assert(*prev_p || (circ == cmux->active_circuits_head));
+      /* Increment the active circuits counter */
+      ++n_active_circuits;
+    } else {
+      /* Shouldn't be in list, so no next or prev link */
+      tor_assert(!(*next_p));
+      tor_assert(!(*prev_p));
+      /* And can't be head or tail */
+      tor_assert(circ != cmux->active_circuits_head);
+      tor_assert(circ != cmux->active_circuits_tail);
+    }
+
+    /* Increment the circuits counter */
+    ++n_circuits;
+    /* Adjust the cell counter */
+    n_cells += (*i)->muxinfo.cell_count;
+
+    /* Set the mark bit to circ_is_active */
+    (*i)->muxinfo.mark = circ_is_active;
+
+    /* Advance to the next entry */
+    i = HT_NEXT(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
+  }
+
+  /* Now check the counters */
+  tor_assert(n_cells == cmux->n_cells);
+  tor_assert(n_circuits == cmux->n_circuits);
+  tor_assert(n_active_circuits == cmux->n_active_circuits);
+}
+
+/**
+ * Do the second pass of circuitmux_assert_okay(); see the comment in that
+ * function.
+ */
+
+static void
+circuitmux_assert_okay_pass_two(circuitmux_t *cmux)
+{
+  circuit_t *curr_circ, *prev_circ = NULL, *next_circ;
+  or_circuit_t *curr_or_circ;
+  uint64_t curr_chan_id;
+  circid_t curr_circ_id;
+  circuit_t **next_p, **prev_p;
+  channel_t *chan;
+  unsigned int n_active_circuits = 0;
+  cell_direction_t direction;
+  chanid_circid_muxinfo_t search, *hashent = NULL;
+
+  tor_assert(cmux);
+  tor_assert(cmux->chanid_circid_map);
+
+  /*
+   * Walk the linked list of active circuits in cmux; keep track of the
+   * previous circuit seen for consistency checking purposes.  Count them
+   * to make sure the number in the linked list matches
+   * cmux->n_active_circuits.
+   */
+  curr_circ = cmux->active_circuits_head;
+  while (curr_circ) {
+    /* Reset some things */
+    chan = NULL;
+    curr_or_circ = NULL;
+    next_circ = NULL;
+    next_p = prev_p = NULL;
+    direction = 0;
+
+    /* Figure out if this is n_mux or p_mux */
+    if (cmux == curr_circ->n_mux) {
+      /* Get next_p and prev_p */
+      next_p = &(curr_circ->next_active_on_n_chan);
+      prev_p = &(curr_circ->prev_active_on_n_chan);
+      /* Get the channel */
+      chan = curr_circ->n_chan;
+      /* Get the circuit id */
+      curr_circ_id = curr_circ->n_circ_id;
+      /* Remember the direction */
+      direction = CELL_DIRECTION_OUT;
+    } else {
+      /* We must be p_mux and this must be an or_circuit_t */
+      curr_or_circ = TO_OR_CIRCUIT(curr_circ);
+      tor_assert(cmux == curr_or_circ->p_mux);
+      /* Get next_p and prev_p */
+      next_p = &(curr_or_circ->next_active_on_p_chan);
+      prev_p = &(curr_or_circ->prev_active_on_p_chan);
+      /* Get the channel */
+      chan = curr_or_circ->p_chan;
+      /* Get the circuit id */
+      curr_circ_id = curr_or_circ->p_circ_id;
+      /* Remember the direction */
+      direction = CELL_DIRECTION_IN;
+    }
+
+    /* Assert that we got a channel and get the channel ID */
+    tor_assert(chan);
+    curr_chan_id = chan->global_identifier;
+
+    /* Assert that prev_p points to last circuit we saw */
+    tor_assert(*prev_p == prev_circ);
+    /* If that's NULL, assert that we are the head */
+    if (!(*prev_p)) tor_assert(curr_circ == cmux->active_circuits_head);
+
+    /* Get the next circuit */
+    next_circ = *next_p;
+    /* If it's NULL, assert that we are the tail */
+    if (!(*next_p)) tor_assert(curr_circ == cmux->active_circuits_tail);
+
+    /* Now find the hash table entry for this circuit */
+    search.chan_id = curr_chan_id;
+    search.circ_id = curr_circ_id;
+    hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                      &search);
+
+    /* Assert that we have one */
+    tor_assert(hashent);
+
+    /* Assert that the direction matches */
+    tor_assert(direction == hashent->muxinfo.direction);
+
+    /* Assert that the hash entry got marked in pass one */
+    tor_assert(hashent->muxinfo.mark);
+
+    /* Clear the mark */
+    hashent->muxinfo.mark = 0;
+
+    /* Increment the counter */
+    ++n_active_circuits;
+
+    /* Advance to the next active circuit and update prev_circ */
+    prev_circ = curr_circ;
+    curr_circ = next_circ;
+  }
+
+  /* Assert that the counter matches the cmux */
+  tor_assert(n_active_circuits == cmux->n_active_circuits);
+}
+
+/**
+ * Do the third pass of circuitmux_assert_okay(); see the comment in that
+ * function.
+ */
+
+static void
+circuitmux_assert_okay_pass_three(circuitmux_t *cmux)
+{
+  chanid_circid_muxinfo_t **i = NULL;
+
+  tor_assert(cmux);
+  tor_assert(cmux->chanid_circid_map);
+
+  /* Start iterating the hash table */
+  i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
+
+  /* Advance through each entry */
+  while (i) {
+    /* Assert that it isn't null */
+    tor_assert(*i);
+
+    /*
+     * Assert that this entry is not marked - i.e., that either we didn't
+     * think it should be active in pass one or we saw it in the active
+     * circuits linked list.
+     */
+    tor_assert(!((*i)->muxinfo.mark));
+
+    /* Advance to the next entry */
+    i = HT_NEXT(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
   }
 }
 
