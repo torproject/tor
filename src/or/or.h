@@ -2634,15 +2634,7 @@ typedef struct circuit_t {
 
   /**
    * The hop to which we want to extend this circuit.  Should be NULL if
-   * the circuit has attached to a connection.
-   *
-   * TODO:
-   *  - If this is NULL, we have extended.  Is it true that if this is
-   *    NULL then n_chan is not NULL?
-   *  - If n_chan is NULL, then what is n_circ_id?
-   *  - It doesn't matter, because we'll only ever attach to a circuitmux_t
-   *    when n_chan is not NULL, and that's what needs to use a unique ID
-   *    for circuits.
+   * the circuit has attached to a channel.
    */
   extend_info_t *n_hop;
 
