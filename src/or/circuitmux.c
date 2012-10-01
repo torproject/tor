@@ -127,6 +127,17 @@ struct chanid_circid_muxinfo_t {
 };
 
 /*
+ * Internal-use #defines
+ */
+
+#ifdef CMUX_PARANOIA
+#define circuitmux_assert_okay_paranoid(cmux) \
+  circuitmux_assert_okay(cmux)
+#else
+#define circuitmux_assert_okay_paranoid(cmux)
+#endif
+
+/*
  * Static function declarations
  */
 
@@ -175,6 +186,8 @@ circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
 
   tor_assert(cmux);
   tor_assert(circ);
+
+  circuitmux_assert_okay_paranoid(cmux);
 
   /* Figure out our next_p and prev_p for this cmux/direction */
   if (direction) {
@@ -229,6 +242,8 @@ circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
   *prev_p = cmux->active_circuits_tail;
   /* Set the tail to this circuit */
   cmux->active_circuits_tail = circ;
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 static INLINE circuit_t **
@@ -324,6 +339,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
   circuit_t *circ = NULL;
 
   tor_assert(cmux);
+  circuitmux_assert_okay_paranoid(cmux);
 
   i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
   while (i) {
@@ -794,6 +810,7 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(circ);
   tor_assert(direction == CELL_DIRECTION_IN ||
              direction == CELL_DIRECTION_OUT);
+  circuitmux_assert_okay_paranoid(cmux);
 
   /*
    * Figure out which channel we're using, and get the circuit's current
@@ -919,6 +936,8 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
     }
     cmux->n_cells += cell_count;
   }
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /**
@@ -940,6 +959,7 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
   tor_assert(cmux->chanid_circid_map);
   tor_assert(circ);
   tor_assert(circ->n_chan);
+  circuitmux_assert_okay_paranoid(cmux);
 
   /* See if we have it for n_chan/n_circ_id */
   search.chan_id = circ->n_chan->global_identifier;
@@ -995,6 +1015,8 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
     /* Free the hash entry */
     tor_free(hashent);
   }
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /**
@@ -1017,6 +1039,11 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(circ);
   tor_assert(direction == CELL_DIRECTION_OUT ||
              direction == CELL_DIRECTION_IN);
+  /*
+   * Don't circuitmux_assert_okay_paranoid(cmux) here because the cell count
+   * already got changed and we have to update the list for it to be consistent
+   * again.
+   */
 
   /* Get the right set of active list links for this direction */
   if (direction == CELL_DIRECTION_OUT) {
@@ -1084,6 +1111,8 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
     cmux->policy->notify_circ_active(cmux, cmux->policy_data,
                                      circ, hashent->muxinfo.policy_data);
   }
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /**
@@ -1107,6 +1136,11 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(circ);
   tor_assert(direction == CELL_DIRECTION_OUT ||
              direction == CELL_DIRECTION_IN);
+  /*
+   * Don't circuitmux_assert_okay_paranoid(cmux) here because the cell count
+   * already got changed and we have to update the list for it to be consistent
+   * again.
+   */
 
   /* Get the right set of active list links for this direction */
   if (direction == CELL_DIRECTION_OUT) {
@@ -1191,6 +1225,8 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
     cmux->policy->notify_circ_inactive(cmux, cmux->policy_data,
                                        circ, hashent->muxinfo.policy_data);
   }
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /**
@@ -1217,6 +1253,8 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
   tor_assert(cmux);
   tor_assert(circ);
 
+  circuitmux_assert_okay_paranoid(cmux);
+
   /* Search for this circuit's entry */
   hashent = circuitmux_find_map_entry(cmux, circ);
   /* Assert that we found one */
@@ -1242,15 +1280,22 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
    */
   if (hashent->muxinfo.cell_count > 0 && n_cells == 0) {
     --(cmux->n_active_circuits);
+    hashent->muxinfo.cell_count = n_cells;
     circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
   /* Is the old cell count == 0 and the new cell count > 0 ? */
   } else if (hashent->muxinfo.cell_count == 0 && n_cells > 0) {
     ++(cmux->n_active_circuits);
+    hashent->muxinfo.cell_count = n_cells;
     circuitmux_make_circuit_active(cmux, circ, hashent->muxinfo.direction);
+  } else {
+    /*
+     * Update the entry cell count like this so we can put a
+     * circuitmux_assert_okay_paranoid inside make_circuit_(in)active() too.
+     */
+    hashent->muxinfo.cell_count = n_cells;
   }
 
-  /* Update hash entry cell counter */
-  hashent->muxinfo.cell_count = n_cells;
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /*
@@ -1301,6 +1346,7 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
 
   tor_assert(cmux);
   tor_assert(circ);
+  circuitmux_assert_okay_paranoid(cmux);
 
   if (n_cells == 0) return;
 
@@ -1351,6 +1397,8 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
     --(cmux->n_active_circuits);
     circuitmux_make_circuit_inactive(cmux, circ, hashent->muxinfo.direction);
   }
+
+  circuitmux_assert_okay_paranoid(cmux);
 }
 
 /*
