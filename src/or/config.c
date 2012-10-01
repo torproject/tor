@@ -14,6 +14,8 @@
 #include "or.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuitmux.h"
+#include "circuitmux_ewma.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
