@@ -546,12 +546,6 @@ init_circuit_base(circuit_t *circ)
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
 
-  /* Initialize the cell_ewma_t structure */
-  circ->n_cell_ewma.last_adjusted_tick = cell_ewma_get_tick();
-  circ->n_cell_ewma.cell_count = 0.0;
-  circ->n_cell_ewma.heap_index = -1;
-  circ->n_cell_ewma.is_for_p_chan = 0;
-
   circuit_add(circ);
 }
 
@@ -598,16 +592,6 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
   circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
 
   init_circuit_base(TO_CIRCUIT(circ));
-
-  /* Initialize the cell_ewma_t structure */
-
-  /* Initialize the cell counts to 0 */
-  circ->p_cell_ewma.cell_count = 0.0;
-  circ->p_cell_ewma.last_adjusted_tick = cell_ewma_get_tick();
-  circ->p_cell_ewma.is_for_p_chan = 1;
-
-  /* It's not in any heap yet. */
-  circ->p_cell_ewma.heap_index = -1;
 
   return circ;
 }
