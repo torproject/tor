@@ -11,6 +11,7 @@
  */
 
 #include "or.h"
+#include "channel.h"
 #include "circuitbuild.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
@@ -1636,6 +1637,7 @@ networkstatus_set_current_consensus(const char *consensus,
   consensus_waiting_for_certs_t *waiting = NULL;
   time_t current_valid_after = 0;
   int free_consensus = 1; /* Free 'c' at the end of the function */
+  int old_ewma_enabled;
 
   if (flav < 0) {
     /* XXXX we don't handle unrecognized flavors yet. */
@@ -1829,7 +1831,19 @@ networkstatus_set_current_consensus(const char *consensus,
 
     dirvote_recalculate_timing(options, now);
     routerstatus_list_update_named_server_map();
-    cell_ewma_set_scale_factor(options, current_consensus);
+
+    /* Update ewma and adjust policy if needed; first cache the old value */
+    old_ewma_enabled = cell_ewma_enabled();
+    /* Change the cell EWMA settings */
+    cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+    /* If we just enabled ewma, set the cmux policy on all active channels */
+    if (cell_ewma_enabled() && !old_ewma_enabled) {
+      channel_set_cmux_policy_everywhere(&ewma_policy);
+    } else if (!cell_ewma_enabled() && old_ewma_enabled) {
+      /* Turn it off everywhere */
+      channel_set_cmux_policy_everywhere(NULL);
+    }
+
 
     /* XXXX024 this call might be unnecessary here: can changing the
      * current consensus really alter our view of any OR's rate limits? */
