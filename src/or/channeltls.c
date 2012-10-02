@@ -17,6 +17,7 @@
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitmux.h"
+#include "circuitmux_ewma.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -129,7 +130,9 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   channel_mark_outgoing(chan);
 
   chan->cmux = circuitmux_alloc();
-  /* TODO set cmux policy */
+  if (cell_ewma_enabled()) {
+    circuitmux_set_policy(chan->cmux, &ewma_policy);
+  }
 
   /* Set up or_connection stuff */
   tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
@@ -262,7 +265,9 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   channel_mark_incoming(chan);
 
   chan->cmux = circuitmux_alloc();
-  /* TODO set cmux policy */
+  if (cell_ewma_enabled()) {
+    circuitmux_set_policy(chan->cmux, &ewma_policy);
+  }
 
   /* If we got one, we should register it */
   if (chan) channel_register(chan);
