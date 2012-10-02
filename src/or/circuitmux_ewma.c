@@ -226,6 +226,7 @@ ewma_alloc_cmux_data(circuitmux_t *cmux)
   tor_assert(cmux);
 
   pol = tor_malloc_zero(sizeof(*pol));
+  pol->_base.magic = EWMA_POL_DATA_MAGIC;
   pol->active_circuit_pqueue = smartlist_new();
   pol->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
@@ -278,6 +279,7 @@ ewma_alloc_circ_data(circuitmux_t *cmux,
   pol = TO_EWMA_POL_DATA(pol_data);
 
   cdata = tor_malloc_zero(sizeof(*cdata));
+  cdata->_base.magic = EWMA_POL_CIRC_DATA_MAGIC;
   cdata->circ = circ;
 
   /*
