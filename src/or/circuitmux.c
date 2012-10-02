@@ -182,6 +182,7 @@ circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
 {
   circuit_t **next_p = NULL, **prev_p = NULL;
   circuit_t **next_prev = NULL, **prev_next = NULL;
+  circuit_t **tail_next = NULL;
   or_circuit_t *or_circ = NULL;
 
   tor_assert(cmux);
@@ -237,9 +238,18 @@ circuitmux_move_active_circ_to_tail(circuitmux_t *cmux, circuit_t *circ,
   else cmux->active_circuits_head = *next_p;
   /* Adjust the next node's previous pointer, if any */
   if (next_prev) *next_prev = *prev_p;
+  /* We're out of the list; now re-attach at the tail */
   /* Adjust our next and prev pointers */
   *next_p = NULL;
   *prev_p = cmux->active_circuits_tail;
+  /* Set the next pointer of the tail, or the head if none */
+  if (cmux->active_circuits_tail) {
+    tail_next = circuitmux_next_active_circ_p(cmux,
+                                              cmux->active_circuits_tail);
+    *tail_next = circ;
+  } else {
+    cmux->active_circuits_head = circ;
+  }
   /* Set the tail to this circuit */
   cmux->active_circuits_tail = circ;
 
@@ -966,15 +976,16 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
   tor_assert(cmux);
   tor_assert(cmux->chanid_circid_map);
   tor_assert(circ);
-  tor_assert(circ->n_chan);
   circuitmux_assert_okay_paranoid(cmux);
 
   /* See if we have it for n_chan/n_circ_id */
-  search.chan_id = circ->n_chan->global_identifier;
-  search.circ_id = circ->n_circ_id;
-  hashent = HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
-                      &search);
-  last_searched_direction = CELL_DIRECTION_OUT;
+  if (circ->n_chan) {
+    search.chan_id = circ->n_chan->global_identifier;
+    search.circ_id = circ->n_circ_id;
+    hashent = HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+                        &search);
+    last_searched_direction = CELL_DIRECTION_OUT;
+  }
 
   /* Got one? If not, see if it's an or_circuit_t and try p_chan/p_circ_id */
   if (!hashent) {
