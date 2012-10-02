@@ -369,24 +369,24 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
         if (circ) {
           /* Clear the circuit's mux for this direction */
           if (to_remove->muxinfo.direction == CELL_DIRECTION_OUT) {
-            /* Clear n_mux */
-            circ->n_mux = NULL;
             /*
              * Update active_circuits et al.; this does policy notifies, so
              * comes before freeing policy data
              */
             circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_OUT);
+            /* Clear n_mux */
+            circ->n_mux = NULL;
           } else if (circ->magic == OR_CIRCUIT_MAGIC) {
-            /*
-             * It has a sensible p_chan and direction == CELL_DIRECTION_IN,
-             * so clear p_mux.
-             */
-            TO_OR_CIRCUIT(circ)->p_mux = NULL;
             /*
              * Update active_circuits et al.; this does policy notifies, so
              * comes before freeing policy data
              */
             circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
+            /*
+             * It has a sensible p_chan and direction == CELL_DIRECTION_IN,
+             * so clear p_mux.
+             */
+            TO_OR_CIRCUIT(circ)->p_mux = NULL;
           } else {
             /* Complain and move on */
             log_warn(LD_CIRC,
