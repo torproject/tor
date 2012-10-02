@@ -520,6 +520,7 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
  *
  * These tick values are not meant to be shared between Tor instances, or used
  * for other purposes. */
+
 static unsigned
 cell_ewma_tick_from_timeval(const struct timeval *now,
                             double *remainder_out)
@@ -530,6 +531,13 @@ cell_ewma_tick_from_timeval(const struct timeval *now,
     ((double)(now->tv_usec)) / 1.0e6;
   *remainder_out = rem / EWMA_TICK_LEN;
   return res;
+}
+
+/** Tell the caller whether ewma_enabled is set */
+int
+cell_ewma_enabled(void)
+{
+  return ewma_enabled;
 }
 
 /** Compute and return the current cell_ewma tick. */
