@@ -2655,12 +2655,13 @@ pathbias_count_first_hop(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
                "One-hop circuit has length %d. Path state is %s. "
-               "Circuit is a %s currently %s. %s",
+               "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
                pathbias_state_to_string(circ->path_state),
                circuit_purpose_to_string(circ->_base.purpose),
                circuit_state_to_string(circ->_base.state),
                rate_msg);
+        tor_free(rate_msg);
       }
       tor_fragile_assert();
     }
@@ -2674,11 +2675,12 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                                      approx_time()))) {
         log_info(LD_BUG,
                 "Opened circuit is in strange path state %s. "
-                "Circuit is a %s currently %s. %s",
+                "Circuit is a %s currently %s.%s",
                 pathbias_state_to_string(circ->path_state),
                 circuit_purpose_to_string(circ->_base.purpose),
                 circuit_state_to_string(circ->_base.state),
                 rate_msg);
+        tor_free(rate_msg);
       }
     }
 
@@ -2701,11 +2703,12 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                   approx_time()))) {
             log_info(LD_BUG,
                    "Unopened circuit has strange path state %s. "
-                   "Circuit is a %s currently %s. %s",
+                   "Circuit is a %s currently %s.%s",
                    pathbias_state_to_string(circ->path_state),
                    circuit_purpose_to_string(circ->_base.purpose),
                    circuit_state_to_string(circ->_base.state),
                    rate_msg);
+            tor_free(rate_msg);
           }
         }
       } else {
@@ -2713,10 +2716,11 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                 approx_time()))) {
           log_info(LD_BUG,
               "Unopened circuit has no known guard. "
-              "Circuit is a %s currently %s. %s",
+              "Circuit is a %s currently %s.%s",
               circuit_purpose_to_string(circ->_base.purpose),
               circuit_state_to_string(circ->_base.state),
               rate_msg);
+          tor_free(rate_msg);
         }
       }
     }
@@ -2727,12 +2731,13 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                 approx_time()))) {
         log_info(LD_BUG,
             "A %s circuit is in cpath state %d (opened: %d). "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
             circ->cpath->state, circ->has_opened,
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   }
@@ -2765,12 +2770,13 @@ pathbias_count_success(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
                "One-hop circuit has length %d. Path state is %s. "
-               "Circuit is a %s currently %s. %s",
+               "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
                pathbias_state_to_string(circ->path_state),
                circuit_purpose_to_string(circ->_base.purpose),
                circuit_state_to_string(circ->_base.state),
                rate_msg);
+        tor_free(rate_msg);
       }
       tor_fragile_assert();
     }
@@ -2795,11 +2801,12 @@ pathbias_count_success(origin_circuit_t *circ)
                 approx_time()))) {
           log_info(LD_BUG,
               "Succeeded circuit is in strange path state %s. "
-              "Circuit is a %s currently %s. %s",
+              "Circuit is a %s currently %s.%s",
               pathbias_state_to_string(circ->path_state),
               circuit_purpose_to_string(circ->_base.purpose),
               circuit_state_to_string(circ->_base.state),
               rate_msg);
+          tor_free(rate_msg);
         }
       }
 
@@ -2814,10 +2821,11 @@ pathbias_count_success(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
             "Completed circuit has no known guard. "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   } else {
@@ -2826,11 +2834,12 @@ pathbias_count_success(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
             "Opened circuit is in strange path state %s. "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   }
