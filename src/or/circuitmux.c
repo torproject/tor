@@ -47,24 +47,52 @@ typedef struct circuit_muxinfo_s circuit_muxinfo_t;
  * To channels, which each have a circuitmux_t, the supported operations
  * are:
  *
- * circuitmux_flush_cells():
+ *   circuitmux_get_first_active_circuit():
  *
- *   Retrieve a cell from one of the active circuits, chosen according to
- *   the circuitmux_t's cell selection policy.
+ *     Pick one of the circuitmux's active circuits to send cells from.
  *
- * circuitmux_unlink_all():
+ *   circuitmux_notify_xmit_cells():
  *
- *   The channel is closing down, all circuits must be detached.
+ *     Notify the circuitmux that cells have been sent on a circuit.
  *
  * To circuits, the exposed operations are:
  *
- *   TODO
+ *   circuitmux_attach_circuit():
  *
- * To circuit selection policies, the exposed operations are:
+ *     Attach a circuit to the circuitmux; this will allocate any policy-
+ *     specific data wanted for this circuit and add it to the active
+ *     circuits list if it has queued cells.
  *
- *   TODO
+ *   circuitmux_detach_circuit():
  *
- * General status inquiries?
+ *     Detach a circuit from the circuitmux, freeing associated structures.
+ *
+ *   circuitmux_clear_num_cells():
+ *
+ *     Clear the circuitmux's cell counter for this circuit.
+ *
+ *   circuitmux_set_num_cells():
+ *
+ *     Set the circuitmux's cell counter for this circuit.
+ *
+ * See circuitmux.h for the circuitmux_policy_t data structure, which contains
+ * a table of function pointers implementing a circuit selection policy, and
+ * circuitmux_ewma.c for an example of a circuitmux policy.  Circuitmux
+ * policies can be manipulated with:
+ *
+ *   circuitmux_get_policy():
+ *
+ *     Return the current policy for a circuitmux_t, if any.
+ *
+ *   circuitmux_clear_policy():
+ *
+ *     Remove a policy installed on a circuitmux_t, freeing all associated
+ *     data.  The circuitmux will revert to the built-in round-robin behavior.
+ *
+ *   circuitmux_set_policy():
+ *
+ *     Install a policy on a circuitmux_t; the appropriate callbacks will be
+ *     made to attach all existing circuits to the new policy.
  *
  */
 
