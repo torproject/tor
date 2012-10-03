@@ -3003,6 +3003,8 @@ rep_hist_free_all(void)
   digestmap_free(history_map, free_or_history);
   tor_free(read_array);
   tor_free(write_array);
+  tor_free(dir_read_array);
+  tor_free(dir_write_array);
   tor_free(last_stability_doc);
   tor_free(exit_bytes_read);
   tor_free(exit_bytes_written);
