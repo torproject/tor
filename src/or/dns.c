@@ -1211,19 +1211,17 @@ configure_nameservers(int force)
 
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (! tor_addr_is_null(&options->_OutboundBindAddressIPv4)) {
-    if (1) {
-      int socklen;
-      struct sockaddr_storage ss;
-      socklen = tor_addr_to_sockaddr(&options->_OutboundBindAddressIPv4, 0,
-                                     (struct sockaddr *)&ss, sizeof(ss));
-      if (socklen <= 0) {
-        log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
-                 " Ignoring.");
-      } else {
-        evdns_base_set_default_outgoing_bind_address(the_evdns_base,
-                                                     (struct sockaddr *)&ss,
-                                                     socklen);
-      }
+    int socklen;
+    struct sockaddr_storage ss;
+    socklen = tor_addr_to_sockaddr(&options->_OutboundBindAddressIPv4, 0,
+                                   (struct sockaddr *)&ss, sizeof(ss));
+    if (socklen <= 0) {
+      log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
+               " Ignoring.");
+    } else {
+      evdns_base_set_default_outgoing_bind_address(the_evdns_base,
+                                                   (struct sockaddr *)&ss,
+                                                   socklen);
     }
   }
 #endif
