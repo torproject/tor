@@ -1210,15 +1210,11 @@ configure_nameservers(int force)
   }
 
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
-  if (options->OutboundBindAddress) {
-    tor_addr_t addr;
-    if (tor_addr_parse(&addr, options->OutboundBindAddress) < 0) {
-      log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
-               options->OutboundBindAddress);
-    } else {
+  if (! tor_addr_is_null(options->_OutboundBindAddressIPv4)) {
+    if (1) {
       int socklen;
       struct sockaddr_storage ss;
-      socklen = tor_addr_to_sockaddr(&addr, 0,
+      socklen = tor_addr_to_sockaddr(&options->_OutboundBindAddressIPv4, 0,
                                      (struct sockaddr *)&ss, sizeof(ss));
       if (socklen <= 0) {
         log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
