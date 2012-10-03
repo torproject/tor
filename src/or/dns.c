@@ -1210,7 +1210,7 @@ configure_nameservers(int force)
   }
 
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
-  if (! tor_addr_is_null(options->_OutboundBindAddressIPv4)) {
+  if (! tor_addr_is_null(&options->_OutboundBindAddressIPv4)) {
     if (1) {
       int socklen;
       struct sockaddr_storage ss;
