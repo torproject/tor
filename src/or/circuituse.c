@@ -1513,8 +1513,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       if ((m = rate_limit_log(&delay_limit, approx_time()))) {
         log_notice(LD_APP, "We'd like to launch a circuit to handle a "
                    "connection, but we already have %d general-purpose client "
-                   "circuits pending. Waiting until some finish.",
-                   n_pending);
+                   "circuits pending. Waiting until some finish.%s",
+                   n_pending, m);
         tor_free(m);
       }
       return 0;
