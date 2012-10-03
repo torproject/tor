@@ -1231,7 +1231,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       if (circ->n_conn) {
-        uint8_t trunc_reason = *(uint8_t*)(cell->payload + RELAY_HEADER_SIZE);
+        uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);
         circuit_clear_cell_queue(circ, circ->n_conn);
         connection_or_send_destroy(circ->n_circ_id, circ->n_conn,
                                    trunc_reason);

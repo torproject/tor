@@ -296,7 +296,7 @@ cell_pack(packed_cell_t *dst, const cell_t *src)
 {
   char *dest = dst->body;
   set_uint16(dest, htons(src->circ_id));
-  *(uint8_t*)(dest+2) = src->command;
+  set_uint8(dest+2, src->command);
   memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
 }
 
@@ -307,7 +307,7 @@ static void
 cell_unpack(cell_t *dest, const char *src)
 {
   dest->circ_id = ntohs(get_uint16(src));
-  dest->command = *(uint8_t*)(src+2);
+  dest->command = get_uint8(src+2);
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
