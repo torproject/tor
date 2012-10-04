@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When relays refuse a "create" cell because their queue of pending
+      create cells is too big (typically because their cpu can't keep up
+      with the arrival rate), send back reason "resource limit" rather
+      than reason "internal", so network measurement scripts can get a
+      more accurate picture. Bugfix on 0.1.1.11-alpha; fixes bug 7037.

@@ -428,7 +428,7 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
         log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.%s",m);
         tor_free(m);
       }
-      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
       return;
     }
     log_debug(LD_OR,"success: handed off onionskin.");
