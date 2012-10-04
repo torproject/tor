@@ -2999,7 +2999,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
  * just give up: for circ to close, and return 0.
  */
 int
-circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
+circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
 {
 //  crypt_path_t *victim;
 //  connection_t *stream;
@@ -3012,7 +3012,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
    *     just give up.
    */
   circuit_mark_for_close(TO_CIRCUIT(circ),
-          END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_OR_CONN_CLOSED);
+          END_CIRC_REASON_FLAG_REMOTE|reason);
   return 0;
 
 #if 0

@@ -32,7 +32,8 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
                               int reverse);
 int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
                              const uint8_t *reply);
-int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer);
+int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer,
+                      int reason);
 int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
                      const char *payload, const char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,

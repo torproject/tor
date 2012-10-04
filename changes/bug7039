@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - When a Tor client gets a "truncated" relay cell, the first byte of
+      its payload specifies why the circuit was truncated. We were
+      ignoring this 'reason' byte when tearing down the circuit, resulting
+      in the controller not being told why the circuit closed. Now we
+      pass the reason from the truncated cell to the controller. Bugfix
+      on 0.1.2.3-alpha; fixes bug 7039.

@@ -1251,7 +1251,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'truncated' unsupported at non-origin. Dropping.");
         return 0;
       }
-      circuit_truncated(TO_ORIGIN_CIRCUIT(circ), layer_hint);
+      circuit_truncated(TO_ORIGIN_CIRCUIT(circ), layer_hint,
+                        get_uint8(cell->payload + RELAY_HEADER_SIZE));
       return 0;
     case RELAY_COMMAND_CONNECTED:
       if (conn) {
