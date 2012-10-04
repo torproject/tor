@@ -872,18 +872,23 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
 void
 node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out)
 {
+  const or_options_t *options = get_options();
   tor_assert(ap_out);
 
   /* Cheap implementation of config option ClientUseIPv6 -- simply
-     don't prefer IPv6 when ClientUseIPv6 is not set. (See #4455 for
-     more on this subject.) Note that this filter is too strict since
-     we're hindering not only clients! Erring on the safe side
-     shouldn't be a problem though. XXX move this check to where
-     outgoing connections are made? -LN */
-  if (get_options()->ClientUseIPv6 == 1 && node_ipv6_preferred(node))
+     don't prefer IPv6 when ClientUseIPv6 is not set and we're not a
+     client running with bridges. See #4455 for more on this subject.
+
+     Note that this filter is too strict since we're hindering not
+     only clients! Erring on the safe side shouldn't be a problem
+     though. XXX move this check to where outgoing connections are
+     made? -LN */
+  if ((options->ClientUseIPv6 || options->UseBridges) &&
+      node_ipv6_preferred(node)) {
     node_get_pref_ipv6_orport(node, ap_out);
-  else
+  } else {
     node_get_prim_orport(node, ap_out);
+  }
 }
 
 /** Copy the preferred IPv6 OR port (IP address and TCP port) for

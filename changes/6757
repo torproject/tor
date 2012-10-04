@@ -1,0 +1,5 @@
+  o Minor bugfixes (client):
+    - Make clients running with IPv6 bridges connect over IPv6 again,
+      even without setting new config options ClientUseIPv6 and
+      ClientPreferIPv6ORPort.
+      Fixes bug 6757; bugfix on 0.2.4.1-alpha.
