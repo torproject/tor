@@ -2553,10 +2553,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (!(options->UseEntryGuards) &&
       (options->RendConfigLines != NULL)) {
     log_warn(LD_CONFIG,
-	     "UseEntryGuards is disabled, but you have configured one or more "
-	     "hidden services on this Tor instance.  Your hidden services "
-	     "will be very easy to locate using a well-known attack -- see "
-	     "http://freehaven.net/anonbib/#hs-attack06 for details.");
+             "UseEntryGuards is disabled, but you have configured one or more "
+             "hidden services on this Tor instance.  Your hidden services "
+             "will be very easy to locate using a well-known attack -- see "
+             "http://freehaven.net/anonbib/#hs-attack06 for details.");
   }
 
   if (!(options->LearnCircuitBuildTimeout) &&
