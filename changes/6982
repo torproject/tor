@@ -1,0 +1,3 @@
+  o Minor features (portability):
+    - Tor now builds correctly on Bitrig, an OpenBSD fork. Patch from dhill.
+      Ticket 6982.
