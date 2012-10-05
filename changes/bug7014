@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix two cases in src/or/transports.c where we were calling
+      fmt_addr() twice in a parameter list. Bug found by David
+      Fifield. Fixes bug 7014; bugfix on 0.2.3.9-alpha.
+
