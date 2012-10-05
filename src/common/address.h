@@ -145,6 +145,7 @@ char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
  *  addresses. */
 #define fmt_and_decorate_addr(a) fmt_addr_impl((a), 1)
 const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
+const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
 const char * fmt_addr32(uint32_t addr);
 int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
 
