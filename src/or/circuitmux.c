@@ -1019,7 +1019,7 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
   if (circ->n_chan) {
     search.chan_id = circ->n_chan->global_identifier;
     search.circ_id = circ->n_circ_id;
-    hashent = HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
+    hashent = HT_FIND(chanid_circid_muxinfo_map, cmux->chanid_circid_map,
                         &search);
     last_searched_direction = CELL_DIRECTION_OUT;
   }
@@ -1030,7 +1030,7 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
       search.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
       if (TO_OR_CIRCUIT(circ)->p_chan) {
         search.chan_id = TO_OR_CIRCUIT(circ)->p_chan->global_identifier;
-        hashent = HT_REMOVE(chanid_circid_muxinfo_map,
+        hashent = HT_FIND(chanid_circid_muxinfo_map,
                             cmux->chanid_circid_map,
                             &search);
         last_searched_direction = CELL_DIRECTION_IN;
@@ -1038,7 +1038,10 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
     }
   }
 
-  /* If hashent isn't NULL, we just removed it from the map */
+  /*
+   * If hashent isn't NULL, we have a circuit to detach; don't remove it from
+   * the map until later of circuitmux_make_circuit_inactive() breaks.
+   */
   if (hashent) {
     /* Update counters */
     --(cmux->n_circuits);
@@ -1067,6 +1070,9 @@ circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
     /* Clear the circuit's mux for this direction */
     if (last_searched_direction == CELL_DIRECTION_OUT) circ->n_mux = NULL;
     else TO_OR_CIRCUIT(circ)->p_mux = NULL;
+
+    /* Now remove it from the map */
+    HT_REMOVE(chanid_circid_muxinfo_map, cmux->chanid_circid_map, hashent);
 
     /* Free the hash entry */
     tor_free(hashent);
