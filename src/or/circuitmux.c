@@ -386,7 +386,6 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
   i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
   while (i) {
     to_remove = *i;
-    i = HT_NEXT_RMV(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
     if (to_remove) {
       /* Find a channel and circuit */
       chan = channel_find_by_global_id(to_remove->chan_id);
@@ -401,7 +400,11 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
              * Update active_circuits et al.; this does policy notifies, so
              * comes before freeing policy data
              */
-            circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_OUT);
+
+            if (to_remove->muxinfo.cell_count > 0) {
+              circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_OUT);
+            }
+
             /* Clear n_mux */
             circ->n_mux = NULL;
           } else if (circ->magic == OR_CIRCUIT_MAGIC) {
@@ -409,7 +412,11 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
              * Update active_circuits et al.; this does policy notifies, so
              * comes before freeing policy data
              */
-            circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
+            
+            if (to_remove->muxinfo.cell_count > 0) {
+              circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
+            }
+
             /*
              * It has a sensible p_chan and direction == CELL_DIRECTION_IN,
              * so clear p_mux.
@@ -456,10 +463,12 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
 
       /* Assert that we don't have un-freed policy data for this circuit */
       tor_assert(to_remove->muxinfo.policy_data == NULL);
-
-      /* Free it */
-      tor_free(to_remove);
     }
+
+    i = HT_NEXT_RMV(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
+
+    /* Free it */
+    tor_free(to_remove);
   }
 
   cmux->n_circuits = 0;
