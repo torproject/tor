@@ -3945,8 +3945,8 @@ parse_bridge_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
-              fmt_and_decorate_addr(&addr), (int)port,
+    log_debug(LD_DIR, "Bridge at %s (transport: %s) (%s)",
+              fmt_addrport(&addr, port),
               transport_name ? transport_name : "no transport",
               fingerprint ? fingerprint : "no key listed");
     bridge_add_from_config(&addr, port,
@@ -4079,8 +4079,8 @@ parse_client_transport_line(const char *line, int validate_only)
       transport_add_from_config(&addr, port, smartlist_get(transport_list, 0),
                                 socks_ver);
 
-      log_info(LD_DIR, "Transport '%s' found at %s:%d",
-               transports, fmt_and_decorate_addr(&addr), (int)port);
+      log_info(LD_DIR, "Transport '%s' found at %s",
+               transports, fmt_addrport(&addr, port));
     }
   }
 
@@ -4199,8 +4199,8 @@ parse_server_transport_line(const char *line, int validate_only)
     }
 
     if (!validate_only) {
-      log_info(LD_DIR, "Server transport '%s' at %s:%d.",
-               transports, fmt_and_decorate_addr(&addr), (int)port);
+      log_info(LD_DIR, "Server transport '%s' at %s.",
+               transports, fmt_addrport(&addr, port));
     }
   }
 
@@ -4372,17 +4372,17 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
     if (port->is_unix_addr) {
       /* Unix sockets aren't accessible over a network. */
     } else if (!tor_addr_is_internal(&port->addr, 1)) {
-      log_warn(LD_CONFIG, "You specified a public address '%s:%d' for %sPort. "
+      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
                "Other people on the Internet might find your computer and "
                "use it as an open proxy. Please don't allow this unless you "
                "have a good reason.",
-               fmt_and_decorate_addr(&port->addr), port->port, portname);
+               fmt_addrport(&port->addr, port->port), portname);
     } else if (!tor_addr_is_loopback(&port->addr)) {
-      log_notice(LD_CONFIG, "You configured a non-loopback address '%s:%d' "
+      log_notice(LD_CONFIG, "You configured a non-loopback address '%s' "
                  "for %sPort. This allows everybody on your local network to "
                  "use your machine as a proxy. Make sure this is what you "
                  "wanted.",
-                 fmt_and_decorate_addr(&port->addr), port->port, portname);
+                 fmt_addrport(&port->addr, port->port), portname);
     }
   } SMARTLIST_FOREACH_END(port);
 }

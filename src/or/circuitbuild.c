@@ -1955,9 +1955,9 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   tor_assert(firsthop->extend_info);
 
   /* now see if we're already connected to the first OR in 'route' */
-  log_debug(LD_CIRC,"Looking for firsthop '%s:%u'",
-            fmt_and_decorate_addr(&firsthop->extend_info->addr),
-            firsthop->extend_info->port);
+  log_debug(LD_CIRC,"Looking for firsthop '%s'",
+            fmt_addrport(&firsthop->extend_info->addr,
+                         firsthop->extend_info->port));
 
   n_conn = connection_or_get_for_extend(firsthop->extend_info->identity_digest,
                                         &firsthop->extend_info->addr,
@@ -2470,8 +2470,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
                                         &should_launch);
 
   if (!n_conn) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d): %s",
-              fmt_and_decorate_addr(&n_addr), (int)n_port, msg?msg:"????");
+    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s",
+              fmt_addrport(&n_addr, n_port), msg?msg:"????");
 
     circ->n_hop = extend_info_new(NULL /*nickname*/,
                                     id_digest,
@@ -3926,8 +3926,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   else
     node_get_prim_orport(node, &ap);
 
-  log_debug(LD_CIRC, "using %s:%d for %s",
-            fmt_and_decorate_addr(&ap.addr), ap.port,
+  log_debug(LD_CIRC, "using %s for %s",
+            fmt_addrport(&ap.addr, ap.port),
             node->ri ? node->ri->nickname : node->rs->nickname);
 
   if (node->ri)
@@ -5318,8 +5318,8 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
     get_configured_bridge_by_addr_port_digest(addr, port, digest);
   if (bridge && tor_digest_is_zero(bridge->identity)) {
     memcpy(bridge->identity, digest, DIGEST_LEN);
-    log_notice(LD_DIR, "Learned fingerprint %s for bridge %s:%d",
-               hex_str(digest, DIGEST_LEN), fmt_and_decorate_addr(addr), port);
+    log_notice(LD_DIR, "Learned fingerprint %s for bridge %s",
+               hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port));
   }
 }
 
@@ -5364,12 +5364,12 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
           strcmp_opt(bridge->transport_name, transport_name)) {
         /* warn the user */
         char *bridge_description_new, *bridge_description_old;
-        tor_asprintf(&bridge_description_new, "%s:%u:%s:%s",
-                     fmt_and_decorate_addr(addr), port,
+        tor_asprintf(&bridge_description_new, "%s:%s:%s",
+                     fmt_addrport(addr, port),
                      digest ? hex_str(digest, DIGEST_LEN) : "",
                      transport_name ? transport_name : "");
-        tor_asprintf(&bridge_description_old, "%s:%u:%s:%s",
-                     fmt_and_decorate_addr(&bridge->addr), bridge->port,
+        tor_asprintf(&bridge_description_old, "%s:%s:%s",
+                     fmt_addrport(&bridge->addr, bridge->port),
                      tor_digest_is_zero(bridge->identity) ?
                      "" : hex_str(bridge->identity,DIGEST_LEN),
                      bridge->transport_name ? bridge->transport_name : "");
@@ -5582,10 +5582,9 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
 
       if (ask_bridge_directly &&
           !fascist_firewall_allows_address_or(&bridge->addr, bridge->port)) {
-        log_notice(LD_DIR, "Bridge at '%s:%d' isn't reachable by our "
+        log_notice(LD_DIR, "Bridge at '%s' isn't reachable by our "
                    "firewall policy. %s.",
-                   fmt_and_decorate_addr(&bridge->addr),
-                   bridge->port,
+                   fmt_addrport(&bridge->addr, bridge->port),
                    can_use_bridge_authority ?
                      "Asking bridge authority instead" : "Skipping");
         if (can_use_bridge_authority)
@@ -5655,9 +5654,8 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
         ri->ipv6_orport = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "
-                 "address %s:%d.",
-                 ri->nickname, fmt_and_decorate_addr(&ri->ipv6_addr),
-                 ri->ipv6_orport);
+                 "address %s.",
+                 ri->nickname, fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
       } else {
         log_err(LD_BUG, "Address family not supported: %d.",
                 tor_addr_family(&bridge->addr));
@@ -5676,10 +5674,10 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
-                 "Will prefer using its %s address (%s:%d).",
+                 "Will prefer using its %s address (%s).",
                  ri->nickname,
                  tor_addr_family(&ap.addr) == AF_INET6 ? "IPv6" : "IPv4",
-                 fmt_and_decorate_addr(&ap.addr), ap.port);
+                 fmt_addrport(&ap.addr, ap.port));
     }
   }
   if (node->rs) {
@@ -5694,9 +5692,8 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       rs->or_port = bridge->port;
       log_info(LD_DIR,
                "Adjusted bridge routerstatus for '%s' to match "
-               "configured address %s:%d.",
-               rs->nickname, fmt_and_decorate_addr(&bridge->addr),
-               rs->or_port);
+               "configured address %s.",
+               rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
     }
   }
 }
