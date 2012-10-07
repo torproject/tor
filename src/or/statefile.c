@@ -553,7 +553,8 @@ save_transport_to_state(const char *transport,
   if (transport_line) { /* if transport already exists in state... */
     const char *prev_bindaddr = /* get its addrport... */
       get_transport_bindaddr(transport_line->value, transport);
-    tor_asprintf(&transport_addrport, "%s:%d", fmt_addr(addr), (int)port);
+    tor_asprintf(&transport_addrport, "%s:%d", fmt_and_decorate_addr(addr),
+                 (int)port);
 
     /* if transport in state has the same address as this one, life is good */
     if (!strcmp(prev_bindaddr, transport_addrport)) {
@@ -566,7 +567,7 @@ save_transport_to_state(const char *transport,
                "address:port");
       tor_free(transport_line->value); /* free the old line */
       tor_asprintf(&transport_line->value, "%s %s:%d", transport,
-                   fmt_addr(addr),
+                   fmt_and_decorate_addr(addr),
                    (int) port); /* replace old addrport line with new line */
     }
   } else { /* never seen this one before; save it in state for next time */
@@ -585,7 +586,7 @@ save_transport_to_state(const char *transport,
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("TransportProxy");
     tor_asprintf(&line->value, "%s %s:%d", transport,
-                 fmt_addr(addr), (int) port);
+                 fmt_and_decorate_addr(addr), (int) port);
 
     next = &(line->next);
   }
