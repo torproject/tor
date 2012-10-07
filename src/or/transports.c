@@ -270,13 +270,13 @@ transport_resolve_conflicts(const transport_t *t)
       t_tmp->marked_for_removal = 0;
       return 1;
     } else { /* same name but different addrport */
-      char *new_transport_addr = tor_strdup(fmt_addr(&t->addr));
+      char *new_transport_addr = tor_strdup(fmt_and_decorate_addr(&t->addr));
       if (t_tmp->marked_for_removal) { /* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but there was already a transport marked for deletion at "
                    "'%s:%u'. We deleted the old transport and registered the "
                    "new one.", t->name, new_transport_addr, t->port,
-                   fmt_addr(&t_tmp->addr), t_tmp->port);
+                   fmt_and_decorate_addr(&t_tmp->addr), t_tmp->port);
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
         tor_free(new_transport_addr);
@@ -284,7 +284,7 @@ transport_resolve_conflicts(const transport_t *t)
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but the same transport already exists at '%s:%u'. "
                    "Skipping.", t->name, new_transport_addr, t->port,
-                   fmt_addr(&t_tmp->addr), t_tmp->port);
+                   fmt_and_decorate_addr(&t_tmp->addr), t_tmp->port);
         tor_free(new_transport_addr);
         return -1;
       }
@@ -333,17 +333,17 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
   case -1:
   default:
     log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
-               t->name, fmt_addr(&t->addr), t->port);
+               t->name, fmt_and_decorate_addr(&t->addr), t->port);
     transport_free(t);
     return -1;
   case 1:
     log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
+             t->name, fmt_and_decorate_addr(&t->addr), t->port);
      transport_free(t); /* falling */
      return 0;
   case 0:
     log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
+             t->name, fmt_and_decorate_addr(&t->addr), t->port);
     return 0;
   }
 }
@@ -645,7 +645,7 @@ register_server_proxy(const managed_proxy_t *mp)
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
     log_notice(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
-               t->name, fmt_addr(&t->addr), (int)t->port);
+               t->name, fmt_and_decorate_addr(&t->addr), (int)t->port);
   } SMARTLIST_FOREACH_END(t);
 }
 

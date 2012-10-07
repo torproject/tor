@@ -905,7 +905,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
 
     log_notice(LD_NET, "Opening %s on %s:%d",
-               conn_type_to_string(type), fmt_addr(&addr), usePort);
+               conn_type_to_string(type), fmt_and_decorate_addr(&addr),
+               usePort);
 
     s = tor_open_socket(tor_addr_family(&addr),
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
@@ -1220,7 +1221,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       if (socks_policy_permits_address(&addr) == 0) {
         log_notice(LD_APP,
                    "Denying socks connection from untrusted address %s.",
-                   fmt_addr(&addr));
+                   fmt_and_decorate_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
@@ -1229,7 +1230,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       /* check dirpolicy to see if we should accept it */
       if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
-                   fmt_addr(&addr));
+                   fmt_and_decorate_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
@@ -1395,12 +1396,12 @@ connection_connect(connection_t *conn, const char *address,
       if (ext_addr_len == 0) {
         log_warn(LD_NET,
                  "Error converting OutboundBindAddress %s into sockaddr. "
-                 "Ignoring.", fmt_addr(ext_addr));
+                 "Ignoring.", fmt_and_decorate_addr(ext_addr));
       } else {
         if (bind(s, (struct sockaddr *) &ext_addr_sa, ext_addr_len) < 0) {
           *socket_error = tor_socket_errno(s);
           log_warn(LD_NET,"Error binding network socket to %s: %s",
-                   fmt_addr(ext_addr),
+                   fmt_and_decorate_addr(ext_addr),
                    tor_socket_strerror(*socket_error));
           tor_close_socket(s);
           return -1;
@@ -4236,7 +4237,8 @@ log_failed_proxy_connection(connection_t *conn)
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s:%u just failed. "
            "Make sure that the proxy server is up and running.",
-           proxy_type_to_string(get_proxy_type()), fmt_addr(&proxy_addr),
+           proxy_type_to_string(get_proxy_type()),
+           fmt_and_decorate_addr(&proxy_addr),
            proxy_port);
 }
 

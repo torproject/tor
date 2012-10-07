@@ -406,7 +406,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
            escaped_safe_str(conn->address), conn->port,
-           safe_str(fmt_addr(&conn->addr)));
+           safe_str(fmt_and_decorate_addr(&conn->addr)));
 
   rep_hist_note_exit_stream_opened(conn->port);
 

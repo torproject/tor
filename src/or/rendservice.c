@@ -273,7 +273,8 @@ rend_add_service(rend_service_t *service)
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       p = smartlist_get(service->ports, i);
       log_debug(LD_REND,"Service maps port %d to %s:%d",
-                p->virtual_port, fmt_addr(&p->real_addr), p->real_port);
+                p->virtual_port, fmt_and_decorate_addr(&p->real_addr),
+                p->real_port);
     }
   }
 }

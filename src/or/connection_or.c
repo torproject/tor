@@ -1089,12 +1089,14 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
                "transport proxy supporting '%s'. This can happen if you "
                "haven't provided a ClientTransportPlugin line, or if "
                "your pluggable transport proxy stopped running.",
-               fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port,
+               fmt_and_decorate_addr(&TO_CONN(conn)->addr),
+               TO_CONN(conn)->port,
                transport_name, transport_name);
     } else {
       log_warn(LD_GENERAL, "Tried to connect to '%s:%u' through a proxy, but "
                "the proxy address could not be found.",
-               fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port);
+               fmt_and_decorate_addr(&TO_CONN(conn)->addr),
+               TO_CONN(conn)->port);
     }
 
     connection_free(TO_CONN(conn));

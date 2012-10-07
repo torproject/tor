@@ -3946,7 +3946,7 @@ parse_bridge_line(const char *line, int validate_only)
 
   if (!validate_only) {
     log_debug(LD_DIR, "Bridge at %s:%d (transport: %s) (%s)",
-              fmt_addr(&addr), (int)port,
+              fmt_and_decorate_addr(&addr), (int)port,
               transport_name ? transport_name : "no transport",
               fingerprint ? fingerprint : "no key listed");
     bridge_add_from_config(&addr, port,
@@ -4080,7 +4080,7 @@ parse_client_transport_line(const char *line, int validate_only)
                                 socks_ver);
 
       log_info(LD_DIR, "Transport '%s' found at %s:%d",
-               transports, fmt_addr(&addr), (int)port);
+               transports, fmt_and_decorate_addr(&addr), (int)port);
     }
   }
 
@@ -4200,7 +4200,7 @@ parse_server_transport_line(const char *line, int validate_only)
 
     if (!validate_only) {
       log_info(LD_DIR, "Server transport '%s' at %s:%d.",
-               transports, fmt_addr(&addr), (int)port);
+               transports, fmt_and_decorate_addr(&addr), (int)port);
     }
   }
 
@@ -4376,13 +4376,13 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
                "Other people on the Internet might find your computer and "
                "use it as an open proxy. Please don't allow this unless you "
                "have a good reason.",
-               fmt_addr(&port->addr), port->port, portname);
+               fmt_and_decorate_addr(&port->addr), port->port, portname);
     } else if (!tor_addr_is_loopback(&port->addr)) {
       log_notice(LD_CONFIG, "You configured a non-loopback address '%s:%d' "
                  "for %sPort. This allows everybody on your local network to "
                  "use your machine as a proxy. Make sure this is what you "
                  "wanted.",
-                 fmt_addr(&port->addr), port->port, portname);
+                 fmt_and_decorate_addr(&port->addr), port->port, portname);
     }
   } SMARTLIST_FOREACH_END(port);
 }
