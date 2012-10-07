@@ -1512,7 +1512,7 @@ connection_proxy_connect(connection_t *conn, int type)
       }
 
       if (base64_authenticator) {
-        const char *addr = fmt_addr(&conn->addr);
+        const char *addr = fmt_and_decorate_addr(&conn->addr);
         tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
                      "Proxy-Authorization: Basic %s\r\n\r\n",
@@ -1522,7 +1522,7 @@ connection_proxy_connect(connection_t *conn, int type)
         tor_free(base64_authenticator);
       } else {
         tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
-                     fmt_addr(&conn->addr), conn->port);
+                     fmt_and_decorate_addr(&conn->addr), conn->port);
       }
 
       connection_write_to_buf(buf, strlen(buf), conn);
