@@ -285,7 +285,6 @@ void channel_closed(channel_t *chan);
 
 /* Free a channel */
 void channel_free(channel_t *chan);
-void channel_force_free(channel_t *chan);
 
 /* State/metadata setters */
 

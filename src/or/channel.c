@@ -86,6 +86,8 @@ static ssize_t
 channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                                              ssize_t num_cells);
 
+static void channel_force_free(channel_t *chan);
+
 /***********************************
  * Channel state utility functions *
  **********************************/
@@ -753,7 +755,7 @@ channel_free(channel_t *chan)
  * it should only be used from channel_free_all() when shutting down.
  */
 
-void
+static void
 channel_force_free(channel_t *chan)
 {
   tor_assert(chan);
