@@ -596,14 +596,13 @@ channel_find_by_global_id(uint64_t global_identifier)
 channel_t *
 channel_find_by_remote_digest(const char *identity_digest)
 {
-  channel_t *rv = NULL, *tmp;
+  channel_t *rv = NULL;
 
   tor_assert(identity_digest);
 
   /* Search for it in the identity map */
   if (channel_identity_map) {
-    tmp = digestmap_get(channel_identity_map, identity_digest);
-    rv = tmp;
+    rv = digestmap_get(channel_identity_map, identity_digest);
   }
 
   return rv;
