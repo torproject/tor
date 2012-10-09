@@ -12,7 +12,7 @@
 #include "or.h"
 
 /*
- * Channel struct; see thw channel_t typedef in or.h.  A channel is an
+ * Channel struct; see the channel_t typedef in or.h.  A channel is an
  * abstract interface for the OR-to-OR connection, similar to connection_or_t,
  * but without the strong coupling to the underlying TLS implementation.  They
  * are constructed by calling a protocol-specific function to open a channel
