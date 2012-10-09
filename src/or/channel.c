@@ -1723,7 +1723,9 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
  * Write a cell to a channel
  *
  * Write a fixed-length cell to a channel using the write_cell() method.
- * This is equivalent to the pre-channels connection_or_write_cell_to_buf().
+ * This is equivalent to the pre-channels connection_or_write_cell_to_buf();
+ * it is called by the transport-independent code to deliver a cell to a
+ * channel for transmission.
  */
 
 void
@@ -1747,7 +1749,9 @@ channel_write_cell(channel_t *chan, cell_t *cell)
 /**
  * Write a packed cell to a channel
  *
- * Write a packed cell to a channel using the write_cell() method.
+ * Write a packed cell to a channel using the write_cell() method.  This is
+ * called by the transport-independent code to deliver a packed cell to a
+ * channel for transmission.
  */
 
 void
@@ -1774,7 +1778,8 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
  *
  * Write a variable-length cell to a channel using the write_cell() method.
  * This is equivalent to the pre-channels
- * connection_or_write_var_cell_to_buf().
+ * connection_or_write_var_cell_to_buf(); it's called by the transport-
+ * independent code to deliver a var_cell to a channel for transmission.
  */
 
 void
