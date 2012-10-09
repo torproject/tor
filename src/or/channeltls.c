@@ -129,7 +129,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
     cell_ewma_get_tick();
 
   /* Set up or_connection stuff */
-  connection_or_connect(addr, port, id_digest, tlschan);
+  tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
   /* connection_or_connect() will fill in tlschan->conn */
   if (!(tlschan->conn)) {
     channel_change_state(chan, CHANNEL_STATE_ERROR);
