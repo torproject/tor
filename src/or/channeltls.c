@@ -102,8 +102,9 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                     const char *id_digest)
 {
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
-  channel_t *chan = TLS_CHAN_TO_BASE(tlschan);
+  channel_t *chan = &(tlschan->_base);
   channel_init(chan);
+  chan->magic = TLS_CHAN_MAGIC;
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
@@ -233,12 +234,13 @@ channel_t *
 channel_tls_handle_incoming(or_connection_t *orconn)
 {
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
-  channel_t *chan = TLS_CHAN_TO_BASE(tlschan);
+  channel_t *chan = &(tlschan->_base);
 
   tor_assert(orconn);
   tor_assert(!(orconn->chan));
 
   channel_init(chan);
+  chan->magic = TLS_CHAN_MAGIC;
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
@@ -265,6 +267,37 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   if (chan) channel_register(chan);
 
   return chan;
+}
+
+/*********
+ * Casts *
+ ********/
+
+/**
+ * Cast a channel_tls_t to a channel_t.
+ */
+
+channel_t *
+channel_tls_to_base(channel_tls_t *tlschan)
+{
+  if (!tlschan) return NULL;
+
+  return &(tlschan->_base);
+}
+
+/**
+ * Cast a channel_t to a channel_tls_t, with appropriate type-checking
+ * asserts.
+ */
+
+channel_tls_t *
+channel_tls_from_base(channel_t *chan)
+{
+  if (!chan) return NULL;
+
+  tor_assert(chan->magic == TLS_CHAN_MAGIC);
+
+  return (channel_tls_t *)(chan);
 }
 
 /********************************************

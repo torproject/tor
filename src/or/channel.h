@@ -26,6 +26,9 @@ typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
  */
 
 struct channel_s {
+  /* Magic number for type-checking cast macros */
+  uint32_t magic;
+
   /* Current channel state */
   channel_state_t state;
 

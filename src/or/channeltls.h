@@ -12,8 +12,10 @@
 #include "or.h"
 #include "channel.h"
 
-#define BASE_CHAN_TO_TLS(c) ((channel_tls_t *)(c))
-#define TLS_CHAN_TO_BASE(c) ((channel_t *)(c))
+#define BASE_CHAN_TO_TLS(c) (channel_tls_from_base((c)))
+#define TLS_CHAN_TO_BASE(c) (channel_tls_to_base((c)))
+
+#define TLS_CHAN_MAGIC 0x8a192427U
 
 #ifdef _TOR_CHANNEL_INTERNAL
 
@@ -31,6 +33,11 @@ channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
 channel_listener_t * channel_tls_get_listener(void);
 channel_listener_t * channel_tls_start_listener(void);
 channel_t * channel_tls_handle_incoming(or_connection_t *orconn);
+
+/* Casts */
+
+channel_t * channel_tls_to_base(channel_tls_t *tlschan);
+channel_tls_t * channel_tls_from_base(channel_t *chan);
 
 /* Things for connection_or.c to call back into */
 ssize_t channel_tls_flush_some_cells(channel_tls_t *chan, ssize_t num_cells);
