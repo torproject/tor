@@ -763,7 +763,8 @@ channel_init_listener(channel_t *chan)
 void
 channel_free(channel_t *chan)
 {
-  tor_assert(chan);
+  if (!chan) return;
+
   /* It must be closed or errored */
   tor_assert(chan->state == CHANNEL_STATE_CLOSED ||
              chan->state == CHANNEL_STATE_ERROR);
