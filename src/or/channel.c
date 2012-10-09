@@ -772,7 +772,7 @@ channel_force_free(channel_t *chan)
     if (chan->u.listener.incoming_list) {
       SMARTLIST_FOREACH_BEGIN(chan->u.listener.incoming_list,
                               channel_t *, qchan) {
-        channel_request_close(qchan);
+        channel_mark_for_close(qchan);
       } SMARTLIST_FOREACH_END(qchan);
 
       smartlist_free(chan->u.listener.incoming_list);
@@ -965,7 +965,7 @@ channel_set_cell_handlers(channel_t *chan,
 }
 
 /**
- * Request a channel be closed
+ * Mark a channel to be closed
  *
  * This function tries to close a channel_t; it will go into the CLOSING
  * state, and eventually the lower layer should put it into the CLOSED or
@@ -975,7 +975,7 @@ channel_set_cell_handlers(channel_t *chan,
  */
 
 void
-channel_request_close(channel_t *chan)
+channel_mark_for_close(channel_t *chan)
 {
   tor_assert(chan != NULL);
   tor_assert(chan->close != NULL);
@@ -2419,7 +2419,7 @@ channel_free_all(void)
        * and allocate that again on close.
        */
       channel_unregister(curr);
-      channel_request_close(curr);
+      channel_mark_for_close(curr);
       channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
@@ -2442,7 +2442,7 @@ channel_free_all(void)
        * and allocate that again on close.
        */
       channel_unregister(curr);
-      channel_request_close(curr);
+      channel_mark_for_close(curr);
       channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
@@ -2464,7 +2464,7 @@ channel_free_all(void)
       if (!(curr->state == CHANNEL_STATE_CLOSING ||
             curr->state == CHANNEL_STATE_CLOSED ||
             curr->state == CHANNEL_STATE_ERROR)) {
-        channel_request_close(curr);
+        channel_mark_for_close(curr);
       }
       channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);

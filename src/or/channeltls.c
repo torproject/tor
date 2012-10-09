@@ -224,7 +224,7 @@ channel_tls_free_all(void)
   if (channel_tls_listener) {
     base = TLS_CHAN_TO_BASE(channel_tls_listener);
     channel_unregister(base);
-    channel_request_close(base);
+    channel_mark_for_close(base);
     channel_free(base);
     channel_tls_listener = NULL;
   }
@@ -316,7 +316,7 @@ channel_tls_close_method(channel_t *chan)
     if (chan->u.listener.incoming_list) {
       SMARTLIST_FOREACH_BEGIN(chan->u.listener.incoming_list,
                               channel_t *, ichan) {
-        channel_request_close(ichan);
+        channel_mark_for_close(ichan);
       } SMARTLIST_FOREACH_END(ichan);
 
       smartlist_free(chan->u.listener.incoming_list);
