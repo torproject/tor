@@ -133,6 +133,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
   /* connection_or_connect() will fill in tlschan->conn */
   if (!(tlschan->conn)) {
+    chan->reason_for_closing = CHANNEL_CLOSE_FOR_ERROR;
     channel_change_state(chan, CHANNEL_STATE_ERROR);
     goto err;
   }
