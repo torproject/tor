@@ -74,6 +74,8 @@ static uint64_t n_channels_allocated = 0;
  */
 static digestmap_t *channel_identity_map = NULL;
 
+static int cell_queue_entry_is_padding(cell_queue_entry_t *q);
+
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
 static void channel_remove_from_digest_map(channel_t *chan);
@@ -85,8 +87,9 @@ static void channel_remove_from_digest_map(channel_t *chan);
 static ssize_t
 channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                                              ssize_t num_cells);
-
 static void channel_force_free(channel_t *chan);
+static void
+channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q);
 
 /***********************************
  * Channel state utility functions *
@@ -1308,39 +1311,56 @@ channel_set_remote_end(channel_t *chan,
 }
 
 /**
- * Write a cell to a channel
- *
- * Write a fixed-length cell to a channel using the write_cell() method.
- * This is equivalent to the pre-channels connection_or_write_cell_to_buf().
- *
- * @param chan Channel to write a cell to
- * @param cell Cell to write to chan
+ * Check whether a cell queue entry is padding; this is a helper function
+ * for channel_write_cell_queue_entry()
  */
 
-void
-channel_write_cell(channel_t *chan, cell_t *cell)
+static int
+cell_queue_entry_is_padding(cell_queue_entry_t *q)
 {
-  cell_queue_entry_t *q;
-  int sent = 0;
+  tor_assert(q);
+
+  if (q->type == CELL_QUEUE_FIXED) {
+    if (q->u.fixed.cell) {
+      if (q->u.fixed.cell->command == CELL_PADDING ||
+          q->u.fixed.cell->command == CELL_VPADDING) {
+        return 1;
+      }
+    }
+  } else if (q->type == CELL_QUEUE_VAR) {
+    if (q->u.var.var_cell) {
+      if (q->u.var.var_cell->command == CELL_PADDING ||
+          q->u.var.var_cell->command == CELL_VPADDING) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Given a cell_queue_entry_t filled out by the caller, try to send the cell
+ * and queue it if we can't.
+ */
+
+static void
+channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
+{
+  int result = 0, sent = 0;
+  cell_queue_entry_t *tmp = NULL;
 
   tor_assert(chan);
   tor_assert(!(chan->is_listener));
-  tor_assert(cell);
-  tor_assert(chan->u.cell_chan.write_cell);
+  tor_assert(q);
 
   /* Assert that the state makes sense for a cell write */
   tor_assert(chan->state == CHANNEL_STATE_OPENING ||
              chan->state == CHANNEL_STATE_OPEN ||
              chan->state == CHANNEL_STATE_MAINT);
 
-  log_debug(LD_CHANNEL,
-            "Writing cell_t %p to channel %p with global ID "
-            U64_FORMAT,
-            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
-
   /* Increment the timestamp unless it's padding */
-  if (!(cell->command == CELL_PADDING ||
-        cell->command == CELL_VPADDING)) {
+  if (!cell_queue_entry_is_padding(q)) {
     chan->u.cell_chan.timestamp_last_added_nonpadding = approx_time();
   }
 
@@ -1348,7 +1368,31 @@ channel_write_cell(channel_t *chan, cell_t *cell)
   if (!(chan->u.cell_chan.outgoing_queue &&
         (smartlist_len(chan->u.cell_chan.outgoing_queue) > 0)) &&
        chan->state == CHANNEL_STATE_OPEN) {
-    if (chan->u.cell_chan.write_cell(chan, cell)) {
+    /* Pick the right write function for this cell type and save the result */
+    switch (q->type) {
+      case CELL_QUEUE_FIXED:
+        tor_assert(chan->u.cell_chan.write_cell);
+        tor_assert(q->u.fixed.cell);
+        result = chan->u.cell_chan.write_cell(chan, q->u.fixed.cell);
+        break;
+      case CELL_QUEUE_PACKED:
+        tor_assert(chan->u.cell_chan.write_packed_cell);
+        tor_assert(q->u.packed.packed_cell);
+        result = chan->
+          u.cell_chan.write_packed_cell(chan,
+                                        q->u.packed.packed_cell);
+        break;
+      case CELL_QUEUE_VAR:
+        tor_assert(chan->u.cell_chan.write_var_cell);
+        tor_assert(q->u.var.var_cell);
+        result = chan->u.cell_chan.write_var_cell(chan, q->u.var.var_cell);
+        break;
+      default:
+        tor_assert(1);
+    }
+
+    /* Check if we got it out */
+    if (result > 0) {
       sent = 1;
       /* Timestamp for transmission */
       channel_timestamp_xmit(chan);
@@ -1363,39 +1407,56 @@ channel_write_cell(channel_t *chan, cell_t *cell)
     /* Not sent, queue it */
     if (!(chan->u.cell_chan.outgoing_queue))
       chan->u.cell_chan.outgoing_queue = smartlist_new();
-    q = tor_malloc(sizeof(*q));
-    q->type = CELL_QUEUE_FIXED;
-    q->u.fixed.cell = cell;
-    smartlist_add(chan->u.cell_chan.outgoing_queue, q);
+    /*
+     * We have to copy the queue entry passed in, since the caller probably
+     * used the stack.
+     */
+    tmp = tor_malloc(sizeof(*tmp));
+    memcpy(tmp, q, sizeof(*tmp));
+    smartlist_add(chan->u.cell_chan.outgoing_queue, tmp);
     /* Try to process the queue? */
     if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
   }
 }
 
 /**
+ * Write a cell to a channel
+ *
+ * Write a fixed-length cell to a channel using the write_cell() method.
+ * This is equivalent to the pre-channels connection_or_write_cell_to_buf().
+ */
+
+void
+channel_write_cell(channel_t *chan, cell_t *cell)
+{
+  cell_queue_entry_t q;
+
+  tor_assert(chan);
+  tor_assert(cell);
+
+  log_debug(LD_CHANNEL,
+            "Writing cell_t %p to channel %p with global ID "
+            U64_FORMAT,
+            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
+
+  q.type = CELL_QUEUE_FIXED;
+  q.u.fixed.cell = cell;
+  channel_write_cell_queue_entry(chan, &q);
+}
+
+/**
  * Write a packed cell to a channel
  *
  * Write a packed cell to a channel using the write_cell() method.
- *
- * @param chan Channel to write a cell to
- * @param packed_cell Cell to write to chan
  */
 
 void
 channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
 {
-  cell_queue_entry_t *q;
-  int sent = 0;
+  cell_queue_entry_t q;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(packed_cell);
-  tor_assert(chan->u.cell_chan.write_packed_cell);
-
-  /* Assert that the state makes sense for a cell write */
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
 
   log_debug(LD_CHANNEL,
             "Writing packed_cell_t %p to channel %p with global ID "
@@ -1403,35 +1464,9 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
             packed_cell, chan,
             U64_PRINTF_ARG(chan->global_identifier));
 
-  /* Increment the timestamp */
-  chan->u.cell_chan.timestamp_last_added_nonpadding = approx_time();
-
-  /* Can we send it right out?  If so, try */
-  if (!(chan->u.cell_chan.outgoing_queue &&
-        (smartlist_len(chan->u.cell_chan.outgoing_queue) > 0)) &&
-       chan->state == CHANNEL_STATE_OPEN) {
-    if (chan->u.cell_chan.write_packed_cell(chan, packed_cell)) {
-      sent = 1;
-      /* Timestamp for transmission */
-      channel_timestamp_xmit(chan);
-      /* If we're here the queue is empty, so it's drained too */
-      channel_timestamp_drained(chan);
-      /* Update the counter */
-      ++(chan->u.cell_chan.n_cells_xmitted);
-    }
-  }
-
-  if (!sent) {
-    /* Not sent, queue it */
-    if (!(chan->u.cell_chan.outgoing_queue))
-      chan->u.cell_chan.outgoing_queue = smartlist_new();
-    q = tor_malloc(sizeof(*q));
-    q->type = CELL_QUEUE_PACKED;
-    q->u.packed.packed_cell = packed_cell;
-    smartlist_add(chan->u.cell_chan.outgoing_queue, q);
-    /* Try to process the queue? */
-    if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
-  }
+  q.type = CELL_QUEUE_PACKED;
+  q.u.packed.packed_cell = packed_cell;
+  channel_write_cell_queue_entry(chan, &q);
 }
 
 /**
@@ -1440,26 +1475,15 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
  * Write a variable-length cell to a channel using the write_cell() method.
  * This is equivalent to the pre-channels
  * connection_or_write_var_cell_to_buf().
- *
- * @param chan Channel to write a cell to
- * @param var_cell Cell to write to chan
  */
 
 void
 channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
 {
-  cell_queue_entry_t *q;
-  int sent = 0;
+  cell_queue_entry_t q;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(var_cell);
-  tor_assert(chan->u.cell_chan.write_var_cell);
-
-  /* Assert that the state makes sense for a cell write */
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
 
   log_debug(LD_CHANNEL,
             "Writing var_cell_t %p to channel %p with global ID "
@@ -1467,38 +1491,9 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
             var_cell, chan,
             U64_PRINTF_ARG(chan->global_identifier));
 
-  /* Increment the timestamp unless it's padding */
-  if (!(var_cell->command == CELL_PADDING ||
-        var_cell->command == CELL_VPADDING)) {
-    chan->u.cell_chan.timestamp_last_added_nonpadding = approx_time();
-  }
-
-  /* Can we send it right out? If so, then try */
-  if (!(chan->u.cell_chan.outgoing_queue &&
-        (smartlist_len(chan->u.cell_chan.outgoing_queue) > 0)) &&
-       chan->state == CHANNEL_STATE_OPEN) {
-    if (chan->u.cell_chan.write_var_cell(chan, var_cell)) {
-      sent = 1;
-      /* Timestamp for transmission */
-      channel_timestamp_xmit(chan);
-      /* If we're here the queue is empty, so it's drained too */
-      channel_timestamp_drained(chan);
-      /* Update the counter */
-      ++(chan->u.cell_chan.n_cells_xmitted);
-    }
-  }
-
-  if (!sent) {
-    /* Not sent, queue it */
-    if (!(chan->u.cell_chan.outgoing_queue))
-      chan->u.cell_chan.outgoing_queue = smartlist_new();
-    q = tor_malloc(sizeof(*q));
-    q->type = CELL_QUEUE_VAR;
-    q->u.var.var_cell = var_cell;
-    smartlist_add(chan->u.cell_chan.outgoing_queue, q);
-    /* Try to process the queue? */
-    if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
-  }
+  q.type = CELL_QUEUE_VAR;
+  q.u.var.var_cell = var_cell;
+  channel_write_cell_queue_entry(chan, &q);
 }
 
 /**
