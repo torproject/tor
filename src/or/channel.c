@@ -622,15 +622,10 @@ channel_find_by_remote_digest(const char *identity_digest)
 channel_t *
 channel_next_with_digest(channel_t *chan)
 {
-  channel_t *rv = NULL;
-
   tor_assert(chan);
   tor_assert(!(chan->is_listener));
 
-  if (chan->u.cell_chan.next_with_same_id)
-    rv = chan->u.cell_chan.next_with_same_id;
-
-  return rv;
+  return chan->u.cell_chan.next_with_same_id;
 }
 
 /**
