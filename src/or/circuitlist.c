@@ -918,15 +918,17 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan)
   if (found && found->circuit) {
     log_debug(LD_CIRC,
               "circuit_get_by_circid_channel_impl() returning circuit %p for"
-              " circ_id %d, channel ID %lu (%p)",
-              found->circuit, circ_id, chan->global_identifier, chan);
+              " circ_id %d, channel ID " U64_FORMAT " (%p)",
+              found->circuit, circ_id,
+              U64_PRINTF_ARG(chan->global_identifier), chan);
     return found->circuit;
   }
 
   log_debug(LD_CIRC,
             "circuit_get_by_circid_channel_impl() found nothing for"
-            " circ_id %d, channel ID %lu (%p)",
-            circ_id, chan->global_identifier, chan);
+            " circ_id %d, channel ID " U64_FORMAT " (%p)",
+            circ_id,
+            U64_PRINTF_ARG(chan->global_identifier), chan);
 
   return NULL;
   /* The rest of this checks for bugs. Disabled by default. */

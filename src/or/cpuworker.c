@@ -157,8 +157,9 @@ connection_cpu_process_inbuf(connection_t *conn)
     tag_unpack(buf, &chan_id, &circ_id);
     circ = NULL;
     log_debug(LD_OR,
-              "Unpacking cpuworker reply, chan_id is %lu, circ_id is %d",
-              chan_id, circ_id);
+              "Unpacking cpuworker reply, chan_id is " U64_FORMAT
+              ", circ_id is %d",
+              U64_PRINTF_ARG(chan_id), circ_id);
     p_chan = channel_find_by_global_id(chan_id);
 
     if (p_chan)

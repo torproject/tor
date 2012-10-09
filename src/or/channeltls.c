@@ -118,8 +118,10 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   chan->u.cell_chan.write_var_cell = channel_tls_write_var_cell_method;
 
   log_debug(LD_CHANNEL,
-            "In channel_tls_connect() for channel %p (global id %lu)",
-            tlschan, chan->global_identifier);
+            "In channel_tls_connect() for channel %p "
+            "(global id " U64_FORMAT ")",
+            tlschan,
+            U64_PRINTF_ARG(chan->global_identifier));
 
   if (is_local_addr(addr)) channel_mark_local(chan);
   channel_mark_outgoing(chan);
@@ -137,8 +139,8 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   }
 
   log_debug(LD_CHANNEL,
-            "Got orconn %p for channel with global id %lu",
-            tlschan->conn, chan->global_identifier);
+            "Got orconn %p for channel with global id " U64_FORMAT,
+            tlschan->conn, U64_PRINTF_ARG(chan->global_identifier));
 
   goto done;
 
@@ -195,8 +197,8 @@ channel_tls_start_listener(void)
     channel_tls_listener = listener;
 
     log_debug(LD_CHANNEL,
-              "Starting TLS listener channel %p with global id %lu",
-              lchan, lchan->global_identifier);
+              "Starting TLS listener channel %p with global id " U64_FORMAT,
+              lchan, U64_PRINTF_ARG(lchan->global_identifier));
 
     channel_register(lchan);
   } else lchan = TLS_CHAN_TO_BASE(channel_tls_listener);
@@ -366,7 +368,9 @@ channel_tls_describe_transport_method(channel_t *chan)
       id = TO_CONN(tlschan->conn)->global_identifier;
 
       if (buf) tor_free(buf);
-      tor_asprintf(&buf, "TLS channel (connection %lu)", id);
+      tor_asprintf(&buf,
+                   "TLS channel (connection " U64_FORMAT ")",
+                   U64_PRINTF_ARG(id));
 
       rv = buf;
     } else {

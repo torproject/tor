@@ -193,8 +193,10 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   tor_assert(!(chan->is_listener));
 
   log_debug(LD_OR,
-            "Got a CREATE cell for circ_id %d on channel %lu (%p)",
-            cell->circ_id, chan->global_identifier, chan);
+            "Got a CREATE cell for circ_id %d on channel " U64_FORMAT
+            " (%p)",
+            cell->circ_id,
+            U64_PRINTF_ARG(chan->global_identifier), chan);
 
   if (we_are_hibernating()) {
     log_info(LD_OR,

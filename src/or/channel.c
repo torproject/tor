@@ -241,14 +241,15 @@ channel_register(channel_t *chan)
 
   if (chan->is_listener) {
     log_debug(LD_CHANNEL,
-              "Registering listener channel %p (ID %lu) in state %s (%d)",
-              chan, chan->global_identifier,
+              "Registering listener channel %p (ID " U64_FORMAT ") "
+              "in state %s (%d)",
+              chan, U64_PRINTF_ARG(chan->global_identifier),
               channel_state_to_string(chan->state), chan->state);
   } else {
     log_debug(LD_CHANNEL,
-              "Registering cell channel %p (ID %lu) in state %s (%d) "
-              "with digest %s",
-              chan, chan->global_identifier,
+              "Registering cell channel %p (ID " U64_FORMAT ") "
+              "in state %s (%d) with digest %s",
+              chan, U64_PRINTF_ARG(chan->global_identifier),
               channel_state_to_string(chan->state), chan->state,
               hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
   }
@@ -282,9 +283,9 @@ channel_register(channel_t *chan)
           channel_add_to_digest_map(chan);
         } else {
           log_info(LD_CHANNEL,
-                  "Channel %p (global ID %lu) in state %s (%d) registered "
-                  "with no identity digest",
-                  chan, chan->global_identifier,
+                  "Channel %p (global ID " U64_FORMAT ") "
+                  "in state %s (%d) registered with no identity digest",
+                  chan, U64_PRINTF_ARG(chan->global_identifier),
                   channel_state_to_string(chan->state), chan->state);
         }
       }
@@ -398,9 +399,9 @@ channel_add_to_digest_map(channel_t *chan)
   }
 
   log_debug(LD_CHANNEL,
-            "Added channel %p (%lu) to identity map in state %s (%d) "
-            "with digest %s",
-            chan, chan->global_identifier,
+            "Added channel %p (global ID " U64_FORMAT ") "
+            "to identity map in state %s (%d) with digest %s",
+            chan, U64_PRINTF_ARG(chan->global_identifier),
             channel_state_to_string(chan->state), chan->state,
             hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
 }
@@ -432,9 +433,10 @@ channel_remove_from_digest_map(channel_t *chan)
      * case is similar to digestmap_get() failing below.
      */
     log_warn(LD_BUG,
-             "Trying to remove channel %p (%lu) with digest %s from "
-             "identity map, but didn't have any identity map",
-             chan, chan->global_identifier,
+             "Trying to remove channel %p (global ID " U64_FORMAT ") "
+             "with digest %s from identity map, but didn't have any identity "
+             "map",
+             chan, U64_PRINTF_ARG(chan->global_identifier),
              hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
     /* Clear out its next/prev pointers */
     if (chan->u.cell_chan.next_with_same_id) {
@@ -496,18 +498,18 @@ channel_remove_from_digest_map(channel_t *chan)
       chan->u.cell_chan.prev_with_same_id = NULL;
 
       log_debug(LD_CHANNEL,
-                "Removed channel %p (%lu) from identity map in state %s (%d) "
-                "with digest %s",
-                chan, chan->global_identifier,
+                "Removed channel %p (global ID " U64_FORMAT ") from "
+                "identity map in state %s (%d) with digest %s",
+                chan, U64_PRINTF_ARG(chan->global_identifier),
                 channel_state_to_string(chan->state), chan->state,
                 hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
     } else {
       /* This is not good */
       log_warn(LD_BUG,
-               "Trying to remove channel %p (%lu) with digest %s from "
-               "identity map, but couldn't find it in the list for that "
-               "digest",
-               chan, chan->global_identifier,
+               "Trying to remove channel %p (global ID " U64_FORMAT ") "
+               "with digest %s from identity map, but couldn't find it in "
+               "the list for that digest",
+               chan, U64_PRINTF_ARG(chan->global_identifier),
                hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
       /* Unlink it and hope for the best */
       if (chan->u.cell_chan.next_with_same_id) {
@@ -526,9 +528,10 @@ channel_remove_from_digest_map(channel_t *chan)
   } else {
     /* Shouldn't happen */
     log_warn(LD_BUG,
-             "Trying to remove channel %p (%lu) with digest %s from "
-             "identity map, but couldn't find any with that digest",
-             chan, chan->global_identifier,
+             "Trying to remove channel %p (global ID " U64_FORMAT ") with "
+             "digest %s from identity map, but couldn't find any with "
+             "that digest",
+             chan, U64_PRINTF_ARG(chan->global_identifier),
              hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
     /* Clear out its next/prev pointers */
     if (chan->u.cell_chan.next_with_same_id) {
@@ -1256,8 +1259,8 @@ channel_clear_identity_digest(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint digest on channel %p with "
-            "global ID %lu",
-            chan, chan->global_identifier);
+            "global ID " U64_FORMAT,
+            chan, U64_PRINTF_ARG(chan->global_identifier));
 
   state_not_in_map =
     (chan->state == CHANNEL_STATE_LISTENING ||
@@ -1295,8 +1298,8 @@ channel_set_identity_digest(channel_t *chan,
 
   log_debug(LD_CHANNEL,
             "Setting remote endpoint digest on channel %p with "
-            "global ID %lu to digest %s",
-            chan, chan->global_identifier,
+            "global ID " U64_FORMAT " to digest %s",
+            chan, U64_PRINTF_ARG(chan->global_identifier),
             identity_digest ?
               hex_str(identity_digest, DIGEST_LEN) : "(null)");
 
@@ -1354,8 +1357,8 @@ channel_clear_remote_end(channel_t *chan)
 
   log_debug(LD_CHANNEL,
             "Clearing remote endpoint identity on channel %p with "
-            "global ID %lu",
-            chan, chan->global_identifier);
+            "global ID " U64_FORMAT,
+            chan, U64_PRINTF_ARG(chan->global_identifier));
 
   state_not_in_map =
     (chan->state == CHANNEL_STATE_LISTENING ||
@@ -1396,8 +1399,8 @@ channel_set_remote_end(channel_t *chan,
 
   log_debug(LD_CHANNEL,
             "Setting remote endpoint identity on channel %p with "
-            "global ID %lu to nickname %s, digest %s",
-            chan, chan->global_identifier,
+            "global ID " U64_FORMAT " to nickname %s, digest %s",
+            chan, U64_PRINTF_ARG(chan->global_identifier),
             nickname ? nickname : "(null)",
             identity_digest ?
               hex_str(identity_digest, DIGEST_LEN) : "(null)");
@@ -1469,8 +1472,9 @@ channel_write_cell(channel_t *chan, cell_t *cell)
              chan->state == CHANNEL_STATE_MAINT);
 
   log_debug(LD_CHANNEL,
-            "Writing cell_t %p to channel %p with global ID %lu",
-            cell, chan, chan->global_identifier);
+            "Writing cell_t %p to channel %p with global ID "
+            U64_FORMAT,
+            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
 
   /* Increment the timestamp unless it's padding */
   if (!(cell->command == CELL_PADDING ||
@@ -1532,8 +1536,10 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
              chan->state == CHANNEL_STATE_MAINT);
 
   log_debug(LD_CHANNEL,
-            "Writing packed_cell_t %p to channel %p with global ID %lu",
-            packed_cell, chan, chan->global_identifier);
+            "Writing packed_cell_t %p to channel %p with global ID "
+            U64_FORMAT,
+            packed_cell, chan,
+            U64_PRINTF_ARG(chan->global_identifier));
 
   /* Increment the timestamp */
   chan->u.cell_chan.timestamp_last_added_nonpadding = approx_time();
@@ -1594,8 +1600,10 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
              chan->state == CHANNEL_STATE_MAINT);
 
   log_debug(LD_CHANNEL,
-            "Writing var_cell_t %p to channel %p with global ID %lu",
-            var_cell, chan, chan->global_identifier);
+            "Writing var_cell_t %p to channel %p with global ID "
+            U64_FORMAT,
+            var_cell, chan,
+            U64_PRINTF_ARG(chan->global_identifier));
 
   /* Increment the timestamp unless it's padding */
   if (!(var_cell->command == CELL_PADDING ||
@@ -2064,8 +2072,8 @@ channel_process_incoming(channel_t *listener)
 
   log_debug(LD_CHANNEL,
             "Processing queue of incoming connections for listening "
-            "channel %p (global ID %lu)",
-            listener, listener->global_identifier);
+            "channel %p (global ID " U64_FORMAT ")",
+            listener, U64_PRINTF_ARG(listener->global_identifier));
 
   if (!(listener->u.listener.incoming_list)) return;
 
@@ -2075,9 +2083,12 @@ channel_process_incoming(channel_t *listener)
     tor_assert(!(chan->is_listener));
 
     log_debug(LD_CHANNEL,
-              "Handling incoming connection %p (%lu) for listener %p (%lu)",
-              chan, chan->global_identifier,
-              listener, listener->global_identifier);
+              "Handling incoming connection %p (" U64_FORMAT ") "
+              "for listener %p (" U64_FORMAT ")",
+              chan,
+              U64_PRINTF_ARG(chan->global_identifier),
+              listener,
+              U64_PRINTF_ARG(listener->global_identifier));
     /* Make sure this is set correctly */
     channel_mark_incoming(chan);
     listener->u.listener.listener(listener, chan);
@@ -2524,8 +2535,9 @@ channel_free_all(void)
       /* Deregister and free it */
       tor_assert(tmp);
       log_debug(LD_CHANNEL,
-                "Cleaning up finished channel %p (ID %lu) in state %s (%d)",
-                tmp, tmp->global_identifier,
+                "Cleaning up finished channel %p (ID " U64_FORMAT ") "
+                "in state %s (%d)",
+                tmp, U64_PRINTF_ARG(tmp->global_identifier),
                 channel_state_to_string(tmp->state), tmp->state);
       channel_unregister(tmp);
       channel_free(tmp);
@@ -2545,8 +2557,9 @@ channel_free_all(void)
       /* Close, deregister and free it */
       tor_assert(tmp);
       log_debug(LD_CHANNEL,
-                "Cleaning up listening channel %p (ID %lu) in state %s (%d)",
-                tmp, tmp->global_identifier,
+                "Cleaning up listening channel %p (ID " U64_FORMAT ") "
+                "in state %s (%d)",
+                tmp, U64_PRINTF_ARG(tmp->global_identifier),
                 channel_state_to_string(tmp->state), tmp->state);
       /*
        * We have to unregister first so we don't put it in finished_channels
@@ -2570,8 +2583,9 @@ channel_free_all(void)
       /* Close, deregister and free it */
       tor_assert(tmp);
       log_debug(LD_CHANNEL,
-                "Cleaning up active channel %p (ID %lu) in state %s (%d)",
-                tmp, tmp->global_identifier,
+                "Cleaning up active channel %p (ID " U64_FORMAT ") "
+                "in state %s (%d)",
+                tmp, U64_PRINTF_ARG(tmp->global_identifier),
                 channel_state_to_string(tmp->state), tmp->state);
       /*
        * We have to unregister first so we don't put it in finished_channels
@@ -2595,8 +2609,9 @@ channel_free_all(void)
       /* Close, deregister and free it */
       tor_assert(tmp);
       log_debug(LD_CHANNEL,
-                "Cleaning up leftover channel %p (ID %lu) in state %s (%d)",
-                tmp, tmp->global_identifier,
+                "Cleaning up leftover channel %p (ID " U64_FORMAT ") "
+                "in state %s (%d)",
+                tmp, U64_PRINTF_ARG(tmp->global_identifier),
                 channel_state_to_string(tmp->state), tmp->state);
       channel_unregister(tmp);
       if (!(tmp->state == CHANNEL_STATE_CLOSING ||
@@ -2875,27 +2890,32 @@ channel_dump_statistics(channel_t *chan, int severity)
   age = (double)(now - chan->timestamp_created);
 
   log(severity, LD_GENERAL,
-      "Channel %lu (at %p) with transport %s is in state %s (%d) and %s",
-      chan->global_identifier, chan,
+      "Channel " U64_FORMAT " (at %p) with transport %s is in state "
+      "%s (%d) and %s",
+      U64_PRINTF_ARG(chan->global_identifier), chan,
       channel_describe_transport(chan),
       channel_state_to_string(chan->state), chan->state,
       chan->is_listener ?
         "listens for incoming connections" :
         "transports cells");
   log(severity, LD_GENERAL,
-      " * Channel %lu was created at %lu (%lu seconds ago) and last active "
-      "at %lu (%lu seconds ago)",
-      chan->global_identifier,
-      chan->timestamp_created, now - chan->timestamp_created,
-      chan->timestamp_active, now - chan->timestamp_active);
+      " * Channel " U64_FORMAT " was created at " U64_FORMAT
+      " (" U64_FORMAT " seconds ago) "
+      "and last active at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
+      U64_PRINTF_ARG(chan->global_identifier),
+      U64_PRINTF_ARG(chan->timestamp_created),
+      U64_PRINTF_ARG(now - chan->timestamp_created),
+      U64_PRINTF_ARG(chan->timestamp_active),
+      U64_PRINTF_ARG(now - chan->timestamp_active));
   if (chan->is_listener) {
     log(severity, LD_GENERAL,
-        " * Listener channel %lu last accepted an incoming channel at %lu "
-        "(%lu seconds ago) and has accepted %lu channels in total",
-        chan->global_identifier,
-        chan->u.listener.timestamp_accepted,
-        now - chan->u.listener.timestamp_accepted,
-        chan->u.listener.n_accepted);
+        " * Listener channel " U64_FORMAT " last accepted an incoming "
+        "channel at " U64_FORMAT " (" U64_FORMAT " seconds ago) "
+        "and has accepted " U64_FORMAT " channels in total",
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.listener.timestamp_accepted),
+        U64_PRINTF_ARG(now - chan->u.listener.timestamp_accepted),
+        U64_PRINTF_ARG(chan->u.listener.n_accepted));
 
     /*
      * If it's sensible to do so, get the rate of incoming channels on this
@@ -2907,15 +2927,15 @@ channel_dump_statistics(channel_t *chan, int severity)
       avg = (double)(chan->u.listener.n_accepted) / age;
       if (avg >= 1.0) {
         log(severity, LD_GENERAL,
-            " * Listener channel %lu has averaged %f incoming channels per "
-            "second",
-            chan->global_identifier, avg);
+            " * Listener channel " U64_FORMAT " has averaged %f incoming "
+            "channels per second",
+            U64_PRINTF_ARG(chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
         log(severity, LD_GENERAL,
-            " * Listener channel %lu has averaged %f seconds between "
-            "incoming channels",
-            chan->global_identifier, interval);
+            " * Listener channel " U64_FORMAT " has averaged %f seconds "
+            "between incoming channels",
+            U64_PRINTF_ARG(chan->global_identifier), interval);
       }
     }
   } else {
@@ -2923,30 +2943,30 @@ channel_dump_statistics(channel_t *chan, int severity)
     if (!tor_digest_is_zero(chan->u.cell_chan.identity_digest)) {
       if (chan->u.cell_chan.nickname) {
         log(severity, LD_GENERAL,
-            " * Cell-bearing channel %lu says it is connected to an OR "
-            "with digest %s and nickname %s",
-            chan->global_identifier,
+            " * Cell-bearing channel " U64_FORMAT " says it is connected "
+            "to an OR with digest %s and nickname %s",
+            U64_PRINTF_ARG(chan->global_identifier),
             hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN),
             chan->u.cell_chan.nickname);
       } else {
         log(severity, LD_GENERAL,
-            " * Cell-bearing channel %lu says it is connected to an OR "
-            "with digest %s and no known nickname",
-            chan->global_identifier,
+            " * Cell-bearing channel " U64_FORMAT " says it is connected "
+            "to an OR with digest %s and no known nickname",
+            U64_PRINTF_ARG(chan->global_identifier),
             hex_str(chan->u.cell_chan.identity_digest, DIGEST_LEN));
       }
     } else {
       if (chan->u.cell_chan.nickname) {
         log(severity, LD_GENERAL,
-            " * Cell-bearing channel %lu does not know the digest of the "
-            "OR it is connected to, but reports its nickname is %s",
-            chan->global_identifier,
+            " * Cell-bearing channel " U64_FORMAT " does not know the digest"
+            " of the OR it is connected to, but reports its nickname is %s",
+            U64_PRINTF_ARG(chan->global_identifier),
             chan->u.cell_chan.nickname);
       } else {
         log(severity, LD_GENERAL,
-            " * Cell-bearing channel %lu does not know the digest or the "
-            "nickname of the OR it is connected to",
-            chan->global_identifier);
+            " * Cell-bearing channel " U64_FORMAT " does not know the digest"
+            " or the nickname of the OR it is connected to",
+            U64_PRINTF_ARG(chan->global_identifier));
       }
     }
 
@@ -2955,29 +2975,29 @@ channel_dump_statistics(channel_t *chan, int severity)
     if (have_remote_addr) {
       remote_addr_str = tor_dup_addr(&remote_addr);
       log(severity, LD_GENERAL,
-          " * Cell-bearing channel %lu says its remote address is %s, "
-          "and gives a canonical description of \"%s\" and an "
+          " * Cell-bearing channel " U64_FORMAT " says its remote address"
+          " is %s, and gives a canonical description of \"%s\" and an "
           "actual description of \"%s\"",
-          chan->global_identifier,
+          U64_PRINTF_ARG(chan->global_identifier),
           remote_addr_str,
           channel_get_canonical_remote_descr(chan),
           channel_get_actual_remote_descr(chan));
       tor_free(remote_addr_str);
     } else {
       log(severity, LD_GENERAL,
-          " * Cell-bearing channel %lu does not know its remote address, "
-          "but gives a canonical description of \"%s\" and an "
+          " * Cell-bearing channel " U64_FORMAT " does not know its remote "
+          "address, but gives a canonical description of \"%s\" and an "
           "actual description of \"%s\"",
-          chan->global_identifier,
+          U64_PRINTF_ARG(chan->global_identifier),
           channel_get_canonical_remote_descr(chan),
           channel_get_actual_remote_descr(chan));
     }
 
     /* Handle marks */
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu has these marks: %s %s %s "
+        " * Cell-bearing channel " U64_FORMAT " has these marks: %s %s %s "
         "%s %s %s",
-        chan->global_identifier,
+        U64_PRINTF_ARG(chan->global_identifier),
         channel_is_bad_for_new_circs(chan) ?
           "bad_for_new_circs" : "!bad_for_new_circs",
         channel_is_canonical(chan) ?
@@ -2994,9 +3014,9 @@ channel_dump_statistics(channel_t *chan, int severity)
 
     /* Describe queues */
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu has %d queued incoming cells "
-        "and %d queued outgoing cells",
-        chan->global_identifier,
+        " * Cell-bearing channel " U64_FORMAT " has %d queued incoming cells"
+        " and %d queued outgoing cells",
+        U64_PRINTF_ARG(chan->global_identifier),
         (chan->u.cell_chan.cell_queue != NULL) ?
           smartlist_len(chan->u.cell_chan.cell_queue) : 0,
         (chan->u.cell_chan.outgoing_queue != NULL) ?
@@ -3004,9 +3024,9 @@ channel_dump_statistics(channel_t *chan, int severity)
 
     /* Describe circuits */
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu has %d active circuits out of %d"
-        " in total",
-        chan->global_identifier,
+        " * Cell-bearing channel " U64_FORMAT " has %d active circuits out of"
+        " %d in total",
+        U64_PRINTF_ARG(chan->global_identifier),
         (chan->u.cell_chan.active_circuit_pqueue != NULL) ?
           smartlist_len(chan->u.cell_chan.active_circuit_pqueue) : 0,
         chan->u.cell_chan.n_circuits);
@@ -3014,67 +3034,67 @@ channel_dump_statistics(channel_t *chan, int severity)
 
     /* Describe timestamps */
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu was last used by a client at %lu "
-        "(%lu seconds ago)",
-        chan->global_identifier,
-        chan->u.cell_chan.timestamp_client,
-        now - chan->u.cell_chan.timestamp_client);
+        " * Cell-bearing channel " U64_FORMAT " was last used by a "
+        "client at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.cell_chan.timestamp_client),
+        U64_PRINTF_ARG(now - chan->u.cell_chan.timestamp_client));
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu was last drained at %lu "
-        "(%lu seconds ago)",
-        chan->global_identifier,
-        chan->u.cell_chan.timestamp_drained,
-        now - chan->u.cell_chan.timestamp_drained);
+        " * Cell-bearing channel " U64_FORMAT " was last drained at "
+        U64_FORMAT " (" U64_FORMAT " seconds ago)",
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.cell_chan.timestamp_drained),
+        U64_PRINTF_ARG(now - chan->u.cell_chan.timestamp_drained));
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu last received a cell at %lu "
-        "(%lu seconds ago)",
-        chan->global_identifier,
-        chan->u.cell_chan.timestamp_recv,
-        now - chan->u.cell_chan.timestamp_recv);
+        " * Cell-bearing channel " U64_FORMAT " last received a cell "
+        "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.cell_chan.timestamp_recv),
+        U64_PRINTF_ARG(now - chan->u.cell_chan.timestamp_recv));
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu last trasmitted a cell at %lu "
-        "(%lu seconds ago)",
-        chan->global_identifier,
-        chan->u.cell_chan.timestamp_xmit,
-        now - chan->u.cell_chan.timestamp_xmit);
+        " * Cell-bearing channel " U64_FORMAT " last trasmitted a cell "
+        "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.cell_chan.timestamp_xmit),
+        U64_PRINTF_ARG(now - chan->u.cell_chan.timestamp_xmit));
 
     /* Describe counters and rates */
     log(severity, LD_GENERAL,
-        " * Cell-bearing channel %lu has received %lu cells and "
-        " transmitted %lu",
-        chan->global_identifier,
-        chan->u.cell_chan.n_cells_recved,
-        chan->u.cell_chan.n_cells_xmitted);
+        " * Cell-bearing channel " U64_FORMAT " has received "
+        U64_FORMAT " cells and transmitted " U64_FORMAT,
+        U64_PRINTF_ARG(chan->global_identifier),
+        U64_PRINTF_ARG(chan->u.cell_chan.n_cells_recved),
+        U64_PRINTF_ARG(chan->u.cell_chan.n_cells_xmitted));
     if (now > chan->timestamp_created &&
         chan->timestamp_created > 0) {
       if (chan->u.cell_chan.n_cells_recved > 0) {
         avg = (double)(chan->u.cell_chan.n_cells_recved) / age;
         if (avg >= 1.0) {
           log(severity, LD_GENERAL,
-              " * Cell-bearing channel %lu has averaged %f cells received "
-              "per second",
-              chan->global_identifier, avg);
+              " * Cell-bearing channel " U64_FORMAT " has averaged %f "
+              "cells received per second",
+              U64_PRINTF_ARG(chan->global_identifier), avg);
         } else if (avg >= 0.0) {
           interval = 1.0 / avg;
           log(severity, LD_GENERAL,
-              " * Cell-bearing channel %lu has averaged %f seconds between "
-              "received cells",
-              chan->global_identifier, interval);
+              " * Cell-bearing channel " U64_FORMAT " has averaged %f "
+              "seconds between received cells",
+              U64_PRINTF_ARG(chan->global_identifier), interval);
         }
       }
       if (chan->u.cell_chan.n_cells_xmitted > 0) {
         avg = (double)(chan->u.cell_chan.n_cells_xmitted) / age;
         if (avg >= 1.0) {
           log(severity, LD_GENERAL,
-              " * Cell-bearing channel %lu has averaged %f cells transmitted "
-              "per second",
-              chan->global_identifier, avg);
+              " * Cell-bearing channel " U64_FORMAT " has averaged %f "
+              "cells transmitted per second",
+              U64_PRINTF_ARG(chan->global_identifier), avg);
         } else if (avg >= 0.0) {
           interval = 1.0 / avg;
           log(severity, LD_GENERAL,
-              " * Cell-bearing channel %lu has averaged %f seconds between "
-              "transmitted cells",
-              chan->global_identifier, interval);
+              " * Cell-bearing channel " U64_FORMAT " has averaged %f "
+              "seconds between transmitted cells",
+              U64_PRINTF_ARG(chan->global_identifier), interval);
         }
       }
     }
