@@ -368,7 +368,6 @@ int channel_is_better(time_t now,
 
 channel_t * channel_find_by_global_id(uint64_t global_identifier);
 channel_t * channel_find_by_remote_digest(const char *identity_digest);
-channel_t * channel_find_by_remote_nickname(const char *nickname);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
  */

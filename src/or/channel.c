@@ -610,42 +610,6 @@ channel_find_by_remote_digest(const char *identity_digest)
 }
 
 /**
- * Find channel by remote nickname
- *
- * This function looks up a channel by the nickname of the remote
- * endpoint.  It's possible that more than one channel to that endpoint
- * nickname exists, but there is not currently any supported way to iterate
- * them.  Use digests.
- *
- * @param nickname A node nickname
- * @return A channel pointer to a channel to a node with that nickname, or
- *         NULL if none is available.
- */
-
-channel_t *
-channel_find_by_remote_nickname(const char *nickname)
-{
-  channel_t *rv = NULL;
-
-  tor_assert(nickname);
-
-  if (all_channels && smartlist_len(all_channels) > 0) {
-    SMARTLIST_FOREACH_BEGIN(all_channels, channel_t *, curr) {
-      if (!(curr->is_listener)) {
-        if (curr->u.cell_chan.nickname &&
-            strncmp(curr->u.cell_chan.nickname, nickname,
-                    MAX_NICKNAME_LEN) == 0) {
-          rv = curr;
-          break;
-        }
-      }
-    } SMARTLIST_FOREACH_END(curr);
-  }
-
-  return rv;
-}
-
-/**
  * Next channel with digest
  *
  * This function takes a channel and finds the next channel in the list
