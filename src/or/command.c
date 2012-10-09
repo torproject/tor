@@ -505,6 +505,6 @@ command_setup_listener(channel_t *listener)
   tor_assert(listener);
   tor_assert(listener->state == CHANNEL_STATE_LISTENING);
 
-  channel_set_listener(listener, command_handle_incoming_channel);
+  channel_set_listener_fn(listener, command_handle_incoming_channel);
 }
 

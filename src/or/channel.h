@@ -11,6 +11,11 @@
 
 #include "or.h"
 
+/* Channel handler function pointer typedefs */
+typedef void (*channel_listener_fn_ptr)(channel_t *, channel_t *);
+typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
+typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
+
 /*
  * Channel struct; see the channel_t typedef in or.h.  A channel is an
  * abstract interface for the OR-to-OR connection, similar to connection_or_t,
@@ -65,7 +70,7 @@ struct channel_s {
   union {
     struct {
       /* Registered listen handler to call on incoming connection */
-      void (*listener)(channel_t *, channel_t *);
+      channel_listener_fn_ptr listener;
 
       /* List of pending incoming connections */
       smartlist_t *incoming_list;
@@ -78,8 +83,8 @@ struct channel_s {
     } listener;
     struct {
       /* Registered handlers for incoming cells */
-      void (*cell_handler)(channel_t *, cell_t *);
-      void (*var_cell_handler)(channel_t *, var_cell_t *);
+      channel_cell_handler_fn_ptr cell_handler;
+      channel_var_cell_handler_fn_ptr var_cell_handler;
 
       /* Methods implemented by the lower layer */
 
@@ -238,19 +243,20 @@ void channel_write_var_cell(channel_t *chan, var_cell_t *cell);
 /* Channel callback registrations */
 
 /* Listener callback */
-void (* channel_get_listener(channel_t *chan))(channel_t *, channel_t *);
-void channel_set_listener(channel_t *chan,
-                          void (*listener)(channel_t *, channel_t *) );
+channel_listener_fn_ptr channel_get_listener_fn(channel_t *chan);
+void channel_set_listener_fn(channel_t *chan,
+                             channel_listener_fn_ptr listener);
 
 /* Incoming cell callbacks */
-void (* channel_get_cell_handler(channel_t *chan))
-  (channel_t *, cell_t *);
-void (* channel_get_var_cell_handler(channel_t *chan))
-  (channel_t *, var_cell_t *);
+channel_cell_handler_fn_ptr channel_get_cell_handler(channel_t *chan);
+
+channel_var_cell_handler_fn_ptr
+channel_get_var_cell_handler(channel_t *chan);
+
 void channel_set_cell_handlers(channel_t *chan,
-                               void (*cell_handler)(channel_t *, cell_t *),
-                               void (*var_cell_handler)(channel_t *,
-                                                        var_cell_t *));
+                               channel_cell_handler_fn_ptr cell_handler,
+                               channel_var_cell_handler_fn_ptr
+                                 var_cell_handler);
 
 /* Clean up closed channels periodically; called from run_scheduled_events()
  * in main.c

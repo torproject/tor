@@ -823,9 +823,8 @@ channel_force_free(channel_t *chan)
  * @return Function pointer to an incoming channel handler
  */
 
-void
-(* channel_get_listener(channel_t *chan))
-  (channel_t *, channel_t *)
+channel_listener_fn_ptr
+channel_get_listener_fn(channel_t *chan)
 {
   tor_assert(chan);
   tor_assert(chan->is_listener);
@@ -847,8 +846,8 @@ void
  */
 
 void
-channel_set_listener(channel_t *chan,
-                     void (*listener)(channel_t *, channel_t *) )
+channel_set_listener_fn(channel_t *chan,
+                        channel_listener_fn_ptr listener)
 {
   tor_assert(chan);
   tor_assert(chan->is_listener);
@@ -872,9 +871,8 @@ channel_set_listener(channel_t *chan,
  * @return A function pointer to chan's fixed-length cell handler, if any.
  */
 
-void
-(* channel_get_cell_handler(channel_t *chan))
-  (channel_t *, cell_t *)
+channel_cell_handler_fn_ptr
+channel_get_cell_handler(channel_t *chan)
 {
   tor_assert(chan);
   tor_assert(!(chan->is_listener));
@@ -897,9 +895,8 @@ void
  * @return A function pointer to chan's variable-length cell handler, if any.
  */
 
-void
-(* channel_get_var_cell_handler(channel_t *chan))
-  (channel_t *, var_cell_t *)
+channel_var_cell_handler_fn_ptr
+channel_get_var_cell_handler(channel_t *chan)
 {
   tor_assert(chan);
   tor_assert(!(chan->is_listener));
@@ -927,9 +924,9 @@ void
 
 void
 channel_set_cell_handlers(channel_t *chan,
-                          void (*cell_handler)(channel_t *, cell_t *),
-                          void (*var_cell_handler)(channel_t *,
-                                                   var_cell_t *))
+                          channel_cell_handler_fn_ptr cell_handler,
+                          channel_var_cell_handler_fn_ptr
+                            var_cell_handler)
 {
   int try_again = 0;
 
