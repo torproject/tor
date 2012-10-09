@@ -89,11 +89,6 @@ static int enter_v3_handshake_with_cell(var_cell_t *cell,
  * Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
  * handshake with an OR with identity digest <b>id_digest</b>, and wrap
  * it in a channel_tls_t.
- *
- * @param addr Address to connect on
- * @param port Port to connect on
- * @param id_digest Identity digest we want
- * @return The launched channel, or NULL if it failed.
  */
 
 channel_t *
@@ -161,8 +156,6 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
  *
  * Returns the current listening channel for incoming TLS connections, or
  * NULL if none has been established
- *
- * @return TLS listener
  */
 
 channel_t *
@@ -176,8 +169,6 @@ channel_tls_get_listener(void)
  *
  * Return the current channel_tls_t listener, or start one if we haven't yet,
  * and return that.
- *
- * @return TLS listener
  */
 
 channel_t *
@@ -235,9 +226,6 @@ channel_tls_free_all(void)
 
 /**
  * Create a new channel around an incoming or_connection_t
- *
- * @param orconn New or_connection_t
- * @return A channel to queue on the TLS listener
  */
 
 channel_t *
@@ -288,8 +276,6 @@ channel_tls_handle_incoming(or_connection_t *orconn)
  * Close a channel_tls_t
  *
  * This implements the close method for channel_tls_t
- *
- * @param chan Channel to close
  */
 
 static void
@@ -384,10 +370,6 @@ channel_tls_describe_transport_method(channel_t *chan)
  * This implements the get_remote_addr method for channel_tls_t; copy the
  * remote endpoint of the channel to addr_out and return 1 (always
  * succeeds for this transport).
- *
- * @param chan Channel to query
- * @param addr_out Write the address out here
- * @return Always succeeds and returns 1
  */
 
 static int
@@ -411,10 +393,6 @@ channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out)
  * a text description of the remote endpoint of the channel suitable for use
  * in log messages.  The req parameter is 0 for the canonical address or 1 for
  * the actual address seen.
- *
- * @param chan Channel to query
- * @param req Request type (0 for canonical, 1 for actual)
- * @return Pointer to string containing description
  */
 
 static const char *
@@ -461,9 +439,6 @@ channel_tls_get_remote_descr_method(channel_t *chan, int req)
  *
  * This implements the has_queued_writes method for channel_tls _t; it returns
  * 1 iff we have queued writes on the outbuf of the underlying or_connection_t.
- *
- * @param chan Channel to query
- * @return Whether we have queued writes on the outbuf
  */
 
 static int
@@ -486,10 +461,6 @@ channel_tls_has_queued_writes_method(channel_t *chan)
  * This implements the is_canonical method for channel_tls_t; if req is zero,
  * it returns whether this is a canonical channel, and if it is one it returns
  * whether that can be relied upon.
- *
- * @param chan Channel to query
- * @param req Request type (0 for is_canonical, 1 for is_canonical_reliable)
- * @return Query response
  */
 
 static int
@@ -526,10 +497,6 @@ channel_tls_is_canonical_method(channel_t *chan, int req)
  *
  * This implements the matches_extend_info method for channel_tls_t; the upper
  * layer wants to know if this channel matches an extend_info_t.
- *
- * @param chan Channel to test
- * @param extend_info The extend_info_t to match
- * @return 1 if this channel matches, 0 otherwise
  */
 
 static int
@@ -552,10 +519,6 @@ channel_tls_matches_extend_info_method(channel_t *chan,
  * This implements the matches_target method for channel_tls _t; the upper
  * layer wants to know if this channel matches a target address when extending
  * a circuit.
- *
- * @param chan Channel to test
- * @param target Address to match
- * @return 1 if this channel matches, 0 otherwise
  */
 
 static int
@@ -577,10 +540,6 @@ channel_tls_matches_target_method(channel_t *chan,
  *
  * This implements the write_cell method for channel_tls_t; given a
  * channel_tls_t and a cell_t, transmit the cell_t.
- *
- * @param chan Channel to transmit on
- * @param cell Cell to transmit
- * @return Always succeeds and returns 1
  */
 
 static int
@@ -602,10 +561,6 @@ channel_tls_write_cell_method(channel_t *chan, cell_t *cell)
  *
  * This implements the write_packed_cell method for channel_tls_t; given a
  * channel_tls_t and a packed_cell_t, transmit the packed_cell_t.
- *
- * @param chan Channel to transmit on
- * @param packed_cell Cell to transmit
- * @return Always succeeds and returns 1
  */
 
 static int
@@ -632,10 +587,6 @@ channel_tls_write_packed_cell_method(channel_t *chan,
  *
  * This implements the write_var_cell method for channel_tls_t; given a
  * channel_tls_t and a var_cell_t, transmit the var_cell_t.
- *
- * @param chan Channel to transmit on
- * @param var_cell Cell to transmit
- * @return Always succeeds and returns 1
  */
 
 static int
@@ -657,15 +608,10 @@ channel_tls_write_var_cell_method(channel_t *chan, var_cell_t *var_cell)
  ******************************************************/
 
 /**
- * Handle orconn state changes
+ * Handle an orconn state change
  *
  * This function will be called by connection_or.c when the or_connection_t
  * associated with this channel_tls_t changes state.
- *
- * @param chan Channel controlling the or_connection_t
- * @param conn The or_connection_t changing state
- * @param old_state The old state of conn
- * @param state The new state of conn
  */
 
 void
@@ -712,13 +658,9 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
 }
 
 /**
- * Try to flush cells from a channel_tls_t
+ * Flush cells from a channel_tls_t
  *
  * Try to flush up to about num_cells cells, and return how many we flushed.
- *
- * @param chan Channel to flush
- * @param num_cells Maximum number of cells
- * @return Number of cells actually flushed
  */
 
 ssize_t
@@ -752,9 +694,6 @@ channel_tls_flush_some_cells(channel_tls_t *chan, ssize_t num_cells)
  *
  * Return true if there is any more to flush on this channel (cells in queue
  * or active circuits).
- *
- * @param chan Channel to test
- * @return 1 if chan has anything to flush, 0 otherwise
  */
 
 int
@@ -778,12 +717,6 @@ channel_tls_more_to_flush(channel_tls_t *chan)
  * This is a wrapper function around the actual function that processes the
  * <b>cell</b> that just arrived on <b>chan</b>. Increment <b>*time</b>
  * by the number of microseconds used by the call to <b>*func(cell, chan)</b>.
- *
- * @param cell Incoming cell to process
- * @param chan Channel it arrived on
- * @param time Increment this by the number of microseconds it took to handle
- *        this cell
- * @param func Function pointer to cell handling function
  */
 
 static void
@@ -820,9 +753,6 @@ channel_tls_time_process_cell(cell_t *cell, channel_tls_t *chan, int *time,
  * for cell types specific to the handshake for this transport protocol and
  * handles them, and queues all other cells to the channel_t layer, which
  * eventually will hand them off to command.c.
- *
- * @param cell Cell to handle
- * @param conn The or_connection_t cell arrived on
  */
 
 void
@@ -920,9 +850,6 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
  * related and live below the channel_t layer, so no variable-length
  * cells ever get delivered in the current implementation, but I've left
  * the mechanism in place for future use.
- *
- * @param var_cell Incoming cell to handle
- * @param conn The or_connection_t var_cell arrived on
  */
 
 void
@@ -1091,8 +1018,6 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
  *
  * Return true if <b>command</b> is a cell command that's allowed to start a
  * V3 handshake.
- *
- * @param command Cell type to check
  */
 
 static int
@@ -1115,10 +1040,6 @@ command_allowed_before_handshake(uint8_t command)
  * either for a cell or a TLS handshake.  Set the connection's state to
  * "handshaking_v3', initializes the or_handshake_state field as needed,
  * and add the cell to the hash of incoming cells.)
- *
- * @param cell Incoming cell initiating the handshake
- * @param chan Channel cell was received on
- * @return 0 on success; return -1 and mark the connection on failure.
  */
 
 static int
@@ -1159,9 +1080,6 @@ enter_v3_handshake_with_cell(var_cell_t *cell, channel_tls_t *chan)
  * negotiated.  We compare the versions in the cell to the list of versions
  * we support, pick the highest version we have in common, and continue the
  * negotiation from there.
- *
- * @param cell Incoming VERSIONS cell
- * @param chan Channel that cell arrived on
  */
 
 static void
@@ -1311,9 +1229,6 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
  *
  * This function is called to handle an incoming NETINFO cell; read and act
  * on its contents, and set the connection state to "open".
- *
- * @param cell Incoming NETINFO cell
- * @param chan Channel that cell arrived on
  */
 
 static void
@@ -1493,9 +1408,6 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
  * store the certificates in or_handshake_state.  If this is the client side
  * of the connection, we then authenticate the server or mark the connection.
  * If it's the server side, wait for an AUTHENTICATE cell.
- *
- * @param cell Incoming CERTS cell
- * @param chan Channel that cell arrived on
  */
 
 static void
@@ -1694,9 +1606,6 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
  * a v3 handshake, mark the channel.  If the cell is well-formed but we don't
  * want to authenticate, just drop it.  If the cell is well-formed *and* we
  * want to authenticate, send an AUTHENTICATE cell and then a NETINFO cell.
- *
- * @param cell Incoming AUTH_CHALLENGE cell to handle
- * @param chan Channel that cell arrived on
  */
 
 static void
@@ -1794,9 +1703,6 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
  * other side of the connection successfully (because it isn't signed right,
  * we didn't get a CERTS cell, etc) mark the connection.  Otherwise, accept
  * the identity of the router on the other side of the connection.
- *
- * @param cell Incoming AUTHENTICATE cell
- * @param chan Channel that cell arrived on
  */
 
 static void
