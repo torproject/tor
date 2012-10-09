@@ -296,7 +296,6 @@ static void
 channel_tls_close_method(channel_t *chan)
 {
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
-  channel_t *tmp = NULL;
 
   tor_assert(tlschan);
 
@@ -317,9 +316,7 @@ channel_tls_close_method(channel_t *chan)
     if (chan->u.listener.incoming_list) {
       SMARTLIST_FOREACH_BEGIN(chan->u.listener.incoming_list,
                               channel_t *, ichan) {
-        tmp = ichan;
-        SMARTLIST_DEL_CURRENT(chan->u.listener.incoming_list, ichan);
-        channel_request_close(tmp);
+        channel_request_close(ichan);
       } SMARTLIST_FOREACH_END(ichan);
 
       smartlist_free(chan->u.listener.incoming_list);

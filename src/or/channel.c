@@ -761,9 +761,6 @@ channel_free(channel_t *chan)
 void
 channel_force_free(channel_t *chan)
 {
-  cell_queue_entry_t *tmp = NULL;
-  channel_t *tmpchan = NULL;
-
   tor_assert(chan);
 
   /* Call a free method if there is one */
@@ -778,9 +775,7 @@ channel_force_free(channel_t *chan)
     if (chan->u.listener.incoming_list) {
       SMARTLIST_FOREACH_BEGIN(chan->u.listener.incoming_list,
                               channel_t *, qchan) {
-        tmpchan = qchan;
-        SMARTLIST_DEL_CURRENT(chan->u.listener.incoming_list, qchan);
-        channel_request_close(tmpchan);
+        channel_request_close(qchan);
       } SMARTLIST_FOREACH_END(qchan);
 
       smartlist_free(chan->u.listener.incoming_list);
@@ -794,8 +789,6 @@ channel_force_free(channel_t *chan)
     if (chan->u.cell_chan.cell_queue) {
       SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.cell_queue,
                               cell_queue_entry_t *, q) {
-        tmp = q;
-        SMARTLIST_DEL_CURRENT(chan->u.cell_chan.cell_queue, q);
         tor_free(q);
       } SMARTLIST_FOREACH_END(q);
 
@@ -807,14 +800,12 @@ channel_force_free(channel_t *chan)
     if (chan->u.cell_chan.outgoing_queue) {
       SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.outgoing_queue,
                               cell_queue_entry_t *, q) {
-        tmp = q;
-        SMARTLIST_DEL_CURRENT(chan->u.cell_chan.outgoing_queue, q);
-        if (tmp->type == CELL_QUEUE_PACKED) {
-          if (tmp->u.packed.packed_cell) {
-            packed_cell_free(tmp->u.packed.packed_cell);
+        if (q->type == CELL_QUEUE_PACKED) {
+          if (q->u.packed.packed_cell) {
+            packed_cell_free(q->u.packed.packed_cell);
           }
         }
-        tor_free(tmp);
+        tor_free(q);
       } SMARTLIST_FOREACH_END(q);
 
       smartlist_free(chan->u.cell_chan.outgoing_queue);
@@ -2055,10 +2046,8 @@ channel_process_incoming(channel_t *listener)
     /* Make sure this is set correctly */
     channel_mark_incoming(chan);
     listener->u.listener.listener(listener, chan);
-    SMARTLIST_DEL_CURRENT(listener->u.listener.incoming_list, chan);
   } SMARTLIST_FOREACH_END(chan);
 
-  tor_assert(smartlist_len(listener->u.listener.incoming_list) == 0);
   smartlist_free(listener->u.listener.incoming_list);
   listener->u.listener.incoming_list = NULL;
 }
@@ -2484,53 +2473,44 @@ channel_run_cleanup(void)
 void
 channel_free_all(void)
 {
-  channel_t *tmp = NULL;
-
   log_debug(LD_CHANNEL,
             "Shutting down channels...");
 
   /* First, let's go for finished channels */
   if (finished_channels) {
     SMARTLIST_FOREACH_BEGIN(finished_channels, channel_t *, curr) {
-      tmp = curr;
-      /* Remove it from the list */
-      SMARTLIST_DEL_CURRENT(finished_channels, curr);
       /* Deregister and free it */
-      tor_assert(tmp);
+      tor_assert(curr);
       log_debug(LD_CHANNEL,
                 "Cleaning up finished channel %p (ID " U64_FORMAT ") "
                 "in state %s (%d)",
-                tmp, U64_PRINTF_ARG(tmp->global_identifier),
-                channel_state_to_string(tmp->state), tmp->state);
-      channel_unregister(tmp);
-      channel_free(tmp);
+                curr, U64_PRINTF_ARG(curr->global_identifier),
+                channel_state_to_string(curr->state), curr->state);
+      channel_unregister(curr);
+      channel_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
     smartlist_free(finished_channels);
     finished_channels = NULL;
-    tmp = NULL;
   }
 
   /* Now the listeners */
   if (listening_channels) {
     SMARTLIST_FOREACH_BEGIN(listening_channels, channel_t *, curr) {
-      tmp = curr;
-      /* Remove it from the list */
-      SMARTLIST_DEL_CURRENT(listening_channels, curr);
       /* Close, deregister and free it */
-      tor_assert(tmp);
+      tor_assert(curr);
       log_debug(LD_CHANNEL,
                 "Cleaning up listening channel %p (ID " U64_FORMAT ") "
                 "in state %s (%d)",
-                tmp, U64_PRINTF_ARG(tmp->global_identifier),
-                channel_state_to_string(tmp->state), tmp->state);
+                curr, U64_PRINTF_ARG(curr->global_identifier),
+                channel_state_to_string(curr->state), curr->state);
       /*
        * We have to unregister first so we don't put it in finished_channels
        * and allocate that again on close.
        */
-      channel_unregister(tmp);
-      channel_request_close(tmp);
-      channel_force_free(tmp);
+      channel_unregister(curr);
+      channel_request_close(curr);
+      channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
     smartlist_free(listening_channels);
@@ -2540,23 +2520,20 @@ channel_free_all(void)
   /* Now all active channels */
   if (active_channels) {
     SMARTLIST_FOREACH_BEGIN(active_channels, channel_t *, curr) {
-      tmp = curr;
-      /* Remove it from the list */
-      SMARTLIST_DEL_CURRENT(active_channels, curr);
       /* Close, deregister and free it */
-      tor_assert(tmp);
+      tor_assert(curr);
       log_debug(LD_CHANNEL,
                 "Cleaning up active channel %p (ID " U64_FORMAT ") "
                 "in state %s (%d)",
-                tmp, U64_PRINTF_ARG(tmp->global_identifier),
-                channel_state_to_string(tmp->state), tmp->state);
+                curr, U64_PRINTF_ARG(curr->global_identifier),
+                channel_state_to_string(curr->state), curr->state);
       /*
        * We have to unregister first so we don't put it in finished_channels
        * and allocate that again on close.
        */
-      channel_unregister(tmp);
-      channel_request_close(tmp);
-      channel_force_free(tmp);
+      channel_unregister(curr);
+      channel_request_close(curr);
+      channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
     smartlist_free(active_channels);
@@ -2566,23 +2543,20 @@ channel_free_all(void)
   /* Now all channels, in case any are left over */
   if (all_channels) {
     SMARTLIST_FOREACH_BEGIN(all_channels, channel_t *, curr) {
-      tmp = curr;
-      /* Remove it from the list */
-      SMARTLIST_DEL_CURRENT(all_channels, curr);
       /* Close, deregister and free it */
-      tor_assert(tmp);
+      tor_assert(curr);
       log_debug(LD_CHANNEL,
                 "Cleaning up leftover channel %p (ID " U64_FORMAT ") "
                 "in state %s (%d)",
-                tmp, U64_PRINTF_ARG(tmp->global_identifier),
-                channel_state_to_string(tmp->state), tmp->state);
-      channel_unregister(tmp);
-      if (!(tmp->state == CHANNEL_STATE_CLOSING ||
-            tmp->state == CHANNEL_STATE_CLOSED ||
-            tmp->state == CHANNEL_STATE_ERROR)) {
-        channel_request_close(tmp);
+                curr, U64_PRINTF_ARG(curr->global_identifier),
+                channel_state_to_string(curr->state), curr->state);
+      channel_unregister(curr);
+      if (!(curr->state == CHANNEL_STATE_CLOSING ||
+            curr->state == CHANNEL_STATE_CLOSED ||
+            curr->state == CHANNEL_STATE_ERROR)) {
+        channel_request_close(curr);
       }
-      channel_force_free(tmp);
+      channel_force_free(curr);
     } SMARTLIST_FOREACH_END(curr);
 
     smartlist_free(all_channels);
