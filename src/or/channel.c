@@ -916,50 +916,7 @@ void
 }
 
 /**
- * Set the fixed-length cell handler for a channel
- *
- * This function sets the fixed-length cell handler for a channel and
- * processes any incoming cells that had been blocked in the queue because
- * none was available.
- *
- * @param chan Channel to set the fixed-length cell handler for
- * @param cell_handler Function pointer to new fixed-length cell handler
- */
-
-void
-channel_set_cell_handler(channel_t *chan,
-                         void (*cell_handler)(channel_t *, cell_t *))
-{
-  int changed = 0;
-
-  tor_assert(chan);
-  tor_assert(!(chan->is_listener));
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
-
-  log_debug(LD_CHANNEL,
-           "Setting cell_handler callback for channel %p to %p",
-           chan, cell_handler);
-
-  /*
-   * Keep track whether we've changed it so we know if there's any point in
-   * re-running the queue.
-   */
-  if (cell_handler != chan->u.cell_chan.cell_handler) changed = 1;
-
-  /* Change it */
-  chan->u.cell_chan.cell_handler = cell_handler;
-
-  /* Re-run the queue if we have one and there's any reason to */
-  if (chan->u.cell_chan.cell_queue &&
-      (smartlist_len(chan->u.cell_chan.cell_queue) > 0) &&
-      changed &&
-      chan->u.cell_chan.cell_handler) channel_process_cells(chan);
-}
-
-/**
- * Set the both cell handlers for a channel
+ * Set both cell handlers for a channel
  *
  * This function sets both the fixed-length and variable length cell handlers
  * for a channel and processes any incoming cells that had been blocked in the
@@ -1008,50 +965,6 @@ channel_set_cell_handlers(channel_t *chan,
       try_again &&
       (chan->u.cell_chan.cell_handler ||
        chan->u.cell_chan.var_cell_handler)) channel_process_cells(chan);
-}
-
-/**
- * Set the variable-length cell handler for a channel
- *
- * This function sets the variable-length cell handler for a channel and
- * processes any incoming cells that had been blocked in the queue because
- * none was available.
- *
- * @param chan Channel to set the variable-length cell handler for
- * @param cell_handler Function pointer to new variable-length cell handler
- */
-
-void
-channel_set_var_cell_handler(channel_t *chan,
-                             void (*var_cell_handler)(channel_t *,
-                                                      var_cell_t *))
-{
-  int changed = 0;
-
-  tor_assert(chan);
-  tor_assert(!(chan->is_listener));
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
-
-  log_debug(LD_CHANNEL,
-           "Setting var_cell_handler callback for channel %p to %p",
-           chan, var_cell_handler);
-
-  /*
-   * Keep track whether we've changed it so we know if there's any point in
-   * re-running the queue.
-   */
-  if (var_cell_handler != chan->u.cell_chan.var_cell_handler) changed = 1;
-
-  /* Change it */
-  chan->u.cell_chan.var_cell_handler = var_cell_handler;
-
-  /* Re-run the queue if we have one and there's any reason to */
-  if (chan->u.cell_chan.cell_queue &&
-      (smartlist_len(chan->u.cell_chan.cell_queue) > 0) &&
-      changed && chan->u.cell_chan.var_cell_handler)
-    channel_process_cells(chan);
 }
 
 /**

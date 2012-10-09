@@ -247,15 +247,10 @@ void (* channel_get_cell_handler(channel_t *chan))
   (channel_t *, cell_t *);
 void (* channel_get_var_cell_handler(channel_t *chan))
   (channel_t *, var_cell_t *);
-void channel_set_cell_handler(channel_t *chan,
-                              void (*cell_handler)(channel_t *, cell_t *));
 void channel_set_cell_handlers(channel_t *chan,
                                void (*cell_handler)(channel_t *, cell_t *),
                                void (*var_cell_handler)(channel_t *,
                                                         var_cell_t *));
-void channel_set_var_cell_handler(channel_t *chan,
-                                  void (*var_cell_handler)(channel_t *,
-                                                           var_cell_t *));
 
 /* Clean up closed channels periodically; called from run_scheduled_events()
  * in main.c
