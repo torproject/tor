@@ -1096,8 +1096,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
          * and linked. */
         static uint64_t next_id = 0;
         circ->dirreq_id = ++next_id;
-        tor_assert(!(TO_OR_CIRCUIT(circ)->p_chan->is_listener));
-        TO_OR_CIRCUIT(circ)->p_chan->u.cell_chan.dirreq_id = circ->dirreq_id;
+        TO_OR_CIRCUIT(circ)->p_chan->dirreq_id = circ->dirreq_id;
       }
 
       return connection_exit_begin_conn(cell, circ);
@@ -2179,23 +2178,22 @@ scale_active_circuits(channel_t *chan, unsigned cur_tick)
   double factor;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   factor =
     get_scale_factor(
-      chan->u.cell_chan.active_circuit_pqueue_last_recalibrated,
+      chan->active_circuit_pqueue_last_recalibrated,
       cur_tick);
   /** Ordinarily it isn't okay to change the value of an element in a heap,
    * but it's okay here, since we are preserving the order. */
   SMARTLIST_FOREACH_BEGIN(
-      chan->u.cell_chan.active_circuit_pqueue,
+      chan->active_circuit_pqueue,
       cell_ewma_t *, e) {
       tor_assert(e->last_adjusted_tick ==
-                 chan->u.cell_chan.active_circuit_pqueue_last_recalibrated);
+                 chan->active_circuit_pqueue_last_recalibrated);
       e->cell_count *= factor;
       e->last_adjusted_tick = cur_tick;
   } SMARTLIST_FOREACH_END(e);
-  chan->u.cell_chan.active_circuit_pqueue_last_recalibrated = cur_tick;
+  chan->active_circuit_pqueue_last_recalibrated = cur_tick;
 }
 
 /** Rescale <b>ewma</b> to the same scale as <b>chan</b>, and add it to
@@ -2204,15 +2202,14 @@ static void
 add_cell_ewma_to_chan(channel_t *chan, cell_ewma_t *ewma)
 {
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(ewma);
   tor_assert(ewma->heap_index == -1);
 
   scale_single_cell_ewma(
       ewma,
-      chan->u.cell_chan.active_circuit_pqueue_last_recalibrated);
+      chan->active_circuit_pqueue_last_recalibrated);
 
-  smartlist_pqueue_add(chan->u.cell_chan.active_circuit_pqueue,
+  smartlist_pqueue_add(chan->active_circuit_pqueue,
                        compare_cell_ewma_counts,
                        STRUCT_OFFSET(cell_ewma_t, heap_index),
                        ewma);
@@ -2223,11 +2220,10 @@ static void
 remove_cell_ewma_from_chan(channel_t *chan, cell_ewma_t *ewma)
 {
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(ewma);
   tor_assert(ewma->heap_index != -1);
 
-  smartlist_pqueue_remove(chan->u.cell_chan.active_circuit_pqueue,
+  smartlist_pqueue_remove(chan->active_circuit_pqueue,
                           compare_cell_ewma_counts,
                           STRUCT_OFFSET(cell_ewma_t, heap_index),
                           ewma);
@@ -2239,9 +2235,8 @@ static cell_ewma_t *
 pop_first_cell_ewma_from_chan(channel_t *chan)
 {
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
-  return smartlist_pqueue_pop(chan->u.cell_chan.active_circuit_pqueue,
+  return smartlist_pqueue_pop(chan->active_circuit_pqueue,
                               compare_cell_ewma_counts,
                               STRUCT_OFFSET(cell_ewma_t, heap_index));
 }
@@ -2254,7 +2249,6 @@ make_circuit_active_on_chan(circuit_t *circ, channel_t *chan)
   circuit_t **nextp = NULL, **prevp = NULL;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(circ);
 
   nextp = next_circ_on_chan_p(circ, chan);
@@ -2267,11 +2261,11 @@ make_circuit_active_on_chan(circuit_t *circ, channel_t *chan)
 
   assert_active_circuits_ok_paranoid(chan);
 
-  if (!(chan->u.cell_chan.active_circuits)) {
-    chan->u.cell_chan.active_circuits = circ;
+  if (!(chan->active_circuits)) {
+    chan->active_circuits = circ;
     *prevp = *nextp = circ;
   } else {
-    circuit_t *head = chan->u.cell_chan.active_circuits;
+    circuit_t *head = chan->active_circuits;
     circuit_t *old_tail = *prev_circ_on_chan_p(head, chan);
     *next_circ_on_chan_p(old_tail, chan) = circ;
     *nextp = head;
@@ -2299,7 +2293,6 @@ make_circuit_inactive_on_chan(circuit_t *circ, channel_t *chan)
   circuit_t *next = NULL, *prev = NULL;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
   tor_assert(circ);
 
   nextp = next_circ_on_chan_p(circ, chan);
@@ -2319,12 +2312,12 @@ make_circuit_inactive_on_chan(circuit_t *circ, channel_t *chan)
   tor_assert(*next_circ_on_chan_p(prev, chan) == circ);
 
   if (next == circ) {
-    chan->u.cell_chan.active_circuits = NULL;
+    chan->active_circuits = NULL;
   } else {
     *prev_circ_on_chan_p(next, chan) = prev;
     *next_circ_on_chan_p(prev, chan) = next;
-    if (chan->u.cell_chan.active_circuits == circ)
-      chan->u.cell_chan.active_circuits = next;
+    if (chan->active_circuits == circ)
+      chan->active_circuits = next;
   }
   *prevp = *nextp = NULL;
 
@@ -2347,9 +2340,8 @@ channel_unlink_all_active_circs(channel_t *chan)
   circuit_t *head = NULL, *cur = NULL;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
-  cur = head = chan->u.cell_chan.active_circuits;
+  cur = head = chan->active_circuits;
   if (! head)
     return;
   do {
@@ -2358,12 +2350,12 @@ channel_unlink_all_active_circs(channel_t *chan)
     *next_circ_on_chan_p(cur, chan) = NULL;
     cur = next;
   } while (cur != head);
-  chan->u.cell_chan.active_circuits = NULL;
+  chan->active_circuits = NULL;
 
-  SMARTLIST_FOREACH(chan->u.cell_chan.active_circuit_pqueue,
+  SMARTLIST_FOREACH(chan->active_circuit_pqueue,
                     cell_ewma_t *, e,
                     e->heap_index = -1);
-  smartlist_clear(chan->u.cell_chan.active_circuit_pqueue);
+  smartlist_clear(chan->active_circuit_pqueue);
 }
 
 /** Block (if <b>block</b> is true) or unblock (if <b>block</b> is false)
@@ -2440,9 +2432,8 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
   double ewma_increment = -1;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
-  circ = chan->u.cell_chan.active_circuits;
+  circ = chan->active_circuits;
   if (!circ) return 0;
   assert_active_circuits_ok_paranoid(chan);
 
@@ -2453,13 +2444,13 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
     tor_gettimeofday_cached(&now_hires);
     tick = cell_ewma_tick_from_timeval(&now_hires, &fractional_tick);
 
-    if (tick != chan->u.cell_chan.active_circuit_pqueue_last_recalibrated) {
+    if (tick != chan->active_circuit_pqueue_last_recalibrated) {
       scale_active_circuits(chan, tick);
     }
 
     ewma_increment = pow(ewma_scale_factor, -fractional_tick);
 
-    cell_ewma = smartlist_get(chan->u.cell_chan.active_circuit_pqueue, 0);
+    cell_ewma = smartlist_get(chan->active_circuit_pqueue, 0);
     circ = cell_ewma_to_circuit(cell_ewma);
   }
 
@@ -2511,8 +2502,8 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
 
     /* If we just flushed our queue and this circuit is used for a
      * tunneled directory request, possibly advance its state. */
-    if (queue->n == 0 && chan->u.cell_chan.dirreq_id)
-      geoip_change_dirreq_state(chan->u.cell_chan.dirreq_id,
+    if (queue->n == 0 && chan->dirreq_id)
+      geoip_change_dirreq_state(chan->dirreq_id,
                                 DIRREQ_TUNNELED,
                                 DIRREQ_CIRC_QUEUE_FLUSHED);
 
@@ -2534,7 +2525,7 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
       tor_assert(tmp == cell_ewma);
       add_cell_ewma_to_chan(chan, cell_ewma);
     }
-    if (!ewma_enabled && circ != chan->u.cell_chan.active_circuits) {
+    if (!ewma_enabled && circ != chan->active_circuits) {
       /* If this happens, the current circuit just got made inactive by
        * a call in connection_write_to_buf().  That's nothing to worry about:
        * circuit_make_inactive_on_conn() already advanced chan->active_circuits
@@ -2546,7 +2537,7 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
   }
   tor_assert(*next_circ_on_chan_p(circ, chan));
   assert_active_circuits_ok_paranoid(chan);
-  chan->u.cell_chan.active_circuits = *next_circ_on_chan_p(circ, chan);
+  chan->active_circuits = *next_circ_on_chan_p(circ, chan);
 
   /* Is the cell queue low enough to unblock all the streams that are waiting
    * to write to this circuit? */
@@ -2701,9 +2692,8 @@ assert_active_circuits_ok(channel_t *chan)
   int n = 0;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
-  cur = head = chan->u.cell_chan.active_circuits;
+  cur = head = chan->active_circuits;
 
   if (! head)
     return;
@@ -2723,13 +2713,13 @@ assert_active_circuits_ok(channel_t *chan)
       tor_assert(ewma->is_for_p_chan);
     }
     tor_assert(ewma->heap_index != -1);
-    tor_assert(ewma == smartlist_get(chan->u.cell_chan.active_circuit_pqueue,
+    tor_assert(ewma == smartlist_get(chan->active_circuit_pqueue,
                                      ewma->heap_index));
     n++;
     cur = next;
   } while (cur != head);
 
-  tor_assert(n == smartlist_len(chan->u.cell_chan.active_circuit_pqueue));
+  tor_assert(n == smartlist_len(chan->active_circuit_pqueue));
 }
 
 /** Return 1 if we shouldn't restart reading on this circuit, even if

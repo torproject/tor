@@ -883,6 +883,10 @@ typedef uint16_t streamid_t;
 
 typedef struct channel_s channel_t;
 
+/* channel_listener_t typedef; struct channel_listener_s is in channel.h */
+
+typedef struct channel_listener_s channel_listener_t;
+
 /* channel states for channel_t */
 
 typedef enum {
@@ -892,20 +896,9 @@ typedef enum {
    * Permitted transitions from:
    *   - CHANNEL_STATE_CLOSING
    * Permitted transitions to:
-   *   - CHANNEL_STATE_LISTENING
    *   - CHANNEL_STATE_OPENING
    */
   CHANNEL_STATE_CLOSED = 0,
-  /*
-   * Listening state - channel is listening for incoming connections
-   *
-   * Permitted transitions from:
-   *   - CHANNEL_STATE_CLOSED
-   * Permitted transitions to:
-   *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_ERROR
-   */
-  CHANNEL_STATE_LISTENING,
   /*
    * Opening state - channel is trying to connect
    *
@@ -957,7 +950,6 @@ typedef enum {
    *
    * Permitted transitions from:
    *   - CHANNEL_STATE_CLOSING
-   *   - CHANNEL_STATE_LISTENING
    *   - CHANNEL_STATE_MAINT
    *   - CHANNEL_STATE_OPENING
    *   - CHANNEL_STATE_OPEN
@@ -970,6 +962,55 @@ typedef enum {
    */
   CHANNEL_STATE_LAST
 } channel_state_t;
+
+/* channel listener states for channel_listener_t */
+
+typedef enum {
+  /*
+   * Closed state - channel listener is inactive
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   */
+  CHANNEL_LISTENER_STATE_CLOSED = 0,
+  /*
+   * Listening state - channel listener is listening for incoming
+   * connections
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_CLOSED
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSING
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_LISTENING,
+  /*
+   * Closing state - channel listener is shutting down
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_LISTENER_STATE_LISTENING
+   * Permitted transitions to:
+   *   - CHANNEL_LISTENER_STATE_CLOSED,
+   *   - CHANNEL_LISTENER_STATE_ERROR
+   */
+  CHANNEL_LISTENER_STATE_CLOSING,
+  /*
+   * Error state - channel listener has experienced a permanent error
+   *
+   * Permitted transitions from:
+   *   - CHANNEL_STATE_CLOSING
+   *   - CHANNEL_STATE_LISTENING
+   * Permitted transitions to:
+   *   - None
+   */
+  CHANNEL_LISTENER_STATE_ERROR,
+  /*
+   * Placeholder for maximum state value
+   */
+  CHANNEL_LISTENER_STATE_LAST
+} channel_listener_state_t;
 
 /* TLS channel stuff */
 

@@ -1539,6 +1539,7 @@ run_scheduled_events(time_t now)
 
   /** 8c. Do channel cleanup just like for connections */
   channel_run_cleanup();
+  channel_listener_run_cleanup();
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
@@ -2172,6 +2173,7 @@ dumpstats(int severity)
   } SMARTLIST_FOREACH_END(conn);
 
   channel_dumpstats(severity);
+  channel_listener_dumpstats(severity);
 
   log(severity, LD_NET,
       "Cells processed: "U64_FORMAT" padding\n"

@@ -336,8 +336,7 @@ connection_or_get_num_circuits(or_connection_t *conn)
   tor_assert(conn);
 
   if (conn->chan) {
-    tor_assert(!(TLS_CHAN_TO_BASE(conn->chan)->is_listener));
-    return TLS_CHAN_TO_BASE(conn->chan)->u.cell_chan.n_circuits;
+    return TLS_CHAN_TO_BASE(conn->chan)->n_circuits;
   } else return 0;
 }
 
@@ -1001,8 +1000,6 @@ connection_or_notify_error(or_connection_t *conn,
   /* Tell the controlling channel if we have one */
   if (conn->chan) {
     chan = TLS_CHAN_TO_BASE(conn->chan);
-    /* This shouldn't ever happen in the listening state */
-    tor_assert(chan->state != CHANNEL_STATE_LISTENING);
     /* Don't transition if we're already in closing, closed or error */
     if (!(chan->state == CHANNEL_STATE_CLOSING ||
           chan->state == CHANNEL_STATE_CLOSED ||
@@ -1148,8 +1145,6 @@ connection_or_close_normally(or_connection_t *orconn, int flush)
   else connection_mark_for_close(TO_CONN(orconn));
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
-    /* This shouldn't ever happen in the listening state */
-    tor_assert(chan->state != CHANNEL_STATE_LISTENING);
     /* Don't transition if we're already in closing, closed or error */
     if (!(chan->state == CHANNEL_STATE_CLOSING ||
           chan->state == CHANNEL_STATE_CLOSED ||
@@ -1173,8 +1168,6 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
   else connection_mark_for_close(TO_CONN(orconn));
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
-    /* This shouldn't ever happen in the listening state */
-    tor_assert(chan->state != CHANNEL_STATE_LISTENING);
     /* Don't transition if we're already in closing, closed or error */
     if (!(chan->state == CHANNEL_STATE_CLOSING ||
           chan->state == CHANNEL_STATE_CLOSED ||
@@ -1195,7 +1188,8 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
 int
 connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
-  channel_t *chan_listener, *chan;
+  channel_listener_t *chan_listener;
+  channel_t *chan;
 
   /* Incoming connections will need a new channel passed to the
    * channel_tls_listener */
@@ -1208,7 +1202,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
       command_setup_listener(chan_listener);
     }
     chan = channel_tls_handle_incoming(conn);
-    channel_queue_incoming(chan_listener, chan);
+    channel_listener_queue_incoming(chan_listener, chan);
   }
 
   connection_or_change_state(conn, OR_CONN_STATE_TLS_HANDSHAKING);

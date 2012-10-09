@@ -42,7 +42,7 @@ uint64_t stats_n_authenticate_cells_processed = 0;
 uint64_t stats_n_authorize_cells_processed = 0;
 
 /** Active listener, if any */
-channel_tls_t *channel_tls_listener = NULL;
+channel_listener_t *channel_tls_listener = NULL;
 
 /* channel_tls_t method declarations */
 
@@ -65,6 +65,12 @@ static int channel_tls_write_packed_cell_method(channel_t *chan,
                                                 packed_cell_t *packed_cell);
 static int channel_tls_write_var_cell_method(channel_t *chan,
                                              var_cell_t *var_cell);
+
+/* channel_listener_tls_t method declarations */
+
+static void channel_tls_listener_close_method(channel_listener_t *chan_l);
+static const char *
+channel_tls_listener_describe_transport_method(channel_listener_t *chan_l);
 
 /** Handle incoming cells for the handshake stuff here rather than
  * passing them on up. */
@@ -97,20 +103,19 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
 {
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
   channel_t *chan = TLS_CHAN_TO_BASE(tlschan);
-  channel_init_for_cells(chan);
+  channel_init(chan);
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
-  chan->u.cell_chan.get_remote_addr = channel_tls_get_remote_addr_method;
-  chan->u.cell_chan.get_remote_descr = channel_tls_get_remote_descr_method;
-  chan->u.cell_chan.has_queued_writes = channel_tls_has_queued_writes_method;
-  chan->u.cell_chan.is_canonical = channel_tls_is_canonical_method;
-  chan->u.cell_chan.matches_extend_info =
-    channel_tls_matches_extend_info_method;
-  chan->u.cell_chan.matches_target = channel_tls_matches_target_method;
-  chan->u.cell_chan.write_cell = channel_tls_write_cell_method;
-  chan->u.cell_chan.write_packed_cell = channel_tls_write_packed_cell_method;
-  chan->u.cell_chan.write_var_cell = channel_tls_write_var_cell_method;
+  chan->get_remote_addr = channel_tls_get_remote_addr_method;
+  chan->get_remote_descr = channel_tls_get_remote_descr_method;
+  chan->has_queued_writes = channel_tls_has_queued_writes_method;
+  chan->is_canonical = channel_tls_is_canonical_method;
+  chan->matches_extend_info = channel_tls_matches_extend_info_method;
+  chan->matches_target = channel_tls_matches_target_method;
+  chan->write_cell = channel_tls_write_cell_method;
+  chan->write_packed_cell = channel_tls_write_packed_cell_method;
+  chan->write_var_cell = channel_tls_write_var_cell_method;
 
   log_debug(LD_CHANNEL,
             "In channel_tls_connect() for channel %p "
@@ -121,9 +126,8 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   if (is_local_addr(addr)) channel_mark_local(chan);
   channel_mark_outgoing(chan);
 
-  chan->u.cell_chan.active_circuit_pqueue = smartlist_new();
-  chan->u.cell_chan.active_circuit_pqueue_last_recalibrated =
-    cell_ewma_get_tick();
+  chan->active_circuit_pqueue = smartlist_new();
+  chan->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
   /* Set up or_connection stuff */
   tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
@@ -140,7 +144,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   goto done;
 
  err:
-  smartlist_free(chan->u.cell_chan.active_circuit_pqueue);
+  smartlist_free(chan->active_circuit_pqueue);
   tor_free(tlschan);
   chan = NULL;
 
@@ -154,14 +158,14 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
 /**
  * Return the current channel_tls_t listener
  *
- * Returns the current listening channel for incoming TLS connections, or
+ * Returns the current channel listener for incoming TLS connections, or
  * NULL if none has been established
  */
 
-channel_t *
+channel_listener_t *
 channel_tls_get_listener(void)
 {
-  return TLS_CHAN_TO_BASE(channel_tls_listener);
+  return channel_tls_listener;
 }
 
 /**
@@ -171,30 +175,29 @@ channel_tls_get_listener(void)
  * and return that.
  */
 
-channel_t *
+channel_listener_t *
 channel_tls_start_listener(void)
 {
-  channel_tls_t *listener;
-  channel_t *lchan;
+  channel_listener_t *listener;
 
   if (!channel_tls_listener) {
     listener = tor_malloc_zero(sizeof(*listener));
-    lchan = TLS_CHAN_TO_BASE(listener);
-    channel_init_listener(lchan);
-    lchan->state = CHANNEL_STATE_LISTENING;
-    lchan->close = channel_tls_close_method;
-    lchan->describe_transport = channel_tls_describe_transport_method;
+    channel_init_listener(listener);
+    listener->state = CHANNEL_LISTENER_STATE_LISTENING;
+    listener->close = channel_tls_listener_close_method;
+    listener->describe_transport =
+      channel_tls_listener_describe_transport_method;
 
     channel_tls_listener = listener;
 
     log_debug(LD_CHANNEL,
-              "Starting TLS listener channel %p with global id " U64_FORMAT,
-              lchan, U64_PRINTF_ARG(lchan->global_identifier));
+              "Starting TLS channel listener %p with global id " U64_FORMAT,
+              listener, U64_PRINTF_ARG(listener->global_identifier));
 
-    channel_register(lchan);
-  } else lchan = TLS_CHAN_TO_BASE(channel_tls_listener);
+    channel_listener_register(listener);
+  } else listener = channel_tls_listener;
 
-  return lchan;
+  return listener;
 }
 
 /**
@@ -207,16 +210,13 @@ channel_tls_start_listener(void)
 void
 channel_tls_free_all(void)
 {
-  channel_t *base = NULL;
-
   log_debug(LD_CHANNEL,
             "Shutting down TLS channels...");
 
   if (channel_tls_listener) {
-    base = TLS_CHAN_TO_BASE(channel_tls_listener);
-    channel_unregister(base);
-    channel_mark_for_close(base);
-    channel_free(base);
+    channel_listener_unregister(channel_tls_listener);
+    channel_listener_mark_for_close(channel_tls_listener);
+    channel_listener_free(channel_tls_listener);
     channel_tls_listener = NULL;
   }
 
@@ -237,19 +237,18 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   tor_assert(orconn);
   tor_assert(!(orconn->chan));
 
-  channel_init_for_cells(chan);
+  channel_init(chan);
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
-  chan->u.cell_chan.get_remote_descr = channel_tls_get_remote_descr_method;
-  chan->u.cell_chan.has_queued_writes = channel_tls_has_queued_writes_method;
-  chan->u.cell_chan.is_canonical = channel_tls_is_canonical_method;
-  chan->u.cell_chan.matches_extend_info =
-    channel_tls_matches_extend_info_method;
-  chan->u.cell_chan.matches_target = channel_tls_matches_target_method;
-  chan->u.cell_chan.write_cell = channel_tls_write_cell_method;
-  chan->u.cell_chan.write_packed_cell = channel_tls_write_packed_cell_method;
-  chan->u.cell_chan.write_var_cell = channel_tls_write_var_cell_method;
+  chan->get_remote_descr = channel_tls_get_remote_descr_method;
+  chan->has_queued_writes = channel_tls_has_queued_writes_method;
+  chan->is_canonical = channel_tls_is_canonical_method;
+  chan->matches_extend_info = channel_tls_matches_extend_info_method;
+  chan->matches_target = channel_tls_matches_target_method;
+  chan->write_cell = channel_tls_write_cell_method;
+  chan->write_packed_cell = channel_tls_write_packed_cell_method;
+  chan->write_var_cell = channel_tls_write_var_cell_method;
 
   /* Link the channel and orconn to each other */
   tlschan->conn = orconn;
@@ -258,9 +257,8 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   if (is_local_addr(&(TO_CONN(orconn)->addr))) channel_mark_local(chan);
   channel_mark_incoming(chan);
 
-  chan->u.cell_chan.active_circuit_pqueue = smartlist_new();
-  chan->u.cell_chan.active_circuit_pqueue_last_recalibrated =
-    cell_ewma_get_tick();
+  chan->active_circuit_pqueue = smartlist_new();
+  chan->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
   /* If we got one, we should register it */
   if (chan) channel_register(chan);
@@ -285,43 +283,13 @@ channel_tls_close_method(channel_t *chan)
 
   tor_assert(tlschan);
 
-  if (chan->is_listener) {
-    /*
-     * Listeners we just go ahead and change state through to CLOSED, but
-     * make sure to check if they're channel_tls_listener to NULL it out.
-     */
-    if (chan == TLS_CHAN_TO_BASE(channel_tls_listener))
-      channel_tls_listener = NULL;
-
-    if (!(chan->state == CHANNEL_STATE_CLOSING ||
-          chan->state == CHANNEL_STATE_CLOSED ||
-          chan->state == CHANNEL_STATE_ERROR)) {
-      channel_change_state(chan, CHANNEL_STATE_CLOSING);
-    }
-
-    if (chan->u.listener.incoming_list) {
-      SMARTLIST_FOREACH_BEGIN(chan->u.listener.incoming_list,
-                              channel_t *, ichan) {
-        channel_mark_for_close(ichan);
-      } SMARTLIST_FOREACH_END(ichan);
-
-      smartlist_free(chan->u.listener.incoming_list);
-      chan->u.listener.incoming_list = NULL;
-    }
-
-    if (!(chan->state == CHANNEL_STATE_CLOSED ||
-          chan->state == CHANNEL_STATE_ERROR)) {
-      channel_change_state(chan, CHANNEL_STATE_CLOSED);
-    }
-  } else {
-    if (tlschan->conn) connection_or_close_normally(tlschan->conn, 1);
-    else {
-      /* Weird - we'll have to change the state ourselves, I guess */
-      log_info(LD_CHANNEL,
-               "Tried to close channel_tls_t %p with NULL conn",
-               tlschan);
-      channel_change_state(chan, CHANNEL_STATE_ERROR);
-    }
+  if (tlschan->conn) connection_or_close_normally(tlschan->conn, 1);
+  else {
+    /* Weird - we'll have to change the state ourselves, I guess */
+    log_info(LD_CHANNEL,
+             "Tried to close channel_tls_t %p with NULL conn",
+             tlschan);
+    channel_change_state(chan, CHANNEL_STATE_ERROR);
   }
 }
 
@@ -342,23 +310,19 @@ channel_tls_describe_transport_method(channel_t *chan)
 
   tor_assert(chan);
 
-  if (chan->is_listener) {
-    rv = "TLS channel (listening)";
+   tlschan = BASE_CHAN_TO_TLS(chan);
+
+  if (tlschan->conn) {
+    id = TO_CONN(tlschan->conn)->global_identifier;
+
+    if (buf) tor_free(buf);
+    tor_asprintf(&buf,
+                 "TLS channel (connection " U64_FORMAT ")",
+                 U64_PRINTF_ARG(id));
+
+    rv = buf;
   } else {
-    tlschan = BASE_CHAN_TO_TLS(chan);
-
-    if (tlschan->conn) {
-      id = TO_CONN(tlschan->conn)->global_identifier;
-
-      if (buf) tor_free(buf);
-      tor_asprintf(&buf,
-                   "TLS channel (connection " U64_FORMAT ")",
-                   U64_PRINTF_ARG(id));
-
-      rv = buf;
-    } else {
-      rv = "TLS channel (no connection)";
-    }
+    rv = "TLS channel (no connection)";
   }
 
   return rv;
@@ -603,6 +567,65 @@ channel_tls_write_var_cell_method(channel_t *chan, var_cell_t *var_cell)
   return 1;
 }
 
+/*************************************************
+ * Method implementations for channel_listener_t *
+ ************************************************/
+
+/**
+ * Close a channel_listener_t
+ *
+ * This implements the close method for channel_listener_t
+ */
+
+static void
+channel_tls_listener_close_method(channel_listener_t *chan_l)
+{
+  tor_assert(chan_l);
+
+  /*
+   * Listeners we just go ahead and change state through to CLOSED, but
+   * make sure to check if they're channel_tls_listener to NULL it out.
+   */
+  if (chan_l == channel_tls_listener)
+    channel_tls_listener = NULL;
+
+  if (!(chan_l->state == CHANNEL_LISTENER_STATE_CLOSING ||
+        chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
+        chan_l->state == CHANNEL_LISTENER_STATE_ERROR)) {
+    channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_CLOSING);
+  }
+
+  if (chan_l->incoming_list) {
+    SMARTLIST_FOREACH_BEGIN(chan_l->incoming_list,
+                            channel_t *, ichan) {
+      channel_mark_for_close(ichan);
+    } SMARTLIST_FOREACH_END(ichan);
+
+    smartlist_free(chan_l->incoming_list);
+    chan_l->incoming_list = NULL;
+  }
+
+  if (!(chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
+        chan_l->state == CHANNEL_LISTENER_STATE_ERROR)) {
+    channel_listener_change_state(chan_l, CHANNEL_LISTENER_STATE_CLOSED);
+  }
+}
+
+/**
+ * Describe the transport for a channel_listener_t
+ *
+ * This returns the string "TLS channel (listening)" to the upper
+ * layer.
+ */
+
+static const char *
+channel_tls_listener_describe_transport_method(channel_listener_t *chan_l)
+{
+  tor_assert(chan_l);
+
+  return "TLS channel (listening)";
+}
+
 /*******************************************************
  * Functions for handling events on an or_connection_t *
  ******************************************************/
@@ -782,8 +805,6 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
    return;
   }
 
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
-
   handshaking = (TO_CONN(conn)->state != OR_CONN_STATE_OPEN);
 
   if (conn->_base.marked_for_close)
@@ -891,8 +912,6 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
              "Got a var_cell_t on an OR connection with no channel");
     return;
   }
-
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
 
   handshaking = (TO_CONN(conn)->state != OR_CONN_STATE_OPEN);
 
@@ -1049,7 +1068,6 @@ enter_v3_handshake_with_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
   started_here = connection_or_nonopen_was_started_here(chan->conn);
@@ -1091,7 +1109,6 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
   started_here = connection_or_nonopen_was_started_here(chan->conn);
@@ -1247,7 +1264,6 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
   if (chan->conn->link_proto < 2) {
@@ -1386,7 +1402,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              safe_str_client(chan->conn->_base.address),
              chan->conn->_base.port,
              (int)(chan->conn->link_proto),
-             hex_str(TLS_CHAN_TO_BASE(chan)->u.cell_chan.identity_digest,
+             hex_str(TLS_CHAN_TO_BASE(chan)->identity_digest,
                      DIGEST_LEN),
              tor_addr_is_null(&my_apparent_addr) ?
              "<none>" : fmt_and_decorate_addr(&my_apparent_addr));
@@ -1422,7 +1438,6 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
 #define ERR(s)                                                  \
@@ -1515,7 +1530,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     * _trying_ to connect to an authority, not necessarily if we _did_ connect
     * to one. */
     if (router_digest_is_trusted_dir(
-          TLS_CHAN_TO_BASE(chan)->u.cell_chan.identity_digest))
+          TLS_CHAN_TO_BASE(chan)->identity_digest))
       severity = LOG_WARN;
     else
       severity = LOG_PROTOCOL_WARN;
@@ -1616,7 +1631,6 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
 #define ERR(s)                                                  \
@@ -1714,7 +1728,6 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(TLS_CHAN_TO_BASE(chan)->is_listener));
   tor_assert(chan->conn);
 
 #define ERR(s)                                                  \

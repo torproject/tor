@@ -1711,23 +1711,22 @@ get_unique_circ_id_by_chan(channel_t *chan)
   circid_t high_bit;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
-  if (chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_NEITHER) {
+  if (chan->circ_id_type == CIRC_ID_TYPE_NEITHER) {
     log_warn(LD_BUG,
              "Trying to pick a circuit ID for a connection from "
              "a client with no identity.");
     return 0;
   }
   high_bit =
-    (chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
+    (chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
      * circID such that (high_bit|test_circ_id) is not already used. */
-    test_circ_id = chan->u.cell_chan.next_circ_id++;
+    test_circ_id = chan->next_circ_id++;
     if (test_circ_id == 0 || test_circ_id >= 1<<15) {
       test_circ_id = 1;
-      chan->u.cell_chan.next_circ_id = 2;
+      chan->next_circ_id = 2;
     }
     if (++attempts > 1<<15) {
       /* Make sure we don't loop forever if all circ_id's are used. This
@@ -2039,11 +2038,9 @@ circuit_n_chan_done(channel_t *chan, int status)
   int err_reason = 0;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   log_debug(LD_CIRC,"chan to %s/%s, status=%d",
-            chan->u.cell_chan.nickname ?
-              chan->u.cell_chan.nickname : "NULL",
+            chan->nickname ? chan->nickname : "NULL",
             channel_get_canonical_remote_descr(chan), status);
 
   pending_circs = smartlist_new();
@@ -2064,7 +2061,7 @@ circuit_n_chan_done(channel_t *chan, int status)
           continue;
       } else {
         /* We expected a key. See if it's the right one. */
-        if (tor_memneq(chan->u.cell_chan.identity_digest,
+        if (tor_memneq(chan->identity_digest,
                    circ->n_hop->identity_digest, DIGEST_LEN))
           continue;
       }
@@ -2247,8 +2244,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     else
       control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
 
-    tor_assert(!(circ->_base.n_chan->is_listener));
-    node = node_get_by_id(circ->_base.n_chan->u.cell_chan.identity_digest);
+    node = node_get_by_id(circ->_base.n_chan->identity_digest);
     fast = should_use_create_fast_for_circuit(circ);
     if (!fast) {
       /* We are an OR and we know the right onion key: we should
@@ -2487,10 +2483,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
-  tor_assert(!(TO_OR_CIRCUIT(circ)->p_chan->is_listener));
   if (tor_memeq(id_digest,
-                TO_OR_CIRCUIT(circ)->p_chan->
-                  u.cell_chan.identity_digest,
+                TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
                 DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop.");
@@ -2733,9 +2727,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     if (!circ->has_opened) {
       entry_guard_t *guard;
 
-      tor_assert(!(circ->_base.n_chan->is_listener));
-      guard = entry_guard_get_by_id_digest(
-                circ->_base.n_chan->u.cell_chan.identity_digest);
+      guard =
+        entry_guard_get_by_id_digest(circ->_base.n_chan->identity_digest);
       if (guard) {
         if (circ->path_state == PATH_STATE_NEW_CIRC) {
           circ->path_state = PATH_STATE_DID_FIRST_HOP;
@@ -2840,10 +2833,8 @@ pathbias_count_success(origin_circuit_t *circ)
 
   /* Don't count cannibalized/reused circs for path bias */
   if (!circ->has_opened) {
-    tor_assert(!(circ->_base.n_chan->is_listener));
     guard =
-      entry_guard_get_by_id_digest(circ->_base.n_chan->
-                                     u.cell_chan.identity_digest);
+      entry_guard_get_by_id_digest(circ->_base.n_chan->identity_digest);
 
     if (guard) {
       if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {

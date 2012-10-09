@@ -102,8 +102,6 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   circid_t old_id, *circid_ptr;
   int was_active, make_active;
 
-  if (chan) tor_assert(!(chan->is_listener));
-
   if (direction == CELL_DIRECTION_OUT) {
     chan_ptr = &circ->n_chan;
     circid_ptr = &circ->n_circ_id;
@@ -131,13 +129,12 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   }
 
   if (old_chan) { /* we may need to remove it from the conn-circid map */
-    tor_assert(!(old_chan->is_listener));
     search.circ_id = old_id;
     search.chan = old_chan;
     found = HT_REMOVE(chan_circid_map, &chan_circid_map, &search);
     if (found) {
       tor_free(found);
-      --old_chan->u.cell_chan.n_circuits;
+      --old_chan->n_circuits;
     }
     if (was_active && old_chan != chan)
       make_circuit_inactive_on_chan(circ, old_chan);
@@ -167,7 +164,7 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   if (make_active && old_chan != chan)
     make_circuit_active_on_chan(circ,chan);
 
-  ++chan->u.cell_chan.n_circuits;
+  ++chan->n_circuits;
 }
 
 /** Set the p_conn field of a circuit <b>circ</b>, along
@@ -242,7 +239,6 @@ circuit_get_all_pending_on_channel(smartlist_t *out, channel_t *chan)
 {
   tor_assert(out);
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   if (!circuits_pending_chans)
     return;
@@ -259,8 +255,8 @@ circuit_get_all_pending_on_channel(smartlist_t *out, channel_t *chan)
         continue;
     } else {
       /* We expected a key. See if it's the right one. */
-      if (tor_memneq(chan->u.cell_chan.identity_digest,
-                 circ->n_hop->identity_digest, DIGEST_LEN))
+      if (tor_memneq(chan->identity_digest,
+                     circ->n_hop->identity_digest, DIGEST_LEN))
         continue;
     }
     smartlist_add(out, circ);
@@ -276,14 +272,12 @@ circuit_count_pending_on_channel(channel_t *chan)
   smartlist_t *sl = smartlist_new();
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   circuit_get_all_pending_on_channel(sl, chan);
   cnt = smartlist_len(sl);
   smartlist_free(sl);
   log_debug(LD_CIRC,"or_conn to %s at %s, %d pending circs",
-            chan->u.cell_chan.nickname ?
-              chan->u.cell_chan.nickname : "NULL",
+            chan->nickname ? chan->nickname : "NULL",
             channel_get_canonical_remote_descr(chan),
             cnt);
   return cnt;
@@ -839,7 +833,6 @@ circuit_dump_by_chan(channel_t *chan, int severity)
   circuit_t *circ;
 
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     circid_t n_circ_id = circ->n_circ_id, p_circ_id = 0;
@@ -865,7 +858,7 @@ circuit_dump_by_chan(channel_t *chan, int severity)
 
     if (!circ->n_chan && circ->n_hop &&
         channel_matches_extend_info(chan, circ->n_hop) &&
-        tor_memeq(chan->u.cell_chan.identity_digest,
+        tor_memeq(chan->identity_digest,
                   circ->n_hop->identity_digest, DIGEST_LEN)) {
       circuit_dump_chan_details(severity, circ, chan,
                                 (circ->state == CIRCUIT_STATE_OPEN &&

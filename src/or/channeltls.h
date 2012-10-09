@@ -28,8 +28,8 @@ struct channel_tls_s {
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest);
-channel_t * channel_tls_get_listener(void);
-channel_t * channel_tls_start_listener(void);
+channel_listener_t * channel_tls_get_listener(void);
+channel_listener_t * channel_tls_start_listener(void);
 channel_t * channel_tls_handle_incoming(or_connection_t *orconn);
 
 /* Things for connection_or.c to call back into */

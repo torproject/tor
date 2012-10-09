@@ -3070,11 +3070,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
     if (or_circ && or_circ->p_chan) {
-      tor_assert(!(or_circ->p_chan->is_listener));
       if (!options->AllowSingleHopExits &&
            (or_circ->is_first_hop ||
             (!connection_or_digest_is_known_relay(
-                or_circ->p_chan->u.cell_chan.identity_digest) &&
+                or_circ->p_chan->identity_digest) &&
           should_refuse_unknown_exits(options)))) {
         /* Don't let clients use us as a single-hop proxy, unless the user
          * has explicitly allowed that in the config. It attracts attackers

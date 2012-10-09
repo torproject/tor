@@ -44,7 +44,7 @@ uint64_t stats_n_relay_cells_processed = 0;
 uint64_t stats_n_destroy_cells_processed = 0;
 
 /* Handle an incoming channel */
-static void command_handle_incoming_channel(channel_t *listener,
+static void command_handle_incoming_channel(channel_listener_t *listener,
                                             channel_t *chan);
 
 /* These are the main functions for processing cells */
@@ -190,7 +190,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
 
   tor_assert(cell);
   tor_assert(chan);
-  tor_assert(!(chan->is_listener));
 
   log_debug(LD_OR,
             "Got a CREATE cell for circ_id %d on channel " U64_FORMAT
@@ -223,9 +222,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
    * circ. */
   id_is_high = cell->circ_id & (1<<15);
   if ((id_is_high &&
-       chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_HIGHER) ||
+       chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
       (!id_is_high &&
-       chan->u.cell_chan.circ_id_type == CIRC_ID_TYPE_LOWER)) {
+       chan->circ_id_type == CIRC_ID_TYPE_LOWER)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received create cell with unexpected circ_id %d. Closing.",
            cell->circ_id);
@@ -235,7 +234,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   }
 
   if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
-    const node_t *node = node_get_by_id(chan->u.cell_chan.identity_digest);
+    const node_t *node = node_get_by_id(chan->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",
@@ -473,7 +472,7 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
  */
 
 static void
-command_handle_incoming_channel(channel_t *listener, channel_t *chan)
+command_handle_incoming_channel(channel_listener_t *listener, channel_t *chan)
 {
   tor_assert(listener);
   tor_assert(chan);
@@ -500,11 +499,11 @@ command_setup_channel(channel_t *chan)
  */
 
 void
-command_setup_listener(channel_t *listener)
+command_setup_listener(channel_listener_t *listener)
 {
   tor_assert(listener);
-  tor_assert(listener->state == CHANNEL_STATE_LISTENING);
+  tor_assert(listener->state == CHANNEL_LISTENER_STATE_LISTENING);
 
-  channel_set_listener_fn(listener, command_handle_incoming_channel);
+  channel_listener_set_listener_fn(listener, command_handle_incoming_channel);
 }
 

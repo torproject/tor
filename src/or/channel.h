@@ -12,7 +12,7 @@
 #include "or.h"
 
 /* Channel handler function pointer typedefs */
-typedef void (*channel_listener_fn_ptr)(channel_t *, channel_t *);
+typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
 typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
 
@@ -36,12 +36,6 @@ struct channel_s {
 
   /* Should we expect to see this channel in the channel lists? */
   unsigned char registered:1;
-
-  /** Set this if this channel is created in CHANNEL_STATE_LISTEN, so
-   * lower-layer close methods that see the channel in CHANNEL_STATE_CLOSING
-   * know.
-   */
-  unsigned int is_listener:1;
 
   /** Why did we close?
    */
@@ -67,171 +61,210 @@ struct channel_s {
   /* Optional method to dump transport-specific statistics on the channel */
   void (*dumpstats)(channel_t *, int);
 
-  union {
-    struct {
-      /* Registered listen handler to call on incoming connection */
-      channel_listener_fn_ptr listener;
+  /* Registered handlers for incoming cells */
+  channel_cell_handler_fn_ptr cell_handler;
+  channel_var_cell_handler_fn_ptr var_cell_handler;
 
-      /* List of pending incoming connections */
-      smartlist_t *incoming_list;
+  /* Methods implemented by the lower layer */
 
-      /* Timestamps for listeners */
-      time_t timestamp_accepted;
+  /*
+   * Ask the underlying transport what the remote endpoint address is, in
+   * a tor_addr_t.  This is optional and subclasses may leave this NULL.
+   * If they implement it, they should write the address out to the
+   * provided tor_addr_t *, and return 1 if successful or 0 if no address
+   * available.
+   */
+  int (*get_remote_addr)(channel_t *, tor_addr_t *);
+  /*
+   * Get a text description of the remote endpoint; canonicalized if the
+   * arg is 0, or the one we originally connected to/received from if it's
+   * 1.
+   */
+  const char * (*get_remote_descr)(channel_t *, int);
+  /* Check if the lower layer has queued writes */
+  int (*has_queued_writes)(channel_t *);
+  /*
+   * If the second param is zero, ask the lower layer if this is
+   * 'canonical', for a transport-specific definition of canonical; if
+   * it is 1, ask if the answer to the preceding query is safe to rely
+   * on.
+   */
+  int (*is_canonical)(channel_t *, int);
+  /* Check if this channel matches a specified extend_info_t */
+  int (*matches_extend_info)(channel_t *, extend_info_t *);
+  /* Check if this channel matches a target address when extending */
+  int (*matches_target)(channel_t *, const tor_addr_t *);
+  /* Write a cell to an open channel */
+  int (*write_cell)(channel_t *, cell_t *);
+  /* Write a packed cell to an open channel */
+  int (*write_packed_cell)(channel_t *, packed_cell_t *);
+  /* Write a variable-length cell to an open channel */
+  int (*write_var_cell)(channel_t *, var_cell_t *);
 
-      /* Counters for listeners */
-      uint64_t n_accepted;
-    } listener;
-    struct {
-      /* Registered handlers for incoming cells */
-      channel_cell_handler_fn_ptr cell_handler;
-      channel_var_cell_handler_fn_ptr var_cell_handler;
+  /*
+   * Hash of the public RSA key for the other side's identity key, or
+   * zeroes if the other side hasn't shown us a valid identity key.
+   */
+  char identity_digest[DIGEST_LEN];
+  /* Nickname of the OR on the other side, or NULL if none. */
+  char *nickname;
 
-      /* Methods implemented by the lower layer */
+  /*
+   * Linked list of channels with the same identity digest, for the
+   * digest->channel map
+   */
+  channel_t *next_with_same_id, *prev_with_same_id;
 
-      /*
-       * Ask the underlying transport what the remote endpoint address is, in
-       * a tor_addr_t.  This is optional and subclasses may leave this NULL.
-       * If they implement it, they should write the address out to the
-       * provided tor_addr_t *, and return 1 if successful or 0 if no address
-       * available.
-       */
-      int (*get_remote_addr)(channel_t *, tor_addr_t *);
-      /*
-       * Get a text description of the remote endpoint; canonicalized if the
-       * arg is 0, or the one we originally connected to/received from if it's
-       * 1.
-       */
-      const char * (*get_remote_descr)(channel_t *, int);
-      /* Check if the lower layer has queued writes */
-      int (*has_queued_writes)(channel_t *);
-      /*
-       * If the second param is zero, ask the lower layer if this is
-       * 'canonical', for a transport-specific definition of canonical; if
-       * it is 1, ask if the answer to the preceding query is safe to rely
-       * on.
-       */
-      int (*is_canonical)(channel_t *, int);
-      /* Check if this channel matches a specified extend_info_t */
-      int (*matches_extend_info)(channel_t *, extend_info_t *);
-      /* Check if this channel matches a target address when extending */
-      int (*matches_target)(channel_t *, const tor_addr_t *);
-      /* Write a cell to an open channel */
-      int (*write_cell)(channel_t *, cell_t *);
-      /* Write a packed cell to an open channel */
-      int (*write_packed_cell)(channel_t *, packed_cell_t *);
-      /* Write a variable-length cell to an open channel */
-      int (*write_var_cell)(channel_t *, var_cell_t *);
+  /* List of incoming cells to handle */
+  smartlist_t *incoming_queue;
 
-      /*
-       * Hash of the public RSA key for the other side's identity key, or
-       * zeroes if the other side hasn't shown us a valid identity key.
-       */
-      char identity_digest[DIGEST_LEN];
-      /* Nickname of the OR on the other side, or NULL if none. */
-      char *nickname;
+  /* List of queued outgoing cells */
+  smartlist_t *outgoing_queue;
 
-      /*
-       * Linked list of channels with the same identity digest, for the
-       * digest->channel map
-       */
-      channel_t *next_with_same_id, *prev_with_same_id;
+  /* Circuit stuff for use by relay.c */
 
-      /* List of incoming cells to handle */
-      smartlist_t *incoming_queue;
+  /*
+   * Double-linked ring of circuits with queued cells waiting for room to
+   * free up on this connection's outbuf.  Every time we pull cells from
+   * a circuit, we advance this pointer to the next circuit in the ring.
+   */
+  struct circuit_t *active_circuits;
+  /*
+   * Priority queue of cell_ewma_t for circuits with queued cells waiting
+   * for room to free up on this connection's outbuf.  Kept in heap order
+   * according to EWMA.
+   *
+   * This is redundant with active_circuits; if we ever decide only to use
+   * the cell_ewma algorithm for choosing circuits, we can remove
+   * active_circuits.
+   */
+  smartlist_t *active_circuit_pqueue;
+  /*
+   * The tick on which the cell_ewma_ts in active_circuit_pqueue last had
+   * their ewma values rescaled.
+   */
+  unsigned active_circuit_pqueue_last_recalibrated;
 
-      /* List of queued outgoing cells */
-      smartlist_t *outgoing_queue;
+  /* Circuit ID generation stuff for use by circuitbuild.c */
 
-      /* Circuit stuff for use by relay.c */
+  /*
+   * When we send CREATE cells along this connection, which half of the
+   * space should we use?
+   */
+  circ_id_type_t circ_id_type:2;
+  /*
+   * Which circ_id do we try to use next on this connection?  This is
+   * always in the range 0..1<<15-1.
+   */
+  circid_t next_circ_id;
 
-      /*
-       * Double-linked ring of circuits with queued cells waiting for room to
-       * free up on this connection's outbuf.  Every time we pull cells from
-       * a circuit, we advance this pointer to the next circuit in the ring.
-       */
-      struct circuit_t *active_circuits;
-      /*
-       * Priority queue of cell_ewma_t for circuits with queued cells waiting
-       * for room to free up on this connection's outbuf.  Kept in heap order
-       * according to EWMA.
-       *
-       * This is redundant with active_circuits; if we ever decide only to use
-       * the cell_ewma algorithm for choosing circuits, we can remove
-       * active_circuits.
-       */
-      smartlist_t *active_circuit_pqueue;
-      /*
-       * The tick on which the cell_ewma_ts in active_circuit_pqueue last had
-       * their ewma values rescaled.
-       */
-      unsigned active_circuit_pqueue_last_recalibrated;
+  /* How many circuits use this connection as p_chan or n_chan? */
+  int n_circuits;
 
-      /* Circuit ID generation stuff for use by circuitbuild.c */
+  /*
+   * True iff this channel shouldn't get any new circs attached to it,
+   * because the connection is too old, or because there's a better one.
+   * More generally, this flag is used to note an unhealthy connection;
+   * for example, if a bad connection fails we shouldn't assume that the
+   * router itself has a problem.
+   */
+  unsigned int is_bad_for_new_circs:1;
 
-      /*
-       * When we send CREATE cells along this connection, which half of the
-       * space should we use?
-       */
-      circ_id_type_t circ_id_type:2;
-      /*
-       * Which circ_id do we try to use next on this connection?  This is
-       * always in the range 0..1<<15-1.
-       */
-      circid_t next_circ_id;
+  /** True iff we have decided that the other end of this connection
+   * is a client.  Channels with this flag set should never be used
+   * to satisfy an EXTEND request.  */
+  unsigned int is_client:1;
 
-      /* How many circuits use this connection as p_chan or n_chan? */
-      int n_circuits;
+  /** Set if the channel was initiated remotely (came from a listener) */
+  unsigned int is_incoming:1;
 
-      /*
-       * True iff this channel shouldn't get any new circs attached to it,
-       * because the connection is too old, or because there's a better one.
-       * More generally, this flag is used to note an unhealthy connection;
-       * for example, if a bad connection fails we shouldn't assume that the
-       * router itself has a problem.
-       */
-      unsigned int is_bad_for_new_circs:1;
+  /** Set by lower layer if this is local; i.e., everything it communicates
+   * with for this channel returns true for is_local_addr().  This is used
+   * to decide whether to declare reachability when we receive something on
+   * this channel in circuitbuild.c
+   */
+  unsigned int is_local:1;
 
-      /** True iff we have decided that the other end of this connection
-       * is a client.  Channels with this flag set should never be used
-       * to satisfy an EXTEND request.  */
-      unsigned int is_client:1;
+  /** Channel timestamps for cell channels */
+  time_t timestamp_client; /* Client used this, according to relay.c */
+  time_t timestamp_drained; /* Output queue empty */
+  time_t timestamp_recv; /* Cell received from lower layer */
+  time_t timestamp_xmit; /* Cell sent to lower layer */
 
-      /** Set if the channel was initiated remotely (came from a listener) */
-      unsigned int is_incoming:1;
+  /* Timestamp for relay.c */
+  time_t timestamp_last_added_nonpadding;
 
-      /** Set by lower layer if this is local; i.e., everything it communicates
-       * with for this channel returns true for is_local_addr().  This is used
-       * to decide whether to declare reachability when we receive something on
-       * this channel in circuitbuild.c
-       */
-      unsigned int is_local:1;
+  /** Unique ID for measuring direct network status requests;vtunneled ones
+   * come over a circuit_t, which has a dirreq_id field as well, but is a
+   * distinct namespace. */
+  uint64_t dirreq_id;
 
-      /** Channel timestamps for cell channels */
-      time_t timestamp_client; /* Client used this, according to relay.c */
-      time_t timestamp_drained; /* Output queue empty */
-      time_t timestamp_recv; /* Cell received from lower layer */
-      time_t timestamp_xmit; /* Cell sent to lower layer */
+  /** Channel counters for cell channels */
+  uint64_t n_cells_recved;
+  uint64_t n_cells_xmitted;
+};
 
-      /* Timestamp for relay.c */
-      time_t timestamp_last_added_nonpadding;
+struct channel_listener_s {
+  /* Current channel listener state */
+  channel_listener_state_t state;
 
-      /** Unique ID for measuring direct network status requests;vtunneled ones
-       * come over a circuit_t, which has a dirreq_id field as well, but is a
-       * distinct namespace. */
-      uint64_t dirreq_id;
+  /* Globally unique ID number for a channel over the lifetime of a Tor
+   * process.
+   */
+  uint64_t global_identifier;
 
-      /** Channel counters for cell channels */
-      uint64_t n_cells_recved;
-      uint64_t n_cells_xmitted;
-    } cell_chan;
-  } u;
+  /* Should we expect to see this channel in the channel lists? */
+  unsigned char registered:1;
+
+  /** Why did we close?
+   */
+  enum {
+    CHANNEL_LISTENER_NOT_CLOSING = 0,
+    CHANNEL_LISTENER_CLOSE_REQUESTED,
+    CHANNEL_LISTENER_CLOSE_FROM_BELOW,
+    CHANNEL_LISTENER_CLOSE_FOR_ERROR
+  } reason_for_closing;
+
+  /* Timestamps for both cell channels and listeners */
+  time_t timestamp_created; /* Channel created */
+  time_t timestamp_active; /* Any activity */
+
+  /* Methods implemented by the lower layer */
+
+  /* Free a channel */
+  void (*free)(channel_listener_t *);
+  /* Close an open channel */
+  void (*close)(channel_listener_t *);
+  /* Describe the transport subclass for this channel */
+  const char * (*describe_transport)(channel_listener_t *);
+  /* Optional method to dump transport-specific statistics on the channel */
+  void (*dumpstats)(channel_listener_t *, int);
+
+  /* Registered listen handler to call on incoming connection */
+  channel_listener_fn_ptr listener;
+
+  /* List of pending incoming connections */
+  smartlist_t *incoming_list;
+
+  /* Timestamps for listeners */
+  time_t timestamp_accepted;
+
+  /* Counters for listeners */
+  uint64_t n_accepted;
 };
 
 /* Channel state manipulations */
 
 int channel_state_is_valid(channel_state_t state);
+int channel_listener_state_is_valid(channel_listener_state_t state);
+
 int channel_state_can_transition(channel_state_t from, channel_state_t to);
+int channel_listener_state_can_transition(channel_listener_state_t from,
+                                          channel_listener_state_t to);
+
 const char * channel_state_to_string(channel_state_t state);
+const char *
+channel_listener_state_to_string(channel_listener_state_t state);
 
 /* Abstract channel operations */
 
@@ -240,12 +273,16 @@ void channel_write_cell(channel_t *chan, cell_t *cell);
 void channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
 void channel_write_var_cell(channel_t *chan, var_cell_t *cell);
 
+void channel_listener_mark_for_close(channel_listener_t *chan_l);
+
 /* Channel callback registrations */
 
 /* Listener callback */
-channel_listener_fn_ptr channel_get_listener_fn(channel_t *chan);
-void channel_set_listener_fn(channel_t *chan,
-                             channel_listener_fn_ptr listener);
+channel_listener_fn_ptr
+channel_listener_get_listener_fn(channel_listener_t *chan);
+
+void channel_listener_set_listener_fn(channel_listener_t *chan,
+                                      channel_listener_fn_ptr listener);
 
 /* Incoming cell callbacks */
 channel_cell_handler_fn_ptr channel_get_cell_handler(channel_t *chan);
@@ -258,16 +295,18 @@ void channel_set_cell_handlers(channel_t *chan,
                                channel_var_cell_handler_fn_ptr
                                  var_cell_handler);
 
-/* Clean up closed channels periodically; called from run_scheduled_events()
- * in main.c
+/* Clean up closed channels and channel listeners periodically; these are
+ * called from run_scheduled_events() in main.c.
  */
 void channel_run_cleanup(void);
+void channel_listener_run_cleanup(void);
 
 /* Close all channels and deallocate everything */
 void channel_free_all(void);
 
 /* Dump some statistics in the log */
 void channel_dumpstats(int severity);
+void channel_listener_dumpstats(int severity);
 
 #ifdef _TOR_CHANNEL_INTERNAL
 
@@ -277,20 +316,29 @@ void channel_dumpstats(int severity);
  * constructors.
  */
 
-void channel_init_for_cells(channel_t *chan);
-void channel_init_listener(channel_t *chan);
+void channel_init(channel_t *chan);
+void channel_init_listener(channel_listener_t *chan);
 
 /* Channel registration/unregistration */
 void channel_register(channel_t *chan);
 void channel_unregister(channel_t *chan);
+
+/* Channel listener registration/unregistration */
+void channel_listener_register(channel_listener_t *chan_l);
+void channel_listener_unregister(channel_listener_t *chan_l);
 
 /* Close from below */
 void channel_close_from_lower_layer(channel_t *chan);
 void channel_close_for_error(channel_t *chan);
 void channel_closed(channel_t *chan);
 
+void channel_listener_close_from_lower_layer(channel_listener_t *chan_l);
+void channel_listener_close_for_error(channel_listener_t *chan_l);
+void channel_listener_closed(channel_listener_t *chan_l);
+
 /* Free a channel */
 void channel_free(channel_t *chan);
+void channel_listener_free(channel_listener_t *chan_l);
 
 /* State/metadata setters */
 
@@ -306,17 +354,24 @@ void channel_set_remote_end(channel_t *chan,
                             const char *identity_digest,
                             const char *nickname);
 
+void channel_listener_change_state(channel_listener_t *chan_l,
+                                   channel_listener_state_t to_state);
+
 /* Timestamp updates */
 void channel_timestamp_created(channel_t *chan);
-void channel_timestamp_accepted(channel_t *chan);
 void channel_timestamp_active(channel_t *chan);
 void channel_timestamp_drained(channel_t *chan);
 void channel_timestamp_recv(channel_t *chan);
 void channel_timestamp_xmit(channel_t *chan);
 
+void channel_listener_timestamp_created(channel_listener_t *chan_l);
+void channel_listener_timestamp_active(channel_listener_t *chan_l);
+void channel_listener_timestamp_accepted(channel_listener_t *chan_l);
+
 /* Incoming channel handling */
-void channel_process_incoming(channel_t *listener);
-void channel_queue_incoming(channel_t *listener, channel_t *incoming);
+void channel_listener_process_incoming(channel_listener_t *listener);
+void channel_listener_queue_incoming(channel_listener_t *listener,
+                                     channel_t *incoming);
 
 /* Incoming cell handling */
 void channel_process_cells(channel_t *chan);
@@ -401,19 +456,29 @@ int channel_matches_target_addr_for_extend(channel_t *chan,
 void channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd);
 void channel_timestamp_client(channel_t *chan);
 
+const char * channel_listener_describe_transport(channel_listener_t *chan_l);
+void channel_listener_dump_statistics(channel_listener_t *chan_l,
+                                      int severity);
+void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
+                                                int severity);
+
 /* Timestamp queries */
 time_t channel_when_created(channel_t *chan);
-time_t channel_when_last_accepted(channel_t *chan);
 time_t channel_when_last_active(channel_t *chan);
 time_t channel_when_last_client(channel_t *chan);
 time_t channel_when_last_drained(channel_t *chan);
 time_t channel_when_last_recv(channel_t *chan);
 time_t channel_when_last_xmit(channel_t *chan);
 
+time_t channel_listener_when_created(channel_listener_t *chan_l);
+time_t channel_listener_when_last_active(channel_listener_t *chan_l);
+time_t channel_listener_when_last_accepted(channel_listener_t *chan_l);
+
 /* Counter queries */
-uint64_t channel_count_accepted(channel_t *chan);
 uint64_t channel_count_recved(channel_t *chan);
 uint64_t channel_count_xmitted(channel_t *chan);
+
+uint64_t channel_listener_count_accepted(channel_listener_t *chan_l);
 
 #endif
 
