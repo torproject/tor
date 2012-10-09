@@ -783,14 +783,14 @@ channel_force_free(channel_t *chan)
     smartlist_free(chan->u.cell_chan.active_circuit_pqueue);
 
     /* We might still have a cell queue; kill it */
-    if (chan->u.cell_chan.cell_queue) {
-      SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.cell_queue,
+    if (chan->u.cell_chan.incoming_queue) {
+      SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.incoming_queue,
                               cell_queue_entry_t *, q) {
         tor_free(q);
       } SMARTLIST_FOREACH_END(q);
 
-      smartlist_free(chan->u.cell_chan.cell_queue);
-      chan->u.cell_chan.cell_queue = NULL;
+      smartlist_free(chan->u.cell_chan.incoming_queue);
+      chan->u.cell_chan.incoming_queue = NULL;
     }
 
     /* Outgoing cell queue is similar, but we can have to free packed cells */
@@ -957,8 +957,8 @@ channel_set_cell_handlers(channel_t *chan,
   chan->u.cell_chan.var_cell_handler = var_cell_handler;
 
   /* Re-run the queue if we have one and there's any reason to */
-  if (chan->u.cell_chan.cell_queue &&
-      (smartlist_len(chan->u.cell_chan.cell_queue) > 0) &&
+  if (chan->u.cell_chan.incoming_queue &&
+      (smartlist_len(chan->u.cell_chan.incoming_queue) > 0) &&
       try_again &&
       (chan->u.cell_chan.cell_handler ||
        chan->u.cell_chan.var_cell_handler)) channel_process_cells(chan);
@@ -1633,8 +1633,8 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
   if (!(chan->is_listener) &&
       to_state == CHANNEL_STATE_OPEN) {
     /* Check for queued cells to process */
-    if (chan->u.cell_chan.cell_queue &&
-        smartlist_len(chan->u.cell_chan.cell_queue) > 0)
+    if (chan->u.cell_chan.incoming_queue &&
+        smartlist_len(chan->u.cell_chan.incoming_queue) > 0)
       channel_process_cells(chan);
     if (chan->u.cell_chan.outgoing_queue &&
         smartlist_len(chan->u.cell_chan.outgoing_queue) > 0)
@@ -1646,8 +1646,8 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
       tor_assert(!(chan->u.listener.incoming_list) ||
                   smartlist_len(chan->u.listener.incoming_list) == 0);
     } else {
-      tor_assert(!(chan->u.cell_chan.cell_queue) ||
-                  smartlist_len(chan->u.cell_chan.cell_queue) == 0);
+      tor_assert(!(chan->u.cell_chan.incoming_queue) ||
+                  smartlist_len(chan->u.cell_chan.incoming_queue) == 0);
       tor_assert(!(chan->u.cell_chan.outgoing_queue) ||
                   smartlist_len(chan->u.cell_chan.outgoing_queue) == 0);
     }
@@ -1881,8 +1881,8 @@ channel_more_to_flush(channel_t *chan)
   tor_assert(!(chan->is_listener));
 
   /* Check if we have any queued */
-  if (chan->u.cell_chan.cell_queue &&
-      smartlist_len(chan->u.cell_chan.cell_queue) > 0) return 1;
+  if (chan->u.cell_chan.incoming_queue &&
+      smartlist_len(chan->u.cell_chan.incoming_queue) > 0) return 1;
 
   /* Check if any circuits would like to queue some */
   if (chan->u.cell_chan.active_circuits) return 1;
@@ -2108,13 +2108,13 @@ channel_process_cells(channel_t *chan)
   if (!(chan->u.cell_chan.cell_handler ||
         chan->u.cell_chan.var_cell_handler)) return;
   /* Nothing we can do if we have no cells */
-  if (!(chan->u.cell_chan.cell_queue)) return;
+  if (!(chan->u.cell_chan.incoming_queue)) return;
 
   /*
    * Process cells until we're done or find one we have no current handler
    * for.
    */
-  SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.cell_queue,
+  SMARTLIST_FOREACH_BEGIN(chan->u.cell_chan.incoming_queue,
                           cell_queue_entry_t *, q) {
     tor_assert(q);
     tor_assert(q->type == CELL_QUEUE_FIXED ||
@@ -2128,7 +2128,7 @@ channel_process_cells(channel_t *chan)
                 "Processing incoming cell_t %p for channel %p",
                 q->u.fixed.cell, chan);
       chan->u.cell_chan.cell_handler(chan, q->u.fixed.cell);
-      SMARTLIST_DEL_CURRENT(chan->u.cell_chan.cell_queue, q);
+      SMARTLIST_DEL_CURRENT(chan->u.cell_chan.incoming_queue, q);
       tor_free(q);
     } else if (q->type == CELL_QUEUE_VAR &&
                chan->u.cell_chan.var_cell_handler) {
@@ -2138,7 +2138,7 @@ channel_process_cells(channel_t *chan)
                 "Processing incoming var_cell_t %p for channel %p",
                 q->u.var.var_cell, chan);
       chan->u.cell_chan.var_cell_handler(chan, q->u.var.var_cell);
-      SMARTLIST_DEL_CURRENT(chan->u.cell_chan.cell_queue, q);
+      SMARTLIST_DEL_CURRENT(chan->u.cell_chan.incoming_queue, q);
       tor_free(q);
     } else {
       /* Can't handle this one */
@@ -2147,9 +2147,9 @@ channel_process_cells(channel_t *chan)
   } SMARTLIST_FOREACH_END(q);
 
   /* If the list is empty, free it */
-  if (smartlist_len(chan->u.cell_chan.cell_queue) == 0 ) {
-    smartlist_free(chan->u.cell_chan.cell_queue);
-    chan->u.cell_chan.cell_queue = NULL;
+  if (smartlist_len(chan->u.cell_chan.incoming_queue) == 0 ) {
+    smartlist_free(chan->u.cell_chan.incoming_queue);
+    chan->u.cell_chan.incoming_queue = NULL;
   }
 }
 
@@ -2176,13 +2176,13 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->u.cell_chan.cell_handler)) need_to_queue = 1;
-  if (chan->u.cell_chan.cell_queue &&
-      (smartlist_len(chan->u.cell_chan.cell_queue) > 0))
+  if (chan->u.cell_chan.incoming_queue &&
+      (smartlist_len(chan->u.cell_chan.incoming_queue) > 0))
     need_to_queue = 1;
 
   /* If we need to queue and have no queue, create one */
-  if (need_to_queue && !(chan->u.cell_chan.cell_queue)) {
-    chan->u.cell_chan.cell_queue = smartlist_new();
+  if (need_to_queue && !(chan->u.cell_chan.incoming_queue)) {
+    chan->u.cell_chan.incoming_queue = smartlist_new();
   }
 
   /* Timestamp for receiving */
@@ -2200,14 +2200,14 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
     chan->u.cell_chan.cell_handler(chan, cell);
   } else {
     /* Otherwise queue it and then process the queue if possible. */
-    tor_assert(chan->u.cell_chan.cell_queue);
+    tor_assert(chan->u.cell_chan.incoming_queue);
     q = tor_malloc(sizeof(*q));
     q->type = CELL_QUEUE_FIXED;
     q->u.fixed.cell = cell;
     log_debug(LD_CHANNEL,
               "Queueing incoming cell_t %p for channel %p",
               cell, chan);
-    smartlist_add(chan->u.cell_chan.cell_queue, q);
+    smartlist_add(chan->u.cell_chan.incoming_queue, q);
     if (chan->u.cell_chan.cell_handler ||
         chan->u.cell_chan.var_cell_handler) {
       channel_process_cells(chan);
@@ -2238,13 +2238,13 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->u.cell_chan.var_cell_handler)) need_to_queue = 1;
-  if (chan->u.cell_chan.cell_queue &&
-      (smartlist_len(chan->u.cell_chan.cell_queue) > 0))
+  if (chan->u.cell_chan.incoming_queue &&
+      (smartlist_len(chan->u.cell_chan.incoming_queue) > 0))
     need_to_queue = 1;
 
   /* If we need to queue and have no queue, create one */
-  if (need_to_queue && !(chan->u.cell_chan.cell_queue)) {
-    chan->u.cell_chan.cell_queue = smartlist_new();
+  if (need_to_queue && !(chan->u.cell_chan.incoming_queue)) {
+    chan->u.cell_chan.incoming_queue = smartlist_new();
   }
 
   /* Timestamp for receiving */
@@ -2262,14 +2262,14 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
     chan->u.cell_chan.var_cell_handler(chan, var_cell);
   } else {
     /* Otherwise queue it and then process the queue if possible. */
-    tor_assert(chan->u.cell_chan.cell_queue);
+    tor_assert(chan->u.cell_chan.incoming_queue);
     q = tor_malloc(sizeof(*q));
     q->type = CELL_QUEUE_VAR;
     q->u.var.var_cell = var_cell;
     log_debug(LD_CHANNEL,
               "Queueing incoming var_cell_t %p for channel %p",
               var_cell, chan);
-    smartlist_add(chan->u.cell_chan.cell_queue, q);
+    smartlist_add(chan->u.cell_chan.incoming_queue, q);
     if (chan->u.cell_chan.cell_handler ||
         chan->u.cell_chan.var_cell_handler) {
       channel_process_cells(chan);
@@ -2864,8 +2864,8 @@ channel_dump_statistics(channel_t *chan, int severity)
         " * Cell-bearing channel " U64_FORMAT " has %d queued incoming cells"
         " and %d queued outgoing cells",
         U64_PRINTF_ARG(chan->global_identifier),
-        (chan->u.cell_chan.cell_queue != NULL) ?
-          smartlist_len(chan->u.cell_chan.cell_queue) : 0,
+        (chan->u.cell_chan.incoming_queue != NULL) ?
+          smartlist_len(chan->u.cell_chan.incoming_queue) : 0,
         (chan->u.cell_chan.outgoing_queue != NULL) ?
           smartlist_len(chan->u.cell_chan.outgoing_queue) : 0);
 

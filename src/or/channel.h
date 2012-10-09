@@ -132,7 +132,7 @@ struct channel_s {
       channel_t *next_with_same_id, *prev_with_same_id;
 
       /* List of incoming cells to handle */
-      smartlist_t *cell_queue;
+      smartlist_t *incoming_queue;
 
       /* List of queued outgoing cells */
       smartlist_t *outgoing_queue;
