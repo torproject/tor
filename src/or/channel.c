@@ -18,6 +18,7 @@
 #include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "connection_or.h" /* For var_cell_free() */
 #include "geoip.h"
 #include "nodelist.h"
 #include "relay.h"
@@ -80,7 +81,13 @@ static uint64_t n_channels_allocated = 0;
  */
 static digestmap_t *channel_identity_map = NULL;
 
+static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
+static void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
 static int cell_queue_entry_is_padding(cell_queue_entry_t *q);
+static cell_queue_entry_t *
+cell_queue_entry_new_fixed(cell_t *cell);
+static cell_queue_entry_t *
+cell_queue_entry_new_var(var_cell_t *var_cell);
 
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
@@ -865,7 +872,7 @@ channel_force_free(channel_t *chan)
   if (chan->incoming_queue) {
     SMARTLIST_FOREACH_BEGIN(chan->incoming_queue,
                             cell_queue_entry_t *, q) {
-      tor_free(q);
+      cell_queue_entry_free(q, 0);
     } SMARTLIST_FOREACH_END(q);
 
     smartlist_free(chan->incoming_queue);
@@ -876,12 +883,7 @@ channel_force_free(channel_t *chan)
   if (chan->outgoing_queue) {
     SMARTLIST_FOREACH_BEGIN(chan->outgoing_queue,
                             cell_queue_entry_t *, q) {
-      if (q->type == CELL_QUEUE_PACKED) {
-        if (q->u.packed.packed_cell) {
-          packed_cell_free(q->u.packed.packed_cell);
-        }
-      }
-      tor_free(q);
+      cell_queue_entry_free(q, 0);
     } SMARTLIST_FOREACH_END(q);
 
     smartlist_free(chan->outgoing_queue);
@@ -1502,6 +1504,79 @@ channel_set_remote_end(channel_t *chan,
 }
 
 /**
+ * Duplicate a cell queue entry; this is a shallow copy intended for use
+ * in channel_write_cell_queue_entry().
+ */
+
+static cell_queue_entry_t *
+cell_queue_entry_dup(cell_queue_entry_t *q)
+{
+  cell_queue_entry_t *rv = NULL;
+
+  tor_assert(q);
+
+  rv = tor_malloc(sizeof(*rv));
+  memcpy(rv, q, sizeof(*rv));
+  
+  return rv;
+}
+
+/**
+ * Free a cell_queue_entry_t; the handed_off parameter indicates whether
+ * the contents were passed to the lower layer (it is responsible for
+ * them) or not (we should free).
+ */
+
+static void
+cell_queue_entry_free(cell_queue_entry_t *q, int handed_off) {
+  if (!q) return;
+
+  if (!handed_off) {
+    /*
+     * If we handed it off, the recipient becomes responsible (or
+     * with packed cells the channel_t subclass calls packed_cell
+     * free after writing out its contents; see, e.g.,
+     * channel_tls_write_packed_cell_method().  Otherwise, we have
+     * to take care of it here if possible.
+     */
+    switch (q->type) {
+      case CELL_QUEUE_FIXED:
+        if (q->u.fixed.cell) {
+          /*
+           * There doesn't seem to be a cell_free() function anywhere in the
+           * pre-channel code; just use tor_free()
+           */
+          tor_free(q->u.fixed.cell);
+        }
+        break;
+      case CELL_QUEUE_PACKED:
+        if (q->u.packed.packed_cell) {
+          packed_cell_free(q->u.packed.packed_cell);
+        }
+        break;
+      case CELL_QUEUE_VAR:
+        if (q->u.var.var_cell) {
+          /*
+           * This one's in connection_or.c; it'd be nice to figure out the
+           * whole flow of cells from one end to the other and factor the
+           * cell memory management functions like this out of the specific
+           * TLS lower layer.
+           */
+          var_cell_free(q->u.var.var_cell);
+        }
+        break;
+      default:
+        /*
+         * Nothing we can do if we don't know the type; this will
+         * have been warned about elsewhere.
+         */
+        break;
+    }
+  }
+  tor_free(q);
+}
+
+/**
  * Check whether a cell queue entry is padding; this is a helper function
  * for channel_write_cell_queue_entry()
  */
@@ -1528,6 +1603,42 @@ cell_queue_entry_is_padding(cell_queue_entry_t *q)
   }
 
   return 0;
+}
+
+/**
+ * Allocate a new cell queue entry for a fixed-size cell
+ */
+
+static cell_queue_entry_t *
+cell_queue_entry_new_fixed(cell_t *cell)
+{
+  cell_queue_entry_t *q = NULL;
+
+  tor_assert(cell);
+
+  q = tor_malloc(sizeof(*q));
+  q->type = CELL_QUEUE_FIXED;
+  q->u.fixed.cell = cell;
+
+  return q;
+}
+
+/**
+ * Allocate a new cell queue entry for a variable-size cell
+ */
+
+static cell_queue_entry_t *
+cell_queue_entry_new_var(var_cell_t *var_cell)
+{
+  cell_queue_entry_t *q = NULL;
+
+  tor_assert(var_cell);
+
+  q = tor_malloc(sizeof(*q));
+  q->type = CELL_QUEUE_VAR;
+  q->u.var.var_cell = var_cell;
+
+  return q;
 }
 
 /**
@@ -1601,8 +1712,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
      * We have to copy the queue entry passed in, since the caller probably
      * used the stack.
      */
-    tmp = tor_malloc(sizeof(*tmp));
-    memcpy(tmp, q, sizeof(*tmp));
+    tmp = cell_queue_entry_dup(q);
     smartlist_add(chan->outgoing_queue, tmp);
     /* Try to process the queue? */
     if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
@@ -1980,10 +2090,11 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
             if (q->u.fixed.cell) {
               if (chan->write_cell(chan,
                     q->u.fixed.cell)) {
-                tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                cell_queue_entry_free(q, 1);
+                q = NULL;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -1994,17 +2105,19 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              tor_free(q);
+              cell_queue_entry_free(q, 0);
+              q = NULL;
             }
             break;
          case CELL_QUEUE_PACKED:
             if (q->u.packed.packed_cell) {
               if (chan->write_packed_cell(chan,
                     q->u.packed.packed_cell)) {
-                tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                cell_queue_entry_free(q, 1);
+                q = NULL;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2015,17 +2128,19 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              tor_free(q);
+              cell_queue_entry_free(q, 0);
+              q = NULL;
             }
             break;
          case CELL_QUEUE_VAR:
             if (q->u.var.var_cell) {
               if (chan->write_var_cell(chan,
                     q->u.var.var_cell)) {
-                tor_free(q);
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                cell_queue_entry_free(q, 1);
+                q = NULL;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2036,7 +2151,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              tor_free(q);
+              cell_queue_entry_free(q, 0);
+              q = NULL;
             }
             break;
           default:
@@ -2046,7 +2162,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                      "(global ID " U64_FORMAT "; ignoring it."
                      "  Someone should fix this.",
                      q->type, chan, U64_PRINTF_ARG(chan->global_identifier));
-            tor_free(q); /* tor_free() NULLs it out */
+            cell_queue_entry_free(q, 0);
+            q = NULL;
         }
       } else {
         /* This shouldn't happen; log and throw it away */
@@ -2403,9 +2520,7 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
   } else {
     /* Otherwise queue it and then process the queue if possible. */
     tor_assert(chan->incoming_queue);
-    q = tor_malloc(sizeof(*q));
-    q->type = CELL_QUEUE_FIXED;
-    q->u.fixed.cell = cell;
+    q = cell_queue_entry_new_fixed(cell);
     log_debug(LD_CHANNEL,
               "Queueing incoming cell_t %p for channel %p "
               "(global ID " U64_FORMAT ")",
@@ -2465,9 +2580,7 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
   } else {
     /* Otherwise queue it and then process the queue if possible. */
     tor_assert(chan->incoming_queue);
-    q = tor_malloc(sizeof(*q));
-    q->type = CELL_QUEUE_VAR;
-    q->u.var.var_cell = var_cell;
+    q = cell_queue_entry_new_var(var_cell);
     log_debug(LD_CHANNEL,
               "Queueing incoming var_cell_t %p for channel %p "
               "(global ID " U64_FORMAT ")",
