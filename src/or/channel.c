@@ -1847,7 +1847,6 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
 
       /* Get the head of the queue */
       q = smartlist_get(chan->u.cell_chan.outgoing_queue, 0);
-      /* That shouldn't happen; bail out */
       if (q) {
         /*
          * Okay, we have a good queue entry, try to give it to the lower
