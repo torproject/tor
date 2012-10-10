@@ -2018,7 +2018,7 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
 {
   unsigned int unlimited = 0;
   ssize_t flushed = 0;
-  int num_cells_from_circs;
+  int num_cells_from_circs, clamped_num_cells;
 
   tor_assert(chan);
 
@@ -2033,12 +2033,20 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
     if (!unlimited && num_cells <= flushed) goto done;
 
     if (circuitmux_num_cells(chan->cmux) > 0) {
+      /* Calculate number of cells, including clamp */
+      if (unlimited) {
+        clamped_num_cells = MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED;
+      } else {
+        if (num_cells - flushed >
+            MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED) {
+          clamped_num_cells = MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED;
+        } else {
+          clamped_num_cells = (int)(num_cells - flushed);
+        }
+      }
       /* Try to get more cells from any active circuits */
       num_cells_from_circs = channel_flush_from_first_active_circuit(
-          chan,
-          (unlimited ?
-             MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED :
-             (num_cells - flushed)));
+          chan, clamped_num_cells);
 
       /* If it claims we got some, process the queue again */
       if (num_cells_from_circs > 0) {
