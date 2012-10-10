@@ -3702,10 +3702,6 @@ typedef struct {
    * of certain configuration options. */
   int TestingTorNetwork;
 
-  /** File to check for a consensus networkstatus, if we don't have one
-   * cached. */
-  char *FallbackNetworkstatusFile;
-
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help
    * the bridge authority guess which countries have blocked access to us. */

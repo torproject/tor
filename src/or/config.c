@@ -231,12 +231,7 @@ static config_var_t option_vars_[] = {
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
 
-#if defined (WINCE)
-  V(FallbackNetworkstatusFile,   FILENAME, "fallback-consensus"),
-#else
-  V(FallbackNetworkstatusFile,   FILENAME,
-    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
-#endif
+  OBSOLETE("FallbackNetworkstatusFile"),
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
   V(FastFirstHopPK,              BOOL,     "1"),

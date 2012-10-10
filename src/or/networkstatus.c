@@ -219,8 +219,6 @@ router_reload_consensus_networkstatus(void)
 {
   char *filename;
   char *s;
-  struct stat st;
-  const or_options_t *options = get_options();
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
   int flav;
 
@@ -261,25 +259,6 @@ router_reload_consensus_networkstatus(void)
       tor_free(s);
     }
     tor_free(filename);
-  }
-
-  if (!current_consensus ||
-      (stat(options->FallbackNetworkstatusFile, &st)==0 &&
-       st.st_mtime > current_consensus->valid_after)) {
-    s = read_file_to_str(options->FallbackNetworkstatusFile,
-                         RFTS_IGNORE_MISSING, NULL);
-    if (s) {
-      if (networkstatus_set_current_consensus(s, "ns",
-                                              flags|NSSET_ACCEPT_OBSOLETE)) {
-        log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
-                 options->FallbackNetworkstatusFile);
-      } else {
-        log_notice(LD_FS,
-                   "Loaded fallback consensus networkstatus from \"%s\"",
-                   options->FallbackNetworkstatusFile);
-      }
-      tor_free(s);
-    }
   }
 
   if (!current_consensus) {
@@ -1674,9 +1653,6 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (from_cache && !accept_obsolete &&
       c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
-    /* XXXX If we try to make fallbackconsensus work again, we should
-     * consider taking this out. Until then, believing obsolete consensuses
-     * is causing more harm than good. See also bug 887. */
     log_info(LD_DIR, "Loaded an expired consensus. Discarding.");
     goto done;
   }

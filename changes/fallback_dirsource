@@ -7,3 +7,7 @@
       of servers to try to get a consensus from when first connecting 
       to the Tor network, and thereby reduce load on the directory
       authorities.
+
+  o Removed features:
+    - Drop the old FallbackNetworkstatus option: we never got it working
+      well enough to use it.

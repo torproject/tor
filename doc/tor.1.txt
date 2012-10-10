@@ -1129,12 +1129,6 @@ The following options are useful only for clients (that is, if
     regular router descriptors. Tor does not use this information for anything
     itself; to save bandwidth, leave this option turned off. (Default: 0)
 
-**FallbackNetworkstatusFile** __FILENAME__::
-    If Tor doesn't have a cached networkstatus file, it starts out using this
-    one instead. Even if this file is out of date, Tor can still use it to
-    learn about directory mirrors, so it doesn't need to put load on the
-    authorities. (Default: None)
-
 **WarnPlaintextPorts** __port__,__port__,__...__::
     Tells Tor to issue a warnings whenever the user tries to make an anonymous
     connection to one of these ports. This option is designed to alert users
