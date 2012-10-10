@@ -244,8 +244,10 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     }
 
     if (SSLeay() < OPENSSL_V_SERIES(1,0,0)) {
-      log_notice(LD_CRYPTO, "Your OpenSSL version seems to be %s. We "
-                 "recommend 1.0.0 or later.", crypto_openssl_get_version_str());
+      log_notice(LD_CRYPTO,
+                 "Your OpenSSL version seems to be %s. We recommend 1.0.0 "
+                 "or later.",
+                 crypto_openssl_get_version_str());
     }
 
     if (useAccel > 0) {

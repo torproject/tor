@@ -412,7 +412,7 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
              * Update active_circuits et al.; this does policy notifies, so
              * comes before freeing policy data
              */
-            
+
             if (to_remove->muxinfo.cell_count > 0) {
               circuitmux_make_circuit_inactive(cmux, circ, CELL_DIRECTION_IN);
             }

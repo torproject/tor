@@ -1389,7 +1389,6 @@ options_act(const or_options_t *old_options)
     channel_set_cmux_policy_everywhere(NULL);
   }
 
-
   /* Update the BridgePassword's hashed version as needed.  We store this as a
    * digest so that we can do side-channel-proof comparisons on it.
    */

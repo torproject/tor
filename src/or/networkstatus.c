@@ -1844,7 +1844,6 @@ networkstatus_set_current_consensus(const char *consensus,
       channel_set_cmux_policy_everywhere(NULL);
     }
 
-
     /* XXXX024 this call might be unnecessary here: can changing the
      * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);

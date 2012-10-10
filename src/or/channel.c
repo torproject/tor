@@ -1518,7 +1518,7 @@ cell_queue_entry_dup(cell_queue_entry_t *q)
 
   rv = tor_malloc(sizeof(*rv));
   memcpy(rv, q, sizeof(*rv));
-  
+
   return rv;
 }
 
@@ -1529,7 +1529,8 @@ cell_queue_entry_dup(cell_queue_entry_t *q)
  */
 
 static void
-cell_queue_entry_free(cell_queue_entry_t *q, int handed_off) {
+cell_queue_entry_free(cell_queue_entry_t *q, int handed_off)
+{
   if (!q) return;
 
   if (!handed_off) {

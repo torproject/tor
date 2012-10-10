@@ -168,7 +168,7 @@ ewma_free_circ_data(circuitmux_t *cmux,
                     circuitmux_policy_data_t *pol_data,
                     circuit_t *circ,
                     circuitmux_policy_circ_data_t *pol_circ_data);
-static void 
+static void
 ewma_notify_circ_active(circuitmux_t *cmux,
                         circuitmux_policy_data_t *pol_data,
                         circuit_t *circ,
@@ -329,7 +329,7 @@ ewma_free_circ_data(circuitmux_t *cmux,
  * the active_circuits_pqueue.
  */
 
-static void 
+static void
 ewma_notify_circ_active(circuitmux_t *cmux,
                         circuitmux_policy_data_t *pol_data,
                         circuit_t *circ,
@@ -354,7 +354,7 @@ ewma_notify_circ_active(circuitmux_t *cmux,
  * the active_circuits_pqueue.
  */
 
-static void 
+static void
 ewma_notify_circ_inactive(circuitmux_t *cmux,
                           circuitmux_policy_data_t *pol_data,
                           circuit_t *circ,
