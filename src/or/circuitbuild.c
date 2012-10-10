@@ -5310,19 +5310,22 @@ transport_resolve_conflicts(transport_t *t)
       t_tmp->marked_for_removal = 0;
       return 1;
     } else { /* same name but different addrport */
+      char *new_transport_addr = tor_strdup(fmt_addr(&t->addr));
       if (t_tmp->marked_for_removal) { /* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but there was already a transport marked for deletion at "
                    "'%s:%u'. We deleted the old transport and registered the "
-                   "new one.", t->name, fmt_addr(&t->addr), t->port,
+                   "new one.", t->name, new_transport_addr, t->port,
                    fmt_addr(&t_tmp->addr), t_tmp->port);
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
+        tor_free(new_transport_addr);
       } else { /* *not* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but the same transport already exists at '%s:%u'. "
-                   "Skipping.", t->name, fmt_addr(&t->addr), t->port,
+                   "Skipping.", t->name, new_transport_addr, t->port,
                    fmt_addr(&t_tmp->addr), t_tmp->port);
+        tor_free(new_transport_addr);
         return -1;
       }
     }
