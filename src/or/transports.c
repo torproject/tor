@@ -1382,7 +1382,7 @@ pt_get_extra_info_descriptor_string(void)
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
-      const char *addr_str = fmt_addr(&t->addr);
+      const char *addr_str = fmt_and_decorate_addr(&t->addr);
       uint32_t external_ip_address = 0;
       if (tor_addr_is_null(&t->addr) &&
           router_pick_published_address(get_options(),
