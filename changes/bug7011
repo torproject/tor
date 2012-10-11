@@ -1,8 +1,6 @@
   o Minor bugfixes:
-    - Use square brackets around IPv6 addresses in these places:
-      o Log messages.
-      o HTTPS CONNECT proxy requests.
-      o In TransportProxy statefile entries.
-      o In pluggable transport extra-info.
-      Fixes bug 7011.
+    - Use square brackets around IPv6 addresses in numerous places that needed
+      them, including log messages, HTTPS CONNECT proxy requests,
+      TransportProxy statefile entries, and pluggable transport extra-info
+      lines.  Fix for bug 7011; patch by David Fifield.
 
