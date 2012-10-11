@@ -13,6 +13,8 @@
 #define MAIN_PRIVATE
 #include "or.h"
 #include "buffers.h"
+#include "channel.h"
+#include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -398,6 +400,18 @@ connection_unlink(connection_t *conn)
   if (conn->type == CONN_TYPE_OR) {
     if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest))
       connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+    /* connection_unlink() can only get called if the connection
+     * was already on the closeable list, and it got there by
+     * connection_mark_for_close(), which was called from
+     * connection_or_close_normally() or
+     * connection_or_close_for_error(), so the channel should
+     * already be in CHANNEL_STATE_CLOSING, and then the
+     * connection_about_to_close_connection() goes to
+     * connection_or_about_to_close(), which calls channel_closed()
+     * to notify the channel_t layer, and closed the channel, so
+     * nothing more to do here to deal with the channel associated
+     * with an orconn.
+     */
   }
   connection_free(conn);
 }
@@ -1046,7 +1060,8 @@ run_connection_housekeeping(int i, time_t now)
   tor_assert(conn->outbuf);
 #endif
 
-  if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
+  if (channel_is_bad_for_new_circs(TLS_CHAN_TO_BASE(or_conn->chan)) &&
+      !connection_or_get_num_circuits(or_conn)) {
     /* It's bad for new circuits, and has no unmarked circuits on it:
      * mark it now. */
     log_info(LD_OR,
@@ -1056,28 +1071,29 @@ run_connection_housekeeping(int i, time_t now)
       connection_or_connect_failed(TO_OR_CONN(conn),
                                    END_OR_CONN_REASON_TIMEOUT,
                                    "Tor gave up on the connection");
-    connection_mark_and_flush(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!connection_state_is_open(conn)) {
     if (past_keepalive) {
       /* We never managed to actually get this connection open and happy. */
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                (int)conn->s,conn->address, conn->port);
-      connection_mark_for_close(conn);
+      connection_or_close_normally(TO_OR_CONN(conn), 0);
     }
-  } else if (we_are_hibernating() && !or_conn->n_circuits &&
+  } else if (we_are_hibernating() &&
+             !connection_or_get_num_circuits(or_conn) &&
              !connection_get_outbuf_len(conn)) {
     /* We're hibernating, there's no circuits, and nothing to flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);
-    connection_mark_and_flush(conn);
-  } else if (!or_conn->n_circuits &&
+    connection_or_close_normally(TO_OR_CONN(conn), 1);
+  } else if (!connection_or_get_num_circuits(or_conn) &&
              now >= or_conn->timestamp_last_added_nonpadding +
                                          IDLE_OR_CONN_TIMEOUT) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[idle %d].", (int)conn->s,conn->address, conn->port,
              (int)(now - or_conn->timestamp_last_added_nonpadding));
-    connection_mark_for_close(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (
       now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
       now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
@@ -1087,7 +1103,7 @@ run_connection_housekeeping(int i, time_t now)
            (int)conn->s, conn->address, conn->port,
            (int)connection_get_outbuf_len(conn),
            (int)(now-conn->timestamp_lastwritten));
-    connection_mark_for_close(conn);
+    connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (past_keepalive && !connection_get_outbuf_len(conn)) {
     /* send a padding cell */
     log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
@@ -1520,6 +1536,10 @@ run_scheduled_events(time_t now)
   /** 8b. And if anything in our state is ready to get flushed to disk, we
    * flush it. */
   or_state_save(now);
+
+  /** 8c. Do channel cleanup just like for connections */
+  channel_run_cleanup();
+  channel_listener_run_cleanup();
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
@@ -2151,6 +2171,10 @@ dumpstats(int severity)
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */
   } SMARTLIST_FOREACH_END(conn);
+
+  channel_dumpstats(severity);
+  channel_listener_dumpstats(severity);
+
   log(severity, LD_NET,
       "Cells processed: "U64_FORMAT" padding\n"
       "                 "U64_FORMAT" create\n"
@@ -2456,6 +2480,8 @@ tor_free_all(int postfork)
   circuit_free_all();
   entry_guards_free_all();
   pt_free_all();
+  channel_tls_free_all();
+  channel_free_all();
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();

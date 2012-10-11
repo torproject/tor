@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -53,7 +54,7 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
   tor_assert(conn);
   tor_assert(conn->socks_request);
 
-  if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
+  if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_chan))
     return 0; /* ignore non-open circs */
   if (circ->marked_for_close)
     return 0;
@@ -565,9 +566,9 @@ circuit_expire_building(void)
       continue;
     }
 
-    if (victim->n_conn)
-      log_info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
-               victim->n_conn->_base.address, victim->n_conn->_base.port,
+    if (victim->n_chan)
+      log_info(LD_CIRC,"Abandoning circ %s:%d (state %d:%s, purpose %d)",
+               channel_get_canonical_remote_descr(victim->n_chan),
                victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
@@ -977,13 +978,13 @@ circuit_expire_old_circuits_serverside(time_t now)
     /* If the circuit has been idle for too long, and there are no streams
      * on it, and it ends here, and it used a create_fast, mark it for close.
      */
-    if (or_circ->is_first_hop && !circ->n_conn &&
+    if (or_circ->is_first_hop && !circ->n_chan &&
         !or_circ->n_streams && !or_circ->resolving_streams &&
-        or_circ->p_conn &&
-        or_circ->p_conn->timestamp_last_added_nonpadding <= cutoff) {
+        or_circ->p_chan &&
+        channel_when_last_xmit(or_circ->p_chan) <= cutoff) {
       log_info(LD_CIRC, "Closing circ_id %d (empty %d secs ago)",
                or_circ->p_circ_id,
-               (int)(now - or_circ->p_conn->timestamp_last_added_nonpadding));
+               (int)(now - channel_when_last_xmit(or_circ->p_chan)));
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     }
   }
@@ -1163,6 +1164,7 @@ circuit_try_attaching_streams(origin_circuit_t *circ)
 void
 circuit_build_failed(origin_circuit_t *circ)
 {
+  channel_t *n_chan = NULL;
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
    */
@@ -1179,11 +1181,12 @@ circuit_build_failed(origin_circuit_t *circ)
     /* We failed at the first hop. If there's an OR connection
      * to blame, blame it. Also, avoid this relay for a while, and
      * fail any one-hop directory fetches destined for it. */
-    const char *n_conn_id = circ->cpath->extend_info->identity_digest;
+    const char *n_chan_id = circ->cpath->extend_info->identity_digest;
     int already_marked = 0;
-    if (circ->_base.n_conn) {
-      or_connection_t *n_conn = circ->_base.n_conn;
-      if (n_conn->is_bad_for_new_circs) {
+    if (circ->_base.n_chan) {
+      n_chan = circ->_base.n_chan;
+
+      if (n_chan->is_bad_for_new_circs) {
         /* We only want to blame this router when a fresh healthy
          * connection fails. So don't mark this router as newly failed,
          * since maybe this was just an old circuit attempt that's
@@ -1195,18 +1198,18 @@ circuit_build_failed(origin_circuit_t *circ)
       }
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
-               "(%s:%d). I'm going to try to rotate to a better connection.",
-               n_conn->_base.address, n_conn->_base.port);
-      n_conn->is_bad_for_new_circs = 1;
+               "(%s). I'm going to try to rotate to a better connection.",
+               channel_get_canonical_remote_descr(n_chan));
+      n_chan->is_bad_for_new_circs = 1;
     } else {
       log_info(LD_OR,
                "Our circuit died before the first hop with no connection");
     }
-    if (n_conn_id && !already_marked) {
-      entry_guard_register_connect_status(n_conn_id, 0, 1, time(NULL));
+    if (n_chan_id && !already_marked) {
+      entry_guard_register_connect_status(n_chan_id, 0, 1, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
-      connection_ap_fail_onehop(n_conn_id, circ->build_state);
+      connection_ap_fail_onehop(n_chan_id, circ->build_state);
     }
   }
 

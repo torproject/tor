@@ -12,6 +12,13 @@
 
 #include "or.h"
 #include "buffers.h"
+/*
+ * Define this so we get channel internal functions, since we're implementing
+ * part of a subclass (channel_tls_t).
+ */
+#define _TOR_CHANNEL_INTERNAL
+#include "channel.h"
+#include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -257,10 +264,6 @@ or_connection_new(int socket_family)
   connection_init(now, TO_CONN(or_conn), CONN_TYPE_OR, socket_family);
 
   or_conn->timestamp_last_added_nonpadding = time(NULL);
-  or_conn->next_circ_id = crypto_rand_int(1<<15);
-
-  or_conn->active_circuit_pqueue = smartlist_new();
-  or_conn->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
   return or_conn;
 }
@@ -502,7 +505,6 @@ _connection_free(connection_t *conn)
     or_conn->tls = NULL;
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
-    smartlist_free(or_conn->active_circuit_pqueue);
     tor_free(or_conn->nickname);
   }
   if (conn->type == CONN_TYPE_AP) {
@@ -691,6 +693,16 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
         conn->marked_for_close);
     tor_fragile_assert();
     return;
+  }
+
+  if (conn->type == CONN_TYPE_OR) {
+    /*
+     * Bad news if this happens without telling the controlling channel; do
+     * this so we can find things that call this wrongly when the asserts hit.
+     */
+    log_debug(LD_CHANNEL,
+              "Calling connection_mark_for_close on an OR conn at %s:%d",
+              file, line);
   }
 
   conn->marked_for_close = line;
@@ -1281,12 +1293,19 @@ static int
 connection_init_accepted_conn(connection_t *conn,
                               const listener_connection_t *listener)
 {
+  int rv;
+
   connection_start_reading(conn);
 
   switch (conn->type) {
     case CONN_TYPE_OR:
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
-      return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
+      rv = connection_tls_start_handshake(TO_OR_CONN(conn), 1);
+      if (rv < 0) {
+        connection_or_close_for_error(TO_OR_CONN(conn), 0);
+      }
+      return rv;
+      break;
     case CONN_TYPE_AP:
       TO_ENTRY_CONN(conn)->isolation_flags = listener->isolation_flags;
       TO_ENTRY_CONN(conn)->session_group = listener->session_group;
@@ -2091,7 +2110,8 @@ static int
 connection_counts_as_relayed_traffic(connection_t *conn, time_t now)
 {
   if (conn->type == CONN_TYPE_OR &&
-      TO_OR_CONN(conn)->client_used + CLIENT_IDLE_TIME_FOR_PRIORITY < now)
+      connection_or_client_used(TO_OR_CONN(conn)) +
+                                CLIENT_IDLE_TIME_FOR_PRIORITY < now)
     return 1;
   if (conn->type == CONN_TYPE_DIR && DIR_CONN_IS_SERVER(conn))
     return 1;
@@ -2688,11 +2708,14 @@ connection_handle_read_impl(connection_t *conn)
   before = buf_datalen(conn->inbuf);
   if (connection_read_to_buf(conn, &max_to_read, &socket_error) < 0) {
     /* There's a read error; kill the connection.*/
-    if (conn->type == CONN_TYPE_OR &&
-        conn->state == OR_CONN_STATE_CONNECTING) {
-      connection_or_connect_failed(TO_OR_CONN(conn),
-                                   errno_to_orconn_end_reason(socket_error),
-                                   tor_socket_strerror(socket_error));
+    if (conn->type == CONN_TYPE_OR) {
+      connection_or_notify_error(TO_OR_CONN(conn),
+                                 socket_error != 0 ?
+                                   errno_to_orconn_end_reason(socket_error) :
+                                   END_OR_CONN_REASON_CONNRESET,
+                                 socket_error != 0 ?
+                                   tor_socket_strerror(socket_error) :
+                                   "(unknown, errno was 0)");
     }
     if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
@@ -3214,9 +3237,9 @@ connection_handle_write_impl(connection_t *conn, int force)
         if (CONN_IS_EDGE(conn))
           connection_edge_end_errno(TO_EDGE_CONN(conn));
         if (conn->type == CONN_TYPE_OR)
-          connection_or_connect_failed(TO_OR_CONN(conn),
-                                       errno_to_orconn_end_reason(e),
-                                       tor_socket_strerror(e));
+          connection_or_notify_error(TO_OR_CONN(conn),
+                                     errno_to_orconn_end_reason(e),
+                                     tor_socket_strerror(e));
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -3241,6 +3264,10 @@ connection_handle_write_impl(connection_t *conn, int force)
       connection_stop_writing(conn);
       if (connection_tls_continue_handshake(or_conn) < 0) {
         /* Don't flush; connection is dead. */
+        connection_or_notify_error(or_conn,
+                                   END_OR_CONN_REASON_MISC,
+                                   "TLS error in connection_tls_"
+                                   "continue_handshake()");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
         return -1;
@@ -3254,19 +3281,23 @@ connection_handle_write_impl(connection_t *conn, int force)
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
 
-    /* If we just flushed the last bytes, check if this tunneled dir
-     * request is done. */
+    /* If we just flushed the last bytes, tell the channel on the
+     * or_conn to check if it needs to geoip_change_dirreq_state() */
     /* XXXX move this to flushed_some or finished_flushing -NM */
-    if (buf_datalen(conn->outbuf) == 0 && conn->dirreq_id)
-      geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
-                                DIRREQ_OR_CONN_BUFFER_FLUSHED);
+    if (buf_datalen(conn->outbuf) == 0 && or_conn->chan)
+      channel_notify_flushed(TLS_CHAN_TO_BASE(or_conn->chan));
 
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:
-        log_info(LD_NET,result!=TOR_TLS_CLOSE?
+        log_info(LD_NET, result != TOR_TLS_CLOSE ?
                  "tls error. breaking.":"TLS connection closed on flush");
         /* Don't flush; connection is dead. */
+        connection_or_notify_error(or_conn,
+                                   END_OR_CONN_REASON_MISC,
+                                   result != TOR_TLS_CLOSE ?
+                                     "TLS error in during flush" :
+                                     "TLS closed during flush");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
         return -1;
@@ -3325,8 +3356,16 @@ connection_handle_write_impl(connection_t *conn, int force)
   if (result > 0) {
     /* If we wrote any bytes from our buffer, then call the appropriate
      * functions. */
-    if (connection_flushed_some(conn) < 0)
+    if (connection_flushed_some(conn) < 0) {
+      if (connection_speaks_cells(conn)) {
+        connection_or_notify_error(TO_OR_CONN(conn),
+                                   END_OR_CONN_REASON_MISC,
+                                   "Got error back from "
+                                   "connection_flushed_some()");
+      }
+
       connection_mark_for_close(conn);
+    }
   }
 
   if (!connection_wants_to_flush(conn)) { /* it's done flushing */
@@ -4125,7 +4164,6 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR:
       tor_assert(conn->state >= _OR_CONN_STATE_MIN);
       tor_assert(conn->state <= _OR_CONN_STATE_MAX);
-      tor_assert(TO_OR_CONN(conn)->n_circuits >= 0);
       break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->state >= _EXIT_CONN_STATE_MIN);

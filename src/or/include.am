@@ -17,8 +17,12 @@ endif
 
 src_or_libtor_a_SOURCES = \
 	src/or/buffers.c				\
+	src/or/channel.c				\
+	src/or/channeltls.c				\
 	src/or/circuitbuild.c				\
 	src/or/circuitlist.c				\
+	src/or/circuitmux.c				\
+	src/or/circuitmux_ewma.c			\
 	src/or/circuituse.c				\
 	src/or/command.c				\
 	src/or/config.c					\
@@ -86,8 +90,12 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a 
 
 ORHEADERS = \
 	src/or/buffers.h				\
+	src/or/channel.h				\
+	src/or/channeltls.h				\
 	src/or/circuitbuild.h				\
 	src/or/circuitlist.h				\
+	src/or/circuitmux.h				\
+	src/or/circuitmux_ewma.h			\
 	src/or/circuituse.h				\
 	src/or/command.h				\
 	src/or/config.h					\

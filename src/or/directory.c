@@ -2855,8 +2855,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         geoip_note_ns_response(act, GEOIP_SUCCESS);
         /* Note that a request for a network status has started, so that we
          * can measure the download time later on. */
-        if (TO_CONN(conn)->dirreq_id)
-          geoip_start_dirreq(TO_CONN(conn)->dirreq_id, dlen, act,
+        if (conn->dirreq_id)
+          geoip_start_dirreq(conn->dirreq_id, dlen, act,
                              DIRREQ_TUNNELED);
         else
           geoip_start_dirreq(TO_CONN(conn)->global_identifier, dlen, act,
@@ -3529,8 +3529,8 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   /* Note that we have finished writing the directory response. For direct
    * connections this means we're done, for tunneled connections its only
    * an intermediate step. */
-  if (TO_CONN(conn)->dirreq_id)
-    geoip_change_dirreq_state(TO_CONN(conn)->dirreq_id, DIRREQ_TUNNELED,
+  if (conn->dirreq_id)
+    geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
                               DIRREQ_FLUSHING_DIR_CONN_FINISHED);
   else
     geoip_change_dirreq_state(TO_CONN(conn)->global_identifier,

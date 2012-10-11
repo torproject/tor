@@ -18,20 +18,24 @@ const char *circuit_purpose_to_controller_string(uint8_t purpose);
 const char *circuit_purpose_to_controller_hs_state_string(uint8_t purpose);
 const char *circuit_purpose_to_string(uint8_t purpose);
 void circuit_dump_by_conn(connection_t *conn, int severity);
-void circuit_set_p_circid_orconn(or_circuit_t *circ, circid_t id,
-                                 or_connection_t *conn);
-void circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
-                                 or_connection_t *conn);
+void circuit_dump_by_chan(channel_t *chan, int severity);
+void circuit_set_p_circid_chan(or_circuit_t *circ, circid_t id,
+                               channel_t *chan);
+void circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
+                               channel_t *chan);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
 int32_t circuit_initial_package_window(void);
 origin_circuit_t *origin_circuit_new(void);
-or_circuit_t *or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn);
-circuit_t *circuit_get_by_circid_orconn(circid_t circ_id,
-                                        or_connection_t *conn);
-int circuit_id_in_use_on_orconn(circid_t circ_id, or_connection_t *conn);
+or_circuit_t *or_circuit_new(circid_t p_circ_id, channel_t *p_chan);
+circuit_t *circuit_get_by_circid_channel(circid_t circ_id,
+                                         channel_t *chan);
+circuit_t *
+circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
+                                             channel_t *chan);
+int circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
-void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
+void circuit_unlink_all_from_channel(channel_t *chan, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_ready_rend_circ_by_rend_data(
   const rend_data_t *rend_data);
@@ -47,9 +51,9 @@ void _circuit_mark_for_close(circuit_t *circ, int reason,
                              int line, const char *file);
 int circuit_get_cpath_len(origin_circuit_t *circ);
 crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
-void circuit_get_all_pending_on_or_conn(smartlist_t *out,
-                                        or_connection_t *or_conn);
-int circuit_count_pending_on_or_conn(or_connection_t *or_conn);
+void circuit_get_all_pending_on_channel(smartlist_t *out,
+                                        channel_t *chan);
+int circuit_count_pending_on_channel(channel_t *chan);
 
 #define circuit_mark_for_close(c, reason)                               \
   _circuit_mark_for_close((c), (reason), __LINE__, _SHORT_FILE_)

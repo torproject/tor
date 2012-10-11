@@ -12,6 +12,8 @@
 
 #include "or.h"
 #include "buffers.h"
+#include "channel.h"
+#include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -3822,8 +3824,12 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
     }
-  ncircs = circuit_count_pending_on_or_conn(conn);
-  ncircs += conn->n_circuits;
+  if (conn->chan) {
+    ncircs = circuit_count_pending_on_channel(TLS_CHAN_TO_BASE(conn->chan));
+  } else {
+    ncircs = 0;
+  }
+  ncircs += connection_or_get_num_circuits(conn);
   if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
     tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",
                  reason ? " " : "", ncircs);

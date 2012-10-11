@@ -323,8 +323,8 @@ circuit_end_reason_to_control_string(int reason)
       return "CONNECTFAILED";
     case END_CIRC_REASON_OR_IDENTITY:
       return "OR_IDENTITY";
-    case END_CIRC_REASON_OR_CONN_CLOSED:
-      return "OR_CONN_CLOSED";
+    case END_CIRC_REASON_CHANNEL_CLOSED:
+      return "CHANNEL_CLOSED";
     case END_CIRC_REASON_FINISHED:
       return "FINISHED";
     case END_CIRC_REASON_TIMEOUT:

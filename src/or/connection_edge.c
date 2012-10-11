@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "buffers.h"
+#include "channel.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
@@ -3068,27 +3069,29 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       return 0;
     }
-    if (or_circ && or_circ->p_conn && !options->AllowSingleHopExits &&
-        (or_circ->is_first_hop ||
-         (!connection_or_digest_is_known_relay(
-                                       or_circ->p_conn->identity_digest) &&
+    if (or_circ && or_circ->p_chan) {
+      if (!options->AllowSingleHopExits &&
+           (or_circ->is_first_hop ||
+            (!connection_or_digest_is_known_relay(
+                or_circ->p_chan->identity_digest) &&
           should_refuse_unknown_exits(options)))) {
-      /* Don't let clients use us as a single-hop proxy, unless the user
-       * has explicitly allowed that in the config. It attracts attackers
-       * and users who'd be better off with, well, single-hop proxies.
-       */
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Attempt by %s to open a stream %s. Closing.",
-             safe_str(or_circ->p_conn->_base.address),
-             or_circ->is_first_hop ? "on first hop of circuit" :
-                                     "from unknown relay");
-      relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    or_circ->is_first_hop ?
-                                      END_STREAM_REASON_TORPROTOCOL :
-                                      END_STREAM_REASON_MISC,
-                                    NULL);
-      tor_free(address);
-      return 0;
+        /* Don't let clients use us as a single-hop proxy, unless the user
+         * has explicitly allowed that in the config. It attracts attackers
+         * and users who'd be better off with, well, single-hop proxies.
+         */
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "Attempt by %s to open a stream %s. Closing.",
+               safe_str(channel_get_canonical_remote_descr(or_circ->p_chan)),
+               or_circ->is_first_hop ? "on first hop of circuit" :
+                                       "from unknown relay");
+        relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                      or_circ->is_first_hop ?
+                                        END_STREAM_REASON_TORPROTOCOL :
+                                        END_STREAM_REASON_MISC,
+                                      NULL);
+        tor_free(address);
+        return 0;
+      }
     }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     if (!directory_permits_begindir_requests(options) ||
@@ -3101,8 +3104,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
      * caller might want to know whether his IP address has changed, and
      * we might already have corrected _base.addr[ess] for the relay's
      * canonical IP address. */
-    if (or_circ && or_circ->p_conn)
-      address = tor_dup_addr(&or_circ->p_conn->real_addr);
+    if (or_circ && or_circ->p_chan)
+      address = tor_strdup(channel_get_actual_remote_descr(or_circ->p_chan));
     else
       address = tor_strdup("127.0.0.1");
     port = 1; /* XXXX This value is never actually used anywhere, and there
@@ -3120,7 +3123,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   /* Remember the tunneled request ID in the new edge connection, so that
    * we can measure download times. */
-  TO_CONN(n_stream)->dirreq_id = circ->dirreq_id;
+  n_stream->dirreq_id = circ->dirreq_id;
 
   n_stream->_base.purpose = EXIT_PURPOSE_CONNECT;
 
@@ -3178,8 +3181,6 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     tor_assert(or_circ);
-    if (or_circ->p_conn && !tor_addr_is_null(&or_circ->p_conn->real_addr))
-      tor_addr_copy(&n_stream->_base.addr, &or_circ->p_conn->real_addr);
     return connection_exit_connect_dir(n_stream);
   }
 
@@ -3364,7 +3365,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   /* Note that the new dir conn belongs to the same tunneled request as
    * the edge conn, so that we can measure download times. */
-  TO_CONN(dirconn)->dirreq_id = TO_CONN(exitconn)->dirreq_id;
+  dirconn->dirreq_id = exitconn->dirreq_id;
 
   connection_link_connections(TO_CONN(dirconn), TO_CONN(exitconn));
 
