@@ -5,7 +5,7 @@ noinst_PROGRAMS+= src/test/test src/test/test-child src/test/bench
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""	       \
-	-I"$(top_srcdir)/src/or"
+	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext"
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on Windows, but I assure you that it
@@ -24,7 +24,7 @@ src_test_test_SOURCES = \
 	src/test/test_replay.c \
 	src/test/test_util.c \
 	src/test/test_config.c \
-	src/test/tinytest.c
+	src/ext/tinytest.c
 
 src_test_test_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 
@@ -48,8 +48,5 @@ src_test_bench_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypt
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS+= \
-	src/test/tinytest.h \
-	src/test/tinytest_macros.h \
 	src/test/test.h
-
 

@@ -9,7 +9,7 @@ EXTRA_DIST+= \
 AM_CPPFLAGS += -I$(srcdir)/src/common -Isrc/common
 
 if USE_OPENBSD_MALLOC
-libor_extra_source=src/common/OpenBSD_malloc_Linux.c
+libor_extra_source=src/ext/OpenBSD_malloc_Linux.c
 else
 libor_extra_source=
 endif
@@ -44,7 +44,6 @@ COMMONHEADERS = \
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/di_ops.h				\
-  src/common/ht.h				\
   src/common/memarea.h				\
   src/common/mempool.h				\
   src/common/procmon.h				\

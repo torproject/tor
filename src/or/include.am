@@ -12,7 +12,7 @@ EXTRA_DIST+= src/or/ntmain.c src/or/or_sha1.i src/or/Makefile.nmake
 if USE_EXTERNAL_EVDNS
 evdns_source=
 else
-evdns_source=src/or/eventdns.c
+evdns_source=src/ext/eventdns.c
 endif
 
 src_or_libtor_a_SOURCES = \
@@ -110,7 +110,6 @@ ORHEADERS = \
 	src/or/dirvote.h				\
 	src/or/dns.h					\
 	src/or/dnsserv.h				\
-	src/or/eventdns.h				\
 	src/or/eventdns_tor.h				\
 	src/or/geoip.h					\
 	src/or/hibernate.h				\
