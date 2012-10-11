@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Use square brackets around IPv6 addresses in these places:
+      o Log messages.
+      o HTTPS CONNECT proxy requests.
+      o In TransportProxy statefile entries.
+      o In pluggable transport extra-info.
+      Fixes bug 7011.
+
