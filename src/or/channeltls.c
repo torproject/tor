@@ -917,7 +917,6 @@ void
 channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
 {
   channel_tls_t *chan;
-  int handshaking;
 
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
@@ -952,8 +951,6 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
              "Got a var_cell_t on an OR connection with no channel");
     return;
   }
-
-  handshaking = (TO_CONN(conn)->state != OR_CONN_STATE_OPEN);
 
   if (TO_CONN(conn)->marked_for_close)
     return;

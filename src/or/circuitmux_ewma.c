@@ -265,7 +265,6 @@ ewma_alloc_circ_data(circuitmux_t *cmux,
                      cell_direction_t direction,
                      unsigned int cell_count)
 {
-  ewma_policy_data_t *pol = NULL;
   ewma_policy_circ_data_t *cdata = NULL;
 
   tor_assert(cmux);
@@ -275,8 +274,6 @@ ewma_alloc_circ_data(circuitmux_t *cmux,
              direction == CELL_DIRECTION_IN);
   /* Shut the compiler up */
   tor_assert(cell_count == cell_count);
-
-  pol = TO_EWMA_POL_DATA(pol_data);
 
   cdata = tor_malloc_zero(sizeof(*cdata));
   cdata->_base.magic = EWMA_POL_CIRC_DATA_MAGIC;
@@ -309,13 +306,11 @@ ewma_free_circ_data(circuitmux_t *cmux,
                     circuitmux_policy_circ_data_t *pol_circ_data)
 
 {
-  ewma_policy_data_t *pol = NULL;
   ewma_policy_circ_data_t *cdata = NULL;
 
   tor_assert(cmux);
   tor_assert(circ);
   tor_assert(pol_data);
-  pol = TO_EWMA_POL_DATA(pol_data);
 
   if (!pol_circ_data) return;
 

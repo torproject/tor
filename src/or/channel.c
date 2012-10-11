@@ -552,7 +552,7 @@ channel_add_to_digest_map(channel_t *chan)
 static void
 channel_remove_from_digest_map(channel_t *chan)
 {
-  channel_t *tmp, *head;
+  channel_t *tmp;
 
   tor_assert(chan);
 
@@ -588,7 +588,6 @@ channel_remove_from_digest_map(channel_t *chan)
   tmp = digestmap_get(channel_identity_map, chan->identity_digest);
   if (tmp) {
     /* Okay, it's here */
-    head = tmp; /* Keep track of list head */
     /* Look for this channel */
     while (tmp && tmp != chan) {
       tmp = tmp->next_with_same_id;
