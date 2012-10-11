@@ -2427,6 +2427,8 @@ channel_listener_queue_incoming(channel_listener_t *listener,
 void
 channel_process_cells(channel_t *chan)
 {
+  smartlist_t *queue;
+  int putback = 0;
   tor_assert(chan);
   tor_assert(chan->state == CHANNEL_STATE_CLOSING ||
              chan->state == CHANNEL_STATE_MAINT ||
@@ -2442,17 +2444,20 @@ channel_process_cells(channel_t *chan)
   /* Nothing we can do if we have no cells */
   if (!(chan->incoming_queue)) return;
 
+  queue = chan->incoming_queue;
+  chan->incoming_queue = NULL;
   /*
    * Process cells until we're done or find one we have no current handler
    * for.
    */
-  SMARTLIST_FOREACH_BEGIN(chan->incoming_queue,
-                          cell_queue_entry_t *, q) {
+  SMARTLIST_FOREACH_BEGIN(queue, cell_queue_entry_t *, q) {
     tor_assert(q);
     tor_assert(q->type == CELL_QUEUE_FIXED ||
                q->type == CELL_QUEUE_VAR);
 
-    if (q->type == CELL_QUEUE_FIXED &&
+    if (putback) {
+      smartlist_add(chan->incoming_queue, q);
+    } else if (q->type == CELL_QUEUE_FIXED &&
         chan->cell_handler) {
       /* Handle a fixed-length cell */
       tor_assert(q->u.fixed.cell);
@@ -2462,7 +2467,6 @@ channel_process_cells(channel_t *chan)
                 q->u.fixed.cell, chan,
                 U64_PRINTF_ARG(chan->global_identifier));
       chan->cell_handler(chan, q->u.fixed.cell);
-      SMARTLIST_DEL_CURRENT(chan->incoming_queue, q);
       tor_free(q);
     } else if (q->type == CELL_QUEUE_VAR &&
                chan->var_cell_handler) {
@@ -2474,19 +2478,18 @@ channel_process_cells(channel_t *chan)
                 q->u.var.var_cell, chan,
                 U64_PRINTF_ARG(chan->global_identifier));
       chan->var_cell_handler(chan, q->u.var.var_cell);
-      SMARTLIST_DEL_CURRENT(chan->incoming_queue, q);
       tor_free(q);
     } else {
       /* Can't handle this one */
-      break;
+      if (!chan->incoming_queue)
+        chan->incoming_queue = smartlist_new();
+      smartlist_add(chan->incoming_queue, q);
+      putback = 1;
     }
   } SMARTLIST_FOREACH_END(q);
 
   /* If the list is empty, free it */
-  if (smartlist_len(chan->incoming_queue) == 0 ) {
-    smartlist_free(chan->incoming_queue);
-    chan->incoming_queue = NULL;
-  }
+  smartlist_free(queue);
 }
 
 /**
