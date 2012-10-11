@@ -270,24 +270,26 @@ transport_resolve_conflicts(const transport_t *t)
       t_tmp->marked_for_removal = 0;
       return 1;
     } else { /* same name but different addrport */
-      char *new_transport_addr = tor_strdup(fmt_addr(&t->addr));
+      char *new_transport_addrport =
+        tor_strdup(fmt_addrport(&t->addr, t->port));
       if (t_tmp->marked_for_removal) { /* marked for removal */
-        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s' "
                    "but there was already a transport marked for deletion at "
-                   "'%s:%u'. We deleted the old transport and registered the "
-                   "new one.", t->name, new_transport_addr, t->port,
-                   fmt_addr(&t_tmp->addr), t_tmp->port);
+                   "'%s'. We deleted the old transport and registered the "
+                   "new one.", t->name, new_transport_addrport,
+                   fmt_addrport(&t_tmp->addr, t_tmp->port));
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
-        tor_free(new_transport_addr);
+        tor_free(new_transport_addrport);
       } else { /* *not* marked for removal */
-        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
-                   "but the same transport already exists at '%s:%u'. "
-                   "Skipping.", t->name, new_transport_addr, t->port,
-                   fmt_addr(&t_tmp->addr), t_tmp->port);
-        tor_free(new_transport_addr);
+        log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s' "
+                   "but the same transport already exists at '%s'. "
+                   "Skipping.", t->name, new_transport_addrport,
+                   fmt_addrport(&t_tmp->addr, t_tmp->port));
+        tor_free(new_transport_addrport);
         return -1;
       }
+      tor_free(new_transport_addrport);
     }
   }
 
@@ -332,18 +334,18 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
   switch (r) {
   case -1:
   default:
-    log_notice(LD_GENERAL, "Could not add transport %s at %s:%u. Skipping.",
-               t->name, fmt_addr(&t->addr), t->port);
+    log_notice(LD_GENERAL, "Could not add transport %s at %s. Skipping.",
+               t->name, fmt_addrport(&t->addr, t->port));
     transport_free(t);
     return -1;
   case 1:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s.",
+             t->name, fmt_addrport(&t->addr, t->port));
      transport_free(t); /* falling */
      return 0;
   case 0:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s:%u.",
-             t->name, fmt_addr(&t->addr), t->port);
+    log_info(LD_GENERAL, "Succesfully registered transport %s at %s.",
+             t->name, fmt_addrport(&t->addr, t->port));
     return 0;
   }
 }
@@ -644,8 +646,8 @@ register_server_proxy(const managed_proxy_t *mp)
 
   SMARTLIST_FOREACH_BEGIN(mp->transports, transport_t *, t) {
     save_transport_to_state(t->name, &t->addr, t->port);
-    log_notice(LD_GENERAL, "Registered server transport '%s' at '%s:%d'",
-               t->name, fmt_addr(&t->addr), (int)t->port);
+    log_notice(LD_GENERAL, "Registered server transport '%s' at '%s'",
+               t->name, fmt_addrport(&t->addr, t->port));
   } SMARTLIST_FOREACH_END(t);
 }
 
@@ -1382,19 +1384,21 @@ pt_get_extra_info_descriptor_string(void)
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
-      const char *addr_str = fmt_addr(&t->addr);
+      const char *addrport = NULL;
       uint32_t external_ip_address = 0;
       if (tor_addr_is_null(&t->addr) &&
           router_pick_published_address(get_options(),
                                         &external_ip_address) >= 0) {
-        /* returned addr was 0.0.0.0 and we found our external IP
-           address: use it. */
-        addr_str = fmt_addr32(external_ip_address);
+        tor_addr_t addr;
+        tor_addr_from_ipv4h(&addr, external_ip_address);
+        addrport = fmt_addrport(&addr, t->port);
+      } else {
+        addrport = fmt_addrport(&t->addr, t->port);
       }
 
       smartlist_add_asprintf(string_chunks,
-                             "transport %s %s:%u",
-                             t->name, addr_str, t->port);
+                             "transport %s %s",
+                             t->name, addrport);
     } SMARTLIST_FOREACH_END(t);
 
   } SMARTLIST_FOREACH_END(mp);

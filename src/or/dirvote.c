@@ -489,10 +489,9 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
                                                   _compare_orports);
     if (most_alt_orport) {
       memcpy(best_alt_orport_out, most_alt_orport, sizeof(tor_addr_port_t));
-      log_debug(LD_DIR, "\"a\" line winner for %s is %s:%d",
+      log_debug(LD_DIR, "\"a\" line winner for %s is %s",
                 most->status.nickname,
-                fmt_and_decorate_addr(&most_alt_orport->addr),
-                most_alt_orport->port);
+                fmt_addrport(&most_alt_orport->addr, most_alt_orport->port));
     }
 
     SMARTLIST_FOREACH(alt_orports, tor_addr_port_t *, ap, tor_free(ap));
@@ -3561,9 +3560,8 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
-    smartlist_add_asprintf(chunks, "a %s:%d\n",
-                           fmt_and_decorate_addr(&ri->ipv6_addr),
-                           ri->ipv6_orport);
+    smartlist_add_asprintf(chunks, "a %s\n",
+                           fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
 
   if (family)
     smartlist_add_asprintf(chunks, "family %s\n", family);

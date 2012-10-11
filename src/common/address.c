@@ -1006,6 +1006,19 @@ fmt_addr_impl(const tor_addr_t *addr, int decorate)
     return "???";
 }
 
+/** Return a string representing the pair <b>addr</b> and <b>port</b>.
+ * This calls fmt_and_decorate_addr internally, so IPv6 addresses will
+ * have brackets, and the caveats of fmt_addr_impl apply.
+ */
+const char *
+fmt_addrport(const tor_addr_t *addr, uint16_t port)
+{
+  /* Add space for a colon and up to 5 digits. */
+  static char buf[TOR_ADDR_BUF_LEN + 6];
+  tor_snprintf(buf, sizeof(buf), "%s:%u", fmt_and_decorate_addr(addr), port);
+  return buf;
+}
+
 /** Like fmt_addr(), but takes <b>addr</b> as a host-order IPv4
  * addresses. Also not thread-safe, also clobbers its return buffer on
  * repeated calls. */

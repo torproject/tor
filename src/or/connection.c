@@ -916,8 +916,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
     tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
 
-    log_notice(LD_NET, "Opening %s on %s:%d",
-               conn_type_to_string(type), fmt_addr(&addr), usePort);
+    log_notice(LD_NET, "Opening %s on %s",
+               conn_type_to_string(type), fmt_addrport(&addr, usePort));
 
     s = tor_open_socket(tor_addr_family(&addr),
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
@@ -1232,7 +1232,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       if (socks_policy_permits_address(&addr) == 0) {
         log_notice(LD_APP,
                    "Denying socks connection from untrusted address %s.",
-                   fmt_addr(&addr));
+                   fmt_and_decorate_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
@@ -1241,7 +1241,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       /* check dirpolicy to see if we should accept it */
       if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
-                   fmt_addr(&addr));
+                   fmt_and_decorate_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
@@ -1414,12 +1414,12 @@ connection_connect(connection_t *conn, const char *address,
       if (ext_addr_len == 0) {
         log_warn(LD_NET,
                  "Error converting OutboundBindAddress %s into sockaddr. "
-                 "Ignoring.", fmt_addr(ext_addr));
+                 "Ignoring.", fmt_and_decorate_addr(ext_addr));
       } else {
         if (bind(s, (struct sockaddr *) &ext_addr_sa, ext_addr_len) < 0) {
           *socket_error = tor_socket_errno(s);
           log_warn(LD_NET,"Error binding network socket to %s: %s",
-                   fmt_addr(ext_addr),
+                   fmt_and_decorate_addr(ext_addr),
                    tor_socket_strerror(*socket_error));
           tor_close_socket(s);
           return -1;
@@ -1530,17 +1530,17 @@ connection_proxy_connect(connection_t *conn, int type)
       }
 
       if (base64_authenticator) {
-        const char *addr = fmt_addr(&conn->addr);
-        tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
-                     "Host: %s:%d\r\n"
+        const char *addrport = fmt_addrport(&conn->addr, conn->port);
+        tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.1\r\n"
+                     "Host: %s\r\n"
                      "Proxy-Authorization: Basic %s\r\n\r\n",
-                     addr, conn->port,
-                     addr, conn->port,
+                     addrport,
+                     addrport,
                      base64_authenticator);
         tor_free(base64_authenticator);
       } else {
-        tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
-                     fmt_addr(&conn->addr), conn->port);
+        tor_snprintf(buf, sizeof(buf), "CONNECT %s HTTP/1.0\r\n\r\n",
+                     fmt_addrport(&conn->addr, conn->port));
       }
 
       connection_write_to_buf(buf, strlen(buf), conn);
@@ -4272,10 +4272,10 @@ log_failed_proxy_connection(connection_t *conn)
     return; /* if we have no proxy set up, leave this function. */
 
   log_warn(LD_NET,
-           "The connection to the %s proxy server at %s:%u just failed. "
+           "The connection to the %s proxy server at %s just failed. "
            "Make sure that the proxy server is up and running.",
-           proxy_type_to_string(get_proxy_type()), fmt_addr(&proxy_addr),
-           proxy_port);
+           proxy_type_to_string(get_proxy_type()),
+           fmt_addrport(&proxy_addr, proxy_port));
 }
 
 /** Return string representation of <b>proxy_type</b>. */

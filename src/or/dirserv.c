@@ -2118,11 +2118,9 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
   /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {
-    const char *addr_str = fmt_and_decorate_addr(&rs->ipv6_addr);
     r = tor_snprintf(cp, buf_len - (cp-buf),
-                     "a %s:%d\n",
-                     addr_str,
-                     (int)rs->ipv6_orport);
+                     "a %s\n",
+                     fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
     if (r<0) {
       log_warn(LD_BUG, "Not enough space in buffer.");
       return -1;
