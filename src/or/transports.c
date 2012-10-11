@@ -1384,19 +1384,21 @@ pt_get_extra_info_descriptor_string(void)
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
-      const char *addr_str = fmt_and_decorate_addr(&t->addr);
+      const char *addrport = NULL;
       uint32_t external_ip_address = 0;
       if (tor_addr_is_null(&t->addr) &&
           router_pick_published_address(get_options(),
                                         &external_ip_address) >= 0) {
-        /* returned addr was 0.0.0.0 and we found our external IP
-           address: use it. */
-        addr_str = fmt_addr32(external_ip_address);
+        tor_addr_t addr;
+        tor_addr_from_ipv4h(&addr, external_ip_address);
+        addrport = fmt_addrport(&addr, t->port);
+      } else {
+        addrport = fmt_addrport(&t->addr, t->port);
       }
 
       smartlist_add_asprintf(string_chunks,
-                             "transport %s %s:%u",
-                             t->name, addr_str, t->port);
+                             "transport %s %s",
+                             t->name, addrport);
     } SMARTLIST_FOREACH_END(t);
 
   } SMARTLIST_FOREACH_END(mp);
