@@ -1,3 +1,4 @@
+include src/ext/include.am
 include src/common/include.am
 include src/or/include.am
 include src/test/include.am
