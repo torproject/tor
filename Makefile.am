@@ -62,13 +62,9 @@ test: all
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
-		src/common/*.h			      \
-		src/common/[^asO]*.c		      \
-		src/common/address.c		      \
-		src/or/[^e]*.[ch]		      \
-		src/or/eventdns_tor.h		      \
-		src/test/test*.[ch]		      \
-		src/test/[^t]*.[ch]		      \
+		src/common/*.[ch]		      \
+		src/or/*.[ch]			      \
+		src/test/*.[ch]			      \
 		src/tools/*.[ch]		      \
 		src/tools/tor-fw-helper/*.[ch]
 
