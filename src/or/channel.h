@@ -10,12 +10,17 @@
 #define _TOR_CHANNEL_H
 
 #include "or.h"
+#include "tor_queue.h"
 #include "circuitmux.h"
 
 /* Channel handler function pointer typedefs */
 typedef void (*channel_listener_fn_ptr)(channel_listener_t *, channel_t *);
 typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
 typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
+
+struct cell_queue_entry_s;
+SIMPLEQ_HEAD(chan_cell_queue, cell_queue_entry_s) incoming_queue;
+typedef struct chan_cell_queue chan_cell_queue_t;
 
 /*
  * Channel struct; see the channel_t typedef in or.h.  A channel is an
@@ -120,10 +125,10 @@ struct channel_s {
   channel_t *next_with_same_id, *prev_with_same_id;
 
   /* List of incoming cells to handle */
-  smartlist_t *incoming_queue;
+  chan_cell_queue_t incoming_queue;
 
   /* List of queued outgoing cells */
-  smartlist_t *outgoing_queue;
+  chan_cell_queue_t outgoing_queue;
 
   /* Circuit mux for circuits sending on this channel */
   circuitmux_t *cmux;
