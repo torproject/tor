@@ -24,7 +24,7 @@ ht.h
     tree.h.  Shared with Libevent.
 
 tinytest.[ch]
-tinydest_demos.c
+tinytest_demos.c
 tinytest_macros.h
 
     A unit testing framework. https://github.com/nmathewson/tinytest
