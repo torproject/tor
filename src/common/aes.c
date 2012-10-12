@@ -340,7 +340,7 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
     EVP_EncryptInit(&cipher->key.evp, c, (const unsigned char*)key, NULL);
     cipher->using_evp = 1;
   } else {
-    AES_set_encrypt_key((const unsigned char *)key, key_bits, &cipher->key.aes);
+    AES_set_encrypt_key((const unsigned char *)key, key_bits,&cipher->key.aes);
     cipher->using_evp = 0;
   }
 
@@ -387,9 +387,10 @@ aes_cipher_free(aes_cnt_cipher_t *cipher)
 
 #ifdef CAN_USE_OPENSSL_CTR
 /* Helper function to use EVP with openssl's counter-mode wrapper. */
-static void evp_block128_fn(const uint8_t in[16],
-                            uint8_t out[16],
-                            const void *key)
+static void
+evp_block128_fn(const uint8_t in[16],
+                uint8_t out[16],
+                const void *key)
 {
   EVP_CIPHER_CTX *ctx = (void*)key;
   int inl=16, outl=16;
@@ -429,8 +430,7 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
                          &cipher->pos);
     }
     return;
-  }
-  else
+  } else
 #endif
   {
     int c = cipher->pos;
@@ -469,8 +469,7 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
   if (should_use_openssl_CTR) {
     aes_crypt(cipher, data, len, data);
     return;
-  }
-  else
+  } else
 #endif
   {
     int c = cipher->pos;
@@ -519,3 +518,4 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
 }
 
 #endif
+
