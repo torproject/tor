@@ -71,7 +71,7 @@ main(int c, char **v)
       return 1;
     printf("%s\n",digest);
   } else {
-    rsa = _crypto_pk_get_rsa(env);
+    rsa = crypto_pk_get_rsa_(env);
     str = BN_bn2hex(rsa->n);
 
     printf("%s\n", str);

@@ -970,7 +970,7 @@ router_orport_found_reachable(void)
   if (!can_reach_or_port && me) {
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->_PublishServerDescriptor != NO_DIRINFO ?
+               get_options()->PublishServerDescriptor_ != NO_DIRINFO ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
@@ -1013,9 +1013,9 @@ router_perform_bandwidth_test(int num_circs, time_t now)
                                               CIRCUIT_PURPOSE_TESTING))) {
     /* dump cells_per_circuit drop cells onto this circ */
     int i = cells_per_circuit;
-    if (circ->_base.state != CIRCUIT_STATE_OPEN)
+    if (circ->base_.state != CIRCUIT_STATE_OPEN)
       continue;
-    circ->_base.timestamp_dirty = now;
+    circ->base_.timestamp_dirty = now;
     while (i-- > 0) {
       if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                        RELAY_COMMAND_DROP,
@@ -1209,7 +1209,7 @@ decide_if_publishable_server(void)
 
   if (options->ClientOnly)
     return 0;
-  if (options->_PublishServerDescriptor == NO_DIRINFO)
+  if (options->PublishServerDescriptor_ == NO_DIRINFO)
     return 0;
   if (!server_mode(options))
     return 0;
@@ -1330,7 +1330,7 @@ router_upload_dir_desc_to_dirservers(int force)
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
-  dirinfo_type_t auth = get_options()->_PublishServerDescriptor;
+  dirinfo_type_t auth = get_options()->PublishServerDescriptor_;
 
   ri = router_get_my_routerinfo();
   if (!ri) {
@@ -1377,14 +1377,14 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (tor_addr_is_null(&conn->_base.addr))
+  if (tor_addr_is_null(&conn->base_.addr))
     return -1;
 
   /* XXXX IPv6 */
-  if (tor_addr_family(&conn->_base.addr) != AF_INET)
+  if (tor_addr_family(&conn->base_.addr) != AF_INET)
     return -1;
 
-  return compare_tor_addr_to_addr_policy(&conn->_base.addr, conn->_base.port,
+  return compare_tor_addr_to_addr_policy(&conn->base_.addr, conn->base_.port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 
@@ -1796,7 +1796,7 @@ void
 mark_my_descriptor_dirty(const char *reason)
 {
   const or_options_t *options = get_options();
-  if (server_mode(options) && options->_PublishServerDescriptor)
+  if (server_mode(options) && options->PublishServerDescriptor_)
     log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
   desc_clean_since = 0;
   if (!desc_dirty_reason)
@@ -1928,7 +1928,7 @@ router_new_address_suggestion(const char *suggestion,
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
     return;
   }
-  if (tor_addr_eq(&d_conn->_base.addr, &addr)) {
+  if (tor_addr_eq(&d_conn->base_.addr, &addr)) {
     /* Don't believe anybody who says our IP is their IP. */
     log_debug(LD_DIR, "A directory server told us our IP address is %s, "
               "but he's just reporting his own IP address. Ignoring.",
@@ -1944,7 +1944,7 @@ router_new_address_suggestion(const char *suggestion,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=DIRSERV",
                                 suggestion);
     log_addr_has_changed(LOG_NOTICE, &last_guessed_ip, &addr,
-                         d_conn->_base.address);
+                         d_conn->base_.address);
     ip_address_changed(0);
     tor_addr_copy(&last_guessed_ip, &addr); /* router_rebuild_descriptor()
                                                will fetch it */

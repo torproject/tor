@@ -14,7 +14,7 @@
 #include "statefile.h"
 
 /** A list of state-file "abbreviations," for compatibility. */
-static config_abbrev_t _state_abbrevs[] = {
+static config_abbrev_t state_abbrevs_[] = {
   { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
   { "HelperNode", "EntryGuard", 0, 0 },
   { "HelperNodeDownSince", "EntryGuardDownSince", 0, 0 },
@@ -34,7 +34,7 @@ static config_abbrev_t _state_abbrevs[] = {
   VAR(#member, conftype, member, initvalue)
 
 /** Array of "state" variables saved to the ~/.tor/state file. */
-static config_var_t _state_vars[] = {
+static config_var_t state_vars_[] = {
   /* Remember to document these in state-contents.txt ! */
 
   V(AccountingBytesReadInInterval,    MEMUNIT,  NULL),
@@ -104,9 +104,9 @@ static config_var_t state_extra_var = {
 static const config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
-  STRUCT_OFFSET(or_state_t, _magic),
-  _state_abbrevs,
-  _state_vars,
+  STRUCT_OFFSET(or_state_t, magic_),
+  state_abbrevs_,
+  state_vars_,
   (validate_fn_t)or_state_validate,
   &state_extra_var,
 };
@@ -302,7 +302,7 @@ or_state_load(void)
       goto done;
   }
   new_state = tor_malloc_zero(sizeof(or_state_t));
-  new_state->_magic = OR_STATE_MAGIC;
+  new_state->magic_ = OR_STATE_MAGIC;
   config_init(&state_format, new_state);
   if (contents) {
     config_line_t *lines=NULL;
@@ -339,7 +339,7 @@ or_state_load(void)
     config_free(&state_format, new_state);
 
     new_state = tor_malloc_zero(sizeof(or_state_t));
-    new_state->_magic = OR_STATE_MAGIC;
+    new_state->magic_ = OR_STATE_MAGIC;
     config_init(&state_format, new_state);
   } else if (contents) {
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);

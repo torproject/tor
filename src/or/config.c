@@ -54,7 +54,7 @@ extern int quiet_level;
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
-static config_abbrev_t _option_abbrevs[] = {
+static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirBadDirCC),
   PLURAL(AuthDirBadExitCC),
   PLURAL(AuthDirInvalidCC),
@@ -119,7 +119,7 @@ static config_abbrev_t _option_abbrevs[] = {
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
-static config_var_t _option_vars[] = {
+static config_var_t option_vars_[] = {
   OBSOLETE("AccountingMaxKB"),
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   V(AccountingStart,             STRING,   NULL),
@@ -403,7 +403,7 @@ static config_var_t _option_vars[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
   V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
-  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "0"),
+  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -431,7 +431,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
-  VAR("___UsingTestNetworkDefaults", BOOL, _UsingTestNetworkDefaults, "1"),
+  VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -487,9 +487,9 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
 static config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
-  STRUCT_OFFSET(or_options_t, _magic),
-  _option_abbrevs,
-  _option_vars,
+  STRUCT_OFFSET(or_options_t, magic_),
+  option_abbrevs_,
+  option_vars_,
   (validate_fn_t)options_validate,
   NULL
 };
@@ -642,13 +642,13 @@ or_options_free(or_options_t *options)
   if (!options)
     return;
 
-  routerset_free(options->_ExcludeExitNodesUnion);
+  routerset_free(options->ExcludeExitNodesUnion_);
   if (options->NodeFamilySets) {
     SMARTLIST_FOREACH(options->NodeFamilySets, routerset_t *,
                       rs, routerset_free(rs));
     smartlist_free(options->NodeFamilySets);
   }
-  tor_free(options->_BridgePassword_AuthDigest);
+  tor_free(options->BridgePassword_AuthDigest_);
   config_free(&options_format, options);
 }
 
@@ -688,7 +688,7 @@ const char *
 safe_str_client(const char *address)
 {
   tor_assert(address);
-  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
+  if (get_options()->SafeLogging_ == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
   else
     return address;
@@ -705,7 +705,7 @@ const char *
 safe_str(const char *address)
 {
   tor_assert(address);
-  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
+  if (get_options()->SafeLogging_ != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return address;
@@ -717,7 +717,7 @@ safe_str(const char *address)
 const char *
 escaped_safe_str_client(const char *address)
 {
-  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
+  if (get_options()->SafeLogging_ == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
   else
     return escaped(address);
@@ -729,7 +729,7 @@ escaped_safe_str_client(const char *address)
 const char *
 escaped_safe_str(const char *address)
 {
-  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
+  if (get_options()->SafeLogging_ != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return escaped(address);
@@ -926,7 +926,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     int n_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
     if (set_max_file_descriptors((unsigned)options->ConnLimit,
-                                 &options->_ConnLimit) < 0) {
+                                 &options->ConnLimit_) < 0) {
       *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
       goto rollback;
     }
@@ -1067,7 +1067,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
   if (set_conn_limit && old_options)
     set_max_file_descriptors((unsigned)old_options->ConnLimit,
-                             &options->_ConnLimit);
+                             &options->ConnLimit_);
 
   SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
   {
@@ -1400,8 +1400,8 @@ options_act(const or_options_t *old_options)
                "BridgePassword.");
       return -1;
     }
-    options->_BridgePassword_AuthDigest = tor_malloc(DIGEST256_LEN);
-    crypto_digest256(options->_BridgePassword_AuthDigest,
+    options->BridgePassword_AuthDigest_ = tor_malloc(DIGEST256_LEN);
+    crypto_digest256(options->BridgePassword_AuthDigest_,
                      http_authenticator, strlen(http_authenticator),
                      DIGEST_SHA256);
     tor_free(http_authenticator);
@@ -1816,8 +1816,8 @@ list_torrc_options(void)
 {
   int i;
   smartlist_t *lines = smartlist_new();
-  for (i = 0; _option_vars[i].name; ++i) {
-    const config_var_t *var = &_option_vars[i];
+  for (i = 0; option_vars_[i].name; ++i) {
+    const config_var_t *var = &option_vars_[i];
     if (var->type == CONFIG_TYPE_OBSOLETE ||
         var->type == CONFIG_TYPE_LINELIST_V)
       continue;
@@ -2082,16 +2082,16 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 }
 
 /** Parse an authority type from <b>options</b>-\>PublishServerDescriptor
- * and write it to <b>options</b>-\>_PublishServerDescriptor. Treat "1"
+ * and write it to <b>options</b>-\>PublishServerDescriptor_. Treat "1"
  * as "v2,v3" unless BridgeRelay is 1, in which case treat it as "bridge".
  * Treat "0" as "".
  * Return 0 on success or -1 if not a recognized authority type (in which
- * case the value of _PublishServerDescriptor is undefined). */
+ * case the value of PublishServerDescriptor_ is undefined). */
 static int
 compute_publishserverdescriptor(or_options_t *options)
 {
   smartlist_t *list = options->PublishServerDescriptor;
-  dirinfo_type_t *auth = &options->_PublishServerDescriptor;
+  dirinfo_type_t *auth = &options->PublishServerDescriptor_;
   *auth = NO_DIRINFO;
   if (!list) /* empty list, answer is none */
     return 0;
@@ -2254,9 +2254,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
-    options->_ExcludeExitNodesUnion = routerset_new();
-    routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeExitNodes);
-    routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeNodes);
+    options->ExcludeExitNodesUnion_ = routerset_new();
+    routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
+    routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
   }
 
   if (options->NodeFamilies) {
@@ -2455,19 +2455,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
              "EntryNodes will be ignored.");
 
-  options->_AllowInvalid = 0;
+  options->AllowInvalid_ = 0;
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH_BEGIN(options->AllowInvalidNodes, const char *, cp) {
         if (!strcasecmp(cp, "entry"))
-          options->_AllowInvalid |= ALLOW_INVALID_ENTRY;
+          options->AllowInvalid_ |= ALLOW_INVALID_ENTRY;
         else if (!strcasecmp(cp, "exit"))
-          options->_AllowInvalid |= ALLOW_INVALID_EXIT;
+          options->AllowInvalid_ |= ALLOW_INVALID_EXIT;
         else if (!strcasecmp(cp, "middle"))
-          options->_AllowInvalid |= ALLOW_INVALID_MIDDLE;
+          options->AllowInvalid_ |= ALLOW_INVALID_MIDDLE;
         else if (!strcasecmp(cp, "introduction"))
-          options->_AllowInvalid |= ALLOW_INVALID_INTRODUCTION;
+          options->AllowInvalid_ |= ALLOW_INVALID_INTRODUCTION;
         else if (!strcasecmp(cp, "rendezvous"))
-          options->_AllowInvalid |= ALLOW_INVALID_RENDEZVOUS;
+          options->AllowInvalid_ |= ALLOW_INVALID_RENDEZVOUS;
         else {
           tor_asprintf(msg,
               "Unrecognized value '%s' in AllowInvalidNodes", cp);
@@ -2478,11 +2478,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (!options->SafeLogging ||
       !strcasecmp(options->SafeLogging, "0")) {
-    options->_SafeLogging = SAFELOG_SCRUB_NONE;
+    options->SafeLogging_ = SAFELOG_SCRUB_NONE;
   } else if (!strcasecmp(options->SafeLogging, "relay")) {
-    options->_SafeLogging = SAFELOG_SCRUB_RELAY;
+    options->SafeLogging_ = SAFELOG_SCRUB_RELAY;
   } else if (!strcasecmp(options->SafeLogging, "1")) {
-    options->_SafeLogging = SAFELOG_SCRUB_ALL;
+    options->SafeLogging_ = SAFELOG_SCRUB_ALL;
   } else {
     tor_asprintf(msg,
                      "Unrecognized value '%s' in SafeLogging",
@@ -2496,8 +2496,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if ((options->BridgeRelay
-        || options->_PublishServerDescriptor & BRIDGE_DIRINFO)
-      && (options->_PublishServerDescriptor
+        || options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
+      && (options->PublishServerDescriptor_
           & (V1_DIRINFO|V2_DIRINFO|V3_DIRINFO))) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
@@ -2968,7 +2968,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */
   if (options->TestingV3AuthInitialVotingInterval != 30*60 &&
-      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     REJECT("TestingV3AuthInitialVotingInterval may only be changed in testing "
            "Tor networks!");
   } else if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
@@ -2979,7 +2979,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingV3AuthInitialVoteDelay != 5*60 &&
-      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
 
     REJECT("TestingV3AuthInitialVoteDelay may only be changed in testing "
            "Tor networks!");
@@ -2988,7 +2988,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingV3AuthInitialDistDelay != 5*60 &&
-      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     REJECT("TestingV3AuthInitialDistDelay may only be changed in testing "
            "Tor networks!");
   } else if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
@@ -3003,7 +3003,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingAuthDirTimeToLearnReachability != 30*60 &&
-      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     REJECT("TestingAuthDirTimeToLearnReachability may only be changed in "
            "testing Tor networks!");
   } else if (options->TestingAuthDirTimeToLearnReachability < 0) {
@@ -3013,7 +3013,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingEstimatedDescriptorPropagationTime != 10*60 &&
-      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     REJECT("TestingEstimatedDescriptorPropagationTime may only be changed in "
            "testing Tor networks!");
   } else if (options->TestingEstimatedDescriptorPropagationTime < 0) {
@@ -3149,7 +3149,7 @@ options_transition_affects_workers(const or_options_t *old_options,
       !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||
-      old_options->_SafeLogging != new_options->_SafeLogging ||
+      old_options->SafeLogging_ != new_options->SafeLogging_ ||
       old_options->ClientOnly != new_options->ClientOnly ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
       !config_lines_eq(old_options->Logs, new_options->Logs) ||
@@ -3182,8 +3182,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
                        new_options->DirPort_lines) ||
       old_options->ClientOnly != new_options->ClientOnly ||
       old_options->DisableNetwork != new_options->DisableNetwork ||
-      old_options->_PublishServerDescriptor !=
-        new_options->_PublishServerDescriptor ||
+      old_options->PublishServerDescriptor_ !=
+        new_options->PublishServerDescriptor_ ||
       get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
       get_effective_bwburst(old_options) !=
         get_effective_bwburst(new_options) ||
@@ -3540,7 +3540,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
                                   this is the first time we run*/
 
   newoptions = tor_malloc_zero(sizeof(or_options_t));
-  newoptions->_magic = OR_OPTIONS_MAGIC;
+  newoptions->magic_ = OR_OPTIONS_MAGIC;
   options_init(newoptions);
   newoptions->command = command;
   newoptions->command_arg = command_arg;
@@ -3600,7 +3600,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     config_free(&options_format, newdefaultoptions);
     newdefaultoptions = NULL;
     newoptions = tor_malloc_zero(sizeof(or_options_t));
-    newoptions->_magic = OR_OPTIONS_MAGIC;
+    newoptions->magic_ = OR_OPTIONS_MAGIC;
     options_init(newoptions);
     newoptions->command = command;
     newoptions->command_arg = command_arg;
@@ -5466,11 +5466,11 @@ getinfo_helper_config(control_connection_t *conn,
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_new();
     int i;
-    for (i = 0; _option_vars[i].name; ++i) {
-      const config_var_t *var = &_option_vars[i];
+    for (i = 0; option_vars_[i].name; ++i) {
+      const config_var_t *var = &option_vars_[i];
       const char *type;
       /* don't tell controller about triple-underscore options */
-      if (!strncmp(_option_vars[i].name, "___", 3))
+      if (!strncmp(option_vars_[i].name, "___", 3))
         continue;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
@@ -5504,8 +5504,8 @@ getinfo_helper_config(control_connection_t *conn,
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
     int i;
-    for (i = 0; _option_vars[i].name; ++i) {
-      const config_var_t *var = &_option_vars[i];
+    for (i = 0; option_vars_[i].name; ++i) {
+      const config_var_t *var = &option_vars_[i];
       if (var->initvalue != NULL) {
           char *val = esc_for_log(var->initvalue);
           smartlist_add_asprintf(sl, "%s %s\n",var->name,val);
@@ -5520,8 +5520,8 @@ getinfo_helper_config(control_connection_t *conn,
 }
 
 /** Parse outbound bind address option lines. If <b>validate_only</b>
- * is not 0 update _OutboundBindAddressIPv4 and
- * _OutboundBindAddressIPv6 in <b>options</b>. On failure, set
+ * is not 0 update OutboundBindAddressIPv4_ and
+ * OutboundBindAddressIPv6_ in <b>options</b>. On failure, set
  * <b>msg</b> (if provided) to a newly allocated string containing a
  * description of the problem and return -1. */
 static int
@@ -5531,10 +5531,10 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
   int found_v4 = 0, found_v6 = 0;
 
   if (!validate_only) {
-    memset(&options->_OutboundBindAddressIPv4, 0,
-           sizeof(options->_OutboundBindAddressIPv4));
-    memset(&options->_OutboundBindAddressIPv6, 0,
-           sizeof(options->_OutboundBindAddressIPv6));
+    memset(&options->OutboundBindAddressIPv4_, 0,
+           sizeof(options->OutboundBindAddressIPv4_));
+    memset(&options->OutboundBindAddressIPv6_, 0,
+           sizeof(options->OutboundBindAddressIPv6_));
   }
   while (lines) {
     tor_addr_t addr, *dst_addr = NULL;
@@ -5548,7 +5548,7 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
         return -1;
       }
       found_v4 = 1;
-      dst_addr = &options->_OutboundBindAddressIPv4;
+      dst_addr = &options->OutboundBindAddressIPv4_;
       break;
     case AF_INET6:
       if (found_v6) {
@@ -5558,7 +5558,7 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
         return -1;
       }
       found_v6 = 1;
-      dst_addr = &options->_OutboundBindAddressIPv6;
+      dst_addr = &options->OutboundBindAddressIPv6_;
       break;
     default:
       if (msg)

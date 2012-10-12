@@ -13,11 +13,11 @@
 #include "circuitmux.h"
 
 /* Everything but circuitmux_ewma.c should see this extern */
-#ifndef _TOR_CIRCUITMUX_EWMA_C
+#ifndef TOR_CIRCUITMUX_EWMA_C_
 
 extern circuitmux_policy_t ewma_policy;
 
-#endif /* !(_TOR_CIRCUITMUX_EWMA_C) */
+#endif /* !(TOR_CIRCUITMUX_EWMA_C_) */
 
 /* Externally visible EWMA functions */
 int cell_ewma_enabled(void);

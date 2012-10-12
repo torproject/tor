@@ -1763,8 +1763,8 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
-                 circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", last hop ",
-                 circ->_base.state == CIRCUIT_STATE_OPEN ? "" :
+                 circ->base_.state == CIRCUIT_STATE_OPEN ? "" : ", last hop ",
+                 circ->base_.state == CIRCUIT_STATE_OPEN ? "" :
                  (nickname?nickname:"*unnamed*"));
   }
 
@@ -1927,7 +1927,7 @@ origin_circuit_init(uint8_t purpose, int flags)
     ((flags & CIRCLAUNCH_NEED_CAPACITY) ? 1 : 0);
   circ->build_state->is_internal =
     ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
-  circ->_base.purpose = purpose;
+  circ->base_.purpose = purpose;
   return circ;
 }
 
@@ -1993,7 +1993,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     log_info(LD_CIRC, "Next router is %s: %s",
              safe_str_client(extend_info_describe(firsthop->extend_info)),
              msg?msg:"???");
-    circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
+    circ->base_.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {
       if (circ->build_state->onehop_tunnel)
@@ -2015,8 +2015,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
      */
     return 0;
   } else { /* it's already open. use it. */
-    tor_assert(!circ->_base.n_hop);
-    circ->_base.n_chan = n_chan;
+    tor_assert(!circ->base_.n_hop);
+    circ->base_.n_chan = n_chan;
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
@@ -2244,7 +2244,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     else
       control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
 
-    node = node_get_by_id(circ->_base.n_chan->identity_digest);
+    node = node_get_by_id(circ->base_.n_chan->identity_digest);
     fast = should_use_create_fast_for_circuit(circ);
     if (!fast) {
       /* We are an OR and we know the right onion key: we should
@@ -2281,7 +2281,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
              node ? node_describe(node) : "<unnamed>");
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
-    tor_assert(circ->_base.state == CIRCUIT_STATE_BUILDING);
+    tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
     log_debug(LD_CIRC,"starting to send subsequent skin.");
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
@@ -2291,7 +2291,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         struct timeval end;
         long timediff;
         tor_gettimeofday(&end);
-        timediff = tv_mdiff(&circ->_base.timestamp_created, &end);
+        timediff = tv_mdiff(&circ->base_.timestamp_created, &end);
 
         /*
          * If the circuit build time is much greater than we would have cut
@@ -2301,8 +2301,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
                               "Assuming clock jump. Purpose %d (%s)", timediff,
-                     circ->_base.purpose,
-                     circuit_purpose_to_string(circ->_base.purpose));
+                     circ->base_.purpose,
+                     circuit_purpose_to_string(circ->base_.purpose));
         } else if (!circuit_build_times_disabled()) {
           /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(&circ_times)) {
@@ -2310,7 +2310,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
             circuit_build_times_set_timeout(&circ_times);
           }
 
-          if (circ->_base.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+          if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
             circuit_build_times_network_circ_success(&circ_times);
           }
         }
@@ -2343,7 +2343,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_has_opened(circ); /* do other actions as necessary */
 
       /* We're done with measurement circuits here. Just close them */
-      if (circ->_base.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+      if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
       return 0;
     }
@@ -2679,8 +2679,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
   /* We can't do path bias accounting without entry guards.
    * Testing and controller circuits also have no guards. */
   if (get_options()->UseEntryGuards == 0 ||
-          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
-          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+          circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
     return 0;
   }
 
@@ -2697,8 +2697,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
                pathbias_state_to_string(circ->path_state),
-               circuit_purpose_to_string(circ->_base.purpose),
-               circuit_state_to_string(circ->_base.state),
+               circuit_purpose_to_string(circ->base_.purpose),
+               circuit_state_to_string(circ->base_.state),
                rate_msg);
         tor_free(rate_msg);
       }
@@ -2716,8 +2716,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                 "Opened circuit is in strange path state %s. "
                 "Circuit is a %s currently %s.%s",
                 pathbias_state_to_string(circ->path_state),
-                circuit_purpose_to_string(circ->_base.purpose),
-                circuit_state_to_string(circ->_base.state),
+                circuit_purpose_to_string(circ->base_.purpose),
+                circuit_state_to_string(circ->base_.state),
                 rate_msg);
         tor_free(rate_msg);
       }
@@ -2728,7 +2728,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
       entry_guard_t *guard;
 
       guard =
-        entry_guard_get_by_id_digest(circ->_base.n_chan->identity_digest);
+        entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
       if (guard) {
         if (circ->path_state == PATH_STATE_NEW_CIRC) {
           circ->path_state = PATH_STATE_DID_FIRST_HOP;
@@ -2744,8 +2744,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                    "Unopened circuit has strange path state %s. "
                    "Circuit is a %s currently %s.%s",
                    pathbias_state_to_string(circ->path_state),
-                   circuit_purpose_to_string(circ->_base.purpose),
-                   circuit_state_to_string(circ->_base.state),
+                   circuit_purpose_to_string(circ->base_.purpose),
+                   circuit_state_to_string(circ->base_.state),
                    rate_msg);
             tor_free(rate_msg);
           }
@@ -2756,8 +2756,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
           log_info(LD_BUG,
               "Unopened circuit has no known guard. "
               "Circuit is a %s currently %s.%s",
-              circuit_purpose_to_string(circ->_base.purpose),
-              circuit_state_to_string(circ->_base.state),
+              circuit_purpose_to_string(circ->base_.purpose),
+              circuit_state_to_string(circ->base_.state),
               rate_msg);
           tor_free(rate_msg);
         }
@@ -2773,8 +2773,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
             "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
             circ->cpath->state, circ->has_opened,
-            circuit_purpose_to_string(circ->_base.purpose),
-            circuit_state_to_string(circ->_base.state),
+            circuit_purpose_to_string(circ->base_.purpose),
+            circuit_state_to_string(circ->base_.state),
             rate_msg);
         tor_free(rate_msg);
       }
@@ -2803,8 +2803,8 @@ pathbias_count_success(origin_circuit_t *circ)
   /* We can't do path bias accounting without entry guards.
    * Testing and controller circuits also have no guards. */
   if (get_options()->UseEntryGuards == 0 ||
-          circ->_base.purpose == CIRCUIT_PURPOSE_TESTING ||
-          circ->_base.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+          circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
     return;
   }
 
@@ -2821,8 +2821,8 @@ pathbias_count_success(origin_circuit_t *circ)
                "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
                pathbias_state_to_string(circ->path_state),
-               circuit_purpose_to_string(circ->_base.purpose),
-               circuit_state_to_string(circ->_base.state),
+               circuit_purpose_to_string(circ->base_.purpose),
+               circuit_state_to_string(circ->base_.state),
                rate_msg);
         tor_free(rate_msg);
       }
@@ -2834,7 +2834,7 @@ pathbias_count_success(origin_circuit_t *circ)
   /* Don't count cannibalized/reused circs for path bias */
   if (!circ->has_opened) {
     guard =
-      entry_guard_get_by_id_digest(circ->_base.n_chan->identity_digest);
+      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
 
     if (guard) {
       if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
@@ -2851,8 +2851,8 @@ pathbias_count_success(origin_circuit_t *circ)
               "Succeeded circuit is in strange path state %s. "
               "Circuit is a %s currently %s.%s",
               pathbias_state_to_string(circ->path_state),
-              circuit_purpose_to_string(circ->_base.purpose),
-              circuit_state_to_string(circ->_base.state),
+              circuit_purpose_to_string(circ->base_.purpose),
+              circuit_state_to_string(circ->base_.state),
               rate_msg);
           tor_free(rate_msg);
         }
@@ -2867,14 +2867,14 @@ pathbias_count_success(origin_circuit_t *circ)
     /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
      * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
      * No need to log that case. */
-    } else if (circ->_base.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+    } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
         log_info(LD_BUG,
             "Completed circuit has no known guard. "
             "Circuit is a %s currently %s.%s",
-            circuit_purpose_to_string(circ->_base.purpose),
-            circuit_state_to_string(circ->_base.state),
+            circuit_purpose_to_string(circ->base_.purpose),
+            circuit_state_to_string(circ->base_.state),
             rate_msg);
         tor_free(rate_msg);
       }
@@ -2887,8 +2887,8 @@ pathbias_count_success(origin_circuit_t *circ)
             "Opened circuit is in strange path state %s. "
             "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
-            circuit_purpose_to_string(circ->_base.purpose),
-            circuit_state_to_string(circ->_base.state),
+            circuit_purpose_to_string(circ->base_.purpose),
+            circuit_state_to_string(circ->base_.state),
             rate_msg);
         tor_free(rate_msg);
       }
@@ -3331,7 +3331,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       n_supported[i] = -1;
       continue;
     }
-    if (routerset_contains_node(options->_ExcludeExitNodesUnion, node)) {
+    if (routerset_contains_node(options->ExcludeExitNodesUnion_, node)) {
       n_supported[i] = -1;
       continue; /* user asked us not to use it, no matter what */
     }
@@ -3348,7 +3348,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
                  * we'll retry later in this function with need_update and
                  * need_capacity set to 0. */
     }
-    if (!(node->is_valid || options->_AllowInvalid & ALLOW_INVALID_EXIT)) {
+    if (!(node->is_valid || options->AllowInvalid_ & ALLOW_INVALID_EXIT)) {
       /* if it's invalid and we don't want it */
       n_supported[i] = -1;
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
@@ -3434,7 +3434,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       }
       log_notice(LD_CIRC, "All routers are down or won't exit%s -- "
                  "choosing a doomed exit at random.",
-                 options->_ExcludeExitNodesUnion ? " or are Excluded" : "");
+                 options->ExcludeExitNodesUnion_ ? " or are Excluded" : "");
     }
     supporting = smartlist_new();
     needed_ports = circuit_get_unhandled_ports(time(NULL));
@@ -3473,7 +3473,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
     log_warn(LD_CIRC,
              "No specified %sexit routers seem to be running: "
              "can't choose an exit.",
-             options->_ExcludeExitNodesUnion ? "non-excluded " : "");
+             options->ExcludeExitNodesUnion_ ? "non-excluded " : "");
   }
   return NULL;
 }
@@ -3501,14 +3501,14 @@ choose_good_exit_server(uint8_t purpose,
 
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
-      if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
+      if (options->AllowInvalid_ & ALLOW_INVALID_MIDDLE)
         flags |= CRN_ALLOW_INVALID;
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
       else
         return choose_good_exit_server_general(need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      if (options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS)
+      if (options->AllowInvalid_ & ALLOW_INVALID_RENDEZVOUS)
         flags |= CRN_ALLOW_INVALID;
       return router_choose_random_node(NULL, options->ExcludeNodes, flags);
   }
@@ -3525,7 +3525,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
   const or_options_t *options = get_options();
   routerset_t *rs = options->ExcludeNodes;
   const char *description;
-  uint8_t purpose = circ->_base.purpose;
+  uint8_t purpose = circ->base_.purpose;
 
   if (circ->build_state->onehop_tunnel)
     return;
@@ -3545,7 +3545,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
       if (circ->build_state->is_internal)
         return;
       description = "requested exit node";
-      rs = options->_ExcludeExitNodesUnion;
+      rs = options->ExcludeExitNodesUnion_;
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
@@ -3562,7 +3562,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
       description = "chosen rendezvous point";
       break;
     case CIRCUIT_PURPOSE_CONTROLLER:
-      rs = options->_ExcludeExitNodesUnion;
+      rs = options->ExcludeExitNodesUnion_;
       description = "controller-selected circuit target";
       break;
     }
@@ -3604,7 +3604,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
     log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel.");
     state->desired_path_len = 1;
   } else {
-    int r = new_route_len(circ->_base.purpose, exit, nodelist_get_list());
+    int r = new_route_len(circ->base_.purpose, exit, nodelist_get_list());
     if (r < 1) /* must be at least 1 */
       return -1;
     state->desired_path_len = r;
@@ -3617,7 +3617,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
     const node_t *node =
-      choose_good_exit_server(circ->_base.purpose, state->need_uptime,
+      choose_good_exit_server(circ->base_.purpose, state->need_uptime,
                               state->need_capacity, state->is_internal);
     if (!node) {
       log_warn(LD_CIRC,"failed to choose an exit server");
@@ -3738,8 +3738,8 @@ choose_good_middle_server(uint8_t purpose,
   smartlist_t *excluded;
   const or_options_t *options = get_options();
   router_crn_flags_t flags = CRN_NEED_DESC;
-  tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
-             purpose <= _CIRCUIT_PURPOSE_MAX);
+  tor_assert(CIRCUIT_PURPOSE_MIN_ <= purpose &&
+             purpose <= CIRCUIT_PURPOSE_MAX_);
 
   log_debug(LD_CIRC, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_new();
@@ -3756,7 +3756,7 @@ choose_good_middle_server(uint8_t purpose,
     flags |= CRN_NEED_UPTIME;
   if (state->need_capacity)
     flags |= CRN_NEED_CAPACITY;
-  if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
+  if (options->AllowInvalid_ & ALLOW_INVALID_MIDDLE)
     flags |= CRN_ALLOW_INVALID;
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);
@@ -3818,7 +3818,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     if (state->need_capacity)
       flags |= CRN_NEED_CAPACITY;
   }
-  if (options->_AllowInvalid & ALLOW_INVALID_ENTRY)
+  if (options->AllowInvalid_ & ALLOW_INVALID_ENTRY)
     flags |= CRN_ALLOW_INVALID;
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
@@ -3846,7 +3846,7 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
 static int
 onion_extend_cpath(origin_circuit_t *circ)
 {
-  uint8_t purpose = circ->_base.purpose;
+  uint8_t purpose = circ->base_.purpose;
   cpath_build_state_t *state = circ->build_state;
   int cur_len = circuit_get_cpath_len(circ);
   extend_info_t *info = NULL;
@@ -5049,7 +5049,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;
   }
-  digestmap_free(added_by, _tor_free);
+  digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;
 }
 

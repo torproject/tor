@@ -1208,19 +1208,19 @@ test_util_pow2(void)
 }
 
 /** mutex for thread test to stop the threads hitting data at the same time. */
-static tor_mutex_t *_thread_test_mutex = NULL;
+static tor_mutex_t *thread_test_mutex_ = NULL;
 /** mutexes for the thread test to make sure that the threads have to
  * interleave somewhat. */
-static tor_mutex_t *_thread_test_start1 = NULL,
-                   *_thread_test_start2 = NULL;
+static tor_mutex_t *thread_test_start1_ = NULL,
+                   *thread_test_start2_ = NULL;
 /** Shared strmap for the thread test. */
-static strmap_t *_thread_test_strmap = NULL;
+static strmap_t *thread_test_strmap_ = NULL;
 /** The name of thread1 for the thread test */
-static char *_thread1_name = NULL;
+static char *thread1_name_ = NULL;
 /** The name of thread2 for the thread test */
-static char *_thread2_name = NULL;
+static char *thread2_name_ = NULL;
 
-static void _thread_test_func(void* _s) ATTR_NORETURN;
+static void thread_test_func_(void* _s) ATTR_NORETURN;
 
 /** How many iterations have the threads in the unit test run? */
 static int t1_count = 0, t2_count = 0;
@@ -1228,9 +1228,9 @@ static int t1_count = 0, t2_count = 0;
 /** Helper function for threading unit tests: This function runs in a
  * subthread. It grabs its own mutex (start1 or start2) to make sure that it
  * should start, then it repeatedly alters _test_thread_strmap protected by
- * _thread_test_mutex. */
+ * thread_test_mutex_. */
 static void
-_thread_test_func(void* _s)
+thread_test_func_(void* _s)
 {
   char *s = _s;
   int i, *count;
@@ -1238,12 +1238,12 @@ _thread_test_func(void* _s)
   char buf[64];
   char **cp;
   if (!strcmp(s, "thread 1")) {
-    m = _thread_test_start1;
-    cp = &_thread1_name;
+    m = thread_test_start1_;
+    cp = &thread1_name_;
     count = &t1_count;
   } else {
-    m = _thread_test_start2;
-    cp = &_thread2_name;
+    m = thread_test_start2_;
+    cp = &thread2_name_;
     count = &t2_count;
   }
 
@@ -1253,14 +1253,14 @@ _thread_test_func(void* _s)
   tor_mutex_acquire(m);
 
   for (i=0; i<10000; ++i) {
-    tor_mutex_acquire(_thread_test_mutex);
-    strmap_set(_thread_test_strmap, "last to run", *cp);
+    tor_mutex_acquire(thread_test_mutex_);
+    strmap_set(thread_test_strmap_, "last to run", *cp);
     ++*count;
-    tor_mutex_release(_thread_test_mutex);
+    tor_mutex_release(thread_test_mutex_);
   }
-  tor_mutex_acquire(_thread_test_mutex);
-  strmap_set(_thread_test_strmap, s, *cp);
-  tor_mutex_release(_thread_test_mutex);
+  tor_mutex_acquire(thread_test_mutex_);
+  strmap_set(thread_test_strmap_, s, *cp);
+  tor_mutex_release(thread_test_mutex_);
 
   tor_mutex_release(m);
 
@@ -1285,67 +1285,67 @@ test_util_threads(void)
   if (1)
     return;
 #endif
-  _thread_test_mutex = tor_mutex_new();
-  _thread_test_start1 = tor_mutex_new();
-  _thread_test_start2 = tor_mutex_new();
-  _thread_test_strmap = strmap_new();
+  thread_test_mutex_ = tor_mutex_new();
+  thread_test_start1_ = tor_mutex_new();
+  thread_test_start2_ = tor_mutex_new();
+  thread_test_strmap_ = strmap_new();
   s1 = tor_strdup("thread 1");
   s2 = tor_strdup("thread 2");
-  tor_mutex_acquire(_thread_test_start1);
-  tor_mutex_acquire(_thread_test_start2);
-  spawn_func(_thread_test_func, s1);
-  spawn_func(_thread_test_func, s2);
-  tor_mutex_release(_thread_test_start2);
-  tor_mutex_release(_thread_test_start1);
+  tor_mutex_acquire(thread_test_start1_);
+  tor_mutex_acquire(thread_test_start2_);
+  spawn_func(thread_test_func_, s1);
+  spawn_func(thread_test_func_, s2);
+  tor_mutex_release(thread_test_start2_);
+  tor_mutex_release(thread_test_start1_);
   started = time(NULL);
   while (!done) {
-    tor_mutex_acquire(_thread_test_mutex);
-    strmap_assert_ok(_thread_test_strmap);
-    if (strmap_get(_thread_test_strmap, "thread 1") &&
-        strmap_get(_thread_test_strmap, "thread 2")) {
+    tor_mutex_acquire(thread_test_mutex_);
+    strmap_assert_ok(thread_test_strmap_);
+    if (strmap_get(thread_test_strmap_, "thread 1") &&
+        strmap_get(thread_test_strmap_, "thread 2")) {
       done = 1;
     } else if (time(NULL) > started + 150) {
       timedout = done = 1;
     }
-    tor_mutex_release(_thread_test_mutex);
+    tor_mutex_release(thread_test_mutex_);
 #ifndef _WIN32
     /* Prevent the main thread from starving the worker threads. */
     select(0, NULL, NULL, NULL, &tv);
 #endif
   }
-  tor_mutex_acquire(_thread_test_start1);
-  tor_mutex_release(_thread_test_start1);
-  tor_mutex_acquire(_thread_test_start2);
-  tor_mutex_release(_thread_test_start2);
+  tor_mutex_acquire(thread_test_start1_);
+  tor_mutex_release(thread_test_start1_);
+  tor_mutex_acquire(thread_test_start2_);
+  tor_mutex_release(thread_test_start2_);
 
-  tor_mutex_free(_thread_test_mutex);
+  tor_mutex_free(thread_test_mutex_);
 
   if (timedout) {
     printf("\nTimed out: %d %d", t1_count, t2_count);
-    test_assert(strmap_get(_thread_test_strmap, "thread 1"));
-    test_assert(strmap_get(_thread_test_strmap, "thread 2"));
+    test_assert(strmap_get(thread_test_strmap_, "thread 1"));
+    test_assert(strmap_get(thread_test_strmap_, "thread 2"));
     test_assert(!timedout);
   }
 
   /* different thread IDs. */
-  test_assert(strcmp(strmap_get(_thread_test_strmap, "thread 1"),
-                     strmap_get(_thread_test_strmap, "thread 2")));
-  test_assert(!strcmp(strmap_get(_thread_test_strmap, "thread 1"),
-                      strmap_get(_thread_test_strmap, "last to run")) ||
-              !strcmp(strmap_get(_thread_test_strmap, "thread 2"),
-                      strmap_get(_thread_test_strmap, "last to run")));
+  test_assert(strcmp(strmap_get(thread_test_strmap_, "thread 1"),
+                     strmap_get(thread_test_strmap_, "thread 2")));
+  test_assert(!strcmp(strmap_get(thread_test_strmap_, "thread 1"),
+                      strmap_get(thread_test_strmap_, "last to run")) ||
+              !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
+                      strmap_get(thread_test_strmap_, "last to run")));
 
  done:
   tor_free(s1);
   tor_free(s2);
-  tor_free(_thread1_name);
-  tor_free(_thread2_name);
-  if (_thread_test_strmap)
-    strmap_free(_thread_test_strmap, NULL);
-  if (_thread_test_start1)
-    tor_mutex_free(_thread_test_start1);
-  if (_thread_test_start2)
-    tor_mutex_free(_thread_test_start2);
+  tor_free(thread1_name_);
+  tor_free(thread2_name_);
+  if (thread_test_strmap_)
+    strmap_free(thread_test_strmap_, NULL);
+  if (thread_test_start1_)
+    tor_mutex_free(thread_test_start1_);
+  if (thread_test_start2_)
+    tor_mutex_free(thread_test_start2_);
 }
 
 /** Run unit tests for compression functions */
@@ -3197,7 +3197,7 @@ test_util_set_env_var_in_sl(void *ptr)
   SMARTLIST_FOREACH(new_env_vars, char *, env_var,
                     set_environment_variable_in_smartlist(merged_env_vars,
                                                           env_var,
-                                                          _tor_free,
+                                                          tor_free_,
                                                           1));
 
   smartlist_sort_strings(merged_env_vars);

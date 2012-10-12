@@ -23,7 +23,7 @@ replaycache_free(replaycache_t *r)
     return;
   }
 
-  if (r->digests_seen) digestmap_free(r->digests_seen, _tor_free);
+  if (r->digests_seen) digestmap_free(r->digests_seen, tor_free_);
 
   tor_free(r);
 }

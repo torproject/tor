@@ -308,10 +308,10 @@ char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #endif
 
 #ifdef _WIN32
-#define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
+#define SHORT_FILE__ (tor_fix_source_file(__FILE__))
 const char *tor_fix_source_file(const char *fname);
 #else
-#define _SHORT_FILE_ (__FILE__)
+#define SHORT_FILE__ (__FILE__)
 #define tor_fix_source_file(s) (s)
 #endif
 

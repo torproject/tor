@@ -654,7 +654,7 @@ signed_desc_append_to_journal(signed_descriptor_t *desc,
  * signed_descriptor_t* in *<b>a</b> is older, the same age as, or newer than
  * the signed_descriptor_t* in *<b>b</b>. */
 static int
-_compare_signed_descriptors_by_age(const void **_a, const void **_b)
+compare_signed_descriptors_by_age_(const void **_a, const void **_b)
 {
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
   return (int)(r1->published_on - r2->published_on);
@@ -727,7 +727,7 @@ router_rebuild_store(int flags, desc_store_t *store)
                       smartlist_add(signed_descriptors, &ri->cache_info));
   }
 
-  smartlist_sort(signed_descriptors, _compare_signed_descriptors_by_age);
+  smartlist_sort(signed_descriptors, compare_signed_descriptors_by_age_);
 
   /* Now, add the appropriate members to chunk_list */
   SMARTLIST_FOREACH_BEGIN(signed_descriptors, signed_descriptor_t *, sd) {
@@ -946,7 +946,7 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   if (get_options()->PreferTunneledDirConns)
-    flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
+    flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
 
   if (!routerlist)
     return NULL;
@@ -1053,7 +1053,7 @@ router_pick_trusteddirserver(dirinfo_type_t type, int flags)
   const routerstatus_t *choice;
   int busy = 0;
   if (get_options()->PreferTunneledDirConns)
-    flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
+    flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
 
   choice = router_pick_trusteddirserver_impl(type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
@@ -1080,7 +1080,7 @@ router_pick_trusteddirserver(dirinfo_type_t type, int flags)
  * routerlist.  Arguments are as for router_pick_directory_server(), except
  * that RETRY_IF_NO_SERVERS is ignored, and:
  *
- * If the _PDS_PREFER_TUNNELED_DIR_CONNS flag is set, prefer directory servers
+ * If the PDS_PREFER_TUNNELED_DIR_CONNS_ flag is set, prefer directory servers
  * that we can use with BEGINDIR.
  */
 static const routerstatus_t *
@@ -1095,7 +1095,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   int try_excluding = 1, n_excluded = 0;
 
   if (!consensus)
@@ -1210,7 +1210,7 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
   time_t now = time(NULL);
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  const int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  const int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   int n_busy = 0;
@@ -2451,7 +2451,7 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
 
 /** Helper: free the storage held by the extrainfo_t in <b>e</b>. */
 static void
-_extrainfo_free(void *e)
+extrainfo_free_(void *e)
 {
   extrainfo_free(e);
 }
@@ -2465,7 +2465,7 @@ routerlist_free(routerlist_t *rl)
   rimap_free(rl->identity_map, NULL);
   sdmap_free(rl->desc_digest_map, NULL);
   sdmap_free(rl->desc_by_eid_map, NULL);
-  eimap_free(rl->extra_info_map, _extrainfo_free);
+  eimap_free(rl->extra_info_map, extrainfo_free_);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
@@ -2507,7 +2507,7 @@ dump_routerlist_mem_usage(int severity)
  * <b>ri</b>.  Return the index of <b>ri</b> in <b>sl</b>, or -1 if <b>ri</b>
  * is not in <b>sl</b>. */
 static INLINE int
-_routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
+routerlist_find_elt_(smartlist_t *sl, void *ri, int idx)
 {
   if (idx < 0) {
     idx = -1;
@@ -2804,7 +2804,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     ri_old->cache_info.routerlist_index = -1;
     ri_new->cache_info.routerlist_index = idx;
     /* Check that ri_old is not in rl->routers anymore: */
-    tor_assert( _routerlist_find_elt(rl->routers, ri_old, -1) == -1 );
+    tor_assert( routerlist_find_elt_(rl->routers, ri_old, -1) == -1 );
   } else {
     log_warn(LD_BUG, "Appending entry from routerlist_replace.");
     routerlist_insert(rl, ri_new);
@@ -3166,7 +3166,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
  * signed_descriptor_t* in *<b>a</b> has an identity digest preceding, equal
  * to, or later than that of *<b>b</b>. */
 static int
-_compare_old_routers_by_identity(const void **_a, const void **_b)
+compare_old_routers_by_identity_(const void **_a, const void **_b)
 {
   int i;
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
@@ -3186,7 +3186,7 @@ struct duration_idx_t {
 
 /** Sorting helper: compare two duration_idx_t by their duration. */
 static int
-_compare_duration_idx(const void *_d1, const void *_d2)
+compare_duration_idx_(const void *_d1, const void *_d2)
 {
   const struct duration_idx_t *d1 = _d1;
   const struct duration_idx_t *d2 = _d2;
@@ -3263,7 +3263,7 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
      * the duration of liveness, and remove the ones we're not already going to
      * remove based on how long they were alive.
      **/
-    qsort(lifespans, n, sizeof(struct duration_idx_t), _compare_duration_idx);
+    qsort(lifespans, n, sizeof(struct duration_idx_t), compare_duration_idx_);
     for (i = 0; i < n && n_rmv < n_extra; ++i) {
       if (!must_keep[lifespans[i].idx-lo] && !lifespans[i].old) {
         rmv[lifespans[i].idx-lo] = 1;
@@ -3417,7 +3417,7 @@ routerlist_remove_old_routers(void)
     goto done;
 
   /* Sort by identity, then fix indices. */
-  smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
+  smartlist_sort(routerlist->old_routers, compare_old_routers_by_identity_);
   /* Fix indices. */
   for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
     signed_descriptor_t *r = smartlist_get(routerlist->old_routers, i);
@@ -4775,7 +4775,7 @@ esc_router_info(const routerinfo_t *router)
 /** Helper for sorting: compare two routerinfos by their identity
  * digest. */
 static int
-_compare_routerinfo_by_id_digest(const void **a, const void **b)
+compare_routerinfo_by_id_digest_(const void **a, const void **b)
 {
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   return fast_memcmp(first->cache_info.identity_digest,
@@ -4787,7 +4787,7 @@ _compare_routerinfo_by_id_digest(const void **a, const void **b)
 void
 routers_sort_by_identity(smartlist_t *routers)
 {
-  smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+  smartlist_sort(routers, compare_routerinfo_by_id_digest_);
 }
 
 /** Called when we change a node set, or when we reload the geoip list:
@@ -4806,8 +4806,8 @@ refresh_all_country_info(void)
     routerset_refresh_countries(options->ExcludeNodes);
   if (options->ExcludeExitNodes)
     routerset_refresh_countries(options->ExcludeExitNodes);
-  if (options->_ExcludeExitNodesUnion)
-    routerset_refresh_countries(options->_ExcludeExitNodesUnion);
+  if (options->ExcludeExitNodesUnion_)
+    routerset_refresh_countries(options->ExcludeExitNodesUnion_);
 
   nodelist_refresh_countries();
 }

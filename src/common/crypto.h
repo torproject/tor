@@ -279,11 +279,11 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 struct rsa_st;
 struct evp_pkey_st;
 struct dh_st;
-struct rsa_st *_crypto_pk_get_rsa(crypto_pk_t *env);
-crypto_pk_t *_crypto_new_pk_from_rsa(struct rsa_st *rsa);
-struct evp_pkey_st *_crypto_pk_get_evp_pkey(crypto_pk_t *env,
+struct rsa_st *crypto_pk_get_rsa_(crypto_pk_t *env);
+crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
+struct evp_pkey_st *crypto_pk_get_evp_pkey_(crypto_pk_t *env,
                                                 int private);
-struct dh_st *_crypto_dh_get_dh(crypto_dh_t *dh);
+struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 /* Prototypes for private functions only used by crypto.c and test.c*/
 void add_spaces_to_fp(char *out, size_t outlen, const char *in);
 #endif

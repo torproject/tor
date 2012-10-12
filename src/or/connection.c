@@ -16,7 +16,7 @@
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
  */
-#define _TOR_CHANNEL_INTERNAL
+#define TOR_CHANNEL_INTERNAL_
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -427,7 +427,7 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
  * if <b>conn</b> is an OR or OP connection.
  */
 static void
-_connection_free(connection_t *conn)
+connection_free_(connection_t *conn)
 {
   void *mem;
   size_t memlen;
@@ -604,7 +604,7 @@ connection_free(connection_t *conn)
     connection_control_closed(TO_CONTROL_CONN(conn));
   }
   connection_unregister_events(conn);
-  _connection_free(conn);
+  connection_free_(conn);
 }
 
 /**
@@ -680,7 +680,7 @@ connection_close_immediate(connection_t *conn)
 /** Mark <b>conn</b> to be closed next time we loop through
  * conn_close_if_marked() in main.c. */
 void
-_connection_mark_for_close(connection_t *conn, int line, const char *file)
+connection_mark_for_close_(connection_t *conn, int line, const char *file)
 {
   assert_connection_ok(conn,0);
   tor_assert(line);
@@ -903,7 +903,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
 
-  if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
+  if (get_n_open_sockets() >= get_options()->ConnLimit_-1) {
     warn_too_many_conns();
     return NULL;
   }
@@ -1310,7 +1310,7 @@ connection_init_accepted_conn(connection_t *conn,
       TO_ENTRY_CONN(conn)->isolation_flags = listener->isolation_flags;
       TO_ENTRY_CONN(conn)->session_group = listener->session_group;
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
-      TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->_base.type;
+      TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
@@ -1357,7 +1357,7 @@ connection_connect(connection_t *conn, const char *address,
   const or_options_t *options = get_options();
   int protocol_family;
 
-  if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
+  if (get_n_open_sockets() >= get_options()->ConnLimit_-1) {
     warn_too_many_conns();
     *socket_error = SOCK_ERRNO(ENOBUFS);
     return -1;
@@ -1399,11 +1399,11 @@ connection_connect(connection_t *conn, const char *address,
   if (!tor_addr_is_loopback(addr)) {
     const tor_addr_t *ext_addr = NULL;
     if (protocol_family == AF_INET &&
-        !tor_addr_is_null(&options->_OutboundBindAddressIPv4))
-      ext_addr = &options->_OutboundBindAddressIPv4;
+        !tor_addr_is_null(&options->OutboundBindAddressIPv4_))
+      ext_addr = &options->OutboundBindAddressIPv4_;
     else if (protocol_family == AF_INET6 &&
-             !tor_addr_is_null(&options->_OutboundBindAddressIPv6))
-      ext_addr = &options->_OutboundBindAddressIPv6;
+             !tor_addr_is_null(&options->OutboundBindAddressIPv6_))
+      ext_addr = &options->OutboundBindAddressIPv6_;
     if (ext_addr) {
       struct sockaddr_storage ext_addr_sa;
       socklen_t ext_addr_len = 0;
@@ -2570,7 +2570,7 @@ connection_bucket_should_increase(int bucket, or_connection_t *conn)
 {
   tor_assert(conn);
 
-  if (conn->_base.state != OR_CONN_STATE_OPEN)
+  if (conn->base_.state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
   if (bucket >= conn->bandwidthburst)
     return 0;
@@ -3428,7 +3428,7 @@ connection_flush(connection_t *conn)
  * once.
  */
 void
-_connection_write_to_buf_impl(const char *string, size_t len,
+connection_write_to_buf_impl_(const char *string, size_t len,
                               connection_t *conn, int zlib)
 {
   /* XXXX This function really needs to return -1 on failure. */
@@ -3995,9 +3995,9 @@ connection_reached_eof(connection_t *conn)
 void
 connection_dump_buffer_mem_stats(int severity)
 {
-  uint64_t used_by_type[_CONN_TYPE_MAX+1];
-  uint64_t alloc_by_type[_CONN_TYPE_MAX+1];
-  int n_conns_by_type[_CONN_TYPE_MAX+1];
+  uint64_t used_by_type[CONN_TYPE_MAX_+1];
+  uint64_t alloc_by_type[CONN_TYPE_MAX_+1];
+  int n_conns_by_type[CONN_TYPE_MAX_+1];
   uint64_t total_alloc = 0;
   uint64_t total_used = 0;
   int i;
@@ -4019,7 +4019,7 @@ connection_dump_buffer_mem_stats(int severity)
       alloc_by_type[tp] += buf_allocation(c->outbuf);
     }
   } SMARTLIST_FOREACH_END(c);
-  for (i=0; i <= _CONN_TYPE_MAX; ++i) {
+  for (i=0; i <= CONN_TYPE_MAX_; ++i) {
     total_used += used_by_type[i];
     total_alloc += alloc_by_type[i];
   }
@@ -4028,7 +4028,7 @@ connection_dump_buffer_mem_stats(int severity)
      "In buffers for %d connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
       smartlist_len(conns),
       U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
-  for (i=_CONN_TYPE_MIN; i <= _CONN_TYPE_MAX; ++i) {
+  for (i=CONN_TYPE_MIN_; i <= CONN_TYPE_MAX_; ++i) {
     if (!n_conns_by_type[i])
       continue;
     log(severity, LD_GENERAL,
@@ -4046,8 +4046,8 @@ assert_connection_ok(connection_t *conn, time_t now)
 {
   (void) now; /* XXXX unused. */
   tor_assert(conn);
-  tor_assert(conn->type >= _CONN_TYPE_MIN);
-  tor_assert(conn->type <= _CONN_TYPE_MAX);
+  tor_assert(conn->type >= CONN_TYPE_MIN_);
+  tor_assert(conn->type <= CONN_TYPE_MAX_);
 
 #ifdef USE_BUFFEREVENTS
   if (conn->bufev) {
@@ -4162,33 +4162,33 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:
-      tor_assert(conn->state >= _OR_CONN_STATE_MIN);
-      tor_assert(conn->state <= _OR_CONN_STATE_MAX);
+      tor_assert(conn->state >= OR_CONN_STATE_MIN_);
+      tor_assert(conn->state <= OR_CONN_STATE_MAX_);
       break;
     case CONN_TYPE_EXIT:
-      tor_assert(conn->state >= _EXIT_CONN_STATE_MIN);
-      tor_assert(conn->state <= _EXIT_CONN_STATE_MAX);
-      tor_assert(conn->purpose >= _EXIT_PURPOSE_MIN);
-      tor_assert(conn->purpose <= _EXIT_PURPOSE_MAX);
+      tor_assert(conn->state >= EXIT_CONN_STATE_MIN_);
+      tor_assert(conn->state <= EXIT_CONN_STATE_MAX_);
+      tor_assert(conn->purpose >= EXIT_PURPOSE_MIN_);
+      tor_assert(conn->purpose <= EXIT_PURPOSE_MAX_);
       break;
     case CONN_TYPE_AP:
-      tor_assert(conn->state >= _AP_CONN_STATE_MIN);
-      tor_assert(conn->state <= _AP_CONN_STATE_MAX);
+      tor_assert(conn->state >= AP_CONN_STATE_MIN_);
+      tor_assert(conn->state <= AP_CONN_STATE_MAX_);
       tor_assert(TO_ENTRY_CONN(conn)->socks_request);
       break;
     case CONN_TYPE_DIR:
-      tor_assert(conn->state >= _DIR_CONN_STATE_MIN);
-      tor_assert(conn->state <= _DIR_CONN_STATE_MAX);
-      tor_assert(conn->purpose >= _DIR_PURPOSE_MIN);
-      tor_assert(conn->purpose <= _DIR_PURPOSE_MAX);
+      tor_assert(conn->state >= DIR_CONN_STATE_MIN_);
+      tor_assert(conn->state <= DIR_CONN_STATE_MAX_);
+      tor_assert(conn->purpose >= DIR_PURPOSE_MIN_);
+      tor_assert(conn->purpose <= DIR_PURPOSE_MAX_);
       break;
     case CONN_TYPE_CPUWORKER:
-      tor_assert(conn->state >= _CPUWORKER_STATE_MIN);
-      tor_assert(conn->state <= _CPUWORKER_STATE_MAX);
+      tor_assert(conn->state >= CPUWORKER_STATE_MIN_);
+      tor_assert(conn->state <= CPUWORKER_STATE_MAX_);
       break;
     case CONN_TYPE_CONTROL:
-      tor_assert(conn->state >= _CONTROL_CONN_STATE_MIN);
-      tor_assert(conn->state <= _CONTROL_CONN_STATE_MAX);
+      tor_assert(conn->state >= CONTROL_CONN_STATE_MIN_);
+      tor_assert(conn->state <= CONTROL_CONN_STATE_MAX_);
       break;
     default:
       tor_assert(0);
@@ -4293,7 +4293,7 @@ proxy_type_to_string(int proxy_type)
   return NULL; /*Unreached*/
 }
 
-/** Call _connection_free() on every connection in our array, and release all
+/** Call connection_free_() on every connection in our array, and release all
  * storage held by connection.c. This is used by cpuworkers and dnsworkers
  * when they fork, so they don't keep resources held open (especially
  * sockets).
@@ -4319,7 +4319,7 @@ connection_free_all(void)
   /* Clear out our list of broken connections */
   clear_broken_connection_map(0);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
+  SMARTLIST_FOREACH(conns, connection_t *, conn, connection_free_(conn));
 
   if (outgoing_addrs) {
     SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t *, addr, tor_free(addr));

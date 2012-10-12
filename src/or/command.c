@@ -250,7 +250,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   }
 
   circ = or_circuit_new(cell->circ_id, chan);
-  circ->_base.purpose = CIRCUIT_PURPOSE_OR;
+  circ->base_.purpose = CIRCUIT_PURPOSE_OR;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
   if (cell->command == CELL_CREATE) {
     char *onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);

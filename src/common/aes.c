@@ -285,7 +285,7 @@ evaluate_ctr_for_aes(void)
  * value of the current counter.
  */
 static INLINE void
-_aes_fill_buf(aes_cnt_cipher_t *cipher)
+aes_fill_buf_(aes_cnt_cipher_t *cipher)
 {
   /* We don't currently use OpenSSL's counter mode implementation because:
    *  1) some versions have known bugs
@@ -360,7 +360,7 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
     memset(cipher->buf, 0, sizeof(cipher->buf));
   else
 #endif
-    _aes_fill_buf(cipher);
+    aes_fill_buf_(cipher);
 }
 
 /** Release storage held by <b>cipher</b>
@@ -453,7 +453,7 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
         UPDATE_CTR_BUF(cipher, 1);
       }
       UPDATE_CTR_BUF(cipher, 0);
-      _aes_fill_buf(cipher);
+      aes_fill_buf_(cipher);
     }
   }
 }
@@ -493,7 +493,7 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
         UPDATE_CTR_BUF(cipher, 1);
       }
       UPDATE_CTR_BUF(cipher, 0);
-      _aes_fill_buf(cipher);
+      aes_fill_buf_(cipher);
     }
   }
 }
@@ -515,7 +515,7 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
 #ifdef CAN_USE_OPENSSL_CTR
   if (!should_use_openssl_CTR)
 #endif
-    _aes_fill_buf(cipher);
+    aes_fill_buf_(cipher);
 }
 
 #endif

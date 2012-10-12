@@ -602,7 +602,7 @@ smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
 
 /** Helper: compare two const char **s. */
 static int
-_compare_string_ptrs(const void **_a, const void **_b)
+compare_string_ptrs_(const void **_a, const void **_b)
 {
   return strcmp((const char*)*_a, (const char*)*_b);
 }
@@ -612,14 +612,14 @@ _compare_string_ptrs(const void **_a, const void **_b)
 void
 smartlist_sort_strings(smartlist_t *sl)
 {
-  smartlist_sort(sl, _compare_string_ptrs);
+  smartlist_sort(sl, compare_string_ptrs_);
 }
 
 /** Return the most frequent string in the sorted list <b>sl</b> */
 char *
 smartlist_get_most_frequent_string(smartlist_t *sl)
 {
-  return smartlist_get_most_frequent(sl, _compare_string_ptrs);
+  return smartlist_get_most_frequent(sl, compare_string_ptrs_);
 }
 
 /** Remove duplicate strings from a sorted list, and free them with tor_free().
@@ -627,7 +627,7 @@ smartlist_get_most_frequent_string(smartlist_t *sl)
 void
 smartlist_uniq_strings(smartlist_t *sl)
 {
-  smartlist_uniq(sl, _compare_string_ptrs, _tor_free);
+  smartlist_uniq(sl, compare_string_ptrs_, tor_free_);
 }
 
 /* Heap-based priority queue implementation for O(lg N) insert and remove.
@@ -828,7 +828,7 @@ smartlist_pqueue_assert_ok(smartlist_t *sl,
 
 /** Helper: compare two DIGEST_LEN digests. */
 static int
-_compare_digests(const void **_a, const void **_b)
+compare_digests_(const void **_a, const void **_b)
 {
   return tor_memcmp((const char*)*_a, (const char*)*_b, DIGEST_LEN);
 }
@@ -837,7 +837,7 @@ _compare_digests(const void **_a, const void **_b)
 void
 smartlist_sort_digests(smartlist_t *sl)
 {
-  smartlist_sort(sl, _compare_digests);
+  smartlist_sort(sl, compare_digests_);
 }
 
 /** Remove duplicate digests from a sorted list, and free them with tor_free().
@@ -845,12 +845,12 @@ smartlist_sort_digests(smartlist_t *sl)
 void
 smartlist_uniq_digests(smartlist_t *sl)
 {
-  smartlist_uniq(sl, _compare_digests, _tor_free);
+  smartlist_uniq(sl, compare_digests_, tor_free_);
 }
 
 /** Helper: compare two DIGEST256_LEN digests. */
 static int
-_compare_digests256(const void **_a, const void **_b)
+compare_digests256_(const void **_a, const void **_b)
 {
   return tor_memcmp((const char*)*_a, (const char*)*_b, DIGEST256_LEN);
 }
@@ -859,7 +859,7 @@ _compare_digests256(const void **_a, const void **_b)
 void
 smartlist_sort_digests256(smartlist_t *sl)
 {
-  smartlist_sort(sl, _compare_digests256);
+  smartlist_sort(sl, compare_digests256_);
 }
 
 /** Return the most frequent member of the sorted list of DIGEST256_LEN
@@ -867,7 +867,7 @@ smartlist_sort_digests256(smartlist_t *sl)
 char *
 smartlist_get_most_frequent_digest256(smartlist_t *sl)
 {
-  return smartlist_get_most_frequent(sl, _compare_digests256);
+  return smartlist_get_most_frequent(sl, compare_digests256_);
 }
 
 /** Remove duplicate 256-bit digests from a sorted list, and free them with
@@ -876,7 +876,7 @@ smartlist_get_most_frequent_digest256(smartlist_t *sl)
 void
 smartlist_uniq_digests256(smartlist_t *sl)
 {
-  smartlist_uniq(sl, _compare_digests256, _tor_free);
+  smartlist_uniq(sl, compare_digests256_, tor_free_);
 }
 
 /** Helper: Declare an entry type and a map type to implement a mapping using

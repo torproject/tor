@@ -11,7 +11,7 @@
  * should touch.
  */
 
-#define _TOR_CHANNEL_INTERNAL
+#define TOR_CHANNEL_INTERNAL_
 
 #include "or.h"
 #include "channel.h"

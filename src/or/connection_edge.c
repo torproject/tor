@@ -66,7 +66,7 @@ static int connection_ap_supports_optimistic_data(const entry_connection_t *);
  * has_sent_end to 1, and mark the conn.
  */
 void
-_connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
+connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
                                int line, const char *file)
 {
   connection_t *base_conn = ENTRY_TO_CONN(conn);
@@ -89,7 +89,7 @@ _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
 
   if (base_conn->marked_for_close) {
     /* This call will warn as appropriate. */
-    _connection_mark_for_close(base_conn, line, file);
+    connection_mark_for_close_(base_conn, line, file);
     return;
   }
 
@@ -109,7 +109,7 @@ _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
       conn->socks_request->has_finished = 1;
   }
 
-  _connection_mark_and_flush(base_conn, line, file);
+  connection_mark_and_flush_(base_conn, line, file);
 
   ENTRY_TO_EDGE_CONN(conn)->end_reason = endreason;
 }
@@ -124,12 +124,12 @@ connection_edge_reached_eof(edge_connection_t *conn)
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
-  log_info(LD_EDGE,"conn (fd %d) reached eof. Closing.", conn->_base.s);
-  if (!conn->_base.marked_for_close) {
+  log_info(LD_EDGE,"conn (fd %d) reached eof. Closing.", conn->base_.s);
+  if (!conn->base_.marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
     connection_edge_end(conn, END_STREAM_REASON_DONE);
-    if (conn->_base.type == CONN_TYPE_AP) {
+    if (conn->base_.type == CONN_TYPE_AP) {
       /* eof, so don't send a socks reply back */
       if (EDGE_TO_ENTRY_CONN(conn)->socks_request)
         EDGE_TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
@@ -154,7 +154,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
 {
   tor_assert(conn);
 
-  switch (conn->_base.state) {
+  switch (conn->base_.state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(EDGE_TO_ENTRY_CONN(conn)) <0) {
         /* already marked */
@@ -180,7 +180,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
         log_info(LD_EDGE,
                  "data from edge while in '%s' state. Sending it anyway. "
                  "package_partial=%d, buflen=%ld",
-                 conn_state_to_string(conn->_base.type, conn->_base.state),
+                 conn_state_to_string(conn->base_.type, conn->base_.state),
                  package_partial,
                  (long)connection_get_inbuf_len(TO_CONN(conn)));
         if (connection_edge_package_raw_inbuf(conn, package_partial, NULL)<0) {
@@ -199,10 +199,10 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
     case AP_CONN_STATE_CONTROLLER_WAIT:
       log_info(LD_EDGE,
                "data from edge while in '%s' state. Leaving it on buffer.",
-               conn_state_to_string(conn->_base.type, conn->_base.state));
+               conn_state_to_string(conn->base_.type, conn->base_.state));
       return 0;
   }
-  log_warn(LD_BUG,"Got unexpected state %d. Closing.",conn->_base.state);
+  log_warn(LD_BUG,"Got unexpected state %d. Closing.",conn->base_.state);
   tor_fragile_assert();
   connection_edge_end(conn, END_STREAM_REASON_INTERNAL);
   connection_mark_for_close(TO_CONN(conn));
@@ -215,10 +215,10 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
 int
 connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
 {
-  if (!conn->_base.marked_for_close) {
+  if (!conn->base_.marked_for_close) {
     log_info(LD_EDGE,
              "CircID %d: At an edge. Marking connection for close.", circ_id);
-    if (conn->_base.type == CONN_TYPE_AP) {
+    if (conn->base_.type == CONN_TYPE_AP) {
       entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
       connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_DESTROY);
       control_event_stream_bandwidth(conn);
@@ -282,10 +282,10 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
     return -1;
   }
 
-  if (conn->_base.marked_for_close) {
+  if (conn->base_.marked_for_close) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
-             conn->_base.marked_for_close_file, conn->_base.marked_for_close);
+             conn->base_.marked_for_close_file, conn->base_.marked_for_close);
     return 0;
   }
 
@@ -301,11 +301,11 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   if (reason == END_STREAM_REASON_EXITPOLICY &&
       !connection_edge_is_rendezvous_stream(conn)) {
     int addrlen;
-    if (tor_addr_family(&conn->_base.addr) == AF_INET) {
-      set_uint32(payload+1, tor_addr_to_ipv4n(&conn->_base.addr));
+    if (tor_addr_family(&conn->base_.addr) == AF_INET) {
+      set_uint32(payload+1, tor_addr_to_ipv4n(&conn->base_.addr));
       addrlen = 4;
     } else {
-      memcpy(payload+1, tor_addr_to_in6_addr8(&conn->_base.addr), 16);
+      memcpy(payload+1, tor_addr_to_in6_addr8(&conn->base_.addr), 16);
       addrlen = 16;
     }
     set_uint32(payload+1+addrlen, htonl(dns_clip_ttl(conn->address_ttl)));
@@ -313,12 +313,12 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   }
 
   if (circ && !circ->marked_for_close) {
-    log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->_base.s);
+    log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->base_.s);
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
   } else {
     log_debug(LD_EDGE,"No circ to send end on conn (fd %d).",
-              conn->_base.s);
+              conn->base_.s);
   }
 
   conn->edge_has_sent_end = 1;
@@ -335,7 +335,7 @@ connection_edge_end_errno(edge_connection_t *conn)
 {
   uint8_t reason;
   tor_assert(conn);
-  reason = errno_to_stream_end_reason(tor_socket_errno(conn->_base.s));
+  reason = errno_to_stream_end_reason(tor_socket_errno(conn->base_.s));
   return connection_edge_end(conn, reason);
 }
 
@@ -347,7 +347,7 @@ connection_edge_end_errno(edge_connection_t *conn)
 int
 connection_edge_flushed_some(edge_connection_t *conn)
 {
-  switch (conn->_base.state) {
+  switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_edge_consider_sending_sendme(conn);
@@ -371,7 +371,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
 {
   tor_assert(conn);
 
-  switch (conn->_base.state) {
+  switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_edge_consider_sending_sendme(conn);
@@ -385,7 +385,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_RESOLVE_WAIT:
       return 0;
     default:
-      log_warn(LD_BUG, "Called in unexpected state %d.",conn->_base.state);
+      log_warn(LD_BUG, "Called in unexpected state %d.",conn->base_.state);
       tor_fragile_assert();
       return -1;
   }
@@ -401,7 +401,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   connection_t *conn;
 
   tor_assert(edge_conn);
-  tor_assert(edge_conn->_base.type == CONN_TYPE_EXIT);
+  tor_assert(edge_conn->base_.type == CONN_TYPE_EXIT);
   conn = TO_CONN(edge_conn);
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
@@ -628,7 +628,7 @@ connection_ap_expire_beginning(void)
     tor_assert(circ->timestamp_dirty);
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 'cutoff' seconds to try */
-    conn->_base.timestamp_lastread += cutoff;
+    conn->base_.timestamp_lastread += cutoff;
     if (entry_conn->num_socks_retries < 250) /* avoid overflow */
       entry_conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
@@ -934,7 +934,7 @@ void
 addressmap_clear_excluded_trackexithosts(const or_options_t *options)
 {
   const routerset_t *allow_nodes = options->ExitNodes;
-  const routerset_t *exclude_nodes = options->_ExcludeExitNodesUnion;
+  const routerset_t *exclude_nodes = options->ExcludeExitNodesUnion_;
 
   if (!addressmap)
     return;
@@ -1688,15 +1688,15 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 {
    strmap_iter_t *iter;
    const char *key;
-   void *_val;
+   void *val_;
    addressmap_entry_t *val;
 
    if (!addressmap)
      addressmap_init();
 
    for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
-     strmap_iter_get(iter, &key, &_val);
-     val = _val;
+     strmap_iter_get(iter, &key, &val_);
+     val = val_;
      if (val->expires >= min_expires && val->expires <= max_expires) {
        if (!sl) {
          iter = strmap_iter_next_rmv(addressmap,iter);
@@ -1925,7 +1925,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
 
     /* If StrictNodes is not set, then .exit overrides ExcludeNodes. */
     routerset_t *excludeset = options->StrictNodes ?
-      options->_ExcludeExitNodesUnion : options->ExcludeExitNodes;
+      options->ExcludeExitNodesUnion_ : options->ExcludeExitNodes;
     const node_t *node;
 
     if (exit_source == ADDRMAPSRC_AUTOMAP && !options->AllowDotExit) {
@@ -2587,13 +2587,13 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 
     /* Mark this circuit "unusable for new streams". */
     /* XXXX024 this is a kludgy way to do this. */
-    tor_assert(circ->_base.timestamp_dirty);
-    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+    tor_assert(circ->base_.timestamp_dirty);
+    circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
-               (circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
+               (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
   payload_len = (int)strlen(payload)+1;
@@ -2620,7 +2620,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
   edge_conn->deliver_window = STREAMWINDOW_START;
   base_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   log_info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
-           base_conn->s, circ->_base.n_circ_id);
+           base_conn->s, circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
   /* If there's queued-up data, send it now */
@@ -2659,7 +2659,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   tor_assert(base_conn->type == CONN_TYPE_AP);
   tor_assert(base_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
-  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL);
 
   command = ap_conn->socks_request->command;
   tor_assert(SOCKS_COMMAND_IS_RESOLVE(command));
@@ -2672,8 +2672,8 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
     /* Mark this circuit "unusable for new streams". */
     /* XXXX024 this is a kludgy way to do this. */
-    tor_assert(circ->_base.timestamp_dirty);
-    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+    tor_assert(circ->base_.timestamp_dirty);
+    circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
@@ -2721,7 +2721,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   base_conn->address = tor_strdup("(Tor_internal)");
   base_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
-           base_conn->s, circ->_base.n_circ_id);
+           base_conn->s, circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_NEW, 0);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);
   return 0;
@@ -3102,7 +3102,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     }
     /* Make sure to get the 'real' address of the previous hop: the
      * caller might want to know whether his IP address has changed, and
-     * we might already have corrected _base.addr[ess] for the relay's
+     * we might already have corrected base_.addr[ess] for the relay's
      * canonical IP address. */
     if (or_circ && or_circ->p_chan)
       address = tor_strdup(channel_get_actual_remote_descr(or_circ->p_chan));
@@ -3125,10 +3125,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
    * we can measure download times. */
   n_stream->dirreq_id = circ->dirreq_id;
 
-  n_stream->_base.purpose = EXIT_PURPOSE_CONNECT;
+  n_stream->base_.purpose = EXIT_PURPOSE_CONNECT;
 
   n_stream->stream_id = rh.stream_id;
-  n_stream->_base.port = port;
+  n_stream->base_.port = port;
   /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
@@ -3136,14 +3136,14 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     log_info(LD_REND,"begin is for rendezvous. configuring stream.");
-    n_stream->_base.address = tor_strdup("(rendezvous)");
-    n_stream->_base.state = EXIT_CONN_STATE_CONNECTING;
+    n_stream->base_.address = tor_strdup("(rendezvous)");
+    n_stream->base_.state = EXIT_CONN_STATE_CONNECTING;
     n_stream->rend_data = rend_data_dup(origin_circ->rend_data);
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
     if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
       log_info(LD_REND,"Didn't find rendezvous service (port %d)",
-               n_stream->_base.port);
+               n_stream->base_.port);
       relay_send_end_cell_from_edge(rh.stream_id, circ,
                                     END_STREAM_REASON_EXITPOLICY,
                                     origin_circ->cpath->prev);
@@ -3166,8 +3166,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return 0;
   }
   tor_strlower(address);
-  n_stream->_base.address = address;
-  n_stream->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
+  n_stream->base_.address = address;
+  n_stream->base_.state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
   if (we_are_hibernating()) {
@@ -3230,12 +3230,12 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
    */
   dummy_conn = edge_connection_new(CONN_TYPE_EXIT, AF_INET);
   dummy_conn->stream_id = rh.stream_id;
-  dummy_conn->_base.address = tor_strndup(
+  dummy_conn->base_.address = tor_strndup(
                                        (char*)cell->payload+RELAY_HEADER_SIZE,
                                        rh.length);
-  dummy_conn->_base.port = 0;
-  dummy_conn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
-  dummy_conn->_base.purpose = EXIT_PURPOSE_RESOLVE;
+  dummy_conn->base_.port = 0;
+  dummy_conn->base_.state = EXIT_CONN_STATE_RESOLVEFAILED;
+  dummy_conn->base_.purpose = EXIT_PURPOSE_RESOLVE;
 
   dummy_conn->on_circuit = TO_CIRCUIT(circ);
 
@@ -3245,7 +3245,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
       /* Connection freed; don't touch it. */
       return 0;
     case 1: /* The result was cached; a resolved cell was sent. */
-      if (!dummy_conn->_base.marked_for_close)
+      if (!dummy_conn->base_.marked_for_close)
         connection_free(TO_CONN(dummy_conn));
       return 0;
     case 0: /* resolve added to pending list */
@@ -3352,16 +3352,16 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   log_info(LD_EXIT, "Opening local connection for anonymized directory exit");
 
-  exitconn->_base.state = EXIT_CONN_STATE_OPEN;
+  exitconn->base_.state = EXIT_CONN_STATE_OPEN;
 
-  dirconn = dir_connection_new(tor_addr_family(&exitconn->_base.addr));
+  dirconn = dir_connection_new(tor_addr_family(&exitconn->base_.addr));
 
-  tor_addr_copy(&dirconn->_base.addr, &exitconn->_base.addr);
-  dirconn->_base.port = 0;
-  dirconn->_base.address = tor_strdup(exitconn->_base.address);
-  dirconn->_base.type = CONN_TYPE_DIR;
-  dirconn->_base.purpose = DIR_PURPOSE_SERVER;
-  dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
+  tor_addr_copy(&dirconn->base_.addr, &exitconn->base_.addr);
+  dirconn->base_.port = 0;
+  dirconn->base_.address = tor_strdup(exitconn->base_.address);
+  dirconn->base_.type = CONN_TYPE_DIR;
+  dirconn->base_.purpose = DIR_PURPOSE_SERVER;
+  dirconn->base_.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
 
   /* Note that the new dir conn belongs to the same tunneled request as
    * the edge conn, so that we can measure download times. */
@@ -3467,7 +3467,7 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
     if (!conn->chosen_exit_name && node_exit_policy_rejects_all(exit))
       return 0;
   }
-  if (routerset_contains_node(options->_ExcludeExitNodesUnion, exit)) {
+  if (routerset_contains_node(options->ExcludeExitNodesUnion_, exit)) {
     /* Not a suitable exit. Refuse it. */
     return 0;
   }

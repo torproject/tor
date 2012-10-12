@@ -31,25 +31,25 @@ void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
-void _connection_mark_for_close(connection_t *conn,int line, const char *file);
+void connection_mark_for_close_(connection_t *conn,int line, const char *file);
 
 #define connection_mark_for_close(c) \
-  _connection_mark_for_close((c), __LINE__, _SHORT_FILE_)
+  connection_mark_for_close_((c), __LINE__, SHORT_FILE__)
 
 /**
  * Mark 'c' for close, but try to hold it open until all the data is written.
  */
-#define _connection_mark_and_flush(c,line,file)                         \
+#define connection_mark_and_flush_(c,line,file)                         \
   do {                                                                  \
     connection_t *tmp_conn_ = (c);                                      \
-    _connection_mark_for_close(tmp_conn_, (line), (file));              \
+    connection_mark_for_close_(tmp_conn_, (line), (file));              \
     tmp_conn_->hold_open_until_flushed = 1;                             \
     IF_HAS_BUFFEREVENT(tmp_conn_,                                       \
                        connection_start_writing(tmp_conn_));            \
   } while (0)
 
 #define connection_mark_and_flush(c)            \
-  _connection_mark_and_flush((c), __LINE__, _SHORT_FILE_)
+  connection_mark_and_flush_((c), __LINE__, SHORT_FILE__)
 
 void connection_expire_held_open(void);
 
@@ -90,7 +90,7 @@ int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn, int force);
 int connection_flush(connection_t *conn);
 
-void _connection_write_to_buf_impl(const char *string, size_t len,
+void connection_write_to_buf_impl_(const char *string, size_t len,
                                    connection_t *conn, int zlib);
 /* DOCDOC connection_write_to_buf */
 static void connection_write_to_buf(const char *string, size_t len,
@@ -101,13 +101,13 @@ static void connection_write_to_buf_zlib(const char *string, size_t len,
 static INLINE void
 connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 {
-  _connection_write_to_buf_impl(string, len, conn, 0);
+  connection_write_to_buf_impl_(string, len, conn, 0);
 }
 static INLINE void
 connection_write_to_buf_zlib(const char *string, size_t len,
                              dir_connection_t *conn, int done)
 {
-  _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
+  connection_write_to_buf_impl_(string, len, TO_CONN(conn), done ? -1 : 1);
 }
 
 /* DOCDOC connection_get_inbuf_len */

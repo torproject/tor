@@ -84,14 +84,14 @@ struct circuitmux_policy_circ_data_s {
  * Convert a circuitmux_policy_data_t subtype to a circuitmux_policy_data_t.
  */
 
-#define TO_CMUX_POL_DATA(x)  (&((x)->_base))
+#define TO_CMUX_POL_DATA(x)  (&((x)->base_))
 
 /**
  * Convert a circuitmux_policy_circ_data_t subtype to a
  * circuitmux_policy_circ_data_t.
  */
 
-#define TO_CMUX_POL_CIRC_DATA(x)  (&((x)->_base))
+#define TO_CMUX_POL_CIRC_DATA(x)  (&((x)->base_))
 
 /* Consistency check */
 void circuitmux_assert_okay(circuitmux_t *cmux);

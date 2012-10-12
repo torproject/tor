@@ -171,7 +171,7 @@ int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
 #define tor_addr_is_internal(addr, for_listening) \
-  tor_addr_is_internal_((addr), (for_listening), _SHORT_FILE_, __LINE__)
+  tor_addr_is_internal_((addr), (for_listening), SHORT_FILE__, __LINE__)
 
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */

@@ -1894,7 +1894,7 @@ main(int c, const char **v)
 
 #ifdef USE_DMALLOC
   {
-    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc, _tor_free);
+    int r = CRYPTO_set_mem_ex_functions(tor_malloc_, tor_realloc_, tor_free_);
     tor_assert(r);
   }
 #endif

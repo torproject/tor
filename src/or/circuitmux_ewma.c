@@ -6,7 +6,7 @@
  * \brief EWMA circuit selection as a circuitmux_t policy
  **/
 
-#define _TOR_CIRCUITMUX_EWMA_C
+#define TOR_CIRCUITMUX_EWMA_C_
 
 #include <math.h>
 
@@ -62,7 +62,7 @@ struct cell_ewma_s {
 };
 
 struct ewma_policy_data_s {
-  circuitmux_policy_data_t _base;
+  circuitmux_policy_data_t base_;
 
   /**
    * Priority queue of cell_ewma_t for circuits with queued cells waiting
@@ -81,7 +81,7 @@ struct ewma_policy_data_s {
 };
 
 struct ewma_policy_circ_data_s {
-  circuitmux_policy_circ_data_t _base;
+  circuitmux_policy_circ_data_t base_;
 
   /**
    * The EWMA count for the number of cells flushed from this circuit
@@ -226,7 +226,7 @@ ewma_alloc_cmux_data(circuitmux_t *cmux)
   tor_assert(cmux);
 
   pol = tor_malloc_zero(sizeof(*pol));
-  pol->_base.magic = EWMA_POL_DATA_MAGIC;
+  pol->base_.magic = EWMA_POL_DATA_MAGIC;
   pol->active_circuit_pqueue = smartlist_new();
   pol->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
 
@@ -276,7 +276,7 @@ ewma_alloc_circ_data(circuitmux_t *cmux,
   tor_assert(cell_count == cell_count);
 
   cdata = tor_malloc_zero(sizeof(*cdata));
-  cdata->_base.magic = EWMA_POL_CIRC_DATA_MAGIC;
+  cdata->base_.magic = EWMA_POL_CIRC_DATA_MAGIC;
   cdata->circ = circ;
 
   /*

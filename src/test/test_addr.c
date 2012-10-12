@@ -70,7 +70,7 @@ test_addr_basic(void)
   ;
 }
 
-#define _test_op_ip6(a,op,b,e1,e2)                               \
+#define test_op_ip6_(a,op,b,e1,e2)                               \
   STMT_BEGIN                                                     \
   tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
     (memcmp(val1_->s6_addr, val2_->s6_addr, 16) op 0),           \
@@ -93,7 +93,7 @@ test_addr_basic(void)
 #define test_pton6_same(a,b) STMT_BEGIN                \
      test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);      \
      test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);      \
-     _test_op_ip6(&a1,==,&a2,#a,#b);                   \
+     test_op_ip6_(&a1,==,&a2,#a,#b);                   \
   STMT_END
 
 /** Helper: Assert that <b>a</b> is recognized as a bad IPv6 address by
@@ -108,7 +108,7 @@ test_addr_basic(void)
     test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);                        \
     test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
     test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);                        \
-    _test_op_ip6(&a1, ==, &a2, a, b);                                   \
+    test_op_ip6_(&a1, ==, &a2, a, b);                                   \
   STMT_END
 
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that

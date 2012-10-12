@@ -76,9 +76,9 @@
 
 #ifdef TOR_IS_MULTITHREADED
 /** A number of preallocated mutexes for use by OpenSSL. */
-static tor_mutex_t **_openssl_mutexes = NULL;
+static tor_mutex_t **openssl_mutexes_ = NULL;
 /** How many mutexes have we allocated for use by OpenSSL? */
-static int _n_openssl_mutexes = 0;
+static int n_openssl_mutexes_ = 0;
 #endif
 
 /** A public key, or a public/private key-pair. */
@@ -133,7 +133,7 @@ crypto_get_rsa_padding(int padding)
 }
 
 /** Boolean: has OpenSSL's crypto been initialized? */
-static int _crypto_global_initialized = 0;
+static int crypto_global_initialized_ = 0;
 
 /** Log all pending crypto errors at level <b>severity</b>.  Use
  * <b>doing</b> to describe our current activities.
@@ -225,10 +225,10 @@ crypto_openssl_get_version_str(void)
 int
 crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
-  if (!_crypto_global_initialized) {
+  if (!crypto_global_initialized_) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
-    _crypto_global_initialized = 1;
+    crypto_global_initialized_ = 1;
     setup_openssl_threading();
 
     if (SSLeay() == OPENSSL_VERSION_NUMBER &&
@@ -313,7 +313,7 @@ crypto_thread_cleanup(void)
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
 crypto_pk_t *
-_crypto_new_pk_from_rsa(RSA *rsa)
+crypto_new_pk_from_rsa_(RSA *rsa)
 {
   crypto_pk_t *env;
   tor_assert(rsa);
@@ -326,7 +326,7 @@ _crypto_new_pk_from_rsa(RSA *rsa)
 /** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
  * crypto_pk_t. */
 RSA *
-_crypto_pk_get_rsa(crypto_pk_t *env)
+crypto_pk_get_rsa_(crypto_pk_t *env)
 {
   return env->key;
 }
@@ -334,7 +334,7 @@ _crypto_pk_get_rsa(crypto_pk_t *env)
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
  * private is set, include the private-key portion of the key. */
 EVP_PKEY *
-_crypto_pk_get_evp_pkey(crypto_pk_t *env, int private)
+crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
@@ -362,7 +362,7 @@ _crypto_pk_get_evp_pkey(crypto_pk_t *env, int private)
 /** Used by tortls.c: Get the DH* from a crypto_dh_t.
  */
 DH *
-_crypto_dh_get_dh(crypto_dh_t *dh)
+crypto_dh_get_dh_(crypto_dh_t *dh)
 {
   return dh->dh;
 }
@@ -377,7 +377,7 @@ crypto_pk_new(void)
 
   rsa = RSA_new();
   tor_assert(rsa);
-  return _crypto_new_pk_from_rsa(rsa);
+  return crypto_new_pk_from_rsa_(rsa);
 }
 
 /** Release a reference to an asymmetric key; when all the references
@@ -822,7 +822,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
     return NULL;
   }
 
-  return _crypto_new_pk_from_rsa(new_key);
+  return crypto_new_pk_from_rsa_(new_key);
 }
 
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> with the public key
@@ -1189,7 +1189,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
     crypto_log_errors(LOG_WARN,"decoding public key");
     return NULL;
   }
-  return _crypto_new_pk_from_rsa(rsa);
+  return crypto_new_pk_from_rsa_(rsa);
 }
 
 /** Given a private or public key <b>pk</b>, put a SHA1 hash of the
@@ -2873,19 +2873,19 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 #ifdef TOR_IS_MULTITHREADED
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */
 static void
-_openssl_locking_cb(int mode, int n, const char *file, int line)
+openssl_locking_cb_(int mode, int n, const char *file, int line)
 {
   (void)file;
   (void)line;
-  if (!_openssl_mutexes)
+  if (!openssl_mutexes_)
     /* This is not a really good  fix for the
      * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
      * it can't hurt. */
     return;
   if (mode & CRYPTO_LOCK)
-    tor_mutex_acquire(_openssl_mutexes[n]);
+    tor_mutex_acquire(openssl_mutexes_[n]);
   else
-    tor_mutex_release(_openssl_mutexes[n]);
+    tor_mutex_release(openssl_mutexes_[n]);
 }
 
 /** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can use it
@@ -2897,7 +2897,7 @@ struct CRYPTO_dynlock_value {
 /** OpenSSL callback function to allocate a lock: see CRYPTO_set_dynlock_*
  * documentation in OpenSSL's docs for more info. */
 static struct CRYPTO_dynlock_value *
-_openssl_dynlock_create_cb(const char *file, int line)
+openssl_dynlock_create_cb_(const char *file, int line)
 {
   struct CRYPTO_dynlock_value *v;
   (void)file;
@@ -2910,7 +2910,7 @@ _openssl_dynlock_create_cb(const char *file, int line)
 /** OpenSSL callback function to acquire or release a lock: see
  * CRYPTO_set_dynlock_* documentation in OpenSSL's docs for more info. */
 static void
-_openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
+openssl_dynlock_lock_cb_(int mode, struct CRYPTO_dynlock_value *v,
                          const char *file, int line)
 {
   (void)file;
@@ -2924,7 +2924,7 @@ _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
 /** OpenSSL callback function to free a lock: see CRYPTO_set_dynlock_*
  * documentation in OpenSSL's docs for more info. */
 static void
-_openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,
+openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
                             const char *file, int line)
 {
   (void)file;
@@ -2941,15 +2941,15 @@ setup_openssl_threading(void)
 {
   int i;
   int n = CRYPTO_num_locks();
-  _n_openssl_mutexes = n;
-  _openssl_mutexes = tor_malloc(n*sizeof(tor_mutex_t *));
+  n_openssl_mutexes_ = n;
+  openssl_mutexes_ = tor_malloc(n*sizeof(tor_mutex_t *));
   for (i=0; i < n; ++i)
-    _openssl_mutexes[i] = tor_mutex_new();
-  CRYPTO_set_locking_callback(_openssl_locking_cb);
+    openssl_mutexes_[i] = tor_mutex_new();
+  CRYPTO_set_locking_callback(openssl_locking_cb_);
   CRYPTO_set_id_callback(tor_get_thread_id);
-  CRYPTO_set_dynlock_create_callback(_openssl_dynlock_create_cb);
-  CRYPTO_set_dynlock_lock_callback(_openssl_dynlock_lock_cb);
-  CRYPTO_set_dynlock_destroy_callback(_openssl_dynlock_destroy_cb);
+  CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
+  CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
+  CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
   return 0;
 }
 #else
@@ -2983,12 +2983,12 @@ crypto_global_cleanup(void)
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 #ifdef TOR_IS_MULTITHREADED
-  if (_n_openssl_mutexes) {
-    int n = _n_openssl_mutexes;
-    tor_mutex_t **ms = _openssl_mutexes;
+  if (n_openssl_mutexes_) {
+    int n = n_openssl_mutexes_;
+    tor_mutex_t **ms = openssl_mutexes_;
     int i;
-    _openssl_mutexes = NULL;
-    _n_openssl_mutexes = 0;
+    openssl_mutexes_ = NULL;
+    n_openssl_mutexes_ = 0;
     for (i=0;i<n;++i) {
       tor_mutex_free(ms[i]);
     }

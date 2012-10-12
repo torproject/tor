@@ -230,7 +230,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
         cell_direction == CELL_DIRECTION_OUT) {
       or_circuit_t *splice = TO_OR_CIRCUIT(circ)->rend_splice;
       tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
-      tor_assert(splice->_base.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      tor_assert(splice->base_.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       cell->circ_id = splice->p_circ_id;
       cell->command = CELL_RELAY; /* can't be relay_early anyway */
       if ((reason = circuit_receive_relay_cell(cell, TO_CIRCUIT(splice),
@@ -422,7 +422,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
     for (tmpconn = TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
-          !tmpconn->_base.marked_for_close &&
+          !tmpconn->base_.marked_for_close &&
           tmpconn->cpath_layer == layer_hint) {
         log_debug(LD_APP,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
@@ -432,7 +432,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
     for (tmpconn = TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
-          !tmpconn->_base.marked_for_close) {
+          !tmpconn->base_.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         if (cell_direction == CELL_DIRECTION_OUT ||
             connection_edge_is_rendezvous_stream(tmpconn))
@@ -442,7 +442,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
     for (tmpconn = TO_OR_CIRCUIT(circ)->resolving_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
-          !tmpconn->_base.marked_for_close) {
+          !tmpconn->base_.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
@@ -631,16 +631,16 @@ connection_edge_send_command(edge_connection_t *fromconn,
   tor_assert(fromconn);
   circ = fromconn->on_circuit;
 
-  if (fromconn->_base.marked_for_close) {
+  if (fromconn->base_.marked_for_close) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
-             fromconn->_base.marked_for_close_file,
-             fromconn->_base.marked_for_close);
+             fromconn->base_.marked_for_close_file,
+             fromconn->base_.marked_for_close);
     return 0;
   }
 
   if (!circ) {
-    if (fromconn->_base.type == CONN_TYPE_AP) {
+    if (fromconn->base_.type == CONN_TYPE_AP) {
       log_info(LD_APP,"no circ. Closing conn.");
       connection_mark_unattached_ap(EDGE_TO_ENTRY_CONN(fromconn),
                                     END_STREAM_REASON_INTERNAL);
@@ -777,8 +777,8 @@ connection_ap_process_end_not_open(
           circuit_log_path(LOG_INFO,LD_APP,circ);
           /* Mark this circuit "unusable for new streams". */
           /* XXXX024 this is a kludgy way to do this. */
-          tor_assert(circ->_base.timestamp_dirty);
-          circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+          tor_assert(circ->base_.timestamp_dirty);
+          circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
           if (conn->chosen_exit_optional) {
             /* stop wanting a specific exit */
@@ -854,7 +854,7 @@ connection_edge_process_relay_cell_not_open(
     edge_connection_t *conn, crypt_path_t *layer_hint)
 {
   if (rh->command == RELAY_COMMAND_END) {
-    if (CIRCUIT_IS_ORIGIN(circ) && conn->_base.type == CONN_TYPE_AP) {
+    if (CIRCUIT_IS_ORIGIN(circ) && conn->base_.type == CONN_TYPE_AP) {
       return connection_ap_process_end_not_open(rh, cell,
                                                 TO_ORIGIN_CIRCUIT(circ),
                                                 EDGE_TO_ENTRY_CONN(conn),
@@ -869,18 +869,18 @@ connection_edge_process_relay_cell_not_open(
     }
   }
 
-  if (conn->_base.type == CONN_TYPE_AP &&
+  if (conn->base_.type == CONN_TYPE_AP &&
       rh->command == RELAY_COMMAND_CONNECTED) {
     entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
     tor_assert(CIRCUIT_IS_ORIGIN(circ));
-    if (conn->_base.state != AP_CONN_STATE_CONNECT_WAIT) {
+    if (conn->base_.state != AP_CONN_STATE_CONNECT_WAIT) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP,
              "Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
-    conn->_base.state = AP_CONN_STATE_OPEN;
+    conn->base_.state = AP_CONN_STATE_OPEN;
     log_info(LD_APP,"'connected' received after %d seconds.",
-             (int)(time(NULL) - conn->_base.timestamp_lastread));
+             (int)(time(NULL) - conn->base_.timestamp_lastread));
     if (rh->length >= 4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
       int ttl;
@@ -944,13 +944,13 @@ connection_edge_process_relay_cell_not_open(
     }
     return 0;
   }
-  if (conn->_base.type == CONN_TYPE_AP &&
+  if (conn->base_.type == CONN_TYPE_AP &&
       rh->command == RELAY_COMMAND_RESOLVED) {
     int ttl;
     int answer_len;
     uint8_t answer_type;
     entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
-    if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
+    if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
              "not in state resolve_wait. Dropping.");
       return 0;
@@ -1001,8 +1001,8 @@ connection_edge_process_relay_cell_not_open(
 
   log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Got an unexpected relay command %d, in state %d (%s). Dropping.",
-         rh->command, conn->_base.state,
-         conn_state_to_string(conn->_base.type, conn->_base.state));
+         rh->command, conn->base_.state,
+         conn_state_to_string(conn->base_.type, conn->base_.state));
   return 0; /* for forward compatibility, don't kill the circuit */
 //  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
 //  connection_mark_for_close(conn);
@@ -1050,9 +1050,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
    * conn points to the recognized stream. */
 
   if (conn && !connection_state_is_open(TO_CONN(conn))) {
-    if (conn->_base.type == CONN_TYPE_EXIT &&
-        (conn->_base.state == EXIT_CONN_STATE_CONNECTING ||
-         conn->_base.state == EXIT_CONN_STATE_RESOLVING) &&
+    if (conn->base_.type == CONN_TYPE_EXIT &&
+        (conn->base_.state == EXIT_CONN_STATE_CONNECTING ||
+         conn->base_.state == EXIT_CONN_STATE_RESOLVING) &&
         rh.command == RELAY_COMMAND_DATA) {
       /* Allow DATA cells to be delivered to an exit node in state
        * EXIT_CONN_STATE_CONNECTING or EXIT_CONN_STATE_RESOLVING.
@@ -1152,10 +1152,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_info(domain,"%d: end cell (%s) for stream %d. Removing stream.",
-               conn->_base.s,
+               conn->base_.s,
                stream_end_reason_to_string(reason),
                conn->stream_id);
-      if (conn->_base.type == CONN_TYPE_AP) {
+      if (conn->base_.type == CONN_TYPE_AP) {
         entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
         if (entry_conn->socks_request &&
             !entry_conn->socks_request->has_finished)
@@ -1166,7 +1166,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       conn->edge_has_sent_end = 1;
       if (!conn->end_reason)
         conn->end_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
-      if (!conn->_base.marked_for_close) {
+      if (!conn->base_.marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
         connection_mark_and_flush(TO_CONN(conn));
@@ -1392,21 +1392,21 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   size_t bytes_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
-  const unsigned domain = conn->_base.type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
+  const unsigned domain = conn->base_.type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
   int sending_from_optimistic = 0;
   const int sending_optimistically =
-    conn->_base.type == CONN_TYPE_AP &&
-    conn->_base.state != AP_CONN_STATE_OPEN;
+    conn->base_.type == CONN_TYPE_AP &&
+    conn->base_.state != AP_CONN_STATE_OPEN;
   entry_connection_t *entry_conn =
-    conn->_base.type == CONN_TYPE_AP ? EDGE_TO_ENTRY_CONN(conn) : NULL;
+    conn->base_.type == CONN_TYPE_AP ? EDGE_TO_ENTRY_CONN(conn) : NULL;
   crypt_path_t *cpath_layer = conn->cpath_layer;
 
   tor_assert(conn);
 
-  if (conn->_base.marked_for_close) {
+  if (conn->base_.marked_for_close) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
-             conn->_base.marked_for_close_file, conn->_base.marked_for_close);
+             conn->base_.marked_for_close_file, conn->base_.marked_for_close);
     return 0;
   }
 
@@ -1473,7 +1473,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     connection_fetch_from_buf(payload, length, TO_CONN(conn));
   }
 
-  log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->_base.s,
+  log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->base_.s,
             (int)length, (int)connection_get_inbuf_len(TO_CONN(conn)));
 
   if (sending_optimistically && !sending_from_optimistic) {
@@ -1539,9 +1539,9 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
   }
 
   while (conn->deliver_window <= STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_debug(conn->_base.type == CONN_TYPE_AP ?LD_APP:LD_EXIT,
+    log_debug(conn->base_.type == CONN_TYPE_AP ?LD_APP:LD_EXIT,
               "Outbuf %d, Queuing stream sendme.",
-              (int)conn->_base.outbuf_flushlen);
+              (int)conn->base_.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {
@@ -1630,7 +1630,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   /* Activate reading starting from the chosen stream */
   for (conn=chosen_stream; conn; conn = conn->next_stream) {
     /* Start reading for the streams starting from here */
-    if (conn->_base.marked_for_close || conn->package_window <= 0)
+    if (conn->base_.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       connection_start_reading(TO_CONN(conn));
@@ -1641,7 +1641,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   }
   /* Go back and do the ones we skipped, circular-style */
   for (conn = first_conn; conn != chosen_stream; conn = conn->next_stream) {
-    if (conn->_base.marked_for_close || conn->package_window <= 0)
+    if (conn->base_.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       connection_start_reading(TO_CONN(conn));
@@ -1667,7 +1667,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
    * package.
    */
   for (conn=first_conn; conn; conn=conn->next_stream) {
-    if (conn->_base.marked_for_close || conn->package_window <= 0)
+    if (conn->base_.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       int n = cells_per_conn, r;
@@ -1857,7 +1857,7 @@ dump_cell_pool_usage(int severity)
   circuit_t *c;
   int n_circs = 0;
   int n_cells = 0;
-  for (c = _circuit_get_global_list(); c; c = c->next) {
+  for (c = circuit_get_global_list_(); c; c = c->next) {
     n_cells += c->n_chan_cells.n;
     if (!CIRCUIT_IS_ORIGIN(c))
       n_cells += TO_OR_CIRCUIT(c)->p_chan_cells.n;

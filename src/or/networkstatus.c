@@ -670,7 +670,7 @@ networkstatus_get_cache_filename(const char *identity_digest)
 /** Helper for smartlist_sort: Compare two networkstatus objects by
  * publication date. */
 static int
-_compare_networkstatus_v2_published_on(const void **_a, const void **_b)
+compare_networkstatus_v2_published_on_(const void **_a, const void **_b)
 {
   const networkstatus_v2_t *a = *_a, *b = *_b;
   if (a->published_on < b->published_on)
@@ -904,7 +904,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   networkstatus_v2_list_has_changed = 1;
 
   smartlist_sort(networkstatus_v2_list,
-                 _compare_networkstatus_v2_published_on);
+                 compare_networkstatus_v2_published_on_);
 
   if (!skewed)
     add_networkstatus_to_cache(s, source, ns);
@@ -2005,7 +2005,7 @@ download_status_map_update_from_v2_networkstatus(void)
       digestmap_set(dl_status, d, s);
     } SMARTLIST_FOREACH_END(rs);
   } SMARTLIST_FOREACH_END(ns);
-  digestmap_free(v2_download_status_map, _tor_free);
+  digestmap_free(v2_download_status_map, tor_free_);
   v2_download_status_map = dl_status;
   networkstatus_v2_list_has_changed = 0;
 }
@@ -2018,7 +2018,7 @@ routerstatus_list_update_named_server_map(void)
   if (!current_consensus)
     return;
 
-  strmap_free(named_server_map, _tor_free);
+  strmap_free(named_server_map, tor_free_);
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
@@ -2405,7 +2405,7 @@ networkstatus_free_all(void)
     networkstatus_v2_list = NULL;
   }
 
-  digestmap_free(v2_download_status_map, _tor_free);
+  digestmap_free(v2_download_status_map, tor_free_);
   v2_download_status_map = NULL;
   networkstatus_vote_free(current_ns_consensus);
   networkstatus_vote_free(current_md_consensus);
@@ -2420,7 +2420,7 @@ networkstatus_free_all(void)
     tor_free(waiting->body);
   }
 
-  strmap_free(named_server_map, _tor_free);
+  strmap_free(named_server_map, tor_free_);
   strmap_free(unnamed_server_map, NULL);
 }
 

@@ -16,7 +16,7 @@
  * Define this so we get channel internal functions, since we're implementing
  * part of a subclass (channel_tls_t).
  */
-#define _TOR_CHANNEL_INTERNAL
+#define TOR_CHANNEL_INTERNAL_
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -318,8 +318,8 @@ connection_or_change_state(or_connection_t *conn, uint8_t state)
 
   tor_assert(conn);
 
-  old_state = conn->_base.state;
-  conn->_base.state = state;
+  old_state = conn->base_.state;
+  conn->base_.state = state;
 
   if (conn->chan)
     channel_tls_handle_state_change_on_orconn(conn->chan, conn,
@@ -427,7 +427,7 @@ connection_or_process_inbuf(or_connection_t *conn)
   int ret = 0;
   tor_assert(conn);
 
-  switch (conn->_base.state) {
+  switch (conn->base_.state) {
     case OR_CONN_STATE_PROXY_HANDSHAKING:
       ret = connection_read_proxy_handshake(TO_CONN(conn));
 
@@ -449,7 +449,7 @@ connection_or_process_inbuf(or_connection_t *conn)
 #ifdef USE_BUFFEREVENTS
       if (tor_tls_server_got_renegotiate(conn->tls))
         connection_or_tls_renegotiated_cb(conn->tls, conn);
-      if (conn->_base.marked_for_close)
+      if (conn->base_.marked_for_close)
         return 0;
       /* fall through. */
 #endif
@@ -467,13 +467,13 @@ connection_or_process_inbuf(or_connection_t *conn)
    *
    * XXX024 Remove this check once we verify that the above paragraph is
    * 100% true. */
-  if (buf_datalen(conn->_base.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
+  if (buf_datalen(conn->base_.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "
            "on nonopen OR connection %s %s:%u in state %s; closing.",
-           (int)buf_datalen(conn->_base.inbuf),
+           (int)buf_datalen(conn->base_.inbuf),
            connection_or_nonopen_was_started_here(conn) ? "to" : "from",
-           conn->_base.address, conn->_base.port,
-           conn_state_to_string(conn->_base.type, conn->_base.state));
+           conn->base_.address, conn->base_.port,
+           conn_state_to_string(conn->base_.type, conn->base_.state));
     connection_or_close_for_error(conn, 0);
     ret = -1;
   }
@@ -536,14 +536,14 @@ connection_or_finished_flushing(or_connection_t *conn)
   tor_assert(conn);
   assert_connection_ok(TO_CONN(conn),0);
 
-  switch (conn->_base.state) {
+  switch (conn->base_.state) {
     case OR_CONN_STATE_PROXY_HANDSHAKING:
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
       break;
     default:
-      log_err(LD_BUG,"Called in unexpected state %d.", conn->_base.state);
+      log_err(LD_BUG,"Called in unexpected state %d.", conn->base_.state);
       tor_fragile_assert();
       return -1;
   }
@@ -691,8 +691,8 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
     cfg = ev_token_bucket_cfg_new(rate_per_tick, burst, rate_per_tick,
                                   burst, tick);
     old_cfg = conn->bucket_cfg;
-    if (conn->_base.bufev)
-      tor_set_bufferevent_rate_limit(conn->_base.bufev, cfg);
+    if (conn->base_.bufev)
+      tor_set_bufferevent_rate_limit(conn->base_.bufev, cfg);
     if (old_cfg)
       ev_token_bucket_cfg_free(old_cfg);
     conn->bucket_cfg = cfg;
@@ -741,15 +741,15 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   connection_or_set_identity_digest(conn, id_digest);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
-  conn->_base.port = port;
-  tor_addr_copy(&conn->_base.addr, addr);
+  conn->base_.port = port;
+  tor_addr_copy(&conn->base_.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
   if (r) {
     tor_addr_port_t node_ap;
     node_get_pref_orport(r, &node_ap);
     /* XXXX proposal 186 is making this more complex.  For now, a conn
        is canonical when it uses the _preferred_ address. */
-    if (tor_addr_eq(&conn->_base.addr, &node_ap.addr))
+    if (tor_addr_eq(&conn->base_.addr, &node_ap.addr))
       conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
@@ -762,12 +762,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
-      tor_addr_copy(&conn->_base.addr, &node_ap.addr);
-      conn->_base.port = node_ap.port;
+      tor_addr_copy(&conn->base_.addr, &node_ap.addr);
+      conn->base_.port = node_ap.port;
     }
     conn->nickname = tor_strdup(node_get_nickname(r));
-    tor_free(conn->_base.address);
-    conn->_base.address = tor_dup_addr(&node_ap.addr);
+    tor_free(conn->base_.address);
+    conn->base_.address = tor_dup_addr(&node_ap.addr);
   } else {
     const char *n;
     /* If we're an authoritative directory server, we may know a
@@ -781,8 +781,8 @@ connection_or_init_conn_from_address(or_connection_t *conn,
       base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
                     conn->identity_digest, DIGEST_LEN);
     }
-    tor_free(conn->_base.address);
-    conn->_base.address = tor_dup_addr(addr);
+    tor_free(conn->base_.address);
+    conn->base_.address = tor_dup_addr(addr);
   }
 }
 
@@ -839,23 +839,23 @@ connection_or_group_set_badness(or_connection_t *head, int force)
   /* Pass 1: expire everything that's old, and see what the status of
    * everything else is. */
   for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
-    if (or_conn->_base.marked_for_close ||
+    if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue;
     if (force ||
-        or_conn->_base.timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD
+        or_conn->base_.timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD
           < now) {
       log_info(LD_OR,
                "Marking OR conn to %s:%d as too old for new circuits "
                "(fd %d, %d secs old).",
-               or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
-               (int)(now - or_conn->_base.timestamp_created));
+               or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+               (int)(now - or_conn->base_.timestamp_created));
       connection_or_mark_bad_for_new_circs(or_conn);
     }
 
     if (connection_or_is_bad_for_new_circs(or_conn)) {
       ++n_old;
-    } else if (or_conn->_base.state != OR_CONN_STATE_OPEN) {
+    } else if (or_conn->base_.state != OR_CONN_STATE_OPEN) {
       ++n_inprogress;
     } else if (or_conn->is_canonical) {
       ++n_canonical;
@@ -867,10 +867,10 @@ connection_or_group_set_badness(or_connection_t *head, int force)
   /* Pass 2: We know how about how good the best connection is.
    * expire everything that's worse, and find the very best if we can. */
   for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
-    if (or_conn->_base.marked_for_close ||
+    if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue; /* This one doesn't need to be marked bad. */
-    if (or_conn->_base.state != OR_CONN_STATE_OPEN)
+    if (or_conn->base_.state != OR_CONN_STATE_OPEN)
       continue; /* Don't mark anything bad until we have seen what happens
                  * when the connection finishes. */
     if (n_canonical && !or_conn->is_canonical) {
@@ -880,8 +880,8 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                "Marking OR conn to %s:%d as unsuitable for new circuits: "
                "(fd %d, %d secs old).  It is not canonical, and we have "
                "another connection to that OR that is.",
-               or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
-               (int)(now - or_conn->_base.timestamp_created));
+               or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+               (int)(now - or_conn->base_.timestamp_created));
       connection_or_mark_bad_for_new_circs(or_conn);
       continue;
     }
@@ -913,9 +913,9 @@ connection_or_group_set_badness(or_connection_t *head, int force)
    *   "mostly harmless", so a fix can wait until somebody is bored.
    */
   for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
-    if (or_conn->_base.marked_for_close ||
+    if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn) ||
-        or_conn->_base.state != OR_CONN_STATE_OPEN)
+        or_conn->base_.state != OR_CONN_STATE_OPEN)
       continue;
     if (or_conn != best &&
         channel_is_better(now,
@@ -928,9 +928,9 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
                  "(fd %d, %d secs old).  We have a better canonical one "
                  "(fd %d; %d secs old).",
-                 or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
-                 (int)(now - or_conn->_base.timestamp_created),
-                 best->_base.s, (int)(now - best->_base.timestamp_created));
+                 or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+                 (int)(now - or_conn->base_.timestamp_created),
+                 best->base_.s, (int)(now - best->base_.timestamp_created));
         connection_or_mark_bad_for_new_circs(or_conn);
       } else if (!tor_addr_compare(&or_conn->real_addr,
                                    &best->real_addr, CMP_EXACT)) {
@@ -938,9 +938,9 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
                  "(fd %d, %d secs old).  We have a better one with the "
                  "same address (fd %d; %d secs old).",
-                 or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
-                 (int)(now - or_conn->_base.timestamp_created),
-                 best->_base.s, (int)(now - best->_base.timestamp_created));
+                 or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+                 (int)(now - or_conn->base_.timestamp_created),
+                 best->base_.s, (int)(now - best->base_.timestamp_created));
         connection_or_mark_bad_for_new_circs(or_conn);
       }
     }
@@ -1074,7 +1074,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     if (proxy_type != PROXY_NONE) {
       tor_addr_copy(&addr, &proxy_addr);
       port = proxy_port;
-      conn->_base.proxy_state = PROXY_INFANT;
+      conn->base_.proxy_state = PROXY_INFANT;
     }
   } else {
     /* get_proxy_addrport() might fail if we have a Bridge line that
@@ -1103,12 +1103,12 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  switch (connection_connect(TO_CONN(conn), conn->_base.address,
+  switch (connection_connect(TO_CONN(conn), conn->base_.address,
                              &addr, port, &socket_error)) {
     case -1:
       /* If the connection failed immediately, and we're using
        * a proxy, our proxy is down. Don't blame the Tor server. */
-      if (conn->_base.proxy_state == PROXY_INFANT)
+      if (conn->base_.proxy_state == PROXY_INFANT)
         entry_guard_register_connect_status(conn->identity_digest,
                                             0, 1, time(NULL));
       connection_or_connect_failed(conn,
@@ -1207,27 +1207,27 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
 
   connection_or_change_state(conn, OR_CONN_STATE_TLS_HANDSHAKING);
   tor_assert(!conn->tls);
-  conn->tls = tor_tls_new(conn->_base.s, receiving);
+  conn->tls = tor_tls_new(conn->base_.s, receiving);
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
   tor_tls_set_logged_address(conn->tls, // XXX client and relay?
-      escaped_safe_str(conn->_base.address));
+      escaped_safe_str(conn->base_.address));
 
 #ifdef USE_BUFFEREVENTS
   if (connection_type_uses_bufferevent(TO_CONN(conn))) {
     const int filtering = get_options()->UseFilteringSSLBufferevents;
     struct bufferevent *b =
-      tor_tls_init_bufferevent(conn->tls, conn->_base.bufev, conn->_base.s,
+      tor_tls_init_bufferevent(conn->tls, conn->base_.bufev, conn->base_.s,
                                receiving, filtering);
     if (!b) {
       log_warn(LD_BUG,"tor_tls_init_bufferevent failed. Closing.");
       return -1;
     }
-    conn->_base.bufev = b;
+    conn->base_.bufev = b;
     if (conn->bucket_cfg)
-      tor_set_bufferevent_rate_limit(conn->_base.bufev, conn->bucket_cfg);
+      tor_set_bufferevent_rate_limit(conn->base_.bufev, conn->bucket_cfg);
     connection_enable_rate_limiting(TO_CONN(conn));
 
     connection_configure_bufferevent_callbacks(TO_CONN(conn));
@@ -1239,7 +1239,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   }
 #endif
   connection_start_reading(TO_CONN(conn));
-  log_debug(LD_HANDSHAKE,"starting TLS handshake on fd %d", conn->_base.s);
+  log_debug(LD_HANDSHAKE,"starting TLS handshake on fd %d", conn->base_.s);
   note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
 
   IF_HAS_BUFFEREVENT(TO_CONN(conn), {
@@ -1281,12 +1281,12 @@ connection_tls_continue_handshake(or_connection_t *conn)
   int result;
   check_no_tls_errors();
  again:
-  if (conn->_base.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
+  if (conn->base_.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
     // log_notice(LD_OR, "Renegotiate with %p", conn->tls);
     result = tor_tls_renegotiate(conn->tls);
     // log_notice(LD_OR, "Result: %d", result);
   } else {
-    tor_assert(conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING);
+    tor_assert(conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING);
     // log_notice(LD_OR, "Continue handshake with %p", conn->tls);
     result = tor_tls_handshake(conn->tls);
     // log_notice(LD_OR, "Result: %d", result);
@@ -1299,7 +1299,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
     case TOR_TLS_DONE:
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
-          if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+          if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
             if (tor_tls_received_v3_certificate(conn->tls)) {
               log_info(LD_OR, "Client got a v3 cert!  Moving on to v3 "
                          "handshake.");
@@ -1312,7 +1312,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
               goto again;
             }
           }
-          // log_notice(LD_OR,"Done. state was %d.", conn->_base.state);
+          // log_notice(LD_OR,"Done. state was %d.", conn->base_.state);
         } else {
           /* v2/v3 handshake, but not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
@@ -1351,7 +1351,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
 
   /* XXXX cut-and-paste code; should become a function. */
   if (event & BEV_EVENT_CONNECTED) {
-    if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+    if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
       if (tor_tls_finish_handshake(conn->tls) < 0) {
         log_warn(LD_OR, "Problem finishing handshake");
         connection_or_close_for_error(conn, 0);
@@ -1361,7 +1361,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
 
     if (! tor_tls_used_v1_handshake(conn->tls)) {
       if (!tor_tls_is_server(conn->tls)) {
-        if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+        if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
           if (tor_tls_received_v3_certificate(conn->tls)) {
             log_info(LD_OR, "Client got a v3 cert!");
             if (connection_or_launch_v3_or_handshake(conn) < 0)
@@ -1371,7 +1371,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
             connection_or_change_state(conn,
                 OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING);
             tor_tls_unblock_renegotiation(conn->tls);
-            if (bufferevent_ssl_renegotiate(conn->_base.bufev)<0) {
+            if (bufferevent_ssl_renegotiate(conn->base_.bufev)<0) {
               log_warn(LD_OR, "Start_renegotiating went badly.");
               connection_or_close_for_error(conn, 0);
             }
@@ -1431,7 +1431,7 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
 int
 connection_or_nonopen_was_started_here(or_connection_t *conn)
 {
-  tor_assert(conn->_base.type == CONN_TYPE_OR);
+  tor_assert(conn->base_.type == CONN_TYPE_OR);
   if (!conn->tls)
     return 1; /* it's still in proxy states or something */
   if (conn->handshake_state)
@@ -1473,8 +1473,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   const or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
   const char *safe_address =
-    started_here ? conn->_base.address :
-                   safe_str_client(conn->_base.address);
+    started_here ? conn->base_.address :
+                   safe_str_client(conn->base_.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
   int has_cert = 0;
 
@@ -1483,7 +1483,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   if (started_here && !has_cert) {
     log_info(LD_HANDSHAKE,"Tried connecting to router at %s:%d, but it didn't "
              "send a cert! Closing.",
-             safe_address, conn->_base.port);
+             safe_address, conn->base_.port);
     return -1;
   } else if (!has_cert) {
     log_debug(LD_HANDSHAKE,"Got incoming connection with no certificate. "
@@ -1497,7 +1497,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     if (started_here && v<0) {
       log_fn(severity,LD_HANDSHAKE,"Tried connecting to router at %s:%d: It"
              " has a cert but it's invalid. Closing.",
-             safe_address, conn->_base.port);
+             safe_address, conn->base_.port);
         return -1;
     } else if (v<0) {
       log_info(LD_HANDSHAKE,"Incoming connection gave us an invalid cert "
@@ -1505,7 +1505,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     } else {
       log_debug(LD_HANDSHAKE,
                 "The certificate seems to be valid on %s connection "
-                "with %s:%d", conn_type, safe_address, conn->_base.port);
+                "with %s:%d", conn_type, safe_address, conn->base_.port);
     }
     check_no_tls_errors();
   }
@@ -1558,10 +1558,10 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                   conn->identity_digest, DIGEST_LEN);
     log_info(LD_HANDSHAKE, "Connected to router %s at %s:%d without knowing "
                     "its key. Hoping for the best.",
-                    conn->nickname, conn->_base.address, conn->_base.port);
+                    conn->nickname, conn->base_.address, conn->base_.port);
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
-    learned_router_identity(&conn->_base.addr, conn->_base.port,
+    learned_router_identity(&conn->base_.addr, conn->base_.port,
                             (const char*)peer_id);
   }
 
@@ -1575,7 +1575,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     log_fn(severity, LD_HANDSHAKE,
            "Tried connecting to router at %s:%d, but identity key was not "
            "as expected: wanted %s but got %s.",
-           conn->_base.address, conn->_base.port, expected, seen);
+           conn->base_.address, conn->base_.port, expected, seen);
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
@@ -1587,7 +1587,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     return -1;
   }
   if (authdir_mode_tests_reachability(options)) {
-    dirserv_orconn_tls_done(&conn->_base.addr, conn->_base.port,
+    dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
                             (const char*)peer_id);
   }
 
@@ -1629,7 +1629,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done. verifying.",
             started_here?"outgoing":"incoming",
             conn,
-            safe_str_client(conn->_base.address));
+            safe_str_client(conn->base_.address));
 
   directory_set_dirty();
 
@@ -1642,8 +1642,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
     if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->_base.addr,
-                                           conn->_base.port, digest_rcvd, 0);
+      connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                           conn->base_.port, digest_rcvd, 0);
     }
     tor_tls_block_renegotiation(conn->tls);
     return connection_or_set_state_open(conn);
@@ -1652,8 +1652,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->_base.addr,
-                                           conn->_base.port, digest_rcvd, 0);
+      connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                           conn->base_.port, digest_rcvd, 0);
     }
     return connection_or_send_versions(conn, 0);
   }
@@ -1826,7 +1826,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   if (conn->chan)
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
+  if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn->handshake_state, cell, 0);
 
   if (cell->command != CELL_PADDING)
@@ -1848,7 +1848,7 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
   connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
   connection_write_to_buf((char*)cell->payload,
                           cell->payload_len, TO_CONN(conn));
-  if (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
+  if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_var_cell(conn->handshake_state, cell, 0);
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
@@ -1887,7 +1887,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
   while (1) {
     log_debug(LD_OR,
               "%d: starting, inbuf_datalen %d (%d pending in tls object).",
-              conn->_base.s,(int)connection_get_inbuf_len(TO_CONN(conn)),
+              conn->base_.s,(int)connection_get_inbuf_len(TO_CONN(conn)),
               tor_tls_get_pending_bytes(conn->tls));
     if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
       if (!var_cell)
@@ -2000,10 +2000,10 @@ connection_or_send_netinfo(or_connection_t *conn)
   /* Their address. */
   out = cell.payload + 4;
   /* We use &conn->real_addr below, unless it hasn't yet been set. If it
-   * hasn't yet been set, we know that _base.addr hasn't been tampered with
+   * hasn't yet been set, we know that base_.addr hasn't been tampered with
    * yet either. */
   len = append_address_to_payload(out, !tor_addr_is_null(&conn->real_addr)
-                                       ? &conn->real_addr : &conn->_base.addr);
+                                       ? &conn->real_addr : &conn->base_.addr);
   if (len<0)
     return -1;
   out += len;
@@ -2050,7 +2050,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
   ssize_t pos;
   int server_mode;
 
-  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+  tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
@@ -2097,7 +2097,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   var_cell_t *cell;
   uint8_t *cp;
   uint8_t challenge[OR_AUTH_CHALLENGE_LEN];
-  tor_assert(conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
+  tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
