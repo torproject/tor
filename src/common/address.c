@@ -305,7 +305,8 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
  * also treated as internal for now.)
  */
 int
-tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
+tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
+                      const char *filename, int lineno)
 {
   uint32_t iph4 = 0;
   uint32_t iph6[4];
@@ -355,8 +356,8 @@ tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
 
   /* unknown address family... assume it's not safe for external use */
   /* rather than tor_assert(0) */
-  log_warn(LD_BUG, "tor_addr_is_internal() called with a non-IP address of "
-           "type %d", (int)v_family);
+  log_warn(LD_BUG, "tor_addr_is_internal() called from %s:%d with a "
+           "non-IP address of type %d", filename, lineno, (int)v_family);
   tor_fragile_assert();
   return 1;
 }

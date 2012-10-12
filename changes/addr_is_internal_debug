@@ -1,0 +1,4 @@
+  o Minor features:
+    - Log the call-site of a failed tor_addr_is_internal(), so that we
+      can learn who is calling it with AF_UNSPECIFIED and fix the
+      second (unrelated) part of bug 7086.
