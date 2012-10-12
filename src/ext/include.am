@@ -9,7 +9,8 @@ EXTHEADERS = \
   src/ext/tinytest.h	\
   src/ext/strlcat.c	\
   src/ext/strlcpy.c	\
-  src/ext/tinytest_macros.h
+  src/ext/tinytest_macros.h \
+  src/ext/tor_queue.h
 
 noinst_HEADERS+= $(EXTHEADERS)
 
