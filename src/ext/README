@@ -4,6 +4,13 @@ OpenBSD_malloc_Linux.c:
     The OpenBSD malloc implementation, ported to Linux.  Used only when
     --enable-openbsd-malloc is passed to the configure script.
 
+strlcat.c
+strlcpy.c
+
+    Implementations of strlcat and strlcpy, the more sane replacements
+    for strcat and strcpy.  These are nonstandard, and some libc
+    implementations refuse to add them for religious reasons.
+
 eventdns.[ch]
 
     A fork of Libevent's DNS implementation, used by Tor when Libevent

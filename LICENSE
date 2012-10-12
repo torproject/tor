@@ -43,7 +43,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===============================================================================
-src/common/strlcat.c and src/common/strlcpy.c by Todd C. Miller are licensed
+src/ext/strlcat.c and src/ext/strlcpy.c by Todd C. Miller are licensed
 under the following license:
 
  * Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
