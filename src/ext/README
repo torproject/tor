@@ -1,0 +1,24 @@
+
+OpenBSD_malloc_Linux.c:
+
+    The OpenBSD malloc implementation, ported to Linux.  Used only when
+    --enable-openbsd-malloc is passed to the configure script.
+
+eventdns.[ch]
+
+    A fork of Libevent's DNS implementation, used by Tor when Libevent
+    2.0 or later is not available.  Once Libevent 2.0 is required, we
+    should throw this away; it has diverged from evdns.[ch], and is
+    no longer easily mergeable.
+
+ht.h
+
+    An implementation of a hash table in the style of Niels Provos's
+    tree.h.  Shared with Libevent.
+
+tinytest.[ch]
+tinydest_demos.c
+tinytest_macros.h
+
+    A unit testing framework. https://github.com/nmathewson/tinytest
+
