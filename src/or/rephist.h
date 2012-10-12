@@ -9,8 +9,8 @@
  * \brief Header file for rephist.c.
  **/
 
-#ifndef _TOR_REPHIST_H
-#define _TOR_REPHIST_H
+#ifndef TOR_REPHIST_H
+#define TOR_REPHIST_H
 
 void rep_hist_init(void);
 void rep_hist_note_connect_failed(const char* nickname, time_t when);

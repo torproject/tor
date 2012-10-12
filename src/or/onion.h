@@ -9,8 +9,8 @@
  * \brief Header file for onion.c.
  **/
 
-#ifndef _TOR_ONION_H
-#define _TOR_ONION_H
+#ifndef TOR_ONION_H
+#define TOR_ONION_H
 
 int onion_pending_add(or_circuit_t *circ, char *onionskin);
 or_circuit_t *onion_next_task(char **onionskin_out);

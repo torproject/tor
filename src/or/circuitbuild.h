@@ -9,8 +9,8 @@
  * \brief Header file for circuitbuild.c.
  **/
 
-#ifndef _TOR_CIRCUITBUILD_H
-#define _TOR_CIRCUITBUILD_H
+#ifndef TOR_CIRCUITBUILD_H
+#define TOR_CIRCUITBUILD_H
 
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);

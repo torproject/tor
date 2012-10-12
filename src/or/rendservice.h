@@ -9,8 +9,8 @@
  * \brief Header file for rendservice.c.
  **/
 
-#ifndef _TOR_RENDSERVICE_H
-#define _TOR_RENDSERVICE_H
+#ifndef TOR_RENDSERVICE_H
+#define TOR_RENDSERVICE_H
 
 #include "or.h"
 

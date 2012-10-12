@@ -3,8 +3,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_COMPAT_H
-#define _TOR_COMPAT_H
+#ifndef TOR_COMPAT_H
+#define TOR_COMPAT_H
 
 #include "orconfig.h"
 #include "torint.h"

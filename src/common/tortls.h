@@ -3,8 +3,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_TORTLS_H
-#define _TOR_TORTLS_H
+#ifndef TOR_TORTLS_H
+#define TOR_TORTLS_H
 
 /**
  * \file tortls.h

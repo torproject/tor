@@ -9,8 +9,8 @@
  * \brief Header file for connection.c.
  **/
 
-#ifndef _TOR_CONNECTION_H
-#define _TOR_CONNECTION_H
+#ifndef TOR_CONNECTION_H
+#define TOR_CONNECTION_H
 
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"

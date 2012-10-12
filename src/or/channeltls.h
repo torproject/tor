@@ -6,8 +6,8 @@
  * \brief Header file for channeltls.c
  **/
 
-#ifndef _TOR_CHANNEL_TLS_H
-#define _TOR_CHANNEL_TLS_H
+#ifndef TOR_CHANNELTLS_H
+#define TOR_CHANNELTLS_H
 
 #include "or.h"
 #include "channel.h"

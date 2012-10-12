@@ -9,8 +9,8 @@
  * \brief Header file for buffers.c.
  **/
 
-#ifndef _TOR_BUFFERS_H
-#define _TOR_BUFFERS_H
+#ifndef TOR_BUFFERS_H
+#define TOR_BUFFERS_H
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);

@@ -9,8 +9,8 @@
  * \brief Header file for rendclient.c.
  **/
 
-#ifndef _TOR_RENDCLIENT_H
-#define _TOR_RENDCLIENT_H
+#ifndef TOR_RENDCLIENT_H
+#define TOR_RENDCLIENT_H
 
 void rend_client_purge_state(void);
 

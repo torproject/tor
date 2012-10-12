@@ -9,8 +9,8 @@
  * \brief Header file for connection_edge.c.
  **/
 
-#ifndef _TOR_CONNECTION_EDGE_H
-#define _TOR_CONNECTION_EDGE_H
+#ifndef TOR_CONNECTION_EDGE_H
+#define TOR_CONNECTION_EDGE_H
 
 #define connection_mark_unattached_ap(conn, endreason) \
   _connection_mark_unattached_ap((conn), (endreason), __LINE__, _SHORT_FILE_)

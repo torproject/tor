@@ -9,8 +9,8 @@
  * \brief Header file for command.c.
  **/
 
-#ifndef _TOR_COMMAND_H
-#define _TOR_COMMAND_H
+#ifndef TOR_COMMAND_H
+#define TOR_COMMAND_H
 
 #include "channel.h"
 

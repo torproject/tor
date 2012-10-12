@@ -9,8 +9,8 @@
  * \brief Header file for reasons.c.
  **/
 
-#ifndef _TOR_REASONS_H
-#define _TOR_REASONS_H
+#ifndef TOR_REASONS_H
+#define TOR_REASONS_H
 
 const char *stream_end_reason_to_control_string(int reason);
 const char *stream_end_reason_to_string(int reason);

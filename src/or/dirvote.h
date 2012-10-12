@@ -9,8 +9,8 @@
  * \brief Header file for dirvote.c.
  **/
 
-#ifndef _TOR_DIRVOTE_H
-#define _TOR_DIRVOTE_H
+#ifndef TOR_DIRVOTE_H
+#define TOR_DIRVOTE_H
 
 /** Lowest allowable value for VoteSeconds. */
 #define MIN_VOTE_SECONDS 20

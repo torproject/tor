@@ -9,8 +9,8 @@
  * \brief Header file for rendcommon.c.
  **/
 
-#ifndef _TOR_RENDCOMMON_H
-#define _TOR_RENDCOMMON_H
+#ifndef TOR_RENDCOMMON_H
+#define TOR_RENDCOMMON_H
 
 /** Free all storage associated with <b>data</b> */
 static INLINE void

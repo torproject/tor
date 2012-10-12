@@ -9,8 +9,8 @@
  * \brief Header file for connection_or.c.
  **/
 
-#ifndef _TOR_CONNECTION_OR_H
-#define _TOR_CONNECTION_OR_H
+#ifndef TOR_CONNECTION_OR_H
+#define TOR_CONNECTION_OR_H
 
 void connection_or_remove_from_identity_map(or_connection_t *conn);
 void connection_or_clear_identity_map(void);

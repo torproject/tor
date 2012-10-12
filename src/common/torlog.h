@@ -10,7 +10,7 @@
  * \brief Headers for log.c
  **/
 
-#ifndef _TOR_LOG_H
+#ifndef TOR_TORLOG_H
 
 #include "compat.h"
 
@@ -213,6 +213,6 @@ extern const char *_log_fn_function_name;
 
 #endif /* !GNUC */
 
-# define _TOR_LOG_H
+# define TOR_TORLOG_H
 #endif
 

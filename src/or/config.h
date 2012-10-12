@@ -9,8 +9,8 @@
  * \brief Header file for config.c.
  **/
 
-#ifndef _TOR_CONFIG_H
-#define _TOR_CONFIG_H
+#ifndef TOR_CONFIG_H
+#define TOR_CONFIG_H
 
 const char *get_dirportfrontpage(void);
 const or_options_t *get_options(void);

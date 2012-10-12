@@ -8,8 +8,8 @@
  * \brief Headers for util.c
  **/
 
-#ifndef _TOR_UTIL_H
-#define _TOR_UTIL_H
+#ifndef TOR_UTIL_H
+#define TOR_UTIL_H
 
 #include "orconfig.h"
 #include "torint.h"

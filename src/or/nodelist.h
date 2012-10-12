@@ -9,8 +9,8 @@
  * \brief Header file for nodelist.c.
  **/
 
-#ifndef _TOR_NODELIST_H
-#define _TOR_NODELIST_H
+#ifndef TOR_NODELIST_H
+#define TOR_NODELIST_H
 
 #define node_assert_ok(n) STMT_BEGIN {                          \
     tor_assert((n)->ri || (n)->rs);                             \

@@ -9,8 +9,8 @@
  * \brief Header file for circuitlist.c.
  **/
 
-#ifndef _TOR_CIRCUITLIST_H
-#define _TOR_CIRCUITLIST_H
+#ifndef TOR_CIRCUITLIST_H
+#define TOR_CIRCUITLIST_H
 
 circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);

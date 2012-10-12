@@ -6,8 +6,8 @@
  * \brief Header file for channel.c
  **/
 
-#ifndef _TOR_CHANNEL_H
-#define _TOR_CHANNEL_H
+#ifndef TOR_CHANNEL_H
+#define TOR_CHANNEL_H
 
 #include "or.h"
 #include "circuitmux.h"

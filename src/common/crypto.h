@@ -10,8 +10,8 @@
  * \brief Headers for crypto.c
  **/
 
-#ifndef _TOR_CRYPTO_H
-#define _TOR_CRYPTO_H
+#ifndef TOR_CRYPTO_H
+#define TOR_CRYPTO_H
 
 #include <stdio.h>
 #include "torint.h"

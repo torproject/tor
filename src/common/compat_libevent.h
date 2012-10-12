@@ -1,8 +1,8 @@
 /* Copyright (c) 2009-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_COMPAT_LIBEVENT_H
-#define _TOR_COMPAT_LIBEVENT_H
+#ifndef TOR_COMPAT_LIBEVENT_H
+#define TOR_COMPAT_LIBEVENT_H
 
 #include "orconfig.h"
 

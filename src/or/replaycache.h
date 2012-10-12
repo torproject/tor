@@ -6,8 +6,8 @@
  * \brief Header file for replaycache.c.
  **/
 
-#ifndef _TOR_REPLAYCACHE_H
-#define _TOR_REPLAYCACHE_H
+#ifndef TOR_REPLAYCACHE_H
+#define TOR_REPLAYCACHE_H
 
 typedef struct replaycache_s replaycache_t;
 

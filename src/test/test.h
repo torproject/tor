@@ -3,8 +3,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_TEST_H
-#define _TOR_TEST_H
+#ifndef TOR_TEST_H
+#define TOR_TEST_H
 
 /**
  * \file test.h

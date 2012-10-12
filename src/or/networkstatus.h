@@ -9,8 +9,8 @@
  * \brief Header file for networkstatus.c.
  **/
 
-#ifndef _TOR_NETWORKSTATUS_H
-#define _TOR_NETWORKSTATUS_H
+#ifndef TOR_NETWORKSTATUS_H
+#define TOR_NETWORKSTATUS_H
 
 /** How old do we allow a v2 network-status to get before removing it
  * completely? */

@@ -8,8 +8,8 @@
  * \brief Headers for address.h
  **/
 
-#ifndef _TOR_ADDRESS_H
-#define _TOR_ADDRESS_H
+#ifndef TOR_ADDRESS_H
+#define TOR_ADDRESS_H
 
 #include "orconfig.h"
 #include "torint.h"

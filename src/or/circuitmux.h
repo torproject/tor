@@ -6,8 +6,8 @@
  * \brief Header file for circuitmux.c
  **/
 
-#ifndef _TOR_CIRCUITMUX_H
-#define _TOR_CIRCUITMUX_H
+#ifndef TOR_CIRCUITMUX_H
+#define TOR_CIRCUITMUX_H
 
 #include "or.h"
 
@@ -132,5 +132,5 @@ void circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ);
 void circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
                               unsigned int n_cells);
 
-#endif /* _TOR_CIRCUITMUX_H */
+#endif /* TOR_CIRCUITMUX_H */
 
