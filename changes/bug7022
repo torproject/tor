@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix memory leaks whenever we logged any message about the "path
-      bias" detection. Fixes bug 7022; bugfix on 0.2.3.21-rc.

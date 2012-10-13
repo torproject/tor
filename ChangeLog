@@ -1,3 +1,45 @@
+Changes in version 0.2.3.23-rc - 2012-10-14
+  Tor 0.2.3.23-rc adds a new v3 directory authority, and fixes a variety
+  of smaller bugs in preparation for the release.
+
+  o New directory authorities:
+    - Add Faravahar (run by Sina Rabbani) as the ninth v3 directory
+      authority. Closes ticket 5749.
+
+  o Major bugfixes:
+    - Fix a possible crash bug when checking for deactivated circuits
+      in connection_or_flush_from_first_active_circuit(). Fixes bug 6341;
+      bugfix on 0.2.2.7-alpha. Bug report and fix received pseudonymously.
+
+  o Minor bugfixes (on 0.2.3.x):
+    - Fix two cases in src/or/transports.c where we were calling
+      fmt_addr() twice in a parameter list. Bug found by David
+      Fifield. Fixes bug 7014; bugfix on 0.2.3.9-alpha.
+    - Convert an assert in the pathbias code to a log message. The assert
+      appears to only be triggerable by Tor2Web mode. Fixes bug 6866;
+      bugfix on 0.2.3.17-beta.
+    - Fix memory leaks whenever we logged any message about the "path
+      bias" detection. Fixes bug 7022; bugfix on 0.2.3.21-rc.
+
+  o Minor bugfixes (on 0.2.2.x and earlier):
+    - When relays refuse a "create" cell because their queue of pending
+      create cells is too big (typically because their cpu can't keep up
+      with the arrival rate), send back reason "resource limit" rather
+      than reason "internal", so network measurement scripts can get a
+      more accurate picture. Bugfix on 0.1.1.11-alpha; fixes bug 7037.
+    - Correct file sizes when reading binary files on Cygwin, to avoid
+      a bug where Tor would fail to read its state file. Fixes bug 6844;
+      bugfix on 0.1.2.7-alpha.
+    - Avoid undefined behaviour when parsing the list of supported
+      rendezvous/introduction protocols in a hidden service descriptor.
+      Previously, Tor would have confused (as-yet-unused) protocol version
+      numbers greater than 32 with lower ones on many platforms. Fixes
+      bug 6827; bugfix on 0.2.0.10-alpha. Found by George Kadianakis.
+
+  o Documentation fixes:
+    - Clarify that hidden services are TCP only. Fixes bug 6024.
+
+
 Changes in version 0.2.3.22-rc - 2012-09-11
   Tor 0.2.3.22-rc fixes another opportunity for a remotely triggerable
   assertion.

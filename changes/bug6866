@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Convert an assert in the pathbias code to a log message. Assert
-      appears to only be triggerable by Tor2Web mode. Fixes bug 6866;
-      bugfix on 0.2.3.17-beta.

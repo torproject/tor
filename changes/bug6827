@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-
-    - Avoid undefined behaviour when parsing the list of supported
-      rendezvous/introduction protocols in a hidden service
-      descriptor.  Previously, Tor would have confused (as-yet-unused)
-      protocol version numbers greater than 32 with lower ones on many
-      platforms.  Fixes bug 6827; bugfix on 0.2.0.10-alpha; found by
-      George Kadianakis.
-
