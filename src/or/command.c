@@ -160,7 +160,7 @@ command_process_cell(channel_t *chan, cell_t *cell)
 }
 
 /** Process an incoming var_cell from a channel; in the current protocol all
- * the var_cells are handshake-related and handles below the channel layer,
+ * the var_cells are handshake-related and handled below the channel layer,
  * so this just logs a warning and drops the cell.
  */
 
