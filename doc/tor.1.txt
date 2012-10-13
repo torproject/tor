@@ -81,7 +81,7 @@ COMMAND-LINE OPTIONS
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
 instance, you can tell Tor to start listening for SOCKS connections on port
-9999 by passing --SOCKSPort 9999 or SOCKPort 9999 to it on the command line,
+9999 by passing --SOCKSPort 9999 or SOCKSPort 9999 to it on the command line,
 or by putting "SOCKSPort 9999" in the configuration file.  You will need to
 quote options with spaces in them: if you want Tor to log all debugging
 messages to debug.log, you will probably need to say --Log 'debug file
@@ -237,7 +237,7 @@ GENERAL OPTIONS
     recommend that you leave this alone unless you know what you're doing,
     since giving attackers access to your control listener is really
     dangerous. This directive can be specified multiple
-    times to bind to multiple addresses/ports.  (Default: 127.0.0.1) 
+    times to bind to multiple addresses/ports.  (Default: 127.0.0.1)
 
 **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
@@ -762,7 +762,7 @@ The following options are useful only for clients (that is, if
     purposes, e.g., for Tor controllers. This option may be used multiple times
     for different hidden services. If a hidden service uses authorization and
     this option is not set, the hidden service is not accessible. Hidden
-    services can be configured to require authorization using the 
+    services can be configured to require authorization using the
     **HiddenServiceAuthorizeClient** option.
 
 **CloseHSClientCircuitsImmediatelyOnTimeout** **0**|**1**::
@@ -1017,7 +1017,7 @@ The following options are useful only for clients (that is, if
     Open this port to listen for transparent proxy connections.  Set this to
     0 if you don't want to allow transparent proxy connections.  Set the port
     to "auto" to have Tor pick a port for you. This directive can be
-    specified multiple times to bind to multiple addresses/ports.  See 
+    specified multiple times to bind to multiple addresses/ports.  See
     SOCKSPort for an explanation of isolation flags. +
  +
     TransPort requires OS support for transparent proxies, such as BSDs' pf or
@@ -1055,7 +1055,7 @@ The following options are useful only for clients (that is, if
 **AutomapHostsOnResolve** **0**|**1**::
     When this option is enabled, and we get a request to resolve an address
     that ends with one of the suffixes in **AutomapHostsSuffixes**, we map an
-    unused virtual address to that address, and return the new virtual address. 
+    unused virtual address to that address, and return the new virtual address.
     This is handy for making ".onion" addresses work with applications that
     resolve an address and then connect to it. (Default: 0)
 
@@ -1747,10 +1747,11 @@ The following options are used to configure a hidden service.
     Configure a virtual port VIRTPORT for a hidden service. You may use this
     option multiple times; each time applies to the service using the most
     recent hiddenservicedir. By default, this option maps the virtual port to
-    the same port on 127.0.0.1. You may override the target port, address, or
-    both by specifying a target of addr, port, or addr:port. You may also have
-    multiple lines with  the same VIRTPORT: when a user connects to that
-    VIRTPORT, one of the TARGETs from those lines will be chosen at random.
+    the same port on 127.0.0.1 over TCP. You may override the target port,
+    address, or both by specifying a target of addr, port, or addr:port.
+    You may also have multiple lines with  the same VIRTPORT: when a user
+    connects to that VIRTPORT, one of the TARGETs from those lines will be
+    chosen at random.
 
 **PublishHidServDescriptors** **0**|**1**::
     If set to 0, Tor will run any hidden services you configure, but it won't
@@ -1775,7 +1776,7 @@ The following options are used to configure a hidden service.
     their configuration file using **HidServAuth**.
 
 **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Every time the specified period elapses, Tor uploads any rendezvous 
+    Every time the specified period elapses, Tor uploads any rendezvous
     service descriptors to the directory servers. This information  is also
     uploaded whenever it changes. (Default: 1 hour)
 

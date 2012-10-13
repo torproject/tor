@@ -4823,6 +4823,9 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                    10, 0, INT_MAX, &num_ok, NULL);
     if (!num_ok) /* It's a string; let's ignore it. */
       continue;
+    if (version >= REND_PROTOCOL_VERSION_BITMASK_WIDTH)
+      /* Avoid undefined left-shift behaviour. */
+      continue;
     result->protocols |= 1 << version;
   }
   SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));

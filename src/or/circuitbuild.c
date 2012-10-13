@@ -2646,8 +2646,25 @@ pathbias_count_first_hop(origin_circuit_t *circ)
   char *rate_msg = NULL;
 
   /* Completely ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel) {
-    tor_assert(circ->build_state->desired_path_len == 1);
+  if (circ->build_state->onehop_tunnel ||
+      circ->build_state->desired_path_len == 1) {
+    /* Check for inconsistency */
+    if (circ->build_state->desired_path_len != 1 ||
+        !circ->build_state->onehop_tunnel) {
+      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+              approx_time()))) {
+        log_info(LD_BUG,
+               "One-hop circuit has length %d. Path state is %s. "
+               "Circuit is a %s currently %s.%s",
+               circ->build_state->desired_path_len,
+               pathbias_state_to_string(circ->path_state),
+               circuit_purpose_to_string(circ->_base.purpose),
+               circuit_state_to_string(circ->_base.state),
+               rate_msg);
+        tor_free(rate_msg);
+      }
+      tor_fragile_assert();
+    }
     return 0;
   }
 
@@ -2658,11 +2675,12 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                                      approx_time()))) {
         log_info(LD_BUG,
                 "Opened circuit is in strange path state %s. "
-                "Circuit is a %s currently %s. %s",
+                "Circuit is a %s currently %s.%s",
                 pathbias_state_to_string(circ->path_state),
                 circuit_purpose_to_string(circ->_base.purpose),
                 circuit_state_to_string(circ->_base.state),
                 rate_msg);
+        tor_free(rate_msg);
       }
     }
 
@@ -2685,11 +2703,12 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                   approx_time()))) {
             log_info(LD_BUG,
                    "Unopened circuit has strange path state %s. "
-                   "Circuit is a %s currently %s. %s",
+                   "Circuit is a %s currently %s.%s",
                    pathbias_state_to_string(circ->path_state),
                    circuit_purpose_to_string(circ->_base.purpose),
                    circuit_state_to_string(circ->_base.state),
                    rate_msg);
+            tor_free(rate_msg);
           }
         }
       } else {
@@ -2697,10 +2716,11 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                 approx_time()))) {
           log_info(LD_BUG,
               "Unopened circuit has no known guard. "
-              "Circuit is a %s currently %s. %s",
+              "Circuit is a %s currently %s.%s",
               circuit_purpose_to_string(circ->_base.purpose),
               circuit_state_to_string(circ->_base.state),
               rate_msg);
+          tor_free(rate_msg);
         }
       }
     }
@@ -2711,12 +2731,13 @@ pathbias_count_first_hop(origin_circuit_t *circ)
                 approx_time()))) {
         log_info(LD_BUG,
             "A %s circuit is in cpath state %d (opened: %d). "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
             circ->cpath->state, circ->has_opened,
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   }
@@ -2740,8 +2761,25 @@ pathbias_count_success(origin_circuit_t *circ)
   char *rate_msg = NULL;
 
   /* Ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel) {
-    tor_assert(circ->build_state->desired_path_len == 1);
+  if (circ->build_state->onehop_tunnel ||
+      circ->build_state->desired_path_len == 1) {
+    /* Check for consistency */
+    if (circ->build_state->desired_path_len != 1 ||
+        !circ->build_state->onehop_tunnel) {
+      if ((rate_msg = rate_limit_log(&success_notice_limit,
+              approx_time()))) {
+        log_info(LD_BUG,
+               "One-hop circuit has length %d. Path state is %s. "
+               "Circuit is a %s currently %s.%s",
+               circ->build_state->desired_path_len,
+               pathbias_state_to_string(circ->path_state),
+               circuit_purpose_to_string(circ->_base.purpose),
+               circuit_state_to_string(circ->_base.state),
+               rate_msg);
+        tor_free(rate_msg);
+      }
+      tor_fragile_assert();
+    }
     return;
   }
 
@@ -2763,11 +2801,12 @@ pathbias_count_success(origin_circuit_t *circ)
                 approx_time()))) {
           log_info(LD_BUG,
               "Succeeded circuit is in strange path state %s. "
-              "Circuit is a %s currently %s. %s",
+              "Circuit is a %s currently %s.%s",
               pathbias_state_to_string(circ->path_state),
               circuit_purpose_to_string(circ->_base.purpose),
               circuit_state_to_string(circ->_base.state),
               rate_msg);
+          tor_free(rate_msg);
         }
       }
 
@@ -2782,10 +2821,11 @@ pathbias_count_success(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
             "Completed circuit has no known guard. "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   } else {
@@ -2794,11 +2834,12 @@ pathbias_count_success(origin_circuit_t *circ)
               approx_time()))) {
         log_info(LD_BUG,
             "Opened circuit is in strange path state %s. "
-            "Circuit is a %s currently %s. %s",
+            "Circuit is a %s currently %s.%s",
             pathbias_state_to_string(circ->path_state),
             circuit_purpose_to_string(circ->_base.purpose),
             circuit_state_to_string(circ->_base.state),
             rate_msg);
+        tor_free(rate_msg);
       }
     }
   }
@@ -5269,19 +5310,22 @@ transport_resolve_conflicts(transport_t *t)
       t_tmp->marked_for_removal = 0;
       return 1;
     } else { /* same name but different addrport */
+      char *new_transport_addr = tor_strdup(fmt_addr(&t->addr));
       if (t_tmp->marked_for_removal) { /* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but there was already a transport marked for deletion at "
                    "'%s:%u'. We deleted the old transport and registered the "
-                   "new one.", t->name, fmt_addr(&t->addr), t->port,
+                   "new one.", t->name, new_transport_addr, t->port,
                    fmt_addr(&t_tmp->addr), t_tmp->port);
         smartlist_remove(transport_list, t_tmp);
         transport_free(t_tmp);
+        tor_free(new_transport_addr);
       } else { /* *not* marked for removal */
         log_notice(LD_GENERAL, "You tried to add transport '%s' at '%s:%u' "
                    "but the same transport already exists at '%s:%u'. "
-                   "Skipping.", t->name, fmt_addr(&t->addr), t->port,
+                   "Skipping.", t->name, new_transport_addr, t->port,
                    fmt_addr(&t_tmp->addr), t_tmp->port);
+        tor_free(new_transport_addr);
         return -1;
       }
     }

@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+   - Correct file sizes when reading binary files on
+     Cygwin, to avoid a bug where Tor would fail to read its state file.
+     Fixes bug 6844; bugfix on 0.1.2.7-alpha.
