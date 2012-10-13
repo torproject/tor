@@ -81,7 +81,37 @@ static uint64_t n_channels_allocated = 0;
  * If more than one channel exists, follow the next_with_same_id pointer
  * as a linked list.
  */
-static digestmap_t *channel_identity_map = NULL;
+HT_HEAD(channel_idmap, channel_idmap_entry_s) channel_identity_map =
+  HT_INITIALIZER();
+
+typedef struct channel_idmap_entry_s {
+  HT_ENTRY(channel_idmap_entry_s) node;
+  uint8_t digest[DIGEST_LEN];
+  LIST_HEAD(channel_list_s, channel_s) channel_list;
+} channel_idmap_entry_t;
+
+static INLINE unsigned
+channel_idmap_hash(const channel_idmap_entry_t *ent)
+{
+  const unsigned *a = (const unsigned *)ent->digest;
+#if SIZEOF_INT == 4
+  return a[0] ^ a[1] ^ a[2] ^ a[3] ^ a[4];
+#elif SIZEOF_INT == 8
+  return a[0] ^ a[1];
+#endif
+}
+
+static INLINE int
+channel_idmap_eq(const channel_idmap_entry_t *a,
+                  const channel_idmap_entry_t *b)
+{
+  return tor_memeq(a->digest, b->digest, DIGEST_LEN);
+}
+
+HT_PROTOTYPE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
+             channel_idmap_eq);
+HT_GENERATE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
+            channel_idmap_eq, 0.5, tor_malloc, tor_realloc, _tor_free);
 
 static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
 static void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
@@ -505,7 +535,7 @@ channel_listener_unregister(channel_listener_t *chan_l)
 static void
 channel_add_to_digest_map(channel_t *chan)
 {
-  channel_t *tmp;
+  channel_idmap_entry_t *ent, search;
 
   tor_assert(chan);
 
@@ -517,23 +547,15 @@ channel_add_to_digest_map(channel_t *chan)
   /* Assert that there is a digest */
   tor_assert(!tor_digest_is_zero(chan->identity_digest));
 
-  /* Allocate the identity map if we have to */
-  if (!channel_identity_map) channel_identity_map = digestmap_new();
-
-  /* Insert it */
-  tmp = digestmap_set(channel_identity_map,
-                      chan->identity_digest,
-                      chan);
-  if (tmp) {
-    /* There already was one, this goes at the head of the list */
-    chan->next_with_same_id = tmp;
-    chan->prev_with_same_id = NULL;
-    tmp->prev_with_same_id = chan;
-  } else {
-    /* First with this digest */
-    chan->next_with_same_id = NULL;
-    chan->prev_with_same_id = NULL;
+  memcpy(search.digest, chan->identity_digest, DIGEST_LEN);
+  ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
+  if (! ent) {
+    ent = tor_malloc(sizeof(channel_idmap_entry_t));
+    memcpy(ent->digest, chan->identity_digest, DIGEST_LEN);
+    LIST_INIT(&ent->channel_list);
+    HT_INSERT(channel_idmap, &channel_identity_map, ent);
   }
+  LIST_INSERT_HEAD(&ent->channel_list, chan, next_with_same_id);
 
   log_debug(LD_CHANNEL,
             "Added channel %p (global ID " U64_FORMAT ") "
@@ -553,13 +575,14 @@ channel_add_to_digest_map(channel_t *chan)
 static void
 channel_remove_from_digest_map(channel_t *chan)
 {
-  channel_t *tmp;
+  channel_idmap_entry_t *ent, search;
 
   tor_assert(chan);
 
   /* Assert that there is a digest */
   tor_assert(!tor_digest_is_zero(chan->identity_digest));
 
+#if 0
   /* Make sure we have a map */
   if (!channel_identity_map) {
     /*
@@ -584,66 +607,29 @@ channel_remove_from_digest_map(channel_t *chan)
 
     return;
   }
+#endif
+
+  /* Pull it out of its list, wherever that list is */
+  LIST_REMOVE(chan, next_with_same_id);
+
+  memcpy(search.digest, chan->identity_digest, DIGEST_LEN);
+  ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
 
   /* Look for it in the map */
-  tmp = digestmap_get(channel_identity_map, chan->identity_digest);
-  if (tmp) {
+  if (ent) {
     /* Okay, it's here */
-    /* Look for this channel */
-    while (tmp && tmp != chan) {
-      tmp = tmp->next_with_same_id;
+
+    if (LIST_EMPTY(&ent->channel_list)) {
+      HT_REMOVE(channel_idmap, &channel_identity_map, ent);
+      tor_free(ent);
     }
 
-    if (tmp == chan) {
-      /* Found it, good */
-      if (chan->next_with_same_id) {
-        chan->next_with_same_id->prev_with_same_id = chan->prev_with_same_id;
-      }
-      /* else we're the tail of the list */
-      if (chan->prev_with_same_id) {
-        /* We're not the head of the list, so we can *just* unlink */
-        chan->prev_with_same_id->next_with_same_id = chan->next_with_same_id;
-      } else {
-        /* We're the head, so we have to point the digest map entry at our
-         * next if we have one, or remove it if we're also the tail */
-        if (chan->next_with_same_id) {
-          digestmap_set(channel_identity_map,
-                        chan->identity_digest,
-                        chan->next_with_same_id);
-        } else {
-          digestmap_remove(channel_identity_map,
-                           chan->identity_digest);
-        }
-      }
-
-      /* NULL out its next/prev pointers, and we're finished */
-      chan->next_with_same_id = NULL;
-      chan->prev_with_same_id = NULL;
-
-      log_debug(LD_CHANNEL,
-                "Removed channel %p (global ID " U64_FORMAT ") from "
-                "identity map in state %s (%d) with digest %s",
-                chan, U64_PRINTF_ARG(chan->global_identifier),
-                channel_state_to_string(chan->state), chan->state,
-                hex_str(chan->identity_digest, DIGEST_LEN));
-    } else {
-      /* This is not good */
-      log_warn(LD_BUG,
-               "Trying to remove channel %p (global ID " U64_FORMAT ") "
-               "with digest %s from identity map, but couldn't find it in "
-               "the list for that digest",
-               chan, U64_PRINTF_ARG(chan->global_identifier),
-               hex_str(chan->identity_digest, DIGEST_LEN));
-      /* Unlink it and hope for the best */
-      if (chan->next_with_same_id) {
-        chan->next_with_same_id->prev_with_same_id = chan->prev_with_same_id;
-      }
-      if (chan->prev_with_same_id) {
-        chan->prev_with_same_id->next_with_same_id = chan->next_with_same_id;
-      }
-      chan->next_with_same_id = NULL;
-      chan->prev_with_same_id = NULL;
-    }
+    log_debug(LD_CHANNEL,
+              "Removed channel %p (global ID " U64_FORMAT ") from "
+              "identity map in state %s (%d) with digest %s",
+              chan, U64_PRINTF_ARG(chan->global_identifier),
+              channel_state_to_string(chan->state), chan->state,
+              hex_str(chan->identity_digest, DIGEST_LEN));
   } else {
     /* Shouldn't happen */
     log_warn(LD_BUG,
@@ -652,15 +638,6 @@ channel_remove_from_digest_map(channel_t *chan)
              "that digest",
              chan, U64_PRINTF_ARG(chan->global_identifier),
              hex_str(chan->identity_digest, DIGEST_LEN));
-    /* Clear out its next/prev pointers */
-    if (chan->next_with_same_id) {
-      chan->next_with_same_id->prev_with_same_id = chan->prev_with_same_id;
-    }
-    if (chan->prev_with_same_id) {
-      chan->prev_with_same_id->next_with_same_id = chan->next_with_same_id;
-    }
-    chan->next_with_same_id = NULL;
-    chan->prev_with_same_id = NULL;
   }
 }
 
@@ -698,20 +675,21 @@ channel_find_by_global_id(uint64_t global_identifier)
  *
  * This function looks up a channel by the digest of its remote endpoint in
  * the channel digest map.  It's possible that more than one channel to a
- * given endpoint exists.  Use channel_next_with_digest() and
- * channel_prev_with_digest() to walk the list.
+ * given endpoint exists.  Use channel_next_with_digest() to walk the list.
  */
 
 channel_t *
 channel_find_by_remote_digest(const char *identity_digest)
 {
   channel_t *rv = NULL;
+  channel_idmap_entry_t *ent, search;
 
   tor_assert(identity_digest);
 
-  /* Search for it in the identity map */
-  if (channel_identity_map) {
-    rv = digestmap_get(channel_identity_map, identity_digest);
+  memcpy(search.digest, identity_digest, DIGEST_LEN);
+  ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
+  if (ent) {
+    rv = LIST_FIRST(&ent->channel_list);
   }
 
   return rv;
@@ -729,22 +707,7 @@ channel_next_with_digest(channel_t *chan)
 {
   tor_assert(chan);
 
-  return chan->next_with_same_id;
-}
-
-/**
- * Get previous channel with digest
- *
- * This function takes a channel and finds the previos channel in the list
- * with the same digest.
- */
-
-channel_t *
-channel_prev_with_digest(channel_t *chan)
-{
-  tor_assert(chan);
-
-  return chan->prev_with_same_id;
+  return LIST_NEXT(chan, next_with_same_id);
 }
 
 /**
@@ -772,6 +735,9 @@ channel_init(channel_t *chan)
   /* Initialize queues. */
   SIMPLEQ_INIT(&chan->incoming_queue);
   SIMPLEQ_INIT(&chan->outgoing_queue);
+
+  /* Initialize list entries. */
+  memset(&chan->next_with_same_id, 0, sizeof(chan->next_with_same_id));
 
   /* Timestamp it */
   channel_timestamp_created(chan);
@@ -2846,13 +2812,10 @@ channel_free_all(void)
   }
 
   /* Now free channel_identity_map */
-  if (channel_identity_map) {
-    log_debug(LD_CHANNEL,
-              "Freeing channel_identity_map");
-    /* Geez, anything still left over just won't die ... let it leak then */
-    digestmap_free(channel_identity_map, NULL);
-    channel_identity_map = NULL;
-  }
+  log_debug(LD_CHANNEL,
+            "Freeing channel_identity_map");
+  /* Geez, anything still left over just won't die ... let it leak then */
+  HT_CLEAR(channel_idmap, &channel_identity_map);
 
   log_debug(LD_CHANNEL,
             "Done cleaning up after channels");
@@ -2958,12 +2921,6 @@ channel_get_for_extend(const char *digest,
 
   tor_assert(msg_out);
   tor_assert(launch_out);
-
-  if (!channel_identity_map) {
-    *msg_out = "Router not connected (nothing is).  Connecting.";
-    *launch_out = 1;
-    return NULL;
-  }
 
   chan = channel_find_by_remote_digest(digest);
 

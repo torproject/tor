@@ -122,7 +122,7 @@ struct channel_s {
    * Linked list of channels with the same identity digest, for the
    * digest->channel map
    */
-  channel_t *next_with_same_id, *prev_with_same_id;
+  LIST_ENTRY(channel_s) next_with_same_id;
 
   /* List of incoming cells to handle */
   chan_cell_queue_t incoming_queue;
@@ -417,9 +417,7 @@ channel_t * channel_find_by_remote_digest(const char *identity_digest);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
  */
-
 channel_t * channel_next_with_digest(channel_t *chan);
-channel_t * channel_prev_with_digest(channel_t *chan);
 
 /*
  * Metadata queries/updates
