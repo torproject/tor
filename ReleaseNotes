@@ -753,11 +753,11 @@ Changes in version 0.2.3.x - 2012-10-??
     - Check CircuitBuildTimeout and LearnCircuitBuildTimeout in
       options_validate(); warn if LearnCircuitBuildTimeout is disabled and
       CircuitBuildTimeout is set unreasonably low. Resolves ticket 5452.
-    - Issue a notice if a guard completes less than 40% of your circuits.
-      Threshold is configurable by torrc option PathBiasNoticeRate and
-      consensus parameter pb_noticepct. There is additional, off-by-
-      default code to disable guards which fail too many circuits.
-      Addresses ticket 5458.
+    - Issue a log message if a guard completes less than 40% of your
+      circuits. Threshold is configurable by torrc option
+      PathBiasNoticeRate and consensus parameter pb_noticepct. There is
+      additional, off-by-default code to disable guards which fail too
+      many circuits. Addresses ticket 5458.
 
   o Minor bugfixes (log messages, client):
     - Downgrade "Got a certificate, but we already have it" log messages
