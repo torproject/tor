@@ -4,8 +4,15 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.3.x - 2012-10-??
+
   The Tor 0.2.3 release series is dedicated to the memory of Len "rabbi"
-  Sassaman (1980-2011).
+  Sassaman (1980-2011), a long-time cypherpunk, anonymity researcher,
+  Mixmaster maintainer, Pynchon Gate co-designer, CodeCon organizer,
+  programmer, and friend.  Unstinting in his dedication to the cause of
+  freedom, he inspired and helped many of us as we began our work on
+  anonymity, and inspires us still.  Let's all honor his memory by
+  writing software to protect people's freedoms, and by helping others
+  to do so.
 
   Tor 0.2.3.x, the first stable release in the 0.2.3 branch, features ...
 
