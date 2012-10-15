@@ -130,7 +130,7 @@ typedef int socklen_t;
 #define mm_realloc(x,y) tor_realloc((x),(y))
 #define mm_free(x) tor_free(x)
 #define mm_strdup(x) tor_strdup(x)
-#define _mm_free(x) _tor_free(x)
+#define _mm_free(x) tor_free_(x)
 
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
