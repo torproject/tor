@@ -848,6 +848,11 @@ channel_listener_free(channel_listener_t *chan_l)
 {
   if (!chan_l) return;
 
+  log_debug(LD_CHANNEL,
+            "Freeing channel_listener_t " U64_FORMAT " at %p",
+            U64_PRINTF_ARG(chan_l->global_identifier),
+            chan_l);
+
   /* It must be closed or errored */
   tor_assert(chan_l->state == CHANNEL_LISTENER_STATE_CLOSED ||
              chan_l->state == CHANNEL_LISTENER_STATE_ERROR);
@@ -934,6 +939,11 @@ static void
 channel_listener_force_free(channel_listener_t *chan_l)
 {
   tor_assert(chan_l);
+
+  log_debug(LD_CHANNEL,
+            "Force-freeing channel_listener_t " U64_FORMAT " at %p",
+            U64_PRINTF_ARG(chan_l->global_identifier),
+            chan_l);
 
   /* Call a free method if there is one */
   if (chan_l->free) chan_l->free(chan_l);

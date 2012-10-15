@@ -216,14 +216,26 @@ channel_tls_start_listener(void)
 void
 channel_tls_free_all(void)
 {
+  channel_listener_t *old_listener = NULL;
+
   log_debug(LD_CHANNEL,
             "Shutting down TLS channels...");
 
   if (channel_tls_listener) {
-    channel_listener_unregister(channel_tls_listener);
-    channel_listener_mark_for_close(channel_tls_listener);
-    channel_listener_free(channel_tls_listener);
-    channel_tls_listener = NULL;
+    /*
+     * When we close it, channel_tls_listener will get nulled out, so save
+     * a pointer so we can free it.
+     */
+    old_listener = channel_tls_listener;
+    log_debug(LD_CHANNEL,
+              "Closing channel_tls_listener with ID " U64_FORMAT
+              " at %p.",
+              U64_PRINTF_ARG(old_listener->global_identifier),
+              old_listener);
+    channel_listener_unregister(old_listener);
+    channel_listener_mark_for_close(old_listener);
+    channel_listener_free(old_listener);
+    tor_assert(channel_tls_listener == NULL);
   }
 
   log_debug(LD_CHANNEL,
