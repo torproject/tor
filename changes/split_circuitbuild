@@ -1,0 +1,2 @@
+  o Code simplification and refactoring:
+    - Move the entry node code from circuitbuild.c to its own file.
