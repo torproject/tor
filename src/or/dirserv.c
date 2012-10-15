@@ -93,7 +93,8 @@ static const signed_descriptor_t *get_signed_descriptor_by_fp(
                                                         const char *fp,
                                                         int extrainfo,
                                                         time_t publish_cutoff);
-static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
+static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
+                                                const char **msg);
 
 /************** Measured Bandwidth parsing code ******/
 #define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
