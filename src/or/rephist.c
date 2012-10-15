@@ -160,7 +160,7 @@ get_link_history(const char *from_id, const char *to_id)
 
 /** Helper: free storage held by a single link history entry. */
 static void
-_free_link_history(void *val)
+free_link_history_(void *val)
 {
   rephist_total_alloc -= sizeof(link_history_t);
   tor_free(val);
@@ -171,7 +171,7 @@ static void
 free_or_history(void *_hist)
 {
   or_history_t *hist = _hist;
-  digestmap_free(hist->link_history_map, _free_link_history);
+  digestmap_free(hist->link_history_map, free_link_history_);
   rephist_total_alloc -= sizeof(or_history_t);
   rephist_total_num--;
   tor_free(hist);
@@ -2131,7 +2131,7 @@ rep_hist_exit_stats_term(void)
  * but works fine for sorting an array of port numbers, which is what we use
  * it for. */
 static int
-_compare_int(const void *x, const void *y)
+compare_int_(const void *x, const void *y)
 {
   return (*(int*)x - *(int*)y);
 }
@@ -2218,7 +2218,7 @@ rep_hist_format_exit_stats(time_t now)
   other_streams = total_streams;
   /* Sort the ports; this puts them out of sync with top_bytes, but we
    * won't be using top_bytes again anyway */
-  qsort(top_ports, top_elements, sizeof(int), _compare_int);
+  qsort(top_ports, top_elements, sizeof(int), compare_int_);
   for (j = 0; j < top_elements; j++) {
     cur_port = top_ports[j];
     if (exit_bytes_written[cur_port] > 0) {
@@ -2440,7 +2440,7 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
 /** Sorting helper: return -1, 1, or 0 based on comparison of two
  * circ_buffer_stats_t */
 static int
-_buffer_stats_compare_entries(const void **_a, const void **_b)
+buffer_stats_compare_entries_(const void **_a, const void **_b)
 {
   const circ_buffer_stats_t *a = *_a, *b = *_b;
   if (a->processed_cells < b->processed_cells)
@@ -2505,7 +2505,7 @@ rep_hist_format_buffer_stats(time_t now)
   number_of_circuits = smartlist_len(circuits_for_buffer_stats);
   if (number_of_circuits > 0) {
     smartlist_sort(circuits_for_buffer_stats,
-                   _buffer_stats_compare_entries);
+                   buffer_stats_compare_entries_);
     i = 0;
     SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
                             circ_buffer_stats_t *, stat)
@@ -2590,7 +2590,7 @@ rep_hist_buffer_stats_write(time_t now)
     goto done; /* Not ready to write */
 
   /* Add open circuits to the history. */
-  for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     rep_hist_buffer_stats_add_circ(circ, now);
   }
 

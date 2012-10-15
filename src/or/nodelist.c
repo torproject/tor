@@ -1110,7 +1110,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
         node->is_running &&
         compare_tor_addr_to_node_policy(&a, port, node) ==
           ADDR_POLICY_ACCEPTED &&
-        !routerset_contains_node(options->_ExcludeExitNodesUnion, node))
+        !routerset_contains_node(options->ExcludeExitNodesUnion_, node))
       return node;
   });
   return NULL;

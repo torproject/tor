@@ -1256,7 +1256,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 
 /** Number of extra file descriptors to keep in reserve beyond those that we
  * tell Tor it's allowed to use. */
-#define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
+#define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond ConnLimit_ */
 
 /** Learn the maximum allowed number of file descriptors, and tell the system
  * we want to use up to that number. (Some systems have a low soft limit, and

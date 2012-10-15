@@ -29,8 +29,8 @@
 /****************************************************************************/
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
- * to directory 'keywords'. _ERR is an error in the tokenizing process, _EOF
- * is an end-of-file marker, and _NIL is used to encode not-a-token.
+ * to directory 'keywords'. ERR_ is an error in the tokenizing process, EOF_
+ * is an end-of-file marker, and NIL_ is used to encode not-a-token.
  */
 typedef enum {
   K_ACCEPT = 0,
@@ -131,7 +131,7 @@ typedef enum {
 
   A_PURPOSE,
   A_LAST_LISTED,
-  _A_UNKNOWN,
+  A_UNKNOWN_,
 
   R_RENDEZVOUS_SERVICE_DESCRIPTOR,
   R_VERSION,
@@ -152,13 +152,13 @@ typedef enum {
   C_DESCRIPTOR_COOKIE,
   C_CLIENT_KEY,
 
-  _ERR,
-  _EOF,
-  _NIL
+  ERR_,
+  EOF_,
+  NIL_
 } directory_keyword;
 
 #define MIN_ANNOTATION A_PURPOSE
-#define MAX_ANNOTATION _A_UNKNOWN
+#define MAX_ANNOTATION A_UNKNOWN_
 
 /** Structure to hold a single directory token.
  *
@@ -181,7 +181,7 @@ typedef struct directory_token_t {
 
   crypto_pk_t *key;        /**< For public keys only.  Heap-allocated. */
 
-  char *error;                 /**< For _ERR tokens only. */
+  char *error;                 /**< For ERR_ tokens only. */
 } directory_token_t;
 
 /* ********************************************************************** */
@@ -235,7 +235,7 @@ typedef struct token_rule_t {
  */
 
 /** Appears to indicate the end of a table. */
-#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX, 0, 0 }
+#define END_OF_TABLE { NULL, NIL_, 0,0,0, NO_OBJ, 0, INT_MAX, 0, 0 }
 /** An item with no restrictions: used for obsolete document types */
 #define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX, 0, 0 }
 /** An item with no restrictions on multiplicity or location. */
@@ -549,10 +549,10 @@ static int router_get_hashes_impl(const char *s, size_t s_len,
 static void token_clear(directory_token_t *tok);
 static smartlist_t *find_all_by_keyword(smartlist_t *s, directory_keyword k);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
-static directory_token_t *_find_by_keyword(smartlist_t *s,
+static directory_token_t *find_by_keyword_(smartlist_t *s,
                                            directory_keyword keyword,
                                            const char *keyword_str);
-#define find_by_keyword(s, keyword) _find_by_keyword((s), (keyword), #keyword)
+#define find_by_keyword(s, keyword) find_by_keyword_((s), (keyword), #keyword)
 static directory_token_t *find_opt_by_keyword(smartlist_t *s,
                                               directory_keyword keyword);
 
@@ -2263,7 +2263,7 @@ compare_routerstatus_entries(const void **_a, const void **_b)
 
 /** Helper: used in call to _smartlist_uniq to clear out duplicate entries. */
 static void
-_free_duplicate_routerstatus_entry(void *e)
+free_duplicate_routerstatus_entry_(void *e)
 {
   log_warn(LD_DIR,
            "Network-status has two entries for the same router. "
@@ -2404,7 +2404,7 @@ networkstatus_v2_parse_from_string(const char *s)
   }
   smartlist_sort(ns->entries, compare_routerstatus_entries);
   smartlist_uniq(ns->entries, compare_routerstatus_entries,
-                 _free_duplicate_routerstatus_entry);
+                 free_duplicate_routerstatus_entry_);
 
   if (tokenize_string(area,s, NULL, footer_tokens, dir_footer_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
@@ -3661,7 +3661,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   eos = cp + strlen(cp);
   area = memarea_new();
   tok = get_next_token(area, &cp, eos, routerdesc_token_table);
-  if (tok->tp == _ERR) {
+  if (tok->tp == ERR_) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
   }
@@ -3814,14 +3814,14 @@ token_clear(directory_token_t *tok)
   STMT_BEGIN                                                       \
     if (tok) token_clear(tok);                                      \
     tok = ALLOC_ZERO(sizeof(directory_token_t));                   \
-    tok->tp = _ERR;                                                \
+    tok->tp = ERR_;                                                \
     tok->error = STRDUP(msg);                                      \
     goto done_tokenizing;                                          \
   STMT_END
 
 /** Helper: make sure that the token <b>tok</b> with keyword <b>kwd</b> obeys
  * the object syntax of <b>o_syn</b>.  Allocate all storage in <b>area</b>.
- * Return <b>tok</b> on success, or a new _ERR token if the token didn't
+ * Return <b>tok</b> on success, or a new ERR_ token if the token didn't
  * conform to the syntax we wanted.
  **/
 static INLINE directory_token_t *
@@ -3940,7 +3940,7 @@ get_next_token(memarea_t *area,
 
   tor_assert(area);
   tok = ALLOC_ZERO(sizeof(directory_token_t));
-  tok->tp = _ERR;
+  tok->tp = ERR_;
 
   /* Set *s to first token, eol to end-of-line, next to after first token */
   *s = eat_whitespace_eos(*s, eos); /* eat multi-line whitespace */
@@ -3997,10 +3997,10 @@ get_next_token(memarea_t *area,
     }
   }
 
-  if (tok->tp == _ERR) {
+  if (tok->tp == ERR_) {
     /* No keyword matched; call it an "K_opt" or "A_unrecognized" */
     if (**s == '@')
-      tok->tp = _A_UNKNOWN;
+      tok->tp = A_UNKNOWN_;
     else
       tok->tp = K_OPT;
     tok->args = ALLOC(sizeof(char*));
@@ -4090,7 +4090,7 @@ tokenize_string(memarea_t *area,
 {
   const char **s;
   directory_token_t *tok = NULL;
-  int counts[_NIL];
+  int counts[NIL_];
   int i;
   int first_nonannotation;
   int prev_len = smartlist_len(out);
@@ -4099,14 +4099,14 @@ tokenize_string(memarea_t *area,
   s = &start;
   if (!end)
     end = start+strlen(start);
-  for (i = 0; i < _NIL; ++i)
+  for (i = 0; i < NIL_; ++i)
     counts[i] = 0;
 
   SMARTLIST_FOREACH(out, const directory_token_t *, t, ++counts[t->tp]);
 
-  while (*s < end && (!tok || tok->tp != _EOF)) {
+  while (*s < end && (!tok || tok->tp != EOF_)) {
     tok = get_next_token(area, s, end, table);
-    if (tok->tp == _ERR) {
+    if (tok->tp == ERR_) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
       token_clear(tok);
       return -1;
@@ -4196,7 +4196,7 @@ find_opt_by_keyword(smartlist_t *s, directory_keyword keyword)
  * with an assert if no such keyword is found.
  */
 static directory_token_t *
-_find_by_keyword(smartlist_t *s, directory_keyword keyword,
+find_by_keyword_(smartlist_t *s, directory_keyword keyword,
                  const char *keyword_as_string)
 {
   directory_token_t *tok = find_opt_by_keyword(s, keyword);
@@ -4695,7 +4695,7 @@ tor_version_same_series(tor_version_t *a, tor_version_t *b)
  * if _a precedes _b, 1 if _b precedes _a, and 0 if they are equivalent.
  * Used to sort a list of versions. */
 static int
-_compare_tor_version_str_ptr(const void **_a, const void **_b)
+compare_tor_version_str_ptr_(const void **_a, const void **_b)
 {
   const char *a = *_a, *b = *_b;
   int ca, cb;
@@ -4719,10 +4719,10 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
 void
 sort_version_list(smartlist_t *versions, int remove_duplicates)
 {
-  smartlist_sort(versions, _compare_tor_version_str_ptr);
+  smartlist_sort(versions, compare_tor_version_str_ptr_);
 
   if (remove_duplicates)
-    smartlist_uniq(versions, _compare_tor_version_str_ptr, _tor_free);
+    smartlist_uniq(versions, compare_tor_version_str_ptr_, tor_free_);
 }
 
 /** Parse and validate the ASCII-encoded v2 descriptor in <b>desc</b>,

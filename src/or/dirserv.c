@@ -516,8 +516,8 @@ dirserv_free_fingerprint_list(void)
   if (!fingerprint_list)
     return;
 
-  strmap_free(fingerprint_list->fp_by_name, _tor_free);
-  digestmap_free(fingerprint_list->status_by_digest, _tor_free);
+  strmap_free(fingerprint_list->fp_by_name, tor_free_);
+  digestmap_free(fingerprint_list->status_by_digest, tor_free_);
   tor_free(fingerprint_list);
 }
 
@@ -1427,7 +1427,7 @@ clear_cached_dir(cached_dir_t *d)
 
 /** Free all storage held by the cached_dir_t in <b>d</b>. */
 static void
-_free_cached_dir(void *_d)
+free_cached_dir_(void *_d)
 {
   cached_dir_t *d;
   if (!_d)
@@ -2258,7 +2258,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
  * and a router with more bandwidth is more useful than one with less.)
  **/
 static int
-_compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
+compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
 {
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   int first_is_auth, second_is_auth;
@@ -2333,7 +2333,7 @@ get_possible_sybil_list(const smartlist_t *routers)
     max_with_same_addr_on_authority = INT_MAX;
 
   smartlist_add_all(routers_by_ip, routers);
-  smartlist_sort(routers_by_ip, _compare_routerinfo_by_ip_and_bw);
+  smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
   omit_as_sybil = digestmap_new();
 
   last_addr = 0;
@@ -3849,7 +3849,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
 int
 connection_dirserv_flushed_some(dir_connection_t *conn)
 {
-  tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
+  tor_assert(conn->base_.state == DIR_CONN_STATE_SERVER_WRITING);
 
   if (connection_get_outbuf_len(TO_CONN(conn)) >= DIRSERV_BUFFER_MIN)
     return 0;
@@ -3884,9 +3884,9 @@ dirserv_free_all(void)
   cached_dir_decref(cached_directory);
   clear_cached_dir(&cached_runningrouters);
 
-  digestmap_free(cached_v2_networkstatus, _free_cached_dir);
+  digestmap_free(cached_v2_networkstatus, free_cached_dir_);
   cached_v2_networkstatus = NULL;
-  strmap_free(cached_consensuses, _free_cached_dir);
+  strmap_free(cached_consensuses, free_cached_dir_);
   cached_consensuses = NULL;
 }
 

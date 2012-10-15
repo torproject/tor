@@ -10,7 +10,7 @@
  * \brief Headers for log.c
  **/
 
-#ifndef _TOR_LOG_H
+#ifndef TOR_TORLOG_H
 
 #include "compat.h"
 
@@ -156,63 +156,63 @@ void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 #define log tor_log /* hack it so we don't conflict with log() as much */
 
 #if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
-extern int _log_global_min_severity;
+extern int log_global_min_severity_;
 
-void _log_fn(int severity, log_domain_mask_t domain,
+void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
 /** Log a message at level <b>severity</b>, using a pretty-printed version
  * of the current function name. */
 #define log_fn(severity, domain, args...)               \
-  _log_fn(severity, domain, __PRETTY_FUNCTION__, args)
+  log_fn_(severity, domain, __PRETTY_FUNCTION__, args)
 #define log_debug(domain, args...)                                      \
   STMT_BEGIN                                                            \
-    if (PREDICT_UNLIKELY(_log_global_min_severity == LOG_DEBUG))        \
-      _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args);            \
+    if (PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG))        \
+      log_fn_(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args);            \
   STMT_END
 #define log_info(domain, args...)                           \
-  _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
+  log_fn_(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
 #define log_notice(domain, args...)                         \
-  _log_fn(LOG_NOTICE, domain, __PRETTY_FUNCTION__, args)
+  log_fn_(LOG_NOTICE, domain, __PRETTY_FUNCTION__, args)
 #define log_warn(domain, args...)                           \
-  _log_fn(LOG_WARN, domain, __PRETTY_FUNCTION__, args)
+  log_fn_(LOG_WARN, domain, __PRETTY_FUNCTION__, args)
 #define log_err(domain, args...)                            \
-  _log_fn(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
+  log_fn_(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
 
 #else /* ! defined(__GNUC__) */
 
-void _log_fn(int severity, log_domain_mask_t domain, const char *format, ...);
-void _log_debug(log_domain_mask_t domain, const char *format, ...);
-void _log_info(log_domain_mask_t domain, const char *format, ...);
-void _log_notice(log_domain_mask_t domain, const char *format, ...);
-void _log_warn(log_domain_mask_t domain, const char *format, ...);
-void _log_err(log_domain_mask_t domain, const char *format, ...);
+void log_fn_(int severity, log_domain_mask_t domain, const char *format, ...);
+void log_debug_(log_domain_mask_t domain, const char *format, ...);
+void log_info_(log_domain_mask_t domain, const char *format, ...);
+void log_notice_(log_domain_mask_t domain, const char *format, ...);
+void log_warn_(log_domain_mask_t domain, const char *format, ...);
+void log_err_(log_domain_mask_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __func__, or even __LINE__. */
-#define log_fn _log_fn
-#define log_debug _log_debug
-#define log_info _log_info
-#define log_notice _log_notice
-#define log_warn _log_warn
-#define log_err _log_err
+#define log_fn log_fn_
+#define log_debug log_debug_
+#define log_info log_info_
+#define log_notice log_notice_
+#define log_warn log_warn_
+#define log_err log_err_
 #else
 /* We don't have GCC's varargs macros, so use a global variable to pass the
  * function name to log_fn */
-extern const char *_log_fn_function_name;
+extern const char *log_fn_function_name_;
 /* We abuse the comma operator here, since we can't use the standard
  * do {...} while (0) trick to wrap this macro, since the macro can't take
  * arguments. */
-#define log_fn (_log_fn_function_name=__func__),_log_fn
-#define log_debug (_log_fn_function_name=__func__),_log_debug
-#define log_info (_log_fn_function_name=__func__),_log_info
-#define log_notice (_log_fn_function_name=__func__),_log_notice
-#define log_warn (_log_fn_function_name=__func__),_log_warn
-#define log_err (_log_fn_function_name=__func__),_log_err
+#define log_fn (log_fn_function_name_=__func__),log_fn_
+#define log_debug (log_fn_function_name_=__func__),log_debug_
+#define log_info (log_fn_function_name_=__func__),log_info_
+#define log_notice (log_fn_function_name_=__func__),log_notice_
+#define log_warn (log_fn_function_name_=__func__),log_warn_
+#define log_err (log_fn_function_name_=__func__),log_err_
 #endif
 
 #endif /* !GNUC */
 
-# define _TOR_LOG_H
+# define TOR_TORLOG_H
 #endif
 

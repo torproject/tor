@@ -6,8 +6,8 @@
  * \brief Header file for circuitmux.c
  **/
 
-#ifndef _TOR_CIRCUITMUX_H
-#define _TOR_CIRCUITMUX_H
+#ifndef TOR_CIRCUITMUX_H
+#define TOR_CIRCUITMUX_H
 
 #include "or.h"
 
@@ -84,14 +84,14 @@ struct circuitmux_policy_circ_data_s {
  * Convert a circuitmux_policy_data_t subtype to a circuitmux_policy_data_t.
  */
 
-#define TO_CMUX_POL_DATA(x)  (&((x)->_base))
+#define TO_CMUX_POL_DATA(x)  (&((x)->base_))
 
 /**
  * Convert a circuitmux_policy_circ_data_t subtype to a
  * circuitmux_policy_circ_data_t.
  */
 
-#define TO_CMUX_POL_CIRC_DATA(x)  (&((x)->_base))
+#define TO_CMUX_POL_CIRC_DATA(x)  (&((x)->base_))
 
 /* Consistency check */
 void circuitmux_assert_okay(circuitmux_t *cmux);
@@ -132,5 +132,5 @@ void circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ);
 void circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
                               unsigned int n_cells);
 
-#endif /* _TOR_CIRCUITMUX_H */
+#endif /* TOR_CIRCUITMUX_H */
 

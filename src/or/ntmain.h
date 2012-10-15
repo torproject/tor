@@ -9,8 +9,8 @@
  * \brief Header file for ntmain.c.
  **/
 
-#ifndef _TOR_NTMAIN_H
-#define _TOR_NTMAIN_H
+#ifndef TOR_NTMAIN_H
+#define TOR_NTMAIN_H
 
 #ifdef _WIN32
 #if !defined (WINCE)

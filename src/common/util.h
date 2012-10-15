@@ -8,8 +8,8 @@
  * \brief Headers for util.c
  **/
 
-#ifndef _TOR_UTIL_H
-#define _TOR_UTIL_H
+#ifndef TOR_UTIL_H
+#define TOR_UTIL_H
 
 #include "orconfig.h"
 #include "torint.h"
@@ -49,9 +49,9 @@
 #define tor_assert(expr) STMT_BEGIN                                     \
     if (PREDICT_UNLIKELY(!(expr))) {                                    \
       log_err(LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.",      \
-          _SHORT_FILE_, __LINE__, __func__, #expr);                     \
+          SHORT_FILE__, __LINE__, __func__, #expr);                     \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
-              _SHORT_FILE_, __LINE__, __func__, #expr);                 \
+              SHORT_FILE__, __LINE__, __func__, #expr);                 \
       abort();                                                          \
     } STMT_END
 
@@ -62,7 +62,7 @@
  * to calls. */
 #ifdef USE_DMALLOC
 #define DMALLOC_PARAMS , const char *file, const int line
-#define DMALLOC_ARGS , _SHORT_FILE_, __LINE__
+#define DMALLOC_ARGS , SHORT_FILE__, __LINE__
 #else
 #define DMALLOC_PARAMS
 #define DMALLOC_ARGS
@@ -74,22 +74,22 @@
 #define tor_fragile_assert()
 
 /* Memory management */
-void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
-void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
-char *_tor_strdup(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
-char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
+void *tor_malloc_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
+void *tor_malloc_zero_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
+void *tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS) ATTR_MALLOC;
+void *tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS);
+char *tor_strdup_(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
+char *tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
-void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
+void *tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
-void _tor_free(void *mem);
+void tor_free_(void *mem);
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
 #define tor_free(p) STMT_BEGIN \
     if (PREDICT_LIKELY((p)!=NULL)) {                \
-      dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
+      dmalloc_free(SHORT_FILE__, __LINE__, (p), 0); \
       (p)=NULL;                                     \
     }                                               \
   STMT_END
@@ -99,7 +99,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
  * and it sets the pointer value to NULL after freeing it.
  *
  * This is a macro.  If you need a function pointer to release memory from
- * tor_malloc(), use _tor_free().
+ * tor_malloc(), use tor_free_().
  */
 #define tor_free(p) STMT_BEGIN                                 \
     if (PREDICT_LIKELY((p)!=NULL)) {                           \
@@ -109,14 +109,14 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
   STMT_END
 #endif
 
-#define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
-#define tor_malloc_zero(size)  _tor_malloc_zero(size DMALLOC_ARGS)
-#define tor_calloc(nmemb,size) _tor_calloc(nmemb, size DMALLOC_ARGS)
+#define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
+#define tor_malloc_zero(size)  tor_malloc_zero_(size DMALLOC_ARGS)
+#define tor_calloc(nmemb,size) tor_calloc_(nmemb, size DMALLOC_ARGS)
 #define tor_malloc_roundup(szp) _tor_malloc_roundup(szp DMALLOC_ARGS)
-#define tor_realloc(ptr, size) _tor_realloc(ptr, size DMALLOC_ARGS)
-#define tor_strdup(s)          _tor_strdup(s DMALLOC_ARGS)
-#define tor_strndup(s, n)      _tor_strndup(s, n DMALLOC_ARGS)
-#define tor_memdup(s, n)       _tor_memdup(s, n DMALLOC_ARGS)
+#define tor_realloc(ptr, size) tor_realloc_(ptr, size DMALLOC_ARGS)
+#define tor_strdup(s)          tor_strdup_(s DMALLOC_ARGS)
+#define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)
+#define tor_memdup(s, n)       tor_memdup_(s, n DMALLOC_ARGS)
 
 void tor_log_mallinfo(int severity);
 

@@ -3,8 +3,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_TORTLS_H
-#define _TOR_TORTLS_H
+#ifndef TOR_TORTLS_H
+#define TOR_TORTLS_H
 
 /**
  * \file tortls.h
@@ -21,7 +21,7 @@ typedef struct tor_tls_t tor_tls_t;
 typedef struct tor_cert_t tor_cert_t;
 
 /* Possible return values for most tor_tls_* functions. */
-#define _MIN_TOR_TLS_ERROR_VAL     -9
+#define MIN_TOR_TLS_ERROR_VAL_     -9
 #define TOR_TLS_ERROR_MISC         -9
 /* Rename to unexpected close or something. XXXX */
 #define TOR_TLS_ERROR_IO           -8
@@ -98,9 +98,9 @@ int tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
-#define check_no_tls_errors() _check_no_tls_errors(__FILE__,__LINE__)
+#define check_no_tls_errors() check_no_tls_errors_(__FILE__,__LINE__)
 
-void _check_no_tls_errors(const char *fname, int line);
+void check_no_tls_errors_(const char *fname, int line);
 void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                            int severity, int domain, const char *doing);
 

@@ -9,8 +9,8 @@
  * \brief Header file for dnsserv.c.
  **/
 
-#ifndef _TOR_DNSSERV_H
-#define _TOR_DNSSERV_H
+#ifndef TOR_DNSSERV_H
+#define TOR_DNSSERV_H
 
 void dnsserv_configure_listener(connection_t *conn);
 void dnsserv_close_listener(connection_t *conn);

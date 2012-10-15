@@ -1188,7 +1188,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
   SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
     set_environment_variable_in_smartlist(merged_env_vars, env_var,
-                                          _tor_free, 1);
+                                          tor_free_, 1);
   } SMARTLIST_FOREACH_END(env_var);
 
   env = process_environment_make(merged_env_vars);
@@ -1292,7 +1292,7 @@ free_execve_args(char **arg)
   char **tmp = arg;
   while (*tmp) /* use the fact that the last element of the array is a
                   NULL pointer to know when to stop freeing */
-    _tor_free(*tmp++);
+    tor_free_(*tmp++);
 
   tor_free(arg);
 }

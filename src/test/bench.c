@@ -214,8 +214,8 @@ bench_cell_ops(void)
   crypto_rand((char*)cell->payload, sizeof(cell->payload));
 
   /* Mock-up or_circuit_t */
-  or_circ->_base.magic = OR_CIRCUIT_MAGIC;
-  or_circ->_base.purpose = CIRCUIT_PURPOSE_OR;
+  or_circ->base_.magic = OR_CIRCUIT_MAGIC;
+  or_circ->base_.purpose = CIRCUIT_PURPOSE_OR;
 
   /* Initialize crypto */
   or_circ->p_crypto = crypto_cipher_new(NULL);

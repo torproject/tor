@@ -323,7 +323,7 @@ typedef struct dir_src_ent_t {
 /** Helper for sorting networkstatus_t votes (not consensuses) by the
  * hash of their voters' identity digests. */
 static int
-_compare_votes_by_authority_id(const void **_a, const void **_b)
+compare_votes_by_authority_id_(const void **_a, const void **_b)
 {
   const networkstatus_t *a = *_a, *b = *_b;
   return fast_memcmp(get_voter(a)->identity_digest,
@@ -334,7 +334,7 @@ _compare_votes_by_authority_id(const void **_a, const void **_b)
  * their identity digests, and return -1, 0, or 1 depending on their
  * ordering */
 static int
-_compare_dir_src_ents_by_authority_id(const void **_a, const void **_b)
+compare_dir_src_ents_by_authority_id_(const void **_a, const void **_b)
 {
   const dir_src_ent_t *a = *_a, *b = *_b;
   const networkstatus_voter_info_t *a_v = get_voter(a->v),
@@ -401,7 +401,7 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
 
 /** Helper for sorting routerlists based on compare_vote_rs. */
 static int
-_compare_vote_rs(const void **_a, const void **_b)
+compare_vote_rs_(const void **_a, const void **_b)
 {
   const vote_routerstatus_t *a = *_a, *b = *_b;
   return compare_vote_rs(a,b);
@@ -409,7 +409,7 @@ _compare_vote_rs(const void **_a, const void **_b)
 
 /** Helper for sorting OR ports. */
 static int
-_compare_orports(const void **_a, const void **_b)
+compare_orports_(const void **_a, const void **_b)
 {
   const tor_addr_port_t *a = *_a, *b = *_b;
   int r;
@@ -436,11 +436,11 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   int most_n = 0, cur_n = 0;
   time_t most_published = 0;
 
-  /* _compare_vote_rs() sorts the items by identity digest (all the same),
+  /* compare_vote_rs_() sorts the items by identity digest (all the same),
    * then by SD digest.  That way, if we have a tie that the published_on
    * date cannot tie, we use the descriptor with the smaller digest.
    */
-  smartlist_sort(votes, _compare_vote_rs);
+  smartlist_sort(votes, compare_vote_rs_);
   SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
     if (cur && !compare_vote_rs(cur, rs)) {
       ++cur_n;
@@ -484,9 +484,9 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
       }
     } SMARTLIST_FOREACH_END(rs);
 
-    smartlist_sort(alt_orports, _compare_orports);
+    smartlist_sort(alt_orports, compare_orports_);
     most_alt_orport = smartlist_get_most_frequent(alt_orports,
-                                                  _compare_orports);
+                                                  compare_orports_);
     if (most_alt_orport) {
       memcpy(best_alt_orport_out, most_alt_orport, sizeof(tor_addr_port_t));
       log_debug(LD_DIR, "\"a\" line winner for %s is %s",
@@ -543,7 +543,7 @@ hash_list_members(char *digest_out, size_t len_out,
  * positive integers. (Non-integers are treated as prior to all integers, and
  * compared lexically.) */
 static int
-_cmp_int_strings(const void **_a, const void **_b)
+cmp_int_strings_(const void **_a, const void **_b)
 {
   const char *a = *_a, *b = *_b;
   int ai = (int)tor_parse_long(a, 10, 1, INT_MAX, NULL, NULL);
@@ -574,13 +574,13 @@ compute_consensus_method(smartlist_t *votes)
   {
     tor_assert(vote->supported_methods);
     smartlist_add_all(tmp, vote->supported_methods);
-    smartlist_sort(tmp, _cmp_int_strings);
-    smartlist_uniq(tmp, _cmp_int_strings, NULL);
+    smartlist_sort(tmp, cmp_int_strings_);
+    smartlist_uniq(tmp, cmp_int_strings_, NULL);
     smartlist_add_all(all_methods, tmp);
     smartlist_clear(tmp);
   });
 
-  smartlist_sort(all_methods, _cmp_int_strings);
+  smartlist_sort(all_methods, cmp_int_strings_);
   get_frequent_members(acceptable_methods, all_methods, min);
   n_ok = smartlist_len(acceptable_methods);
   if (n_ok) {
@@ -1529,7 +1529,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
 
   /* Sort the votes. */
-  smartlist_sort(votes, _compare_votes_by_authority_id);
+  smartlist_sort(votes, compare_votes_by_authority_id_);
   /* Add the authority sections. */
   {
     smartlist_t *dir_sources = smartlist_new();
@@ -1548,7 +1548,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(dir_sources, e_legacy);
       }
     } SMARTLIST_FOREACH_END(v);
-    smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
+    smartlist_sort(dir_sources, compare_dir_src_ents_by_authority_id_);
 
     SMARTLIST_FOREACH_BEGIN(dir_sources, const dir_src_ent_t *, e) {
       char fingerprint[HEX_DIGEST_LEN+1];
@@ -2487,7 +2487,7 @@ ns_detached_signatures_free(ns_detached_signatures_t *s)
       smartlist_free(sigs);
     } STRMAP_FOREACH_END;
     strmap_free(s->signatures, NULL);
-    strmap_free(s->digests, _tor_free);
+    strmap_free(s->digests, tor_free_);
   }
 
   tor_free(s);

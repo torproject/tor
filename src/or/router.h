@@ -9,8 +9,8 @@
  * \brief Header file for router.c.
  **/
 
-#ifndef _TOR_ROUTER_H
-#define _TOR_ROUTER_H
+#ifndef TOR_ROUTER_H
+#define TOR_ROUTER_H
 
 crypto_pk_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);

@@ -9,8 +9,8 @@
  * \brief Header file for geoip.c.
  **/
 
-#ifndef _TOR_GEOIP_H
-#define _TOR_GEOIP_H
+#ifndef TOR_GEOIP_H
+#define TOR_GEOIP_H
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);

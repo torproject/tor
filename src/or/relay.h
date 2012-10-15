@@ -9,8 +9,8 @@
  * \brief Header file for relay.c.
  **/
 
-#ifndef _TOR_RELAY_H
-#define _TOR_RELAY_H
+#ifndef TOR_RELAY_H
+#define TOR_RELAY_H
 
 extern uint64_t stats_n_relay_cells_relayed;
 extern uint64_t stats_n_relay_cells_delivered;

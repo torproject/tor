@@ -53,7 +53,7 @@
  * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
  */
-#define _EVENT_MIN             0x0001
+#define EVENT_MIN_             0x0001
 #define EVENT_CIRCUIT_STATUS   0x0001
 #define EVENT_STREAM_STATUS    0x0002
 #define EVENT_OR_CONN_STATUS   0x0003
@@ -79,8 +79,8 @@
 #define EVENT_BUILDTIMEOUT_SET     0x0017
 #define EVENT_SIGNAL           0x0018
 #define EVENT_CONF_CHANGED     0x0019
-#define _EVENT_MAX             0x0019
-/* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
+#define EVENT_MAX_             0x0019
+/* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
@@ -595,7 +595,7 @@ send_control_event_string(uint16_t event, event_format_t which,
 {
   smartlist_t *conns = get_connection_array();
   (void)which;
-  tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
+  tor_assert(event >= EVENT_MIN_ && event <= EVENT_MAX_);
 
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_CONTROL &&
@@ -1218,9 +1218,9 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   connection_mark_for_close(TO_CONN(conn));
   return 0;
  ok:
-  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->_base.s);
+  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->base_.s);
   send_control_done(conn);
-  conn->_base.state = CONTROL_CONN_STATE_OPEN;
+  conn->base_.state = CONTROL_CONN_STATE_OPEN;
   tor_free(password);
   if (sl) { /* clean up */
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -1323,7 +1323,7 @@ handle_control_takeownership(control_connection_t *conn, uint32_t len,
 
   log_info(LD_CONTROL, "Control connection %d has taken ownership of this "
            "Tor instance.",
-           (int)(conn->_base.s));
+           (int)(conn->base_.s));
 
   send_control_done(conn);
   return 0;
@@ -1880,11 +1880,11 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
   }
 
   smartlist_add_asprintf(descparts, "PURPOSE=%s",
-                    circuit_purpose_to_controller_string(circ->_base.purpose));
+                    circuit_purpose_to_controller_string(circ->base_.purpose));
 
   {
     const char *hs_state =
-      circuit_purpose_to_controller_hs_state_string(circ->_base.purpose);
+      circuit_purpose_to_controller_hs_state_string(circ->base_.purpose);
 
     if (hs_state != NULL) {
       smartlist_add_asprintf(descparts, "HS_STATE=%s", hs_state);
@@ -1898,7 +1898,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
   {
     char tbuf[ISO_TIME_USEC_LEN+1];
-    format_iso_time_nospace_usec(tbuf, &circ->_base.timestamp_created);
+    format_iso_time_nospace_usec(tbuf, &circ->base_.timestamp_created);
 
     smartlist_add_asprintf(descparts, "TIME_CREATED=%s", tbuf);
   }
@@ -1922,7 +1922,7 @@ getinfo_helper_events(control_connection_t *control_conn,
   if (!strcmp(question, "circuit-status")) {
     circuit_t *circ_;
     smartlist_t *status = smartlist_new();
-    for (circ_ = _circuit_get_global_list(); circ_; circ_ = circ_->next) {
+    for (circ_ = circuit_get_global_list_(); circ_; circ_ = circ_->next) {
       origin_circuit_t *circ;
       char *circdesc;
       const char *state;
@@ -1930,7 +1930,7 @@ getinfo_helper_events(control_connection_t *control_conn,
         continue;
       circ = TO_ORIGIN_CIRCUIT(circ_);
 
-      if (circ->_base.state == CIRCUIT_STATE_OPEN)
+      if (circ->base_.state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (circ->cpath)
         state = "EXTENDED";
@@ -2007,7 +2007,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       if (base_conn->type != CONN_TYPE_OR || base_conn->marked_for_close)
         continue;
       conn = TO_OR_CONN(base_conn);
-      if (conn->_base.state == OR_CONN_STATE_OPEN)
+      if (conn->base_.state == OR_CONN_STATE_OPEN)
         state = "CONNECTED";
       else if (conn->nickname)
         state = "LAUNCHED";
@@ -2534,7 +2534,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
   } else {
-    if (circ->_base.state == CIRCUIT_STATE_OPEN) {
+    if (circ->base_.state == CIRCUIT_STATE_OPEN) {
       int err_reason = 0;
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
       if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
@@ -2667,7 +2667,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     TO_CONN(edge_conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
-  if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
+  if (circ && (circ->base_.state != CIRCUIT_STATE_OPEN)) {
     connection_write_str_to_buf(
                     "551 Can't attach stream to non-open origin circuit\r\n",
                     conn);
@@ -3235,7 +3235,7 @@ connection_control_closed(control_connection_t *conn)
 static int
 is_valid_initial_command(control_connection_t *conn, const char *cmd)
 {
-  if (conn->_base.state == CONTROL_CONN_STATE_OPEN)
+  if (conn->base_.state == CONTROL_CONN_STATE_OPEN)
     return 1;
   if (!strcasecmp(cmd, "PROTOCOLINFO"))
     return (!conn->have_sent_protocolinfo &&
@@ -3280,8 +3280,8 @@ connection_control_process_inbuf(control_connection_t *conn)
   char *args;
 
   tor_assert(conn);
-  tor_assert(conn->_base.state == CONTROL_CONN_STATE_OPEN ||
-             conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH);
+  tor_assert(conn->base_.state == CONTROL_CONN_STATE_OPEN ||
+             conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH);
 
   if (!conn->incoming_cmd) {
     conn->incoming_cmd = tor_malloc(1024);
@@ -3289,7 +3289,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     conn->incoming_cmd_cur_len = 0;
   }
 
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
+  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
       peek_connection_has_control0_command(TO_CONN(conn))) {
     /* Detect v0 commands and send a "no more v0" message. */
     size_t body_len;
@@ -3388,7 +3388,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     return 0;
   }
 
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
+  if (conn->base_.state == CONTROL_CONN_STATE_NEEDAUTH &&
       !is_valid_initial_command(conn, conn->incoming_cmd)) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
@@ -3792,7 +3792,7 @@ orconn_target_get_name(char *name, size_t len, or_connection_t *conn)
                   DIGEST_LEN);
   } else {
     tor_snprintf(name, len, "%s:%d",
-                 conn->_base.address, conn->_base.port);
+                 conn->base_.address, conn->base_.port);
   }
 }
 
@@ -3858,7 +3858,7 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
 
     send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
                        "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
-                       U64_PRINTF_ARG(edge_conn->_base.global_identifier),
+                       U64_PRINTF_ARG(edge_conn->base_.global_identifier),
                        (unsigned long)edge_conn->n_read,
                        (unsigned long)edge_conn->n_written);
 
@@ -3887,7 +3887,7 @@ control_event_stream_bandwidth_used(void)
 
         send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
                            "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
-                           U64_PRINTF_ARG(edge_conn->_base.global_identifier),
+                           U64_PRINTF_ARG(edge_conn->base_.global_identifier),
                            (unsigned long)edge_conn->n_read,
                            (unsigned long)edge_conn->n_written);
 

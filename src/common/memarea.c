@@ -77,7 +77,7 @@ typedef struct memarea_chunk_t {
                    * full. */
   union {
     char mem[1]; /**< Memory space in this chunk.  */
-    void *_void_for_alignment; /**< Dummy; used to make sure mem is aligned. */
+    void *void_for_alignment_; /**< Dummy; used to make sure mem is aligned. */
   } u;
 } memarea_chunk_t;
 

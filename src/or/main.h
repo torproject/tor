@@ -9,8 +9,8 @@
  * \brief Header file for main.c.
  **/
 
-#ifndef _TOR_MAIN_H
-#define _TOR_MAIN_H
+#ifndef TOR_MAIN_H
+#define TOR_MAIN_H
 
 extern int can_complete_circuit;
 

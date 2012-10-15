@@ -8,8 +8,8 @@
   **/
 
 #ifdef MINIUPNPC
-#ifndef _TOR_FW_HELPER_UPNP_H
-#define _TOR_FW_HELPER_UPNP_H
+#ifndef TOR_TOR_FW_HELPER_UPNP_H
+#define TOR_TOR_FW_HELPER_UPNP_H
 
 #include <miniupnpc/miniwget.h>
 #include <miniupnpc/miniupnpc.h>

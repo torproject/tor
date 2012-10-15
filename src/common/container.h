@@ -3,8 +3,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#ifndef _TOR_CONTAINER_H
-#define _TOR_CONTAINER_H
+#ifndef TOR_CONTAINER_H
+#define TOR_CONTAINER_H
 
 #include "util.h"
 

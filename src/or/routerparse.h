@@ -9,8 +9,8 @@
  * \brief Header file for routerparse.c.
  **/
 
-#ifndef _TOR_ROUTERPARSE_H
-#define _TOR_ROUTERPARSE_H
+#ifndef TOR_ROUTERPARSE_H
+#define TOR_ROUTERPARSE_H
 
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);

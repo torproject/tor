@@ -6,18 +6,18 @@
  * \brief Header file for circuitmux_ewma.c
  **/
 
-#ifndef _TOR_CIRCUITMUX_EWMA_H
-#define _TOR_CIRCUITMUX_EWMA_H
+#ifndef TOR_CIRCUITMUX_EWMA_H
+#define TOR_CIRCUITMUX_EWMA_H
 
 #include "or.h"
 #include "circuitmux.h"
 
 /* Everything but circuitmux_ewma.c should see this extern */
-#ifndef _TOR_CIRCUITMUX_EWMA_C
+#ifndef TOR_CIRCUITMUX_EWMA_C_
 
 extern circuitmux_policy_t ewma_policy;
 
-#endif /* !(_TOR_CIRCUITMUX_EWMA_C) */
+#endif /* !(TOR_CIRCUITMUX_EWMA_C_) */
 
 /* Externally visible EWMA functions */
 int cell_ewma_enabled(void);
@@ -25,5 +25,5 @@ unsigned int cell_ewma_get_tick(void);
 void cell_ewma_set_scale_factor(const or_options_t *options,
                                 const networkstatus_t *consensus);
 
-#endif /* _TOR_CIRCUITMUX_EWMA_H */
+#endif /* TOR_CIRCUITMUX_EWMA_H */
 

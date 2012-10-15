@@ -7,8 +7,8 @@
   * \brief The main header for our firewall helper.
   **/
 
-#ifndef _TOR_FW_HELPER_H
-#define _TOR_FW_HELPER_H
+#ifndef TOR_TOR_FW_HELPER_H
+#define TOR_TOR_FW_HELPER_H
 
 #include <stdint.h>
 #include <stdio.h>

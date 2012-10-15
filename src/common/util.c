@@ -39,8 +39,8 @@
 #endif
 
 /* math.h needs this on Linux */
-#ifndef __USE_ISOC99
-#define __USE_ISOC99 1
+#ifndef _USE_ISOC99_
+#define _USE_ISOC99_ 1
 #endif
 #include <math.h>
 #include <stdlib.h>
@@ -125,7 +125,7 @@
  * ignored otherwise.
  */
 void *
-_tor_malloc(size_t size DMALLOC_PARAMS)
+tor_malloc_(size_t size DMALLOC_PARAMS)
 {
   void *result;
 
@@ -159,7 +159,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
 void *
-_tor_malloc_zero(size_t size DMALLOC_PARAMS)
+tor_malloc_zero_(size_t size DMALLOC_PARAMS)
 {
   /* You may ask yourself, "wouldn't it be smart to use calloc instead of
    * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
@@ -167,7 +167,7 @@ _tor_malloc_zero(size_t size DMALLOC_PARAMS)
    * we're allocating something very big (it knows if it just got the memory
    * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
    * for big stuff, so we don't bother with calloc. */
-  void *result = _tor_malloc(size DMALLOC_FN_ARGS);
+  void *result = tor_malloc_(size DMALLOC_FN_ARGS);
   memset(result, 0, size);
   return result;
 }
@@ -184,7 +184,7 @@ _tor_malloc_zero(size_t size DMALLOC_PARAMS)
  * smaller than size).  Don't do that then.
  */
 void *
-_tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS)
+tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
 {
   /* You may ask yourself, "wouldn't it be smart to use calloc instead of
    * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
@@ -197,7 +197,7 @@ _tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS)
 
   tor_assert(nmemb < max_nmemb);
 
-  result = _tor_malloc_zero((nmemb * size) DMALLOC_FN_ARGS);
+  result = tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
   return result;
 }
 
@@ -206,7 +206,7 @@ _tor_calloc(size_t nmemb, size_t size DMALLOC_PARAMS)
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
 void *
-_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
+tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
 {
   void *result;
 
@@ -230,7 +230,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
  * NULL.)
  */
 char *
-_tor_strdup(const char *s DMALLOC_PARAMS)
+tor_strdup_(const char *s DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(s);
@@ -254,12 +254,12 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
  * NULL.)
  */
 char *
-_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
+tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(s);
   tor_assert(n < SIZE_T_CEILING);
-  dup = _tor_malloc((n+1) DMALLOC_FN_ARGS);
+  dup = tor_malloc_((n+1) DMALLOC_FN_ARGS);
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
@@ -272,12 +272,12 @@ _tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
 /** Allocate a chunk of <b>len</b> bytes, with the same contents as the
  * <b>len</b> bytes starting at <b>mem</b>. */
 void *
-_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
+tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(len < SIZE_T_CEILING);
   tor_assert(mem);
-  dup = _tor_malloc(len DMALLOC_FN_ARGS);
+  dup = tor_malloc_(len DMALLOC_FN_ARGS);
   memcpy(dup, mem, len);
   return dup;
 }
@@ -285,7 +285,7 @@ _tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
 /** Helper for places that need to take a function pointer to the right
  * spelling of "free()". */
 void
-_tor_free(void *mem)
+tor_free_(void *mem)
 {
   tor_free(mem);
 }
@@ -1019,7 +1019,7 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 
 /** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
 static INLINE int
-_hex_decode_digit(char c)
+hex_decode_digit_(char c)
 {
   switch (c) {
     case '0': return 0;
@@ -1047,7 +1047,7 @@ _hex_decode_digit(char c)
 int
 hex_decode_digit(char c)
 {
-  return _hex_decode_digit(c);
+  return hex_decode_digit_(c);
 }
 
 /** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode it
@@ -1065,8 +1065,8 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   end = src+srclen;
   while (src<end) {
-    v1 = _hex_decode_digit(*src);
-    v2 = _hex_decode_digit(*(src+1));
+    v1 = hex_decode_digit_(*src);
+    v2 = hex_decode_digit_(*(src+1));
     if (v1<0||v2<0)
       return -1;
     *(uint8_t*)dest = (v1<<4)|v2;
@@ -1166,15 +1166,15 @@ esc_for_log(const char *s)
 const char *
 escaped(const char *s)
 {
-  static char *_escaped_val = NULL;
-  tor_free(_escaped_val);
+  static char *escaped_val_ = NULL;
+  tor_free(escaped_val_);
 
   if (s)
-    _escaped_val = esc_for_log(s);
+    escaped_val_ = esc_for_log(s);
   else
-    _escaped_val = NULL;
+    escaped_val_ = NULL;
 
-  return _escaped_val;
+  return escaped_val_;
 }
 
 /** Rudimentary string wrapping code: given a un-wrapped <b>string</b> (no

@@ -42,7 +42,7 @@ struct microdesc_cache_t {
 
 /** Helper: computes a hash of <b>md</b> to place it in a hash table. */
 static INLINE unsigned int
-_microdesc_hash(microdesc_t *md)
+microdesc_hash_(microdesc_t *md)
 {
   unsigned *d = (unsigned*)md->digest;
 #if SIZEOF_INT == 4
@@ -54,15 +54,15 @@ _microdesc_hash(microdesc_t *md)
 
 /** Helper: compares <b>a</b> and </b> for equality for hash-table purposes. */
 static INLINE int
-_microdesc_eq(microdesc_t *a, microdesc_t *b)
+microdesc_eq_(microdesc_t *a, microdesc_t *b)
 {
   return tor_memeq(a->digest, b->digest, DIGEST256_LEN);
 }
 
 HT_PROTOTYPE(microdesc_map, microdesc_t, node,
-             _microdesc_hash, _microdesc_eq);
+             microdesc_hash_, microdesc_eq_);
 HT_GENERATE(microdesc_map, microdesc_t, node,
-             _microdesc_hash, _microdesc_eq, 0.6,
+             microdesc_hash_, microdesc_eq_, 0.6,
              malloc, realloc, free);
 
 /** Write the body of <b>md</b> into <b>f</b>, with appropriate annotations.

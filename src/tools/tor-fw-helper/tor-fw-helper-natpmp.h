@@ -7,8 +7,8 @@
   **/
 
 #ifdef NAT_PMP
-#ifndef _TOR_FW_HELPER_NATPMP_H
-#define _TOR_FW_HELPER_NATPMP_H
+#ifndef TOR_TOR_FW_HELPER_NATPMP_H
+#define TOR_TOR_FW_HELPER_NATPMP_H
 
 #include <natpmp.h>
 

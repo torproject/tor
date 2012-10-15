@@ -10,7 +10,7 @@
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>. */
 static int
-_compare_strs(const void **a, const void **b)
+compare_strs_(const void **a, const void **b)
 {
   const char *s1 = *a, *s2 = *b;
   return strcmp(s1, s2);
@@ -19,7 +19,7 @@ _compare_strs(const void **a, const void **b)
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>, excluding a's first character, and ignoring case. */
 static int
-_compare_without_first_ch(const void *a, const void **b)
+compare_without_first_ch_(const void *a, const void **b)
 {
   const char *s1 = a, *s2 = *b;
   return strcasecmp(s1+1, s2);
@@ -176,7 +176,7 @@ test_container_smartlist_strings(void)
   /* Test swapping, shuffling, and sorting. */
   smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
   test_eq(7, smartlist_len(sl));
-  smartlist_sort(sl, _compare_strs);
+  smartlist_sort(sl, compare_strs_);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp_alloc,"and,arma,by,nickm,onion,router,the");
   tor_free(cp_alloc);
@@ -195,26 +195,26 @@ test_container_smartlist_strings(void)
   test_assert(smartlist_string_isin(sl, "the"));
 
   /* Test bsearch. */
-  smartlist_sort(sl, _compare_strs);
+  smartlist_sort(sl, compare_strs_);
   test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
-                                        _compare_without_first_ch));
-  test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
-  test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
+                                        compare_without_first_ch_));
+  test_streq("and", smartlist_bsearch(sl, " AND", compare_without_first_ch_));
+  test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", compare_without_first_ch_));
 
   /* Test bsearch_idx */
   {
     int f;
-    test_eq(0, smartlist_bsearch_idx(sl," aaa",_compare_without_first_ch,&f));
+    test_eq(0, smartlist_bsearch_idx(sl," aaa",compare_without_first_ch_,&f));
     test_eq(f, 0);
-    test_eq(0, smartlist_bsearch_idx(sl," and",_compare_without_first_ch,&f));
+    test_eq(0, smartlist_bsearch_idx(sl," and",compare_without_first_ch_,&f));
     test_eq(f, 1);
-    test_eq(1, smartlist_bsearch_idx(sl," arm",_compare_without_first_ch,&f));
+    test_eq(1, smartlist_bsearch_idx(sl," arm",compare_without_first_ch_,&f));
     test_eq(f, 0);
-    test_eq(1, smartlist_bsearch_idx(sl," arma",_compare_without_first_ch,&f));
+    test_eq(1, smartlist_bsearch_idx(sl," arma",compare_without_first_ch_,&f));
     test_eq(f, 1);
-    test_eq(2, smartlist_bsearch_idx(sl," armb",_compare_without_first_ch,&f));
+    test_eq(2, smartlist_bsearch_idx(sl," armb",compare_without_first_ch_,&f));
     test_eq(f, 0);
-    test_eq(7, smartlist_bsearch_idx(sl," zzzz",_compare_without_first_ch,&f));
+    test_eq(7, smartlist_bsearch_idx(sl," zzzz",compare_without_first_ch_,&f));
     test_eq(f, 0);
   }
 
@@ -236,8 +236,8 @@ test_container_smartlist_strings(void)
   smartlist_split_string(sl,
                      "50,noon,radar,a,man,a,plan,a,canal,panama,radar,noon,50",
                      ",", 0, 0);
-  smartlist_sort(sl, _compare_strs);
-  smartlist_uniq(sl, _compare_strs, _tor_free);
+  smartlist_sort(sl, compare_strs_);
+  smartlist_uniq(sl, compare_strs_, tor_free_);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp_alloc, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp_alloc);
@@ -522,7 +522,7 @@ typedef struct pq_entry_t {
 
 /** Helper: return a tristate based on comparing two pq_entry_t values. */
 static int
-_compare_strings_for_pqueue(const void *p1, const void *p2)
+compare_strings_for_pqueue_(const void *p1, const void *p2)
 {
   const pq_entry_t *e1=p1, *e2=p2;
   return strcmp(e1->val, e2->val);
@@ -552,7 +552,7 @@ test_container_pqueue(void)
 
 #define OK() smartlist_pqueue_assert_ok(sl, cmp, offset)
 
-  cmp = _compare_strings_for_pqueue;
+  cmp = compare_strings_for_pqueue_;
   smartlist_pqueue_add(sl, cmp, offset, &cows);
   smartlist_pqueue_add(sl, cmp, offset, &zebras);
   smartlist_pqueue_add(sl, cmp, offset, &fish);

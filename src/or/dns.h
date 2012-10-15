@@ -9,8 +9,8 @@
  * \brief Header file for dns.c.
  **/
 
-#ifndef _TOR_DNS_H
-#define _TOR_DNS_H
+#ifndef TOR_DNS_H
+#define TOR_DNS_H
 
 int dns_init(void);
 int has_dns_init_failed(void);

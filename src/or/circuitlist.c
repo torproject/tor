@@ -58,7 +58,7 @@ typedef struct chan_circid_circuit_map_t {
  * b, and return less than, equal to, or greater than zero appropriately.
  */
 static INLINE int
-_chan_circid_entries_eq(chan_circid_circuit_map_t *a,
+chan_circid_entries_eq_(chan_circid_circuit_map_t *a,
                         chan_circid_circuit_map_t *b)
 {
   return a->chan == b->chan && a->circ_id == b->circ_id;
@@ -67,7 +67,7 @@ _chan_circid_entries_eq(chan_circid_circuit_map_t *a,
 /** Helper: return a hash based on circuit ID and the pointer value of
  * chan in <b>a</b>. */
 static INLINE unsigned int
-_chan_circid_entry_hash(chan_circid_circuit_map_t *a)
+chan_circid_entry_hash_(chan_circid_circuit_map_t *a)
 {
   return (((unsigned)a->circ_id)<<8) ^ (unsigned)(uintptr_t)(a->chan);
 }
@@ -76,9 +76,9 @@ _chan_circid_entry_hash(chan_circid_circuit_map_t *a)
 static HT_HEAD(chan_circid_map, chan_circid_circuit_map_t)
      chan_circid_map = HT_INITIALIZER();
 HT_PROTOTYPE(chan_circid_map, chan_circid_circuit_map_t, node,
-             _chan_circid_entry_hash, _chan_circid_entries_eq)
+             chan_circid_entry_hash_, chan_circid_entries_eq_)
 HT_GENERATE(chan_circid_map, chan_circid_circuit_map_t, node,
-            _chan_circid_entry_hash, _chan_circid_entries_eq, 0.6,
+            chan_circid_entry_hash_, chan_circid_entries_eq_, 0.6,
             malloc, realloc, free)
 
 /** The most recently returned entry from circuit_get_by_circid_chan;
@@ -350,7 +350,7 @@ circuit_close_all_marked(void)
 
 /** Return the head of the global linked list of circuits. */
 circuit_t *
-_circuit_get_global_list(void)
+circuit_get_global_list_(void)
 {
   return global_circuitlist;
 }
@@ -572,7 +572,7 @@ origin_circuit_new(void)
   static uint32_t n_circuits_allocated = 1;
 
   circ = tor_malloc_zero(sizeof(origin_circuit_t));
-  circ->_base.magic = ORIGIN_CIRCUIT_MAGIC;
+  circ->base_.magic = ORIGIN_CIRCUIT_MAGIC;
 
   circ->next_stream_id = crypto_rand_int(1<<16);
   circ->global_identifier = n_circuits_allocated++;
@@ -595,7 +595,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
   or_circuit_t *circ;
 
   circ = tor_malloc_zero(sizeof(or_circuit_t));
-  circ->_base.magic = OR_CIRCUIT_MAGIC;
+  circ->base_.magic = OR_CIRCUIT_MAGIC;
 
   if (p_chan)
     circuit_set_p_circid_chan(circ, p_circ_id, p_chan);
@@ -659,7 +659,7 @@ circuit_free(circuit_t *circ)
 
     if (ocirc->rend_splice) {
       or_circuit_t *other = ocirc->rend_splice;
-      tor_assert(other->_base.magic == OR_CIRCUIT_MAGIC);
+      tor_assert(other->base_.magic == OR_CIRCUIT_MAGIC);
       other->rend_splice = NULL;
     }
 
@@ -1162,7 +1162,7 @@ origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                             int flags)
 {
-  circuit_t *_circ;
+  circuit_t *circ_;
   origin_circuit_t *best=NULL;
   int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
@@ -1178,13 +1178,13 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
             "capacity %d, internal %d",
             purpose, need_uptime, need_capacity, internal);
 
-  for (_circ=global_circuitlist; _circ; _circ = _circ->next) {
-    if (CIRCUIT_IS_ORIGIN(_circ) &&
-        _circ->state == CIRCUIT_STATE_OPEN &&
-        !_circ->marked_for_close &&
-        _circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
-        !_circ->timestamp_dirty) {
-      origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(_circ);
+  for (circ_=global_circuitlist; circ_; circ_ = circ_->next) {
+    if (CIRCUIT_IS_ORIGIN(circ_) &&
+        circ_->state == CIRCUIT_STATE_OPEN &&
+        !circ_->marked_for_close &&
+        circ_->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        !circ_->timestamp_dirty) {
+      origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(circ_);
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal) &&
@@ -1318,7 +1318,7 @@ circuit_expire_all_dirty_circs(void)
  *     rendezvous stream), then mark the other circuit to close as well.
  */
 void
-_circuit_mark_for_close(circuit_t *circ, int reason, int line,
+circuit_mark_for_close_(circuit_t *circ, int reason, int line,
                         const char *file)
 {
   int orig_reason = reason; /* Passed to the controller */
@@ -1349,7 +1349,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   if (reason & END_CIRC_REASON_FLAG_REMOTE)
     reason &= ~END_CIRC_REASON_FLAG_REMOTE;
 
-  if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
+  if (reason < END_CIRC_REASON_MIN_ || reason > END_CIRC_REASON_MAX_) {
     if (!(orig_reason & END_CIRC_REASON_FLAG_REMOTE))
       log_warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
     reason = END_CIRC_REASON_NONE;
@@ -1424,7 +1424,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     while (or_circ->resolving_streams) {
       conn = or_circ->resolving_streams;
       or_circ->resolving_streams = conn->next_stream;
-      if (!conn->_base.marked_for_close) {
+      if (!conn->base_.marked_for_close) {
         /* The client will see a DESTROY, and infer that the connections
          * are closing because the circuit is getting torn down.  No need
          * to send an end cell. */
@@ -1455,7 +1455,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   if (!CIRCUIT_IS_ORIGIN(circ)) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     if (or_circ->rend_splice) {
-      if (!or_circ->rend_splice->_base.marked_for_close) {
+      if (!or_circ->rend_splice->base_.marked_for_close) {
         /* do this after marking this circuit, to avoid infinite recursion. */
         circuit_mark_for_close(TO_CIRCUIT(or_circ->rend_splice), reason);
       }
@@ -1529,8 +1529,8 @@ assert_circuit_ok(const circuit_t *c)
 
   tor_assert(c);
   tor_assert(c->magic == ORIGIN_CIRCUIT_MAGIC || c->magic == OR_CIRCUIT_MAGIC);
-  tor_assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
-             c->purpose <= _CIRCUIT_PURPOSE_MAX);
+  tor_assert(c->purpose >= CIRCUIT_PURPOSE_MIN_ &&
+             c->purpose <= CIRCUIT_PURPOSE_MAX_);
 
   {
     /* Having a separate variable for this pleases GCC 4.2 in ways I hope I
@@ -1563,7 +1563,7 @@ assert_circuit_ok(const circuit_t *c)
   }
   if (or_circ)
     for (conn = or_circ->n_streams; conn; conn = conn->next_stream)
-      tor_assert(conn->_base.type == CONN_TYPE_EXIT);
+      tor_assert(conn->base_.type == CONN_TYPE_EXIT);
 
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);

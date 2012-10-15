@@ -9,8 +9,8 @@
  * \brief Master header file for Tor-specific functionality.
  **/
 
-#ifndef _TOR_OR_H
-#define _TOR_OR_H
+#ifndef TOR_OR_H
+#define TOR_OR_H
 
 #include "orconfig.h"
 
@@ -198,7 +198,7 @@ typedef enum {
   CIRC_ID_TYPE_NEITHER=2
 } circ_id_type_t;
 
-#define _CONN_TYPE_MIN 3
+#define CONN_TYPE_MIN_ 3
 /** Type for sockets listening for OR connections. */
 #define CONN_TYPE_OR_LISTENER 3
 /** A bidirectional TLS connection transmitting a sequence of cells.
@@ -229,8 +229,8 @@ typedef enum {
 #define CONN_TYPE_AP_NATD_LISTENER 14
 /** Type for sockets listening for DNS requests. */
 #define CONN_TYPE_AP_DNS_LISTENER 15
-#define _CONN_TYPE_MAX 15
-/* !!!! If _CONN_TYPE_MAX is ever over 15, we must grow the type field in
+#define CONN_TYPE_MAX_ 15
+/* !!!! If CONN_TYPE_MAX_ is ever over 15, we must grow the type field in
  * connection_t. */
 
 /* Proxy client types */
@@ -270,17 +270,17 @@ typedef enum {
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0
 
-#define _CPUWORKER_STATE_MIN 1
+#define CPUWORKER_STATE_MIN_ 1
 /** State for a connection to a cpuworker process that's idle. */
 #define CPUWORKER_STATE_IDLE 1
 /** State for a connection to a cpuworker process that's processing a
  * handshake. */
 #define CPUWORKER_STATE_BUSY_ONION 2
-#define _CPUWORKER_STATE_MAX 2
+#define CPUWORKER_STATE_MAX_ 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 
-#define _OR_CONN_STATE_MIN 1
+#define OR_CONN_STATE_MIN_ 1
 /** State for a connection to an OR: waiting for connect() to finish. */
 #define OR_CONN_STATE_CONNECTING 1
 /** State for a connection to an OR: waiting for proxy handshake to complete */
@@ -305,9 +305,9 @@ typedef enum {
 #define OR_CONN_STATE_OR_HANDSHAKING_V3 7
 /** State for an OR connection: Ready to send/receive cells. */
 #define OR_CONN_STATE_OPEN 8
-#define _OR_CONN_STATE_MAX 8
+#define OR_CONN_STATE_MAX_ 8
 
-#define _EXIT_CONN_STATE_MIN 1
+#define EXIT_CONN_STATE_MIN_ 1
 /** State for an exit connection: waiting for response from DNS farm. */
 #define EXIT_CONN_STATE_RESOLVING 1
 /** State for an exit connection: waiting for connect() to finish. */
@@ -316,10 +316,10 @@ typedef enum {
 #define EXIT_CONN_STATE_OPEN 3
 /** State for an exit connection: waiting to be removed. */
 #define EXIT_CONN_STATE_RESOLVEFAILED 4
-#define _EXIT_CONN_STATE_MAX 4
+#define EXIT_CONN_STATE_MAX_ 4
 
 /* The AP state values must be disjoint from the EXIT state values. */
-#define _AP_CONN_STATE_MIN 5
+#define AP_CONN_STATE_MIN_ 5
 /** State for a SOCKS connection: waiting for SOCKS request. */
 #define AP_CONN_STATE_SOCKS_WAIT 5
 /** State for a SOCKS connection: got a y.onion URL; waiting to receive
@@ -339,14 +339,14 @@ typedef enum {
 /** State for a transparent natd connection: waiting for original
  * destination. */
 #define AP_CONN_STATE_NATD_WAIT 12
-#define _AP_CONN_STATE_MAX 12
+#define AP_CONN_STATE_MAX_ 12
 
 /** True iff the AP_CONN_STATE_* value <b>s</b> means that the corresponding
  * edge connection is not attached to any circuit. */
 #define AP_CONN_STATE_IS_UNATTACHED(s) \
   ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
 
-#define _DIR_CONN_STATE_MIN 1
+#define DIR_CONN_STATE_MIN_ 1
 /** State for connection to directory server: waiting for connect(). */
 #define DIR_CONN_STATE_CONNECTING 1
 /** State for connection to directory server: sending HTTP request. */
@@ -359,21 +359,21 @@ typedef enum {
 #define DIR_CONN_STATE_SERVER_COMMAND_WAIT 5
 /** State for connection at directory server: sending HTTP response. */
 #define DIR_CONN_STATE_SERVER_WRITING 6
-#define _DIR_CONN_STATE_MAX 6
+#define DIR_CONN_STATE_MAX_ 6
 
 /** True iff the purpose of <b>conn</b> means that it's a server-side
  * directory connection. */
 #define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
-#define _CONTROL_CONN_STATE_MIN 1
+#define CONTROL_CONN_STATE_MIN_ 1
 /** State for a control connection: Authenticated and accepting v1 commands. */
 #define CONTROL_CONN_STATE_OPEN 1
 /** State for a control connection: Waiting for authentication; speaking
  * protocol v1. */
 #define CONTROL_CONN_STATE_NEEDAUTH 2
-#define _CONTROL_CONN_STATE_MAX 2
+#define CONTROL_CONN_STATE_MAX_ 2
 
-#define _DIR_PURPOSE_MIN 3
+#define DIR_PURPOSE_MIN_ 3
 /** A connection to a directory server: download a rendezvous
  * descriptor. */
 #define DIR_PURPOSE_FETCH_RENDDESC 3
@@ -421,7 +421,7 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 /** A connection to a directory server: download a microdescriptor. */
 #define DIR_PURPOSE_FETCH_MICRODESC 19
-#define _DIR_PURPOSE_MAX 19
+#define DIR_PURPOSE_MAX_ 19
 
 /** True iff <b>p</b> is a purpose corresponding to uploading data to a
  * directory server. */
@@ -431,12 +431,12 @@ typedef enum {
    (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
    (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
 
-#define _EXIT_PURPOSE_MIN 1
+#define EXIT_PURPOSE_MIN_ 1
 /** This exit stream wants to do an ordinary connect. */
 #define EXIT_PURPOSE_CONNECT 1
 /** This exit stream wants to do a resolve (either normal or reverse). */
 #define EXIT_PURPOSE_RESOLVE 2
-#define _EXIT_PURPOSE_MAX 2
+#define EXIT_PURPOSE_MAX_ 2
 
 /* !!!! If any connection purpose is ever over 31, we must grow the type
  * field in connection_t. */
@@ -451,10 +451,10 @@ typedef enum {
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
 #define CIRCUIT_STATE_OPEN 3
 
-#define _CIRCUIT_PURPOSE_MIN 1
+#define CIRCUIT_PURPOSE_MIN_ 1
 
 /* these circuits were initiated elsewhere */
-#define _CIRCUIT_PURPOSE_OR_MIN 1
+#define CIRCUIT_PURPOSE_OR_MIN_ 1
 /** OR-side circuit purpose: normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_OR 1
 /** OR-side circuit purpose: At OR, from Bob, waiting for intro from Alices. */
@@ -463,7 +463,7 @@ typedef enum {
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3
 /** OR-side circuit purpose: At OR, both circuits have this purpose. */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4
-#define _CIRCUIT_PURPOSE_OR_MAX 4
+#define CIRCUIT_PURPOSE_OR_MAX_ 4
 
 /* these circuits originate at this node */
 
@@ -506,7 +506,7 @@ typedef enum {
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
 /** This circuit is used for build time measurement only */
 #define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 13
-#define _CIRCUIT_PURPOSE_C_MAX 13
+#define CIRCUIT_PURPOSE_C_MAX_ 13
 /** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 14
 /** Hidden-service-side circuit purpose: at Bob, successfully established
@@ -520,19 +520,19 @@ typedef enum {
 #define CIRCUIT_PURPOSE_TESTING 18
 /** A controller made this circuit and Tor should not use it. */
 #define CIRCUIT_PURPOSE_CONTROLLER 19
-#define _CIRCUIT_PURPOSE_MAX 19
+#define CIRCUIT_PURPOSE_MAX_ 19
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255
 
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
-#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
+#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>CIRCUIT_PURPOSE_OR_MAX_)
 /** True iff the circuit purpose <b>p</b> is for a circuit that originated
  * here to serve as a client.  (Hidden services don't count here.) */
 #define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
-  ((p)> _CIRCUIT_PURPOSE_OR_MAX &&    \
-   (p)<=_CIRCUIT_PURPOSE_C_MAX)
+  ((p)> CIRCUIT_PURPOSE_OR_MAX_ &&    \
+   (p)<=CIRCUIT_PURPOSE_C_MAX_)
 /** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 /** True iff the circuit purpose <b>p</b> is for an established rendezvous
@@ -665,7 +665,7 @@ typedef enum {
 
 /* Reasons why we (or a remote OR) might close a circuit. See tor-spec.txt for
  * documentation of these. */
-#define _END_CIRC_REASON_MIN            0
+#define END_CIRC_REASON_MIN_            0
 #define END_CIRC_REASON_NONE            0
 #define END_CIRC_REASON_TORPROTOCOL     1
 #define END_CIRC_REASON_INTERNAL        2
@@ -679,7 +679,7 @@ typedef enum {
 #define END_CIRC_REASON_TIMEOUT         10
 #define END_CIRC_REASON_DESTROYED       11
 #define END_CIRC_REASON_NOSUCHSERVICE   12
-#define _END_CIRC_REASON_MAX            12
+#define END_CIRC_REASON_MAX_            12
 
 /** Bitwise-OR this with the argument to circuit_mark_for_close() or
  * control_event_circuit_status() to indicate that the reason was
@@ -1206,7 +1206,7 @@ typedef struct connection_t {
 
 /** Subtype of connection_t; used for a listener socket. */
 typedef struct listener_connection_t {
-  connection_t _base;
+  connection_t base_;
 
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port it uses to listen to and answer connections. */
@@ -1329,7 +1329,7 @@ typedef struct or_handshake_state_t {
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
 typedef struct or_connection_t {
-  connection_t _base;
+  connection_t base_;
 
   /** Hash of the public RSA key for the other side's identity key, or zeroes
    * if the other side hasn't shown us a valid identity key. */
@@ -1394,7 +1394,7 @@ typedef struct or_connection_t {
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
  * connection, or an exit. */
 typedef struct edge_connection_t {
-  connection_t _base;
+  connection_t base_;
 
   struct edge_connection_t *next_stream; /**< Points to the next stream at this
                                           * edge, if any */
@@ -1447,7 +1447,7 @@ typedef struct edge_connection_t {
 /** Subtype of edge_connection_t for an "entry connection" -- that is, a SOCKS
  * connection, a DNS request, a TransPort connection or a NATD connection */
 typedef struct entry_connection_t {
-  edge_connection_t _edge;
+  edge_connection_t edge_;
 
   /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
@@ -1525,7 +1525,7 @@ typedef struct entry_connection_t {
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
 typedef struct dir_connection_t {
-  connection_t _base;
+  connection_t base_;
 
  /** Which 'resource' did we ask the directory for? This is typically the part
   * of the URL string that defines, relative to the directory conn purpose,
@@ -1572,7 +1572,7 @@ typedef struct dir_connection_t {
 
 /** Subtype of connection_t for an connection to a controller. */
 typedef struct control_connection_t {
-  connection_t _base;
+  connection_t base_;
 
   uint32_t event_mask; /**< Bitfield: which events does this controller
                         * care about? */
@@ -1599,12 +1599,12 @@ typedef struct control_connection_t {
 } control_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
-#define TO_CONN(c) (&(((c)->_base)))
-/** Helper macro: Given a pointer to to._base, of type from*, return &to. */
-#define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, _base))
+#define TO_CONN(c) (&(((c)->base_)))
+/** Helper macro: Given a pointer to to.base_, of type from*, return &to. */
+#define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, base_))
 
 /** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
-#define ENTRY_TO_EDGE_CONN(c) (&(((c))->_edge))
+#define ENTRY_TO_EDGE_CONN(c) (&(((c))->edge_))
 /** Cast a entry_connection_t subtype pointer to a connection_t **/
 #define ENTRY_TO_CONN(c) (TO_CONN(ENTRY_TO_EDGE_CONN(c)))
 
@@ -1649,12 +1649,12 @@ static INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
 static INLINE entry_connection_t *TO_ENTRY_CONN(connection_t *c)
 {
   tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, _edge._base);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
 }
 static INLINE entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
 {
-  tor_assert(c->_base.magic == ENTRY_CONNECTION_MAGIC);
-  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, _edge);
+  tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
+  return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
 }
 static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
@@ -2726,7 +2726,7 @@ typedef enum {
 /** An origin_circuit_t holds data necessary to build and use a circuit.
  */
 typedef struct origin_circuit_t {
-  circuit_t _base;
+  circuit_t base_;
 
   /** Linked list of AP streams (or EXIT streams if hidden service)
    * associated with this circuit. */
@@ -2859,7 +2859,7 @@ typedef struct origin_circuit_t {
 /** An or_circuit_t holds information needed to implement a circuit at an
  * OR. */
 typedef struct or_circuit_t {
-  circuit_t _base;
+  circuit_t base_;
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to p_chan.  NULL if we have no cells pending, or if we're not
@@ -2940,7 +2940,7 @@ typedef struct or_circuit_t {
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t. */
-#define TO_CIRCUIT(x)  (&((x)->_base))
+#define TO_CIRCUIT(x)  (&((x)->base_))
 
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
@@ -3063,7 +3063,7 @@ typedef struct routerset_t routerset_t;
 
 /** Configuration options for a Tor process. */
 typedef struct {
-  uint32_t _magic;
+  uint32_t magic_;
 
   /** What should the tor process actually do? */
   enum {
@@ -3105,7 +3105,7 @@ typedef struct {
                                  * ORs not to consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
-  routerset_t *_ExcludeExitNodesUnion;
+  routerset_t *ExcludeExitNodesUnion_;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
@@ -3113,7 +3113,7 @@ typedef struct {
   /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
   smartlist_t *AllowInvalidNodes;
   /** Bitmask; derived from AllowInvalidNodes. */
-  invalid_router_usage_t _AllowInvalid;
+  invalid_router_usage_t AllowInvalid_;
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to local addresses? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
@@ -3136,9 +3136,9 @@ typedef struct {
   /** Local address to bind outbound sockets */
   config_line_t *OutboundBindAddress;
   /** IPv4 address derived from OutboundBindAddress. */
-  tor_addr_t _OutboundBindAddressIPv4;
+  tor_addr_t OutboundBindAddressIPv4_;
   /** IPv6 address derived from OutboundBindAddress. */
-  tor_addr_t _OutboundBindAddressIPv6;
+  tor_addr_t OutboundBindAddressIPv6_;
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
   config_line_t *RecommendedVersions;
@@ -3207,7 +3207,7 @@ typedef struct {
   char *BridgePassword;
   /** If BridgePassword is set, this is a SHA256 digest of the basic http
    * authenticator for it. Used so we can do a time-independent comparison. */
-  char *_BridgePassword_AuthDigest;
+  char *BridgePassword_AuthDigest_;
 
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
@@ -3233,7 +3233,7 @@ typedef struct {
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
   /** A bitfield of authority types, derived from PublishServerDescriptor. */
-  dirinfo_type_t _PublishServerDescriptor;
+  dirinfo_type_t PublishServerDescriptor_;
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
@@ -3266,7 +3266,7 @@ typedef struct {
   int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
 
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
-  int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
+  int ConnLimit_; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows
@@ -3470,7 +3470,7 @@ typedef struct {
   /* Derived from SafeLogging */
   enum {
     SAFELOG_SCRUB_ALL, SAFELOG_SCRUB_RELAY, SAFELOG_SCRUB_NONE
-  } _SafeLogging;
+  } SafeLogging_;
 
   int SafeSocks; /**< Boolean: should we outright refuse application
                   * connections that use socks4 or socks5-with-local-dns? */
@@ -3688,7 +3688,7 @@ typedef struct {
   /** Set to true if the TestingTorNetwork configuration option is set.
    * This is used so that options_validate() has a chance to realize that
    * the defaults have changed. */
-  int _UsingTestNetworkDefaults;
+  int UsingTestNetworkDefaults_;
 
   /** If 1, we try to use microdescriptors to build circuits.  If 0, we don't.
    * If -1, Tor decides. */
@@ -3732,7 +3732,7 @@ typedef struct {
 
 /** Persistent state for an onion router, as saved to disk. */
 typedef struct {
-  uint32_t _magic;
+  uint32_t magic_;
   /** The time at which we next plan to write the state to the disk.  Equal to
    * TIME_MAX if there are no savable changes, 0 if there are changes that
    * should be saved right away. */
@@ -4505,7 +4505,7 @@ typedef struct trusted_dir_server_t {
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
 
-#define _PDS_PREFER_TUNNELED_DIR_CONNS (1<<16)
+#define PDS_PREFER_TUNNELED_DIR_CONNS_ (1<<16)
 
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/

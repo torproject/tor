@@ -9,10 +9,10 @@
  * \brief Header file for circuitlist.c.
  **/
 
-#ifndef _TOR_CIRCUITLIST_H
-#define _TOR_CIRCUITLIST_H
+#ifndef TOR_CIRCUITLIST_H
+#define TOR_CIRCUITLIST_H
 
-circuit_t * _circuit_get_global_list(void);
+circuit_t * circuit_get_global_list_(void);
 const char *circuit_state_to_string(int state);
 const char *circuit_purpose_to_controller_string(uint8_t purpose);
 const char *circuit_purpose_to_controller_hs_state_string(uint8_t purpose);
@@ -47,7 +47,7 @@ origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
                                               extend_info_t *info, int flags);
 void circuit_mark_all_unused_circs(void);
 void circuit_expire_all_dirty_circs(void);
-void _circuit_mark_for_close(circuit_t *circ, int reason,
+void circuit_mark_for_close_(circuit_t *circ, int reason,
                              int line, const char *file);
 int circuit_get_cpath_len(origin_circuit_t *circ);
 crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
@@ -56,7 +56,7 @@ void circuit_get_all_pending_on_channel(smartlist_t *out,
 int circuit_count_pending_on_channel(channel_t *chan);
 
 #define circuit_mark_for_close(c, reason)                               \
-  _circuit_mark_for_close((c), (reason), __LINE__, _SHORT_FILE_)
+  circuit_mark_for_close_((c), (reason), __LINE__, SHORT_FILE__)
 
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);

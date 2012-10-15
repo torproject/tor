@@ -5,8 +5,8 @@
 
 /* Implements a minimal interface to counter-mode AES. */
 
-#ifndef _TOR_AES_H
-#define _TOR_AES_H
+#ifndef TOR_AES_H
+#define TOR_AES_H
 
 /**
  * \file aes.h

@@ -9,8 +9,8 @@
  * \brief Header file for microdesc.c.
  **/
 
-#ifndef _TOR_MICRODESC_H
-#define _TOR_MICRODESC_H
+#ifndef TOR_MICRODESC_H
+#define TOR_MICRODESC_H
 
 microdesc_cache_t *get_microdesc_cache(void);
 

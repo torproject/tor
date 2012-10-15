@@ -6,8 +6,8 @@
  * \brief Header file for channeltls.c
  **/
 
-#ifndef _TOR_CHANNEL_TLS_H
-#define _TOR_CHANNEL_TLS_H
+#ifndef TOR_CHANNELTLS_H
+#define TOR_CHANNELTLS_H
 
 #include "or.h"
 #include "channel.h"
@@ -17,16 +17,16 @@
 
 #define TLS_CHAN_MAGIC 0x8a192427U
 
-#ifdef _TOR_CHANNEL_INTERNAL
+#ifdef TOR_CHANNEL_INTERNAL_
 
 struct channel_tls_s {
   /* Base channel_t struct */
-  channel_t _base;
+  channel_t base_;
   /* or_connection_t pointer */
   or_connection_t *conn;
 };
 
-#endif /* _TOR_CHANNEL_INTERNAL */
+#endif /* TOR_CHANNEL_INTERNAL_ */
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest);

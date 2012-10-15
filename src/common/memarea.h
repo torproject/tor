@@ -2,8 +2,8 @@
 /* See LICENSE for licensing information */
 /* Tor dependencies */
 
-#ifndef _TOR_MEMAREA_H
-#define _TOR_MEMAREA_H
+#ifndef TOR_MEMAREA_H
+#define TOR_MEMAREA_H
 
 typedef struct memarea_t memarea_t;
 

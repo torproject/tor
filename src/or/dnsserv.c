@@ -133,7 +133,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   strlcpy(entry_conn->socks_request->address, q->name,
           sizeof(entry_conn->socks_request->address));
 
-  entry_conn->socks_request->listener_type = listener->_base.type;
+  entry_conn->socks_request->listener_type = listener->base_.type;
   entry_conn->dns_server_request = req;
   entry_conn->isolation_flags = listener->isolation_flags;
   entry_conn->session_group = listener->session_group;
@@ -178,7 +178,7 @@ dnsserv_launch_request(const char *name, int reverse)
   /* Make a new dummy AP connection, and attach the request to it. */
   entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
   conn = ENTRY_TO_EDGE_CONN(entry_conn);
-  conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
+  conn->base_.state = AP_CONN_STATE_RESOLVE_WAIT;
 
   if (reverse)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;

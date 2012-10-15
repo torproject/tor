@@ -113,7 +113,7 @@ struct mp_allocated_t {
      * (Not actual size.) */
     char mem[1];
     /** An extra element to the union to insure correct alignment. */
-    ALIGNMENT_TYPE _dummy;
+    ALIGNMENT_TYPE dummy_;
   } u;
 };
 

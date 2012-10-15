@@ -800,7 +800,7 @@ rend_cache_entry_free(rend_cache_entry_t *e)
 /** Helper: deallocate a rend_cache_entry_t.  (Used with strmap_free(), which
  * requires a function pointer whose argument is void*). */
 static void
-_rend_cache_entry_free(void *p)
+rend_cache_entry_free_(void *p)
 {
   rend_cache_entry_free(p);
 }
@@ -809,8 +809,8 @@ _rend_cache_entry_free(void *p)
 void
 rend_cache_free_all(void)
 {
-  strmap_free(rend_cache, _rend_cache_entry_free);
-  digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
+  strmap_free(rend_cache, rend_cache_entry_free_);
+  digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
 }
@@ -844,7 +844,7 @@ rend_cache_purge(void)
 {
   if (rend_cache) {
     log_info(LD_REND, "Purging client/v0-HS-authority HS descriptor cache");
-    strmap_free(rend_cache, _rend_cache_entry_free);
+    strmap_free(rend_cache, rend_cache_entry_free_);
   }
   rend_cache = strmap_new();
 }

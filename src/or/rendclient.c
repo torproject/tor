@@ -44,7 +44,7 @@ rend_client_purge_state(void)
 void
 rend_client_introcirc_has_opened(origin_circuit_t *circ)
 {
-  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(circ->cpath);
 
   log_info(LD_REND,"introcirc is open");
@@ -57,7 +57,7 @@ rend_client_introcirc_has_opened(origin_circuit_t *circ)
 static int
 rend_client_send_establish_rendezvous(origin_circuit_t *circ)
 {
-  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   tor_assert(circ->rend_data);
   log_info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
@@ -103,13 +103,13 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
   if (circ->remaining_relay_early_cells) {
     log_info(LD_REND,
              "Re-extending circ %d, this time to %s.",
-             circ->_base.n_circ_id,
+             circ->base_.n_circ_id,
              safe_str_client(extend_info_describe(extend_info)));
     result = circuit_extend_to_new_exit(circ, extend_info);
   } else {
     log_info(LD_REND,
              "Closing intro circ %d (out of RELAY_EARLY cells).",
-             circ->_base.n_circ_id);
+             circ->base_.n_circ_id);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
     /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
     result = 0;
@@ -135,8 +135,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   crypto_pk_t *intro_key = NULL;
   int status = 0;
 
-  tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
+  tor_assert(introcirc->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(rendcirc->base_.purpose == CIRCUIT_PURPOSE_C_REND_READY);
   tor_assert(introcirc->rend_data);
   tor_assert(rendcirc->rend_data);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_data->onion_address,
@@ -308,12 +308,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   /* Set timestamp_dirty, because circuit_expire_building expects it
    * to specify when a circuit entered the _C_INTRODUCE_ACK_WAIT
    * state. */
-  introcirc->_base.timestamp_dirty = time(NULL);
+  introcirc->base_.timestamp_dirty = time(NULL);
 
   goto cleanup;
 
  perm_err:
-  if (!introcirc->_base.marked_for_close)
+  if (!introcirc->base_.marked_for_close)
     circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);
  cleanup:
@@ -328,7 +328,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 void
 rend_client_rendcirc_has_opened(origin_circuit_t *circ)
 {
-  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
 
   log_info(LD_REND,"rendcirc is open");
 
@@ -347,10 +347,10 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_warn(LD_PROTOCOL,
              "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
-             circ->_base.n_circ_id);
+             circ->base_.n_circ_id);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
     return -1;
   }
@@ -377,7 +377,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
       /* Set timestamp_dirty, because circuit_expire_building expects
        * it to specify when a circuit entered the
        * _C_REND_READY_INTRO_ACKED state. */
-      rendcirc->_base.timestamp_dirty = time(NULL);
+      rendcirc->base_.timestamp_dirty = time(NULL);
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
@@ -541,7 +541,7 @@ rend_client_purge_last_hid_serv_requests(void)
 
   if (old_last_hid_serv_requests != NULL) {
     log_info(LD_REND, "Purging client last-HS-desc-request-time table");
-    strmap_free(old_last_hid_serv_requests, _tor_free);
+    strmap_free(old_last_hid_serv_requests, tor_free_);
   }
 }
 
@@ -846,7 +846,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
   (void) request;
   (void) request_len;
   /* we just got an ack for our establish-rendezvous. switch purposes. */
-  if (circ->_base.purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+  if (circ->base_.purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
     log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
              "Closing circ.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
@@ -857,7 +857,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_READY);
   /* Set timestamp_dirty, because circuit_expire_building expects it
    * to specify when a circuit entered the _C_REND_READY state. */
-  circ->_base.timestamp_dirty = time(NULL);
+  circ->base_.timestamp_dirty = time(NULL);
   /* XXXX This is a pretty brute-force approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. See comments bug 743. */
@@ -875,8 +875,8 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
-  if ((circ->_base.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-       circ->_base.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
+  if ((circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+       circ->base_.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
     log_warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
              "expecting it. Closing.");

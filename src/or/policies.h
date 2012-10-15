@@ -9,8 +9,8 @@
  * \brief Header file for policies.c.
  **/
 
-#ifndef _TOR_POLICIES_H
-#define _TOR_POLICIES_H
+#ifndef TOR_POLICIES_H
+#define TOR_POLICIES_H
 
 /* (length of "accept 255.255.255.255/255.255.255.255:65535-65535\n" plus a
  * NUL.)

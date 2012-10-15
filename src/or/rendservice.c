@@ -543,7 +543,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     /* XXXX it would be nicer if we had a nicer abstraction to use here,
      * so we could just iterate over the list of services to close, but
      * once again, this isn't critical-path code. */
-    for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+    for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
       if (!circ->marked_for_close &&
           circ->state == CIRCUIT_STATE_OPEN &&
           (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -610,7 +610,7 @@ rend_service_update_descriptor(rend_service_t *service)
     }
 
     circ = find_intro_circuit(intro_svc, service->pk_digest);
-    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
+    if (!circ || circ->base_.purpose != CIRCUIT_PURPOSE_S_INTRO) {
       /* This intro point's circuit isn't finished yet.  Don't list it. */
       continue;
     }
@@ -1128,10 +1128,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   int replay;
 
   /* Do some initial validation and logging before we parse the cell */
-  if (circuit->_base.purpose != CIRCUIT_PURPOSE_S_INTRO) {
+  if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_INTRO) {
     log_warn(LD_PROTOCOL,
              "Got an INTRODUCE2 over a non-introduction circuit %d.",
-             circuit->_base.n_circ_id);
+             circuit->base_.n_circ_id);
     goto err;
   }
 
@@ -1166,7 +1166,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   }
 
   log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
-           escaped(serviceid), circuit->_base.n_circ_id);
+           escaped(serviceid), circuit->base_.n_circ_id);
 
   /* use intro key instead of service key. */
   intro_key = circuit->intro_key;
@@ -1181,7 +1181,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (!parsed_req) {
     goto log_error;
   } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
+    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->base_.n_circ_id);
     tor_free(err_msg);
   }
 
@@ -1191,7 +1191,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (result < 0) {
     goto log_error;
   } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
+    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->base_.n_circ_id);
     tor_free(err_msg);
   }
 
@@ -1227,7 +1227,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (result < 0) {
     goto log_error;
   } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
+    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->base_.n_circ_id);
     tor_free(err_msg);
   }
 
@@ -1237,7 +1237,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (result < 0) {
     goto log_error;
   } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
+    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->base_.n_circ_id);
     tor_free(err_msg);
   }
 
@@ -1247,7 +1247,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (result < 0) {
     goto log_error;
   } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->_base.n_circ_id);
+    log_info(LD_REND, "%s on circ %d.", err_msg, circuit->base_.n_circ_id);
     tor_free(err_msg);
   }
   stage_descr = NULL;
@@ -1396,7 +1396,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     }
   }
 
-  log_warn(LD_REND, "%s on circ %d", err_msg, circuit->_base.n_circ_id);
+  log_warn(LD_REND, "%s on circ %d", err_msg, circuit->base_.n_circ_id);
  err:
   status = -1;
   if (dh) crypto_dh_free(dh);
@@ -2264,7 +2264,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   origin_circuit_t *newcirc;
   cpath_build_state_t *newstate, *oldstate;
 
-  tor_assert(oldcirc->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+  tor_assert(oldcirc->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
   /* Don't relaunch the same rend circ twice. */
   if (oldcirc->hs_service_side_rend_circ_has_been_relaunched) {
@@ -2369,7 +2369,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
           sizeof(launched->rend_data->onion_address));
   memcpy(launched->rend_data->rend_pk_digest, service->pk_digest, DIGEST_LEN);
   launched->intro_key = crypto_pk_dup_key(intro->intro_key);
-  if (launched->_base.state == CIRCUIT_STATE_OPEN)
+  if (launched->base_.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);
   return 0;
 }
@@ -2381,7 +2381,7 @@ count_established_intro_points(const char *query)
 {
   int num_ipos = 0;
   circuit_t *circ;
-  for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (!circ->marked_for_close &&
         circ->state == CIRCUIT_STATE_OPEN &&
         (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -2410,7 +2410,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   int reason = END_CIRC_REASON_TORPROTOCOL;
   crypto_pk_t *intro_key;
 
-  tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+  tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
 #ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(circuit->build_state->onehop_tunnel));
 #endif
@@ -2424,7 +2424,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
-             serviceid, circuit->_base.n_circ_id);
+             serviceid, circuit->base_.n_circ_id);
     reason = END_CIRC_REASON_NOSUCHSERVICE;
     goto err;
   }
@@ -2468,7 +2468,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   log_info(LD_REND,
            "Established circuit %d as introduction point for service %s",
-           circuit->_base.n_circ_id, serviceid);
+           circuit->base_.n_circ_id, serviceid);
 
   /* Use the intro key instead of the service key in ESTABLISH_INTRO. */
   intro_key = circuit->intro_key;
@@ -2503,7 +2503,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                                    buf, len, circuit->cpath->prev)<0) {
     log_info(LD_GENERAL,
              "Couldn't send introduction request for service %s on circuit %d",
-             serviceid, circuit->_base.n_circ_id);
+             serviceid, circuit->base_.n_circ_id);
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
@@ -2533,7 +2533,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
   (void) request;
   (void) request_len;
 
-  if (circuit->_base.purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+  if (circuit->base_.purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_warn(LD_PROTOCOL,
              "received INTRO_ESTABLISHED cell on non-intro circuit.");
     goto err;
@@ -2543,7 +2543,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %d.",
-             circuit->_base.n_circ_id);
+             circuit->base_.n_circ_id);
     goto err;
   }
   service->desc_is_dirty = time(NULL);
@@ -2553,7 +2553,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
                 circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND,
            "Received INTRO_ESTABLISHED cell on circuit %d for service %s",
-           circuit->_base.n_circ_id, serviceid);
+           circuit->base_.n_circ_id, serviceid);
 
   return 0;
  err:
@@ -2574,7 +2574,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   char hexcookie[9];
   int reason;
 
-  tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+  tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
   tor_assert(circuit->build_state);
 #ifndef NON_ANONYMOUS_MODE_ENABLED
@@ -2590,7 +2590,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   log_info(LD_REND,
            "Done building circuit %d to rendezvous with "
            "cookie %s for service %s",
-           circuit->_base.n_circ_id, hexcookie, serviceid);
+           circuit->base_.n_circ_id, hexcookie, serviceid);
 
   /* Clear the 'in-progress HS circ has timed out' flag for
    * consistency with what happens on the client side; this line has
@@ -3150,7 +3150,7 @@ rend_services_introduce(void)
          j < (int)n_intro_points_to_open;
          ++j) { /* XXXX remove casts */
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
-      if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
+      if (get_options()->AllowInvalid_ & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
       node = router_choose_random_node(intro_nodes,
                                        options->ExcludeNodes, flags);
@@ -3300,7 +3300,7 @@ rend_service_dump_stats(int severity)
         continue;
       }
       log(severity, LD_GENERAL, "  Intro point %d at %s: circuit is %s",
-          j, safe_name, circuit_state_to_string(circ->_base.state));
+          j, safe_name, circuit_state_to_string(circ->base_.state));
     }
   }
 }
@@ -3319,7 +3319,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
 
-  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
   log_debug(LD_REND,"beginning to hunt for addr/port");
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -3329,25 +3329,25 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %d; closing.",
-             serviceid, circ->_base.n_circ_id);
+             serviceid, circ->base_.n_circ_id);
     return -1;
   }
   matching_ports = smartlist_new();
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
   {
-    if (conn->_base.port == p->virtual_port) {
+    if (conn->base_.port == p->virtual_port) {
       smartlist_add(matching_ports, p);
     }
   });
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
-    tor_addr_copy(&conn->_base.addr, &chosen_port->real_addr);
-    conn->_base.port = chosen_port->real_port;
+    tor_addr_copy(&conn->base_.addr, &chosen_port->real_addr);
+    conn->base_.port = chosen_port->real_port;
     return 0;
   }
   log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
-           conn->_base.port,serviceid);
+           conn->base_.port,serviceid);
   return -1;
 }
 

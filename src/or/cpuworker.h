@@ -9,8 +9,8 @@
  * \brief Header file for cpuworker.c.
  **/
 
-#ifndef _TOR_CPUWORKER_H
-#define _TOR_CPUWORKER_H
+#ifndef TOR_CPUWORKER_H
+#define TOR_CPUWORKER_H
 
 void cpu_init(void);
 void cpuworkers_rotate(void);

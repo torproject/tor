@@ -209,8 +209,8 @@
  * with the next probe.
  */
 
-#ifndef _TOR_EVENTDNS_H
-#define _TOR_EVENTDNS_H
+#ifndef TOR_EVENTDNS_H
+#define TOR_EVENTDNS_H
 
 /* Error codes 0-5 are as described in RFC 1035. */
 #define DNS_ERR_NONE 0

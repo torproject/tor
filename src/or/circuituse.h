@@ -9,8 +9,8 @@
  * \brief Header file for circuituse.c.
  **/
 
-#ifndef _TOR_CIRCUITUSE_H
-#define _TOR_CIRCUITUSE_H
+#ifndef TOR_CIRCUITUSE_H
+#define TOR_CIRCUITUSE_H
 
 void circuit_expire_building(void);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);

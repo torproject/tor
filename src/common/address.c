@@ -1422,17 +1422,17 @@ addr_port_lookup(int severity, const char *addrport, char **address,
                 uint32_t *addr, uint16_t *port_out)
 {
   const char *colon;
-  char *_address = NULL;
-  int _port;
+  char *address_ = NULL;
+  int port_;
   int ok = 1;
 
   tor_assert(addrport);
 
   colon = strrchr(addrport, ':');
   if (colon) {
-    _address = tor_strndup(addrport, colon-addrport);
-    _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
-    if (!_port) {
+    address_ = tor_strndup(addrport, colon-addrport);
+    port_ = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
+    if (!port_) {
       log_fn(severity, LD_GENERAL, "Port %s out of range", escaped(colon+1));
       ok = 0;
     }
@@ -1445,28 +1445,28 @@ addr_port_lookup(int severity, const char *addrport, char **address,
       ok = 0;
     }
   } else {
-    _address = tor_strdup(addrport);
-    _port = 0;
+    address_ = tor_strdup(addrport);
+    port_ = 0;
   }
 
   if (addr) {
     /* There's an addr pointer, so we need to resolve the hostname. */
-    if (tor_lookup_hostname(_address,addr)) {
-      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(_address));
+    if (tor_lookup_hostname(address_,addr)) {
+      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(address_));
       ok = 0;
       *addr = 0;
     }
   }
 
   if (address && ok) {
-    *address = _address;
+    *address = address_;
   } else {
     if (address)
       *address = NULL;
-    tor_free(_address);
+    tor_free(address_);
   }
   if (port_out)
-    *port_out = ok ? ((uint16_t) _port) : 0;
+    *port_out = ok ? ((uint16_t) port_) : 0;
 
   return ok ? 0 : -1;
 }

@@ -8,8 +8,8 @@
  * \brief Header file for routerlist.c.
  **/
 
-#ifndef _TOR_ROUTERLIST_H
-#define _TOR_ROUTERLIST_H
+#ifndef TOR_ROUTERLIST_H
+#define TOR_ROUTERLIST_H
 
 int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);

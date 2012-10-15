@@ -9,13 +9,13 @@
  * \brief Header file for connection_edge.c.
  **/
 
-#ifndef _TOR_CONNECTION_EDGE_H
-#define _TOR_CONNECTION_EDGE_H
+#ifndef TOR_CONNECTION_EDGE_H
+#define TOR_CONNECTION_EDGE_H
 
 #define connection_mark_unattached_ap(conn, endreason) \
-  _connection_mark_unattached_ap((conn), (endreason), __LINE__, _SHORT_FILE_)
+  connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
-void _connection_mark_unattached_ap(entry_connection_t *conn, int endreason,
+void connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
                                     int line, const char *file);
 int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
