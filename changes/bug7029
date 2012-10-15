@@ -1,0 +1,3 @@
+  o Minor bugfixes (code cleanliness):
+    - Free some more still-in-use memory at exit, to make hunting for
+      memory leaks easier. Resolves bug 7029.

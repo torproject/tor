@@ -4327,6 +4327,9 @@ connection_free_all(void)
     outgoing_addrs = NULL;
   }
 
+  tor_free(last_interface_ipv4);
+  tor_free(last_interface_ipv6);
+
 #ifdef USE_BUFFEREVENTS
   if (global_rate_limit)
     bufferevent_rate_limit_group_free(global_rate_limit);

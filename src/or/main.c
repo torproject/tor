@@ -2503,6 +2503,10 @@ tor_free_all(int postfork)
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
   periodic_timer_free(second_timer);
+#ifndef USE_BUFFEREVENTS
+  periodic_timer_free(refill_timer);
+#endif
+
   if (!postfork) {
     release_lockfile();
   }
