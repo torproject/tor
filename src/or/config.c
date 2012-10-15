@@ -27,6 +27,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "dns.h"
+#include "entrynodes.h"x
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"

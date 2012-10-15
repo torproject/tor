@@ -6,6 +6,7 @@
 #include "config.h"
 #include "directory.h"
 #include "dirserv.h"
+#include "entrynodes.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"

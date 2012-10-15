@@ -12,9 +12,9 @@
 
 #include "or.h"
 #include "channel.h"
-#include "circuitbuild.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
+#include "circuitstats.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -22,6 +22,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"

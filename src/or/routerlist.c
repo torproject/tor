@@ -13,13 +13,14 @@
 
 #define ROUTERLIST_PRIVATE
 #include "or.h"
-#include "circuitbuild.h"
+#include "circuitstats.h"
 #include "config.h"
 #include "connection.h"
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"

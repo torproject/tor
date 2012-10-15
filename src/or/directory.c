@@ -13,6 +13,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "geoip.h"
 #include "main.h"
 #include "microdesc.h"

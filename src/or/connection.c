@@ -32,6 +32,7 @@
 #include "dirserv.h"
 #include "dns.h"
 #include "dnsserv.h"
+#include "entrynodes.h"
 #include "geoip.h"
 #include "main.h"
 #include "policies.h"

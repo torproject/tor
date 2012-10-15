@@ -23,6 +23,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/circuitlist.c				\
 	src/or/circuitmux.c				\
 	src/or/circuitmux_ewma.c			\
+	src/or/circuitstats.c				\
 	src/or/circuituse.c				\
 	src/or/command.c				\
 	src/or/config.c					\
@@ -38,6 +39,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/dns.c					\
 	src/or/dnsserv.c				\
 	src/or/geoip.c					\
+	src/or/entrynodes.c				\
 	src/or/hibernate.c				\
 	src/or/main.c					\
 	src/or/microdesc.c				\
@@ -96,6 +98,7 @@ ORHEADERS = \
 	src/or/circuitlist.h				\
 	src/or/circuitmux.h				\
 	src/or/circuitmux_ewma.h			\
+	src/or/circuitstats.h				\
 	src/or/circuituse.h				\
 	src/or/command.h				\
 	src/or/config.h					\
@@ -112,6 +115,7 @@ ORHEADERS = \
 	src/or/dnsserv.h				\
 	src/or/eventdns_tor.h				\
 	src/or/geoip.h					\
+	src/or/entrynodes.h				\
 	src/or/hibernate.h				\
 	src/or/main.h					\
 	src/or/microdesc.h				\
