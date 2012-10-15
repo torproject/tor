@@ -808,11 +808,20 @@ channel_free(channel_t *chan)
   /* It must be deregistered */
   tor_assert(!(chan->registered));
 
+  /*
+   * Get rid of cmux policy before we do anything, so cmux policies don't
+   * see channels in weird half-freed states.
+   */
+  if (chan->cmux) {
+    circuitmux_set_policy(chan->cmux, NULL);
+  }
+
   /* Call a free method if there is one */
   if (chan->free) chan->free(chan);
 
   channel_clear_remote_end(chan);
 
+  /* Get rid of cmux */
   if (chan->cmux) {
     circuitmux_detach_all_circuits(chan->cmux);
     circuitmux_free(chan->cmux);
@@ -863,10 +872,24 @@ channel_force_free(channel_t *chan)
 {
   tor_assert(chan);
 
+  /*
+   * Get rid of cmux policy before we do anything, so cmux policies don't
+   * see channels in weird half-freed states.
+   */
+  if (chan->cmux) {
+    circuitmux_set_policy(chan->cmux, NULL);
+  }
+
   /* Call a free method if there is one */
   if (chan->free) chan->free(chan);
 
   channel_clear_remote_end(chan);
+
+  /* Get rid of cmux */
+  if (chan->cmux) {
+    circuitmux_free(chan->cmux);
+    chan->cmux = NULL;
+  }
 
   /* We might still have a cell queue; kill it */
   if (chan->incoming_queue) {
