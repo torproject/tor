@@ -808,6 +808,10 @@ channel_free(channel_t *chan)
   /* It must be deregistered */
   tor_assert(!(chan->registered));
 
+  log_debug(LD_CHANNEL,
+            "Freeing channel " U64_FORMAT " at %p",
+            U64_PRINTF_ARG(chan->global_identifier), chan);
+
   /*
    * Get rid of cmux policy before we do anything, so cmux policies don't
    * see channels in weird half-freed states.
@@ -871,6 +875,10 @@ static void
 channel_force_free(channel_t *chan)
 {
   tor_assert(chan);
+
+  log_debug(LD_CHANNEL,
+            "Force-freeing channel " U64_FORMAT " at %p",
+            U64_PRINTF_ARG(chan->global_identifier), chan);
 
   /*
    * Get rid of cmux policy before we do anything, so cmux policies don't
