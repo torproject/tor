@@ -1251,6 +1251,17 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   return 0;
 }
 
+/** Block all future attempts to renegotiate on 'conn' */
+void
+connection_or_block_renegotiation(or_connection_t *conn)
+{
+  tor_tls_t *tls = conn->tls;
+  if (!tls)
+    return;
+  tor_tls_set_renegotiate_callback(tls, NULL, NULL);
+  tor_tls_block_renegotiation(tls);
+}
+
 /** Invoked on the server side from inside tor_tls_read() when the server
  * gets a successful TLS renegotiation from the client. */
 static void
@@ -1260,8 +1271,7 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
   (void)tls;
 
   /* Don't invoke this again. */
-  tor_tls_set_renegotiate_callback(tls, NULL, NULL);
-  tor_tls_block_renegotiation(tls);
+  connection_or_block_renegotiation(conn);
 
   if (connection_tls_finish_handshake(conn) < 0) {
     /* XXXX_TLS double-check that it's ok to do this from inside read. */
