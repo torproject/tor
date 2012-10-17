@@ -3050,7 +3050,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
    *     just give up.
    */
   circuit_mark_for_close(TO_CIRCUIT(circ),
-          END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_CHANNEL_CLOSED|reason);
+          END_CIRC_REASON_FLAG_REMOTE|reason);
   return 0;
 
 #if 0
