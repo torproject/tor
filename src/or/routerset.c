@@ -216,7 +216,7 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
     return 3;
   if (set->countries) {
     if (country < 0 && addr)
-      country = geoip_get_country_by_ip(tor_addr_to_ipv4h(addr));
+      country = geoip_get_country_by_addr(addr);
 
     if (country >= 0 && country < set->n_countries &&
         bitarray_is_set(set->countries, country))

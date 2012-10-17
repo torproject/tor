@@ -921,12 +921,15 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
 void
 node_set_country(node_t *node)
 {
+  tor_addr_t addr = TOR_ADDR_NULL;
+
+  /* XXXXipv6 */
   if (node->rs)
-    node->country = geoip_get_country_by_ip(node->rs->addr);
+    tor_addr_from_ipv4h(&addr, node->rs->addr);
   else if (node->ri)
-    node->country = geoip_get_country_by_ip(node->ri->addr);
-  else
-    node->country = -1;
+    tor_addr_from_ipv4h(&addr, node->ri->addr);
+
+  node->country = geoip_get_country_by_addr(&addr);
 }
 
 /** Set the country code of all routers in the routerlist. */
