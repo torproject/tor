@@ -1,0 +1,9 @@
+  o Major bugfixes (security):
+
+    - Disable TLS session tickets.  OpenSSL's implementation were giving
+      our TLS session keys the lifetime of our TLS context objects, when
+      perfect forward secrecy would want us to discard anything that
+      could decrypt a link connection as soon as the link connection was
+      closed.  Fixes bug 7139; bugfix on all versions of Tor linked
+      against OpenSSL 1.0.0 or later. Found by "nextgens".
+
