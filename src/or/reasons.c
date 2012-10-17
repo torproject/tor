@@ -300,8 +300,13 @@ errno_to_orconn_end_reason(int e)
 const char *
 circuit_end_reason_to_control_string(int reason)
 {
-  if (reason >= 0 && reason & END_CIRC_REASON_FLAG_REMOTE)
+  int is_remote = 0;
+
+  if (reason >= 0 && reason & END_CIRC_REASON_FLAG_REMOTE) {
     reason &= ~END_CIRC_REASON_FLAG_REMOTE;
+    is_remote = 1;
+  }
+
   switch (reason) {
     case END_CIRC_AT_ORIGIN:
       /* This shouldn't get passed here; it's a catch-all reason. */
@@ -338,7 +343,18 @@ circuit_end_reason_to_control_string(int reason)
     case END_CIRC_REASON_MEASUREMENT_EXPIRED:
       return "MEASUREMENT_EXPIRED";
     default:
-      log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
+      if (is_remote) {
+        /*
+         * If it's remote, it's not a bug *here*, so don't use LD_BUG, but
+         * do note that the someone we're talking to is speaking the Tor
+         * protocol with a weird accent.
+         */
+        log_warn(LD_PROTOCOL,
+                 "Remote server sent bogus reason code %d", reason);
+      } else {
+        log_warn(LD_BUG,
+                 "Unrecognized reason code %d", reason);
+      }
       return NULL;
   }
 }
