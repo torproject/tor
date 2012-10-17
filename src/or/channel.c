@@ -3484,7 +3484,15 @@ channel_get_actual_remote_descr(channel_t *chan)
   tor_assert(chan->get_remote_descr);
 
   /* Param 1 indicates the actual description */
-  return chan->get_remote_descr(chan, 1);
+  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL);
+}
+
+/** DOCDOC */
+const char *
+channel_get_actual_remote_address(channel_t *chan)
+{
+  /* Param 1 indicates the actual description */
+  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY);
 }
 
 /**

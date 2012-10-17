@@ -3105,7 +3105,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
      * we might already have corrected base_.addr[ess] for the relay's
      * canonical IP address. */
     if (or_circ && or_circ->p_chan)
-      address = tor_strdup(channel_get_actual_remote_descr(or_circ->p_chan));
+      address = tor_strdup(channel_get_actual_remote_address(or_circ->p_chan));
     else
       address = tor_strdup("127.0.0.1");
     port = 1; /* XXXX This value is never actually used anywhere, and there

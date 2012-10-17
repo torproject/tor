@@ -53,7 +53,7 @@ static const char * channel_tls_describe_transport_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
 static const char *
-channel_tls_get_remote_descr_method(channel_t *chan, int req);
+channel_tls_get_remote_descr_method(channel_t *chan, int flags);
 static int channel_tls_has_queued_writes_method(channel_t *chan);
 static int channel_tls_is_canonical_method(channel_t *chan, int req);
 static int
@@ -412,7 +412,7 @@ channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out)
  */
 
 static const char *
-channel_tls_get_remote_descr_method(channel_t *chan, int req)
+channel_tls_get_remote_descr_method(channel_t *chan, int flags)
 {
 #define MAX_DESCR_LEN 32
 
@@ -427,21 +427,34 @@ channel_tls_get_remote_descr_method(channel_t *chan, int req)
 
   conn = TO_CONN(tlschan->conn);
 
-  switch (req) {
+  switch (flags) {
     case 0:
-      /* Canonical address */
+      /* Canonical address with port*/
       tor_snprintf(buf, MAX_DESCR_LEN + 1,
                    "%s:%u", conn->address, conn->port);
       answer = buf;
       break;
-    case 1:
-      /* Actual address */
+    case GRD_FLAG_ORIGINAL:
+      /* Actual address with port */
       addr_str = tor_dup_addr(&(tlschan->conn->real_addr));
       tor_snprintf(buf, MAX_DESCR_LEN + 1,
                    "%s:%u", addr_str, conn->port);
       tor_free(addr_str);
       answer = buf;
       break;
+    case GRD_FLAG_ADDR_ONLY:
+      /* Canonical address, no port */
+      strlcpy(buf, conn->address, sizeof(buf));
+      answer = buf;
+      break;
+    case GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY:
+      /* Actual address, no port */
+      addr_str = tor_dup_addr(&(tlschan->conn->real_addr));
+      strlcpy(buf, addr_str, sizeof(buf));
+      tor_free(addr_str);
+      answer = buf;
+      break;
+
     default:
       /* Something's broken in channel.c */
       tor_assert(1);
