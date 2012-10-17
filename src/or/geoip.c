@@ -140,7 +140,7 @@ geoip_ipv4_parse_entry(const char *line)
 /** Sorting helper: return -1, 1, or 0 based on comparison of two
  * geoip_ipv4_entry_t */
 static int
-_geoip_ipv4_compare_entries(const void **_a, const void **_b)
+geoip_ipv4_compare_entries_(const void **_a, const void **_b)
 {
   const geoip_ipv4_entry_t *a = *_a, *b = *_b;
   if (a->ip_low < b->ip_low)
@@ -154,7 +154,7 @@ _geoip_ipv4_compare_entries(const void **_a, const void **_b)
 /** bsearch helper: return -1, 1, or 0 based on comparison of an IP (a pointer
  * to a uint32_t in host order) to a geoip_ipv4_entry_t */
 static int
-_geoip_ipv4_compare_key_to_entry(const void *_key, const void **_member)
+geoip_ipv4_compare_key_to_entry_(const void *_key, const void **_member)
 {
   /* No alignment issue here, since _key really is a pointer to uint32_t */
   const uint32_t addr = *(uint32_t *)_key;
@@ -258,7 +258,7 @@ geoip_ipv6_parse_entry(const char *line)
 /** Sorting helper: return -1, 1, or 0 based on comparison of two
  * geoip_ipv6_entry_t */
 static int
-_geoip_ipv6_compare_entries(const void **_a, const void **_b)
+geoip_ipv6_compare_entries_(const void **_a, const void **_b)
 {
   const geoip_ipv6_entry_t *a = *_a, *b = *_b;
   return memcmp(&a->ip_low, &b->ip_low, sizeof(struct in6_addr));
@@ -267,7 +267,7 @@ _geoip_ipv6_compare_entries(const void **_a, const void **_b)
 /** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6 (a pointer
  * to a in6_addr in host order) to a geoip_ipv6_entry_t */
 static int
-_geoip_ipv6_compare_key_to_entry(const void *_key, const void **_member)
+geoip_ipv6_compare_key_to_entry_(const void *_key, const void **_member)
 {
   /* XXX5053 The following comment isn't correct anymore and I'm not 100%
    * certain how to fix it, because I don't know what alignment issues
@@ -372,9 +372,9 @@ geoip_load_file(sa_family_t family, const char *filename, const or_options_t *op
   fclose(f);
 
   if (family == AF_INET)
-    smartlist_sort(geoip_ipv4_entries, _geoip_ipv4_compare_entries);
+    smartlist_sort(geoip_ipv4_entries, geoip_ipv4_compare_entries_);
   else /* AF_INET6 */
-    smartlist_sort(geoip_ipv6_entries, _geoip_ipv6_compare_entries);
+    smartlist_sort(geoip_ipv6_entries, geoip_ipv6_compare_entries_);
 
   /* Okay, now we need to maybe change our mind about what is in which
    * country. */
@@ -404,7 +404,7 @@ geoip_get_country_by_ipv4(uint32_t ipaddr)
   geoip_ipv4_entry_t *ent;
   if (!geoip_ipv4_entries)
     return -1;
-  ent = smartlist_bsearch(geoip_ipv4_entries, &ipaddr, _geoip_ipv4_compare_key_to_entry);
+  ent = smartlist_bsearch(geoip_ipv4_entries, &ipaddr, geoip_ipv4_compare_key_to_entry_);
   return ent ? (int)ent->country : 0;
 }
 
@@ -420,7 +420,7 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
 
   if (!geoip_ipv6_entries)
     return -1;
-  ent = smartlist_bsearch(geoip_ipv6_entries, addr, _geoip_ipv6_compare_key_to_entry);
+  ent = smartlist_bsearch(geoip_ipv6_entries, addr, geoip_ipv6_compare_key_to_entry_);
   return ent ? (int)ent->country : 0;
 }
 
