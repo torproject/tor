@@ -3243,6 +3243,7 @@ channel_dump_statistics(channel_t *chan, int severity)
   /* Handle remote address and descriptions */
   have_remote_addr = channel_get_addr_if_possible(chan, &remote_addr);
   if (have_remote_addr) {
+    char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     remote_addr_str = tor_dup_addr(&remote_addr);
     log(severity, LD_GENERAL,
         " * Channel " U64_FORMAT " says its remote address"
@@ -3251,16 +3252,19 @@ channel_dump_statistics(channel_t *chan, int severity)
         U64_PRINTF_ARG(chan->global_identifier),
         remote_addr_str,
         channel_get_canonical_remote_descr(chan),
-        channel_get_actual_remote_descr(chan));
+        actual);
     tor_free(remote_addr_str);
+    tor_free(actual);
   } else {
+    char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     log(severity, LD_GENERAL,
         " * Channel " U64_FORMAT " does not know its remote "
         "address, but gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
         U64_PRINTF_ARG(chan->global_identifier),
         channel_get_canonical_remote_descr(chan),
-        channel_get_actual_remote_descr(chan));
+        actual);
+    tor_free(actual);
   }
 
   /* Handle marks */
