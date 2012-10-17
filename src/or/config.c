@@ -1532,7 +1532,8 @@ options_act(const or_options_t *old_options)
   }
   /* And maybe load geoip ipv6 file */
   if (options->GeoIPv6File &&
-      ((!old_options || !opt_streq(old_options->GeoIPv6File, options->GeoIPv6File))
+      ((!old_options || !opt_streq(old_options->GeoIPv6File,
+                                   options->GeoIPv6File))
        || !geoip_is_loaded())) {
     /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow.  See also comment for GeoIPFile. */
@@ -1549,7 +1550,6 @@ options_act(const or_options_t *old_options)
     geoip_load_file(AF_INET6, actual_fname, options);
     tor_free(actual_fname);
   }
-      
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||

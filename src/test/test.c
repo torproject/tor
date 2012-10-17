@@ -1485,13 +1485,15 @@ test_geoip(void)
 
   /* Make sure that country ID actually works. */
 #define SET_TEST_IPV6(i) in6.s6_addr32[3] = htonl((uint32_t) i)
-#define CHECK_COUNTRY(country, val) do {				\
-    /* test ipv4 country lookup */					\
-    test_streq(country, geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
-    /* test ipv6 country lookup */					\
-    SET_TEST_IPV6(val);							\
-    test_streq(country, geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
-  } while(0)
+#define CHECK_COUNTRY(country, val) do {                                \
+    /* test ipv4 country lookup */                                      \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
+    /* test ipv6 country lookup */                                      \
+    SET_TEST_IPV6(val);                                                 \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
+  } while (0)
 
   CHECK_COUNTRY("??", 3);
   CHECK_COUNTRY("ab", 32);
@@ -1511,14 +1513,14 @@ test_geoip(void)
    * using ipv4.  Since our fake geoip database is the same between
    * ipv4 and ipv6, we should get the same result no matter which
    * address family we pick for each IP. */
-#define SET_TEST_ADDRESS(i) do { \
-    if ((i) & 1) {				\
-      SET_TEST_IPV6(i);				\
-      tor_addr_from_in6(&addr, &in6);		\
-    } else {					\
+#define SET_TEST_ADDRESS(i) do {                \
+    if ((i) & 1) {                              \
+      SET_TEST_IPV6(i);                         \
+      tor_addr_from_in6(&addr, &in6);           \
+    } else {                                    \
       tor_addr_from_ipv4h(&addr, (uint32_t) i); \
-    }						\
-  } while(0)
+    }                                           \
+  } while (0)
 
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;

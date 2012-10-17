@@ -167,11 +167,12 @@ geoip_ipv4_compare_key_to_entry_(const void *_key, const void **_member)
     return 0;
 }
 
-/** Add an entry to the GeoIP IPv6 table, mapping all IPs between <b>low</b> and
- * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>.
- */
+/** Add an entry to the GeoIP IPv6 table, mapping all IPs between
+ * <b>low</b> and <b>high</b>, inclusive, to the 2-letter country code
+ * <b>country</b>. */
 static void
-geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high, const char *country)
+geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high,
+                     const char *country)
 {
   intptr_t idx;
   geoip_ipv6_entry_t *ent;
@@ -264,8 +265,8 @@ geoip_ipv6_compare_entries_(const void **_a, const void **_b)
   return memcmp(&a->ip_low, &b->ip_low, sizeof(struct in6_addr));
 }
 
-/** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6 (a pointer
- * to a in6_addr in host order) to a geoip_ipv6_entry_t */
+/** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6
+ * (a pointer to a in6_addr in host order) to a geoip_ipv6_entry_t */
 static int
 geoip_ipv6_compare_key_to_entry_(const void *_key, const void **_member)
 {
@@ -324,7 +325,8 @@ init_geoip_countries(void)
  * with '#' (comments).
  */
 int
-geoip_load_file(sa_family_t family, const char *filename, const or_options_t *options)
+geoip_load_file(sa_family_t family, const char *filename,
+                const or_options_t *options)
 {
   FILE *f;
   const char *msg = "";
@@ -343,20 +345,23 @@ geoip_load_file(sa_family_t family, const char *filename, const or_options_t *op
 
   if (family == AF_INET) {
     if (geoip_ipv4_entries) {
-      SMARTLIST_FOREACH(geoip_ipv4_entries, geoip_ipv4_entry_t *, e, tor_free(e));
+      SMARTLIST_FOREACH(geoip_ipv4_entries, geoip_ipv4_entry_t *, e,
+                        tor_free(e));
       smartlist_free(geoip_ipv4_entries);
     }
     geoip_ipv4_entries = smartlist_new();
   } else { /* AF_INET6 */
     if (geoip_ipv6_entries) {
-      SMARTLIST_FOREACH(geoip_ipv6_entries, geoip_ipv6_entry_t *, e, tor_free(e));
+      SMARTLIST_FOREACH(geoip_ipv6_entries, geoip_ipv6_entry_t *, e,
+                        tor_free(e));
       smartlist_free(geoip_ipv6_entries);
     }
     geoip_ipv6_entries = smartlist_new();
   }
   geoip_digest_env = crypto_digest_new();
-  
-  log_notice(LD_GENERAL, "Parsing GEOIP %s file %s.", (family == AF_INET) ? "ipv4" : "ipv6", filename);
+
+  log_notice(LD_GENERAL, "Parsing GEOIP %s file %s.",
+             (family == AF_INET) ? "ipv4" : "ipv6", filename);
   while (!feof(f)) {
     char buf[512];
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
@@ -404,7 +409,8 @@ geoip_get_country_by_ipv4(uint32_t ipaddr)
   geoip_ipv4_entry_t *ent;
   if (!geoip_ipv4_entries)
     return -1;
-  ent = smartlist_bsearch(geoip_ipv4_entries, &ipaddr, geoip_ipv4_compare_key_to_entry_);
+  ent = smartlist_bsearch(geoip_ipv4_entries, &ipaddr,
+                          geoip_ipv4_compare_key_to_entry_);
   return ent ? (int)ent->country : 0;
 }
 
@@ -420,10 +426,10 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
 
   if (!geoip_ipv6_entries)
     return -1;
-  ent = smartlist_bsearch(geoip_ipv6_entries, addr, geoip_ipv6_compare_key_to_entry_);
+  ent = smartlist_bsearch(geoip_ipv6_entries, addr,
+                          geoip_ipv6_compare_key_to_entry_);
   return ent ? (int)ent->country : 0;
 }
-
 
 /** Given an IP address, return a number representing the country to which
  * that address belongs, -1 for "No geoip information available", or 0 for
@@ -470,7 +476,8 @@ geoip_is_loaded(void)
   /* XXX5053 Saying that we have loaded a GeoIP database if have _either_
    * a v4 or v6 database might be problematic.  Maybe we need to add an
    * address parameter to this function? -KL */
-  return geoip_countries != NULL && (geoip_ipv4_entries != NULL || geoip_ipv6_entries != NULL);
+  return geoip_countries != NULL &&
+    (geoip_ipv4_entries != NULL || geoip_ipv6_entries != NULL);
 }
 
 /** Return the hex-encoded SHA1 digest of the loaded GeoIP file. The
@@ -990,7 +997,8 @@ geoip_get_dirreq_history(geoip_client_action_t action,
  * to export geoip data yet.  This counts both IPv4 and IPv6 clients
  * since they're in the same clientmap list. */
 char *
-geoip_get_client_history(geoip_client_action_t action, int *total_ipv4, int *total_ipv6)
+geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
+                         int *total_ipv6)
 {
   char *result = NULL;
   unsigned granularity = IP_GRANULARITY;
@@ -1412,16 +1420,17 @@ geoip_format_bridge_stats(time_t now)
     return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4,
+                                  &total_ipv6);
 
   tor_asprintf(&out,
                "bridge-stats-end %s (%ld s)\n"
                "bridge-ips %s\n"
-	       "bridge-ip-versions v4=%d,v6=%d\n",
+               "bridge-ip-versions v4=%d,v6=%d\n",
                written, duration,
                data ? data : "",
-	       total_ipv4,
-	       total_ipv6);
+               total_ipv4,
+               total_ipv6);
   tor_free(data);
 
   return out;
@@ -1571,7 +1580,8 @@ geoip_format_entry_stats(time_t now)
 
   tor_assert(now >= start_of_entry_stats_interval);
 
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4,
+                                  &total_ipv6);
   format_iso_time(t, now);
   tor_asprintf(&result,
                "entry-stats-end %s (%u s)\n"
@@ -1658,11 +1668,13 @@ clear_geoip_db(void)
 
   strmap_free(country_idxplus1_by_lc_code, NULL);
   if (geoip_ipv4_entries) {
-    SMARTLIST_FOREACH(geoip_ipv4_entries, geoip_ipv4_entry_t *, ent, tor_free(ent));
+    SMARTLIST_FOREACH(geoip_ipv4_entries, geoip_ipv4_entry_t *, ent,
+                      tor_free(ent));
     smartlist_free(geoip_ipv4_entries);
   }
   if (geoip_ipv6_entries) {
-    SMARTLIST_FOREACH(geoip_ipv6_entries, geoip_ipv6_entry_t *, ent, tor_free(ent));
+    SMARTLIST_FOREACH(geoip_ipv6_entries, geoip_ipv6_entry_t *, ent,
+                      tor_free(ent));
     smartlist_free(geoip_ipv6_entries);
   }
   geoip_countries = NULL;
