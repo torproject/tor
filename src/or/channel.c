@@ -3506,12 +3506,12 @@ channel_get_canonical_remote_descr(channel_t *chan)
 }
 
 /**
- * Get remote address if possible
+ * Get remote address if possible.
  *
  * Write the remote address out to a tor_addr_t if the underlying transport
- * supports this operation.
+ * supports this operation, and return 1.  Return 0 if the underlying transport
+ * doesn't let us do this.
  */
-
 int
 channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
 {
