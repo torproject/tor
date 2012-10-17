@@ -3475,8 +3475,10 @@ channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
  * This function return a test provided by the lower layer of the remote
  * endpoint for this channel; it should specify the actual address connected
  * to/from.
+ *
+ * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
+ * may invalidate the return value from this function.
  */
-
 const char *
 channel_get_actual_remote_descr(channel_t *chan)
 {
@@ -3487,7 +3489,12 @@ channel_get_actual_remote_descr(channel_t *chan)
   return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL);
 }
 
-/** DOCDOC */
+/**
+ * Return the text address of the remote endpoint.
+ *
+ * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
+ * may invalidate the return value from this function.
+ */
 const char *
 channel_get_actual_remote_address(channel_t *chan)
 {
@@ -3501,8 +3508,10 @@ channel_get_actual_remote_address(channel_t *chan)
  * This function return a test provided by the lower layer of the remote
  * endpoint for this channel; it should use the known canonical address for
  * this OR's identity digest if possible.
+ *
+ * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
+ * may invalidate the return value from this function.
  */
-
 const char *
 channel_get_canonical_remote_descr(channel_t *chan)
 {
