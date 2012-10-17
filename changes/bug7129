@@ -1,6 +1,0 @@
- o Minor bugfixes:
-   - Fix mal-merge of channels that ORed END_CIRC_REASON_CHANNEL_CLOSED into
-     reason codes in circuit_truncated().
-   - Fix unknown reason warning in circuit_end_reason_to_control_string()
-     to use LD_PROTOCOL rather than LD_BUG when the bad reason originated
-     elsewhere.
