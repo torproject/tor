@@ -3180,7 +3180,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->on_circuit = circ;
 
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    tor_addr_t tmp_addr;
     tor_assert(or_circ);
+    if (or_circ->p_chan &&
+        channel_get_addr_if_possible(or_circ->p_chan, &tmp_addr)) {
+      tor_addr_copy(&n_stream->base_.addr, &tmp_addr);
+    }
     return connection_exit_connect_dir(n_stream);
   }
 
