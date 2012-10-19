@@ -21,6 +21,7 @@ or_connection_t *connection_or_get_for_extend(const char *digest,
                                               int *launch_out);
 void connection_or_set_bad_connections(const char *digest, int force);
 
+void connection_or_block_renegotiation(or_connection_t *conn);
 int connection_or_reached_eof(or_connection_t *conn);
 int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
