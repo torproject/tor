@@ -1,0 +1,4 @@
+  o Minor features (IPv6):
+    - Bridge clients connecting over IPv6 are now counted in bridge
+      statistics. Implementation by shkoo, addressing ticket 5053.
+      Included in 0.2.3.14-alpha.
