@@ -1,12 +1,25 @@
-Changes in version 0.2.3.23-rc - 2012-10-14
-  Tor 0.2.3.23-rc adds a new v3 directory authority, and fixes a variety
+Changes in version 0.2.3.23-rc - 2012-10-20
+  Tor 0.2.3.23-rc adds a new v3 directory authority, fixes a privacy
+  vulnerability introduced by a change in OpenSSL, and fixes a variety
   of smaller bugs in preparation for the release.
 
   o New directory authorities:
     - Add Faravahar (run by Sina Rabbani) as the ninth v3 directory
       authority. Closes ticket 5749.
 
+  o Major bugfixes (security):
+    - Disable TLS session tickets. OpenSSL's implementation was giving
+      our TLS session keys the lifetime of our TLS context objects, when
+      perfect forward secrecy would want us to discard anything that
+      could decrypt a link connection as soon as the link connection
+      was closed. Fixes bug 7139; bugfix on all versions of Tor linked
+      against OpenSSL 1.0.0 or later. Found by Florent Daignière.
+
   o Major bugfixes:
+    - Discard extraneous renegotiation attempts once the V3 link
+      protocol has been initiated. Failure to do so left us open to
+      a remotely triggerable assertion failure. Fixes CVE-2012-2249;
+      bugfix on 0.2.3.6-alpha. Reported by "some guy from France".
     - Fix a possible crash bug when checking for deactivated circuits
       in connection_or_flush_from_first_active_circuit(). Fixes bug 6341;
       bugfix on 0.2.2.7-alpha. Bug report and fix received pseudonymously.
@@ -22,6 +35,10 @@ Changes in version 0.2.3.23-rc - 2012-10-14
       bias" detection. Fixes bug 7022; bugfix on 0.2.3.21-rc.
 
   o Minor bugfixes (on 0.2.2.x and earlier):
+    - Don't serve or accept v2 hidden service descriptors over a relay's
+      DirPort. It's never correct to do so, and disabling it might
+      make it more annoying to exploit any bugs that turn up in the
+      descriptor-parsing code. Fixes bug 7149.
     - When relays refuse a "create" cell because their queue of pending
       create cells is too big (typically because their cpu can't keep up
       with the arrival rate), send back reason "resource limit" rather

@@ -1,5 +1,0 @@
-  o Major bugfixes (security):
-    - Discard extraneous renegotiation attempts once the V3 link
-      protocol has been initiated. Failure to do so left us open to
-      a remotely triggerable assertion failure. Fixes CVE-2012-2249;
-      bugfix on 0.2.3.6-alpha. Reported by "some guy from France".
