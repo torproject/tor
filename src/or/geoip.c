@@ -994,20 +994,25 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   return result;
 }
 
-/** Return a newly allocated comma-separated string containing entries for
- * all the countries from which we've seen enough clients connect as a
- * bridge, directory server, or entry guard. The entry format is cc=num
- * where num is the number of IPs we've seen connecting from that country,
- * and cc is a lowercased country code. Returns NULL if we don't want
- * to export geoip data yet.  This counts both IPv4 and IPv6 clients
- * since they're in the same clientmap list. */
-char *
-geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
-                         int *total_ipv6)
+/** Store a newly allocated comma-separated string in
+ * *<a>country_str</a> containing entries for all the countries from
+ * which we've seen enough clients connect as a bridge, directory
+ * server, or entry guard. The entry format is cc=num where num is the
+ * number of IPs we've seen connecting from that country, and cc is a
+ * lowercased country code. *<a>country_str</a> is set to NULL if
+ * we're not ready to export per country data yet.
+ *
+ * Store a newly allocated comma-separated string in <a>ipver_str</a>
+ * containing entries for clients connecting over IPv4 and IPv6. The
+ * format is family=num where num is the nubmer of IPs we've seen
+ * connecting over that protocol family, and family is 'v4' or 'v6'.
+ *
+ * Return 0 on success and -1 if we're missing geoip data. */
+int
+geoip_get_client_history(geoip_client_action_t action,
+                         char **country_str, char **ipver_str)
 {
-  char *result = NULL;
   unsigned granularity = IP_GRANULARITY;
-  smartlist_t *chunks = NULL;
   smartlist_t *entries = NULL;
   int n_countries = geoip_get_n_countries();
   int i;
@@ -1017,7 +1022,7 @@ geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
   unsigned ipv4_count = 0, ipv6_count = 0;
 
   if (!geoip_is_loaded(AF_INET) && !geoip_is_loaded(AF_INET6))
-    return NULL;
+    return -1;
 
   counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
   HT_FOREACH(ent, clientmap, &client_history) {
@@ -1039,13 +1044,25 @@ geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
       break;
     }
   }
-  if (total_ipv4)
-      (*total_ipv4) = round_to_next_multiple_of(ipv4_count, granularity);
-  if (total_ipv6)
-      (*total_ipv6) = round_to_next_multiple_of(ipv6_count, granularity);
-  /* Don't record anything if we haven't seen enough IPs. */
-  if (total < MIN_IPS_TO_NOTE_ANYTHING)
-    goto done;
+  if (ipver_str) {
+    smartlist_t *chunks = smartlist_new();
+    smartlist_add_asprintf(chunks, "v4=%u",
+                           round_to_next_multiple_of(ipv4_count, granularity));
+    smartlist_add_asprintf(chunks, "v6=%u",
+                           round_to_next_multiple_of(ipv6_count, granularity));
+    *ipver_str = smartlist_join_strings(chunks, ",", 0, NULL);
+    SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
+    smartlist_free(chunks);
+  }
+
+  /* Don't record per country data if we haven't seen enough IPs. */
+  if (total < MIN_IPS_TO_NOTE_ANYTHING) {
+    tor_free(counts);
+    if (country_str)
+      *country_str = NULL;
+    return 0;
+  }
+
   /* Make a list of c_hist_t */
   entries = smartlist_new();
   for (i = 0; i < n_countries; ++i) {
@@ -1066,23 +1083,21 @@ geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
    * the sort order could leak info. */
   smartlist_sort(entries, _c_hist_compare);
 
-  /* Build the result. */
-  chunks = smartlist_new();
-  SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
-      smartlist_add_asprintf(chunks, "%s=%u", ch->country, ch->total);
-  });
-  result = smartlist_join_strings(chunks, ",", 0, NULL);
- done:
-  tor_free(counts);
-  if (chunks) {
+  if (country_str) {
+    smartlist_t *chunks = smartlist_new();
+    SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
+        smartlist_add_asprintf(chunks, "%s=%u", ch->country, ch->total);
+      });
+    *country_str = smartlist_join_strings(chunks, ",", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
     smartlist_free(chunks);
   }
-  if (entries) {
-    SMARTLIST_FOREACH(entries, c_hist_t *, c, tor_free(c));
-    smartlist_free(entries);
-  }
-  return result;
+
+  SMARTLIST_FOREACH(entries, c_hist_t *, c, tor_free(c));
+  smartlist_free(entries);
+  tor_free(counts);
+
+  return 0;
 }
 
 /** Return a newly allocated string holding the per-country request history
@@ -1205,10 +1220,9 @@ geoip_format_dirreq_stats(time_t now)
   tor_assert(now >= start_of_dirreq_stats_interval);
 
   format_iso_time(t, now);
-  v2_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
-                                           NULL, NULL);
-  v3_ips_string = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS,
-                                           NULL, NULL);
+  geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2, &v2_ips_string,
+                           NULL);
+  geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS, &v3_ips_string, NULL);
   v2_reqs_string = geoip_get_request_history(
                    GEOIP_CLIENT_NETWORKSTATUS_V2);
   v3_reqs_string = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
@@ -1414,10 +1428,9 @@ static char *bridge_stats_extrainfo = NULL;
 char *
 geoip_format_bridge_stats(time_t now)
 {
-  char *out = NULL, *data = NULL;
+  char *out = NULL, *data = NULL, *ipver = NULL;
   long duration = now - start_of_bridge_stats_interval;
   char written[ISO_TIME_LEN+1];
-  int total_ipv4 = 0, total_ipv6 = 0;
 
   if (duration < 0)
     return NULL;
@@ -1425,18 +1438,17 @@ geoip_format_bridge_stats(time_t now)
     return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4,
-                                  &total_ipv6);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &data, &ipver);
 
   tor_asprintf(&out,
                "bridge-stats-end %s (%ld s)\n"
                "bridge-ips %s\n"
-               "bridge-ip-versions v4=%d,v6=%d\n",
+               "bridge-ip-versions %s\n",
                written, duration,
                data ? data : "",
-               total_ipv4,
-               total_ipv6);
+               ipver ? ipver : "");
   tor_free(data);
+  tor_free(ipver);
 
   return out;
 }
@@ -1447,17 +1459,20 @@ geoip_format_bridge_stats(time_t now)
 static char *
 format_bridge_stats_controller(time_t now)
 {
-  char *out = NULL, *data = NULL;
+  char *out = NULL, *country_data = NULL, *ipver_data = NULL;
   char started[ISO_TIME_LEN+1];
   (void) now;
 
   format_iso_time(started, start_of_bridge_stats_interval);
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, NULL, NULL);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &country_data, &ipver_data);
 
   tor_asprintf(&out,
-               "TimeStarted=\"%s\" CountrySummary=%s",
-               started, data ? data : "");
-  tor_free(data);
+               "TimeStarted=\"%s\" CountrySummary=%s IPVersions=%s",
+               started,
+               country_data ? country_data : "",
+               ipver_data ? ipver_data : "");
+  tor_free(country_data);
+  tor_free(ipver_data);
   return out;
 }
 
@@ -1578,15 +1593,13 @@ geoip_format_entry_stats(time_t now)
   char t[ISO_TIME_LEN+1];
   char *data = NULL;
   char *result;
-  int total_ipv4, total_ipv6;
 
   if (!start_of_entry_stats_interval)
     return NULL; /* Not initialized. */
 
   tor_assert(now >= start_of_entry_stats_interval);
 
-  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4,
-                                  &total_ipv6);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &data, NULL);
   format_iso_time(t, now);
   tor_asprintf(&result,
                "entry-stats-end %s (%u s)\n"

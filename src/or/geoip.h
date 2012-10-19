@@ -33,8 +33,8 @@ void geoip_remove_old_clients(time_t cutoff);
 
 void geoip_note_ns_response(geoip_client_action_t action,
                             geoip_ns_response_t response);
-char *geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
-                               int *total_ipv6);
+int geoip_get_client_history(geoip_client_action_t action,
+                             char **country_str, char **ipver_str);
 char *geoip_get_request_history(geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer,

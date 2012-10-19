@@ -1388,7 +1388,7 @@ test_geoip(void)
 {
   int i, j;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  char *s = NULL;
+  char *s = NULL, *v = NULL;
   const char *bridge_stats_1 =
       "bridge-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "bridge-ips zz=24,xy=8\n"
@@ -1457,7 +1457,6 @@ test_geoip(void)
       "entry-ips \n";
   tor_addr_t addr;
   struct in6_addr in6;
-  int total_ipv4, total_ipv6;
 
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
@@ -1542,20 +1541,23 @@ test_geoip(void)
     SET_TEST_ADDRESS(i);
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
   }
-  s = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &s, &v);
   test_assert(s);
+  test_assert(v);
   test_streq("zz=24,ab=16,xy=8", s);
-  test_eq(total_ipv4, 16);
-  test_eq(total_ipv6, 16);
+  test_streq("v4=16,v6=16", v);
   tor_free(s);
+  tor_free(v);
 
   /* Now clear out all the AB observations. */
   geoip_remove_old_clients(now-6000);
-  s = geoip_get_client_history(GEOIP_CLIENT_CONNECT, &total_ipv4, &total_ipv6);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &s, &v);
   test_assert(s);
+  test_assert(v);
   test_streq("zz=24,xy=8", s);
-  test_eq(total_ipv4, 16);
-  test_eq(total_ipv6, 16);
+  test_streq("v4=16,v6=16", v);
+  tor_free(s);
+  tor_free(v);
 
   /* Start testing bridge statistics by making sure that we don't output
    * bridge stats without initializing them. */
