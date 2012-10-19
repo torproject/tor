@@ -1146,6 +1146,7 @@ enter_v3_handshake_with_cell(var_cell_t *cell, channel_tls_t *chan)
            "Received a cell while TLS-handshaking, not in "
            "OR_HANDSHAKING_V3, on a connection we originated.");
   }
+  connection_or_block_renegotiation(chan->conn);
   chan->conn->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   if (connection_init_or_handshake_state(chan->conn, started_here) < 0) {
     connection_or_close_for_error(chan->conn, 0);
