@@ -3657,7 +3657,7 @@ typedef struct {
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
 
-  /** Optionally, IPv4 and IPv6 GeoIP data */
+  /** Optionally, IPv4 and IPv6 GeoIP data. */
   char *GeoIPFile;
   char *GeoIPv6File;
 

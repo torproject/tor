@@ -323,7 +323,7 @@ addr_is_in_cc_list(uint32_t addr, const smartlist_t *cc_list)
 
   if (!cc_list)
     return 0;
-  /* XXX: ipv4 specific */
+  /* XXXXipv6 */
   tor_addr_from_ipv4h(&tar, addr);
   country = geoip_get_country_by_addr(&tar);
   name = geoip_get_country_name(country);

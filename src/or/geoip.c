@@ -1428,7 +1428,7 @@ static char *bridge_stats_extrainfo = NULL;
 char *
 geoip_format_bridge_stats(time_t now)
 {
-  char *out = NULL, *data = NULL, *ipver = NULL;
+  char *out = NULL, *country_data = NULL, *ipver_data = NULL;
   long duration = now - start_of_bridge_stats_interval;
   char written[ISO_TIME_LEN+1];
 
@@ -1438,17 +1438,17 @@ geoip_format_bridge_stats(time_t now)
     return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
-  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &data, &ipver);
+  geoip_get_client_history(GEOIP_CLIENT_CONNECT, &country_data, &ipver_data);
 
   tor_asprintf(&out,
                "bridge-stats-end %s (%ld s)\n"
                "bridge-ips %s\n"
                "bridge-ip-versions %s\n",
                written, duration,
-               data ? data : "",
-               ipver ? ipver : "");
-  tor_free(data);
-  tor_free(ipver);
+               country_data ? country_data : "",
+               ipver_data ? ipver_data : "");
+  tor_free(country_data);
+  tor_free(ipver_data);
 
   return out;
 }
