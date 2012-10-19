@@ -5564,6 +5564,10 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
   return 0;
 }
 
+/** Load one of the geoip files, <a>family</a> determining which
+ * one. Note that <a>fname</a> will be freed by this
+ * function. <a>default_fname</a> is used if on Windows and
+ * <a>fname</a> equals "<default>". */
 static void
 config_load_geoip_file_(sa_family_t family,
                         char *fname, /* will be freed */
@@ -5584,6 +5588,8 @@ config_load_geoip_file_(sa_family_t family,
     tor_free(fname);
 }
 
+/** Load geoip files for IPv4 and IPv6 if <a>options</a> and
+ * <a>old_options</a> indicate we should. */
 static void
 config_maybe_load_geoip_files_(const or_options_t *options,
                                const or_options_t *old_options)
