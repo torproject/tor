@@ -46,6 +46,9 @@ uint64_t stats_n_authorize_cells_processed = 0;
 /** Active listener, if any */
 channel_listener_t *channel_tls_listener = NULL;
 
+/* Utility function declarations */
+static void channel_tls_common_init(channel_tls_t *tlschan);
+
 /* channel_tls_t method declarations */
 
 static void channel_tls_close_method(channel_t *chan);
@@ -92,19 +95,18 @@ static int enter_v3_handshake_with_cell(var_cell_t *cell,
                                         channel_tls_t *tlschan);
 
 /**
- * Start a new TLS channel
- *
- * Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
- * handshake with an OR with identity digest <b>id_digest</b>, and wrap
- * it in a channel_tls_t.
+ * Do parts of channel_tls_t initialization common to channel_tls_connect()
+ * and channel_tls_handle_incoming().
  */
 
-channel_t *
-channel_tls_connect(const tor_addr_t *addr, uint16_t port,
-                    const char *id_digest)
+static void
+channel_tls_common_init(channel_tls_t *tlschan)
 {
-  channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
-  channel_t *chan = &(tlschan->base_);
+  channel_t *chan;
+
+  tor_assert(tlschan);
+
+  chan = &(tlschan->base_);
   channel_init(chan);
   chan->magic = TLS_CHAN_MAGIC;
   chan->state = CHANNEL_STATE_OPENING;
@@ -120,6 +122,29 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   chan->write_packed_cell = channel_tls_write_packed_cell_method;
   chan->write_var_cell = channel_tls_write_var_cell_method;
 
+  chan->cmux = circuitmux_alloc();
+  if (cell_ewma_enabled()) {
+    circuitmux_set_policy(chan->cmux, &ewma_policy);
+  }
+}
+
+/**
+ * Start a new TLS channel
+ *
+ * Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
+ * handshake with an OR with identity digest <b>id_digest</b>, and wrap
+ * it in a channel_tls_t.
+ */
+
+channel_t *
+channel_tls_connect(const tor_addr_t *addr, uint16_t port,
+                    const char *id_digest)
+{
+  channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
+  channel_t *chan = &(tlschan->base_);
+
+  channel_tls_common_init(tlschan);
+
   log_debug(LD_CHANNEL,
             "In channel_tls_connect() for channel %p "
             "(global id " U64_FORMAT ")",
@@ -128,11 +153,6 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
 
   if (is_local_addr(addr)) channel_mark_local(chan);
   channel_mark_outgoing(chan);
-
-  chan->cmux = circuitmux_alloc();
-  if (cell_ewma_enabled()) {
-    circuitmux_set_policy(chan->cmux, &ewma_policy);
-  }
 
   /* Set up or_connection stuff */
   tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
@@ -255,19 +275,7 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   tor_assert(orconn);
   tor_assert(!(orconn->chan));
 
-  channel_init(chan);
-  chan->magic = TLS_CHAN_MAGIC;
-  chan->state = CHANNEL_STATE_OPENING;
-  chan->close = channel_tls_close_method;
-  chan->describe_transport = channel_tls_describe_transport_method;
-  chan->get_remote_descr = channel_tls_get_remote_descr_method;
-  chan->has_queued_writes = channel_tls_has_queued_writes_method;
-  chan->is_canonical = channel_tls_is_canonical_method;
-  chan->matches_extend_info = channel_tls_matches_extend_info_method;
-  chan->matches_target = channel_tls_matches_target_method;
-  chan->write_cell = channel_tls_write_cell_method;
-  chan->write_packed_cell = channel_tls_write_packed_cell_method;
-  chan->write_var_cell = channel_tls_write_var_cell_method;
+  channel_tls_common_init(tlschan);
 
   /* Link the channel and orconn to each other */
   tlschan->conn = orconn;
@@ -275,11 +283,6 @@ channel_tls_handle_incoming(or_connection_t *orconn)
 
   if (is_local_addr(&(TO_CONN(orconn)->addr))) channel_mark_local(chan);
   channel_mark_incoming(chan);
-
-  chan->cmux = circuitmux_alloc();
-  if (cell_ewma_enabled()) {
-    circuitmux_set_policy(chan->cmux, &ewma_policy);
-  }
 
   /* If we got one, we should register it */
   if (chan) channel_register(chan);
