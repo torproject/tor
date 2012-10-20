@@ -2313,9 +2313,12 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   tor_free(bandwidth_usage);
   smartlist_add(chunks, pre);
 
-  if (geoip_is_loaded()) {
-    smartlist_add_asprintf(chunks, "geoip-db-digest %s\n", geoip_db_digest());
-  }
+  if (geoip_is_loaded(AF_INET))
+    smartlist_add_asprintf(chunks, "geoip-db-digest %s\n",
+                           geoip_db_digest(AF_INET));
+  if (geoip_is_loaded(AF_INET6))
+    smartlist_add_asprintf(chunks, "geoip6-db-digest %s\n",
+                           geoip_db_digest(AF_INET6));
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");

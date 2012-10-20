@@ -52,8 +52,9 @@ static strmap_t *country_idxplus1_by_lc_code = NULL;
  * by their respective ip_low. */
 static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 
-/** SHA1 digest of the GeoIP file to include in extra-info descriptors. */
+/** SHA1 digest of the GeoIP files to include in extra-info descriptors. */
 static char geoip_digest[DIGEST_LEN];
+static char geoip6_digest[DIGEST_LEN];
 
 /** Return the index of the <b>country</b>'s entry in the GeoIP DB
  * if it is a valid 2-letter country code, otherwise return -1.
@@ -376,22 +377,20 @@ geoip_load_file(sa_family_t family, const char *filename,
   /*XXXX abort and return -1 if no entries/illformed?*/
   fclose(f);
 
-  if (family == AF_INET)
+  /* Sort list and remember file digests so that we can include it in
+   * our extra-info descriptors. */
+  if (family == AF_INET) {
     smartlist_sort(geoip_ipv4_entries, geoip_ipv4_compare_entries_);
-  else /* AF_INET6 */
+    /* Okay, now we need to maybe change our mind about what is in
+     * which country. We do this for IPv4 only since that's what we
+     * store in node->country. */
+    refresh_all_country_info();
+    crypto_digest_get_digest(geoip_digest_env, geoip_digest, DIGEST_LEN);
+  }
+  else {                        /* AF_INET6 */
     smartlist_sort(geoip_ipv6_entries, geoip_ipv6_compare_entries_);
-
-  /* Okay, now we need to maybe change our mind about what is in which
-   * country. */
-  refresh_all_country_info();
-
-  /* Remember file digest so that we can include it in our extra-info
-   * descriptors. */
-  /* XXX5053 This is a bug!  We overwrite geoip_digest with whichever file
-   * we parse last.  We'll want to add a separate geoip6_digest and write
-   * a geoip6-db-digest line to our extra-info descriptor.  Needs a
-   * dir-spec.txt patch, too. -KL */
-  crypto_digest_get_digest(geoip_digest_env, geoip_digest, DIGEST_LEN);
+    crypto_digest_get_digest(geoip_digest_env, geoip6_digest, DIGEST_LEN);
+  }
   crypto_digest_free(geoip_digest_env);
 
   return 0;
@@ -471,22 +470,28 @@ geoip_get_country_name(country_t num)
 
 /** Return true iff we have loaded a GeoIP database.*/
 int
-geoip_is_loaded(void)
+geoip_is_loaded(sa_family_t family)
 {
-  /* XXX5053 Saying that we have loaded a GeoIP database if have _either_
-   * a v4 or v6 database might be problematic.  Maybe we need to add an
-   * address parameter to this function? -KL */
-  return geoip_countries != NULL &&
-    (geoip_ipv4_entries != NULL || geoip_ipv6_entries != NULL);
+  tor_assert(family == AF_INET || family == AF_INET6);
+  if (geoip_countries == NULL)
+    return 0;
+  if (family == AF_INET)
+    return geoip_ipv4_entries != NULL;
+  else                          /* AF_INET6 */
+    return geoip_ipv6_entries != NULL;
 }
 
 /** Return the hex-encoded SHA1 digest of the loaded GeoIP file. The
  * result does not need to be deallocated, but will be overwritten by the
  * next call of hex_str(). */
 const char *
-geoip_db_digest(void)
+geoip_db_digest(sa_family_t family)
 {
-  return hex_str(geoip_digest, DIGEST_LEN);
+  tor_assert(family == AF_INET || family == AF_INET6);
+  if (family == AF_INET)
+    return hex_str(geoip_digest, DIGEST_LEN);
+  else                          /* AF_INET6 */
+    return hex_str(geoip6_digest, DIGEST_LEN);
 }
 
 /** Entry in a map from IP address to the last time we've seen an incoming
@@ -1011,7 +1016,7 @@ geoip_get_client_history(geoip_client_action_t action, int *total_ipv4,
   unsigned total = 0;
   unsigned ipv4_count = 0, ipv6_count = 0;
 
-  if (!geoip_is_loaded())
+  if (!geoip_is_loaded(AF_INET) && !geoip_is_loaded(AF_INET6))
     return NULL;
 
   counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
@@ -1639,20 +1644,25 @@ getinfo_helper_geoip(control_connection_t *control_conn,
                      const char **errmsg)
 {
   (void)control_conn;
-  if (!geoip_is_loaded()) {
-    *errmsg = "GeoIP data not loaded";
-    return -1;
-  }
   if (!strcmpstart(question, "ip-to-country/")) {
     int c;
-    uint32_t ip;
-    struct in_addr in;
+    sa_family_t family;
+    tor_addr_t addr;
     question += strlen("ip-to-country/");
-    if (tor_inet_aton(question, &in) != 0) {
-      ip = ntohl(in.s_addr);
-      c = geoip_get_country_by_ipv4(ip);
-      *answer = tor_strdup(geoip_get_country_name(c));
+    family = tor_addr_parse(&addr, question);
+    if (family != AF_INET && family != AF_INET6) {
+      *errmsg = "Invalid address family";
+      return -1;
     }
+    if (!geoip_is_loaded(family)) {
+      *errmsg = "GeoIP data not loaded";
+      return -1;
+    }
+    if (family == AF_INET)
+      c = geoip_get_country_by_ipv4(tor_addr_to_ipv4h(&addr));
+    else                      /* AF_INET6 */
+      c = geoip_get_country_by_ipv6(tor_addr_to_in6(&addr));
+    *answer = tor_strdup(geoip_get_country_name(c));
   }
   return 0;
 }

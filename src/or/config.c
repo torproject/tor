@@ -1512,10 +1512,10 @@ options_act(const or_options_t *old_options)
       connection_or_update_token_buckets(get_connection_array(), options);
   }
 
-  /* Maybe load geoip file */
+  /* Maybe load IPv4 geoip file */
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile, options->GeoIPFile))
-       || !geoip_is_loaded())) {
+       || !geoip_is_loaded(AF_INET))) {
     /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow. -NM */
     /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
@@ -1530,11 +1530,11 @@ options_act(const or_options_t *old_options)
     geoip_load_file(AF_INET, actual_fname, options);
     tor_free(actual_fname);
   }
-  /* And maybe load geoip ipv6 file */
+  /* And maybe load IPv6 geoip file */
   if (options->GeoIPv6File &&
       ((!old_options || !opt_streq(old_options->GeoIPv6File,
                                    options->GeoIPv6File))
-       || !geoip_is_loaded())) {
+       || !geoip_is_loaded(AF_INET6))) {
     /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow.  See also comment for GeoIPFile. */
     /* XXXX024 Reload GeoIPV6File on SIGHUP.  See also comment for
@@ -1573,7 +1573,7 @@ options_act(const or_options_t *old_options)
     }
     if ((!old_options || !old_options->DirReqStatistics) &&
         options->DirReqStatistics) {
-      if (geoip_is_loaded()) {
+      if (geoip_is_loaded(AF_INET)) {
         geoip_dirreq_stats_init(now);
         print_notice = 1;
       } else {
@@ -1588,7 +1588,7 @@ options_act(const or_options_t *old_options)
     }
     if ((!old_options || !old_options->EntryStatistics) &&
         options->EntryStatistics && !should_record_bridge_info(options)) {
-      if (geoip_is_loaded()) {
+      if (geoip_is_loaded(AF_INET) || geoip_is_loaded(AF_INET6)) {
         geoip_entry_stats_init(now);
         print_notice = 1;
       } else {

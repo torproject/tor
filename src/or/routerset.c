@@ -82,7 +82,7 @@ routerset_refresh_countries(routerset_t *target)
   int cc;
   bitarray_free(target->countries);
 
-  if (!geoip_is_loaded()) {
+  if (!geoip_is_loaded(AF_INET)) {
     target->countries = NULL;
     target->n_countries = 0;
     return;
