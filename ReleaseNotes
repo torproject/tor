@@ -233,6 +233,10 @@ Changes in version 0.2.3.x - 2012-10-??
       differ between the current configuration and the defaults file. HUP
       reloads both files. Implements task 4552.
 
+  o New directory authorities:
+    - Add Faravahar (run by Sina Rabbani) as the ninth v3 directory
+      authority. Closes ticket 5749.
+
   o Security/privacy fixes:
     - Avoid read-from-freed-memory and double-free bugs that could occur
       when a DNS request fails while launching it. Fixes bug 6480;
@@ -249,6 +253,12 @@ Changes in version 0.2.3.x - 2012-10-??
       (for Unix). Also drop the "git-XYZ" tag in the version. Packagers
       can insert an extra string in the platform line by setting the
       preprocessor variable TOR_BUILD_TAG. Resolves bug 2988.
+    - Disable TLS session tickets. OpenSSL's implementation was giving
+      our TLS session keys the lifetime of our TLS context objects, when
+      perfect forward secrecy would want us to discard anything that
+      could decrypt a link connection as soon as the link connection
+      was closed. Fixes bug 7139; bugfix on all versions of Tor linked
+      against OpenSSL 1.0.0 or later. Found by Florent Daignière.
 
   o Major bugfixes (clients):
     - If we are unable to find any exit that supports our predicted ports,
@@ -288,16 +298,19 @@ Changes in version 0.2.3.x - 2012-10-??
       result in bizarre window values. Report and patch contributed
       pseudonymously. Fixes part of bug 6271. This bug was introduced
       before the first Tor release, in svn commit r152.
-    - Set the SO_REUSEADDR socket option before we call bind() on outgoing
-      connections. This change should allow busy exit relays to stop
-      running out of available sockets as quickly. Fixes bug 4950;
-      bugfix on 0.2.2.26-beta.
     - Don't update the AccountingSoftLimitHitAt state file entry whenever
       tor gets started. This prevents a wrong average bandwidth
       estimate, which would cause relays to always start a new accounting
       interval at the earliest possible moment. Fixes bug 2003; bugfix
       on 0.2.2.7-alpha. Reported by Bryon Eldridge, who also helped
       immensely in tracking this bug down.
+    - Fix a possible crash bug when checking for deactivated circuits
+      in connection_or_flush_from_first_active_circuit(). Fixes bug 6341;
+      bugfix on 0.2.2.7-alpha. Bug report and fix received pseudonymously.
+    - Set the SO_REUSEADDR socket option before we call bind() on outgoing
+      connections. This change should allow busy exit relays to stop
+      running out of available sockets as quickly. Fixes bug 4950;
+      bugfix on 0.2.2.26-beta.
 
   o Major bugfixes (blocking resistance):
     - Bridges no longer include their address in NETINFO cells on outgoing
@@ -591,6 +604,9 @@ Changes in version 0.2.3.x - 2012-10-??
     - Fix a memory leak when trying to launch a DNS request when the
       nameservers are unconfigurable. Fixes bug 5916; bugfix on Tor
       0.1.2.1-alpha.
+    - Correct file sizes when reading binary files on Cygwin, to avoid
+      a bug where Tor would fail to read its state file. Fixes bug 6844;
+      bugfix on 0.1.2.7-alpha.
     - Make sure to set *socket_error in all error cases in
       connection_connect(), so it can't produce a warning about
       errno being zero from errno_to_orconn_end_reason(). Bugfix on
@@ -615,6 +631,11 @@ Changes in version 0.2.3.x - 2012-10-??
     - Don't publish a new relay descriptor when we reload our onion key,
       unless the onion key has actually changed. Fixes bug 3263 and
       resolves another cause of bug 1810. Bugfix on 0.1.1.11-alpha.
+    - When relays refuse a "create" cell because their queue of pending
+      create cells is too big (typically because their cpu can't keep up
+      with the arrival rate), send back reason "resource limit" rather
+      than reason "internal", so network measurement scripts can get a
+      more accurate picture. Bugfix on 0.1.1.11-alpha; fixes bug 7037.
     - Exit nodes don't need to fetch certificates for authorities that
       they don't recognize; only directory authorities, bridges,
       and caches need to do that. Fixes part of bug 2297; bugfix on
@@ -638,8 +659,23 @@ Changes in version 0.2.3.x - 2012-10-??
       of missing v2 networkstatus documents, unless they're configured
       to retrieve v2 networkstatus documents. Fixes bug 4838; bugfix on
       0.2.2.26-beta. Patch by Daniel Bryg.
+    - Don't serve or accept v2 hidden service descriptors over a relay's
+      DirPort. It's never correct to do so, and disabling it might
+      make it more annoying to exploit any bugs that turn up in the
+      descriptor-parsing code. Fixes bug 7149.
 
-  o Minor bugfixes (hidden services):
+  o Minor bugfixes (hidden services, client-side):
+    - Assert that hidden-service-related operations are not performed
+      using single-hop circuits. Previously, Tor would assert that
+      client-side streams are not attached to single-hop circuits,
+      but not that other sensitive operations on the client and service
+      side are not performed using single-hop circuits. Fixes bug 3332;
+      bugfix on 0.0.6.
+    - Avoid undefined behaviour when parsing the list of supported
+      rendezvous/introduction protocols in a hidden service descriptor.
+      Previously, Tor would have confused (as-yet-unused) protocol version
+      numbers greater than 32 with lower ones on many platforms. Fixes
+      bug 6827; bugfix on 0.2.0.10-alpha. Found by George Kadianakis.
     - Don't close hidden service client circuits which have almost
       finished connecting to their destination when they reach
       the normal circuit-build timeout. Previously, we would close
@@ -650,17 +686,13 @@ Changes in version 0.2.3.x - 2012-10-??
       another rendezvous attempt in parallel. This behavior change can
       be disabled using the new CloseHSClientCircuitsImmediatelyOnTimeout
       option. Fixes part of bug 1297; bugfix on 0.2.2.2-alpha.
+
+  o Minor bugfixes (hidden services, service-side):
     - Don't close hidden-service-side rendezvous circuits when they
       reach the normal circuit-build timeout. This behaviour change can
       be disabled using the new
       CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
       remaining part of bug 1297; bugfix on 0.2.2.2-alpha.
-    - Assert that hidden-service-related operations are not performed
-      using single-hop circuits. Previously, Tor would assert that
-      client-side streams are not attached to single-hop circuits,
-      but not that other sensitive operations on the client and service
-      side are not performed using single-hop circuits. Fixes bug 3332;
-      bugfix on 0.0.6.
     - Don't launch more than 10 service-side introduction-point circuits
       for a hidden service in five minutes. Previously, we would consider
       launching more introduction-point circuits if at least one second
@@ -1032,6 +1064,7 @@ Changes in version 0.2.3.x - 2012-10-??
       fact that {OR/Dir}ListenAddress is now unnecessary (and
       therefore deprecated). Resolves ticket 5597.
     - Correct a broken faq link in the INSTALL file. Fixes bug 2307.
+    - Clarify that hidden services are TCP only. Fixes bug 6024.
 
 
 Changes in version 0.2.2.39 - 2012-09-11
