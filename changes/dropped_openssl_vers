@@ -1,3 +1,0 @@
-  o Required libraries:
-    - Tor now requires OpenSSL 0.9.8 or later; OpenSSL 1.0.0 or later is
-      strongly recommended.

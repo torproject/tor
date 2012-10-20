@@ -1,3 +1,0 @@
-  o Code refactoring:
-    - Source files taken from other packages now reside in src/ext;
-      previously they were scattered around the rest of Tor.

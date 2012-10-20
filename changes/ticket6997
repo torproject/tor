@@ -1,2 +1,0 @@
-  o Minor bugfixes:
-    - Command-line option "--version" implies "--quiet". Closes ticket #6997.

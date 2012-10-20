@@ -1,3 +1,104 @@
+Changes in version 0.2.4.4-alpha - 2012-10-20
+  Tor 0.2.4.4-alpha adds a new v3 directory authority, fixes a privacy
+  vulnerability introduced by a change in OpenSSL, fixes a remotely
+  triggerable assert, and adds new channel_t and circuitmux_t abstractions
+  that will make it easier to test new connection transport and cell
+  scheduling algorithms.
+
+  o New directory authorities (also in 0.2.3.23-rc):
+    - Add Faravahar (run by Sina Rabbani) as the ninth v3 directory
+      authority. Closes ticket 5749.
+
+  o Major bugfixes (security/privacy, also in 0.2.3.23-rc):
+    - Disable TLS session tickets. OpenSSL's implementation was giving
+      our TLS session keys the lifetime of our TLS context objects, when
+      perfect forward secrecy would want us to discard anything that
+      could decrypt a link connection as soon as the link connection
+      was closed. Fixes bug 7139; bugfix on all versions of Tor linked
+      against OpenSSL 1.0.0 or later. Found by Florent Daignière.
+    - Discard extraneous renegotiation attempts once the V3 link
+      protocol has been initiated. Failure to do so left us open to
+      a remotely triggerable assertion failure. Fixes CVE-2012-2249;
+      bugfix on 0.2.3.6-alpha. Reported by "some guy from France".
+
+  o Internal abstraction features:
+    - Introduce new channel_t abstraction between circuits and
+      or_connection_t to allow for implementing alternate OR-to-OR
+      transports. A channel_t is an abstract object which can either be a
+      cell-bearing channel, which is responsible for authenticating and
+      handshaking with the remote OR and transmitting cells to and from
+      it, or a listening channel, which spawns new cell-bearing channels
+      at the request of remote ORs. Implements part of ticket 6465.
+    - Also new is the channel_tls_t subclass of channel_t, adapting it
+      to the existing or_connection_t code. The V2/V3 protocol handshaking
+      code which formerly resided in command.c has been moved below the
+      channel_t abstraction layer and may be found in channeltls.c now.
+      Implements the rest of ticket 6465.
+    - Introduce new circuitmux_t storing the queue of circuits for
+      a channel; this encapsulates and abstracts the queue logic and
+      circuit selection policy, and allows the latter to be overridden
+      easily by switching out a policy object. The existing EWMA behavior
+      is now implemented as a circuitmux_policy_t. Resolves ticket 6816.
+
+  o Required libraries:
+    - Tor now requires OpenSSL 0.9.8 or later. OpenSSL 1.0.0 or later is
+      strongly recommended.
+
+  o Minor features:
+    - Warn users who run hidden services on a Tor client with
+      UseEntryGuards disabled that their hidden services will be
+      vulnerable to http://freehaven.net/anonbib/#hs-attack06 (the
+      attack which motivated Tor to support entry guards in the first
+      place). Resolves ticket 6889.
+    - Tor now builds correctly on Bitrig, an OpenBSD fork. Patch from
+      dhill. Resolves ticket 6982.
+
+  o Minor bugfixes (also in 0.2.3.23-rc):
+    - Don't serve or accept v2 hidden service descriptors over a
+      relay's DirPort. It's never correct to do so, and disabling it
+      might make it more annoying to exploit any bugs that turn up in the
+      descriptor-parsing code. Fixes bug 7149.
+    - Fix two cases in src/or/transports.c where we were calling
+      fmt_addr() twice in a parameter list. Bug found by David
+      Fifield. Fixes bug 7014; bugfix on 0.2.3.9-alpha.
+    - Fix memory leaks whenever we logged any message about the "path
+      bias" detection. Fixes bug 7022; bugfix on 0.2.3.21-rc.
+    - When relays refuse a "create" cell because their queue of pending
+      create cells is too big (typically because their cpu can't keep up
+      with the arrival rate), send back reason "resource limit" rather
+      than reason "internal", so network measurement scripts can get a
+      more accurate picture. Fixes bug 7037; bugfix on 0.1.1.11-alpha.
+
+  o Minor bugfixes:
+    - Command-line option "--version" implies "--quiet". Fixes bug 6997.
+    - Free some more still-in-use memory at exit, to make hunting for
+      memory leaks easier. Resolves bug 7029.
+    - When a Tor client gets a "truncated" relay cell, the first byte of
+      its payload specifies why the circuit was truncated. We were
+      ignoring this 'reason' byte when tearing down the circuit, resulting
+      in the controller not being told why the circuit closed. Now we
+      pass the reason from the truncated cell to the controller. Bugfix
+      on 0.1.2.3-alpha; fixes bug 7039.
+    - Downgrade "Failed to hand off onionskin" messages to "debug"
+      severity, since they're typically redundant with the "Your computer
+      is too slow" messages. Fixes bug 7038; bugfix on 0.2.2.16-alpha.
+    - Make clients running with IPv6 bridges connect over IPv6 again,
+      even without setting new config options ClientUseIPv6 and
+      ClientPreferIPv6ORPort. Fixes bug 6757; bugfix on 0.2.4.1-alpha.
+    - Use square brackets around IPv6 addresses in numerous places
+      that needed them, including log messages, HTTPS CONNECT proxy
+      requests, TransportProxy statefile entries, and pluggable transport
+      extra-info lines. Fixes bug 7011; patch by David Fifield.
+
+  o Code refactoring and cleanup:
+    - Source files taken from other packages now reside in src/ext;
+      previously they were scattered around the rest of Tor.
+    - Avoid use of reserved identifiers in our C code. The C standard
+      doesn't like us declaring anything that starts with an
+      underscore, so let's knock it off before we get in trouble. Fix
+      for bug 1031; bugfix on the first Tor commit.
+
+
 Changes in version 0.2.3.23-rc - 2012-10-20
   Tor 0.2.3.23-rc adds a new v3 directory authority, fixes a privacy
   vulnerability introduced by a change in OpenSSL, and fixes a variety

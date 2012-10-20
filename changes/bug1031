@@ -1,5 +1,0 @@
-  o Code cleanup:
-    - Avoid use of reserved identifiers in our C code. The C standard
-      doesn't like us declaring anything that starts with an
-      underscore, so let's knock it off before we get in trouble. Fix
-      for bug 1031; bugfix on the first Tor commit.

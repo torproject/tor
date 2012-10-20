@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-
-    - Don't serve or accept v2 hidden service descriptors over a
-      relay's DirPort. It's never correct to do so, and disabling it
-      might make it more annoying to exploit any bugs that turn up in the
-      descriptor-parsing code. Fixes bug 7149.
-

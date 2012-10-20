@@ -1,5 +1,0 @@
-  o Minor bugfixes (log messages):
-    - Downgrade "Failed to hand off onionskin" messages to "debug"
-      severity, since they're typically redundant with the "Your computer
-      is too slow" messages. Fixes bug 7038; bugfix on 0.2.2.16-alpha.
-

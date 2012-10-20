@@ -1,6 +1,0 @@
-  o Infrastructure features:
-    - Introduce new circuitmux_t storing the queue of circuits for a channel;
-      this encapsulates and abstracts the queue logic and circuit selection
-      policy, and allows the latter to be overridden easily by switching out
-      a policy object.  The existing EWMA behavior is now implemented as a
-      circuitmux_policy_t.  This fixes bug 6816.

@@ -1,8 +1,0 @@
-  o Minor features:
-
-    - Warn users who run hidden services on a Tor client with
-      UseEntryGuards disabled that their hidden services will be
-      vulnerable to http://freehaven.net/anonbib/#hs-attack06 (the
-      attack which motivated Tor to support entry guards in the first
-      place).  Fixes bug 6889.
-
