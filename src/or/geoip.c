@@ -62,14 +62,14 @@ static char geoip6_digest[DIGEST_LEN];
 country_t
 geoip_get_country(const char *country)
 {
-  void *_idxplus1;
+  void *idxplus1_;
   intptr_t idx;
 
-  _idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
-  if (!_idxplus1)
+  idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
+  if (!idxplus1_)
     return -1;
 
-  idx = ((uintptr_t)_idxplus1)-1;
+  idx = ((uintptr_t)idxplus1_)-1;
   return (country_t)idx;
 }
 
@@ -81,14 +81,14 @@ geoip_ipv4_add_entry(uint32_t low, uint32_t high, const char *country)
 {
   intptr_t idx;
   geoip_ipv4_entry_t *ent;
-  void *_idxplus1;
+  void *idxplus1_;
 
   if (high < low)
     return;
 
-  _idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
+  idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
 
-  if (!_idxplus1) {
+  if (!idxplus1_) {
     geoip_country_t *c = tor_malloc_zero(sizeof(geoip_country_t));
     strlcpy(c->countrycode, country, sizeof(c->countrycode));
     tor_strlower(c->countrycode);
@@ -96,7 +96,7 @@ geoip_ipv4_add_entry(uint32_t low, uint32_t high, const char *country)
     idx = smartlist_len(geoip_countries) - 1;
     strmap_set_lc(country_idxplus1_by_lc_code, country, (void*)(idx+1));
   } else {
-    idx = ((uintptr_t)_idxplus1)-1;
+    idx = ((uintptr_t)idxplus1_)-1;
   }
   {
     geoip_country_t *c = smartlist_get(geoip_countries, idx);
@@ -177,14 +177,14 @@ geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high,
 {
   intptr_t idx;
   geoip_ipv6_entry_t *ent;
-  void *_idxplus1;
+  void *idxplus1_;
 
   if (memcmp(&high, &low, sizeof(struct in6_addr)) < 0)
     return;
 
-  _idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
+  idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
 
-  if (!_idxplus1) {
+  if (!idxplus1_) {
     geoip_country_t *c = tor_malloc_zero(sizeof(geoip_country_t));
     strlcpy(c->countrycode, country, sizeof(c->countrycode));
     tor_strlower(c->countrycode);
@@ -192,7 +192,7 @@ geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high,
     idx = smartlist_len(geoip_countries) - 1;
     strmap_set_lc(country_idxplus1_by_lc_code, country, (void*)(idx+1));
   } else {
-    idx = ((uintptr_t)_idxplus1)-1;
+    idx = ((uintptr_t)idxplus1_)-1;
   }
   {
     geoip_country_t *c = smartlist_get(geoip_countries, idx);
