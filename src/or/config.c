@@ -482,6 +482,8 @@ static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
 static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
+static void config_maybe_load_geoip_files_(const or_options_t *options,
+                                           const or_options_t *old_options);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -1512,44 +1514,7 @@ options_act(const or_options_t *old_options)
       connection_or_update_token_buckets(get_connection_array(), options);
   }
 
-  /* Maybe load IPv4 geoip file */
-  if (options->GeoIPFile &&
-      ((!old_options || !opt_streq(old_options->GeoIPFile, options->GeoIPFile))
-       || !geoip_is_loaded(AF_INET))) {
-    /* XXXX Don't use this "<default>" junk; make our filename options
-     * understand prefixes somehow. -NM */
-    /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
-    char *actual_fname = tor_strdup(options->GeoIPFile);
-#ifdef _WIN32
-    if (!strcmp(actual_fname, "<default>")) {
-      const char *conf_root = get_windows_conf_root();
-      tor_free(actual_fname);
-      tor_asprintf(&actual_fname, "%s\\geoip", conf_root);
-    }
-#endif
-    geoip_load_file(AF_INET, actual_fname, options);
-    tor_free(actual_fname);
-  }
-  /* And maybe load IPv6 geoip file */
-  if (options->GeoIPv6File &&
-      ((!old_options || !opt_streq(old_options->GeoIPv6File,
-                                   options->GeoIPv6File))
-       || !geoip_is_loaded(AF_INET6))) {
-    /* XXXX Don't use this "<default>" junk; make our filename options
-     * understand prefixes somehow.  See also comment for GeoIPFile. */
-    /* XXXX024 Reload GeoIPV6File on SIGHUP.  See also comment for
-     * GeoIPFile. */
-    char *actual_fname = tor_strdup(options->GeoIPv6File);
-#ifdef _WIN32
-    if (!strcmp(actual_fname, "<default>")) {
-      const char *conf_root = get_windows_conf_root();
-      tor_free(actual_fname);
-      tor_asprintf(&actual_fname, "%s\\geoip6", conf_root);
-    }
-#endif
-    geoip_load_file(AF_INET6, actual_fname, options);
-    tor_free(actual_fname);
-  }
+  config_maybe_load_geoip_files_(options, old_options);
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
@@ -5599,3 +5564,38 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
   return 0;
 }
 
+static void
+config_load_geoip_file_(sa_family_t family,
+                        char *fname, /* will be freed */
+                        const char *default_fname)
+{
+  (void)default_fname;
+  /* XXXX Don't use this "<default>" junk; make our filename options
+   * understand prefixes somehow. -NM */
+  /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
+#ifdef _WIN32
+    if (!strcmp(fname, "<default>")) {
+      const char *conf_root = get_windows_conf_root();
+      tor_free(fname);
+      tor_asprintf(&fname, "%s\\%s", conf_root, default_fname);
+    }
+#endif
+    geoip_load_file(family, fname);
+    tor_free(fname);
+}
+
+static void
+config_maybe_load_geoip_files_(const or_options_t *options,
+                               const or_options_t *old_options)
+{
+  if (options->GeoIPFile &&
+      ((!old_options || !opt_streq(old_options->GeoIPFile,
+                                   options->GeoIPFile))
+       || !geoip_is_loaded(AF_INET)))
+    config_load_geoip_file_(AF_INET, tor_strdup(options->GeoIPFile), "geoip");
+  if (options->GeoIPv6File &&
+      ((!old_options || !opt_streq(old_options->GeoIPv6File,
+                                   options->GeoIPv6File))
+       || !geoip_is_loaded(AF_INET6)))
+    config_load_geoip_file_(AF_INET6, tor_strdup(options->GeoIPv6File), "geoip6");
+}

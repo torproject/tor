@@ -326,11 +326,11 @@ init_geoip_countries(void)
  * with '#' (comments).
  */
 int
-geoip_load_file(sa_family_t family, const char *filename,
-                const or_options_t *options)
+geoip_load_file(sa_family_t family, const char *filename)
 {
   FILE *f;
   const char *msg = "";
+  const or_options_t *options = get_options();
   int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
   crypto_digest_t *geoip_digest_env = NULL;
 
