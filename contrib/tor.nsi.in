@@ -207,7 +207,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${OpenSSL} "OpenSSL libraries required by Tor."
   !insertmacro MUI_DESCRIPTION_TEXT ${Docs} "Documentation about Tor."
   !insertmacro MUI_DESCRIPTION_TEXT ${ShortCuts} "Shortcuts to easily start Tor"
-  !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Tor and it's documentation from the Start Menu"
+  !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Tor and its documentation from the Start Menu"
   !insertmacro MUI_DESCRIPTION_TEXT ${Desktop} "A shortcut to start Tor from the desktop"
   !insertmacro MUI_DESCRIPTION_TEXT ${Startup} "Launches Tor automatically at startup in a minimized window"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

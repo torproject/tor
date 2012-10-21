@@ -165,7 +165,7 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${Polipo} "The core executable and config files needed for Polipo to run."
   !insertmacro MUI_DESCRIPTION_TEXT ${ShortCuts} "Shortcuts to easily start Polipo"
-  !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Polipo and it's documentation from the Start Menu"
+  !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Polipo and its documentation from the Start Menu"
   !insertmacro MUI_DESCRIPTION_TEXT ${Desktop} "A shortcut to start Polipo from the desktop"
   !insertmacro MUI_DESCRIPTION_TEXT ${Startup} "Launches Polipo automatically at startup in a minimized window"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
