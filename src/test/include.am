@@ -14,6 +14,7 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 src_test_test_SOURCES = \
 	src/test/test.c \
 	src/test/test_addr.c \
+	src/test/test_cell_formats.c \
 	src/test/test_containers.c \
 	src/test/test_crypto.c \
 	src/test/test_data.c \

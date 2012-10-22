@@ -8,6 +8,7 @@
  * \file connection_edge.c
  * \brief Handle edge streams.
  **/
+#define CONNECTION_EDGE_PRIVATE
 
 #include "or.h"
 #include "addressmap.h"
@@ -2059,6 +2060,64 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
   return;
 }
 
+/* DOCDOC */
+/* static */ int
+begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
+                 uint8_t *end_reason_out)
+{
+  relay_header_t rh;
+  const uint8_t *body, *nul;
+
+  memset(bcell, 0, sizeof(*bcell));
+  *end_reason_out = END_STREAM_REASON_MISC;
+
+  relay_header_unpack(&rh, cell->payload);
+  if (rh.length > RELAY_PAYLOAD_SIZE) {
+    return -2; /*XXXX why not TORPROTOL? */
+  }
+
+  bcell->stream_id = rh.stream_id;
+
+  if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    bcell->is_begindir = 1;
+    return 0;
+  } else if (rh.command != RELAY_COMMAND_BEGIN) {
+    log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
+    *end_reason_out = END_STREAM_REASON_INTERNAL;
+    return -1;
+  }
+
+  body = cell->payload + RELAY_HEADER_SIZE;
+  nul = memchr(body, 0, rh.length);
+  if (! nul) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Relay begin cell has no \\0. Closing.");
+    *end_reason_out = END_STREAM_REASON_TORPROTOCOL;
+    return -1;
+  }
+
+  if (tor_addr_port_split(LOG_PROTOCOL_WARN,
+                          (char*)(body),
+                          &bcell->address,&bcell->port)<0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Unable to parse addr:port in relay begin cell. Closing.");
+    *end_reason_out = END_STREAM_REASON_TORPROTOCOL;
+    return -1;
+  }
+  if (bcell->port == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Missing port in relay begin cell. Closing.");
+    tor_free(bcell->address);
+    *end_reason_out = END_STREAM_REASON_TORPROTOCOL;
+    return -1;
+  }
+  if (body + rh.length >= nul + 4)
+    bcell->flags = ntohl(get_uint32(nul+1));
+
+  return 0;
+}
+
+
 /** A relay 'begin' or 'begin_dir' cell has arrived, and either we are
  * an exit hop for the circuit, or we are the origin and it is a
  * rendezvous begin.
@@ -2082,10 +2141,13 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 {
   edge_connection_t *n_stream;
   relay_header_t rh;
-  char *address=NULL;
-  uint16_t port;
+  char *address = NULL;
+  uint16_t port = 0;
   or_circuit_t *or_circ = NULL;
   const or_options_t *options = get_options();
+  begin_cell_t bcell;
+  int r;
+  uint8_t end_reason=0;
 
   assert_circuit_ok(circ);
   if (!CIRCUIT_IS_ORIGIN(circ))
@@ -2109,31 +2171,20 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return 0;
   }
 
-  if (rh.command == RELAY_COMMAND_BEGIN) {
-    if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Relay begin cell has no \\0. Closing.");
-      relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_TORPROTOCOL, NULL);
-      return 0;
-    }
-    if (tor_addr_port_split(LOG_PROTOCOL_WARN,
-                            (char*)(cell->payload+RELAY_HEADER_SIZE),
-                            &address,&port)<0) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Unable to parse addr:port in relay begin cell. Closing.");
-      relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_TORPROTOCOL, NULL);
-      return 0;
-    }
-    if (port==0) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Missing port in relay begin cell. Closing.");
-      relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_TORPROTOCOL, NULL);
-      tor_free(address);
-      return 0;
-    }
+  r = begin_cell_parse(cell, &bcell, &end_reason);
+  if (r < -1) {
+    return -1;
+  } else if (r == -1) {
+    tor_free(bcell.address);
+    relay_send_end_cell_from_edge(rh.stream_id, circ, end_reason, NULL);
+    return 0;
+  }
+
+  if (! bcell.is_begindir) {
+    /* Steal reference */
+    address = bcell.address;
+    port = bcell.port;
+
     if (or_circ && or_circ->p_chan) {
       if (!options->AllowSingleHopExits &&
            (or_circ->is_first_hop ||

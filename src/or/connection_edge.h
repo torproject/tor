@@ -91,5 +91,20 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
                                              int dry_run);
 void circuit_clear_isolation(origin_circuit_t *circ);
 
+#ifdef CONNECTION_EDGE_PRIVATE
+/*DOCDOC*/
+typedef struct begin_cell_t {
+  char *address;
+  uint32_t flags;
+  uint16_t port;
+  uint16_t stream_id;
+  unsigned is_begindir : 1;
+} begin_cell_t;
+
+int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
+                     uint8_t *end_reason_out);
+#endif
+
+
 #endif
 
