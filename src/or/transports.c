@@ -614,8 +614,15 @@ configure_proxy(managed_proxy_t *mp)
     tor_get_lines_from_handle(tor_process_get_stdout_pipe(mp->process_handle),
                               &stream_status);
   if (!proxy_output) { /* failed to get input from proxy */
-    if (stream_status != IO_STREAM_EAGAIN)
+    if (stream_status != IO_STREAM_EAGAIN) { /* bad stream status! */
       mp->conf_state = PT_PROTO_BROKEN;
+      log_warn(LD_GENERAL, "The communication stream of managed proxy '%s' "
+               "is '%s'. Most probably the managed proxy stopped running. "
+               "This might be a bug of the managed proxy, a bug of Tor, or "
+               "a misconfiguration. Please enable logging on your managed "
+               "proxy and check the logs for errors.",
+               mp->argv[0], stream_status_to_string(stream_status));
+    }
 
     goto done;
   }
