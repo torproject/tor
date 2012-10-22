@@ -13,13 +13,16 @@
  **/
 
 #include "or.h"
-#include "circuitbuild.c"
+#include "circuitbuild.h"
+#include "circuitstats.h"
 #include "config.h"
+#include "confparse.h"
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"
 #include "directory.h"
 #include "entrynodes.h"
+#include "main.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "router.h"

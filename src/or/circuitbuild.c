@@ -993,7 +993,8 @@ pathbias_get_notice_rate(const or_options_t *options)
                                    DFLT_PATH_BIAS_NOTICE_PCT, 0, 100)/100.0;
 }
 
-static double
+/* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+double
 pathbias_get_disable_rate(const or_options_t *options)
 {
 // XXX: This needs tuning based on use + experimentation before we set it
@@ -2152,7 +2153,8 @@ choose_good_middle_server(uint8_t purpose,
  * If <b>state</b> is NULL, we're choosing a router to serve as an entry
  * guard, not for any particular circuit.
  */
-static const node_t *
+/* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+const node_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 {
   const node_t *choice;

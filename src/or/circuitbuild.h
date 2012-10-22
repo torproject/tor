@@ -51,5 +51,9 @@ void extend_info_free(extend_info_t *info);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
+const node_t *choose_good_entry_server(uint8_t purpose,
+                                       cpath_build_state_t *state);
+double pathbias_get_disable_rate(const or_options_t *options);
+
 #endif
 
