@@ -1014,6 +1014,7 @@ test_policy_summary_helper(const char *policy_str,
   config_line_t line;
   smartlist_t *policy = smartlist_new();
   char *summary = NULL;
+  const char *summary_after;
   int r;
   short_policy_t *short_policy = NULL;
 
@@ -1030,8 +1031,11 @@ test_policy_summary_helper(const char *policy_str,
 
   short_policy = parse_short_policy(summary);
   tt_assert(short_policy);
+  summary_after = write_short_policy(short_policy);
+  test_streq(summary, summary_after);
 
  done:
+  tor_free(summary_after);
   tor_free(summary);
   if (policy)
     addr_policy_list_free(policy);

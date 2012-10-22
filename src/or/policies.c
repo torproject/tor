@@ -1413,6 +1413,33 @@ parse_short_policy(const char *summary)
   return result;
 }
 
+/** Write <b>policy</b> back out into a string. Used only for unit tests
+ * currently. */
+const char *
+write_short_policy(const short_policy_t *policy)
+{
+  int i;
+  char *answer;
+  smartlist_t *sl = smartlist_new();
+
+  smartlist_add_asprintf(sl, "%s", policy->is_accept ? "accept " : "reject ");
+
+  for(i=0; i < policy->n_entries; i++) {
+    const short_policy_entry_t *e = &policy->entries[i];
+    if (e->min_port == e->max_port) {
+      smartlist_add_asprintf(sl, "%d", e->min_port);
+    } else {
+      smartlist_add_asprintf(sl, "%d-%d", e->min_port, e->max_port);
+    }
+    if (i < policy->n_entries-1)
+      smartlist_add(sl, tor_strdup(","));
+  }
+  answer = smartlist_join_strings(sl, "", 0, NULL);
+  SMARTLIST_FOREACH(sl, char *, a, tor_free(a));
+  smartlist_free(sl);
+  return answer;
+}
+
 /** Release all storage held in <b>policy</b>. */
 void
 short_policy_free(short_policy_t *policy)
