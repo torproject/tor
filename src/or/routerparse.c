@@ -11,7 +11,7 @@
 
 #include "or.h"
 #include "config.h"
-#include "circuitbuild.h"
+#include "circuitstats.h"
 #include "dirserv.h"
 #include "dirvote.h"
 #include "policies.h"

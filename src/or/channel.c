@@ -18,8 +18,10 @@
 #include "channeltls.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuitstats.h"
 #include "connection_or.h" /* For var_cell_free() */
 #include "circuitmux.h"
+#include "entrynodes.h"
 #include "geoip.h"
 #include "nodelist.h"
 #include "relay.h"

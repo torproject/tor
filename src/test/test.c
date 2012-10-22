@@ -32,7 +32,7 @@ const char tor_git_revision[] = "";
 #define CONFIG_PRIVATE
 #define GEOIP_PRIVATE
 #define ROUTER_PRIVATE
-#define CIRCUIT_PRIVATE
+#define CIRCUITSTATS_PRIVATE
 
 /*
  * Linux doesn't provide lround in math.h by default, but mac os does...
@@ -44,7 +44,7 @@ double fabs(double x);
 
 #include "or.h"
 #include "buffers.h"
-#include "circuitbuild.h"
+#include "circuitstats.h"
 #include "config.h"
 #include "connection_edge.h"
 #include "geoip.h"

@@ -5,9 +5,10 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
-#include "circuitbuild.h"
+#include "circuitstats.h"
 #include "config.h"
 #include "confparse.h"
+#include "entrynodes.h"
 #include "hibernate.h"
 #include "rephist.h"
 #include "router.h"

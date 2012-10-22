@@ -14,6 +14,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "circuitstats.h"
 #include "connection.h"
 #include "config.h"
 #include "connection_edge.h"
