@@ -16,6 +16,15 @@ compare_strs_(const void **a, const void **b)
   return strcmp(s1, s2);
 }
 
+/** Helper: return a tristate based on comparing the strings in <b>a</b> and
+ * *<b>b</b>. */
+static int
+compare_strs_for_bsearch_(const void *a, const void **b)
+{
+  const char *s1 = a, *s2 = *b;
+  return strcmp(s1, s2);
+}
+
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>, excluding a's first character, and ignoring case. */
 static int
@@ -204,6 +213,8 @@ test_container_smartlist_strings(void)
   /* Test bsearch_idx */
   {
     int f;
+    smartlist_t *tmp = NULL;
+
     test_eq(0, smartlist_bsearch_idx(sl," aaa",compare_without_first_ch_,&f));
     test_eq(f, 0);
     test_eq(0, smartlist_bsearch_idx(sl," and",compare_without_first_ch_,&f));
@@ -216,6 +227,31 @@ test_container_smartlist_strings(void)
     test_eq(f, 0);
     test_eq(7, smartlist_bsearch_idx(sl," zzzz",compare_without_first_ch_,&f));
     test_eq(f, 0);
+
+    /* Test trivial cases for list of length 0 or 1 */
+    tmp = smartlist_new();
+    test_eq(0, smartlist_bsearch_idx(tmp, "foo",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 0);
+    smartlist_insert(tmp, 0, (void *)("bar"));
+    test_eq(1, smartlist_bsearch_idx(tmp, "foo",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 0);
+    test_eq(0, smartlist_bsearch_idx(tmp, "aaa",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 0);
+    test_eq(0, smartlist_bsearch_idx(tmp, "bar",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 1);
+    /* ... and one for length 2 */
+    smartlist_insert(tmp, 1, (void *)("foo"));
+    test_eq(1, smartlist_bsearch_idx(tmp, "foo",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 1);
+    test_eq(2, smartlist_bsearch_idx(tmp, "goo",
+                                     compare_strs_for_bsearch_, &f));
+    test_eq(f, 0);
+    smartlist_free(tmp);
   }
 
   /* Test reverse() and pop_last() */
