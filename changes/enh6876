@@ -1,0 +1,3 @@
+  o Minor features:
+    - Option OutboundBindAddress can be specified multiple times and
+      accepts IPv6 addresses. Resolves ticket 6876.
