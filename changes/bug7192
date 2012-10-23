@@ -1,0 +1,10 @@
+  o Major bugfixes:
+    - When parsing exit policy summaries from microdescriptors, we had
+      previously been ignoring the last character in each one, so that
+      "accept 80,443,8080" would be treated by clients as indicating a
+      node that allows access to ports 80, 443, and 808. That would lead
+      to clients attempting connections that could never work, and
+      ignoring exit nodes that would support their connections. Now clients
+      parse these exit policy summaries correctly. Fixes bug 7192;
+      bugfix on 0.2.3.1-alpha.
+
