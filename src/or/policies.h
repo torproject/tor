@@ -61,6 +61,7 @@ void policies_free_all(void);
 char *policy_summarize(smartlist_t *policy);
 
 short_policy_t *parse_short_policy(const char *summary);
+char *write_short_policy(const short_policy_t *policy);
 void short_policy_free(short_policy_t *policy);
 int short_policy_is_reject_star(const short_policy_t *policy);
 addr_policy_result_t compare_tor_addr_to_short_policy(

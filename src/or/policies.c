@@ -1347,8 +1347,10 @@ parse_short_policy(const char *summary)
     unsigned low, high;
     char dummy;
     char ent_buf[32];
+    size_t len;
 
     next = comma ? comma+1 : strchr(summary, '\0');
+    len = comma ? (size_t)(comma - summary) : strlen(summary);
 
     if (n_entries == MAX_EXITPOLICY_SUMMARY_LEN) {
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Impossibly long policy summary %s",
@@ -1356,20 +1358,22 @@ parse_short_policy(const char *summary)
       return NULL;
     }
 
-    if (! TOR_ISDIGIT(*summary) || next-summary > (int)(sizeof(ent_buf)-1)) {
+    if (! TOR_ISDIGIT(*summary) || len > (sizeof(ent_buf)-1)) {
       /* unrecognized entry format. skip it. */
       continue;
     }
-    if (next-summary < 2) {
+    if (len < 1) {
       /* empty; skip it. */
+      /* XXX This happens to be unreachable, since if len==0, then *summary is
+       * ',' or '\0', and the TOR_ISDIGIT test above would have failed. */
       continue;
     }
 
-    memcpy(ent_buf, summary, next-summary-1);
-    ent_buf[next-summary-1] = '\0';
+    memcpy(ent_buf, summary, len);
+    ent_buf[len] = '\0';
 
     if (tor_sscanf(ent_buf, "%u-%u%c", &low, &high, &dummy) == 2) {
-      if (low<1 || low>65535 || high<1 || high>65535) {
+      if (low<1 || low>65535 || high<1 || high>65535 || low>high) {
         log_fn(LOG_PROTOCOL_WARN, LD_DIR,
                "Found bad entry in policy summary %s", escaped(orig_summary));
         return NULL;
@@ -1410,6 +1414,33 @@ parse_short_policy(const char *summary)
   result->n_entries = n_entries;
   memcpy(result->entries, entries, sizeof(short_policy_entry_t)*n_entries);
   return result;
+}
+
+/** Write <b>policy</b> back out into a string. Used only for unit tests
+ * currently. */
+char *
+write_short_policy(const short_policy_t *policy)
+{
+  int i;
+  char *answer;
+  smartlist_t *sl = smartlist_new();
+
+  smartlist_add_asprintf(sl, "%s", policy->is_accept ? "accept " : "reject ");
+
+  for (i=0; i < policy->n_entries; i++) {
+    const short_policy_entry_t *e = &policy->entries[i];
+    if (e->min_port == e->max_port) {
+      smartlist_add_asprintf(sl, "%d", e->min_port);
+    } else {
+      smartlist_add_asprintf(sl, "%d-%d", e->min_port, e->max_port);
+    }
+    if (i < policy->n_entries-1)
+      smartlist_add(sl, tor_strdup(","));
+  }
+  answer = smartlist_join_strings(sl, "", 0, NULL);
+  SMARTLIST_FOREACH(sl, char *, a, tor_free(a));
+  smartlist_free(sl);
+  return answer;
 }
 
 /** Release all storage held in <b>policy</b>. */

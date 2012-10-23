@@ -1004,6 +1004,28 @@ test_circuit_timeout(void)
   return;
 }
 
+/* Helper: assert that short_policy parses and writes back out as itself,
+   or as <b>expected</b> if that's provided. */
+static void
+test_short_policy_parse(const char *input,
+                        const char *expected)
+{
+  short_policy_t *short_policy = NULL;
+  char *out = NULL;
+
+  if (expected == NULL)
+    expected = input;
+
+  short_policy = parse_short_policy(input);
+  tt_assert(short_policy);
+  out = write_short_policy(short_policy);
+  tt_str_op(out, ==, expected);
+
+ done:
+  tor_free(out);
+  short_policy_free(short_policy);
+}
+
 /** Helper: Parse the exit policy string in <b>policy_str</b>, and make sure
  * that policies_summarize() produces the string <b>expected_summary</b> from
  * it. */
@@ -1014,6 +1036,7 @@ test_policy_summary_helper(const char *policy_str,
   config_line_t line;
   smartlist_t *policy = smartlist_new();
   char *summary = NULL;
+  char *summary_after = NULL;
   int r;
   short_policy_t *short_policy = NULL;
 
@@ -1030,8 +1053,11 @@ test_policy_summary_helper(const char *policy_str,
 
   short_policy = parse_short_policy(summary);
   tt_assert(short_policy);
+  summary_after = write_short_policy(short_policy);
+  test_streq(summary, summary_after);
 
  done:
+  tor_free(summary_after);
   tor_free(summary);
   if (policy)
     addr_policy_list_free(policy);
@@ -1226,6 +1252,46 @@ test_policies(void)
                              "reject *:7,"
                              "accept *:*",
                              "reject 1,3,5,7");
+
+  /* Short policies with unrecognized formats should get accepted. */
+  test_short_policy_parse("accept fred,2,3-5", "accept 2,3-5");
+  test_short_policy_parse("accept 2,fred,3", "accept 2,3");
+  test_short_policy_parse("accept 2,fred,3,bob", "accept 2,3");
+  test_short_policy_parse("accept 2,-3,500-600", "accept 2,500-600");
+  /* Short policies with nil entries are accepted too. */
+  test_short_policy_parse("accept 1,,3", "accept 1,3");
+  test_short_policy_parse("accept 100-200,,", "accept 100-200");
+  test_short_policy_parse("reject ,1-10,,,,30-40", "reject 1-10,30-40");
+
+  /* Try parsing various broken short policies */
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 200-199"));
+  tt_ptr_op(NULL, ==, parse_short_policy(""));
+  tt_ptr_op(NULL, ==, parse_short_policy("rejekt 1,2,3"));
+  tt_ptr_op(NULL, ==, parse_short_policy("reject "));
+  tt_ptr_op(NULL, ==, parse_short_policy("reject"));
+  tt_ptr_op(NULL, ==, parse_short_policy("rej"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3,100000"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3x,4"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3x,4"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 2-"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 2-x"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 1-,3"));
+  tt_ptr_op(NULL, ==, parse_short_policy("accept 1-,3"));
+  /* Test a too-long policy. */
+  {
+    int i;
+    char *policy = NULL;
+    smartlist_t *chunks = smartlist_new();
+    smartlist_add(chunks, tor_strdup("accept "));
+    for (i=1; i<10000; ++i)
+      smartlist_add_asprintf(chunks, "%d,", i);
+    smartlist_add(chunks, tor_strdup("20000"));
+    policy = smartlist_join_strings(chunks, "", 0, NULL);
+    SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
+    smartlist_free(chunks);
+    tt_ptr_op(NULL, ==, parse_short_policy(policy));/* shouldn't be accepted */
+    tor_free(policy); /* could leak. */
+  }
 
   /* truncation ports */
   sm = smartlist_new();
