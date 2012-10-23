@@ -572,7 +572,28 @@ smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
                       int (*compare)(const void *key, const void **member),
                       int *found_out)
 {
-  int hi = smartlist_len(sl) - 1, lo = 0, cmp, mid;
+  const int len = smartlist_len(sl);
+  int hi, lo, cmp, mid;
+
+  if (len == 0) {
+    *found_out = 0;
+    return 0;
+  } else if (len == 1) {
+    cmp = compare(key, (const void **) &sl->list[0]);
+    if (cmp == 0) {
+      *found_out = 1;
+      return 0;
+    } else if (cmp < 0) {
+      *found_out = 0;
+      return 0;
+    } else {
+      *found_out = 0;
+      return 1;
+    }
+  }
+
+  hi = smartlist_len(sl) - 1;
+  lo = 0;
 
   while (lo <= hi) {
     mid = (lo + hi) / 2;
