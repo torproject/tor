@@ -52,6 +52,8 @@ Changes in version 0.2.4.4-alpha - 2012-10-20
       place). Resolves ticket 6889.
     - Tor now builds correctly on Bitrig, an OpenBSD fork. Patch from
       dhill. Resolves ticket 6982.
+    - Option OutboundBindAddress can be specified multiple times and
+      accepts IPv6 addresses. Resolves ticket 6876.
 
   o Minor bugfixes (also in 0.2.3.23-rc):
     - Don't serve or accept v2 hidden service descriptors over a
