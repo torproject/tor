@@ -1,0 +1,3 @@
+ o Bugfixes
+   - The smartlist_bsearch_idx() function was broken for lists of length zero
+     or one; fix it.  This fixes bug7191.
