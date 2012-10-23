@@ -1461,15 +1461,14 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
   int i;
   int found_match = 0;
   int accept;
-  (void)addr;
 
   tor_assert(port != 0);
 
   if (addr && tor_addr_is_null(addr))
     addr = NULL; /* Unspec means 'no address at all,' in this context. */
 
-  if (addr && (tor_addr_is_internal(addr, 0) ||
-               tor_addr_is_loopback(addr)))
+  if (addr && get_options()->ClientRejectInternalAddresses &&
+      (tor_addr_is_internal(addr, 0) || tor_addr_is_loopback(addr)))
     return ADDR_POLICY_REJECTED;
 
   for (i=0; i < policy->n_entries; ++i) {
