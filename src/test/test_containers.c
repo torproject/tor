@@ -229,7 +229,7 @@ test_container_smartlist_strings(void)
     test_eq(f, 0);
 
     /* Test trivial cases for list of length 0 or 1 */
-    tmp = smartlist_create();
+    tmp = smartlist_new();
     test_eq(0, smartlist_bsearch_idx(tmp, "foo",
                                      compare_strs_for_bsearch_, &f));
     test_eq(f, 0);
