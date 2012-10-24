@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Fix a denial of service attack by which any directory authority
-      could crash all the others, or by which a single v2 directory
-      authority could crash everybody downloading v2 directory
-      information. Fixes bug 7191; bugfix on 0.2.0.10-alpha. 
