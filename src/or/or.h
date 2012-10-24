@@ -1730,7 +1730,15 @@ typedef struct addr_policy_t {
   maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
                  * first <b>maskbits</b> bits of <b>a</b> match
                  * <b>addr</b>. */
-  tor_addr_t addr; /**< Base address to accept or reject. */
+  /** Base address to accept or reject.
+   *
+   * Note that wildcards are treated
+   * differntly depending on address family. An AF_UNSPEC address means
+   * "All addresses, IPv4 or IPv6." An AF_INET address with maskbits==0 means
+   * "All IPv4 addresses" and an AF_INET6 address with maskbits == 0 means
+   * "All IPv6 addresses".
+  **/
+  tor_addr_t addr;
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 } addr_policy_t;

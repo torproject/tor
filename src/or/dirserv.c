@@ -2237,7 +2237,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     }
 
     if (desc) {
-      summary = policy_summarize(desc->exit_policy);
+      summary = policy_summarize(desc->exit_policy, AF_INET);
       r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
       if (r<0) {
         log_warn(LD_BUG, "Not enough space in buffer.");

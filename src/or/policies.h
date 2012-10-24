@@ -31,6 +31,7 @@ int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
 int validate_addr_policies(const or_options_t *options, char **msg);
 void policy_expand_private(smartlist_t **policy);
+void policy_expand_unspec(smartlist_t **policy);
 int policies_parse_from_options(const or_options_t *options);
 
 addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
@@ -58,7 +59,7 @@ void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
 
-char *policy_summarize(smartlist_t *policy);
+char *policy_summarize(smartlist_t *policy, sa_family_t family);
 
 short_policy_t *parse_short_policy(const char *summary);
 char *write_short_policy(const short_policy_t *policy);

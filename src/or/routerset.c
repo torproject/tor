@@ -148,6 +148,7 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
         SMARTLIST_DEL_CURRENT(list, nick);
       }
   } SMARTLIST_FOREACH_END(nick);
+  policy_expand_unspec(&target->policies);
   smartlist_add_all(target->list, list);
   smartlist_free(list);
   if (added_countries)

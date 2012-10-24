@@ -535,7 +535,8 @@ static token_rule_t microdesc_token_table[] = {
 
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
-static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
+static addr_policy_t *router_parse_addr_policy(directory_token_t *tok,
+                                               unsigned fmt_flags);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
 static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
@@ -3633,6 +3634,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
 /** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.
+ *
+ * The addr_policy_t returned by this function can have its address set to
+ * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
+ * of AF_INET and AF_INET6 items.
  */
 addr_policy_t *
 router_parse_addr_policy_item_from_string(const char *s, int assume_action)
@@ -3672,7 +3677,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
     goto err;
   }
 
-  r = router_parse_addr_policy(tok);
+  r = router_parse_addr_policy(tok, TAPMP_EXTENDED_STAR);
   goto done;
  err:
   r = NULL;
@@ -3691,7 +3696,7 @@ static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
   addr_policy_t *newe;
-  newe = router_parse_addr_policy(tok);
+  newe = router_parse_addr_policy(tok, 0);
   if (!newe)
     return -1;
   if (! router->exit_policy)
@@ -3716,7 +3721,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 /** Given a K_ACCEPT or K_REJECT token and a router, create and return
  * a new exit_policy_t corresponding to the token. */
 static addr_policy_t *
-router_parse_addr_policy(directory_token_t *tok)
+router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 {
   addr_policy_t newe;
   char *arg;
@@ -3738,7 +3743,7 @@ router_parse_addr_policy(directory_token_t *tok)
   else
     newe.policy_type = ADDR_POLICY_ACCEPT;
 
-  if (tor_addr_parse_mask_ports(arg, 0, &newe.addr, &newe.maskbits,
+  if (tor_addr_parse_mask_ports(arg, fmt_flags, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
     log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
     return NULL;

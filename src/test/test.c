@@ -1046,7 +1046,7 @@ test_policy_summary_helper(const char *policy_str,
 
   r = policies_parse_exit_policy(&line, &policy, 0, NULL, 1);
   test_eq(r, 0);
-  summary = policy_summarize(policy);
+  summary = policy_summarize(policy, AF_INET);
 
   test_assert(summary != NULL);
   test_streq(summary, expected_summary);
@@ -1192,7 +1192,7 @@ test_policies(void)
   test_assert(policy);
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
-  test_eq(smartlist_len(policy), 2);
+  test_eq(smartlist_len(policy), 4);
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */

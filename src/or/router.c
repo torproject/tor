@@ -2001,7 +2001,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
-  addr_policy_t *tmpe;
   char *family_line;
   char *extra_or_address = NULL;
   const or_options_t *options = get_options();
@@ -2130,11 +2129,12 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
     strlcat(s+written, "reject *:*\n", maxlen-written);
     written += strlen("reject *:*\n");
-    tmpe = NULL;
   } else if (router->exit_policy) {
     int i;
     for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
-      tmpe = smartlist_get(router->exit_policy, i);
+      addr_policy_t *tmpe = smartlist_get(router->exit_policy, i);
+      if (tor_addr_family(&tmpe->addr) == AF_INET6)
+        continue; /* Don't include IPv6 parts of address policy */
       result = policy_write_item(s+written, maxlen-written, tmpe, 1);
       if (result < 0) {
         log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");

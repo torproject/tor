@@ -3552,7 +3552,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
     goto done;
-  summary = policy_summarize(ri->exit_policy);
+  summary = policy_summarize(ri->exit_policy, AF_INET);
   if (ri->declared_family)
     family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
 
