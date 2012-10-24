@@ -1280,7 +1280,8 @@ find_single_ipv6_orport(const smartlist_t *list,
     uint16_t port_min, port_max;
     tor_assert(t->n_args >= 1);
     /* XXXX Prop186 the full spec allows much more than this. */
-    if (tor_addr_parse_mask_ports(t->args[0], &a, &bits, &port_min,
+    if (tor_addr_parse_mask_ports(t->args[0], 0,
+                                  &a, &bits, &port_min,
                                   &port_max) == AF_INET6 &&
         bits == 128 &&
         port_min == port_max) {
@@ -3737,7 +3738,7 @@ router_parse_addr_policy(directory_token_t *tok)
   else
     newe.policy_type = ADDR_POLICY_ACCEPT;
 
-  if (tor_addr_parse_mask_ports(arg, &newe.addr, &newe.maskbits,
+  if (tor_addr_parse_mask_ports(arg, 0, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
     log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
     return NULL;

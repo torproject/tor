@@ -87,7 +87,8 @@ policy_expand_private(smartlist_t **policy)
        memcpy(&newpolicy, p, sizeof(addr_policy_t));
        newpolicy.is_private = 0;
        newpolicy.is_canonical = 0;
-       if (tor_addr_parse_mask_ports(private_nets[i], &newpolicy.addr,
+       if (tor_addr_parse_mask_ports(private_nets[i], 0,
+                               &newpolicy.addr,
                                &newpolicy.maskbits, &port_min, &port_max)<0) {
          tor_assert(0);
        }
@@ -1192,8 +1193,8 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
      for (i = 0; private_nets[i]; ++i) {
        tor_addr_t addr;
        maskbits_t maskbits;
-       if (tor_addr_parse_mask_ports(private_nets[i], &addr,
-                                  &maskbits, NULL, NULL)<0) {
+       if (tor_addr_parse_mask_ports(private_nets[i], 0, &addr,
+                                     &maskbits, NULL, NULL)<0) {
          tor_assert(0);
        }
        if (tor_addr_compare(&p->addr, &addr, CMP_EXACT) == 0 &&

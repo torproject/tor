@@ -183,7 +183,8 @@ int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 
 int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
-int tor_addr_parse_mask_ports(const char *s,
+#define TAPMP_EXTENDED_STAR 1
+int tor_addr_parse_mask_ports(const char *s, unsigned flags,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
 const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,

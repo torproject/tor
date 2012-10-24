@@ -159,7 +159,8 @@ test_addr_basic(void)
  * as <b>pt1..pt2</b>. */
 #define test_addr_mask_ports_parse(xx, f, ip1, ip2, ip3, ip4, mm, pt1, pt2) \
   STMT_BEGIN                                                                \
-    test_eq(tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2), f);  \
+    test_eq(tor_addr_parse_mask_ports(xx, 0, &t1, &mask, &port1, &port2),   \
+            f);                                                             \
     p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));        \
     test_eq(htonl(ip1), tor_addr_to_in6_addr32(&t1)[0]);            \
     test_eq(htonl(ip2), tor_addr_to_in6_addr32(&t1)[1]);            \
@@ -401,11 +402,11 @@ test_addr_ip6_helpers(void)
   test_addr_compare("0::2:2:1", <, "0::ffff:0.3.2.1");
   test_addr_compare("0::ffff:0.3.2.1", >, "0::0:0:0");
   test_addr_compare("0::ffff:5.2.2.1", <, "::ffff:6.0.0.0"); /* XXXX wrong. */
-  tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", &t1, NULL, NULL, NULL);
-  tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", 0, &t1, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("2.3.4.5", 0, &t2, NULL, NULL, NULL);
   test_assert(tor_addr_compare(&t1, &t2, CMP_SEMANTIC) == 0);
-  tor_addr_parse_mask_ports("[::ffff:2.3.4.4]", &t1, NULL, NULL, NULL);
-  tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("[::ffff:2.3.4.4]", 0, &t1, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("2.3.4.5", 0, &t2, NULL, NULL, NULL);
   test_assert(tor_addr_compare(&t1, &t2, CMP_SEMANTIC) < 0);
 
   /* test compare_masked */
@@ -568,6 +569,7 @@ test_addr_ip6_helpers(void)
     test_streq(rbuf, addr_PTR);
   }
 
+  /* XXXX turn this into a separate function; it's not all IPv6. */
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,
                              0, 0, 0, 0x0000000f, 17, 47, 95);
@@ -581,27 +583,123 @@ test_addr_ip6_helpers(void)
                              0xabcd0002, 0, 0, 0x044a0000, 128, 2, 65000);
 
   test_streq(p1, "abcd:2::44a:0");
-  r=tor_addr_parse_mask_ports("[fefef::]/112", &t1, NULL, NULL, NULL);
+  /* Try some long addresses. */
+  r=tor_addr_parse_mask_ports("[ffff:1111:1111:1111:1111:1111:1111:1111]",
+                              0, &t1, NULL, NULL, NULL);
+  test_assert(r == AF_INET6);
+  r=tor_addr_parse_mask_ports("[ffff:1111:1111:1111:1111:1111:1111:11111]",
+                              0, &t1, NULL, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("efef::/112", &t1, NULL, NULL, NULL);
+  r=tor_addr_parse_mask_ports("[ffff:1111:1111:1111:1111:1111:1111:1111:1]",
+                              0, &t1, NULL, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f::]", &t1, NULL, NULL, NULL);
+  r=tor_addr_parse_mask_ports(
+         "[ffff:1111:1111:1111:1111:1111:1111:ffff:"
+         "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:"
+         "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:"
+         "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]",
+         0, &t1, NULL, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("[::f:f:f:f:f:f:f:f]", &t1, NULL, NULL, NULL);
+  /* Try some failing cases. */
+  r=tor_addr_parse_mask_ports("[fefef::]/112", 0, &t1, NULL, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f:f]", &t1, NULL, NULL, NULL);
+  r=tor_addr_parse_mask_ports("[fefe::/112", 0, &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[fefe::", 0, &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[fefe::X]", 0, &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("efef::/112", 0, &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f::]",0,&t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[::f:f:f:f:f:f:f:f]",0,&t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f:f]",0,&t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f::]/fred",0,&t1,&mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f::]/255.255.0.0",
+                              0,&t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  /* This one will get rejected because it isn't a pure prefix. */
+  r=tor_addr_parse_mask_ports("1.1.2.3/255.255.64.0",0,&t1, &mask,NULL,NULL);
   test_assert(r == -1);
   /* Test for V4-mapped address with mask < 96.  (arguably not valid) */
-  r=tor_addr_parse_mask_ports("[::ffff:1.1.2.2/33]", &t1, &mask, NULL, NULL);
+  r=tor_addr_parse_mask_ports("[::ffff:1.1.2.2/33]",0,&t1, &mask, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("1.1.2.2/33", &t1, &mask, NULL, NULL);
+  r=tor_addr_parse_mask_ports("1.1.2.2/33",0,&t1, &mask, NULL, NULL);
   test_assert(r == -1);
-  r=tor_addr_parse_mask_ports("1.1.2.2/31", &t1, &mask, NULL, NULL);
+  /* Try extended wildcard addresses with out TAPMP_EXTENDED_STAR*/
+  r=tor_addr_parse_mask_ports("*4",0,&t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("*6",0,&t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+#if 0
+  /* Try a mask with a wildcard. */
+  r=tor_addr_parse_mask_ports("*/16",0,&t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("*4/16",TAPMP_EXTENDED_STAR,
+                              &t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("*6/30",TAPMP_EXTENDED_STAR,
+                              &t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+#endif
+  /* Basic mask tests*/
+  r=tor_addr_parse_mask_ports("1.1.2.2/31",0,&t1, &mask, NULL, NULL);
   test_assert(r == AF_INET);
-  r=tor_addr_parse_mask_ports("[efef::]/112", &t1, &mask, &port1, &port2);
+  tt_int_op(mask,==,31);
+  tt_int_op(tor_addr_family(&t1),==,AF_INET);
+  tt_int_op(tor_addr_to_ipv4h(&t1),==,0x01010202);
+  r=tor_addr_parse_mask_ports("3.4.16.032:1-2",0,&t1, &mask, &port1, &port2);
+  test_assert(r == AF_INET);
+  tt_int_op(mask,==,32);
+  tt_int_op(tor_addr_family(&t1),==,AF_INET);
+  tt_int_op(tor_addr_to_ipv4h(&t1),==,0x03041020);
+  test_assert(port1 == 1);
+  test_assert(port2 == 2);
+  r=tor_addr_parse_mask_ports("1.1.2.3/255.255.128.0",0,&t1, &mask,NULL,NULL);
+  test_assert(r == AF_INET);
+  tt_int_op(mask,==,17);
+  tt_int_op(tor_addr_family(&t1),==,AF_INET);
+  tt_int_op(tor_addr_to_ipv4h(&t1),==,0x01010203);
+  r=tor_addr_parse_mask_ports("[efef::]/112",0,&t1, &mask, &port1, &port2);
   test_assert(r == AF_INET6);
   test_assert(port1 == 1);
   test_assert(port2 == 65535);
+  /* Try regular wildcard behavior without TAPMP_EXTENDED_STAR */
+  r=tor_addr_parse_mask_ports("*:80-443",0,&t1,&mask,&port1,&port2);
+  tt_int_op(r,==,AF_INET); /* Old users of this always get inet */
+  tt_int_op(tor_addr_family(&t1),==,AF_INET);
+  tt_int_op(tor_addr_to_ipv4h(&t1),==,0);
+  tt_int_op(mask,==,0);
+  tt_int_op(port1,==,80);
+  tt_int_op(port2,==,443);
+  /* Now try wildcards *with* TAPMP_EXTENDED_STAR */
+  r=tor_addr_parse_mask_ports("*:8000-9000",TAPMP_EXTENDED_STAR,
+                              &t1,&mask,&port1,&port2);
+  tt_int_op(r,==,AF_UNSPEC);
+  tt_int_op(tor_addr_family(&t1),==,AF_UNSPEC);
+  tt_int_op(mask,==,0);
+  tt_int_op(port1,==,8000);
+  tt_int_op(port2,==,9000);
+  r=tor_addr_parse_mask_ports("*4:6667",TAPMP_EXTENDED_STAR,
+                              &t1,&mask,&port1,&port2);
+  tt_int_op(r,==,AF_INET);
+  tt_int_op(tor_addr_family(&t1),==,AF_INET);
+  tt_int_op(tor_addr_to_ipv4h(&t1),==,0);
+  tt_int_op(mask,==,0);
+  tt_int_op(port1,==,6667);
+  tt_int_op(port2,==,6667);
+  r=tor_addr_parse_mask_ports("*6",TAPMP_EXTENDED_STAR,
+                              &t1,&mask,&port1,&port2);
+  tt_int_op(r,==,AF_INET6);
+  tt_int_op(tor_addr_family(&t1),==,AF_INET6);
+  tt_assert(tor_mem_is_zero((const char*)tor_addr_to_in6_addr32(&t1), 16));
+  tt_int_op(mask,==,0);
+  tt_int_op(port1,==,1);
+  tt_int_op(port2,==,65535);
 
   /* make sure inet address lengths >= max */
   test_assert(INET_NTOA_BUF_LEN >= sizeof("255.255.255.255"));
