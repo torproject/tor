@@ -1021,7 +1021,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
       const or_options_t *options = get_options();
-      unsigned hop_cnt, success_cnt;
+      unsigned hop_cnt, success_cnt, timeouts;
 
       if (!node) {
         *msg = tor_strdup("Unable to parse entry nodes: "
@@ -1029,14 +1029,20 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         break;
       }
 
-      if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
-        log_warn(LD_GENERAL, "Unable to parse guard path bias info: "
+      /* First try 3 params, then 2. */
+      if (tor_sscanf(line->value, "%u %u %u", &success_cnt, &hop_cnt,
+                     &timeouts) != 3) {
+        timeouts = 0;
+        if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
+          log_warn(LD_GENERAL, "Unable to parse guard path bias info: "
                  "Misformated EntryGuardPathBias %s", escaped(line->value));
-        continue;
+          continue;
+        }
       }
 
       node->first_hops = hop_cnt;
       node->circuit_successes = success_cnt;
+      node->timeouts = timeouts;
       log_info(LD_GENERAL, "Read %u/%u path bias for node %s",
                node->circuit_successes, node->first_hops, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
@@ -1173,8 +1179,8 @@ entry_guards_update_state(or_state_t *state)
       if (e->first_hops) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
-        tor_asprintf(&line->value, "%u %u",
-                     e->circuit_successes, e->first_hops);
+        tor_asprintf(&line->value, "%u %u %u",
+                     e->circuit_successes, e->first_hops, e->timeouts);
         next = &(line->next);
       }
 

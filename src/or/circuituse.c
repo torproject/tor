@@ -663,6 +663,8 @@ circuit_expire_building(void)
       circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
     else
       circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+
+    pathbias_count_timeout(TO_ORIGIN_CIRCUIT(victim));
   }
 }
 

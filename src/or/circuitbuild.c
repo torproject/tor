@@ -1057,6 +1057,53 @@ pathbias_state_to_string(path_state_t state)
 }
 
 /**
+ * Decide if the path bias code should count a circuit.
+ *
+ * @returns 1 if we should count it, 0 otherwise.
+ */
+static int
+pathbias_should_count(origin_circuit_t *circ)
+{
+#define PATHBIAS_COUNT_INTERVAL (600)
+  static ratelim_t count_limit =
+    RATELIM_INIT(PATHBIAS_COUNT_INTERVAL);
+  char *rate_msg = NULL;
+
+  /* We can't do path bias accounting without entry guards.
+   * Testing and controller circuits also have no guards. */
+  if (get_options()->UseEntryGuards == 0 ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+    return 0;
+  }
+
+  /* Completely ignore one hop circuits */
+  if (circ->build_state->onehop_tunnel ||
+      circ->build_state->desired_path_len == 1) {
+    /* Check for inconsistency */
+    if (circ->build_state->desired_path_len != 1 ||
+        !circ->build_state->onehop_tunnel) {
+      if ((rate_msg = rate_limit_log(&count_limit, approx_time()))) {
+        log_notice(LD_BUG,
+               "One-hop circuit has length %d. Path state is %s. "
+               "Circuit is a %s currently %s.%s",
+               circ->build_state->desired_path_len,
+               pathbias_state_to_string(circ->path_state),
+               circuit_purpose_to_string(circ->base_.purpose),
+               circuit_state_to_string(circ->base_.state),
+               rate_msg);
+        tor_free(rate_msg);
+      }
+      tor_fragile_assert();
+    }
+    return 0;
+  }
+
+  return 1;
+}
+
+
+/**
  * Check our circuit state to see if this is a successful first hop.
  * If so, record it in the current guard's path bias first_hop count.
  *
@@ -1287,6 +1334,26 @@ pathbias_count_success(origin_circuit_t *circ)
         tor_free(rate_msg);
       }
     }
+  }
+}
+
+/**
+ * Count timeouts for path bias log messages.
+ *
+ * These counts are purely informational.
+ */
+void
+pathbias_count_timeout(origin_circuit_t *circ)
+{
+  if(!pathbias_should_count(circ)) {
+    return;
+  }
+  entry_guard_t *guard =
+      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+
+  if (guard) {
+    guard->timeouts++;
+    entry_guards_changed();
   }
 }
 

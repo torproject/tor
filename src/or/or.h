@@ -4067,6 +4067,8 @@ typedef struct {
   double close_ms;
 } circuit_build_times_t;
 
+void pathbias_count_timeout(origin_circuit_t *circ);
+
 /********************************* config.c ***************************/
 
 /** An error from options_trial_assign() or options_init_from_string(). */

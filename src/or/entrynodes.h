@@ -47,6 +47,8 @@ typedef struct entry_guard_t {
   unsigned first_hops; /**< Number of first hops this guard has completed */
   unsigned circuit_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
+  unsigned timeouts; /**< Number of 'right-censored' timeouts 
+                                   for this guard. */
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
