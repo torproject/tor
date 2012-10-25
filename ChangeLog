@@ -1,4 +1,4 @@
-Changes in version 0.2.4.5-alpha - 2012-10-2?
+Changes in version 0.2.4.5-alpha - 2012-10-25
   Tor 0.2.3.24-rc comes hard at the heels of 0.2.4.4-alpha, to fix two
   important security vulnerabilities that could lead to remotely
   triggerable relay crashes, fixes a major bug that was preventing
