@@ -276,7 +276,7 @@ static config_var_t option_vars_[] = {
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
-  //  V(IPv6EXit,                    BOOL,     "0"),
+  V(IPv6Exit,                    BOOL,     "0"),
   VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
@@ -3170,6 +3170,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
+      old_options->IPv6Exit != new_options->IPv6Exit ||
       !config_lines_eq(old_options->ORPort_lines,
                        new_options->ORPort_lines) ||
       !config_lines_eq(old_options->DirPort_lines,

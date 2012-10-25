@@ -2238,6 +2238,17 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return 0;
   }
 
+  if (! options->IPv6Exit) {
+    /* I don't care if you prefer IPv6; I can't give you any. */
+    bcell.flags &= ~BEGIN_FLAG_IPV6_PREFERRED;
+    /* If you don't want IPv4, I can't help. */
+    if (bcell.flags & BEGIN_FLAG_IPV4_NOT_OK) {
+      tor_free(address);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_EXITPOLICY, NULL);
+    }
+  }
+
   log_debug(LD_EXIT,"Creating new exit connection.");
   n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);/*XXXX IPv6*/
 
@@ -2395,8 +2406,10 @@ connection_exit_connect(edge_connection_t *edge_conn)
   connection_t *conn = TO_CONN(edge_conn);
   int socket_error = 0;
 
-  if (!connection_edge_is_rendezvous_stream(edge_conn) &&
-      router_compare_to_my_exit_policy(edge_conn)) {
+  if ( (!connection_edge_is_rendezvous_stream(edge_conn) &&
+        router_compare_to_my_exit_policy(edge_conn)) ||
+       (tor_addr_family(&conn->addr) == AF_INET6 &&
+        ! get_options()->IPv6Exit)) {
     log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",
              escaped_safe_str_client(conn->address), conn->port);
     connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);

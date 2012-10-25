@@ -1604,6 +1604,7 @@ router_rebuild_descriptor(int force)
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
     policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
+                               options->IPv6Exit,
                                options->ExitPolicyRejectPrivate,
                                ri->address, !options->BridgeRelay);
   }

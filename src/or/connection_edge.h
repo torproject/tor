@@ -92,6 +92,11 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
 void circuit_clear_isolation(origin_circuit_t *circ);
 
 #ifdef CONNECTION_EDGE_PRIVATE
+
+#define BEGIN_FLAG_IPV6_OK        (1u<<0)
+#define BEGIN_FLAG_IPV4_NOT_OK    (1u<<1)
+#define BEGIN_FLAG_IPV6_PREFERRED (1u<<2)
+
 /*DOCDOC*/
 typedef struct begin_cell_t {
   char *address;
