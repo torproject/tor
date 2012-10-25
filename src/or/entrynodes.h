@@ -31,7 +31,11 @@ typedef struct entry_guard_t {
                                   * router, 1 if we have. */
   unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
                                * in spite of having it marked as unreachable?*/
-  unsigned int path_bias_notice : 1; /**< Did we alert the user about path bias
+  unsigned int path_bias_noticed : 1; /**< Did we alert the user about path bias
+                                      * for this node already? */
+  unsigned int path_bias_warned : 1; /**< Did we alert the user about path bias
+                                      * for this node already? */
+  unsigned int path_bias_crited : 1; /**< Did we alert the user about path bias
                                       * for this node already? */
   unsigned int path_bias_disabled : 1; /**< Have we disabled this node because
                                         * of path bias issues? */

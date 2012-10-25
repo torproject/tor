@@ -1408,7 +1408,8 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
     if (guard->circuit_successes/((double)guard->first_hops)
-        < pathbias_get_crit_rate(options)) {
+        < pathbias_get_crit_rate(options)
+        && !guard->path_bias_crited) {
 
       /* This message is currently disabled by default. */
       log_warn(LD_PROTOCOL,
@@ -1417,6 +1418,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                "a bug.",
                guard->circuit_successes, guard->first_hops, guard->nickname,
                hex_str(guard->identity, DIGEST_LEN));
+      guard->path_bias_crited = 1;
 
       if (pathbias_get_dropguards(options)) {
         guard->path_bias_disabled = 1;
@@ -1424,14 +1426,23 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
       }
       return -1;
     } else if (guard->circuit_successes/((double)guard->first_hops)
+               < pathbias_get_warn_rate(options)
+               && !guard->path_bias_warned) {
+      guard->path_bias_warned = 1;
+      log_notice(LD_PROTOCOL,
+                 "Low circuit success rate %u/%u for guard %s=%s.",
+                 guard->circuit_successes, guard->first_hops, guard->nickname,
+                 hex_str(guard->identity, DIGEST_LEN));
+    } else if (guard->circuit_successes/((double)guard->first_hops)
                < pathbias_get_notice_rate(options)
-               && !guard->path_bias_notice) {
-      guard->path_bias_notice = 1;
+               && !guard->path_bias_noticed) {
+      guard->path_bias_noticed = 1;
       log_notice(LD_PROTOCOL,
                  "Low circuit success rate %u/%u for guard %s=%s.",
                  guard->circuit_successes, guard->first_hops, guard->nickname,
                  hex_str(guard->identity, DIGEST_LEN));
     }
+
   }
 
   /* If we get a ton of circuits, just scale everything down */
