@@ -1410,37 +1410,56 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
     if (guard->circuit_successes/((double)guard->first_hops)
         < pathbias_get_crit_rate(options)
         && !guard->path_bias_crited) {
-
-      /* This message is currently disabled by default. */
-      log_warn(LD_PROTOCOL,
-               "Extremely low circuit success rate %u/%u for guard %s=%s. "
-               "This indicates either an overloaded guard, an attack, or "
-               "a bug.",
-               guard->circuit_successes, guard->first_hops, guard->nickname,
-               hex_str(guard->identity, DIGEST_LEN));
       guard->path_bias_crited = 1;
-
+      
       if (pathbias_get_dropguards(options)) {
+        /* This message is currently disabled by default. */
+        log_warn(LD_PROTOCOL,
+                 "Your Guard %s=%s is failing an extremely large amount of "
+                 "circuits. Tor has disabled use of this guard. Success "
+                 "counts are %d/%d, with %d timeouts. For reference, your "
+                 "timeout cutoff is %ld.",
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN),
+                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 (long)circ_times.close_ms/1000);
         guard->path_bias_disabled = 1;
         guard->bad_since = approx_time();
+      } else {
+        log_warn(LD_PROTOCOL,
+                 "Your Guard %s=%s is failing an extremely large amount of "
+                 "circuits. Success counts are %d/%d, with %d timeouts. "
+                 "For reference, your timeout cutoff is %ld.",
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN),
+                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 (long)circ_times.close_ms/1000);
       }
       return -1;
     } else if (guard->circuit_successes/((double)guard->first_hops)
                < pathbias_get_warn_rate(options)
                && !guard->path_bias_warned) {
       guard->path_bias_warned = 1;
-      log_notice(LD_PROTOCOL,
-                 "Low circuit success rate %u/%u for guard %s=%s.",
-                 guard->circuit_successes, guard->first_hops, guard->nickname,
-                 hex_str(guard->identity, DIGEST_LEN));
+      log_warn(LD_PROTOCOL,
+                 "Your Guard %s=%s is failing a very large amount of "
+                 "circuits. Most likely this means the Tor network is "
+                 "overloaded, but it could also mean an attack against "
+                 "you or the potentially the guard itself. Success counts "
+                 "are %d/%d, with %d timeouts. For reference, your timeout "
+                 "cutoff is %ld.",
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN),
+                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 (long)circ_times.close_ms/1000);
     } else if (guard->circuit_successes/((double)guard->first_hops)
                < pathbias_get_notice_rate(options)
                && !guard->path_bias_noticed) {
       guard->path_bias_noticed = 1;
       log_notice(LD_PROTOCOL,
-                 "Low circuit success rate %u/%u for guard %s=%s.",
-                 guard->circuit_successes, guard->first_hops, guard->nickname,
-                 hex_str(guard->identity, DIGEST_LEN));
+                 "Your Guard %s=%s is failing more circuits than usual. Most "
+                 "likely this means the Tor network is overloaded. Success "
+                 "counts are %d/%d, with %d timeouts. For reference, your "
+                 "timeout cutoff is %ld.",
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN),
+                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 (long)circ_times.close_ms/1000);
     }
 
   }
