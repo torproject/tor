@@ -260,6 +260,22 @@ Changes in version 0.2.3.x - 2012-10-??
       was closed. Fixes bug 7139; bugfix on all versions of Tor linked
       against OpenSSL 1.0.0 or later. Found by Florent Daignière.
 
+  o Major bugfixes (crashes and asserts):
+    - Avoid a pair of double-free and use-after-mark bugs that can
+      occur with certain timings in canceled and re-received DNS
+      requests. Fixes bug 6472; bugfix on 0.0.7rc1.
+    - Fix a denial of service attack by which any directory authority
+      could crash all the others, or by which a single v2 directory
+      authority could crash everybody downloading v2 directory
+      information. Fixes bug 7191; bugfix on 0.2.0.10-alpha.
+    - Fix an assert that directory authorities could trigger on sighup
+      during some configuration state transitions. We now don't treat
+      it as a fatal error when the new descriptor we just generated in
+      init_keys() isn't accepted. Fixes bug 4438; bugfix on 0.2.1.9-alpha.
+    - Avoid segfault when starting up having run with an extremely old
+      version of Tor and parsing its state file. Fixes bug 6801; bugfix
+      on 0.2.2.23-alpha.
+
   o Major bugfixes (clients):
     - If we are unable to find any exit that supports our predicted ports,
       stop calling them predicted, so that we don't loop and build
@@ -542,18 +558,6 @@ Changes in version 0.2.3.x - 2012-10-??
       microdescriptor without removing it from the appropriate data
       structures. Fixes issue 3135; issue noted by "wanoskarnet".
     - Shorten links in the tor-exit-notice file. Patch by Christian Kujau.
-
-  o Minor bugfixes (crashes and asserts):
-    - Avoid a pair of double-free and use-after-mark bugs that can
-      occur with certain timings in canceled and re-received DNS
-      requests. Fixes bug 6472; bugfix on 0.0.7rc1.
-    - Fix an assert that directory authorities could trigger on sighup
-      during some configuration state transitions. We now don't treat
-      it as a fatal error when the new descriptor we just generated in
-      init_keys() isn't accepted. Fixes bug 4438; bugfix on 0.2.1.9-alpha.
-    - Avoid segfault when starting up having run with an extremely old
-      version of Tor and parsing its state file. Fixes bug 6801; bugfix
-      on 0.2.2.23-alpha.
 
   o Minor bugfixes (code security):
     - Prevent a null-pointer dereference when receiving a data cell
