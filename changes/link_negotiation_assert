@@ -1,6 +1,0 @@
-  o Major bugfixs (security):
-    - Fix a group of remotely triggerable assertion failures related to
-      incorrect link protocol negotiation. Found, diagnosed, and fixed
-      by "some guy from France." Fix for CVE-2012-2250; bugfix on
-      0.2.3.6-alpha.
-
