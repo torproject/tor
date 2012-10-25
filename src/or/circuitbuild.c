@@ -1137,7 +1137,6 @@ pathbias_should_count(origin_circuit_t *circ)
   return 1;
 }
 
-
 /**
  * Check our circuit state to see if this is a successful first hop.
  * If so, record it in the current guard's path bias first_hop count.
@@ -1326,7 +1325,7 @@ pathbias_count_success(origin_circuit_t *circ)
 void
 pathbias_count_timeout(origin_circuit_t *circ)
 {
-  if(!pathbias_should_count(circ)) {
+  if (!pathbias_should_count(circ)) {
     return;
   }
   entry_guard_t *guard =
@@ -1357,7 +1356,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
         < pathbias_get_crit_rate(options)
         && !guard->path_bias_crited) {
       guard->path_bias_crited = 1;
-      
+
       if (pathbias_get_dropguards(options)) {
         /* This message is currently disabled by default. */
         log_warn(LD_PROTOCOL,
@@ -1407,7 +1406,6 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
     }
-
   }
 
   /* If we get a ton of circuits, just scale everything down */

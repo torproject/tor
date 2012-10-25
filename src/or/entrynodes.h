@@ -31,8 +31,8 @@ typedef struct entry_guard_t {
                                   * router, 1 if we have. */
   unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
                                * in spite of having it marked as unreachable?*/
-  unsigned int path_bias_noticed : 1; /**< Did we alert the user about path bias
-                                      * for this node already? */
+  unsigned int path_bias_noticed : 1; /**< Did we alert the user about path
+                                       * bias for this node already? */
   unsigned int path_bias_warned : 1; /**< Did we alert the user about path bias
                                       * for this node already? */
   unsigned int path_bias_crited : 1; /**< Did we alert the user about path bias
@@ -51,8 +51,7 @@ typedef struct entry_guard_t {
   unsigned first_hops; /**< Number of first hops this guard has completed */
   unsigned circuit_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
-  unsigned timeouts; /**< Number of 'right-censored' timeouts 
-                                   for this guard. */
+  unsigned timeouts; /**< Number of 'right-censored' timeouts for this guard.*/
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
