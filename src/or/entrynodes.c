@@ -1048,8 +1048,9 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if (node->circuit_successes/((double)node->first_hops)
-          < pathbias_get_disable_rate(options)) {
+      if ((node->circuit_successes/((double)node->first_hops)
+          < pathbias_get_crit_rate(options)) &&
+          pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path bias is too high (%u/%u); disabling node %s",

@@ -3784,9 +3784,12 @@ typedef struct {
    */
   int PathBiasCircThreshold;
   double PathBiasNoticeRate;
-  double PathBiasDisableRate;
+  double PathBiasWarnRate;
+  double PathBiasCritRate;
+  int PathBiasDropGuards;
   int PathBiasScaleThreshold;
   int PathBiasScaleFactor;
+  int PathBiasMultFactor;
   /** @} */
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */

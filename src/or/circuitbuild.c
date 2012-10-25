@@ -985,7 +985,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
 static int
 pathbias_get_min_circs(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_MIN_CIRC 20
+#define DFLT_PATH_BIAS_MIN_CIRC 150
   if (options->PathBiasCircThreshold >= 5)
     return options->PathBiasCircThreshold;
   else
@@ -997,7 +997,7 @@ pathbias_get_min_circs(const or_options_t *options)
 static double
 pathbias_get_notice_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_NOTICE_PCT 40
+#define DFLT_PATH_BIAS_NOTICE_PCT 70
   if (options->PathBiasNoticeRate >= 0.0)
     return options->PathBiasNoticeRate;
   else
@@ -1007,22 +1007,45 @@ pathbias_get_notice_rate(const or_options_t *options)
 
 /* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
 double
-pathbias_get_disable_rate(const or_options_t *options)
+pathbias_get_warn_rate(const or_options_t *options)
 {
-// XXX: This needs tuning based on use + experimentation before we set it
-#define DFLT_PATH_BIAS_DISABLE_PCT 0
-  if (options->PathBiasDisableRate >= 0.0)
-    return options->PathBiasDisableRate;
+#define DFLT_PATH_BIAS_WARN_PCT 50
+  if (options->PathBiasWarnRate >= 0.0)
+    return options->PathBiasWarnRate;
   else
-    return networkstatus_get_param(NULL, "pb_disablepct",
-                                   DFLT_PATH_BIAS_DISABLE_PCT, 0, 100)/100.0;
+    return networkstatus_get_param(NULL, "pb_warnpct",
+                                   DFLT_PATH_BIAS_WARN_PCT, 0, 100)/100.0;
+}
+
+/* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+double
+pathbias_get_crit_rate(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_CRIT_PCT 30
+  if (options->PathBiasCritRate >= 0.0)
+    return options->PathBiasCritRate;
+  else
+    return networkstatus_get_param(NULL, "pb_critpct",
+                                   DFLT_PATH_BIAS_CRIT_PCT, 0, 100)/100.0;
+}
+
+/* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+int
+pathbias_get_dropguards(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_DROP_GUARDS 0
+  if (options->PathBiasDropGuards >= 0)
+    return options->PathBiasDropGuards;
+  else
+    return networkstatus_get_param(NULL, "pb_dropguards",
+                                   DFLT_PATH_BIAS_DROP_GUARDS, 0, 100)/100.0;
 }
 
 static int
 pathbias_get_scale_threshold(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_SCALE_THRESHOLD 200
-  if (options->PathBiasScaleThreshold >= 2)
+#define DFLT_PATH_BIAS_SCALE_THRESHOLD 300
+  if (options->PathBiasScaleThreshold >= 10)
     return options->PathBiasScaleThreshold;
   else
     return networkstatus_get_param(NULL, "pb_scalecircs",
@@ -1039,6 +1062,18 @@ pathbias_get_scale_factor(const or_options_t *options)
   else
     return networkstatus_get_param(NULL, "pb_scalefactor",
                                 DFLT_PATH_BIAS_SCALE_FACTOR, 1, INT32_MAX);
+}
+
+static int
+pathbias_get_mult_factor(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_MULT_FACTOR 1
+  if (options->PathBiasMultFactor >= 1)
+    return options->PathBiasMultFactor;
+  else
+    return networkstatus_get_param(NULL, "pb_multfactor",
+                                DFLT_PATH_BIAS_MULT_FACTOR, 1,
+                                pathbias_get_scale_factor(options)-1);
 }
 
 static const char *
@@ -1373,7 +1408,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
     if (guard->circuit_successes/((double)guard->first_hops)
-        < pathbias_get_disable_rate(options)) {
+        < pathbias_get_crit_rate(options)) {
 
       /* This message is currently disabled by default. */
       log_warn(LD_PROTOCOL,
@@ -1383,8 +1418,10 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                guard->circuit_successes, guard->first_hops, guard->nickname,
                hex_str(guard->identity, DIGEST_LEN));
 
-      guard->path_bias_disabled = 1;
-      guard->bad_since = approx_time();
+      if (pathbias_get_dropguards(options)) {
+        guard->path_bias_disabled = 1;
+        guard->bad_since = approx_time();
+      }
       return -1;
     } else if (guard->circuit_successes/((double)guard->first_hops)
                < pathbias_get_notice_rate(options)
@@ -1400,15 +1437,19 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
   /* If we get a ton of circuits, just scale everything down */
   if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
+    const int mult_factor = pathbias_get_mult_factor(options);
     /* For now, only scale if there will be no rounding error...
      * XXX024: We want to switch to a real moving average for 0.2.4. */
-    if ((guard->first_hops % scale_factor) == 0 &&
-        (guard->circuit_successes % scale_factor) == 0) {
+    if (((mult_factor*guard->first_hops) % scale_factor) == 0 &&
+        ((mult_factor*guard->circuit_successes) % scale_factor) == 0) {
       log_info(LD_PROTOCOL,
-               "Scaling pathbias counts to (%u/%u)/%d for guard %s=%s",
-               guard->circuit_successes, guard->first_hops,
+               "Scaling pathbias counts to (%u/%u)*(%d/%d) for guard %s=%s",
+               guard->circuit_successes, guard->first_hops, mult_factor,
                scale_factor, guard->nickname, hex_str(guard->identity,
                DIGEST_LEN));
+      guard->first_hops *= mult_factor;
+      guard->circuit_successes *= mult_factor;
+
       guard->first_hops /= scale_factor;
       guard->circuit_successes /= scale_factor;
     }

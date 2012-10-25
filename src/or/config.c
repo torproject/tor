@@ -316,9 +316,12 @@ static config_var_t option_vars_[] = {
 
   V(PathBiasCircThreshold,       INT,      "-1"),
   V(PathBiasNoticeRate,          DOUBLE,   "-1"),
-  V(PathBiasDisableRate,         DOUBLE,   "-1"),
+  V(PathBiasWarnRate,            DOUBLE,   "-1"),
+  V(PathBiasCritRate,            DOUBLE,   "-1"),
   V(PathBiasScaleThreshold,      INT,      "-1"),
   V(PathBiasScaleFactor,         INT,      "-1"),
+  V(PathBiasMultFactor,          INT,      "-1"),
+  V(PathBiasDropGuards,          BOOL,      "0"),
 
   OBSOLETE("PathlenCoinWeight"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
