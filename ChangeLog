@@ -1,7 +1,7 @@
 Changes in version 0.2.3.24-rc - 2012-10-25
   Tor 0.2.3.24-rc fixes two important security vulnerabilities that
   could lead to remotely triggerable relay crashes, and fixes
-  a major bug that was preventing clients from choosing good exit
+  a major bug that was preventing clients from choosing suitable exit
   nodes.
 
   o Major bugfixes (security):
