@@ -2408,6 +2408,9 @@ connection_exit_connect(edge_connection_t *edge_conn)
   addr = &conn->addr;
   port = conn->port;
 
+  if (tor_addr_family(addr) == AF_INET6)
+    conn->socket_family = AF_INET6;
+
   log_debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
     case -1: {

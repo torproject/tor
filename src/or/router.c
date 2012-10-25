@@ -1380,8 +1380,8 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
   if (tor_addr_is_null(&conn->base_.addr))
     return -1;
 
-  /* XXXX IPv6 */
-  if (tor_addr_family(&conn->base_.addr) != AF_INET)
+  if (tor_addr_family(&conn->base_.addr) != AF_INET &&
+      tor_addr_family(&conn->base_.addr) != AF_INET6)
     return -1;
 
   return compare_tor_addr_to_addr_policy(&conn->base_.addr, conn->base_.port,

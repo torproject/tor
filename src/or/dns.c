@@ -160,7 +160,8 @@ typedef struct cached_resolve_t {
 
 static void purge_expired_resolves(time_t now);
 static void dns_found_answer(const char *address, uint8_t is_reverse,
-                             uint32_t addr, const char *hostname, char outcome,
+                             uint32_t addr,
+                             const char *hostname, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn);
@@ -490,9 +491,13 @@ purge_expired_resolves(time_t now)
   assert_cache_ok();
 }
 
+/* argument for send_resolved_cell only, meaning "let the answer type be ipv4
+ * or ipv6 depending on the connection's address". */
+#define RESOLVED_TYPE_AUTO 0xff
+
 /** Send a response to the RESOLVE request of a connection.
  * <b>answer_type</b> must be one of
- * RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT).
+ * RESOLVED_TYPE_(IPV4|IPV6|ERROR|ERROR_TRANSIENT|AUTO).
  *
  * If <b>circ</b> is provided, and we have a cached answer, send the
  * answer back along circ; otherwise, send the answer back along
@@ -505,6 +510,16 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
   size_t buflen;
   uint32_t ttl;
 
+  if (answer_type == RESOLVED_TYPE_AUTO) {
+    sa_family_t family = tor_addr_family(&conn->base_.addr);
+    if (family == AF_INET)
+      answer_type = RESOLVED_TYPE_IPV4;
+    else if (family == AF_INET6)
+      answer_type = RESOLVED_TYPE_IPV6;
+    else
+      answer_type = RESOLVED_TYPE_ERROR_TRANSIENT;
+  }
+
   buf[0] = answer_type;
   ttl = dns_clip_ttl(conn->address_ttl);
 
@@ -516,7 +531,15 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
       set_uint32(buf+6, htonl(ttl));
       buflen = 10;
       break;
-    /*XXXX IP6 need ipv6 implementation */
+    case RESOLVED_TYPE_IPV6:
+      {
+        const uint8_t *bytes = tor_addr_to_in6_addr8(&conn->base_.addr);
+        buf[1] = 16;
+        memcpy(buf+2, bytes, 16);
+        set_uint32(buf+18, htonl(ttl));
+        buflen = 22;
+      }
+      break;
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       {
@@ -614,7 +637,7 @@ dns_resolve(edge_connection_t *exitconn)
         if (hostname)
           send_resolved_hostname_cell(exitconn, hostname);
         else
-          send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+          send_resolved_cell(exitconn, RESOLVED_TYPE_AUTO);
         exitconn->on_circuit = NULL;
       } else {
         /* Add to the n_streams list; the calling function will send back a
@@ -693,12 +716,13 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   /* first check if exitconn->base_.address is an IP. If so, we already
    * know the answer. */
   if (tor_addr_parse(&addr, exitconn->base_.address) >= 0) {
-    if (tor_addr_family(&addr) == AF_INET) {
+    if (tor_addr_family(&addr) == AF_INET ||
+        tor_addr_family(&addr) == AF_INET6) {
       tor_addr_copy(&exitconn->base_.addr, &addr);
       exitconn->address_ttl = DEFAULT_DNS_TTL;
       return 1;
     } else {
-      /* XXXX IPv6 */
+      /* XXXX unspec? Bogus? */
       return -1;
     }
   }
@@ -1140,7 +1164,7 @@ dns_found_answer(const char *address, uint8_t is_reverse, uint32_t addr,
         if (is_reverse)
           send_resolved_hostname_cell(pendconn, hostname);
         else
-          send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
+          send_resolved_cell(pendconn, RESOLVED_TYPE_AUTO);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
