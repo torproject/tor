@@ -2402,6 +2402,7 @@ routerinfo_free(routerinfo_t *router)
     smartlist_free(router->declared_family);
   }
   addr_policy_list_free(router->exit_policy);
+  short_policy_free(router->ipv6_exit_policy);
 
   memset(router, 77, sizeof(routerinfo_t));
 

@@ -66,6 +66,7 @@ typedef enum {
   K_SERVER_VERSIONS,
   K_OR_ADDRESS,
   K_P,
+  K_P6,
   K_R,
   K_A,
   K_S,
@@ -77,6 +78,7 @@ typedef enum {
   K_CACHES_EXTRA_INFO,
   K_HIDDEN_SERVICE_DIR,
   K_ALLOW_SINGLE_HOP_EXITS,
+  K_IPV6_POLICY,
 
   K_DIRREQ_END,
   K_DIRREQ_V2_IPS,
@@ -271,6 +273,7 @@ static token_rule_t routerdesc_token_table[] = {
   T0N("reject6",             K_REJECT6,             ARGS,    NO_OBJ ),
   T0N("accept6",             K_ACCEPT6,             ARGS,    NO_OBJ ),
   T1_START( "router",        K_ROUTER,              GE(5),   NO_OBJ ),
+  T01("ipv6-policy",         K_IPV6_POLICY,         CONCAT_ARGS, NO_OBJ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
@@ -527,6 +530,7 @@ static token_rule_t microdesc_token_table[] = {
   T0N("a",                     K_A,                GE(1),       NO_OBJ ),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
+  T01("p6",                    K_P6,               CONCAT_ARGS, NO_OBJ ),
   A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };
@@ -1572,6 +1576,14 @@ router_parse_entry_from_string(const char *s, const char *end,
   policy_expand_private(&router->exit_policy);
   if (policy_is_reject_star(router->exit_policy))
     router->policy_is_reject_star = 1;
+
+  if ((tok = find_opt_by_keyword(tokens, K_IPV6_POLICY)) && tok->n_args) {
+    router->ipv6_exit_policy = parse_short_policy(tok->args[0]);
+    if (! router->ipv6_exit_policy) {
+      log_warn(LD_DIR , "Error in ipv6-policy %s", escaped(tok->args[0]));
+      goto err;
+    }
+  }
 
   if ((tok = find_opt_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
@@ -4483,6 +4495,9 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if ((tok = find_opt_by_keyword(tokens, K_P))) {
       md->exit_policy = parse_short_policy(tok->args[0]);
+    }
+    if ((tok = find_opt_by_keyword(tokens, K_P6))) {
+      md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
     }
 
     crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);

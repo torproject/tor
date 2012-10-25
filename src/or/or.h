@@ -1878,7 +1878,10 @@ typedef struct {
   /** How many bytes/s is this router known to handle? */
   uint32_t bandwidthcapacity;
   smartlist_t *exit_policy; /**< What streams will this OR permit
-                             * to exit?  NULL for 'reject *:*'. */
+                             * to exit on IPv4?  NULL for 'reject *:*'. */
+  /** What streams will this OR permit to exit on IPv6?
+   * NULL for 'reject *:*' */
+  struct short_policy_t *ipv6_exit_policy;
   long uptime; /**< How many seconds the router claims to have been up */
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
@@ -2084,8 +2087,11 @@ typedef struct microdesc_t {
   uint16_t ipv6_orport;
   /** As routerinfo_t.family */
   smartlist_t *family;
-  /** Exit policy summary */
+  /** IPv4 exit policy summary */
   short_policy_t *exit_policy;
+  /** IPv6 exit policy summary */
+  short_policy_t *ipv6_exit_policy;
+
 } microdesc_t;
 
 /** A node_t represents a Tor router.
