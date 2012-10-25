@@ -1229,6 +1229,15 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
            "handshake. Closing connection.");
     connection_or_close_for_error(chan->conn, 0);
     return;
+  } else if (highest_supported_version != 2 &&
+             chan->conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V2) {
+    /* XXXX This should eventually be a log_protocol_warn */
+    log_fn(LOG_WARN, LD_OR,
+           "Negotiated link with non-2 protocol after doing a v2 TLS "
+           "handshake with %s. Closing connection.",
+           fmt_addr(&chan->conn->base_.addr));
+    connection_or_close_for_error(chan->conn, 0);
+    return;
   }
 
   chan->conn->link_proto = highest_supported_version;
