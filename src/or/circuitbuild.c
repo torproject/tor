@@ -1152,34 +1152,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
-  /* We can't do path bias accounting without entry guards.
-   * Testing and controller circuits also have no guards. */
-  if (get_options()->UseEntryGuards == 0 ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
-    return 0;
-  }
-
-  /* Completely ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel ||
-      circ->build_state->desired_path_len == 1) {
-    /* Check for inconsistency */
-    if (circ->build_state->desired_path_len != 1 ||
-        !circ->build_state->onehop_tunnel) {
-      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
-              approx_time()))) {
-        log_notice(LD_BUG,
-               "One-hop circuit has length %d. Path state is %s. "
-               "Circuit is a %s currently %s.%s",
-               circ->build_state->desired_path_len,
-               pathbias_state_to_string(circ->path_state),
-               circuit_purpose_to_string(circ->base_.purpose),
-               circuit_state_to_string(circ->base_.state),
-               rate_msg);
-        tor_free(rate_msg);
-      }
-      tor_fragile_assert();
-    }
+  if (!pathbias_should_count(circ)) {
     return 0;
   }
 
@@ -1276,34 +1249,7 @@ pathbias_count_success(origin_circuit_t *circ)
   char *rate_msg = NULL;
   entry_guard_t *guard = NULL;
 
-  /* We can't do path bias accounting without entry guards.
-   * Testing and controller circuits also have no guards. */
-  if (get_options()->UseEntryGuards == 0 ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
-    return;
-  }
-
-  /* Ignore one hop circuits */
-  if (circ->build_state->onehop_tunnel ||
-      circ->build_state->desired_path_len == 1) {
-    /* Check for consistency */
-    if (circ->build_state->desired_path_len != 1 ||
-        !circ->build_state->onehop_tunnel) {
-      if ((rate_msg = rate_limit_log(&success_notice_limit,
-              approx_time()))) {
-        log_notice(LD_BUG,
-               "One-hop circuit has length %d. Path state is %s. "
-               "Circuit is a %s currently %s.%s",
-               circ->build_state->desired_path_len,
-               pathbias_state_to_string(circ->path_state),
-               circuit_purpose_to_string(circ->base_.purpose),
-               circuit_state_to_string(circ->base_.state),
-               rate_msg);
-        tor_free(rate_msg);
-      }
-      tor_fragile_assert();
-    }
+  if (!pathbias_should_count(circ)) {
     return;
   }
 
