@@ -719,6 +719,15 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
            "handshake. Closing connection.");
     connection_mark_for_close(TO_CONN(conn));
     return;
+  } else if (highest_supported_version != 2 &&
+             conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING_V2) {
+    /* XXXX This should eventually be a log_protocol_warn */
+    log_fn(LOG_WARN, LD_OR,
+           "Negotiated link with non-2 protocol after doing a v2 TLS "
+           "handshake with %s. Closing connection.",
+           fmt_addr(&conn->_base.addr));
+    connection_mark_for_close(TO_CONN(conn));
+    return;
   }
 
   conn->link_proto = highest_supported_version;
