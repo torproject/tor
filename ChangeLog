@@ -1,9 +1,20 @@
-Changes in version 0.2.3.24-rc - 2012-10-2?
-  o Major bugfixes:
+Changes in version 0.2.3.24-rc - 2012-10-25
+  Tor 0.2.3.24-rc fixes two important security vulnerabilities that
+  could lead to remotely triggerable relay crashes, and fixes
+  a major bug that was preventing clients from choosing good exit
+  nodes.
+
+  o Major bugfixes (security):
+    - Fix a group of remotely triggerable assertion failures related to
+      incorrect link protocol negotiation. Found, diagnosed, and fixed
+      by "some guy from France." Fix for CVE-2012-2250; bugfix on
+      0.2.3.6-alpha.
     - Fix a denial of service attack by which any directory authority
       could crash all the others, or by which a single v2 directory
       authority could crash everybody downloading v2 directory
       information. Fixes bug 7191; bugfix on 0.2.0.10-alpha.
+
+  o Major bugfixes:
     - When parsing exit policy summaries from microdescriptors, we had
       previously been ignoring the last character in each one, so that
       "accept 80,443,8080" would be treated by clients as indicating
