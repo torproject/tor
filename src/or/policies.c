@@ -1616,16 +1616,29 @@ compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
   if (node->rejects_all)
     return ADDR_POLICY_REJECTED;
 
-  if (node->ri)
+  if (addr && tor_addr_family(addr) == AF_INET6) {
+    const short_policy_t *p = NULL;
+    if (node->ri)
+      p = node->ri->ipv6_exit_policy;
+    else if (node->md)
+      p = node->md->ipv6_exit_policy;
+    if (p)
+      return compare_tor_addr_to_short_policy(addr, port, p);
+    else
+      return ADDR_POLICY_REJECTED;
+  }
+
+  if (node->ri) {
     return compare_tor_addr_to_addr_policy(addr, port, node->ri->exit_policy);
-  else if (node->md) {
+  } else if (node->md) {
     if (node->md->exit_policy == NULL)
       return ADDR_POLICY_REJECTED;
     else
       return compare_tor_addr_to_short_policy(addr, port,
                                               node->md->exit_policy);
-  } else
+  } else {
     return ADDR_POLICY_PROBABLY_REJECTED;
+  }
 }
 
 /** Implementation for GETINFO control command: knows the answer for questions

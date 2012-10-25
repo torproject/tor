@@ -1609,6 +1609,11 @@ router_rebuild_descriptor(int force)
   }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy);
+#if 0
+  /* XXXX024 Don't actually enable this code until exiting to an IPv6
+   * address works. */
+  ri->ipv6_exit_policy = policy_summarize(&ri->exit_policy, AF_INET6);
+#endif
 
 #if 0
   /* XXXX NM NM I belive this is safe to remove */
@@ -2148,6 +2153,20 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       }
       s[written++] = '\n';
     }
+  }
+
+  if (router->ipv6_exit_policy) {
+    char *p6 = write_short_policy(router->ipv6_exit_policy);
+    if (p6 && strcmp(p6, "reject 1-65535")) {
+      result = tor_snprintf(s+written, maxlen-written,
+                            "ipv6-policy %s\n", p6);
+      if (result<0) {
+        log_warn(LD_BUG,"Descriptor printf of policy ran out of room");
+        return -1;
+      }
+      written += result;
+    }
+    tor_free(p6);
   }
 
   if (written + DIROBJ_MAX_SIG_LEN > maxlen) {
