@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Clients now consider the ClientRejectInternalAddresses config option
-      when using a microdescriptor consensus stanza to decide whether
-      an exit relay would allow exiting to an internal address. Fixes
-      bug 7190; bugfix on 0.2.3.1-alpha.
-

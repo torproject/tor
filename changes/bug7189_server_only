@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Only disable TLS session ticket support when running as a TLS
-      server. This keeps clients harder to distinguish from regular firefox
-      connections. Fixes bug 7189; bugfix on Tor 0.2.3.23-rc.

@@ -1,3 +1,38 @@
+Changes in version 0.2.4.5-alpha - 2012-10-2?
+  o Major bugfixes (also in 0.2.3.24-rc):
+    - Fix a denial of service attack by which any directory authority
+      could crash all the others, or by which a single v2 directory
+      authority could crash everybody downloading v2 directory
+      information. Fixes bug 7191; bugfix on 0.2.0.10-alpha.
+    - When parsing exit policy summaries from microdescriptors, we had
+      previously been ignoring the last character in each one, so that
+      "accept 80,443,8080" would be treated by clients as indicating
+      a node that allows access to ports 80, 443, and 808. That would
+      lead to clients attempting connections that could never work,
+      and ignoring exit nodes that would support their connections. Now
+      clients parse these exit policy summaries correctly. Fixes bug 7192;
+      bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (also in 0.2.3.24-rc):
+    - Clients now consider the ClientRejectInternalAddresses config option
+      when using a microdescriptor consensus stanza to decide whether
+      an exit relay would allow exiting to an internal address. Fixes
+      bug 7190; bugfix on 0.2.3.1-alpha.
+
+  o Code simplification and refactoring:
+    - Start using OpenBSD's implementation of queue.h (originally by Niels
+      Provos).
+    - Move the entry node code from circuitbuild.c to its own file.
+    - Move the circuit build timeout tracking code from circuitbuild.c
+      to its own file.
+
+  o Minor bugfixes:
+    - Only disable TLS session ticket support when running as a TLS
+      server. This keeps clients harder to distinguish from regular firefox
+      connections. Fixes bug 7189; bugfix on Tor 0.2.3.23-rc.
+
+
+
 Changes in version 0.2.4.4-alpha - 2012-10-20
   Tor 0.2.4.4-alpha adds a new v3 directory authority, fixes a privacy
   vulnerability introduced by a change in OpenSSL, fixes a remotely

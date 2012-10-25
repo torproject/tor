@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Move the entry node code from circuitbuild.c to its own file.
-    - Move the circuit build timeout tracking code from circuitbuild.c
-      to its own file.
