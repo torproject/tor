@@ -1656,6 +1656,10 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
   payload_len = (int)strlen(payload)+1;
+  if (payload_len <= RELAY_PAYLOAD_SIZE - 4) {
+    set_uint32(payload + payload_len, htonl(edge_conn->begincell_flags));
+    payload_len += 4;
+  }
 
   log_info(LD_APP,
            "Sending relay cell %d to begin stream %d.",
@@ -2235,14 +2239,14 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
 
   log_debug(LD_EXIT,"Creating new exit connection.");
-  n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);
+  n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);/*XXXX IPv6*/
 
   /* Remember the tunneled request ID in the new edge connection, so that
    * we can measure download times. */
   n_stream->dirreq_id = circ->dirreq_id;
 
   n_stream->base_.purpose = EXIT_PURPOSE_CONNECT;
-
+  n_stream->begincell_flags = bcell.flags;
   n_stream->stream_id = rh.stream_id;
   n_stream->base_.port = port;
   /* leave n_stream->s at -1, because it's not yet valid */

@@ -1414,6 +1414,8 @@ typedef struct edge_connection_t {
 
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
+  uint32_t begincell_flags; /** Flags sent or received in the BEGIN cell
+                             * for this connection */
 
   streamid_t stream_id; /**< The stream ID used for this edge connection on its
                          * circuit */
