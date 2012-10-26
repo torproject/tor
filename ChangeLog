@@ -43,6 +43,39 @@ Changes in version 0.2.4.5-alpha - 2012-10-25
       to its own file.
 
 
+Changes in version 0.2.3.24-rc - 2012-10-25
+  Tor 0.2.3.24-rc fixes two important security vulnerabilities that
+  could lead to remotely triggerable relay crashes, and fixes
+  a major bug that was preventing clients from choosing suitable exit
+  nodes.
+
+  o Major bugfixes (security):
+    - Fix a group of remotely triggerable assertion failures related to
+      incorrect link protocol negotiation. Found, diagnosed, and fixed
+      by "some guy from France". Fix for CVE-2012-2250; bugfix on
+      0.2.3.6-alpha.
+    - Fix a denial of service attack by which any directory authority
+      could crash all the others, or by which a single v2 directory
+      authority could crash everybody downloading v2 directory
+      information. Fixes bug 7191; bugfix on 0.2.0.10-alpha.
+
+  o Major bugfixes:
+    - When parsing exit policy summaries from microdescriptors, we had
+      previously been ignoring the last character in each one, so that
+      "accept 80,443,8080" would be treated by clients as indicating
+      a node that allows access to ports 80, 443, and 808. That would
+      lead to clients attempting connections that could never work,
+      and ignoring exit nodes that would support their connections. Now
+      clients parse these exit policy summaries correctly. Fixes bug 7192;
+      bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes:
+    - Clients now consider the ClientRejectInternalAddresses config option
+      when using a microdescriptor consensus stanza to decide whether
+      an exit relay would allow exiting to an internal address. Fixes
+      bug 7190; bugfix on 0.2.3.1-alpha.
+
+
 Changes in version 0.2.4.4-alpha - 2012-10-20
   Tor 0.2.4.4-alpha adds a new v3 directory authority, fixes a privacy
   vulnerability introduced by a change in OpenSSL, fixes a remotely
