@@ -1,13 +1,13 @@
 Changes in version 0.2.4.5-alpha - 2012-10-25
-  Tor 0.2.3.24-rc comes hard at the heels of 0.2.4.4-alpha, to fix two
-  important security vulnerabilities that could lead to remotely
-  triggerable relay crashes, fixes a major bug that was preventing
-  clients from choosing good exit nodes, and refactor some of our code.
+  Tor 0.2.4.5-alpha comes hard at the heels of 0.2.4.4-alpha, to fix
+  two important security vulnerabilities that could lead to remotely
+  triggerable relay crashes, fix a major bug that was preventing clients
+  from choosing suitable exit nodes, and refactor some of our code.
 
   o Major bugfixes (security, also in 0.2.3.24-rc):
     - Fix a group of remotely triggerable assertion failures related to
       incorrect link protocol negotiation. Found, diagnosed, and fixed
-      by "some guy from France." Fix for CVE-2012-2250; bugfix on
+      by "some guy from France". Fix for CVE-2012-2250; bugfix on
       0.2.3.6-alpha.
     - Fix a denial of service attack by which any directory authority
       could crash all the others, or by which a single v2 directory
@@ -32,7 +32,7 @@ Changes in version 0.2.4.5-alpha - 2012-10-25
 
   o Minor bugfixes:
     - Only disable TLS session ticket support when running as a TLS
-      server. This keeps clients harder to distinguish from regular firefox
+      server. Now clients will blend better with regular Firefox
       connections. Fixes bug 7189; bugfix on Tor 0.2.3.23-rc.
 
   o Code simplification and refactoring:
