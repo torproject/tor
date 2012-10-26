@@ -1469,11 +1469,6 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
 
   max_time = circuit_build_times_max(cbt);
 
-  /* Sometimes really fast guard nodes give us such a steep curve
-   * that this ends up being not that much greater than timeout_ms.
-   * Make it be at least 1 min to handle this case. */
-  cbt->close_ms = MAX(cbt->close_ms, circuit_build_times_initial_timeout());
-
   if (cbt->timeout_ms > max_time) {
     log_info(LD_CIRC,
                "Circuit build timeout of %dms is beyond the maximum build "
@@ -1489,6 +1484,11 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
                "%dms.", (int)cbt->close_ms, 2*max_time);
     cbt->close_ms = 2*max_time;
   }
+
+  /* Sometimes really fast guard nodes give us such a steep curve
+   * that this ends up being not that much greater than timeout_ms.
+   * Make it be at least 1 min to handle this case. */
+  cbt->close_ms = MAX(cbt->close_ms, circuit_build_times_initial_timeout());
 
   cbt->have_computed_timeout = 1;
   return 1;

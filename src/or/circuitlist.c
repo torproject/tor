@@ -555,6 +555,11 @@ init_circuit_base(circuit_t *circ)
 {
   tor_gettimeofday(&circ->timestamp_created);
 
+  // Gets reset when we send CREATE_FAST.
+  // circuit_expire_building() expects these to be equal
+  // until the orconn is built.
+  circ->timestamp_began = circ->timestamp_created;
+
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
 
@@ -777,7 +782,7 @@ circuit_dump_conn_details(int severity,
       "state %d (%s), born %ld:",
       conn_array_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
-      (long)circ->timestamp_created.tv_sec);
+      (long)circ->timestamp_began.tv_sec);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
   }
@@ -840,7 +845,7 @@ circuit_dump_chan_details(int severity,
       "state %d (%s), born %ld:",
       chan, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
-      (long)circ->timestamp_created.tv_sec);
+      (long)circ->timestamp_began.tv_sec);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
   }

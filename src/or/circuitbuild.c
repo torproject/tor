@@ -522,6 +522,18 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
                                CELL_DIRECTION_OUT, 0);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
+    /* Update began timestamp for circuits starting their first hop */
+    if (TO_ORIGIN_CIRCUIT(circ)->cpath->state == CPATH_STATE_CLOSED) {
+      if (circ->n_chan->state != CHANNEL_STATE_OPEN) {
+        log_warn(LD_CIRC,
+                 "Got first hop for a circuit without an opened channel. "
+                 "State: %s.", channel_state_to_string(circ->n_chan->state));
+        tor_fragile_assert();
+      }
+
+      tor_gettimeofday(&circ->timestamp_began);
+    }
+
     /* mark it so it gets better rate limiting treatment. */
     channel_timestamp_client(circ->n_chan);
   }
@@ -672,7 +684,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         struct timeval end;
         long timediff;
         tor_gettimeofday(&end);
-        timediff = tv_mdiff(&circ->base_.timestamp_created, &end);
+        timediff = tv_mdiff(&circ->base_.timestamp_began, &end);
 
         /*
          * If the circuit build time is much greater than we would have cut

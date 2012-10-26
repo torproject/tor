@@ -176,6 +176,13 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
   const uint8_t purpose = ENTRY_TO_CONN(conn)->purpose;
   int a_bits, b_bits;
 
+  /* If one of the circuits was allowed to live due to relaxing its timeout,
+   * it is definitely worse (it's probably a much slower path). */
+  if (oa->relaxed_timeout && !ob->relaxed_timeout)
+    return 0; /* ob is better. It's not relaxed. */
+  if (!oa->relaxed_timeout && ob->relaxed_timeout)
+    return 1; /* oa is better. It's not relaxed. */
+
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* if it's used but less dirty it's best;
@@ -187,7 +194,7 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
           return 1;
       } else {
         if (a->timestamp_dirty ||
-            timercmp(&a->timestamp_created, &b->timestamp_created, >))
+            timercmp(&a->timestamp_began, &b->timestamp_began, >))
           return 1;
         if (ob->build_state->is_internal)
           /* XXX023 what the heck is this internal thing doing here. I
@@ -279,7 +286,7 @@ circuit_get_best(const entry_connection_t *conn,
 
     if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
         !must_be_open && circ->state != CIRCUIT_STATE_OPEN &&
-        tv_mdiff(&now, &circ->timestamp_created) > circ_times.timeout_ms) {
+        tv_mdiff(&now, &circ->timestamp_began) > circ_times.timeout_ms) {
       intro_going_on_but_too_old = 1;
       continue;
     }
@@ -365,8 +372,31 @@ circuit_expire_building(void)
   const or_options_t *options = get_options();
   struct timeval now;
   cpath_build_state_t *build_state;
+  int any_opened_circs = 0;
 
   tor_gettimeofday(&now);
+
+  /* Check to see if we have any opened circuits. If we don't,
+   * we want to be more lenient with timeouts, in case the
+   * user has relocated and/or changed network connections.
+   * See bug #3443. */
+  while (next_circ) {
+    if (!CIRCUIT_IS_ORIGIN(next_circ) || /* didn't originate here */
+        next_circ->marked_for_close) /* don't mess with marked circs */
+      continue;
+
+    if (TO_ORIGIN_CIRCUIT(next_circ)->has_opened &&
+        next_circ->state == CIRCUIT_STATE_OPEN &&
+        TO_ORIGIN_CIRCUIT(next_circ)->build_state &&
+        TO_ORIGIN_CIRCUIT(next_circ)->build_state->desired_path_len
+          == DEFAULT_ROUTE_LEN) {
+      any_opened_circs = 1;
+      break;
+    }
+    next_circ = next_circ->next;
+  }
+  next_circ = global_circuitlist;
+
 #define SET_CUTOFF(target, msec) do {                       \
     long ms = tor_lround(msec);                             \
     struct timeval diff;                                    \
@@ -391,8 +421,20 @@ circuit_expire_building(void)
     victim = next_circ;
     next_circ = next_circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
-        victim->marked_for_close) /* don't mess with marked circs */
+        victim->marked_for_close)     /* don't mess with marked circs */
       continue;
+
+    /* If we haven't yet started the first hop, it means we don't have
+     * any orconns available, and thus have not started counting time yet
+     * for this circuit. See circuit_deliver_create_cell() and uses of
+     * timestamp_began.
+     *
+     * Continue to wait in this case. The ORConn should timeout
+     * independently and kill us then.
+     */
+    if (TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_CLOSED) {
+      continue;
+    }
 
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
     if (build_state && build_state->onehop_tunnel)
@@ -410,8 +452,39 @@ circuit_expire_building(void)
     if (TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)
       cutoff = hs_extremely_old_cutoff;
 
-    if (timercmp(&victim->timestamp_created, &cutoff, >))
+    if (timercmp(&victim->timestamp_began, &cutoff, >))
       continue; /* it's still young, leave it alone */
+
+    if (!any_opened_circs) {
+      /* It's still young enough that we wouldn't close it, right? */
+      if (timercmp(&victim->timestamp_began, &close_cutoff, >)) {
+        if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
+          int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath->state
+                                      == CPATH_STATE_OPEN;
+          log_info(LD_CIRC,
+                 "No circuits are opened. Relaxing timeout for "
+                 "a circuit with channel state %s. %d guards are live.",
+                 channel_state_to_string(victim->n_chan->state),
+                 num_live_entry_guards());
+
+          /* We count the timeout here for CBT, because technically this
+           * was a timeout, and the timeout value needs to reset if we
+           * see enough of them. Note this means we also need to avoid
+           * double-counting below, too. */
+          circuit_build_times_count_timeout(&circ_times, first_hop_succeeded);
+          TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout = 1;
+        }
+        continue;
+      } else {
+        log_notice(LD_CIRC,
+                 "No circuits are opened. Relaxed timeout for "
+                 "a circuit with channel state %s to %ldms. "
+                 "However, it appears the circuit has timed out anyway. "
+                 "%d guards are live. ",
+                 channel_state_to_string(victim->n_chan->state),
+                 (long)circ_times.close_ms, num_live_entry_guards());
+      }
+    }
 
 #if 0
     /* some debug logs, to help track bugs */
@@ -489,9 +562,12 @@ circuit_expire_building(void)
           /* Record this failure to check for too many timeouts
            * in a row. This function does not record a time value yet
            * (we do that later); it only counts the fact that we did
-           * have a timeout. */
-          circuit_build_times_count_timeout(&circ_times,
-                                            first_hop_succeeded);
+           * have a timeout. We also want to avoid double-counting
+           * already "relaxed" circuits, which are counted above. */
+          if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
+            circuit_build_times_count_timeout(&circ_times,
+                                              first_hop_succeeded);
+          }
           continue;
         }
 
@@ -500,16 +576,16 @@ circuit_expire_building(void)
          * it off at, we probably had a suspend event along this codepath,
          * and we should discard the value.
          */
-        if (timercmp(&victim->timestamp_created, &extremely_old_cutoff, <)) {
+        if (timercmp(&victim->timestamp_began, &extremely_old_cutoff, <)) {
           log_notice(LD_CIRC,
                      "Extremely large value for circuit build timeout: %lds. "
                      "Assuming clock jump. Purpose %d (%s)",
-                     (long)(now.tv_sec - victim->timestamp_created.tv_sec),
+                     (long)(now.tv_sec - victim->timestamp_began.tv_sec),
                      victim->purpose,
                      circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(&circ_times,
                                          first_hop_succeeded,
-                                         victim->timestamp_created.tv_sec)) {
+                                         victim->timestamp_began.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
       }
@@ -791,7 +867,7 @@ circuit_build_needed_circs(time_t now)
     circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
     if (get_options()->RunTesting &&
         circ &&
-        circ->timestamp_created.tv_sec + TESTING_CIRCUIT_INTERVAL < now) {
+        circ->timestamp_began.tv_sec + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
       circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, 0);
     }
@@ -911,7 +987,7 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
-      if (timercmp(&circ->timestamp_created, &cutoff, <)) {
+      if (timercmp(&circ->timestamp_began, &cutoff, <)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -921,7 +997,7 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
           log_debug(LD_CIRC,
                     "Closing circuit that has been unused for %ld msec.",
-                    tv_mdiff(&circ->timestamp_created, &now));
+                    tv_mdiff(&circ->timestamp_began, &now));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           /* Server-side rend joined circuits can end up really old, because
@@ -935,7 +1011,7 @@ circuit_expire_old_circuits_clientside(void)
                        "Ancient non-dirty circuit %d is still around after "
                        "%ld milliseconds. Purpose: %d (%s)",
                        TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                       tv_mdiff(&circ->timestamp_created, &now),
+                       tv_mdiff(&circ->timestamp_began, &now),
                        circ->purpose,
                        circuit_purpose_to_string(circ->purpose));
             TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
@@ -1316,20 +1392,24 @@ circuit_launch_by_extend_info(uint8_t purpose,
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
       uint8_t old_purpose = circ->base_.purpose;
-      struct timeval old_timestamp_created;
+      struct timeval old_timestamp_began;
 
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
 
       circuit_change_purpose(TO_CIRCUIT(circ), purpose);
-      /* reset the birth date of this circ, else expire_building
+      /* Reset the start date of this circ, else expire_building
        * will see it and think it's been trying to build since it
-       * began. */
-      tor_gettimeofday(&circ->base_.timestamp_created);
+       * began.
+       *
+       * Technically, the code should reset this when the
+       * create cell is finally sent, but we're close enough
+       * here. */
+      tor_gettimeofday(&circ->base_.timestamp_began);
 
       control_event_circuit_cannibalized(circ, old_purpose,
-                                         &old_timestamp_created);
+                                         &old_timestamp_began);
 
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:

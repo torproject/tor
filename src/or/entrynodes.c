@@ -219,7 +219,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
 }
 
 /** Return the number of entry guards that we think are usable. */
-static int
+int
 num_live_entry_guards(void)
 {
   int n = 0;
