@@ -220,6 +220,7 @@ test_util_time(void)
   test_eq(-1, parse_iso_time("2011-03-30 23:59:62 GMT", &t_res));
   test_eq(-1, parse_iso_time("1969-03-30 23:59:59 GMT", &t_res));
   test_eq(-1, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
+  test_eq(-1, parse_iso_time("2147483647-08-29 14:00:00", &t_res));
   test_eq(-1, parse_iso_time("2011-03-30 23:59", &t_res));
 
   /* Test tor_gettimeofday */
