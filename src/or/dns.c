@@ -1506,8 +1506,8 @@ static int dns_wildcarded_test_address_notice_given = 0;
 /** True iff all addresses seem to be getting wildcarded. */
 static int dns_is_completely_invalid = 0;
 
-/** Called when we see <b>id</b> (a dotted quad) in response to a request for
- * a hopefully bogus address. */
+/** Called when we see <b>id</b> (a dotted quad or IPv6 address) in response
+ * to a request for a hopefully bogus address. */
 static void
 wildcard_increment_answer(const char *id)
 {
@@ -1579,17 +1579,27 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
 {
   (void)ttl;
   ++n_wildcard_requests;
-  if (result == DNS_ERR_NONE && type == DNS_IPv4_A && count) {
-    uint32_t *addrs = addresses;
-    int i;
+  if (result == DNS_ERR_NONE && count) {
     char *string_address = arg;
-    for (i = 0; i < count; ++i) {
-      char answer_buf[INET_NTOA_BUF_LEN+1];
-      struct in_addr in;
-      in.s_addr = addrs[i];
-      tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
-      wildcard_increment_answer(answer_buf);
+    int i;
+    if (type == DNS_IPv4_A) {
+      const uint32_t *addrs = addresses;
+      for (i = 0; i < count; ++i) {
+        char answer_buf[INET_NTOA_BUF_LEN+1];
+        struct in_addr in;
+        in.s_addr = addrs[i];
+        tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+        wildcard_increment_answer(answer_buf);
+      }
+    } else if (type == DNS_IPv6_AAAA) {
+      const struct in6_addr *addrs = addresses;
+      for (i = 0; i < count; ++i) {
+        char answer_buf[TOR_ADDR_BUF_LEN+1];
+        tor_inet_ntop(AF_INET6, &addrs[i], answer_buf, sizeof(answer_buf));
+        wildcard_increment_answer(answer_buf);
+      }
     }
+
     log(dns_wildcard_one_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider gave an answer for \"%s\", which "
         "is not supposed to exist. Apparently they are hijacking "
@@ -1606,7 +1616,8 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
  * <b>min_len</b> and <b>max_len</b> random (plausible) characters followed by
  * <b>suffix</b> */
 static void
-launch_wildcard_check(int min_len, int max_len, const char *suffix)
+launch_wildcard_check(int min_len, int max_len, int is_ipv6,
+                      const char *suffix)
 {
   char *addr;
   struct evdns_request *req;
@@ -1616,7 +1627,15 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
            "domains with request for bogus hostname \"%s\"", addr);
 
   tor_assert(the_evdns_base);
-  req = evdns_base_resolve_ipv4(
+  if (is_ipv6)
+    req = evdns_base_resolve_ipv6(
+                         the_evdns_base,
+                         /* This "addr" tells us which address to resolve */
+                         addr,
+                         DNS_QUERY_NO_SEARCH, evdns_wildcard_check_callback,
+                         /* This "addr" is an argument to the callback*/ addr);
+  else
+    req = evdns_base_resolve_ipv4(
                          the_evdns_base,
                          /* This "addr" tells us which address to resolve */
                          addr,
@@ -1661,6 +1680,14 @@ launch_test_addresses(int fd, short event, void *args)
                escaped_safe_str(address));
       tor_free(a);
     }
+    a = tor_strdup(address);
+    req = evdns_base_resolve_ipv6(the_evdns_base,
+                              address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
+    if (!req) {
+      log_info(LD_EXIT, "eventdns rejected test address %s",
+               escaped_safe_str(address));
+      tor_free(a);
+    }
   } SMARTLIST_FOREACH_END(address);
 }
 
@@ -1673,27 +1700,29 @@ launch_test_addresses(int fd, short event, void *args)
 static void
 dns_launch_wildcard_checks(void)
 {
-  int i;
+  int i, ipv6;
   log_info(LD_EXIT, "Launching checks to see whether our nameservers like "
            "to hijack DNS failures.");
-  for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
-    /* RFC2606 reserves these.  Sadly, some DNS hijackers, in a silly attempt
-     * to 'comply' with rfc2606, refrain from giving A records for these.
-     * This is the standards-compliance equivalent of making sure that your
-     * crackhouse's elevator inspection certificate is up to date.
-     */
-    launch_wildcard_check(2, 16, ".invalid");
-    launch_wildcard_check(2, 16, ".test");
+  for (ipv6 = 0; ipv6 <= 1; ++ipv6) {
+    for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
+      /* RFC2606 reserves these.  Sadly, some DNS hijackers, in a silly
+       * attempt to 'comply' with rfc2606, refrain from giving A records for
+       * these.  This is the standards-compliance equivalent of making sure
+       * that your crackhouse's elevator inspection certificate is up to date.
+       */
+      launch_wildcard_check(2, 16, ipv6, ".invalid");
+      launch_wildcard_check(2, 16, ipv6, ".test");
 
-    /* These will break specs if there are ever any number of
-     * 8+-character top-level domains. */
-    launch_wildcard_check(8, 16, "");
+      /* These will break specs if there are ever any number of
+       * 8+-character top-level domains. */
+      launch_wildcard_check(8, 16, ipv6, "");
 
-    /* Try some random .com/org/net domains. This will work fine so long as
-     * not too many resolve to the same place. */
-    launch_wildcard_check(8, 16, ".com");
-    launch_wildcard_check(8, 16, ".org");
-    launch_wildcard_check(8, 16, ".net");
+      /* Try some random .com/org/net domains. This will work fine so long as
+       * not too many resolve to the same place. */
+      launch_wildcard_check(8, 16, ipv6, ".com");
+      launch_wildcard_check(8, 16, ipv6, ".org");
+      launch_wildcard_check(8, 16, ipv6, ".net");
+  }
   }
 }
 
