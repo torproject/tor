@@ -1342,6 +1342,10 @@ configure_nameservers(int force)
   return -1;
 }
 
+static uint64_t n_ipv6_requests_made = 0;
+static uint64_t n_ipv6_timeouts = 0;
+static int dns_is_broken_for_ipv6 = 0;
+
 /** For eventdns: Called when we get an answer for a request we launched.
  * See eventdns.h for arguments; 'arg' holds the address we tried to resolve.
  */
@@ -1352,9 +1356,28 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   char *string_address = arg;
   uint8_t is_reverse = 0;
   int status = DNS_RESOLVE_FAILED_PERMANENT;
-  uint32_t addr = 0;
+  tor_addr_t addr;
   const char *hostname = NULL;
   int was_wildcarded = 0;
+
+  tor_addr_make_unspec(&addr); /*WRONG WRONG WRONG XXXX XXXXX IPV6 prop208*/
+
+  /* Keep track of whether IPv6 is working */
+  if (type == DNS_IPv6_AAAA) {
+    if (result == DNS_ERR_TIMEOUT) {
+      ++n_ipv6_timeouts;
+    }
+
+    if (n_ipv6_timeouts > 10 &&
+        n_ipv6_timeouts > n_ipv6_requests_made / 2) {
+      if (! dns_is_broken_for_ipv6) {
+        log_notice(LD_EXIT, "More than half of our IPv6 requests seem to "
+                   "have timed out. I'm going to assume I can't get AAAA "
+                   "responses.");
+        dns_is_broken_for_ipv6 = 1;
+      }
+    }
+  }
 
   if (result == DNS_ERR_NONE) {
     if (type == DNS_IPv4_A && count) {
@@ -1362,10 +1385,10 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       struct in_addr in;
       char *escaped_address;
       uint32_t *addrs = addresses;
-      in.s_addr = addrs[0];
-      addr = ntohl(addrs[0]);
+      tor_addr_from_ipv4n(&addr, addrs[0]);
       status = DNS_RESOLVE_SUCCEEDED;
-      tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+
+      tor_addr_to_str(answer_buf, &addr, sizeof(answer_buf), 0);
       escaped_address = esc_for_log(string_address);
 
       if (answer_is_wildcarded(answer_buf)) {
@@ -1375,6 +1398,29 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   escaped_safe_str(answer_buf));
         was_wildcarded = 1;
         addr = 0;
+        status = DNS_RESOLVE_FAILED_PERMANENT;
+      } else {
+        log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
+                  safe_str(escaped_address),
+                  escaped_safe_str(answer_buf));
+      }
+      tor_free(escaped_address);
+    } else if (type == DNS_IPv6_AAAA && count) {
+      char answer_buf[TOR_ADDR_BUF_LEN];
+      char *escaped_address;
+      struct in6_addr *addrs = addresses;
+      tor_addr_from_in6(&addr, &addrs[0]);
+      status = DNS_RESOLVE_SUCCEEDED;
+      tor_inet_ntop(AF_INET6, &addrs[0], answer_buf, sizeof(answer_buf));
+      escaped_address = esc_for_log(string_address);
+
+      if (answer_is_wildcarded(answer_buf)) {
+        log_debug(LD_EXIT, "eventdns said that %s resolves to ISP-hijacked "
+                  "address %s; treating as a failure.",
+                  safe_str(escaped_address),
+                  escaped_safe_str(answer_buf));
+        was_wildcarded = 1;
+        tor_addr_make_unspec(&addr); /* WRONG WRONG ETC XXXXXXXX */
         status = DNS_RESOLVE_FAILED_PERMANENT;
       } else {
         log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
@@ -1666,8 +1712,8 @@ launch_test_addresses(int fd, short event, void *args)
   /* This situation is worse than the failure-hijacking situation.  When this
    * happens, we're no good for DNS requests at all, and we shouldn't really
    * be an exit server.*/
-  if (!options->ServerDNSTestAddresses)
-    return;
+  if (options->ServerDNSTestAddresses) {
+
   tor_assert(the_evdns_base);
   SMARTLIST_FOREACH_BEGIN(options->ServerDNSTestAddresses,
                           const char *, address) {
@@ -1683,12 +1729,16 @@ launch_test_addresses(int fd, short event, void *args)
     a = tor_strdup(address);
     req = evdns_base_resolve_ipv6(the_evdns_base,
                               address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
+    ++n_ipv6_requests_made;
     if (!req) {
       log_info(LD_EXIT, "eventdns rejected test address %s",
                escaped_safe_str(address));
       tor_free(a);
     }
   } SMARTLIST_FOREACH_END(address);
+
+  } /*XXXX REINDENT */
+
 }
 
 #define N_WILDCARD_CHECKS 2
@@ -1756,6 +1806,13 @@ dns_seems_to_be_broken(void)
   return dns_is_completely_invalid;
 }
 
+/** DOCDOC */
+int
+dns_seems_to_be_broken_for_ipv6(void)
+{
+  return dns_is_broken_for_ipv6;
+}
+
 /** Forget what we've previously learned about our DNS servers' correctness. */
 void
 dns_reset_correctness_checks(void)
@@ -1764,6 +1821,8 @@ dns_reset_correctness_checks(void)
   dns_wildcard_response_count = NULL;
 
   n_wildcard_requests = 0;
+
+  n_ipv6_requests_made = n_ipv6_timeouts = 0;
 
   if (dns_wildcard_list) {
     SMARTLIST_FOREACH(dns_wildcard_list, char *, cp, tor_free(cp));
@@ -1775,7 +1834,8 @@ dns_reset_correctness_checks(void)
     smartlist_clear(dns_wildcarded_test_address_list);
   }
   dns_wildcard_one_notice_given = dns_wildcard_notice_given =
-    dns_wildcarded_test_address_notice_given = dns_is_completely_invalid = 0;
+    dns_wildcarded_test_address_notice_given = dns_is_completely_invalid =
+    dns_is_broken_for_ipv6 = 0;
 }
 
 /** Return true iff we have noticed that the dotted-quad <b>ip</b> has been
