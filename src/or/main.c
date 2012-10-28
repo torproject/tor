@@ -12,6 +12,7 @@
 
 #define MAIN_PRIVATE
 #include "or.h"
+#include "addressmap.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"

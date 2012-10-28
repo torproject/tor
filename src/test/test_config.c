@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #include "or.h"
+#include "addressmap.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection_edge.h"

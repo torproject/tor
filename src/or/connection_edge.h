@@ -67,30 +67,6 @@ int connection_ap_process_transparent(entry_connection_t *conn);
 
 int address_is_invalid_destination(const char *address, int client);
 
-void addressmap_init(void);
-void addressmap_clear_excluded_trackexithosts(const or_options_t *options);
-void addressmap_clear_invalid_automaps(const or_options_t *options);
-void addressmap_clean(time_t now);
-void addressmap_clear_configured(void);
-void addressmap_clear_transient(void);
-void addressmap_free_all(void);
-int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
-                       addressmap_entry_source_t *exit_source_out);
-int addressmap_have_mapping(const char *address, int update_timeout);
-
-void addressmap_register(const char *address, char *new_address,
-                         time_t expires, addressmap_entry_source_t source,
-                         const int address_wildcard,
-                         const int new_address_wildcard);
-int parse_virtual_addr_network(const char *val, int validate_only,
-                               char **msg);
-int client_dns_incr_failures(const char *address);
-void client_dns_clear_failures(const char *address);
-void client_dns_set_addressmap(const char *address, uint32_t val,
-                               const char *exitname, int ttl);
-const char *addressmap_register_virtual_address(int type, char *new_address);
-void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
-                             time_t max_expires, int want_expiry);
 int connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
                                                 origin_circuit_t *circ,
                                                 crypt_path_t *cpath);

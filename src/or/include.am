@@ -16,6 +16,7 @@ evdns_source=src/ext/eventdns.c
 endif
 
 src_or_libtor_a_SOURCES = \
+	src/or/addressmap.c				\
 	src/or/buffers.c				\
 	src/or/channel.c				\
 	src/or/channeltls.c				\
@@ -91,6 +92,7 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a 
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 ORHEADERS = \
+	src/or/addressmap.h				\
 	src/or/buffers.h				\
 	src/or/channel.h				\
 	src/or/channeltls.h				\

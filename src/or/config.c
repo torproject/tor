@@ -12,6 +12,7 @@
 #define CONFIG_PRIVATE
 
 #include "or.h"
+#include "addressmap.h"
 #include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
