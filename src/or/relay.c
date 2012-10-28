@@ -725,7 +725,9 @@ connection_ap_process_end_not_open(
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
-          client_dns_set_addressmap(conn->socks_request->address, addr,
+
+          client_dns_set_addressmap(circ,
+                                    conn->socks_request->address, addr,
                                     conn->chosen_exit_name, ttl);
         }
         /* check if he *ought* to have allowed it */
@@ -898,7 +900,8 @@ connection_edge_process_relay_cell_not_open(
         ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+4));
       else
         ttl = -1;
-      client_dns_set_addressmap(entry_conn->socks_request->address, addr,
+      client_dns_set_addressmap(TO_ORIGIN_CIRCUIT(circ),
+                                entry_conn->socks_request->address, addr,
                                 entry_conn->chosen_exit_name, ttl);
 
       remap_event_helper(entry_conn, addr);

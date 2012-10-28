@@ -571,7 +571,8 @@ client_dns_clear_failures(const char *address)
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 static void
-client_dns_set_addressmap_impl(const char *address, const char *name,
+client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
+                               const char *address, const char *name,
                                const char *exitname,
                                int ttl)
 {
@@ -579,6 +580,7 @@ client_dns_set_addressmap_impl(const char *address, const char *name,
   char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
   /* 123.123.123.123.<hex or nickname>.exit\0  or just  123.123.123.123\0 */
   char extendedval[INET_NTOA_BUF_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
+  (void)on_circ;
 
   tor_assert(address);
   tor_assert(name);
@@ -617,7 +619,8 @@ client_dns_set_addressmap_impl(const char *address, const char *name,
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
-client_dns_set_addressmap(const char *address, uint32_t val,
+client_dns_set_addressmap(origin_circuit_t *on_circ,
+                          const char *address, uint32_t val,
                           const char *exitname,
                           int ttl)
 {
@@ -631,7 +634,7 @@ client_dns_set_addressmap(const char *address, uint32_t val,
   in.s_addr = htonl(val);
   tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
 
-  client_dns_set_addressmap_impl(address, valbuf, exitname, ttl);
+  client_dns_set_addressmap_impl(on_circ, address, valbuf, exitname, ttl);
 }
 
 /** Add a cache entry noting that <b>address</b> (ordinarily a dotted quad)
@@ -644,13 +647,14 @@ client_dns_set_addressmap(const char *address, uint32_t val,
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
-client_dns_set_reverse_addressmap(const char *address, const char *v,
+client_dns_set_reverse_addressmap(origin_circuit_t *on_circ,
+                                  const char *address, const char *v,
                                   const char *exitname,
                                   int ttl)
 {
   char *s = NULL;
   tor_asprintf(&s, "REVERSE[%s]", address);
-  client_dns_set_addressmap_impl(s, v, exitname, ttl);
+  client_dns_set_addressmap_impl(on_circ, s, v, exitname, ttl);
   tor_free(s);
 }
 
