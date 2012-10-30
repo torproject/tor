@@ -29,3 +29,11 @@ tinytest_macros.h
 
     A unit testing framework. https://github.com/nmathewson/tinytest
 
+tor_queue.h
+
+    A copy of sys/queue.h from OpenBSD.  We keep our own copy rather
+    than using sys/queue.h, since some platforms don't have a
+    sys/queue.h, and the ones that do have diverged in incompatible
+    ways.  (CIRCLEQ or no CIRCLEQ? SIMPLQ or STAILQ?)
+
+    
