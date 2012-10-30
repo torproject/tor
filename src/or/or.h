@@ -3218,6 +3218,9 @@ typedef struct {
   config_line_t *ServerTransportPlugin; /**< List of client
                                            transport plugins. */
 
+  /** List of TCP/IP addresses that transports should listen at. */
+  config_line_t *ServerTransportListenAddr;
+
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the
                     * future. */

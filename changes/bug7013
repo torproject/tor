@@ -1,0 +1,4 @@
+  o Minor features:
+    - Add a new torrc option 'ServerTransportListenAddr' which allows
+      users to select the address where their pluggable transports
+      will listen for connections.

@@ -273,6 +273,7 @@ static config_var_t option_vars_[] = {
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
   VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
+  V(ServerTransportListenAddr,   LINELIST, NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
@@ -462,6 +463,9 @@ static int parse_bridge_line(const char *line, int validate_only);
 static int parse_client_transport_line(const char *line, int validate_only);
 
 static int parse_server_transport_line(const char *line, int validate_only);
+static char *get_bindaddr_from_transport_listen_line(const char *line,
+                                                     const char *transport);
+
 static int parse_dir_server_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -2879,6 +2883,22 @@ options_validate(or_options_t *old_options, or_options_t *options,
                escaped(options->ServerTransportPlugin->value));
   }
 
+  for (cl = options->ServerTransportListenAddr; cl; cl = cl->next) {
+    /** If get_bindaddr_from_transport_listen_line() fails with
+        'transport' being NULL, it means that something went wrong
+        while parsing the ServerTransportListenAddr line. */
+    char *bindaddr = get_bindaddr_from_transport_listen_line(cl->value, NULL);
+    if (!bindaddr)
+      REJECT("ServerTransportListenAddr did not parse. See logs for details.");
+    tor_free(bindaddr);
+  }
+
+  if (options->ServerTransportListenAddr && !options->ServerTransportPlugin) {
+    log_notice(LD_GENERAL, "You need at least a single managed-proxy to "
+               "specify a transport listen address. The "
+               "ServerTransportListenAddr line will be ignored.");
+  }
+
   if (options->ConstrainedSockets) {
     /* If the user wants to constrain socket buffer use, make sure the desired
      * limit is between MIN|MAX_TCPSOCK_BUFFER in k increments. */
@@ -4115,6 +4135,87 @@ parse_client_transport_line(const char *line, int validate_only)
   }
 
   return r;
+}
+
+/** Given a ServerTransportListenAddr <b>line</b>, return its
+ *  <address:port> string. Return NULL if the line was not
+ *  well-formed.
+ *
+ *  If <b>transport</b> is set, return NULL if the line is not
+ *  referring to <b>transport</b>.
+ *
+ *  The returned string is allocated on the heap and it's the
+ *  responsibility of the caller to free it. */
+static char *
+get_bindaddr_from_transport_listen_line(const char *line,const char *transport)
+{
+  smartlist_t *items = NULL;
+  const char *parsed_transport = NULL;
+  char *addrport = NULL;
+  char *addr = NULL;
+  uint16_t port = 0;
+
+  items = smartlist_new();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+
+  if (smartlist_len(items) < 2) {
+    log_warn(LD_CONFIG,"Too few arguments on ServerTransportListenAddr line.");
+    goto err;
+  }
+
+  parsed_transport = smartlist_get(items, 0);
+  addrport = tor_strdup(smartlist_get(items, 1));
+
+  /* If 'transport' is given, check if it matches the one on the line */
+  if (transport && strcmp(transport, parsed_transport))
+    goto err;
+
+  /* Validate addrport */
+  if (tor_addr_port_split(LOG_WARN, addrport, &addr, &port)<0) {
+    log_warn(LD_CONFIG, "Error parsing ServerTransportListenAddr "
+             "address '%s'", addrport);
+    goto err;
+  }
+
+  if (!port) {
+    log_warn(LD_CONFIG,
+             "ServerTransportListenAddr address '%s' has no port.", addrport);
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  tor_free(addrport);
+  addrport = NULL;
+
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  tor_free(addr);
+
+  return addrport;
+}
+
+/** Given the name of a pluggable transport in <b>transport</b>, check
+ *  the configuration file to see if the user has explicitly asked for
+ *  it to listen on a specific port. Return a <address:port> string if
+ *  so, otherwise NULL. */
+char *
+get_transport_bindaddr_from_config(const char *transport)
+{
+  config_line_t *cl;
+  const or_options_t *options = get_options();
+
+  for (cl = options->ServerTransportListenAddr; cl; cl = cl->next) {
+    char *bindaddr =
+      get_bindaddr_from_transport_listen_line(cl->value, transport);
+    if (bindaddr)
+      return bindaddr;
+  }
+
+  return NULL;
 }
 
 /** Read the contents of a ServerTransportPlugin line from

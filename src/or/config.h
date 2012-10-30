@@ -82,6 +82,8 @@ const char *tor_get_digests(void);
 uint32_t get_effective_bwrate(const or_options_t *options);
 uint32_t get_effective_bwburst(const or_options_t *options);
 
+char *get_transport_bindaddr_from_config(const char *transport);
+
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */
 or_options_t *options_new(void);
