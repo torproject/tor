@@ -2462,7 +2462,6 @@ channel_process_cells(channel_t *chan)
       break;
     }
   }
-
 }
 
 /**
