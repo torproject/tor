@@ -1225,6 +1225,15 @@ typedef struct listener_connection_t {
   uint8_t isolation_flags;
   /**@}*/
 
+  /** For a SOCKS listener, these fields describe whether we should
+   * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
+   *
+   * @{
+   */
+  unsigned int socks_ipv4_traffic : 1;
+  unsigned int socks_ipv6_traffic : 1;
+  /** @} */
+
 } listener_connection_t;
 
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
@@ -1521,6 +1530,13 @@ typedef struct entry_connection_t {
    * the exit has sent a CONNECTED cell) and we have chosen to use it.
    */
   unsigned int may_use_optimistic_data : 1;
+
+  /** Should we permit IPv4 and IPv6 traffic to use this connection?
+   *
+   * @{ */
+  unsigned int ipv4_traffic_ok : 1;
+  unsigned int ipv6_traffic_ok : 1;
+  /** @} */
 
 } entry_connection_t;
 
@@ -3044,6 +3060,8 @@ typedef struct port_cfg_t {
   unsigned int all_addrs : 1;
   unsigned int ipv4_only : 1;
   unsigned int ipv6_only : 1;
+  unsigned int ipv4_traffic : 1;
+  unsigned int ipv6_traffic : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */

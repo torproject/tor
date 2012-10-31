@@ -4441,6 +4441,7 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
 #define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
 #define CL_PORT_SERVER_OPTIONS (1u<<3)
 #define CL_PORT_FORBID_NONLOCAL (1u<<4)
+#define CL_PORT_TAKES_HOSTNAMES (1u<<5)
 
 /**
  * Parse port configuration for a single port type.
@@ -4473,6 +4474,9 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
  * isolation options in the FooPort entries; instead allow the
  * server-port option set.
  *
+ * If CL_PORT_TAKES_HOSTNAMES is set in <b>flags</b>, allow the options
+ * {No,}IPv{4,6}Traffic.
+ *
  * On success, if <b>out</b> is given, add a new port_cfg_t entry to
  * <b>out</b> for every port that the client should listen on.  Return 0
  * on success, -1 on failure.
@@ -4496,6 +4500,7 @@ parse_port_config(smartlist_t *out,
   const unsigned forbid_nonlocal = flags & CL_PORT_FORBID_NONLOCAL;
   const unsigned allow_spurious_listenaddr =
     flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
+  const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
   int got_zero_port=0, got_nonzero_port=0;
 
   /* FooListenAddress is deprecated; let's make it work like it used to work,
@@ -4599,7 +4604,8 @@ parse_port_config(smartlist_t *out,
     uint16_t ptmp=0;
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
-      ipv4_only = 0, ipv6_only = 0;
+      ipv4_only = 0, ipv6_only = 0,
+      ipv4_traffic = 1, ipv6_traffic = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -4723,8 +4729,20 @@ parse_port_config(smartlist_t *out,
           no = 1;
           elt += 2;
         }
+
+        if (takes_hostnames) {
+          if (!strcasecmp(elt, "IPv4Traffic")) {
+            ipv4_traffic = ! no;
+            continue;
+          } else if (!strcasecmp(elt, "IPv6Traffic")) {
+            ipv6_traffic = ! no;
+            continue;
+          }
+        }
+
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
+
 
         if (!strcasecmp(elt, "IsolateDestPort")) {
           isoflag = ISO_DESTPORT;
@@ -4766,6 +4784,8 @@ parse_port_config(smartlist_t *out,
       cfg->all_addrs = all_addrs;
       cfg->ipv4_only = ipv4_only;
       cfg->ipv6_only = ipv6_only;
+      cfg->ipv4_traffic = ipv4_traffic;
+      cfg->ipv6_traffic = ipv6_traffic;
 
       smartlist_add(out, cfg);
     }
@@ -4858,7 +4878,8 @@ parse_ports(or_options_t *options, int validate_only,
              options->SocksPort_lines, options->SocksListenAddress,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
-             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR) < 0) {
+             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR|
+             CL_PORT_TAKES_HOSTNAMES) < 0) {
     *msg = tor_strdup("Invalid SocksPort/SocksListenAddress configuration");
     goto err;
   }
