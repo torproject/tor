@@ -1148,6 +1148,30 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         }
       }
 
+      {
+        tor_addr_t addr;
+        /* XXX Duplicate call to tor_addr_parse. */
+        if (tor_addr_parse(&addr, socks->address) >= 0) {
+          sa_family_t family = tor_addr_family(&addr);
+          if ((family == AF_INET && ! conn->ipv4_traffic_ok) ||
+              (family == AF_INET6 && ! conn->ipv4_traffic_ok)) {
+            log_warn(LD_NET, "Rejecting SOCKS request for an IP address "
+                     "family that this listener does not support.");
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+            return -1;
+          } else if (family == AF_INET6 && socks->socks_version == 4) {
+            log_warn(LD_NET, "Rejecting SOCKS4 request for an IPv6 address.");
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+            return -1;
+          } else if (socks->socks_version == 4 && !conn->ipv4_traffic_ok) {
+            log_warn(LD_NET, "Rejecting SOCKS4 request on a listener with "
+                     "no IPv4 traffic supported.");
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+            return -1;
+          }
+        }
+      }
+
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
         const node_t *r =
