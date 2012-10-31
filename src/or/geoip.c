@@ -224,24 +224,22 @@ static int
 geoip_ipv6_compare_entries_(const void **_a, const void **_b)
 {
   const geoip_ipv6_entry_t *a = *_a, *b = *_b;
-  return memcmp(&a->ip_low, &b->ip_low, sizeof(struct in6_addr));
+  return memcmp(a->ip_low.s6_addr, b->ip_low.s6_addr, sizeof(struct in6_addr));
 }
 
 /** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6
- * (a pointer to a in6_addr in host order) to a geoip_ipv6_entry_t */
+ * (a pointer to a in6_addr) to a geoip_ipv6_entry_t */
 static int
 geoip_ipv6_compare_key_to_entry_(const void *_key, const void **_member)
 {
-  /* XXX5053 The following comment isn't correct anymore and I'm not 100%
-   * certain how to fix it, because I don't know what alignment issues
-   * there could be. -KL */
-  /* No alignment issue here, since _key really is a pointer to uint32_t */
   const struct in6_addr *addr = (struct in6_addr *)_key;
   const geoip_ipv6_entry_t *entry = *_member;
 
-  if (memcmp(addr, &entry->ip_low, sizeof(struct in6_addr)) < 0)
+  if (memcmp(addr->s6_addr, entry->ip_low.s6_addr,
+             sizeof(struct in6_addr)) < 0)
     return -1;
-  else if (memcmp(addr, &entry->ip_high, sizeof(struct in6_addr)) > 0)
+  else if (memcmp(addr->s6_addr, entry->ip_high.s6_addr,
+                  sizeof(struct in6_addr)) > 0)
     return 1;
   else
     return 0;
