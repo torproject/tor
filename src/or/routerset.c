@@ -74,7 +74,7 @@ routerset_get_countryname(const char *c)
 }
 
 /** Update the routerset's <b>countries</b> bitarray_t. Called whenever
- * the GeoIP database is reloaded.
+ * the GeoIP IPv4 database is reloaded.
  */
 void
 routerset_refresh_countries(routerset_t *target)

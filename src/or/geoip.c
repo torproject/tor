@@ -21,7 +21,7 @@
 static void clear_geoip_db(void);
 static void init_geoip_countries(void);
 
-/** An entry from the GeoIP file: maps an IP range to a country. */
+/** An entry from the GeoIP IPv4 file: maps an IPv4 range to a country. */
 typedef struct geoip_ipv4_entry_t {
   uint32_t ip_low; /**< The lowest IP in the range, in host order */
   uint32_t ip_high; /**< The highest IP in the range, in host order */
@@ -56,9 +56,9 @@ static smartlist_t *geoip_ipv4_entries = NULL, *geoip_ipv6_entries = NULL;
 static char geoip_digest[DIGEST_LEN];
 static char geoip6_digest[DIGEST_LEN];
 
-/** Return the index of the <b>country</b>'s entry in the GeoIP DB
- * if it is a valid 2-letter country code, otherwise return -1.
- */
+/** Return the index of the <b>country</b>'s entry in the GeoIP
+ * country list if it is a valid 2-letter country code, otherwise
+ * return -1. */
 country_t
 geoip_get_country(const char *country)
 {
@@ -408,7 +408,7 @@ geoip_get_country_by_addr(const tor_addr_t *addr)
   }
 }
 
-/** Return the number of countries recognized by the GeoIP database. */
+/** Return the number of countries recognized by the GeoIP country list. */
 int
 geoip_get_n_countries(void)
 {
@@ -1641,7 +1641,7 @@ getinfo_helper_geoip(control_connection_t *control_conn,
   return 0;
 }
 
-/** Release all storage held by the GeoIP database. */
+/** Release all storage held by the GeoIP databases and country list. */
 static void
 clear_geoip_db(void)
 {
