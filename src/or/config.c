@@ -4542,7 +4542,7 @@ parse_port_config(smartlist_t *out,
       cfg->port = mainport;
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
       cfg->no_listen = 1;
-      cfg->ipv4_only = 1;
+      cfg->bind_ipv4_only = 1;
       smartlist_add(out, cfg);
     }
 
@@ -4604,7 +4604,7 @@ parse_port_config(smartlist_t *out,
     uint16_t ptmp=0;
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
-      ipv4_only = 0, ipv6_only = 0,
+      bind_ipv4_only = 0, bind_ipv6_only = 0,
       ipv4_traffic = 1, ipv6_traffic = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
@@ -4670,9 +4670,9 @@ parse_port_config(smartlist_t *out,
           all_addrs = 1;
 #endif
         } else if (!strcasecmp(elt, "IPv4Only")) {
-          ipv4_only = 1;
+          bind_ipv4_only = 1;
         } else if (!strcasecmp(elt, "IPv6Only")) {
-          ipv6_only = 1;
+          bind_ipv6_only = 1;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt));
@@ -4685,18 +4685,18 @@ parse_port_config(smartlist_t *out,
                  portname, escaped(ports->value));
         goto err;
       }
-      if (ipv4_only && ipv6_only) {
+      if (bind_ipv4_only && bind_ipv6_only) {
         log_warn(LD_CONFIG, "Tried to set both IPv4Only and IPv6Only "
                  "on %sPort line '%s'",
                  portname, escaped(ports->value));
         goto err;
       }
-      if (ipv4_only && tor_addr_family(&addr) == AF_INET6) {
+      if (bind_ipv4_only && tor_addr_family(&addr) == AF_INET6) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
                  portname);
         goto err;
       }
-      if (ipv6_only && tor_addr_family(&addr) == AF_INET) {
+      if (bind_ipv6_only && tor_addr_family(&addr) == AF_INET) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
                  portname);
         goto err;
@@ -4782,8 +4782,8 @@ parse_port_config(smartlist_t *out,
       cfg->no_advertise = no_advertise;
       cfg->no_listen = no_listen;
       cfg->all_addrs = all_addrs;
-      cfg->ipv4_only = ipv4_only;
-      cfg->ipv6_only = ipv6_only;
+      cfg->bind_ipv4_only = bind_ipv4_only;
+      cfg->bind_ipv6_only = bind_ipv6_only;
       cfg->ipv4_traffic = ipv4_traffic;
       cfg->ipv6_traffic = ipv6_traffic;
 
@@ -5019,7 +5019,7 @@ check_server_ports(const smartlist_t *ports,
       if (! port->no_advertise) {
         ++n_orport_advertised;
         if (tor_addr_family(&port->addr) == AF_INET ||
-            (tor_addr_family(&port->addr) == AF_UNSPEC && !port->ipv6_only))
+            (tor_addr_family(&port->addr) == AF_UNSPEC && !port->bind_ipv6_only))
           ++n_orport_advertised_ipv4;
       }
       if (! port->no_listen)
@@ -5149,8 +5149,8 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
         (tor_addr_family(&cfg->addr) == address_family ||
          tor_addr_family(&cfg->addr) == AF_UNSPEC)) {
       if (tor_addr_family(&cfg->addr) != AF_UNSPEC ||
-          (address_family == AF_INET && !cfg->ipv6_only) ||
-          (address_family == AF_INET6 && !cfg->ipv4_only)) {
+          (address_family == AF_INET && !cfg->bind_ipv6_only) ||
+          (address_family == AF_INET6 && !cfg->bind_ipv4_only)) {
         return cfg->port;
       }
     }

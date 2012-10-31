@@ -3058,8 +3058,8 @@ typedef struct port_cfg_t {
   unsigned int no_advertise : 1;
   unsigned int no_listen : 1;
   unsigned int all_addrs : 1;
-  unsigned int ipv4_only : 1;
-  unsigned int ipv6_only : 1;
+  unsigned int bind_ipv4_only : 1;
+  unsigned int bind_ipv6_only : 1;
   unsigned int ipv4_traffic : 1;
   unsigned int ipv6_traffic : 1;
 
