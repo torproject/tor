@@ -6,6 +6,7 @@
 #include "orconfig.h"
 
 #define CONNECTION_EDGE_PRIVATE
+#define RELAY_PRIVATE
 #include "or.h"
 #include "connection_edge.h"
 #include "relay.h"
@@ -223,12 +224,125 @@ test_cfmt_begin_cells(void *arg)
   tor_free(bcell.address);
 }
 
+static void
+test_cfmt_connected_cells(void *arg)
+{
+  relay_header_t rh;
+  cell_t cell;
+  tor_addr_t addr;
+  int ttl, r;
+  (void)arg;
+
+  /* Let's try an oldschool one with nothing in it. */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED, "", 0);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_UNSPEC);
+  tt_int_op(ttl, ==, -1);
+
+  /* A slightly less oldschool one: only an IPv4 address */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED, "\x20\x30\x40\x50", 4);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET);
+  tt_str_op(fmt_addr(&addr), ==, "32.48.64.80");
+  tt_int_op(ttl, ==, -1);
+
+  /* Bogus but understandable: truncated TTL */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED, "\x11\x12\x13\x14\x15", 5);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET);
+  tt_str_op(fmt_addr(&addr), ==, "17.18.19.20");
+  tt_int_op(ttl, ==, -1);
+
+  /* Regular IPv4 one: address and TTL */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x02\x03\x04\x05\x00\x00\x0e\x10", 8);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET);
+  tt_str_op(fmt_addr(&addr), ==, "2.3.4.5");
+  tt_int_op(ttl, ==, 3600);
+
+  /* IPv4 with too-big TTL */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x02\x03\x04\x05\xf0\x00\x00\x00", 8);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET);
+  tt_str_op(fmt_addr(&addr), ==, "2.3.4.5");
+  tt_int_op(ttl, ==, -1);
+
+  /* IPv6 (ttl is mandatory) */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x00\x00\x00\x00\x06"
+                  "\x26\x07\xf8\xb0\x40\x0c\x0c\x02"
+                  "\x00\x00\x00\x00\x00\x00\x00\x68"
+                  "\x00\x00\x02\x58", 25);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET6);
+  tt_str_op(fmt_addr(&addr), ==, "2607:f8b0:400c:c02::68");
+  tt_int_op(ttl, ==, 600);
+
+  /* IPv6 (ttl too big) */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x00\x00\x00\x00\x06"
+                  "\x26\x07\xf8\xb0\x40\x0c\x0c\x02"
+                  "\x00\x00\x00\x00\x00\x00\x00\x68"
+                  "\x90\x00\x02\x58", 25);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET6);
+  tt_str_op(fmt_addr(&addr), ==, "2607:f8b0:400c:c02::68");
+  tt_int_op(ttl, ==, -1);
+
+  /* Bogus size: 3. */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x00\x01\x02", 3);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, -1);
+
+  /* Bogus family: 7. */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x00\x00\x00\x00\x07"
+                  "\x26\x07\xf8\xb0\x40\x0c\x0c\x02"
+                  "\x00\x00\x00\x00\x00\x00\x00\x68"
+                  "\x90\x00\x02\x58", 25);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, -1);
+
+  /* Truncated IPv6. */
+  make_relay_cell(&cell, RELAY_COMMAND_CONNECTED,
+                  "\x00\x00\x00\x00\x06"
+                  "\x26\x07\xf8\xb0\x40\x0c\x0c\x02"
+                  "\x00\x00\x00\x00\x00\x00\x00\x68"
+                  "\x00\x00\x02", 24);
+  relay_header_unpack(&rh, cell.payload);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, -1);
+
+ done:
+  ;
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cfmt_ ## name, flags, 0, NULL }
 
 struct testcase_t cell_format_tests[] = {
   TEST(relay_header, 0),
   TEST(begin_cells, 0),
+  TEST(connected_cells, 0),
   END_OF_TESTCASES
 };
 

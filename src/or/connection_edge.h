@@ -108,6 +108,7 @@ typedef struct begin_cell_t {
 
 int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                      uint8_t *end_reason_out);
+
 #endif
 
 

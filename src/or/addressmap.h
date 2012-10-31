@@ -29,7 +29,7 @@ int parse_virtual_addr_network(const char *val, int validate_only,
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(origin_circuit_t *on_circ,
-                               const char *address, uint32_t val,
+                               const char *address, const tor_addr_t *val,
                                const char *exitname, int ttl);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,

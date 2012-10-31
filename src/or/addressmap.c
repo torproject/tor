@@ -576,10 +576,7 @@ client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
                                const char *exitname,
                                int ttl)
 {
-  /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
-  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
-  /* 123.123.123.123.<hex or nickname>.exit\0  or just  123.123.123.123\0 */
-  char extendedval[INET_NTOA_BUF_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
+  char *extendedaddress=NULL, *extendedval=NULL;
   (void)on_circ;
 
   tor_assert(address);
@@ -594,18 +591,19 @@ client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
     /* XXXX fails to ever get attempts to get an exit address of
      * google.com.digest[=~]nickname.exit; we need a syntax for this that
      * won't make strict RFC952-compliant applications (like us) barf. */
-    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+    tor_asprintf(&extendedaddress,
                  "%s.%s.exit", address, exitname);
-    tor_snprintf(extendedval, sizeof(extendedval),
+    tor_asprintf(&extendedval,
                  "%s.%s.exit", name, exitname);
   } else {
-    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+    tor_asprintf(&extendedaddress,
                  "%s", address);
-    tor_snprintf(extendedval, sizeof(extendedval),
+    tor_asprintf(&extendedval,
                  "%s", name);
   }
-  addressmap_register(extendedaddress, tor_strdup(extendedval),
+  addressmap_register(extendedaddress, extendedval,
                       time(NULL) + ttl, ADDRMAPSRC_DNS, 0, 0);
+  tor_free(extendedaddress);
 }
 
 /** Record the fact that <b>address</b> resolved to <b>val</b>.
@@ -620,19 +618,26 @@ client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
  */
 void
 client_dns_set_addressmap(origin_circuit_t *on_circ,
-                          const char *address, uint32_t val,
+                          const char *address,
+                          const tor_addr_t *val,
                           const char *exitname,
                           int ttl)
 {
-  struct in_addr in;
-  char valbuf[INET_NTOA_BUF_LEN];
+  tor_addr_t addr_tmp;
+  char valbuf[TOR_ADDR_BUF_LEN];
 
   tor_assert(address);
+  tor_assert(val);
 
-  if (tor_inet_aton(address, &in))
+  if (tor_addr_parse(&addr_tmp, address) == 0)
     return; /* If address was an IP address already, don't add a mapping. */
-  in.s_addr = htonl(val);
-  tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
+
+  /* XXXXX For now, don't cache IPv6 addresses. */
+  if (tor_addr_family(val) != AF_INET)
+    return;
+
+  if (! tor_addr_to_str(valbuf, val, sizeof(valbuf), 0)) /* XXXX decorate? */
+    return;
 
   client_dns_set_addressmap_impl(on_circ, address, valbuf, exitname, ttl);
 }
