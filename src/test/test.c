@@ -1461,22 +1461,20 @@ test_geoip(void)
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
    * fine uint32_t values. */
-  test_eq(0, geoip_ipv4_parse_entry("10,50,AB"));
-  test_eq(0, geoip_ipv4_parse_entry("52,90,XY"));
-  test_eq(0, geoip_ipv4_parse_entry("95,100,AB"));
-  test_eq(0, geoip_ipv4_parse_entry("\"105\",\"140\",\"ZZ\""));
-  test_eq(0, geoip_ipv4_parse_entry("\"150\",\"190\",\"XY\""));
-  test_eq(0, geoip_ipv4_parse_entry("\"200\",\"250\",\"AB\""));
+  test_eq(0, geoip_parse_entry("10,50,AB", AF_INET));
+  test_eq(0, geoip_parse_entry("52,90,XY", AF_INET));
+  test_eq(0, geoip_parse_entry("95,100,AB", AF_INET));
+  test_eq(0, geoip_parse_entry("\"105\",\"140\",\"ZZ\"", AF_INET));
+  test_eq(0, geoip_parse_entry("\"150\",\"190\",\"XY\"", AF_INET));
+  test_eq(0, geoip_parse_entry("\"200\",\"250\",\"AB\"", AF_INET));
 
   /* Populate the IPv6 DB equivalently with fake IPs in the same range */
-  test_eq(0, geoip_ipv6_parse_entry("::a,::32,AB"));
-  test_eq(0, geoip_ipv6_parse_entry("::34,::5a,XY"));
-  test_eq(0, geoip_ipv6_parse_entry("::5f,::64,AB"));
-  /* XXX5053 If we plan to support parsing Maxmind's GeoIPv6.csv format,
-   * we should test it here.  If not, remove this comment. -KL */
-  test_eq(0, geoip_ipv6_parse_entry("::69,::8c,ZZ"));
-  test_eq(0, geoip_ipv6_parse_entry("::96,::be,XY"));
-  test_eq(0, geoip_ipv6_parse_entry("::c8,::fa,AB"));
+  test_eq(0, geoip_parse_entry("::a,::32,AB", AF_INET6));
+  test_eq(0, geoip_parse_entry("::34,::5a,XY", AF_INET6));
+  test_eq(0, geoip_parse_entry("::5f,::64,AB", AF_INET6));
+  test_eq(0, geoip_parse_entry("::69,::8c,ZZ", AF_INET6));
+  test_eq(0, geoip_parse_entry("::96,::be,XY", AF_INET6));
+  test_eq(0, geoip_parse_entry("::c8,::fa,AB", AF_INET6));
 
   /* We should have 4 countries: ??, ab, xy, zz. */
   test_eq(4, geoip_get_n_countries());

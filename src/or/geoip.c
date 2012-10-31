@@ -73,17 +73,18 @@ geoip_get_country(const char *country)
   return (country_t)idx;
 }
 
-/** Add an entry to the GeoIP table, mapping all IPs between <b>low</b> and
- * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>.
- */
+/** Add an entry to a GeoIP table, mapping all IP addresses between <b>low</b> and
+ * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>. */
 static void
-geoip_ipv4_add_entry(uint32_t low, uint32_t high, const char *country)
+geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
+                const char *country)
 {
   intptr_t idx;
-  geoip_ipv4_entry_t *ent;
   void *idxplus1_;
 
-  if (high < low)
+  if (tor_addr_family(low) != tor_addr_family(high))
+    return;
+  if (tor_addr_compare(high, low, CMP_EXACT) < 0)
     return;
 
   idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
@@ -102,40 +103,89 @@ geoip_ipv4_add_entry(uint32_t low, uint32_t high, const char *country)
     geoip_country_t *c = smartlist_get(geoip_countries, idx);
     tor_assert(!strcasecmp(c->countrycode, country));
   }
-  ent = tor_malloc_zero(sizeof(geoip_ipv4_entry_t));
-  ent->ip_low = low;
-  ent->ip_high = high;
-  ent->country = idx;
-  smartlist_add(geoip_ipv4_entries, ent);
+
+  if (tor_addr_family(low) == AF_INET) {
+    geoip_ipv4_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv4_entry_t));
+    ent->ip_low = tor_addr_to_ipv4h(low);
+    ent->ip_high = tor_addr_to_ipv4h(high);
+    ent->country = idx;
+    smartlist_add(geoip_ipv4_entries, ent);
+  } else if (tor_addr_family(low) == AF_INET6) {
+    geoip_ipv6_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv6_entry_t));
+    ent->ip_low = *tor_addr_to_in6(low);
+    ent->ip_high = *tor_addr_to_in6(high);
+    ent->country = idx;
+    smartlist_add(geoip_ipv6_entries, ent);
+  }
 }
 
-/** Add an entry to the GeoIP table, parsing it from <b>line</b>.  The
- * format is as for geoip_load_file(). */
+/** Add an entry to the GeoIP table indicated by <b>family</b>,
+ * parsing it from <b>line</b>. The format is as for geoip_load_file(). */
 /*private*/ int
-geoip_ipv4_parse_entry(const char *line)
+geoip_parse_entry(const char *line, sa_family_t family)
 {
-  unsigned int low, high;
-  char b[3];
+  tor_addr_t low_addr, high_addr;
+  char c[3];
+  char *country = NULL;
+
   if (!geoip_countries)
     init_geoip_countries();
-  if (!geoip_ipv4_entries)
-    geoip_ipv4_entries = smartlist_new();
+  if (family == AF_INET) {
+    if (!geoip_ipv4_entries)
+      geoip_ipv4_entries = smartlist_new();
+  } else if (family == AF_INET6) {
+    if (!geoip_ipv6_entries)
+      geoip_ipv6_entries = smartlist_new();
+  } else {
+    log_warn(LD_GENERAL, "Unsupported family: %d", family);
+    return -1;
+  }
 
   while (TOR_ISSPACE(*line))
     ++line;
   if (*line == '#')
     return 0;
-  if (tor_sscanf(line,"%u,%u,%2s", &low, &high, b) == 3) {
-    geoip_ipv4_add_entry(low, high, b);
-    return 0;
-  } else if (tor_sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
-    geoip_ipv4_add_entry(low, high, b);
-    return 0;
-  } else {
-    log_warn(LD_GENERAL, "Unable to parse line from GEOIP file: %s",
-             escaped(line));
-    return -1;
+
+  if (family == AF_INET) {
+    unsigned int low, high;
+    if (tor_sscanf(line,"%u,%u,%2s", &low, &high, c) == 3 ||
+        tor_sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, c) == 3) {
+      tor_addr_from_ipv4h(&low_addr, low);
+      tor_addr_from_ipv4h(&high_addr, high);
+    } else
+      goto fail;
+    country = c;
+  } else {                      /* AF_INET6 */
+    char buf[512];
+    char *low_str, *high_str;
+    struct in6_addr low, high;
+    char *strtok_state;
+    strlcpy(buf, line, sizeof(buf));
+    low_str = tor_strtok_r(buf, ",", &strtok_state);
+    if (!low_str)
+      goto fail;
+    high_str = tor_strtok_r(NULL, ",", &strtok_state);
+    if (!high_str)
+      goto fail;
+    country = tor_strtok_r(NULL, "\n", &strtok_state);
+    if (!country)
+      goto fail;
+    if (strlen(country) != 2)
+      goto fail;
+    if (tor_inet_pton(AF_INET6, low_str, &low) <= 0)
+      goto fail;
+    tor_addr_from_in6(&low_addr, &low);
+    if (tor_inet_pton(AF_INET6, high_str, &high) <= 0)
+      goto fail;
+    tor_addr_from_in6(&high_addr, &high);
   }
+  geoip_add_entry(&low_addr, &high_addr, country);
+  return 0;
+
+  fail:
+  log_warn(LD_GENERAL, "Unable to parse line from GEOIP %s file: %s",
+           family == AF_INET ? "IPv4" : "IPv6", escaped(line));
+  return -1;
 }
 
 /** Sorting helper: return -1, 1, or 0 based on comparison of two
@@ -166,95 +216,6 @@ geoip_ipv4_compare_key_to_entry_(const void *_key, const void **_member)
     return 1;
   else
     return 0;
-}
-
-/** Add an entry to the GeoIP IPv6 table, mapping all IPs between
- * <b>low</b> and <b>high</b>, inclusive, to the 2-letter country code
- * <b>country</b>. */
-static void
-geoip_ipv6_add_entry(struct in6_addr low, struct in6_addr high,
-                     const char *country)
-{
-  intptr_t idx;
-  geoip_ipv6_entry_t *ent;
-  void *idxplus1_;
-
-  if (memcmp(&high, &low, sizeof(struct in6_addr)) < 0)
-    return;
-
-  idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
-
-  if (!idxplus1_) {
-    geoip_country_t *c = tor_malloc_zero(sizeof(geoip_country_t));
-    strlcpy(c->countrycode, country, sizeof(c->countrycode));
-    tor_strlower(c->countrycode);
-    smartlist_add(geoip_countries, c);
-    idx = smartlist_len(geoip_countries) - 1;
-    strmap_set_lc(country_idxplus1_by_lc_code, country, (void*)(idx+1));
-  } else {
-    idx = ((uintptr_t)idxplus1_)-1;
-  }
-  {
-    geoip_country_t *c = smartlist_get(geoip_countries, idx);
-    tor_assert(!strcasecmp(c->countrycode, country));
-  }
-  ent = tor_malloc_zero(sizeof(geoip_ipv6_entry_t));
-  ent->ip_low = low;
-  ent->ip_high = high;
-  ent->country = idx;
-  smartlist_add(geoip_ipv6_entries, ent);
-}
-
-/** Add an entry to the GeoIP ipv6 table, parsing it from <b>line</b>.  The
- * format is as for geoip_load_file(). */
-/* XXX5053 Should this code also support parsing Maxmind's GeoIPv6.csv
- * format directly, similar to how their v4 format is also accepted?  That
- * would enable people to use their commercial IPv6 databases instead of
- * our free one, if they wanted. -KL */
-/*private*/ int
-geoip_ipv6_parse_entry(const char *line)
-{
-  char buf[512];
-  char *low_str, *high_str, *country;
-  struct in6_addr low, high;
-  char *strtok_state;
-
-  strlcpy(buf, line, sizeof(buf));
-
-  if (!geoip_countries)
-    init_geoip_countries();
-  if (!geoip_ipv6_entries)
-    geoip_ipv6_entries = smartlist_new();
-
-  while (TOR_ISSPACE(*line))
-    ++line;
-  if (*line == '#')
-    return 0;
-
-  low_str = tor_strtok_r(buf, ",", &strtok_state);
-  if (!low_str)
-    goto fail;
-  high_str = tor_strtok_r(NULL, ",", &strtok_state);
-  if (!high_str)
-    goto fail;
-  country = tor_strtok_r(NULL, "\n", &strtok_state);
-  if (!country)
-    goto fail;
-  if (strlen(country) != 2)
-    goto fail;
-
-  if (tor_inet_pton(AF_INET6, low_str, &low) <= 0)
-    goto fail;
-  if (tor_inet_pton(AF_INET6, high_str, &high) <= 0)
-    goto fail;
-
-  geoip_ipv6_add_entry(low, high, country);
-  return 0;
-
-  fail:
-    log_warn(LD_GENERAL, "Unable to parse line from GEOIP IPV6 file: %s",
-             escaped(line));
-    return -1;
 }
 
 /** Sorting helper: return -1, 1, or 0 based on comparison of two
@@ -312,15 +273,20 @@ init_geoip_countries(void)
   strmap_set_lc(country_idxplus1_by_lc_code, "??", (void*)(1));
 }
 
-/** Clear the GeoIP database and reload it from the file
- * <b>filename</b>. Return 0 on success, -1 on failure.
+/** Clear appropriate GeoIP database, based on <b>family</b>, and
+ * reload it from the file <b>filename</b>. Return 0 on success, -1 on
+ * failure.
  *
- * Recognized line formats are:
+ * Recognized line formats for IPv4 are:
  *   INTIPLOW,INTIPHIGH,CC
  * and
  *   "INTIPLOW","INTIPHIGH","CC","CC3","COUNTRY NAME"
  * where INTIPLOW and INTIPHIGH are IPv4 addresses encoded as 4-byte unsigned
  * integers, and CC is a country code.
+ *
+ * Recognized line format for IPv6 is:
+ *   IPV6LOW,IPV6HIGH,CC
+ * where IPV6LOW and IPV6HIGH are IPv6 addresses and CC is a country code.
  *
  * It also recognizes, and skips over, blank lines and lines that start
  * with '#' (comments).
@@ -362,17 +328,14 @@ geoip_load_file(sa_family_t family, const char *filename)
   geoip_digest_env = crypto_digest_new();
 
   log_notice(LD_GENERAL, "Parsing GEOIP %s file %s.",
-             (family == AF_INET) ? "ipv4" : "ipv6", filename);
+             (family == AF_INET) ? "IPv4" : "IPv6", filename);
   while (!feof(f)) {
     char buf[512];
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
       break;
     crypto_digest_add_bytes(geoip_digest_env, buf, strlen(buf));
     /* FFFF track full country name. */
-    if (family == AF_INET)
-      geoip_ipv4_parse_entry(buf);
-    else /* AF_INET6 */
-      geoip_ipv6_parse_entry(buf);
+    geoip_parse_entry(buf, family);
   }
   /*XXXX abort and return -1 if no entries/illformed?*/
   fclose(f);

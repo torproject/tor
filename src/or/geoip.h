@@ -13,8 +13,7 @@
 #define _TOR_GEOIP_H
 
 #ifdef GEOIP_PRIVATE
-int geoip_ipv4_parse_entry(const char *line);
-int geoip_ipv6_parse_entry(const char *line);
+int geoip_parse_entry(const char *line, sa_family_t family);
 int geoip_get_country_by_ipv4(uint32_t ipaddr);
 int geoip_get_country_by_ipv6(const struct in6_addr *addr);
 #endif
