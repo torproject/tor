@@ -1647,6 +1647,51 @@ connection_ap_supports_optimistic_data(const entry_connection_t *conn)
   return conn->may_use_optimistic_data;
 }
 
+/** DOCDOC */
+static uint32_t
+connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
+{
+  edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(ap_conn);
+  const node_t *exitnode = NULL;
+  const crypt_path_t *cpath_layer = edge_conn->cpath_layer;
+  uint32_t flags = 0;
+  if (ap_conn->use_begindir)
+    return 0;
+
+  if (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+    return 0;
+
+  if (ap_conn->ipv4_traffic_ok && !ap_conn->ipv6_traffic_ok)
+    return 0;
+
+  if (! cpath_layer ||
+      ! cpath_layer->extend_info)
+    return 0;
+
+  if (!ap_conn->ipv4_traffic_ok)
+    flags |= BEGIN_FLAG_IPV4_NOT_OK;
+
+  exitnode = node_get_by_id(cpath_layer->extend_info->identity_digest);
+
+  if (ap_conn->ipv6_traffic_ok && exitnode) {
+    tor_addr_t a;
+    tor_addr_make_null(&a, AF_INET6);
+    if (compare_tor_addr_to_node_policy(&a, ap_conn->socks_request->port,
+                                        exitnode)
+        != ADDR_POLICY_REJECTED) {
+      flags |= BEGIN_FLAG_IPV6_OK;
+    }
+  }
+
+  if (flags == BEGIN_FLAG_IPV4_NOT_OK) {
+    log_warn(LD_BUG, "Hey; I'm about to ask a node for a connection that I "
+             "am telling it to fulfil with neither IPv4 nor IPv6. That's "
+             "probably not going to work.");
+  }
+
+  return flags;
+}
+
 /** Write a relay begin cell, using destaddr and destport from ap_conn's
  * socks_request field, and send it down circ.
  *
@@ -1681,6 +1726,9 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
     circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
+
+  /* Set up begin cell flags. */
+  edge_conn->begincell_flags = connection_ap_get_begincell_flags(ap_conn);
 
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
                (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
