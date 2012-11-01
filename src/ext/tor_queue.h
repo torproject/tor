@@ -99,7 +99,9 @@ struct name {								\
 #define	SLIST_HEAD_INITIALIZER(head)					\
 	{ NULL }
  
-#define SLIST_ENTRY(type)						\
+/* XXXX This macro name conflicts with a typedef in winnt.h, so Tor
+ * has to redefine it. */
+#define TOR_SLIST_ENTRY(type)						\
 struct {								\
 	struct type *sle_next;	/* next element */			\
 }
