@@ -4743,7 +4743,6 @@ parse_port_config(smartlist_t *out,
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
 
-
         if (!strcasecmp(elt, "IsolateDestPort")) {
           isoflag = ISO_DESTPORT;
         } else if (!strcasecmp(elt, "IsolateDestAddr")) {
@@ -5019,7 +5018,8 @@ check_server_ports(const smartlist_t *ports,
       if (! port->no_advertise) {
         ++n_orport_advertised;
         if (tor_addr_family(&port->addr) == AF_INET ||
-            (tor_addr_family(&port->addr) == AF_UNSPEC && !port->bind_ipv6_only))
+            (tor_addr_family(&port->addr) == AF_UNSPEC &&
+                !port->bind_ipv6_only))
           ++n_orport_advertised_ipv4;
       }
       if (! port->no_listen)

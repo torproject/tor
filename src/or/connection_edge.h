@@ -111,6 +111,5 @@ int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
 
 #endif
 
-
 #endif
 

@@ -784,7 +784,6 @@ connection_ap_detach_retriable(entry_connection_t *conn,
   }
 }
 
-
 /** Check if <b>conn</b> is using a dangerous port. Then warn and/or
  * reject depending on our config options. */
 static int
@@ -2208,7 +2207,6 @@ begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
 
   return 0;
 }
-
 
 /** A relay 'begin' or 'begin_dir' cell has arrived, and either we are
  * an exit hop for the circuit, or we are the origin and it is a

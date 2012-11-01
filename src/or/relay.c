@@ -1063,7 +1063,8 @@ connection_edge_process_relay_cell_not_open(
                    -1);
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       tor_addr_t addr;
-      tor_addr_from_ipv4n(&addr, get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
+      tor_addr_from_ipv4n(&addr,
+                          get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
       remap_event_helper(entry_conn, &addr);
     } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
       tor_addr_t addr;
