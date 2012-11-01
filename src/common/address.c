@@ -181,6 +181,14 @@ tor_addr_make_unspec(tor_addr_t *a)
   a->family = AF_UNSPEC;
 }
 
+/** DOCDOC */
+void
+tor_addr_make_null(tor_addr_t *a, sa_family_t family)
+{
+  memset(a, 0, sizeof(*a));
+  a->family = family;
+}
+
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
  * *<b>addr</b> to the proper IP address and family. The <b>family</b>
  * argument (which must be AF_INET, AF_INET6, or AF_UNSPEC) declares a
