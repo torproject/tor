@@ -1168,6 +1168,10 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                      "no IPv4 traffic supported.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
+          } else if (family == AF_INET6) {
+            conn->ipv4_traffic_ok = 0;
+          } else if (family == AF_INET) {
+            conn->ipv6_traffic_ok = 0;
           }
         }
       }
