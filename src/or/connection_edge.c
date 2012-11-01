@@ -2625,11 +2625,15 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
   }
 
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-    struct in_addr in;
     tor_addr_t addr, *addrp = NULL;
     addr_policy_result_t r;
-    if (tor_inet_aton(conn->socks_request->address, &in)) {
-      tor_addr_from_in(&addr, &in);
+    if (0 == tor_addr_parse(&addr, conn->socks_request->address)) {
+      addrp = &addr;
+    } else if (!conn->ipv4_traffic_ok && conn->ipv6_traffic_ok) {
+      tor_addr_make_null(&addr, AF_INET6);
+      addrp = &addr;
+    } else if (conn->ipv4_traffic_ok && !conn->ipv6_traffic_ok) {
+      tor_addr_make_null(&addr, AF_INET);
       addrp = &addr;
     }
     r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port,exit);
