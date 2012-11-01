@@ -1714,31 +1714,29 @@ launch_test_addresses(int fd, short event, void *args)
    * be an exit server.*/
   if (options->ServerDNSTestAddresses) {
 
-  tor_assert(the_evdns_base);
-  SMARTLIST_FOREACH_BEGIN(options->ServerDNSTestAddresses,
-                          const char *, address) {
-    char *a = tor_strdup(address);
-    req = evdns_base_resolve_ipv4(the_evdns_base,
-                              address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
+    tor_assert(the_evdns_base);
+    SMARTLIST_FOREACH_BEGIN(options->ServerDNSTestAddresses,
+                            const char *, address) {
+      char *a = tor_strdup(address);
+      req = evdns_base_resolve_ipv4(the_evdns_base,
+                         address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
 
-    if (!req) {
-      log_info(LD_EXIT, "eventdns rejected test address %s",
-               escaped_safe_str(address));
-      tor_free(a);
-    }
-    a = tor_strdup(address);
-    req = evdns_base_resolve_ipv6(the_evdns_base,
-                              address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
-    ++n_ipv6_requests_made;
-    if (!req) {
-      log_info(LD_EXIT, "eventdns rejected test address %s",
-               escaped_safe_str(address));
-      tor_free(a);
-    }
-  } SMARTLIST_FOREACH_END(address);
-
-  } /*XXXX REINDENT */
-
+      if (!req) {
+        log_info(LD_EXIT, "eventdns rejected test address %s",
+                 escaped_safe_str(address));
+        tor_free(a);
+      }
+      a = tor_strdup(address);
+      req = evdns_base_resolve_ipv6(the_evdns_base,
+                           address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
+      ++n_ipv6_requests_made;
+      if (!req) {
+        log_info(LD_EXIT, "eventdns rejected test address %s",
+                 escaped_safe_str(address));
+        tor_free(a);
+      }
+    } SMARTLIST_FOREACH_END(address);
+  }
 }
 
 #define N_WILDCARD_CHECKS 2
