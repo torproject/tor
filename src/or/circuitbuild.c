@@ -994,6 +994,7 @@ pathbias_get_min_circs(const or_options_t *options)
                                    5, INT32_MAX);
 }
 
+/** The circuit success rate below which we issue a notice */
 static double
 pathbias_get_notice_rate(const or_options_t *options)
 {
@@ -1006,6 +1007,7 @@ pathbias_get_notice_rate(const or_options_t *options)
 }
 
 /* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+/** The circuit success rate below which we issue a warn */
 double
 pathbias_get_warn_rate(const or_options_t *options)
 {
@@ -1018,18 +1020,26 @@ pathbias_get_warn_rate(const or_options_t *options)
 }
 
 /* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+/**
+ * The extreme rate is the rate at which we would drop the guard,
+ * if pb_dropguard is also set. Otherwise we just warn.
+ */
 double
-pathbias_get_crit_rate(const or_options_t *options)
+pathbias_get_extreme_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_CRIT_PCT 30
-  if (options->PathBiasCritRate >= 0.0)
-    return options->PathBiasCritRate;
+#define DFLT_PATH_BIAS_EXTREME_PCT 30
+  if (options->PathBiasExtremeRate >= 0.0)
+    return options->PathBiasExtremeRate;
   else
-    return networkstatus_get_param(NULL, "pb_critpct",
-                                   DFLT_PATH_BIAS_CRIT_PCT, 0, 100)/100.0;
+    return networkstatus_get_param(NULL, "pb_extremepct",
+                                   DFLT_PATH_BIAS_EXTREME_PCT, 0, 100)/100.0;
 }
 
 /* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
+/**
+ * If 1, we actually disable use of guards that fall below
+ * the extreme_pct.
+ */
 int
 pathbias_get_dropguards(const or_options_t *options)
 {
@@ -1041,6 +1051,12 @@ pathbias_get_dropguards(const or_options_t *options)
                                    DFLT_PATH_BIAS_DROP_GUARDS, 0, 100)/100.0;
 }
 
+/**
+ * This is the number of circuits at which we scale our
+ * counts by mult_factor/scale_factor. Note, this count is
+ * not exact, as we only perform the scaling in the event
+ * of no integer truncation.
+ */
 static int
 pathbias_get_scale_threshold(const or_options_t *options)
 {
@@ -1053,6 +1069,12 @@ pathbias_get_scale_threshold(const or_options_t *options)
                                    INT32_MAX);
 }
 
+/**
+ * The scale factor is the denominator for our scaling
+ * of circuit counts for our path bias window. Note that
+ * we must be careful of the values we use here, as the
+ * code only scales in the event of no integer truncation.
+ */
 static int
 pathbias_get_scale_factor(const or_options_t *options)
 {
@@ -1064,6 +1086,11 @@ pathbias_get_scale_factor(const or_options_t *options)
                                 DFLT_PATH_BIAS_SCALE_FACTOR, 1, INT32_MAX);
 }
 
+/**
+ * The mult factor is the numerator for our scaling
+ * of circuit counts for our path bias window. It
+ * allows us to scale by fractions.
+ */
 static int
 pathbias_get_mult_factor(const or_options_t *options)
 {
@@ -1076,6 +1103,9 @@ pathbias_get_mult_factor(const or_options_t *options)
                                 pathbias_get_scale_factor(options)-1);
 }
 
+/**
+ * Convert a Guard's path state to string.
+ */
 static const char *
 pathbias_state_to_string(path_state_t state)
 {
@@ -1262,7 +1292,7 @@ pathbias_count_success(origin_circuit_t *circ)
         circ->path_state = PATH_STATE_SUCCEEDED;
         guard->circuit_successes++;
 
-        log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+        log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
                  guard->circuit_successes, guard->first_hops,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
@@ -1353,26 +1383,29 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
     if (guard->circuit_successes/((double)guard->first_hops)
-        < pathbias_get_crit_rate(options)
-        && !guard->path_bias_crited) {
-      guard->path_bias_crited = 1;
-
+        < pathbias_get_extreme_rate(options)) {
+      /* Dropping is currently disabled by default. */
       if (pathbias_get_dropguards(options)) {
-        /* This message is currently disabled by default. */
-        log_warn(LD_PROTOCOL,
+        if (!guard->path_bias_disabled) {
+          log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing an extremely large amount of "
-                 "circuits. Tor has disabled use of this guard. Success "
+                 "circuits. To avoid potential route manipluation attacks, "
+                 "Tor has disabled use of this guard. Success "
                  "counts are %d/%d, with %d timeouts. For reference, your "
                  "timeout cutoff is %ld.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
-        guard->path_bias_disabled = 1;
-        guard->bad_since = approx_time();
-      } else {
-        log_warn(LD_PROTOCOL,
+          guard->path_bias_disabled = 1;
+          guard->bad_since = approx_time();
+        }
+      } else if (!guard->path_bias_extreme) {
+        guard->path_bias_extreme = 1;
+        log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing an extremely large amount of "
-                 "circuits. Success counts are %d/%d, with %d timeouts. "
+                 "circuits. This could indicate a route manipulation attack, "
+                 "extreme network overload, or a bug. "
+                 "Success counts are %d/%d, with %d timeouts. "
                  "For reference, your timeout cutoff is %ld.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
@@ -1380,10 +1413,10 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
       }
       return -1;
     } else if (guard->circuit_successes/((double)guard->first_hops)
-               < pathbias_get_warn_rate(options)
-               && !guard->path_bias_warned) {
-      guard->path_bias_warned = 1;
-      log_warn(LD_PROTOCOL,
+               < pathbias_get_warn_rate(options)) {
+      if (!guard->path_bias_warned) {
+        guard->path_bias_warned = 1;
+        log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing a very large amount of "
                  "circuits. Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
@@ -1393,18 +1426,20 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
+      }
     } else if (guard->circuit_successes/((double)guard->first_hops)
-               < pathbias_get_notice_rate(options)
-               && !guard->path_bias_noticed) {
-      guard->path_bias_noticed = 1;
-      log_notice(LD_PROTOCOL,
-                 "Your Guard %s=%s is failing more circuits than usual. Most "
-                 "likely this means the Tor network is overloaded. Success "
-                 "counts are %d/%d, with %d timeouts. For reference, your "
-                 "timeout cutoff is %ld.",
-                 guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 guard->circuit_successes, guard->first_hops, guard->timeouts,
-                 (long)circ_times.close_ms/1000);
+               < pathbias_get_notice_rate(options)) {
+      if (!guard->path_bias_noticed) {
+        guard->path_bias_noticed = 1;
+        log_notice(LD_CIRC,
+                   "Your Guard %s=%s is failing more circuits than usual. "
+                   "Most likely this means the Tor network is overloaded. "
+                   "Success counts are %d/%d, with %d timeouts. For "
+                   "reference, your timeout cutoff is %ld.",
+                   guard->nickname, hex_str(guard->identity, DIGEST_LEN),
+                   guard->circuit_successes, guard->first_hops,
+                   guard->timeouts, (long)circ_times.close_ms/1000);
+      }
     }
   }
 
@@ -1412,24 +1447,26 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
   if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
-    /* For now, only scale if there will be no rounding error...
-     * XXX024: We want to switch to a real moving average for 0.2.4. */
+    /* Only scale if there will be no rounding error for our scaling
+     * factors */
     if (((mult_factor*guard->first_hops) % scale_factor) == 0 &&
         ((mult_factor*guard->circuit_successes) % scale_factor) == 0) {
-      log_info(LD_PROTOCOL,
+      log_info(LD_CIRC,
                "Scaling pathbias counts to (%u/%u)*(%d/%d) for guard %s=%s",
                guard->circuit_successes, guard->first_hops, mult_factor,
                scale_factor, guard->nickname, hex_str(guard->identity,
                DIGEST_LEN));
       guard->first_hops *= mult_factor;
       guard->circuit_successes *= mult_factor;
+      guard->timeouts *= mult_factor;
 
       guard->first_hops /= scale_factor;
       guard->circuit_successes /= scale_factor;
+      guard->timeouts /= scale_factor;
     }
   }
   guard->first_hops++;
-  log_info(LD_PROTOCOL, "Got success count %u/%u for guard %s=%s",
+  log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
            guard->circuit_successes, guard->first_hops, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;

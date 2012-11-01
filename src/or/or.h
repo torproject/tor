@@ -3785,7 +3785,7 @@ typedef struct {
   int PathBiasCircThreshold;
   double PathBiasNoticeRate;
   double PathBiasWarnRate;
-  double PathBiasCritRate;
+  double PathBiasExtremeRate;
   int PathBiasDropGuards;
   int PathBiasScaleThreshold;
   int PathBiasScaleFactor;
@@ -4069,8 +4069,6 @@ typedef struct {
   /** How long we wait before actually closing the circuit. */
   double close_ms;
 } circuit_build_times_t;
-
-void pathbias_count_timeout(origin_circuit_t *circ);
 
 /********************************* config.c ***************************/
 

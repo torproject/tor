@@ -314,10 +314,11 @@ static config_var_t option_vars_[] = {
   VPORT(ORPort,                      LINELIST, NULL),
   V(OutboundBindAddress,         LINELIST,   NULL),
 
+  OBSOLETE("PathBiasDisableRate"),
   V(PathBiasCircThreshold,       INT,      "-1"),
   V(PathBiasNoticeRate,          DOUBLE,   "-1"),
   V(PathBiasWarnRate,            DOUBLE,   "-1"),
-  V(PathBiasCritRate,            DOUBLE,   "-1"),
+  V(PathBiasExtremeRate,         DOUBLE,   "-1"),
   V(PathBiasScaleThreshold,      INT,      "-1"),
   V(PathBiasScaleFactor,         INT,      "-1"),
   V(PathBiasMultFactor,          INT,      "-1"),

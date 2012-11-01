@@ -1049,7 +1049,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
       if ((node->circuit_successes/((double)node->first_hops)
-          < pathbias_get_crit_rate(options)) &&
+          < pathbias_get_extreme_rate(options)) &&
           pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
