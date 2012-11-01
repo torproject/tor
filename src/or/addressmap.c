@@ -636,7 +636,7 @@ client_dns_set_addressmap(origin_circuit_t *on_circ,
   if (tor_addr_family(val) != AF_INET)
     return;
 
-  if (! tor_addr_to_str(valbuf, val, sizeof(valbuf), 0)) /* XXXX decorate? */
+  if (! tor_addr_to_str(valbuf, val, sizeof(valbuf), 1))
     return;
 
   client_dns_set_addressmap_impl(on_circ, address, valbuf, exitname, ttl);

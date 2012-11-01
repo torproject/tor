@@ -1344,7 +1344,7 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   }
 
   tor_addr_from_sockaddr(&addr, (struct sockaddr*)&orig_dst, &req->port);
-  tor_addr_to_str(req->address, &addr, sizeof(req->address), 0);
+  tor_addr_to_str(req->address, &addr, sizeof(req->address), 1);
 
   return 0;
 #elif defined(TRANS_PF)
@@ -1405,7 +1405,7 @@ connection_ap_get_original_destination(entry_connection_t *conn,
     return -1;
   }
 
-  tor_addr_to_str(req->address, &addr, sizeof(req->address), 0);
+  tor_addr_to_str(req->address, &addr, sizeof(req->address), 1);
   req->port = ntohs(pnl.rdport);
 
   return 0;
