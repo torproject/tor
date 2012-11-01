@@ -1683,7 +1683,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
   payload_len = (int)strlen(payload)+1;
-  if (payload_len <= RELAY_PAYLOAD_SIZE - 4) {
+  if (payload_len <= RELAY_PAYLOAD_SIZE - 4 && edge_conn->begincell_flags) {
     set_uint32(payload + payload_len, htonl(edge_conn->begincell_flags));
     payload_len += 4;
   }
