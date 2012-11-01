@@ -1173,9 +1173,15 @@ The following options are useful only for clients (that is, if
 
 **PathBiasNoticeRate** __NUM__ +
 
-**PathBiasDisableRate** __NUM__ +
+**PathBiasWarnRate** __NUM__ +
+
+**PathBiasExtremeRate** __NUM__ +
+
+**PathBiasDropGuards** __NUM__ +
 
 **PathBiasScaleThreshold** __NUM__ +
+
+**PathBiasMultFactor** __NUM__ +
 
 **PathBiasScaleFactor** __NUM__::
     These options override the default behavior of Tor's (**currently
@@ -1183,18 +1189,21 @@ The following options are useful only for clients (that is, if
     misbehaving guard nodes, Tor looks for nodes where more than a certain
     fraction of circuits through that node fail after the first hop.  The
     PathBiasCircThreshold option controls how many circuits we need to build
-    through a guard before we make these checks.  The PathBiasNoticeRate and
-    PathBiasDisableRate options control what fraction of circuits must
-    succeed through a guard so we won't warn about it or disable it,
-    respectively.  When we have seen more than PathBiasScaleThreshold
-    circuits through a guard, we divide our observations by
-    PathBiasScaleFactor, so that new observations don't get swamped by old
-    ones. +
+    through a guard before we make these checks.  The PathBiasNoticeRate,
+    PathBiasWarnRate and PathBiasExtremeRate options control what fraction of
+    circuits must succeed through a guard so we won't write log messages.
+    If less than PathBiasExtremeRate circuits succeed *and* PathBiasDropGuards
+    is set to 1, we disable use of that guard. +
+ +
+    When we have seen more than PathBiasScaleThreshold
+    circuits through a guard, we scale our observations by
+    PathBiasMultFactor/PathBiasScaleFactor, so that new observations don't get
+    swamped by old ones. +
  +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
-    If no defaults are available there, these options default to 20, .70,
-    0.0, 200, and 4 respectively.
+    If no defaults are available there, these options default to 150, .70,
+    .50, .30, 0, 300, 1, and 2 respectively.
 
 **ClientUseIPv6** **0**|**1**::
     If this option is set to 1, Tor might connect to entry nodes over
