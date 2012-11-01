@@ -1172,6 +1172,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         }
       }
 
+      if (socks->socks_version == 4)
+        conn->ipv6_traffic_ok = 0;
+
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
         const node_t *r =
