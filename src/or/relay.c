@@ -1151,7 +1151,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
-      log_info(domain,"%d: end cell (%s) for stream %d. Removing stream.",
+      log_info(domain,TOR_SOCKET_T_FORMAT": end cell (%s) for stream %d. "
+               "Removing stream.",
                conn->base_.s,
                stream_end_reason_to_string(reason),
                conn->stream_id);
@@ -1473,7 +1474,8 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     connection_fetch_from_buf(payload, length, TO_CONN(conn));
   }
 
-  log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->base_.s,
+  log_debug(domain,TOR_SOCKET_T_FORMAT": Packaging %d bytes (%d waiting).",
+            conn->base_.s,
             (int)length, (int)connection_get_inbuf_len(TO_CONN(conn)));
 
   if (sending_optimistically && !sending_from_optimistic) {

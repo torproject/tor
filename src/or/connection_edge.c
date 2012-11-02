@@ -124,7 +124,8 @@ connection_edge_reached_eof(edge_connection_t *conn)
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
-  log_info(LD_EDGE,"conn (fd %d) reached eof. Closing.", conn->base_.s);
+  log_info(LD_EDGE,"conn (fd "TOR_SOCKET_T_FORMAT") reached eof. Closing.",
+           conn->base_.s);
   if (!conn->base_.marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
@@ -313,11 +314,12 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   }
 
   if (circ && !circ->marked_for_close) {
-    log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->base_.s);
+    log_debug(LD_EDGE,"Sending end on conn (fd "TOR_SOCKET_T_FORMAT").",
+              conn->base_.s);
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
   } else {
-    log_debug(LD_EDGE,"No circ to send end on conn (fd %d).",
+    log_debug(LD_EDGE,"No circ to send end on conn (fd "TOR_SOCKET_T_FORMAT").",
               conn->base_.s);
   }
 
@@ -2619,7 +2621,8 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
   edge_conn->package_window = STREAMWINDOW_START;
   edge_conn->deliver_window = STREAMWINDOW_START;
   base_conn->state = AP_CONN_STATE_CONNECT_WAIT;
-  log_info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
+  log_info(LD_APP,"Address/port sent, ap socket "TOR_SOCKET_T_FORMAT
+           ", n_circ_id %d",
            base_conn->s, circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
@@ -2720,7 +2723,8 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   tor_free(base_conn->address); /* Maybe already set by dnsserv. */
   base_conn->address = tor_strdup("(Tor_internal)");
   base_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
-  log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
+  log_info(LD_APP,"Address sent for resolve, ap socket "TOR_SOCKET_T_FORMAT
+           ", n_circ_id %d",
            base_conn->s, circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_NEW, 0);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);

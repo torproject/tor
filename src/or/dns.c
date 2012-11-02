@@ -763,12 +763,13 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
         *made_connection_pending_out = 1;
-        log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
-                  "resolve of %s", exitconn->base_.s,
+        log_debug(LD_EXIT,"Connection (fd "TOR_SOCKET_T_FORMAT") waiting "
+                  "for pending DNS resolve of %s", exitconn->base_.s,
                   escaped_safe_str(exitconn->base_.address));
         return 0;
       case CACHE_STATE_CACHED_VALID:
-        log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
+        log_debug(LD_EXIT,"Connection (fd "TOR_SOCKET_T_FORMAT") found "
+                  "cached answer for %s",
                   exitconn->base_.s,
                   escaped_safe_str(resolve->address));
         exitconn->address_ttl = resolve->ttl;
@@ -780,7 +781,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
         }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
-        log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
+        log_debug(LD_EXIT,"Connection (fd "TOR_SOCKET_T_FORMAT") found cached "
+                  "error for %s",
                   exitconn->base_.s,
                   escaped_safe_str(exitconn->base_.address));
         return -1;
@@ -891,7 +893,7 @@ connection_dns_remove(edge_connection_t *conn)
   if (pend->conn == conn) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
-    log_debug(LD_EXIT, "First connection (fd %d) no longer waiting "
+    log_debug(LD_EXIT, "First connection (fd "TOR_SOCKET_T_FORMAT") no longer waiting "
               "for resolve of %s",
               conn->base_.s,
               escaped_safe_str(conn->base_.address));
@@ -903,7 +905,8 @@ connection_dns_remove(edge_connection_t *conn)
         pend->next = victim->next;
         tor_free(victim);
         log_debug(LD_EXIT,
-                  "Connection (fd %d) no longer waiting for resolve of %s",
+                  "Connection (fd "TOR_SOCKET_T_FORMAT") no longer waiting "
+                  "for resolve of %s",
                   conn->base_.s, escaped_safe_str(conn->base_.address));
         return; /* more are pending */
       }
@@ -1607,7 +1610,7 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
 /** Launch attempts to resolve a bunch of known-good addresses (configured in
  * ServerDNSTestAddresses).  [Callback for a libevent timer] */
 static void
-launch_test_addresses(int fd, short event, void *args)
+launch_test_addresses(evutil_socket_t fd, short event, void *args)
 {
   const or_options_t *options = get_options();
   struct evdns_request *req;

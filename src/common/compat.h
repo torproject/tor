@@ -239,6 +239,19 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #define I64_FORMAT "%lld"
 #endif
 
+#if (SIZEOF_INTPTR_T == SIZEOF_INT)
+#define INTPTR_T_FORMAT "%d"
+#define INTPTR_PRINTF_ARG(x) ((int)(x))
+#elif (SIZEOF_INTPTR_T == SIZEOF_LONG)
+#define INTPTR_T_FORMAT "%ld"
+#define INTPTR_PRINTF_ARG(x) ((long)(x))
+#elif (SIZEOF_INTPTR_T == 8)
+#define INTPTR_T_FORMAT I64_FORMAT
+#define INTPTR_PRINTF_ARG(x) I64_PRINTF_ARG(x)
+#else
+#error Unknown: SIZEOF_INTPTR_T
+#endif
+
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
  * tor_munmap_file. */
 typedef struct tor_mmap_t {
@@ -403,11 +416,13 @@ typedef int socklen_t;
  * any inadvertant checks for the socket being <= 0 or > 0 will probably
  * still work. */
 #define tor_socket_t intptr_t
+#define TOR_SOCKET_T_FORMAT INTPTR_T_FORMAT
 #define SOCKET_OK(s) ((SOCKET)(s) != INVALID_SOCKET)
 #define TOR_INVALID_SOCKET INVALID_SOCKET
 #else
 /** Type used for a network socket. */
 #define tor_socket_t int
+#define TOR_SOCKET_T_FORMAT "%d"
 /** Macro: true iff 's' is a possible value for a valid initialized socket. */
 #define SOCKET_OK(s) ((s) >= 0)
 /** Error/uninitialized value for a tor_socket_t. */

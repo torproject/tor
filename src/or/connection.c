@@ -1460,7 +1460,7 @@ connection_connect(connection_t *conn, const char *address,
 
   /* it succeeded. we're connected. */
   log_fn(inprogress?LOG_DEBUG:LOG_INFO, LD_NET,
-         "Connection to %s:%u %s (sock %d).",
+         "Connection to %s:%u %s (sock "TOR_SOCKET_T_FORMAT").",
          escaped_safe_str_client(address),
          port, inprogress?"in progress":"established", s);
   conn->s = s;

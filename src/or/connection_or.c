@@ -849,7 +849,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
           < now) {
       log_info(LD_OR,
                "Marking OR conn to %s:%d as too old for new circuits "
-               "(fd %d, %d secs old).",
+               "(fd "TOR_SOCKET_T_FORMAT", %d secs old).",
                or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
                (int)(now - or_conn->base_.timestamp_created));
       connection_or_mark_bad_for_new_circs(or_conn);
@@ -880,7 +880,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
        * and this one is open but not canonical.  Mark it bad. */
       log_info(LD_OR,
                "Marking OR conn to %s:%d as unsuitable for new circuits: "
-               "(fd %d, %d secs old).  It is not canonical, and we have "
+               "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  It is not canonical, and we have "
                "another connection to that OR that is.",
                or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
                (int)(now - or_conn->base_.timestamp_created));
@@ -928,8 +928,9 @@ connection_or_group_set_badness(or_connection_t *head, int force)
       if (best->is_canonical) {
         log_info(LD_OR,
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
-                 "(fd %d, %d secs old).  We have a better canonical one "
-                 "(fd %d; %d secs old).",
+                 "(fd "TOR_SOCKET_T_FORMAT", %d secs old). "
+                 "We have a better canonical one "
+                 "(fd "TOR_SOCKET_T_FORMAT"; %d secs old).",
                  or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
                  (int)(now - or_conn->base_.timestamp_created),
                  best->base_.s, (int)(now - best->base_.timestamp_created));
@@ -938,8 +939,9 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                                    &best->real_addr, CMP_EXACT)) {
         log_info(LD_OR,
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
-                 "(fd %d, %d secs old).  We have a better one with the "
-                 "same address (fd %d; %d secs old).",
+                 "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  We have a better "
+                 "one with the "
+                 "same address (fd "TOR_SOCKET_T_FORMAT"; %d secs old).",
                  or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
                  (int)(now - or_conn->base_.timestamp_created),
                  best->base_.s, (int)(now - best->base_.timestamp_created));
@@ -1241,7 +1243,8 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   }
 #endif
   connection_start_reading(TO_CONN(conn));
-  log_debug(LD_HANDSHAKE,"starting TLS handshake on fd %d", conn->base_.s);
+  log_debug(LD_HANDSHAKE,"starting TLS handshake on fd "TOR_SOCKET_T_FORMAT,
+            conn->base_.s);
   note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
 
   IF_HAS_BUFFEREVENT(TO_CONN(conn), {
@@ -1898,7 +1901,8 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
 
   while (1) {
     log_debug(LD_OR,
-              "%d: starting, inbuf_datalen %d (%d pending in tls object).",
+              TOR_SOCKET_T_FORMAT": starting, inbuf_datalen %d "
+              "(%d pending in tls object).",
               conn->base_.s,(int)connection_get_inbuf_len(TO_CONN(conn)),
               tor_tls_get_pending_bytes(conn->tls));
     if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
