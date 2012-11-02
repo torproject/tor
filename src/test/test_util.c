@@ -1005,7 +1005,7 @@ test_util_strmisc(void)
     const char *s = "abcdefghijklmnopqrstuvwxyz";
     cp = tor_strndup(s, 30);
     test_streq(cp, s); /* same string, */
-    test_neq(cp, s); /* but different pointers. */
+    test_neq_ptr(cp, s); /* but different pointers. */
     tor_free(cp);
 
     cp = tor_strndup(s, 5);
@@ -1015,7 +1015,7 @@ test_util_strmisc(void)
     s = "a\0b\0c\0d\0e\0";
     cp = tor_memdup(s,10);
     test_memeq(cp, s, 10); /* same ram, */
-    test_neq(cp, s); /* but different pointers. */
+    test_neq_ptr(cp, s); /* but different pointers. */
     tor_free(cp);
   }
 
@@ -1495,7 +1495,7 @@ test_util_mmap(void)
   /* Now a zero-length file. */
   write_str_to_file(fname1, "", 1);
   mapping = tor_mmap_file(fname1);
-  test_eq(mapping, NULL);
+  test_eq_ptr(mapping, NULL);
   test_eq(ERANGE, errno);
   unlink(fname1);
 
@@ -1889,7 +1889,7 @@ test_util_memarea(void)
   /* Make sure we don't overalign. */
   p1 = memarea_alloc(area, 1);
   p2 = memarea_alloc(area, 1);
-  test_eq(p1+sizeof(void*), p2);
+  test_eq_ptr(p1+sizeof(void*), p2);
   {
     malloced_ptr = tor_malloc(64);
     test_assert(!memarea_owns_ptr(area, malloced_ptr));
@@ -1934,7 +1934,7 @@ test_util_memarea(void)
 
   memarea_clear(area);
   p1 = memarea_alloc(area, 1);
-  test_eq(p1, p1_orig);
+  test_eq_ptr(p1, p1_orig);
   memarea_clear(area);
 
   /* Check for running over an area's size. */

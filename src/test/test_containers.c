@@ -266,7 +266,7 @@ test_container_smartlist_strings(void)
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
   cp_alloc = smartlist_pop_last(sl);
-  test_eq(cp_alloc, NULL);
+  test_eq_ptr(cp_alloc, NULL);
 
   /* Test uniq() */
   smartlist_split_string(sl,
@@ -677,12 +677,12 @@ test_container_strmap(void)
   test_eq(strmap_size(map), 0);
   test_assert(strmap_isempty(map));
   v = strmap_set(map, "K1", (void*)99);
-  test_eq(v, NULL);
+  test_eq_ptr(v, NULL);
   test_assert(!strmap_isempty(map));
   v = strmap_set(map, "K2", (void*)101);
-  test_eq(v, NULL);
+  test_eq_ptr(v, NULL);
   v = strmap_set(map, "K1", (void*)100);
-  test_eq(v, (void*)99);
+  test_eq_ptr(v, (void*)99);
   test_eq_ptr(strmap_get(map,"K1"), (void*)100);
   test_eq_ptr(strmap_get(map,"K2"), (void*)101);
   test_eq_ptr(strmap_get(map,"K-not-there"), NULL);
