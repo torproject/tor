@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Compile correctly on compilers without C99 designated initializer
+      support. Fixes bug 7286; bugfix on 0.2.4.4-alpha.

@@ -200,15 +200,16 @@ static int ewma_enabled = 0;
 
 /*** EWMA circuitmux_policy_t method table ***/
 
-circuitmux_policy_t ewma_policy = {  .alloc_cmux_data = ewma_alloc_cmux_data,
-  .free_cmux_data = ewma_free_cmux_data,
-  .alloc_circ_data = ewma_alloc_circ_data,
-  .free_circ_data = ewma_free_circ_data,
-  .notify_circ_active = ewma_notify_circ_active,
-  .notify_circ_inactive = ewma_notify_circ_inactive,
-  .notify_set_n_cells = NULL, /* EWMA doesn't need this */
-  .notify_xmit_cells = ewma_notify_xmit_cells,
-  .pick_active_circuit = ewma_pick_active_circuit
+circuitmux_policy_t ewma_policy = {
+  /*.alloc_cmux_data =*/ ewma_alloc_cmux_data,
+  /*.free_cmux_data =*/ ewma_free_cmux_data,
+  /*.alloc_circ_data =*/ ewma_alloc_circ_data,
+  /*.free_circ_data =*/ ewma_free_circ_data,
+  /*.notify_circ_active =*/ ewma_notify_circ_active,
+  /*.notify_circ_inactive =*/ ewma_notify_circ_inactive,
+  /*.notify_set_n_cells =*/ NULL, /* EWMA doesn't need this */
+  /*.notify_xmit_cells =*/ ewma_notify_xmit_cells,
+  /*.pick_active_circuit =*/ ewma_pick_active_circuit
 };
 
 /*** EWMA method implementations using the below EWMA helper functions ***/
