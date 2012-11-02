@@ -105,6 +105,9 @@ struct name {								\
 struct {								\
 	struct type *sle_next;	/* next element */			\
 }
+#ifndef _WIN32
+#define SLIST_ENTRY(type) TOR_SLIST_ENTRY(type)
+#endif
  
 /*
  * Singly-linked List access methods.
