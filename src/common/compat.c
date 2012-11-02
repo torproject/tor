@@ -429,7 +429,6 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
   /* On Windows, _vsnprintf won't tell us the length of the string if it
    * overflows, so we need to use _vcsprintf to tell how much to allocate */
   int len, r;
-  char *res;
   len = _vscprintf(fmt, args);
   if (len < 0) {
     *strp = NULL;
