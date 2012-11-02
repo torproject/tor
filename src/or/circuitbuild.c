@@ -1100,7 +1100,7 @@ pathbias_get_mult_factor(const or_options_t *options)
   else
     return networkstatus_get_param(NULL, "pb_multfactor",
                                 DFLT_PATH_BIAS_MULT_FACTOR, 1,
-                                pathbias_get_scale_factor(options)-1);
+                                pathbias_get_scale_factor(options));
 }
 
 /**
@@ -1398,6 +1398,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  (long)circ_times.close_ms/1000);
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
+          return -1;
         }
       } else if (!guard->path_bias_extreme) {
         guard->path_bias_extreme = 1;
@@ -1411,7 +1412,6 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
-      return -1;
     } else if (guard->circuit_successes/((double)guard->first_hops)
                < pathbias_get_warn_rate(options)) {
       if (!guard->path_bias_warned) {
