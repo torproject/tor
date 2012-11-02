@@ -1392,7 +1392,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "circuits. To avoid potential route manipluation attacks, "
                  "Tor has disabled use of this guard. Success "
                  "counts are %d/%d, with %d timeouts. For reference, your "
-                 "timeout cutoff is %ld.",
+                 "timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
@@ -1407,7 +1407,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "circuits. This could indicate a route manipulation attack, "
                  "extreme network overload, or a bug. "
                  "Success counts are %d/%d, with %d timeouts. "
-                 "For reference, your timeout cutoff is %ld.",
+                 "For reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
@@ -1422,7 +1422,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "overloaded, but it could also mean an attack against "
                  "you or the potentially the guard itself. Success counts "
                  "are %d/%d, with %d timeouts. For reference, your timeout "
-                 "cutoff is %ld.",
+                 "cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  guard->circuit_successes, guard->first_hops, guard->timeouts,
                  (long)circ_times.close_ms/1000);
@@ -1435,7 +1435,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                    "Your Guard %s=%s is failing more circuits than usual. "
                    "Most likely this means the Tor network is overloaded. "
                    "Success counts are %d/%d, with %d timeouts. For "
-                   "reference, your timeout cutoff is %ld.",
+                   "reference, your timeout cutoff is %ld seconds.",
                    guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                    guard->circuit_successes, guard->first_hops,
                    guard->timeouts, (long)circ_times.close_ms/1000);
