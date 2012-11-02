@@ -27,9 +27,19 @@
 #include <windows.h>
 #endif
 
-#if 0 == SIZEOF_PID_T
-/* Windows does not define pid_t, but _getpid() returns an int. */
+#if (0 == SIZEOF_PID_T) && defined(_WIN32)
+/* Windows does not define pid_t sometimes, but _getpid() returns an int.
+ * Everybody else needs to have a pid_t. */
 typedef int pid_t;
+#define PID_T_FORMAT "%d"
+#elif (SIZEOF_PID_T == SIZEOF_INT) || (SIZEOF_PID_T == SIZEOF_SHORT)
+#define PID_T_FORMAT "%d"
+#elif (SIZEOF_PID_T == SIZEOF_LONG)
+#define PID_T_FORMAT "%ld"
+#elif (SIZEOF_PID_T == SIZEOF_INT64_T)
+#define PID_T_FORMAT I64_FORMAT
+#else
+#error Unknown: SIZEOF_PID_T
 #endif
 
 /* Define to 1 if process-termination monitors on this OS and Libevent
@@ -206,15 +216,17 @@ tor_process_monitor_new(struct event_base *base,
 
   if (procmon->hproc != NULL) {
     procmon->poll_hproc = 1;
-    log_info(procmon->log_domain, "Successfully opened handle to process %d; "
+    log_info(procmon->log_domain, "Successfully opened handle to process "
+             PID_T_FORMAT"; "
              "monitoring it.",
-             (int)(procmon->pid));
+             procmon->pid);
   } else {
     /* If we couldn't get a handle to the process, we'll try again the
      * first time we poll. */
-    log_info(procmon->log_domain, "Failed to open handle to process %d; will "
+    log_info(procmon->log_domain, "Failed to open handle to process "
+             PID_T_FORMAT"; will "
              "try again later.",
-             (int)(procmon->pid));
+             procmon->pid);
   }
 #endif
 
@@ -259,7 +271,8 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
     if (!GetExitCodeProcess(procmon->hproc, &exit_code)) {
       char *errmsg = format_win32_error(GetLastError());
       log_warn(procmon->log_domain, "Error \"%s\" occurred while polling "
-               "handle for monitored process %d; assuming it's dead.",
+               "handle for monitored process "PID_T_FORMAT"; assuming "
+               "it's dead.",
                errmsg, procmon->pid);
       tor_free(errmsg);
       its_dead_jim = 1;
@@ -275,7 +288,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
     if (procmon->hproc != NULL) {
       log_info(procmon->log_domain, "Successfully opened handle to monitored "
-               "process %d.",
+               "process "PID_T_FORMAT".",
                procmon->pid);
       its_dead_jim = 0;
       procmon->poll_hproc = 1;
@@ -294,8 +307,8 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
       if (!its_dead_jim)
         log_info(procmon->log_domain, "Failed to open handle to monitored "
-                 "process %d, and error code %lu (%s) is not 'invalid "
-                 "parameter' -- assuming the process is still alive.",
+                 "process "PID_T_FORMAT", and error code %lu (%s) is not "
+                 "'invalid parameter' -- assuming the process is still alive.",
                  procmon->pid,
                  err_code, errmsg);
 
@@ -309,8 +322,8 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 #endif
 
   log(its_dead_jim ? LOG_NOTICE : LOG_INFO,
-      procmon->log_domain, "Monitored process %d is %s.",
-      (int)procmon->pid,
+      procmon->log_domain, "Monitored process "PID_T_FORMAT" is %s.",
+      procmon->pid,
       its_dead_jim ? "dead" : "still alive");
 
   if (its_dead_jim) {
