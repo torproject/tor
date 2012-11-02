@@ -1,0 +1,2 @@
+  o Minor bugfixes:
+    - Compile on win64 using mingw64. Fixes bug 7260; patches from "yayooo".

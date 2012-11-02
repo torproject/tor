@@ -145,6 +145,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the `_vscprintf' function. */
+#define HAVE__VSCPRINTF 1
+
 /* Define to 1 iff NULL is represented by a 0 in memory. */
 #define NULL_REP_IS_ZERO_BYTES 1
 
@@ -189,6 +192,9 @@
 
 /* The size of a `long long', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG
+
+/* The size of `pid_t', as computed by sizeof. */
+#define SIZEOF_PID_T 0
 
 /* The size of a `short', as computed by sizeof. */
 #define SIZEOF_SHORT 2

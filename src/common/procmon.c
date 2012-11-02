@@ -25,7 +25,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
 
+#if 0 == SIZEOF_PID_T
 /* Windows does not define pid_t, but _getpid() returns an int. */
 typedef int pid_t;
 #endif
