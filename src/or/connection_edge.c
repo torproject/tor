@@ -2493,7 +2493,8 @@ connection_exit_connect(edge_connection_t *edge_conn)
   int socket_error = 0;
 
   if ( (!connection_edge_is_rendezvous_stream(edge_conn) &&
-        router_compare_to_my_exit_policy(edge_conn)) ||
+        router_compare_to_my_exit_policy(&edge_conn->base_.addr,
+                                         edge_conn->base_.port)) ||
        (tor_addr_family(&conn->addr) == AF_INET6 &&
         ! get_options()->IPv6Exit)) {
     log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",

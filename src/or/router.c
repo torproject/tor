@@ -1370,22 +1370,34 @@ router_upload_dir_desc_to_dirservers(int force)
  * conn.  Return 0 if we accept; non-0 if we reject.
  */
 int
-router_compare_to_my_exit_policy(edge_connection_t *conn)
+router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 {
   if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
     return -1;
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (tor_addr_is_null(&conn->base_.addr))
+  if (tor_addr_is_null(addr))
     return -1;
 
-  if (tor_addr_family(&conn->base_.addr) != AF_INET &&
-      tor_addr_family(&conn->base_.addr) != AF_INET6)
+  /* look at desc_routerinfo->exit_policy for both the v4 and the v6
+   * policies.  The exit_policy field in desc_routerinfo is a bit unusual,
+   * in that it contains IPv6 and IPv6 entries.  We don't want to look
+   * at desc_routerinfio->ipv6_exit_policy, since that's a port summary. */
+  if ((tor_addr_family(addr) == AF_INET ||
+       tor_addr_family(addr) == AF_INET6)) {
+    return compare_tor_addr_to_addr_policy(addr, port,
+                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+#if 0
+  } else if (tor_addr_family(addr) == AF_INET6) {
+    return get_options()->IPv6Exit &&
+      desc_routerinfo->ipv6_exit_policy &&
+      compare_tor_addr_to_short_policy(addr, port,
+                  desc_routerinfo->ipv6_exit_policy) != ADDR_POLICY_ACCEPTED;
+#endif
+  } else {
     return -1;
-
-  return compare_tor_addr_to_addr_policy(&conn->base_.addr, conn->base_.port,
-                   desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+  }
 }
 
 /** Return true iff my exit policy is reject *:*.  Return -1 if we don't
