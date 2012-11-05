@@ -5566,27 +5566,28 @@ parse_outbound_addresses(or_options_t *options, int validate_only, char **msg)
 }
 
 /** Load one of the geoip files, <a>family</a> determining which
- * one. Note that <a>fname</a> will be freed by this
- * function. <a>default_fname</a> is used if on Windows and
+ * one. <a>default_fname</a> is used if on Windows and
  * <a>fname</a> equals "<default>". */
 static void
 config_load_geoip_file_(sa_family_t family,
-                        char *fname, /* will be freed */
+                        const char *fname,
                         const char *default_fname)
 {
-  (void)default_fname;
+#ifdef _WIN32
+  char *free_fname = NULL; /* Used to hold any temporary-allocated value */
   /* XXXX Don't use this "<default>" junk; make our filename options
    * understand prefixes somehow. -NM */
-  /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
-#ifdef _WIN32
-    if (!strcmp(fname, "<default>")) {
-      const char *conf_root = get_windows_conf_root();
-      tor_free(fname);
-      tor_asprintf(&fname, "%s\\%s", conf_root, default_fname);
-    }
+  if (!strcmp(fname, "<default>")) {
+    const char *conf_root = get_windows_conf_root();
+    tor_asprintf(&free_fname, "%s\\%s", conf_root, default_fname);
+    fname = free_fname;
+  }
+  geoip_load_file(family, fname);
+  tor_free(free_fname);
+#else
+  (void)default_fname;
+  geoip_load_file(family, fname);
 #endif
-    geoip_load_file(family, fname);
-    tor_free(fname);
 }
 
 /** Load geoip files for IPv4 and IPv6 if <a>options</a> and
@@ -5595,14 +5596,16 @@ static void
 config_maybe_load_geoip_files_(const or_options_t *options,
                                const or_options_t *old_options)
 {
+  /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
+
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile,
                                    options->GeoIPFile))
        || !geoip_is_loaded(AF_INET)))
-    config_load_geoip_file_(AF_INET, tor_strdup(options->GeoIPFile), "geoip");
+    config_load_geoip_file_(AF_INET, options->GeoIPFile, "geoip");
   if (options->GeoIPv6File &&
       ((!old_options || !opt_streq(old_options->GeoIPv6File,
                                    options->GeoIPv6File))
        || !geoip_is_loaded(AF_INET6)))
-    config_load_geoip_file_(AF_INET6, tor_strdup(options->GeoIPv6File), "geoip6");
+    config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
 }
