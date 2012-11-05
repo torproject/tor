@@ -5609,3 +5609,4 @@ config_maybe_load_geoip_files_(const or_options_t *options,
        || !geoip_is_loaded(AF_INET6)))
     config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
 }
+

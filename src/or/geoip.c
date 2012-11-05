@@ -73,8 +73,8 @@ geoip_get_country(const char *country)
   return (country_t)idx;
 }
 
-/** Add an entry to a GeoIP table, mapping all IP addresses between <b>low</b> and
- * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>. */
+/** Add an entry to a GeoIP table, mapping all IP addresses between <b>low</b>
+ * and <b>high</b>, inclusive, to the 2-letter country code <b>country</b>. */
 static void
 geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
                 const char *country)
