@@ -1440,6 +1440,8 @@ typedef struct edge_connection_t {
 
   /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
+  /* DOCDOC exit only */
+  unsigned int is_reverse_dns_lookup:1;
 
   unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
