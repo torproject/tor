@@ -4791,7 +4791,7 @@ routers_sort_by_identity(smartlist_t *routers)
   smartlist_sort(routers, compare_routerinfo_by_id_digest_);
 }
 
-/** Called when we change a node set, or when we reload the geoip list:
+/** Called when we change a node set, or when we reload the geoip IPv4 list:
  * recompute all country info in all configuration node sets and in the
  * routerlist. */
 void

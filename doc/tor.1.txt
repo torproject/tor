@@ -1458,7 +1458,10 @@ is non-zero):
     does on behalf of clients. (Default: 1)
 
 **GeoIPFile** __filename__::
-    A filename containing GeoIP data, for use with BridgeRecordUsageByCountry.
+    A filename containing IPv4 GeoIP data, for use with by-country statistics.
+
+**GeoIPv6File** __filename__::
+    A filename containing IPv6 GeoIP data, for use with by-country statistics.
 
 **CellStatistics** **0**|**1**::
     When this option is enabled, Tor writes statistics on the mean time that
