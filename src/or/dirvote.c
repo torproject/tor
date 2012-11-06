@@ -3534,12 +3534,8 @@ dirvote_get_vote(const char *fp, int flags)
   return NULL;
 }
 
-/** Construct and return a new microdescriptor from a routerinfo <b>ri</b>.
- *
- * XXX Right now, there is only one way to generate microdescriptors from
- * router descriptors.  This may change in future consensus methods.  If so,
- * we'll need an internal way to remember which method we used, and ask for a
- * particular method.
+/** Construct and return a new microdescriptor from a routerinfo <b>ri</b>
+ * according to <b>consensus_method</b>.
  **/
 microdesc_t *
 dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
