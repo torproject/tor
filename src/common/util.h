@@ -307,6 +307,8 @@ enum stream_status {
   IO_STREAM_CLOSED
 };
 
+const char *stream_status_to_string(enum stream_status stream_status);
+
 enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
 
 /** Return values from file_status(); see that function's documentation

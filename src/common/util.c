@@ -4461,6 +4461,25 @@ tor_split_lines(smartlist_t *sl, char *buf, int len)
   return smartlist_len(sl);
 }
 
+/** Return a string corresponding to <b>stream_status</b>. */
+const char *
+stream_status_to_string(enum stream_status stream_status)
+{
+  switch (stream_status) {
+    case IO_STREAM_OKAY:
+      return "okay";
+    case IO_STREAM_EAGAIN:
+      return "temporarily unavailable";
+    case IO_STREAM_TERM:
+      return "terminated";
+    case IO_STREAM_CLOSED:
+      return "closed";
+    default:
+      tor_fragile_assert();
+      return "unknown";
+  }
+}
+
 #ifdef _WIN32
 
 /** Return a smartlist containing lines outputted from
