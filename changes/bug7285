@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Warn when we are binding low ports when hibernation is enabled;
+      previously we had warned when we were _advertising_ low ports with
+      hibernation enabled. Fixes bug 7285; bugfix on 0.2.3.9-alpha.
