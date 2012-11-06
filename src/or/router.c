@@ -1622,11 +1622,13 @@ router_rebuild_descriptor(int force)
   }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy);
-#if 0
-  /* XXXX024 Don't actually enable this code until exiting to an IPv6
-   * address works. */
-  ri->ipv6_exit_policy = policy_summarize(&ri->exit_policy, AF_INET6);
-#endif
+
+  if (options->IPv6Exit) {
+    char *p_tmp = policy_summarize(ri->exit_policy, AF_INET6);
+    if (p_tmp)
+      ri->ipv6_exit_policy = parse_short_policy(p_tmp);
+    tor_free(p_tmp);
+  }
 
 #if 0
   /* XXXX NM NM I belive this is safe to remove */
