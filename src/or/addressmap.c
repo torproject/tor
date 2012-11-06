@@ -902,6 +902,13 @@ address_is_invalid_destination(const char *address, int client)
       return 0;
   }
 
+  /* It might be an IPv6 address! */
+  {
+    tor_addr_t a;
+    if (tor_addr_parse(&a, address) >= 0)
+      return 0;
+  }
+
   while (*address) {
     if (TOR_ISALNUM(*address) ||
         *address == '-' ||

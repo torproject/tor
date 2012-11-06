@@ -1334,7 +1334,7 @@ make_pending_resolve_cached(cached_resolve_t *resolve)
     cached_resolve_t *new_resolve = tor_memdup(resolve,
                                                sizeof(cached_resolve_t));
     uint32_t ttl = UINT32_MAX;
-    new_resolve->expiry = 0; /* So that set_expiry won't croak. */
+    new_resolve->expire = 0; /* So that set_expiry won't croak. */
     if (resolve->res_status_hostname == RES_STATUS_DONE_OK)
       new_resolve->result_ptr.hostname =
         tor_strdup(resolve->result_ptr.hostname);
