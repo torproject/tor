@@ -73,8 +73,10 @@ static const struct consensus_method_range_t {
   int high;
 } microdesc_consensus_methods[] = {
   {MIN_METHOD_FOR_MICRODESC, MIN_METHOD_FOR_A_LINES - 1},
-  {MIN_METHOD_FOR_A_LINES, MAX_SUPPORTED_CONSENSUS_METHOD},
-  {-1, -1}};
+  {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
+  {MIN_METHOD_FOR_P6_LINES, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {-1, -1}
+};
 
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
