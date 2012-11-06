@@ -5004,7 +5004,7 @@ check_server_ports(const smartlist_t *ports,
       continue;
     }
 #ifndef _WIN32
-    if (!port->no_advertise && port->port < 1024)
+    if (!port->no_listen && port->port < 1024)
       ++n_low_port;
 #endif
   } SMARTLIST_FOREACH_END(port);
