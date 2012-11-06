@@ -61,6 +61,9 @@ struct evdns_request;
 #define evdns_base_resolve_ipv4(base, addr, options, cb, ptr) \
   ((evdns_resolve_ipv4((addr), (options), (cb), (ptr))!=0)    \
    ? NULL : ((void*)1))
+#define evdns_base_resolve_ipv6(base, addr, options, cb, ptr) \
+  ((evdns_resolve_ipv6((addr), (options), (cb), (ptr))!=0)    \
+   ? NULL : ((void*)1))
 #define evdns_base_resolve_reverse(base, addr, options, cb, ptr)        \
   ((evdns_resolve_reverse((addr), (options), (cb), (ptr))!=0)           \
    ? NULL : ((void*)1))
