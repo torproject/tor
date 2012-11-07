@@ -449,7 +449,8 @@ int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
 int channel_matches_target_addr_for_extend(channel_t *chan,
                                            const tor_addr_t *target);
 unsigned int channel_num_circuits(channel_t *chan);
-void channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd);
+void channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd,
+                             int consider_identity);
 void channel_timestamp_client(channel_t *chan);
 
 const char * channel_listener_describe_transport(channel_listener_t *chan_l);

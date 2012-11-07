@@ -1554,7 +1554,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   tor_assert(conn->chan);
-  channel_set_circid_type(TLS_CHAN_TO_BASE(conn->chan), identity_rcvd);
+  channel_set_circid_type(TLS_CHAN_TO_BASE(conn->chan), identity_rcvd, 1);
+
   crypto_pk_free(identity_rcvd);
 
   if (started_here)

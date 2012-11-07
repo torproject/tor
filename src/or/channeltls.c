@@ -1384,7 +1384,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         tor_assert(tor_digest_is_zero(
                   (const char*)(chan->conn->handshake_state->
                       authenticated_peer_id)));
-        channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL);
+        channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
+               chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
 
         connection_or_init_conn_from_address(chan->conn,
                   &(chan->conn->base_.addr),
@@ -1638,7 +1639,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         ERR("Internal error: Couldn't get RSA key from ID cert.");
       memcpy(chan->conn->handshake_state->authenticated_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
-      channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd);
+      channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd,
+                chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
       crypto_pk_free(identity_rcvd);
     }
 
@@ -1922,7 +1924,8 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     memcpy(chan->conn->handshake_state->authenticated_peer_id,
            id_digests->d[DIGEST_SHA1], DIGEST_LEN);
 
-    channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd);
+    channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd,
+               chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
     crypto_pk_free(identity_rcvd);
 
     connection_or_init_conn_from_address(chan->conn,

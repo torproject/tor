@@ -4043,9 +4043,10 @@ channel_num_circuits(channel_t *chan)
  * This is called when setting up a channel and replaces the old
  * connection_or_set_circid_type()
  */
-
 void
-channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd)
+channel_set_circid_type(channel_t *chan,
+                        crypto_pk_t *identity_rcvd,
+                        int consider_identity)
 {
   int started_here;
   crypto_pk_t *our_identity;
@@ -4053,6 +4054,15 @@ channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd)
   tor_assert(chan);
 
   started_here = channel_is_outgoing(chan);
+
+  if (! consider_identity) {
+    if (started_here)
+      chan->circ_id_type = CIRC_ID_TYPE_HIGHER;
+    else
+      chan->circ_id_type = CIRC_ID_TYPE_LOWER;
+    return;
+  }
+
   our_identity = started_here ?
     get_tlsclient_identity_key() : get_server_identity_key();
 
