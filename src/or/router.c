@@ -1002,7 +1002,8 @@ router_dirport_found_reachable(void)
 void
 router_perform_bandwidth_test(int num_circs, time_t now)
 {
-  int num_cells = (int)(get_options()->BandwidthRate * 10 / CELL_NETWORK_SIZE);
+  int num_cells = (int)(get_options()->BandwidthRate * 10 /
+                        CELL_MAX_NETWORK_SIZE);
   int max_cells = num_cells < CIRCWINDOW_START ?
                     num_cells : CIRCWINDOW_START;
   int cells_per_circuit = max_cells / num_circs;

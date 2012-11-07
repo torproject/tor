@@ -31,7 +31,7 @@
 #define MIN_CPUWORKERS 1
 
 /** The tag specifies which circuit this onionskin was from. */
-#define TAG_LEN 10
+#define TAG_LEN 12
 /** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE \
   (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
@@ -75,7 +75,7 @@ tag_pack(char *tag, uint64_t chan_id, circid_t circ_id)
   /*XXXX RETHINK THIS WHOLE MESS !!!! !NM NM NM NM*/
   /*XXXX DOUBLEPLUSTHIS!!!! AS AS AS AS*/
   set_uint64(tag, chan_id);
-  set_uint16(tag+8, circ_id);
+  set_uint32(tag+8, circ_id);
 }
 
 /** Unpack <b>tag</b> into addr, port, and circ_id.
@@ -84,7 +84,7 @@ static void
 tag_unpack(const char *tag, uint64_t *chan_id, circid_t *circ_id)
 {
   *chan_id = get_uint64(tag);
-  *circ_id = get_uint16(tag+8);
+  *circ_id = get_uint32(tag+8);
 }
 
 /** Called when the onion key has changed and we need to spawn new

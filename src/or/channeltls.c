@@ -600,12 +600,14 @@ channel_tls_write_packed_cell_method(channel_t *chan,
                                      packed_cell_t *packed_cell)
 {
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+  size_t cell_network_size = (chan->wide_circ_ids) ?
+    CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
 
   tor_assert(tlschan);
   tor_assert(packed_cell);
   tor_assert(tlschan->conn);
 
-  connection_write_to_buf(packed_cell->body, CELL_NETWORK_SIZE,
+  connection_write_to_buf(packed_cell->body, cell_network_size,
                           TO_CONN(tlschan->conn));
 
   /* This is where the cell is finished; used to be done from relay.c */
@@ -893,7 +895,7 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   }
 
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
-    or_handshake_state_record_cell(conn->handshake_state, cell, 1);
+    or_handshake_state_record_cell(conn, conn->handshake_state, cell, 1);
 
   switch (cell->command) {
     case CELL_PADDING:
@@ -1032,7 +1034,8 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
       break;
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
       if (var_cell->command != CELL_AUTHENTICATE)
-        or_handshake_state_record_var_cell(conn->handshake_state, var_cell, 1);
+        or_handshake_state_record_var_cell(conn, conn->handshake_state,
+                                           var_cell, 1);
       break; /* Everything is allowed */
     case OR_CONN_STATE_OPEN:
       if (conn->link_proto < 3) {
@@ -1152,7 +1155,8 @@ enter_v3_handshake_with_cell(var_cell_t *cell, channel_tls_t *chan)
     connection_or_close_for_error(chan->conn, 0);
     return -1;
   }
-  or_handshake_state_record_var_cell(chan->conn->handshake_state, cell, 1);
+  or_handshake_state_record_var_cell(chan->conn,
+                                     chan->conn->handshake_state, cell, 1);
   return 0;
 }
 
@@ -1223,7 +1227,7 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
     connection_or_close_for_error(chan->conn, 0);
     return;
   } else if (highest_supported_version < 3 &&
-             chan->conn->base_.state ==  OR_CONN_STATE_OR_HANDSHAKING_V3) {
+             chan->conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Negotiated link protocol 2 or lower after doing a v3 TLS "
            "handshake. Closing connection.");
@@ -1292,6 +1296,13 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
         return;
       }
     }
+
+    /* We set this after sending the verions cell. */
+    /*XXXXX symbolic const.*/
+    chan->base_.wide_circ_ids =
+      chan->conn->link_proto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
+    chan->conn->wide_circ_ids = chan->base_.wide_circ_ids;
+
     if (send_certs) {
       if (connection_or_send_certs_cell(chan->conn) < 0) {
         log_warn(LD_OR, "Couldn't send certs cell");

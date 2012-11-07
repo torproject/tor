@@ -2157,8 +2157,7 @@ connection_bucket_round_robin(int base, int priority,
 static ssize_t
 connection_bucket_read_limit(connection_t *conn, time_t now)
 {
-  int base = connection_speaks_cells(conn) ?
-               CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
+  int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
   int conn_bucket = -1;
   int global_bucket = global_read_bucket;
@@ -2167,6 +2166,8 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN)
       conn_bucket = or_conn->read_bucket;
+    base = or_conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
+      CELL_MAX_NETWORK_SIZE - 2;
   }
 
   if (!connection_is_rate_limited(conn)) {
@@ -2186,8 +2187,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
 ssize_t
 connection_bucket_write_limit(connection_t *conn, time_t now)
 {
-  int base = connection_speaks_cells(conn) ?
-               CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
+  int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
   int conn_bucket = (int)conn->outbuf_flushlen;
   int global_bucket = global_write_bucket;
@@ -2205,6 +2205,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
       if (or_conn->write_bucket < conn_bucket)
         conn_bucket = or_conn->write_bucket >= 0 ?
                         or_conn->write_bucket : 0;
+    base = or_conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
+      CELL_MAX_NETWORK_SIZE - 2;
   }
 
   if (connection_counts_as_relayed_traffic(conn, now) &&

@@ -89,7 +89,7 @@ get_unique_circ_id_by_chan(channel_t *chan)
 {
   circid_t test_circ_id;
   circid_t attempts=0;
-  circid_t high_bit;
+  circid_t high_bit, max_range;
 
   tor_assert(chan);
 
@@ -99,17 +99,17 @@ get_unique_circ_id_by_chan(channel_t *chan)
              "a client with no identity.");
     return 0;
   }
-  high_bit =
-    (chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
+  max_range =  (chan->wide_circ_ids) ? (1u<<31) : (1u<<15);
+  high_bit = (chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ? max_range : 0;
   do {
-    /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
+    /* Sequentially iterate over test_circ_id=1...max_range until we find a
      * circID such that (high_bit|test_circ_id) is not already used. */
     test_circ_id = chan->next_circ_id++;
-    if (test_circ_id == 0 || test_circ_id >= 1<<15) {
+    if (test_circ_id == 0 || test_circ_id >= max_range) {
       test_circ_id = 1;
       chan->next_circ_id = 2;
     }
-    if (++attempts > 1<<15) {
+    if (++attempts > max_range) {
       /* Make sure we don't loop forever if all circ_id's are used. This
        * matters because it's an external DoS opportunity.
        */

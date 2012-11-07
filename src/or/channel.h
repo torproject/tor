@@ -143,6 +143,8 @@ struct channel_s {
    * space should we use?
    */
   circ_id_type_t circ_id_type:2;
+  /** DOCDOC*/
+  unsigned wide_circ_ids:1;
   /*
    * Which circ_id do we try to use next on this connection?  This is
    * always in the range 0..1<<15-1.
