@@ -206,12 +206,12 @@ onion_skin_create(crypto_pk_t *dest_router_key,
                                       PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
 
-  memset(challenge, 0, sizeof(challenge));
+  memwipe(challenge, 0, sizeof(challenge));
   *handshake_state_out = dh;
 
   return 0;
  err:
-  memset(challenge, 0, sizeof(challenge));
+  memwipe(challenge, 0, sizeof(challenge));
   if (dh) crypto_dh_free(dh);
   return -1;
 }
@@ -286,15 +286,15 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
   /* use the rest of the key material for our shared keys, digests, etc */
   memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
 
-  memset(challenge, 0, sizeof(challenge));
-  memset(key_material, 0, key_material_len);
+  memwipe(challenge, 0, sizeof(challenge));
+  memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   crypto_dh_free(dh);
   return 0;
  err:
-  memset(challenge, 0, sizeof(challenge));
+  memwipe(challenge, 0, sizeof(challenge));
   if (key_material) {
-    memset(key_material, 0, key_material_len);
+    memwipe(key_material, 0, key_material_len);
     tor_free(key_material);
   }
   if (dh) crypto_dh_free(dh);
@@ -340,11 +340,11 @@ onion_skin_client_handshake(crypto_dh_t *handshake_state,
   /* use the rest of the key material for our shared keys, digests, etc */
   memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
 
-  memset(key_material, 0, key_material_len);
+  memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   return 0;
  err:
-  memset(key_material, 0, key_material_len);
+  memwipe(key_material, 0, key_material_len);
   tor_free(key_material);
   return -1;
 }
@@ -381,8 +381,8 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
   memcpy(key_out, out+DIGEST_LEN, key_out_len);
   r = 0;
  done:
-  memset(tmp, 0, sizeof(tmp));
-  memset(out, 0, out_len);
+  memwipe(tmp, 0, sizeof(tmp));
+  memwipe(out, 0, out_len);
   tor_free(out);
   return r;
 }
@@ -426,8 +426,8 @@ fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
   memcpy(key_out, out+DIGEST_LEN, key_out_len);
   r = 0;
  done:
-  memset(tmp, 0, sizeof(tmp));
-  memset(out, 0, out_len);
+  memwipe(tmp, 0, sizeof(tmp));
+  memwipe(out, 0, out_len);
   tor_free(out);
   return r;
 }

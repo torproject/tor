@@ -106,7 +106,7 @@ aes_cipher_free(aes_cnt_cipher_t *cipher)
   if (!cipher)
     return;
   EVP_CIPHER_CTX_cleanup(&cipher->evp);
-  memset(cipher, 0, sizeof(aes_cnt_cipher_t));
+  memwipe(cipher, 0, sizeof(aes_cnt_cipher_t));
   tor_free(cipher);
 }
 void
@@ -373,7 +373,7 @@ aes_cipher_free(aes_cnt_cipher_t *cipher)
   if (cipher->using_evp) {
     EVP_CIPHER_CTX_cleanup(&cipher->key.evp);
   }
-  memset(cipher, 0, sizeof(aes_cnt_cipher_t));
+  memwipe(cipher, 0, sizeof(aes_cnt_cipher_t));
   tor_free(cipher);
 }
 

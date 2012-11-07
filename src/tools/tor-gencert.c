@@ -105,7 +105,7 @@ load_passphrase(void)
   cp = memchr(buf, '\n', n);
   passphrase_len = cp-buf;
   passphrase = tor_strndup(buf, passphrase_len);
-  memset(buf, 0, sizeof(buf));
+  memwipe(buf, 0, sizeof(buf));
   return 0;
 }
 
@@ -113,7 +113,7 @@ static void
 clear_passphrase(void)
 {
   if (passphrase) {
-    memset(passphrase, 0, passphrase_len);
+    memwipe(passphrase, 0, passphrase_len);
     tor_free(passphrase);
   }
 }
@@ -191,7 +191,7 @@ parse_commandline(int argc, char **argv)
     }
   }
 
-  memset(&s, 0, sizeof(s));
+  memwipe(&s, 0, sizeof(s));
   if (verbose)
     set_log_severity_config(LOG_DEBUG, LOG_ERR, &s);
   else

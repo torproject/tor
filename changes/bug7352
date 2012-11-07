@@ -1,0 +1,12 @@
+  o Major bugfixes:
+    - Tor tries to wipe potentially sensitive data after using it, so
+      that if some subsequent security failure exposes Tor's memory,
+      the damage will be limited. But we had a bug where the compiler
+      was eliminating these wipe operations when it decided that the
+      memory was no longer visible to a (correctly running) program,
+      hence defeating our attempt at defense in depth. We fix that
+      by using OpenSSL's OPENSSL_cleanse() operation, which a compiler
+      is unlikely to optimize away. Future versions of Tor may use
+      a less ridiculously heavy approach for this. Fixes bug 7352.
+      Reported in an article by Andrey Karpov.
+
