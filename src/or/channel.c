@@ -2585,17 +2585,29 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
 
   tor_assert(chan);
 
-  memset(&cell, 0, sizeof(cell_t));
-  cell.circ_id = circ_id;
-  cell.command = CELL_DESTROY;
-  cell.payload[0] = (uint8_t) reason;
-  log_debug(LD_OR,
-            "Sending destroy (circID %d) on channel %p "
-            "(global ID " U64_FORMAT ")",
-            circ_id, chan,
-            U64_PRINTF_ARG(chan->global_identifier));
+  /* Check to make sure we can send on this channel first */
+  if (!(chan->state == CHANNEL_STATE_CLOSING ||
+        chan->state == CHANNEL_STATE_CLOSED ||
+        chan->state == CHANNEL_STATE_ERROR)) {
+    memset(&cell, 0, sizeof(cell_t));
+    cell.circ_id = circ_id;
+    cell.command = CELL_DESTROY;
+    cell.payload[0] = (uint8_t) reason;
+    log_debug(LD_OR,
+              "Sending destroy (circID %d) on channel %p "
+              "(global ID " U64_FORMAT ")",
+              circ_id, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
 
-  channel_write_cell(chan, &cell);
+    channel_write_cell(chan, &cell);
+  } else {
+    log_warn(LD_BUG,
+             "Someone called channel_send_destroy() for circID %d "
+             "on a channel " U64_FORMAT " at %p in state %s (%d)",
+             circ_id, U64_PRINTF_ARG(chan->global_identifier),
+             chan, channel_state_to_string(chan->state),
+             chan->state);
+  }
 
   return 0;
 }
