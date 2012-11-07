@@ -361,6 +361,7 @@ cell_pack(packed_cell_t *dst, const cell_t *src, int wide_circ_ids)
   } else {
     set_uint16(dest, htons(src->circ_id));
     dest += 2;
+    memset(dest+CELL_MAX_NETWORK_SIZE-2, 0, 2); /*make sure it's clear */
   }
   set_uint8(dest, src->command);
   memcpy(dest+1, src->payload, CELL_PAYLOAD_SIZE);
