@@ -1411,7 +1411,12 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
   }
   if (circ->n_chan) {
     circuit_clear_cell_queue(circ, circ->n_chan);
-    channel_send_destroy(circ->n_circ_id, circ->n_chan, reason);
+    /* Only send destroy if the channel isn't closing anyway */
+    if (!(circ->n_chan->state == CHANNEL_STATE_CLOSING ||
+          circ->n_chan->state == CHANNEL_STATE_CLOSED ||
+          circ->n_chan->state == CHANNEL_STATE_ERROR)) {
+      channel_send_destroy(circ->n_circ_id, circ->n_chan, reason);
+    }
     circuitmux_detach_circuit(circ->n_chan->cmux, circ);
   }
 
@@ -1439,7 +1444,12 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
 
     if (or_circ->p_chan) {
       circuit_clear_cell_queue(circ, or_circ->p_chan);
-      channel_send_destroy(or_circ->p_circ_id, or_circ->p_chan, reason);
+      /* Only send destroy if the channel isn't closing anyway */
+      if (!(or_circ->p_chan->state == CHANNEL_STATE_CLOSING ||
+            or_circ->p_chan->state == CHANNEL_STATE_CLOSED ||
+            or_circ->p_chan->state == CHANNEL_STATE_ERROR)) {
+        channel_send_destroy(or_circ->p_circ_id, or_circ->p_chan, reason);
+      }
       circuitmux_detach_circuit(or_circ->p_chan->cmux, circ);
     }
   } else {
