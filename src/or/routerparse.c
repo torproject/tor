@@ -4637,7 +4637,7 @@ tor_version_parse(const char *s, tor_version_t *out)
     if (close_paren-cp > HEX_DIGEST_LEN)
       return -1;
     hexlen = (int)(close_paren-cp);
-    memset(digest, 0, sizeof(digest));
+    memwipe(digest, 0, sizeof(digest));
     if ( hexlen == 0 || (hexlen % 2) == 1)
       return -1;
     if (base16_decode(digest, hexlen/2, cp, hexlen))

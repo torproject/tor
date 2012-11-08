@@ -1719,7 +1719,7 @@ or_handshake_state_free(or_handshake_state_t *state)
   crypto_digest_free(state->digest_received);
   tor_cert_free(state->auth_cert);
   tor_cert_free(state->id_cert);
-  memset(state, 0xBE, sizeof(or_handshake_state_t));
+  memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
 
@@ -1760,7 +1760,7 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
      this very often at all. */
   cell_pack(&packed, cell);
   crypto_digest_add_bytes(d, packed.body, sizeof(packed.body));
-  memset(&packed, 0, sizeof(packed));
+  memwipe(&packed, 0, sizeof(packed));
 }
 
 /** Remember that a variable-length <b>cell</b> has been transmitted (if
@@ -1795,7 +1795,7 @@ or_handshake_state_record_var_cell(or_handshake_state_t *state,
   crypto_digest_add_bytes(d, buf, sizeof(buf));
   crypto_digest_add_bytes(d, (const char *)cell->payload, cell->payload_len);
 
-  memset(buf, 0, sizeof(buf));
+  memwipe(buf, 0, sizeof(buf));
 }
 
 /** Set <b>conn</b>'s state to OR_CONN_STATE_OPEN, and tell other subsystems
@@ -2125,7 +2125,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
-  memset(challenge, 0, sizeof(challenge));
+  memwipe(challenge, 0, sizeof(challenge));
 
   return 0;
 }

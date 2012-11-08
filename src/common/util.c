@@ -4014,7 +4014,7 @@ tor_process_handle_destroy(process_handle_t *process_handle,
     fclose(process_handle->stderr_handle);
 #endif
 
-  memset(process_handle, 0x0f, sizeof(process_handle_t));
+  memwipe(process_handle, 0x0f, sizeof(process_handle_t));
   tor_free(process_handle);
 }
 

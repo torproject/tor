@@ -1406,13 +1406,13 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   tor_free(err_msg);
 
  done:
-  memset(keys, 0, sizeof(keys));
-  memset(buf, 0, sizeof(buf));
-  memset(serviceid, 0, sizeof(serviceid));
-  memset(hexcookie, 0, sizeof(hexcookie));
-  memset(intro_key_digest, 0, sizeof(intro_key_digest));
-  memset(auth_data, 0, sizeof(auth_data));
-  memset(diffie_hellman_hash, 0, sizeof(diffie_hellman_hash));
+  memwipe(keys, 0, sizeof(keys));
+  memwipe(buf, 0, sizeof(buf));
+  memwipe(serviceid, 0, sizeof(serviceid));
+  memwipe(hexcookie, 0, sizeof(hexcookie));
+  memwipe(intro_key_digest, 0, sizeof(intro_key_digest));
+  memwipe(auth_data, 0, sizeof(auth_data));
+  memwipe(diffie_hellman_hash, 0, sizeof(diffie_hellman_hash));
 
   /* Free the parsed cell */
   if (parsed_req) {

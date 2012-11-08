@@ -417,7 +417,7 @@ networkstatus_vote_free(networkstatus_t *ns)
 
   digestmap_free(ns->desc_digest_map, NULL);
 
-  memset(ns, 11, sizeof(*ns));
+  memwipe(ns, 11, sizeof(*ns));
   tor_free(ns);
 }
 

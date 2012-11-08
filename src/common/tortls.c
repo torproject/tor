@@ -713,7 +713,7 @@ tor_cert_free(tor_cert_t *cert)
   if (cert->cert)
     X509_free(cert->cert);
   tor_free(cert->encoded);
-  memset(cert, 0x03, sizeof(*cert));
+  memwipe(cert, 0x03, sizeof(*cert));
   tor_free(cert);
 }
 
@@ -2450,7 +2450,7 @@ tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
                      (char*)tls->ssl->session->master_key,
                      tls->ssl->session->master_key_length,
                      buf, len);
-  memset(buf, 0, sizeof(buf));
+  memwipe(buf, 0, sizeof(buf));
   return 0;
 }
 

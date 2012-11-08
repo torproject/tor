@@ -273,6 +273,9 @@ int digest256_from_base64(char *digest, const char *d64);
 void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);
 
+/** OpenSSL-based utility functions. */
+void memwipe(void *mem, uint8_t byte, size_t sz);
+
 #ifdef CRYPTO_PRIVATE
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */

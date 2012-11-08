@@ -936,10 +936,10 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
 
   circuit_try_attaching_streams(circ);
 
-  memset(keys, 0, sizeof(keys));
+  memwipe(keys, 0, sizeof(keys));
   return 0;
  err:
-  memset(keys, 0, sizeof(keys));
+  memwipe(keys, 0, sizeof(keys));
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }

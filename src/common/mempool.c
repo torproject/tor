@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "torint.h"
+#include "crypto.h"
 #define MEMPOOL_PRIVATE
 #include "mempool.h"
 
@@ -509,7 +510,7 @@ mp_pool_destroy(mp_pool_t *pool)
   destroy_chunks(pool->empty_chunks);
   destroy_chunks(pool->used_chunks);
   destroy_chunks(pool->full_chunks);
-  memset(pool, 0xe0, sizeof(mp_pool_t));
+  memwipe(pool, 0xe0, sizeof(mp_pool_t));
   FREE(pool);
 }
 

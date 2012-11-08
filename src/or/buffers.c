@@ -1544,14 +1544,14 @@ socks_request_free(socks_request_t *req)
   if (!req)
     return;
   if (req->username) {
-    memset(req->username, 0x10, req->usernamelen);
+    memwipe(req->username, 0x10, req->usernamelen);
     tor_free(req->username);
   }
   if (req->password) {
-    memset(req->password, 0x04, req->passwordlen);
+    memwipe(req->password, 0x04, req->passwordlen);
     tor_free(req->password);
   }
-  memset(req, 0xCC, sizeof(socks_request_t));
+  memwipe(req, 0xCC, sizeof(socks_request_t));
   tor_free(req);
 }
 

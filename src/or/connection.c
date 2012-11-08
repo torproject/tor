@@ -574,7 +574,7 @@ connection_free_(connection_t *conn)
   }
 #endif
 
-  memset(mem, 0xCC, memlen); /* poison memory */
+  memwipe(mem, 0xCC, memlen); /* poison memory */
   tor_free(mem);
 }
 

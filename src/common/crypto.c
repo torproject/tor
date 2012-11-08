@@ -444,7 +444,7 @@ crypto_cipher_free(crypto_cipher_t *env)
 
   tor_assert(env->cipher);
   aes_cipher_free(env->cipher);
-  memset(env, 0, sizeof(crypto_cipher_t));
+  memwipe(env, 0, sizeof(crypto_cipher_t));
   tor_free(env);
 }
 
@@ -544,7 +544,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
 
   /* Try to parse it. */
   r = crypto_pk_read_private_key_from_string(env, contents, -1);
-  memset(contents, 0, strlen(contents));
+  memwipe(contents, 0, strlen(contents));
   tor_free(contents);
   if (r)
     return -1; /* read_private_key_from_string already warned, so we don't.*/
@@ -686,7 +686,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
   s[len]='\0';
   r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
-  memset(s, 0, strlen(s));
+  memwipe(s, 0, strlen(s));
   tor_free(s);
   return r;
 }
@@ -1012,7 +1012,7 @@ crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
   if (crypto_digest(digest,from,fromlen)<0)
     return -1;
   r = crypto_pk_private_sign(env,to,tolen,digest,DIGEST_LEN);
-  memset(digest, 0, sizeof(digest));
+  memwipe(digest, 0, sizeof(digest));
   return r;
 }
 
@@ -1076,14 +1076,14 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
                             from+pkeylen-overhead-CIPHER_KEY_LEN, symlen);
 
   if (r<0) goto err;
-  memset(buf, 0, pkeylen);
+  memwipe(buf, 0, pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   tor_assert(outlen+symlen < INT_MAX);
   return (int)(outlen + symlen);
  err:
 
-  memset(buf, 0, pkeylen);
+  memwipe(buf, 0, pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   return -1;
@@ -1134,13 +1134,13 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_t *env,
   r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
   if (r<0)
     goto err;
-  memset(buf,0,pkeylen);
+  memwipe(buf,0,pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   tor_assert(outlen + fromlen < INT_MAX);
   return (int)(outlen + (fromlen-pkeylen));
  err:
-  memset(buf,0,pkeylen);
+  memwipe(buf,0,pkeylen);
   tor_free(buf);
   crypto_cipher_free(cipher);
   return -1;
@@ -1540,7 +1540,7 @@ crypto_digest_free(crypto_digest_t *digest)
 {
   if (!digest)
     return;
-  memset(digest, 0, sizeof(crypto_digest_t));
+  memwipe(digest, 0, sizeof(crypto_digest_t));
   tor_free(digest);
 }
 
@@ -1602,7 +1602,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       break;
   }
   memcpy(out, r, out_len);
-  memset(r, 0, sizeof(r));
+  memwipe(r, 0, sizeof(r));
 }
 
 /** Allocate and return a new digest object with the same state as
@@ -2187,7 +2187,7 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
   if (pubkey_bn)
     BN_free(pubkey_bn);
   if (secret_tmp) {
-    memset(secret_tmp, 0, secret_tmp_len);
+    memwipe(secret_tmp, 0, secret_tmp_len);
     tor_free(secret_tmp);
   }
   if (result < 0)
@@ -2222,15 +2222,15 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
       goto err;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
   }
-  memset(tmp, 0, key_in_len+1);
+  memwipe(tmp, 0, key_in_len+1);
   tor_free(tmp);
-  memset(digest, 0, sizeof(digest));
+  memwipe(digest, 0, sizeof(digest));
   return 0;
 
  err:
-  memset(tmp, 0, key_in_len+1);
+  memwipe(tmp, 0, key_in_len+1);
   tor_free(tmp);
-  memset(digest, 0, sizeof(digest));
+  memwipe(digest, 0, sizeof(digest));
   return -1;
 }
 
@@ -2320,7 +2320,7 @@ crypto_seed_rng(int startup)
     return rand_poll_status ? 0 : -1;
   }
   RAND_seed(buf, sizeof(buf));
-  memset(buf, 0, sizeof(buf));
+  memwipe(buf, 0, sizeof(buf));
   seed_weak_rng();
   return 0;
 #else
@@ -2337,7 +2337,7 @@ crypto_seed_rng(int startup)
       return -1;
     }
     RAND_seed(buf, (int)sizeof(buf));
-    memset(buf, 0, sizeof(buf));
+    memwipe(buf, 0, sizeof(buf));
     seed_weak_rng();
     return 0;
   }
@@ -2820,7 +2820,7 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     }
   }
 
-  memset(tmp, 0, srclen);
+  memwipe(tmp, 0, srclen);
   tor_free(tmp);
   tmp = NULL;
   return 0;
@@ -2865,9 +2865,52 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
     }
   }
   crypto_digest_get_digest(d, key_out, key_out_len);
-  memset(tmp, 0, tmplen);
+  memwipe(tmp, 0, tmplen);
   tor_free(tmp);
   crypto_digest_free(d);
+}
+
+/**
+ * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to
+ * the value <b>byte</b>.
+ *
+ * This function is preferable to memset, since many compilers will happily
+ * optimize out memset() when they can convince themselves that the data being
+ * cleared will never be read.
+ *
+ * Right now, our convention is to use this function when we are wiping data
+ * that's about to become inaccessible, such as stack buffers that are about
+ * to go out of scope or structures that are about to get freed.  (In
+ * practice, it appears that the compilers we're currently using will optimize
+ * out the memset()s for stack-allocated buffers, but not those for
+ * about-to-be-freed structures. That could change, though, so we're being
+ * wary.)  If there are live reads for the data, then you can just use
+ * memset().
+ */
+void
+memwipe(void *mem, uint8_t byte, size_t sz)
+{
+  /* Because whole-program-optimization exists, we may not be able to just
+   * have this function call "memset".  A smart compiler could inline it, then
+   * eliminate dead memsets, and declare itself to be clever. */
+
+  /* This is a slow and ugly function from OpenSSL that fills 'mem' with junk
+   * based on the pointer value, then uses that junk to update a global
+   * variable.  It's an elaborate ruse to trick the compiler into not
+   * optimizing out the "wipe this memory" code.  Read it if you like zany
+   * programming tricks! In later versions of Tor, we should look for better
+   * not-optimized-out memory wiping stuff. */
+  OPENSSL_cleanse(mem, sz);
+  /* Just in case some caller of memwipe() is relying on getting a buffer
+   * filled with a particular value, fill the buffer.
+   *
+   * If this function gets inlined, this memset might get eliminated, but
+   * that's okay: We only care about this particular memset in the case where
+   * the caller should have been using memset(), and the memset() wouldn't get
+   * eliminated.  In other words, this is here so that we won't break anything
+   * if somebody accidentally calls memwipe() instead of memset().
+   **/
+  memset(mem, byte, sz);
 }
 
 #ifdef TOR_IS_MULTITHREADED
