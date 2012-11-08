@@ -161,7 +161,7 @@ rend_authorized_client_free(rend_authorized_client_t *client)
     crypto_pk_free(client->client_key);
   tor_strclear(client->client_name);
   tor_free(client->client_name);
-  memset(client->descriptor_cookie, 0, sizeof(client->descriptor_cookie));
+  memwipe(client->descriptor_cookie, 0, sizeof(client->descriptor_cookie));
   tor_free(client);
 }
 
@@ -699,10 +699,10 @@ rend_service_load_keys(rend_service_t *s)
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
   if (write_str_to_file(fname,buf,0)<0) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
-    memset(buf, 0, sizeof(buf));
+    memwipe(buf, 0, sizeof(buf));
     return -1;
   }
-  memset(buf, 0, sizeof(buf));
+  memwipe(buf, 0, sizeof(buf));
 
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
@@ -830,13 +830,13 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
          * len is string length, not buffer length, but last byte is NUL
          * anyway.
          */
-        memset(client_key_out, 0, len);
+        memwipe(client_key_out, 0, len);
         tor_free(client_key_out);
         goto err;
       }
       written = tor_snprintf(buf + written, sizeof(buf) - written,
                              "client-key\n%s", client_key_out);
-      memset(client_key_out, 0, len);
+      memwipe(client_key_out, 0, len);
       tor_free(client_key_out);
       if (written < 0) {
         log_warn(LD_BUG, "Could not write client entry.");
@@ -897,13 +897,13 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   }
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
 
-  memset(cfname, 0, sizeof(cfname));
+  memwipe(cfname, 0, sizeof(cfname));
 
   /* Clear stack buffers that held key-derived material. */
-  memset(buf, 0, sizeof(buf));
-  memset(desc_cook_out, 0, sizeof(desc_cook_out));
-  memset(service_id, 0, sizeof(service_id));
-  memset(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
+  memwipe(buf, 0, sizeof(buf));
+  memwipe(desc_cook_out, 0, sizeof(desc_cook_out));
+  memwipe(service_id, 0, sizeof(service_id));
+  memwipe(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
 
   return r;
 }
@@ -1540,7 +1540,7 @@ rend_service_free_intro(rend_intro_cell_t *request)
   /* Have plaintext? */
   if (request->plaintext) {
     /* Zero it out just to be safe */
-    memset(request->plaintext, 0, request->plaintext_len);
+    memwipe(request->plaintext, 0, request->plaintext_len);
     tor_free(request->plaintext);
     request->plaintext_len = 0;
   }
@@ -1561,7 +1561,7 @@ rend_service_free_intro(rend_intro_cell_t *request)
         break;
       case 3:
         if (request->u.v3.auth_data) {
-          memset(request->u.v3.auth_data, 0, request->u.v3.auth_len);
+          memwipe(request->u.v3.auth_data, 0, request->u.v3.auth_len);
           tor_free(request->u.v3.auth_data);
         }
 
@@ -1577,7 +1577,7 @@ rend_service_free_intro(rend_intro_cell_t *request)
   }
 
   /* Zero it out to make sure sensitive stuff doesn't hang around in memory */
-  memset(request, 0, sizeof(*request));
+  memwipe(request, 0, sizeof(*request));
 
   tor_free(request);
 }
@@ -2075,9 +2075,9 @@ rend_service_decrypt_intro(
   else tor_free(err_msg);
 
   /* clean up potentially sensitive material */
-  memset(buf, 0, sizeof(buf));
-  memset(key_digest, 0, sizeof(key_digest));
-  memset(service_id, 0, sizeof(service_id));
+  memwipe(buf, 0, sizeof(buf));
+  memwipe(key_digest, 0, sizeof(key_digest));
+  memwipe(service_id, 0, sizeof(service_id));
 
   return status;
 }
@@ -2513,9 +2513,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
  err:
   circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
  done:
-  memset(buf, 0, sizeof(buf));
-  memset(auth, 0, sizeof(auth));
-  memset(serviceid, 0, sizeof(serviceid));
+  memwipe(buf, 0, sizeof(buf));
+  memwipe(auth, 0, sizeof(auth));
+  memwipe(serviceid, 0, sizeof(serviceid));
 
   return;
 }
@@ -2665,9 +2665,9 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  err:
   circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
  done:
-  memset(buf, 0, sizeof(buf));
-  memset(serviceid, 0, sizeof(serviceid));
-  memset(hexcookie, 0, sizeof(hexcookie));
+  memwipe(buf, 0, sizeof(buf));
+  memwipe(serviceid, 0, sizeof(serviceid));
+  memwipe(hexcookie, 0, sizeof(hexcookie));
 
   return;
 }
