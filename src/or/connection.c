@@ -2763,7 +2763,11 @@ connection_handle_read_impl(connection_t *conn)
       }
     }
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    connection_mark_for_close(conn);
+    /*
+     * This can bypass normal channel checking since we did
+     * connection_or_notify_error() above.
+     */
+    connection_mark_for_close_internal(conn);
     return -1;
   }
   n_read += buf_datalen(conn->inbuf) - before;
@@ -3279,7 +3283,11 @@ connection_handle_write_impl(connection_t *conn, int force)
                                      tor_socket_strerror(e));
 
         connection_close_immediate(conn);
-        connection_mark_for_close(conn);
+        /*
+         * This can bypass normal channel checking since we did
+         * connection_or_notify_error() above.
+         */
+        connection_mark_for_close_internal(conn);
         return -1;
       } else {
         return 0; /* no change, see if next time is better */
@@ -3306,7 +3314,11 @@ connection_handle_write_impl(connection_t *conn, int force)
                                    "TLS error in connection_tls_"
                                    "continue_handshake()");
         connection_close_immediate(conn);
-        connection_mark_for_close(conn);
+        /*
+         * This can bypass normal channel checking since we did
+         * connection_or_notify_error() above.
+         */
+        connection_mark_for_close_internal(conn);
         return -1;
       }
       return 0;
@@ -3336,7 +3348,11 @@ connection_handle_write_impl(connection_t *conn, int force)
                                      "TLS error in during flush" :
                                      "TLS closed during flush");
         connection_close_immediate(conn);
-        connection_mark_for_close(conn);
+        /*
+         * This can bypass normal channel checking since we did
+         * connection_or_notify_error() above.
+         */
+        connection_mark_for_close_internal(conn);
         return -1;
       case TOR_TLS_WANTWRITE:
         log_debug(LD_NET,"wanted write.");
@@ -3401,7 +3417,11 @@ connection_handle_write_impl(connection_t *conn, int force)
                                    "connection_flushed_some()");
       }
 
-      connection_mark_for_close(conn);
+      /*
+       * This can bypass normal channel checking since we did
+       * connection_or_notify_error() above.
+       */
+      connection_mark_for_close_internal(conn);
     }
   }
 
