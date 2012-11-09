@@ -1522,7 +1522,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
            safe_str(chan->conn->base_.address),                 \
            chan->conn->base_.port, (s));                        \
     connection_or_close_for_error(chan->conn, 0);               \
-    return;                                                     \
+    goto err;                                                   \
   } while (0)
 
   if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
