@@ -1547,7 +1547,10 @@ test_geoip(void)
   memset(&in6, 0, sizeof(in6));
 
   /* Make sure that country ID actually works. */
-#define SET_TEST_IPV6(i) in6.s6_addr32[3] = htonl((uint32_t) i)
+#define SET_TEST_IPV6(i) \
+  do {                                                          \
+    set_uint32(in6.s6_addr + 12, htonl((uint32_t) (i)));        \
+  } while (0)
 #define CHECK_COUNTRY(country, val) do {                                \
     /* test ipv4 country lookup */                                      \
     test_streq(country,                                                 \
