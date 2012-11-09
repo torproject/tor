@@ -31,21 +31,53 @@ void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
-void connection_mark_for_close_(connection_t *conn,int line, const char *file);
+void connection_mark_for_close_(connection_t *conn,
+                                int line, const char *file);
+void connection_mark_for_close_internal_(connection_t *conn,
+                                         int line, const char *file);
 
 #define connection_mark_for_close(c) \
   connection_mark_for_close_((c), __LINE__, SHORT_FILE__)
+#define connection_mark_for_close_internal(c) \
+  connection_mark_for_close_internal_((c), __LINE__, SHORT_FILE__)
+
+/**
+ * Mark 'c' for close, but try to hold it open until all the data is written.
+ * Use the _internal versions of connection_mark_for_close; this should be
+ * called when you either are sure that if this is an or_connection_t the
+ * controlling channel has been notified (e.g. with
+ * connection_or_notify_error()), or you actually are the
+ * connection_or_close_for_error() or connection_or_close_normally function.
+ * For all other cases, use connection_mark_and_flush() instead, which
+ * checks for or_connection_t properly, instead.  See below.
+ */
+#define connection_mark_and_flush_internal_(c,line,file)                  \
+  do {                                                                    \
+    connection_t *tmp_conn_ = (c);                                        \
+    connection_mark_for_close_internal_(tmp_conn_, (line), (file));       \
+    tmp_conn_->hold_open_until_flushed = 1;                               \
+    IF_HAS_BUFFEREVENT(tmp_conn_,                                         \
+                       connection_start_writing(tmp_conn_));              \
+  } while (0)
+
+#define connection_mark_and_flush_internal(c)            \
+  connection_mark_and_flush_internal_((c), __LINE__, SHORT_FILE__)
 
 /**
  * Mark 'c' for close, but try to hold it open until all the data is written.
  */
-#define connection_mark_and_flush_(c,line,file)                         \
-  do {                                                                  \
-    connection_t *tmp_conn_ = (c);                                      \
-    connection_mark_for_close_(tmp_conn_, (line), (file));              \
-    tmp_conn_->hold_open_until_flushed = 1;                             \
-    IF_HAS_BUFFEREVENT(tmp_conn_,                                       \
-                       connection_start_writing(tmp_conn_));            \
+#define connection_mark_and_flush_(c,line,file)                           \
+  do {                                                                    \
+    connection_t *tmp_conn_ = (c);                                        \
+    if (tmp_conn_->type == CONN_TYPE_OR) {                                \
+      log_warn(LD_CHANNEL | LD_BUG,                                       \
+               "Something tried to close (and flush) an or_connection_t"  \
+               " without going through channels at %s:%d",                \
+               file, line);                                               \
+      connection_or_close_for_error(TO_OR_CONN(tmp_conn_), 1);            \
+    } else {                                                              \
+      connection_mark_and_flush_internal_(c, line, file);                 \
+    }                                                                     \
   } while (0)
 
 #define connection_mark_and_flush(c)            \

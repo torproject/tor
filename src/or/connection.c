@@ -688,6 +688,41 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
   tor_assert(line < 1<<16); /* marked_for_close can only fit a uint16_t. */
   tor_assert(file);
 
+  if (conn->type == CONN_TYPE_OR) {
+    /*
+     * An or_connection should have been closed through one of the channel-
+     * aware functions in connection_or.c.  We'll assume this is an error
+     * close and do that, and log a bug warning.
+     */
+    log_warn(LD_CHANNEL | LD_BUG,
+             "Something tried to close an or_connection_t without going "
+             "through channels at %s:%d",
+             file, line);
+    connection_or_close_for_error(TO_OR_CONN(conn), 0);
+  } else {
+    /* Pass it down to the real function */
+    connection_mark_for_close_internal_(conn, line, file);
+  }
+}
+
+/** Mark <b>conn</b> to be closed next time we loop through
+ * conn_close_if_marked() in main.c; the _internal version bypasses the
+ * CONN_TYPE_OR checks; this should be called when you either are sure that
+ * if this is an or_connection_t the controlling channel has been notified
+ * (e.g. with connection_or_notify_error()), or you actually are the
+ * connection_or_close_for_error() or connection_or_close_normally function.
+ * For all other cases, use connection_mark_and_flush() instead, which
+ * checks for or_connection_t properly, instead.  See below.
+ */
+void
+connection_mark_for_close_internal_(connection_t *conn,
+                                    int line, const char *file)
+{
+  assert_connection_ok(conn,0);
+  tor_assert(line);
+  tor_assert(line < 1<<16); /* marked_for_close can only fit a uint16_t. */
+  tor_assert(file);
+
   if (conn->marked_for_close) {
     log(LOG_WARN,LD_BUG,"Duplicate call to connection_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line, conn->marked_for_close_file,
@@ -702,7 +737,8 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
      * this so we can find things that call this wrongly when the asserts hit.
      */
     log_debug(LD_CHANNEL,
-              "Calling connection_mark_for_close on an OR conn at %s:%d",
+              "Calling connection_mark_for_close_internal_() on an OR conn "
+              "at %s:%d",
               file, line);
   }
 

@@ -1143,8 +1143,8 @@ connection_or_close_normally(or_connection_t *orconn, int flush)
   channel_t *chan = NULL;
 
   tor_assert(orconn);
-  if (flush) connection_mark_and_flush(TO_CONN(orconn));
-  else connection_mark_for_close(TO_CONN(orconn));
+  if (flush) connection_mark_and_flush_internal(TO_CONN(orconn));
+  else connection_mark_for_close_internal(TO_CONN(orconn));
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
     /* Don't transition if we're already in closing, closed or error */
@@ -1166,8 +1166,8 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
   channel_t *chan = NULL;
 
   tor_assert(orconn);
-  if (flush) connection_mark_and_flush(TO_CONN(orconn));
-  else connection_mark_for_close(TO_CONN(orconn));
+  if (flush) connection_mark_and_flush_internal(TO_CONN(orconn));
+  else connection_mark_for_close_internal(TO_CONN(orconn));
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
     /* Don't transition if we're already in closing, closed or error */
