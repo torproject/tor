@@ -1,0 +1,6 @@
+  o Major bugfixes (relay):
+    - Fix an assertion failure that could occur when closing a connection
+      with a spliced rendezvous circuit. Fix for bug 7212; bugfix on
+      Tor 0.2.4.4-alpha.
+
+      

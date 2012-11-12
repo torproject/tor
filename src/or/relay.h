@@ -54,7 +54,10 @@ void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 void channel_unlink_all_circuits(channel_t *chan);
 int channel_flush_from_first_active_circuit(channel_t *chan, int max);
 void assert_circuit_mux_okay(channel_t *chan);
-void update_circuit_on_cmux(circuit_t *circ, cell_direction_t direction);
+void update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
+                             const char *file, int lineno);
+#define update_circuit_on_cmux(circ, direction) \
+  update_circuit_on_cmux_((circ), (direction), SHORT_FILE__, __LINE__)
 
 int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
 const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,

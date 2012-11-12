@@ -1976,7 +1976,8 @@ cell_queue_pop(cell_queue_t *queue)
  * circuit mux.
  */
 void
-update_circuit_on_cmux(circuit_t *circ, cell_direction_t direction)
+update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
+                        const char *file, int lineno)
 {
   channel_t *chan = NULL;
   or_circuit_t *or_circ = NULL;
@@ -1999,7 +2000,11 @@ update_circuit_on_cmux(circuit_t *circ, cell_direction_t direction)
   cmux = chan->cmux;
 
   /* Cmux sanity check */
-  tor_assert(circuitmux_is_circuit_attached(cmux, circ));
+  if (! circuitmux_is_circuit_attached(cmux, circ)) {
+    log_warn(LD_BUG, "called on non-attachd circuit from %s:%d",
+             file, lineno);
+    return;
+  }
   tor_assert(circuitmux_attached_circuit_direction(cmux, circ) == direction);
 
   assert_cmux_ok_paranoid(chan);
@@ -2334,7 +2339,8 @@ circuit_clear_cell_queue(circuit_t *circ, channel_t *chan)
   cell_queue_clear(queue);
 
   /* Update the cell counter in the cmux */
-  update_circuit_on_cmux(circ, direction);
+  if (chan->cmux && circuitmux_is_circuit_attached(chan->cmux, circ))
+    update_circuit_on_cmux(circ, direction);
 }
 
 /** Fail with an assert if the circuit mux on chan is corrupt
