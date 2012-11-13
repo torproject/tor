@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a harmless bug when opting against publishing a relay descriptor
+      because DisableNetwork is set. Fixes bug 7464; bugfix on
+      0.2.3.9-alpha.

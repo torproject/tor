@@ -1218,7 +1218,7 @@ run_scheduled_events(time_t now)
     if (router_rebuild_descriptor(1)<0) {
       log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
-    if (advertised_server_mode() & !options->DisableNetwork)
+    if (advertised_server_mode() && !options->DisableNetwork)
       router_upload_dir_desc_to_dirservers(0);
   }
 
