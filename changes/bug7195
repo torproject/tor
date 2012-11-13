@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Add warning message when a managed proxy dies during
-      configuration. Fixes bug 7195; bugfix on 0.2.4.2-alpha.
-

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix a memory leak on failing cases of channel_tls_process_certs_cell.
-      Fixes bug 7422; bugfix on 0.2.4.4-alpha.

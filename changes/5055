@@ -1,9 +1,0 @@
-  o Minor features (IPv6):
-    - Add GeoIP database for IPv6 addresses and use it. The new config
-      option is GeoIPv6File.
-      Bridge clients connecting over IPv6 are now counted in bridge
-      statistics. Bridge statistics files now list "bridge-ip-versions"
-      and extra-info documents list "geoip6-db-digest".
-      The control protocol has been extended to support more IPv6
-      ("CLIENTS_SEEN" and "ip-to-country").
-      Initial implementation by shkoo, addressing ticket 5055.

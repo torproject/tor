@@ -1,3 +1,64 @@
+Changes in version 0.2.4.6-alpha - 2012-11-13
+  Tor 0.2.4.6-alpha fixes an assert bug that has been plaguing relays,
+  makes our defense-in-depth memory wiping more reliable, and begins to
+  count IPv6 addresses in bridge statistics,
+
+  o Major bugfixes:
+    - Fix an assertion failure that could occur when closing a connection
+      with a spliced rendezvous circuit. Fix for bug 7212; bugfix on
+      Tor 0.2.4.4-alpha.
+    - Tor tries to wipe potentially sensitive data after using it, so
+      that if some subsequent security failure exposes Tor's memory,
+      the damage will be limited. But we had a bug where the compiler
+      was eliminating these wipe operations when it decided that the
+      memory was no longer visible to a (correctly running) program,
+      hence defeating our attempt at defense in depth. We fix that
+      by using OpenSSL's OPENSSL_cleanse() operation, which a compiler
+      is unlikely to optimize away. Future versions of Tor may use
+      a less ridiculously heavy approach for this. Fixes bug 7352.
+      Reported in an article by Andrey Karpov.
+
+  o Minor features:
+    - Add GeoIP database for IPv6 addresses. The new config option
+      is GeoIPv6File.
+    - Bridge statistics now count bridge clients connecting over IPv6:
+      bridge statistics files now list "bridge-ip-versions" and
+      extra-info documents list "geoip6-db-digest". The control protocol
+      "CLIENTS_SEEN" and "ip-to-country" queries now support IPv6. Initial
+      implementation by "shkoo", addressing ticket 5055.
+
+  o Minor bugfixes:
+    - Warn when we are binding low ports when hibernation is enabled;
+      previously we had warned when we were _advertising_ low ports with
+      hibernation enabled. Fixes bug 7285; bugfix on 0.2.3.9-alpha.
+    - Fix a harmless bug when opting against publishing a relay descriptor
+      because DisableNetwork is set. Fixes bug 7464; bugfix on
+      0.2.3.9-alpha.
+    - Add warning message when a managed proxy dies during configuration.
+      Fixes bug 7195; bugfix on 0.2.4.2-alpha.
+    - Fix a linking error when building tor-fw-helper without miniupnp.
+      Fixes bug 7235; bugfix on 0.2.4.2-alpha. Fix by Anthony G. Basile.
+    - Check for closing an or_connection_t without going through correct
+      channel functions; emit a warning and then call
+      connection_or_close_for_error() so we don't assert as in bugs 7212
+      and 7267.
+    - Compile correctly on compilers without C99 designated initializer
+      support. Fixes bug 7286; bugfix on 0.2.4.4-alpha.
+    - Avoid a possible assert that can occur when channel_send_destroy() is
+      called on a channel in CHANNEL_STATE_CLOSING, CHANNEL_STATE_CLOSED,
+      or CHANNEL_STATE_ERROR when the Tor process is resumed after being
+      blocked for a long interval. Fixes bug 7350; bugfix on 0.2.4.4-alpha.
+    - Fix a memory leak on failing cases of channel_tls_process_certs_cell.
+      Fixes bug 7422; bugfix on 0.2.4.4-alpha.
+
+  o Code simplification and refactoring:
+    - Start using OpenBSD's implementation of queue.h, so that we don't
+      need to hand-roll our own pointer and list structures whenever we
+      need them. (We can't rely on a sys/queue.h, since some operating
+      systems don't have them, and the ones that do have them don't all
+      present the same extensions.)
+
+
 Changes in version 0.2.4.5-alpha - 2012-10-25
   Tor 0.2.4.5-alpha comes hard at the heels of 0.2.4.4-alpha, to fix
   two important security vulnerabilities that could lead to remotely

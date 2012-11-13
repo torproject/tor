@@ -1,7 +1,0 @@
-  o Code simplification and refactoring:
-    - Start using OpenBSD's implementation of queue.h, so that we don't
-      need to hand-roll our own pointer and list structures whenever we
-      need them. (We can't rely on a sys/queue.h, since some operating
-      systems don't have them, and the ones that do have them don't all
-      present the same extensions.)
-

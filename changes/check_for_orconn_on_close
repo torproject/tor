@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Check for closing an or_connection_t without going through correct
-      channel functions; emit a warning and then call
-      connection_or_close_for_error() so we don't assert as in 7212 and 7267.

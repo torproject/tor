@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a possible assert that can occur when channel_send_destroy() is
-      called on a channel in CHANNEL_STATE_CLOSING, CHANNEL_STATE_CLOSED
-      or CHANNEL_STATE_ERROR when the Tor process is resumed after being
-      blocked for a long interval.  Fixes bug 7350.
