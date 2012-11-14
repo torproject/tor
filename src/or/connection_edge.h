@@ -91,19 +91,41 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
                                              int dry_run);
 void circuit_clear_isolation(origin_circuit_t *circ);
 
-/* DOCDOC*/
+/** @name Begin-cell flags
+ *
+ * These flags are used in RELAY_BEGIN cells to change the default behavior
+ * of the cell.
+ *
+ * @{
+ **/
+/** When this flag is set, the client is willing to get connected to IPv6
+ * addresses */
 #define BEGIN_FLAG_IPV6_OK        (1u<<0)
+/** When this flag is set, the client DOES NOT support connecting to IPv4
+ * addresses.  (The sense of this flag is inverted from IPV6_OK, so that the
+ * old default behavior of Tor is equivalent to having all flags set to 0.)
+ **/
 #define BEGIN_FLAG_IPV4_NOT_OK    (1u<<1)
+/** When this flag is set, if we find both an IPv4 and an IPv6 address,
+ * we use the IPv6 address.  Otherwise we use the IPv4 address. */
 #define BEGIN_FLAG_IPV6_PREFERRED (1u<<2)
+/**@}*/
 
 #ifdef CONNECTION_EDGE_PRIVATE
 
-/*DOCDOC*/
+/** A parsed BEGIN or BEGIN_DIR cell */
 typedef struct begin_cell_t {
+  /** The address the client has asked us to connect to, or NULL if this is
+   * a BEGIN_DIR cell*/
   char *address;
+  /** The flags specified in the BEGIN cell's body.  One or more of
+   * BEGIN_FLAG_*. */
   uint32_t flags;
+  /** The client's requested port. */
   uint16_t port;
+  /** The client's requested Stream ID */
   uint16_t stream_id;
+  /** True iff this is a BEGIN_DIR cell. */
   unsigned is_begindir : 1;
 } begin_cell_t;
 

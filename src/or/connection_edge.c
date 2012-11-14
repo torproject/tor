@@ -392,10 +392,17 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/** Longest size for the relay payload of a RELAY_CONNECTED cell that we're
+ * able to generate. */
+/* 4 zero bytes; 1 type byte; 16 byte IPv6 address; 4 byte TTL. */
 #define MAX_CONNECTED_CELL_PAYLOAD_LEN 25
 
-/** DOCDOC */
+/** Set the buffer at <b>payload_out</b> -- which must have at least
+ * MAX_CONNECTED_CELL_PAYLOAD_LEN bytes available -- to the body of a
+ * RELAY_CONNECTED cell indicating that we have connected to <b>addr</b>, and
+ * that the name resolution that led us to <b>addr</b> will be valid for
+ * <b>ttl</b> seconds. Return -1 on error, or the number of bytes used on
+ * success. */
 /* private */int
 connected_cell_format_payload(uint8_t *payload_out,
                               const tor_addr_t *addr,
@@ -403,6 +410,9 @@ connected_cell_format_payload(uint8_t *payload_out,
 {
   const sa_family_t family = tor_addr_family(addr);
   int connected_payload_len;
+
+  /* should be needless */
+  memset(payload_out, 0, MAX_CONNECTED_CELL_PAYLOAD_LEN);
 
   if (family == AF_INET) {
     set_uint32(payload_out, tor_addr_to_ipv4n(addr));
@@ -1672,7 +1682,8 @@ connection_ap_supports_optimistic_data(const entry_connection_t *conn)
   return conn->may_use_optimistic_data;
 }
 
-/** DOCDOC */
+/** Return a bitmask of BEGIN_FLAG_* flags that we should transmit in the
+ * RELAY_BEGIN cell for <b>ap_conn</b>. */
 static uint32_t
 connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
 {
@@ -1680,12 +1691,16 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
   const node_t *exitnode = NULL;
   const crypt_path_t *cpath_layer = edge_conn->cpath_layer;
   uint32_t flags = 0;
+
+  /* No flags for begindir */
   if (ap_conn->use_begindir)
     return 0;
 
+  /* No flags for hidden services. */
   if (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL)
     return 0;
 
+  /* If only IPv4 is supported, no flags */
   if (ap_conn->ipv4_traffic_ok && !ap_conn->ipv6_traffic_ok)
     return 0;
 
@@ -1704,6 +1719,8 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
     if (compare_tor_addr_to_node_policy(&a, ap_conn->socks_request->port,
                                         exitnode)
         != ADDR_POLICY_REJECTED) {
+      /* Only say "IPv6 OK" if the exit node supports IPv6. Otherwise there's
+       * no point. */
       flags |= BEGIN_FLAG_IPV6_OK;
     }
   }
@@ -2184,7 +2201,10 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
   return;
 }
 
-/* DOCDOC */
+/** Read a RELAY_BEGIN or RELAY_BEGINDIR cell from <b>cell</b>, decode it, and
+ * place the result in <b>bcell</b>.  On success return 0; on failure return
+ * <0 and set *<b>end_reason_out</b> to the end reason we should send back to
+ * the client. */
 /* static */ int
 begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                  uint8_t *end_reason_out)

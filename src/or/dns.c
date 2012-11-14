@@ -127,10 +127,16 @@ typedef struct pending_connection_t {
  * connections, and should appear in the hash table. */
 #define CACHE_STATE_CACHED 2
 
-/* DOCDOC */
+/** @name status values for a single DNS request.
+ *
+ * @{ */
+/** The DNS request is in progress. */
 #define RES_STATUS_INFLIGHT 1
+/** The DNS request finished and gave an answer */
 #define RES_STATUS_DONE_OK 2
+/** The DNS request finished and gave an error */
 #define RES_STATUS_DONE_ERR 3
+/**@}*/
 
 /** A DNS request: possibly completed, possibly pending; cached_resolve
  * structs are stored at the OR side in a hash table, and as a linked
@@ -138,27 +144,34 @@ typedef struct pending_connection_t {
  */
 typedef struct cached_resolve_t {
   HT_ENTRY(cached_resolve_t) node;
-  uint32_t magic;
+  uint32_t magic;  /**< Must be CACHED_RESOLVE_MAGIC */
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
 
   union {
-    uint32_t addr_ipv4; /**< IPv4 addr for <b>address</b>. */
-    int err_ipv4;
-  } result_ipv4;
+    uint32_t addr_ipv4; /**< IPv4 addr for <b>address</b>, if successful */
+    int err_ipv4; /**< One of DNS_ERR_*, if IPv4 lookup failed. */
+  } result_ipv4; /**< Outcome of IPv4 lookup */
   union {
-    struct in6_addr addr_ipv6;
-    int err_ipv6;
-  } result_ipv6;
+    struct in6_addr addr_ipv6; /**< IPv6 addr for <b>address</b>, if
+                                * successful */
+    int err_ipv6; /**< One of DNS_ERR_*, if IPv6 lookup failed. */
+  } result_ipv6; /**< Outcome of IPv6 lookup, if any */
   union {
-    char *hostname;
-    int err_hostname;
+    char *hostname; /** A hostname, if PTR lookup happened successfully*/
+    int err_hostname; /** One of DNS_ERR_*, if PTR lookup failed. */
   } result_ptr;
+  /** @name Status fields
+   *
+   * These take one of the RES_STATUS_* values, depending on the state
+   * of the corresponding lookup.
+   *
+   * @{ */
   unsigned int res_status_ipv4 : 2;
   unsigned int res_status_ipv6 : 2;
   unsigned int res_status_hostname : 2;
-
+  /**@}*/
   uint8_t state; /**< Is this cached entry pending/done/informative? */
-  //uint8_t is_reverse; /**< Is this a reverse (addr-to-hostname) lookup? */
+
   time_t expire; /**< Remove items from cache after this time. */
   uint32_t ttl_ipv4; /**< What TTL did the nameserver tell us? */
   uint32_t ttl_ipv6; /**< What TTL did the nameserver tell us? */
@@ -201,9 +214,11 @@ static void assert_resolve_ok(cached_resolve_t *resolve);
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
 
-/*DOCDOC*/
+/** Global: how many IPv6 requests have we made in all? */
 static uint64_t n_ipv6_requests_made = 0;
+/** Global: how many IPv6 requests have timed out? */
 static uint64_t n_ipv6_timeouts = 0;
+/** Global: Do we think that IPv6 DNS is broken? */
 static int dns_is_broken_for_ipv6 = 0;
 
 /** Function to compare hashed resolves on their addresses; used to
@@ -445,7 +460,7 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
   }
 }
 
-/*DOCDOC*/
+/** Return true iff there are no in-flight requests for <b>resolve</b>. */
 static int
 cached_resolve_have_all_answers(const cached_resolve_t *resolve)
 {
@@ -911,7 +926,16 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   return launch_resolve(resolve);
 }
 
-/* DOCDOC must set address_ttl, addr, etc.*/
+/** Given an exit connection <b>exitconn</b>, and a cached_resolve_t
+ * <b>resolve</b> whose DNS lookups have all succeeded or failed, update the
+ * appropriate fields (address_ttl and addr) of <b>exitconn</b>.
+ *
+ * If this is a reverse lookup, set *<b>hostname_out</b> to a newly allocated
+ * copy of the name resulting hostname.
+ *
+ * Return -2 on a transient error, -1 on a permenent error, and 1 on
+ * a successful lookup.
+ */
 static int
 set_exitconn_info_from_resolve(edge_connection_t *exitconn,
                                const cached_resolve_t *resolve,
@@ -1178,11 +1202,14 @@ is_test_address(const char *address)
     smartlist_string_isin_case(options->ServerDNSTestAddresses, address);
 }
 
-/** Called on the OR side when a DNS worker or the eventdns library tells us
- * the outcome of a DNS resolve: tell all pending connections about the result
- * of the lookup, and cache the value.  (<b>address</b> is a NUL-terminated
- * string containing the address to look up; <b>addr</b> is an IPv4 address in
- * host order; DOCDOC
+/** Called on the OR side when the eventdns library tells us the outcome of a
+ * single DNS resolve: remember the answer, and tell all pending connections
+ * about the result of the lookup if the lookup is now done.  (<b>address</b>
+ * is a NUL-terminated string containing the address to look up;
+ * <b>query_type</b> is one of DNS_{IPv4_A,IPv6_AAAA,PTR}; <b>dns_answer</b>
+ * is DNS_OK or one of DNS_ERR_*, <b>addr</b> is an IPv4 or IPv6 address if we
+ * got one; <b>hostname</b> is a hostname fora PTR request if we got one, and
+ * <b>ttl</b> is the time-to-live of this answer, in seconds.)
  */
 static void
 dns_found_answer(const char *address, uint8_t query_type,
@@ -1229,7 +1256,9 @@ dns_found_answer(const char *address, uint8_t query_type,
   }
 }
 
-/*DOCDOC*/
+/** Given a pending cached_resolve_t that we just finished resolving,
+ * inform every connection that was waiting for the outcome of that
+ * resolution. */
 static void
 inform_pending_connections(cached_resolve_t *resolve)
 {
@@ -1306,7 +1335,12 @@ inform_pending_connections(cached_resolve_t *resolve)
   }
 }
 
-/*DOCDOC*/
+/** Remove a pending cached_resolve_t from the hashtable, and add a
+ * corresponding cached cached_resolve_t.
+ *
+ * This function is only necessary because of the perversity of our
+ * cache timeout code; see inline comment for ideas on eliminating it.
+ **/
 static void
 make_pending_resolve_cached(cached_resolve_t *resolve)
 {
@@ -1627,7 +1661,9 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   tor_free(arg_);
 }
 
-/**DOCDOC*/
+/** Start a single DNS resolve for <b>address</b> (if <b>query_type</b> is
+ * DNS_IPv4_A or DNS_IPv6_AAAA) <b>ptr_address</b> (if <b>query_type</b> is
+ * DNS_PTR). Return 0 if we launched the request, -1 otherwise. */
 static int
 launch_one_resolve(const char *address, uint8_t query_type,
                    const tor_addr_t *ptr_address)
@@ -2011,7 +2047,7 @@ dns_seems_to_be_broken(void)
   return dns_is_completely_invalid;
 }
 
-/** DOCDOC */
+/** Return true iff we think that IPv6 hostname lookup is broken */
 int
 dns_seems_to_be_broken_for_ipv6(void)
 {

@@ -181,7 +181,9 @@ tor_addr_make_unspec(tor_addr_t *a)
   a->family = AF_UNSPEC;
 }
 
-/** DOCDOC */
+/** Set address <a>a</b> to the null address in address family <b>family</b>.
+ * The null address for AF_INET is 0.0.0.0.  The null address for AF_INET6 is
+ * [::].  AF_UNSPEC is all null. */
 void
 tor_addr_make_null(tor_addr_t *a, sa_family_t family)
 {

@@ -1237,7 +1237,6 @@ typedef struct listener_connection_t {
    * addresses? */
   unsigned int socks_prefer_ipv6 : 1;
 
-
 } listener_connection_t;
 
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
@@ -1444,7 +1443,7 @@ typedef struct edge_connection_t {
 
   /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
-  /* DOCDOC exit only */
+  /** True iff this connection is for a PTR DNS request. (exit only) */
   unsigned int is_reverse_dns_lookup:1;
 
   unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
@@ -3772,7 +3771,7 @@ typedef struct {
   int PathBiasScaleFactor;
   /** @} */
 
-  int IPv6Exit; /**< DOCDOC*/
+  int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
 
 } or_options_t;
 
