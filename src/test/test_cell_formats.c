@@ -231,6 +231,7 @@ test_cfmt_connected_cells(void *arg)
   cell_t cell;
   tor_addr_t addr;
   int ttl, r;
+  char *mem_op_hex_tmp = NULL;
   (void)arg;
 
   /* Let's try an oldschool one with nothing in it. */
@@ -332,8 +333,45 @@ test_cfmt_connected_cells(void *arg)
   r = connected_cell_parse(&rh, &cell, &addr, &ttl);
   tt_int_op(r, ==, -1);
 
+  /* Now make sure we can generate connected cells correctly. */
+  /* Try an IPv4 address */
+  memset(&rh, 0, sizeof(rh));
+  memset(&cell, 0, sizeof(cell));
+  tor_addr_parse(&addr, "30.40.50.60");
+  rh.length = connected_cell_format_payload(cell.payload+RELAY_HEADER_SIZE,
+                                            &addr, 128);
+  tt_int_op(rh.length, ==, 8);
+  test_memeq_hex(cell.payload+RELAY_HEADER_SIZE, "1e28323c" "00000080");
+
+  /* Try parsing it. */
+  tor_addr_make_unspec(&addr);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET);
+  tt_str_op(fmt_addr(&addr), ==, "30.40.50.60");
+  tt_int_op(ttl, ==, 128);
+
+  /* Try an IPv6 address */
+  memset(&rh, 0, sizeof(rh));
+  memset(&cell, 0, sizeof(cell));
+  tor_addr_parse(&addr, "2620::6b0:b:1a1a:0:26e5:480e");
+  rh.length = connected_cell_format_payload(cell.payload+RELAY_HEADER_SIZE,
+                                            &addr, 3600);
+  tt_int_op(rh.length, ==, 25);
+  test_memeq_hex(cell.payload + RELAY_HEADER_SIZE,
+                 "00000000" "06"
+                 "2620000006b0000b1a1a000026e5480e" "00000e10");
+
+  /* Try parsing it. */
+  tor_addr_make_unspec(&addr);
+  r = connected_cell_parse(&rh, &cell, &addr, &ttl);
+  tt_int_op(r, ==, 0);
+  tt_int_op(tor_addr_family(&addr), ==, AF_INET6);
+  tt_str_op(fmt_addr(&addr), ==, "2620:0:6b0:b:1a1a:0:26e5:480e");
+  tt_int_op(ttl, ==, 3600);
+
  done:
-  ;
+  tor_free(mem_op_hex_tmp);
 }
 
 #define TEST(name, flags)                                               \

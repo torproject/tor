@@ -109,7 +109,9 @@ typedef struct begin_cell_t {
 
 int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                      uint8_t *end_reason_out);
-
+int connected_cell_format_payload(uint8_t *payload_out,
+                                  const tor_addr_t *addr,
+                                  uint32_t ttl);
 #endif
 
 #endif

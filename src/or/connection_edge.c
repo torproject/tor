@@ -392,6 +392,38 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   return 0;
 }
 
+/** DOCDOC */
+#define MAX_CONNECTED_CELL_PAYLOAD_LEN 25
+
+/** DOCDOC */
+/* private */int
+connected_cell_format_payload(uint8_t *payload_out,
+                              const tor_addr_t *addr,
+                              uint32_t ttl)
+{
+  const sa_family_t family = tor_addr_family(addr);
+  int connected_payload_len;
+
+  if (family == AF_INET) {
+    set_uint32(payload_out, tor_addr_to_ipv4n(addr));
+    connected_payload_len = 4;
+  } else if (family == AF_INET6) {
+    set_uint32(payload_out, 0);
+    set_uint8(payload_out + 4, 6);
+    memcpy(payload_out + 5, tor_addr_to_in6_addr8(addr), 16);
+    connected_payload_len = 21;
+  } else {
+    return -1;
+  }
+
+  set_uint32(payload_out + connected_payload_len, htonl(dns_clip_ttl(ttl)));
+  connected_payload_len += 4;
+
+  tor_assert(connected_payload_len <= MAX_CONNECTED_CELL_PAYLOAD_LEN);
+
+  return connected_payload_len;
+}
+
 /** Connected handler for exit connections: start writing pending
  * data, deliver 'CONNECTED' relay cells as appropriate, and check
  * any pending data that may have been received. */
@@ -423,22 +455,16 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
                                      RELAY_COMMAND_CONNECTED, NULL, 0) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
-    char connected_payload[20];
-    int connected_payload_len;
-    if (tor_addr_family(&conn->addr) == AF_INET) {
-      set_uint32(connected_payload, tor_addr_to_ipv4n(&conn->addr));
-      set_uint32(connected_payload+4,
-                 htonl(dns_clip_ttl(edge_conn->address_ttl)));
-      connected_payload_len = 8;
-    } else {
-      memcpy(connected_payload, tor_addr_to_in6_addr8(&conn->addr), 16);
-      set_uint32(connected_payload+16,
-                 htonl(dns_clip_ttl(edge_conn->address_ttl)));
-      connected_payload_len = 20;
-    }
+    uint8_t connected_payload[MAX_CONNECTED_CELL_PAYLOAD_LEN];
+    int connected_payload_len =
+      connected_cell_format_payload(connected_payload, &conn->addr,
+                                    edge_conn->address_ttl);
+    if (connected_payload_len < 0)
+      return -1;
+
     if (connection_edge_send_command(edge_conn,
-                                 RELAY_COMMAND_CONNECTED,
-                                 connected_payload, connected_payload_len) < 0)
+                        RELAY_COMMAND_CONNECTED,
+                        (char*)connected_payload, connected_payload_len) < 0)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(edge_conn->package_window > 0);
@@ -2554,21 +2580,20 @@ connection_exit_connect(edge_connection_t *edge_conn)
                                  RELAY_COMMAND_CONNECTED,
                                  NULL, 0);
   } else { /* normal stream */
-    char connected_payload[20];
-    int connected_payload_len;
-    if (tor_addr_family(&conn->addr) == AF_INET) {
-      set_uint32(connected_payload, tor_addr_to_ipv4n(&conn->addr));
-      connected_payload_len = 4;
-    } else {
-      memcpy(connected_payload, tor_addr_to_in6_addr8(&conn->addr), 16);
-      connected_payload_len = 16;
+    uint8_t connected_payload[MAX_CONNECTED_CELL_PAYLOAD_LEN];
+    int connected_payload_len =
+      connected_cell_format_payload(connected_payload, &conn->addr,
+                                    edge_conn->address_ttl);
+    if (connected_payload_len < 0) {
+      connection_edge_end(edge_conn, END_STREAM_REASON_INTERNAL);
+      circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
+      connection_free(conn);
     }
-    set_uint32(connected_payload+connected_payload_len,
-               htonl(dns_clip_ttl(edge_conn->address_ttl)));
-    connected_payload_len += 4;
+
     connection_edge_send_command(edge_conn,
                                  RELAY_COMMAND_CONNECTED,
-                                 connected_payload, connected_payload_len);
+                                 (char*)connected_payload,
+                                 connected_payload_len);
   }
 }
 
