@@ -87,12 +87,6 @@ struct evdns_request;
  * that the resolver is wedged? */
 #define RESOLVE_MAX_TIMEOUT 300
 
-/** Possible outcomes from hostname lookup: permanent failure,
- * transient (retryable) failure, and success. */
-#define DNS_RESOLVE_FAILED_TRANSIENT 1
-#define DNS_RESOLVE_FAILED_PERMANENT 2
-#define DNS_RESOLVE_SUCCEEDED 3
-
 /** Our evdns_base; this structure handles all our name lookups. */
 static struct evdns_base *the_evdns_base = NULL;
 
@@ -1188,8 +1182,7 @@ is_test_address(const char *address)
  * the outcome of a DNS resolve: tell all pending connections about the result
  * of the lookup, and cache the value.  (<b>address</b> is a NUL-terminated
  * string containing the address to look up; <b>addr</b> is an IPv4 address in
- * host order; <b>outcome</b> is one of
- * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
+ * host order; DOCDOC
  */
 static void
 dns_found_answer(const char *address, uint8_t query_type,
