@@ -1,0 +1,5 @@
+  o Minor features (controller):
+    - Allow an optional $ before the node identity digest in the
+      controller command GETINFO ns/id/<identity>, for consistency with
+      md/id/<identity> and desc/id/<identity>.
+

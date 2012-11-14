@@ -2374,8 +2374,11 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     return 0;
   } else if (!strcmpstart(question, "ns/id/")) {
     char d[DIGEST_LEN];
+    const char *q = question + 6;
+    if (*q == '$')
+      ++q;
 
-    if (base16_decode(d, DIGEST_LEN, question+6, strlen(question+6))) {
+    if (base16_decode(d, DIGEST_LEN, q, strlen(q))) {
       *errmsg = "Data not decodeable as hex";
       return -1;
     }
