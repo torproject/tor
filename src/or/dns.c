@@ -1530,7 +1530,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   char *arg_ = arg;
   uint8_t orig_query_type = arg_[0];
   char *string_address = arg_ + 1;
-  int status = DNS_RESOLVE_FAILED_PERMANENT;
   tor_addr_t addr;
   const char *hostname = NULL;
   int was_wildcarded = 0;
@@ -1560,7 +1559,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       char *escaped_address;
       uint32_t *addrs = addresses;
       tor_addr_from_ipv4n(&addr, addrs[0]);
-      status = DNS_RESOLVE_SUCCEEDED;
 
       tor_addr_to_str(answer_buf, &addr, sizeof(answer_buf), 0);
       escaped_address = esc_for_log(string_address);
@@ -1572,7 +1570,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   escaped_safe_str(answer_buf));
         was_wildcarded = 1;
         tor_addr_make_null(&addr, AF_INET); /* ???? */
-        status = DNS_RESOLVE_FAILED_PERMANENT;
+        result = DNS_ERR_NOTEXIST;
       } else {
         log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
                   safe_str(escaped_address),
@@ -1584,7 +1582,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       char *escaped_address;
       struct in6_addr *addrs = addresses;
       tor_addr_from_in6(&addr, &addrs[0]);
-      status = DNS_RESOLVE_SUCCEEDED;
       tor_inet_ntop(AF_INET6, &addrs[0], answer_buf, sizeof(answer_buf));
       escaped_address = esc_for_log(string_address);
 
@@ -1595,7 +1592,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   escaped_safe_str(answer_buf));
         was_wildcarded = 1;
         tor_addr_make_unspec(&addr); /* WRONG WRONG ETC XXXXXXXX */
-        status = DNS_RESOLVE_FAILED_PERMANENT;
+        result = DNS_ERR_NOTEXIST;
       } else {
         log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
                   safe_str(escaped_address),
@@ -1605,7 +1602,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
     } else if (type == DNS_PTR && count) {
       char *escaped_address;
       hostname = ((char**)addresses)[0];
-      status = DNS_RESOLVE_SUCCEEDED;
       escaped_address = esc_for_log(string_address);
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
                 safe_str(escaped_address),
@@ -1618,9 +1614,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       log_warn(LD_BUG, "eventdns returned no addresses or error for %s!",
                escaped_safe_str(string_address));
     }
-  } else {
-    if (evdns_err_is_transient(result))
-      status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
   if (was_wildcarded) {
     if (is_test_address(string_address)) {
