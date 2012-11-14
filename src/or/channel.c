@@ -1057,6 +1057,19 @@ channel_set_cell_handlers(channel_t *chan,
        chan->var_cell_handler)) channel_process_cells(chan);
 }
 
+/*
+ * On closing channels
+ *
+ * There are three functions that close channels, for use in
+ * different circumstances:
+ *
+ *  - Use channel_mark_for_close() for most cases
+ *  - Use channel_close_from_lower_layer() if you are connection_or.c
+ *    and the other end closes the underlying connection.
+ *  - Use channel_close_for_error() if you are connection_or.c and
+ *    some sort of error has occurred.
+ */
+
 /**
  * Mark a channel for closure
  *
