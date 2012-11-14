@@ -1682,6 +1682,13 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
     }
   }
 
+  if (flags == BEGIN_FLAG_IPV6_OK) {
+    /* When IPv4 and IPv6 are both allowed, consider whether to say we
+     * prefer IPv6.  Otherwise there's no point in declaring a preference */
+    if (ap_conn->prefer_ipv6_traffic)
+      flags |= BEGIN_FLAG_IPV6_PREFERRED;
+  }
+
   if (flags == BEGIN_FLAG_IPV4_NOT_OK) {
     log_warn(LD_BUG, "Hey; I'm about to ask a node for a connection that I "
              "am telling it to fulfil with neither IPv4 nor IPv6. That's "

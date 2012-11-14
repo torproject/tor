@@ -1233,6 +1233,10 @@ typedef struct listener_connection_t {
   unsigned int socks_ipv4_traffic : 1;
   unsigned int socks_ipv6_traffic : 1;
   /** @} */
+  /** For a socks listener: should we tell the exit that we prefer IPv6
+   * addresses? */
+  unsigned int socks_prefer_ipv6 : 1;
+
 
 } listener_connection_t;
 
@@ -1539,6 +1543,8 @@ typedef struct entry_connection_t {
   unsigned int ipv4_traffic_ok : 1;
   unsigned int ipv6_traffic_ok : 1;
   /** @} */
+  /** Should we say we prefer IPv6 traffic? */
+  unsigned int prefer_ipv6_traffic : 1;
 
 } entry_connection_t;
 
@@ -3064,6 +3070,7 @@ typedef struct port_cfg_t {
   unsigned int bind_ipv6_only : 1;
   unsigned int ipv4_traffic : 1;
   unsigned int ipv6_traffic : 1;
+  unsigned int prefer_ipv6 : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */

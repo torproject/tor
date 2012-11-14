@@ -4605,7 +4605,7 @@ parse_port_config(smartlist_t *out,
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 0;
+      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -4737,6 +4737,9 @@ parse_port_config(smartlist_t *out,
           } else if (!strcasecmp(elt, "IPv6Traffic")) {
             ipv6_traffic = ! no;
             continue;
+          } else if (!strcasecmp(elt, "PreferIPv6")) {
+            prefer_ipv6 = ! no;
+            continue;
           }
         }
 
@@ -4785,6 +4788,7 @@ parse_port_config(smartlist_t *out,
       cfg->bind_ipv6_only = bind_ipv6_only;
       cfg->ipv4_traffic = ipv4_traffic;
       cfg->ipv6_traffic = ipv6_traffic;
+      cfg->prefer_ipv6 = prefer_ipv6;
 
       smartlist_add(out, cfg);
     }
