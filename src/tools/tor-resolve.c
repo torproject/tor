@@ -109,7 +109,7 @@ build_socks_resolve_request(char **out,
 static int
 parse_socks4a_resolve_response(const char *hostname,
                                const char *response, size_t len,
-                               uint32_t *addr_out)
+                               tor_addr_t *addr_out)
 {
   uint8_t status;
   tor_assert(response);
@@ -140,7 +140,7 @@ parse_socks4a_resolve_response(const char *hostname,
     return -1;
   }
 
-  *addr_out = ntohl(get_uint32(response+4));
+  tor_addr_from_ipv4n(addr_out, get_uint32(response+4));
   return 0;
 }
 
@@ -179,7 +179,7 @@ socks5_reason_to_string(char reason)
 static int
 do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
            int reverse, int version,
-           uint32_t *result_addr, char **result_hostname)
+           tor_addr_t *result_addr, char **result_hostname)
 {
   int s;
   struct sockaddr_in socksaddr;
@@ -190,7 +190,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   tor_assert(result_addr);
   tor_assert(version == 4 || version == 5);
 
-  *result_addr = 0;
+  tor_addr_make_unspec(result_addr);
   *result_hostname = NULL;
 
   s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
@@ -255,7 +255,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       return -1;
     }
   } else {
-    char reply_buf[4];
+    char reply_buf[16];
     if (read_all(s, reply_buf, 4, 1) != 4) {
       log_err(LD_NET, "Error reading SOCKS5 response.");
       return -1;
@@ -284,8 +284,16 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
         log_err(LD_NET, "Error reading address in socks5 response.");
         return -1;
       }
-      *result_addr = ntohl(get_uint32(reply_buf));
+      tor_addr_from_ipv4n(result_addr, get_uint32(reply_buf));
+    } else if (reply_buf[3] == 4) {
+      /* IPv6 address */
+      if (read_all(s, reply_buf, 16, 1) != 16) {
+        log_err(LD_NET, "Error reading address in socks5 response.");
+        return -1;
+      }
+      tor_addr_from_ipv6_bytes(result_addr, reply_buf);
     } else if (reply_buf[3] == 3) {
+      /* Domain name */
       size_t result_len;
       if (read_all(s, reply_buf, 1, 1) != 1) {
         log_err(LD_NET, "Error reading address_length in socks5 response.");
@@ -322,10 +330,8 @@ main(int argc, char **argv)
   int isSocks4 = 0, isVerbose = 0, isReverse = 0;
   char **arg;
   int n_args;
-  struct in_addr a;
-  uint32_t result = 0;
+  tor_addr_t result;
   char *result_hostname = NULL;
-  char buf[INET_NTOA_BUF_LEN];
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
   init_logging();
@@ -423,9 +429,7 @@ main(int argc, char **argv)
   if (result_hostname) {
     printf("%s\n", result_hostname);
   } else {
-    a.s_addr = htonl(result);
-    tor_inet_ntoa(&a, buf, sizeof(buf));
-    printf("%s\n", buf);
+    printf("%s\n", fmt_addr(&result));
   }
   return 0;
 }
