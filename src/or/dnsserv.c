@@ -89,6 +89,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
       continue;
     switch (req->questions[i]->type) {
       case EVDNS_TYPE_A:
+      case EVDNS_TYPE_AAAA:
       case EVDNS_TYPE_PTR:
         q = req->questions[i];
       default:

@@ -74,23 +74,29 @@ build_socks_resolve_request(char **out,
     memcpy((*out)+8+strlen(username)+1, hostname, strlen(hostname)+1);
   } else if (version == 5) {
     int is_ip_address;
-    struct in_addr in;
+    tor_addr_t addr;
     size_t addrlen;
-    is_ip_address = tor_inet_aton(hostname, &in);
+    int ipv6;
+    is_ip_address = tor_addr_parse(&addr, hostname) != -1;
     if (!is_ip_address && reverse) {
       log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
       return -1;
     }
-    addrlen = reverse ? 4 : 1 + strlen(hostname);
+    ipv6 = reverse && tor_addr_family(&addr) == AF_INET6;
+    addrlen = reverse ? (ipv6 ? 16 : 4) : 1 + strlen(hostname);
     len = 6 + addrlen;
     *out = tor_malloc(len);
     (*out)[0] = 5; /* SOCKS version 5 */
     (*out)[1] = reverse ? '\xF1' : '\xF0'; /* RESOLVE_PTR or RESOLVE */
     (*out)[2] = 0; /* reserved. */
-    (*out)[3] = reverse ? 1 : 3;
     if (reverse) {
-      set_uint32((*out)+4, in.s_addr);
+      (*out)[3] = ipv6 ? 4 : 1;
+      if (ipv6)
+        memcpy((*out)+4, tor_addr_to_in6_addr8(&addr), 16);
+      else
+        set_uint32((*out)+4, tor_addr_to_ipv4n(&addr));
     } else {
+      (*out)[3] = 3;
       (*out)[4] = (char)(uint8_t)(addrlen - 1);
       memcpy((*out)+5, hostname, addrlen - 1);
     }
