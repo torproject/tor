@@ -1115,7 +1115,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       lis_conn->session_group = global_next_session_group--;
     }
   }
-  if (type == CONN_TYPE_AP) {
+  if (type == CONN_TYPE_AP_LISTENER) {
     lis_conn->socks_ipv4_traffic = port_cfg->ipv4_traffic;
     lis_conn->socks_ipv6_traffic = port_cfg->ipv6_traffic;
     lis_conn->socks_prefer_ipv6 = port_cfg->prefer_ipv6;
