@@ -1621,7 +1621,8 @@ router_rebuild_descriptor(int force)
                                ri->address, !options->BridgeRelay);
   }
   ri->policy_is_reject_star =
-    policy_is_reject_star(ri->exit_policy);
+    policy_is_reject_star(ri->exit_policy, AF_INET) &&
+    policy_is_reject_star(ri->exit_policy, AF_INET6);
 
   if (options->IPv6Exit) {
     char *p_tmp = policy_summarize(ri->exit_policy, AF_INET6);

@@ -1049,18 +1049,23 @@ exit_policy_is_general_exit(smartlist_t *policy)
 /** Return false if <b>policy</b> might permit access to some addr:port;
  * otherwise if we are certain it rejects everything, return true. */
 int
-policy_is_reject_star(const smartlist_t *policy)
+policy_is_reject_star(const smartlist_t *policy, sa_family_t family)
 {
   if (!policy) /*XXXX disallow NULL policies? */
     return 1;
-  SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
-    if (p->policy_type == ADDR_POLICY_ACCEPT)
+  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, p) {
+    if (p->policy_type == ADDR_POLICY_ACCEPT &&
+        (tor_addr_family(&p->addr) == family ||
+         tor_addr_family(&p->addr) == AF_UNSPEC)) {
       return 0;
-    else if (p->policy_type == ADDR_POLICY_REJECT &&
-             p->prt_min <= 1 && p->prt_max == 65535 &&
-             p->maskbits == 0)
+    } else if (p->policy_type == ADDR_POLICY_REJECT &&
+               p->prt_min <= 1 && p->prt_max == 65535 &&
+               p->maskbits == 0 &&
+               (tor_addr_family(&p->addr) == family ||
+                tor_addr_family(&p->addr) == AF_UNSPEC)) {
       return 1;
-  });
+    }
+  } SMARTLIST_FOREACH_END(p);
   return 1;
 }
 

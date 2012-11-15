@@ -799,7 +799,6 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   cached_resolve_t search;
   pending_connection_t *pending_connection;
   int is_reverse = 0;
-  const routerinfo_t *me;
   tor_addr_t addr;
   time_t now = time(NULL);
   int r;
@@ -824,10 +823,9 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   }
 
   /* If we're a non-exit, don't even do DNS lookups. */
-  if (!(me = router_get_my_routerinfo()) ||
-      policy_is_reject_star(me->exit_policy)) {
+  if (router_my_exit_policy_is_reject_star())
     return -1;
-  }
+
   if (address_is_invalid_destination(exitconn->base_.address, 0)) {
     log(LOG_PROTOCOL_WARN, LD_EXIT,
         "Rejecting invalid destination address %s",

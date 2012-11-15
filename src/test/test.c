@@ -1176,9 +1176,9 @@ test_policies(void)
   test_assert(!cmp_addr_policies(policy2, policy2));
   test_assert(!cmp_addr_policies(NULL, NULL));
 
-  test_assert(!policy_is_reject_star(policy2));
-  test_assert(policy_is_reject_star(policy));
-  test_assert(policy_is_reject_star(NULL));
+  test_assert(!policy_is_reject_star(policy2, AF_INET));
+  test_assert(policy_is_reject_star(policy, AF_INET));
+  test_assert(policy_is_reject_star(NULL, AF_INET));
 
   addr_policy_list_free(policy);
   policy = NULL;
