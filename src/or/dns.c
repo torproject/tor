@@ -1580,7 +1580,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   const char *hostname = NULL;
   int was_wildcarded = 0;
 
-  tor_addr_make_unspec(&addr); /*WRONG WRONG WRONG XXXX XXXXX IPV6 prop208*/
+  tor_addr_make_unspec(&addr);
 
   /* Keep track of whether IPv6 is working */
   if (type == DNS_IPv6_AAAA) {
@@ -1615,7 +1615,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   safe_str(escaped_address),
                   escaped_safe_str(answer_buf));
         was_wildcarded = 1;
-        tor_addr_make_null(&addr, AF_INET); /* ???? */
+        tor_addr_make_unspec(&addr);
         result = DNS_ERR_NOTEXIST;
       } else {
         log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
@@ -1637,7 +1637,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   safe_str(escaped_address),
                   escaped_safe_str(answer_buf));
         was_wildcarded = 1;
-        tor_addr_make_unspec(&addr); /* WRONG WRONG ETC XXXXXXXX */
+        tor_addr_make_unspec(&addr);
         result = DNS_ERR_NOTEXIST;
       } else {
         log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
