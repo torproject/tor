@@ -1370,22 +1370,34 @@ router_upload_dir_desc_to_dirservers(int force)
  * conn.  Return 0 if we accept; non-0 if we reject.
  */
 int
-router_compare_to_my_exit_policy(edge_connection_t *conn)
+router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 {
   if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
     return -1;
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (tor_addr_is_null(&conn->base_.addr))
+  if (tor_addr_is_null(addr))
     return -1;
 
-  /* XXXX IPv6 */
-  if (tor_addr_family(&conn->base_.addr) != AF_INET)
+  /* look at desc_routerinfo->exit_policy for both the v4 and the v6
+   * policies.  The exit_policy field in desc_routerinfo is a bit unusual,
+   * in that it contains IPv6 and IPv6 entries.  We don't want to look
+   * at desc_routerinfio->ipv6_exit_policy, since that's a port summary. */
+  if ((tor_addr_family(addr) == AF_INET ||
+       tor_addr_family(addr) == AF_INET6)) {
+    return compare_tor_addr_to_addr_policy(addr, port,
+                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+#if 0
+  } else if (tor_addr_family(addr) == AF_INET6) {
+    return get_options()->IPv6Exit &&
+      desc_routerinfo->ipv6_exit_policy &&
+      compare_tor_addr_to_short_policy(addr, port,
+                  desc_routerinfo->ipv6_exit_policy) != ADDR_POLICY_ACCEPTED;
+#endif
+  } else {
     return -1;
-
-  return compare_tor_addr_to_addr_policy(&conn->base_.addr, conn->base_.port,
-                   desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+  }
 }
 
 /** Return true iff my exit policy is reject *:*.  Return -1 if we don't
@@ -1561,7 +1573,7 @@ router_rebuild_descriptor(int force)
     SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
       if (p->type == CONN_TYPE_OR_LISTENER &&
           ! p->no_advertise &&
-          ! p->ipv4_only &&
+          ! p->bind_ipv4_only &&
           tor_addr_family(&p->addr) == AF_INET6) {
         if (! tor_addr_is_internal(&p->addr, 0)) {
           ipv6_orport = p;
@@ -1604,11 +1616,20 @@ router_rebuild_descriptor(int force)
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
     policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
+                               options->IPv6Exit,
                                options->ExitPolicyRejectPrivate,
                                ri->address, !options->BridgeRelay);
   }
   ri->policy_is_reject_star =
-    policy_is_reject_star(ri->exit_policy);
+    policy_is_reject_star(ri->exit_policy, AF_INET) &&
+    policy_is_reject_star(ri->exit_policy, AF_INET6);
+
+  if (options->IPv6Exit) {
+    char *p_tmp = policy_summarize(ri->exit_policy, AF_INET6);
+    if (p_tmp)
+      ri->ipv6_exit_policy = parse_short_policy(p_tmp);
+    tor_free(p_tmp);
+  }
 
 #if 0
   /* XXXX NM NM I belive this is safe to remove */
@@ -2001,7 +2022,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
-  addr_policy_t *tmpe;
   char *family_line;
   char *extra_or_address = NULL;
   const or_options_t *options = get_options();
@@ -2130,11 +2150,12 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
     strlcat(s+written, "reject *:*\n", maxlen-written);
     written += strlen("reject *:*\n");
-    tmpe = NULL;
   } else if (router->exit_policy) {
     int i;
     for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
-      tmpe = smartlist_get(router->exit_policy, i);
+      addr_policy_t *tmpe = smartlist_get(router->exit_policy, i);
+      if (tor_addr_family(&tmpe->addr) == AF_INET6)
+        continue; /* Don't include IPv6 parts of address policy */
       result = policy_write_item(s+written, maxlen-written, tmpe, 1);
       if (result < 0) {
         log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
@@ -2148,6 +2169,20 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       }
       s[written++] = '\n';
     }
+  }
+
+  if (router->ipv6_exit_policy) {
+    char *p6 = write_short_policy(router->ipv6_exit_policy);
+    if (p6 && strcmp(p6, "reject 1-65535")) {
+      result = tor_snprintf(s+written, maxlen-written,
+                            "ipv6-policy %s\n", p6);
+      if (result<0) {
+        log_warn(LD_BUG,"Descriptor printf of policy ran out of room");
+        return -1;
+      }
+      written += result;
+    }
+    tor_free(p6);
   }
 
   if (written + DIROBJ_MAX_SIG_LEN > maxlen) {

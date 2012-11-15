@@ -74,23 +74,29 @@ build_socks_resolve_request(char **out,
     memcpy((*out)+8+strlen(username)+1, hostname, strlen(hostname)+1);
   } else if (version == 5) {
     int is_ip_address;
-    struct in_addr in;
+    tor_addr_t addr;
     size_t addrlen;
-    is_ip_address = tor_inet_aton(hostname, &in);
+    int ipv6;
+    is_ip_address = tor_addr_parse(&addr, hostname) != -1;
     if (!is_ip_address && reverse) {
       log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
       return -1;
     }
-    addrlen = reverse ? 4 : 1 + strlen(hostname);
+    ipv6 = reverse && tor_addr_family(&addr) == AF_INET6;
+    addrlen = reverse ? (ipv6 ? 16 : 4) : 1 + strlen(hostname);
     len = 6 + addrlen;
     *out = tor_malloc(len);
     (*out)[0] = 5; /* SOCKS version 5 */
     (*out)[1] = reverse ? '\xF1' : '\xF0'; /* RESOLVE_PTR or RESOLVE */
     (*out)[2] = 0; /* reserved. */
-    (*out)[3] = reverse ? 1 : 3;
     if (reverse) {
-      set_uint32((*out)+4, in.s_addr);
+      (*out)[3] = ipv6 ? 4 : 1;
+      if (ipv6)
+        memcpy((*out)+4, tor_addr_to_in6_addr8(&addr), 16);
+      else
+        set_uint32((*out)+4, tor_addr_to_ipv4n(&addr));
     } else {
+      (*out)[3] = 3;
       (*out)[4] = (char)(uint8_t)(addrlen - 1);
       memcpy((*out)+5, hostname, addrlen - 1);
     }
@@ -109,7 +115,7 @@ build_socks_resolve_request(char **out,
 static int
 parse_socks4a_resolve_response(const char *hostname,
                                const char *response, size_t len,
-                               uint32_t *addr_out)
+                               tor_addr_t *addr_out)
 {
   uint8_t status;
   tor_assert(response);
@@ -140,7 +146,7 @@ parse_socks4a_resolve_response(const char *hostname,
     return -1;
   }
 
-  *addr_out = ntohl(get_uint32(response+4));
+  tor_addr_from_ipv4n(addr_out, get_uint32(response+4));
   return 0;
 }
 
@@ -179,7 +185,7 @@ socks5_reason_to_string(char reason)
 static int
 do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
            int reverse, int version,
-           uint32_t *result_addr, char **result_hostname)
+           tor_addr_t *result_addr, char **result_hostname)
 {
   int s;
   struct sockaddr_in socksaddr;
@@ -190,7 +196,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   tor_assert(result_addr);
   tor_assert(version == 4 || version == 5);
 
-  *result_addr = 0;
+  tor_addr_make_unspec(result_addr);
   *result_hostname = NULL;
 
   s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
@@ -255,7 +261,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       return -1;
     }
   } else {
-    char reply_buf[4];
+    char reply_buf[16];
     if (read_all(s, reply_buf, 4, 1) != 4) {
       log_err(LD_NET, "Error reading SOCKS5 response.");
       return -1;
@@ -284,8 +290,16 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
         log_err(LD_NET, "Error reading address in socks5 response.");
         return -1;
       }
-      *result_addr = ntohl(get_uint32(reply_buf));
+      tor_addr_from_ipv4n(result_addr, get_uint32(reply_buf));
+    } else if (reply_buf[3] == 4) {
+      /* IPv6 address */
+      if (read_all(s, reply_buf, 16, 1) != 16) {
+        log_err(LD_NET, "Error reading address in socks5 response.");
+        return -1;
+      }
+      tor_addr_from_ipv6_bytes(result_addr, reply_buf);
     } else if (reply_buf[3] == 3) {
+      /* Domain name */
       size_t result_len;
       if (read_all(s, reply_buf, 1, 1) != 1) {
         log_err(LD_NET, "Error reading address_length in socks5 response.");
@@ -322,10 +336,8 @@ main(int argc, char **argv)
   int isSocks4 = 0, isVerbose = 0, isReverse = 0;
   char **arg;
   int n_args;
-  struct in_addr a;
-  uint32_t result = 0;
+  tor_addr_t result;
   char *result_hostname = NULL;
-  char buf[INET_NTOA_BUF_LEN];
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
   init_logging();
@@ -423,9 +435,7 @@ main(int argc, char **argv)
   if (result_hostname) {
     printf("%s\n", result_hostname);
   } else {
-    a.s_addr = htonl(result);
-    tor_inet_ntoa(&a, buf, sizeof(buf));
-    printf("%s\n", buf);
+    printf("%s\n", fmt_addr(&result));
   }
   return 0;
 }

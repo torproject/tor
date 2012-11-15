@@ -24,6 +24,7 @@ void dns_cancel_pending_resolve(const char *question);
 int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
+int dns_seems_to_be_broken_for_ipv6(void);
 void dns_reset_correctness_checks(void);
 void dump_dns_mem_usage(int severity);
 

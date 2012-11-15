@@ -89,6 +89,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
       continue;
     switch (req->questions[i]->type) {
       case EVDNS_TYPE_A:
+      case EVDNS_TYPE_AAAA:
       case EVDNS_TYPE_PTR:
         q = req->questions[i];
       default:
@@ -101,7 +102,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
     evdns_server_request_respond(req, DNS_ERR_NOTIMPL);
     return;
   }
-  if (q->type != EVDNS_TYPE_A) {
+  if (q->type != EVDNS_TYPE_A && q->type != EVDNS_TYPE_AAAA) {
     tor_assert(q->type == EVDNS_TYPE_PTR);
   }
 
@@ -125,7 +126,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   TO_CONN(conn)->port = port;
   TO_CONN(conn)->address = tor_dup_addr(&tor_addr);
 
-  if (q->type == EVDNS_TYPE_A)
+  if (q->type == EVDNS_TYPE_A || q->type == EVDNS_TYPE_AAAA)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
   else
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
@@ -289,8 +290,9 @@ dnsserv_resolved(entry_connection_t *conn,
    * or more of the questions in the request); then, call
    * evdns_server_request_respond. */
   if (answer_type == RESOLVED_TYPE_IPV6) {
-    log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
-    err = DNS_ERR_NOTIMPL;
+    evdns_server_request_add_aaaa_reply(req,
+                                        name,
+                                        1, answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
     evdns_server_request_add_a_reply(req,

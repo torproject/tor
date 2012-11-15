@@ -583,6 +583,7 @@ microdesc_free(microdesc_t *md)
     smartlist_free(md->family);
   }
   short_policy_free(md->exit_policy);
+  short_policy_free(md->ipv6_exit_policy);
 
   tor_free(md);
 }

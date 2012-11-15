@@ -1115,6 +1115,14 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       lis_conn->session_group = global_next_session_group--;
     }
   }
+  if (type == CONN_TYPE_AP_LISTENER) {
+    lis_conn->socks_ipv4_traffic = port_cfg->ipv4_traffic;
+    lis_conn->socks_ipv6_traffic = port_cfg->ipv6_traffic;
+    lis_conn->socks_prefer_ipv6 = port_cfg->prefer_ipv6;
+  } else {
+    lis_conn->socks_ipv4_traffic = 1;
+    lis_conn->socks_ipv6_traffic = 1;
+  }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1348,6 +1356,9 @@ connection_init_accepted_conn(connection_t *conn,
       TO_ENTRY_CONN(conn)->session_group = listener->session_group;
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
       TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
+      TO_ENTRY_CONN(conn)->ipv4_traffic_ok = listener->socks_ipv4_traffic;
+      TO_ENTRY_CONN(conn)->ipv6_traffic_ok = listener->socks_ipv6_traffic;
+      TO_ENTRY_CONN(conn)->prefer_ipv6_traffic = listener->socks_prefer_ipv6;
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;

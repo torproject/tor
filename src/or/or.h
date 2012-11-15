@@ -1225,6 +1225,18 @@ typedef struct listener_connection_t {
   uint8_t isolation_flags;
   /**@}*/
 
+  /** For a SOCKS listener, these fields describe whether we should
+   * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
+   *
+   * @{
+   */
+  unsigned int socks_ipv4_traffic : 1;
+  unsigned int socks_ipv6_traffic : 1;
+  /** @} */
+  /** For a socks listener: should we tell the exit that we prefer IPv6
+   * addresses? */
+  unsigned int socks_prefer_ipv6 : 1;
+
 } listener_connection_t;
 
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
@@ -1414,6 +1426,8 @@ typedef struct edge_connection_t {
 
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
+  uint32_t begincell_flags; /** Flags sent or received in the BEGIN cell
+                             * for this connection */
 
   streamid_t stream_id; /**< The stream ID used for this edge connection on its
                          * circuit */
@@ -1429,6 +1443,8 @@ typedef struct edge_connection_t {
 
   /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
+  /** True iff this connection is for a PTR DNS request. (exit only) */
+  unsigned int is_reverse_dns_lookup:1;
 
   unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
@@ -1519,6 +1535,15 @@ typedef struct entry_connection_t {
    * the exit has sent a CONNECTED cell) and we have chosen to use it.
    */
   unsigned int may_use_optimistic_data : 1;
+
+  /** Should we permit IPv4 and IPv6 traffic to use this connection?
+   *
+   * @{ */
+  unsigned int ipv4_traffic_ok : 1;
+  unsigned int ipv6_traffic_ok : 1;
+  /** @} */
+  /** Should we say we prefer IPv6 traffic? */
+  unsigned int prefer_ipv6_traffic : 1;
 
 } entry_connection_t;
 
@@ -1730,7 +1755,15 @@ typedef struct addr_policy_t {
   maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
                  * first <b>maskbits</b> bits of <b>a</b> match
                  * <b>addr</b>. */
-  tor_addr_t addr; /**< Base address to accept or reject. */
+  /** Base address to accept or reject.
+   *
+   * Note that wildcards are treated
+   * differntly depending on address family. An AF_UNSPEC address means
+   * "All addresses, IPv4 or IPv6." An AF_INET address with maskbits==0 means
+   * "All IPv4 addresses" and an AF_INET6 address with maskbits == 0 means
+   * "All IPv6 addresses".
+  **/
+  tor_addr_t addr;
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 } addr_policy_t;
@@ -1870,7 +1903,10 @@ typedef struct {
   /** How many bytes/s is this router known to handle? */
   uint32_t bandwidthcapacity;
   smartlist_t *exit_policy; /**< What streams will this OR permit
-                             * to exit?  NULL for 'reject *:*'. */
+                             * to exit on IPv4?  NULL for 'reject *:*'. */
+  /** What streams will this OR permit to exit on IPv6?
+   * NULL for 'reject *:*' */
+  struct short_policy_t *ipv6_exit_policy;
   long uptime; /**< How many seconds the router claims to have been up */
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
@@ -2076,8 +2112,11 @@ typedef struct microdesc_t {
   uint16_t ipv6_orport;
   /** As routerinfo_t.family */
   smartlist_t *family;
-  /** Exit policy summary */
+  /** IPv4 exit policy summary */
   short_policy_t *exit_policy;
+  /** IPv6 exit policy summary */
+  short_policy_t *ipv6_exit_policy;
+
 } microdesc_t;
 
 /** A node_t represents a Tor router.
@@ -3026,8 +3065,11 @@ typedef struct port_cfg_t {
   unsigned int no_advertise : 1;
   unsigned int no_listen : 1;
   unsigned int all_addrs : 1;
-  unsigned int ipv4_only : 1;
-  unsigned int ipv6_only : 1;
+  unsigned int bind_ipv4_only : 1;
+  unsigned int bind_ipv6_only : 1;
+  unsigned int ipv4_traffic : 1;
+  unsigned int ipv6_traffic : 1;
+  unsigned int prefer_ipv6 : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
@@ -3728,6 +3770,8 @@ typedef struct {
   int PathBiasScaleThreshold;
   int PathBiasScaleFactor;
   /** @} */
+
+  int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
 
 } or_options_t;
 

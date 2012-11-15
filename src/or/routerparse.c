@@ -66,6 +66,7 @@ typedef enum {
   K_SERVER_VERSIONS,
   K_OR_ADDRESS,
   K_P,
+  K_P6,
   K_R,
   K_A,
   K_S,
@@ -77,6 +78,7 @@ typedef enum {
   K_CACHES_EXTRA_INFO,
   K_HIDDEN_SERVICE_DIR,
   K_ALLOW_SINGLE_HOP_EXITS,
+  K_IPV6_POLICY,
 
   K_DIRREQ_END,
   K_DIRREQ_V2_IPS,
@@ -271,6 +273,7 @@ static token_rule_t routerdesc_token_table[] = {
   T0N("reject6",             K_REJECT6,             ARGS,    NO_OBJ ),
   T0N("accept6",             K_ACCEPT6,             ARGS,    NO_OBJ ),
   T1_START( "router",        K_ROUTER,              GE(5),   NO_OBJ ),
+  T01("ipv6-policy",         K_IPV6_POLICY,         CONCAT_ARGS, NO_OBJ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
@@ -527,6 +530,7 @@ static token_rule_t microdesc_token_table[] = {
   T0N("a",                     K_A,                GE(1),       NO_OBJ ),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
+  T01("p6",                    K_P6,               CONCAT_ARGS, NO_OBJ ),
   A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
   END_OF_TABLE
 };
@@ -535,7 +539,8 @@ static token_rule_t microdesc_token_table[] = {
 
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
-static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
+static addr_policy_t *router_parse_addr_policy(directory_token_t *tok,
+                                               unsigned fmt_flags);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
 static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
@@ -1280,7 +1285,8 @@ find_single_ipv6_orport(const smartlist_t *list,
     uint16_t port_min, port_max;
     tor_assert(t->n_args >= 1);
     /* XXXX Prop186 the full spec allows much more than this. */
-    if (tor_addr_parse_mask_ports(t->args[0], &a, &bits, &port_min,
+    if (tor_addr_parse_mask_ports(t->args[0], 0,
+                                  &a, &bits, &port_min,
                                   &port_max) == AF_INET6 &&
         bits == 128 &&
         port_min == port_max) {
@@ -1568,7 +1574,18 @@ router_parse_entry_from_string(const char *s, const char *end,
                       goto err;
                     });
   policy_expand_private(&router->exit_policy);
-  if (policy_is_reject_star(router->exit_policy))
+
+  if ((tok = find_opt_by_keyword(tokens, K_IPV6_POLICY)) && tok->n_args) {
+    router->ipv6_exit_policy = parse_short_policy(tok->args[0]);
+    if (! router->ipv6_exit_policy) {
+      log_warn(LD_DIR , "Error in ipv6-policy %s", escaped(tok->args[0]));
+      goto err;
+    }
+  }
+
+  if (policy_is_reject_star(router->exit_policy, AF_INET) &&
+      (!router->ipv6_exit_policy ||
+       short_policy_is_reject_star(router->ipv6_exit_policy)))
     router->policy_is_reject_star = 1;
 
   if ((tok = find_opt_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
@@ -3632,6 +3649,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
 /** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.
+ *
+ * The addr_policy_t returned by this function can have its address set to
+ * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
+ * of AF_INET and AF_INET6 items.
  */
 addr_policy_t *
 router_parse_addr_policy_item_from_string(const char *s, int assume_action)
@@ -3671,7 +3692,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
     goto err;
   }
 
-  r = router_parse_addr_policy(tok);
+  r = router_parse_addr_policy(tok, TAPMP_EXTENDED_STAR);
   goto done;
  err:
   r = NULL;
@@ -3690,7 +3711,7 @@ static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
   addr_policy_t *newe;
-  newe = router_parse_addr_policy(tok);
+  newe = router_parse_addr_policy(tok, 0);
   if (!newe)
     return -1;
   if (! router->exit_policy)
@@ -3715,7 +3736,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 /** Given a K_ACCEPT or K_REJECT token and a router, create and return
  * a new exit_policy_t corresponding to the token. */
 static addr_policy_t *
-router_parse_addr_policy(directory_token_t *tok)
+router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 {
   addr_policy_t newe;
   char *arg;
@@ -3737,7 +3758,7 @@ router_parse_addr_policy(directory_token_t *tok)
   else
     newe.policy_type = ADDR_POLICY_ACCEPT;
 
-  if (tor_addr_parse_mask_ports(arg, &newe.addr, &newe.maskbits,
+  if (tor_addr_parse_mask_ports(arg, fmt_flags, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
     log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
     return NULL;
@@ -4477,6 +4498,9 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if ((tok = find_opt_by_keyword(tokens, K_P))) {
       md->exit_policy = parse_short_policy(tok->args[0]);
+    }
+    if ((tok = find_opt_by_keyword(tokens, K_P6))) {
+      md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
     }
 
     crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);

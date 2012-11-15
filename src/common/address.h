@@ -55,6 +55,7 @@ socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
 int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                            uint16_t *port_out);
 void tor_addr_make_unspec(tor_addr_t *a);
+void tor_addr_make_null(tor_addr_t *a, sa_family_t family);
 char *tor_sockaddr_to_str(const struct sockaddr *sa);
 
 /** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
@@ -183,7 +184,8 @@ int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 
 int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
-int tor_addr_parse_mask_ports(const char *s,
+#define TAPMP_EXTENDED_STAR 1
+int tor_addr_parse_mask_ports(const char *s, unsigned flags,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
 const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,

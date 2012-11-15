@@ -12,6 +12,7 @@
 #define CONFIG_PRIVATE
 
 #include "or.h"
+#include "addressmap.h"
 #include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
@@ -275,6 +276,7 @@ static config_var_t option_vars_[] = {
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
   V(HTTPSProxyAuthenticator,     STRING,   NULL),
+  V(IPv6Exit,                    BOOL,     "0"),
   VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
@@ -3168,6 +3170,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
+      old_options->IPv6Exit != new_options->IPv6Exit ||
       !config_lines_eq(old_options->ORPort_lines,
                        new_options->ORPort_lines) ||
       !config_lines_eq(old_options->DirPort_lines,
@@ -4438,6 +4441,7 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
 #define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
 #define CL_PORT_SERVER_OPTIONS (1u<<3)
 #define CL_PORT_FORBID_NONLOCAL (1u<<4)
+#define CL_PORT_TAKES_HOSTNAMES (1u<<5)
 
 /**
  * Parse port configuration for a single port type.
@@ -4470,6 +4474,9 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
  * isolation options in the FooPort entries; instead allow the
  * server-port option set.
  *
+ * If CL_PORT_TAKES_HOSTNAMES is set in <b>flags</b>, allow the options
+ * {No,}IPv{4,6}Traffic.
+ *
  * On success, if <b>out</b> is given, add a new port_cfg_t entry to
  * <b>out</b> for every port that the client should listen on.  Return 0
  * on success, -1 on failure.
@@ -4493,6 +4500,7 @@ parse_port_config(smartlist_t *out,
   const unsigned forbid_nonlocal = flags & CL_PORT_FORBID_NONLOCAL;
   const unsigned allow_spurious_listenaddr =
     flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
+  const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
   int got_zero_port=0, got_nonzero_port=0;
 
   /* FooListenAddress is deprecated; let's make it work like it used to work,
@@ -4534,7 +4542,7 @@ parse_port_config(smartlist_t *out,
       cfg->port = mainport;
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
       cfg->no_listen = 1;
-      cfg->ipv4_only = 1;
+      cfg->bind_ipv4_only = 1;
       smartlist_add(out, cfg);
     }
 
@@ -4596,7 +4604,8 @@ parse_port_config(smartlist_t *out,
     uint16_t ptmp=0;
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
-      ipv4_only = 0, ipv6_only = 0;
+      bind_ipv4_only = 0, bind_ipv6_only = 0,
+      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -4661,9 +4670,9 @@ parse_port_config(smartlist_t *out,
           all_addrs = 1;
 #endif
         } else if (!strcasecmp(elt, "IPv4Only")) {
-          ipv4_only = 1;
+          bind_ipv4_only = 1;
         } else if (!strcasecmp(elt, "IPv6Only")) {
-          ipv6_only = 1;
+          bind_ipv6_only = 1;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt));
@@ -4676,18 +4685,18 @@ parse_port_config(smartlist_t *out,
                  portname, escaped(ports->value));
         goto err;
       }
-      if (ipv4_only && ipv6_only) {
+      if (bind_ipv4_only && bind_ipv6_only) {
         log_warn(LD_CONFIG, "Tried to set both IPv4Only and IPv6Only "
                  "on %sPort line '%s'",
                  portname, escaped(ports->value));
         goto err;
       }
-      if (ipv4_only && tor_addr_family(&addr) == AF_INET6) {
+      if (bind_ipv4_only && tor_addr_family(&addr) == AF_INET6) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
                  portname);
         goto err;
       }
-      if (ipv6_only && tor_addr_family(&addr) == AF_INET) {
+      if (bind_ipv6_only && tor_addr_family(&addr) == AF_INET) {
         log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
                  portname);
         goto err;
@@ -4720,6 +4729,20 @@ parse_port_config(smartlist_t *out,
           no = 1;
           elt += 2;
         }
+
+        if (takes_hostnames) {
+          if (!strcasecmp(elt, "IPv4Traffic")) {
+            ipv4_traffic = ! no;
+            continue;
+          } else if (!strcasecmp(elt, "IPv6Traffic")) {
+            ipv6_traffic = ! no;
+            continue;
+          } else if (!strcasecmp(elt, "PreferIPv6")) {
+            prefer_ipv6 = ! no;
+            continue;
+          }
+        }
+
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
 
@@ -4761,8 +4784,11 @@ parse_port_config(smartlist_t *out,
       cfg->no_advertise = no_advertise;
       cfg->no_listen = no_listen;
       cfg->all_addrs = all_addrs;
-      cfg->ipv4_only = ipv4_only;
-      cfg->ipv6_only = ipv6_only;
+      cfg->bind_ipv4_only = bind_ipv4_only;
+      cfg->bind_ipv6_only = bind_ipv6_only;
+      cfg->ipv4_traffic = ipv4_traffic;
+      cfg->ipv6_traffic = ipv6_traffic;
+      cfg->prefer_ipv6 = prefer_ipv6;
 
       smartlist_add(out, cfg);
     }
@@ -4855,7 +4881,8 @@ parse_ports(or_options_t *options, int validate_only,
              options->SocksPort_lines, options->SocksListenAddress,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
-             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR) < 0) {
+             CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR|
+             CL_PORT_TAKES_HOSTNAMES) < 0) {
     *msg = tor_strdup("Invalid SocksPort/SocksListenAddress configuration");
     goto err;
   }
@@ -4995,7 +5022,8 @@ check_server_ports(const smartlist_t *ports,
       if (! port->no_advertise) {
         ++n_orport_advertised;
         if (tor_addr_family(&port->addr) == AF_INET ||
-            (tor_addr_family(&port->addr) == AF_UNSPEC && !port->ipv6_only))
+            (tor_addr_family(&port->addr) == AF_UNSPEC &&
+                !port->bind_ipv6_only))
           ++n_orport_advertised_ipv4;
       }
       if (! port->no_listen)
@@ -5125,8 +5153,8 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
         (tor_addr_family(&cfg->addr) == address_family ||
          tor_addr_family(&cfg->addr) == AF_UNSPEC)) {
       if (tor_addr_family(&cfg->addr) != AF_UNSPEC ||
-          (address_family == AF_INET && !cfg->ipv6_only) ||
-          (address_family == AF_INET6 && !cfg->ipv4_only)) {
+          (address_family == AF_INET && !cfg->bind_ipv6_only) ||
+          (address_family == AF_INET6 && !cfg->bind_ipv4_only)) {
         return cfg->port;
       }
     }

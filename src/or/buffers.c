@@ -12,6 +12,7 @@
  **/
 #define BUFFERS_PRIVATE
 #include "or.h"
+#include "addressmap.h"
 #include "buffers.h"
 #include "config.h"
 #include "connection_edge.h"

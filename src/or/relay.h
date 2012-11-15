@@ -68,6 +68,8 @@ void circuit_clear_cell_queue(circuit_t *circ, channel_t *chan);
 #ifdef RELAY_PRIVATE
 int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
+int connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
+                         tor_addr_t *addr_out, int *ttl_out);
 #endif
 
 #endif

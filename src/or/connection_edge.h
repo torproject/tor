@@ -67,30 +67,6 @@ int connection_ap_process_transparent(entry_connection_t *conn);
 
 int address_is_invalid_destination(const char *address, int client);
 
-void addressmap_init(void);
-void addressmap_clear_excluded_trackexithosts(const or_options_t *options);
-void addressmap_clear_invalid_automaps(const or_options_t *options);
-void addressmap_clean(time_t now);
-void addressmap_clear_configured(void);
-void addressmap_clear_transient(void);
-void addressmap_free_all(void);
-int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
-                       addressmap_entry_source_t *exit_source_out);
-int addressmap_have_mapping(const char *address, int update_timeout);
-
-void addressmap_register(const char *address, char *new_address,
-                         time_t expires, addressmap_entry_source_t source,
-                         const int address_wildcard,
-                         const int new_address_wildcard);
-int parse_virtual_addr_network(const char *val, int validate_only,
-                               char **msg);
-int client_dns_incr_failures(const char *address);
-void client_dns_clear_failures(const char *address);
-void client_dns_set_addressmap(const char *address, uint32_t val,
-                               const char *exitname, int ttl);
-const char *addressmap_register_virtual_address(int type, char *new_address);
-void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
-                             time_t max_expires, int want_expiry);
 int connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
                                                 origin_circuit_t *circ,
                                                 crypt_path_t *cpath);
@@ -114,6 +90,51 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
                                              origin_circuit_t *circ,
                                              int dry_run);
 void circuit_clear_isolation(origin_circuit_t *circ);
+
+/** @name Begin-cell flags
+ *
+ * These flags are used in RELAY_BEGIN cells to change the default behavior
+ * of the cell.
+ *
+ * @{
+ **/
+/** When this flag is set, the client is willing to get connected to IPv6
+ * addresses */
+#define BEGIN_FLAG_IPV6_OK        (1u<<0)
+/** When this flag is set, the client DOES NOT support connecting to IPv4
+ * addresses.  (The sense of this flag is inverted from IPV6_OK, so that the
+ * old default behavior of Tor is equivalent to having all flags set to 0.)
+ **/
+#define BEGIN_FLAG_IPV4_NOT_OK    (1u<<1)
+/** When this flag is set, if we find both an IPv4 and an IPv6 address,
+ * we use the IPv6 address.  Otherwise we use the IPv4 address. */
+#define BEGIN_FLAG_IPV6_PREFERRED (1u<<2)
+/**@}*/
+
+#ifdef CONNECTION_EDGE_PRIVATE
+
+/** A parsed BEGIN or BEGIN_DIR cell */
+typedef struct begin_cell_t {
+  /** The address the client has asked us to connect to, or NULL if this is
+   * a BEGIN_DIR cell*/
+  char *address;
+  /** The flags specified in the BEGIN cell's body.  One or more of
+   * BEGIN_FLAG_*. */
+  uint32_t flags;
+  /** The client's requested port. */
+  uint16_t port;
+  /** The client's requested Stream ID */
+  uint16_t stream_id;
+  /** True iff this is a BEGIN_DIR cell. */
+  unsigned is_begindir : 1;
+} begin_cell_t;
+
+int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
+                     uint8_t *end_reason_out);
+int connected_cell_format_payload(uint8_t *payload_out,
+                                  const tor_addr_t *addr,
+                                  uint32_t ttl);
+#endif
 
 #endif
 

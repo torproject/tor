@@ -1044,9 +1044,9 @@ test_policy_summary_helper(const char *policy_str,
   line.value = (char *)policy_str;
   line.next = NULL;
 
-  r = policies_parse_exit_policy(&line, &policy, 0, NULL, 1);
+  r = policies_parse_exit_policy(&line, &policy, 1, 0, NULL, 1);
   test_eq(r, 0);
-  summary = policy_summarize(policy);
+  summary = policy_summarize(policy, AF_INET);
 
   test_assert(summary != NULL);
   test_streq(summary, expected_summary);
@@ -1101,7 +1101,7 @@ test_policies(void)
   test_assert(ADDR_POLICY_REJECTED ==
           compare_tor_addr_to_addr_policy(&tar, 2, policy));
 
-  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL, 1));
+  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, 1, NULL, 1));
   test_assert(policy2);
 
   policy3 = smartlist_new();
@@ -1176,9 +1176,9 @@ test_policies(void)
   test_assert(!cmp_addr_policies(policy2, policy2));
   test_assert(!cmp_addr_policies(NULL, NULL));
 
-  test_assert(!policy_is_reject_star(policy2));
-  test_assert(policy_is_reject_star(policy));
-  test_assert(policy_is_reject_star(NULL));
+  test_assert(!policy_is_reject_star(policy2, AF_INET));
+  test_assert(policy_is_reject_star(policy, AF_INET));
+  test_assert(policy_is_reject_star(NULL, AF_INET));
 
   addr_policy_list_free(policy);
   policy = NULL;
@@ -1188,11 +1188,11 @@ test_policies(void)
   line.key = (char*)"foo";
   line.value = (char*)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL, 1));
+  test_assert(0 == policies_parse_exit_policy(&line, &policy, 1, 0, NULL, 1));
   test_assert(policy);
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
-  test_eq(smartlist_len(policy), 2);
+  test_eq(smartlist_len(policy), 4);
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */
@@ -1983,6 +1983,7 @@ extern struct testcase_t pt_tests[];
 extern struct testcase_t config_tests[];
 extern struct testcase_t introduce_tests[];
 extern struct testcase_t replaycache_tests[];
+extern struct testcase_t cell_format_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1991,6 +1992,7 @@ static struct testgroup_t testgroups[] = {
   { "crypto/", crypto_tests },
   { "container/", container_tests },
   { "util/", util_tests },
+  { "cellfmt/", cell_format_tests },
   { "dir/", dir_tests },
   { "dir/md/", microdesc_tests },
   { "pt/", pt_tests },

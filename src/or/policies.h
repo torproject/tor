@@ -31,6 +31,7 @@ int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
 int validate_addr_policies(const or_options_t *options, char **msg);
 void policy_expand_private(smartlist_t **policy);
+void policy_expand_unspec(smartlist_t **policy);
 int policies_parse_from_options(const or_options_t *options);
 
 addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
@@ -42,12 +43,13 @@ addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
                               uint16_t port, const node_t *node);
 
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
+                               int ipv6exit,
                                int rejectprivate, const char *local_address,
                                int add_default_policy);
 void policies_exit_policy_append_reject_star(smartlist_t **dest);
 void policies_set_node_exitpolicy_to_reject_all(node_t *exitrouter);
 int exit_policy_is_general_exit(smartlist_t *policy);
-int policy_is_reject_star(const smartlist_t *policy);
+int policy_is_reject_star(const smartlist_t *policy, sa_family_t family);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer,
                             const char **errmsg);
@@ -58,7 +60,7 @@ void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
 
-char *policy_summarize(smartlist_t *policy);
+char *policy_summarize(smartlist_t *policy, sa_family_t family);
 
 short_policy_t *parse_short_policy(const char *summary);
 char *write_short_policy(const short_policy_t *policy);

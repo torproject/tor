@@ -864,7 +864,7 @@ The following options are useful only for clients (that is, if
     the same circuit. Currently, two addresses are "too close" if they lie in
     the same /16 range. (Default: 1)
 
-**SOCKSPort** \['address':]__port__|**auto** [_isolation flags_]::
+**SOCKSPort** \['address':]__port__|**auto** [_flags_] [_isolation flags_]::
     Open this port to listen for connections from SOCKS-speaking
     applications. Set this to 0 if you don't want to allow application
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
@@ -897,7 +897,19 @@ The following options are useful only for clients (that is, if
         on this port to share circuits with streams from every other
         port with the same session group.  (By default, streams received
         on different SOCKSPorts, TransPorts, etc are always isolated from one
-        another. This option overrides that behavior.)
+        another. This option overrides that behavior.) +
++
+    Other recognized _flags_ for a SOCKSPort are:
+    **NoIPv4Traffic**;;
+        Tell exits to not connect to IPv4 addresses in response to SOCKS
+        requests on this connection.
+    **IPv6Traffic**;;
+        Tell exits to allow IPv6 addresses in response to SOCKS requests on
+        this connection, so long as SOCKS5 is in use.  (SOCKS4 can't handle
+        IPv6.)
+    **PreferIPv6**;;
+        Tells exits that, if a host has both an IPv4 and an IPv6 address,
+        we would prefer to connect to it via IPv6. (IPv4 is the default.)
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
@@ -1274,6 +1286,10 @@ is non-zero):
     Reject all private (local) networks, along with your own public IP address,
     at the beginning of your exit policy. See above entry on ExitPolicy.
     (Default: 1)
+
+**IPv6Exit** **0**|**1**::
+    If set, and we are an exit node, allow clients to use us for IPv6
+    traffic. (Default: 0)
 
 **MaxOnionsPending** __NUM__::
     If you have more than this number of onionskins queued for decrypt, reject
