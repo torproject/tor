@@ -2204,7 +2204,11 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
 /** Read a RELAY_BEGIN or RELAY_BEGINDIR cell from <b>cell</b>, decode it, and
  * place the result in <b>bcell</b>.  On success return 0; on failure return
  * <0 and set *<b>end_reason_out</b> to the end reason we should send back to
- * the client. */
+ * the client.
+ *
+ * Return -1 in the case where want to send a RELAY_END cell, and < -1 when
+ * we don't.
+ **/
 /* static */ int
 begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                  uint8_t *end_reason_out)
@@ -2217,7 +2221,7 @@ begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
 
   relay_header_unpack(&rh, cell->payload);
   if (rh.length > RELAY_PAYLOAD_SIZE) {
-    return -2; /*XXXX why not TORPROTOL? */
+    return -2; /*XXXX why not TORPROTOCOL? */
   }
 
   bcell->stream_id = rh.stream_id;
@@ -2389,7 +2393,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
 
   log_debug(LD_EXIT,"Creating new exit connection.");
-  n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);/*XXXX IPv6*/
+  /* The 'AF_INET' here is temporary; we might need to change it later in
+   * connection_exit_connect(). */
+  n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);
 
   /* Remember the tunneled request ID in the new edge connection, so that
    * we can measure download times. */
