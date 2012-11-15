@@ -1,0 +1,18 @@
+  o Major features:
+
+    - Tor now has (alpha) support for exiting to IPv6 addresses. To
+      enable it as an exit node, make sure that you have IPv6
+      connectivity, set the IPv6Exit flag to 1. Also make sure your
+      exit policy reads as you would like: the address * applies to
+      all address families, whereas *4 is IPv4 address only, and *6
+      is IPv6 addresses only.  On the client side, you'll need to
+      wait till the authorities have upgraded, wait for enough exits
+      to support IPv6, apply the "IPv6Traffic" flag to a SocksPort,
+      and use Socks5. Closes ticket 5547, implements proposal 117 as
+      revised in proposal 208.
+
+      We DO NOT recommend that clients with actual anonymity needs
+      start using IPv6 over Tor yet: not enough exits support it
+      yet, and there are some DNS-caching related issues that need
+      to be solved first.
+
