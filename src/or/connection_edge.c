@@ -1879,7 +1879,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
     /* We're doing a reverse lookup.  The input could be an IP address, or
      * could be an .in-addr.arpa or .ip6.arpa address */
-    r = tor_addr_parse_PTR_name(&addr, a, AF_INET, 1);
+    r = tor_addr_parse_PTR_name(&addr, a, AF_UNSPEC, 1);
     if (r <= 0) {
       log_warn(LD_APP, "Rejecting ill-formed reverse lookup of %s",
                safe_str_client(a));
