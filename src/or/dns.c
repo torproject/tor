@@ -148,7 +148,8 @@ typedef struct cached_resolve_t {
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
 
   union {
-    uint32_t addr_ipv4; /**< IPv4 addr for <b>address</b>, if successful */
+    uint32_t addr_ipv4; /**< IPv4 addr for <b>address</b>, if successful.
+                         * (In host order.) */
     int err_ipv4; /**< One of DNS_ERR_*, if IPv4 lookup failed. */
   } result_ipv4; /**< Outcome of IPv4 lookup */
   union {
@@ -188,14 +189,16 @@ static void dns_found_answer(const char *address, uint8_t query_type,
                              const tor_addr_t *addr,
                              const char *hostname,
                              uint32_t ttl);
-static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
+static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type,
+                               const cached_resolve_t *resolve);
 static int launch_resolve(cached_resolve_t *resolve);
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
 static int dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
                             or_circuit_t *oncirc, char **resolved_to_hostname,
-                            int *made_connection_pending_out);
+                            int *made_connection_pending_out,
+                            cached_resolve_t **resolve_out);
 static int set_exitconn_info_from_resolve(edge_connection_t *exitconn,
                                           const cached_resolve_t *resolve,
                                           char **hostname_out);
@@ -593,55 +596,55 @@ purge_expired_resolves(time_t now)
 
 /** Send a response to the RESOLVE request of a connection.
  * <b>answer_type</b> must be one of
- * RESOLVED_TYPE_(IPV4|IPV6|ERROR|ERROR_TRANSIENT|AUTO).
+ * RESOLVED_TYPE_(AUTO|ERROR|ERROR_TRANSIENT|).
  *
  * If <b>circ</b> is provided, and we have a cached answer, send the
  * answer back along circ; otherwise, send the answer back along
  * <b>conn</b>'s attached circuit.
  */
 static void
-send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
+send_resolved_cell(edge_connection_t *conn, uint8_t answer_type,
+                   const cached_resolve_t *resolved)
 {
-  char buf[RELAY_PAYLOAD_SIZE];
-  size_t buflen;
+  char buf[RELAY_PAYLOAD_SIZE], *cp = buf;
+  size_t buflen = 0;
   uint32_t ttl;
-
-  if (answer_type == RESOLVED_TYPE_AUTO) {
-    sa_family_t family = tor_addr_family(&conn->base_.addr);
-    if (family == AF_INET)
-      answer_type = RESOLVED_TYPE_IPV4;
-    else if (family == AF_INET6)
-      answer_type = RESOLVED_TYPE_IPV6;
-    else
-      answer_type = RESOLVED_TYPE_ERROR_TRANSIENT;
-  }
 
   buf[0] = answer_type;
   ttl = dns_clip_ttl(conn->address_ttl);
 
   switch (answer_type)
     {
-    case RESOLVED_TYPE_IPV4:
-      buf[1] = 4;
-      set_uint32(buf+2, tor_addr_to_ipv4n(&conn->base_.addr));
-      set_uint32(buf+6, htonl(ttl));
-      buflen = 10;
-      break;
-    case RESOLVED_TYPE_IPV6:
-      {
-        const uint8_t *bytes = tor_addr_to_in6_addr8(&conn->base_.addr);
-        buf[1] = 16;
-        memcpy(buf+2, bytes, 16);
-        set_uint32(buf+18, htonl(ttl));
-        buflen = 22;
+    case RESOLVED_TYPE_AUTO:
+      if (resolved && resolved->res_status_ipv4 == RES_STATUS_DONE_OK) {
+        cp[0] = RESOLVED_TYPE_IPV4;
+        cp[1] = 4;
+        set_uint32(cp+2, htonl(resolved->result_ipv4.addr_ipv4));
+        set_uint32(cp+6, htonl(ttl));
+        cp += 10;
       }
-      break;
+      if (resolved && resolved->res_status_ipv6 == RES_STATUS_DONE_OK) {
+        const uint8_t *bytes = resolved->result_ipv6.addr_ipv6.s6_addr;
+        cp[0] = RESOLVED_TYPE_IPV6;
+        cp[1] = 16;
+        memcpy(cp+2, bytes, 16);
+        set_uint32(cp+18, htonl(ttl));
+        cp += 22;
+      }
+      if (cp != buf) {
+        buflen = cp - buf;
+        break;
+      } else {
+        answer_type = RESOLVED_TYPE_ERROR;
+        /* fall through. */
+      }
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       {
         const char *errmsg = "Error resolving hostname";
         size_t msglen = strlen(errmsg);
 
+        buf[0] = answer_type;
         buf[1] = msglen;
         strlcpy(buf+2, errmsg, sizeof(buf)-2);
         set_uint32(buf+2+msglen, htonl(ttl));
@@ -719,10 +722,11 @@ dns_resolve(edge_connection_t *exitconn)
   int is_resolve, r;
   int made_connection_pending = 0;
   char *hostname = NULL;
+  cached_resolve_t *resolve = NULL;
   is_resolve = exitconn->base_.purpose == EXIT_PURPOSE_RESOLVE;
 
   r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname,
-                       &made_connection_pending);
+                       &made_connection_pending, &resolve);
 
   switch (r) {
     case 1:
@@ -733,7 +737,7 @@ dns_resolve(edge_connection_t *exitconn)
         if (hostname)
           send_resolved_hostname_cell(exitconn, hostname);
         else
-          send_resolved_cell(exitconn, RESOLVED_TYPE_AUTO);
+          send_resolved_cell(exitconn, RESOLVED_TYPE_AUTO, resolve);
         exitconn->on_circuit = NULL;
       } else {
         /* Add to the n_streams list; the calling function will send back a
@@ -755,7 +759,8 @@ dns_resolve(edge_connection_t *exitconn)
        * and stop everybody waiting for the same connection. */
       if (is_resolve) {
         send_resolved_cell(exitconn,
-             (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
+             (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT,
+             NULL);
       }
 
       exitconn->on_circuit = NULL;
@@ -789,11 +794,14 @@ dns_resolve(edge_connection_t *exitconn)
  * Set *<b>made_connection_pending_out</b> to true if we have placed
  * <b>exitconn</b> on the list of pending connections for some resolve; set it
  * to false otherwise.
+ *
+ * Set *<b>resolve_out</b> to a cached resolve, if we found one.
  */
 static int
 dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
                  or_circuit_t *oncirc, char **hostname_out,
-                 int *made_connection_pending_out)
+                 int *made_connection_pending_out,
+                 cached_resolve_t **resolve_out)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
@@ -891,6 +899,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
                   exitconn->base_.s,
                   escaped_safe_str(resolve->address));
 
+        *resolve_out = resolve;
+
         return set_exitconn_info_from_resolve(exitconn, resolve, hostname_out);
 
       case CACHE_STATE_DONE:
@@ -940,6 +950,8 @@ set_exitconn_info_from_resolve(edge_connection_t *exitconn,
                                char **hostname_out)
 {
   int ipv4_ok, ipv6_ok, answer_with_ipv4, r;
+  uint32_t begincell_flags;
+  const int is_resolve = exitconn->base_.purpose == EXIT_PURPOSE_RESOLVE;
   tor_assert(exitconn);
   tor_assert(resolve);
 
@@ -955,14 +967,22 @@ set_exitconn_info_from_resolve(edge_connection_t *exitconn,
 
   /* If we're here then the connection wants one or either of ipv4, ipv6, and
    * we can give it one or both. */
+  if (is_resolve) {
+    begincell_flags = BEGIN_FLAG_IPV6_OK;
+  } else {
+    begincell_flags = exitconn->begincell_flags;
+  }
+
   ipv4_ok = (resolve->res_status_ipv4 == RES_STATUS_DONE_OK) &&
-    ! (exitconn->begincell_flags & BEGIN_FLAG_IPV4_NOT_OK);
+    ! (begincell_flags & BEGIN_FLAG_IPV4_NOT_OK);
   ipv6_ok = (resolve->res_status_ipv6 == RES_STATUS_DONE_OK) &&
-    (exitconn->begincell_flags & BEGIN_FLAG_IPV6_OK) &&
+    (begincell_flags & BEGIN_FLAG_IPV6_OK) &&
     get_options()->IPv6Exit;
 
   /* Now decide which one to actually give. */
-  if (ipv4_ok && ipv6_ok) {
+  if (ipv4_ok && ipv6_ok && is_resolve) {
+    answer_with_ipv4 = 1;
+  } else if (ipv4_ok && ipv6_ok) {
     /* If we have both, see if our exit policy has an opinion. */
     const uint16_t port = exitconn->base_.port;
     int ipv4_allowed, ipv6_allowed;
@@ -978,7 +998,7 @@ set_exitconn_info_from_resolve(edge_connection_t *exitconn,
     } else {
       /* Our exit policy would permit both.  Answer with whichever the user
        * prefers */
-      answer_with_ipv4 = !(exitconn->begincell_flags &
+      answer_with_ipv4 = !(begincell_flags &
                            BEGIN_FLAG_IPV6_PREFERRED);
     }
   } else {
@@ -989,7 +1009,7 @@ set_exitconn_info_from_resolve(edge_connection_t *exitconn,
       answer_with_ipv4 = 0;
     } else {
       /* Neither one was okay. Choose based on user preference. */
-      answer_with_ipv4 = !(exitconn->begincell_flags &
+      answer_with_ipv4 = !(begincell_flags &
                            BEGIN_FLAG_IPV6_PREFERRED);
     }
   }
@@ -1292,7 +1312,8 @@ inform_pending_connections(cached_resolve_t *resolve)
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
         send_resolved_cell(pendconn, r == -1 ?
-                          RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
+                         RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT,
+                         NULL);
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
@@ -1321,7 +1342,7 @@ inform_pending_connections(cached_resolve_t *resolve)
         if (pendconn->is_reverse_dns_lookup)
           send_resolved_hostname_cell(pendconn, hostname);
         else
-          send_resolved_cell(pendconn, RESOLVED_TYPE_AUTO);
+          send_resolved_cell(pendconn, RESOLVED_TYPE_AUTO, resolve);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
