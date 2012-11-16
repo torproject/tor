@@ -4777,6 +4777,12 @@ parse_port_config(smartlist_t *out,
     else
       got_zero_port = 1;
 
+    if (ipv4_traffic == 0 && ipv6_traffic == 0) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with both IPv4 and "
+               "IPv6 disabled; that won't work.", portname);
+      goto err;
+    }
+
     if (out && port) {
       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
       tor_addr_copy(&cfg->addr, &addr);
