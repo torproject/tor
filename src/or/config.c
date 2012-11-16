@@ -4543,6 +4543,7 @@ parse_port_config(smartlist_t *out,
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
       cfg->no_listen = 1;
       cfg->bind_ipv4_only = 1;
+      cfg->ipv4_traffic = 1;
       smartlist_add(out, cfg);
     }
 
@@ -4562,6 +4563,7 @@ parse_port_config(smartlist_t *out,
         cfg->session_group = SESSION_GROUP_UNSET;
         cfg->isolation_flags = ISO_DEFAULT;
         cfg->no_advertise = 1;
+        cfg->ipv4_traffic = 1;
         smartlist_add(out, cfg);
       }
     }
@@ -4585,6 +4587,7 @@ parse_port_config(smartlist_t *out,
        tor_addr_parse(&cfg->addr, defaultaddr);
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
+       cfg->ipv4_traffic = 1;
        smartlist_add(out, cfg);
     }
     return 0;
