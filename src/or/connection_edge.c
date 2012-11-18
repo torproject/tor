@@ -2176,6 +2176,17 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
      status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED,
                               endreason);
 
+  /* Flag this stream's circuit as having completed a stream successfully
+   * (for path bias) */
+  if (status == SOCKS5_SUCCEEDED) {
+    if(!conn->edge_.on_circuit ||
+       !CIRCUIT_IS_ORIGIN(conn->edge_.on_circuit)) {
+      log_warn(LD_BUG, "No origin circuit for successful SOCKS stream");
+    } else {
+      TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->any_streams_succeeded = 1;
+    }
+  }
+
   if (conn->socks_request->has_finished) {
     log_warn(LD_BUG, "(Harmless.) duplicate calls to "
              "connection_ap_handshake_socks_reply.");

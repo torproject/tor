@@ -1104,6 +1104,21 @@ pathbias_get_mult_factor(const or_options_t *options)
 }
 
 /**
+ * If this parameter is set to a true value (default), we use the
+ * successful_circuits_closed. Otherwise, we use the success_count.
+ */
+static int
+pathbias_use_close_counts(const or_options_t *options)
+{
+#define DFLT_PATH_BIAS_USE_CLOSE_COUNTS 1
+  if (options->PathBiasUseCloseCounts >= 0)
+    return options->PathBiasUseCloseCounts;
+  else
+    return networkstatus_get_param(NULL, "pb_useclosecounts",
+                                DFLT_PATH_BIAS_USE_CLOSE_COUNTS, 0, 1);
+}
+
+/**
  * Convert a Guard's path state to string.
  */
 static const char *
@@ -1348,6 +1363,94 @@ pathbias_count_success(origin_circuit_t *circ)
 }
 
 /**
+ * Count a successfully closed circuit.
+ */
+void
+pathbias_count_successful_close(origin_circuit_t *circ)
+{
+  entry_guard_t *guard = NULL;
+  if (!pathbias_should_count(circ)) {
+    return;
+  }
+
+  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+   
+  if (guard) {
+    /* In the long run: circuit_success ~= successful_circuit_close + 
+     *                                     circ_failure + stream_failure */
+    guard->successful_circuits_closed++;
+    entry_guards_changed();
+  } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+   /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
+    * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
+    * No need to log that case. */
+    log_info(LD_BUG,
+        "Successfully closed circuit has no known guard. "
+        "Circuit is a %s currently %s",
+        circuit_purpose_to_string(circ->base_.purpose),
+        circuit_state_to_string(circ->base_.state));
+  }
+}
+
+/**
+ * Count a circuit that fails after it is built, but before it can 
+ * carry any traffic.
+ *
+ * This is needed because there are ways to destroy a
+ * circuit after it has successfully completed. Right now, this is
+ * used for purely informational/debugging purposes.
+ */
+void
+pathbias_count_collapse(origin_circuit_t *circ)
+{
+  entry_guard_t *guard = NULL;
+  if (!pathbias_should_count(circ)) {
+    return;
+  }
+
+  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+    
+  if (guard) {
+    guard->collapsed_circuits++;
+    entry_guards_changed();
+  } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+   /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
+    * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
+    * No need to log that case. */
+    log_info(LD_BUG,
+        "Destroyed circuit has no known guard. "
+        "Circuit is a %s currently %s",
+        circuit_purpose_to_string(circ->base_.purpose),
+        circuit_state_to_string(circ->base_.state));
+  }
+}
+
+void
+pathbias_count_unusable(origin_circuit_t *circ)
+{
+  entry_guard_t *guard = NULL;
+  if (!pathbias_should_count(circ)) {
+    return;
+  }
+
+  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+    
+  if (guard) {
+    guard->unusable_circuits++;
+    entry_guards_changed();
+  } else if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+   /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
+    * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
+    * No need to log that case. */
+    log_info(LD_BUG,
+        "Stream-failing circuit has no known guard. "
+        "Circuit is a %s currently %s",
+        circuit_purpose_to_string(circ->base_.purpose),
+        circuit_state_to_string(circ->base_.state));
+  }
+}
+
+/**
  * Count timeouts for path bias log messages.
  *
  * These counts are purely informational.
@@ -1367,6 +1470,44 @@ pathbias_count_timeout(origin_circuit_t *circ)
   }
 }
 
+// XXX: DOCDOC
+int
+pathbias_get_closed_count(entry_guard_t *guard)
+{
+  circuit_t *circ = global_circuitlist;
+  int open_circuits = 0;
+
+  /* Count currently open circuits. Give them the benefit of the doubt */
+  for ( ; circ; circ = circ->next) {
+    if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
+        circ->marked_for_close) /* already counted */
+      continue;
+
+    if (TO_ORIGIN_CIRCUIT(circ)->path_state == PATH_STATE_SUCCEEDED &&
+        (memcmp(guard->identity, circ->n_chan->identity_digest, DIGEST_LEN)
+         == 0)) {
+      open_circuits++;
+    }
+  }
+
+  return guard->successful_circuits_closed + open_circuits;
+}
+
+/**
+ * This function checks the consensus parameters to decide
+ * if it should return guard->circuit_successes or
+ * guard->successful_circuits_closed.
+ */
+static int
+pathbias_get_success_count(entry_guard_t *guard)
+{
+  if (pathbias_use_close_counts(get_options())) {
+    return pathbias_get_closed_count(guard);
+  } else {
+    return guard->circuit_successes;
+  }
+}
+
 /** Increment the number of times we successfully extended a circuit to
  * 'guard', first checking if the failure rate is high enough that we should
  * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
@@ -1382,7 +1523,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
     /* Note: We rely on the < comparison here to allow us to set a 0
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
-    if (guard->circuit_successes/((double)guard->first_hops)
+    if (pathbias_get_success_count(guard)/((double)guard->first_hops)
         < pathbias_get_extreme_rate(options)) {
       /* Dropping is currently disabled by default. */
       if (pathbias_get_dropguards(options)) {
@@ -1390,11 +1531,14 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
           log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing an extremely large amount of "
                  "circuits. To avoid potential route manipluation attacks, "
-                 "Tor has disabled use of this guard. Success "
-                 "counts are %d/%d, with %d timeouts. For reference, your "
-                 "timeout cutoff is %ld seconds.",
+                 "Tor has disabled use of this guard. "
+                 "Success counts are %d/%d. %d circuits completed, %d "
+                 "were unusable, %d collapsed, and %d timed out. For "
+                 "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 pathbias_get_closed_count(guard), guard->first_hops,
+                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
@@ -1406,13 +1550,16 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "Your Guard %s=%s is failing an extremely large amount of "
                  "circuits. This could indicate a route manipulation attack, "
                  "extreme network overload, or a bug. "
-                 "Success counts are %d/%d, with %d timeouts. "
-                 "For reference, your timeout cutoff is %ld seconds.",
+                 "Success counts are %d/%d. %d circuits completed, %d "
+                 "were unusable, %d collapsed, and %d timed out. For "
+                 "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 pathbias_get_closed_count(guard), guard->first_hops,
+                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
-    } else if (guard->circuit_successes/((double)guard->first_hops)
+    } else if (pathbias_get_success_count(guard)/((double)guard->first_hops)
                < pathbias_get_warn_rate(options)) {
       if (!guard->path_bias_warned) {
         guard->path_bias_warned = 1;
@@ -1420,25 +1567,31 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "Your Guard %s=%s is failing a very large amount of "
                  "circuits. Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
-                 "you or the potentially the guard itself. Success counts "
-                 "are %d/%d, with %d timeouts. For reference, your timeout "
-                 "cutoff is %ld seconds.",
+                 "you or the potentially the guard itself. "
+                 "Success counts are %d/%d. %d circuits completed, %d "
+                 "were unusable, %d collapsed, and %d timed out. For "
+                 "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 guard->circuit_successes, guard->first_hops, guard->timeouts,
+                 pathbias_get_closed_count(guard), guard->first_hops,
+                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
-    } else if (guard->circuit_successes/((double)guard->first_hops)
+    } else if (pathbias_get_success_count(guard)/((double)guard->first_hops)
                < pathbias_get_notice_rate(options)) {
       if (!guard->path_bias_noticed) {
         guard->path_bias_noticed = 1;
         log_notice(LD_CIRC,
                    "Your Guard %s=%s is failing more circuits than usual. "
                    "Most likely this means the Tor network is overloaded. "
-                   "Success counts are %d/%d, with %d timeouts. For "
+                   "Success counts are %d/%d. %d circuits completed, %d "
+                   "were unusable, %d collapsed, and %d timed out. For "
                    "reference, your timeout cutoff is %ld seconds.",
                    guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                   guard->circuit_successes, guard->first_hops,
-                   guard->timeouts, (long)circ_times.close_ms/1000);
+                   pathbias_get_closed_count(guard), guard->first_hops,
+                   guard->circuit_successes, guard->unusable_circuits,
+                   guard->collapsed_circuits, guard->timeouts,
+                   (long)circ_times.close_ms/1000);
       }
     }
   }
@@ -1456,13 +1609,20 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                guard->circuit_successes, guard->first_hops, mult_factor,
                scale_factor, guard->nickname, hex_str(guard->identity,
                DIGEST_LEN));
+
       guard->first_hops *= mult_factor;
       guard->circuit_successes *= mult_factor;
       guard->timeouts *= mult_factor;
+      guard->successful_circuits_closed *= mult_factor;
+      guard->collapsed_circuits *= mult_factor;
+      guard->unusable_circuits *= mult_factor;
 
       guard->first_hops /= scale_factor;
       guard->circuit_successes /= scale_factor;
       guard->timeouts /= scale_factor;
+      guard->successful_circuits_closed /= scale_factor;
+      guard->collapsed_circuits /= scale_factor;
+      guard->unusable_circuits /= scale_factor;
     }
   }
   guard->first_hops++;

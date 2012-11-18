@@ -51,7 +51,15 @@ typedef struct entry_guard_t {
   unsigned first_hops; /**< Number of first hops this guard has completed */
   unsigned circuit_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
-  unsigned timeouts; /**< Number of 'right-censored' timeouts for this guard.*/
+  unsigned successful_circuits_closed; /**< Number of circuits that carried
+                                        * streams successfully. */
+  unsigned collapsed_circuits; /**< Number of fully built circuits that were
+                                 * remotely closed before any streams were
+                                 * attempted. */
+  unsigned unusable_circuits; /**< Number of circuits for which streams were 
+                                *  attempted, but none succeeded. */
+  unsigned timeouts; /**< Number of 'right-censored' circuit timeouts for this
+                       * guard. */
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);

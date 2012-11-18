@@ -56,6 +56,12 @@ const node_t *choose_good_entry_server(uint8_t purpose,
 double pathbias_get_extreme_rate(const or_options_t *options);
 int pathbias_get_dropguards(const or_options_t *options);
 void pathbias_count_timeout(origin_circuit_t *circ);
+void pathbias_count_successful_close(origin_circuit_t *circ);
+void pathbias_count_collapse(origin_circuit_t *circ);
+void pathbias_count_unusable(origin_circuit_t *circ);
+
+typedef struct entry_guard_t entry_guard_t;
+int pathbias_get_closed_count(entry_guard_t *gaurd);
 
 #endif
 

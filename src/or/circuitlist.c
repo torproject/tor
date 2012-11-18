@@ -1347,7 +1347,44 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
     }
     reason = END_CIRC_REASON_NONE;
   }
+  
   if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+    if (ocirc->path_state == PATH_STATE_SUCCEEDED) {
+      int pathbias_is_normal_close = 1;
+
+      /* FIXME: Is timestamp_dirty the right thing for these two checks? 
+       * Should we use isolation_any_streams_attached instead? */
+      if (!circ->timestamp_dirty) {
+        if (reason & END_CIRC_REASON_FLAG_REMOTE) {
+          /* Unused remote circ close reasons all could be bias */
+          pathbias_is_normal_close = 0;
+          pathbias_count_collapse(ocirc);
+        } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
+                    == END_CIRC_REASON_CHANNEL_CLOSED &&
+                   circ->n_chan->reason_for_closing 
+                    != CHANNEL_CLOSE_REQUESTED) {
+          /* If we didn't close the channel ourselves, it could be bias */
+          /* FIXME: Only count bias if the network is live?
+           * What about clock jumps/suspends? */
+          pathbias_is_normal_close = 0;
+          pathbias_count_collapse(ocirc);
+        }
+      } else if (circ->timestamp_dirty && !ocirc->any_streams_succeeded) {
+        /* Any circuit where there were attempted streams but no successful
+         * streams could be bias */
+        /* FIXME: This may be better handled by limiting the number of retries
+         * per stream? */
+        pathbias_is_normal_close = 0;
+        pathbias_count_unusable(ocirc);
+      }
+
+      if (pathbias_is_normal_close) {
+        pathbias_count_successful_close(ocirc);
+      }
+    }
+
     /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;
   }

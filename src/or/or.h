@@ -2872,6 +2872,13 @@ typedef struct origin_circuit_t {
    */
   unsigned int isolation_any_streams_attached : 1;
 
+  /**
+   * Did any SOCKS streams actually succeed on this circuit?
+   *
+   * XXX: We probably also need to set this for intro other hidserv circs..
+   */
+  unsigned int any_streams_succeeded : 1;
+
   /** A bitfield of ISO_* flags for every isolation field such that this
    * circuit has had streams with more than one value for that field
    * attached to it. */
@@ -3790,6 +3797,7 @@ typedef struct {
   int PathBiasScaleThreshold;
   int PathBiasScaleFactor;
   int PathBiasMultFactor;
+  int PathBiasUseCloseCounts;
   /** @} */
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
