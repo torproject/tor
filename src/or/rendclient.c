@@ -378,6 +378,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
        * it to specify when a circuit entered the
        * _C_REND_READY_INTRO_ACKED state. */
       rendcirc->base_.timestamp_dirty = time(NULL);
+      
+      /* For path bias: This circuit was used successfully */
+      circ->any_streams_succeeded = 1;
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }

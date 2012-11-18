@@ -2454,6 +2454,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     assert_circuit_ok(circ);
 
     connection_exit_connect(n_stream);
+
+    /* For path bias: This circuit was used successfully */
+    origin_circ->any_streams_succeeded = 1;
+
     tor_free(address);
     return 0;
   }

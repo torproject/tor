@@ -2873,9 +2873,8 @@ typedef struct origin_circuit_t {
   unsigned int isolation_any_streams_attached : 1;
 
   /**
-   * Did any SOCKS streams actually succeed on this circuit?
-   *
-   * XXX: We probably also need to set this for intro other hidserv circs..
+   * Did any SOCKS streams or hidserv introductions actually succeed on
+   * this circuit?
    */
   unsigned int any_streams_succeeded : 1;
 

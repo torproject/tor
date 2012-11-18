@@ -1383,6 +1383,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
+          
+  /* For path bias: This circuit was used successfully */
+  circuit->any_streams_succeeded = 1;
 
   goto done;
 
