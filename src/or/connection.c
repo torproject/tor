@@ -281,6 +281,13 @@ entry_connection_new(int type, int socket_family)
   tor_assert(type == CONN_TYPE_AP);
   connection_init(time(NULL), ENTRY_TO_CONN(entry_conn), type, socket_family);
   entry_conn->socks_request = socks_request_new();
+  /* If this is coming from a listener, we'll set it up based on the listener
+   * in a little while.  Otherwise, we're doing this as a linked connection
+   * of some kind, and we should set it up here based on the socket family */
+  if (socket_family == AF_INET)
+    entry_conn->ipv4_traffic_ok = 1;
+  else if (socket_family == AF_INET6)
+    entry_conn->ipv6_traffic_ok = 1;
   return entry_conn;
 }
 
