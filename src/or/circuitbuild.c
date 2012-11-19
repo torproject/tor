@@ -1218,10 +1218,16 @@ pathbias_count_first_hop(origin_circuit_t *circ)
 
     /* Don't count cannibalized circs for path bias */
     if (!circ->has_opened) {
-      entry_guard_t *guard;
+      entry_guard_t *guard = NULL;
 
-      guard =
-        entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+      if (circ->cpath && circ->cpath->extend_info) {
+        guard = entry_guard_get_by_id_digest(
+                  circ->cpath->extend_info->identity_digest);
+      } else if (circ->base_.n_chan) {
+        guard =
+          entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+      }
+
       if (guard) {
         if (circ->path_state == PATH_STATE_NEW_CIRC) {
           circ->path_state = PATH_STATE_DID_FIRST_HOP;
@@ -1299,8 +1305,13 @@ pathbias_count_success(origin_circuit_t *circ)
 
   /* Don't count cannibalized/reused circs for path bias */
   if (!circ->has_opened) {
-    guard =
-      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+    if (circ->cpath && circ->cpath->extend_info) {
+      guard = entry_guard_get_by_id_digest(
+                circ->cpath->extend_info->identity_digest);
+    } else if (circ->base_.n_chan) {
+      guard =
+        entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+    }
 
     if (guard) {
       if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
@@ -1373,7 +1384,13 @@ pathbias_count_successful_close(origin_circuit_t *circ)
     return;
   }
 
-  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  if (circ->cpath && circ->cpath->extend_info) {
+    guard = entry_guard_get_by_id_digest(
+              circ->cpath->extend_info->identity_digest);
+  } else if (circ->base_.n_chan) {
+    guard =
+      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  }
    
   if (guard) {
     /* In the long run: circuit_success ~= successful_circuit_close + 
@@ -1408,7 +1425,13 @@ pathbias_count_collapse(origin_circuit_t *circ)
     return;
   }
 
-  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  if (circ->cpath && circ->cpath->extend_info) {
+    guard = entry_guard_get_by_id_digest(
+              circ->cpath->extend_info->identity_digest);
+  } else if (circ->base_.n_chan) {
+    guard =
+      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  }
     
   if (guard) {
     guard->collapsed_circuits++;
@@ -1433,7 +1456,13 @@ pathbias_count_unusable(origin_circuit_t *circ)
     return;
   }
 
-  guard = entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  if (circ->cpath && circ->cpath->extend_info) {
+    guard = entry_guard_get_by_id_digest(
+              circ->cpath->extend_info->identity_digest);
+  } else if (circ->base_.n_chan) {
+    guard =
+      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  }
     
   if (guard) {
     guard->unusable_circuits++;
@@ -1458,11 +1487,19 @@ pathbias_count_unusable(origin_circuit_t *circ)
 void
 pathbias_count_timeout(origin_circuit_t *circ)
 {
+  entry_guard_t *guard = NULL;
+
   if (!pathbias_should_count(circ)) {
     return;
   }
-  entry_guard_t *guard =
+
+  if (circ->cpath && circ->cpath->extend_info) {
+    guard = entry_guard_get_by_id_digest(
+              circ->cpath->extend_info->identity_digest);
+  } else if (circ->base_.n_chan) {
+    guard =
       entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
+  }
 
   if (guard) {
     guard->timeouts++;
