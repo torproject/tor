@@ -111,5 +111,7 @@ int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
 
 int validate_pluggable_transports_config(void);
 
+int pathbias_get_closed_count(entry_guard_t *gaurd);
+
 #endif
 

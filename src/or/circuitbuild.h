@@ -60,8 +60,4 @@ void pathbias_count_successful_close(origin_circuit_t *circ);
 void pathbias_count_collapse(origin_circuit_t *circ);
 void pathbias_count_unusable(origin_circuit_t *circ);
 
-typedef struct entry_guard_t entry_guard_t;
-int pathbias_get_closed_count(entry_guard_t *gaurd);
-
 #endif
-
