@@ -2584,6 +2584,10 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(!(circuit->build_state->onehop_tunnel));
 #endif
   tor_assert(circuit->rend_data);
+
+  /* Declare the circuit dirty to avoid reuse, and for path-bias */
+  circuit->base_.timestamp_dirty = time(NULL);
+
   hop = circuit->build_state->service_pending_final_cpath_ref->cpath;
 
   base16_encode(hexcookie,9,circuit->rend_data->rend_cookie,4);
