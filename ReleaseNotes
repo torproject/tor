@@ -3,8 +3,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.3.x - 2012-10-??
-
+Changes in version 0.2.3.25 - 2012-11-19
   The Tor 0.2.3 release series is dedicated to the memory of Len "rabbi"
   Sassaman (1980-2011), a long-time cypherpunk, anonymity researcher,
   Mixmaster maintainer, Pynchon Gate co-designer, CodeCon organizer,
@@ -13,7 +12,17 @@ Changes in version 0.2.3.x - 2012-10-??
   anonymity, and inspires us still. Please honor his memory by writing
   software to protect people's freedoms, and by helping others to do so.
 
-  Tor 0.2.3.x, the first stable release in the 0.2.3 branch, features ...
+  Tor 0.2.3.25, the first stable release in the 0.2.3 branch, features
+  significantly reduced directory overhead (via microdescriptors),
+  enormous crypto performance improvements for fast relays on new
+  enough hardware, a new v3 TLS handshake protocol that can better
+  resist fingerprinting, support for protocol obfuscation plugins (aka
+  pluggable transports), better scalability for hidden services, IPv6
+  support for bridges, performance improvements like allowing clients
+  to skip the first round-trip on the circuit ("optimistic data") and
+  refilling token buckets more often, a new "stream isolation" design
+  to isolate different applications on different circuits, and many
+  stability, security, and privacy fixes.
 
   Major features (v3 directory protocol):
     - Clients now use microdescriptors instead of regular descriptors
@@ -259,6 +268,16 @@ Changes in version 0.2.3.x - 2012-10-??
       could decrypt a link connection as soon as the link connection
       was closed. Fixes bug 7139; bugfix on all versions of Tor linked
       against OpenSSL 1.0.0 or later. Found by Florent Daignière.
+    - Tor tries to wipe potentially sensitive data after using it, so
+      that if some subsequent security failure exposes Tor's memory,
+      the damage will be limited. But we had a bug where the compiler
+      was eliminating these wipe operations when it decided that the
+      memory was no longer visible to a (correctly running) program,
+      hence defeating our attempt at defense in depth. We fix that
+      by using OpenSSL's OPENSSL_cleanse() operation, which a compiler
+      is unlikely to optimize away. Future versions of Tor may use
+      a less ridiculously heavy approach for this. Fixes bug 7352.
+      Reported in an article by Andrey Karpov.
 
   o Major bugfixes (crashes and asserts):
     - Avoid a pair of double-free and use-after-mark bugs that can
