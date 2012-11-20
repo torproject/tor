@@ -1308,9 +1308,6 @@ pathbias_count_success(origin_circuit_t *circ)
     if (circ->cpath && circ->cpath->extend_info) {
       guard = entry_guard_get_by_id_digest(
                 circ->cpath->extend_info->identity_digest);
-    } else if (circ->base_.n_chan) {
-      guard =
-        entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
     }
 
     if (guard) {
@@ -1387,11 +1384,8 @@ pathbias_count_successful_close(origin_circuit_t *circ)
   if (circ->cpath && circ->cpath->extend_info) {
     guard = entry_guard_get_by_id_digest(
               circ->cpath->extend_info->identity_digest);
-  } else if (circ->base_.n_chan) {
-    guard =
-      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
   }
-   
+
   if (guard) {
     /* In the long run: circuit_success ~= successful_circuit_close + 
      *                                     circ_failure + stream_failure */
@@ -1428,11 +1422,8 @@ pathbias_count_collapse(origin_circuit_t *circ)
   if (circ->cpath && circ->cpath->extend_info) {
     guard = entry_guard_get_by_id_digest(
               circ->cpath->extend_info->identity_digest);
-  } else if (circ->base_.n_chan) {
-    guard =
-      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
   }
-    
+
   if (guard) {
     guard->collapsed_circuits++;
     entry_guards_changed();
@@ -1459,11 +1450,8 @@ pathbias_count_unusable(origin_circuit_t *circ)
   if (circ->cpath && circ->cpath->extend_info) {
     guard = entry_guard_get_by_id_digest(
               circ->cpath->extend_info->identity_digest);
-  } else if (circ->base_.n_chan) {
-    guard =
-      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
   }
-    
+
   if (guard) {
     guard->unusable_circuits++;
     entry_guards_changed();
@@ -1496,9 +1484,6 @@ pathbias_count_timeout(origin_circuit_t *circ)
   if (circ->cpath && circ->cpath->extend_info) {
     guard = entry_guard_get_by_id_digest(
               circ->cpath->extend_info->identity_digest);
-  } else if (circ->base_.n_chan) {
-    guard =
-      entry_guard_get_by_id_digest(circ->base_.n_chan->identity_digest);
   }
 
   if (guard) {
@@ -1517,11 +1502,14 @@ pathbias_get_closed_count(entry_guard_t *guard)
   /* Count currently open circuits. Give them the benefit of the doubt */
   for ( ; circ; circ = circ->next) {
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
-        circ->marked_for_close) /* already counted */
+        circ->marked_for_close ||  /* already counted */
+        !circ->cpath || !circ->cpath->extend_info)
       continue;
 
     if (TO_ORIGIN_CIRCUIT(circ)->path_state == PATH_STATE_SUCCEEDED &&
-        (memcmp(guard->identity, circ->n_chan->identity_digest, DIGEST_LEN)
+        (memcmp(guard->identity,
+                TO_ORIGIN_CIRCUIT(circ)->cpath->extend_info->identity_digest,
+                DIGEST_LEN)
          == 0)) {
       open_circuits++;
     }
