@@ -1,3 +1,42 @@
+Changes in version 0.2.3.25 - 2012-11-19
+  The Tor 0.2.3 release series is dedicated to the memory of Len "rabbi"
+  Sassaman (1980-2011), a long-time cypherpunk, anonymity researcher,
+  Mixmaster maintainer, Pynchon Gate co-designer, CodeCon organizer,
+  programmer, and friend. Unstinting in his dedication to the cause of
+  freedom, he inspired and helped many of us as we began our work on
+  anonymity, and inspires us still. Please honor his memory by writing
+  software to protect people's freedoms, and by helping others to do so.
+
+  Tor 0.2.3.25, the first stable release in the 0.2.3 branch, features
+  significantly reduced directory overhead (via microdescriptors),
+  enormous crypto performance improvements for fast relays on new
+  enough hardware, a new v3 TLS handshake protocol that can better
+  resist fingerprinting, support for protocol obfuscation plugins (aka
+  pluggable transports), better scalability for hidden services, IPv6
+  support for bridges, performance improvements like allowing clients
+  to skip the first round-trip on the circuit ("optimistic data") and
+  refilling token buckets more often, a new "stream isolation" design
+  to isolate different applications on different circuits, and many
+  stability, security, and privacy fixes.
+
+  o Major bugfixes:
+    - Tor tries to wipe potentially sensitive data after using it, so
+      that if some subsequent security failure exposes Tor's memory,
+      the damage will be limited. But we had a bug where the compiler
+      was eliminating these wipe operations when it decided that the
+      memory was no longer visible to a (correctly running) program,
+      hence defeating our attempt at defense in depth. We fix that
+      by using OpenSSL's OPENSSL_cleanse() operation, which a compiler
+      is unlikely to optimize away. Future versions of Tor may use
+      a less ridiculously heavy approach for this. Fixes bug 7352.
+      Reported in an article by Andrey Karpov.
+
+  o Minor bugfixes:
+    - Fix a harmless bug when opting against publishing a relay descriptor
+      because DisableNetwork is set. Fixes bug 7464; bugfix on
+      0.2.3.9-alpha.
+
+
 Changes in version 0.2.4.6-alpha - 2012-11-13
   Tor 0.2.4.6-alpha fixes an assert bug that has been plaguing relays,
   makes our defense-in-depth memory wiping more reliable, and begins to
