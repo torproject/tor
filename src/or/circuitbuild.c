@@ -1501,14 +1501,19 @@ pathbias_get_closed_count(entry_guard_t *guard)
 
   /* Count currently open circuits. Give them the benefit of the doubt */
   for ( ; circ; circ = circ->next) {
+    origin_circuit_t *ocirc = NULL;
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
-        circ->marked_for_close ||  /* already counted */
-        !circ->cpath || !circ->cpath->extend_info)
+        circ->marked_for_close) /* already counted */
       continue;
 
-    if (TO_ORIGIN_CIRCUIT(circ)->path_state == PATH_STATE_SUCCEEDED &&
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+    if(!ocirc->cpath || !ocirc->cpath->extend_info)
+      continue;
+
+    if (ocirc->path_state == PATH_STATE_SUCCEEDED &&
         (memcmp(guard->identity,
-                TO_ORIGIN_CIRCUIT(circ)->cpath->extend_info->identity_digest,
+                ocirc->cpath->extend_info->identity_digest,
                 DIGEST_LEN)
          == 0)) {
       open_circuits++;
