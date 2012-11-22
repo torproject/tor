@@ -2875,6 +2875,10 @@ typedef struct origin_circuit_t {
   /**
    * Did any SOCKS streams or hidserv introductions actually succeed on
    * this circuit?
+   *
+   * Note: If we ever implement end-to-end stream timing through test
+   * stream probes (#5707), we must *not* set this for those probes
+   * (or any other automatic streams).
    */
   unsigned int any_streams_succeeded : 1;
 
