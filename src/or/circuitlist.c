@@ -1038,8 +1038,13 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
   for (circ = global_circuitlist; circ; circ = circ->next) {
     int mark = 0;
     if (circ->n_chan == chan) {
-        circuit_set_n_circid_chan(circ, 0, NULL);
-        mark = 1;
+      circuit_set_n_circid_chan(circ, 0, NULL);
+      mark = 1;
+    
+      /* If we didn't request this closure, pass the remote
+       * bit to mark_for_close. */ 
+      if (chan->reason_for_closing != CHANNEL_CLOSE_REQUESTED)
+        reason |= END_CIRC_REASON_FLAG_REMOTE;
     }
     if (! CIRCUIT_IS_ORIGIN(circ)) {
       or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
@@ -1355,14 +1360,20 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
       int pathbias_is_normal_close = 1;
 
       /* FIXME: Is timestamp_dirty the right thing for these two checks? 
-       * Should we use isolation_any_streams_attached instead? */
+       * Should we use isolation_any_streams_attached instead? 
+       * isolation_any_streams_attached is not used for hidservs.. */
       if (!circ->timestamp_dirty) {
-        if (reason & END_CIRC_REASON_FLAG_REMOTE) {
+        if (orig_reason & END_CIRC_REASON_FLAG_REMOTE) {
           /* Unused remote circ close reasons all could be bias */
+          // XXX: We hit this a lot for hidserv circs with purposes:
+          // CIRCUIT_PURPOSE_S_CONNECT_REND (reasons: 514,517,520)
+          // CIRCUIT_PURPOSE_S_REND_JOINED (reasons: 514,517,520)
+          //  == reasons: 2,3,8. Client-side timeouts?
           pathbias_is_normal_close = 0;
           pathbias_count_collapse(ocirc);
         } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
                     == END_CIRC_REASON_CHANNEL_CLOSED &&
+                   circ->n_chan &&
                    circ->n_chan->reason_for_closing 
                     != CHANNEL_CLOSE_REQUESTED) {
           /* If we didn't close the channel ourselves, it could be bias */
