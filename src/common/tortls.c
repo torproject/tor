@@ -2077,7 +2077,7 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
   BIO_get_mem_ptr(bio, &buf);
   s2 = tor_strndup(buf->data, buf->length);
 
-  strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
+  strftime(mytime, 32, "%b %d %H:%M:%S %Y UTC", tor_gmtime_r(&now, &tm));
 
   log(severity, LD_GENERAL,
       "(certificate lifetime runs from %s through %s. Your time is %s.)",

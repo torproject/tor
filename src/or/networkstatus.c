@@ -775,7 +775,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
     long delta = now - ns->published_on;
     format_time_interval(dbuf, sizeof(dbuf), delta);
     log_warn(LD_GENERAL, "Network status from %s was published %s in the "
-             "future (%s GMT). Check your time and date settings! "
+             "future (%s UTC). Check your time and date settings! "
              "Not caching.",
              source_desc, dbuf, published);
     control_event_general_status(LOG_WARN,
@@ -1874,7 +1874,7 @@ networkstatus_set_current_consensus(const char *consensus,
     format_iso_time(tbuf, c->valid_after);
     format_time_interval(dbuf, sizeof(dbuf), delta);
     log_warn(LD_GENERAL, "Our clock is %s behind the time published in the "
-             "consensus network status document (%s GMT).  Tor needs an "
+             "consensus network status document (%s UTC).  Tor needs an "
              "accurate clock to work correctly. Please check your time and "
              "date settings!", dbuf, tbuf);
     control_event_general_status(LOG_WARN,

@@ -416,7 +416,7 @@ or_state_save(time_t now)
   format_local_iso_time(tbuf, now);
   tor_asprintf(&contents,
                "# Tor state file last generated on %s local time\n"
-               "# Other times below are in GMT\n"
+               "# Other times below are in UTC\n"
                "# You *do not* need to edit this file.\n\n%s",
                tbuf, state);
   tor_free(state);

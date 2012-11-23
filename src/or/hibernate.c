@@ -890,12 +890,12 @@ hibernate_end_time_elapsed(time_t now)
       /* We weren't sleeping before; we should sleep now. */
       log_notice(LD_ACCT,
                  "Accounting period ended. Commencing hibernation until "
-                 "%s GMT", buf);
+                 "%s UTC", buf);
       hibernate_go_dormant(now);
     } else {
       log_notice(LD_ACCT,
              "Accounting period ended. This period, we will hibernate"
-             " until %s GMT",buf);
+             " until %s UTC",buf);
     }
   }
 }

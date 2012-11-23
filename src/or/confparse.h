@@ -23,7 +23,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
   CONFIG_TYPE_AUTOBOOL,     /**< A boolean+auto value, expressed 0 for false,
                              * 1 for true, and -1 for auto  */
-  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to GMT. */
+  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to UTC. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
                               * optional whitespace. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */

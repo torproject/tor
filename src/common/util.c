@@ -1342,7 +1342,7 @@ n_leapdays(int y1, int y2)
 static const int days_per_month[] =
   { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-/** Compute a time_t given a struct tm.  The result is given in GMT, and
+/** Compute a time_t given a struct tm.  The result is given in UTC, and
  * does not account for leap seconds.  Return 0 on success, -1 on failure.
  */
 int
@@ -1383,10 +1383,11 @@ static const char *MONTH_NAMES[] =
   { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-/** Set <b>buf</b> to the RFC1123 encoding of the GMT value of <b>t</b>.
+/** Set <b>buf</b> to the RFC1123 encoding of the UTC value of <b>t</b>.
  * The buffer must be at least RFC1123_TIME_LEN+1 bytes long.
  *
- * (RFC1123 format is Fri, 29 Sep 2006 15:54:20 GMT)
+ * (RFC1123 format is "Fri, 29 Sep 2006 15:54:20 GMT". Note the "GMT"
+ * rather than "UTC".)
  */
 void
 format_rfc1123_time(char *buf, time_t t)
@@ -1404,8 +1405,8 @@ format_rfc1123_time(char *buf, time_t t)
   memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
-/** Parse the RFC1123 encoding of some time (in GMT) from <b>buf</b>,
- * and store the result in *<b>t</b>.
+/** Parse the (a subset of) the RFC1123 encoding of some time (in UTC) from
+ * <b>buf</b>, and store the result in *<b>t</b>.
  *
  * Return 0 on success, -1 on failure.
 */
