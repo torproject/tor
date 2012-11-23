@@ -98,6 +98,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "StrictEntryNodes", "StrictNodes", 0, 1},
   { "StrictExitNodes", "StrictNodes", 0, 1},
+  { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
   { "_UseFilteringSSLBufferevents", "UseFilteringSSLBufferevents", 0, 1},
   { NULL, NULL, 0, 0},
 };
@@ -396,7 +397,8 @@ static config_var_t option_vars_[] = {
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
   V(V3BandwidthsFile,            FILENAME, NULL),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
-  V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
+  V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
+  V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
   V(UseFilteringSSLBufferevents, BOOL,    "0"),
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
@@ -1379,7 +1381,8 @@ options_act(const or_options_t *old_options)
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
-  parse_virtual_addr_network(options->VirtualAddrNetwork, 0, NULL);
+  parse_virtual_addr_network(options->VirtualAddrNetworkIPv4, AF_INET,0,NULL);
+  parse_virtual_addr_network(options->VirtualAddrNetworkIPv6, AF_INET6,0,NULL);
 
   /* Update address policies. */
   if (policies_parse_from_options(options) < 0) {
@@ -1492,8 +1495,10 @@ options_act(const or_options_t *old_options)
       if (!smartlist_strings_eq(old_options->AutomapHostsSuffixes,
                                 options->AutomapHostsSuffixes))
         revise_automap_entries = 1;
-      else if (!opt_streq(old_options->VirtualAddrNetwork,
-                          options->VirtualAddrNetwork))
+      else if (!opt_streq(old_options->VirtualAddrNetworkIPv4,
+                          options->VirtualAddrNetworkIPv4) ||
+               !opt_streq(old_options->VirtualAddrNetworkIPv6,
+                          options->VirtualAddrNetworkIPv6))
         revise_automap_entries = 1;
     }
 
@@ -2968,7 +2973,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to configure client authorization for hidden services. "
            "See logs for details.");
 
-  if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, NULL)<0)
+  if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv4,
+                                 AF_INET, 1, msg)<0)
+    return -1;
+  if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv6,
+                                 AF_INET6, 1, msg)<0)
     return -1;
 
   if (options->PreferTunneledDirConns && !options->TunnelDirConns)

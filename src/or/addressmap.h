@@ -27,7 +27,8 @@ void addressmap_register(const char *address, char *new_address,
                          time_t expires, addressmap_entry_source_t source,
                          const int address_wildcard,
                          const int new_address_wildcard);
-int parse_virtual_addr_network(const char *val, int validate_only,
+int parse_virtual_addr_network(const char *val,
+                               sa_family_t family, int validate_only,
                                char **msg);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
@@ -44,6 +45,16 @@ void client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
                                        const char *exitname, int ttl);
 int addressmap_address_should_automap(const char *address,
                                       const or_options_t *options);
+
+#ifdef ADDRESSMAP_PRIVATE
+typedef struct virtual_addr_conf_t {
+  tor_addr_t addr;
+  maskbits_t bits;
+} virtual_addr_conf_t;
+
+void get_random_virtual_addr(const virtual_addr_conf_t *conf,
+                             tor_addr_t *addr_out);
+#endif
 
 #endif
 

@@ -1040,16 +1040,20 @@ The following options are useful only for clients (that is, if
     applications to do DNS resolves themselves is usually a bad idea and
     can leak your location to attackers. (Default: 1)
 
-**VirtualAddrNetwork** __Address__/__bits__::
+**VirtualAddrNetworkIPv4** __Address__/__bits__ +
+
+**VirtualAddrNetworkIPv6** [__Address__]/__bits__::
     When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
     command from the controller or the AutomapHostsOnResolve feature, Tor
-    picks an unassigned address from this range. (Default:
-    127.192.0.0/10) +
+    picks an unassigned address from this range. (Defaults:
+    127.192.0.0/10 and [FE80::]/10 respectively.) +
  +
     When providing proxy server service to a network of computers using a tool
-    like dns-proxy-tor, change this address to "10.192.0.0/10" or
-    "172.16.0.0/12". The default **VirtualAddrNetwork** address range on a
-    properly configured machine will route to the loopback interface. For
+    like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
+    "172.16.0.0/12" and change the IPv6 network to "[FC00]/7".
+    The default **VirtualAddrNetwork** address ranges on a
+    properly configured machine will route to the loopback or link-local
+    interface. For
     local use, no change to the default VirtualAddrNetwork setting is needed.
 
 **AllowNonRFC953Hostnames** **0**|**1**::

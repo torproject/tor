@@ -4,6 +4,8 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define ADDRESSMAP_PRIVATE
+
 #include "or.h"
 #include "addressmap.h"
 #include "circuituse.h"
@@ -52,11 +54,13 @@ typedef struct {
 /** Entry for mapping addresses to which virtual address we mapped them to. */
 typedef struct {
   char *ipv4_address;
+  char *ipv6_address;
   char *hostname_address;
 } virtaddress_entry_t;
 
 /** A hash table to store client-side address rewrite instructions. */
 static strmap_t *addressmap=NULL;
+
 /**
  * Table mapping addresses to which virtual address, if any, we
  * assigned them to.
@@ -714,13 +718,9 @@ client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
  *
  * These options are configured by parse_virtual_addr_network().
  */
-/** Which network should we use for virtual IPv4 addresses?  Only the first
- * bits of this value are fixed. */
-static uint32_t virtual_addr_network = 0x7fc00000u;
-/** How many bits of <b>virtual_addr_network</b> are fixed? */
-static maskbits_t virtual_addr_netmask_bits = 10;
-/** What's the next virtual address we will hand out? */
-static uint32_t next_virtual_addr    = 0x7fc00000u;
+
+static virtual_addr_conf_t virtaddr_conf_ipv4;
+static virtual_addr_conf_t virtaddr_conf_ipv6;
 
 /** Read a netmask of the form 127.192.0.0/10 from "val", and check whether
  * it's a valid set of virtual addresses to hand out in response to MAPADDRESS
@@ -728,37 +728,49 @@ static uint32_t next_virtual_addr    = 0x7fc00000u;
  * string and return -1 on failure.  If validate_only is false, sets the
  * actual virtual address range to the parsed value. */
 int
-parse_virtual_addr_network(const char *val, int validate_only,
+parse_virtual_addr_network(const char *val, sa_family_t family,
+                           int validate_only,
                            char **msg)
 {
-  uint32_t addr;
-  uint16_t port_min, port_max;
+  const int ipv6 = (family == AF_INET6);
+  tor_addr_t addr;
   maskbits_t bits;
+  const int max_bits = ipv6 ? 40 : 16;
+  virtual_addr_conf_t *conf = ipv6 ? &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
-  if (parse_addr_and_port_range(val, &addr, &bits, &port_min, &port_max)) {
-    if (msg) *msg = tor_strdup("Error parsing VirtualAddressNetwork");
+  if (tor_addr_parse_mask_ports(val, 0, &addr, &bits, NULL, NULL) < 0) {
+    if (msg)
+      tor_asprintf(msg, "Error parsing VirtualAddressNetwork%s %s",
+                   ipv6?"IPv6":"", val);
     return -1;
   }
-
+  if (tor_addr_family(&addr) != family) {
+    if (msg)
+      tor_asprintf(msg, "Incorrect address type for VirtualAddressNetwork%s",
+                   ipv6?"IPv6":"");
+    return -1;
+  }
+#if 0
   if (port_min != 1 || port_max != 65535) {
-    if (msg) *msg = tor_strdup("Can't specify ports on VirtualAddressNetwork");
+    if (msg)
+      tor_asprintf(msg, "Can't specify ports on VirtualAddressNetwork%s",
+                   ipv6?"IPv6":"");
     return -1;
   }
+#endif
 
-  if (bits > 16) {
-    if (msg) *msg = tor_strdup("VirtualAddressNetwork expects a /16 "
-                               "network or larger");
+  if (bits > max_bits) {
+    if (msg)
+      tor_asprintf(msg, "VirtualAddressNetwork%s expects a /%d "
+                   "network or larger",ipv6?"IPv6":"", max_bits);
     return -1;
   }
 
   if (validate_only)
     return 0;
 
-  virtual_addr_network = (uint32_t)( addr & (0xfffffffful << (32-bits)) );
-  virtual_addr_netmask_bits = bits;
-
-  if (addr_mask_cmp_bits(next_virtual_addr, addr, bits))
-    next_virtual_addr = addr;
+  tor_addr_copy(&conf->addr, &addr);
+  conf->bits = bits;
 
   return 0;
 }
@@ -770,29 +782,60 @@ parse_virtual_addr_network(const char *val, int validate_only,
 int
 address_is_in_virtual_range(const char *address)
 {
-  struct in_addr in;
+  tor_addr_t addr;
   tor_assert(address);
   if (!strcasecmpend(address, ".virtual")) {
     return 1;
-  } else if (tor_inet_aton(address, &in)) {
-    uint32_t addr = ntohl(in.s_addr);
-    if (!addr_mask_cmp_bits(addr, virtual_addr_network,
-                            virtual_addr_netmask_bits))
+  } else if (tor_addr_parse(&addr, address) >= 0) {
+    const virtual_addr_conf_t *conf = (tor_addr_family(&addr) == AF_INET6) ?
+      &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
+    if (tor_addr_compare_masked(&addr, &conf->addr, conf->bits, CMP_EXACT)==0)
       return 1;
   }
   return 0;
 }
 
-/** Increment the value of next_virtual_addr; reset it to the start of the
- * virtual address range if it wraps around.
+/** Return a random address conforming to the virtual address configuration
+ * in <b>conf</b>.
  */
-static INLINE void
-increment_virtual_addr(void)
+/* private */ void
+get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
 {
-  ++next_virtual_addr;
-  if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
-                         virtual_addr_netmask_bits))
-    next_virtual_addr = virtual_addr_network;
+  uint8_t tmp[4];
+  const uint8_t *addr_bytes;
+  uint8_t bytes[16];
+  const int ipv6 = tor_addr_family(&conf->addr) == AF_INET6;
+  const int total_bytes = ipv6 ? 16 : 4;
+
+  tor_assert(conf->bits <= total_bytes * 8);
+
+  /* Set addr_bytes to the bytes of the virtual network, in host order */
+  if (ipv6) {
+    addr_bytes = tor_addr_to_in6_addr8(&conf->addr);
+  } else {
+    set_uint32(tmp, tor_addr_to_ipv4n(&conf->addr));
+    addr_bytes = tmp;
+  }
+
+  /* Get an appropriate number of random bytes. */
+  crypto_rand((char*)bytes, total_bytes);
+
+  /* Now replace the first "conf->bits" bits of 'bytes' with addr_bytes*/
+  if (conf->bits >= 8)
+    memcpy(bytes, addr_bytes, conf->bits / 8);
+  if (conf->bits & 7) {
+    uint8_t mask = 0xff >> (conf->bits & 7);
+    bytes[conf->bits/8] &= mask;
+    bytes[conf->bits/8] |= addr_bytes[conf->bits/8] & ~mask;
+  }
+
+  if (ipv6)
+    tor_addr_from_ipv6_bytes(addr_out, (char*) bytes);
+  else
+    tor_addr_from_ipv4n(addr_out, get_uint32(bytes));
+
+  tor_assert(tor_addr_compare_masked(addr_out, &conf->addr,
+                                     conf->bits, CMP_EXACT)==0);
 }
 
 /** Return a newly allocated string holding an address of <b>type</b>
@@ -815,37 +858,44 @@ addressmap_get_virtual_address(int type)
       strlcat(buf, ".virtual", sizeof(buf));
     } while (strmap_get(addressmap, buf));
     return tor_strdup(buf);
-  } else if (type == RESOLVED_TYPE_IPV4) {
+  } else if (type == RESOLVED_TYPE_IPV4 || type == RESOLVED_TYPE_IPV6) {
+    const int ipv6 = (type == RESOLVED_TYPE_IPV6);
+    const virtual_addr_conf_t *conf = ipv6 ?
+      &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
+
     // This is an imperfect estimate of how many addresses are available, but
-    // that's ok.
-    struct in_addr in;
-    uint32_t available = 1u << (32-virtual_addr_netmask_bits);
-    while (available) {
-      /* Don't hand out any .0 or .255 address. */
-      while ((next_virtual_addr & 0xff) == 0 ||
-             (next_virtual_addr & 0xff) == 0xff) {
-        increment_virtual_addr();
-        if (! --available) {
-          log_warn(LD_CONFIG, "Ran out of virtual addresses!");
-          return NULL;
-        }
-      }
-      in.s_addr = htonl(next_virtual_addr);
-      tor_inet_ntoa(&in, buf, sizeof(buf));
-      if (!strmap_get(addressmap, buf)) {
-        increment_virtual_addr();
-        break;
+    // that's ok.  We also don't try every one.
+    uint32_t attempts = ipv6 ? UINT32_MAX : (1u << (32- conf->bits));
+
+    tor_addr_t addr;
+
+    while (attempts--) {
+      get_random_virtual_addr(conf, &addr);
+
+      if (!ipv6) {
+        /* Don't hand out any .0 or .255 address. */
+        const uint32_t a = tor_addr_to_ipv4h(&addr);
+        if ((a & 0xff) == 0 || (a & 0xff) == 0xff)
+          continue;
       }
 
-      increment_virtual_addr();
-      --available;
-      // log_info(LD_CONFIG, "%d addrs available", (int)available);
-      if (! available) {
-        log_warn(LD_CONFIG, "Ran out of virtual addresses!");
-        return NULL;
+      tor_addr_to_str(buf, &addr, sizeof(buf), 1);
+      if (!strmap_get(addressmap, buf)) {
+        /* XXXX This code is to make sure I didn't add an undecorated version
+         * by mistake. I hope it's needless. */
+        char tmp[TOR_ADDR_BUF_LEN];
+        tor_addr_to_str(buf, &addr, sizeof(tmp), 0);
+        if (strmap_get(addressmap, tmp)) {
+          log_warn(LD_BUG, "%s wasn't in the addressmap, but %s was.",
+                   buf, tmp);
+          continue;
+        }
+
+        return tor_strdup(buf);
       }
     }
-    return tor_strdup(buf);
+    log_warn(LD_CONFIG, "Ran out of virtual addresses!");
+    return NULL;
   } else {
     log_warn(LD_BUG, "Called with unsupported address type (%d)", type);
     return NULL;
@@ -878,8 +928,13 @@ addressmap_register_virtual_address(int type, char *new_address)
     vent_needs_to_be_added = 1;
   }
 
-  addrp = (type == RESOLVED_TYPE_IPV4) ?
-    &vent->ipv4_address : &vent->hostname_address;
+  if (type == RESOLVED_TYPE_IPV4)
+    addrp = &vent->ipv4_address;
+  else if (type == RESOLVED_TYPE_IPV6)
+    addrp = &vent->ipv6_address;
+  else
+    addrp = &vent->hostname_address;
+
   if (*addrp) {
     addressmap_entry_t *ent = strmap_get(addressmap, *addrp);
     if (ent && ent->new_address &&
@@ -887,7 +942,7 @@ addressmap_register_virtual_address(int type, char *new_address)
       tor_free(new_address);
       tor_assert(!vent_needs_to_be_added);
       return tor_strdup(*addrp);
-    } else
+    } else {
       log_warn(LD_BUG,
                "Internal confusion: I thought that '%s' was mapped to by "
                "'%s', but '%s' really maps to '%s'. This is a harmless bug.",
@@ -895,6 +950,7 @@ addressmap_register_virtual_address(int type, char *new_address)
                safe_str_client(*addrp),
                safe_str_client(*addrp),
                ent?safe_str_client(ent->new_address):"(nothing)");
+    }
   }
 
   tor_free(*addrp);

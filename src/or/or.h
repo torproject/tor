@@ -3588,8 +3588,10 @@ typedef struct {
   /** Should we fetch our dir info at the start of the consensus period? */
   int FetchDirInfoExtraEarly;
 
-  char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
-                             * MAPADDRESS requests. */
+  char *VirtualAddrNetworkIPv4; /**< Address and mask to hand out for virtual
+                                 * MAPADDRESS requests for IPv4 addresses */
+  char *VirtualAddrNetworkIPv6; /**< Address and mask to hand out for virtual
+                                 * MAPADDRESS requests for IPv6 addresses */
   int ServerDNSSearchDomains; /**< Boolean: If set, we don't force exit
                       * addresses to be FQDNs, but rather search for them in
                       * the local domains. */
