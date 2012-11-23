@@ -2736,7 +2736,7 @@ digest256_from_base64(char *digest, const char *d64)
 #endif
 }
 
-/** Implements base32 encoding as in rfc3548.  Limitation: Requires
+/** Implements base32 encoding as in RFC 4648.  Limitation: Requires
  * that srclen*8 is a multiple of 5.
  */
 void
@@ -2761,7 +2761,7 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   dest[i] = '\0';
 }
 
-/** Implements base32 decoding as in rfc3548.  Limitation: Requires
+/** Implements base32 decoding as in RFC 4648.  Limitation: Requires
  * that srclen*5 is a multiple of 8. Returns 0 if successful, -1 otherwise.
  */
 int
