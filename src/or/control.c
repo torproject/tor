@@ -2943,7 +2943,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   send_control_done(conn);
   SMARTLIST_FOREACH(failed, const char *, arg, {
       control_event_address_mapped(arg, arg, time(NULL),
-                                   "Unable to launch resolve request");
+                                   "internal");
   });
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));

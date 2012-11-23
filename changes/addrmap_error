@@ -1,0 +1,5 @@
+  o Minor bugfixes (controller):
+    - The ADDRMAP command can no longer generate an ill-formed error
+      code on a failed MAPADDRESS. It now says "internal" rather than
+      an English sentence fragment with spaces in the middle. Bugfix on
+      Tor 0.2.0.19-alpha.
