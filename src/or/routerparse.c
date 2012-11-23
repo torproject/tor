@@ -4305,8 +4305,8 @@ router_get_hash_impl_helper(const char *s, size_t s_len,
 
 /** Compute the digest of the substring of <b>s</b> taken from the first
  * occurrence of <b>start_str</b> through the first instance of c after the
- * first subsequent occurrence of <b>end_str</b>; store the 20-byte result in
- * <b>digest</b>; return 0 on success.
+ * first subsequent occurrence of <b>end_str</b>; store the 20-byte or 32-byte
+ * result in <b>digest</b>; return 0 on success.
  *
  * If no such substring exists, return -1.
  */
