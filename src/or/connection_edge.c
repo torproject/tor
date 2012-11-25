@@ -928,12 +928,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
 
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
       !tor_inet_aton(socks->address, &addr_tmp) &&
-      options->AutomapHostsOnResolve && options->AutomapHostsSuffixes) {
-    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, const char *, cp,
-                      if (!strcasecmpend(socks->address, cp)) {
-                        automap = 1;
-                        break;
-                      });
+      options->AutomapHostsOnResolve) {
+    automap = addressmap_address_should_automap(socks->address, options);
     if (automap) {
       const char *new_addr;
       new_addr = addressmap_register_virtual_address(

@@ -42,6 +42,8 @@ void clear_trackexithost_mappings(const char *exitname);
 void client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
                                        const char *address, const char *v,
                                        const char *exitname, int ttl);
+int addressmap_address_should_automap(const char *address,
+                                      const or_options_t *options);
 
 #endif
 

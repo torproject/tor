@@ -210,6 +210,24 @@ addressmap_clear_excluded_trackexithosts(const or_options_t *options)
   } STRMAP_FOREACH_END;
 }
 
+/** Return true iff <b>address</b> is one that we are configured to
+ * automap on resolve according to <b>options</b>. */
+int
+addressmap_address_should_automap(const char *address,
+                                  const or_options_t *options)
+{
+  const smartlist_t *suffix_list = options->AutomapHostsSuffixes;
+
+  if (!suffix_list)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(suffix_list, const char *, suffix) {
+    if (!strcasecmpend(address, suffix))
+      return 1;
+  } SMARTLIST_FOREACH_END(suffix);
+  return 0;
+}
+
 /** Remove all AUTOMAP mappings from the addressmap for which the
  * source address no longer matches AutomapHostsSuffixes, which is
  * no longer allowed by AutomapHostsOnResolve, or for which the
@@ -232,15 +250,7 @@ addressmap_clear_invalid_automaps(const or_options_t *options)
       continue; /* not an automap mapping. */
 
     if (!remove) {
-      int suffix_found = 0;
-      SMARTLIST_FOREACH(suffixes, const char *, suffix, {
-          if (!strcasecmpend(src_address, suffix)) {
-            suffix_found = 1;
-            break;
-          }
-      });
-      if (!suffix_found)
-        remove = 1;
+      remove = ! addressmap_address_should_automap(src_address, options);
     }
 
     if (!remove && ! address_is_in_virtual_range(ent->new_address))
