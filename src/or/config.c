@@ -678,7 +678,7 @@ config_free_all(void)
 
   if (configured_ports) {
     SMARTLIST_FOREACH(configured_ports,
-                      port_cfg_t *, p, tor_free(p));
+                      port_cfg_t *, p, port_cfg_free(p));
     smartlist_free(configured_ports);
     configured_ports = NULL;
   }
@@ -4589,6 +4589,17 @@ parse_dir_fallback_line(const char *line,
   return r;
 }
 
+/** Allocate and return a new port_cfg_t with reasonable defaults. */
+static port_cfg_t *
+port_cfg_new(void)
+{
+  port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+  cfg->ipv4_traffic = 1;
+  cfg->cache_ipv4_answers = 1;
+  cfg->use_cached_ipv4_answers = 1;
+  return cfg;
+}
+
 /** Free all storage held in <b>port</b> */
 static void
 port_cfg_free(port_cfg_t *port)
@@ -4763,7 +4774,7 @@ parse_port_config(smartlist_t *out,
 
     if (use_server_options && out) {
       /* Add a no_listen port. */
-      port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+      port_cfg_t *cfg = port_cfg_new();
       cfg->type = listener_type;
       cfg->port = mainport;
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
@@ -4782,15 +4793,13 @@ parse_port_config(smartlist_t *out,
         return -1;
       }
       if (out) {
-        port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+        port_cfg_t *cfg = port_cfg_new();
         cfg->type = listener_type;
         cfg->port = port ? port : mainport;
         tor_addr_copy(&cfg->addr, &addr);
         cfg->session_group = SESSION_GROUP_UNSET;
         cfg->isolation_flags = ISO_DEFAULT;
         cfg->no_advertise = 1;
-        cfg->ipv4_traffic = 1;
-        cfg->cache_ipv4_answers = cfg->use_cached_ipv4_answers = 1;
         smartlist_add(out, cfg);
       }
     }
@@ -4808,14 +4817,12 @@ parse_port_config(smartlist_t *out,
    * one. */
   if (! ports) {
     if (defaultport && out) {
-       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+       port_cfg_t *cfg = port_cfg_new();
        cfg->type = listener_type;
        cfg->port = defaultport;
        tor_addr_parse(&cfg->addr, defaultaddr);
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
-       cfg->ipv4_traffic = 1;
-       cfg->cache_ipv4_answers = cfg->use_cached_ipv4_answers = 1;
        smartlist_add(out, cfg);
     }
     return 0;
@@ -5033,7 +5040,7 @@ parse_port_config(smartlist_t *out,
     }
 
     if (out && port) {
-      port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+      port_cfg_t *cfg = port_cfg_new();
       tor_addr_copy(&cfg->addr, &addr);
       cfg->port = port;
       cfg->type = listener_type;
