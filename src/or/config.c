@@ -5125,7 +5125,7 @@ parse_ports(or_options_t *options, int validate_only,
                         options->DNSPort_lines, options->DNSListenAddress,
                         "DNS", CONN_TYPE_AP_DNS_LISTENER,
                         "127.0.0.1", 0,
-                        CL_PORT_WARN_NONLOCAL) < 0) {
+                        CL_PORT_WARN_NONLOCAL|CL_PORT_TAKES_HOSTNAMES) < 0) {
     *msg = tor_strdup("Invalid DNSPort/DNSListenAddress configuration");
     goto err;
   }
