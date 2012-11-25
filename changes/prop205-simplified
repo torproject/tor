@@ -1,4 +1,4 @@
-  o Major features:
+  o Major features (client-side DNS):
 
     - The updating and usage of DNS cache is now configurable on a
       per- client-port level. SOCKSPort, DNSPort, etc lines may now
@@ -15,7 +15,11 @@
       linkability risk, since all traffic on a circuits is already
       linkable, but it would also provide little performance benefit:
       the exit node caches DNS replies too. Implements a simplified
-      version of Proposal 205.
+      version of Proposal 205. Implements ticket #7570.
 
+  o Disabled features:
 
+    - Client-side use of the DNS cache is now off by default.  See "Major
+      features (client-side DNS)" for more information. Implements a
+      simplified version of Proposal 205. Implements ticket #7570.
 
