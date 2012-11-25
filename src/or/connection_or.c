@@ -2564,15 +2564,6 @@ init_ext_or_auth_cookie_authentication(int is_enabled)
   return 0;
 }
 
-/** Extended ORPort commands (Transport-to-Bridge) */
-#define EXT_OR_CMD_TB_DONE 0x0000
-#define EXT_OR_CMD_TB_USERADDR 0x0001
-
-/** Extended ORPort commands (Bridge-to-Transport) */
-#define EXT_OR_CMD_BT_OKAY 0x1000
-#define EXT_OR_CMD_BT_DENY 0x1001
-#define EXT_OR_CMD_BT_CONTROL 0x1002
-
 /** DOCDOCDOC
     Return -1 on error. 0 on unsufficient data. 1 on correct.
 */
@@ -2761,6 +2752,57 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
   }
 }
 
+/** Extended ORPort commands (Transport-to-Bridge) */
+#define EXT_OR_CMD_TB_DONE 0x0000
+#define EXT_OR_CMD_TB_USERADDR 0x0001
+
+/** Extended ORPort commands (Bridge-to-Transport) */
+#define EXT_OR_CMD_BT_OKAY 0x1000
+#define EXT_OR_CMD_BT_DENY 0x1001
+#define EXT_OR_CMD_BT_CONTROL 0x1002
+
+static int
+connection_ext_or_handle_useraddr(connection_t *conn, char *payload, uint16_t len)
+{
+  /* Copy address string. */
+  tor_addr_t addr;
+  uint16_t port;
+  char *addr_str;
+  char *address_part=NULL;
+  int res;
+  addr_str = tor_malloc(len + 1);
+  memcpy(addr_str, payload, len);
+  addr_str[len] = 0;
+
+  res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
+  tor_free(addr_str);
+  if (res<0)
+    return -1;
+
+  res = tor_addr_parse(&addr, address_part);
+  tor_free(address_part);
+  if (res<0)
+    return -1;
+
+  { /* do some logging */
+    char *old_address = tor_dup_addr(&conn->addr);
+    char *new_address = tor_dup_addr(&addr);
+
+    log_warn(LD_NET, "Received USERADDR." /* XXX FIX ALL LOG SEVERITIES AND MESSAGES */
+             "We rewrite our address from '%s:%u' to '%s:%u'.",
+             safe_str(old_address), conn->port, safe_str(new_address), port);
+
+    tor_free(old_address);
+    tor_free(new_address);
+  }
+
+  /* record the address */
+  tor_addr_copy(&conn->addr, &addr);
+  conn->port = port;
+
+  return 0;
+}
+
 /** Process Extended ORPort messages from <b>or_conn</b>. */
 int
 connection_ext_or_process_inbuf(or_connection_t *or_conn)
@@ -2810,44 +2852,8 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       conn->state = EXT_OR_CONN_STATE_FLUSHING;
       connection_stop_reading(conn);
     } else if (command->cmd == EXT_OR_CMD_TB_USERADDR) {
-      /* XXX Put this in a function of its own. We need to empasize
-         that we change the address and port of this connection. */
-
-      /* Copy address string. */
-      tor_addr_t addr;
-      uint16_t port;
-      char *addr_str;
-      char *address_part=NULL;
-      int res;
-      addr_str = tor_malloc(command->len + 1);
-      memcpy(addr_str, command->body, command->len);
-      addr_str[command->len] = 0;
-
-      res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
-      tor_free(addr_str);
-      if (res<0)
+      if (connection_ext_or_handle_useraddr(conn, command->body, command->len) < 0)
         goto err;
-
-      res = tor_addr_parse(&addr, address_part);
-      tor_free(address_part);
-      if (res<0)
-        goto err;
-
-      {
-        char *old_address = tor_dup_addr(&conn->addr);
-        char *new_address = tor_dup_addr(&addr);
-
-        log_warn(LD_NET, "Received USERADDR." /* XXX FIX ALL LOG SEVERITIES AND MESSAGES */
-                 "We rewrite our address from '%s:%u' to '%s:%u'.",
-                 safe_str(old_address), conn->port, safe_str(new_address), port);
-
-        tor_free(old_address);
-        tor_free(new_address);
-      }
-
-      /* record the address */
-      tor_addr_copy(&conn->addr, &addr);
-      conn->port = port;
     } else {
       log_notice(LD_NET, "Got an Extended ORPort command we don't understand (%u).",
                  command->cmd);
