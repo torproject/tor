@@ -946,7 +946,9 @@ The following options are useful only for clients (that is, if
         nodes via this connection.
     **UseIPv4Cache**;;
         Tells the client to use any cached IPv4 DNS answers we have when making
-        requests via this connection. (On by default.)
+        requests via this connection. (NOTE: This option, along UseIPv6Cache
+        and UseDNSCache, can harm your anonymity, and probably
+        won't help performance as much as you might expect. Use with care!)
     **UseIPv6Cache**;;
         Tells the client to use any cached IPv6 DNS answers we have when making
         requests via this connection.

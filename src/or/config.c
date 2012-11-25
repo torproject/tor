@@ -4596,7 +4596,6 @@ port_cfg_new(void)
   port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
   cfg->ipv4_traffic = 1;
   cfg->cache_ipv4_answers = 1;
-  cfg->use_cached_ipv4_answers = 1;
   return cfg;
 }
 
@@ -4844,7 +4843,7 @@ parse_port_config(smartlist_t *out,
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
       ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
-      cache_ipv4 = 1, use_cached_ipv4 = 1,
+      cache_ipv4 = 1, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
