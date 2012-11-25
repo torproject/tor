@@ -742,7 +742,7 @@ connection_ap_process_end_not_open(
             return 0;
           }
 
-          client_dns_set_addressmap(circ,
+          client_dns_set_addressmap(conn,
                                     conn->socks_request->address, &addr,
                                     conn->chosen_exit_name, ttl);
         }
@@ -979,7 +979,7 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
 
-      client_dns_set_addressmap(TO_ORIGIN_CIRCUIT(circ),
+      client_dns_set_addressmap(entry_conn,
                                 entry_conn->socks_request->address, &addr,
                                 entry_conn->chosen_exit_name, ttl);
 

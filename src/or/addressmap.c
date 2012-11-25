@@ -594,13 +594,13 @@ client_dns_clear_failures(const char *address)
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 static void
-client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
+client_dns_set_addressmap_impl(entry_connection_t *for_conn,
                                const char *address, const char *name,
                                const char *exitname,
                                int ttl)
 {
   char *extendedaddress=NULL, *extendedval=NULL;
-  (void)on_circ;
+  (void)for_conn;
 
   tor_assert(address);
   tor_assert(name);
@@ -640,7 +640,7 @@ client_dns_set_addressmap_impl(origin_circuit_t *on_circ,
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
-client_dns_set_addressmap(origin_circuit_t *on_circ,
+client_dns_set_addressmap(entry_connection_t *for_conn,
                           const char *address,
                           const tor_addr_t *val,
                           const char *exitname,
@@ -655,14 +655,18 @@ client_dns_set_addressmap(origin_circuit_t *on_circ,
   if (tor_addr_parse(&addr_tmp, address) >= 0)
     return; /* If address was an IP address already, don't add a mapping. */
 
-  /* XXXXX For now, don't cache IPv6 addresses. */
-  if (tor_addr_family(val) != AF_INET)
-    return;
+  if (tor_addr_family(val) == AF_INET) {
+    if (! for_conn->cache_ipv4_answers)
+      return;
+  } else if (tor_addr_family(val) == AF_INET6) {
+    if (! for_conn->cache_ipv6_answers)
+      return;
+  }
 
   if (! tor_addr_to_str(valbuf, val, sizeof(valbuf), 1))
     return;
 
-  client_dns_set_addressmap_impl(on_circ, address, valbuf, exitname, ttl);
+  client_dns_set_addressmap_impl(for_conn, address, valbuf, exitname, ttl);
 }
 
 /** Add a cache entry noting that <b>address</b> (ordinarily a dotted quad)
@@ -675,14 +679,21 @@ client_dns_set_addressmap(origin_circuit_t *on_circ,
  * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
-client_dns_set_reverse_addressmap(origin_circuit_t *on_circ,
+client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
                                   const char *address, const char *v,
                                   const char *exitname,
                                   int ttl)
 {
   char *s = NULL;
+  {
+    tor_addr_t tmp_addr;
+    sa_family_t f = tor_addr_parse(&tmp_addr, address);
+    if ((f == AF_INET && ! for_conn->cache_ipv4_answers) ||
+        (f == AF_INET6 && ! for_conn->cache_ipv6_answers))
+      return;
+  }
   tor_asprintf(&s, "REVERSE[%s]", address);
-  client_dns_set_addressmap_impl(on_circ, s, v, exitname, ttl);
+  client_dns_set_addressmap_impl(for_conn, s, v, exitname, ttl);
   tor_free(s);
 }
 

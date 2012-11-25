@@ -31,7 +31,7 @@ int parse_virtual_addr_network(const char *val, int validate_only,
                                char **msg);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
-void client_dns_set_addressmap(origin_circuit_t *on_circ,
+void client_dns_set_addressmap(entry_connection_t *for_conn,
                                const char *address, const tor_addr_t *val,
                                const char *exitname, int ttl);
 const char *addressmap_register_virtual_address(int type, char *new_address);
@@ -39,7 +39,7 @@ void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires, int want_expiry);
 int address_is_in_virtual_range(const char *addr);
 void clear_trackexithost_mappings(const char *exitname);
-void client_dns_set_reverse_addressmap(origin_circuit_t *on_circ,
+void client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
                                        const char *address, const char *v,
                                        const char *exitname, int ttl);
 

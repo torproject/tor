@@ -2072,7 +2072,7 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
       tor_addr_t a;
       tor_addr_from_ipv4n(&a, get_uint32(answer));
       if (! tor_addr_is_null(&a)) {
-        client_dns_set_addressmap(origin_circ,
+        client_dns_set_addressmap(conn,
                                   conn->socks_request->address, &a,
                                   conn->chosen_exit_name, ttl);
       }
@@ -2080,13 +2080,13 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
       tor_addr_t a;
       tor_addr_from_ipv6_bytes(&a, (char*)answer);
       if (! tor_addr_is_null(&a)) {
-        client_dns_set_addressmap(origin_circ,
+        client_dns_set_addressmap(conn,
                                   conn->socks_request->address, &a,
                                   conn->chosen_exit_name, ttl);
       }
     } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
       char *cp = tor_strndup((char*)answer, answer_len);
-      client_dns_set_reverse_addressmap(origin_circ,
+      client_dns_set_reverse_addressmap(conn,
                                         conn->socks_request->address,
                                         cp,
                                         conn->chosen_exit_name, ttl);
