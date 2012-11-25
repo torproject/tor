@@ -952,8 +952,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
+    unsigned rewrite_flags = 0;
+    if (conn->use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
+
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
-                                   &map_expires)) {
+                                   rewrite_flags, &map_expires)) {
       char *result = tor_strdup(socks->address);
       /* remember _what_ is supposed to have been resolved. */
       tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
@@ -984,8 +990,13 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     }
   } else if (!automap) {
     /* For address map controls, remap the address. */
+    unsigned rewrite_flags = 0;
+    if (conn->use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           &map_expires, &exit_source)) {
+                           rewrite_flags, &map_expires, &exit_source)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
     }

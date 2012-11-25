@@ -42,6 +42,11 @@ test_config_addressmap(void *arg)
   config_get_lines(buf, &(get_options_mutable()->AddressMap), 0);
   config_register_addressmaps(get_options());
 
+/* Use old interface for now, so we don't need to rewrite the unit tests */
+#define addressmap_rewrite(a,s,eo,ao)                                   \
+  addressmap_rewrite((a),(s),AMR_FLAG_USE_IPV4_DNS|AMR_FLAG_USE_IPV6_DNS, \
+                     (eo),(ao))
+
   /* MapAddress .invalidwildcard.com .torserver.exit  - no match */
   strlcpy(address, "www.invalidwildcard.com", sizeof(address));
   test_assert(!addressmap_rewrite(address, sizeof(address), &expires, NULL));
@@ -157,6 +162,8 @@ test_config_addressmap(void *arg)
 
   strlcpy(address, "www.torproject.org", sizeof(address));
   test_assert(!addressmap_rewrite(address, sizeof(address), &expires, NULL));
+
+#undef addressmap_rewrite
 
  done:
   ;

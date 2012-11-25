@@ -335,7 +335,9 @@ addressmap_match_superdomains(char *address)
  * was a .exit.
  */
 int
-addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
+addressmap_rewrite(char *address, size_t maxlen,
+                   unsigned flags,
+                   time_t *expires_out,
                    addressmap_entry_source_t *exit_source_out)
 {
   addressmap_entry_t *ent;
@@ -366,6 +368,16 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
 
     if (!ent || !ent->new_address) {
       goto done;
+    }
+
+    if (ent && ent->source == ADDRMAPSRC_DNS) {
+      sa_family_t f;
+      tor_addr_t tmp;
+      f = tor_addr_parse(&tmp, ent->new_address);
+      if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
+        goto done;
+      else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
+        goto done;
     }
 
     if (ent->dst_wildcard && !exact_match) {
@@ -409,11 +421,22 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
  * *<b>expires_out</b> to the expiry time of the result, or to <b>time_max</b>
  * if the result does not expire. */
 int
-addressmap_rewrite_reverse(char *address, size_t maxlen, time_t *expires_out)
+addressmap_rewrite_reverse(char *address, size_t maxlen, unsigned flags,
+                           time_t *expires_out)
 {
   char *s, *cp;
   addressmap_entry_t *ent;
   int r = 0;
+  {
+    sa_family_t f;
+    tor_addr_t tmp;
+    f = tor_addr_parse(&tmp, address);
+    if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
+      return 0;
+    else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
+      return 0;
+  }
+
   tor_asprintf(&s, "REVERSE[%s]", address);
   ent = strmap_get(addressmap, s);
   if (ent) {

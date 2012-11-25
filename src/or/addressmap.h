@@ -14,9 +14,12 @@ void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
-int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out,
+#define AMR_FLAG_USE_IPV4_DNS (1u<<0)
+#define AMR_FLAG_USE_IPV6_DNS (1u<<1)
+int addressmap_rewrite(char *address, size_t maxlen, unsigned flags,
+                       time_t *expires_out,
                        addressmap_entry_source_t *exit_source_out);
-int addressmap_rewrite_reverse(char *address, size_t maxlen,
+int addressmap_rewrite_reverse(char *address, size_t maxlen, unsigned flags,
                                time_t *expires_out);
 int addressmap_have_mapping(const char *address, int update_timeout);
 

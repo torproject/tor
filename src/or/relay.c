@@ -758,10 +758,17 @@ connection_ap_process_end_not_open(
           policies_set_node_exitpolicy_to_reject_all(exitrouter);
         }
         /* rewrite it to an IP if we learned one. */
-        if (addressmap_rewrite(conn->socks_request->address,
-                               sizeof(conn->socks_request->address),
-                               NULL, NULL)) {
-          control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+        {
+          unsigned rewrite_flags = 0;
+          if (conn->use_cached_ipv4_answers)
+            rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+          if (conn->use_cached_ipv6_answers)
+            rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
+          if (addressmap_rewrite(conn->socks_request->address,
+                                 sizeof(conn->socks_request->address),
+                                 rewrite_flags, NULL, NULL)) {
+            control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+          }
         }
         if (conn->chosen_exit_optional ||
             conn->chosen_exit_retries) {
