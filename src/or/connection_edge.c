@@ -932,9 +932,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     automap = addressmap_address_should_automap(socks->address, options);
     if (automap) {
       const char *new_addr;
-      /*XXXX IPv6 Sometimes this should be RESOLVED_TYPE_IPV6 */
+      int addr_type = RESOLVED_TYPE_IPV4;
+      if (conn->socks_request->socks_version != 4) {
+        if (!conn->ipv4_traffic_ok ||
+            (conn->ipv6_traffic_ok && conn->prefer_ipv6_traffic) ||
+            conn->prefer_ipv6_virtaddr)
+          addr_type = RESOLVED_TYPE_IPV6;
+      }
       new_addr = addressmap_register_virtual_address(
-                              RESOLVED_TYPE_IPV4, tor_strdup(socks->address));
+                                    addr_type, tor_strdup(socks->address));
       if (! new_addr) {
         log_warn(LD_APP, "Unable to automap address %s",
                  escaped_safe_str(socks->address));

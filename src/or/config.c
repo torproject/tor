@@ -4605,6 +4605,7 @@ port_cfg_new(void)
   port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
   cfg->ipv4_traffic = 1;
   cfg->cache_ipv4_answers = 1;
+  cfg->prefer_ipv6_virtaddr = 1;
   return cfg;
 }
 
@@ -4789,6 +4790,7 @@ parse_port_config(smartlist_t *out,
       cfg->no_listen = 1;
       cfg->bind_ipv4_only = 1;
       cfg->ipv4_traffic = 1;
+      cfg->prefer_ipv6_virtaddr = 1;
       smartlist_add(out, cfg);
     }
 
@@ -4853,7 +4855,8 @@ parse_port_config(smartlist_t *out,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
       ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
       cache_ipv4 = 1, use_cached_ipv4 = 0,
-      cache_ipv6 = 0, use_cached_ipv6 = 0;
+      cache_ipv6 = 0, use_cached_ipv6 = 0,
+      prefer_ipv6_automap = 1;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -5008,6 +5011,9 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "UseDNSCache")) {
           use_cached_ipv4 = use_cached_ipv6 = ! no;
           continue;
+        } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
+          prefer_ipv6_automap = ! no;
+          continue;
         }
 
         if (!strcasecmpend(elt, "s"))
@@ -5066,6 +5072,7 @@ parse_port_config(smartlist_t *out,
       cfg->cache_ipv6_answers = cache_ipv6;
       cfg->use_cached_ipv4_answers = use_cached_ipv4;
       cfg->use_cached_ipv6_answers = use_cached_ipv6;
+      cfg->prefer_ipv6_virtaddr = prefer_ipv6_automap;
 
       smartlist_add(out, cfg);
     }

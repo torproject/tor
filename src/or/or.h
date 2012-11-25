@@ -1242,6 +1242,7 @@ typedef struct listener_connection_t {
   unsigned int cache_ipv6_answers : 1;
   unsigned int use_cached_ipv4_answers : 1;
   unsigned int use_cached_ipv6_answers : 1;
+  unsigned int prefer_ipv6_virtaddr : 1;
 
 } listener_connection_t;
 
@@ -1556,6 +1557,7 @@ typedef struct entry_connection_t {
   unsigned int cache_ipv6_answers : 1;
   unsigned int use_cached_ipv4_answers : 1;
   unsigned int use_cached_ipv6_answers : 1;
+  unsigned int prefer_ipv6_virtaddr : 1;
 
 } entry_connection_t;
 
@@ -3107,6 +3109,7 @@ typedef struct port_cfg_t {
   unsigned int cache_ipv6_answers : 1;
   unsigned int use_cached_ipv4_answers : 1;
   unsigned int use_cached_ipv6_answers : 1;
+  unsigned int prefer_ipv6_virtaddr : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
