@@ -955,6 +955,11 @@ The following options are useful only for clients (that is, if
     **UseDNSCache**;;
         Tells the client to use any cached DNS answers we have when making
         requests via this connection.
+    **PreferIPv6Automap**;;
+        When serving a hostname lookup request on this port that
+        should get automapped (according to AutomapHostsOnResove),
+        if we could return either an IPv4 or an IPv6 answer, prefer
+        an IPv6 answer. (On by default.)
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
