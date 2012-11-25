@@ -1,0 +1,21 @@
+  o Major features:
+
+    - The updating and usage of DNS cache is now configurable on a
+      per- client-port level. SOCKSPort, DNSPort, etc lines may now
+      contain {No,}Cache{IPv4,IPv6,}DNS lines to indicate that we
+      shouldn't cache these types of DNS answers when we receive them
+      from an exit node in response to a request from this port, and
+      {No,}UseCached{IPv4,IPv6,DNS} lines to indicate that if we have
+      cached DNS answers of these types, we shouldn't use them. It's
+      potentially risky to use cached DNS answers at the client,
+      since doing so can indicate to one exit
+      what answers we've gotten for DNS lookups in the past. With
+      IPv6, this becomes especially problematic. Using cached DNS
+      answers for requests on the same circuit would present less
+      linkability risk, since all traffic on a circuits is already
+      linkable, but it would also provide little performance benefit:
+      the exit node caches DNS replies too. Implements a simplified
+      version of Proposal 205.
+
+
+
