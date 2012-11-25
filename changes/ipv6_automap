@@ -10,3 +10,10 @@
     - AutomapHostsOnResolve responses are now randomized, to avoid
       annoying situations where Tor is restarted and applications
       connect to the wrong addresses.
+
+    - We never try more than 1000 times to pick a virtual address
+      when AutomapHostsOnResolve is set. That's good enough so long
+      as we aren't close to handing out our entire virtual address
+      space; if you're getting there, it's best to switch to IPv6
+      virtual addresses anyway.
+

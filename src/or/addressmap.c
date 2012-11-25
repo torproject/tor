@@ -863,9 +863,13 @@ addressmap_get_virtual_address(int type)
     const virtual_addr_conf_t *conf = ipv6 ?
       &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
-    // This is an imperfect estimate of how many addresses are available, but
-    // that's ok.  We also don't try every one.
-    uint32_t attempts = ipv6 ? UINT32_MAX : (1u << (32- conf->bits));
+    /* Don't try more than 1000 times.  This gives us P < 1e-9 for
+     * failing to get a good address so long as the address space is
+     * less than ~97.95% full.  That's always going to be true under
+     * sensible circumstances for an IPv6 /10, and it's going to be
+     * true for an IPv4 /10 as long as we've handed out less than
+     * 4.08 million addresses. */
+    uint32_t attempts = 1000;
 
     tor_addr_t addr;
 
