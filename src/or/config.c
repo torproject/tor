@@ -4790,6 +4790,7 @@ parse_port_config(smartlist_t *out,
         cfg->isolation_flags = ISO_DEFAULT;
         cfg->no_advertise = 1;
         cfg->ipv4_traffic = 1;
+        cfg->cache_ipv4_answers = cfg->use_cached_ipv4_answers = 1;
         smartlist_add(out, cfg);
       }
     }
@@ -4814,6 +4815,7 @@ parse_port_config(smartlist_t *out,
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
        cfg->ipv4_traffic = 1;
+       cfg->cache_ipv4_answers = cfg->use_cached_ipv4_answers = 1;
        smartlist_add(out, cfg);
     }
     return 0;
@@ -4834,7 +4836,9 @@ parse_port_config(smartlist_t *out,
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0;
+      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
+      cache_ipv4 = 1, use_cached_ipv4 = 1,
+      cache_ipv6 = 0, use_cached_ipv6 = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -4971,6 +4975,25 @@ parse_port_config(smartlist_t *out,
             continue;
           }
         }
+        if (!strcasecmp(elt, "CacheIPv4DNS")) {
+          cache_ipv4 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
+          cache_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "CacheDNS")) {
+          cache_ipv4 = cache_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseIPv4Cache")) {
+          use_cached_ipv4 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseIPv6Cache")) {
+          use_cached_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseDNSCache")) {
+          use_cached_ipv4 = use_cached_ipv6 = ! no;
+          continue;
+        }
 
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
@@ -5024,6 +5047,10 @@ parse_port_config(smartlist_t *out,
       cfg->ipv4_traffic = ipv4_traffic;
       cfg->ipv6_traffic = ipv6_traffic;
       cfg->prefer_ipv6 = prefer_ipv6;
+      cfg->cache_ipv4_answers = cache_ipv4;
+      cfg->cache_ipv6_answers = cache_ipv6;
+      cfg->use_cached_ipv4_answers = use_cached_ipv4;
+      cfg->use_cached_ipv6_answers = use_cached_ipv6;
 
       smartlist_add(out, cfg);
     }

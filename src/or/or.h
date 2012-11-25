@@ -1237,6 +1237,12 @@ typedef struct listener_connection_t {
    * addresses? */
   unsigned int socks_prefer_ipv6 : 1;
 
+  /*DOCDOC*/
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
+
 } listener_connection_t;
 
 /** Minimum length of the random part of an AUTH_CHALLENGE cell. */
@@ -1544,6 +1550,12 @@ typedef struct entry_connection_t {
   /** @} */
   /** Should we say we prefer IPv6 traffic? */
   unsigned int prefer_ipv6_traffic : 1;
+
+  /* DOCDOC*/
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
 
 } entry_connection_t;
 
@@ -3084,9 +3096,17 @@ typedef struct port_cfg_t {
   unsigned int all_addrs : 1;
   unsigned int bind_ipv4_only : 1;
   unsigned int bind_ipv6_only : 1;
+
+  /* Client port types only: */
   unsigned int ipv4_traffic : 1;
   unsigned int ipv6_traffic : 1;
   unsigned int prefer_ipv6 : 1;
+
+  /* DOCDOC */
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
