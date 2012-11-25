@@ -1,0 +1,12 @@
+  o Minor features:
+
+    - AutomapHostsOnResolve now support IPv6 addresses. By default, we
+      prefer to hand out virtual IPv6 addresses, since there are more of
+      them and we can't run out. To override this behavior and make
+      IPv4 addresses preferred, set NoPreferIPv6Automap on whatever
+      SOCKSPort or DNSPort you're using for resolving. Implements
+      ticket #7571.
+
+    - AutomapHostsOnResolve responses are now randomized, to avoid
+      annoying situations where Tor is restarted and applications
+      connect to the wrong addresses.
