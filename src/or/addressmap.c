@@ -629,7 +629,7 @@ client_dns_set_addressmap(origin_circuit_t *on_circ,
   tor_assert(address);
   tor_assert(val);
 
-  if (tor_addr_parse(&addr_tmp, address) == 0)
+  if (tor_addr_parse(&addr_tmp, address) >= 0)
     return; /* If address was an IP address already, don't add a mapping. */
 
   /* XXXXX For now, don't cache IPv6 addresses. */
