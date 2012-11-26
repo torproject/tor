@@ -1383,6 +1383,12 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
           pathbias_count_collapse(ocirc);
         }
       } else if (circ->timestamp_dirty && !ocirc->any_streams_succeeded) {
+        // XXX: May open up attacks if the adversary can force connections
+        // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
+        // state.. Can we use that? Does optimistic data change this?
+        // XXX: For the hidserv side, we could only care about INTRODUCING purposes
+        // for server+client, and REND purposes for the server... Can we
+        // somehow only count those?
         /* Any circuit where there were attempted streams but no successful
          * streams could be bias */
         /* FIXME: This may be better handled by limiting the number of retries
