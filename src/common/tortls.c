@@ -127,6 +127,24 @@ typedef struct tor_tls_context_t {
   crypto_pk_t *auth_key;
 } tor_tls_context_t;
 
+/** Return values for tor_tls_classify_client_ciphers.
+ *
+ * @{
+ */
+/** An error occurred when examining the client ciphers */
+#define CIPHERS_ERR -1
+/** The client cipher list indicates that a v1 handshake was in use. */
+#define CIPHERS_V1 1
+/** The client cipher list indicates that the client is using the v2 or the
+ * v3 handshake, but that it is (probably!) lying about what ciphers it
+ * supports */
+#define CIPHERS_V2 2
+/** The client cipher list indicates that the client is using the v2 or the
+ * v3 handshake, and that it is telling the truth about what ciphers it
+ * supports */
+#define CIPHERS_UNRESTRICTED 3
+/** @} */
+
 #define TOR_TLS_MAGIC 0x71571571
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -1322,23 +1340,94 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 }
 
 #ifdef V2_HANDSHAKE_SERVER
-/** Return true iff the cipher list suggested by the client for <b>ssl</b> is
- * a list that indicates that the client knows how to do the v2 TLS connection
- * handshake. */
-static int
-tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
+
+/* Here's the old V2 cipher list we sent from 0.2.1.1-alpha up to
+ * 0.2.3.17-beta. If a client is using this list, we can't believe the ciphers
+ * that it claims to support.  We'll prune this list to remove the ciphers
+ * *we* don't recognize. */
+static uint16_t v2_cipher_list[] = {
+  0xc00a, /* TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA */
+  0xc014, /* TLS1_TXT_ECDHE_RSA_WITH_AES_256_CBC_SHA */
+  0x0039, /* TLS1_TXT_DHE_RSA_WITH_AES_256_SHA */
+  0x0038, /* TLS1_TXT_DHE_DSS_WITH_AES_256_SHA */
+  0xc00f, /* TLS1_TXT_ECDH_RSA_WITH_AES_256_CBC_SHA */
+  0xc005, /* TLS1_TXT_ECDH_ECDSA_WITH_AES_256_CBC_SHA */
+  0x0035, /* TLS1_TXT_RSA_WITH_AES_256_SHA */
+  0xc007, /* TLS1_TXT_ECDHE_ECDSA_WITH_RC4_128_SHA */
+  0xc009, /* TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA */
+  0xc011, /* TLS1_TXT_ECDHE_RSA_WITH_RC4_128_SHA */
+  0xc013, /* TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA */
+  0x0033, /* TLS1_TXT_DHE_RSA_WITH_AES_128_SHA */
+  0x0032, /* TLS1_TXT_DHE_DSS_WITH_AES_128_SHA */
+  0xc00c, /* TLS1_TXT_ECDH_RSA_WITH_RC4_128_SHA */
+  0xc00e, /* TLS1_TXT_ECDH_RSA_WITH_AES_128_CBC_SHA */
+  0xc002, /* TLS1_TXT_ECDH_ECDSA_WITH_RC4_128_SHA */
+  0xc004, /* TLS1_TXT_ECDH_ECDSA_WITH_AES_128_CBC_SHA */
+  0x0004, /* SSL3_TXT_RSA_RC4_128_MD5 */
+  0x0005, /* SSL3_TXT_RSA_RC4_128_SHA */
+  0x002f, /* TLS1_TXT_RSA_WITH_AES_128_SHA */
+  0xc008, /* TLS1_TXT_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA */
+  0xc012, /* TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA */
+  0x0016, /* SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA */
+  0x0013, /* SSL3_TXT_EDH_DSS_DES_192_CBC3_SHA */
+  0xc00d, /* TLS1_TXT_ECDH_RSA_WITH_DES_192_CBC3_SHA */
+  0xc003, /* TLS1_TXT_ECDH_ECDSA_WITH_DES_192_CBC3_SHA */
+  0xfeff, /* SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA */
+  0x000a, /* SSL3_TXT_RSA_DES_192_CBC3_SHA */
+  0
+};
+/** Have we removed the unrecognized ciphers from v2_cipher_list yet? */
+static int v2_cipher_list_pruned = 0;
+
+/** Remove from v2_cipher_list every cipher that we don't support, so that
+ * comparing v2_cipher_list to a client's cipher list will give a sensible
+ * result. */
+static void
+prune_v2_cipher_list(void)
 {
-  int i;
+  uint16_t *inp, *outp;
+  const SSL_METHOD *m = SSLv23_method();
+
+  inp = outp = v2_cipher_list;
+  while (*inp) {
+    unsigned char cipherid[2];
+    const SSL_CIPHER *cipher;
+    /* Is there no better way to do this? */
+    set_uint16(cipherid, htons(*inp));
+    cipher = m->get_cipher_by_char(cipherid);
+    if (cipher) {
+      tor_assert((cipher->id & 0xffff) == *inp);
+      *outp++ = *inp++;
+    } else {
+      inp++;
+    }
+  }
+  *outp = 0;
+
+  v2_cipher_list_pruned = 1;
+}
+
+/** Examine the client cipher list in <b>ssl</b>, and determine what kind of
+ * client it is.  Return one of CIPHERS_ERR, CIPHERS_V1, CIPHERS_V2,
+ * CIPHERS_UNRESTRICTED.
+ **/
+static int
+tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
+{
+  int i, res;
   SSL_SESSION *session;
+  if (PREDICT_UNLIKELY(!v2_cipher_list_pruned))
+    prune_v2_cipher_list();
+
   /* If we reached this point, we just got a client hello.  See if there is
    * a cipher list. */
   if (!(session = SSL_get_session((SSL *)ssl))) {
     log_info(LD_NET, "No session on TLS?");
-    return 0;
+    return CIPHERS_ERR;
   }
   if (!session->ciphers) {
     log_info(LD_NET, "No ciphers on session");
-    return 0;
+    return CIPHERS_ERR;
   }
   /* Now we need to see if there are any ciphers whose presence means we're
    * dealing with an updated Tor. */
@@ -1351,11 +1440,32 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
         strcmp(ciphername, "(NONE)")) {
       log_debug(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername);
       // return 1;
-      goto dump_list;
+      goto v2_or_higher;
     }
   }
-  return 0;
- dump_list:
+  return CIPHERS_V1;
+ v2_or_higher:
+  {
+    const uint16_t *v2_cipher = v2_cipher_list;
+    for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+      uint16_t id = cipher->id & 0xffff;
+      if (id == 0x00ff) /* extended renegotiation indicator. */
+        continue;
+      if (!id || id != *v2_cipher) {
+        res = CIPHERS_UNRESTRICTED;
+        goto dump_ciphers;
+      }
+      ++v2_cipher;
+    }
+    if (*v2_cipher != 0) {
+      res = CIPHERS_UNRESTRICTED;
+      goto dump_ciphers;
+    }
+    res = CIPHERS_V2;
+  }
+
+ dump_ciphers:
   {
     smartlist_t *elts = smartlist_new();
     char *s;
@@ -1365,12 +1475,21 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
       smartlist_add(elts, (char*)ciphername);
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
-    log_debug(LD_NET, "Got a non-version-1 cipher list from %s.  It is: '%s'",
-              address, s);
+    log_debug(LD_NET, "Got a %s V2/V3 cipher list from %s.  It is: '%s'",
+              (res == CIPHERS_V2) ? "fictitious" : "real", address, s);
     tor_free(s);
     smartlist_free(elts);
   }
-  return 1;
+  return res;
+}
+
+/** Return true iff the cipher list suggested by the client for <b>ssl</b> is
+ * a list that indicates that the client knows how to do the v2 TLS connection
+ * handshake. */
+static int
+tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
+{
+  return tor_tls_classify_client_ciphers(ssl, address) >= CIPHERS_V2;
 }
 
 /** Invoked when a TLS state changes: log the change at severity 'debug' */
