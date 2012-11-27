@@ -1224,6 +1224,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   }
 
   SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
+  SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_ECDH_USE);
 
 #ifdef SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
   SSL_CTX_set_options(result->ctx,
@@ -1274,6 +1275,17 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     SSL_CTX_set_tmp_dh(result->ctx, crypto_dh_get_dh_(dh));
     crypto_dh_free(dh);
   }
+#if (!defined(OPENSSL_NO_EC) &&                         \
+     OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0))
+  if (! is_client) {
+    EC_KEY *ec_key;
+    /* Use P-256 for ECDHE. */
+    ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    if (ec_key != NULL) /*XXXX Handle errors? */
+      SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
+    EC_KEY_free(ec_key);
+  }
+#endif
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
