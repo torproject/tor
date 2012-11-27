@@ -623,12 +623,65 @@ test_addr_ip6_helpers(void)
   ;
 }
 
+/** Test tor_addr_port_parse(). */
+static void
+test_addr_parse(void)
+{
+  int r;
+  tor_addr_t addr;
+  char buf[TOR_ADDR_BUF_LEN];
+  uint16_t port = 0;
+
+  /* Correct call. */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.1:1234",
+                         &addr, &port);
+  test_assert(r == 0);
+  tor_addr_to_str(buf, &addr, sizeof(buf), 0);
+  test_streq(buf, "192.0.2.1");
+  test_eq(port, 1234);
+
+  /* Domain name. */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "torproject.org:1234",
+                         &addr, &port);
+  test_assert(r == -1);
+
+  /* Only IP. */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.2",
+                         &addr, &port);
+  test_assert(r == -1);
+
+  /* Bad port. */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.2:66666",
+                         &addr, &port);
+  test_assert(r == -1);
+
+  /* Only domain name */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "torproject.org",
+                         &addr, &port);
+  test_assert(r == -1);
+
+  /* Bad IP address */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2:1234",
+                         &addr, &port);
+  test_assert(r == -1);
+
+ done:
+  ;
+}
+
 #define ADDR_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
 
 struct testcase_t addr_tests[] = {
   ADDR_LEGACY(basic),
   ADDR_LEGACY(ip6_helpers),
+  ADDR_LEGACY(parse),
   END_OF_TESTCASES
 };
 
