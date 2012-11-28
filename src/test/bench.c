@@ -15,9 +15,12 @@ const char tor_git_revision[] = "";
 #include "orconfig.h"
 
 #define RELAY_PRIVATE
+#define CONFIG_PRIVATE
 
 #include "or.h"
+#include "onion.h"
 #include "relay.h"
+#include "config.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -94,6 +97,66 @@ bench_aes(void)
            NANOCOUNT(start, end, iters*len));
   }
   crypto_cipher_free(c);
+}
+
+static void
+bench_onion_TAP(void)
+{
+  const int iters = 1<<9;
+  int i;
+  crypto_pk_t *key, *key2;
+  uint64_t start, end;
+  char os[ONIONSKIN_CHALLENGE_LEN];
+  char or[ONIONSKIN_REPLY_LEN];
+  crypto_dh_t *dh_out;
+
+  key = crypto_pk_new();
+  key2 = crypto_pk_new();
+  crypto_pk_generate_key_with_bits(key, 1024);
+  crypto_pk_generate_key_with_bits(key2, 1024);
+
+  reset_perftime();
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    onion_skin_create(key, &dh_out, os);
+    crypto_dh_free(dh_out);
+  }
+  end = perftime();
+  printf("Client-side, part 1: %f msec.\n", NANOCOUNT(start, end, iters)/1e6);
+
+  onion_skin_create(key, &dh_out, os);
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    char key_out[CPATH_KEY_MATERIAL_LEN];
+    onion_skin_server_handshake(os, key, NULL, or, key_out, sizeof(key_out));
+  }
+  end = perftime();
+  printf("Server-side, key guessed right: %f msec\n",
+         NANOCOUNT(start, end, iters)/1e6);
+
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    char key_out[CPATH_KEY_MATERIAL_LEN];
+    onion_skin_server_handshake(os, key2, key, or, key_out, sizeof(key_out));
+  }
+  end = perftime();
+  printf("Server-side, key guessed wrong: %f msec.\n",
+         NANOCOUNT(start, end, iters)/1e6);
+
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    crypto_dh_t *dh;
+    char key_out[CPATH_KEY_MATERIAL_LEN];
+    int s;
+    dh = crypto_dh_dup(dh_out);
+    s = onion_skin_client_handshake(dh, or, key_out, sizeof(key_out));
+    tor_assert(s == 0);
+  }
+  end = perftime();
+  printf("Client-side, part 2: %f msec.\n",
+         NANOCOUNT(start, end, iters)/1e6);
+
+  crypto_pk_free(key);
 }
 
 static void
@@ -261,6 +324,7 @@ typedef struct benchmark_t {
 static struct benchmark_t benchmarks[] = {
   ENT(dmap),
   ENT(aes),
+  ENT(onion_TAP),
   ENT(cell_aes),
   ENT(cell_ops),
   {NULL,NULL,0}
@@ -286,6 +350,8 @@ main(int argc, const char **argv)
   int i;
   int list=0, n_enabled=0;
   benchmark_t *b;
+  char *errmsg;
+  or_options_t *options;
 
   tor_threads_init();
 
@@ -306,6 +372,16 @@ main(int argc, const char **argv)
   reset_perftime();
 
   crypto_seed_rng(1);
+  options = options_new();
+  init_logging();
+  options->command = CMD_RUN_UNITTESTS;
+  options->DataDirectory = tor_strdup("");
+  options_init(options);
+  if (set_options(options, &errmsg) < 0) {
+    printf("Failed to set initial options: %s\n", errmsg);
+    tor_free(errmsg);
+    return 1;
+  }
 
   for (b = benchmarks; b->name; ++b) {
     if (b->enabled || n_enabled == 0) {
