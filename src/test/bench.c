@@ -18,6 +18,15 @@ const char tor_git_revision[] = "";
 
 #include "or.h"
 #include "relay.h"
+#include <openssl/opensslv.h>
+#include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
+#ifndef OPENSSL_NO_EC
+#include <openssl/ec.h>
+#include <openssl/ecdh.h>
+#include <openssl/obj_mac.h>
+#endif
+#endif
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -248,6 +257,91 @@ bench_cell_ops(void)
   tor_free(cell);
 }
 
+static void
+bench_dh(void)
+{
+  const int iters = 1<<10;
+  int i;
+  uint64_t start, end;
+
+  reset_perftime();
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    char dh_pubkey_a[DH_BYTES], dh_pubkey_b[DH_BYTES];
+    char secret_a[DH_BYTES], secret_b[DH_BYTES];
+    ssize_t slen_a, slen_b;
+    crypto_dh_t *dh_a = crypto_dh_new(DH_TYPE_TLS);
+    crypto_dh_t *dh_b = crypto_dh_new(DH_TYPE_TLS);
+    crypto_dh_generate_public(dh_a);
+    crypto_dh_generate_public(dh_b);
+    crypto_dh_get_public(dh_a, dh_pubkey_a, sizeof(dh_pubkey_a));
+    crypto_dh_get_public(dh_b, dh_pubkey_b, sizeof(dh_pubkey_b));
+    slen_a = crypto_dh_compute_secret(LOG_NOTICE,
+                                      dh_a, dh_pubkey_b, sizeof(dh_pubkey_b),
+                                      secret_a, sizeof(secret_a));
+    slen_b = crypto_dh_compute_secret(LOG_NOTICE,
+                                      dh_b, dh_pubkey_a, sizeof(dh_pubkey_a),
+                                      secret_b, sizeof(secret_b));
+    tor_assert(slen_a == slen_b);
+    tor_assert(!memcmp(secret_a, secret_b, slen_a));
+    crypto_dh_free(dh_a);
+    crypto_dh_free(dh_b);
+  }
+  end = perftime();
+  printf("Complete DH handshakes (1024 bit, public and private ops):\n"
+         "      %f millisec each.\n", NANOCOUNT(start, end, iters)/1e6);
+}
+
+#if (!defined(OPENSSL_NO_EC)                    \
+     && OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0))
+#define HAVE_EC_BENCHMARKS
+static void
+bench_ecdh_impl(int nid, const char *name)
+{
+  const int iters = 1<<10;
+  int i;
+  uint64_t start, end;
+
+  reset_perftime();
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    char secret_a[DH_BYTES], secret_b[DH_BYTES];
+    ssize_t slen_a, slen_b;
+    EC_KEY *dh_a = EC_KEY_new_by_curve_name(nid);
+    EC_KEY *dh_b = EC_KEY_new_by_curve_name(nid);
+
+    EC_KEY_generate_key(dh_a);
+    EC_KEY_generate_key(dh_b);
+    slen_a = ECDH_compute_key(secret_a, DH_BYTES,
+                              EC_KEY_get0_public_key(dh_b), dh_a,
+                              NULL);
+    slen_b = ECDH_compute_key(secret_b, DH_BYTES,
+                              EC_KEY_get0_public_key(dh_a), dh_b,
+                              NULL);
+
+    tor_assert(slen_a == slen_b);
+    tor_assert(!memcmp(secret_a, secret_b, slen_a));
+    EC_KEY_free(dh_a);
+    EC_KEY_free(dh_b);
+  }
+  end = perftime();
+  printf("Complete ECDH %s handshakes (2 public and 2 private ops):\n"
+         "      %f millisec each.\n", name, NANOCOUNT(start, end, iters)/1e6);
+}
+
+static void
+bench_ecdh_p256(void)
+{
+  bench_ecdh_impl(NID_X9_62_prime256v1, "P-256");
+}
+
+static void
+bench_ecdh_p224(void)
+{
+  bench_ecdh_impl(NID_secp224r1, "P-224");
+}
+#endif
+
 typedef void (*bench_fn)(void);
 
 typedef struct benchmark_t {
@@ -263,6 +357,11 @@ static struct benchmark_t benchmarks[] = {
   ENT(aes),
   ENT(cell_aes),
   ENT(cell_ops),
+  ENT(dh),
+#ifdef HAVE_EC_BENCHMARKS
+  ENT(ecdh_p256),
+  ENT(ecdh_p224),
+#endif
   {NULL,NULL,0}
 };
 
