@@ -170,6 +170,9 @@ struct tor_tls_t {
                                   * one certificate). */
   /** True iff we should call negotiated_callback when we're done reading. */
   unsigned int got_renegotiate:1;
+  /** Return value from tor_tls_classify_client_ciphers, or 0 if we haven't
+   * called that function yet. */
+  int8_t client_cipher_list_type;
   /** Incremented every time we start the server side of a handshake. */
   uint8_t server_handshake_count;
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
@@ -1416,18 +1419,25 @@ tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
 {
   int i, res;
   SSL_SESSION *session;
+  tor_tls_t *tor_tls;
   if (PREDICT_UNLIKELY(!v2_cipher_list_pruned))
     prune_v2_cipher_list();
+
+  tor_tls = tor_tls_get_by_ssl(ssl);
+  if (tor_tls && tor_tls->client_cipher_list_type)
+    return tor_tls->client_cipher_list_type;
 
   /* If we reached this point, we just got a client hello.  See if there is
    * a cipher list. */
   if (!(session = SSL_get_session((SSL *)ssl))) {
     log_info(LD_NET, "No session on TLS?");
-    return CIPHERS_ERR;
+    res = CIPHERS_ERR;
+    goto done;
   }
   if (!session->ciphers) {
     log_info(LD_NET, "No ciphers on session");
-    return CIPHERS_ERR;
+    res = CIPHERS_ERR;
+    goto done;
   }
   /* Now we need to see if there are any ciphers whose presence means we're
    * dealing with an updated Tor. */
@@ -1443,7 +1453,8 @@ tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
       goto v2_or_higher;
     }
   }
-  return CIPHERS_V1;
+  res = CIPHERS_V1;
+  goto done;
  v2_or_higher:
   {
     const uint16_t *v2_cipher = v2_cipher_list;
@@ -1480,6 +1491,10 @@ tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
     tor_free(s);
     smartlist_free(elts);
   }
+ done:
+  if (tor_tls)
+    return tor_tls->client_cipher_list_type = res;
+
   return res;
 }
 
