@@ -129,6 +129,7 @@ int tor_tls_cert_is_valid(int severity,
                           const tor_cert_t *cert,
                           const tor_cert_t *signing_cert,
                           int check_rsa_1024);
+const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 
 #endif
 

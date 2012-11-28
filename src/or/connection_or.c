@@ -1317,7 +1317,8 @@ connection_tls_continue_handshake(or_connection_t *conn)
           if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
             if (tor_tls_received_v3_certificate(conn->tls)) {
               log_info(LD_OR, "Client got a v3 cert!  Moving on to v3 "
-                         "handshake.");
+                       "handshake with ciphersuite %s",
+                       tor_tls_get_ciphersuite_name(conn->tls));
               return connection_or_launch_v3_or_handshake(conn);
             } else {
               log_debug(LD_OR, "Done with initial SSL handshake (client-side)."
@@ -1641,10 +1642,12 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
-  log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done. verifying.",
+  log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done, using "
+            "ciphersuite %s. verifying.",
             started_here?"outgoing":"incoming",
             conn,
-            safe_str_client(conn->base_.address));
+            safe_str_client(conn->base_.address),
+            tor_tls_get_ciphersuite_name(conn->tls));
 
   directory_set_dirty();
 

@@ -678,11 +678,42 @@ tor_tls_create_certificate(crypto_pk_t *rsa,
 #undef SERIAL_NUMBER_SIZE
 }
 
-/** List of ciphers that servers should select from.*/
+/** List of ciphers that servers should select from when the client might be
+ * claiming extra unsupported ciphers in order to avoid fingerprinting.  */
 #define SERVER_CIPHER_LIST                         \
   (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
    TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
    SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
+
+/** List of ciphers that servers should select from when we actually have
+ * our choice of what cipher to use. */
+const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_AES_256_CHC_SHA
+       TLS1_TXT_ECDHE_RSA_WITH_AES_256_CBC_SHA ":"
+#endif
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+       TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384 ":"
+#endif
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_AES_128_SHA256
+       TLS1_TXT_ECDHE_RSA_WITH_AES_128_SHA256 ":"
+#endif
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA
+       TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA ":"
+#endif
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+       TLS1_TXT_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+#endif
+//#if TLS1_TXT_ECDHE_RSA_WITH_RC4_128_SHA
+//    TLS1_TXT_ECDHE_RSA_WITH_RC4_128_SHA ":"
+//#endif
+  /* These next two are mandatory. */
+  TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"
+  TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"
+#ifdef TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA
+       TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA ":"
+#endif
+  SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA;
+
 /* Note: to set up your own private testing network with link crypto
  * disabled, set your Tors' cipher list to
  * (SSL3_TXT_RSA_NULL_SHA).  If you do this, you won't be able to communicate
@@ -1410,15 +1441,22 @@ prune_v2_cipher_list(void)
   v2_cipher_list_pruned = 1;
 }
 
+/* Return the name of the negotiated ciphersuite in use on <b>tls</b> */
+const char *
+tor_tls_get_ciphersuite_name(tor_tls_t *tls)
+{
+  return SSL_get_cipher(tls->ssl);
+}
+
 /** Examine the client cipher list in <b>ssl</b>, and determine what kind of
  * client it is.  Return one of CIPHERS_ERR, CIPHERS_V1, CIPHERS_V2,
  * CIPHERS_UNRESTRICTED.
  **/
 static int
-tor_tls_classify_client_ciphers(const SSL *ssl)
+tor_tls_classify_client_ciphers(const SSL *ssl,
+                                STACK_OF(SSL_CIPHER) *peer_ciphers)
 {
   int i, res;
-  SSL_SESSION *session;
   tor_tls_t *tor_tls;
   if (PREDICT_UNLIKELY(!v2_cipher_list_pruned))
     prune_v2_cipher_list();
@@ -1429,20 +1467,15 @@ tor_tls_classify_client_ciphers(const SSL *ssl)
 
   /* If we reached this point, we just got a client hello.  See if there is
    * a cipher list. */
-  if (!(session = SSL_get_session((SSL *)ssl))) {
-    log_info(LD_NET, "No session on TLS?");
-    res = CIPHERS_ERR;
-    goto done;
-  }
-  if (!session->ciphers) {
+  if (!peer_ciphers) {
     log_info(LD_NET, "No ciphers on session");
     res = CIPHERS_ERR;
     goto done;
   }
   /* Now we need to see if there are any ciphers whose presence means we're
    * dealing with an updated Tor. */
-  for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
-    SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+  for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
+    SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
     const char *ciphername = SSL_CIPHER_get_name(cipher);
     if (strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_128_SHA) &&
         strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_256_SHA) &&
@@ -1458,8 +1491,8 @@ tor_tls_classify_client_ciphers(const SSL *ssl)
  v2_or_higher:
   {
     const uint16_t *v2_cipher = v2_cipher_list;
-    for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+    for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
       uint16_t id = cipher->id & 0xffff;
       if (id == 0x00ff) /* extended renegotiation indicator. */
         continue;
@@ -1480,8 +1513,8 @@ tor_tls_classify_client_ciphers(const SSL *ssl)
   {
     smartlist_t *elts = smartlist_new();
     char *s;
-    for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+    for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
       const char *ciphername = SSL_CIPHER_get_name(cipher);
       smartlist_add(elts, (char*)ciphername);
     }
@@ -1504,8 +1537,56 @@ tor_tls_classify_client_ciphers(const SSL *ssl)
 static int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
-  return tor_tls_classify_client_ciphers(ssl) >= CIPHERS_V2;
+  SSL_SESSION *session;
+  if (!(session = SSL_get_session((SSL *)ssl))) {
+    log_info(LD_NET, "No session on TLS?");
+    return CIPHERS_ERR;
+  }
+
+  return tor_tls_classify_client_ciphers(ssl, session->ciphers) >= CIPHERS_V2;
 }
+
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
+/** Callback to get invoked on a server after we've read the list of ciphers
+ * the client supports, but before we pick our own ciphersuite.
+ *
+ * We can't abuse an info_cb for this, since by the time one of the
+ * client_hello info_cbs is called, we've already picked which ciphersuite to
+ * use.
+ *
+ * Technically, this function is an abuse of this callback, since the point of
+ * a session_secret_cb is to try to set up and/or verify a shared-secret for
+ * authentication on the fly.  But as long as we return 0, we won't actually be
+ * setting up a shared secret, and all will be fine.
+ */
+static int
+tor_tls_session_secret_cb(SSL *ssl, void *secret, int *secret_len,
+                          STACK_OF(SSL_CIPHER) *peer_ciphers,
+                          SSL_CIPHER **cipher, void *arg)
+{
+  (void) secret;
+  (void) secret_len;
+  (void) peer_ciphers;
+  (void) cipher;
+  (void) arg;
+
+  if (tor_tls_classify_client_ciphers(ssl, peer_ciphers) ==
+       CIPHERS_UNRESTRICTED) {
+    SSL_set_cipher_list(ssl, UNRESTRICTED_SERVER_CIPHER_LIST);
+  }
+
+  SSL_set_session_secret_cb(ssl, NULL, NULL);
+
+  return 0;
+}
+static void
+tor_tls_setup_session_secret_cb(tor_tls_t *tls)
+{
+  SSL_set_session_secret_cb(tls->ssl, tor_tls_session_secret_cb, NULL);
+}
+#else
+#define tor_tls_setup_session_secret_cb(tls) STMT_NIL
+#endif
 
 /** Invoked when a TLS state changes: log the change at severity 'debug' */
 static void
@@ -1772,6 +1853,9 @@ tor_tls_new(int sock, int isServer)
   {
     SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
   }
+
+  if (isServer)
+    tor_tls_setup_session_secret_cb(result);
 
   /* Not expected to get called. */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
