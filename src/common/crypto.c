@@ -2036,6 +2036,16 @@ crypto_dh_new(int dh_type)
   return NULL;
 }
 
+/** Return a copy of <b>dh</b>, sharing its internal state. */
+crypto_dh_t *
+crypto_dh_dup(const crypto_dh_t *dh)
+{
+  crypto_dh_t *dh_new = tor_malloc_zero(sizeof(crypto_dh_t));
+  dh_new->dh = dh->dh;
+  DH_up_ref(dh->dh);
+  return dh_new;
+}
+
 /** Return the length of the DH key in <b>dh</b>, in bytes.
  */
 int

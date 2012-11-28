@@ -230,6 +230,7 @@ void crypto_hmac_sha256(char *hmac_out,
 #define DH_TYPE_REND 2
 #define DH_TYPE_TLS 3
 crypto_dh_t *crypto_dh_new(int dh_type);
+crypto_dh_t *crypto_dh_dup(const crypto_dh_t *dh);
 int crypto_dh_get_bytes(crypto_dh_t *dh);
 int crypto_dh_generate_public(crypto_dh_t *dh);
 int crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
