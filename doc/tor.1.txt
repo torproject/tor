@@ -181,6 +181,11 @@ GENERAL OPTIONS
     using __options__ as its command-line options, and expects to receive
     proxied client traffic from it.
 
+**ServerTransportListenAddr** __transport__ __IP__:__PORT__::
+    When this option is set, Tor will suggest __IP__:__PORT__ as the
+    listening address of any pluggable transport proxy that tries to
+    launch __transport__.
+
 **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
