@@ -1415,7 +1415,7 @@ prune_v2_cipher_list(void)
  * CIPHERS_UNRESTRICTED.
  **/
 static int
-tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
+tor_tls_classify_client_ciphers(const SSL *ssl)
 {
   int i, res;
   SSL_SESSION *session;
@@ -1487,7 +1487,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
     log_debug(LD_NET, "Got a %s V2/V3 cipher list from %s.  It is: '%s'",
-              (res == CIPHERS_V2) ? "fictitious" : "real", address, s);
+              (res == CIPHERS_V2) ? "fictitious" : "real", ADDR(tor_tls), s);
     tor_free(s);
     smartlist_free(elts);
   }
@@ -1502,9 +1502,9 @@ tor_tls_classify_client_ciphers(const SSL *ssl, const char *address)
  * a list that indicates that the client knows how to do the v2 TLS connection
  * handshake. */
 static int
-tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
+tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
-  return tor_tls_classify_client_ciphers(ssl, address) >= CIPHERS_V2;
+  return tor_tls_classify_client_ciphers(ssl) >= CIPHERS_V2;
 }
 
 /** Invoked when a TLS state changes: log the change at severity 'debug' */
@@ -1548,7 +1548,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
   }
 
   /* Now check the cipher list. */
-  if (tor_tls_client_is_using_v2_ciphers(ssl, ADDR(tls))) {
+  if (tor_tls_client_is_using_v2_ciphers(ssl)) {
     if (tls->wasV2Handshake)
       return; /* We already turned this stuff off for the first handshake;
                * This is a renegotiation. */
@@ -2014,7 +2014,7 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
     tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
 #ifdef V2_HANDSHAKE_SERVER
-    if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
+    if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
       /* This check is redundant, but back when we did it in the callback,
        * we might have not been able to look up the tor_tls_t if the code
        * was buggy.  Fixing that. */
