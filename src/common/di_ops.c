@@ -8,6 +8,8 @@
 
 #include "orconfig.h"
 #include "di_ops.h"
+#include "torlog.h"
+#include "util.h"
 
 /**
  * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes at
@@ -129,5 +131,75 @@ tor_memeq(const void *a, const void *b, size_t sz)
    */
 
   return 1 & ((any_difference - 1) >> 8);
+}
+
+/* Implement di_digest256_map_t as a linked list of entries. */
+struct di_digest256_map_t {
+  struct di_digest256_map_t *next;
+  uint8_t key[32];
+  void *val;
+};
+
+/** Release all storage held in <b>map</b>, calling free_fn on each value
+ * as we go. */
+void
+dimap_free(di_digest256_map_t *map, dimap_free_fn free_fn)
+{
+  while (map) {
+    di_digest256_map_t *victim = map;
+    map = map->next;
+    if (free_fn)
+      free_fn(victim->val);
+    tor_free(victim);
+  }
+}
+
+/** Adjust the map at *<b>map</b>, adding an entry for <b>key</b> ->
+ * <b>val</b>, where <b>key</b> is a DIGEST256_LEN-byte key.
+ *
+ * The caller MUST NOT add a key that already appears in the map.
+ */
+void
+dimap_add_entry(di_digest256_map_t **map,
+                const uint8_t *key, void *val)
+{
+  di_digest256_map_t *new_ent;
+  {
+    void *old_val = dimap_search(*map, key, NULL);
+    tor_assert(! old_val);
+    tor_assert(val);
+  }
+  new_ent = tor_malloc_zero(sizeof(di_digest256_map_t));
+  new_ent->next = *map;
+  memcpy(new_ent->key, key, 32);
+  new_ent->val = val;
+  *map = new_ent;
+}
+
+/** Search the map at <b>map</b> for an entry whose key is <b>key</b> (a
+ * DIGEST256_LEN-byte key) returning the corresponding value if we found one,
+ * and returning <b>dflt_val</b> if the key wasn't found.
+ *
+ * This operation takes an amount of time dependent only on the length of
+ * <b>map</b>, not on the position or presence of <b>key</b> within <b>map</b>.
+ */
+void *
+dimap_search(const di_digest256_map_t *map, const uint8_t *key,
+             void *dflt_val)
+{
+  uintptr_t result = (uintptr_t)dflt_val;
+
+  while (map) {
+    uintptr_t r = (uintptr_t) tor_memeq(map->key, key, 32);
+    r -= 1; /* Now r is (uintptr_t)-1 if memeq returned false, and
+             * 0 if memeq returned true. */
+
+    result &= r;
+    result |= ((uintptr_t)(map->val)) & ~r;
+
+    map = map->next;
+  }
+
+  return (void *)result;
 }
 
