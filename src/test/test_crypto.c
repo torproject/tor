@@ -5,9 +5,13 @@
 
 #include "orconfig.h"
 #define CRYPTO_PRIVATE
+#define CRYPTO_CURVE25519_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "aes.h"
+#ifdef CURVE25519_ENABLED
+#include "crypto_curve25519.h"
+#endif
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
@@ -929,6 +933,80 @@ test_crypto_hkdf_sha256(void *arg)
 #undef EXPAND
 }
 
+#ifdef CURVE25519_ENABLED
+static void
+test_crypto_curve25519_impl(void *arg)
+{
+  /* adapted from curve25519_donna, which adapted it from test-curve25519
+     version 20050915, by D. J. Bernstein, Public domain. */
+
+  unsigned char e1k[32];
+  unsigned char e2k[32];
+  unsigned char e1e2k[32];
+  unsigned char e2e1k[32];
+  unsigned char e1[32] = {3};
+  unsigned char e2[32] = {5};
+  unsigned char k[32] = {9};
+  int loop, i;
+  const int loop_max=10000;
+  char *mem_op_hex_tmp = NULL;
+
+  (void)arg;
+
+  for (loop = 0; loop < loop_max; ++loop) {
+    curve25519_impl(e1k,e1,k);
+    curve25519_impl(e2e1k,e2,e1k);
+    curve25519_impl(e2k,e2,k);
+    curve25519_impl(e1e2k,e1,e2k);
+    test_memeq(e1e2k, e2e1k, 32);
+    if (loop == loop_max-1) {
+      break;
+    }
+    for (i = 0;i < 32;++i) e1[i] ^= e2k[i];
+    for (i = 0;i < 32;++i) e2[i] ^= e1k[i];
+    for (i = 0;i < 32;++i) k[i] ^= e1e2k[i];
+  }
+
+  test_memeq_hex(e1,
+                 "4faf81190869fd742a33691b0e0824d5"
+                 "7e0329f4dd2819f5f32d130f1296b500");
+  test_memeq_hex(e2k,
+                 "05aec13f92286f3a781ccae98995a3b9"
+                 "e0544770bc7de853b38f9100489e3e79");
+  test_memeq_hex(e1e2k,
+                 "cd6e8269104eb5aaee886bd2071fba88"
+                 "bd13861475516bc2cd2b6e005e805064");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_crypto_curve25519_wrappers(void *arg)
+{
+  curve25519_public_key_t pubkey1, pubkey2;
+  curve25519_secret_key_t seckey1, seckey2;
+
+  uint8_t output1[CURVE25519_OUTPUT_LEN];
+  uint8_t output2[CURVE25519_OUTPUT_LEN];
+  (void)arg;
+
+  /* Test a simple handshake, serializing and deserializing some stuff. */
+  curve25519_secret_key_generate(&seckey1, 0);
+  curve25519_secret_key_generate(&seckey2, 0);
+  curve25519_public_key_generate(&pubkey1, &seckey1);
+  curve25519_public_key_generate(&pubkey2, &seckey2);
+  test_assert(curve25519_public_key_is_ok(&pubkey1));
+  test_assert(curve25519_public_key_is_ok(&pubkey2));
+  curve25519_handshake(output1, &seckey1, &pubkey2);
+  curve25519_handshake(output2, &seckey2, &pubkey1);
+  test_memeq(output1, output2, sizeof(output1));
+
+ done:
+  ;
+}
+#endif
+
 static void *
 pass_data_setup_fn(const struct testcase_t *testcase)
 {
@@ -962,6 +1040,10 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
+#ifdef CURVE25519_ENABLED
+  { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
+  { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
+#endif
   END_OF_TESTCASES
 };
 
