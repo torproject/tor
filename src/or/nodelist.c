@@ -624,7 +624,7 @@ node_is_dir(const node_t *node)
 }
 
 /** Return true iff <b>node</b> has either kind of usable descriptor -- that
- * is, a routerdecriptor or a microdescriptor. */
+ * is, a routerdescriptor or a microdescriptor. */
 int
 node_has_descriptor(const node_t *node)
 {
@@ -1139,7 +1139,7 @@ node_is_unreliable(const node_t *node, int need_uptime,
 }
 
 /** Return 1 if all running sufficiently-stable routers we can use will reject
- * addr:port, return 0 if any might accept it. */
+ * addr:port. Return 0 if any might accept it. */
 int
 router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                     int need_uptime)

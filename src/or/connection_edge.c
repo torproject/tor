@@ -790,7 +790,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
 /** The AP connection <b>conn</b> has just failed while attaching or
  * sending a BEGIN or resolving on <b>circ</b>, but another circuit
  * might work. Detach the circuit, and either reattach it, launch a
- * new circuit, tell the controller, or give up as a appropriate.
+ * new circuit, tell the controller, or give up as appropriate.
  *
  * Returns -1 on err, 1 on success, 0 on not-yet-sure.
  */

@@ -75,7 +75,7 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
   size_t written;
-  /* XXXX drops unkown annotations. */
+  /* XXXX drops unknown annotations. */
   if (md->last_listed) {
     char buf[ISO_TIME_LEN+1];
     char annotation[ISO_TIME_LEN+32];
@@ -132,7 +132,7 @@ get_microdesc_cache(void)
 */
 
 /** Decode the microdescriptors from the string starting at <b>s</b> and
- * ending at <b>eos</b>, and store them in <b>cache</b>.  If <b>no-save</b>,
+ * ending at <b>eos</b>, and store them in <b>cache</b>.  If <b>no_save</b>,
  * mark them as non-writable to disk.  If <b>where</b> is SAVED_IN_CACHE,
  * leave their bodies as pointers to the mmap'd cache.  If where is
  * <b>SAVED_NOWHERE</b>, do not allow annotations.  If listed_at is positive,
@@ -160,7 +160,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
                       md->last_listed = listed_at);
   }
   if (requested_digests256) {
-    digestmap_t *requested; /* XXXX actuqlly we should just use a
+    digestmap_t *requested; /* XXXX actually we should just use a
                                digest256map */
     requested = digestmap_new();
     SMARTLIST_FOREACH(requested_digests256, const char *, cp,
@@ -169,7 +169,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
       if (digestmap_get(requested, md->digest)) {
         digestmap_set(requested, md->digest, (void*)2);
       } else {
-        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Received non-requested microcdesc");
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Received non-requested microdesc");
         microdesc_free(md);
         SMARTLIST_DEL_CURRENT(descriptors, md);
       }
@@ -188,7 +188,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
   return added;
 }
 
-/** As microdescs_add_to_cache, but takes a list of micrdescriptors instead of
+/** As microdescs_add_to_cache, but takes a list of microdescriptors instead of
  * a string to decode.  Frees any members of <b>descriptors</b> that it does
  * not add. */
 smartlist_t *
@@ -232,7 +232,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
       size_t annotation_len;
       size = dump_microdescriptor(f, md, &annotation_len);
       if (size < 0) {
-        /* we already warned in dump_microdescriptor; */
+        /* we already warned in dump_microdescriptor */
         abort_writing_to_file(open_file);
         smartlist_clear(added);
         return added;

@@ -1616,7 +1616,7 @@ short_policy_is_reject_star(const short_policy_t *policy)
           policy->entries[0].max_port == 65535);
 }
 
-/** Decides whether addr:port is probably or definitely accepted or rejected by
+/** Decide whether addr:port is probably or definitely accepted or rejected by
  * <b>node</b>.  See compare_tor_addr_to_addr_policy for details on addr/port
  * interpretation. */
 addr_policy_result_t
