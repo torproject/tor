@@ -401,6 +401,8 @@ crecip(felem out, const felem z) {
   /* 2^255 - 21 */ fmul(out, t0, a);
 }
 
+int curve25519_donna(u8 *, const u8 *, const u8 *);
+
 int
 curve25519_donna(u8 *mypublic, const u8 *secret, const u8 *basepoint) {
   limb bp[5], x[5], z[5], zmone[5];

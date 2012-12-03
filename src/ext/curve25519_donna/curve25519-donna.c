@@ -238,7 +238,7 @@ static inline limb
 div_by_2_26(const limb v)
 {
   /* High word of v; no shift needed*/
-  const uint32_t highword = ((uint64_t) v) >> 32;
+  const uint32_t highword = (uint32_t) (((uint64_t) v) >> 32);
   /* Set to all 1s if v was negative; else set to 0s. */
   const int32_t sign = ((int32_t) highword) >> 31;
   /* Set to 0x3ffffff if v was negative; else set to 0. */
@@ -252,7 +252,7 @@ static inline limb
 div_by_2_25(const limb v)
 {
   /* High word of v; no shift needed*/
-  const uint32_t highword = ((uint64_t) v) >> 32;
+  const uint32_t highword = (uint32_t) (((uint64_t) v) >> 32);
   /* Set to all 1s if v was negative; else set to 0s. */
   const int32_t sign = ((int32_t) highword) >> 31;
   /* Set to 0x1ffffff if v was negative; else set to 0. */
@@ -305,7 +305,7 @@ static void freduce_coefficients(limb *output) {
    * So |over| will be no more than 1. */
   {
     /* output[1] fits in 32 bits, so we can use div_s32_by_2_25 here. */
-    s32 over32 = div_s32_by_2_25(output[1]);
+    s32 over32 = div_s32_by_2_25((s32) output[1]);
     output[1] -= over32 << 25;
     output[2] += over32;
   }
@@ -446,10 +446,12 @@ fcontract(u8 *output, limb *input) {
         input[i+1] = (s32)(input[i+1]) - carry;
       }
     }
-    const s32 mask = (s32)(input[9]) >> 31;
-    const s32 carry = -(((s32)(input[9]) & mask) >> 25);
-    input[9] = (s32)(input[9]) + (carry << 25);
-    input[0] = (s32)(input[0]) - (carry * 19);
+    {
+      const s32 mask = (s32)(input[9]) >> 31;
+      const s32 carry = -(((s32)(input[9]) & mask) >> 25);
+      input[9] = (s32)(input[9]) + (carry << 25);
+      input[0] = (s32)(input[0]) - (carry * 19);
+    }
   }
 
   /* The first borrow-propagation pass above ended with every limb
@@ -462,10 +464,12 @@ fcontract(u8 *output, limb *input) {
      were all zero.  In that case, input[1] is now 2^25 - 1, and this
      last borrow-propagation step will leave input[1] non-negative.
   */
-  const s32 mask = (s32)(input[0]) >> 31;
-  const s32 carry = -(((s32)(input[0]) & mask) >> 26);
-  input[0] = (s32)(input[0]) + (carry << 26);
-  input[1] = (s32)(input[1]) - carry;
+  {
+    const s32 mask = (s32)(input[0]) >> 31;
+    const s32 carry = -(((s32)(input[0]) & mask) >> 26);
+    input[0] = (s32)(input[0]) + (carry << 26);
+    input[1] = (s32)(input[1]) - carry;
+  }
 
   /* Both passes through the above loop, plus the last 0-to-1 step, are
      necessary: if input[9] is -1 and input[0] through input[8] are 0,
@@ -571,7 +575,7 @@ static void fmonty(limb *x2, limb *z2,  /* output 2Q */
 static void
 swap_conditional(limb a[19], limb b[19], limb iswap) {
   unsigned i;
-  const s32 swap = -iswap;
+  const s32 swap = (s32) -iswap;
 
   for (i = 0; i < 10; ++i) {
     const s32 x = swap & ( ((s32)a[i]) ^ ((s32)b[i]) );
@@ -702,6 +706,8 @@ crecip(limb *out, const limb *z) {
   /* 2^255 - 2^5 */ fsquare(t1,t0);
   /* 2^255 - 21 */ fmul(out,t1,z11);
 }
+
+int curve25519_donna(u8 *, const u8 *, const u8 *);
 
 int
 curve25519_donna(u8 *mypublic, const u8 *secret, const u8 *basepoint) {
