@@ -833,6 +833,52 @@ test_crypto_base32_decode(void)
 }
 
 static void
+test_crypto_kdf_TAP(void *arg)
+{
+  uint8_t key_material[100];
+  int r;
+  char *mem_op_hex_tmp = NULL;
+
+  (void)arg;
+#define EXPAND(s)                                \
+  r = crypto_expand_key_material_TAP(            \
+    (const uint8_t*)(s), strlen(s),              \
+    key_material, 100)
+
+  /* Test vectors generated with a little python script; feel free to write
+   * your own. */
+  memset(key_material, 0, sizeof(key_material));
+  EXPAND("");
+  tt_int_op(r, ==, 0);
+  test_memeq_hex(key_material,
+                 "5ba93c9db0cff93f52b521d7420e43f6eda2784fbf8b4530d8"
+                 "d246dd74ac53a13471bba17941dff7c4ea21bb365bbeeaf5f2"
+                 "c654883e56d11e43c44e9842926af7ca0a8cca12604f945414"
+                 "f07b01e13da42c6cf1de3abfdea9b95f34687cbbe92b9a7383");
+
+  EXPAND("Tor");
+  tt_int_op(r, ==, 0);
+  test_memeq_hex(key_material,
+                 "776c6214fc647aaa5f683c737ee66ec44f03d0372e1cce6922"
+                 "7950f236ddf1e329a7ce7c227903303f525a8c6662426e8034"
+                 "870642a6dabbd41b5d97ec9bf2312ea729992f48f8ea2d0ba8"
+                 "3f45dfda1a80bdc8b80de01b23e3e0ffae099b3e4ccf28dc28");
+
+  EXPAND("AN ALARMING ITEM TO FIND ON A MONTHLY AUTO-DEBIT NOTICE");
+  tt_int_op(r, ==, 0);
+  test_memeq_hex(key_material,
+                 "a340b5d126086c3ab29c2af4179196dbf95e1c72431419d331"
+                 "4844bf8f6afb6098db952b95581fb6c33625709d6f4400b8e7"
+                 "ace18a70579fad83c0982ef73f89395bcc39493ad53a685854"
+                 "daf2ba9b78733b805d9a6824c907ee1dba5ac27a1e466d4d10");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+
+#undef EXPAND
+}
+
+static void
 test_crypto_hkdf_sha256(void *arg)
 {
   uint8_t key_material[100];
@@ -880,6 +926,7 @@ test_crypto_hkdf_sha256(void *arg)
 
  done:
   tor_free(mem_op_hex_tmp);
+#undef EXPAND
 }
 
 static void *
@@ -913,6 +960,7 @@ struct testcase_t crypto_tests[] = {
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
   { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(base32_decode),
+  { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
   END_OF_TESTCASES
 };
