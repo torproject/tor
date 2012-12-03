@@ -36,4 +36,7 @@ tor_queue.h
     sys/queue.h, and the ones that do have diverged in incompatible
     ways.  (CIRCLEQ or no CIRCLEQ? SIMPLQ or STAILQ?)
 
-    
+curve25519_donna/*.c
+
+    A copy of Adam Langley's curve25519-donna mostly-portable
+    implementations of curve25519.

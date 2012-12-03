@@ -1,0 +1,44 @@
+See http://code.google.com/p/curve25519-donna/ for details.
+
+BUILDING:
+
+If you run `make`, two .a archives will be built, similar to djb's curve25519
+code. Alternatively, read on:
+
+The C implementation is contained within curve25519-donna.c. It has no external
+dependancies and is BSD licenced. You can copy/include/link it directly in with
+your program. Recommended C flags: -O2
+
+The x86-64 bit implementation is contained within curve25519-donna-x86-64.c and
+curve25519-donna-x86-64.s. Build like this:
+
+% cpp curve25519-donna-x86-64.s > curve25519-donna-x86-64.s.pp
+% as -o curve25519-donna-x86-64.s.o curve25519-donna-x86-64.s.pp
+% gcc -O2 -c curve25519-donna-x86-64.c
+
+Then the two .o files can be linked in
+
+USAGE:
+
+The usage is exactly the same as djb's code (as described at
+http://cr.yp.to/ecdh.html) expect that the function is called curve25519_donna.
+
+In short,
+
+To generate a private key, generate 32 random bytes and:
+
+  mysecret[0] &= 248;
+  mysecret[31] &= 127;
+  mysecret[31] |= 64;
+
+To generate the public key, just do
+
+  static const uint8_t basepoint[32] = {9};
+  curve25519_donna(mypublic, mysecret, basepoint);
+
+To generate an agreed key do:
+  uint8_t shared_key[32];
+  curve25519_donna(shared_key, mysecret, theirpublic);
+
+And hash the shared_key with a cryptographic hash function before using.
+
