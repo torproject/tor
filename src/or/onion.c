@@ -362,8 +362,8 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
                       uint8_t *key_out,
                       size_t key_out_len)
 {
-  char tmp[DIGEST_LEN+DIGEST_LEN];
-  char *out = NULL;
+  uint8_t tmp[DIGEST_LEN+DIGEST_LEN];
+  uint8_t *out = NULL;
   size_t out_len;
   int r = -1;
 
@@ -374,7 +374,7 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
-  if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
+  if (crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len)) {
     goto done;
   }
   memcpy(handshake_reply_out+DIGEST_LEN, out, DIGEST_LEN);
@@ -405,8 +405,8 @@ fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
                       uint8_t *key_out,
                       size_t key_out_len)
 {
-  char tmp[DIGEST_LEN+DIGEST_LEN];
-  char *out;
+  uint8_t tmp[DIGEST_LEN+DIGEST_LEN];
+  uint8_t *out;
   size_t out_len;
   int r = -1;
 
@@ -414,7 +414,7 @@ fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
-  if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
+  if (crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len)) {
     goto done;
   }
   if (tor_memneq(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
