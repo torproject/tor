@@ -993,7 +993,7 @@ test_crypto_curve25519_wrappers(void *arg)
 
   /* Test a simple handshake, serializing and deserializing some stuff. */
   curve25519_secret_key_generate(&seckey1, 0);
-  curve25519_secret_key_generate(&seckey2, 0);
+  curve25519_secret_key_generate(&seckey2, 1);
   curve25519_public_key_generate(&pubkey1, &seckey1);
   curve25519_public_key_generate(&pubkey2, &seckey2);
   test_assert(curve25519_public_key_is_ok(&pubkey1));

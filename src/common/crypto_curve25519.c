@@ -59,9 +59,18 @@ void
 curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
                                int extra_strong)
 {
-  (void)extra_strong;
+  uint8_t k_tmp[CURVE25519_SECKEY_LEN];
 
-  crypto_rand((char*)key_out->secret_key, 32);
+  crypto_rand((char*)key_out->secret_key, CURVE25519_SECKEY_LEN);
+  if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
+    /* If they asked for extra-strong entropy and we have some, use it as an
+     * HMAC key to improve not-so-good entopy rather than using it directly,
+     * just in case the extra-strong entropy is less amazing than we hoped. */
+    crypto_hmac_sha256((char *)key_out->secret_key,
+                    (const char *)k_tmp, sizeof(k_tmp),
+                    (const char *)key_out->secret_key, CURVE25519_SECKEY_LEN);
+  }
+  memwipe(k_tmp, 0, sizeof(k_tmp));
   key_out->secret_key[0] &= 248;
   key_out->secret_key[31] &= 127;
   key_out->secret_key[31] |= 64;

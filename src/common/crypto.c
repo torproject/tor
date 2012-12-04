@@ -2344,22 +2344,16 @@ seed_weak_rng(void)
   tor_init_weak_random(seed);
 }
 
-/** Seed OpenSSL's random number generator with bytes from the operating
- * system.  <b>startup</b> should be true iff we have just started Tor and
- * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>.
  */
 int
-crypto_seed_rng(int startup)
+crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
-  int rand_poll_status = 0;
-
-  /* local variables */
 #ifdef _WIN32
-  unsigned char buf[ADD_ENTROPY];
   static int provider_set = 0;
   static HCRYPTPROV provider;
 #else
-  char buf[ADD_ENTROPY];
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
@@ -2367,56 +2361,75 @@ crypto_seed_rng(int startup)
   size_t n;
 #endif
 
-  /* OpenSSL has a RAND_poll function that knows about more kinds of
-   * entropy than we do.  We'll try calling that, *and* calling our own entropy
-   * functions.  If one succeeds, we'll accept the RNG as seeded. */
-  if (startup || RAND_POLL_IS_SAFE) {
-    rand_poll_status = RAND_poll();
-    if (rand_poll_status == 0)
-      log_warn(LD_CRYPTO, "RAND_poll() failed.");
-  }
-
 #ifdef _WIN32
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
       if ((unsigned long)GetLastError() != (unsigned long)NTE_BAD_KEYSET) {
         log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
-        return rand_poll_status ? 0 : -1;
+        return -1;
       }
     }
     provider_set = 1;
   }
-  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
+  if (!CryptGenRandom(provider, out_len, out)) {
     log_warn(LD_CRYPTO, "Can't get entropy from CryptoAPI.");
-    return rand_poll_status ? 0 : -1;
+    return -1;
   }
-  RAND_seed(buf, sizeof(buf));
-  memwipe(buf, 0, sizeof(buf));
-  seed_weak_rng();
+
   return 0;
 #else
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
-    log_info(LD_CRYPTO, "Seeding RNG from \"%s\"", filenames[i]);
-    n = read_all(fd, buf, sizeof(buf), 0);
+    log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
+    n = read_all(fd, (char*)out, out_len, 0);
     close(fd);
-    if (n != sizeof(buf)) {
+    if (n != out_len) {
       log_warn(LD_CRYPTO,
                "Error reading from entropy source (read only %lu bytes).",
                (unsigned long)n);
       return -1;
     }
-    RAND_seed(buf, (int)sizeof(buf));
-    memwipe(buf, 0, sizeof(buf));
-    seed_weak_rng();
+
     return 0;
   }
 
-  log_warn(LD_CRYPTO, "Cannot seed RNG -- no entropy source found.");
-  return rand_poll_status ? 0 : -1;
+  log_warn(LD_CRYPTO, "Cannot get strong entropy: no entropy source found.");
+  return -1;
 #endif
+}
+
+/** Seed OpenSSL's random number generator with bytes from the operating
+ * system.  <b>startup</b> should be true iff we have just started Tor and
+ * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_seed_rng(int startup)
+{
+  int rand_poll_ok = 0, load_entropy_ok = 0;
+  uint8_t buf[ADD_ENTROPY];
+
+  /* OpenSSL has a RAND_poll function that knows about more kinds of
+   * entropy than we do.  We'll try calling that, *and* calling our own entropy
+   * functions.  If one succeeds, we'll accept the RNG as seeded. */
+  if (startup || RAND_POLL_IS_SAFE) {
+    rand_poll_ok = RAND_poll();
+    if (rand_poll_ok == 0)
+      log_warn(LD_CRYPTO, "RAND_poll() failed.");
+  }
+
+  load_entropy_ok = !crypto_strongest_rand(buf, sizeof(buf));
+  if (load_entropy_ok) {
+    RAND_seed(buf, sizeof(buf));
+  }
+
+  memwipe(buf, 0, sizeof(buf));
+  seed_weak_rng();
+  if (rand_poll_ok || load_entropy_ok)
+    return 0;
+  else
+    return -1;
 }
 
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
