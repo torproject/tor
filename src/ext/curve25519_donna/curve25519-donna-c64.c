@@ -187,7 +187,7 @@ fsquare_times(felem output, const felem in, limb count) {
 }
 
 /* Load a little-endian 64-bit number  */
-limb
+static limb
 load_limb(const u8 *in)
 {
   return
@@ -201,7 +201,7 @@ load_limb(const u8 *in)
     (((limb)in[7]) << 56);
 }
 
-void
+static void
 store_limb(u8 *out, limb in)
 {
   out[0] = in & 0xff;
