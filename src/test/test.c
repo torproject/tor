@@ -53,7 +53,7 @@ double fabs(double x);
 #include "torgzip.h"
 #include "mempool.h"
 #include "memarea.h"
-#include "onion.h"
+#include "onion_tap.h"
 #include "policies.h"
 #include "rephist.h"
 #include "routerparse.h"

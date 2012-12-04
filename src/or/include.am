@@ -53,6 +53,8 @@ src_or_libtor_a_SOURCES = \
 	src/or/networkstatus.c				\
 	src/or/nodelist.c				\
 	src/or/onion.c					\
+	src/or/onion_fast.c				\
+	src/or/onion_tap.c				\
 	src/or/transports.c				\
 	src/or/policies.c				\
 	src/or/reasons.c				\
@@ -132,7 +134,9 @@ ORHEADERS = \
 	src/or/nodelist.h				\
 	src/or/ntmain.h					\
 	src/or/onion.h					\
+	src/or/onion_fast.h				\
 	src/or/onion_ntor.h				\
+	src/or/onion_tap.h				\
 	src/or/or.h					\
 	src/or/transports.h				\
 	src/or/policies.h				\

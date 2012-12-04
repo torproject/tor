@@ -23,6 +23,7 @@
 #include "cpuworker.h"
 #include "main.h"
 #include "onion.h"
+#include "onion_tap.h"
 #include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */

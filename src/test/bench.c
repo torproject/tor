@@ -18,7 +18,7 @@ const char tor_git_revision[] = "";
 #define CONFIG_PRIVATE
 
 #include "or.h"
-#include "onion.h"
+#include "onion_tap.h"
 #include "relay.h"
 #include "config.h"
 #ifdef CURVE25519_ENABLED
