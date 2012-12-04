@@ -5,9 +5,13 @@
 
 #define CRYPTO_CURVE25519_PRIVATE
 #include "orconfig.h"
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #include "crypto.h"
 #include "crypto_curve25519.h"
 #include "util.h"
+#include "torlog.h"
 
 /* ==============================
    Part 1: wrap a suitable curve25519 implementation as curve25519_impl
@@ -83,6 +87,84 @@ curve25519_public_key_generate(curve25519_public_key_t *key_out,
   static const uint8_t basepoint[32] = {9};
 
   curve25519_impl(key_out->public_key, seckey->secret_key, basepoint);
+}
+
+void
+curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
+                            int extra_strong)
+{
+  curve25519_secret_key_generate(&keypair_out->seckey, extra_strong);
+  curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
+}
+
+int
+curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
+                                 const char *fname,
+                                 const char *tag)
+{
+  char contents[32 + CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
+  int r;
+
+  memset(contents, 0, sizeof(contents));
+  tor_snprintf(contents, sizeof(contents), "== c25519v1: %s ==", tag);
+  tor_assert(strlen(contents) <= 32);
+  memcpy(contents+32, keypair->seckey.secret_key, CURVE25519_SECKEY_LEN);
+  memcpy(contents+32+CURVE25519_SECKEY_LEN,
+         keypair->pubkey.public_key, CURVE25519_PUBKEY_LEN);
+
+  r = write_bytes_to_file(fname, contents, sizeof(contents), 1);
+
+  memwipe(contents, 0, sizeof(contents));
+  return r;
+}
+
+int
+curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
+                                  char **tag_out,
+                                  const char *fname)
+{
+  char prefix[33];
+  char *content;
+  struct stat st;
+  int r = -1;
+
+  *tag_out = NULL;
+
+  st.st_size = 0;
+  content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+  if (! content)
+    goto end;
+  if (st.st_size != 32 + CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN)
+    goto end;
+
+  memcpy(prefix, content, 32);
+  prefix[32] = '\0';
+  if (strcmpstart(prefix, "== c25519v1: ") ||
+      strcmpend(prefix, " =="))
+    goto end;
+
+  *tag_out = tor_strndup(prefix+strlen("== c25519v1: "),
+                         strlen(prefix) - strlen("== c25519v1:  =="));
+
+  memcpy(keypair_out->seckey.secret_key, content+32, CURVE25519_SECKEY_LEN);
+  curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
+  if (tor_memneq(keypair_out->pubkey.public_key,
+                 content + 32 + CURVE25519_SECKEY_LEN,
+                 CURVE25519_PUBKEY_LEN))
+    goto end;
+
+  r = 0;
+
+ end:
+  if (content) {
+    memwipe(content, 0, st.st_size);
+    tor_free(content);
+  }
+  if (r != 0) {
+    memset(keypair_out, 0, sizeof(*keypair_out));
+    tor_free(*tag_out);
+  }
+  return r;
 }
 
 /** Perform the curve25519 ECDH handshake with <b>skey</b> and <b>pkey</b>,
