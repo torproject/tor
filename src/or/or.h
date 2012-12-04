@@ -2524,6 +2524,7 @@ typedef enum {
 
 #define CRYPT_PATH_MAGIC 0x70127012u
 
+struct fast_handshake_state_t;
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 typedef struct crypt_path_t {
@@ -2550,7 +2551,7 @@ typedef struct crypt_path_t {
    * authentication, secrecy, and integrity we need, and we're already
    * distinguishable from an OR.
    */
-  uint8_t fast_handshake_state[DIGEST_LEN];
+  struct fast_handshake_state_t *fast_handshake_state;
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 

@@ -12,6 +12,28 @@
 #include "or.h"
 #include "onion_fast.h"
 
+/**DOCDOC*/
+void
+fast_handshake_state_free(fast_handshake_state_t *victim)
+{
+  if (! victim)
+    return;
+  memwipe(victim, 0, sizeof(fast_handshake_state_t));
+  tor_free(victim);
+}
+
+/** DOCDOC */
+int
+fast_onionskin_create(fast_handshake_state_t **handshake_state_out,
+                      uint8_t *handshake_out)
+{
+  fast_handshake_state_t *s;
+  *handshake_state_out = s =tor_malloc(sizeof(fast_handshake_state_t));
+  crypto_rand((char*)s->state, sizeof(s->state));
+  memcpy(handshake_out, s->state, DIGEST_LEN);
+  return 0;
+}
+
 /** Implement the server side of the CREATE_FAST abbreviated handshake.  The
  * client has provided DIGEST_LEN key bytes in <b>key_in</b> ("x").  We
  * generate a reply of DIGEST_LEN*2 bytes in <b>key_out</b>, consisting of a
@@ -63,7 +85,7 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
  * and protected by TLS).
  */
 int
-fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
+fast_client_handshake(const fast_handshake_state_t *handshake_state,
                       const uint8_t *handshake_reply_out,/*DIGEST_LEN*2 bytes*/
                       uint8_t *key_out,
                       size_t key_out_len)
@@ -73,7 +95,7 @@ fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
   size_t out_len;
   int r = -1;
 
-  memcpy(tmp, handshake_state, DIGEST_LEN);
+  memcpy(tmp, handshake_state->state, DIGEST_LEN);
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);

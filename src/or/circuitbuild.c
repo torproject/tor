@@ -645,11 +645,14 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
        * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
        * and a DH operation. */
       cell_type = CELL_CREATE_FAST;
+
       memset(payload, 0, sizeof(payload));
-      crypto_rand((char*) circ->cpath->fast_handshake_state,
-                  sizeof(circ->cpath->fast_handshake_state));
-      memcpy(payload, circ->cpath->fast_handshake_state,
-             sizeof(circ->cpath->fast_handshake_state));
+      if (fast_onionskin_create(&circ->cpath->fast_handshake_state,
+                                (uint8_t *)payload) < 0) {
+        log_warn(LD_CIRC,"onion_skin_create FAST (first hop) failed.");
+        return - END_CIRC_REASON_INTERNAL;
+      }
+
       note_request("cell: create fast", 1);
     }
 

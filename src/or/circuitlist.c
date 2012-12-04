@@ -23,6 +23,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"
+#include "onion_fast.h"
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -744,6 +745,7 @@ circuit_free_cpath_node(crypt_path_t *victim)
   crypto_digest_free(victim->f_digest);
   crypto_digest_free(victim->b_digest);
   crypto_dh_free(victim->dh_handshake_state);
+  fast_handshake_state_free(victim->fast_handshake_state);
   extend_info_free(victim->extend_info);
 
   memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
