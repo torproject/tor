@@ -57,6 +57,10 @@ double fabs(double x);
 #include "policies.h"
 #include "rephist.h"
 #include "routerparse.h"
+#ifdef CURVE25519_ENABLED
+#include "crypto_curve25519.h"
+#include "onion_ntor.h"
+#endif
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
@@ -855,6 +859,59 @@ test_onion_handshake(void)
   if (pk)
     crypto_pk_free(pk);
 }
+
+#ifdef CURVE25519_ENABLED
+static void
+test_ntor_handshake(void *arg)
+{
+  /* client-side */
+  ntor_handshake_state_t *c_state = NULL;
+  uint8_t c_buf[NTOR_ONIONSKIN_LEN];
+  uint8_t c_keys[400];
+
+  /* server-side */
+  di_digest256_map_t *s_keymap=NULL;
+  curve25519_keypair_t s_keypair;
+  uint8_t s_buf[NTOR_REPLY_LEN];
+  uint8_t s_keys[400];
+
+  /* shared */
+  const curve25519_public_key_t *server_pubkey;
+  uint8_t node_id[20] = "abcdefghijklmnopqrst";
+
+  (void) arg;
+
+  /* Make the server some keys */
+  curve25519_secret_key_generate(&s_keypair.seckey, 0);
+  curve25519_public_key_generate(&s_keypair.pubkey, &s_keypair.seckey);
+  dimap_add_entry(&s_keymap, s_keypair.pubkey.public_key, &s_keypair);
+  server_pubkey = &s_keypair.pubkey;
+
+  /* client handshake 1. */
+  memset(c_buf, 0, NTOR_ONIONSKIN_LEN);
+  tt_int_op(0, ==, onion_skin_ntor_create(node_id, server_pubkey,
+                                          &c_state, c_buf));
+
+  /* server handshake */
+  memset(s_buf, 0, NTOR_REPLY_LEN);
+  memset(s_keys, 0, 40);
+  tt_int_op(0, ==, onion_skin_ntor_server_handshake(c_buf, s_keymap, node_id,
+                                                    s_buf, s_keys, 400));
+
+  /* client handshake 2 */
+  memset(c_keys, 0, 40);
+  tt_int_op(0, ==, onion_skin_ntor_client_handshake(c_state, s_buf,
+                                                    c_keys, 400));
+
+  test_memeq(c_keys, s_keys, 400);
+  memset(s_buf, 0, 40);
+  test_memneq(c_keys, s_buf, 40);
+
+ done:
+  ntor_handshake_state_free(c_state);
+  dimap_free(s_keymap, NULL);
+}
+#endif
 
 static void
 test_circuit_timeout(void)
@@ -1947,6 +2004,9 @@ static struct testcase_t test_array[] = {
   ENT(buffers),
   { "buffer_copy", test_buffer_copy, 0, NULL, NULL },
   ENT(onion_handshake),
+#ifdef CURVE25519_ENABLED
+  { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
+#endif
   ENT(circuit_timeout),
   ENT(policies),
   ENT(rend_fns),

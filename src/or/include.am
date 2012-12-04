@@ -15,6 +15,12 @@ else
 evdns_source=src/ext/eventdns.c
 endif
 
+if CURVE25519_ENABLED
+onion_ntor_source=src/or/onion_ntor.c
+else
+onion_ntor_source=
+endif
+
 src_or_libtor_a_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/buffers.c				\
@@ -65,6 +71,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/status.c					\
 	$(evdns_source)					\
 	$(tor_platform_source)				\
+	$(onion_ntor_source)				\
 	src/or/config_codedigest.c
 
 #libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
@@ -125,6 +132,7 @@ ORHEADERS = \
 	src/or/nodelist.h				\
 	src/or/ntmain.h					\
 	src/or/onion.h					\
+	src/or/onion_ntor.h				\
 	src/or/or.h					\
 	src/or/transports.h				\
 	src/or/policies.h				\
