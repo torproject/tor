@@ -43,6 +43,7 @@ typedef enum {
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
+  K_ONION_KEY_NTOR,
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
@@ -276,6 +277,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("ipv6-policy",         K_IPV6_POLICY,         CONCAT_ARGS, NO_OBJ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
+  T01("ntor-onion-key",      K_ONION_KEY_NTOR,      GE(1), NO_OBJ ),
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T01("uptime",              K_UPTIME,              GE(1),   NO_OBJ ),
@@ -527,6 +529,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
 /** List of tokens recognized in microdescriptors */
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
+  T01("ntor-onion-key",        K_ONION_KEY_NTOR,   GE(1),       NO_OBJ ),
   T0N("a",                     K_A,                GE(1),       NO_OBJ ),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
@@ -1515,6 +1518,21 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
+
+  if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
+    uint8_t k[CURVE25519_PUBKEY_LEN+32];
+    int r;
+    tor_assert(tok->n_args >= 1);
+    r = base64_decode((char*)k, sizeof(k), tok->args[0], strlen(tok->args[0]));
+    if (r != CURVE25519_PUBKEY_LEN) {
+      log_warn(LD_DIR, "Bogus onion-key-ntor in routerinfo");
+      goto err;
+    }
+    router->onion_curve25519_pkey =
+      tor_malloc(sizeof(curve25519_public_key_t));
+    memcpy(router->onion_curve25519_pkey->public_key,
+           k, CURVE25519_PUBKEY_LEN);
+  }
 
   tok = find_by_keyword(tokens, K_SIGNING_KEY);
   router->identity_pkey = tok->key;
@@ -4474,6 +4492,22 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
     md->onion_pkey = tok->key;
     tok->key = NULL;
+
+    if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
+      uint8_t k[CURVE25519_PUBKEY_LEN+32];
+      int r;
+      tor_assert(tok->n_args >= 1);
+      r = base64_decode((char*)k, sizeof(k),
+                        tok->args[0], strlen(tok->args[0]));
+      if (r != CURVE25519_PUBKEY_LEN) {
+        log_warn(LD_DIR, "Bogus onion-key-ntor in microdesc");
+        goto next;
+      }
+      md->onion_curve25519_pkey =
+        tor_malloc(sizeof(curve25519_public_key_t));
+      memcpy(md->onion_curve25519_pkey->public_key,
+             k, CURVE25519_PUBKEY_LEN);
+    }
 
     {
       smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);

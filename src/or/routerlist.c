@@ -2395,6 +2395,7 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router->contact_info);
   if (router->onion_pkey)
     crypto_pk_free(router->onion_pkey);
+  tor_free(router->onion_curve25519_pkey);
   if (router->identity_pkey)
     crypto_pk_free(router->identity_pkey);
   if (router->declared_family) {

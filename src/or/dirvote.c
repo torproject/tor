@@ -3554,6 +3554,15 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   smartlist_add_asprintf(chunks, "onion-key\n%s", key);
 
+  if (consensus_method >= MIN_METHOD_FOR_NTOR_KEY &&
+      ri->onion_curve25519_pkey) {
+    char kbuf[128];
+    base64_encode(kbuf, sizeof(kbuf),
+                  (const char*)ri->onion_curve25519_pkey->public_key,
+                  CURVE25519_PUBKEY_LEN);
+    smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
+  }
+
   if (consensus_method >= MIN_METHOD_FOR_A_LINES &&
       !tor_addr_is_null(&ri->ipv6_addr) && ri->ipv6_orport)
     smartlist_add_asprintf(chunks, "a %s\n",

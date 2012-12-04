@@ -99,6 +99,7 @@
 #include "compat_libevent.h"
 #include "ht.h"
 #include "replaycache.h"
+#include "crypto_curve25519.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -1893,6 +1894,8 @@ typedef struct {
 
   crypto_pk_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
+  /** Public curve25519 key for onions */
+  curve25519_public_key_t *onion_curve25519_pkey;
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -2106,6 +2109,8 @@ typedef struct microdesc_t {
 
   /** As routerinfo_t.onion_pkey */
   crypto_pk_t *onion_pkey;
+  /** As routerinfo_t.onion_curve25519_pkey */
+  curve25519_public_key_t *onion_curve25519_pkey;
   /** As routerinfo_t.ipv6_add */
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
