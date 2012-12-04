@@ -186,14 +186,43 @@ fsquare_times(felem output, const felem in, limb count) {
   output[4] = r4;
 }
 
+/* Load a little-endian 64-bit number  */
+limb
+load_limb(const u8 *in)
+{
+  return
+    ((limb)in[0]) |
+    (((limb)in[1]) << 8) |
+    (((limb)in[2]) << 16) |
+    (((limb)in[3]) << 24) |
+    (((limb)in[4]) << 32) |
+    (((limb)in[5]) << 40) |
+    (((limb)in[6]) << 48) |
+    (((limb)in[7]) << 56);
+}
+
+void
+store_limb(u8 *out, limb in)
+{
+  out[0] = in & 0xff;
+  out[1] = (in >> 8) & 0xff;
+  out[2] = (in >> 16) & 0xff;
+  out[3] = (in >> 24) & 0xff;
+  out[4] = (in >> 32) & 0xff;
+  out[5] = (in >> 40) & 0xff;
+  out[6] = (in >> 48) & 0xff;
+  out[7] = (in >> 56) & 0xff;
+}
+
 /* Take a little-endian, 32-byte number and expand it into polynomial form */
 static void
-fexpand(limb *output, const u8 *in) {
-  output[0] = *((const uint64_t *)(in)) & 0x7ffffffffffff;
-  output[1] = (*((const uint64_t *)(in+6)) >> 3) & 0x7ffffffffffff;
-  output[2] = (*((const uint64_t *)(in+12)) >> 6) & 0x7ffffffffffff;
-  output[3] = (*((const uint64_t *)(in+19)) >> 1) & 0x7ffffffffffff;
-  output[4] = (*((const uint64_t *)(in+24)) >> 12) & 0x7ffffffffffff;
+fexpand(limb *output, const u8 *in)
+{
+  output[0] = load_limb(in) & 0x7ffffffffffff;
+  output[1] = (load_limb(in+6) >> 3) & 0x7ffffffffffff;
+  output[2] = (load_limb(in+12) >> 6) & 0x7ffffffffffff;
+  output[3] = (load_limb(in+19) >> 1) & 0x7ffffffffffff;
+  output[4] = (load_limb(in+24) >> 12) & 0x7ffffffffffff;
 }
 
 /* Take a fully reduced polynomial form number and contract it into a
@@ -248,10 +277,10 @@ fcontract(u8 *output, const felem input) {
   t[4] += t[3] >> 51; t[3] &= 0x7ffffffffffff;
   t[4] &= 0x7ffffffffffff;
 
-  *((uint64_t *)(output)) = t[0] | (t[1] << 51);
-  *((uint64_t *)(output+8)) = (t[1] >> 13) | (t[2] << 38);
-  *((uint64_t *)(output+16)) = (t[2] >> 26) | (t[3] << 25);
-  *((uint64_t *)(output+24)) = (t[3] >> 39) | (t[4] << 12);
+  store_limb(output,    t[0] | (t[1] << 51));
+  store_limb(output+8,  (t[1] >> 13) | (t[2] << 38));
+  store_limb(output+16, (t[2] >> 26) | (t[3] << 25));
+  store_limb(output+24, (t[3] >> 39) | (t[4] << 12));
 }
 
 /* Input: Q, Q', Q-Q'

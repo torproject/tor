@@ -39,4 +39,5 @@ tor_queue.h
 curve25519_donna/*.c
 
     A copy of Adam Langley's curve25519-donna mostly-portable
-    implementations of curve25519.
+    implementations of curve25519, with a couple of portability
+    changes which Adam hasn't merged yet.
