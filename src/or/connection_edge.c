@@ -2614,6 +2614,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
       connection_edge_end(edge_conn, END_STREAM_REASON_INTERNAL);
       circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
       connection_free(conn);
+      return;
     }
 
     connection_edge_send_command(edge_conn,
