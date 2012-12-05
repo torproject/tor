@@ -2424,3 +2424,4 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
 
   return 0;
 }
+

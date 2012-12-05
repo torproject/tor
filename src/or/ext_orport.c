@@ -161,7 +161,7 @@ init_ext_or_cookie_authentication(int is_enabled)
     return -1;
   }
 
-  log_warn(LD_GENERAL, "Generated Extended ORPort cookie file in '%s'.",
+  log_info(LD_GENERAL, "Generated Extended ORPort cookie file in '%s'.",
            fname);
 
   tor_free(fname);
@@ -186,7 +186,7 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
   if (connection_fetch_from_buf(authtype, 1, conn) < 0)
     return -1;
 
-  log_warn(LD_GENERAL, "Client wants us to use %d auth type", authtype[0]);
+  log_debug(LD_GENERAL, "Client wants us to use %d auth type", authtype[0]);
   if (authtype[0] != 1) /* '1' is the only auth type supported atm */
     return -1;
 
@@ -219,7 +219,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     return 0;
 
   if (connection_fetch_from_buf(client_nonce,
-                                EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0) /* XXX check-spaces */
+                                EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
     return -1;
 
   /* Get our nonce */
@@ -286,9 +286,9 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     base16_encode(client_nonce_encoded, sizeof(client_nonce_encoded),
                   client_nonce, sizeof(client_nonce));
 
-    log_warn(LD_GENERAL,
-             "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
-             server_hash_encoded, server_nonce_encoded, client_nonce_encoded);
+    log_debug(LD_GENERAL,
+              "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
+              server_hash_encoded, server_nonce_encoded, client_nonce_encoded);
   }
 
   { /* write reply: (server_hash, server_nonce) */
@@ -298,7 +298,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     connection_write_to_buf(reply, sizeof(reply), conn);
   }
 
-  log_warn(LD_GENERAL, "Got client nonce, and sent our own nonce and hash.");
+  log_debug(LD_GENERAL, "Got client nonce, and sent our own nonce and hash.");
 
   conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH;
   return 1;
@@ -346,7 +346,7 @@ connection_ext_or_auth_handle_client_hash(connection_t *conn)
     return -1;
   }
 
-  log_warn(LD_GENERAL, "Got client's hash and it was legit.");
+  log_debug(LD_GENERAL, "Got client's hash and it was legit.");
 
   /* send positive auth result */
   connection_ext_or_auth_send_result_success(conn);
@@ -422,7 +422,7 @@ connection_ext_or_handle_useraddr(connection_t *conn,
     char *old_address = tor_dup_addr(&conn->addr);
     char *new_address = tor_dup_addr(&addr);
 
-    log_warn(LD_NET, "Received USERADDR." /* XXX Fix log severities/messages */
+    log_debug(LD_NET, "Received USERADDR."
              "We rewrite our address from '%s:%u' to '%s:%u'.",
              safe_str(old_address), conn->port, safe_str(new_address), port);
 
@@ -448,8 +448,8 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
   /* If we are still in the authentication stage, process traffic as
      authentication data: */
   while (conn->state <= EXT_OR_CONN_STATE_AUTH_MAX) {
-    log_warn(LD_GENERAL, "Got Extended ORPort authentication data (%u).",
-             (unsigned int) connection_get_inbuf_len(conn));
+    log_debug(LD_GENERAL, "Got Extended ORPort authentication data (%u).",
+              (unsigned int) connection_get_inbuf_len(conn));
     r = connection_ext_or_auth_process_inbuf(or_conn);
     if (r < 0) {
       connection_mark_for_close(conn);
@@ -461,7 +461,7 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
   }
 
   while (1) {
-    log_warn(LD_GENERAL, "Got Extended ORPort data.");
+    log_debug(LD_GENERAL, "Got Extended ORPort data.");
     command = NULL;
     r = connection_fetch_ext_or_cmd_from_buf(conn, &command);
     if (r < 0)
@@ -526,7 +526,7 @@ connection_ext_or_start_auth(or_connection_t *or_conn)
   connection_t *conn = TO_CONN(or_conn);
   char authtypes[2] = "\x01\x00"; /* We only support authtype '1' for now. */
 
-  log_warn(LD_GENERAL,
+  log_debug(LD_GENERAL,
            "ExtORPort authentication: Sending supported authentication types");
 
   connection_write_to_buf(authtypes, sizeof(authtypes), conn);
