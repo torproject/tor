@@ -27,6 +27,7 @@
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "onion.h"
 #include "onion_tap.h"
 #include "onion_fast.h"
 #include "policies.h"
@@ -54,7 +55,9 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
                                                const char *id_digest);
 static int circuit_deliver_create_cell(circuit_t *circ,
-                                       uint8_t cell_type, const char *payload);
+                                       uint8_t cell_type,
+                                       const uint8_t *payload,
+                                       size_t payload_len);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
@@ -474,7 +477,8 @@ circuit_n_chan_done(channel_t *chan, int status)
         /* pull the create cell out of circ->onionskin, and send it */
         tor_assert(circ->n_chan_onionskin);
         if (circuit_deliver_create_cell(circ,CELL_CREATE,
-                                        circ->n_chan_onionskin)<0) {
+                                        (const uint8_t*)circ->n_chan_onionskin,
+                                        circ->n_chan_onionskin_len)<0) {
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
@@ -491,12 +495,12 @@ circuit_n_chan_done(channel_t *chan, int status)
  * for the outgoing
  * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
  * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
- * to this circuit.
+ * to this circuit. DOCDOC payload_len
  * Return -1 if we failed to find a suitable circid, else return 0.
  */
 static int
 circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
-                            const char *payload)
+                            const uint8_t *payload, size_t payload_len)
 {
   cell_t cell;
   circid_t id;
@@ -518,7 +522,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   cell.command = cell_type;
   cell.circ_id = circ->n_circ_id;
 
-  memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
+  memcpy(cell.payload, payload, payload_len);
   append_cell_to_circuit_queue(circ, circ->n_chan, &cell,
                                CELL_DIRECTION_OUT, 0);
 
@@ -611,8 +615,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 {
   crypt_path_t *hop;
   const node_t *node;
-  char payload[2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN];
-  char *onionskin;
+  uint8_t payload[2+4+DIGEST_LEN+MAX_ONIONSKIN_CHALLENGE_LEN];
+  uint8_t *onionskin;
+  uint16_t handshake_type;
+  int onionskin_len;
   size_t payload_len;
 
   tor_assert(circ);
@@ -633,30 +639,29 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
        * send an old slow create cell.
        */
       cell_type = CELL_CREATE;
-      if (onion_skin_create(circ->cpath->extend_info->onion_key,
-                            &(circ->cpath->dh_handshake_state),
-                            payload) < 0) {
-        log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
-        return - END_CIRC_REASON_INTERNAL;
-      }
+      handshake_type = ONION_HANDSHAKE_TYPE_TAP;
       note_request("cell: create", 1);
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
        * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
        * and a DH operation. */
       cell_type = CELL_CREATE_FAST;
-
-      memset(payload, 0, sizeof(payload));
-      if (fast_onionskin_create(&circ->cpath->fast_handshake_state,
-                                (uint8_t *)payload) < 0) {
-        log_warn(LD_CIRC,"onion_skin_create FAST (first hop) failed.");
-        return - END_CIRC_REASON_INTERNAL;
-      }
-
+      handshake_type = ONION_HANDSHAKE_TYPE_FAST;
       note_request("cell: create fast", 1);
     }
 
-    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), cell_type, payload) < 0)
+    memset(payload, 0, sizeof(payload));
+    onionskin_len = onion_skin_create(handshake_type,
+                                      circ->cpath->extend_info,
+                                      &circ->cpath->handshake_state,
+                                      payload);
+    if (onionskin_len < 0) {
+      log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
+
+    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), cell_type, payload,
+                                    onionskin_len) < 0)
       return - END_CIRC_REASON_RESOURCELIMIT;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -742,12 +747,16 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     set_uint16(payload+4, htons(hop->extend_info->port));
 
     onionskin = payload+2+4;
-    memcpy(payload+2+4+ONIONSKIN_CHALLENGE_LEN,
+    memcpy(payload+2+4+TAP_ONIONSKIN_CHALLENGE_LEN,
            hop->extend_info->identity_digest, DIGEST_LEN);
-    payload_len = 2+4+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN;
+    payload_len = 2+4+TAP_ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN;
 
-    if (onion_skin_create(hop->extend_info->onion_key,
-                          &(hop->dh_handshake_state), onionskin) < 0) {
+    handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+
+    if (onion_skin_create(handshake_type,
+                          hop->extend_info,
+                          &hop->handshake_state,
+                          onionskin) < 0) {
       log_warn(LD_CIRC,"onion_skin_create failed.");
       return - END_CIRC_REASON_INTERNAL;
     }
@@ -758,7 +767,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
      * it to a create cell and then send to hop */
     if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                      RELAY_COMMAND_EXTEND,
-                                     payload, payload_len, hop->prev) < 0)
+                                     (char*)payload, payload_len,
+                                     hop->prev) < 0)
       return 0; /* circuit is closed */
 
     hop->state = CPATH_STATE_AWAITING_KEYS;
@@ -826,7 +836,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   relay_header_unpack(&rh, cell->payload);
 
-  if (rh.length < 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
+  if (rh.length < 4+2+TAP_ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Wrong length %d on extend cell. Closing circuit.",
            rh.length);
@@ -837,7 +847,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
   onionskin = (char*) cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = (char*) cell->payload+RELAY_HEADER_SIZE+4+2+
-    ONIONSKIN_CHALLENGE_LEN;
+    TAP_ONIONSKIN_CHALLENGE_LEN;
   tor_addr_from_ipv4h(&n_addr, n_addr32);
 
   if (!n_port || !n_addr32) {
@@ -890,8 +900,10 @@ circuit_extend(cell_t *cell, circuit_t *circ)
                                     NULL /*onion_key*/,
                                     &n_addr, n_port);
 
-    circ->n_chan_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->n_chan_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
+    circ->n_chan_onionskin = tor_malloc(TAP_ONIONSKIN_CHALLENGE_LEN);
+    memcpy(circ->n_chan_onionskin, onionskin, TAP_ONIONSKIN_CHALLENGE_LEN);
+    circ->n_chan_onionskin_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+
     circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
 
     if (should_launch) {
@@ -917,7 +929,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
             "n_chan is %s",
             channel_get_canonical_remote_descr(n_chan));
 
-  if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
+  if (circuit_deliver_create_cell(circ, CELL_CREATE, (uint8_t*)onionskin,
+                                  TAP_ONIONSKIN_CHALLENGE_LEN) < 0)
     return -1;
   return 0;
 }
@@ -1377,31 +1390,32 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   }
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
-  if (reply_type == CELL_CREATED && hop->dh_handshake_state) {
-    if (onion_skin_client_handshake(hop->dh_handshake_state, (char*)reply,keys,
-                                    DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
+  {
+    uint16_t handshake_type = 0xffff;
+    if (reply_type == CELL_CREATED)
+      handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+    else if (reply_type == CELL_CREATED_FAST)
+      handshake_type = ONION_HANDSHAKE_TYPE_FAST;
+
+    if (handshake_type != hop->handshake_state.tag) {
+      log_warn(LD_PROTOCOL,"CREATED cell onionskin type (%u) did not "
+               "match CREATE cell onionskin type (%u).",
+               (unsigned)handshake_type,
+               (unsigned) hop->handshake_state.tag);
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+
+    if (onion_skin_client_handshake(handshake_type,
+                                    &hop->handshake_state,
+                                    reply,
+                                    (uint8_t*)keys, sizeof(keys),
+                                    (uint8_t*)hop->handshake_digest) < 0) {
       log_warn(LD_CIRC,"onion_skin_client_handshake failed.");
       return -END_CIRC_REASON_TORPROTOCOL;
     }
-    /* Remember hash of g^xy */
-    memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
-  } else if (reply_type == CELL_CREATED_FAST && !hop->dh_handshake_state) {
-    if (fast_client_handshake(hop->fast_handshake_state, reply,
-                              (uint8_t*)keys,
-                              DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
-      log_warn(LD_CIRC,"fast_client_handshake failed.");
-      return -END_CIRC_REASON_TORPROTOCOL;
-    }
-    memcpy(hop->handshake_digest, reply+DIGEST_LEN, DIGEST_LEN);
-  } else {
-    log_warn(LD_PROTOCOL,"CREATED cell type did not match CREATE cell type.");
-    return -END_CIRC_REASON_TORPROTOCOL;
   }
 
-  crypto_dh_free(hop->dh_handshake_state); /* don't need it anymore */
-  hop->dh_handshake_state = NULL;
-
-  memset(hop->fast_handshake_state, 0, sizeof(hop->fast_handshake_state));
+  onion_handshake_state_release(&hop->handshake_state);
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
     return -END_CIRC_REASON_TORPROTOCOL;
@@ -1470,7 +1484,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
  */
 int
 onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
-                 const char *keys)
+                 size_t payload_len, const char *keys)
 {
   cell_t cell;
   crypt_path_t *tmp_cpath;
@@ -1484,8 +1498,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
 
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
 
-  memcpy(cell.payload, payload,
-         cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
+  memcpy(cell.payload, payload, payload_len);
 
   log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
             (unsigned int)get_uint32(keys),
@@ -1502,6 +1515,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
   tmp_cpath->magic = 0;
   tor_free(tmp_cpath);
 
+  /* XXXX Move responsibility for extracting this. */
   if (cell_type == CELL_CREATED)
     memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
   else

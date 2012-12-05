@@ -84,6 +84,7 @@ extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 const char *router_get_descriptor_gen_reason(void);
 int router_digest_is_me(const char *digest);
+const uint8_t *router_get_my_id_digest(void);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);

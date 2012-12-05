@@ -819,11 +819,11 @@ test_onion_handshake(void)
 {
   /* client-side */
   crypto_dh_t *c_dh = NULL;
-  char c_buf[ONIONSKIN_CHALLENGE_LEN];
+  char c_buf[TAP_ONIONSKIN_CHALLENGE_LEN];
   char c_keys[40];
 
   /* server-side */
-  char s_buf[ONIONSKIN_REPLY_LEN];
+  char s_buf[TAP_ONIONSKIN_REPLY_LEN];
   char s_keys[40];
 
   /* shared */
@@ -832,18 +832,18 @@ test_onion_handshake(void)
   pk = pk_generate(0);
 
   /* client handshake 1. */
-  memset(c_buf, 0, ONIONSKIN_CHALLENGE_LEN);
-  test_assert(! onion_skin_create(pk, &c_dh, c_buf));
+  memset(c_buf, 0, TAP_ONIONSKIN_CHALLENGE_LEN);
+  test_assert(! onion_skin_TAP_create(pk, &c_dh, c_buf));
 
   /* server handshake */
-  memset(s_buf, 0, ONIONSKIN_REPLY_LEN);
+  memset(s_buf, 0, TAP_ONIONSKIN_REPLY_LEN);
   memset(s_keys, 0, 40);
-  test_assert(! onion_skin_server_handshake(c_buf, pk, NULL,
+  test_assert(! onion_skin_TAP_server_handshake(c_buf, pk, NULL,
                                             s_buf, s_keys, 40));
 
   /* client handshake 2 */
   memset(c_keys, 0, 40);
-  test_assert(! onion_skin_client_handshake(c_dh, s_buf, c_keys, 40));
+  test_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
 
   if (memcmp(c_keys, s_keys, 40)) {
     puts("Aiiiie");

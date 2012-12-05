@@ -1381,6 +1381,7 @@ typedef struct or_connection_t {
 
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
+
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
   time_t timestamp_last_added_nonpadding; /** When did we last add a
                                            * non-padding cell to the outbuf? */
@@ -2470,6 +2471,9 @@ typedef struct extend_info_t {
   uint16_t port; /**< OR port. */
   tor_addr_t addr; /**< IP address. */
   crypto_pk_t *onion_key; /**< Current onionskin key. */
+#ifdef CURVE25519_ENABLED
+  curve25519_public_key_t curve25519_onion_key;
+#endif
 } extend_info_t;
 
 /** Certificate for v3 directory protocol: binds long-term authority identity
@@ -2525,6 +2529,19 @@ typedef enum {
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 struct fast_handshake_state_t;
+struct ntor_handshake_state_t;
+#define ONION_HANDSHAKE_TYPE_TAP 0x0000
+#define ONION_HANDSHAKE_TYPE_FAST 0x0001
+#define ONION_HANDSHAKE_TYPE_NTOR 0x0002
+typedef struct {
+  uint16_t tag;
+  union {
+    struct fast_handshake_state_t *fast;
+    crypto_dh_t *tap;
+    struct ntor_handshake_state_t *ntor;
+  } u;
+} onion_handshake_state_t;
+
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 typedef struct crypt_path_t {
@@ -2543,16 +2560,15 @@ typedef struct crypt_path_t {
   /** Digest state for cells heading away from the OR at this step. */
   crypto_digest_t *b_digest;
 
-  /** Current state of Diffie-Hellman key negotiation with the OR at this
+  /** Current state of the handshake as performed with the OR at this
    * step. */
-  crypto_dh_t *dh_handshake_state;
-  /** Current state of 'fast' (non-PK) key negotiation with the OR at this
-   * step. Used to save CPU when TLS is already providing all the
-   * authentication, secrecy, and integrity we need, and we're already
-   * distinguishable from an OR.
-   */
-  struct fast_handshake_state_t *fast_handshake_state;
+  onion_handshake_state_t handshake_state;
+  /** Diffie-hellman handshake state for performing an introduction
+   * operations */
+  crypto_dh_t *rend_dh_handshake_state;
+
   /** Negotiated key material shared with the OR at this step. */
+  /* XXXX RENAME */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 
   /** Information to extend to the OR at this step. */
@@ -2594,10 +2610,6 @@ typedef struct {
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
 #define DH_KEY_LEN DH_BYTES
-#define ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
-                                 CIPHER_KEY_LEN+\
-                                 DH_KEY_LEN)
-#define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 
 /** Information used to build a circuit. */
 typedef struct {
@@ -2703,9 +2715,10 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
+  uint8_t n_chan_onionskin_len; /* XXXX MAKE THIS GET USED. */
   /** For storage while n_chan is pending
     * (state CIRCUIT_STATE_CHAN_WAIT). When defined, it is always
-    * length ONIONSKIN_CHALLENGE_LEN. */
+    * length n_chan_onionskin_len */
   char *n_chan_onionskin;
 
   /** When was this circuit created?  We keep this timestamp with a higher
@@ -2965,6 +2978,7 @@ typedef struct or_circuit_t {
   char rend_token[REND_TOKEN_LEN];
 
   /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
+  /* XXXX rename this. */
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
 
   /** How many more relay_early cells can we send on this circuit, according

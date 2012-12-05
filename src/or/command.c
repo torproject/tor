@@ -30,6 +30,7 @@
 #include "hibernate.h"
 #include "nodelist.h"
 //#include "onion.h"
+#include "onion_tap.h"
 #include "onion_fast.h"
 #include "relay.h"
 #include "router.h"
@@ -254,8 +255,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   circ->base_.purpose = CIRCUIT_PURPOSE_OR;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
   if (cell->command == CELL_CREATE) {
-    char *onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
+    char *onionskin = tor_malloc(TAP_ONIONSKIN_CHALLENGE_LEN);
+    memcpy(onionskin, cell->payload, TAP_ONIONSKIN_CHALLENGE_LEN);
 
     /* hand it off to the cpuworkers, and then return. */
     if (assign_onionskin_to_cpuworker(NULL, circ, onionskin) < 0) {
@@ -282,7 +283,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
-    if (onionskin_answer(circ, CELL_CREATED_FAST, reply, keys)<0) {
+    if (onionskin_answer(circ, CELL_CREATED_FAST, reply, sizeof(reply),
+                         keys)<0) {
       log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
@@ -340,7 +342,7 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
     log_debug(LD_OR,
               "Converting created cell to extended relay cell, sending.");
     relay_send_command_from_edge(0, circ, RELAY_COMMAND_EXTENDED,
-                                 (char*)cell->payload, ONIONSKIN_REPLY_LEN,
+                                 (char*)cell->payload, TAP_ONIONSKIN_REPLY_LEN,
                                  NULL);
   }
 }

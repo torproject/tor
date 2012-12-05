@@ -35,7 +35,7 @@
 #define TAG_LEN 10
 /** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE \
-  (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
+  (1+TAG_LEN+TAP_ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
 
 /** How many cpuworkers we have running right now. */
 static int num_cpuworkers=0;
@@ -185,7 +185,8 @@ connection_cpu_process_inbuf(connection_t *conn)
     }
     tor_assert(! CIRCUIT_IS_ORIGIN(circ));
     if (onionskin_answer(TO_OR_CIRCUIT(circ), CELL_CREATED, buf+TAG_LEN,
-                         buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
+                         TAP_ONIONSKIN_REPLY_LEN,
+                         buf+TAG_LEN+TAP_ONIONSKIN_REPLY_LEN) < 0) {
       log_warn(LD_OR,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
       goto done_processing;
@@ -214,11 +215,11 @@ connection_cpu_process_inbuf(connection_t *conn)
  *   Request format:
  *          Task type           [1 byte, always CPUWORKER_TASK_ONION]
  *          Opaque tag          TAG_LEN
- *          Onionskin challenge ONIONSKIN_CHALLENGE_LEN
+ *          Onionskin challenge TAP_ONIONSKIN_CHALLENGE_LEN
  *   Response format:
  *          Success/failure     [1 byte, boolean.]
  *          Opaque tag          TAG_LEN
- *          Onionskin challenge ONIONSKIN_REPLY_LEN
+ *          Onionskin challenge TAP_ONIONSKIN_REPLY_LEN
  *          Negotiated keys     KEY_LEN*2+DIGEST_LEN*2
  *
  *  (Note: this _should_ be by addr/port, since we're concerned with specific
@@ -227,17 +228,17 @@ connection_cpu_process_inbuf(connection_t *conn)
 static void
 cpuworker_main(void *data)
 {
-  char question[ONIONSKIN_CHALLENGE_LEN];
+  char question[TAP_ONIONSKIN_CHALLENGE_LEN];
   uint8_t question_type;
   tor_socket_t *fdarray = data;
   tor_socket_t fd;
 
   /* variables for onion processing */
   char keys[CPATH_KEY_MATERIAL_LEN];
-  char reply_to_proxy[ONIONSKIN_REPLY_LEN];
+  char reply_to_proxy[MAX_ONIONSKIN_REPLY_LEN];
   char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
-  crypto_pk_t *onion_key = NULL, *last_onion_key = NULL;
+  server_onion_keys_t onion_keys;
 
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
@@ -248,7 +249,7 @@ cpuworker_main(void *data)
 #endif
   tor_free(data);
 
-  dup_onion_keys(&onion_key, &last_onion_key);
+  setup_server_onion_keys(&onion_keys);
 
   for (;;) {
     ssize_t r;
@@ -275,15 +276,18 @@ cpuworker_main(void *data)
       goto end;
     }
 
-    if (read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) !=
-        ONIONSKIN_CHALLENGE_LEN) {
+    if (read_all(fd, question, TAP_ONIONSKIN_CHALLENGE_LEN, 1) !=
+        TAP_ONIONSKIN_CHALLENGE_LEN) {
       log_err(LD_BUG,"read question failed. Exiting.");
       goto end;
     }
 
     if (question_type == CPUWORKER_TASK_ONION) {
-      if (onion_skin_server_handshake(question, onion_key, last_onion_key,
-          reply_to_proxy, keys, CPATH_KEY_MATERIAL_LEN) < 0) {
+      if (onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_TAP,
+                         (const uint8_t*)question,
+                         &onion_keys,
+                         (uint8_t*)reply_to_proxy,
+                         (uint8_t*)keys, CPATH_KEY_MATERIAL_LEN) < 0) {
         /* failure */
         log_debug(LD_OR,"onion_skin_server_handshake failed.");
         *buf = 0; /* indicate failure in first byte */
@@ -295,8 +299,9 @@ cpuworker_main(void *data)
         log_debug(LD_OR,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
-        memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
-        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,CPATH_KEY_MATERIAL_LEN);
+        memcpy(buf+1+TAG_LEN,reply_to_proxy,TAP_ONIONSKIN_REPLY_LEN);
+        memcpy(buf+1+TAG_LEN+TAP_ONIONSKIN_REPLY_LEN,keys,
+               CPATH_KEY_MATERIAL_LEN);
       }
       if (write_all(fd, buf, LEN_ONION_RESPONSE, 1) != LEN_ONION_RESPONSE) {
         log_err(LD_BUG,"writing response buf failed. Exiting.");
@@ -306,10 +311,7 @@ cpuworker_main(void *data)
     }
   }
  end:
-  if (onion_key)
-    crypto_pk_free(onion_key);
-  if (last_onion_key)
-    crypto_pk_free(last_onion_key);
+  release_server_onion_keys(&onion_keys);
   tor_close_socket(fd);
   crypto_thread_cleanup();
   spawn_exit();
@@ -497,7 +499,7 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
     qbuf[0] = CPUWORKER_TASK_ONION;
     connection_write_to_buf(qbuf, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
+    connection_write_to_buf(onionskin, TAP_ONIONSKIN_CHALLENGE_LEN, cpuworker);
     tor_free(onionskin);
   }
   return 0;

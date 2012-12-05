@@ -12,18 +12,23 @@
 #ifndef TOR_ONION_TAP_H
 #define TOR_ONION_TAP_H
 
-int onion_skin_create(crypto_pk_t *router_key,
+#define TAP_ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
+                                 CIPHER_KEY_LEN+\
+                                 DH_KEY_LEN)
+#define TAP_ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
+
+int onion_skin_TAP_create(crypto_pk_t *router_key,
                       crypto_dh_t **handshake_state_out,
                       char *onion_skin_out);
 
-int onion_skin_server_handshake(const char *onion_skin,
+int onion_skin_TAP_server_handshake(const char *onion_skin,
                                 crypto_pk_t *private_key,
                                 crypto_pk_t *prev_private_key,
                                 char *handshake_reply_out,
                                 char *key_out,
                                 size_t key_out_len);
 
-int onion_skin_client_handshake(crypto_dh_t *handshake_state,
+int onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
                                 const char *handshake_reply,
                                 char *key_out,
                                 size_t key_out_len);

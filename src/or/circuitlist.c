@@ -744,8 +744,8 @@ circuit_free_cpath_node(crypt_path_t *victim)
   crypto_cipher_free(victim->b_crypto);
   crypto_digest_free(victim->f_digest);
   crypto_digest_free(victim->b_digest);
-  crypto_dh_free(victim->dh_handshake_state);
-  fast_handshake_state_free(victim->fast_handshake_state);
+  onion_handshake_state_release(&victim->handshake_state);
+  crypto_dh_free(victim->rend_dh_handshake_state);
   extend_info_free(victim->extend_info);
 
   memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
@@ -1494,7 +1494,8 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
       tor_assert(cp->b_crypto);
       /* fall through */
     case CPATH_STATE_CLOSED:
-      tor_assert(!cp->dh_handshake_state);
+      /*XXXX Assert that there's no handshake_state either. */
+      tor_assert(!cp->rend_dh_handshake_state);
       break;
     case CPATH_STATE_AWAITING_KEYS:
       /* tor_assert(cp->dh_handshake_state); */

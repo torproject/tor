@@ -35,9 +35,9 @@
  * The meeting point/cookies and auth are zeroed out for now.
  */
 int
-onion_skin_create(crypto_pk_t *dest_router_key,
+onion_skin_TAP_create(crypto_pk_t *dest_router_key,
                   crypto_dh_t **handshake_state_out,
-                  char *onion_skin_out) /* ONIONSKIN_CHALLENGE_LEN bytes */
+                  char *onion_skin_out) /* TAP_ONIONSKIN_CHALLENGE_LEN bytes */
 {
   char challenge[DH_KEY_LEN];
   crypto_dh_t *dh = NULL;
@@ -47,7 +47,7 @@ onion_skin_create(crypto_pk_t *dest_router_key,
   tor_assert(handshake_state_out);
   tor_assert(onion_skin_out);
   *handshake_state_out = NULL;
-  memset(onion_skin_out, 0, ONIONSKIN_CHALLENGE_LEN);
+  memset(onion_skin_out, 0, TAP_ONIONSKIN_CHALLENGE_LEN);
 
   if (!(dh = crypto_dh_new(DH_TYPE_CIRCUIT)))
     goto err;
@@ -64,7 +64,7 @@ onion_skin_create(crypto_pk_t *dest_router_key,
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, onion_skin_out,
-                                      ONIONSKIN_CHALLENGE_LEN,
+                                      TAP_ONIONSKIN_CHALLENGE_LEN,
                                       challenge, DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
@@ -85,14 +85,17 @@ onion_skin_create(crypto_pk_t *dest_router_key,
  * next key_out_len bytes of key material in key_out.
  */
 int
-onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
+onion_skin_TAP_server_handshake(
+                            /*TAP_ONIONSKIN_CHALLENGE_LEN*/
+                            const char *onion_skin,
                             crypto_pk_t *private_key,
                             crypto_pk_t *prev_private_key,
-                            char *handshake_reply_out, /*ONIONSKIN_REPLY_LEN*/
+                            /*TAP_ONIONSKIN_REPLY_LEN*/
+                            char *handshake_reply_out,
                             char *key_out,
                             size_t key_out_len)
 {
-  char challenge[ONIONSKIN_CHALLENGE_LEN];
+  char challenge[TAP_ONIONSKIN_CHALLENGE_LEN];
   crypto_dh_t *dh = NULL;
   ssize_t len;
   char *key_material=NULL;
@@ -107,8 +110,9 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
       break;
     note_crypto_pk_op(DEC_ONIONSKIN);
     len = crypto_pk_private_hybrid_decrypt(k, challenge,
-                                           ONIONSKIN_CHALLENGE_LEN,
-                                           onion_skin, ONIONSKIN_CHALLENGE_LEN,
+                                           TAP_ONIONSKIN_CHALLENGE_LEN,
+                                           onion_skin,
+                                           TAP_ONIONSKIN_CHALLENGE_LEN,
                                            PK_PKCS1_OAEP_PADDING,0);
     if (len>0)
       break;
@@ -175,8 +179,8 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
  * After the invocation, call crypto_dh_free on handshake_state.
  */
 int
-onion_skin_client_handshake(crypto_dh_t *handshake_state,
-            const char *handshake_reply, /* ONIONSKIN_REPLY_LEN bytes */
+onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
+            const char *handshake_reply, /* TAP_ONIONSKIN_REPLY_LEN bytes */
             char *key_out,
             size_t key_out_len)
 {

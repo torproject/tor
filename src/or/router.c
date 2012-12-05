@@ -1598,6 +1598,13 @@ router_digest_is_me(const char *digest)
           tor_memeq(server_identitykey_digest, digest, DIGEST_LEN));
 }
 
+/** DOCDOC */
+const uint8_t *
+router_get_my_id_digest(void)
+{
+  return (const uint8_t *)server_identitykey_digest;
+}
+
 /** Return true iff I'm a server and <b>digest</b> is equal to
  * my identity digest. */
 int

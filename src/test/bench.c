@@ -110,8 +110,8 @@ bench_onion_TAP(void)
   int i;
   crypto_pk_t *key, *key2;
   uint64_t start, end;
-  char os[ONIONSKIN_CHALLENGE_LEN];
-  char or[ONIONSKIN_REPLY_LEN];
+  char os[TAP_ONIONSKIN_CHALLENGE_LEN];
+  char or[TAP_ONIONSKIN_REPLY_LEN];
   crypto_dh_t *dh_out;
 
   key = crypto_pk_new();
@@ -122,17 +122,18 @@ bench_onion_TAP(void)
   reset_perftime();
   start = perftime();
   for (i = 0; i < iters; ++i) {
-    onion_skin_create(key, &dh_out, os);
+    onion_skin_TAP_create(key, &dh_out, os);
     crypto_dh_free(dh_out);
   }
   end = perftime();
   printf("Client-side, part 1: %f usec.\n", NANOCOUNT(start, end, iters)/1e3);
 
-  onion_skin_create(key, &dh_out, os);
+  onion_skin_TAP_create(key, &dh_out, os);
   start = perftime();
   for (i = 0; i < iters; ++i) {
     char key_out[CPATH_KEY_MATERIAL_LEN];
-    onion_skin_server_handshake(os, key, NULL, or, key_out, sizeof(key_out));
+    onion_skin_TAP_server_handshake(os, key, NULL, or,
+                                    key_out, sizeof(key_out));
   }
   end = perftime();
   printf("Server-side, key guessed right: %f usec\n",
@@ -141,7 +142,8 @@ bench_onion_TAP(void)
   start = perftime();
   for (i = 0; i < iters; ++i) {
     char key_out[CPATH_KEY_MATERIAL_LEN];
-    onion_skin_server_handshake(os, key2, key, or, key_out, sizeof(key_out));
+    onion_skin_TAP_server_handshake(os, key2, key, or,
+                                    key_out, sizeof(key_out));
   }
   end = perftime();
   printf("Server-side, key guessed wrong: %f usec.\n",
@@ -153,7 +155,7 @@ bench_onion_TAP(void)
     char key_out[CPATH_KEY_MATERIAL_LEN];
     int s;
     dh = crypto_dh_dup(dh_out);
-    s = onion_skin_client_handshake(dh, or, key_out, sizeof(key_out));
+    s = onion_skin_TAP_client_handshake(dh, or, key_out, sizeof(key_out));
     tor_assert(s == 0);
   }
   end = perftime();
