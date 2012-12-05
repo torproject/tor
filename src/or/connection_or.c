@@ -179,8 +179,8 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 }
 
 /** Remove the Extended ORPort identifier of <b>conn</b> from the
-    global identifier list. Also, clear the identifier from the
-    connection itself. */
+ *  global identifier list. Also, clear the identifier from the
+ *  connection itself. */
 void
 connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
 {
@@ -2443,7 +2443,10 @@ connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
   return 0;
 }
 
-/** Get an Extended ORPort message from <b>conn</b>, and place it in <b>out</b>. */
+/** Get an Extended ORPort message from <b>conn</b>, and place it in
+ *  <b>out</b>. Return -1 on fail, 0 if we need more data, and 1 if we
+ *  successfully extracted an Extended ORPort command from the
+ *  buffer.  */
 static int
 connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
 {
@@ -2490,13 +2493,19 @@ connection_ext_or_transition(or_connection_t *conn)
   connection_tls_start_handshake(conn, 1);
 }
 
-/** DOCDOCDOC */
+/** Length of authentication cookie. */
 #define EXT_OR_PORT_AUTH_COOKIE_LEN 32
+/** Length of the header of the cookie file. */
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN 32
+/** Total length of the cookie file. */
 #define EXT_OR_PORT_AUTH_COOKIE_FILE_LEN EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN
+/** Static cookie file header. */
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER "! Extended ORPort Auth Cookie !\x0a"
+/** Length of safe-cookie protocol hashes. */
 #define EXT_OR_PORT_AUTH_HASH_LEN DIGEST256_LEN
+/** Length of safe-cookie protocol nonces. */
 #define EXT_OR_PORT_AUTH_NONCE_LEN 32
+/** Safe-cookie protocol constants. */
 #define EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST "ExtORPort authentication server-to-client hash"
 #define EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST "ExtORPort authentication client-to-server hash"
 
@@ -2541,14 +2550,15 @@ init_ext_or_auth_cookie_authentication(int is_enabled)
   if (ext_or_auth_cookie_is_set)
     return 0; /* all set */
 
-  fname = get_ext_or_auth_cookie_file();
-  crypto_rand(ext_or_auth_cookie, EXT_OR_PORT_AUTH_COOKIE_LEN);
+  if (crypto_rand(ext_or_auth_cookie, EXT_OR_PORT_AUTH_COOKIE_LEN) < 0)
+    return -1;
   ext_or_auth_cookie_is_set = 1;
 
   memcpy(cookie_file_string, EXT_OR_PORT_AUTH_COOKIE_HEADER, EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN);
   memcpy(cookie_file_string+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN,
          ext_or_auth_cookie, EXT_OR_PORT_AUTH_COOKIE_LEN);
 
+  fname = get_ext_or_auth_cookie_file();
   if (write_bytes_to_file(fname, cookie_file_string,
                           EXT_OR_PORT_AUTH_COOKIE_FILE_LEN, 1)) {
     log_warn(LD_FS,"Error writing authentication cookie to %s.",
@@ -2564,11 +2574,15 @@ init_ext_or_auth_cookie_authentication(int is_enabled)
   return 0;
 }
 
-/** DOCDOCDOC
-    Return -1 on error. 0 on unsufficient data. 1 on correct.
-*/
+/** Read data from <b>conn</b> and see if the client sent us the
+ *  authentication type that she prefers to use in this session.
+ *
+ *  Return -1 if we received corrupted data or if we don't support the
+ *  authentication type. Return 0 if we need more data in
+ *  <b>conn</b>. Return 1 if the authentication type negotiation was
+ *  successful. */
 static int
-connection_ext_or_auth_neg_auth_type(connection_t *conn) /* XXX unit tests */
+connection_ext_or_auth_neg_auth_type(connection_t *conn)
 {
   char authtype[1] = {0};
 
@@ -2582,10 +2596,16 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn) /* XXX unit tests */
   if (authtype[0] != 1) /* '1' is the only auth type supported atm */
     return -1;
 
-  conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE; /* XXX maybe do state transition in process_inbuf ? */
+  conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE;
   return 1;
 }
 
+/** Read the client's nonce out of <b>conn</b>, setup the safe-cookie
+ *  crypto, and then send our own hash and nonce to the client
+ *
+ *  Return -1 if there was an error; return 0 if we need more data in
+ *  <b>conn</b>, and return 1 if we successfully retrieved the
+ *  client's nonce and sent our own. */
 static int
 connection_ext_or_auth_handle_client_nonce(connection_t *conn)
 {
@@ -2692,6 +2712,8 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
 #define connection_ext_or_auth_send_result_fail(c)  \
   connection_ext_or_auth_send_result(c, 0)
 
+/** Send authentication results to <b>conn</b>. Successful results if
+ *  <b>success</b> is set; failure results otherwise. */
 static void
 connection_ext_or_auth_send_result(connection_t *conn, int success)
 {
@@ -2701,6 +2723,13 @@ connection_ext_or_auth_send_result(connection_t *conn, int success)
     connection_write_to_buf("\x00", 1, conn);
 }
 
+/** Receive the client's hash from <b>conn</b>, validate that it's
+ *  correct, and then send the authentication results to the client.
+ *
+ *  Return -1 if there was an error during validation; return 0 if we
+ *  need more data in <b>conn</b>, and return 1 if we successfully
+ *  validated the client's hash and sent a happy authentication
+ *  result. */
 static int
 connection_ext_or_auth_handle_client_hash(connection_t *conn)
 {
@@ -2727,9 +2756,8 @@ connection_ext_or_auth_handle_client_hash(connection_t *conn)
   return 1;
 }
 
-/** DOCDOCDOC
-    Return -1 on error. 0 on unsufficient data. 1 on correct.
-*/
+/** Handle data from <b>or_conn</b> received on Extended ORPort.
+ *  Return -1 on error. 0 on unsufficient data. 1 on correct. */
 static int
 connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 {
@@ -2761,6 +2789,14 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 #define EXT_OR_CMD_BT_DENY 0x1001
 #define EXT_OR_CMD_BT_CONTROL 0x1002
 
+
+/** Process a USERADDR command from the Extended
+ *  ORPort. <b>payload</b> is a payload of size <b>len</b>.
+ *
+ *  If the USERADDR command was well formed, change the address of
+ *  <b>conn</b> to the address on the USERADDR command.
+ *
+ *  Return 0 on success and -1 on error. */
 static int
 connection_ext_or_handle_useraddr(connection_t *conn, char *payload, uint16_t len)
 {
@@ -2883,7 +2919,8 @@ connection_ext_or_finished_flushing(or_connection_t *conn)
   return 0;
 }
 
-/* DOCDOCDOC */
+/** Initiate Extended ORPort authentication, by sending the list of
+ *  supported authentication types to the client. */
 int
 connection_ext_or_start_auth(or_connection_t *or_conn)
 {

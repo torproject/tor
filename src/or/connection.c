@@ -601,6 +601,7 @@ connection_free_(connection_t *conn)
   if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
     connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
     tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
+    tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
   }
 
 #ifdef USE_BUFFEREVENTS

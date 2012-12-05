@@ -1261,7 +1261,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
      * variable in Tor's environment and crash PTs that try to parse
      * it even when not run in server mode.) */
 
-    if (options->ExtORPort) {
+    if (options->ExtORPort_lines) {
       char *ext_or_addrport_tmp =
         get_first_listener_addrport_string(CONN_TYPE_EXT_OR_LISTENER);
       char *cookie_file_loc = get_ext_or_auth_cookie_file();
