@@ -2495,6 +2495,10 @@ connection_ext_or_transition(or_connection_t *conn)
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN 32
 #define EXT_OR_PORT_AUTH_COOKIE_FILE_LEN EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER "! Extended ORPort Auth Cookie !\x0a"
+#define EXT_OR_PORT_AUTH_HASH_LEN DIGEST256_LEN
+#define EXT_OR_PORT_AUTH_NONCE_LEN 32
+#define EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST "ExtORPort authentication server-to-client hash"
+#define EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST "ExtORPort authentication client-to-server hash"
 
 /** If true, we've set ext_or_auth_cookie to a secret code and stored
  * it to disk. */
@@ -2569,6 +2573,194 @@ init_ext_or_auth_cookie_authentication(int is_enabled)
 #define EXT_OR_CMD_BT_DENY 0x1001
 #define EXT_OR_CMD_BT_CONTROL 0x1002
 
+/** DOCDOCDOC
+    Return -1 on error. 0 on unsufficient data. 1 on correct.
+*/
+static int
+connection_ext_or_auth_neg_auth_type(connection_t *conn) /* XXX unit tests */
+{
+  char authtype[1] = {0};
+
+  if (connection_get_inbuf_len(conn) < 1)
+    return 0;
+
+  if (connection_fetch_from_buf(authtype, 1, conn) < 0)
+    return -1;
+
+  log_warn(LD_GENERAL, "Client wants us to use %d auth type", authtype[0]);
+  if (authtype[0] != 1) /* '1' is the only auth type supported atm */
+    return -1;
+
+  conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE; /* XXX maybe do state transition in process_inbuf ? */
+  return 1;
+}
+
+static int
+connection_ext_or_auth_handle_client_nonce(connection_t *conn)
+{
+  char server_hash[EXT_OR_PORT_AUTH_HASH_LEN] = {0};
+  char client_nonce[EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
+  char server_nonce[EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
+  char reply[EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
+
+  if (!ext_or_auth_cookie_is_set) { /* this should not happen */
+    log_warn(LD_BUG, "Extended ORPort authentication cookie was not set. "
+             "That's weird since we should have done that on startup. "
+             "This might be a Tor bug, please file a bug report. ");
+    return -1;
+  }
+
+  if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_NONCE_LEN)
+    return 0;
+
+  if (connection_fetch_from_buf(client_nonce, EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0) /* XXX check-spaces */
+    return -1;
+
+  /* Get our nonce */
+  if (crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN) < 0)
+    return -1;
+
+  { /* set up macs */
+    size_t hmac_s_msg_len = strlen(EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST) +
+      2*EXT_OR_PORT_AUTH_NONCE_LEN;
+    size_t hmac_c_msg_len = strlen(EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST) +
+      2*EXT_OR_PORT_AUTH_NONCE_LEN;
+
+    char *hmac_s_msg = tor_malloc_zero(hmac_s_msg_len);
+    char *hmac_c_msg = tor_malloc_zero(hmac_c_msg_len);
+    char *correct_client_hash = tor_malloc_zero(EXT_OR_PORT_AUTH_HASH_LEN);
+
+    memcpy(hmac_s_msg,
+           EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST,
+           strlen(EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST));
+    memcpy(hmac_s_msg + strlen(EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST),
+           client_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+    memcpy(hmac_s_msg + strlen(EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST) +
+           EXT_OR_PORT_AUTH_NONCE_LEN,
+           server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+
+    memcpy(hmac_c_msg,
+           EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST,
+           strlen(EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST));
+    memcpy(hmac_c_msg + strlen(EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST),
+           client_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+    memcpy(hmac_c_msg + strlen(EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST) +
+           EXT_OR_PORT_AUTH_NONCE_LEN,
+           server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+
+    crypto_hmac_sha256(server_hash,
+                       ext_or_auth_cookie,
+                       EXT_OR_PORT_AUTH_COOKIE_LEN,
+                       hmac_s_msg,
+                       hmac_s_msg_len);
+
+    crypto_hmac_sha256(correct_client_hash,
+                       ext_or_auth_cookie,
+                       EXT_OR_PORT_AUTH_COOKIE_LEN,
+                       hmac_c_msg,
+                       hmac_c_msg_len);
+
+    /* Store the client hash we generated. We will need to compare it
+       with the hash sent by the client. */
+    TO_OR_CONN(conn)->ext_or_auth_correct_client_hash = correct_client_hash;
+
+    tor_free(hmac_s_msg);
+    tor_free(hmac_c_msg);
+  }
+
+  { /* debug logging */ /* XXX disable this codepath if not logging on debug? */
+    char server_hash_encoded[(2*EXT_OR_PORT_AUTH_HASH_LEN) + 1];
+    char server_nonce_encoded[(2*EXT_OR_PORT_AUTH_NONCE_LEN) + 1];
+    char client_nonce_encoded[(2*EXT_OR_PORT_AUTH_NONCE_LEN) + 1];
+
+    base16_encode(server_hash_encoded, sizeof(server_hash_encoded),
+                  server_hash, sizeof(server_hash));
+    base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
+                  server_nonce, sizeof(server_nonce));
+    base16_encode(client_nonce_encoded, sizeof(client_nonce_encoded),
+                  client_nonce, sizeof(client_nonce));
+
+    log_warn(LD_GENERAL, "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
+             server_hash_encoded, server_nonce_encoded, client_nonce_encoded);
+  }
+
+  { /* write reply: (server_hash, server_nonce) */
+    memcpy(reply, server_hash, EXT_OR_PORT_AUTH_HASH_LEN);
+    memcpy(reply + EXT_OR_PORT_AUTH_HASH_LEN, server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+    connection_write_to_buf(reply, sizeof(reply), conn);
+  }
+
+  log_warn(LD_GENERAL, "Got client nonce, and sent our own nonce and hash.");
+
+  conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH;
+  return 1;
+}
+
+#define connection_ext_or_auth_send_result_success(c)  \
+  connection_ext_or_auth_send_result(c, 1)
+#define connection_ext_or_auth_send_result_fail(c)  \
+  connection_ext_or_auth_send_result(c, 0)
+
+static void
+connection_ext_or_auth_send_result(connection_t *conn, int success)
+{
+  if (success)
+    connection_write_to_buf("\x01", 1, conn);
+  else
+    connection_write_to_buf("\x00", 1, conn);
+}
+
+static int
+connection_ext_or_auth_handle_client_hash(connection_t *conn)
+{
+  char provided_client_hash[EXT_OR_PORT_AUTH_HASH_LEN] = {0};
+
+  if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_HASH_LEN)
+    return 0;
+
+  if (connection_fetch_from_buf(provided_client_hash, EXT_OR_PORT_AUTH_HASH_LEN, conn) < 0)
+    return -1;
+
+  if (tor_memneq(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash,
+                 provided_client_hash, EXT_OR_PORT_AUTH_HASH_LEN)) {
+    log_warn(LD_GENERAL, "Incorrect client hash. Authentication failed.");
+    connection_ext_or_auth_send_result_fail(conn);
+    return -1;
+  }
+
+  log_warn(LD_GENERAL, "Got client's hash and it was legit.");
+
+  /* send positive auth result */
+  connection_ext_or_auth_send_result_success(conn);
+  conn->state = EXT_OR_CONN_STATE_OPEN;
+  return 1;
+}
+
+/** DOCDOCDOC
+    Return -1 on error. 0 on unsufficient data. 1 on correct.
+*/
+static int
+connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
+{
+  connection_t *conn = TO_CONN(or_conn);
+
+  switch (conn->state) { /* Functionify */
+  case EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE:
+    return connection_ext_or_auth_neg_auth_type(conn);
+
+  case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE:
+    return connection_ext_or_auth_handle_client_nonce(conn);
+
+  case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH:
+    return connection_ext_or_auth_handle_client_hash(conn);
+
+  default:
+    log_warn(LD_BUG, "Encountered unexpected connection state %d while trying "
+             "to process Extended ORPort authentication data.", conn->state);
+    return -1;
+  }
+}
+
 /** Process Extended ORPort messages from <b>or_conn</b>. */
 int
 connection_ext_or_process_inbuf(or_connection_t *or_conn)
@@ -2577,11 +2769,27 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
   ext_or_cmd_t *command;
   int r;
 
+  /* If we are still in the authentication stage, process traffic as
+     authentication data: */
+  while (conn->state <= EXT_OR_CONN_STATE_AUTH_MAX) {
+    log_warn(LD_GENERAL, "Got Extended ORPort authentication data (%u).",
+             (unsigned int) connection_get_inbuf_len(conn));
+    r = connection_ext_or_auth_process_inbuf(or_conn);
+    if (r < 0) {
+      connection_mark_for_close(conn);
+      return -1;
+    } else if (r == 0) {
+      return 0;
+    }
+    /* if r > 0, loop and process more data (if any). */
+  }
+
   while (1) {
+    log_warn(LD_GENERAL, "Got Extended ORPort data.");
     command = NULL;
     r = connection_fetch_ext_or_cmd_from_buf(conn, &command);
     if (r < 0)
-      return -1;
+      goto err;
     else if (r == 0)
       return 0; /* need to wait for more data */
 
@@ -2602,6 +2810,9 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       conn->state = EXT_OR_CONN_STATE_FLUSHING;
       connection_stop_reading(conn);
     } else if (command->cmd == EXT_OR_CMD_TB_USERADDR) {
+      /* XXX Put this in a function of its own. We need to empasize
+         that we change the address and port of this connection. */
+
       /* Copy address string. */
       tor_addr_t addr;
       uint16_t port;
@@ -2612,8 +2823,6 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       memcpy(addr_str, command->body, command->len);
       addr_str[command->len] = 0;
 
-      log_debug(LD_NET, "Received USERADDR: '%s'!", addr_str);
-
       res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
       tor_free(addr_str);
       if (res<0)
@@ -2623,6 +2832,18 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       tor_free(address_part);
       if (res<0)
         goto err;
+
+      {
+        char *old_address = tor_dup_addr(&conn->addr);
+        char *new_address = tor_dup_addr(&addr);
+
+        log_warn(LD_NET, "Received USERADDR." /* XXX FIX ALL LOG SEVERITIES AND MESSAGES */
+                 "We rewrite our address from '%s:%u' to '%s:%u'.",
+                 safe_str(old_address), conn->port, safe_str(new_address), port);
+
+        tor_free(old_address);
+        tor_free(new_address);
+      }
 
       /* record the address */
       tor_addr_copy(&conn->addr, &addr);
@@ -2639,6 +2860,7 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
 
  err:
   ext_or_cmd_free(command);
+  connection_mark_for_close(conn);
   return -1;
 }
 
@@ -2652,5 +2874,21 @@ connection_ext_or_finished_flushing(or_connection_t *conn)
     connection_start_reading(TO_CONN(conn));
     connection_ext_or_transition(conn);
   }
+  return 0;
+}
+
+/* DOCDOCDOC */
+int
+connection_ext_or_start_auth(or_connection_t *or_conn)
+{
+  connection_t *conn = TO_CONN(or_conn);
+  char authtypes[2] = "\x01\x00"; /* We only support authtype '1' for now. */
+
+  log_warn(LD_GENERAL,
+           "ExtORPort authentication: Sending supported authentication types");
+
+  connection_write_to_buf(authtypes, sizeof(authtypes), conn);
+  conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE;
+
   return 0;
 }
