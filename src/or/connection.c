@@ -33,6 +33,7 @@
 #include "dns.h"
 #include "dnsserv.h"
 #include "entrynodes.h"
+#include "ext_orport.h"
 #include "geoip.h"
 #include "main.h"
 #include "policies.h"

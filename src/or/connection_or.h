@@ -45,8 +45,6 @@ void connection_or_close_for_error(or_connection_t *orconn, int flush);
 
 void connection_or_report_broken_states(int severity, int domain);
 
-int connection_ext_or_start_auth(or_connection_t *or_conn);
-
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
@@ -96,18 +94,6 @@ void var_cell_free(var_cell_t *cell);
 
 /** DOCDOC */
 #define MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS 4
-
-ext_or_cmd_t *ext_or_cmd_new(uint16_t len);
-void ext_or_cmd_free(ext_or_cmd_t *cmd);
-void connection_or_set_ext_or_identifier(or_connection_t *conn);
-void connection_or_remove_from_ext_or_id_map(or_connection_t *conn);
-void connection_or_clear_ext_or_id_map(void);
-
-int connection_ext_or_finished_flushing(or_connection_t *conn);
-int connection_ext_or_process_inbuf(or_connection_t *or_conn);
-
-int init_ext_or_auth_cookie_authentication(int is_enabled);
-char *get_ext_or_auth_cookie_file(void);
 
 #endif
 

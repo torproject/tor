@@ -45,6 +45,7 @@
 #include "routerset.h"
 #include "statefile.h"
 #include "transports.h"
+#include "ext_orport.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif

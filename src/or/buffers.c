@@ -19,6 +19,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "reasons.h"
+#include "ext_orport.h"
 #include "../common/util.h"
 #include "../common/torlog.h"
 #ifdef HAVE_UNISTD_H
