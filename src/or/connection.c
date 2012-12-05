@@ -170,6 +170,12 @@ conn_state_to_string(int type, int state)
       break;
     case CONN_TYPE_EXT_OR:
       switch (state) {
+        case EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE:
+          return "waiting for authentication type";
+        case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE:
+          return "waiting for client nonce";
+        case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH:
+          return "waiting for client hash";
         case EXT_OR_CONN_STATE_OPEN: return "open";
         case EXT_OR_CONN_STATE_FLUSHING: return "flushing final OKAY";
       }
@@ -1398,8 +1404,7 @@ connection_init_accepted_conn(connection_t *conn,
 
   switch (conn->type) {
     case CONN_TYPE_EXT_OR:
-      conn->state = EXT_OR_CONN_STATE_OPEN;
-      break;
+      return connection_ext_or_start_auth(TO_OR_CONN(conn));
     case CONN_TYPE_OR:
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       rv = connection_tls_start_handshake(TO_OR_CONN(conn), 1);
@@ -4450,6 +4455,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR:
       tor_assert(conn->state >= OR_CONN_STATE_MIN_);
       tor_assert(conn->state <= OR_CONN_STATE_MAX_);
+      break;
     case CONN_TYPE_EXT_OR:
       tor_assert(conn->state >= EXT_OR_CONN_STATE_MIN_);
       tor_assert(conn->state <= EXT_OR_CONN_STATE_MAX_);

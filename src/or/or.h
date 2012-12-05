@@ -315,14 +315,24 @@ typedef enum {
 #define OR_CONN_STATE_OPEN 8
 #define OR_CONN_STATE_MAX_ 8
 
-/** States of Extended ORPort. */
+/** States of the Extended ORPort protocol. Be careful before changing
+ *  the numbers: they matter. */
 #define EXT_OR_CONN_STATE_MIN_ 1
-/** Extended ORPort just launched, and is accepting connections. */
-#define EXT_OR_CONN_STATE_OPEN 1
+/** Extended ORPort authentication is waiting for the authentication
+ *  type selected by the client. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE 1
+/** Extended ORPort authentication is waiting for the client nonce. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE 2
+/** Extended ORPort authentication is waiting for the client hash. */
+#define EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH 3
+#define EXT_OR_CONN_STATE_AUTH_MAX 3
+/** Authentication finished and the Extended ORPort is now accepting
+ *  traffic. */
+#define EXT_OR_CONN_STATE_OPEN 4
 /** Extended ORPort is flushing its last messages and preparing to
  *  start accepting OR connections. */
-#define EXT_OR_CONN_STATE_FLUSHING 2
-#define EXT_OR_CONN_STATE_MAX_ 2
+#define EXT_OR_CONN_STATE_FLUSHING 5
+#define EXT_OR_CONN_STATE_MAX_ 5
 
 #define EXIT_CONN_STATE_MIN_ 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -1440,6 +1450,9 @@ typedef struct or_connection_t {
   char identity_digest[DIGEST_LEN];
   /** Extended ORPort connection identifier. */
   char *ext_or_conn_id;
+  /** Client hash of the Extended ORPort authentication scheme */
+  char *ext_or_auth_correct_client_hash;
+
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state. */
@@ -3771,7 +3784,10 @@ typedef struct {
 
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
-  char *CookieAuthFile; /**< Location of a cookie authentication file. */
+  char *CookieAuthFile; /**< Filesystem location of a ControlPort
+                         *   authentication cookie. */
+  char *ExtORPortCookieAuthFile; /**< Filesystem location of Extended
+                                 *   ORPort authentication cookie. */
   int CookieAuthFileGroupReadable; /**< Boolean: Is the CookieAuthFile g+r? */
   int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
                           * circuits itself (0), or does it expect a controller
