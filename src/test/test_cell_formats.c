@@ -9,6 +9,10 @@
 #define RELAY_PRIVATE
 #include "or.h"
 #include "connection_edge.h"
+#include "onion.h"
+#include "onion_tap.h"
+#include "onion_fast.h"
+#include "onion_ntor.h"
 #include "relay.h"
 #include "test.h"
 
@@ -374,6 +378,453 @@ test_cfmt_connected_cells(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+test_cfmt_create_cells(void *arg)
+{
+  uint8_t b[MAX_ONIONSKIN_CHALLENGE_LEN];
+  create_cell_t cc;
+  cell_t cell;
+  cell_t cell2;
+
+  (void)arg;
+
+  /* === Let's try parsing some good cells! */
+
+  /* A valid create cell. */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, TAP_ONIONSKIN_CHALLENGE_LEN);
+  cell.command = CELL_CREATE;
+  memcpy(cell.payload, b, TAP_ONIONSKIN_CHALLENGE_LEN);
+  tt_int_op(0, ==, create_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATE, ==, cc.cell_type);
+  tt_int_op(ONION_HANDSHAKE_TYPE_TAP, ==, cc.handshake_type);
+  tt_int_op(TAP_ONIONSKIN_CHALLENGE_LEN, ==, cc.handshake_len);
+  test_memeq(cc.onionskin, b, TAP_ONIONSKIN_CHALLENGE_LEN + 10);
+  tt_int_op(0, ==, create_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A valid create_fast cell. */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, CREATE_FAST_LEN);
+  cell.command = CELL_CREATE_FAST;
+  memcpy(cell.payload, b, CREATE_FAST_LEN);
+  tt_int_op(0, ==, create_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATE_FAST, ==, cc.cell_type);
+  tt_int_op(ONION_HANDSHAKE_TYPE_FAST, ==, cc.handshake_type);
+  tt_int_op(CREATE_FAST_LEN, ==, cc.handshake_len);
+  test_memeq(cc.onionskin, b, CREATE_FAST_LEN + 10);
+  tt_int_op(0, ==, create_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A valid create2 cell with a TAP payload */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, TAP_ONIONSKIN_CHALLENGE_LEN);
+  cell.command = CELL_CREATE2;
+  memcpy(cell.payload, "\x00\x00\x00\xBA", 4); /* TAP, 186 bytes long */
+  memcpy(cell.payload+4, b, TAP_ONIONSKIN_CHALLENGE_LEN);
+  tt_int_op(0, ==, create_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATE2, ==, cc.cell_type);
+  tt_int_op(ONION_HANDSHAKE_TYPE_TAP, ==, cc.handshake_type);
+  tt_int_op(TAP_ONIONSKIN_CHALLENGE_LEN, ==, cc.handshake_len);
+  test_memeq(cc.onionskin, b, TAP_ONIONSKIN_CHALLENGE_LEN + 10);
+  tt_int_op(0, ==, create_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A valid create2 cell with an ntor payload */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
+  cell.command = CELL_CREATE2;
+  memcpy(cell.payload, "\x00\x02\x00\x54", 4); /* ntor, 84 bytes long */
+  memcpy(cell.payload+4, b, NTOR_ONIONSKIN_LEN);
+#ifdef CURVE25519_ENABLED
+  tt_int_op(0, ==, create_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATE2, ==, cc.cell_type);
+  tt_int_op(ONION_HANDSHAKE_TYPE_NTOR, ==, cc.handshake_type);
+  tt_int_op(NTOR_ONIONSKIN_LEN, ==, cc.handshake_len);
+  test_memeq(cc.onionskin, b, NTOR_ONIONSKIN_LEN + 10);
+  tt_int_op(0, ==, create_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+#else
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+#endif
+
+  /* == Okay, now let's try to parse some impossible stuff. */
+
+  /* It has to be some kind of a create cell! */
+  cell.command = CELL_CREATED;
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+
+  /* You can't acutally make an unparseable CREATE or CREATE_FAST cell. */
+
+  /* Try some CREATE2 cells.  First with a bad type. */
+  cell.command = CELL_CREATE2;
+  memcpy(cell.payload, "\x00\x50\x00\x99", 4); /* Type 0x50???? */
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+  /* Now a good type with an incorrect length. */
+  memcpy(cell.payload, "\x00\x00\x00\xBC", 4); /* TAP, 187 bytes.*/
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+  /* Now a good type with a ridiculous length. */
+  memcpy(cell.payload, "\x00\x00\x02\x00", 4); /* TAP, 512 bytes.*/
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+
+  /* == Time to try formatting bad cells.  The important thing is that
+     we reject big lengths, so just check that for now. */
+  cc.handshake_len = 512;
+  tt_int_op(-1, ==, create_cell_format(&cell2, &cc));
+
+  /* == Try formatting a create2 cell we don't understand. XXXX */
+
+ done:
+  ;
+}
+
+static void
+test_cfmt_created_cells(void *arg)
+{
+  uint8_t b[512];
+  created_cell_t cc;
+  cell_t cell;
+  cell_t cell2;
+
+  (void)arg;
+
+  /* A good CREATED cell */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, TAP_ONIONSKIN_REPLY_LEN);
+  cell.command = CELL_CREATED;
+  memcpy(cell.payload, b, TAP_ONIONSKIN_REPLY_LEN);
+  tt_int_op(0, ==, created_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATED, ==, cc.cell_type);
+  tt_int_op(TAP_ONIONSKIN_REPLY_LEN, ==, cc.handshake_len);
+  test_memeq(cc.reply, b, TAP_ONIONSKIN_REPLY_LEN + 10);
+  tt_int_op(0, ==, created_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A good CREATED_FAST cell */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, CREATED_FAST_LEN);
+  cell.command = CELL_CREATED_FAST;
+  memcpy(cell.payload, b, CREATED_FAST_LEN);
+  tt_int_op(0, ==, created_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATED_FAST, ==, cc.cell_type);
+  tt_int_op(CREATED_FAST_LEN, ==, cc.handshake_len);
+  test_memeq(cc.reply, b, CREATED_FAST_LEN + 10);
+  tt_int_op(0, ==, created_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A good CREATED2 cell with short reply */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, 64);
+  cell.command = CELL_CREATED2;
+  memcpy(cell.payload, "\x00\x40", 2);
+  memcpy(cell.payload+2, b, 64);
+  tt_int_op(0, ==, created_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATED2, ==, cc.cell_type);
+  tt_int_op(64, ==, cc.handshake_len);
+  test_memeq(cc.reply, b, 80);
+  tt_int_op(0, ==, created_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* A good CREATED2 cell with maximal reply */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, 496);
+  cell.command = CELL_CREATED2;
+  memcpy(cell.payload, "\x01\xF0", 2);
+  memcpy(cell.payload+2, b, 496);
+  tt_int_op(0, ==, created_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATED2, ==, cc.cell_type);
+  tt_int_op(496, ==, cc.handshake_len);
+  test_memeq(cc.reply, b, 496);
+  tt_int_op(0, ==, created_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+
+  /* Bogus CREATED2 cell: too long! */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, 496);
+  cell.command = CELL_CREATED2;
+  memcpy(cell.payload, "\x01\xF1", 2);
+  tt_int_op(-1, ==, created_cell_parse(&cc, &cell));
+
+  /* Unformattable CREATED2 cell: too long! */
+  cc.handshake_len = 497;
+  tt_int_op(-1, ==, created_cell_format(&cell2, &cc));
+
+ done:
+  ;
+}
+
+static void
+test_cfmt_extend_cells(void *arg)
+{
+  uint8_t b[512];
+  extend_cell_t ec;
+  create_cell_t *cc = &ec.create_cell;
+  uint8_t p[RELAY_PAYLOAD_SIZE];
+  uint8_t p2[RELAY_PAYLOAD_SIZE];
+  uint8_t p2_cmd;
+  uint16_t p2_len;
+  char *mem_op_hex_tmp = NULL;
+
+  (void) arg;
+
+  /* Let's start with a simple EXTEND cell. */
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, TAP_ONIONSKIN_CHALLENGE_LEN);
+  memcpy(p, "\x12\xf4\x00\x01\x01\x02", 6); /* 18 244 0 1 : 258 */
+  memcpy(p+6,b,TAP_ONIONSKIN_CHALLENGE_LEN);
+  memcpy(p+6+TAP_ONIONSKIN_CHALLENGE_LEN, "electroencephalogram", 20);
+  tt_int_op(0, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND,
+                                     p, 26+TAP_ONIONSKIN_CHALLENGE_LEN));
+  tt_int_op(RELAY_COMMAND_EXTEND, ==, ec.cell_type);
+  tt_str_op("18.244.0.1", ==, fmt_addr(&ec.orport_ipv4.addr));
+  tt_int_op(258, ==, ec.orport_ipv4.port);
+  tt_int_op(AF_UNSPEC, ==, tor_addr_family(&ec.orport_ipv6.addr));
+  test_memeq(ec.node_id, "electroencephalogram", 20);
+  tt_int_op(cc->cell_type, ==, CELL_CREATE);
+  tt_int_op(cc->handshake_type, ==, ONION_HANDSHAKE_TYPE_TAP);
+  tt_int_op(cc->handshake_len, ==, TAP_ONIONSKIN_CHALLENGE_LEN);
+  test_memeq(cc->onionskin, b, TAP_ONIONSKIN_CHALLENGE_LEN+20);
+  tt_int_op(0, ==, extend_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND);
+  tt_int_op(p2_len, ==, 26+TAP_ONIONSKIN_CHALLENGE_LEN);
+  test_memeq(p2, p, RELAY_PAYLOAD_SIZE);
+
+  /* Now let's do a minimal ntor EXTEND2 cell. */
+  memset(&ec, 0xff, sizeof(ec));
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
+  /* 2 items; one 18.244.0.1:61681 */
+  memcpy(p, "\x02\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  /* The other is a digest. */
+  memcpy(p+9, "\x02\x14" "anarchoindividualist", 22);
+  /* Prep for the handshake: type and length */
+  memcpy(p+31, "\x00\x02\x00\x54", 4);
+  memcpy(p+35, b, NTOR_ONIONSKIN_LEN);
+  tt_int_op(0, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                     p, 35+NTOR_ONIONSKIN_LEN));
+  tt_int_op(RELAY_COMMAND_EXTEND2, ==, ec.cell_type);
+  tt_str_op("18.244.0.1", ==, fmt_addr(&ec.orport_ipv4.addr));
+  tt_int_op(61681, ==, ec.orport_ipv4.port);
+  tt_int_op(AF_UNSPEC, ==, tor_addr_family(&ec.orport_ipv6.addr));
+  test_memeq(ec.node_id, "anarchoindividualist", 20);
+  tt_int_op(cc->cell_type, ==, CELL_CREATE2);
+  tt_int_op(cc->handshake_type, ==, ONION_HANDSHAKE_TYPE_NTOR);
+  tt_int_op(cc->handshake_len, ==, NTOR_ONIONSKIN_LEN);
+  test_memeq(cc->onionskin, b, NTOR_ONIONSKIN_LEN+20);
+  tt_int_op(0, ==, extend_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND2);
+  tt_int_op(p2_len, ==, 35+NTOR_ONIONSKIN_LEN);
+  test_memeq(p2, p, RELAY_PAYLOAD_SIZE);
+
+  /* Now let's do a fanciful EXTEND2 cell. */
+  memset(&ec, 0xff, sizeof(ec));
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, 99);
+  /* 4 items; one 18 244 0 1 61681 */
+  memcpy(p, "\x04\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  /* One is a digest. */
+  memcpy(p+9, "\x02\x14" "anthropomorphization", 22);
+  /* One is an ipv6 address */
+  memcpy(p+31, "\x01\x12\x20\x02\x00\x00\x00\x00\x00\x00"
+               "\x00\x00\x00\x00\x00\xf0\xc5\x1e\x11\x12", 20);
+  /* One is the Konami code. */
+  memcpy(p+51, "\xf0\x20upupdowndownleftrightleftrightba", 34);
+  /* Prep for the handshake: weird type and length */
+  memcpy(p+85, "\x01\x05\x00\x63", 4);
+  memcpy(p+89, b, 99);
+  tt_int_op(0, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2, p, 89+99));
+  tt_int_op(RELAY_COMMAND_EXTEND2, ==, ec.cell_type);
+  tt_str_op("18.244.0.1", ==, fmt_addr(&ec.orport_ipv4.addr));
+  tt_int_op(61681, ==, ec.orport_ipv4.port);
+  tt_str_op("2002::f0:c51e", ==, fmt_addr(&ec.orport_ipv6.addr));
+  tt_int_op(4370, ==, ec.orport_ipv6.port);
+  test_memeq(ec.node_id, "anthropomorphization", 20);
+  tt_int_op(cc->cell_type, ==, CELL_CREATE2);
+  tt_int_op(cc->handshake_type, ==, 0x105);
+  tt_int_op(cc->handshake_len, ==, 99);
+  test_memeq(cc->onionskin, b, 99+20);
+  tt_int_op(0, ==, extend_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND2);
+  /* We'll generate it minus the IPv6 address and minus the konami code */
+  tt_int_op(p2_len, ==, 89+99-34-20);
+  test_memeq_hex(p2,
+                 /* Two items: one that same darn IP address. */
+                 "02000612F40001F0F1"
+                 /* The next is a digest : anthropomorphization */
+                 "0214616e7468726f706f6d6f727068697a6174696f6e"
+                 /* Now the handshake prologue */
+                 "01050063");
+  test_memeq(p2+1+8+22+4, b, 99+20);
+
+  /* == Now try parsing some junk */
+
+  /* Try a too-long handshake */
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x02\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  memcpy(p+9, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+31, "\xff\xff\x01\xd0", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* Try two identities. */
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x03\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  memcpy(p+9, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+31, "\x02\x14" "autodepolymerization", 22);
+  memcpy(p+53, "\xff\xff\x00\x10", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* No identities. */
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x01\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  memcpy(p+53, "\xff\xff\x00\x10", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* Try a bad IPv4 address (too long, too short)*/
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x02\x00\x07\x12\xf4\x00\x01\xf0\xf1\xff", 10);
+  memcpy(p+10, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+32, "\xff\xff\x00\x10", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x02\x00\x05\x12\xf4\x00\x01\xf0", 8);
+  memcpy(p+8, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+30, "\xff\xff\x00\x10", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* IPv6 address (too long, too short, no IPv4)*/
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x03\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  memcpy(p+9, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+31, "\x01\x13" "xxxxxxxxxxxxxxxxYYZ", 19);
+  memcpy(p+50, "\xff\xff\x00\x20", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x03\x00\x06\x12\xf4\x00\x01\xf0\xf1", 9);
+  memcpy(p+9, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+31, "\x01\x11" "xxxxxxxxxxxxxxxxY", 17);
+  memcpy(p+48, "\xff\xff\x00\x20", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+  memset(p, 0, sizeof(p));
+  memcpy(p, "\x02", 1);
+  memcpy(p+1, "\x02\x14" "anarchoindividualist", 22);
+  memcpy(p+23, "\x01\x12" "xxxxxxxxxxxxxxxxYY", 18);
+  memcpy(p+41, "\xff\xff\x00\x20", 4);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* Running out of space in specifiers  */
+  memset(p,0,sizeof(p));
+  memcpy(p, "\x05\x0a\xff", 3);
+  memcpy(p+3+255, "\x0a\xff", 2);
+  tt_int_op(-1, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2,
+                                      p, sizeof(p)));
+
+  /* Fuzz, because why not. */
+  memset(&ec, 0xff, sizeof(ec));
+  {
+    int i;
+    memset(p, 0, sizeof(p));
+    for (i = 0; i < 10000; ++i) {
+      int n = crypto_rand_int(sizeof(p));
+      crypto_rand((char *)p, n);
+      extend_cell_parse(&ec, RELAY_COMMAND_EXTEND2, p, n);
+    }
+  }
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_cfmt_extended_cells(void *arg)
+{
+  uint8_t b[512];
+  extended_cell_t ec;
+  created_cell_t *cc = &ec.created_cell;
+  uint8_t p[RELAY_PAYLOAD_SIZE];
+  uint8_t p2[RELAY_PAYLOAD_SIZE];
+  uint8_t p2_cmd;
+  uint16_t p2_len;
+  char *mem_op_hex_tmp = NULL;
+
+  (void) arg;
+
+  /* Try a regular EXTENDED cell. */
+  memset(&ec, 0xff, sizeof(ec));
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, TAP_ONIONSKIN_REPLY_LEN);
+  memcpy(p,b,TAP_ONIONSKIN_REPLY_LEN);
+  tt_int_op(0, ==, extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED, p,
+                                       TAP_ONIONSKIN_REPLY_LEN));
+  tt_int_op(RELAY_COMMAND_EXTENDED, ==, ec.cell_type);
+  tt_int_op(cc->cell_type, ==, CELL_CREATED);
+  tt_int_op(cc->handshake_len, ==, TAP_ONIONSKIN_REPLY_LEN);
+  test_memeq(cc->reply, b, TAP_ONIONSKIN_REPLY_LEN);
+  tt_int_op(0, ==, extended_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(RELAY_COMMAND_EXTENDED, ==, p2_cmd);
+  tt_int_op(TAP_ONIONSKIN_REPLY_LEN, ==, p2_len);
+  test_memeq(p2, p, sizeof(p2));
+
+  /* Try an EXTENDED2 cell */
+  memset(&ec, 0xff, sizeof(ec));
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, 42);
+  memcpy(p,"\x00\x2a",2);
+  memcpy(p+2,b,42);
+  tt_int_op(0, ==, extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED2, p, 2+42));
+  tt_int_op(RELAY_COMMAND_EXTENDED2, ==, ec.cell_type);
+  tt_int_op(cc->cell_type, ==, CELL_CREATED2);
+  tt_int_op(cc->handshake_len, ==, 42);
+  test_memeq(cc->reply, b, 42+10);
+  tt_int_op(0, ==, extended_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(RELAY_COMMAND_EXTENDED2, ==, p2_cmd);
+  tt_int_op(2+42, ==, p2_len);
+  test_memeq(p2, p, sizeof(p2));
+
+  /* Try an almost-too-long EXTENDED2 cell */
+  memcpy(p, "\x01\xf0", 2);
+  tt_int_op(0, ==,
+            extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED2, p, sizeof(p)));
+
+  /* Now try a too-long extended2 cell. That's the only misparse I can think
+   * of. */
+  memcpy(p, "\x01\xf1", 2);
+  tt_int_op(-1, ==,
+            extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED2, p, sizeof(p)));
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cfmt_ ## name, flags, 0, NULL }
 
@@ -381,6 +832,10 @@ struct testcase_t cell_format_tests[] = {
   TEST(relay_header, 0),
   TEST(begin_cells, 0),
   TEST(connected_cells, 0),
+  TEST(create_cells, 0),
+  TEST(created_cells, 0),
+  TEST(extend_cells, 0),
+  TEST(extended_cells, 0),
   END_OF_TESTCASES
 };
 

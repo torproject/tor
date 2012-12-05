@@ -6,8 +6,8 @@
 
 /**
  * \file onion.c
- * \brief Functions to queue create cells, handle onionskin
- * parsing and creation, and wrap the various onionskin types.
+ * \brief Functions to queue create cells, wrap the various onionskin types,
+ * and parse and create the CREATE cell and its allies.
  **/
 
 #include "or.h"
@@ -17,6 +17,7 @@
 #include "onion_fast.h"
 #include "onion_ntor.h"
 #include "onion_tap.h"
+#include "relay.h"
 #include "rephist.h"
 #include "router.h"
 
@@ -408,5 +409,519 @@ onion_skin_client_handshake(int type,
     tor_fragile_assert();
     return -1;
   }
+}
+
+/** Helper: return 0 if <b>cell</b> appears valid, -1 otherwise. If
+ * <b>unknown_ok</b> is true, allow cells with handshake types we don't
+ * recognize. */
+static int
+check_create_cell(const create_cell_t *cell, int unknown_ok)
+{
+  switch (cell->cell_type) {
+  case CELL_CREATE:
+    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_TAP)
+      return -1;
+    break;
+  case CELL_CREATE_FAST:
+    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST)
+      return -1;
+    break;
+  case CELL_CREATE2:
+    break;
+  default:
+    return -1;
+  }
+
+  switch (cell->handshake_type) {
+  case ONION_HANDSHAKE_TYPE_TAP:
+    if (cell->handshake_len != TAP_ONIONSKIN_CHALLENGE_LEN)
+      return -1;
+    break;
+  case ONION_HANDSHAKE_TYPE_FAST:
+    if (cell->handshake_len != CREATE_FAST_LEN)
+      return -1;
+    break;
+#ifdef CURVE25519_ENABLED
+  case ONION_HANDSHAKE_TYPE_NTOR:
+    if (cell->handshake_len != NTOR_ONIONSKIN_LEN)
+      return -1;
+    break;
+#endif
+  default:
+    if (! unknown_ok)
+      return -1;
+  }
+
+  return 0;
+}
+
+/** Helper: parse the CREATE2 payload at <b>p</b>, which could be up to
+ * <b>p_len</b> bytes long, and use it to fill the fields of
+ * <b>cell_out</b>. Return 0 on success and -1 on failure.
+ *
+ * Note that part of the body of an EXTEND2 cell is a CREATE2 payload, so
+ * this function is also used for parsing those.
+ */
+static int
+parse_create2_payload(create_cell_t *cell_out, const uint8_t *p, size_t p_len)
+{
+  if (p_len < 4)
+    return -1;
+  cell_out->cell_type = CELL_CREATE2;
+  cell_out->handshake_type = ntohs(get_uint16(p));
+  cell_out->handshake_len = ntohs(get_uint16(p+2));
+  if (cell_out->handshake_len > CELL_PAYLOAD_SIZE - 4 ||
+      cell_out->handshake_len > p_len - 4)
+    return -1;
+  memcpy(cell_out->onionskin, p+4, cell_out->handshake_len);
+  return 0;
+}
+
+/** Parse a CREATE, CREATE_FAST, or CREATE2 cell from <b>cell_in</b> into
+ * <b>cell_out</b>. Return 0 on success, -1 on failure. (We reject some
+ * syntactically valid CREATE2 cells that we can't generate or react to.) */
+int
+create_cell_parse(create_cell_t *cell_out, const cell_t *cell_in)
+{
+  memset(cell_out, 0, sizeof(*cell_out));
+
+  switch (cell_in->command) {
+  case CELL_CREATE:
+    cell_out->cell_type = CELL_CREATE;
+    cell_out->handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+    cell_out->handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+    memcpy(cell_out->onionskin, cell_in->payload, TAP_ONIONSKIN_CHALLENGE_LEN);
+    break;
+  case CELL_CREATE_FAST:
+    cell_out->cell_type = CELL_CREATE_FAST;
+    cell_out->handshake_type = ONION_HANDSHAKE_TYPE_FAST;
+    cell_out->handshake_len = CREATE_FAST_LEN;
+    memcpy(cell_out->onionskin, cell_in->payload, CREATE_FAST_LEN);
+    break;
+  case CELL_CREATE2:
+    if (parse_create2_payload(cell_out, cell_in->payload,
+                              CELL_PAYLOAD_SIZE) < 0)
+      return -1;
+    break;
+  default:
+    return -1;
+  }
+
+  return check_create_cell(cell_out, 0);
+}
+
+/** Helper: return 0 if <b>cell</b> appears valid, -1 otherwise. */
+static int
+check_created_cell(const created_cell_t *cell)
+{
+  switch (cell->cell_type) {
+  case CELL_CREATED:
+    if (cell->handshake_len != TAP_ONIONSKIN_REPLY_LEN)
+      return -1;
+    break;
+  case CELL_CREATED_FAST:
+    if (cell->handshake_len != CREATED_FAST_LEN)
+      return -1;
+    break;
+  case CELL_CREATED2:
+    if (cell->handshake_len > RELAY_PAYLOAD_SIZE-2)
+      return -1;
+    break;
+  }
+
+  return 0;
+}
+
+/** Parse a CREATED, CREATED_FAST, or CREATED2 cell from <b>cell_in</b> into
+ * <b>cell_out</b>. Return 0 on success, -1 on failure. */
+int
+created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in)
+{
+  memset(cell_out, 0, sizeof(*cell_out));
+
+  switch (cell_in->command) {
+  case CELL_CREATED:
+    cell_out->cell_type = CELL_CREATED;
+    cell_out->handshake_len = TAP_ONIONSKIN_REPLY_LEN;
+    memcpy(cell_out->reply, cell_in->payload, TAP_ONIONSKIN_REPLY_LEN);
+    break;
+  case CELL_CREATED_FAST:
+    cell_out->cell_type = CELL_CREATED_FAST;
+    cell_out->handshake_len = CREATED_FAST_LEN;
+    memcpy(cell_out->reply, cell_in->payload, CREATED_FAST_LEN);
+    break;
+  case CELL_CREATED2:
+    {
+      const uint8_t *p = cell_in->payload;
+      cell_out->cell_type = CELL_CREATED2;
+      cell_out->handshake_len = ntohs(get_uint16(p));
+      if (cell_out->handshake_len > CELL_PAYLOAD_SIZE - 2)
+        return -1;
+      memcpy(cell_out->reply, p+2, cell_out->handshake_len);
+      break;
+    }
+  }
+
+  return check_created_cell(cell_out);
+}
+
+/** Helper: return 0 if <b>cell</b> appears valid, -1 otherwise. */
+static int
+check_extend_cell(const extend_cell_t *cell)
+{
+  if (tor_digest_is_zero((const char*)cell->node_id))
+    return -1;
+  /* We don't currently allow EXTEND2 cells without an IPv4 address */
+  if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC)
+    return -1;
+  if (cell->create_cell.cell_type == CELL_CREATE) {
+    if (cell->cell_type != RELAY_COMMAND_EXTEND)
+      return -1;
+  } else if (cell->create_cell.cell_type == CELL_CREATE2) {
+    if (cell->cell_type != RELAY_COMMAND_EXTEND2)
+      return -1;
+  } else {
+    /* In particular, no CREATE_FAST cells are allowed */
+    return -1;
+  }
+  if (cell->create_cell.handshake_type == ONION_HANDSHAKE_TYPE_FAST)
+    return -1;
+
+  return check_create_cell(&cell->create_cell, 1);
+}
+
+/** Protocol constants for specifier types in EXTEND2
+ * @{
+ */
+#define SPECTYPE_IPV4 0
+#define SPECTYPE_IPV6 1
+#define SPECTYPE_LEGACY_ID 2
+/** @} */
+
+/** Parse an EXTEND or EXTEND2 cell (according to <b>command</b>) from the
+ * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
+ * 0 on success, -1 on failure. */
+int
+extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
+                  const uint8_t *payload, size_t payload_length)
+{
+  const uint8_t *eop;
+
+  memset(cell_out, 0, sizeof(*cell_out));
+  if (payload_length > RELAY_PAYLOAD_SIZE)
+    return -1;
+  eop = payload + payload_length;
+
+  switch (command) {
+  case RELAY_COMMAND_EXTEND:
+    {
+      if (payload_length != 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN)
+        return -1;
+
+      cell_out->cell_type = RELAY_COMMAND_EXTEND;
+      tor_addr_from_ipv4n(&cell_out->orport_ipv4.addr, get_uint32(payload));
+      cell_out->orport_ipv4.port = ntohs(get_uint16(payload+4));
+      tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
+      cell_out->create_cell.cell_type = CELL_CREATE;
+      cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+      cell_out->create_cell.handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+      memcpy(cell_out->create_cell.onionskin, payload + 6,
+             TAP_ONIONSKIN_CHALLENGE_LEN);
+      memcpy(cell_out->node_id, payload + 6 + TAP_ONIONSKIN_CHALLENGE_LEN,
+             DIGEST_LEN);
+      break;
+    }
+  case RELAY_COMMAND_EXTEND2:
+    {
+      uint8_t n_specs = *payload, spectype, speclen;
+      int i;
+      int found_ipv4 = 0, found_ipv6 = 0, found_id = 0;
+      tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
+      tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
+
+      cell_out->cell_type = RELAY_COMMAND_EXTEND2;
+      ++payload;
+      /* Parse the specifiers. We'll only take the first IPv4 and first IPv6
+       * addres, and the node ID, and ignore everything else */
+      for (i = 0; i < n_specs; ++i) {
+        if (eop - payload < 2)
+          return -1;
+        spectype = payload[0];
+        speclen = payload[1];
+        payload += 2;
+        if (eop - payload < speclen)
+          return -1;
+        switch (spectype) {
+        case SPECTYPE_IPV4:
+          if (speclen != 6)
+            return -1;
+          if (!found_ipv4) {
+            tor_addr_from_ipv4n(&cell_out->orport_ipv4.addr,
+                                get_uint32(payload));
+            cell_out->orport_ipv4.port = ntohs(get_uint16(payload+4));
+            found_ipv4 = 1;
+          }
+          break;
+        case SPECTYPE_IPV6:
+          if (speclen != 18)
+            return -1;
+          if (!found_ipv6) {
+            tor_addr_from_ipv6_bytes(&cell_out->orport_ipv6.addr,
+                                     (const char*)payload);
+            cell_out->orport_ipv6.port = ntohs(get_uint16(payload+16));
+            found_ipv6 = 1;
+          }
+          break;
+        case SPECTYPE_LEGACY_ID:
+          if (speclen != 20)
+            return -1;
+          if (found_id)
+            return -1;
+          memcpy(cell_out->node_id, payload, 20);
+          found_id = 1;
+          break;
+        }
+        payload += speclen;
+      }
+      if (!found_id || !found_ipv4)
+        return -1;
+      if (parse_create2_payload(&cell_out->create_cell,payload,eop-payload)<0)
+        return -1;
+
+      break;
+    }
+  default:
+    return -1;
+  }
+
+  return check_extend_cell(cell_out);
+}
+
+/** Helper: return 0 if <b>cell</b> appears valid, -1 otherwise. */
+static int
+check_extended_cell(const extended_cell_t *cell)
+{
+  if (cell->created_cell.cell_type == CELL_CREATED) {
+    if (cell->cell_type != RELAY_COMMAND_EXTENDED)
+      return -1;
+  } else if (cell->created_cell.cell_type == CELL_CREATED2) {
+    if (cell->cell_type != RELAY_COMMAND_EXTENDED2)
+      return -1;
+  } else {
+    return -1;
+  }
+
+  return check_created_cell(&cell->created_cell);
+}
+
+/** Parse an EXTENDED or EXTENDED2 cell (according to <b>command</b>) from the
+ * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
+ * 0 on success, -1 on failure. */
+int
+extended_cell_parse(extended_cell_t *cell_out,
+                    const uint8_t command, const uint8_t *payload,
+                    size_t payload_len)
+{
+  const uint8_t *eop;
+
+  memset(cell_out, 0, sizeof(*cell_out));
+  if (payload_len > RELAY_PAYLOAD_SIZE)
+    return -1;
+  eop = payload + payload_len;
+
+  switch (command) {
+  case RELAY_COMMAND_EXTENDED:
+    if (payload_len != TAP_ONIONSKIN_REPLY_LEN)
+      return -1;
+    cell_out->cell_type = RELAY_COMMAND_EXTENDED;
+    cell_out->created_cell.cell_type = CELL_CREATED;
+    cell_out->created_cell.handshake_len = TAP_ONIONSKIN_REPLY_LEN;
+    memcpy(cell_out->created_cell.reply, payload, TAP_ONIONSKIN_REPLY_LEN);
+    break;
+  case RELAY_COMMAND_EXTENDED2:
+    {
+      cell_out->cell_type = RELAY_COMMAND_EXTENDED2;
+      cell_out->created_cell.cell_type = CELL_CREATED2;
+      cell_out->created_cell.handshake_len = ntohs(get_uint16(payload));
+      if (cell_out->created_cell.handshake_len > RELAY_PAYLOAD_SIZE - 2 ||
+          cell_out->created_cell.handshake_len > payload_len - 2)
+        return -1;
+      memcpy(cell_out->created_cell.reply, payload+2,
+             cell_out->created_cell.handshake_len);
+    }
+    break;
+  default:
+    return -1;
+  }
+
+  return check_extended_cell(cell_out);
+}
+
+/** Fill <b>cell_out</b> with a correctly formatted version of the
+ * CREATE{,_FAST,2} cell in <b>cell_in</b>. Return 0 on success, -1 on
+ * failure. */
+int
+create_cell_format(cell_t *cell_out, const create_cell_t *cell_in)
+{
+  if (check_create_cell(cell_in, 0) < 0)
+    return -1;
+
+  memset(cell_out->payload, 0, sizeof(cell_out->payload));
+  cell_out->command = cell_in->cell_type;
+
+  switch (cell_in->cell_type) {
+  case CELL_CREATE:
+  case CELL_CREATE_FAST:
+    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload));
+    memcpy(cell_out->payload, cell_in->onionskin, cell_in->handshake_len);
+    break;
+  case CELL_CREATE2:
+    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload)-4);
+    set_uint16(cell_out->payload, htons(cell_in->handshake_type));
+    set_uint16(cell_out->payload+2, htons(cell_in->handshake_len));
+    memcpy(cell_out->payload + 4, cell_in->onionskin, cell_in->handshake_len);
+    break;
+  default:
+    return -1;
+  }
+
+  return 0;
+}
+
+/** Fill <b>cell_out</b> with a correctly formatted version of the
+ * CREATED{,_FAST,2} cell in <b>cell_in</b>. Return 0 on success, -1 on
+ * failure. */
+int
+created_cell_format(cell_t *cell_out, const created_cell_t *cell_in)
+{
+  if (check_created_cell(cell_in) < 0)
+    return -1;
+
+  memset(cell_out->payload, 0, sizeof(cell_out->payload));
+  cell_out->command = cell_in->cell_type;
+
+  switch (cell_in->cell_type) {
+  case CELL_CREATED:
+  case CELL_CREATED_FAST:
+    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload));
+    memcpy(cell_out->payload, cell_in->reply, cell_in->handshake_len);
+    break;
+  case CELL_CREATED2:
+    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload)-2);
+    set_uint16(cell_out->payload, htons(cell_in->handshake_len));
+    memcpy(cell_out->payload + 2, cell_in->reply, cell_in->handshake_len);
+    break;
+  default:
+    return -1;
+  }
+  return 0;
+}
+
+/** Format the EXTEND{,2} cell in <b>cell_in</b>, storing its relay payload in
+ * <b>payload_out</b>, the number of bytes used in *<b>len_out</b>, and the
+ * relay command in *<b>command_out</b>. The <b>payload_out</b> must have
+ * RELAY_PAYLOAD_SIZE bytes available.  Return 0 on success, -1 on failure. */
+int
+extend_cell_format(uint8_t *command_out, uint16_t *len_out,
+                   uint8_t *payload_out, const extend_cell_t *cell_in)
+{
+  uint8_t *p, *eop;
+  if (check_extend_cell(cell_in) < 0)
+    return -1;
+
+  p = payload_out;
+  eop = payload_out + RELAY_PAYLOAD_SIZE;
+
+  memset(p, 0, RELAY_PAYLOAD_SIZE);
+
+  switch (cell_in->cell_type) {
+  case RELAY_COMMAND_EXTEND:
+    {
+      *command_out = RELAY_COMMAND_EXTEND;
+      *len_out = 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN;
+      set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
+      set_uint16(p+4, ntohs(cell_in->orport_ipv4.port));
+      memcpy(p+6, cell_in->create_cell.onionskin,
+             TAP_ONIONSKIN_CHALLENGE_LEN);
+      memcpy(p+6+TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->node_id, DIGEST_LEN);
+    }
+    break;
+  case RELAY_COMMAND_EXTEND2:
+    {
+      uint8_t n = 2;
+      *command_out = RELAY_COMMAND_EXTEND2;
+
+      *p++ = n; /* 2 identifiers */
+      *p++ = SPECTYPE_IPV4; /* First is IPV4. */
+      *p++ = 6; /* It's 6 bytes long. */
+      set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
+      set_uint16(p+4, htons(cell_in->orport_ipv4.port));
+      p += 6;
+      *p++ = SPECTYPE_LEGACY_ID; /* Next is an identity digest. */
+      *p++ = 20; /* It's 20 bytes long */
+      memcpy(p, cell_in->node_id, DIGEST_LEN);
+      p += 20;
+
+      /* Now we can send the handshake */
+      set_uint16(p, htons(cell_in->create_cell.handshake_type));
+      set_uint16(p+2, htons(cell_in->create_cell.handshake_len));
+      p += 4;
+
+      if (cell_in->create_cell.handshake_len > eop - p)
+        return -1;
+
+      memcpy(p, cell_in->create_cell.onionskin,
+             cell_in->create_cell.handshake_len);
+
+      p += cell_in->create_cell.handshake_len;
+      *len_out = p - payload_out;
+    }
+    break;
+  default:
+    return -1;
+  }
+
+  return 0;
+}
+
+/** Format the EXTENDED{,2} cell in <b>cell_in</b>, storing its relay payload
+ * in <b>payload_out</b>, the number of bytes used in *<b>len_out</b>, and the
+ * relay command in *<b>command_out</b>. The <b>payload_out</b> must have
+ * RELAY_PAYLOAD_SIZE bytes available.  Return 0 on success, -1 on failure. */
+int
+extended_cell_format(uint8_t *command_out, uint16_t *len_out,
+                     uint8_t *payload_out, const extended_cell_t *cell_in)
+{
+  uint8_t *p, *eop;
+  if (check_extended_cell(cell_in) < 0)
+    return -1;
+
+  p = payload_out;
+  eop = payload_out + RELAY_PAYLOAD_SIZE;
+  memset(p, 0, RELAY_PAYLOAD_SIZE);
+
+  switch (cell_in->cell_type) {
+  case RELAY_COMMAND_EXTENDED:
+    {
+      *command_out = RELAY_COMMAND_EXTENDED;
+      *len_out = TAP_ONIONSKIN_REPLY_LEN;
+      memcpy(payload_out, cell_in->created_cell.reply,
+             TAP_ONIONSKIN_REPLY_LEN);
+    }
+    break;
+  case RELAY_COMMAND_EXTENDED2:
+    {
+      *command_out = RELAY_COMMAND_EXTENDED2;
+      *len_out = 2 + cell_in->created_cell.handshake_len;
+      set_uint16(payload_out, htons(cell_in->created_cell.handshake_len));
+      memcpy(payload_out+2, cell_in->created_cell.reply,
+             cell_in->created_cell.handshake_len);
+    }
+    break;
+  default:
+    return -1;
+  }
+
+  return 0;
 }
 
