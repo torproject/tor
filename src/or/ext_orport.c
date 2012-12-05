@@ -128,7 +128,7 @@ get_ext_or_auth_cookie_file(void)
  * authorized to use the control connection. Return -1 if we can't
  * write the file, or 0 on success. */
 int
-init_ext_or_auth_cookie_authentication(int is_enabled)
+init_ext_or_cookie_authentication(int is_enabled)
 {
   char *fname;
   char cookie_file_string[EXT_OR_PORT_AUTH_COOKIE_FILE_LEN];

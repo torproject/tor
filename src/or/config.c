@@ -1481,7 +1481,7 @@ options_act(const or_options_t *old_options)
   }
 
   /* If we have an ExtORPort, initialize its auth cookie. */
-  if (init_ext_or_auth_cookie_authentication(!!options->ExtORPort_lines) < 0) {
+  if (init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
     log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
     return -1;
   }

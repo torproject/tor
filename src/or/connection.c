@@ -1406,6 +1406,7 @@ connection_init_accepted_conn(connection_t *conn,
 
   switch (conn->type) {
     case CONN_TYPE_EXT_OR:
+      /* Initiate Extended ORPort authentication. */
       return connection_ext_or_start_auth(TO_OR_CONN(conn));
     case CONN_TYPE_OR:
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
