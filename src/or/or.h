@@ -2568,8 +2568,7 @@ typedef struct crypt_path_t {
   crypto_dh_t *rend_dh_handshake_state;
 
   /** Negotiated key material shared with the OR at this step. */
-  /* XXXX RENAME */
-  char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
+  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
   /** Information to extend to the OR at this step. */
   extend_info_t *extend_info;
@@ -2978,8 +2977,8 @@ typedef struct or_circuit_t {
   char rend_token[REND_TOKEN_LEN];
 
   /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
-  /* XXXX rename this. */
-  char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
+  /** Stores KH for the handshake. */
+  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */

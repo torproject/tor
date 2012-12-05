@@ -1409,7 +1409,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
                                     &hop->handshake_state,
                                     reply,
                                     (uint8_t*)keys, sizeof(keys),
-                                    (uint8_t*)hop->handshake_digest) < 0) {
+                                    (uint8_t*)hop->rend_circ_nonce) < 0) {
       log_warn(LD_CIRC,"onion_skin_client_handshake failed.");
       return -END_CIRC_REASON_TORPROTOCOL;
     }
@@ -1517,9 +1517,9 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
 
   /* XXXX Move responsibility for extracting this. */
   if (cell_type == CELL_CREATED)
-    memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
+    memcpy(circ->rend_circ_nonce, cell.payload+DH_KEY_LEN, DIGEST_LEN);
   else
-    memcpy(circ->handshake_digest, cell.payload+DIGEST_LEN, DIGEST_LEN);
+    memcpy(circ->rend_circ_nonce, cell.payload+DIGEST_LEN, DIGEST_LEN);
 
   circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
 

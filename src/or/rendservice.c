@@ -1382,7 +1382,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   dh = NULL;
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
-  memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
+  memcpy(cpath->rend_circ_nonce, keys, DIGEST_LEN);
 
   goto done;
 
@@ -2483,7 +2483,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   len = r;
   set_uint16(buf, htons((uint16_t)len));
   len += 2;
-  memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
+  memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
     goto err;
@@ -2630,7 +2630,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
-  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
+  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->rend_circ_nonce,
          DIGEST_LEN);
 
   /* Send the cell */
