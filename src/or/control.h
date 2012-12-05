@@ -77,7 +77,7 @@ int control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                                    buildtimeout_set_event_t type);
 int control_event_signal(uintptr_t signal);
 
-int init_cookie_authentication(int enabled);
+int init_control_auth_cookie_authentication(int enabled);
 smartlist_t *decode_hashed_passwords(config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);

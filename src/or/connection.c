@@ -592,8 +592,10 @@ connection_free_(connection_t *conn)
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
     connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
-  if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR)
+  if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
     connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
+    tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
+  }
 
 #ifdef USE_BUFFEREVENTS
   if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bucket_cfg) {
@@ -4343,6 +4345,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       break;
     case CONN_TYPE_AP:
@@ -4447,6 +4450,9 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR:
       tor_assert(conn->state >= OR_CONN_STATE_MIN_);
       tor_assert(conn->state <= OR_CONN_STATE_MAX_);
+    case CONN_TYPE_EXT_OR:
+      tor_assert(conn->state >= EXT_OR_CONN_STATE_MIN_);
+      tor_assert(conn->state <= EXT_OR_CONN_STATE_MAX_);
       break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->state >= EXIT_CONN_STATE_MIN_);
@@ -4580,6 +4586,7 @@ connection_free_all(void)
 
   /* Unlink everything from the identity map. */
   connection_or_clear_identity_map();
+  connection_or_clear_ext_or_id_map();
 
   /* Clear out our list of broken connections */
   clear_broken_connection_map(0);

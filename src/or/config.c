@@ -1474,8 +1474,14 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
-  if (init_cookie_authentication(options->CookieAuthentication) < 0) {
-    log_warn(LD_CONFIG,"Error creating cookie authentication file.");
+  if (init_control_auth_cookie_authentication(options->CookieAuthentication) < 0) {
+    log_warn(LD_CONFIG,"Error creating control cookie authentication file.");
+    return -1;
+  }
+
+  /* If we have an ExtORPort, initialize its auth cookie. */
+  if (init_ext_or_auth_cookie_authentication(!!options->ExtORPort_lines) < 0) {
+    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
     return -1;
   }
 
