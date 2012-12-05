@@ -4451,7 +4451,7 @@ get_cookie_file(void)
  * authorized to use the control connection. Return -1 if we can't
  * write the file, or 0 on success. */
 int
-init_control_auth_cookie_authentication(int enabled)
+init_control_cookie_authentication(int enabled)
 {
   char *fname;
   if (!enabled) {

@@ -1268,7 +1268,8 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
 
       smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=%s",
                              ext_or_addrport_tmp);
-      smartlist_add_asprintf(envs, "TOR_PT_AUTH_COOKIE_FILE=%s", cookie_file_loc);
+      smartlist_add_asprintf(envs, "TOR_PT_AUTH_COOKIE_FILE=%s",
+                             cookie_file_loc);
 
       tor_free(ext_or_addrport_tmp);
       tor_free(cookie_file_loc);

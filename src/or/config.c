@@ -1474,7 +1474,7 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
-  if (init_control_auth_cookie_authentication(options->CookieAuthentication) < 0) {
+  if (init_control_cookie_authentication(options->CookieAuthentication) < 0) {
     log_warn(LD_CONFIG,"Error creating control cookie authentication file.");
     return -1;
   }

@@ -2498,7 +2498,8 @@ connection_ext_or_transition(or_connection_t *conn)
 /** Length of the header of the cookie file. */
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN 32
 /** Total length of the cookie file. */
-#define EXT_OR_PORT_AUTH_COOKIE_FILE_LEN EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN
+#define EXT_OR_PORT_AUTH_COOKIE_FILE_LEN \
+  EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN
 /** Static cookie file header. */
 #define EXT_OR_PORT_AUTH_COOKIE_HEADER "! Extended ORPort Auth Cookie !\x0a"
 /** Length of safe-cookie protocol hashes. */
@@ -2506,8 +2507,10 @@ connection_ext_or_transition(or_connection_t *conn)
 /** Length of safe-cookie protocol nonces. */
 #define EXT_OR_PORT_AUTH_NONCE_LEN 32
 /** Safe-cookie protocol constants. */
-#define EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST "ExtORPort authentication server-to-client hash"
-#define EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST "ExtORPort authentication client-to-server hash"
+#define EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST \
+  "ExtORPort authentication server-to-client hash"
+#define EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST \
+  "ExtORPort authentication client-to-server hash"
 
 /** If true, we've set ext_or_auth_cookie to a secret code and stored
  * it to disk. */
@@ -2523,7 +2526,8 @@ char *
 get_ext_or_auth_cookie_file(void)
 {
   const or_options_t *options = get_options();
-  if (options->ExtORPortCookieAuthFile && strlen(options->ExtORPortCookieAuthFile)) {
+  if (options->ExtORPortCookieAuthFile &&
+      strlen(options->ExtORPortCookieAuthFile)) {
     return tor_strdup(options->ExtORPortCookieAuthFile);
   } else {
     return get_datadir_fname("extended_orport_auth_cookie");
@@ -2554,7 +2558,8 @@ init_ext_or_auth_cookie_authentication(int is_enabled)
     return -1;
   ext_or_auth_cookie_is_set = 1;
 
-  memcpy(cookie_file_string, EXT_OR_PORT_AUTH_COOKIE_HEADER, EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN);
+  memcpy(cookie_file_string, EXT_OR_PORT_AUTH_COOKIE_HEADER,
+         EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN);
   memcpy(cookie_file_string+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN,
          ext_or_auth_cookie, EXT_OR_PORT_AUTH_COOKIE_LEN);
 
@@ -2624,7 +2629,8 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
   if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_NONCE_LEN)
     return 0;
 
-  if (connection_fetch_from_buf(client_nonce, EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0) /* XXX check-spaces */
+  if (connection_fetch_from_buf(client_nonce,
+                                EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0) /* XXX check-spaces */
     return -1;
 
   /* Get our nonce */
@@ -2679,7 +2685,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     tor_free(hmac_c_msg);
   }
 
-  { /* debug logging */ /* XXX disable this codepath if not logging on debug? */
+  { /* debug logging */ /* XXX disable this codepath if not logging on debug?*/
     char server_hash_encoded[(2*EXT_OR_PORT_AUTH_HASH_LEN) + 1];
     char server_nonce_encoded[(2*EXT_OR_PORT_AUTH_NONCE_LEN) + 1];
     char client_nonce_encoded[(2*EXT_OR_PORT_AUTH_NONCE_LEN) + 1];
@@ -2691,13 +2697,15 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     base16_encode(client_nonce_encoded, sizeof(client_nonce_encoded),
                   client_nonce, sizeof(client_nonce));
 
-    log_warn(LD_GENERAL, "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
+    log_warn(LD_GENERAL,
+             "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
              server_hash_encoded, server_nonce_encoded, client_nonce_encoded);
   }
 
   { /* write reply: (server_hash, server_nonce) */
     memcpy(reply, server_hash, EXT_OR_PORT_AUTH_HASH_LEN);
-    memcpy(reply + EXT_OR_PORT_AUTH_HASH_LEN, server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
+    memcpy(reply + EXT_OR_PORT_AUTH_HASH_LEN, server_nonce,
+           EXT_OR_PORT_AUTH_NONCE_LEN);
     connection_write_to_buf(reply, sizeof(reply), conn);
   }
 
@@ -2738,7 +2746,8 @@ connection_ext_or_auth_handle_client_hash(connection_t *conn)
   if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_HASH_LEN)
     return 0;
 
-  if (connection_fetch_from_buf(provided_client_hash, EXT_OR_PORT_AUTH_HASH_LEN, conn) < 0)
+  if (connection_fetch_from_buf(provided_client_hash,
+                                EXT_OR_PORT_AUTH_HASH_LEN, conn) < 0)
     return -1;
 
   if (tor_memneq(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash,
@@ -2789,7 +2798,6 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 #define EXT_OR_CMD_BT_DENY 0x1001
 #define EXT_OR_CMD_BT_CONTROL 0x1002
 
-
 /** Process a USERADDR command from the Extended
  *  ORPort. <b>payload</b> is a payload of size <b>len</b>.
  *
@@ -2798,7 +2806,8 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
  *
  *  Return 0 on success and -1 on error. */
 static int
-connection_ext_or_handle_useraddr(connection_t *conn, char *payload, uint16_t len)
+connection_ext_or_handle_useraddr(connection_t *conn,
+                                  char *payload, uint16_t len)
 {
   /* Copy address string. */
   tor_addr_t addr;
@@ -2824,7 +2833,7 @@ connection_ext_or_handle_useraddr(connection_t *conn, char *payload, uint16_t le
     char *old_address = tor_dup_addr(&conn->addr);
     char *new_address = tor_dup_addr(&addr);
 
-    log_warn(LD_NET, "Received USERADDR." /* XXX FIX ALL LOG SEVERITIES AND MESSAGES */
+    log_warn(LD_NET, "Received USERADDR." /* XXX Fix log severities/messages */
              "We rewrite our address from '%s:%u' to '%s:%u'.",
              safe_str(old_address), conn->port, safe_str(new_address), port);
 
@@ -2888,10 +2897,11 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
       conn->state = EXT_OR_CONN_STATE_FLUSHING;
       connection_stop_reading(conn);
     } else if (command->cmd == EXT_OR_CMD_TB_USERADDR) {
-      if (connection_ext_or_handle_useraddr(conn, command->body, command->len) < 0)
+      if (connection_ext_or_handle_useraddr(conn,
+                                            command->body, command->len) < 0)
         goto err;
     } else {
-      log_notice(LD_NET, "Got an Extended ORPort command we don't understand (%u).",
+      log_notice(LD_NET,"Got Extended ORPort command we don't regognize (%u).",
                  command->cmd);
     }
 
@@ -2935,3 +2945,4 @@ connection_ext_or_start_auth(or_connection_t *or_conn)
 
   return 0;
 }
+
