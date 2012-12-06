@@ -496,6 +496,8 @@ parse_create2_payload(create_cell_t *cell_out, const uint8_t *p, size_t p_len)
   if (cell_out->handshake_len > CELL_PAYLOAD_SIZE - 4 ||
       cell_out->handshake_len > p_len - 4)
     return -1;
+  if (cell_out->handshake_type == ONION_HANDSHAKE_TYPE_FAST)
+    return -1;
   memcpy(cell_out->onionskin, p+4, cell_out->handshake_len);
   return 0;
 }
@@ -710,7 +712,6 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
         return -1;
       if (parse_create2_payload(&cell_out->create_cell,payload,eop-payload)<0)
         return -1;
-
       break;
     }
   default:

@@ -1471,23 +1471,24 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
  * cell back.
  */
 int
-onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
-                 size_t payload_len, const char *keys,
+onionskin_answer(or_circuit_t *circ,
+                 const created_cell_t *created_cell,
+                 const char *keys,
                  const uint8_t *rend_circ_nonce)
 {
   cell_t cell;
   crypt_path_t *tmp_cpath;
 
+  if (created_cell_format(&cell, created_cell) < 0) {
+    log_warn(LD_BUG,"couldn't format created cell");
+    return -1;
+  }
+  cell.circ_id = circ->p_circ_id;
+
   tmp_cpath = tor_malloc_zero(sizeof(crypt_path_t));
   tmp_cpath->magic = CRYPT_PATH_MAGIC;
 
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = cell_type;
-  cell.circ_id = circ->p_circ_id;
-
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-
-  memcpy(cell.payload, payload, payload_len);
 
   log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
             (unsigned int)get_uint32(keys),
@@ -1506,7 +1507,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
 
   memcpy(circ->rend_circ_nonce, rend_circ_nonce, DIGEST_LEN);
 
-  circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
+  circ->is_first_hop = (created_cell->cell_type == CELL_CREATED_FAST);
 
   append_cell_to_circuit_queue(TO_CIRCUIT(circ),
                                circ->p_chan, &cell, CELL_DIRECTION_IN, 0);

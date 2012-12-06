@@ -35,8 +35,8 @@ int circuit_finish_handshake(origin_circuit_t *circ,
                              const struct created_cell_t *created_cell);
 int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer,
                       int reason);
-int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
-                     const char *payload, size_t payload_len,
+int onionskin_answer(or_circuit_t *circ,
+                     const struct created_cell_t *created_cell,
                      const char *keys,
                      const uint8_t *rend_circ_nonce);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,

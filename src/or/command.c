@@ -274,19 +274,21 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     /* This is a CREATE_FAST cell; we can handle it immediately without using
      * a CPU worker. */
     uint8_t keys[CPATH_KEY_MATERIAL_LEN];
-    uint8_t reply[MAX_ONIONSKIN_REPLY_LEN];
     uint8_t rend_circ_nonce[DIGEST_LEN];
     int len;
+    created_cell_t created_cell;
 
     /* Make sure we never try to use the OR connection on which we
      * received this cell to satisfy an EXTEND request,  */
     channel_mark_client(chan);
 
+    memset(&created_cell, 0, sizeof(created_cell));
     len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
                                        create_cell->onionskin,
                                        create_cell->handshake_len,
                                        NULL,
-                                       reply, keys, CPATH_KEY_MATERIAL_LEN,
+                                       created_cell.reply,
+                                       keys, CPATH_KEY_MATERIAL_LEN,
                                        rend_circ_nonce);
     tor_free(create_cell);
     if (len < 0) {
@@ -295,7 +297,10 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
       tor_free(create_cell);
       return;
     }
-    if (onionskin_answer(circ, CELL_CREATED_FAST, (const char *)reply, len,
+    created_cell.cell_type = CELL_CREATED_FAST;
+    created_cell.handshake_len = len;
+
+    if (onionskin_answer(circ, &created_cell,
                          (const char *)keys, rend_circ_nonce)<0) {
       log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
