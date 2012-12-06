@@ -337,7 +337,7 @@ onion_skin_server_handshake(int type,
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
 #ifdef CURVE25519_ENABLED
-    if (onionskin_len != NTOR_ONIONSKIN_LEN)
+    if (onionskin_len < NTOR_ONIONSKIN_LEN)
       return -1;
     {
       size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
@@ -409,7 +409,7 @@ onion_skin_client_handshake(int type,
     return 0;
 #ifdef CURVE25519_ENABLED
   case ONION_HANDSHAKE_TYPE_NTOR:
-    if (reply_len != NTOR_REPLY_LEN)
+    if (reply_len < NTOR_REPLY_LEN)
       return -1;
     {
       size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
@@ -442,7 +442,8 @@ check_create_cell(const create_cell_t *cell, int unknown_ok)
 {
   switch (cell->cell_type) {
   case CELL_CREATE:
-    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_TAP)
+    if (cell->handshake_type != ONION_HANDSHAKE_TYPE_TAP &&
+        cell->handshake_type != ONION_HANDSHAKE_TYPE_NTOR)
       return -1;
     break;
   case CELL_CREATE_FAST:
@@ -502,6 +503,14 @@ parse_create2_payload(create_cell_t *cell_out, const uint8_t *p, size_t p_len)
   return 0;
 }
 
+/** Magic string which, in a CREATE or EXTEND cell, indicates that a seeming
+ * TAP payload is really an ntor payload.  We'd do away with this if every
+ * relay supported EXTEND2, but we want to be able to extend from A to B with
+ * ntor even when A doesn't understand EXTEND2 and so can't generate a
+ * CREATE2 cell.
+ **/
+#define NTOR_CREATE_MAGIC "ntorNTORntorNTOR"
+
 /** Parse a CREATE, CREATE_FAST, or CREATE2 cell from <b>cell_in</b> into
  * <b>cell_out</b>. Return 0 on success, -1 on failure. (We reject some
  * syntactically valid CREATE2 cells that we can't generate or react to.) */
@@ -513,9 +522,16 @@ create_cell_parse(create_cell_t *cell_out, const cell_t *cell_in)
   switch (cell_in->command) {
   case CELL_CREATE:
     cell_out->cell_type = CELL_CREATE;
-    cell_out->handshake_type = ONION_HANDSHAKE_TYPE_TAP;
-    cell_out->handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
-    memcpy(cell_out->onionskin, cell_in->payload, TAP_ONIONSKIN_CHALLENGE_LEN);
+    if (tor_memeq(cell_in->payload, NTOR_CREATE_MAGIC, 16)) {
+      cell_out->handshake_type = ONION_HANDSHAKE_TYPE_NTOR;
+      cell_out->handshake_len = NTOR_ONIONSKIN_LEN;
+      memcpy(cell_out->onionskin, cell_in->payload+16, NTOR_ONIONSKIN_LEN);
+    } else {
+      cell_out->handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+      cell_out->handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+      memcpy(cell_out->onionskin, cell_in->payload,
+             TAP_ONIONSKIN_CHALLENGE_LEN);
+    }
     break;
   case CELL_CREATE_FAST:
     cell_out->cell_type = CELL_CREATE_FAST;
@@ -603,7 +619,8 @@ check_extend_cell(const extend_cell_t *cell)
     if (cell->cell_type != RELAY_COMMAND_EXTEND)
       return -1;
   } else if (cell->create_cell.cell_type == CELL_CREATE2) {
-    if (cell->cell_type != RELAY_COMMAND_EXTEND2)
+    if (cell->cell_type != RELAY_COMMAND_EXTEND2 &&
+        cell->cell_type != RELAY_COMMAND_EXTEND)
       return -1;
   } else {
     /* In particular, no CREATE_FAST cells are allowed */
@@ -647,11 +664,19 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
       tor_addr_from_ipv4n(&cell_out->orport_ipv4.addr, get_uint32(payload));
       cell_out->orport_ipv4.port = ntohs(get_uint16(payload+4));
       tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
-      cell_out->create_cell.cell_type = CELL_CREATE;
-      cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
-      cell_out->create_cell.handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
-      memcpy(cell_out->create_cell.onionskin, payload + 6,
-             TAP_ONIONSKIN_CHALLENGE_LEN);
+      if (tor_memeq(payload + 6, NTOR_CREATE_MAGIC, 16)) {
+        cell_out->create_cell.cell_type = CELL_CREATE2;
+        cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_NTOR;
+        cell_out->create_cell.handshake_len = NTOR_ONIONSKIN_LEN;
+        memcpy(cell_out->create_cell.onionskin, payload + 22,
+               NTOR_ONIONSKIN_LEN);
+      } else {
+        cell_out->create_cell.cell_type = CELL_CREATE;
+        cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+        cell_out->create_cell.handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+        memcpy(cell_out->create_cell.onionskin, payload + 6,
+               TAP_ONIONSKIN_CHALLENGE_LEN);
+      }
       memcpy(cell_out->node_id, payload + 6 + TAP_ONIONSKIN_CHALLENGE_LEN,
              DIGEST_LEN);
       break;
@@ -787,17 +812,28 @@ extended_cell_parse(extended_cell_t *cell_out,
 int
 create_cell_format(cell_t *cell_out, const create_cell_t *cell_in)
 {
+  uint8_t *p;
+  size_t space;
   if (check_create_cell(cell_in, 0) < 0)
     return -1;
 
   memset(cell_out->payload, 0, sizeof(cell_out->payload));
   cell_out->command = cell_in->cell_type;
 
+  p = cell_out->payload;
+  space = sizeof(cell_out->payload);
+
   switch (cell_in->cell_type) {
   case CELL_CREATE:
+    if (cell_in->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
+      memcpy(p, NTOR_CREATE_MAGIC, 16);
+      p += 16;
+      space -= 16;
+    }
+    /* Fall through */
   case CELL_CREATE_FAST:
-    tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload));
-    memcpy(cell_out->payload, cell_in->onionskin, cell_in->handshake_len);
+    tor_assert(cell_in->handshake_len <= space);
+    memcpy(p, cell_in->onionskin, cell_in->handshake_len);
     break;
   case CELL_CREATE2:
     tor_assert(cell_in->handshake_len <= sizeof(cell_out->payload)-4);
@@ -865,8 +901,13 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
       *len_out = 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN;
       set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
       set_uint16(p+4, ntohs(cell_in->orport_ipv4.port));
-      memcpy(p+6, cell_in->create_cell.onionskin,
-             TAP_ONIONSKIN_CHALLENGE_LEN);
+      if (cell_in->create_cell.handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
+        memcpy(p+6, NTOR_CREATE_MAGIC, 16);
+        memcpy(p+22, cell_in->create_cell.onionskin, NTOR_ONIONSKIN_LEN);
+      } else {
+        memcpy(p+6, cell_in->create_cell.onionskin,
+               TAP_ONIONSKIN_CHALLENGE_LEN);
+      }
       memcpy(p+6+TAP_ONIONSKIN_CHALLENGE_LEN, cell_in->node_id, DIGEST_LEN);
     }
     break;

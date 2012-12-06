@@ -456,6 +456,26 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
 #endif
 
+  /* A valid create cell with an ntor payload, in legacy format. */
+  memset(&cell, 0, sizeof(cell));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
+  cell.command = CELL_CREATE;
+  memcpy(cell.payload, "ntorNTORntorNTOR", 16);
+  memcpy(cell.payload+16, b, NTOR_ONIONSKIN_LEN);
+#ifdef CURVE25519_ENABLED
+  tt_int_op(0, ==, create_cell_parse(&cc, &cell));
+  tt_int_op(CELL_CREATE, ==, cc.cell_type);
+  tt_int_op(ONION_HANDSHAKE_TYPE_NTOR, ==, cc.handshake_type);
+  tt_int_op(NTOR_ONIONSKIN_LEN, ==, cc.handshake_len);
+  test_memeq(cc.onionskin, b, NTOR_ONIONSKIN_LEN + 10);
+  tt_int_op(0, ==, create_cell_format(&cell2, &cc));
+  tt_int_op(cell.command, ==, cell2.command);
+  test_memeq(cell.payload, cell2.payload, CELL_PAYLOAD_SIZE);
+#else
+  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
+#endif
+
   /* == Okay, now let's try to parse some impossible stuff. */
 
   /* It has to be some kind of a create cell! */
@@ -573,6 +593,7 @@ test_cfmt_created_cells(void *arg)
 static void
 test_cfmt_extend_cells(void *arg)
 {
+  cell_t cell;
   uint8_t b[512];
   extend_cell_t ec;
   create_cell_t *cc = &ec.create_cell;
@@ -606,6 +627,31 @@ test_cfmt_extend_cells(void *arg)
   tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND);
   tt_int_op(p2_len, ==, 26+TAP_ONIONSKIN_CHALLENGE_LEN);
   test_memeq(p2, p, RELAY_PAYLOAD_SIZE);
+
+  /* Let's do an ntor stuffed in a legacy EXTEND cell */
+  memset(p, 0, sizeof(p));
+  memset(b, 0, sizeof(b));
+  crypto_rand((char*)b, NTOR_ONIONSKIN_LEN);
+  memcpy(p, "\x12\xf4\x00\x01\x01\x02", 6); /* 18 244 0 1 : 258 */
+  memcpy(p+6,"ntorNTORntorNTOR", 16);
+  memcpy(p+22, b, NTOR_ONIONSKIN_LEN);
+  memcpy(p+6+TAP_ONIONSKIN_CHALLENGE_LEN, "electroencephalogram", 20);
+  tt_int_op(0, ==, extend_cell_parse(&ec, RELAY_COMMAND_EXTEND,
+                                     p, 26+TAP_ONIONSKIN_CHALLENGE_LEN));
+  tt_int_op(RELAY_COMMAND_EXTEND, ==, ec.cell_type);
+  tt_str_op("18.244.0.1", ==, fmt_addr(&ec.orport_ipv4.addr));
+  tt_int_op(258, ==, ec.orport_ipv4.port);
+  tt_int_op(AF_UNSPEC, ==, tor_addr_family(&ec.orport_ipv6.addr));
+  test_memeq(ec.node_id, "electroencephalogram", 20);
+  tt_int_op(cc->cell_type, ==, CELL_CREATE2);
+  tt_int_op(cc->handshake_type, ==, ONION_HANDSHAKE_TYPE_NTOR);
+  tt_int_op(cc->handshake_len, ==, NTOR_ONIONSKIN_LEN);
+  test_memeq(cc->onionskin, b, NTOR_ONIONSKIN_LEN+20);
+  tt_int_op(0, ==, extend_cell_format(&p2_cmd, &p2_len, p2, &ec));
+  tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND);
+  tt_int_op(p2_len, ==, 26+TAP_ONIONSKIN_CHALLENGE_LEN);
+  test_memeq(p2, p, RELAY_PAYLOAD_SIZE);
+  tt_int_op(0, ==, create_cell_format(&cell, cc));
 
   /* Now let's do a minimal ntor EXTEND2 cell. */
   memset(&ec, 0xff, sizeof(ec));
