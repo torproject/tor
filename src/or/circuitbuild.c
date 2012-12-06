@@ -55,9 +55,7 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
                                                const char *id_digest);
 static int circuit_deliver_create_cell(circuit_t *circ,
-                                       uint8_t cell_type,
-                                       const uint8_t *payload,
-                                       size_t payload_len);
+                                       const create_cell_t *create_cell);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
@@ -474,15 +472,13 @@ circuit_n_chan_done(channel_t *chan, int status)
            *     died? */
         }
       } else {
-        /* pull the create cell out of circ->onionskin, and send it */
-        tor_assert(circ->n_chan_onionskin);
-        if (circuit_deliver_create_cell(circ,CELL_CREATE,
-                                        (const uint8_t*)circ->n_chan_onionskin,
-                                        circ->n_chan_onionskin_len)<0) {
+        /* pull the create cell out of circ->n_chan_create_cell, and send it */
+        tor_assert(circ->n_chan_create_cell);
+        if (circuit_deliver_create_cell(circ, circ->n_chan_create_cell)<0) {
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
-        tor_free(circ->n_chan_onionskin);
+        tor_free(circ->n_chan_create_cell);
         circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
     }
@@ -499,16 +495,17 @@ circuit_n_chan_done(channel_t *chan, int status)
  * Return -1 if we failed to find a suitable circid, else return 0.
  */
 static int
-circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
-                            const uint8_t *payload, size_t payload_len)
+circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell)
 {
   cell_t cell;
   circid_t id;
 
   tor_assert(circ);
   tor_assert(circ->n_chan);
-  tor_assert(payload);
-  tor_assert(cell_type == CELL_CREATE || cell_type == CELL_CREATE_FAST);
+  tor_assert(create_cell);
+  tor_assert(create_cell->cell_type == CELL_CREATE ||
+             create_cell->cell_type == CELL_CREATE_FAST ||
+             create_cell->cell_type == CELL_CREATE2);
 
   id = get_unique_circ_id_by_chan(circ->n_chan);
   if (!id) {
@@ -519,10 +516,12 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   circuit_set_n_circid_chan(circ, id, circ->n_chan);
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = cell_type;
+  if (create_cell_format(&cell, create_cell) < 0) {
+    log_warn(LD_CIRC,"Couldn't format create cell");
+    return -1;
+  }
   cell.circ_id = circ->n_circ_id;
 
-  memcpy(cell.payload, payload, payload_len);
   append_cell_to_circuit_queue(circ, circ->n_chan, &cell,
                                CELL_DIRECTION_OUT, 0);
 
@@ -615,18 +614,16 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 {
   crypt_path_t *hop;
   const node_t *node;
-  uint8_t payload[2+4+DIGEST_LEN+MAX_ONIONSKIN_CHALLENGE_LEN];
-  uint8_t *onionskin;
-  uint16_t handshake_type;
-  int onionskin_len;
-  size_t payload_len;
 
   tor_assert(circ);
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
+    /* This is the first hop. */
+    create_cell_t cc;
     int fast;
-    uint8_t cell_type;
+    int len;
     log_debug(LD_CIRC,"First skin; sending create cell.");
+    memset(&cc, 0, sizeof(cc));
     if (circ->build_state->onehop_tunnel)
       control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
     else
@@ -638,30 +635,29 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       /* We are an OR and we know the right onion key: we should
        * send an old slow create cell.
        */
-      cell_type = CELL_CREATE;
-      handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+      cc.cell_type = CELL_CREATE;
+      cc.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
       note_request("cell: create", 1);
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
        * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
        * and a DH operation. */
-      cell_type = CELL_CREATE_FAST;
-      handshake_type = ONION_HANDSHAKE_TYPE_FAST;
+      cc.cell_type = CELL_CREATE_FAST;
+      cc.handshake_type = ONION_HANDSHAKE_TYPE_FAST;
       note_request("cell: create fast", 1);
     }
 
-    memset(payload, 0, sizeof(payload));
-    onionskin_len = onion_skin_create(handshake_type,
-                                      circ->cpath->extend_info,
-                                      &circ->cpath->handshake_state,
-                                      payload);
-    if (onionskin_len < 0) {
+    len = onion_skin_create(cc.handshake_type,
+                            circ->cpath->extend_info,
+                            &circ->cpath->handshake_state,
+                            cc.onionskin);
+    if (len < 0) {
       log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
       return - END_CIRC_REASON_INTERNAL;
     }
+    cc.handshake_len = len;
 
-    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), cell_type, payload,
-                                    onionskin_len) < 0)
+    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc) < 0)
       return - END_CIRC_REASON_RESOURCELIMIT;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -670,10 +666,13 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
              fast ? "CREATE_FAST" : "CREATE",
              node ? node_describe(node) : "<unnamed>");
   } else {
+    extend_cell_t ec;
+    int len;
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
     tor_assert(circ->base_.state == CIRCUIT_STATE_BUILDING);
     log_debug(LD_CIRC,"starting to send subsequent skin.");
     hop = onion_next_hop_in_cpath(circ->cpath);
+    memset(&ec, 0, sizeof(ec));
     if (!hop) {
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
@@ -743,34 +742,44 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return - END_CIRC_REASON_INTERNAL;
     }
 
-    set_uint32(payload, tor_addr_to_ipv4n(&hop->extend_info->addr));
-    set_uint16(payload+4, htons(hop->extend_info->port));
+    ec.cell_type = RELAY_COMMAND_EXTEND;
+    tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
+    ec.orport_ipv4.port = hop->extend_info->port;
+    tor_addr_make_unspec(&ec.orport_ipv6.addr);
+    memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
 
-    onionskin = payload+2+4;
-    memcpy(payload+2+4+TAP_ONIONSKIN_CHALLENGE_LEN,
-           hop->extend_info->identity_digest, DIGEST_LEN);
-    payload_len = 2+4+TAP_ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN;
+    ec.create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+    ec.create_cell.cell_type = CELL_CREATE;
 
-    handshake_type = ONION_HANDSHAKE_TYPE_TAP;
-
-    if (onion_skin_create(handshake_type,
-                          hop->extend_info,
-                          &hop->handshake_state,
-                          onionskin) < 0) {
+    len = onion_skin_create(ec.create_cell.handshake_type,
+                            hop->extend_info,
+                            &hop->handshake_state,
+                            ec.create_cell.onionskin);
+    if (len < 0) {
       log_warn(LD_CIRC,"onion_skin_create failed.");
       return - END_CIRC_REASON_INTERNAL;
     }
+    ec.create_cell.handshake_len = len;
 
     log_info(LD_CIRC,"Sending extend relay cell.");
     note_request("cell: extend", 1);
-    /* send it to hop->prev, because it will transfer
-     * it to a create cell and then send to hop */
-    if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
-                                     RELAY_COMMAND_EXTEND,
-                                     (char*)payload, payload_len,
-                                     hop->prev) < 0)
-      return 0; /* circuit is closed */
+    {
+      uint8_t command = 0;
+      uint16_t payload_len=0;
+      uint8_t payload[RELAY_PAYLOAD_SIZE];
+      if (extend_cell_format(&command, &payload_len, payload, &ec)<0) {
+        log_warn(LD_CIRC,"Couldn't format extend cell");
+        return -END_CIRC_REASON_INTERNAL;
+      }
 
+      /* send it to hop->prev, because it will transfer
+       * it to a create cell and then send to hop */
+      if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
+                                       command,
+                                       (char*)payload, payload_len,
+                                       hop->prev) < 0)
+        return 0; /* circuit is closed */
+    }
     hop->state = CPATH_STATE_AWAITING_KEYS;
   }
   return 0;
@@ -809,11 +818,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 {
   channel_t *n_chan;
   relay_header_t rh;
-  char *onionskin;
-  char *id_digest=NULL;
-  uint32_t n_addr32;
-  uint16_t n_port;
-  tor_addr_t n_addr;
+  extend_cell_t ec;
   const char *msg = NULL;
   int should_launch = 0;
 
@@ -836,27 +841,21 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   relay_header_unpack(&rh, cell->payload);
 
-  if (rh.length < 4+2+TAP_ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
+  if (extend_cell_parse(&ec, rh.command,
+                        cell->payload+RELAY_HEADER_SIZE,
+                        rh.length) < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Wrong length %d on extend cell. Closing circuit.",
-           rh.length);
+           "Can't parse extend cell. Closing circuit.");
     return -1;
   }
 
-  n_addr32 = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
-  n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
-  onionskin = (char*) cell->payload+RELAY_HEADER_SIZE+4+2;
-  id_digest = (char*) cell->payload+RELAY_HEADER_SIZE+4+2+
-    TAP_ONIONSKIN_CHALLENGE_LEN;
-  tor_addr_from_ipv4h(&n_addr, n_addr32);
-
-  if (!n_port || !n_addr32) {
+  if (!ec.orport_ipv4.port || tor_addr_is_null(&ec.orport_ipv4.addr)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to zero destination port or addr.");
     return -1;
   }
 
-  if (tor_addr_is_internal(&n_addr, 0) &&
+  if (tor_addr_is_internal(&ec.orport_ipv4.addr, 0) &&
       !get_options()->ExtendAllowPrivateAddresses) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to a private address");
@@ -869,7 +868,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
    * fingerprints -- a) because it opens the user up to a mitm attack,
    * and b) because it lets an attacker force the relay to hold open a
    * new TLS connection for each extend request. */
-  if (tor_digest_is_zero(id_digest)) {
+  if (tor_digest_is_zero((const char*)ec.node_id)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend without specifying an id_digest.");
     return -1;
@@ -878,7 +877,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
-  if (tor_memeq(id_digest,
+  if (tor_memeq(ec.node_id,
                 TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
                 DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -886,29 +885,34 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  n_chan = channel_get_for_extend(id_digest,
-                                  &n_addr,
+  n_chan = channel_get_for_extend((const char*)ec.node_id,
+                                  &ec.orport_ipv4.addr,
                                   &msg,
                                   &should_launch);
 
   if (!n_chan) {
     log_debug(LD_CIRC|LD_OR,"Next router (%s): %s",
-              fmt_addrport(&n_addr, n_port), msg?msg:"????");
+              fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
+              msg?msg:"????");
 
     circ->n_hop = extend_info_new(NULL /*nickname*/,
-                                    id_digest,
-                                    NULL /*onion_key*/,
-                                    &n_addr, n_port);
+                                  (const char*)ec.node_id,
+                                  NULL /*onion_key*/,
+                                  &ec.orport_ipv4.addr,
+                                  ec.orport_ipv4.port);
 
-    circ->n_chan_onionskin = tor_malloc(TAP_ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->n_chan_onionskin, onionskin, TAP_ONIONSKIN_CHALLENGE_LEN);
-    circ->n_chan_onionskin_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+    /* XXXX Make sure we can eventually deliver create cell with weird
+     * content */
+    circ->n_chan_create_cell = tor_memdup(&ec.create_cell,
+                                          sizeof(ec.create_cell));
 
     circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
 
     if (should_launch) {
       /* we should try to open a connection */
-      n_chan = channel_connect_for_circuit(&n_addr, n_port, id_digest);
+      n_chan = channel_connect_for_circuit(&ec.orport_ipv4.addr,
+                                           ec.orport_ipv4.port,
+                                           (const char*)ec.node_id);
       if (!n_chan) {
         log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
@@ -929,8 +933,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
             "n_chan is %s",
             channel_get_canonical_remote_descr(n_chan));
 
-  if (circuit_deliver_create_cell(circ, CELL_CREATE, (uint8_t*)onionskin,
-                                  TAP_ONIONSKIN_CHALLENGE_LEN) < 0)
+  if (circuit_deliver_create_cell(circ, &ec.create_cell) < 0)
     return -1;
   return 0;
 }

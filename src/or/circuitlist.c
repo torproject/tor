@@ -252,7 +252,7 @@ circuit_set_state(circuit_t *circ, uint8_t state)
     smartlist_add(circuits_pending_chans, circ);
   }
   if (state == CIRCUIT_STATE_OPEN)
-    tor_assert(!circ->n_chan_onionskin);
+    tor_assert(!circ->n_chan_create_cell);
   circ->state = state;
 }
 
@@ -674,7 +674,7 @@ circuit_free(circuit_t *circ)
   }
 
   extend_info_free(circ->n_hop);
-  tor_free(circ->n_chan_onionskin);
+  tor_free(circ->n_chan_create_cell);
 
   /* Remove from map. */
   circuit_set_n_circid_chan(circ, 0, NULL);
@@ -1582,7 +1582,7 @@ assert_circuit_ok(const circuit_t *c)
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
-    tor_assert(!c->n_chan_onionskin);
+    tor_assert(!c->n_chan_create_cell);
     if (or_circ) {
       tor_assert(or_circ->n_crypto);
       tor_assert(or_circ->p_crypto);

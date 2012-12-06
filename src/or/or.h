@@ -2645,6 +2645,8 @@ typedef struct {
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
 
+struct create_cell_t;
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
@@ -2719,11 +2721,8 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
-  uint8_t n_chan_onionskin_len; /* XXXX MAKE THIS GET USED. */
-  /** For storage while n_chan is pending
-    * (state CIRCUIT_STATE_CHAN_WAIT). When defined, it is always
-    * length n_chan_onionskin_len */
-  char *n_chan_onionskin;
+  /** For storage while n_chan is pending (state CIRCUIT_STATE_CHAN_WAIT). */
+  struct create_cell_t *n_chan_create_cell;
 
   /** When was this circuit created?  We keep this timestamp with a higher
    * resolution than most so that the circuit-build-time tracking code can
