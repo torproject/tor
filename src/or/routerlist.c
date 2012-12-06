@@ -1285,7 +1285,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   const routerinfo_t *me = router_get_my_routerinfo();
-  const routerstatus_t *result;
+  const routerstatus_t *result=NULL;
   time_t now = time(NULL);
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
