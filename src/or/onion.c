@@ -771,12 +771,9 @@ extended_cell_parse(extended_cell_t *cell_out,
                     const uint8_t command, const uint8_t *payload,
                     size_t payload_len)
 {
-  const uint8_t *eop;
-
   memset(cell_out, 0, sizeof(*cell_out));
   if (payload_len > RELAY_PAYLOAD_SIZE)
     return -1;
-  eop = payload + payload_len;
 
   switch (command) {
   case RELAY_COMMAND_EXTENDED:
@@ -970,12 +967,11 @@ int
 extended_cell_format(uint8_t *command_out, uint16_t *len_out,
                      uint8_t *payload_out, const extended_cell_t *cell_in)
 {
-  uint8_t *p, *eop;
+  uint8_t *p;
   if (check_extended_cell(cell_in) < 0)
     return -1;
 
   p = payload_out;
-  eop = payload_out + RELAY_PAYLOAD_SIZE;
   memset(p, 0, RELAY_PAYLOAD_SIZE);
 
   switch (cell_in->cell_type) {
@@ -992,6 +988,8 @@ extended_cell_format(uint8_t *command_out, uint16_t *len_out,
       *command_out = RELAY_COMMAND_EXTENDED2;
       *len_out = 2 + cell_in->created_cell.handshake_len;
       set_uint16(payload_out, htons(cell_in->created_cell.handshake_len));
+      if (2+cell_in->created_cell.handshake_len > RELAY_PAYLOAD_SIZE)
+        return -1;
       memcpy(payload_out+2, cell_in->created_cell.reply,
              cell_in->created_cell.handshake_len);
     }
