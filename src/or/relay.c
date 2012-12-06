@@ -1256,7 +1256,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         connection_mark_and_flush(TO_CONN(conn));
       }
       return 0;
-    case RELAY_COMMAND_EXTEND: {
+    case RELAY_COMMAND_EXTEND:
+    case RELAY_COMMAND_EXTEND2: {
       static uint64_t total_n_extend=0, total_nonearly=0;
       total_n_extend++;
       if (rh.stream_id) {
@@ -1291,6 +1292,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return circuit_extend(cell, circ);
     }
     case RELAY_COMMAND_EXTENDED:
+    case RELAY_COMMAND_EXTENDED2:
       if (!layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "'extended' unsupported at non-origin. Dropping.");

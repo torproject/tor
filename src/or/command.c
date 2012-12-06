@@ -133,11 +133,13 @@ command_process_cell(channel_t *chan, cell_t *cell)
   switch (cell->command) {
     case CELL_CREATE:
     case CELL_CREATE_FAST:
+    case CELL_CREATE2:
       ++stats_n_create_cells_processed;
       PROCESS_CELL(create, cell, chan);
       break;
     case CELL_CREATED:
     case CELL_CREATED_FAST:
+    case CELL_CREATED2:
       ++stats_n_created_cells_processed;
       PROCESS_CELL(created, cell, chan);
       break;
