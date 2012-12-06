@@ -2064,10 +2064,6 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
   size_t replylen;
 
   if (ttl >= 0) {
-    origin_circuit_t *origin_circ = NULL;
-    circuit_t *circ = ENTRY_TO_EDGE_CONN(conn)->on_circuit;
-    if (CIRCUIT_IS_ORIGIN(circ)) /* should always be true */
-      origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       tor_addr_t a;
       tor_addr_from_ipv4n(&a, get_uint32(answer));
