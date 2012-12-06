@@ -12,8 +12,9 @@
 #ifndef TOR_ONION_H
 #define TOR_ONION_H
 
-int onion_pending_add(or_circuit_t *circ, char *onionskin);
-or_circuit_t *onion_next_task(char **onionskin_out);
+struct create_cell_t;
+int onion_pending_add(or_circuit_t *circ, struct create_cell_t *onionskin);
+or_circuit_t *onion_next_task(struct create_cell_t **onionskin_out);
 void onion_pending_remove(or_circuit_t *circ);
 void clear_pending_onions(void);
 
@@ -39,14 +40,14 @@ int onion_skin_create(int type,
                       onion_handshake_state_t *state_out,
                       uint8_t *onion_skin_out);
 int onion_skin_server_handshake(int type,
-                      const uint8_t *onion_skin,
+                      const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
                       uint8_t *reply_out,
-                      uint8_t *keys_out, size_t key_out_len);
-//                      uint8_t *rend_authenticator_out);
+                      uint8_t *keys_out, size_t key_out_len,
+                      uint8_t *rend_nonce_out);
 int onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
-                      const uint8_t *reply,
+                      const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t key_out_len,
                       uint8_t *rend_authenticator_out);
 

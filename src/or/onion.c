@@ -25,7 +25,7 @@
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
   or_circuit_t *circ;
-  char *onionskin;
+  create_cell_t *onionskin;
   time_t when_added;
   struct onion_queue_t *next;
 } onion_queue_t;
@@ -48,7 +48,7 @@ static int ol_length=0;
  * if ol_list is too long, in which case do nothing and return -1.
  */
 int
-onion_pending_add(or_circuit_t *circ, char *onionskin)
+onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 {
   onion_queue_t *tmp;
   time_t now = time(NULL);
@@ -105,7 +105,7 @@ onion_pending_add(or_circuit_t *circ, char *onionskin)
  * NULL if the list is empty.
  */
 or_circuit_t *
-onion_next_task(char **onionskin_out)
+onion_next_task(create_cell_t **onionskin_out)
 {
   or_circuit_t *circ;
 
@@ -302,37 +302,60 @@ onion_skin_create(int type,
  * using the keys in <b>keys</b>.  On success, write our response into
  * <b>reply_out</b>, generate <b>keys_out_len</b> bytes worth of key material
  * in <b>keys_out_len</b>, and return the length of the reply. On failure,
- * return -1.  */
+ * return -1.
+ * DOCDOC rend_nonce_out
+ */
 int
 onion_skin_server_handshake(int type,
-                      const uint8_t *onion_skin,
+                      const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
                       uint8_t *reply_out,
-                      uint8_t *keys_out, size_t keys_out_len)
+                      uint8_t *keys_out, size_t keys_out_len,
+                      uint8_t *rend_nonce_out)
 {
   int r = -1;
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
+    if (onionskin_len != TAP_ONIONSKIN_CHALLENGE_LEN)
+      return -1;
     if (onion_skin_TAP_server_handshake((const char*)onion_skin,
                                         keys->onion_key, keys->last_onion_key,
                                         (char*)reply_out,
                                         (char*)keys_out, keys_out_len)<0)
       return -1;
     r = TAP_ONIONSKIN_REPLY_LEN;
+    memcpy(rend_nonce_out, reply_out+DH_KEY_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_FAST:
+    if (onionskin_len != CREATE_FAST_LEN)
+      return -1;
     if (fast_server_handshake(onion_skin, reply_out, keys_out, keys_out_len)<0)
       return -1;
     r = CREATED_FAST_LEN;
+    memcpy(rend_nonce_out, reply_out+DIGEST_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
 #ifdef CURVE25519_ENABLED
-    if (onion_skin_ntor_server_handshake(onion_skin, keys->curve25519_key_map,
-                                         keys->my_identity,
-                                         reply_out, keys_out, keys_out_len)<0)
+    if (onionskin_len != NTOR_ONIONSKIN_LEN)
       return -1;
-    r = NTOR_REPLY_LEN;
+    {
+      size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
+      uint8_t *keys_tmp = tor_malloc(keys_out_len + DIGEST_LEN);
+
+      if (onion_skin_ntor_server_handshake(
+                                   onion_skin, keys->curve25519_key_map,
+                                   keys->my_identity,
+                                   reply_out, keys_tmp, keys_tmp_len)<0) {
+        tor_free(keys_tmp);
+        return -1;
+      }
+      memcpy(keys_out, keys_tmp, keys_out_len);
+      memcpy(rend_nonce_out, keys_tmp+keys_out_len, DIGEST_LEN);
+      memwipe(keys_tmp, 0, keys_tmp_len);
+      tor_free(keys_tmp);
+      r = NTOR_REPLY_LEN;
+    }
 #else
     return -1;
 #endif
@@ -342,12 +365,6 @@ onion_skin_server_handshake(int type,
     tor_fragile_assert();
     return -1;
   }
-
-  /* XXXX we should generate the rendezvous nonce stuff too.  Some notes
-   * below */
-    // memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
-
-    //memcpy(hop->handshake_digest, reply+DIGEST_LEN, DIGEST_LEN);
 
   return r;
 }
@@ -362,7 +379,7 @@ onion_skin_server_handshake(int type,
 int
 onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
-                      const uint8_t *reply,
+                      const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t keys_out_len,
                       uint8_t *rend_authenticator_out)
 {
@@ -371,6 +388,8 @@ onion_skin_client_handshake(int type,
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
+    if (reply_len != TAP_ONIONSKIN_REPLY_LEN)
+      return -1;
     if (onion_skin_TAP_client_handshake(handshake_state->u.tap,
                                         (const char*)reply,
                                         (char *)keys_out, keys_out_len) < 0)
@@ -380,6 +399,8 @@ onion_skin_client_handshake(int type,
 
     return 0;
   case ONION_HANDSHAKE_TYPE_FAST:
+    if (reply_len != CREATED_FAST_LEN)
+      return -1;
     if (fast_client_handshake(handshake_state->u.fast, reply,
                               keys_out, keys_out_len) < 0)
       return -1;
@@ -388,6 +409,8 @@ onion_skin_client_handshake(int type,
     return 0;
 #ifdef CURVE25519_ENABLED
   case ONION_HANDSHAKE_TYPE_NTOR:
+    if (reply_len != NTOR_REPLY_LEN)
+      return -1;
     {
       size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
       uint8_t *keys_tmp = tor_malloc(keys_tmp_len);

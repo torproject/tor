@@ -29,9 +29,7 @@
 #include "cpuworker.h"
 #include "hibernate.h"
 #include "nodelist.h"
-//#include "onion.h"
-#include "onion_tap.h"
-#include "onion_fast.h"
+#include "onion.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -189,6 +187,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   or_circuit_t *circ;
   const or_options_t *options = get_options();
   int id_is_high;
+  create_cell_t *create_cell;
 
   tor_assert(cell);
   tor_assert(chan);
@@ -254,12 +253,18 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   circ = or_circuit_new(cell->circ_id, chan);
   circ->base_.purpose = CIRCUIT_PURPOSE_OR;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
-  if (cell->command == CELL_CREATE) {
-    char *onionskin = tor_malloc(TAP_ONIONSKIN_CHALLENGE_LEN);
-    memcpy(onionskin, cell->payload, TAP_ONIONSKIN_CHALLENGE_LEN);
+  create_cell = tor_malloc_zero(sizeof(create_cell_t));
+  if (create_cell_parse(create_cell, cell) < 0) {
+    tor_free(create_cell);
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Bogus/unrecognized create cell; closing.");
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+    return;
+  }
 
+  if (create_cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST) {
     /* hand it off to the cpuworkers, and then return. */
-    if (assign_onionskin_to_cpuworker(NULL, circ, onionskin) < 0) {
+    if (assign_onionskin_to_cpuworker(NULL, circ, create_cell) < 0) {
       log_debug(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
       return;
@@ -268,27 +273,35 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   } else {
     /* This is a CREATE_FAST cell; we can handle it immediately without using
      * a CPU worker. */
-    char keys[CPATH_KEY_MATERIAL_LEN];
-    char reply[DIGEST_LEN*2];
-
-    tor_assert(cell->command == CELL_CREATE_FAST);
+    uint8_t keys[CPATH_KEY_MATERIAL_LEN];
+    uint8_t reply[MAX_ONIONSKIN_REPLY_LEN];
+    uint8_t rend_circ_nonce[DIGEST_LEN];
+    int len;
 
     /* Make sure we never try to use the OR connection on which we
      * received this cell to satisfy an EXTEND request,  */
     channel_mark_client(chan);
 
-    if (fast_server_handshake(cell->payload, (uint8_t*)reply,
-                              (uint8_t*)keys, sizeof(keys))<0) {
+    len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
+                                       create_cell->onionskin,
+                                       create_cell->handshake_len,
+                                       NULL,
+                                       reply, keys, CPATH_KEY_MATERIAL_LEN,
+                                       rend_circ_nonce);
+    tor_free(create_cell);
+    if (len < 0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+      tor_free(create_cell);
       return;
     }
-    if (onionskin_answer(circ, CELL_CREATED_FAST, reply, sizeof(reply),
-                         keys)<0) {
+    if (onionskin_answer(circ, CELL_CREATED_FAST, (const char *)reply, len,
+                         (const char *)keys, rend_circ_nonce)<0) {
       log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
+    memwipe(keys, 0, sizeof(keys));
   }
 }
 
@@ -304,6 +317,7 @@ static void
 command_process_created_cell(cell_t *cell, channel_t *chan)
 {
   circuit_t *circ;
+  extended_cell_t extended_cell;
 
   circ = circuit_get_by_circid_channel(cell->circ_id, chan);
 
@@ -321,12 +335,18 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
+  if (created_cell_parse(&extended_cell.created_cell, cell) < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Unparseable created cell.");
+    circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+    return;
+  }
+
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     int err_reason = 0;
     log_debug(LD_OR,"at OP. Finishing handshake.");
-    if ((err_reason = circuit_finish_handshake(origin_circ, cell->command,
-                                               cell->payload)) < 0) {
+    if ((err_reason = circuit_finish_handshake(origin_circ,
+                                        &extended_cell.created_cell)) < 0) {
       log_warn(LD_OR,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ, -err_reason);
       return;
@@ -339,11 +359,24 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
+    uint8_t command=0;
+    uint16_t len=0;
+    uint8_t payload[RELAY_PAYLOAD_SIZE];
     log_debug(LD_OR,
               "Converting created cell to extended relay cell, sending.");
-    relay_send_command_from_edge(0, circ, RELAY_COMMAND_EXTENDED,
-                                 (char*)cell->payload, TAP_ONIONSKIN_REPLY_LEN,
-                                 NULL);
+    memset(payload, 0, sizeof(payload));
+    if (extended_cell.created_cell.cell_type == CELL_CREATED2)
+      extended_cell.cell_type = RELAY_COMMAND_EXTENDED2;
+    else
+      extended_cell.cell_type = RELAY_COMMAND_EXTENDED;
+    if (extended_cell_format(&command, &len, payload, &extended_cell) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_OR, "Can't format extended cell.");
+      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+      return;
+    }
+
+    relay_send_command_from_edge(0, circ, command,
+                                 (const char*)payload, len, NULL);
   }
 }
 

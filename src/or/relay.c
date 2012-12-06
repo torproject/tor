@@ -27,6 +27,7 @@
 #include "mempool.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "onion.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
@@ -1296,11 +1297,20 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       log_debug(domain,"Got an extended cell! Yay.");
-      if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
-                                       CELL_CREATED,
-                                       cell->payload+RELAY_HEADER_SIZE)) < 0) {
-        log_warn(domain,"circuit_finish_handshake failed.");
-        return reason;
+      {
+        extended_cell_t extended_cell;
+        if (extended_cell_parse(&extended_cell, rh.command,
+                        (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
+                        rh.length)<0) {
+          log_warn(LD_PROTOCOL,
+                   "Can't parse EXTENDED cell; killing circuit.");
+          return -END_CIRC_REASON_TORPROTOCOL;
+        }
+        if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
+                                         &extended_cell.created_cell)) < 0) {
+          log_warn(domain,"circuit_finish_handshake failed.");
+          return reason;
+        }
       }
       if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
         log_info(domain,"circuit_send_next_onion_skin() failed.");

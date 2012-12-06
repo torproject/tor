@@ -280,6 +280,7 @@ typedef enum {
 #define CPUWORKER_STATE_MAX_ 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
+#define CPUWORKER_TASK_SHUTDOWN 255
 
 #define OR_CONN_STATE_MIN_ 1
 /** State for a connection to an OR: waiting for connect() to finish. */
