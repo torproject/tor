@@ -15,19 +15,25 @@ libor_extra_source=
 endif
 
 if BUILD_CURVE25519_DONNA
-libcrypto_extra_source= \
-	src/ext/curve25519_donna/curve25519-donna.c \
-	src/common/crypto_curve25519.c
+src_common_libcurve25519_donna_a_SOURCES=\
+	src/ext/curve25519_donna/curve25519-donna.c
+noinst_LIBRARIES+=src/common/libcurve25519_donna.a
+LIBDONNA=src/common/libcurve25519_donna.a
 else
 if BUILD_CURVE25519_DONNA_C64
-libcrypto_extra_source= \
-	src/ext/curve25519_donna/curve25519-donna-c64.c \
-	src/common/crypto_curve25519.c
+src_common_libcurve25519_donna_a_SOURCES=\
+	src/ext/curve25519_donna/curve25519-donna-c64.c
+noinst_LIBRARIES+=src/common/libcurve25519_donna.a
+LIBDONNA=src/common/libcurve25519_donna.a
 else
+LIBDONNA=
+endif
+endif
+
+src_common_libcurve25519_donna_a_CFLAGS =
+
 if CURVE25519_ENABLED
 libcrypto_extra_source=src/common/crypto_curve25519.c
-endif
-endif
 endif
 
 src_common_libor_a_SOURCES = \

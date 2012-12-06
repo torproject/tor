@@ -8,12 +8,14 @@ src_tools_tor_resolve_LDADD = src/common/libor.a @TOR_LIB_MATH@ @TOR_LIB_WS32@
 src_tools_tor_gencert_SOURCES = src/tools/tor-gencert.c
 src_tools_tor_gencert_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_tools_tor_gencert_LDADD = src/common/libor.a src/common/libor-crypto.a \
+	$(LIBDONNA) \
         @TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ @TOR_OPENSSL_LIBS@ \
         @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 src_tools_tor_checkkey_SOURCES = src/tools/tor-checkkey.c
 src_tools_tor_checkkey_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_tools_tor_checkkey_LDADD = src/common/libor.a src/common/libor-crypto.a \
+	$(LIBDONNA) \
         @TOR_LIB_MATH@ @TOR_ZLIB_LIBS@ @TOR_OPENSSL_LIBS@ \
         @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
