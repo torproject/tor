@@ -106,6 +106,7 @@ int extended_cell_parse(extended_cell_t *cell_out, uint8_t command,
                         const uint8_t *payload_in, size_t payload_len);
 
 int create_cell_format(cell_t *cell_out, const create_cell_t *cell_in);
+int create_cell_format_relayed(cell_t *cell_out, const create_cell_t *cell_in);
 int created_cell_format(cell_t *cell_out, const created_cell_t *cell_in);
 int extend_cell_format(uint8_t *command_out, uint16_t *len_out,
                        uint8_t *payload_out, const extend_cell_t *cell_in);

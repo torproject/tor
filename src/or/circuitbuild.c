@@ -55,7 +55,8 @@ static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
                                                const char *id_digest);
 static int circuit_deliver_create_cell(circuit_t *circ,
-                                       const create_cell_t *create_cell);
+                                       const create_cell_t *create_cell,
+                                       int relayed);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
@@ -474,7 +475,7 @@ circuit_n_chan_done(channel_t *chan, int status)
       } else {
         /* pull the create cell out of circ->n_chan_create_cell, and send it */
         tor_assert(circ->n_chan_create_cell);
-        if (circuit_deliver_create_cell(circ, circ->n_chan_create_cell)<0) {
+        if (circuit_deliver_create_cell(circ, circ->n_chan_create_cell, 1)<0) {
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
@@ -491,14 +492,16 @@ circuit_n_chan_done(channel_t *chan, int status)
  * for the outgoing
  * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
  * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
- * to this circuit. DOCDOC payload_len
+ * to this circuit. DOCDOC new arguments
  * Return -1 if we failed to find a suitable circid, else return 0.
  */
 static int
-circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell)
+circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
+                            int relayed)
 {
   cell_t cell;
   circid_t id;
+  int r;
 
   tor_assert(circ);
   tor_assert(circ->n_chan);
@@ -516,7 +519,9 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell)
   circuit_set_n_circid_chan(circ, id, circ->n_chan);
 
   memset(&cell, 0, sizeof(cell_t));
-  if (create_cell_format(&cell, create_cell) < 0) {
+  r = relayed ? create_cell_format_relayed(&cell, create_cell)
+              : create_cell_format(&cell, create_cell);
+  if (r < 0) {
     log_warn(LD_CIRC,"Couldn't format create cell");
     return -1;
   }
@@ -657,7 +662,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     }
     cc.handshake_len = len;
 
-    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc) < 0)
+    if (circuit_deliver_create_cell(TO_CIRCUIT(circ), &cc, 0) < 0)
       return - END_CIRC_REASON_RESOURCELIMIT;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -901,8 +906,6 @@ circuit_extend(cell_t *cell, circuit_t *circ)
                                   &ec.orport_ipv4.addr,
                                   ec.orport_ipv4.port);
 
-    /* XXXX Make sure we can eventually deliver create cell with weird
-     * content */
     circ->n_chan_create_cell = tor_memdup(&ec.create_cell,
                                           sizeof(ec.create_cell));
 
@@ -933,7 +936,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
             "n_chan is %s",
             channel_get_canonical_remote_descr(n_chan));
 
-  if (circuit_deliver_create_cell(circ, &ec.create_cell) < 0)
+  if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
     return -1;
   return 0;
 }

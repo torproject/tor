@@ -808,13 +808,14 @@ extended_cell_parse(extended_cell_t *cell_out,
 
 /** Fill <b>cell_out</b> with a correctly formatted version of the
  * CREATE{,_FAST,2} cell in <b>cell_in</b>. Return 0 on success, -1 on
- * failure. */
-int
-create_cell_format(cell_t *cell_out, const create_cell_t *cell_in)
+ * failure.  This is a cell we didn't originate if <b>relayed</b> is true. */
+static int
+create_cell_format_impl(cell_t *cell_out, const create_cell_t *cell_in,
+                        int relayed)
 {
   uint8_t *p;
   size_t space;
-  if (check_create_cell(cell_in, 0) < 0)
+  if (check_create_cell(cell_in, relayed) < 0)
     return -1;
 
   memset(cell_out->payload, 0, sizeof(cell_out->payload));
@@ -846,6 +847,18 @@ create_cell_format(cell_t *cell_out, const create_cell_t *cell_in)
   }
 
   return 0;
+}
+
+int
+create_cell_format(cell_t *cell_out, const create_cell_t *cell_in)
+{
+  return create_cell_format_impl(cell_out, cell_in, 0);
+}
+
+int
+create_cell_format_relayed(cell_t *cell_out, const create_cell_t *cell_in)
+{
+  return create_cell_format_impl(cell_out, cell_in, 1);
 }
 
 /** Fill <b>cell_out</b> with a correctly formatted version of the

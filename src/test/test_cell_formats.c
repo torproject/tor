@@ -651,7 +651,7 @@ test_cfmt_extend_cells(void *arg)
   tt_int_op(p2_cmd, ==, RELAY_COMMAND_EXTEND);
   tt_int_op(p2_len, ==, 26+TAP_ONIONSKIN_CHALLENGE_LEN);
   test_memeq(p2, p, RELAY_PAYLOAD_SIZE);
-  tt_int_op(0, ==, create_cell_format(&cell, cc));
+  tt_int_op(0, ==, create_cell_format_relayed(&cell, cc));
 
   /* Now let's do a minimal ntor EXTEND2 cell. */
   memset(&ec, 0xff, sizeof(ec));
@@ -721,6 +721,7 @@ test_cfmt_extend_cells(void *arg)
                  /* Now the handshake prologue */
                  "01050063");
   test_memeq(p2+1+8+22+4, b, 99+20);
+  tt_int_op(0, ==, create_cell_format_relayed(&cell, cc));
 
   /* == Now try parsing some junk */
 
