@@ -1502,7 +1502,7 @@ routerset_contains_bridge(const routerset_t *routerset,
     return 0;
 
   extinfo = extend_info_new(
-         NULL, bridge->identity, NULL, &bridge->addr, bridge->port);
+         NULL, bridge->identity, NULL, NULL, &bridge->addr, bridge->port);
   result = routerset_contains_extendinfo(routerset, extinfo);
   extend_info_free(extinfo);
   return result;

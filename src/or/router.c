@@ -1071,7 +1071,8 @@ extend_info_from_router(const routerinfo_t *r)
 
   router_get_prim_orport(r, &ap);
   return extend_info_new(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, &ap.addr, ap.port);
+                         r->onion_pkey, r->onion_curve25519_pkey,
+                         &ap.addr, ap.port);
 }
 
 /** Some time has passed, or we just got new directory information.

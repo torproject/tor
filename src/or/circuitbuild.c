@@ -604,6 +604,73 @@ circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
           && circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN;
 }
 
+#ifdef CURVE25519_ENABLED
+/** Return true if the ntor handshake is enabled in the configuration, or if
+ * it's been set to "auto" in the configuration and it's enabled in the
+ * consensus. */
+static int
+circuits_can_use_ntor(void)
+{
+  const or_options_t *options = get_options();
+  if (options->UseNTorHandshake != -1)
+    return options->UseNTorHandshake;
+  return networkstatus_get_param(NULL, "UseNTorHandshake", 0, 0, 1);
+}
+#endif
+
+/** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
+ * directly, and set *<b>cell_type_out</b> and *<b>handshake_type_out</b>
+ * accordingly. */
+static void
+circuit_pick_create_handshake(uint8_t *cell_type_out,
+                              uint16_t *handshake_type_out,
+                              const extend_info_t *ei)
+{
+#ifdef CURVE25519_ENABLED
+  if (!tor_mem_is_zero((const char*)ei->curve25519_onion_key.public_key,
+                       CURVE25519_PUBKEY_LEN) &&
+      circuits_can_use_ntor()) {
+    *cell_type_out = CELL_CREATE2;
+    *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
+    return;
+  }
+#else
+  (void) ei;
+#endif
+
+  *cell_type_out = CELL_CREATE;
+  *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
+}
+
+/** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
+ * directly, and set *<b>handshake_type_out</b> accordingly. Decide whether,
+ * in extending through <b>node</b> to do so, we should use an EXTEND2 or an
+ * EXTEND cell to do so, and set *<b>cell_type_out</b> and
+ * *<b>create_cell_type_out</b> accordingly. */
+static void
+circuit_pick_extend_handshake(uint8_t *cell_type_out,
+                              uint8_t *create_cell_type_out,
+                              uint16_t *handshake_type_out,
+                              const node_t *node_prev,
+                              const extend_info_t *ei)
+{
+  uint8_t t;
+  circuit_pick_create_handshake(&t, handshake_type_out, ei);
+  /* XXXX024 The check for whether the node has a curve25519 key is a bad
+   * proxy for whether it can do extend2 cells; once a version that
+   * handles extend2 cells is out, remove it. */
+  if (node_prev &&
+      *handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
+      (node_has_curve25519_onion_key(node_prev) ||
+       (node_prev->rs && node_prev->rs->version_supports_extend2_cells))) {
+    *cell_type_out = RELAY_COMMAND_EXTEND2;
+    *create_cell_type_out = CELL_CREATE2;
+  } else {
+    *cell_type_out = RELAY_COMMAND_EXTEND;
+    *create_cell_type_out = CELL_CREATE;
+  }
+}
+
 /** This is the backbone function for building circuits.
  *
  * If circ's first hop is closed, then we need to build a create
@@ -638,10 +705,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     fast = should_use_create_fast_for_circuit(circ);
     if (!fast) {
       /* We are an OR and we know the right onion key: we should
-       * send an old slow create cell.
+       * send a create cell.
        */
-      cc.cell_type = CELL_CREATE;
-      cc.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+      circuit_pick_create_handshake(&cc.cell_type, &cc.handshake_type,
+                                    circ->cpath->extend_info);
       note_request("cell: create", 1);
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
@@ -747,14 +814,20 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return - END_CIRC_REASON_INTERNAL;
     }
 
-    ec.cell_type = RELAY_COMMAND_EXTEND;
+    {
+      const node_t *prev_node;
+      prev_node = node_get_by_id(hop->prev->extend_info->identity_digest);
+      circuit_pick_extend_handshake(&ec.cell_type,
+                                    &ec.create_cell.cell_type,
+                                    &ec.create_cell.handshake_type,
+                                    prev_node,
+                                    hop->extend_info);
+    }
+
     tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
     ec.orport_ipv4.port = hop->extend_info->port;
     tor_addr_make_unspec(&ec.orport_ipv6.addr);
     memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
-
-    ec.create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
-    ec.create_cell.cell_type = CELL_CREATE;
 
     len = onion_skin_create(ec.create_cell.handshake_type,
                             hop->extend_info,
@@ -903,6 +976,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     circ->n_hop = extend_info_new(NULL /*nickname*/,
                                   (const char*)ec.node_id,
                                   NULL /*onion_key*/,
+                                  NULL /*curve25519_key*/,
                                   &ec.orport_ipv4.addr,
                                   ec.orport_ipv4.port);
 
@@ -938,6 +1012,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
     return -1;
+
   return 0;
 }
 
@@ -2310,8 +2385,9 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 /** Allocate a new extend_info object based on the various arguments. */
 extend_info_t *
 extend_info_new(const char *nickname, const char *digest,
-                  crypto_pk_t *onion_key,
-                  const tor_addr_t *addr, uint16_t port)
+                crypto_pk_t *onion_key,
+                const curve25519_public_key_t *curve25519_key,
+                const tor_addr_t *addr, uint16_t port)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   memcpy(info->identity_digest, digest, DIGEST_LEN);
@@ -2319,6 +2395,13 @@ extend_info_new(const char *nickname, const char *digest,
     strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
+#ifdef CURVE25519_ENABLED
+  if (curve25519_key)
+    memcpy(&info->curve25519_onion_key, curve25519_key,
+           sizeof(curve25519_public_key_t));
+#else
+  (void)curve25519_key;
+#endif
   tor_addr_copy(&info->addr, addr);
   info->port = port;
   return info;
@@ -2353,12 +2436,14 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     return extend_info_new(node->ri->nickname,
                              node->identity,
                              node->ri->onion_pkey,
+                             node->ri->onion_curve25519_pkey,
                              &ap.addr,
                              ap.port);
   else if (node->rs && node->md)
     return extend_info_new(node->rs->nickname,
                              node->identity,
                              node->md->onion_pkey,
+                             node->md->onion_curve25519_pkey,
                              &ap.addr,
                              ap.port);
   else

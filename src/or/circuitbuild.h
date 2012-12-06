@@ -46,8 +46,9 @@ int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_new(const char *nickname, const char *digest,
-                                 crypto_pk_t *onion_key,
-                                 const tor_addr_t *addr, uint16_t port);
+                               crypto_pk_t *onion_key,
+                               const curve25519_public_key_t *curve25519_key,
+                               const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);

@@ -2025,6 +2025,9 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that allows DATA cells to arrive on
    * a stream before it has sent a CONNECTED cell. */
   unsigned int version_supports_optimistic_data:1;
+  /** True iff this router has a version that allows it to accept EXTEND2
+   * cells */
+  unsigned int version_supports_extend2_cells:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
@@ -3799,6 +3802,8 @@ typedef struct {
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
 
+  /** Autobool: should we use the ntor handshake if we can? */
+  int UseNTorHandshake;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

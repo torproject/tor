@@ -572,6 +572,7 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (origin_circ->remaining_relay_early_cells > 0 &&
         (relay_command == RELAY_COMMAND_EXTEND ||
+         relay_command == RELAY_COMMAND_EXTEND2 ||
          cpath_layer != origin_circ->cpath)) {
       /* If we've got any relay_early cells left and (we're sending
        * an extend cell or we're not talking to the first hop), use
@@ -585,7 +586,8 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
        * task 878. */
       origin_circ->relay_early_commands[
           origin_circ->relay_early_cells_sent++] = relay_command;
-    } else if (relay_command == RELAY_COMMAND_EXTEND) {
+    } else if (relay_command == RELAY_COMMAND_EXTEND ||
+               relay_command == RELAY_COMMAND_EXTEND2) {
       /* If no RELAY_EARLY cells can be sent over this circuit, log which
        * commands have been sent as RELAY_EARLY cells before; helps debug
        * task 878. */

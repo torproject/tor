@@ -54,6 +54,7 @@ int node_ipv6_preferred(const node_t *node);
 int node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out);
+int node_has_curve25519_onion_key(const node_t *node);
 
 smartlist_t *nodelist_get_list(void);
 
