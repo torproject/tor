@@ -192,6 +192,8 @@ setup_server_onion_keys(server_onion_keys_t *keys)
   dup_onion_keys(&keys->onion_key, &keys->last_onion_key);
 #ifdef CURVE25519_ENABLED
   keys->curve25519_key_map = construct_ntor_key_map();
+  keys->junk_keypair = tor_malloc_zero(sizeof(curve25519_keypair_t));
+  curve25519_keypair_generate(keys->junk_keypair, 0);
 #endif
 }
 
@@ -207,6 +209,7 @@ release_server_onion_keys(server_onion_keys_t *keys)
   crypto_pk_free(keys->last_onion_key);
 #ifdef CURVE25519_ENABLED
   ntor_key_map_free(keys->curve25519_key_map);
+  tor_free(keys->junk_keypair);
 #endif
   memset(keys, 0, sizeof(server_onion_keys_t));
 }
@@ -345,6 +348,7 @@ onion_skin_server_handshake(int type,
 
       if (onion_skin_ntor_server_handshake(
                                    onion_skin, keys->curve25519_key_map,
+                                   keys->junk_keypair,
                                    keys->my_identity,
                                    reply_out, keys_tmp, keys_tmp_len)<0) {
         tor_free(keys_tmp);

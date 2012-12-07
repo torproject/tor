@@ -895,7 +895,8 @@ test_ntor_handshake(void *arg)
   /* server handshake */
   memset(s_buf, 0, NTOR_REPLY_LEN);
   memset(s_keys, 0, 40);
-  tt_int_op(0, ==, onion_skin_ntor_server_handshake(c_buf, s_keymap, node_id,
+  tt_int_op(0, ==, onion_skin_ntor_server_handshake(c_buf, s_keymap, NULL,
+                                                    node_id,
                                                     s_buf, s_keys, 400));
 
   /* client handshake 2 */

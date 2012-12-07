@@ -27,6 +27,7 @@ int onion_skin_ntor_create(const uint8_t *router_id,
 
 int onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
                                  const di_digest256_map_t *private_keys,
+                                 const curve25519_keypair_t *junk_keypair,
                                  const uint8_t *my_node_id,
                                  uint8_t *handshake_reply_out,
                                  uint8_t *key_out,

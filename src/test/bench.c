@@ -199,7 +199,7 @@ bench_onion_ntor(void)
   start = perftime();
   for (i = 0; i < iters; ++i) {
     uint8_t key_out[CPATH_KEY_MATERIAL_LEN];
-    onion_skin_ntor_server_handshake(os, keymap, nodeid, or,
+    onion_skin_ntor_server_handshake(os, keymap, NULL, nodeid, or,
                                 key_out, sizeof(key_out));
   }
   end = perftime();

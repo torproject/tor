@@ -121,14 +121,16 @@ onion_skin_ntor_create(const uint8_t *router_id,
  * NTOR_ONIONSKIN_LEN-byte message in <b>onion_skin</b>, our own identity
  * fingerprint as <b>my_node_id</b>, and an associative array mapping public
  * onion keys to curve25519_keypair_t in <b>private_keys</b>, attempt to
- * perform the handshake.  Write an NTOR_REPLY_LEN-byte message to send back
- * to the client into <b>handshake_reply_out</b>, and generate
- * <b>key_out_len</b> bytes of key material in <b>key_out</b>. Return 0 on
- * success, -1 on failure.
+ * perform the handshake.  Use <b>junk_keys</b> if present if the handshake
+ * indicates an unrecognized public key.  Write an NTOR_REPLY_LEN-byte
+ * message to send back to the client into <b>handshake_reply_out</b>, and
+ * generate <b>key_out_len</b> bytes of key material in <b>key_out</b>. Return
+ * 0 on success, -1 on failure.
  */
 int
 onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
                                  const di_digest256_map_t *private_keys,
+                                 const curve25519_keypair_t *junk_keys,
                                  const uint8_t *my_node_id,
                                  uint8_t *handshake_reply_out,
                                  uint8_t *key_out,
@@ -153,9 +155,14 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
   /* XXXX Does this possible early-return business threaten our security? */
   if (tor_memneq(onion_skin, my_node_id, DIGEST_LEN))
     return -1;
-  keypair_bB = dimap_search(private_keys, onion_skin + DIGEST_LEN, NULL);
+  /* Note that on key-not-found, we go through with this operation anyway,
+   * using "junk_keys". This will result in failed authentication, but won't
+   * leak whether we recognized the key. */
+  keypair_bB = dimap_search(private_keys, onion_skin + DIGEST_LEN,
+                            (void*)junk_keys);
   if (!keypair_bB)
     return -1;
+
   memcpy(s.pubkey_X.public_key, onion_skin+DIGEST_LEN+DIGEST256_LEN,
          CURVE25519_PUBKEY_LEN);
 

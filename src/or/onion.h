@@ -24,6 +24,7 @@ typedef struct server_onion_keys_t {
   crypto_pk_t *last_onion_key;
 #ifdef CURVE25519_ENABLED
   di_digest256_map_t *curve25519_key_map;
+  curve25519_keypair_t *junk_keypair;
 #endif
 } server_onion_keys_t;
 
