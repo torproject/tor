@@ -1,0 +1,7 @@
+  o Minor features:
+    - Use a script to replace "A1" ("Anonymous Proxy") entries in our
+      geoip file with real country codes.  This script fixes about 90% of
+      "A1" entries automatically and uses manual country code assignments
+      to fix the remaining 10%.  See src/config/README.geoip for details.
+      Fixes #6266.
+

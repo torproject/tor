@@ -1,0 +1,114 @@
+# This file contains manual overrides of A1 entries (and possibly others)
+# in MaxMind's GeoLite Country database.  Use deanonymind.py in the same
+# directory to process this file when producing a new geoip file.  See
+# README.geoip in the same directory for details.
+
+# Remove MaxMind entry 0.116.0.0-0.119.255.255 which MaxMind says is AT,
+# but which is part of reserved range 0.0.0.0/8.  -KL 2012-06-13
+"0.116.0.0","0.119.255.255","7602176","7864319","",""
+
+# NL, because previous MaxMind entry 31.171.128.0-31.171.133.255 is NL,
+# and RIR delegation files say 31.171.128.0-31.171.135.255 is NL.
+# -KL 2012-11-27
+"31.171.134.0","31.171.135.255","531334656","531335167","NL","Netherlands"
+
+# EU, because next MaxMind entry 37.139.64.1-37.139.64.9 is EU, because
+# RIR delegation files say 37.139.64.0-37.139.71.255 is EU, and because it
+# just makes more sense for the next entry to start at .0 and not .1.
+# -KL 2012-11-27
+"37.139.64.0","37.139.64.0","629882880","629882880","EU","Europe"
+
+# CH, because previous MaxMind entry 46.19.141.0-46.19.142.255 is CH, and
+# RIR delegation files say 46.19.136.0-46.19.143.255 is CH.
+# -KL 2012-11-27
+"46.19.143.0","46.19.143.255","773033728","773033983","CH","Switzerland"
+
+# GB, because next MaxMind entry 46.166.129.0-46.166.134.255 is GB, and
+# RIR delegation files say 46.166.128.0-46.166.191.255 is GB.
+# -KL 2012-11-27
+"46.166.128.0","46.166.128.255","782663680","782663935","GB","United Kingdom"
+
+# US, though could as well be CA.  Previous MaxMind entry
+# 64.237.32.52-64.237.34.127 is US, next MaxMind entry
+# 64.237.34.144-64.237.34.151 is CA, and RIR delegation files say the
+# entire block 64.237.32.0-64.237.63.255 is US.  -KL 2012-11-27
+"64.237.34.128","64.237.34.143","1089282688","1089282703","US","United States"
+
+# US, though could as well be UY.  Previous MaxMind entry
+# 67.15.170.0-67.15.182.255 is US, next MaxMind entry
+# 67.15.183.128-67.15.183.159 is UY, and RIR delegation files say the
+# entire block 67.15.0.0-67.15.255.255 is US.  -KL 2012-11-27
+"67.15.183.0","67.15.183.127","1125103360","1125103487","US","United States"
+
+# US, because next MaxMind entry 67.43.145.0-67.43.155.255 is US, and RIR
+# delegation files say 67.43.144.0-67.43.159.255 is US.
+# -KL 2012-11-27
+"67.43.144.0","67.43.144.255","1126928384","1126928639","US","United States"
+
+# US, because previous MaxMind entry 70.159.21.51-70.232.244.255 is US,
+# because next MaxMind entry 70.232.245.58-70.232.245.59 is A2 ("Satellite
+# Provider") which is a country information about as useless as A1, and
+# because RIR delegation files say 70.224.0.0-70.239.255.255 is US.
+# -KL 2012-11-27
+"70.232.245.0","70.232.245.57","1189672192","1189672249","US","United States"
+
+# US, because next MaxMind entry 70.232.246.0-70.240.141.255 is US,
+# because previous MaxMind entry 70.232.245.58-70.232.245.59 is A2
+# ("Satellite Provider") which is a country information about as useless
+# as A1, and because RIR delegation files say 70.224.0.0-70.239.255.255 is
+# US.  -KL 2012-11-27
+"70.232.245.60","70.232.245.255","1189672252","1189672447","US","United States"
+
+# GB, despite neither previous (GE) nor next (LV) MaxMind entry being GB,
+# but because RIR delegation files agree with both previous and next
+# MaxMind entry and say GB for 91.228.0.0-91.228.3.255.  -KL 2012-11-27
+"91.228.0.0","91.228.3.255","1541668864","1541669887","GB","United Kingdom"
+
+# GB, because next MaxMind entry 91.232.125.0-91.232.125.255 is GB, and
+# RIR delegation files say 91.232.124.0-91.232.125.255 is GB.
+# -KL 2012-11-27
+"91.232.124.0","91.232.124.255","1541962752","1541963007","GB","United Kingdom"
+
+# GB, despite neither previous (RU) nor next (PL) MaxMind entry being GB,
+# but because RIR delegation files agree with both previous and next
+# MaxMind entry and say GB for 91.238.214.0-91.238.215.255.
+# -KL 2012-11-27
+"91.238.214.0","91.238.215.255","1542379008","1542379519","GB","United Kingdom"
+
+# US, because next MaxMind entry 173.0.16.0-173.0.65.255 is US, and RIR
+# delegation files say 173.0.0.0-173.0.15.255 is US.  -KL 2012-11-27
+"173.0.0.0","173.0.15.255","2902458368","2902462463","US","United States"
+
+# US, because next MaxMind entry 176.67.84.0-176.67.84.79 is US, and RIR
+# delegation files say 176.67.80.0-176.67.87.255 is US.  -KL 2012-11-27
+"176.67.80.0","176.67.83.255","2957201408","2957202431","US","United States"
+
+# US, because previous MaxMind entry 176.67.84.192-176.67.85.255 is US,
+# and RIR delegation files say 176.67.80.0-176.67.87.255 is US.
+# -KL 2012-11-27
+"176.67.86.0","176.67.87.255","2957202944","2957203455","US","United States"
+
+# EU, despite neither previous (RU) nor next (UA) MaxMind entry being EU,
+# but because RIR delegation files agree with both previous and next
+# MaxMind entry and say EU for 193.200.150.0-193.200.150.255.
+# -KL 2012-11-27
+"193.200.150.0","193.200.150.255","3251148288","3251148543","EU","Europe"
+
+# US, because previous MaxMind entry 199.96.68.0-199.96.87.127 is US, and
+# RIR delegation files say 199.96.80.0-199.96.87.255 is US.
+# -KL 2012-11-27
+"199.96.87.128","199.96.87.255","3344979840","3344979967","US","United States"
+
+# US, because previous MaxMind entry 209.58.176.144-209.59.31.255 is US,
+# and RIR delegation files say 209.59.32.0-209.59.63.255 is US.
+# -KL 2012-11-27
+"209.59.32.0","209.59.63.255","3510312960","3510321151","US","United States"
+
+# FR, because previous MaxMind entry 217.15.166.0-217.15.166.255 is FR,
+# and RIR delegation files contain a block 217.15.160.0-217.15.175.255
+# which, however, is EU, not FR.  But merging with next MaxMind entry
+# 217.15.176.0-217.15.191.255 which is KZ and which fully matches what
+# the RIR delegation files say seems unlikely to be correct.
+# -KL 2012-11-27
+"217.15.167.0","217.15.175.255","3641681664","3641683967","FR","France"
+

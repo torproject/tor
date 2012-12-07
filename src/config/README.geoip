@@ -1,0 +1,90 @@
+README.geoip -- information on the IP-to-country-code file shipped with tor
+===========================================================================
+
+The IP-to-country-code file in src/config/geoip is based on MaxMind's
+GeoLite Country database with the following modifications:
+
+ - Those "A1" ("Anonymous Proxy") entries lying inbetween two entries with
+   the same country code are automatically changed to that country code.
+   These changes can be overriden by specifying a different country code
+   in src/config/geoip-manual.
+
+ - Other "A1" entries are replaced with country codes specified in
+   src/config/geoip-manual, or are left as is if there is no corresponding
+   entry in that file.  Even non-"A1" entries can be modified by adding a
+   replacement entry to src/config/geoip-manual.  Handle with care.
+
+
+1. Updating the geoip file from a MaxMind database file
+-------------------------------------------------------
+
+Download the most recent MaxMind GeoLite Country database:
+http://geolite.maxmind.com/download/geoip/database/GeoIPCountryCSV.zip
+
+Run `python deanonymind.py` in the local directory.  Review the output to
+learn about applied automatic/manual changes and watch out for any
+warnings.
+
+Possibly edit geoip-manual to make more/fewer/different manual changes and
+re-run `python deanonymind.py`.
+
+When done, prepend the new geoip file with a comment like this:
+
+  # Last updated based on $DATE Maxmind GeoLite Country
+  # See README.geoip for details on the conversion.
+
+
+2. Verifying automatic and manual changes using diff
+----------------------------------------------------
+
+To unzip the original MaxMind file and look at the automatic changes, run:
+
+  unzip GeoIPCountryCSV.zip
+  diff -U1 GeoIPCountryWhois.csv AutomaticGeoIPCountryWhois.csv
+
+To look at subsequent manual changes, run:
+
+  diff -U1 AutomaticGeoIPCountryWhois.csv ManualGeoIPCountryWhois.csv
+
+To manually generate the geoip file and compare it to the automatically
+created one, run:
+
+  cut -d, -f3-5 < ManualGeoIPCountryWhois.csv | sed 's/"//g' > mygeoip
+  diff -U1 geoip mygeoip
+
+
+3. Verifying automatic and manual changes using blockfinder
+-----------------------------------------------------------
+
+Blockfinder is a powerful tool to handle multiple IP-to-country data
+sources.  Blockfinder has a function to specify a country code and compare
+conflicting country code assignments in different data sources.
+
+We can use blockfinder to compare A1 entries in the original MaxMind file
+with the same or overlapping blocks in the file generated above and in the
+RIR delegation files:
+
+  git clone https://github.com/ioerror/blockfinder
+  cd blockfinder/
+  python blockfinder -i
+  python blockfinder -r ../GeoIPCountryWhois.csv
+  python blockfinder -r ../ManualGeoIPCountryWhois.csv
+  python blockfinder -p A1 > A1-comparison.txt
+
+The output marks conflicts between assignments using either '*' in case of
+two different opinions or '#' for three or more different opinions about
+the country code for a given block.
+
+The '*' conflicts are most likely harmless, because there will always be
+at least two opinions with the original MaxMind file saying A1 and the
+other two sources saying something more meaningful.
+
+However, watch out for '#' conflicts.  In these cases, the original
+MaxMind file ("A1"), the updated MaxMind file (hopefully the correct
+country code), and the RIR delegation files (some other country code) all
+disagree.
+
+There are perfectly valid cases where the updated MaxMind file and the RIR
+delegation files don't agree.  But each of those cases must be verified
+manually.
+
