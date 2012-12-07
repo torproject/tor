@@ -262,7 +262,7 @@ cpuworker_main(void *data)
         log_info(LD_OR,
                  "CPU worker exiting because of error on connection to Tor "
                  "process.");
-        log_info(LD_OR,"(Error on %d was %s)",
+        log_info(LD_OR,"(Error on "TOR_SOCKET_T_FORMAT" was %s)",
                  fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
       goto end;

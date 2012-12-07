@@ -813,7 +813,7 @@ conn_close_if_marked(int i)
   }
 #endif
 
-  log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
+  log_debug(LD_NET,"Cleaning up connection (fd "TOR_SOCKET_T_FORMAT").",conn->s);
 
   /* If the connection we are about to close was trying to connect to
   a proxy server and failed, the client won't be able to use that

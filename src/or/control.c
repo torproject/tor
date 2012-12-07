@@ -1221,7 +1221,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   connection_mark_for_close(TO_CONN(conn));
   return 0;
  ok:
-  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->base_.s);
+  log_info(LD_CONTROL, "Authenticated control connection ("TOR_SOCKET_T_FORMAT
+           ")", conn->base_.s);
   send_control_done(conn);
   conn->base_.state = CONTROL_CONN_STATE_OPEN;
   tor_free(password);

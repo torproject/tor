@@ -318,6 +318,7 @@ AC_CHECK_FUNCS(
         sysconf \
         uname \
         vasprintf \
+	_vscprintf
 )
 
 if test "$enable_threads" = "yes"; then
@@ -784,6 +785,7 @@ AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
 AC_CHECK_SIZEOF(size_t)
+AC_CHECK_SIZEOF(pid_t)
 
 AC_CHECK_TYPES([uint, u_char, ssize_t])
 

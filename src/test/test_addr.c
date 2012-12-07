@@ -38,7 +38,7 @@ test_addr_basic(void)
   tor_free(cp);
   u32 = 3;
   test_assert(!addr_port_lookup(LOG_WARN, "localhost", NULL, &u32, &u16));
-  test_eq(cp, NULL);
+  test_eq_ptr(cp, NULL);
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
   tor_free(cp);
