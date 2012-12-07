@@ -914,7 +914,13 @@ The following options are useful only for clients (that is, if
         IPv6.)
     **PreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
-        we would prefer to connect to it via IPv6. (IPv4 is the default.)
+        we would prefer to connect to it via IPv6. (IPv4 is the default.) +
++
+    NOTE: Although this option allows you to specify an IP address other than
+    localhost, you should do so only with extreme caution.  The SOCKS
+    protocol is unencrypted and (as we use it) unauthenticated, so exposing
+    it in this way could leak your information to anybody watching your
+    network, and allow anybody to use your computer as an open proxy.
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
