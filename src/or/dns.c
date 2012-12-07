@@ -1114,8 +1114,8 @@ connection_dns_remove(edge_connection_t *conn)
   if (pend->conn == conn) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
-    log_debug(LD_EXIT, "First connection (fd "TOR_SOCKET_T_FORMAT") no longer waiting "
-              "for resolve of %s",
+    log_debug(LD_EXIT, "First connection (fd "TOR_SOCKET_T_FORMAT") no "
+              "longer waiting for resolve of %s",
               conn->base_.s,
               escaped_safe_str(conn->base_.address));
     return;

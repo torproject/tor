@@ -880,8 +880,8 @@ connection_or_group_set_badness(or_connection_t *head, int force)
        * and this one is open but not canonical.  Mark it bad. */
       log_info(LD_OR,
                "Marking OR conn to %s:%d as unsuitable for new circuits: "
-               "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  It is not canonical, and we have "
-               "another connection to that OR that is.",
+               "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  It is not "
+               "canonical, and we have another connection to that OR that is.",
                or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
                (int)(now - or_conn->base_.timestamp_created));
       connection_or_mark_bad_for_new_circs(or_conn);

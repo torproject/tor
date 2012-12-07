@@ -319,7 +319,8 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
     connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
   } else {
-    log_debug(LD_EDGE,"No circ to send end on conn (fd "TOR_SOCKET_T_FORMAT").",
+    log_debug(LD_EDGE,"No circ to send end on conn "
+              "(fd "TOR_SOCKET_T_FORMAT").",
               conn->base_.s);
   }
 
