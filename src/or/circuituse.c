@@ -382,8 +382,10 @@ circuit_expire_building(void)
    * See bug #3443. */
   while (next_circ) {
     if (!CIRCUIT_IS_ORIGIN(next_circ) || /* didn't originate here */
-        next_circ->marked_for_close) /* don't mess with marked circs */
+        next_circ->marked_for_close) { /* don't mess with marked circs */
+      next_circ = next_circ->next;
       continue;
+    }
 
     if (TO_ORIGIN_CIRCUIT(next_circ)->has_opened &&
         next_circ->state == CIRCUIT_STATE_OPEN &&
