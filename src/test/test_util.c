@@ -2290,7 +2290,7 @@ test_util_load_win_lib(void *ptr)
   tt_assert(h);
  done:
   if (h)
-    CloseHandle(h);
+    FreeLibrary(h);
 }
 #endif
 
