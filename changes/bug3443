@@ -1,0 +1,11 @@
+ o Minor bugfixes
+   - Alter circuit build timeout measurement to start at the point
+     where we begin the CREATE/CREATE_FAST step (as opposed to circuit
+     initialization). This should make our timeout measurements more
+     uniform. Previously, we were sometimes including ORconn setup time
+     in our circuit build time measurements. Fixes bug #3443.
+
+ o Minor features
+   - If we have no circuits open, use a relaxed timeout (the 95-percentile
+     cutoff) until a circuit succeeds. This should allow Tor to succeed
+     building circuits if the network connection drastically changes.

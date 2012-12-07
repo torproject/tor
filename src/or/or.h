@@ -2702,10 +2702,21 @@ typedef struct circuit_t {
     * length ONIONSKIN_CHALLENGE_LEN. */
   char *n_chan_onionskin;
 
-  /** When was this circuit created?  We keep this timestamp with a higher
-   * resolution than most so that the circuit-build-time tracking code can
-   * get millisecond resolution. */
+  /** When did circuit construction actually begin (ie send the
+   * CREATE cell or begin cannibalization).
+   *
+   * Note: This timer will get reset if we decide to cannibalize
+   * a circuit. It may also get reset during certain phases of hidden
+   * service circuit use.
+   *
+   * We keep this timestamp with a higher resolution than most so that the
+   * circuit-build-time tracking code can get millisecond resolution.
+   */
+  struct timeval timestamp_began;
+
+  /** This timestamp marks when the init_circuit_base constructor ran. */
   struct timeval timestamp_created;
+
   /** When the circuit was first used, or 0 if the circuit is clean.
    *
    * XXXX023 Note that some code will artifically adjust this value backward
@@ -2814,6 +2825,10 @@ typedef struct origin_circuit_t {
    * circuits are closed when we get a joined rend circ, and
    * service-side introduction circuits never have this flag set.) */
   unsigned int hs_circ_has_timed_out : 1;
+
+  /** Set iff this circuit has been given a relaxed timeout because
+   * no circuits have opened. Used to prevent spamming logs. */
+  unsigned int relaxed_timeout : 1;
 
   /** Set iff this is a service-side rendezvous circuit for which a
    * new connection attempt has been launched.  We consider launching

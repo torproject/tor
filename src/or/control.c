@@ -3578,9 +3578,9 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
         /* event_tail can currently be up to 130 chars long */
         const char *hs_state_str =
           circuit_purpose_to_controller_hs_state_string(purpose);
-        const struct timeval *old_timestamp_created = tv;
+        const struct timeval *old_timestamp_began = tv;
         char tbuf[ISO_TIME_USEC_LEN+1];
-        format_iso_time_nospace_usec(tbuf, old_timestamp_created);
+        format_iso_time_nospace_usec(tbuf, old_timestamp_began);
 
         tor_snprintf(event_tail, sizeof(event_tail),
                      " OLD_PURPOSE=%s%s%s OLD_TIME_CREATED=%s",

@@ -52,6 +52,7 @@ typedef struct entry_guard_t {
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
 void entry_guards_changed(void);
 const smartlist_t *get_entry_guards(void);
+int num_live_entry_guards(void);
 
 #endif
 
