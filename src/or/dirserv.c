@@ -1147,6 +1147,8 @@ int
 dirserv_dump_directory_to_string(char **dir_out,
                                  crypto_pk_t *private_key)
 {
+  /* XXXX 024 Get rid of this function if we can confirm that nobody's
+   * fetching these any longer */
   char *cp;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
@@ -1447,21 +1449,12 @@ free_cached_dir_(void *_d)
  * If <b>is_running_routers</b>, this is really a v1 running_routers
  * document rather than a v1 directory.
  */
-void
-dirserv_set_cached_directory(const char *directory, time_t published,
-                             int is_running_routers)
+static void
+dirserv_set_cached_directory(const char *directory, time_t published)
 {
-  time_t now = time(NULL);
 
-  if (is_running_routers) {
-    if (published >= now - MAX_V1_RR_AGE)
-      set_cached_dir(&cached_runningrouters, tor_strdup(directory), published);
-  } else {
-    if (published >= now - MAX_V1_DIRECTORY_AGE) {
-      cached_dir_decref(cached_directory);
-      cached_directory = new_cached_dir(tor_strdup(directory), published);
-    }
-  }
+  cached_dir_decref(cached_directory);
+  cached_directory = new_cached_dir(tor_strdup(directory), published);
 }
 
 /** If <b>networkstatus</b> is non-NULL, we've just received a v2
@@ -1643,6 +1636,8 @@ dirserv_get_directory(void)
 static cached_dir_t *
 dirserv_regenerate_directory(void)
 {
+  /* XXXX 024 Get rid of this function if we can confirm that nobody's
+   * fetching these any longer */
   char *new_directory=NULL;
 
   if (dirserv_dump_directory_to_string(&new_directory,
@@ -1662,7 +1657,7 @@ dirserv_regenerate_directory(void)
 
   /* Save the directory to disk so we re-load it quickly on startup.
    */
-  dirserv_set_cached_directory(the_directory->dir, time(NULL), 0);
+  dirserv_set_cached_directory(the_directory->dir, time(NULL));
 
   return the_directory;
 }
