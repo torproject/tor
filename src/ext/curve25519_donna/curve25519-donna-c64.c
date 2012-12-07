@@ -188,8 +188,7 @@ fsquare_times(felem output, const felem in, limb count) {
 
 /* Load a little-endian 64-bit number  */
 static limb
-load_limb(const u8 *in)
-{
+load_limb(const u8 *in) {
   return
     ((limb)in[0]) |
     (((limb)in[1]) << 8) |
@@ -202,8 +201,7 @@ load_limb(const u8 *in)
 }
 
 static void
-store_limb(u8 *out, limb in)
-{
+store_limb(u8 *out, limb in) {
   out[0] = in & 0xff;
   out[1] = (in >> 8) & 0xff;
   out[2] = (in >> 16) & 0xff;
@@ -216,8 +214,7 @@ store_limb(u8 *out, limb in)
 
 /* Take a little-endian, 32-byte number and expand it into polynomial form */
 static void
-fexpand(limb *output, const u8 *in)
-{
+fexpand(limb *output, const u8 *in) {
   output[0] = load_limb(in) & 0x7ffffffffffff;
   output[1] = (load_limb(in+6) >> 3) & 0x7ffffffffffff;
   output[2] = (load_limb(in+12) >> 6) & 0x7ffffffffffff;
