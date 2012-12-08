@@ -739,8 +739,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_has_opened(circ); /* do other actions as necessary */
 
       /* We're done with measurement circuits here. Just close them */
-      if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+      if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+        /* If a measurement circ ever gets back to us, consider it
+         * succeeded for path bias */
+        circ->path_state = PATH_STATE_USE_SUCCEEDED;
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+      }
       return 0;
     }
 
@@ -1156,13 +1160,19 @@ pathbias_should_count(origin_circuit_t *circ)
 
   /* We can't do path bias accounting without entry guards.
    * Testing and controller circuits also have no guards.
+   *
    * We also don't count server-side rends, because their
-   * endpoint could be chosen maliciously. */
+   * endpoint could be chosen maliciously.
+   * Similarly, we can't count client-side intro attempts,
+   * because clients can be manipulated into connecting to
+   * malicious intro points. */
   if (get_options()->UseEntryGuards == 0 ||
           circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
           circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER ||
           circ->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+          circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED ||
+          (circ->base_.purpose >= CIRCUIT_PURPOSE_C_INTRODUCING && 
+           circ->base_.purpose <= CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)) {
     return 0;
   }
 
@@ -1388,7 +1398,7 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
 {
   circuit_t *circ = &ocirc->base_;
 
-  if (!pathbias_should_count(circ)) {
+  if (!pathbias_should_count(ocirc)) {
     return;
   }
 
@@ -1399,33 +1409,15 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
       // XXX: May open up attacks if the adversary can force connections
       // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
       // state.. Can we use that? Does optimistic data change this?
-      // XXX: Sub-attack: in collusion with an intro point, you can induce bias
-      // through the web. Need a Torbutton patch to prevent this.
 
-      /* FIXME: This is not ideal, but it prevents the case where a
-       * CPU overloaded intro point is chosen.
-       * XXX: Is this reason code authenticated?  */
-      if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
-          reason ==
-            END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_RESOURCELIMIT) {
-        log_info(LD_CIRC,
-            "Ignoring CPU overload intro circuit without successful use. "
-            "Circuit purpose %d currently %s.",
-            reason, circ->purpose, circuit_state_to_string(circ->state));
-      } else {
-        log_info(LD_CIRC,
+      log_info(LD_CIRC,
             "Circuit closed without successful use for reason %d. "
             "Circuit purpose %d currently %s.",
             reason, circ->purpose, circuit_state_to_string(circ->state));
-        pathbias_count_unusable(ocirc);
-      }
+      pathbias_count_unusable(ocirc);
     } else {
       if (reason & END_CIRC_REASON_FLAG_REMOTE) {
         /* Unused remote circ close reasons all could be bias */
-        // XXX: We hit this a lot for hidserv circs with purposes:
-        // CIRCUIT_PURPOSE_S_CONNECT_REND (reasons: 514,517,520)
-        // CIRCUIT_PURPOSE_S_REND_JOINED (reasons: 514,517,520)
-        //  == reasons: 2,3,8. Client-side timeouts?
         log_info(LD_CIRC,
             "Circuit remote-closed without successful use for reason %d. "
             "Circuit purpose %d currently %s.",

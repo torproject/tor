@@ -1402,11 +1402,16 @@ circuit_launch_by_extend_info(uint8_t purpose,
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
 
-      if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND &&
+      if ((purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
+           purpose == CIRCUIT_PURPOSE_C_INTRODUCING) &&
           circ->path_state == PATH_STATE_BUILD_SUCCEEDED) {
         /* Path bias: Cannibalized rends pre-emptively count as a
          * successfully used circ. We don't wait until the extend,
-         * because the rend point could be malicious. */
+         * because the rend point could be malicious. 
+         *
+         * Same deal goes for client side introductions. Clients
+         * can be manipulated to connect repeatedly to them
+         * (especially web clients). */
         circ->path_state = PATH_STATE_USE_SUCCEEDED;
         /* This must be called before the purpose change */
         pathbias_check_close(circ);
