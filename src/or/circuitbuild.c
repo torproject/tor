@@ -1155,10 +1155,14 @@ pathbias_should_count(origin_circuit_t *circ)
   char *rate_msg = NULL;
 
   /* We can't do path bias accounting without entry guards.
-   * Testing and controller circuits also have no guards. */
+   * Testing and controller circuits also have no guards.
+   * We also don't count server-side rends, because their
+   * endpoint could be chosen maliciously. */
   if (get_options()->UseEntryGuards == 0 ||
           circ->base_.purpose == CIRCUIT_PURPOSE_TESTING ||
-          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) {
+          circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
+          circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     return 0;
   }
 
@@ -1384,22 +1388,37 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
 {
   circuit_t *circ = &ocirc->base_;
 
+  if (!pathbias_should_count(circ)) {
+    return;
+  }
+
   if (ocirc->path_state == PATH_STATE_BUILD_SUCCEEDED) {
     if (circ->timestamp_dirty) {
+      /* Any circuit where there were attempted streams but no successful
+       * streams could be bias */
       // XXX: May open up attacks if the adversary can force connections
       // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
       // state.. Can we use that? Does optimistic data change this?
-      // XXX: For the hidserv side, we could only care about INTRODUCING purposes
-      // for server+client, and REND purposes for the server... Can we
-      // somehow only count those?
-      /* Any circuit where there were attempted streams but no successful
-       * streams could be bias */
-      log_info(LD_CIRC,
+      // XXX: Sub-attack: in collusion with an intro point, you can induce bias
+      // through the web. Need a Torbutton patch to prevent this.
+
+      /* FIXME: This is not ideal, but it prevents the case where a
+       * CPU overloaded intro point is chosen.
+       * XXX: Is this reason code authenticated?  */
+      if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
+          reason ==
+            END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_RESOURCELIMIT) {
+        log_info(LD_CIRC,
+            "Ignoring CPU overload intro circuit without successful use. "
+            "Circuit purpose %d currently %s.",
+            reason, circ->purpose, circuit_state_to_string(circ->state));
+      } else {
+        log_info(LD_CIRC,
             "Circuit closed without successful use for reason %d. "
-            "Circuit is a %s currently %s.",
-            reason, circuit_purpose_to_string(circ->purpose),
-            circuit_state_to_string(circ->state));
-      pathbias_count_unusable(ocirc);
+            "Circuit purpose %d currently %s.",
+            reason, circ->purpose, circuit_state_to_string(circ->state));
+        pathbias_count_unusable(ocirc);
+      }
     } else {
       if (reason & END_CIRC_REASON_FLAG_REMOTE) {
         /* Unused remote circ close reasons all could be bias */
@@ -1409,9 +1428,8 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
         //  == reasons: 2,3,8. Client-side timeouts?
         log_info(LD_CIRC,
             "Circuit remote-closed without successful use for reason %d. "
-            "Circuit is a %s currently %s.",
-            reason, circuit_purpose_to_string(circ->purpose),
-            circuit_state_to_string(circ->state));
+            "Circuit purpose %d currently %s.",
+            reason, circ->purpose, circuit_state_to_string(circ->state));
         pathbias_count_collapse(ocirc);
       } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
                   == END_CIRC_REASON_CHANNEL_CLOSED &&
@@ -1423,10 +1441,9 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
          * What about clock jumps/suspends? */
         log_info(LD_CIRC,
             "Circuit's channel closed without successful use for reason %d, "
-            "channel reason %d. Circuit is a %s currently %s.",
+            "channel reason %d. Circuit purpose %d currently %s.",
             reason, circ->n_chan->reason_for_closing,
-            circuit_purpose_to_string(circ->purpose),
-            circuit_state_to_string(circ->state));
+            circ->purpose, circuit_state_to_string(circ->state));
         pathbias_count_collapse(ocirc);
       } else {
         pathbias_count_successful_close(ocirc);
@@ -1545,6 +1562,13 @@ pathbias_count_timeout(origin_circuit_t *circ)
   entry_guard_t *guard = NULL;
 
   if (!pathbias_should_count(circ)) {
+    return;
+  }
+
+  /* For hidden service circs, they can actually be used
+   * successfully and then time out later (because
+   * the other side declines to use them). */
+  if (circ->path_state == PATH_STATE_USE_SUCCEEDED) {
     return;
   }
 

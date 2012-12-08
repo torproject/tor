@@ -1402,6 +1402,16 @@ circuit_launch_by_extend_info(uint8_t purpose,
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
 
+      if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND &&
+          circ->path_state == PATH_STATE_BUILD_SUCCEEDED) {
+        /* Path bias: Cannibalized rends pre-emptively count as a
+         * successfully used circ. We don't wait until the extend,
+         * because the rend point could be malicious. */
+        circ->path_state = PATH_STATE_USE_SUCCEEDED;
+        /* This must be called before the purpose change */
+        pathbias_check_close(circ);
+      }
+
       circuit_change_purpose(TO_CIRCUIT(circ), purpose);
       /* Reset the start date of this circ, else expire_building
        * will see it and think it's been trying to build since it
