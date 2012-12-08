@@ -2181,10 +2181,14 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
   if (status == SOCKS5_SUCCEEDED) {
     if(!conn->edge_.on_circuit ||
        !CIRCUIT_IS_ORIGIN(conn->edge_.on_circuit)) {
-      // XXX: Weird. We hit this a lot, and yet have no unusable_circs
-      log_warn(LD_BUG, "No origin circuit for successful SOCKS stream");
+      // XXX: Weird. We hit this a lot, and yet have no unusable_circs.
+      // Maybe during addrmaps/resolves?
+      log_warn(LD_BUG,
+               "(Harmless.) No origin circuit for successful SOCKS stream. "
+               "Reason: %d", endreason);
     } else {
-      TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->any_streams_succeeded = 1;
+      TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->path_state
+          = PATH_STATE_USE_SUCCEEDED;
     }
   }
 
@@ -2457,7 +2461,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     connection_exit_connect(n_stream);
 
     /* For path bias: This circuit was used successfully */
-    origin_circ->any_streams_succeeded = 1;
+    origin_circ->path_state = PATH_STATE_USE_SUCCEEDED;
 
     tor_free(address);
     return 0;

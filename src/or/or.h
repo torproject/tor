@@ -2768,9 +2768,17 @@ typedef enum {
     /** This circuit has completed a first hop, and has been counted by
      * the path bias logic. */
     PATH_STATE_DID_FIRST_HOP = 1,
-    /** This circuit has been completely built, and has been counted as
-     * successful by the path bias logic. */
-    PATH_STATE_SUCCEEDED = 2,
+    /** This circuit has been completely built */
+    PATH_STATE_BUILD_SUCCEEDED = 2,
+    /** Did any SOCKS streams or hidserv introductions actually succeed on
+      * this circuit?
+      *
+      * Note: If we ever implement end-to-end stream timing through test
+      * stream probes (#5707), we must *not* set this for those probes
+      * (or any other automatic streams) because the adversary could
+      * just tag at a later point.
+      */
+    PATH_STATE_USE_SUCCEEDED = 3,
 } path_state_t;
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
@@ -2871,16 +2879,6 @@ typedef struct origin_circuit_t {
    * timestamp_dirty is far too overloaded at the moment.
    */
   unsigned int isolation_any_streams_attached : 1;
-
-  /**
-   * Did any SOCKS streams or hidserv introductions actually succeed on
-   * this circuit?
-   *
-   * Note: If we ever implement end-to-end stream timing through test
-   * stream probes (#5707), we must *not* set this for those probes
-   * (or any other automatic streams).
-   */
-  unsigned int any_streams_succeeded : 1;
 
   /** A bitfield of ISO_* flags for every isolation field such that this
    * circuit has had streams with more than one value for that field

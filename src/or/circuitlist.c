@@ -1354,53 +1354,7 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
   }
   
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-
-    if (ocirc->path_state == PATH_STATE_SUCCEEDED) {
-      int pathbias_is_normal_close = 1;
-
-      /* FIXME: Is timestamp_dirty the right thing for these two checks? 
-       * Should we use isolation_any_streams_attached instead? 
-       * isolation_any_streams_attached is not used for hidservs.. */
-      if (!circ->timestamp_dirty) {
-        if (orig_reason & END_CIRC_REASON_FLAG_REMOTE) {
-          /* Unused remote circ close reasons all could be bias */
-          // XXX: We hit this a lot for hidserv circs with purposes:
-          // CIRCUIT_PURPOSE_S_CONNECT_REND (reasons: 514,517,520)
-          // CIRCUIT_PURPOSE_S_REND_JOINED (reasons: 514,517,520)
-          //  == reasons: 2,3,8. Client-side timeouts?
-          pathbias_is_normal_close = 0;
-          pathbias_count_collapse(ocirc);
-        } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
-                    == END_CIRC_REASON_CHANNEL_CLOSED &&
-                   circ->n_chan &&
-                   circ->n_chan->reason_for_closing 
-                    != CHANNEL_CLOSE_REQUESTED) {
-          /* If we didn't close the channel ourselves, it could be bias */
-          /* FIXME: Only count bias if the network is live?
-           * What about clock jumps/suspends? */
-          pathbias_is_normal_close = 0;
-          pathbias_count_collapse(ocirc);
-        }
-      } else if (circ->timestamp_dirty && !ocirc->any_streams_succeeded) {
-        // XXX: May open up attacks if the adversary can force connections
-        // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
-        // state.. Can we use that? Does optimistic data change this?
-        // XXX: For the hidserv side, we could only care about INTRODUCING purposes
-        // for server+client, and REND purposes for the server... Can we
-        // somehow only count those?
-        /* Any circuit where there were attempted streams but no successful
-         * streams could be bias */
-        /* FIXME: This may be better handled by limiting the number of retries
-         * per stream? */
-        pathbias_is_normal_close = 0;
-        pathbias_count_unusable(ocirc);
-      }
-
-      if (pathbias_is_normal_close) {
-        pathbias_count_successful_close(ocirc);
-      }
-    }
+    pathbias_check_close(TO_ORIGIN_CIRCUIT(circ), reason);
 
     /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;

@@ -60,7 +60,10 @@ static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static int entry_guard_inc_first_hop_count(entry_guard_t *guard);
-static void pathbias_count_success(origin_circuit_t *circ);
+static void pathbias_count_build_success(origin_circuit_t *circ);
+static void pathbias_count_successful_close(origin_circuit_t *circ);
+static void pathbias_count_collapse(origin_circuit_t *circ);
+static void pathbias_count_unusable(origin_circuit_t *circ);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -731,7 +734,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         }
       }
 
-      pathbias_count_success(circ);
+      pathbias_count_build_success(circ);
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */
 
@@ -1129,8 +1132,10 @@ pathbias_state_to_string(path_state_t state)
       return "new";
     case PATH_STATE_DID_FIRST_HOP:
       return "first hop";
-    case PATH_STATE_SUCCEEDED:
-      return "succeeded";
+    case PATH_STATE_BUILD_SUCCEEDED:
+      return "build succeeded";
+    case PATH_STATE_USE_SUCCEEDED:
+      return "use succeeded";
   }
 
   return "unknown";
@@ -1216,7 +1221,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
       }
     }
 
-    /* Don't count cannibalized circs for path bias */
+    /* Don't re-count cannibalized circs.. */
     if (!circ->has_opened) {
       entry_guard_t *guard = NULL;
 
@@ -1291,7 +1296,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
  * Also check for several potential error cases for bug #6475.
  */
 static void
-pathbias_count_success(origin_circuit_t *circ)
+pathbias_count_build_success(origin_circuit_t *circ)
 {
 #define SUCCESS_NOTICE_INTERVAL (600)
   static ratelim_t success_notice_limit =
@@ -1303,7 +1308,8 @@ pathbias_count_success(origin_circuit_t *circ)
     return;
   }
 
-  /* Don't count cannibalized/reused circs for path bias */
+  /* Don't count cannibalized/reused circs for path bias 
+   * build success.. They get counted under use success */
   if (!circ->has_opened) {
     if (circ->cpath && circ->cpath->extend_info) {
       guard = entry_guard_get_by_id_digest(
@@ -1312,7 +1318,7 @@ pathbias_count_success(origin_circuit_t *circ)
 
     if (guard) {
       if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
-        circ->path_state = PATH_STATE_SUCCEEDED;
+        circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
         guard->circuit_successes++;
 
         log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
@@ -1354,7 +1360,7 @@ pathbias_count_success(origin_circuit_t *circ)
       }
     }
   } else {
-    if (circ->path_state != PATH_STATE_SUCCEEDED) {
+    if (circ->path_state < PATH_STATE_BUILD_SUCCEEDED) {
       if ((rate_msg = rate_limit_log(&success_notice_limit,
               approx_time()))) {
         log_info(LD_BUG,
@@ -1371,9 +1377,70 @@ pathbias_count_success(origin_circuit_t *circ)
 }
 
 /**
- * Count a successfully closed circuit.
+ * Check if a circuit was used and/or closed successfully.
  */
 void
+pathbias_check_close(origin_circuit_t *ocirc, int reason)
+{
+  circuit_t *circ = &ocirc->base_;
+
+  if (ocirc->path_state == PATH_STATE_BUILD_SUCCEEDED) {
+    if (circ->timestamp_dirty) {
+      // XXX: May open up attacks if the adversary can force connections
+      // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
+      // state.. Can we use that? Does optimistic data change this?
+      // XXX: For the hidserv side, we could only care about INTRODUCING purposes
+      // for server+client, and REND purposes for the server... Can we
+      // somehow only count those?
+      /* Any circuit where there were attempted streams but no successful
+       * streams could be bias */
+      log_info(LD_CIRC,
+            "Circuit closed without successful use for reason %d. "
+            "Circuit is a %s currently %s.",
+            reason, circuit_purpose_to_string(circ->purpose),
+            circuit_state_to_string(circ->state));
+      pathbias_count_unusable(ocirc);
+    } else {
+      if (reason & END_CIRC_REASON_FLAG_REMOTE) {
+        /* Unused remote circ close reasons all could be bias */
+        // XXX: We hit this a lot for hidserv circs with purposes:
+        // CIRCUIT_PURPOSE_S_CONNECT_REND (reasons: 514,517,520)
+        // CIRCUIT_PURPOSE_S_REND_JOINED (reasons: 514,517,520)
+        //  == reasons: 2,3,8. Client-side timeouts?
+        log_info(LD_CIRC,
+            "Circuit remote-closed without successful use for reason %d. "
+            "Circuit is a %s currently %s.",
+            reason, circuit_purpose_to_string(circ->purpose),
+            circuit_state_to_string(circ->state));
+        pathbias_count_collapse(ocirc);
+      } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
+                  == END_CIRC_REASON_CHANNEL_CLOSED &&
+                 circ->n_chan &&
+                 circ->n_chan->reason_for_closing 
+                  != CHANNEL_CLOSE_REQUESTED) {
+        /* If we didn't close the channel ourselves, it could be bias */
+        /* FIXME: Only count bias if the network is live?
+         * What about clock jumps/suspends? */
+        log_info(LD_CIRC,
+            "Circuit's channel closed without successful use for reason %d, "
+            "channel reason %d. Circuit is a %s currently %s.",
+            reason, circ->n_chan->reason_for_closing,
+            circuit_purpose_to_string(circ->purpose),
+            circuit_state_to_string(circ->state));
+        pathbias_count_collapse(ocirc);
+      } else {
+        pathbias_count_successful_close(ocirc);
+      }
+    }
+  } else if (ocirc->path_state == PATH_STATE_USE_SUCCEEDED) {
+    pathbias_count_successful_close(ocirc);
+  }
+}
+
+/**
+ * Count a successfully closed circuit.
+ */
+static void
 pathbias_count_successful_close(origin_circuit_t *circ)
 {
   entry_guard_t *guard = NULL;
@@ -1411,7 +1478,7 @@ pathbias_count_successful_close(origin_circuit_t *circ)
  * circuit after it has successfully completed. Right now, this is
  * used for purely informational/debugging purposes.
  */
-void
+static void
 pathbias_count_collapse(origin_circuit_t *circ)
 {
   entry_guard_t *guard = NULL;
@@ -1439,7 +1506,7 @@ pathbias_count_collapse(origin_circuit_t *circ)
   }
 }
 
-void
+static void
 pathbias_count_unusable(origin_circuit_t *circ)
 {
   entry_guard_t *guard = NULL;
@@ -1511,7 +1578,7 @@ pathbias_get_closed_count(entry_guard_t *guard)
     if(!ocirc->cpath || !ocirc->cpath->extend_info)
       continue;
 
-    if (ocirc->path_state == PATH_STATE_SUCCEEDED &&
+    if (ocirc->path_state >= PATH_STATE_BUILD_SUCCEEDED &&
         (memcmp(guard->identity,
                 ocirc->cpath->extend_info->identity_digest,
                 DIGEST_LEN)
@@ -2371,6 +2438,11 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit)
     circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return -1;
   }
+
+  /* Set timestamp_dirty, so we can check it for path use bias */
+  if (!circ->base_.timestamp_dirty)
+    circ->base_.timestamp_dirty = time(NULL);
+
   return 0;
 }
 

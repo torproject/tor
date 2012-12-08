@@ -363,7 +363,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 
   /* For path bias: This circuit was used successfully. Valid
    * nacks and acks count. */
-  circ->any_streams_succeeded = 1;
+  circ->path_state = PATH_STATE_USE_SUCCEEDED;
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */

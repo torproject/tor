@@ -1383,9 +1383,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
-          
-  /* For path bias: This circuit was used successfully */
-  circuit->any_streams_succeeded = 1;
+   
+  /* For path bias: This intro circuit was used successfully */
+  circuit->path_state = PATH_STATE_USE_SUCCEEDED;
 
   goto done;
 
@@ -2586,7 +2586,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(circuit->rend_data);
 
   /* Declare the circuit dirty to avoid reuse, and for path-bias */
-  circuit->base_.timestamp_dirty = time(NULL);
+  if(!circuit->base_.timestamp_dirty)
+    circuit->base_.timestamp_dirty = time(NULL);
 
   hop = circuit->build_state->service_pending_final_cpath_ref->cpath;
 
