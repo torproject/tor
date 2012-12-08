@@ -3,25 +3,11 @@
 
 #include "orconfig.h"
 
-#include "onion_ntor.h"
 #include "crypto.h"
+#define ONION_NTOR_PRIVATE
+#include "onion_ntor.h"
 #include "torlog.h"
 #include "util.h"
-
-/** Storage held by a client while waiting for an ntor reply from a server. */
-struct ntor_handshake_state_t {
-  /** Identity digest of the router we're talking to. */
-  uint8_t router_id[DIGEST_LEN];
-  /** Onion key of the router we're talking to. */
-  curve25519_public_key_t pubkey_B;
-
-  /**
-   * Short-lived keypair for use with this handshake.
-   * @{ */
-  curve25519_secret_key_t seckey_x;
-  curve25519_public_key_t pubkey_X;
-  /** @} */
-};
 
 /** Free storage held in an ntor handshake state. */
 void
