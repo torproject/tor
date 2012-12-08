@@ -2567,6 +2567,9 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit)
 {
   int err_reason = 0;
   warn_if_last_router_excluded(circ, exit);
+
+  tor_gettimeofday(&circ->base_.timestamp_began);
+
   circuit_append_new_exit(circ, exit);
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
   if ((err_reason = circuit_send_next_onion_skin(circ))<0) {
