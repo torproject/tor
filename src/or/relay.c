@@ -693,6 +693,14 @@ connection_ap_process_end_not_open(
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   (void) layer_hint; /* unused */
 
+  if (rh->length > 0) {
+    /* Path bias: If we get a valid reason code from the exit, 
+     * it wasn't due to tagging */
+    // XXX: This relies on recognized+digest being strong enough not
+    // to be spoofable.. Is that a valid assumption?
+    circ->path_state = PATH_STATE_USE_SUCCEEDED;
+  }
+
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
       /* avoid retry if rend */
       !connection_edge_is_rendezvous_stream(edge_conn)) {
