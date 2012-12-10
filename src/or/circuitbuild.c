@@ -1361,10 +1361,10 @@ pathbias_count_build_success(origin_circuit_t *circ)
     if (guard) {
       if (circ->path_state == PATH_STATE_BUILD_ATTEMPTED) {
         circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
-        guard->circuit_successes++;
+        guard->circ_successes++;
 
         log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
-                 guard->circuit_successes, guard->circ_attempts,
+                 guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
         if ((rate_msg = rate_limit_log(&success_notice_limit,
@@ -1380,10 +1380,10 @@ pathbias_count_build_success(origin_circuit_t *circ)
         }
       }
 
-      if (guard->circ_attempts < guard->circuit_successes) {
-        log_notice(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
+      if (guard->circ_attempts < guard->circ_successes) {
+        log_notice(LD_BUG, "Unexpectedly high successes counts (%u/%u) "
                  "for guard %s=%s",
-                 guard->circuit_successes, guard->circ_attempts,
+                 guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
     /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -1639,7 +1639,7 @@ pathbias_get_closed_count(entry_guard_t *guard)
 
 /**
  * This function checks the consensus parameters to decide
- * if it should return guard->circuit_successes or
+ * if it should return guard->circ_successes or
  * guard->successful_circuits_closed.
  */
 static int
@@ -1648,7 +1648,7 @@ pathbias_get_success_count(entry_guard_t *guard)
   if (pathbias_use_close_counts(get_options())) {
     return pathbias_get_closed_count(guard);
   } else {
-    return guard->circuit_successes;
+    return guard->circ_successes;
   }
 }
 
@@ -1681,7 +1681,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  pathbias_get_closed_count(guard), guard->circ_attempts,
-                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->circ_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
           guard->path_bias_disabled = 1;
@@ -1699,7 +1699,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  pathbias_get_closed_count(guard), guard->circ_attempts,
-                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->circ_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
@@ -1717,7 +1717,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                  pathbias_get_closed_count(guard), guard->circ_attempts,
-                 guard->circuit_successes, guard->unusable_circuits,
+                 guard->circ_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
@@ -1733,7 +1733,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                    "reference, your timeout cutoff is %ld seconds.",
                    guard->nickname, hex_str(guard->identity, DIGEST_LEN),
                    pathbias_get_closed_count(guard), guard->circ_attempts,
-                   guard->circuit_successes, guard->unusable_circuits,
+                   guard->circ_successes, guard->unusable_circuits,
                    guard->collapsed_circuits, guard->timeouts,
                    (long)circ_times.close_ms/1000);
       }
@@ -1747,22 +1747,22 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
     /* Only scale if there will be no rounding error for our scaling
      * factors */
     if (((mult_factor*guard->circ_attempts) % scale_factor) == 0 &&
-        ((mult_factor*guard->circuit_successes) % scale_factor) == 0) {
+        ((mult_factor*guard->circ_successes) % scale_factor) == 0) {
       log_info(LD_CIRC,
                "Scaling pathbias counts to (%u/%u)*(%d/%d) for guard %s=%s",
-               guard->circuit_successes, guard->circ_attempts, mult_factor,
+               guard->circ_successes, guard->circ_attempts, mult_factor,
                scale_factor, guard->nickname, hex_str(guard->identity,
                DIGEST_LEN));
 
       guard->circ_attempts *= mult_factor;
-      guard->circuit_successes *= mult_factor;
+      guard->circ_successes *= mult_factor;
       guard->timeouts *= mult_factor;
       guard->successful_circuits_closed *= mult_factor;
       guard->collapsed_circuits *= mult_factor;
       guard->unusable_circuits *= mult_factor;
 
       guard->circ_attempts /= scale_factor;
-      guard->circuit_successes /= scale_factor;
+      guard->circ_successes /= scale_factor;
       guard->timeouts /= scale_factor;
       guard->successful_circuits_closed /= scale_factor;
       guard->collapsed_circuits /= scale_factor;
@@ -1771,7 +1771,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
   }
   guard->circ_attempts++;
   log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
-           guard->circuit_successes, guard->circ_attempts, guard->nickname,
+           guard->circ_successes, guard->circ_attempts, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;
 }

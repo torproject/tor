@@ -49,7 +49,7 @@ typedef struct entry_guard_t {
                           * at which we last failed to connect to it. */
 
   unsigned circ_attempts; /**< Number of circuits this guard has "attempted" */
-  unsigned circuit_successes; /**< Number of successfully built circuits using
+  unsigned circ_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
   unsigned successful_circuits_closed; /**< Number of circuits that carried
                                         * streams successfully. */
