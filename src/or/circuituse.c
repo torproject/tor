@@ -1429,7 +1429,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
          */
         circ->path_state = PATH_STATE_USE_SUCCEEDED;
         /* This must be called before the purpose change */
-        pathbias_check_close(circ);
+        pathbias_check_close(circ, END_CIRC_REASON_FINISHED);
       }
 
       circuit_change_purpose(TO_CIRCUIT(circ), purpose);
