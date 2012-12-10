@@ -1040,9 +1040,9 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
     if (circ->n_chan == chan) {
       circuit_set_n_circid_chan(circ, 0, NULL);
       mark = 1;
-    
+
       /* If we didn't request this closure, pass the remote
-       * bit to mark_for_close. */ 
+       * bit to mark_for_close. */
       if (chan->reason_for_closing != CHANNEL_CLOSE_REQUESTED)
         reason |= END_CIRC_REASON_FLAG_REMOTE;
     }
@@ -1352,7 +1352,7 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
     }
     reason = END_CIRC_REASON_NONE;
   }
-  
+
   if (CIRCUIT_IS_ORIGIN(circ)) {
     pathbias_check_close(TO_ORIGIN_CIRCUIT(circ), reason);
 

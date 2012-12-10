@@ -59,3 +59,4 @@ void pathbias_count_timeout(origin_circuit_t *circ);
 void pathbias_check_close(origin_circuit_t *circ, int reason);
 
 #endif
+

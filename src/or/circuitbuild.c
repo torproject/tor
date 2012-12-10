@@ -1199,7 +1199,7 @@ pathbias_should_count(origin_circuit_t *circ)
           circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER ||
           circ->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
           circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED ||
-          (circ->base_.purpose >= CIRCUIT_PURPOSE_C_INTRODUCING && 
+          (circ->base_.purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
            circ->base_.purpose <= CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)) {
     return 0;
   }
@@ -1350,7 +1350,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
     return;
   }
 
-  /* Don't count cannibalized/reused circs for path bias 
+  /* Don't count cannibalized/reused circs for path bias
    * build success.. They get counted under use success */
   if (!circ->has_opened) {
     if (circ->cpath && circ->cpath->extend_info) {
@@ -1456,14 +1456,14 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
       } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
                   == END_CIRC_REASON_CHANNEL_CLOSED &&
                  circ->n_chan &&
-                 circ->n_chan->reason_for_closing 
+                 circ->n_chan->reason_for_closing
                   != CHANNEL_CLOSE_REQUESTED) {
         /* If we didn't close the channel ourselves, it could be bias */
         /* FIXME: Only count bias if the network is live?
          * What about clock jumps/suspends? */
         log_info(LD_CIRC,
-            "Circuit %d's channel closed without successful use for reason %d, "
-            "channel reason %d. Circuit purpose %d currently %s.",
+            "Circuit %d's channel closed without successful use for reason "
+            "%d, channel reason %d. Circuit purpose %d currently %s.",
             ocirc->global_identifier,
             reason, circ->n_chan->reason_for_closing,
             circ->purpose, circuit_state_to_string(circ->state));
@@ -1494,7 +1494,7 @@ pathbias_count_successful_close(origin_circuit_t *circ)
   }
 
   if (guard) {
-    /* In the long run: circuit_success ~= successful_circuit_close + 
+    /* In the long run: circuit_success ~= successful_circuit_close +
      *                                     circ_failure + stream_failure */
     guard->successful_circuits_closed++;
     entry_guards_changed();
@@ -1511,7 +1511,7 @@ pathbias_count_successful_close(origin_circuit_t *circ)
 }
 
 /**
- * Count a circuit that fails after it is built, but before it can 
+ * Count a circuit that fails after it is built, but before it can
  * carry any traffic.
  *
  * This is needed because there are ways to destroy a
@@ -1622,7 +1622,7 @@ pathbias_get_closed_count(entry_guard_t *guard)
 
     ocirc = TO_ORIGIN_CIRCUIT(circ);
 
-    if(!ocirc->cpath || !ocirc->cpath->extend_info)
+    if (!ocirc->cpath || !ocirc->cpath->extend_info)
       continue;
 
     if (ocirc->path_state >= PATH_STATE_BUILD_SUCCEEDED &&
@@ -1642,7 +1642,7 @@ pathbias_get_closed_count(entry_guard_t *guard)
  * if it should return guard->circ_successes or
  * guard->successful_circuits_closed.
  */
-double 
+double
 pathbias_get_success_count(entry_guard_t *guard)
 {
   if (pathbias_use_close_counts(get_options())) {
@@ -1680,8 +1680,9 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 (int)pathbias_get_closed_count(guard), (int)guard->circ_attempts,
-                 (int)guard->circ_successes, (int)guard->unusable_circuits,
+                 (int)pathbias_get_closed_count(guard),
+                 (int)guard->circ_attempts, (int)guard->circ_successes,
+                 (int)guard->unusable_circuits,
                  (int)guard->collapsed_circuits, (int)guard->timeouts,
                  (long)circ_times.close_ms/1000);
           guard->path_bias_disabled = 1;
@@ -1698,8 +1699,9 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 (int)pathbias_get_closed_count(guard), (int)guard->circ_attempts,
-                 (int)guard->circ_successes, (int)guard->unusable_circuits,
+                 (int)pathbias_get_closed_count(guard),
+                 (int)guard->circ_attempts, (int)guard->circ_successes,
+                 (int)guard->unusable_circuits,
                  (int)guard->collapsed_circuits, (int)guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
@@ -1716,8 +1718,9 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 (int)pathbias_get_closed_count(guard), (int)guard->circ_attempts,
-                 (int)guard->circ_successes, (int)guard->unusable_circuits,
+                 (int)pathbias_get_closed_count(guard),
+                 (int)guard->circ_attempts, (int)guard->circ_successes,
+                 (int)guard->unusable_circuits,
                  (int)guard->collapsed_circuits, (int)guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
@@ -1732,8 +1735,9 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                    "were unusable, %d collapsed, and %d timed out. For "
                    "reference, your timeout cutoff is %ld seconds.",
                    guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                   (int)pathbias_get_closed_count(guard), (int)guard->circ_attempts,
-                   (int)guard->circ_successes, (int)guard->unusable_circuits,
+                   (int)pathbias_get_closed_count(guard),
+                   (int)guard->circ_attempts, (int)guard->circ_successes,
+                   (int)guard->unusable_circuits,
                    (int)guard->collapsed_circuits, (int)guard->timeouts,
                    (long)circ_times.close_ms/1000);
       }

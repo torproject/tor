@@ -56,7 +56,7 @@ typedef struct entry_guard_t {
   double collapsed_circuits; /**< Number of fully built circuits that were
                                  * remotely closed before any streams were
                                  * attempted. */
-  double unusable_circuits; /**< Number of circuits for which streams were 
+  double unusable_circuits; /**< Number of circuits for which streams were
                                 *  attempted, but none succeeded. */
   double timeouts; /**< Number of 'right-censored' circuit timeouts for this
                        * guard. */

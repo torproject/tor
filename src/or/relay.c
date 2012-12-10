@@ -694,7 +694,7 @@ connection_ap_process_end_not_open(
   (void) layer_hint; /* unused */
 
   if (rh->length > 0) {
-    /* Path bias: If we get a valid reason code from the exit, 
+    /* Path bias: If we get a valid reason code from the exit,
      * it wasn't due to tagging */
     // XXX: This relies on recognized+digest being strong enough not
     // to be spoofable.. Is that a valid assumption?

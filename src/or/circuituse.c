@@ -1161,7 +1161,7 @@ circuit_has_opened(origin_circuit_t *circ)
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Cannibalized circuits count as used for path bias.
-   * (PURPOSE_GENERAL circs especially, since they are 
+   * (PURPOSE_GENERAL circs especially, since they are
    * marked dirty and often go unused after preemptive
    * building). */
   // XXX: Cannibalized now use RELAY_EARLY, which is visible
@@ -1418,7 +1418,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
           circ->path_state == PATH_STATE_BUILD_SUCCEEDED) {
         /* Path bias: Cannibalized rends pre-emptively count as a
          * successfully used circ. We don't wait until the extend,
-         * because the rend point could be malicious. 
+         * because the rend point could be malicious.
          *
          * Same deal goes for client side introductions. Clients
          * can be manipulated to connect repeatedly to them

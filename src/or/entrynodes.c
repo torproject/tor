@@ -1031,7 +1031,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       }
 
       /* First try 3 params, then 2. */
-      /* In the long run: circuit_success ~= successful_circuit_close + 
+      /* In the long run: circuit_success ~= successful_circuit_close +
        *                                     collapsed_circuits +
        *                                     unusable_circuits */
       if (tor_sscanf(line->value, "%lf %lf %lf %lf %lf %lf",
@@ -1197,7 +1197,7 @@ entry_guards_update_state(or_state_t *state)
       if (e->circ_attempts) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
-        /* In the long run: circuit_success ~= successful_circuit_close + 
+        /* In the long run: circuit_success ~= successful_circuit_close +
          *                                     collapsed_circuits +
          *                                     unusable_circuits */
         tor_asprintf(&line->value, "%lf %lf %lf %lf %lf %lf",

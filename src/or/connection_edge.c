@@ -2184,13 +2184,13 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
       endreason == END_STREAM_REASON_CONNRESET ||
       endreason == END_STREAM_REASON_NOROUTE ||
       endreason == END_STREAM_REASON_RESOURCELIMIT) {
-    if(!conn->edge_.on_circuit ||
+    if (!conn->edge_.on_circuit ||
        !CIRCUIT_IS_ORIGIN(conn->edge_.on_circuit)) {
       // DNS remaps can trigger this. So can failed hidden service
       // lookups.
       log_info(LD_BUG,
-               "(Harmless.) No origin circuit for successful SOCKS stream %ld. "
-               "Reason: %d", ENTRY_TO_CONN(conn)->global_identifier, endreason);
+               "No origin circuit for successful SOCKS stream %ld. Reason: "
+               "%d", ENTRY_TO_CONN(conn)->global_identifier, endreason);
     } else {
       TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->path_state
           = PATH_STATE_USE_SUCCEEDED;
