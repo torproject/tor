@@ -1146,6 +1146,34 @@ pathbias_state_to_string(path_state_t state)
 }
 
 /**
+ * This function decides if a circuit has progressed far enough to count
+ * as a circuit "attempt". As long as end-to-end tagging is possible,
+ * we assume the adversary will use it over hop-to-hop failure. Therefore,
+ * we only need to account bias for the last hop. This should make us
+ * much more resilient to ambient circuit failure, and also make that
+ * failure easier to measure (we only need to measure Exit failure rates).
+ */
+static int
+pathbias_is_new_circ_attempt(origin_circuit_t *circ)
+{
+#define N2N_TAGGING_IS_POSSIBLE
+#ifdef N2N_TAGGING_IS_POSSIBLE
+  /* cpath is a circular list. We want circs with more than one hop,
+   * and the second hop must be waiting for keys still (it's just
+   * about to get them). */
+  return circ->cpath->next != circ->cpath &&
+         circ->cpath->next->state == CPATH_STATE_AWAITING_KEYS;
+#else
+  /* If tagging attacks are no longer possible, we probably want to
+   * count bias from the first hop. However, one could argue that
+   * timing-based tagging is still more useful than per-hop failure.
+   * In which case, we'd never want to use this.
+   */
+  return circ->cpath->state == CPATH_STATE_AWAITING_KEYS;
+#endif
+}
+
+/**
  * Decide if the path bias code should count a circuit.
  *
  * @returns 1 if we should count it, 0 otherwise.
@@ -1219,11 +1247,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     return 0;
   }
 
-  // XXX: Technically, we could make this only count from the *second* hop..
-  // Until we get per-hop MACs or a lower circ failure rate, this might be
-  // better from a false positive POV. Should we s/first_hop/circ_attempt/g?
-  // Then we can control this check from the consensus.
-  if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
+  if (pathbias_is_new_circ_attempt(circ)) {
     /* Help track down the real cause of bug #6475: */
     if (circ->has_opened && circ->path_state != PATH_STATE_DID_FIRST_HOP) {
       if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
