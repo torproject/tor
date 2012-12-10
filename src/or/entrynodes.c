@@ -1065,8 +1065,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if ((node->circ_successes/((double)node->circ_attempts)
-          < pathbias_get_extreme_rate(options)) &&
+      if (pathbias_get_success_count(node)/node->circ_attempts
+            < pathbias_get_extreme_rate(options) &&
           pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,

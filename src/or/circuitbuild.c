@@ -1642,7 +1642,7 @@ pathbias_get_closed_count(entry_guard_t *guard)
  * if it should return guard->circ_successes or
  * guard->successful_circuits_closed.
  */
-static double 
+double 
 pathbias_get_success_count(entry_guard_t *guard)
 {
   if (pathbias_use_close_counts(get_options())) {
