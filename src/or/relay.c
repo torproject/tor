@@ -697,7 +697,7 @@ connection_ap_process_end_not_open(
     /* Path bias: If we get a valid reason code from the exit,
      * it wasn't due to tagging */
     // XXX: This relies on recognized+digest being strong enough not
-    // to be spoofable.. Is that a valid assumption? 
+    // to be spoofable.. Is that a valid assumption?
     // Or more accurately: is it better than nothing? Can the attack
     // be done offline?
     circ->path_state = PATH_STATE_USE_SUCCEEDED;

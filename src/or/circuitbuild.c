@@ -1436,18 +1436,22 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
        * streams could be bias */
       log_info(LD_CIRC,
             "Circuit %d closed without successful use for reason %d. "
-            "Circuit purpose %d currently %s.",
+            "Circuit purpose %d currently %d,%s. Len %d.",
             ocirc->global_identifier,
-            reason, circ->purpose, circuit_state_to_string(circ->state));
+            reason, circ->purpose, ocirc->has_opened,
+            circuit_state_to_string(circ->state),
+            ocirc->build_state->desired_path_len);
       pathbias_count_unusable(ocirc);
     } else {
       if (reason & END_CIRC_REASON_FLAG_REMOTE) {
         /* Unused remote circ close reasons all could be bias */
         log_info(LD_CIRC,
             "Circuit %d remote-closed without successful use for reason %d. "
-            "Circuit purpose %d currently %s.",
+            "Circuit purpose %d currently %d,%s. Len %d.",
             ocirc->global_identifier,
-            reason, circ->purpose, circuit_state_to_string(circ->state));
+            reason, circ->purpose, ocirc->has_opened,
+            circuit_state_to_string(circ->state),
+            ocirc->build_state->desired_path_len);
         pathbias_count_collapse(ocirc);
       } else if ((reason & ~END_CIRC_REASON_FLAG_REMOTE)
                   == END_CIRC_REASON_CHANNEL_CLOSED &&
@@ -1455,14 +1459,16 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
                  circ->n_chan->reason_for_closing
                   != CHANNEL_CLOSE_REQUESTED) {
         /* If we didn't close the channel ourselves, it could be bias */
-        /* FIXME: Only count bias if the network is live?
+        /* XXX: Only count bias if the network is live?
          * What about clock jumps/suspends? */
         log_info(LD_CIRC,
             "Circuit %d's channel closed without successful use for reason "
-            "%d, channel reason %d. Circuit purpose %d currently %s.",
-            ocirc->global_identifier,
+            "%d, channel reason %d. Circuit purpose %d currently %d,%s. Len "
+            "%d.", ocirc->global_identifier,
             reason, circ->n_chan->reason_for_closing,
-            circ->purpose, circuit_state_to_string(circ->state));
+            circ->purpose, ocirc->has_opened,
+            circuit_state_to_string(circ->state),
+            ocirc->build_state->desired_path_len);
         pathbias_count_collapse(ocirc);
       } else {
         pathbias_count_successful_close(ocirc);
