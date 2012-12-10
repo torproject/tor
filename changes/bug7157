@@ -13,3 +13,14 @@
      in combination with PathBiasExtremeRate.
    - Increase the default values for PathBiasScaleThreshold and
      PathBiasCircThreshold from 200 and 20 to 300 and 150, respectively.
+   - Add in circuit usage accounting to path bias. If we try to use a
+     built circuit but fail for any reason, it counts as path bias.
+     Certain classes of circuits where the adversary gets to pick your
+     destination node are exempt from this accounting. Usage accounting
+     can be specifically disabled via consensus parameter or torrc.
+   - Convert all internal path bias state to double-precision floating
+     point, to avoid roundoff error and other issues.
+   - Only record path bias information for circuits that have completed
+     *two* hops. Assuming end-to-end tagging is the attack vector, this
+     makes us more resilient to ambient circuit failure without any 
+     detection capability loss.
