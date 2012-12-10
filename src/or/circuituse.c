@@ -1160,6 +1160,17 @@ circuit_has_opened(origin_circuit_t *circ)
 {
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
+  /* Cannibalized circuits count as used for path bias.
+   * (PURPOSE_GENERAL circs especially, since they are 
+   * marked dirty and often go unused after preemptive
+   * building). */
+  // XXX: Cannibalized now use RELAY_EARLY, which is visible
+  // to taggers end-to-end! We really need to probe these instead.
+  if (circ->has_opened &&
+      circ->build_state->desired_path_len > DEFAULT_ROUTE_LEN) {
+    circ->path_state = PATH_STATE_USE_SUCCEEDED;
+  }
+
   /* Remember that this circuit has finished building. Now if we start
    * it building again later (e.g. by extending it), we will know not
    * to consider its build time. */
@@ -1411,7 +1422,11 @@ circuit_launch_by_extend_info(uint8_t purpose,
          *
          * Same deal goes for client side introductions. Clients
          * can be manipulated to connect repeatedly to them
-         * (especially web clients). */
+         * (especially web clients).
+         *
+         * If we decide to probe the initial portion of these circs,
+         * (up to the adversaries final hop), we need to remove this.
+         */
         circ->path_state = PATH_STATE_USE_SUCCEEDED;
         /* This must be called before the purpose change */
         pathbias_check_close(circ);

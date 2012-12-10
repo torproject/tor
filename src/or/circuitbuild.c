@@ -1219,6 +1219,10 @@ pathbias_count_first_hop(origin_circuit_t *circ)
     return 0;
   }
 
+  // XXX: Technically, we could make this only count from the *second* hop..
+  // Until we get per-hop MACs or a lower circ failure rate, this might be
+  // better from a false positive POV. Should we s/first_hop/circ_attempt/g?
+  // Then we can control this check from the consensus.
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     /* Help track down the real cause of bug #6475: */
     if (circ->has_opened && circ->path_state != PATH_STATE_DID_FIRST_HOP) {
