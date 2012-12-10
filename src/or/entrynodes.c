@@ -1050,7 +1050,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         unusable = 0;
       }
 
-      node->first_hops = hop_cnt;
+      node->circ_attempts = hop_cnt;
       node->circuit_successes = success_cnt;
 
       node->successful_circuits_closed = successful_closed;
@@ -1059,17 +1059,17 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       node->unusable_circuits = unusable;
 
       log_info(LD_GENERAL, "Read %u/%u path bias for node %s",
-               node->circuit_successes, node->first_hops, node->nickname);
+               node->circuit_successes, node->circ_attempts, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if ((node->circuit_successes/((double)node->first_hops)
+      if ((node->circuit_successes/((double)node->circ_attempts)
           < pathbias_get_extreme_rate(options)) &&
           pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
                  "Path bias is too high (%u/%u); disabling node %s",
-                 node->circuit_successes, node->first_hops, node->nickname);
+                 node->circuit_successes, node->circ_attempts, node->nickname);
       }
 
     } else {
@@ -1192,14 +1192,14 @@ entry_guards_update_state(or_state_t *state)
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
-      if (e->first_hops) {
+      if (e->circ_attempts) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
         /* In the long run: circuit_success ~= successful_circuit_close + 
          *                                     collapsed_circuits +
          *                                     unusable_circuits */
         tor_asprintf(&line->value, "%u %u %u %u %u %u",
-                     e->first_hops, e->circuit_successes,
+                     e->circ_attempts, e->circuit_successes,
                      pathbias_get_closed_count(e), e->collapsed_circuits,
                      e->unusable_circuits, e->timeouts);
         next = &(line->next);

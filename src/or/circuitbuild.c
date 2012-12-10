@@ -59,7 +59,7 @@ static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
-static int entry_guard_inc_first_hop_count(entry_guard_t *guard);
+static int entry_guard_inc_circ_attempt_count(entry_guard_t *guard);
 static void pathbias_count_build_success(origin_circuit_t *circ);
 static void pathbias_count_successful_close(origin_circuit_t *circ);
 static void pathbias_count_collapse(origin_circuit_t *circ);
@@ -987,7 +987,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
   return 0;
 }
 
-/** The minimum number of first hop completions before we start
+/** The minimum number of circuit attempts before we start
   * thinking about warning about path bias and dropping guards */
 static int
 pathbias_get_min_circs(const or_options_t *options)
@@ -1134,8 +1134,8 @@ pathbias_state_to_string(path_state_t state)
   switch (state) {
     case PATH_STATE_NEW_CIRC:
       return "new";
-    case PATH_STATE_DID_FIRST_HOP:
-      return "first hop";
+    case PATH_STATE_BUILD_ATTEMPTED:
+      return "build attempted";
     case PATH_STATE_BUILD_SUCCEEDED:
       return "build succeeded";
     case PATH_STATE_USE_SUCCEEDED:
@@ -1230,17 +1230,17 @@ pathbias_should_count(origin_circuit_t *circ)
 }
 
 /**
- * Check our circuit state to see if this is a successful first hop.
- * If so, record it in the current guard's path bias first_hop count.
+ * Check our circuit state to see if this is a successful circuit attempt.
+ * If so, record it in the current guard's path bias circ_attempt count.
  *
  * Also check for several potential error cases for bug #6475.
  */
 static int
-pathbias_count_first_hop(origin_circuit_t *circ)
+pathbias_count_circ_attempt(origin_circuit_t *circ)
 {
-#define FIRST_HOP_NOTICE_INTERVAL (600)
-  static ratelim_t first_hop_notice_limit =
-    RATELIM_INIT(FIRST_HOP_NOTICE_INTERVAL);
+#define CIRC_ATTEMPT_NOTICE_INTERVAL (600)
+  static ratelim_t circ_attempt_notice_limit =
+    RATELIM_INIT(CIRC_ATTEMPT_NOTICE_INTERVAL);
   char *rate_msg = NULL;
 
   if (!pathbias_should_count(circ)) {
@@ -1249,8 +1249,8 @@ pathbias_count_first_hop(origin_circuit_t *circ)
 
   if (pathbias_is_new_circ_attempt(circ)) {
     /* Help track down the real cause of bug #6475: */
-    if (circ->has_opened && circ->path_state != PATH_STATE_DID_FIRST_HOP) {
-      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+    if (circ->has_opened && circ->path_state != PATH_STATE_BUILD_ATTEMPTED) {
+      if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                                      approx_time()))) {
         log_info(LD_BUG,
                 "Opened circuit is in strange path state %s. "
@@ -1277,14 +1277,14 @@ pathbias_count_first_hop(origin_circuit_t *circ)
 
       if (guard) {
         if (circ->path_state == PATH_STATE_NEW_CIRC) {
-          circ->path_state = PATH_STATE_DID_FIRST_HOP;
+          circ->path_state = PATH_STATE_BUILD_ATTEMPTED;
 
-          if (entry_guard_inc_first_hop_count(guard) < 0) {
+          if (entry_guard_inc_circ_attempt_count(guard) < 0) {
             /* Bogus guard; we already warned. */
             return -END_CIRC_REASON_TORPROTOCOL;
           }
         } else {
-          if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+          if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                   approx_time()))) {
             log_info(LD_BUG,
                    "Unopened circuit has strange path state %s. "
@@ -1297,7 +1297,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
           }
         }
       } else {
-        if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+        if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                 approx_time()))) {
           log_info(LD_BUG,
               "Unopened circuit has no known guard. "
@@ -1312,7 +1312,7 @@ pathbias_count_first_hop(origin_circuit_t *circ)
   } else {
     /* Help track down the real cause of bug #6475: */
     if (circ->path_state == PATH_STATE_NEW_CIRC) {
-      if ((rate_msg = rate_limit_log(&first_hop_notice_limit,
+      if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
                 approx_time()))) {
         log_info(LD_BUG,
             "A %s circuit is in cpath state %d (opened: %d). "
@@ -1359,12 +1359,12 @@ pathbias_count_build_success(origin_circuit_t *circ)
     }
 
     if (guard) {
-      if (circ->path_state == PATH_STATE_DID_FIRST_HOP) {
+      if (circ->path_state == PATH_STATE_BUILD_ATTEMPTED) {
         circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
         guard->circuit_successes++;
 
         log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
-                 guard->circuit_successes, guard->first_hops,
+                 guard->circuit_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
         if ((rate_msg = rate_limit_log(&success_notice_limit,
@@ -1380,10 +1380,10 @@ pathbias_count_build_success(origin_circuit_t *circ)
         }
       }
 
-      if (guard->first_hops < guard->circuit_successes) {
+      if (guard->circ_attempts < guard->circuit_successes) {
         log_notice(LD_BUG, "Unexpectedly high circuit_successes (%u/%u) "
                  "for guard %s=%s",
-                 guard->circuit_successes, guard->first_hops,
+                 guard->circuit_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
     /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
@@ -1657,17 +1657,17 @@ pathbias_get_success_count(entry_guard_t *guard)
  * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
  * guard looks fine. */
 static int
-entry_guard_inc_first_hop_count(entry_guard_t *guard)
+entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
 
   entry_guards_changed();
 
-  if (guard->first_hops > (unsigned)pathbias_get_min_circs(options)) {
+  if (guard->circ_attempts > (unsigned)pathbias_get_min_circs(options)) {
     /* Note: We rely on the < comparison here to allow us to set a 0
      * rate and disable the feature entirely. If refactoring, don't
      * change to <= */
-    if (pathbias_get_success_count(guard)/((double)guard->first_hops)
+    if (pathbias_get_success_count(guard)/((double)guard->circ_attempts)
         < pathbias_get_extreme_rate(options)) {
       /* Dropping is currently disabled by default. */
       if (pathbias_get_dropguards(options)) {
@@ -1680,7 +1680,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 pathbias_get_closed_count(guard), guard->first_hops,
+                 pathbias_get_closed_count(guard), guard->circ_attempts,
                  guard->circuit_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
@@ -1698,12 +1698,12 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 pathbias_get_closed_count(guard), guard->first_hops,
+                 pathbias_get_closed_count(guard), guard->circ_attempts,
                  guard->circuit_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
-    } else if (pathbias_get_success_count(guard)/((double)guard->first_hops)
+    } else if (pathbias_get_success_count(guard)/((double)guard->circ_attempts)
                < pathbias_get_warn_rate(options)) {
       if (!guard->path_bias_warned) {
         guard->path_bias_warned = 1;
@@ -1716,12 +1716,12 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                  "were unusable, %d collapsed, and %d timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                 pathbias_get_closed_count(guard), guard->first_hops,
+                 pathbias_get_closed_count(guard), guard->circ_attempts,
                  guard->circuit_successes, guard->unusable_circuits,
                  guard->collapsed_circuits, guard->timeouts,
                  (long)circ_times.close_ms/1000);
       }
-    } else if (pathbias_get_success_count(guard)/((double)guard->first_hops)
+    } else if (pathbias_get_success_count(guard)/((double)guard->circ_attempts)
                < pathbias_get_notice_rate(options)) {
       if (!guard->path_bias_noticed) {
         guard->path_bias_noticed = 1;
@@ -1732,7 +1732,7 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
                    "were unusable, %d collapsed, and %d timed out. For "
                    "reference, your timeout cutoff is %ld seconds.",
                    guard->nickname, hex_str(guard->identity, DIGEST_LEN),
-                   pathbias_get_closed_count(guard), guard->first_hops,
+                   pathbias_get_closed_count(guard), guard->circ_attempts,
                    guard->circuit_successes, guard->unusable_circuits,
                    guard->collapsed_circuits, guard->timeouts,
                    (long)circ_times.close_ms/1000);
@@ -1741,27 +1741,27 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
   }
 
   /* If we get a ton of circuits, just scale everything down */
-  if (guard->first_hops > (unsigned)pathbias_get_scale_threshold(options)) {
+  if (guard->circ_attempts > (unsigned)pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
     /* Only scale if there will be no rounding error for our scaling
      * factors */
-    if (((mult_factor*guard->first_hops) % scale_factor) == 0 &&
+    if (((mult_factor*guard->circ_attempts) % scale_factor) == 0 &&
         ((mult_factor*guard->circuit_successes) % scale_factor) == 0) {
       log_info(LD_CIRC,
                "Scaling pathbias counts to (%u/%u)*(%d/%d) for guard %s=%s",
-               guard->circuit_successes, guard->first_hops, mult_factor,
+               guard->circuit_successes, guard->circ_attempts, mult_factor,
                scale_factor, guard->nickname, hex_str(guard->identity,
                DIGEST_LEN));
 
-      guard->first_hops *= mult_factor;
+      guard->circ_attempts *= mult_factor;
       guard->circuit_successes *= mult_factor;
       guard->timeouts *= mult_factor;
       guard->successful_circuits_closed *= mult_factor;
       guard->collapsed_circuits *= mult_factor;
       guard->unusable_circuits *= mult_factor;
 
-      guard->first_hops /= scale_factor;
+      guard->circ_attempts /= scale_factor;
       guard->circuit_successes /= scale_factor;
       guard->timeouts /= scale_factor;
       guard->successful_circuits_closed /= scale_factor;
@@ -1769,9 +1769,9 @@ entry_guard_inc_first_hop_count(entry_guard_t *guard)
       guard->unusable_circuits /= scale_factor;
     }
   }
-  guard->first_hops++;
+  guard->circ_attempts++;
   log_info(LD_CIRC, "Got success count %u/%u for guard %s=%s",
-           guard->circuit_successes, guard->first_hops, guard->nickname,
+           guard->circuit_successes, guard->circ_attempts, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;
 }
@@ -1794,7 +1794,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   crypt_path_t *hop;
   int rv;
 
-  if ((rv = pathbias_count_first_hop(circ)) < 0)
+  if ((rv = pathbias_count_circ_attempt(circ)) < 0)
     return rv;
 
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {

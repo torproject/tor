@@ -2765,9 +2765,9 @@ typedef enum {
     /** This circuit is "new". It has not yet completed a first hop
      * or been counted by the path bias code. */
     PATH_STATE_NEW_CIRC = 0,
-    /** This circuit has completed a first hop, and has been counted by
+    /** This circuit has completed one/two hops, and has been counted by
      * the path bias logic. */
-    PATH_STATE_DID_FIRST_HOP = 1,
+    PATH_STATE_BUILD_ATTEMPTED = 1,
     /** This circuit has been completely built */
     PATH_STATE_BUILD_SUCCEEDED = 2,
     /** Did any SOCKS streams or hidserv introductions actually succeed on

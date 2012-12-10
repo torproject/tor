@@ -48,7 +48,7 @@ typedef struct entry_guard_t {
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
 
-  unsigned first_hops; /**< Number of first hops this guard has completed */
+  unsigned circ_attempts; /**< Number of circuits this guard has "attempted" */
   unsigned circuit_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
   unsigned successful_circuits_closed; /**< Number of circuits that carried
