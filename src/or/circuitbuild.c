@@ -1608,7 +1608,13 @@ pathbias_count_timeout(origin_circuit_t *circ)
   }
 }
 
-// XXX: DOCDOC
+/**
+ * Return the number of circuits counted as successfully closed for
+ * this guard.
+ * 
+ * Also add in the currently open circuits to give them the benefit
+ * of the doubt.
+ */
 double
 pathbias_get_closed_count(entry_guard_t *guard)
 {
