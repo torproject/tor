@@ -48,17 +48,17 @@ typedef struct entry_guard_t {
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
 
-  unsigned circ_attempts; /**< Number of circuits this guard has "attempted" */
-  unsigned circ_successes; /**< Number of successfully built circuits using
+  double circ_attempts; /**< Number of circuits this guard has "attempted" */
+  double circ_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
-  unsigned successful_circuits_closed; /**< Number of circuits that carried
+  double successful_circuits_closed; /**< Number of circuits that carried
                                         * streams successfully. */
-  unsigned collapsed_circuits; /**< Number of fully built circuits that were
+  double collapsed_circuits; /**< Number of fully built circuits that were
                                  * remotely closed before any streams were
                                  * attempted. */
-  unsigned unusable_circuits; /**< Number of circuits for which streams were 
+  double unusable_circuits; /**< Number of circuits for which streams were 
                                 *  attempted, but none succeeded. */
-  unsigned timeouts; /**< Number of 'right-censored' circuit timeouts for this
+  double timeouts; /**< Number of 'right-censored' circuit timeouts for this
                        * guard. */
 } entry_guard_t;
 
@@ -111,7 +111,7 @@ int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
 
 int validate_pluggable_transports_config(void);
 
-int pathbias_get_closed_count(entry_guard_t *gaurd);
+double pathbias_get_closed_count(entry_guard_t *gaurd);
 
 #endif
 

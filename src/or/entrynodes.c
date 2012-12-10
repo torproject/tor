@@ -1021,7 +1021,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
       const or_options_t *options = get_options();
-      unsigned hop_cnt, success_cnt, timeouts, collapsed, successful_closed,
+      double hop_cnt, success_cnt, timeouts, collapsed, successful_closed,
                unusable;
 
       if (!node) {
@@ -1031,20 +1031,22 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       }
 
       /* First try 3 params, then 2. */
-      // XXX: We want to convert this to floating point before merge
       /* In the long run: circuit_success ~= successful_circuit_close + 
        *                                     collapsed_circuits +
        *                                     unusable_circuits */
-      if (tor_sscanf(line->value, "%u %u %u %u %u %u",
+      if (tor_sscanf(line->value, "%lf %lf %lf %lf %lf %lf",
                   &hop_cnt, &success_cnt, &successful_closed,
                   &collapsed, &unusable, &timeouts) != 6) {
-        if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
+        int old_success, old_hops;
+        if (tor_sscanf(line->value, "%u %u", &old_success, &old_hops) != 2) {
           continue;
         }
         log_info(LD_GENERAL, "Reading old-style EntryGuardPathBias %s",
                  escaped(line->value));
 
-        successful_closed = success_cnt;
+        success_cnt = old_success;
+        successful_closed = old_success;
+        hop_cnt = old_hops;
         timeouts = 0;
         collapsed = 0;
         unusable = 0;
@@ -1058,7 +1060,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       node->collapsed_circuits = collapsed;
       node->unusable_circuits = unusable;
 
-      log_info(LD_GENERAL, "Read %u/%u path bias for node %s",
+      log_info(LD_GENERAL, "Read %lf/%lf path bias for node %s",
                node->circ_successes, node->circ_attempts, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
@@ -1068,7 +1070,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
           pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
-                 "Path bias is too high (%u/%u); disabling node %s",
+                 "Path bias is too high (%lf/%lf); disabling node %s",
                  node->circ_successes, node->circ_attempts, node->nickname);
       }
 
@@ -1198,7 +1200,7 @@ entry_guards_update_state(or_state_t *state)
         /* In the long run: circuit_success ~= successful_circuit_close + 
          *                                     collapsed_circuits +
          *                                     unusable_circuits */
-        tor_asprintf(&line->value, "%u %u %u %u %u %u",
+        tor_asprintf(&line->value, "%lf %lf %lf %lf %lf %lf",
                      e->circ_attempts, e->circ_successes,
                      pathbias_get_closed_count(e), e->collapsed_circuits,
                      e->unusable_circuits, e->timeouts);
