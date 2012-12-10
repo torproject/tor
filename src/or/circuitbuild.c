@@ -1434,10 +1434,6 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
     if (circ->timestamp_dirty) {
       /* Any circuit where there were attempted streams but no successful
        * streams could be bias */
-      // XXX: May open up attacks if the adversary can force connections
-      // on unresponsive hosts to use new circs. Vidalia displayes a "Retrying"
-      // state.. Can we use that? Does optimistic data change this?
-
       log_info(LD_CIRC,
             "Circuit %d closed without successful use for reason %d. "
             "Circuit purpose %d currently %s.",

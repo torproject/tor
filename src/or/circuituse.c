@@ -1166,6 +1166,7 @@ circuit_has_opened(origin_circuit_t *circ)
    * building). */
   // XXX: Cannibalized now use RELAY_EARLY, which is visible
   // to taggers end-to-end! We really need to probe these instead.
+  // Don't forget to remove this check once that's done!
   if (circ->has_opened &&
       circ->build_state->desired_path_len > DEFAULT_ROUTE_LEN) {
     circ->path_state = PATH_STATE_USE_SUCCEEDED;
