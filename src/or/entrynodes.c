@@ -125,6 +125,15 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
     control_event_guard(e->nickname, e->identity, "GOOD");
     changed = 1;
   }
+
+  if (node) {
+    int is_dir = node_is_dir(node) != 0;
+    if (e->is_dir_cache != is_dir) {
+      e->is_dir_cache = is_dir;
+      changed = 1;
+    }
+  }
+
   return changed;
 }
 
@@ -341,6 +350,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend)
            node_describe(node));
   strlcpy(entry->nickname, node_get_nickname(node), sizeof(entry->nickname));
   memcpy(entry->identity, node->identity, DIGEST_LEN);
+  entry->is_dir_cache = node_is_dir(node) != 0;
   /* Choose expiry time smudged over the past month. The goal here
    * is to a) spread out when Tor clients rotate their guards, so they
    * don't all select them on the same day, and b) avoid leaving a
@@ -972,6 +982,17 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
                             "Bad hex digest for EntryGuard");
         }
       }
+      if (smartlist_len(args) >= 3) {
+        const char *is_cache = smartlist_get(args, 2);
+        if (!strcasecmp(is_cache, "DirCache")) {
+          node->is_dir_cache = 1;
+        } else if (!strcasecmp(is_cache, "NoDirCache")) {
+          node->is_dir_cache = 0;
+        } else {
+          log_warn(LD_CONFIG, "Bogus third argument to EntryGuard line: %s",
+                   escaped(is_cache));
+        }
+      }
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
       smartlist_free(args);
       if (*msg)
@@ -1138,7 +1159,8 @@ entry_guards_update_state(or_state_t *state)
       *next = line = tor_malloc_zero(sizeof(config_line_t));
       line->key = tor_strdup("EntryGuard");
       base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
-      tor_asprintf(&line->value, "%s %s", e->nickname, dbuf);
+      tor_asprintf(&line->value, "%s %s %sDirCache", e->nickname, dbuf,
+                   e->is_dir_cache ? "" : "No");
       next = &(line->next);
       if (e->unreachable_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
