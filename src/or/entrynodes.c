@@ -400,10 +400,12 @@ static void
 pick_entry_guards(const or_options_t *options, int for_directory)
 {
   int changed = 0;
+  const int num_needed = for_directory ? options->NumDirectoryGuards :
+    options->NumEntryGuards;
 
   tor_assert(entry_guards);
 
-  while (num_live_entry_guards(for_directory) < options->NumEntryGuards) {
+  while (num_live_entry_guards(for_directory) < num_needed) {
     if (!add_an_entry_guard(NULL, 0, 0, for_directory))
       break;
     changed = 1;
@@ -861,6 +863,8 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   int need_capacity = state ? state->need_capacity : 0;
   int preferred_min, consider_exit_family = 0;
   int need_descriptor = !for_directory;
+  const int num_needed = for_directory ? options->NumDirectoryGuards :
+    options->NumEntryGuards;
 
   /* Checking dirinfo_type isn't required yet, since we only choose directory
      guards that can support microdescs, routerinfos, and networkstatuses, AND
@@ -880,7 +884,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
     entry_guards_set_from_config(options);
 
   if (!entry_list_is_constrained(options) &&
-      smartlist_len(entry_guards) < options->NumEntryGuards)
+      smartlist_len(entry_guards) < num_needed)
     pick_entry_guards(options, for_directory);
 
  retry:
@@ -923,7 +927,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
          * guard list without needing to. */
         goto choose_and_finish;
       }
-      if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
+      if (smartlist_len(live_entry_guards) >= num_needed)
         goto choose_and_finish; /* we have enough */
   } SMARTLIST_FOREACH_END(entry);
 

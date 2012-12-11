@@ -345,7 +345,7 @@ should_use_directory_guards(const or_options_t *options)
   /* If guards are disabled, or directory guards are disabled, we can't
    * use directory guards.
    */
-  if (!options->UseEntryGuards)
+  if (!options->UseEntryGuards || !options->UseEntryGuardsAsDirGuards)
     return 0;
   /* If we're configured to fetch directory info aggressively or of a
    * nonstandard type, don't use directory guards. */
