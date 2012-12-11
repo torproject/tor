@@ -467,7 +467,7 @@ circuit_expire_building(void)
                  "No circuits are opened. Relaxing timeout for "
                  "a circuit with channel state %s. %d guards are live.",
                  channel_state_to_string(victim->n_chan->state),
-                 num_live_entry_guards());
+                 num_live_entry_guards(0));
 
           /* We count the timeout here for CBT, because technically this
            * was a timeout, and the timeout value needs to reset if we
@@ -484,7 +484,7 @@ circuit_expire_building(void)
                  "However, it appears the circuit has timed out anyway. "
                  "%d guards are live. ",
                  channel_state_to_string(victim->n_chan->state),
-                 (long)circ_times.close_ms, num_live_entry_guards());
+                 (long)circ_times.close_ms, num_live_entry_guards(0));
       }
     }
 

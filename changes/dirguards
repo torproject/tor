@@ -1,0 +1,8 @@
+  o Major features:
+    - Preliminary support for directory guards: when possible,
+      clients now use guards for non-anonymous directory requests.
+      This can help prevent client enumeration.  Note that this
+      behavior only works when we have a usable consensus directory:
+      and when options about what to download are more or less
+      standard.  Implements proposal 207; closes ticket 6526.
+

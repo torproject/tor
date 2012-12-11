@@ -334,15 +334,51 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
   }
 }
 
-/**DOCDOC*/
+/** Return true iff, according to the values in <b>options</b>, we should be
+ * using directory guards for direct downloads of directory information. */
+static int
+should_use_directory_guards(const or_options_t *options)
+{
+  /* Public (non-bridge) servers never use directory guards. */
+  if (public_server_mode(options))
+    return 0;
+  /* If guards are disabled, or directory guards are disabled, we can't
+   * use directory guards.
+   */
+  if (!options->UseEntryGuards)
+    return 0;
+  /* If we're configured to fetch directory info aggressively or of a
+   * nonstandard type, don't use directory guards. */
+  if (options->DownloadExtraInfo || options->FetchDirInfoEarly ||
+      options->FetchDirInfoExtraEarly || options->FetchUselessDescriptors ||
+      options->FetchV2Networkstatus)
+    return 0;
+  if (! options->PreferTunneledDirConns)
+    return 0;
+  return 1;
+}
+
+/** Pick an unconsetrained directory server from among our guards, the latest
+ * networkstatus, or the fallback dirservers, for use in downloading
+ * information of type <b>type</b>, and return its routerstatus. */
 static const routerstatus_t *
 directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
                                  uint8_t dir_purpose)
 {
   const routerstatus_t *rs;
+  const or_options_t *options = get_options();
 
-  /* anybody with a non-zero dirport will do */
-  rs = router_pick_directory_server(type, pds_flags);
+  if (options->UseBridges)
+    log_warn(LD_BUG, "Called when we have UseBridges set.");
+
+  if (should_use_directory_guards(options)) {
+    const node_t *node = choose_random_dirguard(type);
+    if (node)
+      rs = node->rs;
+  } else {
+    /* anybody with a non-zero dirport will do */
+    rs = router_pick_directory_server(type, pds_flags);
+  }
   if (!rs) {
     log_info(LD_DIR, "No router found for %s; falling back to "
              "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
