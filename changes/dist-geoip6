@@ -1,3 +1,3 @@
   o Minor bugfixes:
-    - Distribute and install the geoip6 IPv6 GeoIP database. Bugfix
-      on 0.2.4.6-alpha. 
+    - Distribute and install the geoip6 IPv6 GeoIP database. Fixes bug
+      7655; bugfix on 0.2.4.6-alpha.
