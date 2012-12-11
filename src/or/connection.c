@@ -3168,6 +3168,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   ssize_t max_to_write;
   time_t now = approx_time();
   size_t n_read = 0, n_written = 0;
+  int dont_stop_writing = 0;
 
   tor_assert(!connection_is_listener(conn));
 
@@ -3220,6 +3221,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_HANDSHAKING) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
+    size_t initial_size;
     if (conn->state == OR_CONN_STATE_TLS_HANDSHAKING ||
         conn->state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
       connection_stop_writing(conn);
@@ -3235,6 +3237,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     }
 
     /* else open, or closing */
+    initial_size = buf_datalen(conn->outbuf);
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
 
@@ -3257,7 +3260,8 @@ connection_handle_write_impl(connection_t *conn, int force)
       case TOR_TLS_WANTWRITE:
         log_debug(LD_NET,"wanted write.");
         /* we're already writing */
-        return 0;
+        dont_stop_writing = 1;
+        break;
       case TOR_TLS_WANTREAD:
         /* Make sure to avoid a loop if the receive buckets are empty. */
         log_debug(LD_NET,"wanted read.");
@@ -3279,6 +3283,12 @@ connection_handle_write_impl(connection_t *conn, int force)
     tor_tls_get_n_raw_bytes(or_conn->tls, &n_read, &n_written);
     log_debug(LD_GENERAL, "After TLS write of %d: %ld read, %ld written",
               result, (long)n_read, (long)n_written);
+    /* So we notice bytes were written even on error */
+    /* XXXX024 This cast is safe since we can never write INT_MAX bytes in a
+     * single set of TLS operations. But it looks kinda ugly. If we refactor
+     * the *_buf_tls functions, we should make them return ssize_t or size_t
+     * or something. */
+    result = (int)(initial_size-buf_datalen(conn->outbuf));
   } else {
     CONN_LOG_PROTECT(conn,
              result = flush_buf(conn->s, conn->outbuf,
@@ -3313,7 +3323,8 @@ connection_handle_write_impl(connection_t *conn, int force)
       connection_mark_for_close(conn);
   }
 
-  if (!connection_wants_to_flush(conn)) { /* it's done flushing */
+  if (!connection_wants_to_flush(conn) &&
+      !dont_stop_writing) { /* it's done flushing */
     if (connection_finished_flushing(conn) < 0) {
       /* already marked */
       return -1;

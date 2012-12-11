@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - When a TLS write is partially successful but incomplete, remember
+      that the flushed part has been flushed, and notice that bytes were
+      actually written. Reported and fixed pseudonymously. Fixes bug
+      7708; bugfix on Tor 0.1.0.5-rc.
