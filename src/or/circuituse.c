@@ -493,6 +493,8 @@ circuit_expire_building(void)
       cutoff = s_intro_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
       cutoff = stream_cutoff;
+    else if (victim->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
+      cutoff = close_cutoff;
     else if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
              victim->state != CIRCUIT_STATE_OPEN)
       cutoff = cannibalized_cutoff;
@@ -581,6 +583,11 @@ circuit_expire_building(void)
               victim->timestamp_dirty > cutoff.tv_sec)
             continue;
           break;
+        case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
+          /* Open path bias testing circuits are given a long
+           * time to complete the test, but not forever */
+          TO_ORIGIN_CIRCUIT(victim)->path_state = PATH_STATE_USE_FAILED;
+          break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
           /* We keep old introducing circuits around for
            * a while in parallel, and they can end up "opened".
@@ -651,6 +658,18 @@ circuit_expire_building(void)
                                          victim->timestamp_began.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
+      }
+
+      if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
+          victim->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
+        /* For path bias: we want to let these guys live for a while
+         * so we get a chance to test them. */
+        log_info(LD_CIRC,
+                 "Allowing cannibalized circuit %d time to finish building as a "
+                 "pathbias testing circ.",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier);
+        circuit_change_purpose(victim, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
+        continue; /* It now should have a longer timeout next time */
       }
     }
 
@@ -1231,18 +1250,6 @@ void
 circuit_has_opened(origin_circuit_t *circ)
 {
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
-
-  /* Cannibalized circuits count as used for path bias.
-   * (PURPOSE_GENERAL circs especially, since they are
-   * marked dirty and often go unused after preemptive
-   * building). */
-  // XXX: Cannibalized now use RELAY_EARLY, which is visible
-  // to taggers end-to-end! We really need to probe these instead.
-  // Don't forget to remove this check once that's done!
-  if (circ->has_opened &&
-      circ->build_state->desired_path_len > DEFAULT_ROUTE_LEN) {
-    circ->path_state = PATH_STATE_USE_SUCCEEDED;
-  }
 
   /* Remember that this circuit has finished building. Now if we start
    * it building again later (e.g. by extending it), we will know not

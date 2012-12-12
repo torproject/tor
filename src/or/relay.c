@@ -186,7 +186,17 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   if (recognized) {
-    edge_connection_t *conn = relay_lookup_conn(circ, cell, cell_direction,
+    edge_connection_t *conn = NULL;
+
+    if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
+      pathbias_check_probe_response(circ, cell);
+
+      /* We need to drop this cell no matter what to avoid code that expects
+       * a certain purpose (such as the hidserv code). */
+      return 0;
+    }
+
+    conn = relay_lookup_conn(circ, cell, cell_direction,
                                                 layer_hint);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
@@ -222,7 +232,15 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   } else {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Dropping unrecognized inbound cell on origin circuit.");
-    return 0;
+    /* If we see unrecognized cells on path bias testing circs,
+     * it's bad mojo. Those circuits need to die.
+     * XXX: Shouldn't they always die? */
+    if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
+      TO_ORIGIN_CIRCUIT(circ)->path_state = PATH_STATE_USE_FAILED;
+      return -END_CIRC_REASON_TORPROTOCOL;
+    } else {
+      return 0;
+    }
   }
 
   if (!chan) {

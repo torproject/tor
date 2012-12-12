@@ -414,6 +414,8 @@ circuit_purpose_to_controller_string(uint8_t purpose)
       return "MEASURE_TIMEOUT";
     case CIRCUIT_PURPOSE_CONTROLLER:
       return "CONTROLLER";
+    case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
+      return "PATH_BIAS_TESTING";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -441,6 +443,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
     case CIRCUIT_PURPOSE_TESTING:
     case CIRCUIT_PURPOSE_CONTROLLER:
+    case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
       return NULL;
 
     case CIRCUIT_PURPOSE_INTRO_POINT:
@@ -1356,7 +1359,10 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
   }
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    pathbias_check_close(TO_ORIGIN_CIRCUIT(circ), reason);
+    if (pathbias_check_close(TO_ORIGIN_CIRCUIT(circ), reason) == -1) {
+      /* Don't close it yet, we need to test it first */
+      return;
+    }
 
     /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;

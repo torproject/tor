@@ -1661,7 +1661,7 @@ connection_ap_process_natd(entry_connection_t *conn)
 /** Iterate over the two bytes of stream_id until we get one that is not
  * already in use; return it. Return 0 if can't get a unique stream_id.
  */
-static streamid_t
+streamid_t
 get_unique_stream_id_by_circ(origin_circuit_t *circ)
 {
   edge_connection_t *tmpconn;
