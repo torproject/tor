@@ -694,13 +694,23 @@ connection_ap_process_end_not_open(
   (void) layer_hint; /* unused */
 
   if (rh->length > 0) {
-    /* Path bias: If we get a valid reason code from the exit,
-     * it wasn't due to tagging */
-    // XXX: This relies on recognized+digest being strong enough not
-    // to be spoofable.. Is that a valid assumption?
-    // Or more accurately: is it better than nothing? Can the attack
-    // be done offline?
-    circ->path_state = PATH_STATE_USE_SUCCEEDED;
+    if (reason == END_STREAM_REASON_TORPROTOCOL ||
+        reason == END_STREAM_REASON_INTERNAL ||
+        reason == END_STREAM_REASON_DESTROY) {
+      /* All three of these reasons could mean a failed tag
+       * hit the exit and it shat itself. Do not probe.
+       * Fail the circuit. */
+      circ->path_state = PATH_STATE_USE_FAILED;
+      return -END_CIRC_REASON_TORPROTOCOL;
+    } else {
+      /* Path bias: If we get a valid reason code from the exit,
+       * it wasn't due to tagging */
+      // XXX: This relies on recognized+digest being strong enough not
+      // to be spoofable.. Is that a valid assumption?
+      // Or more accurately: is it better than nothing? Can the attack
+      // be done offline?
+      circ->path_state = PATH_STATE_USE_SUCCEEDED;
+    }
   }
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&

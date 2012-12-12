@@ -1140,6 +1140,8 @@ pathbias_state_to_string(path_state_t state)
       return "build succeeded";
     case PATH_STATE_USE_SUCCEEDED:
       return "use succeeded";
+    case PATH_STATE_USE_FAILED:
+      return "use failed";
   }
 
   return "unknown";

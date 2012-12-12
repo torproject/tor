@@ -2779,6 +2779,12 @@ typedef enum {
       * just tag at a later point.
       */
     PATH_STATE_USE_SUCCEEDED = 3,
+
+    /**
+     * This is a special state to indicate that we got a corrupted
+     * relay cell on a circuit and we don't intend to probe it.
+     */
+    PATH_STATE_USE_FAILED = 4,
 } path_state_t;
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
@@ -2816,7 +2822,7 @@ typedef struct origin_circuit_t {
 
   /** Kludge to help us prevent the warn in bug #6475 and eventually
    * debug why we are not seeing first hops in some cases. */
-  path_state_t path_state : 2;
+  path_state_t path_state : 3;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has
