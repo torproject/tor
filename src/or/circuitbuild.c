@@ -1309,22 +1309,6 @@ pathbias_count_circ_attempt(origin_circuit_t *circ)
         }
       }
     }
-  } else {
-    /* Help track down the real cause of bug #6475: */
-    if (circ->path_state == PATH_STATE_NEW_CIRC) {
-      if ((rate_msg = rate_limit_log(&circ_attempt_notice_limit,
-                approx_time()))) {
-        log_info(LD_BUG,
-            "A %s circuit is in cpath state %d (opened: %d). "
-            "Circuit is a %s currently %s.%s",
-            pathbias_state_to_string(circ->path_state),
-            circ->cpath->state, circ->has_opened,
-            circuit_purpose_to_string(circ->base_.purpose),
-            circuit_state_to_string(circ->base_.state),
-            rate_msg);
-        tor_free(rate_msg);
-      }
-    }
   }
 
   return 0;
