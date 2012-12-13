@@ -4,10 +4,11 @@
       they're all down).  Currently, all authorities are fallbacks by
       default, and there are no other default fallbacks, but that will
       change.  This option will allow us to give clients a longer list
-      of servers to try to get a consensus from when first connecting 
-      to the Tor network, and thereby reduce load on the directory
-      authorities.
+      of servers to try to get a consensus from when first connecting to
+      the Tor network, and thereby reduce load on the directory
+      authorities. Implements proposal 206, "Preconfigured directory
+      sources for bootstrapping". Closes bug 572.
 
   o Removed features:
     - Drop the old FallbackNetworkstatus option: we never got it working
-      well enough to use it.
+      well enough to use it. Closes bug 572.
