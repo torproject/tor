@@ -517,7 +517,7 @@ init_keys(void)
   const or_options_t *options = get_options();
   dirinfo_type_t type;
   time_t now = time(NULL);
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   int v3_digest_set = 0;
   authority_cert_t *cert = NULL;
 
@@ -732,17 +732,18 @@ init_keys(void)
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
-    ds = add_trusted_dir_server(options->Nickname, NULL,
+    ds = trusted_dir_server_new(options->Nickname, NULL,
                                 router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
                                 digest,
                                 v3_digest,
-                                type);
+                                type, 0.0);
     if (!ds) {
       log_err(LD_GENERAL,"We want to be a directory authority, but we "
               "couldn't add ourselves to the authority list. Failing.");
       return -1;
     }
+    dir_server_add(ds);
   }
   if (ds->type != type) {
     log_warn(LD_DIR,  "Configured authority type does not match authority "

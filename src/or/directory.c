@@ -244,9 +244,9 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
 int
 directories_have_accepted_server_descriptor(void)
 {
-  smartlist_t *servers = router_get_trusted_dir_servers();
+  const smartlist_t *servers = router_get_trusted_dir_servers();
   const or_options_t *options = get_options();
-  SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
+  SMARTLIST_FOREACH(servers, dir_server_t *, d, {
     if ((d->type & options->PublishServerDescriptor_) &&
         d->has_accepted_serverdesc) {
       return 1;
@@ -280,7 +280,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 {
   const or_options_t *options = get_options();
   int post_via_tor;
-  smartlist_t *dirservers = router_get_trusted_dir_servers();
+  const smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
   const int exclude_self = (dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
                             dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES);
@@ -288,7 +288,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
    */
-  SMARTLIST_FOREACH_BEGIN(dirservers, trusted_dir_server_t *, ds) {
+  SMARTLIST_FOREACH_BEGIN(dirservers, dir_server_t *, ds) {
       routerstatus_t *rs = &(ds->fake_status);
       size_t upload_len = payload_len;
       tor_addr_t ds_addr;
@@ -474,7 +474,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
         if (!rs) {
           log_info(LD_DIR, "No router found for %s; falling back to "
                    "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
-          rs = router_pick_trusteddirserver(type, pds_flags);
+          rs = router_pick_fallback_dirserver(type, pds_flags);
           if (!rs)
             get_via_tor = 1; /* last resort: try routing it via Tor */
         }
@@ -528,7 +528,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
              dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES);
 
   SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
-                          trusted_dir_server_t *, ds) {
+                          dir_server_t *, ds) {
       routerstatus_t *rs;
       if (router_digest_is_me(ds->digest))
         continue;
@@ -716,8 +716,8 @@ connection_dir_download_v2_networkstatus_failed(dir_connection_t *conn,
     /* We're a non-authoritative directory cache; try again. Ignore status
      * code, since we don't want to keep trying forever in a tight loop
      * if all the authorities are shutting us out. */
-    smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
-    SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
+    const smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
+    SMARTLIST_FOREACH(trusted_dirs, dir_server_t *, ds,
                       download_status_failed(&ds->v2_ns_dl_status, 0));
     directory_get_from_dirserver(conn->base_.purpose, conn->router_purpose,
                                  "all.z", 0 /* don't retry_if_no_servers */);
@@ -1088,7 +1088,7 @@ directory_get_consensus_url(const char *resource)
     smartlist_t *authority_digests = smartlist_new();
 
     SMARTLIST_FOREACH_BEGIN(router_get_trusted_dir_servers(),
-                            trusted_dir_server_t *, ds) {
+                            dir_server_t *, ds) {
         char *hex;
         if (!(ds->type & V3_DIRINFO))
           continue;
@@ -1657,7 +1657,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (status_code == 503) {
     routerstatus_t *rs;
-    trusted_dir_server_t *ds;
+    dir_server_t *ds;
     const char *id_digest = conn->identity_digest;
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
@@ -1665,7 +1665,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              conn->base_.port);
     if ((rs = router_get_mutable_consensus_status_by_id(id_digest)))
       rs->last_dir_503_at = now;
-    if ((ds = router_get_trusteddirserver_by_digest(id_digest)))
+    if ((ds = router_get_fallback_dirserver_by_digest(id_digest)))
       ds->fake_status.last_dir_503_at = now;
 
     tor_free(body); tor_free(headers); tor_free(reason);
@@ -1764,7 +1764,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       source = NS_FROM_DIR_ALL;
       which = smartlist_new();
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                        trusted_dir_server_t *, ds,
+                        dir_server_t *, ds,
         {
           char *hex = tor_malloc(HEX_DIGEST_LEN+1);
           base16_encode(hex, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
@@ -2021,7 +2021,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_DIR) {
     switch (status_code) {
       case 200: {
-          trusted_dir_server_t *ds =
+          dir_server_t *ds =
             router_get_trusteddirserver_by_digest(conn->identity_digest);
           char *rejected_hdr = http_get_header(headers,
                                                "X-Descriptor-Not-New: ");
@@ -3597,13 +3597,13 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
     return;
   SMARTLIST_FOREACH_BEGIN(failed, const char *, fp) {
     char digest[DIGEST_LEN];
-    trusted_dir_server_t *dir;
+    dir_server_t *dir;
     if (base16_decode(digest, DIGEST_LEN, fp, strlen(fp))<0) {
       log_warn(LD_BUG, "Called with bad fingerprint in list: %s",
                escaped(fp));
       continue;
     }
-    dir = router_get_trusteddirserver_by_digest(digest);
+    dir = router_get_fallback_dirserver_by_digest(digest);
 
     if (dir)
       download_status_failed(&dir->v2_ns_dl_status, status_code);

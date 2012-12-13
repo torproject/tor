@@ -2517,6 +2517,8 @@ typedef enum {
   MICRODESC_DIRINFO=1 << 6,
 } dirinfo_type_t;
 
+#define ALL_DIRINFO ((dirinfo_type_t)((1<<7)-1))
+
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 /** Holds accounting information for a single step in the layered encryption
@@ -3439,7 +3441,14 @@ typedef struct {
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
    * use the "Alternate*Authority" options below instead. */
-  config_line_t *DirServers;
+  config_line_t *DirAuthorities;
+
+  /** List of fallback directory servers */
+  config_line_t *FallbackDir;
+
+  /** Weight to apply to all directory authority rates if considering them
+   * along with fallbackdirs */
+  double DirAuthorityFallbackRate;
 
   /** If set, use these main (currently v3) directory authorities and
    * not the default ones. */
@@ -3707,10 +3716,6 @@ typedef struct {
    * couple of other configuration options and allow to change the values
    * of certain configuration options. */
   int TestingTorNetwork;
-
-  /** File to check for a consensus networkstatus, if we don't have one
-   * cached. */
-  char *FallbackNetworkstatusFile;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help
@@ -4501,19 +4506,23 @@ typedef struct rend_cache_entry_t {
 
 /********************************* routerlist.c ***************************/
 
-/** Represents information about a single trusted directory server. */
-typedef struct trusted_dir_server_t {
+/** Represents information about a single trusted or fallback directory
+ * server. */
+typedef struct dir_server_t {
   char *description;
   char *nickname;
   char *address; /**< Hostname. */
   uint32_t addr; /**< IPv4 address. */
   uint16_t dir_port; /**< Directory port. */
   uint16_t or_port; /**< OR port: Used for tunneling connections. */
+  double weight; /** Weight used when selecting this node at random */
   char digest[DIGEST_LEN]; /**< Digest of identity key. */
   char v3_identity_digest[DIGEST_LEN]; /**< Digest of v3 (authority only,
                                         * high-security) identity key. */
 
   unsigned int is_running:1; /**< True iff we think this server is running. */
+  unsigned int is_authority:1; /**< True iff this is a directory authority
+                                * of some kind. */
 
   /** True iff this server has accepted the most recent server descriptor
    * we tried to upload to it. */
@@ -4532,7 +4541,7 @@ typedef struct trusted_dir_server_t {
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
                                **/
-} trusted_dir_server_t;
+} dir_server_t;
 
 #define ROUTER_REQUIRED_MIN_BANDWIDTH (20*1024)
 

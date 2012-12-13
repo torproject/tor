@@ -1471,7 +1471,6 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
                                     time_t published)
 {
   cached_dir_t *d, *old_d;
-  smartlist_t *trusted_dirs;
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
@@ -1494,9 +1493,9 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 
   /* Now purge old entries. */
-  trusted_dirs = router_get_trusted_dir_servers();
+
   if (digestmap_size(cached_v2_networkstatus) >
-      smartlist_len(trusted_dirs) + MAX_UNTRUSTED_NETWORKSTATUSES) {
+      get_n_authorities(V2_DIRINFO) + MAX_UNTRUSTED_NETWORKSTATUSES) {
     /* We need to remove the oldest untrusted networkstatus. */
     const char *oldest = NULL;
     time_t oldest_published = TIME_MAX;
@@ -3127,7 +3126,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
       }
     } else {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                  trusted_dir_server_t *, ds,
+                  dir_server_t *, ds,
                   if (ds->type & V2_DIRINFO)
                     smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
     }

@@ -25,14 +25,19 @@ void authority_cert_dl_failed(const char *id_digest, int status);
 void authority_certs_fetch_missing(networkstatus_t *status, time_t now);
 int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
-smartlist_t *router_get_trusted_dir_servers(void);
+const smartlist_t *router_get_trusted_dir_servers(void);
+const smartlist_t *router_get_fallback_dir_servers(void);
 
 const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);
-trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
-trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
+dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
+dir_server_t *router_get_fallback_dirserver_by_digest(
+                                                   const char *digest);
+dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
 const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
                                                    int flags);
+const routerstatus_t *router_pick_fallback_dirserver(dirinfo_type_t type,
+                                                     int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
@@ -127,13 +132,18 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
 void routerlist_retry_directory_downloads(time_t now);
 
 int router_exit_policy_rejects_all(const routerinfo_t *router);
-trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
-                           const char *address,
-                           uint16_t dir_port, uint16_t or_port,
-                           const char *digest, const char *v3_auth_digest,
-                           dirinfo_type_t type);
+
+dir_server_t *trusted_dir_server_new(const char *nickname, const char *address,
+                       uint16_t dir_port, uint16_t or_port,
+                       const char *digest, const char *v3_auth_digest,
+                       dirinfo_type_t type, double weight);
+dir_server_t *fallback_dir_server_new(const tor_addr_t *addr,
+                                      uint16_t dir_port, uint16_t or_port,
+                                      const char *id_digest, double weight);
+void dir_server_add(dir_server_t *ent);
+
 void authority_cert_free(authority_cert_t *cert);
-void clear_trusted_dir_servers(void);
+void clear_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                                   networkstatus_t *consensus);

@@ -1167,8 +1167,13 @@ router_set_status(const char *digest, int up)
   node_t *node;
   tor_assert(digest);
 
+  SMARTLIST_FOREACH(router_get_fallback_dir_servers(),
+                    dir_server_t *, d,
+                    if (tor_memeq(d->digest, digest, DIGEST_LEN))
+                      d->is_running = up);
+
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, d,
+                    dir_server_t *, d,
                     if (tor_memeq(d->digest, digest, DIGEST_LEN))
                       d->is_running = up);
 

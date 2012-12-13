@@ -219,8 +219,6 @@ router_reload_consensus_networkstatus(void)
 {
   char *filename;
   char *s;
-  struct stat st;
-  const or_options_t *options = get_options();
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
   int flav;
 
@@ -261,25 +259,6 @@ router_reload_consensus_networkstatus(void)
       tor_free(s);
     }
     tor_free(filename);
-  }
-
-  if (!current_consensus ||
-      (stat(options->FallbackNetworkstatusFile, &st)==0 &&
-       st.st_mtime > current_consensus->valid_after)) {
-    s = read_file_to_str(options->FallbackNetworkstatusFile,
-                         RFTS_IGNORE_MISSING, NULL);
-    if (s) {
-      if (networkstatus_set_current_consensus(s, "ns",
-                                              flags|NSSET_ACCEPT_OBSOLETE)) {
-        log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
-                 options->FallbackNetworkstatusFile);
-      } else {
-        log_notice(LD_FS,
-                   "Loaded fallback consensus networkstatus from \"%s\"",
-                   options->FallbackNetworkstatusFile);
-      }
-      tor_free(s);
-    }
   }
 
   if (!current_consensus) {
@@ -565,7 +544,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
 
   /* Now see whether we're missing any voters entirely. */
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
+                    dir_server_t *, ds,
     {
       if ((ds->type & V3_DIRINFO) &&
           !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
@@ -597,7 +576,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
-    SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
+    SMARTLIST_FOREACH(missing_authorities, dir_server_t *, ds,
       {
         log(severity, LD_DIR, "Consensus does not include configured "
                  "authority '%s' at %s:%d (identity %s)",
@@ -739,7 +718,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   int i, found;
   time_t now;
   int skewed = 0;
-  trusted_dir_server_t *trusted_dir = NULL;
+  dir_server_t *trusted_dir = NULL;
   const char *source_desc = NULL;
   char fp[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
@@ -1144,7 +1123,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
 
   if (authority) {
     /* An authority launches a separate connection for everybody. */
-    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds)
+    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds)
       {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
          tor_addr_t addr;
@@ -1674,9 +1653,6 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (from_cache && !accept_obsolete &&
       c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
-    /* XXXX If we try to make fallbackconsensus work again, we should
-     * consider taking this out. Until then, believing obsolete consensuses
-     * is causing more harm than good. See also bug 887. */
     log_info(LD_DIR, "Loaded an expired consensus. Discarding.");
     goto done;
   }
@@ -2042,7 +2018,7 @@ void
 routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
 {
-  trusted_dir_server_t *ds;
+  dir_server_t *ds;
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   networkstatus_t *ns = current_consensus;
@@ -2062,7 +2038,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     /* We have a routerstatus for this router. */
     const char *digest = router->cache_info.identity_digest;
 
-    ds = router_get_trusteddirserver_by_digest(digest);
+    ds = router_get_fallback_dirserver_by_digest(digest);
 
     /* Is it the same descriptor, or only the same identity? */
     if (tor_memeq(router->cache_info.signed_descriptor_digest,
