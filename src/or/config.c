@@ -829,7 +829,8 @@ validate_dir_servers(or_options_t *options, or_options_t *old_options)
   /* do we want to complain to the user about being partitionable? */
   if ((options->DirAuthorities &&
        (!old_options ||
-        !config_lines_eq(options->DirAuthorities, old_options->DirAuthorities))) ||
+        !config_lines_eq(options->DirAuthorities,
+                         old_options->DirAuthorities))) ||
       (options->AlternateDirAuthority &&
        (!old_options ||
         !config_lines_eq(options->AlternateDirAuthority,
@@ -1955,8 +1956,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
        * always. */
       log_fn(warn_severity, LD_CONFIG,
              "Address '%s' resolves to private IP address '%s'. "
-             "Tor servers that use the default DirAuthorities must have public "
-             "IP addresses.", hostname, addr_string);
+             "Tor servers that use the default DirAuthorities must have "
+             "public IP addresses.", hostname, addr_string);
       tor_free(addr_string);
       return -1;
     }
