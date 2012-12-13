@@ -1,5 +1,6 @@
 # Last updated based on December 5 2012 Maxmind GeoLite Country
-# See README.geoip for details on the conversion.
+# Visit the following URL for details on the conversion:
+# https://gitweb.torproject.org/tor.git/blob/HEAD:/src/config/README.geoip
 16777216,16777471,AU
 16777472,16778239,CN
 16778240,16779263,AU
