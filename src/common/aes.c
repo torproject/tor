@@ -41,6 +41,7 @@
 #include "aes.h"
 #include "util.h"
 #include "torlog.h"
+#include "di_ops.h"
 
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */
@@ -257,7 +258,7 @@ evaluate_ctr_for_aes(void)
   for (i=0; i<16; ++i)
     AES_ctr128_encrypt(&zero[i], &output[i], 1, &key, ivec, ivec_tmp, &pos);
 
-  if (memcmp(output, encrypt_zero, 16)) {
+  if (fast_memneq(output, encrypt_zero, 16)) {
     /* Counter mode is buggy */
     log_notice(LD_CRYPTO, "This OpenSSL has a buggy version of counter mode; "
                "not using it.");

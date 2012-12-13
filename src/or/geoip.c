@@ -224,7 +224,8 @@ static int
 geoip_ipv6_compare_entries_(const void **_a, const void **_b)
 {
   const geoip_ipv6_entry_t *a = *_a, *b = *_b;
-  return memcmp(a->ip_low.s6_addr, b->ip_low.s6_addr, sizeof(struct in6_addr));
+  return fast_memcmp(a->ip_low.s6_addr, b->ip_low.s6_addr,
+                     sizeof(struct in6_addr));
 }
 
 /** bsearch helper: return -1, 1, or 0 based on comparison of an IPv6
@@ -235,10 +236,10 @@ geoip_ipv6_compare_key_to_entry_(const void *_key, const void **_member)
   const struct in6_addr *addr = (struct in6_addr *)_key;
   const geoip_ipv6_entry_t *entry = *_member;
 
-  if (memcmp(addr->s6_addr, entry->ip_low.s6_addr,
+  if (fast_memcmp(addr->s6_addr, entry->ip_low.s6_addr,
              sizeof(struct in6_addr)) < 0)
     return -1;
-  else if (memcmp(addr->s6_addr, entry->ip_high.s6_addr,
+  else if (fast_memcmp(addr->s6_addr, entry->ip_high.s6_addr,
                   sizeof(struct in6_addr)) > 0)
     return 1;
   else
