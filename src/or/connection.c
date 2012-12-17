@@ -1712,8 +1712,13 @@ connection_proxy_connect(connection_t *conn, int type)
 
       buf[0] = 5; /* version */
 
+      /* We have to use SOCKS5 authentication, if we have a
+         Socks5ProxyUsername or if we want to pass arguments to our
+         pluggable transport proxy: */
+      if ((options->Socks5ProxyUsername) ||
+          (get_proxy_type() == PROXY_PLUGGABLE &&
+           (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
       /* number of auth methods */
-      if (options->Socks5ProxyUsername) {
         buf[1] = 2;
         buf[2] = 0x00; /* no authentication */
         buf[3] = 0x02; /* rfc1929 Username/Passwd auth */
@@ -1907,15 +1912,47 @@ connection_read_proxy_handshake(connection_t *conn)
         unsigned char buf[1024];
         size_t reqsize, usize, psize;
         const char *user, *pass;
+        char *socks_args_string = NULL;
 
-        user = get_options()->Socks5ProxyUsername;
-        pass = get_options()->Socks5ProxyPassword;
-        tor_assert(user && pass);
+        if (get_proxy_type() == PROXY_PLUGGABLE) {
+          socks_args_string =
+            pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
+          if (!socks_args_string) {
+            log_warn(LD_NET, "Could not create SOCKS args string.");
+            ret = -1;
+            break;
+          }
 
-        /* XXX len of user and pass must be <= 255 !!! */
-        usize = strlen(user);
-        psize = strlen(pass);
-        tor_assert(usize <= 255 && psize <= 255);
+          log_debug(LD_NET, "SOCKS5 arguments: %s", socks_args_string);
+          tor_assert(strlen(socks_args_string) > 0);
+          tor_assert(strlen(socks_args_string) <= MAX_SOCKS5_AUTH_SIZE_TOTAL);
+
+          if (strlen(socks_args_string) > MAX_SOCKS5_AUTH_FIELD_SIZE) {
+            user = socks_args_string;
+            usize = MAX_SOCKS5_AUTH_FIELD_SIZE;
+            pass = socks_args_string + MAX_SOCKS5_AUTH_FIELD_SIZE;
+            psize = strlen(socks_args_string) - MAX_SOCKS5_AUTH_FIELD_SIZE;
+          } else {
+            user = socks_args_string;
+            usize = strlen(socks_args_string);
+            pass = "\0";
+            psize = 1;
+          }
+        } else if (get_options()->Socks5ProxyUsername) {
+          user = get_options()->Socks5ProxyUsername;
+          pass = get_options()->Socks5ProxyPassword;
+          tor_assert(user && pass);
+          usize = strlen(user);
+          psize = strlen(pass);
+        } else {
+          log_err(LD_BUG, "We entered %s for no reason!", __func__);
+          tor_fragile_assert();
+          ret = -1;
+          break;
+        }
+
+        tor_assert(usize <= MAX_SOCKS5_AUTH_FIELD_SIZE &&
+                   psize <= MAX_SOCKS5_AUTH_FIELD_SIZE);
         reqsize = 3 + usize + psize;
 
         buf[0] = 1; /* negotiation version */
@@ -1923,6 +1960,9 @@ connection_read_proxy_handshake(connection_t *conn)
         memcpy(buf + 2, user, usize);
         buf[2 + usize] = psize;
         memcpy(buf + 3 + usize, pass, psize);
+
+        if (socks_args_string)
+          tor_free(socks_args_string);
 
         connection_write_to_buf((char *)buf, reqsize, conn);
 
@@ -4390,7 +4430,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
              options->Bridges) {
     const transport_t *transport = NULL;
     int r;
-    r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
     if (r<0)
       return -1;
     if (transport) { /* transport found */
