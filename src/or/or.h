@@ -240,7 +240,9 @@ typedef enum {
 #define PROXY_SOCKS5 3
 /* !!!! If there is ever a PROXY_* type over 2, we must grow the proxy_type
  * field in or_connection_t */
-/* pluggable transports proxy type */
+
+/* Pluggable transport proxy type. Don't use this in or_connection_t,
+ * instead use the actual underlying proxy type (see above).  */
 #define PROXY_PLUGGABLE 4
 
 /* Proxy client handshake states */

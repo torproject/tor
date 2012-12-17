@@ -1751,6 +1751,17 @@ find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
   return 0;
 }
 
+/** Return a smartlist containing all the SOCKS arguments that we
+ *  should pass to the SOCKS proxy. */
+const smartlist_t *
+get_socks_args_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
+{
+  bridge_info_t *bridge = get_configured_bridge_by_addr_port_digest(addr,
+                                                                    port,
+                                                                    NULL);
+  return bridge ? bridge->socks_args : NULL;
+}
+
 /** We need to ask <b>bridge</b> for its server descriptor. */
 static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)

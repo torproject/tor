@@ -95,6 +95,7 @@
 #include "util.h"
 #include "router.h"
 #include "statefile.h"
+#include "entrynodes.h"
 
 static process_environment_t *
 create_managed_proxy_environment(const managed_proxy_t *mp);
@@ -1457,6 +1458,22 @@ pt_stringify_socks_args(const smartlist_t *socks_args)
   smartlist_free(sl_tmp);
 
   return new_string;
+}
+
+/** Return a string of the SOCKS arguments that we should pass to the
+ *  pluggable transports proxy in <b>addr</b>:<b>port</b> according to
+ *  180_pluggable_transport.txt.  The string is allocated on the heap
+ *  and it's the responsibility of the caller to free it after use. */
+char *
+pt_get_socks_args_for_proxy_addrport(const tor_addr_t *addr, uint16_t port)
+{
+  const smartlist_t *socks_args = NULL;
+
+  socks_args = get_socks_args_by_bridge_addrport(addr, port);
+  if (!socks_args)
+    return NULL;
+
+  return pt_stringify_socks_args(socks_args);
 }
 
 /** The tor config was read.
