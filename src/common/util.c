@@ -865,6 +865,36 @@ tor_digest_is_zero(const char *digest)
   return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
 }
 
+/** Return true if <b>string</b> is a valid '<key>=<value>' string.
+ *  <value> is optional, to indicate the empty string. */
+int
+string_is_key_value(const char *string)
+{
+  /* position of equal sign in string */
+  char *equal_sign_pos = NULL;
+
+  tor_assert(string);
+
+  if (strlen(string) < 2) { /* "x=a" is shortest args string */
+    log_warn(LD_GENERAL, "'%s' is too short to be a k=v value.", string);
+    return 0;
+  }
+
+  equal_sign_pos = strchr(string, '=');
+  if (!equal_sign_pos) {
+    log_warn(LD_GENERAL, "'%s' is not a k=v value.", string);
+    return 0;
+  }
+
+  /* validate that the '=' is not in the beginning of the string. */
+  if (equal_sign_pos == string) {
+    log_warn(LD_GENERAL, "'%s' is not a valid k=v value.", string);
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
 int
 tor_digest256_is_zero(const char *digest)
@@ -1247,6 +1277,43 @@ wrap_string(smartlist_t *out, const char *string, size_t width,
     line[line_len-1] = '\0';
     smartlist_add(out, line);
   }
+}
+
+/** Escape every character of <b>string</b> that belongs to the set of
+ *  characters <b>set</b>. Use <b>escape_char</b> as the character to
+ *  use for escaping. */
+char *
+tor_escape_str_for_socks_arg(const char *string)
+{
+  char *new_string = NULL;
+  char *new_cp = NULL;
+  size_t length, new_length;
+  static const char *chars_to_escape = ";\\";
+
+  tor_assert(string);
+
+  length = strlen(string);
+
+  if (!length)
+    return NULL;
+  /* (new_length > SIZE_MAX) => ((length * 2) + 1 > SIZE_MAX) =>
+     (length*2 > SIZE_MAX - 1) => (length > (SIZE_MAX - 1)/2) */
+  if (length > (SIZE_MAX - 1)/2) /* check for overflow */
+    return NULL;
+
+  /* this should be enough even if all characters must be escaped */
+  new_length = (length * 2) + 1;
+
+  new_string = new_cp = tor_malloc_zero(new_length);
+
+  while (*string) {
+    if (strchr(chars_to_escape, *string))
+      *new_cp++ = '\\';
+
+    *new_cp++ = *string++;
+  }
+
+  return new_string;
 }
 
 /* =====

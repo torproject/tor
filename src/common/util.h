@@ -209,12 +209,16 @@ const char *find_whitespace_eos(const char *s, const char *eos);
 const char *find_str_at_start_of_line(const char *haystack,
                                       const char *needle);
 int string_is_C_identifier(const char *string);
+int string_is_key_value(const char *string);
 
 int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
 int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
+
+char *tor_escape_str_for_socks_arg(const char *string);
+
 struct smartlist_t;
 void wrap_string(struct smartlist_t *out, const char *string, size_t width,
                  const char *prefix0, const char *prefixRest);
