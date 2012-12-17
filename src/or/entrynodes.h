@@ -97,9 +97,11 @@ int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
                              const char *digest);
+struct smartlist_t;
 void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
                             const char *digest,
-                            const char *transport_name);
+                            const char *transport_name,
+                            struct smartlist_t *socks_args);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
 void fetch_bridge_descriptors(const or_options_t *options, time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);

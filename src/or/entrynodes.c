@@ -52,6 +52,10 @@ typedef struct {
 
   /** When should we next try to fetch a descriptor for this bridge? */
   download_status_t fetch_status;
+
+  /** A smartlist of k=v values to be passed to the SOCKS proxy, if
+      transports are used for this bridge. */
+  smartlist_t *socks_args;
 } bridge_info_t;
 
 /** A list of our chosen entry guards. */
@@ -1446,6 +1450,11 @@ bridge_free(bridge_info_t *bridge)
     return;
 
   tor_free(bridge->transport_name);
+  if (bridge->socks_args) {
+    SMARTLIST_FOREACH(bridge->socks_args, char*, s, tor_free(s));
+    smartlist_free(bridge->socks_args);
+  }
+
   tor_free(bridge);
 }
 
@@ -1628,10 +1637,16 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
  * is set, it tells us the identity key too.  If we already had the
  * bridge in our list, unmark it, and don't actually add anything new.
  * If <b>transport_name</b> is non-NULL - the bridge is associated with a
- * pluggable transport - we assign the transport to the bridge. */
+ * pluggable transport - we assign the transport to the bridge.
+ * If <b>transport_name</b> is non-NULL - the bridge is associated
+ * with a pluggable transport - we assign the transport to the bridge.
+ * If <b>socks_args</b> is non-NULL, it's a smartlist carrying
+ * key=value pairs to be passed to the pluggable transports
+ * proxy. This function steals reference of the smartlist. */
 void
 bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
-                       const char *digest, const char *transport_name)
+                       const char *digest, const char *transport_name,
+                       smartlist_t *socks_args)
 {
   bridge_info_t *b;
 
@@ -1645,6 +1660,7 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
   if (transport_name)
     b->transport_name = tor_strdup(transport_name);
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
+  b->socks_args = socks_args;
   if (!bridge_list)
     bridge_list = smartlist_new();
 
