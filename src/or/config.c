@@ -98,6 +98,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "StrictEntryNodes", "StrictNodes", 0, 1},
   { "StrictExitNodes", "StrictNodes", 0, 1},
+  { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
   { "_UseFilteringSSLBufferevents", "UseFilteringSSLBufferevents", 0, 1},
   { NULL, NULL, 0, 0},
 };
@@ -396,7 +397,8 @@ static config_var_t option_vars_[] = {
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
   V(V3BandwidthsFile,            FILENAME, NULL),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
-  V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
+  V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
+  V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
   V(UseFilteringSSLBufferevents, BOOL,    "0"),
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
@@ -678,7 +680,7 @@ config_free_all(void)
 
   if (configured_ports) {
     SMARTLIST_FOREACH(configured_ports,
-                      port_cfg_t *, p, tor_free(p));
+                      port_cfg_t *, p, port_cfg_free(p));
     smartlist_free(configured_ports);
     configured_ports = NULL;
   }
@@ -1379,7 +1381,8 @@ options_act(const or_options_t *old_options)
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
-  parse_virtual_addr_network(options->VirtualAddrNetwork, 0, NULL);
+  parse_virtual_addr_network(options->VirtualAddrNetworkIPv4, AF_INET,0,NULL);
+  parse_virtual_addr_network(options->VirtualAddrNetworkIPv6, AF_INET6,0,NULL);
 
   /* Update address policies. */
   if (policies_parse_from_options(options) < 0) {
@@ -1492,8 +1495,10 @@ options_act(const or_options_t *old_options)
       if (!smartlist_strings_eq(old_options->AutomapHostsSuffixes,
                                 options->AutomapHostsSuffixes))
         revise_automap_entries = 1;
-      else if (!opt_streq(old_options->VirtualAddrNetwork,
-                          options->VirtualAddrNetwork))
+      else if (!opt_streq(old_options->VirtualAddrNetworkIPv4,
+                          options->VirtualAddrNetworkIPv4) ||
+               !opt_streq(old_options->VirtualAddrNetworkIPv6,
+                          options->VirtualAddrNetworkIPv6))
         revise_automap_entries = 1;
     }
 
@@ -2968,7 +2973,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to configure client authorization for hidden services. "
            "See logs for details.");
 
-  if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, NULL)<0)
+  if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv4,
+                                 AF_INET, 1, msg)<0)
+    return -1;
+  if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv6,
+                                 AF_INET6, 1, msg)<0)
     return -1;
 
   if (options->PreferTunneledDirConns && !options->TunnelDirConns)
@@ -4589,6 +4598,17 @@ parse_dir_fallback_line(const char *line,
   return r;
 }
 
+/** Allocate and return a new port_cfg_t with reasonable defaults. */
+static port_cfg_t *
+port_cfg_new(void)
+{
+  port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+  cfg->ipv4_traffic = 1;
+  cfg->cache_ipv4_answers = 1;
+  cfg->prefer_ipv6_virtaddr = 1;
+  return cfg;
+}
+
 /** Free all storage held in <b>port</b> */
 static void
 port_cfg_free(port_cfg_t *port)
@@ -4763,13 +4783,14 @@ parse_port_config(smartlist_t *out,
 
     if (use_server_options && out) {
       /* Add a no_listen port. */
-      port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+      port_cfg_t *cfg = port_cfg_new();
       cfg->type = listener_type;
       cfg->port = mainport;
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
       cfg->no_listen = 1;
       cfg->bind_ipv4_only = 1;
       cfg->ipv4_traffic = 1;
+      cfg->prefer_ipv6_virtaddr = 1;
       smartlist_add(out, cfg);
     }
 
@@ -4782,14 +4803,13 @@ parse_port_config(smartlist_t *out,
         return -1;
       }
       if (out) {
-        port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+        port_cfg_t *cfg = port_cfg_new();
         cfg->type = listener_type;
         cfg->port = port ? port : mainport;
         tor_addr_copy(&cfg->addr, &addr);
         cfg->session_group = SESSION_GROUP_UNSET;
         cfg->isolation_flags = ISO_DEFAULT;
         cfg->no_advertise = 1;
-        cfg->ipv4_traffic = 1;
         smartlist_add(out, cfg);
       }
     }
@@ -4807,13 +4827,12 @@ parse_port_config(smartlist_t *out,
    * one. */
   if (! ports) {
     if (defaultport && out) {
-       port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+       port_cfg_t *cfg = port_cfg_new();
        cfg->type = listener_type;
        cfg->port = defaultport;
        tor_addr_parse(&cfg->addr, defaultaddr);
        cfg->session_group = SESSION_GROUP_UNSET;
        cfg->isolation_flags = ISO_DEFAULT;
-       cfg->ipv4_traffic = 1;
        smartlist_add(out, cfg);
     }
     return 0;
@@ -4834,7 +4853,10 @@ parse_port_config(smartlist_t *out,
     int ok;
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0;
+      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
+      cache_ipv4 = 1, use_cached_ipv4 = 0,
+      cache_ipv6 = 0, use_cached_ipv6 = 0,
+      prefer_ipv6_automap = 1;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -4971,6 +4993,28 @@ parse_port_config(smartlist_t *out,
             continue;
           }
         }
+        if (!strcasecmp(elt, "CacheIPv4DNS")) {
+          cache_ipv4 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
+          cache_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "CacheDNS")) {
+          cache_ipv4 = cache_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseIPv4Cache")) {
+          use_cached_ipv4 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseIPv6Cache")) {
+          use_cached_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "UseDNSCache")) {
+          use_cached_ipv4 = use_cached_ipv6 = ! no;
+          continue;
+        } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
+          prefer_ipv6_automap = ! no;
+          continue;
+        }
 
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
@@ -5010,7 +5054,7 @@ parse_port_config(smartlist_t *out,
     }
 
     if (out && port) {
-      port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+      port_cfg_t *cfg = port_cfg_new();
       tor_addr_copy(&cfg->addr, &addr);
       cfg->port = port;
       cfg->type = listener_type;
@@ -5024,6 +5068,11 @@ parse_port_config(smartlist_t *out,
       cfg->ipv4_traffic = ipv4_traffic;
       cfg->ipv6_traffic = ipv6_traffic;
       cfg->prefer_ipv6 = prefer_ipv6;
+      cfg->cache_ipv4_answers = cache_ipv4;
+      cfg->cache_ipv6_answers = cache_ipv6;
+      cfg->use_cached_ipv4_answers = use_cached_ipv4;
+      cfg->use_cached_ipv6_answers = use_cached_ipv6;
+      cfg->prefer_ipv6_virtaddr = prefer_ipv6_automap;
 
       smartlist_add(out, cfg);
     }
@@ -5125,7 +5174,7 @@ parse_ports(or_options_t *options, int validate_only,
                         options->DNSPort_lines, options->DNSListenAddress,
                         "DNS", CONN_TYPE_AP_DNS_LISTENER,
                         "127.0.0.1", 0,
-                        CL_PORT_WARN_NONLOCAL) < 0) {
+                        CL_PORT_WARN_NONLOCAL|CL_PORT_TAKES_HOSTNAMES) < 0) {
     *msg = tor_strdup("Invalid DNSPort/DNSListenAddress configuration");
     goto err;
   }

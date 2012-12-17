@@ -706,6 +706,7 @@ connection_ap_process_end_not_open(
       case END_STREAM_REASON_EXITPOLICY:
         if (rh->length >= 5) {
           tor_addr_t addr;
+
           int ttl = -1;
           tor_addr_make_unspec(&addr);
           if (rh->length == 5 || rh->length == 9) {
@@ -742,9 +743,19 @@ connection_ap_process_end_not_open(
             return 0;
           }
 
-          client_dns_set_addressmap(circ,
+          client_dns_set_addressmap(conn,
                                     conn->socks_request->address, &addr,
                                     conn->chosen_exit_name, ttl);
+
+          {
+            char new_addr[TOR_ADDR_BUF_LEN];
+            tor_addr_to_str(new_addr, &addr, sizeof(new_addr), 1);
+            if (strcmp(conn->socks_request->address, new_addr)) {
+              strlcpy(conn->socks_request->address, new_addr,
+                      sizeof(conn->socks_request->address));
+              control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+            }
+          }
         }
         /* check if he *ought* to have allowed it */
         if (exitrouter &&
@@ -757,12 +768,7 @@ connection_ap_process_end_not_open(
                  node_describe(exitrouter));
           policies_set_node_exitpolicy_to_reject_all(exitrouter);
         }
-        /* rewrite it to an IP if we learned one. */
-        if (addressmap_rewrite(conn->socks_request->address,
-                               sizeof(conn->socks_request->address),
-                               NULL, NULL)) {
-          control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
-        }
+
         if (conn->chosen_exit_optional ||
             conn->chosen_exit_retries) {
           /* stop wanting a specific exit */
@@ -972,7 +978,7 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
 
-      client_dns_set_addressmap(TO_ORIGIN_CIRCUIT(circ),
+      client_dns_set_addressmap(entry_conn,
                                 entry_conn->socks_request->address, &addr,
                                 entry_conn->chosen_exit_name, ttl);
 

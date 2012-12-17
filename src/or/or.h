@@ -1225,7 +1225,7 @@ typedef struct listener_connection_t {
   uint8_t isolation_flags;
   /**@}*/
 
-  /** For a SOCKS listener, these fields describe whether we should
+  /** For a SOCKS listeners, these fields describe whether we should
    * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
    *
    * @{
@@ -1236,6 +1236,24 @@ typedef struct listener_connection_t {
   /** For a socks listener: should we tell the exit that we prefer IPv6
    * addresses? */
   unsigned int socks_prefer_ipv6 : 1;
+
+  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
+   * exit nodes tell us?
+   *
+   * @{ */
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  /** @} */
+  /** For a socks listeners: if we find an answer in our client-side DNS cache,
+   * should we use it?
+   *
+   * @{ */
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
+  /** @} */
+  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
+   * do we prefer IPv6? */
+  unsigned int prefer_ipv6_virtaddr : 1;
 
 } listener_connection_t;
 
@@ -1544,6 +1562,24 @@ typedef struct entry_connection_t {
   /** @} */
   /** Should we say we prefer IPv6 traffic? */
   unsigned int prefer_ipv6_traffic : 1;
+
+  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
+   * exit nodes tell us?
+   *
+   * @{ */
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  /** @} */
+  /** For a socks listeners: if we find an answer in our client-side DNS cache,
+   * should we use it?
+   *
+   * @{ */
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
+  /** @} */
+  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
+   * do we prefer IPv6? */
+  unsigned int prefer_ipv6_virtaddr : 1;
 
 } entry_connection_t;
 
@@ -3084,9 +3120,29 @@ typedef struct port_cfg_t {
   unsigned int all_addrs : 1;
   unsigned int bind_ipv4_only : 1;
   unsigned int bind_ipv6_only : 1;
+
+  /* Client port types only: */
   unsigned int ipv4_traffic : 1;
   unsigned int ipv6_traffic : 1;
   unsigned int prefer_ipv6 : 1;
+
+  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
+   * exit nodes tell us?
+   *
+   * @{ */
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  /** @} */
+  /** For a socks listeners: if we find an answer in our client-side DNS cache,
+   * should we use it?
+   *
+   * @{ */
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
+  /** @} */
+  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
+   * do we prefer IPv6? */
+  unsigned int prefer_ipv6_virtaddr : 1;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
@@ -3568,8 +3624,10 @@ typedef struct {
   /** Should we fetch our dir info at the start of the consensus period? */
   int FetchDirInfoExtraEarly;
 
-  char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
-                             * MAPADDRESS requests. */
+  char *VirtualAddrNetworkIPv4; /**< Address and mask to hand out for virtual
+                                 * MAPADDRESS requests for IPv4 addresses */
+  char *VirtualAddrNetworkIPv6; /**< Address and mask to hand out for virtual
+                                 * MAPADDRESS requests for IPv6 addresses */
   int ServerDNSSearchDomains; /**< Boolean: If set, we don't force exit
                       * addresses to be FQDNs, but rather search for them in
                       * the local domains. */

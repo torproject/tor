@@ -929,11 +929,37 @@ The following options are useful only for clients (that is, if
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
         we would prefer to connect to it via IPv6. (IPv4 is the default.) +
 +
-    NOTE: Although this option allows you to specify an IP address other than
-    localhost, you should do so only with extreme caution.  The SOCKS
-    protocol is unencrypted and (as we use it) unauthenticated, so exposing
-    it in this way could leak your information to anybody watching your
-    network, and allow anybody to use your computer as an open proxy.
+       NOTE: Although this option allows you to specify an IP address
+       other than localhost, you should do so only with extreme caution.
+       The SOCKS protocol is unencrypted and (as we use it)
+       unauthenticated, so exposing it in this way could leak your
+       information to anybody watching your network, and allow anybody
+       to use your computer as an open proxy.
+    **CacheIPv4DNS**;;
+        Tells the client to remember IPv4 DNS answers we receive from exit
+        nodes via this connection. (On by default.)
+    **CacheIPv6DNS**;;
+        Tells the client to remember IPv6 DNS answers we receive from exit
+        nodes via this connection.
+    **CacheDNS**;;
+        Tells the client to remember all DNS answers we receive from exit
+        nodes via this connection.
+    **UseIPv4Cache**;;
+        Tells the client to use any cached IPv4 DNS answers we have when making
+        requests via this connection. (NOTE: This option, along UseIPv6Cache
+        and UseDNSCache, can harm your anonymity, and probably
+        won't help performance as much as you might expect. Use with care!)
+    **UseIPv6Cache**;;
+        Tells the client to use any cached IPv6 DNS answers we have when making
+        requests via this connection.
+    **UseDNSCache**;;
+        Tells the client to use any cached DNS answers we have when making
+        requests via this connection.
+    **PreferIPv6Automap**;;
+        When serving a hostname lookup request on this port that
+        should get automapped (according to AutomapHostsOnResove),
+        if we could return either an IPv4 or an IPv6 answer, prefer
+        an IPv6 answer. (On by default.)
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
@@ -1019,16 +1045,20 @@ The following options are useful only for clients (that is, if
     applications to do DNS resolves themselves is usually a bad idea and
     can leak your location to attackers. (Default: 1)
 
-**VirtualAddrNetwork** __Address__/__bits__::
+**VirtualAddrNetworkIPv4** __Address__/__bits__ +
+
+**VirtualAddrNetworkIPv6** [__Address__]/__bits__::
     When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
     command from the controller or the AutomapHostsOnResolve feature, Tor
-    picks an unassigned address from this range. (Default:
-    127.192.0.0/10) +
+    picks an unassigned address from this range. (Defaults:
+    127.192.0.0/10 and [FE80::]/10 respectively.) +
  +
     When providing proxy server service to a network of computers using a tool
-    like dns-proxy-tor, change this address to "10.192.0.0/10" or
-    "172.16.0.0/12". The default **VirtualAddrNetwork** address range on a
-    properly configured machine will route to the loopback interface. For
+    like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
+    "172.16.0.0/12" and change the IPv6 network to "[FC00]/7".
+    The default **VirtualAddrNetwork** address ranges on a
+    properly configured machine will route to the loopback or link-local
+    interface. For
     local use, no change to the default VirtualAddrNetwork setting is needed.
 
 **AllowNonRFC953Hostnames** **0**|**1**::

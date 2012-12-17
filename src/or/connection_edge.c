@@ -897,7 +897,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
   const or_options_t *options = get_options();
-  struct in_addr addr_tmp;
+  tor_addr_t addr_tmp;
   /* We set this to true if this is an address we should automatically
    * remap to a local address in VirtualAddrNetwork */
   int automap = 0;
@@ -927,17 +927,20 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     conn->original_dest_address = tor_strdup(conn->socks_request->address);
 
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
-      !tor_inet_aton(socks->address, &addr_tmp) &&
-      options->AutomapHostsOnResolve && options->AutomapHostsSuffixes) {
-    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, const char *, cp,
-                      if (!strcasecmpend(socks->address, cp)) {
-                        automap = 1;
-                        break;
-                      });
+      tor_addr_parse(&addr_tmp, socks->address)<0 &&
+      options->AutomapHostsOnResolve) {
+    automap = addressmap_address_should_automap(socks->address, options);
     if (automap) {
       const char *new_addr;
+      int addr_type = RESOLVED_TYPE_IPV4;
+      if (conn->socks_request->socks_version != 4) {
+        if (!conn->ipv4_traffic_ok ||
+            (conn->ipv6_traffic_ok && conn->prefer_ipv6_traffic) ||
+            conn->prefer_ipv6_virtaddr)
+          addr_type = RESOLVED_TYPE_IPV6;
+      }
       new_addr = addressmap_register_virtual_address(
-                              RESOLVED_TYPE_IPV4, tor_strdup(socks->address));
+                                    addr_type, tor_strdup(socks->address));
       if (! new_addr) {
         log_warn(LD_APP, "Unable to automap address %s",
                  escaped_safe_str(socks->address));
@@ -952,8 +955,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
+    unsigned rewrite_flags = 0;
+    if (conn->use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
+
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
-                                   &map_expires)) {
+                                   rewrite_flags, &map_expires)) {
       char *result = tor_strdup(socks->address);
       /* remember _what_ is supposed to have been resolved. */
       tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
@@ -984,8 +993,13 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     }
   } else if (!automap) {
     /* For address map controls, remap the address. */
+    unsigned rewrite_flags = 0;
+    if (conn->use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           &map_expires, &exit_source)) {
+                           rewrite_flags, &map_expires, &exit_source)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
     }
@@ -2053,15 +2067,11 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
   size_t replylen;
 
   if (ttl >= 0) {
-    origin_circuit_t *origin_circ = NULL;
-    circuit_t *circ = ENTRY_TO_EDGE_CONN(conn)->on_circuit;
-    if (CIRCUIT_IS_ORIGIN(circ)) /* should always be true */
-      origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       tor_addr_t a;
       tor_addr_from_ipv4n(&a, get_uint32(answer));
       if (! tor_addr_is_null(&a)) {
-        client_dns_set_addressmap(origin_circ,
+        client_dns_set_addressmap(conn,
                                   conn->socks_request->address, &a,
                                   conn->chosen_exit_name, ttl);
       }
@@ -2069,13 +2079,13 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
       tor_addr_t a;
       tor_addr_from_ipv6_bytes(&a, (char*)answer);
       if (! tor_addr_is_null(&a)) {
-        client_dns_set_addressmap(origin_circ,
+        client_dns_set_addressmap(conn,
                                   conn->socks_request->address, &a,
                                   conn->chosen_exit_name, ttl);
       }
     } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
       char *cp = tor_strndup((char*)answer, answer_len);
-      client_dns_set_reverse_addressmap(origin_circ,
+      client_dns_set_reverse_addressmap(conn,
                                         conn->socks_request->address,
                                         cp,
                                         conn->chosen_exit_name, ttl);

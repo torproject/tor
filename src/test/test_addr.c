@@ -3,9 +3,11 @@
  * Copyright (c) 2007-2012, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define ADDRESSMAP_PRIVATE
 #include "orconfig.h"
 #include "or.h"
 #include "test.h"
+#include "addressmap.h"
 
 static void
 test_addr_basic(void)
@@ -773,6 +775,74 @@ test_addr_parse(void)
   ;
 }
 
+static void
+update_difference(int ipv6, uint8_t *d,
+                  const tor_addr_t *a, const tor_addr_t *b)
+{
+  const int n_bytes = ipv6 ? 16 : 4;
+  uint8_t a_tmp[4], b_tmp[4];
+  const uint8_t *ba, *bb;
+  int i;
+
+  if (ipv6) {
+    ba = tor_addr_to_in6_addr8(a);
+    bb = tor_addr_to_in6_addr8(b);
+  } else {
+    set_uint32(a_tmp, tor_addr_to_ipv4n(a));
+    set_uint32(b_tmp, tor_addr_to_ipv4n(b));
+    ba = a_tmp; bb = b_tmp;
+  }
+
+  for (i = 0; i < n_bytes; ++i) {
+    d[i] |= ba[i] ^ bb[i];
+  }
+}
+
+static void
+test_virtaddrmap(void *data)
+{
+  /* Let's start with a bunch of random addresses. */
+  int ipv6, bits, iter, b;
+  virtual_addr_conf_t cfg[2];
+  uint8_t bytes[16];
+
+  (void)data;
+
+  tor_addr_parse(&cfg[0].addr, "64.65.0.0");
+  tor_addr_parse(&cfg[1].addr, "3491:c0c0::");
+
+  for (ipv6 = 0; ipv6 <= 1; ++ipv6) {
+    for (bits = 0; bits < 18; ++bits) {
+      tor_addr_t last_a;
+      cfg[ipv6].bits = bits;
+      memset(bytes, 0, sizeof(bytes));
+      tor_addr_copy(&last_a, &cfg[ipv6].addr);
+      /* Generate 128 addresses with each addr/bits combination. */
+      for (iter = 0; iter < 128; ++iter) {
+        tor_addr_t a;
+
+        get_random_virtual_addr(&cfg[ipv6], &a);
+        //printf("%s\n", fmt_addr(&a));
+        /* Make sure that the first b bits match the configured network */
+        tt_int_op(0, ==, tor_addr_compare_masked(&a, &cfg[ipv6].addr,
+                                                 bits, CMP_EXACT));
+
+        /* And track which bits have been different between pairs of
+         * addresses */
+        update_difference(ipv6, bytes, &last_a, &a);
+      }
+
+      /* Now make sure all but the first 'bits' bits of bytes are true */
+      for (b = bits+1; b < (ipv6?128:32); ++b) {
+        tt_assert(1 & (bytes[b/8] >> (7-(b&7))));
+      }
+    }
+  }
+
+ done:
+  ;
+}
+
 #define ADDR_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
 
@@ -780,6 +850,7 @@ struct testcase_t addr_tests[] = {
   ADDR_LEGACY(basic),
   ADDR_LEGACY(ip6_helpers),
   ADDR_LEGACY(parse),
+  { "virtaddr", test_virtaddrmap, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

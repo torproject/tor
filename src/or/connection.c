@@ -1130,6 +1130,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     lis_conn->socks_ipv4_traffic = 1;
     lis_conn->socks_ipv6_traffic = 1;
   }
+  lis_conn->cache_ipv4_answers = port_cfg->cache_ipv4_answers;
+  lis_conn->cache_ipv6_answers = port_cfg->cache_ipv6_answers;
+  lis_conn->use_cached_ipv4_answers = port_cfg->use_cached_ipv4_answers;
+  lis_conn->use_cached_ipv6_answers = port_cfg->use_cached_ipv6_answers;
+  lis_conn->prefer_ipv6_virtaddr = port_cfg->prefer_ipv6_virtaddr;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1366,6 +1371,15 @@ connection_init_accepted_conn(connection_t *conn,
       TO_ENTRY_CONN(conn)->ipv4_traffic_ok = listener->socks_ipv4_traffic;
       TO_ENTRY_CONN(conn)->ipv6_traffic_ok = listener->socks_ipv6_traffic;
       TO_ENTRY_CONN(conn)->prefer_ipv6_traffic = listener->socks_prefer_ipv6;
+      TO_ENTRY_CONN(conn)->cache_ipv4_answers = listener->cache_ipv4_answers;
+      TO_ENTRY_CONN(conn)->cache_ipv6_answers = listener->cache_ipv6_answers;
+      TO_ENTRY_CONN(conn)->use_cached_ipv4_answers =
+        listener->use_cached_ipv4_answers;
+      TO_ENTRY_CONN(conn)->use_cached_ipv6_answers =
+        listener->use_cached_ipv6_answers;
+      TO_ENTRY_CONN(conn)->prefer_ipv6_virtaddr =
+        listener->prefer_ipv6_virtaddr;
+
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;

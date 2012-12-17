@@ -1373,10 +1373,13 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                      "512-syntax error: invalid address '%s'", to);
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
-      } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
+      } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0") ||
+                 !strcmp(from, "::")) {
+        const char type =
+          !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME :
+          (!strcmp(from, "0.0.0.0") ? RESOLVED_TYPE_IPV4 : RESOLVED_TYPE_IPV6);
         const char *address = addressmap_register_virtual_address(
-              !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
-               tor_strdup(to));
+                                                     type, tor_strdup(to));
         if (!address) {
           smartlist_add_asprintf(reply,
                        "451-resource exhausted: skipping '%s'", line);
