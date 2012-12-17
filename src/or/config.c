@@ -4025,6 +4025,40 @@ options_init_logs(or_options_t *options, int validate_only)
   return ok?0:-1;
 }
 
+/** Given a smartlist of SOCKS arguments to be passed to a transport
+ *  proxy in <b>args</b>, validate them and return -1 if they are
+ *  corrupted. Return 0 if they seem OK. */
+static int
+validate_transport_socks_arguments(const smartlist_t *args)
+{
+  char *socks_string = NULL;
+  size_t socks_string_len;
+
+  tor_assert(args);
+  tor_assert(smartlist_len(args) > 0);
+
+  SMARTLIST_FOREACH_BEGIN(args, const char *, s) {
+    if (!string_is_key_value(s)) /* arguments should  be k=v items */
+      return -1;
+  } SMARTLIST_FOREACH_END(s);
+
+  socks_string = pt_stringify_socks_args(args);
+  if (!socks_string)
+    return -1;
+
+  socks_string_len = strlen(socks_string);
+  tor_free(socks_string);
+
+  if (socks_string_len > MAX_SOCKS5_AUTH_SIZE_TOTAL) {
+    log_warn(LD_CONFIG, "SOCKS arguments can't be more than %u bytes (%lu).",
+             MAX_SOCKS5_AUTH_SIZE_TOTAL,
+             (unsigned long) socks_string_len);
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Read the contents of a Bridge line from <b>line</b>. Return 0
  * if the line is well-formed, and -1 if it isn't. If
  * <b>validate_only</b> is 0, and the line is well-formed, then add
@@ -4143,6 +4177,11 @@ parse_bridge_line(const char *line, int validate_only)
     bridge_add_from_config(&addr, port,
                            fingerprint ? digest : NULL,
                            transport_name, socks_args);
+  } else {
+    if (socks_args) {
+      if (validate_transport_socks_arguments(socks_args) < 0)
+        goto err;
+    }
   }
 
   r = 0;

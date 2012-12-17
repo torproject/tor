@@ -55,6 +55,7 @@ void pt_prepare_proxy_list_for_config_read(void);
 void sweep_proxy_list(void);
 
 smartlist_t *get_transport_proxy_ports(void);
+char *pt_stringify_socks_args(const smartlist_t *socks_args);
 
 #ifdef PT_PRIVATE
 /** State of the managed proxy configuration protocol. */
