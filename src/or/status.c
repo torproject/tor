@@ -10,6 +10,7 @@
 #include "config.h"
 #include "status.h"
 #include "nodelist.h"
+#include "relay.h"
 #include "router.h"
 #include "circuitlist.h"
 #include "main.h"
@@ -105,6 +106,11 @@ log_heartbeat(time_t now)
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
          "circuits open. I've sent %s and received %s.",
          uptime, count_circuits(),bw_sent,bw_rcvd);
+
+  if (stats_n_data_cells_packaged)
+    log(LOG_NOTICE, LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
+        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
+             U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
 
   tor_free(uptime);
   tor_free(bw_sent);

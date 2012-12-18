@@ -1,0 +1,3 @@
+  o Minor features:
+    - Log packaged cell fullness as part of the heartbeat message.
+      Diagnosis to try to determine the extent of bug 7743.
