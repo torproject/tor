@@ -45,7 +45,7 @@
 typedef struct {
   char *new_address;
   time_t expires;
-  addressmap_entry_source_t source:3;
+  ENUM_BF(addressmap_entry_source_t) source:3;
   unsigned src_wildcard:1;
   unsigned dst_wildcard:1;
   short num_resolve_failures;

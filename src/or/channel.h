@@ -142,7 +142,7 @@ struct channel_s {
    * When we send CREATE cells along this connection, which half of the
    * space should we use?
    */
-  circ_id_type_t circ_id_type:2;
+  ENUM_BF(circ_id_type_t) circ_id_type:2;
   /*
    * Which circ_id do we try to use next on this connection?  This is
    * always in the range 0..1<<15-1.

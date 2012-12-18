@@ -1583,6 +1583,13 @@ typedef struct entry_connection_t {
 
 } entry_connection_t;
 
+typedef enum {
+    DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
+    DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
+    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS,
+    DIR_SPOOL_MICRODESC, /* NOTE: if we add another entry, add another bit. */
+} dir_spool_source_t;
+
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
 typedef struct dir_connection_t {
@@ -1601,12 +1608,8 @@ typedef struct dir_connection_t {
    * "spooling" of directory material to the outbuf.  Otherwise, we'd have
    * to append everything to the outbuf in one enormous chunk. */
   /** What exactly are we spooling right now? */
-  enum {
-    DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
-    DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
-    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS,
-    DIR_SPOOL_MICRODESC, /* NOTE: if we add another entry, add another bit. */
-  } dir_spool_src : 3;
+  ENUM_BF(dir_spool_source_t)  dir_spool_src : 3;
+
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */
   uint8_t router_purpose;
@@ -1782,7 +1785,8 @@ typedef enum {
 /** A reference-counted address policy rule. */
 typedef struct addr_policy_t {
   int refcnt; /**< Reference count */
-  addr_policy_action_t policy_type:2;/**< What to do when the policy matches.*/
+  /** What to do when the policy matches.*/
+  ENUM_BF(addr_policy_action_t) policy_type:2;
   unsigned int is_private:1; /**< True iff this is the pseudo-address,
                               * "private". */
   unsigned int is_canonical:1; /**< True iff this policy is the canonical
@@ -1850,7 +1854,7 @@ typedef struct download_status_t {
                            * again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
-  download_schedule_t schedule : 8;
+  ENUM_BF(download_schedule_t) schedule : 8;
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */
@@ -2114,7 +2118,7 @@ typedef struct microdesc_t {
    */
   time_t last_listed;
   /** Where is this microdescriptor currently stored? */
-  saved_location_t saved_location : 3;
+  ENUM_BF(saved_location_t) saved_location : 3;
   /** If true, do not attempt to cache this microdescriptor on disk. */
   unsigned int no_save : 1;
   /** If true, this microdesc has an entry in the microdesc_map */
@@ -2362,8 +2366,8 @@ typedef enum {
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 typedef struct networkstatus_t {
-  networkstatus_type_t type : 8; /**< Vote, consensus, or opinion? */
-  consensus_flavor_t flavor : 8; /**< If a consensus, what kind? */
+  ENUM_BF(networkstatus_type_t) type : 8; /**< Vote, consensus, or opinion? */
+  ENUM_BF(consensus_flavor_t) flavor : 8; /**< If a consensus, what kind? */
   time_t published; /**< Vote only: Time when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
   time_t fresh_until; /**< Time before which this is the most recent vote or
@@ -2846,7 +2850,7 @@ typedef struct origin_circuit_t {
 
   /** Kludge to help us prevent the warn in bug #6475 and eventually
    * debug why we are not seeing first hops in some cases. */
-  path_state_t path_state : 2;
+  ENUM_BF(path_state_t) path_state : 2;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has

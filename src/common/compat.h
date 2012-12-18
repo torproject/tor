@@ -132,6 +132,17 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define DBL_TO_U64(x) ((uint64_t) (x))
 #endif
 
+#if defined(_MSC_VER)
+/* XXXX024 we should instead have a more general check for "Is enum signed?"*/
+#define ENUM_BF(t) unsigned
+#else
+/** Wrapper for having a bitfield of an enumerated type. Where possible, we
+ * just use the enumerated type (so the compiler can help us and notice
+ * problems), but if enumerated types are unsigned, we must use unsigned,
+ * so that the loss of precision doesn't make large values negative. */
+#define ENUM_BF(t) t
+#endif
+
 /* GCC has several useful attributes. */
 #if defined(__GNUC__) && __GNUC__ >= 3
 #define ATTR_NORETURN __attribute__((noreturn))

@@ -129,6 +129,12 @@ typedef struct tor_tls_context_t {
 
 #define TOR_TLS_MAGIC 0x71571571
 
+typedef enum {
+    TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
+    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
+    TOR_TLS_ST_BUFFEREVENT
+} tor_tls_state_t;
+
 /** Holds a SSL object and its associated data.  Members are only
  * accessed from within tortls.c.
  */
@@ -138,12 +144,9 @@ struct tor_tls_t {
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   char *address; /**< An address to log when describing this connection. */
-  enum {
-    TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
-    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
-    TOR_TLS_ST_BUFFEREVENT
-  } state : 3; /**< The current SSL state, depending on which operations have
-                * completed successfully. */
+  ENUM_BF(tor_tls_state_t) state : 3; /**< The current SSL state,
+                                       * depending on which operations
+                                       * have completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
   unsigned int wasV2Handshake:1; /**< True iff the original handshake for
                                   * this connection used the updated version

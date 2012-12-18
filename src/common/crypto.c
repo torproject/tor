@@ -1505,7 +1505,7 @@ struct crypto_digest_t {
     SHA256_CTX sha2; /**< state for SHA256 */
   } d; /**< State for the digest we're using.  Only one member of the
         * union is usable, depending on the value of <b>algorithm</b>. */
-  digest_algorithm_t algorithm : 8; /**< Which algorithm is in use? */
+  ENUM_BF(digest_algorithm_t) algorithm : 8; /**< Which algorithm is in use? */
 };
 
 /** Allocate and return a new digest object to compute SHA1 digests.
