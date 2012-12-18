@@ -61,10 +61,10 @@ LIBTOR_OBJECTS = \
   transports.obj
 
 libtor.lib: $(LIBTOR_OBJECTS)
-	lib $(LIBTOR_OBJECTS) /out:libtor.lib
+	lib $(LIBTOR_OBJECTS) /out:$@
 
 tor.exe: libtor.lib tor_main.obj
-	$(CC) $(CFLAGS) $(LIBS) libtor.lib ..\common\*.lib tor_main.obj
+	$(CC) $(CFLAGS) $(LIBS) libtor.lib ..\common\*.lib tor_main.obj /Fe$@
 
 clean:
 	del $(LIBTOR_OBJECTS) *.lib tor.exe
