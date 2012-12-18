@@ -2189,7 +2189,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
       // DNS remaps can trigger this. So can failed hidden service
       // lookups.
       log_info(LD_BUG,
-               "No origin circuit for successful SOCKS stream %ld. Reason: "
+               "No origin circuit for successful SOCKS stream %lu. Reason: "
                "%d", ENTRY_TO_CONN(conn)->global_identifier, endreason);
     } else {
       TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->path_state

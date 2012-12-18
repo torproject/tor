@@ -1194,7 +1194,7 @@ entry_guards_update_state(or_state_t *state)
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
-      if (e->circ_attempts) {
+      if (e->circ_attempts > 0) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
         /* In the long run: circuit_success ~= successful_circuit_close +
