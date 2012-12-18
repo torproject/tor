@@ -4919,7 +4919,7 @@ tor_check_port_forwarding(const char *filename,
     status = tor_spawn_background(filename, argv, NULL, &child_handle);
 #endif
 
-    tor_free(argv);
+    tor_free((void*)argv);
 
     if (PROCESS_STATUS_ERROR == status) {
       log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
