@@ -214,16 +214,20 @@ typedef int32_t ssize_t;
 #if (SIZEOF_VOID_P > 4 && SIZEOF_VOID_P <= 8)
 #ifndef HAVE_INTPTR_T
 typedef int64_t intptr_t;
+#define SIZEOF_INTPTR_T 8
 #endif
 #ifndef HAVE_UINTPTR_T
 typedef uint64_t uintptr_t;
+#define SIZEOF_UINTPTR_T 8
 #endif
 #elif (SIZEOF_VOID_P > 2 && SIZEOF_VOID_P <= 4)
 #ifndef HAVE_INTPTR_T
 typedef int32_t intptr_t;
+#define SIZEOF_INTPTR_T 4
 #endif
 #ifndef HAVE_UINTPTR_T
 typedef uint32_t uintptr_t;
+#define SIZEOF_UINTPTR_T 4
 #endif
 #else
 #error "void * is either >8 bytes or <= 2.  In either case, I am confused."
