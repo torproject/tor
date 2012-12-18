@@ -18,3 +18,6 @@ libor-crypto.lib: $(LIBOR_CRYPTO_OBJECTS)
 
 libor-event.lib:  $(LIBOR_EVENT_OBJECTS)
 	lib $(LIBOR_EVENT_OBJECTS) /out:libor-event.lib
+
+clean:
+	del *.obj *.lib libor*.lib
