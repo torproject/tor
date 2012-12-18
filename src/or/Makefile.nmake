@@ -1,11 +1,12 @@
 all: tor.exe
 
-CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common \
+    /I ..\ext
 
-LIBS = ..\..\..\build-alpha\lib\libevent.a \
- ..\..\..\build-alpha\lib\libcrypto.a \
- ..\..\..\build-alpha\lib\libssl.a \
- ..\..\..\build-alpha\lib\libz.a \
+LIBS = ..\..\..\build-alpha\lib\libevent.lib \
+ ..\..\..\build-alpha\lib\libcrypto.lib \
+ ..\..\..\build-alpha\lib\libssl.lib \
+ ..\..\..\build-alpha\lib\libz.lib \
  ws2_32.lib advapi32.lib shell32.lib
 
 LIBTOR_OBJECTS = buffers.obj channel.obj channeltls.obj circuitbuild.obj \

@@ -1,6 +1,6 @@
 all: libor.lib libor-crypto.lib libor-event.lib
 
-CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\ext
 
 LIBOR_OBJECTS = address.obj compat.obj container.obj di_ops.obj \
 	log.obj memarea.obj mempool.obj procmon.obj util.obj \

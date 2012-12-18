@@ -1,6 +1,7 @@
 all: test.exe
 
-CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or \
+    /I ..\ext
 
 LIBS = ..\..\..\build-alpha\lib\libevent.lib \
  ..\..\..\build-alpha\lib\libcrypto.lib \
