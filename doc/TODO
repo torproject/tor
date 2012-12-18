@@ -1,11 +1,3 @@
 
-We've split out our TODO into three files:
-
-TODO.02x is the list of items we're planning to get done in the next
-stable release.
-
-TODO.external lives in svn under /projects/todo/. It's the list of
-external constraints and deliverables that we all need to keep in mind.
-
-TODO.future is the list of other items we plan to get to in later releases.
-
+We no longer track our TODO lists in git.  To see open Tor tasks, visit
+our bugtracker and wiki at trac.torproject.org.
