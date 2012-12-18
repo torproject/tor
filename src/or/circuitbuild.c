@@ -1350,7 +1350,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
         circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
         guard->circ_successes++;
 
-        log_info(LD_CIRC, "Got success count %lf/%lf for guard %s=%s",
+        log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
@@ -1368,7 +1368,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
       }
 
       if (guard->circ_attempts < guard->circ_successes) {
-        log_notice(LD_BUG, "Unexpectedly high successes counts (%lf/%lf) "
+        log_notice(LD_BUG, "Unexpectedly high successes counts (%f/%f) "
                  "for guard %s=%s",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
@@ -1407,6 +1407,13 @@ pathbias_count_build_success(origin_circuit_t *circ)
 
 /**
  * Check if a circuit was used and/or closed successfully.
+ *
+ * If we attempted to use the circuit to carry a stream but failed
+ * for whatever reason, or if the circuit mysteriously died before
+ * we could attach any streams, record these two cases.
+ *
+ * If we *have* successfully used the circuit, or it appears to
+ * have been closed by us locally, count it as a success.
  */
 void
 pathbias_check_close(origin_circuit_t *ocirc, int reason)
@@ -1751,7 +1758,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
     log_info(LD_CIRC,
-             "Scaling pathbias counts to (%lf/%lf)*(%d/%d) for guard %s=%s",
+             "Scaling pathbias counts to (%f/%f)*(%d/%d) for guard %s=%s",
              guard->circ_successes, guard->circ_attempts,
              mult_factor, scale_factor, guard->nickname,
              hex_str(guard->identity, DIGEST_LEN));
@@ -1771,7 +1778,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
     guard->unusable_circuits /= scale_factor;
   }
   guard->circ_attempts++;
-  log_info(LD_CIRC, "Got success count %lf/%lf for guard %s=%s",
+  log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
            guard->circ_successes, guard->circ_attempts, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;

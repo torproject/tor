@@ -1060,7 +1060,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       node->collapsed_circuits = collapsed;
       node->unusable_circuits = unusable;
 
-      log_info(LD_GENERAL, "Read %lf/%lf path bias for node %s",
+      log_info(LD_GENERAL, "Read %f/%f path bias for node %s",
                node->circ_successes, node->circ_attempts, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
@@ -1070,7 +1070,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
           pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
-                 "Path bias is too high (%lf/%lf); disabling node %s",
+                 "Path bias is too high (%f/%f); disabling node %s",
                  node->circ_successes, node->circ_attempts, node->nickname);
       }
 
@@ -1200,7 +1200,7 @@ entry_guards_update_state(or_state_t *state)
         /* In the long run: circuit_success ~= successful_circuit_close +
          *                                     collapsed_circuits +
          *                                     unusable_circuits */
-        tor_asprintf(&line->value, "%lf %lf %lf %lf %lf %lf",
+        tor_asprintf(&line->value, "%f %f %f %f %f %f",
                      e->circ_attempts, e->circ_successes,
                      pathbias_get_closed_count(e), e->collapsed_circuits,
                      e->unusable_circuits, e->timeouts);
