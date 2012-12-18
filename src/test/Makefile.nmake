@@ -18,9 +18,6 @@ TEST_OBJECTS = test.obj test_addr.obj test_containers.obj \
 tinytest.obj: ..\ext\tinytest.c
 	$(CC) $(CFLAGS) /D snprintf=_snprintf /c ..\ext\tinytest.c
 
-tinytest.obj: ..\ext\tinytest.c
-	$(CC) $(CFLAGS) /c ..\exe\tinytest.c
-
 test.exe: $(TEST_OBJECTS)
 	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib $(TEST_OBJECTS) /Fe$@
 
