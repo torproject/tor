@@ -3828,7 +3828,7 @@ get_next_token(memarea_t *area,
   if ((size_t)(eol-next) != 9+obname_len+5 ||
       strcmp_len(next+9, tok->object_type, obname_len) ||
       strcmp_len(eol-5, "-----", 5)) {
-    snprintf(ebuf, sizeof(ebuf), "Malformed object: mismatched end tag %s",
+    tor_snprintf(ebuf, sizeof(ebuf), "Malformed object: mismatched end tag %s",
              tok->object_type);
     ebuf[sizeof(ebuf)-1] = '\0';
     RET_ERR(ebuf);

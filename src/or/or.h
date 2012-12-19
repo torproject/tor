@@ -81,7 +81,6 @@
 #include <process.h>
 #include <direct.h>
 #include <windows.h>
-#define snprintf _snprintf
 #endif
 
 #ifdef USE_BUFFEREVENTS

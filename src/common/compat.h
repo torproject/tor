@@ -59,7 +59,6 @@
 #include <io.h>
 #include <math.h>
 #include <projects.h>
-#define snprintf _snprintf
 /* this is not exported as W .... */
 #define SHGetPathFromIDListW SHGetPathFromIDList
 /* wcecompat has vasprintf */
