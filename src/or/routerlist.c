@@ -1270,7 +1270,7 @@ dirserver_choose_by_weight(const smartlist_t *servers, double authority_weight)
   scale_array_elements_to_u64(weights, n, NULL);
   i = choose_array_element_by_weight(weights, n);
   tor_free(weights);
-  return smartlist_get(servers, i);
+  return (i < 0) ? NULL : smartlist_get(servers, i);
 }
 
 /** Choose randomly from among the dir_server_ts in sourcelist that
