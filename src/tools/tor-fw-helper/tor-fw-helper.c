@@ -100,7 +100,7 @@ usage(void)
           " [-T|--Test]\n"
           " [-v|--verbose]\n"
           " [-g|--fetch-public-ip]\n"
-          " [-p|--forward-port ([<external port>]:<internal port>])\n");
+          " [-p|--forward-port ([<external port>]:<internal port>)]\n");
 }
 
 /** Log commandline options to a hardcoded file <b>tor-fw-helper.log</b> in the
