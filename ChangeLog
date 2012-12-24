@@ -1,4 +1,12 @@
 Changes in version 0.2.4.7-alpha - 2012-12-24
+  Tor 0.2.4.7-alpha introduces a new approach to providing fallback
+  directory mirrors for more robust bootstrapping; fixes more issues where
+  clients with changing network conditions refuse to make any circuits;
+  adds initial support for exiting to IPv6 addresses; resumes being able
+  to update our GeoIP database, and includes the geoip6 file this time;
+  turns off the client-side DNS cache by default due to privacy risks;
+  and fixes a variety of other issues.
+
   o Major features (client resilience):
     - Add a new "FallbackDir" torrc option to use when we can't use
       a directory mirror from the consensus (either because we lack a
@@ -69,13 +77,13 @@ Changes in version 0.2.4.7-alpha - 2012-12-24
       closing an or_connection_t: call channel_mark_for_close() rather
       than connection_mark_for_close(). Fixes bug 7267. Bugfix on
       0.2.4.4-alpha.
-    - Distribute and install the geoip6 IPv6 GeoIP database. Fixes bug
+    - Include the geoip6 IPv6 GeoIP database in the tarball. Fixes bug
       7655; bugfix on 0.2.4.6-alpha.
 
   o Minor features:
-    - Add a new torrc option "ServerTransportListenAddr" to let users
-      select the address where their pluggable transports will listen
-      for connections. Resolves ticket 7013.
+    - Add a new torrc option "ServerTransportListenAddr" to let bridge
+      operators select the address where their pluggable transports will
+      listen for connections. Resolves ticket 7013.
     - Allow an optional $ before the node identity digest in the
       controller command GETINFO ns/id/<identity>, for consistency with
       md/id/<identity> and desc/id/<identity>. Resolves ticket 7059.
@@ -91,9 +99,9 @@ Changes in version 0.2.4.7-alpha - 2012-12-24
     - AutomapHostsOnResolve responses are now randomized, to avoid
       annoying situations where Tor is restarted and applications
       connect to the wrong addresses.
-    - We never try more than 1000 times to pick a new virtual address
-      when AutomapHostsOnResolve is set. That's good enough so long as
-      we aren't close to handing out our entire virtual address space;
+    - Never try more than 1000 times to pick a new virtual address when
+      AutomapHostsOnResolve is set. That's good enough so long as we
+      aren't close to handing out our entire virtual address space;
       if you're getting there, it's best to switch to IPv6 virtual
       addresses anyway.
 
