@@ -1,3 +1,126 @@
+Changes in version 0.2.4.7-alpha - 2012-12-24
+  o Major features (client resilience):
+    - Add a new "FallbackDir" torrc option to use when we can't use
+      a directory mirror from the consensus (either because we lack a
+      consensus, or because they're all down). Currently, all authorities
+      are fallbacks by default, and there are no other default fallbacks,
+      but that will change. This option will allow us to give clients a
+      longer list of servers to try to get a consensus from when first
+      connecting to the Tor network, and thereby reduce load on the
+      directory authorities. Implements proposal 206, "Preconfigured
+      directory sources for bootstrapping". We also removed the old
+      "FallbackNetworkstatus" option, since we never got it working well
+      enough to use it. Closes bug 572.
+    - If we have no circuits open, use a relaxed timeout (the
+      95-percentile cutoff) until a circuit succeeds. This heuristic
+      should allow Tor to succeed at building circuits even when the
+      network connection drastically changes. Should help with bug 3443.
+
+  o Major features (IPv6):
+    - Tor now has (alpha) support for exiting to IPv6 addresses. To
+      enable it as an exit node, make sure that you have IPv6
+      connectivity, then set the IPv6Exit flag to 1. Also make sure your
+      exit policy reads as you would like: the address * applies to all
+      address families, whereas *4 is IPv4 address only, and *6 is IPv6
+      addresses only. On the client side, you'll need to wait until the
+      authorities have upgraded, wait for enough exits to support IPv6,
+      apply the "IPv6Traffic" flag to a SocksPort, and use Socks5. Closes
+      ticket 5547, implements proposal 117 as revised in proposal 208.
+
+      We DO NOT recommend that clients with actual anonymity needs start
+      using IPv6 over Tor yet, since not enough exits support it yet.
+
+  o Major features (geoip database):
+    - Maxmind began labelling Tor relays as being in country "A1",
+      which breaks by-country node selection inside Tor. Now we use a
+      script to replace "A1" ("Anonymous Proxy") entries in our geoip
+      file with real country codes. This script fixes about 90% of "A1"
+      entries automatically and uses manual country code assignments to
+      fix the remaining 10%. See src/config/README.geoip for details.
+      Fixes bug 6266. Also update to the December 5 2012 Maxmind GeoLite
+      Country database, as modified above.
+
+  o Major bugfixes (client-side DNS):
+    - Turn off the client-side DNS cache by default. Updating and using
+      the DNS cache is now configurable on a per-client-port
+      level. SOCKSPort, DNSPort, etc lines may now contain
+      {No,}Cache{IPv4,IPv6,}DNS lines to indicate that we shouldn't
+      cache these types of DNS answers when we receive them from an
+      exit node in response to an application request on this port, and
+      {No,}UseCached{IPv4,IPv6,DNS} lines to indicate that if we have
+      cached DNS answers of these types, we shouldn't use them. It's
+      potentially risky to use cached DNS answers at the client, since
+      doing so can indicate to one exit what answers we've gotten
+      for DNS lookups in the past. With IPv6, this becomes especially
+      problematic. Using cached DNS answers for requests on the same
+      circuit would present less linkability risk, since all traffic
+      on a circuit is already linkable, but it would also provide
+      little performance benefit: the exit node caches DNS replies
+      too. Implements a simplified version of Proposal 205. Implements
+      ticket 7570.
+
+  o Major bugfixes (other):
+    - Alter circuit build timeout measurement to start at the point
+      where we begin the CREATE/CREATE_FAST step (as opposed to circuit
+      initialization). This should make our timeout measurements more
+      uniform. Previously, we were sometimes including ORconn setup time
+      in our circuit build time measurements. Should resolve bug 3443.
+    - Fix an assertion that could trigger in hibernate_go_dormant() when
+      closing an or_connection_t: call channel_mark_for_close() rather
+      than connection_mark_for_close(). Fixes bug 7267. Bugfix on
+      0.2.4.4-alpha.
+    - Distribute and install the geoip6 IPv6 GeoIP database. Fixes bug
+      7655; bugfix on 0.2.4.6-alpha.
+
+  o Minor features:
+    - Add a new torrc option "ServerTransportListenAddr" to let users
+      select the address where their pluggable transports will listen
+      for connections. Resolves ticket 7013.
+    - Allow an optional $ before the node identity digest in the
+      controller command GETINFO ns/id/<identity>, for consistency with
+      md/id/<identity> and desc/id/<identity>. Resolves ticket 7059.
+    - Log packaged cell fullness as part of the heartbeat message.
+      Diagnosis to try to determine the extent of bug 7743.
+
+  o Minor features (IPv6):
+    - AutomapHostsOnResolve now supports IPv6 addresses. By default, we
+      prefer to hand out virtual IPv6 addresses, since there are more of
+      them and we can't run out. To override this behavior and make IPv4
+      addresses preferred, set NoPreferIPv6Automap on whatever SOCKSPort
+      or DNSPort you're using for resolving. Implements ticket 7571.
+    - AutomapHostsOnResolve responses are now randomized, to avoid
+      annoying situations where Tor is restarted and applications
+      connect to the wrong addresses.
+    - We never try more than 1000 times to pick a new virtual address
+      when AutomapHostsOnResolve is set. That's good enough so long as
+      we aren't close to handing out our entire virtual address space;
+      if you're getting there, it's best to switch to IPv6 virtual
+      addresses anyway.
+
+  o Minor bugfixes:
+    - The ADDRMAP command can no longer generate an ill-formed error
+      code on a failed MAPADDRESS. It now says "internal" rather than
+      an English sentence fragment with spaces in the middle. Bugfix on
+      Tor 0.2.0.19-alpha.
+    - Fix log messages and comments to avoid saying "GMT" when we mean
+      "UTC". Fixes bug 6113.
+    - Compile on win64 using mingw64. Fixes bug 7260; patches from
+      "yayooo".
+    - Fix a crash when debugging unit tests on Windows: deallocate a
+      shared library with FreeLibrary, not CloseHandle. Fixes bug 7306;
+      bugfix on 0.2.2.17-alpha. Reported by "ultramage".
+
+  o Renamed options:
+    - The DirServer option is now DirAuthority, for consistency with
+      current naming patterns. You can still use the old DirServer form.
+
+  o Code simplification and refactoring:
+    - Move the client-side address-map/virtual-address/DNS-cache code
+      out of connection_edge.c into a new addressmap.c module.
+    - Remove unused code for parsing v1 directories and "running routers"
+      documents. Fixes bug 6887.
+
+
 Changes in version 0.2.3.25 - 2012-11-19
   The Tor 0.2.3 release series is dedicated to the memory of Len "rabbi"
   Sassaman (1980-2011), a long-time cypherpunk, anonymity researcher,

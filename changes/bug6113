@@ -1,3 +1,0 @@
-  o Trivial bugfixes:
-    - Fix log messages and comments to avoid saying "GMT" when we mean
-      "UTC". Fixes bug 6113.

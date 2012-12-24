@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Move the client-side address-map/virtual-address/DNS-cache code
-      out of connection_edge.c into a new addressmap.c module.

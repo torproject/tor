@@ -1,4 +1,0 @@
- - Major bugfixes
-   o Call channel_mark_for_close() rather than connection_mark_for_close()
-     in hibernate_go_dormant() when closing an or_connection_t.  Fixes bug
-     7267.
