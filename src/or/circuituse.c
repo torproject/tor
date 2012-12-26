@@ -663,6 +663,8 @@ circuit_expire_building(void)
       circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
     else
       circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+
+    pathbias_count_timeout(TO_ORIGIN_CIRCUIT(victim));
   }
 }
 
@@ -1158,6 +1160,18 @@ circuit_has_opened(origin_circuit_t *circ)
 {
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
+  /* Cannibalized circuits count as used for path bias.
+   * (PURPOSE_GENERAL circs especially, since they are
+   * marked dirty and often go unused after preemptive
+   * building). */
+  // XXX: Cannibalized now use RELAY_EARLY, which is visible
+  // to taggers end-to-end! We really need to probe these instead.
+  // Don't forget to remove this check once that's done!
+  if (circ->has_opened &&
+      circ->build_state->desired_path_len > DEFAULT_ROUTE_LEN) {
+    circ->path_state = PATH_STATE_USE_SUCCEEDED;
+  }
+
   /* Remember that this circuit has finished building. Now if we start
    * it building again later (e.g. by extending it), we will know not
    * to consider its build time. */
@@ -1399,6 +1413,25 @@ circuit_launch_by_extend_info(uint8_t purpose,
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,
                circuit_purpose_to_string(purpose));
+
+      if ((purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
+           purpose == CIRCUIT_PURPOSE_C_INTRODUCING) &&
+          circ->path_state == PATH_STATE_BUILD_SUCCEEDED) {
+        /* Path bias: Cannibalized rends pre-emptively count as a
+         * successfully used circ. We don't wait until the extend,
+         * because the rend point could be malicious.
+         *
+         * Same deal goes for client side introductions. Clients
+         * can be manipulated to connect repeatedly to them
+         * (especially web clients).
+         *
+         * If we decide to probe the initial portion of these circs,
+         * (up to the adversaries final hop), we need to remove this.
+         */
+        circ->path_state = PATH_STATE_USE_SUCCEEDED;
+        /* This must be called before the purpose change */
+        pathbias_check_close(circ, END_CIRC_REASON_FINISHED);
+      }
 
       circuit_change_purpose(TO_CIRCUIT(circ), purpose);
       /* Reset the start date of this circ, else expire_building

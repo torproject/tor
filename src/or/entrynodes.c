@@ -1100,7 +1100,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
     } else if (!strcasecmp(line->key, "EntryGuardPathBias")) {
       const or_options_t *options = get_options();
-      unsigned hop_cnt, success_cnt;
+      double hop_cnt, success_cnt, timeouts, collapsed, successful_closed,
+               unusable;
 
       if (!node) {
         *msg = tor_strdup("Unable to parse entry nodes: "
@@ -1108,25 +1109,48 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         break;
       }
 
-      if (tor_sscanf(line->value, "%u %u", &success_cnt, &hop_cnt) != 2) {
-        log_warn(LD_GENERAL, "Unable to parse guard path bias info: "
-                 "Misformated EntryGuardPathBias %s", escaped(line->value));
-        continue;
+      /* First try 3 params, then 2. */
+      /* In the long run: circuit_success ~= successful_circuit_close +
+       *                                     collapsed_circuits +
+       *                                     unusable_circuits */
+      if (tor_sscanf(line->value, "%lf %lf %lf %lf %lf %lf",
+                  &hop_cnt, &success_cnt, &successful_closed,
+                  &collapsed, &unusable, &timeouts) != 6) {
+        int old_success, old_hops;
+        if (tor_sscanf(line->value, "%u %u", &old_success, &old_hops) != 2) {
+          continue;
+        }
+        log_info(LD_GENERAL, "Reading old-style EntryGuardPathBias %s",
+                 escaped(line->value));
+
+        success_cnt = old_success;
+        successful_closed = old_success;
+        hop_cnt = old_hops;
+        timeouts = 0;
+        collapsed = 0;
+        unusable = 0;
       }
 
-      node->first_hops = hop_cnt;
-      node->circuit_successes = success_cnt;
-      log_info(LD_GENERAL, "Read %u/%u path bias for node %s",
-               node->circuit_successes, node->first_hops, node->nickname);
+      node->circ_attempts = hop_cnt;
+      node->circ_successes = success_cnt;
+
+      node->successful_circuits_closed = successful_closed;
+      node->timeouts = timeouts;
+      node->collapsed_circuits = collapsed;
+      node->unusable_circuits = unusable;
+
+      log_info(LD_GENERAL, "Read %f/%f path bias for node %s",
+               node->circ_successes, node->circ_attempts, node->nickname);
       /* Note: We rely on the < comparison here to allow us to set a 0
        * rate and disable the feature entirely. If refactoring, don't
        * change to <= */
-      if (node->circuit_successes/((double)node->first_hops)
-          < pathbias_get_disable_rate(options)) {
+      if (pathbias_get_success_count(node)/node->circ_attempts
+            < pathbias_get_extreme_rate(options) &&
+          pathbias_get_dropguards(options)) {
         node->path_bias_disabled = 1;
         log_info(LD_GENERAL,
-                 "Path bias is too high (%u/%u); disabling node %s",
-                 node->circuit_successes, node->first_hops, node->nickname);
+                 "Path bias is too high (%f/%f); disabling node %s",
+                 node->circ_successes, node->circ_attempts, node->nickname);
       }
 
     } else {
@@ -1250,11 +1274,16 @@ entry_guards_update_state(or_state_t *state)
                      d, e->chosen_by_version, t);
         next = &(line->next);
       }
-      if (e->first_hops) {
+      if (e->circ_attempts > 0) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardPathBias");
-        tor_asprintf(&line->value, "%u %u",
-                     e->circuit_successes, e->first_hops);
+        /* In the long run: circuit_success ~= successful_circuit_close +
+         *                                     collapsed_circuits +
+         *                                     unusable_circuits */
+        tor_asprintf(&line->value, "%f %f %f %f %f %f",
+                     e->circ_attempts, e->circ_successes,
+                     pathbias_get_closed_count(e), e->collapsed_circuits,
+                     e->unusable_circuits, e->timeouts);
         next = &(line->next);
       }
 

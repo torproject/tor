@@ -314,11 +314,16 @@ static config_var_t option_vars_[] = {
   VPORT(ORPort,                      LINELIST, NULL),
   V(OutboundBindAddress,         LINELIST,   NULL),
 
+  OBSOLETE("PathBiasDisableRate"),
   V(PathBiasCircThreshold,       INT,      "-1"),
   V(PathBiasNoticeRate,          DOUBLE,   "-1"),
-  V(PathBiasDisableRate,         DOUBLE,   "-1"),
+  V(PathBiasWarnRate,            DOUBLE,   "-1"),
+  V(PathBiasExtremeRate,         DOUBLE,   "-1"),
   V(PathBiasScaleThreshold,      INT,      "-1"),
   V(PathBiasScaleFactor,         INT,      "-1"),
+  V(PathBiasMultFactor,          INT,      "-1"),
+  V(PathBiasDropGuards,          AUTOBOOL, "0"),
+  V(PathBiasUseCloseCounts,      AUTOBOOL, "1"),
 
   OBSOLETE("PathlenCoinWeight"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),

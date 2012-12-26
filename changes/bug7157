@@ -1,0 +1,26 @@
+
+ o Minor features:
+   - Alter the Path Bias log messages to be more descriptive in terms
+     of reporting timeouts and other statistics.
+   - Create three levels of Path Bias log messages, as opposed to just
+     two. These are configurable via consensus as well as via torrc
+     options PathBiasNoticeRate, PathBiasWarnRate, PathBiasExtremeRate.
+     The default values are 0.70, 0.50, and 0.30 respectively.
+   - Separate the log message levels from the decision to drop guards,
+     which also is available via torrc option PathBiasDropGuards.
+     PathBiasDropGuards defaults to 0 (off).
+   - Deprecate PathBiasDisableRate in favor of PathBiasDropGuards
+     in combination with PathBiasExtremeRate.
+   - Increase the default values for PathBiasScaleThreshold and
+     PathBiasCircThreshold from 200 and 20 to 300 and 150, respectively.
+   - Add in circuit usage accounting to path bias. If we try to use a
+     built circuit but fail for any reason, it counts as path bias.
+     Certain classes of circuits where the adversary gets to pick your
+     destination node are exempt from this accounting. Usage accounting
+     can be specifically disabled via consensus parameter or torrc.
+   - Convert all internal path bias state to double-precision floating
+     point, to avoid roundoff error and other issues.
+   - Only record path bias information for circuits that have completed
+     *two* hops. Assuming end-to-end tagging is the attack vector, this
+     makes us more resilient to ambient circuit failure without any 
+     detection capability loss.

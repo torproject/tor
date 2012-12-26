@@ -1038,8 +1038,13 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
   for (circ = global_circuitlist; circ; circ = circ->next) {
     int mark = 0;
     if (circ->n_chan == chan) {
-        circuit_set_n_circid_chan(circ, 0, NULL);
-        mark = 1;
+      circuit_set_n_circid_chan(circ, 0, NULL);
+      mark = 1;
+
+      /* If we didn't request this closure, pass the remote
+       * bit to mark_for_close. */
+      if (chan->reason_for_closing != CHANNEL_CLOSE_REQUESTED)
+        reason |= END_CIRC_REASON_FLAG_REMOTE;
     }
     if (! CIRCUIT_IS_ORIGIN(circ)) {
       or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
@@ -1347,7 +1352,10 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
     }
     reason = END_CIRC_REASON_NONE;
   }
+
   if (CIRCUIT_IS_ORIGIN(circ)) {
+    pathbias_check_close(TO_ORIGIN_CIRCUIT(circ), reason);
+
     /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;
   }

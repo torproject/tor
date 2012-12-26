@@ -693,6 +693,26 @@ connection_ap_process_end_not_open(
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   (void) layer_hint; /* unused */
 
+  if (rh->length > 0) {
+    if (reason == END_STREAM_REASON_TORPROTOCOL ||
+        reason == END_STREAM_REASON_INTERNAL ||
+        reason == END_STREAM_REASON_DESTROY) {
+      /* All three of these reasons could mean a failed tag
+       * hit the exit and it complained. Do not probe.
+       * Fail the circuit. */
+      circ->path_state = PATH_STATE_USE_FAILED;
+      return -END_CIRC_REASON_TORPROTOCOL;
+    } else {
+      /* Path bias: If we get a valid reason code from the exit,
+       * it wasn't due to tagging.
+       *
+       * We rely on recognized+digest being strong enough to make
+       * tags unlikely to allow us to get tagged, yet 'recognized'
+       * reason codes here. */
+      circ->path_state = PATH_STATE_USE_SUCCEEDED;
+    }
+  }
+
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
       /* avoid retry if rend */
       !connection_edge_is_rendezvous_stream(edge_conn)) {

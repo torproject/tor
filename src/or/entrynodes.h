@@ -31,8 +31,12 @@ typedef struct entry_guard_t {
                                   * router, 1 if we have. */
   unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
                                * in spite of having it marked as unreachable?*/
-  unsigned int path_bias_notice : 1; /**< Did we alert the user about path bias
+  unsigned int path_bias_noticed : 1; /**< Did we alert the user about path
+                                       * bias for this node already? */
+  unsigned int path_bias_warned : 1; /**< Did we alert the user about path bias
                                       * for this node already? */
+  unsigned int path_bias_extreme : 1; /**< Did we alert the user about path
+                                       * bias for this node already? */
   unsigned int path_bias_disabled : 1; /**< Have we disabled this node because
                                         * of path bias issues? */
   unsigned int is_dir_cache : 1; /**< Is this node a directory cache? */
@@ -45,9 +49,18 @@ typedef struct entry_guard_t {
   time_t last_attempted; /**< 0 if we can connect to this guard, or the time
                           * at which we last failed to connect to it. */
 
-  unsigned first_hops; /**< Number of first hops this guard has completed */
-  unsigned circuit_successes; /**< Number of successfully built circuits using
+  double circ_attempts; /**< Number of circuits this guard has "attempted" */
+  double circ_successes; /**< Number of successfully built circuits using
                                * this guard as first hop. */
+  double successful_circuits_closed; /**< Number of circuits that carried
+                                        * streams successfully. */
+  double collapsed_circuits; /**< Number of fully built circuits that were
+                                 * remotely closed before any streams were
+                                 * attempted. */
+  double unusable_circuits; /**< Number of circuits for which streams were
+                                *  attempted, but none succeeded. */
+  double timeouts; /**< Number of 'right-censored' circuit timeouts for this
+                       * guard. */
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
@@ -99,6 +112,9 @@ int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const struct transport_t **transport);
 
 int validate_pluggable_transports_config(void);
+
+double pathbias_get_closed_count(entry_guard_t *gaurd);
+double pathbias_get_success_count(entry_guard_t *guard);
 
 #endif
 
