@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Rate-limit the "No circuits are opened. Relaxed timeout for a
+      circuit with channel state open..." message to once per hour to
+      keep it from filling the notice logs. Mitigates bug 7799 but does
+      not fix the underlying cause. Bugfix on 0.2.4.7-alpha.
+
