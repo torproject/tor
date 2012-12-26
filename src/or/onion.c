@@ -304,9 +304,8 @@ onion_skin_create(int type,
  * type <b>type</b>, responding to the client request in <b>onion_skin</b>
  * using the keys in <b>keys</b>.  On success, write our response into
  * <b>reply_out</b>, generate <b>keys_out_len</b> bytes worth of key material
- * in <b>keys_out_len</b>, and return the length of the reply. On failure,
- * return -1.
- * DOCDOC rend_nonce_out
+ * in <b>keys_out_len</b>, a hidden service nonce to <b>rend_nonce_out</b>,
+ * and return the length of the reply. On failure, return -1.
  */
 int
 onion_skin_server_handshake(int type,

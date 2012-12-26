@@ -490,10 +490,10 @@ circuit_n_chan_done(channel_t *chan, int status)
 
 /** Find a new circid that isn't currently in use on the circ->n_chan
  * for the outgoing
- * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
- * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
- * to this circuit. DOCDOC new arguments
- * Return -1 if we failed to find a suitable circid, else return 0.
+ * circuit <b>circ</b>, and deliver the cell <b>create_cell</b> to this
+ * circuit.  If <b>relayed</b> is true, this is a create cell somebody
+ * gave us via an EXTEND cell, so we shouldn't worry if we don't understand
+ * it. Return -1 if we failed to find a suitable circid, else return 0.
  */
 static int
 circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,

@@ -84,29 +84,44 @@ tag_unpack(const uint8_t *tag, uint64_t *chan_id, circid_t *circ_id)
   *circ_id = get_uint16(tag+8);
 }
 
-/** DOCDOC */
+/** Magic numbers to make sure our cpuworker_requests don't grow any
+ * mis-framing bugs. */
 #define CPUWORKER_REQUEST_MAGIC 0xda4afeed
 #define CPUWORKER_REPLY_MAGIC 0x5eedf00d
 
-/**DOCDOC*/
+/** A request sent to a cpuworker. */
 typedef struct cpuworker_request_t {
+  /** Magic number; must be CPUWORKER_REQUEST_MAGIC. */
   uint32_t magic;
   /** Opaque tag to identify the job */
   uint8_t tag[TAG_LEN];
+  /** Task code. Must be one of CPUWORKER_TASK_* */
   uint8_t task;
 
+  /** A create cell for the cpuworker to process. */
   create_cell_t create_cell;
+
   /* Turn the above into a tagged union if needed. */
 } cpuworker_request_t;
 
-/**DOCDOC*/
+/** A reply sent by a cpuworker. */
 typedef struct cpuworker_reply_t {
+  /** Magic number; must be CPUWORKER_REPLY_MAGIC. */
   uint32_t magic;
+  /** Opaque tag to identify the job; matches the request's tag.*/
   uint8_t tag[TAG_LEN];
+  /** True iff we got a successful request. */
   uint8_t success;
 
+  /** Output of processing a create cell
+   *
+   * @{
+   */
+  /** The created cell to send back. */
   created_cell_t created_cell;
+  /** The keys to use on this circuit. */
   uint8_t keys[CPATH_KEY_MATERIAL_LEN];
+  /** Input to use for authenticating introduce1 cells. */
   uint8_t rend_auth_material[DIGEST_LEN];
 } cpuworker_reply_t;
 

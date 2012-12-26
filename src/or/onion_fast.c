@@ -12,7 +12,7 @@
 #include "or.h"
 #include "onion_fast.h"
 
-/**DOCDOC*/
+/** Release all state held in <b>victim</b>. */
 void
 fast_handshake_state_free(fast_handshake_state_t *victim)
 {
@@ -22,7 +22,8 @@ fast_handshake_state_free(fast_handshake_state_t *victim)
   tor_free(victim);
 }
 
-/** DOCDOC */
+/** Create the state needed to perform a CREATE_FAST hasnshake. Return 0
+ * on success, -1 on failure. */
 int
 fast_onionskin_create(fast_handshake_state_t **handshake_state_out,
                       uint8_t *handshake_out)
