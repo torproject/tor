@@ -27,6 +27,8 @@ int tor_memeq(const void *a, const void *b, size_t sz);
 #define fast_memeq(a,b,c)  (0==memcmp((a),(b),(c)))
 #define fast_memneq(a,b,c) (0!=memcmp((a),(b),(c)))
 
+int safe_mem_is_zero(const void *mem, size_t sz);
+
 /** A type for a map from DIGEST256_LEN-byte blobs to void*, such that
  * data lookups take an amount of time proportional only to the size
  * of the map, and not to the position or presence of the item in the map.

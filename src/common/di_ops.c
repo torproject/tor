@@ -203,3 +203,20 @@ dimap_search(const di_digest256_map_t *map, const uint8_t *key,
   return (void *)result;
 }
 
+/**
+ * Return true iff the <b>sz</b> bytes at <b>mem</b> are all zero. Runs in
+ * time independent of the contents of <b>mem</b>.
+ */
+int
+safe_mem_is_zero(const void *mem, size_t sz)
+{
+  uint32_t total = 0;
+  const uint8_t *ptr = mem;
+
+  while (sz--) {
+    total |= *ptr++;
+  }
+
+  return 1 & ((total - 1) >> 8);
+}
+
