@@ -365,7 +365,7 @@ static const routerstatus_t *
 directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
                                  uint8_t dir_purpose)
 {
-  const routerstatus_t *rs;
+  const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
 
   if (options->UseBridges)
