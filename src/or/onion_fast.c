@@ -29,8 +29,11 @@ fast_onionskin_create(fast_handshake_state_t **handshake_state_out,
                       uint8_t *handshake_out)
 {
   fast_handshake_state_t *s;
-  *handshake_state_out = s =tor_malloc(sizeof(fast_handshake_state_t));
-  crypto_rand((char*)s->state, sizeof(s->state));
+  *handshake_state_out = s = tor_malloc(sizeof(fast_handshake_state_t));
+  if (crypto_rand((char*)s->state, sizeof(s->state)) < 0) {
+    tor_free(s);
+    return -1;
+  }
   memcpy(handshake_out, s->state, DIGEST_LEN);
   return 0;
 }

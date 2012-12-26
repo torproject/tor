@@ -32,12 +32,12 @@ typedef struct curve25519_keypair_t {
 #ifdef CURVE25519_ENABLED
 int curve25519_public_key_is_ok(const curve25519_public_key_t *);
 
-void curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
-                                    int extra_strong);
+int curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
+                                   int extra_strong);
 void curve25519_public_key_generate(curve25519_public_key_t *key_out,
                                     const curve25519_secret_key_t *seckey);
-void curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
-                                 int extra_strong);
+int curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
+                                int extra_strong);
 
 void curve25519_handshake(uint8_t *output,
                           const curve25519_secret_key_t *,

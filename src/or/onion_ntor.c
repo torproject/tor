@@ -78,7 +78,10 @@ onion_skin_ntor_create(const uint8_t *router_id,
 
   memcpy(state->router_id, router_id, DIGEST_LEN);
   memcpy(&state->pubkey_B, router_key, sizeof(curve25519_public_key_t));
-  curve25519_secret_key_generate(&state->seckey_x, 0);
+  if (curve25519_secret_key_generate(&state->seckey_x, 0) < 0) {
+    tor_free(state);
+    return -1;
+  }
   curve25519_public_key_generate(&state->pubkey_X, &state->seckey_x);
 
   op = onion_skin_out;

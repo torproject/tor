@@ -54,14 +54,15 @@ curve25519_public_key_is_ok(const curve25519_public_key_t *key)
 
 /** Generate a new keypair and return the secret key.  If <b>extra_strong</b>
  * is true, this key is possibly going to get used more than once, so
- * use a better-than-usual RNG. */
-void
+ * use a better-than-usual RNG. Return 0 on success, -1 on failure. */
+int
 curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
                                int extra_strong)
 {
   uint8_t k_tmp[CURVE25519_SECKEY_LEN];
 
-  crypto_rand((char*)key_out->secret_key, CURVE25519_SECKEY_LEN);
+  if (crypto_rand((char*)key_out->secret_key, CURVE25519_SECKEY_LEN) < 0)
+    return -1;
   if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
     /* If they asked for extra-strong entropy and we have some, use it as an
      * HMAC key to improve not-so-good entopy rather than using it directly,
@@ -74,6 +75,8 @@ curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
   key_out->secret_key[0] &= 248;
   key_out->secret_key[31] &= 127;
   key_out->secret_key[31] |= 64;
+
+  return 0;
 }
 
 void
@@ -85,12 +88,14 @@ curve25519_public_key_generate(curve25519_public_key_t *key_out,
   curve25519_impl(key_out->public_key, seckey->secret_key, basepoint);
 }
 
-void
+int
 curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
                             int extra_strong)
 {
-  curve25519_secret_key_generate(&keypair_out->seckey, extra_strong);
+  if (curve25519_secret_key_generate(&keypair_out->seckey, extra_strong) < 0)
+    return -1;
   curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
+  return 0;
 }
 
 int

@@ -339,7 +339,8 @@ rotate_onion_key(void)
   tor_free(fname_prev);
   fname = get_datadir_fname2("keys", "secret_onion_key_ntor");
   fname_prev = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
-  curve25519_keypair_generate(&new_curve25519_keypair, 1);
+  if (curve25519_keypair_generate(&new_curve25519_keypair, 1) < 0)
+    goto error;
   if (file_status(fname) == FN_FILE) {
     if (replace_file(fname, fname_prev))
       goto error;
@@ -481,7 +482,8 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
         }
         log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
                  fname);
-        curve25519_keypair_generate(keys_out, 1);
+        if (curve25519_keypair_generate(keys_out, 1) < 0)
+          goto error;
         if (curve25519_keypair_write_to_file(keys_out, fname, tag)<0) {
           log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);
