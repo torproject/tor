@@ -936,14 +936,11 @@ consider_testing_reachability(int test_or, int test_dir)
     if (test_or || test_dir) {
 #define SELF_EXCLUDED_WARN_INTERVAL 3600
       static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
-      char *msg;
-      if ((msg = rate_limit_log(&warning_limit, approx_time()))) {
-        log_warn(LD_CIRC, "Can't peform self-tests for this relay: we have "
+      log_fn_ratelim(&warning_limit, LOG_WARN, LD_CIRC,
+                 "Can't peform self-tests for this relay: we have "
                  "listed ourself in ExcludeNodes, and StrictNodes is set. "
                  "We cannot learn whether we are usable, and will not "
-                 "be able to advertise ourself.%s", msg);
-        tor_free(msg);
-      }
+                 "be able to advertise ourself.");
     }
     return;
   }
