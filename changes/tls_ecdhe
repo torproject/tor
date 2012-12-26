@@ -1,10 +1,12 @@
   o Major features:
 
-    - Servers can now enable the ECDHE TLS ciphersuites when
-      available and appropriate. These ciphersuites, when used with
-      the P-256 elliptic curve, let us negotiate forward-secure TLS
-      secret keys more safely and more efficiently than with our
-      previous use of Diffie Hellman modulo a 1024-bit prime.
+    - Servers can now enable the ECDHE TLS ciphersuites when available
+      and appropriate. These ciphersuites let us negotiate forward-
+      secure TLS secret keys more safely and more efficiently than with
+      our previous use of Diffie Hellman modulo a 1024-bit prime.
+      By default, public servers prefer the (faster) P224 group, and
+      bridges prefer the (more common) P256 group; you can override this
+      with the TLSECGroup option.
 
       Enabling these ciphers was a little tricky, since for a long
       time, clients had been claiming to support them without

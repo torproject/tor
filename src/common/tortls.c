@@ -236,9 +236,11 @@ static X509* tor_tls_create_certificate(crypto_pk_t *rsa,
 static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     crypto_pk_t *identity,
                                     unsigned int key_lifetime,
+                                    unsigned int flags,
                                     int is_client);
 static tor_tls_context_t *tor_tls_context_new(crypto_pk_t *identity,
                                               unsigned int key_lifetime,
+                                              unsigned int flags,
                                               int is_client);
 static int check_cert_lifetime_internal(int severity, const X509 *cert,
                                    int past_tolerance, int future_tolerance);
@@ -1098,17 +1100,20 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
 /** Create new global client and server TLS contexts.
  *
  * If <b>server_identity</b> is NULL, this will not generate a server
- * TLS context. If <b>is_public_server</b> is non-zero, this will use
+ * TLS context. If TOR_TLS_CTX_IS_PUBLIC_SERVER is set in <b>flags</b>, use
  * the same TLS context for incoming and outgoing connections, and
- * ignore <b>client_identity</b>. */
+ * ignore <b>client_identity</b>. If one of TOR_TLS_CTX_USE_ECDHE_P{224,256}
+ * is set in <b>flags</b>, use that ECDHE group if possible; otherwise use
+ * the default ECDHE group. */
 int
-tor_tls_context_init(int is_public_server,
+tor_tls_context_init(unsigned flags,
                      crypto_pk_t *client_identity,
                      crypto_pk_t *server_identity,
                      unsigned int key_lifetime)
 {
   int rv1 = 0;
   int rv2 = 0;
+  const int is_public_server = flags & TOR_TLS_CTX_IS_PUBLIC_SERVER;
 
   if (is_public_server) {
     tor_tls_context_t *new_ctx;
@@ -1118,7 +1123,7 @@ tor_tls_context_init(int is_public_server,
 
     rv1 = tor_tls_context_init_one(&server_tls_context,
                                    server_identity,
-                                   key_lifetime, 0);
+                                   key_lifetime, flags, 0);
 
     if (rv1 >= 0) {
       new_ctx = server_tls_context;
@@ -1135,6 +1140,7 @@ tor_tls_context_init(int is_public_server,
       rv1 = tor_tls_context_init_one(&server_tls_context,
                                      server_identity,
                                      key_lifetime,
+                                     flags,
                                      0);
     } else {
       tor_tls_context_t *old_ctx = server_tls_context;
@@ -1148,6 +1154,7 @@ tor_tls_context_init(int is_public_server,
     rv2 = tor_tls_context_init_one(&client_tls_context,
                                    client_identity,
                                    key_lifetime,
+                                   flags,
                                    1);
   }
 
@@ -1164,10 +1171,12 @@ static int
 tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                          crypto_pk_t *identity,
                          unsigned int key_lifetime,
+                         unsigned int flags,
                          int is_client)
 {
   tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
                                                    key_lifetime,
+                                                   flags,
                                                    is_client);
   tor_tls_context_t *old_ctx = *ppcontext;
 
@@ -1191,7 +1200,7 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
  */
 static tor_tls_context_t *
 tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
-                    int is_client)
+                    unsigned flags, int is_client)
 {
   crypto_pk_t *rsa = NULL, *rsa_auth = NULL;
   EVP_PKEY *pkey = NULL;
@@ -1362,9 +1371,18 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 #if (!defined(OPENSSL_NO_EC) &&                         \
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0))
   if (! is_client) {
+    int nid;
     EC_KEY *ec_key;
+    if (flags & TOR_TLS_CTX_USE_ECDHE_P224)
+      nid = NID_secp224r1;
+    else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
+      nid = NID_X9_62_prime256v1;
+    else if (flags & TOR_TLS_CTX_IS_PUBLIC_SERVER)
+      nid = NID_X9_62_prime256v1;
+    else
+      nid = NID_secp224r1;
     /* Use P-256 for ECDHE. */
-    ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    ec_key = EC_KEY_new_by_curve_name(nid);
     if (ec_key != NULL) /*XXXX Handle errors? */
       SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
     EC_KEY_free(ec_key);

@@ -3854,6 +3854,8 @@ typedef struct {
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
 
+  char *TLSECGroup; /**< One of "P256", "P224", or nil for auto */
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
