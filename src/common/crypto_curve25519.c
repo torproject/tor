@@ -49,11 +49,7 @@ curve25519_impl(uint8_t *output, const uint8_t *secret,
 int
 curve25519_public_key_is_ok(const curve25519_public_key_t *key)
 {
-  static const uint8_t zero[] =
-    "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-    "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-
-  return tor_memneq(key->public_key, zero, CURVE25519_PUBKEY_LEN);
+  return !safe_mem_is_zero(key->public_key, CURVE25519_PUBKEY_LEN);
 }
 
 /** Generate a new keypair and return the secret key.  If <b>extra_strong</b>

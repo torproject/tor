@@ -167,18 +167,10 @@ onion_skin_ntor_server_handshake(const uint8_t *onion_skin,
 
   /* build secret_input */
   curve25519_handshake(si, &s.seckey_y, &s.pubkey_X);
-  bad = tor_memeq(si,
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00", 32);
+  bad = safe_mem_is_zero(si, CURVE25519_OUTPUT_LEN);
   si += CURVE25519_OUTPUT_LEN;
   curve25519_handshake(si, &keypair_bB->seckey, &s.pubkey_X);
-  bad |= tor_memeq(si,
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00", 32);
+  bad |= safe_mem_is_zero(si, CURVE25519_OUTPUT_LEN);
   si += CURVE25519_OUTPUT_LEN;
 
   APPEND(si, my_node_id, DIGEST_LEN);
@@ -257,19 +249,11 @@ onion_skin_ntor_client_handshake(
 
   /* Compute secret_input */
   curve25519_handshake(si, &handshake_state->seckey_x, &s.pubkey_Y);
-  bad = tor_memeq(si,
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00"
-                  "\x00\x00\x00\x00\x00\x00\x00\x00", 32);
+  bad = safe_mem_is_zero(si, CURVE25519_OUTPUT_LEN);
   si += CURVE25519_OUTPUT_LEN;
   curve25519_handshake(si, &handshake_state->seckey_x,
                        &handshake_state->pubkey_B);
-  bad |= tor_memeq(si,
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00"
-                   "\x00\x00\x00\x00\x00\x00\x00\x00", 32);
+  bad |= safe_mem_is_zero(si, CURVE25519_OUTPUT_LEN);
   si += CURVE25519_OUTPUT_LEN;
   APPEND(si, handshake_state->router_id, DIGEST_LEN);
   APPEND(si, handshake_state->pubkey_B.public_key, CURVE25519_PUBKEY_LEN);
