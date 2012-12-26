@@ -1,0 +1,26 @@
+  o Major features:
+
+    - Servers can now enable the ECDHE TLS ciphersuites when available
+      and appropriate. These ciphersuites let us negotiate forward-
+      secure TLS secret keys more safely and more efficiently than with
+      our previous use of Diffie Hellman modulo a 1024-bit prime.
+      By default, public servers prefer the (faster) P224 group, and
+      bridges prefer the (more common) P256 group; you can override this
+      with the TLSECGroup option.
+
+      Enabling these ciphers was a little tricky, since for a long
+      time, clients had been claiming to support them without
+      actually doing so, in order to foil fingerprinting. But with
+      the client-side implementation of proposal 198 in
+      0.2.3.17-beta, clients can now match the ciphers from recent
+      firefox versions *and* list the ciphers they actually mean, so
+      servers can believe such clients when they advertise ECDHE
+      support in their TLS ClientHello messages.
+
+      This feature requires clients running 0.2.3.17-beta or later,
+      and requires both sides to be running OpenSSL 1.0.0 or later
+      with ECC support. OpenSSL 1.0.1, with the compile-time option
+      "enable-ec_nistp_64_gcc_128", is highly recommended.
+      Implements the server side of proposal 198; closes ticket
+      7200.
+

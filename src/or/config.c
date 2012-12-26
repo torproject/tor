@@ -372,6 +372,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TestVia"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(Tor2webMode,                 BOOL,     "0"),
+  V(TLSECGroup,                  STRING,   NULL),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -1192,6 +1193,9 @@ options_transition_requires_fresh_tls_context(const or_options_t *old_options,
   if ((old_options->DynamicDHGroups != new_options->DynamicDHGroups)) {
     return 1;
   }
+
+  if (!opt_streq(old_options->TLSECGroup, new_options->TLSECGroup))
+    return 1;
 
   return 0;
 }
@@ -2299,6 +2303,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
         routerset_free(rs);
       }
     }
+  }
+
+  if (options->TLSECGroup && (strcasecmp(options->TLSECGroup, "P256") &&
+                              strcasecmp(options->TLSECGroup, "P224"))) {
+    COMPLAIN("Unrecognized TLSECGroup: Falling back to the default.");
+    tor_free(options->TLSECGroup);
   }
 
   if (options->ExcludeNodes && options->StrictNodes) {

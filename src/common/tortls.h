@@ -54,7 +54,12 @@ const char *tor_tls_err_to_string(int err);
 void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
 
 void tor_tls_free_all(void);
-int tor_tls_context_init(int is_public_server,
+
+#define TOR_TLS_CTX_IS_PUBLIC_SERVER (1u<<0)
+#define TOR_TLS_CTX_USE_ECDHE_P256   (1u<<1)
+#define TOR_TLS_CTX_USE_ECDHE_P224   (1u<<2)
+
+int tor_tls_context_init(unsigned flags,
                          crypto_pk_t *client_identity,
                          crypto_pk_t *server_identity,
                          unsigned int key_lifetime);
@@ -129,6 +134,7 @@ int tor_tls_cert_is_valid(int severity,
                           const tor_cert_t *cert,
                           const tor_cert_t *signing_cert,
                           int check_rsa_1024);
+const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 
 #endif
 

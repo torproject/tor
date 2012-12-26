@@ -491,7 +491,18 @@ v3_authority_check_key_expiry(void)
 int
 router_initialize_tls_context(void)
 {
-  return tor_tls_context_init(public_server_mode(get_options()),
+  unsigned int flags = 0;
+  const or_options_t *options = get_options();
+  if (public_server_mode(options))
+    flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
+  if (options->TLSECGroup) {
+    if (!strcasecmp(options->TLSECGroup, "P256"))
+      flags |= TOR_TLS_CTX_USE_ECDHE_P256;
+    else if (!strcasecmp(options->TLSECGroup, "P224"))
+      flags |= TOR_TLS_CTX_USE_ECDHE_P224;
+  }
+
+  return tor_tls_context_init(flags,
                               get_tlsclient_identity_key(),
                               server_mode(get_options()) ?
                               get_server_identity_key() : NULL,
