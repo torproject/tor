@@ -22,5 +22,8 @@ int assign_onionskin_to_cpuworker(connection_t *cpuworker,
                                   or_circuit_t *circ,
                                   struct create_cell_t *onionskin);
 
+uint64_t estimated_usec_for_onionskins(uint32_t n_requests,
+                                       uint16_t onionskin_type);
+
 #endif
 

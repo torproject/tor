@@ -98,6 +98,11 @@ typedef struct cpuworker_request_t {
   /** Task code. Must be one of CPUWORKER_TASK_* */
   uint8_t task;
 
+  /** Flag: Are we timing this request? */
+  unsigned timed : 1;
+  /** If we're timing this request, when was it sent to the cpuworker? */
+  struct timeval started_at;
+
   /** A create cell for the cpuworker to process. */
   create_cell_t create_cell;
 
@@ -112,6 +117,17 @@ typedef struct cpuworker_reply_t {
   uint8_t tag[TAG_LEN];
   /** True iff we got a successful request. */
   uint8_t success;
+
+  /** Are we timing this request? */
+  unsigned int timed : 1;
+  /** What handshake type was the request? (Used for timing) */
+  uint16_t handshake_type;
+  /** When did we send the request to the cpuworker? */
+  struct timeval started_at;
+  /** Once the cpuworker received the request, how many microseconds did it
+   * take? (This shouldn't overflow; 4 billion micoseconds is over an hour,
+   * and we'll never have an onion handshake that takes so long.) */
+  uint32_t n_usec;
 
   /** Output of processing a create cell
    *
@@ -163,6 +179,62 @@ connection_cpu_reached_eof(connection_t *conn)
   return 0;
 }
 
+/** Indexed by handshake type: how many onionskins have we processed and
+ * counted of that type? */
+static uint64_t onionskins_n_processed[MAX_ONION_HANDSHAKE_TYPE+1];
+/** Indexed by handshake type, corresponding to the onionskins counted in
+ * onionskins_n_processed: how many microseconds have we spent in cpuworkers
+ * processing that kind of onionskin? */
+static uint64_t onionskins_usec_internal[MAX_ONION_HANDSHAKE_TYPE+1];
+/** Indexed by handshake type, corresponding to onionskins counted in
+ * onionskins_n_processed: how many microseconds have we spent waiting for
+ * cpuworkers to give us answers for that kind of onionskin?
+ */
+static uint64_t onionskins_usec_roundtrip[MAX_ONION_HANDSHAKE_TYPE+1];
+
+/** If any onionskin takes longer than this, we clip them to this
+ * time. (microseconds) */
+#define MAX_BELIEVABLE_ONIONSKIN_DELAY (2*1000*1000)
+
+/** Return true iff we'd like to measure a handshake of type
+ * <b>onionskin_type</b>. */
+static int
+should_time_request(uint16_t onionskin_type)
+{
+  /* If we've never heard of this type, we shouldn't even be here. */
+  if (onionskin_type > MAX_ONION_HANDSHAKE_TYPE)
+    return 0;
+  /* Measure the first N handshakes of each type, to ensure we have a
+   * sample */
+  if (onionskins_n_processed[onionskin_type] < 4096)
+    return 1;
+  /** Otherwise, measure with P=1/128.  We avoid doing this for every
+   * handshake, since the measurement itself can take a little time. */
+  return tor_weak_random() < (TOR_RAND_MAX/128);
+}
+
+/** Return an estimate of how many microseconds we will need for a single
+ * cpuworker to to process <b>n_requests</b> onionskins of type
+ * <b>onionskin_type</b>. */
+uint64_t
+estimated_usec_for_onionskins(uint32_t n_requests, uint16_t onionskin_type)
+{
+  if (onionskin_type > MAX_ONION_HANDSHAKE_TYPE) /* should be impossible */
+    return 1000 * n_requests;
+  if (PREDICT_UNLIKELY(onionskins_n_processed[onionskin_type] < 100)) {
+    /* Until we have 100 data points, just asssume everything takes 1 msec. */
+    return 1000 * n_requests;
+  } else {
+    /* This can't overflow: we'll never have more than 500000 onionskins
+     * measured in onionskin_usec_internal, and they won't take anything near
+     * 1 sec each, and we won't have anything like 1 million queued
+     * onionskins.  But that's 5e5 * 1e6 * 1e6, which is still less than
+     * UINT64_MAX. */
+    return (onionskins_usec_internal[onionskin_type] * n_requests) /
+      onionskins_n_processed[onionskin_type];
+  }
+}
+
 /** Called when we get data from a cpuworker.  If the answer is not complete,
  * wait for a complete answer. If the answer is complete,
  * process it as appropriate.
@@ -190,6 +262,31 @@ connection_cpu_process_inbuf(connection_t *conn)
     connection_fetch_from_buf((void*)&rpl,sizeof(cpuworker_reply_t),conn);
 
     tor_assert(rpl.magic == CPUWORKER_REPLY_MAGIC);
+
+    if (rpl.timed && rpl.success &&
+        rpl.handshake_type <= MAX_ONION_HANDSHAKE_TYPE) {
+      /* Time how long this request took. The handshake_type check should be
+         needless, but let's leave it in to be safe. */
+      struct timeval tv_end, tv_diff;
+      int64_t usec_roundtrip;
+      tor_gettimeofday(&tv_end);
+      timersub(&tv_end, &rpl.started_at, &tv_diff);
+      usec_roundtrip = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+      if (usec_roundtrip < 0 ||
+          usec_roundtrip > MAX_BELIEVABLE_ONIONSKIN_DELAY) {
+        usec_roundtrip = MAX_BELIEVABLE_ONIONSKIN_DELAY;
+      }
+      ++onionskins_n_processed[rpl.handshake_type];
+      onionskins_usec_internal[rpl.handshake_type] += rpl.n_usec;
+      onionskins_usec_roundtrip[rpl.handshake_type] += usec_roundtrip;
+      if (onionskins_n_processed[rpl.handshake_type] >= 500000) {
+        /* Scale down every 500000 handshakes.  On a busy server, that's
+         * less impressive than it sounds. */
+        onionskins_n_processed[rpl.handshake_type] /= 2;
+        onionskins_usec_internal[rpl.handshake_type] /= 2;
+        onionskins_usec_roundtrip[rpl.handshake_type] /= 2;
+      }
+    }
     /* parse out the circ it was talking about */
     tag_unpack(rpl.tag, &chan_id, &circ_id);
     circ = NULL;
@@ -289,7 +386,13 @@ cpuworker_main(void *data)
     if (req.task == CPUWORKER_TASK_ONION) {
       const create_cell_t *cc = &req.create_cell;
       created_cell_t *cell_out = &rpl.created_cell;
+      struct timeval tv_start, tv_end;
       int n;
+      rpl.timed = req.timed;
+      rpl.started_at = req.started_at;
+      rpl.handshake_type = cc->handshake_type;
+      if (req.timed)
+        tor_gettimeofday(&tv_start);
       n = onion_skin_server_handshake(cc->handshake_type,
                                       cc->onionskin, cc->handshake_len,
                                       &onion_keys,
@@ -321,6 +424,17 @@ cpuworker_main(void *data)
         rpl.success = 1;
       }
       rpl.magic = CPUWORKER_REPLY_MAGIC;
+      if (req.timed) {
+        struct timeval tv_diff;
+        int64_t usec;
+        tor_gettimeofday(&tv_end);
+        timersub(&tv_end, &tv_start, &tv_diff);
+        usec = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+        if (usec < 0 || usec > MAX_BELIEVABLE_ONIONSKIN_DELAY)
+          rpl.n_usec = MAX_BELIEVABLE_ONIONSKIN_DELAY;
+        else
+          rpl.n_usec = (uint32_t) usec;
+      }
       if (write_all(fd, (void*)&rpl, sizeof(rpl), 1) != sizeof(rpl)) {
         log_err(LD_BUG,"writing response buf failed. Exiting.");
         goto end;
@@ -478,6 +592,7 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
   cpuworker_request_t req;
   time_t now = approx_time();
   static time_t last_culled_cpuworkers = 0;
+  int should_time;
 
   /* Checking for wedged cpuworkers requires a linear search over all
    * connections, so let's do it only once a minute.
@@ -512,22 +627,27 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
       return -1;
     }
 
+    should_time = should_time_request(onionskin->handshake_type);
     memset(&req, 0, sizeof(req));
     req.magic = CPUWORKER_REQUEST_MAGIC;
     tag_pack(req.tag, circ->p_chan->global_identifier,
              circ->p_circ_id);
+    req.timed = should_time;
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     /* touch the lastwritten timestamp, since that's how we check to
      * see how long it's been since we asked the question, and sometimes
      * we check before the first call to connection_handle_write(). */
-    cpuworker->timestamp_lastwritten = time(NULL);
+    cpuworker->timestamp_lastwritten = now;
     num_cpuworkers_busy++;
 
     req.task = CPUWORKER_TASK_ONION;
     memcpy(&req.create_cell, onionskin, sizeof(create_cell_t));
 
     tor_free(onionskin);
+
+    if (should_time)
+      tor_gettimeofday(&req.started_at);
 
     connection_write_to_buf((void*)&req, sizeof(req), cpuworker);
     memwipe(&req, 0, sizeof(req));
