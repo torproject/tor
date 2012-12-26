@@ -555,8 +555,7 @@ tor_tls_init(void)
                    "that apparently lacks accelerated support for the NIST "
                    "P-224 and P-256 groups. Building openssl with such "
                    "support (using the enable-ec_nistp_64_gcc_128 option "
-                   "when configuring it) would make ECDH about 5-10x "
-                   "faster.");
+                   "when configuring it) would make ECDH much faster.");
     }
 #endif
 
