@@ -284,6 +284,15 @@ void update_approx_time(time_t now);
       }
     }
    </pre>
+
+   As a convenience wrapper for logging, you can replace the above with:
+   <pre>
+   if (possibly_very_frequent_event()) {
+     static ratelim_t warning_limit = RATELIM_INIT(300);
+     log_fn_ratelim(&warning_limit, LOG_WARN, LD_GENERAL,
+                    "The event occurred!");
+   }
+   </pre>
  */
 typedef struct ratelim_t {
   int rate;
