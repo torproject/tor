@@ -1078,7 +1078,7 @@ pathbias_get_scale_threshold(const or_options_t *options)
 
 /**
  * The scale factor is the denominator for our scaling
- * of circuit counts for our path bias window. 
+ * of circuit counts for our path bias window.
  *
  * Note that our use of doubles for the path bias state
  * file means that powers of 2 work best here.
@@ -1605,7 +1605,7 @@ pathbias_count_timeout(origin_circuit_t *circ)
 /**
  * Return the number of circuits counted as successfully closed for
  * this guard.
- * 
+ *
  * Also add in the currently open circuits to give them the benefit
  * of the doubt.
  */
