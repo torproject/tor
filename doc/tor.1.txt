@@ -1021,9 +1021,21 @@ The following options are useful only for clients (that is, if
     increases the odds that an adversary who owns some servers will observe a
     fraction of your paths. (Default: 1)
 
+**UseEntryGuardsAsDirectoryGuards** **0**|**1**::
+    If this option is set to 1, we try to use our entry guards as directory
+    guards, and failing that, pick more nodes to act as our directory guards.
+    This helps prevent an adversary from enumerating clients. It's only
+    available for clients (non-relay, non-bridge) that aren't configured to
+    download any non-default directory material.  It doesn't currently
+    do anything when we lack a live consensus. (Default: 1)
+
 **NumEntryGuards** __NUM__::
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
     as long-term entries for our circuits. (Default: 3)
+
+**NumDirectoryGuards** __NUM__::
+    If UseEntryGuardsAsDirectoryGuards is enabled, we try to make sure we
+    have at least NUM routers to use as directory guards. (Default: 3)
 
 **SafeSocks** **0**|**1**::
     When this option is enabled, Tor will reject application connections that

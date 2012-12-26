@@ -3614,6 +3614,9 @@ typedef struct {
   int UseEntryGuards; /**< Boolean: Do we try to enter from a smallish number
                        * of fixed nodes? */
   int NumEntryGuards; /**< How many entry guards do we try to establish? */
+  int UseEntryGuardsAsDirGuards; /** Boolean: Do we try to get directory info
+                                  * from a smallish number of fixed nodes? */
+  int NumDirectoryGuards; /**< How many dir guards do we try to establish? */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
                        * of our PK time by sending CREATE_FAST cells? */
