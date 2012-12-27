@@ -1764,11 +1764,18 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   int cells_on_queue;
   int cells_per_conn;
   edge_connection_t *chosen_stream = NULL;
+  int max_to_package;
+
+  if (first_conn == NULL) {
+    /* Don't bother to try to do the rest of this if there are no connections
+     * to resume. */
+    return 0;
+  }
 
   /* How many cells do we have space for?  It will be the minimum of
    * the number needed to exhaust the package window, and the minimum
    * needed to fill the cell queue. */
-  int max_to_package = circ->package_window;
+  max_to_package = circ->package_window;
   if (CIRCUIT_IS_ORIGIN(circ)) {
     cells_on_queue = circ->n_chan_cells.n;
   } else {
