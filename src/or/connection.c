@@ -1607,6 +1607,7 @@ connection_read_https_proxy_response(connection_t *conn)
     tor_free(headers);
     return -1;
   }
+  tor_free(headers);
   if (!reason) reason = tor_strdup("[no reason given]");
 
   if (status_code == 200) {
