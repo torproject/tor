@@ -992,6 +992,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (bind(s, listensockaddr, (socklen_t)sizeof(struct sockaddr_un)) == -1) {
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
+      tor_close_socket(s);
       goto err;
     }
 #ifdef HAVE_PWD_H
@@ -1000,9 +1001,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       if (pw == NULL) {
         log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
                  address, options->User);
+        tor_close_socket(s);
       } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
         log_warn(LD_NET,"Unable to chown() %s socket: %s.",
                  address, strerror(errno));
+        tor_close_socket(s);
         goto err;
       }
     }
