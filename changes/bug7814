@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Avoid crashing when, as a node without IPv6-exit support, a
+      client insists on getting an IPv6 address or nothing.  Fixes bug
+      #7814; bugfix on 0.2.4.7-alpha.

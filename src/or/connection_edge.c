@@ -2427,6 +2427,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       relay_send_end_cell_from_edge(rh.stream_id, circ,
                                     END_STREAM_REASON_EXITPOLICY, NULL);
+      return 0;
     }
   }
 
