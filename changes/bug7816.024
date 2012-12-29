@@ -2,3 +2,7 @@
     - Avoid leaking IPv6 policy content if we fail to format it into
       a router descriptor. Spotted by Coverity. Fixes part of 7816;
       bugfix on 0.2.4.7-alpha.
+
+    - Avoid leaking memory if we fail to compute a consensus signature
+      or we generated a consensus we couldn't parse. Spotted by Coverity.
+      Fixes part of 7816; bugfix on 0.2.0.5-alpha.
