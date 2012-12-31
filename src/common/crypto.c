@@ -1458,7 +1458,7 @@ crypto_digest256(char *digest, const char *m, size_t len,
 int
 crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
 {
-  digest_algorithm_t i;
+  int i;
   tor_assert(ds_out);
   memset(ds_out, 0, sizeof(*ds_out));
   if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)

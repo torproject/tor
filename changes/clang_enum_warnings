@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Get rid of a couple of harmless clang warnings, where we compared
+      enums to ints. These warnings are newly introduced in clang 3.2.
