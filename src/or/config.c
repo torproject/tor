@@ -4633,12 +4633,15 @@ port_cfg_free(port_cfg_t *port)
   tor_free(port);
 }
 
-/** Warn for every port in <b>ports</b> that is on a publicly routable
- * address. */
+/** Warn for every port in <b>ports</b> of type <b>listener_type</b> that is
+ * on a publicly routable address. */
 static void
-warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname)
+warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname,
+                           int listener_type)
 {
   SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+    if (port->type != listener_type)
+      continue;
     if (port->is_unix_addr) {
       /* Unix sockets aren't accessible over a network. */
     } else if (!tor_addr_is_internal(&port->addr, 1)) {
@@ -4835,7 +4838,7 @@ parse_port_config(smartlist_t *out,
       if (is_control)
         warn_nonlocal_controller_ports(out, forbid_nonlocal);
       else
-        warn_nonlocal_client_ports(out, portname);
+        warn_nonlocal_client_ports(out, portname, listener_type);
     }
     return 0;
   } /* end if (listenaddrs) */
@@ -5101,7 +5104,7 @@ parse_port_config(smartlist_t *out,
     if (is_control)
       warn_nonlocal_controller_ports(out, forbid_nonlocal);
     else
-      warn_nonlocal_client_ports(out, portname);
+      warn_nonlocal_client_ports(out, portname, listener_type);
   }
 
   if (got_zero_port && got_nonzero_port) {

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Avoid spurious warnings when configuring multiple client ports of
+      which only some are nonlocal. Previously, we had claimed that some
+      were nonlocal when in fact they weren't. Fixes bug 7836; bugfix on
+      0.2.3.3-alpha.
