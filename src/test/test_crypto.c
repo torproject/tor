@@ -1016,6 +1016,7 @@ test_crypto_curve25519_persist(void *arg)
   char *content = NULL;
   const char *cp;
   struct stat st;
+  size_t taglen;
 
   (void)arg;
 
@@ -1034,9 +1035,11 @@ test_crypto_curve25519_persist(void *arg)
 
   content = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(content);
-  tt_assert(!strcmpstart(content, "== c25519v1: testing =="));
-  cp = content + strlen("== c25519v1: testing ==");
-  tt_int_op(st.st_size, ==, 64 + strlen("== c25519v1: testing =="));
+  taglen = strlen("== c25519v1: testing ==");
+  tt_int_op(st.st_size, ==, 32+CURVE25519_PUBKEY_LEN+CURVE25519_SECKEY_LEN);
+  tt_assert(fast_memeq(content, "== c25519v1: testing ==", taglen));
+  tt_assert(tor_mem_is_zero(content+taglen, 32-taglen));
+  cp = content + 32;
   test_memeq(keypair.seckey.secret_key,
              cp,
              CURVE25519_SECKEY_LEN);
@@ -1050,7 +1053,7 @@ test_crypto_curve25519_persist(void *arg)
 
   tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
 
-  content[64] ^= 0xff;
+  content[69] ^= 0xff;
   tt_int_op(0, ==, write_bytes_to_file(fname, content, st.st_size, 1));
   tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
 
