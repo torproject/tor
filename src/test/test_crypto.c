@@ -9,6 +9,7 @@
 #include "or.h"
 #include "test.h"
 #include "aes.h"
+#include "util.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #endif
@@ -1005,6 +1006,59 @@ test_crypto_curve25519_wrappers(void *arg)
  done:
   ;
 }
+
+static void
+test_crypto_curve25519_persist(void *arg)
+{
+  curve25519_keypair_t keypair, keypair2;
+  char *fname = tor_strdup(get_fname("curve25519_keypair"));
+  char *tag = NULL;
+  char *content = NULL;
+  const char *cp;
+  struct stat st;
+
+  (void)arg;
+
+  tt_int_op(0,==,curve25519_keypair_generate(&keypair, 0));
+
+  tt_int_op(0,==,curve25519_keypair_write_to_file(&keypair, fname, "testing"));
+  tt_int_op(0,==,curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+  tt_str_op(tag,==,"testing");
+
+  test_memeq(keypair.pubkey.public_key,
+             keypair2.pubkey.public_key,
+             CURVE25519_PUBKEY_LEN);
+  test_memeq(keypair.seckey.secret_key,
+             keypair2.seckey.secret_key,
+             CURVE25519_SECKEY_LEN);
+
+  content = read_file_to_str(fname, RFTS_BIN, &st);
+  tt_assert(content);
+  tt_assert(!strcmpstart(content, "== c25519v1: testing =="));
+  cp = content + strlen("== c25519v1: testing ==");
+  tt_int_op(st.st_size, ==, 64 + strlen("== c25519v1: testing =="));
+  test_memeq(keypair.seckey.secret_key,
+             cp,
+             CURVE25519_SECKEY_LEN);
+  cp += CURVE25519_SECKEY_LEN;
+  test_memeq(keypair.pubkey.public_key,
+             cp,
+             CURVE25519_SECKEY_LEN);
+
+  tor_free(fname);
+  fname = tor_strdup(get_fname("bogus_keypair"));
+
+  tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+
+  content[64] ^= 0xff;
+  tt_int_op(0, ==, write_bytes_to_file(fname, content, st.st_size, 1));
+  tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+
+ done:
+  tor_free(fname);
+  tor_free(content);
+}
+
 #endif
 
 static void *
@@ -1043,6 +1097,7 @@ struct testcase_t crypto_tests[] = {
 #ifdef CURVE25519_ENABLED
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
+  { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
 #endif
   END_OF_TESTCASES
 };
