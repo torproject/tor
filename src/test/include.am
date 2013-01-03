@@ -36,18 +36,33 @@ src_test_bench_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
-src_test_test_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a \
+src_test_test_LDADD = src/or/libtor.a src/common/libor.a \
+	src/common/libor-crypto.a $(LIBDONNA) \
 	src/common/libor-event.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
-src_test_bench_LDADD = src/or/libtor.a src/common/libor.a src/common/libor-crypto.a \
+src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
+	src/common/libor-crypto.a $(LIBDONNA) \
 	src/common/libor-event.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS+= \
 	src/test/test.h
+
+if CURVE25519_ENABLED
+noinst_PROGRAMS+= src/test/test-ntor-cl
+src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
+src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
+src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
+	src/common/libor-crypto.a $(LIBDONNA) \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
+	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
+src_test_test_ntor_cl_AM_CPPFLAGS =	       \
+	-I"$(top_srcdir)/src/or"
+
+endif
 

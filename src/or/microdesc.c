@@ -575,6 +575,7 @@ microdesc_free(microdesc_t *md)
 
   if (md->onion_pkey)
     crypto_pk_free(md->onion_pkey);
+  tor_free(md->onion_curve25519_pkey);
   if (md->body && md->saved_location != SAVED_IN_CACHE)
     tor_free(md->body);
 

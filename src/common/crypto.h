@@ -230,6 +230,7 @@ void crypto_hmac_sha256(char *hmac_out,
 #define DH_TYPE_REND 2
 #define DH_TYPE_TLS 3
 crypto_dh_t *crypto_dh_new(int dh_type);
+crypto_dh_t *crypto_dh_dup(const crypto_dh_t *dh);
 int crypto_dh_get_bytes(crypto_dh_t *dh);
 int crypto_dh_generate_public(crypto_dh_t *dh);
 int crypto_dh_get_public(crypto_dh_t *dh, char *pubkey_out,
@@ -238,12 +239,20 @@ ssize_t crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
                              const char *pubkey, size_t pubkey_len,
                              char *secret_out, size_t secret_out_len);
 void crypto_dh_free(crypto_dh_t *dh);
-int crypto_expand_key_material(const char *key_in, size_t in_len,
-                               char *key_out, size_t key_out_len);
+
+int crypto_expand_key_material_TAP(const uint8_t *key_in,
+                                   size_t key_in_len,
+                                   uint8_t *key_out, size_t key_out_len);
+int crypto_expand_key_material_rfc5869_sha256(
+                                    const uint8_t *key_in, size_t key_in_len,
+                                    const uint8_t *salt_in, size_t salt_in_len,
+                                    const uint8_t *info_in, size_t info_in_len,
+                                    uint8_t *key_out, size_t key_out_len);
 
 /* random numbers */
 int crypto_seed_rng(int startup);
 int crypto_rand(char *to, size_t n);
+int crypto_strongest_rand(uint8_t *out, size_t out_len);
 int crypto_rand_int(unsigned int max);
 uint64_t crypto_rand_uint64(uint64_t max);
 double crypto_rand_double(void);

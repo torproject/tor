@@ -24,6 +24,8 @@
 .dirstamp
 # Stuff made by our makefiles
 *.bak
+# Python droppings
+*.pyc
 
 # /
 /Makefile
@@ -130,6 +132,8 @@
 /src/common/libor-crypto.lib
 /src/common/libor-event.a
 /src/common/libor-event.lib
+/src/common/libcurve25519_donna.a
+/src/common/libcurve25519_donna.lib
 
 # /src/config/
 /src/config/Makefile
@@ -154,9 +158,10 @@
 /src/test/bench.exe
 /src/test/test
 /src/test/test-child
+/src/test/test-ntor-cl
 /src/test/test.exe
 /src/test/test-child.exe
-
+/src/test/test-ntor-cl.exe
 
 # /src/tools/
 /src/tools/tor-checkkey

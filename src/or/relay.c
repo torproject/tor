@@ -27,6 +27,7 @@
 #include "mempool.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "onion.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
@@ -571,6 +572,7 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (origin_circ->remaining_relay_early_cells > 0 &&
         (relay_command == RELAY_COMMAND_EXTEND ||
+         relay_command == RELAY_COMMAND_EXTEND2 ||
          cpath_layer != origin_circ->cpath)) {
       /* If we've got any relay_early cells left and (we're sending
        * an extend cell or we're not talking to the first hop), use
@@ -584,7 +586,8 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
        * task 878. */
       origin_circ->relay_early_commands[
           origin_circ->relay_early_cells_sent++] = relay_command;
-    } else if (relay_command == RELAY_COMMAND_EXTEND) {
+    } else if (relay_command == RELAY_COMMAND_EXTEND ||
+               relay_command == RELAY_COMMAND_EXTEND2) {
       /* If no RELAY_EARLY cells can be sent over this circuit, log which
        * commands have been sent as RELAY_EARLY cells before; helps debug
        * task 878. */
@@ -1282,7 +1285,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         connection_mark_and_flush(TO_CONN(conn));
       }
       return 0;
-    case RELAY_COMMAND_EXTEND: {
+    case RELAY_COMMAND_EXTEND:
+    case RELAY_COMMAND_EXTEND2: {
       static uint64_t total_n_extend=0, total_nonearly=0;
       total_n_extend++;
       if (rh.stream_id) {
@@ -1317,17 +1321,27 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return circuit_extend(cell, circ);
     }
     case RELAY_COMMAND_EXTENDED:
+    case RELAY_COMMAND_EXTENDED2:
       if (!layer_hint) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "'extended' unsupported at non-origin. Dropping.");
         return 0;
       }
       log_debug(domain,"Got an extended cell! Yay.");
-      if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
-                                       CELL_CREATED,
-                                       cell->payload+RELAY_HEADER_SIZE)) < 0) {
-        log_warn(domain,"circuit_finish_handshake failed.");
-        return reason;
+      {
+        extended_cell_t extended_cell;
+        if (extended_cell_parse(&extended_cell, rh.command,
+                        (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
+                        rh.length)<0) {
+          log_warn(LD_PROTOCOL,
+                   "Can't parse EXTENDED cell; killing circuit.");
+          return -END_CIRC_REASON_TORPROTOCOL;
+        }
+        if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
+                                         &extended_cell.created_cell)) < 0) {
+          log_warn(domain,"circuit_finish_handshake failed.");
+          return reason;
+        }
       }
       if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
         log_info(domain,"circuit_send_next_onion_skin() failed.");

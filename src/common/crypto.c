@@ -2036,6 +2036,16 @@ crypto_dh_new(int dh_type)
   return NULL;
 }
 
+/** Return a copy of <b>dh</b>, sharing its internal state. */
+crypto_dh_t *
+crypto_dh_dup(const crypto_dh_t *dh)
+{
+  crypto_dh_t *dh_new = tor_malloc_zero(sizeof(crypto_dh_t));
+  dh_new->dh = dh->dh;
+  DH_up_ref(dh->dh);
+  return dh_new;
+}
+
 /** Return the length of the DH key in <b>dh</b>, in bytes.
  */
 int
@@ -2174,8 +2184,8 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
     goto error;
   }
   secret_len = result;
-  if (crypto_expand_key_material(secret_tmp, secret_len,
-                                 secret_out, secret_bytes_out)<0)
+  if (crypto_expand_key_material_TAP((uint8_t*)secret_tmp, secret_len,
+                                     (uint8_t*)secret_out, secret_bytes_out)<0)
     goto error;
   secret_len = secret_bytes_out;
 
@@ -2201,15 +2211,18 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
  * <b>key_out</b> by taking the first <b>key_out_len</b> bytes of
  *    H(K | [00]) | H(K | [01]) | ....
  *
+ * This is the key expansion algorithm used in the "TAP" circuit extension
+ * mechanism; it shouldn't be used for new protocols.
+ *
  * Return 0 on success, -1 on failure.
  */
 int
-crypto_expand_key_material(const char *key_in, size_t key_in_len,
-                           char *key_out, size_t key_out_len)
+crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
+                               uint8_t *key_out, size_t key_out_len)
 {
   int i;
-  char *cp, *tmp = tor_malloc(key_in_len+1);
-  char digest[DIGEST_LEN];
+  uint8_t *cp, *tmp = tor_malloc(key_in_len+1);
+  uint8_t digest[DIGEST_LEN];
 
   /* If we try to get more than this amount of key data, we'll repeat blocks.*/
   tor_assert(key_out_len <= DIGEST_LEN*256);
@@ -2218,7 +2231,7 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
   for (cp = key_out, i=0; cp < key_out+key_out_len;
        ++i, cp += DIGEST_LEN) {
     tmp[key_in_len] = i;
-    if (crypto_digest(digest, tmp, key_in_len+1))
+    if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1))
       goto err;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
   }
@@ -2232,6 +2245,65 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
   tor_free(tmp);
   memwipe(digest, 0, sizeof(digest));
   return -1;
+}
+
+/** Expand some secret key material according to RFC5869, using SHA256 as the
+ * underlying hash.  The <b>key_in_len</b> bytes at <b>key_in</b> are the
+ * secret key material; the <b>salt_in_len</b> bytes at <b>salt_in</b> and the
+ * <b>info_in_len</b> bytes in <b>info_in_len</b> are the algorithm's "salt"
+ * and "info" parameters respectively.  On success, write <b>key_out_len</b>
+ * bytes to <b>key_out</b> and return 0.  On failure, return -1.
+ */
+int
+crypto_expand_key_material_rfc5869_sha256(
+                                    const uint8_t *key_in, size_t key_in_len,
+                                    const uint8_t *salt_in, size_t salt_in_len,
+                                    const uint8_t *info_in, size_t info_in_len,
+                                    uint8_t *key_out, size_t key_out_len)
+{
+  uint8_t prk[DIGEST256_LEN];
+  uint8_t tmp[DIGEST256_LEN + 128 + 1];
+  uint8_t mac[DIGEST256_LEN];
+  int i;
+  uint8_t *outp;
+  size_t tmp_len;
+
+  crypto_hmac_sha256((char*)prk,
+                     (const char*)salt_in, salt_in_len,
+                     (const char*)key_in, key_in_len);
+
+  /* If we try to get more than this amount of key data, we'll repeat blocks.*/
+  tor_assert(key_out_len <= DIGEST256_LEN * 256);
+  tor_assert(info_in_len <= 128);
+  memset(tmp, 0, sizeof(tmp));
+  outp = key_out;
+  i = 1;
+
+  while (key_out_len) {
+    size_t n;
+    if (i > 1) {
+      memcpy(tmp, mac, DIGEST256_LEN);
+      memcpy(tmp+DIGEST256_LEN, info_in, info_in_len);
+      tmp[DIGEST256_LEN+info_in_len] = i;
+      tmp_len = DIGEST256_LEN + info_in_len + 1;
+    } else {
+      memcpy(tmp, info_in, info_in_len);
+      tmp[info_in_len] = i;
+      tmp_len = info_in_len + 1;
+    }
+    crypto_hmac_sha256((char*)mac,
+                       (const char*)prk, DIGEST256_LEN,
+                       (const char*)tmp, tmp_len);
+    n = key_out_len < DIGEST256_LEN ? key_out_len : DIGEST256_LEN;
+    memcpy(outp, mac, n);
+    key_out_len -= n;
+    outp += n;
+    ++i;
+  }
+
+  memwipe(tmp, 0, sizeof(tmp));
+  memwipe(mac, 0, sizeof(mac));
+  return 0;
 }
 
 /** Free a DH key exchange object.
@@ -2272,22 +2344,16 @@ seed_weak_rng(void)
   tor_init_weak_random(seed);
 }
 
-/** Seed OpenSSL's random number generator with bytes from the operating
- * system.  <b>startup</b> should be true iff we have just started Tor and
- * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>.
  */
 int
-crypto_seed_rng(int startup)
+crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
-  int rand_poll_status = 0;
-
-  /* local variables */
 #ifdef _WIN32
-  unsigned char buf[ADD_ENTROPY];
   static int provider_set = 0;
   static HCRYPTPROV provider;
 #else
-  char buf[ADD_ENTROPY];
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
@@ -2295,56 +2361,75 @@ crypto_seed_rng(int startup)
   size_t n;
 #endif
 
-  /* OpenSSL has a RAND_poll function that knows about more kinds of
-   * entropy than we do.  We'll try calling that, *and* calling our own entropy
-   * functions.  If one succeeds, we'll accept the RNG as seeded. */
-  if (startup || RAND_POLL_IS_SAFE) {
-    rand_poll_status = RAND_poll();
-    if (rand_poll_status == 0)
-      log_warn(LD_CRYPTO, "RAND_poll() failed.");
-  }
-
 #ifdef _WIN32
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
       if ((unsigned long)GetLastError() != (unsigned long)NTE_BAD_KEYSET) {
         log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
-        return rand_poll_status ? 0 : -1;
+        return -1;
       }
     }
     provider_set = 1;
   }
-  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
+  if (!CryptGenRandom(provider, out_len, out)) {
     log_warn(LD_CRYPTO, "Can't get entropy from CryptoAPI.");
-    return rand_poll_status ? 0 : -1;
+    return -1;
   }
-  RAND_seed(buf, sizeof(buf));
-  memwipe(buf, 0, sizeof(buf));
-  seed_weak_rng();
+
   return 0;
 #else
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
-    log_info(LD_CRYPTO, "Seeding RNG from \"%s\"", filenames[i]);
-    n = read_all(fd, buf, sizeof(buf), 0);
+    log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
+    n = read_all(fd, (char*)out, out_len, 0);
     close(fd);
-    if (n != sizeof(buf)) {
+    if (n != out_len) {
       log_warn(LD_CRYPTO,
                "Error reading from entropy source (read only %lu bytes).",
                (unsigned long)n);
       return -1;
     }
-    RAND_seed(buf, (int)sizeof(buf));
-    memwipe(buf, 0, sizeof(buf));
-    seed_weak_rng();
+
     return 0;
   }
 
-  log_warn(LD_CRYPTO, "Cannot seed RNG -- no entropy source found.");
-  return rand_poll_status ? 0 : -1;
+  log_warn(LD_CRYPTO, "Cannot get strong entropy: no entropy source found.");
+  return -1;
 #endif
+}
+
+/** Seed OpenSSL's random number generator with bytes from the operating
+ * system.  <b>startup</b> should be true iff we have just started Tor and
+ * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_seed_rng(int startup)
+{
+  int rand_poll_ok = 0, load_entropy_ok = 0;
+  uint8_t buf[ADD_ENTROPY];
+
+  /* OpenSSL has a RAND_poll function that knows about more kinds of
+   * entropy than we do.  We'll try calling that, *and* calling our own entropy
+   * functions.  If one succeeds, we'll accept the RNG as seeded. */
+  if (startup || RAND_POLL_IS_SAFE) {
+    rand_poll_ok = RAND_poll();
+    if (rand_poll_ok == 0)
+      log_warn(LD_CRYPTO, "RAND_poll() failed.");
+  }
+
+  load_entropy_ok = !crypto_strongest_rand(buf, sizeof(buf));
+  if (load_entropy_ok) {
+    RAND_seed(buf, sizeof(buf));
+  }
+
+  memwipe(buf, 0, sizeof(buf));
+  seed_weak_rng();
+  if (rand_poll_ok || load_entropy_ok)
+    return 0;
+  else
+    return -1;
 }
 
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on

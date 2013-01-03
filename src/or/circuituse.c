@@ -1697,8 +1697,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
               return -1;
             }
             extend_info = extend_info_new(conn->chosen_exit_name+1,
-                                            digest, NULL, &addr,
-                                            conn->socks_request->port);
+                                          digest, NULL, NULL, &addr,
+                                          conn->socks_request->port);
           } else {
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */

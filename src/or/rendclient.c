@@ -206,12 +206,12 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     cpath = rendcirc->build_state->pending_final_cpath =
       tor_malloc_zero(sizeof(crypt_path_t));
     cpath->magic = CRYPT_PATH_MAGIC;
-    if (!(cpath->dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
+    if (!(cpath->rend_dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
       log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
       status = -2;
       goto perm_err;
     }
-    if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
+    if (crypto_dh_generate_public(cpath->rend_dh_handshake_state)<0) {
       log_warn(LD_BUG, "Internal error: couldn't generate g^x.");
       status = -2;
       goto perm_err;
@@ -261,7 +261,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
   }
 
-  if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
+  if (crypto_dh_get_public(cpath->rend_dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
     status = -2;
@@ -907,9 +907,9 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
   tor_assert(circ->build_state);
   tor_assert(circ->build_state->pending_final_cpath);
   hop = circ->build_state->pending_final_cpath;
-  tor_assert(hop->dh_handshake_state);
+  tor_assert(hop->rend_dh_handshake_state);
   if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN,
-                               hop->dh_handshake_state, (char*)request,
+                               hop->rend_dh_handshake_state, (char*)request,
                                DH_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
@@ -925,8 +925,8 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  crypto_dh_free(hop->dh_handshake_state);
-  hop->dh_handshake_state = NULL;
+  crypto_dh_free(hop->rend_dh_handshake_state);
+  hop->rend_dh_handshake_state = NULL;
 
   /* All is well. Extend the circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_REND_JOINED);

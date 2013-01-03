@@ -14,6 +14,28 @@ else
 libor_extra_source=
 endif
 
+if BUILD_CURVE25519_DONNA
+src_common_libcurve25519_donna_a_SOURCES=\
+	src/ext/curve25519_donna/curve25519-donna.c
+noinst_LIBRARIES+=src/common/libcurve25519_donna.a
+LIBDONNA=src/common/libcurve25519_donna.a
+else
+if BUILD_CURVE25519_DONNA_C64
+src_common_libcurve25519_donna_a_SOURCES=\
+	src/ext/curve25519_donna/curve25519-donna-c64.c
+noinst_LIBRARIES+=src/common/libcurve25519_donna.a
+LIBDONNA=src/common/libcurve25519_donna.a
+else
+LIBDONNA=
+endif
+endif
+
+src_common_libcurve25519_donna_a_CFLAGS =
+
+if CURVE25519_ENABLED
+libcrypto_extra_source=src/common/crypto_curve25519.c
+endif
+
 src_common_libor_a_SOURCES = \
   src/common/address.c					\
   src/common/compat.c					\
@@ -31,7 +53,8 @@ src_common_libor_crypto_a_SOURCES = \
   src/common/aes.c		\
   src/common/crypto.c		\
   src/common/torgzip.c		\
-  src/common/tortls.c
+  src/common/tortls.c		\
+  $(libcrypto_extra_source)
 
 src_common_libor_event_a_SOURCES = src/common/compat_libevent.c
 
@@ -43,6 +66,7 @@ COMMONHEADERS = \
   src/common/compat_libevent.h			\
   src/common/container.h			\
   src/common/crypto.h				\
+  src/common/crypto_curve25519.h		\
   src/common/di_ops.h				\
   src/common/memarea.h				\
   src/common/mempool.h				\

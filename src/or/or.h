@@ -99,6 +99,7 @@
 #include "compat_libevent.h"
 #include "ht.h"
 #include "replaycache.h"
+#include "crypto_curve25519.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -279,6 +280,7 @@ typedef enum {
 #define CPUWORKER_STATE_MAX_ 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
+#define CPUWORKER_TASK_SHUTDOWN 255
 
 #define OR_CONN_STATE_MIN_ 1
 /** State for a connection to an OR: waiting for connect() to finish. */
@@ -560,6 +562,8 @@ typedef enum {
 #define RELAY_COMMAND_RESOLVE 11
 #define RELAY_COMMAND_RESOLVED 12
 #define RELAY_COMMAND_BEGIN_DIR 13
+#define RELAY_COMMAND_EXTEND2 14
+#define RELAY_COMMAND_EXTENDED2 15
 
 #define RELAY_COMMAND_ESTABLISH_INTRO 32
 #define RELAY_COMMAND_ESTABLISH_RENDEZVOUS 33
@@ -826,6 +830,8 @@ typedef enum {
 #define CELL_VERSIONS 7
 #define CELL_NETINFO 8
 #define CELL_RELAY_EARLY 9
+#define CELL_CREATE2 10
+#define CELL_CREATED2 11
 
 #define CELL_VPADDING 128
 #define CELL_CERTS 129
@@ -1398,6 +1404,7 @@ typedef struct or_connection_t {
 
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
+
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
   time_t timestamp_last_added_nonpadding; /** When did we last add a
                                            * non-padding cell to the outbuf? */
@@ -1929,6 +1936,8 @@ typedef struct {
 
   crypto_pk_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
+  /** Public curve25519 key for onions */
+  curve25519_public_key_t *onion_curve25519_pkey;
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -2052,6 +2061,9 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that allows DATA cells to arrive on
    * a stream before it has sent a CONNECTED cell. */
   unsigned int version_supports_optimistic_data:1;
+  /** True iff this router has a version that allows it to accept EXTEND2
+   * cells */
+  unsigned int version_supports_extend2_cells:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
@@ -2142,6 +2154,8 @@ typedef struct microdesc_t {
 
   /** As routerinfo_t.onion_pkey */
   crypto_pk_t *onion_pkey;
+  /** As routerinfo_t.onion_curve25519_pkey */
+  curve25519_public_key_t *onion_curve25519_pkey;
   /** As routerinfo_t.ipv6_add */
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
@@ -2501,6 +2515,9 @@ typedef struct extend_info_t {
   uint16_t port; /**< OR port. */
   tor_addr_t addr; /**< IP address. */
   crypto_pk_t *onion_key; /**< Current onionskin key. */
+#ifdef CURVE25519_ENABLED
+  curve25519_public_key_t curve25519_onion_key;
+#endif
 } extend_info_t;
 
 /** Certificate for v3 directory protocol: binds long-term authority identity
@@ -2557,6 +2574,20 @@ typedef enum {
 
 #define CRYPT_PATH_MAGIC 0x70127012u
 
+struct fast_handshake_state_t;
+struct ntor_handshake_state_t;
+#define ONION_HANDSHAKE_TYPE_TAP 0x0000
+#define ONION_HANDSHAKE_TYPE_FAST 0x0001
+#define ONION_HANDSHAKE_TYPE_NTOR 0x0002
+typedef struct {
+  uint16_t tag;
+  union {
+    struct fast_handshake_state_t *fast;
+    crypto_dh_t *tap;
+    struct ntor_handshake_state_t *ntor;
+  } u;
+} onion_handshake_state_t;
+
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 typedef struct crypt_path_t {
@@ -2575,17 +2606,15 @@ typedef struct crypt_path_t {
   /** Digest state for cells heading away from the OR at this step. */
   crypto_digest_t *b_digest;
 
-  /** Current state of Diffie-Hellman key negotiation with the OR at this
+  /** Current state of the handshake as performed with the OR at this
    * step. */
-  crypto_dh_t *dh_handshake_state;
-  /** Current state of 'fast' (non-PK) key negotiation with the OR at this
-   * step. Used to save CPU when TLS is already providing all the
-   * authentication, secrecy, and integrity we need, and we're already
-   * distinguishable from an OR.
-   */
-  uint8_t fast_handshake_state[DIGEST_LEN];
+  onion_handshake_state_t handshake_state;
+  /** Diffie-hellman handshake state for performing an introduction
+   * operations */
+  crypto_dh_t *rend_dh_handshake_state;
+
   /** Negotiated key material shared with the OR at this step. */
-  char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
+  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
   /** Information to extend to the OR at this step. */
   extend_info_t *extend_info;
@@ -2626,10 +2655,6 @@ typedef struct {
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
 #define DH_KEY_LEN DH_BYTES
-#define ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
-                                 CIPHER_KEY_LEN+\
-                                 DH_KEY_LEN)
-#define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 
 /** Information used to build a circuit. */
 typedef struct {
@@ -2660,6 +2685,8 @@ typedef struct {
 
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
+
+struct create_cell_t;
 
 /**
  * A circuit is a path over the onion routing
@@ -2735,10 +2762,8 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
-  /** For storage while n_chan is pending
-    * (state CIRCUIT_STATE_CHAN_WAIT). When defined, it is always
-    * length ONIONSKIN_CHALLENGE_LEN. */
-  char *n_chan_onionskin;
+  /** For storage while n_chan is pending (state CIRCUIT_STATE_CHAN_WAIT). */
+  struct create_cell_t *n_chan_create_cell;
 
   /** When did circuit construction actually begin (ie send the
    * CREATE cell or begin cannibalization).
@@ -3026,7 +3051,8 @@ typedef struct or_circuit_t {
   char rend_token[REND_TOKEN_LEN];
 
   /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
-  char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
+  /** Stores KH for the handshake. */
+  char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
@@ -3877,6 +3903,8 @@ typedef struct {
 
   char *TLSECGroup; /**< One of "P256", "P224", or nil for auto */
 
+  /** Autobool: should we use the ntor handshake if we can? */
+  int UseNTorHandshake;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

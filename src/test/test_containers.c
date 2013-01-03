@@ -782,6 +782,50 @@ test_container_order_functions(void)
   ;
 }
 
+static void
+test_di_map(void *arg)
+{
+  di_digest256_map_t *map = NULL;
+  const uint8_t key1[] = "In view of the fact that it was ";
+  const uint8_t key2[] = "superficially convincing, being ";
+  const uint8_t key3[] = "properly enciphered in a one-tim";
+  const uint8_t key4[] = "e cipher scheduled for use today";
+  char *v1 = tor_strdup(", it came close to causing a disaster...");
+  char *v2 = tor_strdup("I regret to have to advise you that the mission");
+  char *v3 = tor_strdup("was actually initiated...");
+  /* -- John Brunner, _The Shockwave Rider_ */
+
+  (void)arg;
+
+  /* Try searching on an empty map. */
+  tt_ptr_op(NULL, ==, dimap_search(map, key1, NULL));
+  tt_ptr_op(NULL, ==, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, ==, dimap_search(map, key2, v3));
+  dimap_free(map, NULL);
+  map = NULL;
+
+  /* Add a single entry. */
+  dimap_add_entry(&map, key1, v1);
+  tt_ptr_op(NULL, ==, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, ==, dimap_search(map, key2, v3));
+  tt_ptr_op(v1, ==, dimap_search(map, key1, NULL));
+
+  /* Now try it with three entries in the map. */
+  dimap_add_entry(&map, key2, v2);
+  dimap_add_entry(&map, key3, v3);
+  tt_ptr_op(v1, ==, dimap_search(map, key1, NULL));
+  tt_ptr_op(v2, ==, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, ==, dimap_search(map, key3, NULL));
+  tt_ptr_op(NULL, ==, dimap_search(map, key4, NULL));
+  tt_ptr_op(v1, ==, dimap_search(map, key4, v1));
+
+ done:
+  tor_free(v1);
+  tor_free(v2);
+  tor_free(v3);
+  dimap_free(map, NULL);
+}
+
 #define CONTAINER_LEGACY(name)                                          \
   { #name, legacy_test_helper, 0, &legacy_setup, test_container_ ## name }
 
@@ -796,6 +840,7 @@ struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(strmap),
   CONTAINER_LEGACY(pqueue),
   CONTAINER_LEGACY(order_functions),
+  { "di_map", test_di_map, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

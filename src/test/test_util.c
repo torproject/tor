@@ -2843,6 +2843,16 @@ test_util_di_ops(void)
     test_eq(neq1, !eq1);
   }
 
+  tt_int_op(1, ==, safe_mem_is_zero("", 0));
+  tt_int_op(1, ==, safe_mem_is_zero("", 1));
+  tt_int_op(0, ==, safe_mem_is_zero("a", 1));
+  tt_int_op(0, ==, safe_mem_is_zero("a", 2));
+  tt_int_op(0, ==, safe_mem_is_zero("\0a", 2));
+  tt_int_op(1, ==, safe_mem_is_zero("\0\0a", 2));
+  tt_int_op(1, ==, safe_mem_is_zero("\0\0\0\0\0\0\0\0", 8));
+  tt_int_op(1, ==, safe_mem_is_zero("\0\0\0\0\0\0\0\0a", 8));
+  tt_int_op(0, ==, safe_mem_is_zero("\0\0\0\0\0\0\0\0a", 9));
+
  done:
   ;
 }

@@ -916,6 +916,18 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
   }
 }
 
+/** Return true iff <b>node</b> has a curve25519 onion key. */
+int
+node_has_curve25519_onion_key(const node_t *node)
+{
+  if (node->ri)
+    return node->ri->onion_curve25519_pkey != NULL;
+  else if (node->md)
+    return node->md->onion_curve25519_pkey != NULL;
+  else
+    return 0;
+}
+
 /** Refresh the country code of <b>ri</b>.  This function MUST be called on
  * each router when the GeoIP database is reloaded, and on all new routers. */
 void

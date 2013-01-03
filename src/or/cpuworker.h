@@ -17,9 +17,10 @@ void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
 int connection_cpu_reached_eof(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
+struct create_cell_t;
 int assign_onionskin_to_cpuworker(connection_t *cpuworker,
                                   or_circuit_t *circ,
-                                  char *onionskin);
+                                  struct create_cell_t *onionskin);
 
 #endif
 

@@ -30,12 +30,15 @@ void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
                               int reverse);
-int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
-                             const uint8_t *reply);
+struct created_cell_t;
+int circuit_finish_handshake(origin_circuit_t *circ,
+                             const struct created_cell_t *created_cell);
 int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer,
                       int reason);
-int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
-                     const char *payload, const char *keys);
+int onionskin_answer(or_circuit_t *circ,
+                     const struct created_cell_t *created_cell,
+                     const char *keys,
+                     const uint8_t *rend_circ_nonce);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
@@ -43,8 +46,9 @@ int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_new(const char *nickname, const char *digest,
-                                 crypto_pk_t *onion_key,
-                                 const tor_addr_t *addr, uint16_t port);
+                               crypto_pk_t *onion_key,
+                               const curve25519_public_key_t *curve25519_key,
+                               const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);

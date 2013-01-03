@@ -1378,11 +1378,11 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   cpath->magic = CRYPT_PATH_MAGIC;
   launched->build_state->expiry_time = now + MAX_REND_TIMEOUT;
 
-  cpath->dh_handshake_state = dh;
+  cpath->rend_dh_handshake_state = dh;
   dh = NULL;
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
-  memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
+  memcpy(cpath->rend_circ_nonce, keys, DIGEST_LEN);
 
   /* For path bias: This intro circuit was used successfully */
   circuit->path_state = PATH_STATE_USE_SUCCEEDED;
@@ -2486,7 +2486,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   len = r;
   set_uint16(buf, htons((uint16_t)len));
   len += 2;
-  memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
+  memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
     goto err;
@@ -2632,13 +2632,13 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
 
   /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
   memcpy(buf, circuit->rend_data->rend_cookie, REND_COOKIE_LEN);
-  if (crypto_dh_get_public(hop->dh_handshake_state,
+  if (crypto_dh_get_public(hop->rend_dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
     log_warn(LD_GENERAL,"Couldn't get DH public key.");
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
-  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
+  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->rend_circ_nonce,
          DIGEST_LEN);
 
   /* Send the cell */
@@ -2651,8 +2651,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
     goto err;
   }
 
-  crypto_dh_free(hop->dh_handshake_state);
-  hop->dh_handshake_state = NULL;
+  crypto_dh_free(hop->rend_dh_handshake_state);
+  hop->rend_dh_handshake_state = NULL;
 
   /* Append the cpath entry. */
   hop->state = CPATH_STATE_OPEN;

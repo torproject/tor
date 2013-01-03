@@ -56,8 +56,8 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  /* Next 20 bytes: Hash of handshake_digest | "INTRODUCE" */
-  memcpy(buf, circ->handshake_digest, DIGEST_LEN);
+  /* Next 20 bytes: Hash of rend_circ_nonce | "INTRODUCE" */
+  memcpy(buf, circ->rend_circ_nonce, DIGEST_LEN);
   memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(expected_digest, buf, DIGEST_LEN+9) < 0) {
     log_warn(LD_BUG, "Internal error computing digest.");
