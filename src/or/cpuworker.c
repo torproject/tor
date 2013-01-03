@@ -235,6 +235,54 @@ estimated_usec_for_onionskins(uint32_t n_requests, uint16_t onionskin_type)
   }
 }
 
+/** Compute the absolute and relative overhead of using the cpuworker
+ * framework for onionskins of type <b>onionskin_type</b>.*/
+static int
+get_overhead_for_onionskins(uint32_t *usec_out, double *frac_out,
+                            uint16_t onionskin_type)
+{
+  uint64_t overhead;
+
+  *usec_out = 0;
+  *frac_out = 0.0;
+
+  if (onionskin_type > MAX_ONION_HANDSHAKE_TYPE) /* should be impossible */
+    return -1;
+  if (onionskins_n_processed[onionskin_type] == 0 ||
+      onionskins_usec_internal[onionskin_type] == 0 ||
+      onionskins_usec_roundtrip[onionskin_type] == 0)
+    return -1;
+
+  overhead = onionskins_usec_roundtrip[onionskin_type] -
+    onionskins_usec_internal[onionskin_type];
+
+  *usec_out = (uint32_t)(overhead / onionskins_n_processed[onionskin_type]);
+  *frac_out = U64_TO_DBL(overhead) / onionskins_usec_internal[onionskin_type];
+
+  return 0;
+}
+
+/** If we've measured overhead for onionskins of type <b>onionskin_type</b>,
+ * log it. */
+void
+cpuworker_log_onionskin_overhead(int severity, int onionskin_type,
+                                 const char *onionskin_type_name)
+{
+  uint32_t overhead;
+  double relative_overhead;
+  int r;
+
+  r = get_overhead_for_onionskins(&overhead,  &relative_overhead,
+                                  onionskin_type);
+  if (!overhead || r<0)
+    return;
+
+  log_fn(severity, LD_OR,
+         "%s onionskins have averaged %u usec overhead (%.2f%%) in "
+         "cpuworker code ",
+         onionskin_type_name, (unsigned)overhead, relative_overhead*100);
+}
+
 /** Called when we get data from a cpuworker.  If the answer is not complete,
  * wait for a complete answer. If the answer is complete,
  * process it as appropriate.

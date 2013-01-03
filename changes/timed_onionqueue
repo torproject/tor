@@ -5,3 +5,7 @@
       estimate the time it will take to process an onionskin based on average
       processing time of previous onionskins.  Closes ticket 7291. You'll
       never have to configure MaxOnionsPending again.
+
+    - We compute the overhead from passing onionskins back and forth to
+      cpuworkers, and report it when dumping statistics in response to
+      SIGUSR1.

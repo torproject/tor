@@ -2202,6 +2202,9 @@ dumpstats(int severity)
         100*(U64_TO_DBL(stats_n_data_bytes_received) /
              U64_TO_DBL(stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
+  cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_TAP, "TAP");
+  cpuworker_log_onionskin_overhead(severity, ONION_HANDSHAKE_TYPE_NTOR,"ntor");
+
   if (now - time_of_process_start >= 0)
     elapsed = now - time_of_process_start;
   else
