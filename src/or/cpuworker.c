@@ -320,19 +320,18 @@ connection_cpu_process_inbuf(connection_t *conn)
       tor_gettimeofday(&tv_end);
       timersub(&tv_end, &rpl.started_at, &tv_diff);
       usec_roundtrip = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
-      if (usec_roundtrip < 0 ||
-          usec_roundtrip > MAX_BELIEVABLE_ONIONSKIN_DELAY) {
-        usec_roundtrip = MAX_BELIEVABLE_ONIONSKIN_DELAY;
-      }
-      ++onionskins_n_processed[rpl.handshake_type];
-      onionskins_usec_internal[rpl.handshake_type] += rpl.n_usec;
-      onionskins_usec_roundtrip[rpl.handshake_type] += usec_roundtrip;
-      if (onionskins_n_processed[rpl.handshake_type] >= 500000) {
-        /* Scale down every 500000 handshakes.  On a busy server, that's
-         * less impressive than it sounds. */
-        onionskins_n_processed[rpl.handshake_type] /= 2;
-        onionskins_usec_internal[rpl.handshake_type] /= 2;
-        onionskins_usec_roundtrip[rpl.handshake_type] /= 2;
+      if (usec_roundtrip >= 0 &&
+          usec_roundtrip < MAX_BELIEVABLE_ONIONSKIN_DELAY) {
+        ++onionskins_n_processed[rpl.handshake_type];
+        onionskins_usec_internal[rpl.handshake_type] += rpl.n_usec;
+        onionskins_usec_roundtrip[rpl.handshake_type] += usec_roundtrip;
+        if (onionskins_n_processed[rpl.handshake_type] >= 500000) {
+          /* Scale down every 500000 handshakes.  On a busy server, that's
+           * less impressive than it sounds. */
+          onionskins_n_processed[rpl.handshake_type] /= 2;
+          onionskins_usec_internal[rpl.handshake_type] /= 2;
+          onionskins_usec_roundtrip[rpl.handshake_type] /= 2;
+        }
       }
     }
     /* parse out the circ it was talking about */
