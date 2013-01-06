@@ -1008,6 +1008,42 @@ test_crypto_curve25519_wrappers(void *arg)
 }
 
 static void
+test_crypto_curve25519_encode(void *arg)
+{
+  curve25519_secret_key_t seckey;
+  curve25519_public_key_t key1, key2, key3;
+  char buf[64];
+
+  (void)arg;
+
+  curve25519_secret_key_generate(&seckey, 0);
+  curve25519_public_key_generate(&key1, &seckey);
+  tt_int_op(0, ==, curve25519_public_to_base64(buf, &key1));
+  tt_int_op(CURVE25519_BASE64_PADDED_LEN, ==, strlen(buf));
+
+  tt_int_op(0, ==, curve25519_public_from_base64(&key2, buf));
+  test_memeq(key1.public_key, key2.public_key, CURVE25519_PUBKEY_LEN);
+
+  buf[CURVE25519_BASE64_PADDED_LEN - 1] = '\0';
+  tt_int_op(CURVE25519_BASE64_PADDED_LEN-1, ==, strlen(buf));
+  tt_int_op(0, ==, curve25519_public_from_base64(&key3, buf));
+  test_memeq(key1.public_key, key3.public_key, CURVE25519_PUBKEY_LEN);
+
+  /* Now try bogus parses. */
+  strlcpy(buf, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$=", sizeof(buf));
+  tt_int_op(-1, ==, curve25519_public_from_base64(&key3, buf));
+
+  strlcpy(buf, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", sizeof(buf));
+  tt_int_op(-1, ==, curve25519_public_from_base64(&key3, buf));
+
+  strlcpy(buf, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", sizeof(buf));
+  tt_int_op(-1, ==, curve25519_public_from_base64(&key3, buf));
+
+ done:
+  ;
+}
+
+static void
 test_crypto_curve25519_persist(void *arg)
 {
   curve25519_keypair_t keypair, keypair2;
@@ -1100,6 +1136,7 @@ struct testcase_t crypto_tests[] = {
 #ifdef CURVE25519_ENABLED
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
+  { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
 #endif
   END_OF_TESTCASES
