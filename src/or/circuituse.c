@@ -410,6 +410,15 @@ circuit_expire_building(void)
   } while (0)
 
   /**
+   * Because circuit build timeout is calculated only based on 3 hop
+   * general purpose circuit construction, we need to scale the timeout
+   * to make it properly apply to longer circuits, and circuits of
+   * certain usage types. The following diagram illustrates how we
+   * derive the scaling below. In short, we calculate the number
+   * of times our telescoping-based circuit construction causes cells
+   * to traverse each link for the circuit purpose types in question,
+   * and then assume each link is equivalent.
+   *
    * OP --a--> A --b--> B --c--> C
    * OP --a--> A --b--> B --c--> C --d--> D
    *
@@ -665,8 +674,8 @@ circuit_expire_building(void)
         /* For path bias: we want to let these guys live for a while
          * so we get a chance to test them. */
         log_info(LD_CIRC,
-                 "Allowing cannibalized circuit %d time to finish building as a "
-                 "pathbias testing circ.",
+                 "Allowing cannibalized circuit %d time to finish building "
+                 "as a pathbias testing circ.",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier);
         circuit_change_purpose(victim, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
         continue; /* It now should have a longer timeout next time */
@@ -732,7 +741,7 @@ circuit_expire_building(void)
 
     if (victim->n_chan)
       log_info(LD_CIRC,
-               "Abandoning circ %u %s:%hd (state %d,%d:%s, purpose %hhd, "
+               "Abandoning circ %u %s:%d (state %d,%d:%s, purpose %d, "
                "len %d)", TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                channel_get_canonical_remote_descr(victim->n_chan),
                victim->n_circ_id,
@@ -742,7 +751,7 @@ circuit_expire_building(void)
                TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len);
     else
       log_info(LD_CIRC,
-               "Abandoning circ %u %hd (state %d,%d:%s, purpose %hhd, len %d)",
+               "Abandoning circ %u %d (state %d,%d:%s, purpose %d, len %d)",
                TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                victim->n_circ_id, TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state,
