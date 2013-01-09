@@ -1505,7 +1505,19 @@ pathbias_count_build_success(origin_circuit_t *circ)
 }
 
 /**
- * Send a probe down a circuit that wasn't usable.
+ * Send a probe down a circuit that the client attempted to use,
+ * but for which the stream timed out/failed. The probe is a
+ * RELAY_BEGIN cell with a 0.a.b.c destination address, which
+ * the exit will reject and reply back, echoing that address.
+ *
+ * The reason for such probes is because it is possible to bias
+ * a user's paths simply by causing timeouts, and these timeouts
+ * are not possible to differentiate from unresponsive servers.
+ *
+ * The probe is sent at the end of the circuit lifetime for two
+ * reasons: to prevent cyptographic taggers from being able to
+ * drop cells to cause timeouts, and to prevent easy recognition
+ * of probes before any real client traffic happens.
  *
  * Returns -1 if we couldn't probe, 0 otherwise.
  */
@@ -1517,8 +1529,7 @@ pathbias_send_usable_probe(circuit_t *circ)
   int payload_len;
   origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
   crypt_path_t *cpath_layer = NULL;
-  // XXX: Generate a random 0.a.b.c adddress
-  const char *probe_nonce = "0.1.2.3";
+  char *probe_nonce = NULL;
 
   tor_assert(ocirc);
 
@@ -1548,9 +1559,13 @@ pathbias_send_usable_probe(circuit_t *circ)
   /* Update timestamp for circuit_expire_building to kill us */
   tor_gettimeofday(&circ->timestamp_began);
 
-  tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:25", probe_nonce);
-  tor_addr_parse(&ocirc->pathbias_probe_nonce, probe_nonce);
+  /* Generate a random address for the nonce */
+  crypto_rand((char*)&ocirc->pathbias_probe_nonce,
+              sizeof(ocirc->pathbias_probe_nonce));
+  ocirc->pathbias_probe_nonce &= 0x00ffffff;
+  probe_nonce = tor_dup_ip(ocirc->pathbias_probe_nonce);
 
+  tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:25", probe_nonce);
   payload_len = (int)strlen(payload)+1;
 
   // XXX: need this? Can we assume ipv4 will always be supported?
@@ -1567,12 +1582,14 @@ pathbias_send_usable_probe(circuit_t *circ)
     log_warn(LD_CIRC,
              "Ran out of stream IDs on circuit %u during "
              "pathbias probe attempt.", ocirc->global_identifier);
+    tor_free(probe_nonce);
     return -1;
   }
 
   log_info(LD_CIRC,
            "Sending pathbias testing cell to %s:25 on stream %d for circ %d.",
            probe_nonce, ocirc->pathbias_probe_id, ocirc->global_identifier);
+  tor_free(probe_nonce);
 
   /* Send a test relay cell */
   if (relay_send_command_from_edge(ocirc->pathbias_probe_id, circ,
@@ -1591,18 +1608,19 @@ pathbias_send_usable_probe(circuit_t *circ)
 }
 
 /**
- * Check the response to a pathbias probe.
+ * Check the response to a pathbias probe, to ensure the
+ * cell is recognized and the nonce and other probe
+ * characteristics are as expected.
  *
  * If the response is valid, return 0. Otherwise return < 0.
  */
 int
-pathbias_check_probe_response(circuit_t *circ, cell_t *cell)
+pathbias_check_probe_response(circuit_t *circ, const cell_t *cell)
 {
   /* Based on connection_edge_process_relay_cell() */
   relay_header_t rh;
   int reason;
   uint32_t ipv4_host;
-  tor_addr_t host;
   origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
 
   tor_assert(cell);
@@ -1620,24 +1638,28 @@ pathbias_check_probe_response(circuit_t *circ, cell_t *cell)
 
     /* Check length+extract host: It is in network order after the reason code.
      * See connection_edge_end(). */
-    if (rh.length != 9) { /* reason+ipv4+dns_ttl */
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Path bias probe response length field is insane (%d).",
-             rh.length);
+    if (rh.length < 9) { /* reason+ipv4+dns_ttl */
+      log_notice(LD_PROTOCOL,
+             "Short path bias probe response length field (%d).", rh.length);
       return - END_CIRC_REASON_TORPROTOCOL;
     }
 
-    ipv4_host = get_uint32(cell->payload+RELAY_HEADER_SIZE+1);
-    tor_addr_from_ipv4n(&host, ipv4_host);
+    ipv4_host = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
 
     /* Check nonce */
-    if (memcmp(&host, &ocirc->pathbias_probe_nonce, sizeof(tor_addr_t)) == 0) {
+    if (ipv4_host == ocirc->pathbias_probe_nonce) {
       ocirc->path_state = PATH_STATE_USE_SUCCEEDED;
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
       log_info(LD_CIRC,
                "Got valid path bias probe back for circ %d, stream %d.",
                ocirc->global_identifier, ocirc->pathbias_probe_id);
       return 0;
+    } else {
+      log_notice(LD_CIRC,
+               "Got strange probe value 0x%x vs 0x%x back for circ %d, "
+               "stream %d.", ipv4_host, ocirc->pathbias_probe_nonce,
+               ocirc->global_identifier, ocirc->pathbias_probe_id);
+      return -1;
     }
   }
   log_info(LD_CIRC,

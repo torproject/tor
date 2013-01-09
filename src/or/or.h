@@ -2894,8 +2894,8 @@ typedef struct origin_circuit_t {
   streamid_t pathbias_probe_id;
 
   /** For path probing. Store the temporary probe address nonce
-   * for response comparison. */
-  tor_addr_t pathbias_probe_nonce;
+   * (in host byte order) for response comparison. */
+  uint32_t pathbias_probe_nonce;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has
