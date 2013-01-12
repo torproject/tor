@@ -1,0 +1,4 @@
+  o Minor features (portability):
+    - Work correctly on unix systems where EAGAIN and EWOULDBLOCK are
+      separate error codes--or at least, don't break for that reason.
+      Fixes bug 7935. Reported by "oftc_must_be_destroyed".
