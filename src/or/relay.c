@@ -1619,14 +1619,6 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
             conn->base_.s,
             (int)length, (int)connection_get_inbuf_len(TO_CONN(conn)));
 
-  if (conn->base_.type == CONN_TYPE_AP) {
-    char *text = tor_memdup(payload, length+1);
-    text[length] = 0;
-    log_notice(LD_APP, "Incoming socks text (%d):===\n%s\n===",
-               conn->base_.s, text);
-    tor_free(text);
-  }
-
   if (sending_optimistically && !sending_from_optimistic) {
     /* This is new optimistic data; remember it in case we need to detach and
        retry */

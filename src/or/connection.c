@@ -1245,7 +1245,6 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
-      log_notice(LD_APP, "he hung up before we could accept(). that's fine.");
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
       warn_too_many_conns();
@@ -1257,7 +1256,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     connection_mark_for_close(conn);
     return -1;
   }
-  log_notice(LD_NET,
+  log_debug(LD_NET,
             "Connection accepted on socket %d (child of fd %d).",
             (int)news,(int)conn->s);
 
