@@ -1288,18 +1288,14 @@ router_parse_entry_from_string(const char *s, const char *end,
   tok->key = NULL; /* Prevent free */
 
   if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
-    uint8_t k[CURVE25519_PUBKEY_LEN+32];
-    int r;
+    curve25519_public_key_t k;
     tor_assert(tok->n_args >= 1);
-    r = base64_decode((char*)k, sizeof(k), tok->args[0], strlen(tok->args[0]));
-    if (r != CURVE25519_PUBKEY_LEN) {
-      log_warn(LD_DIR, "Bogus onion-key-ntor in routerinfo");
+    if (curve25519_public_from_base64(&k, tok->args[0]) < 0) {
+      log_warn(LD_DIR, "Bogus ntor-onion-key in routerinfo");
       goto err;
     }
     router->onion_curve25519_pkey =
-      tor_malloc(sizeof(curve25519_public_key_t));
-    memcpy(router->onion_curve25519_pkey->public_key,
-           k, CURVE25519_PUBKEY_LEN);
+      tor_memdup(&k, sizeof(curve25519_public_key_t));
   }
 
   tok = find_by_keyword(tokens, K_SIGNING_KEY);
@@ -4264,19 +4260,14 @@ microdescs_parse_from_string(const char *s, const char *eos,
     tok->key = NULL;
 
     if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
-      uint8_t k[CURVE25519_PUBKEY_LEN+32];
-      int r;
+      curve25519_public_key_t k;
       tor_assert(tok->n_args >= 1);
-      r = base64_decode((char*)k, sizeof(k),
-                        tok->args[0], strlen(tok->args[0]));
-      if (r != CURVE25519_PUBKEY_LEN) {
-        log_warn(LD_DIR, "Bogus onion-key-ntor in microdesc");
+      if (curve25519_public_from_base64(&k, tok->args[0]) < 0) {
+        log_warn(LD_DIR, "Bogus ntor-onion-key in microdesc");
         goto next;
       }
       md->onion_curve25519_pkey =
-        tor_malloc(sizeof(curve25519_public_key_t));
-      memcpy(md->onion_curve25519_pkey->public_key,
-             k, CURVE25519_PUBKEY_LEN);
+        tor_memdup(&k, sizeof(curve25519_public_key_t));
     }
 
     {
