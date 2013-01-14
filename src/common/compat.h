@@ -53,6 +53,7 @@
 #endif
 
 #include <stdio.h>
+#include <errno.h>
 
 #if defined (WINCE)
 #include <fcntl.h>
@@ -538,10 +539,14 @@ int tor_socket_errno(tor_socket_t sock);
 const char *tor_socket_strerror(int e);
 #else
 #define SOCK_ERRNO(e) e
+#if EAGAIN == EWOULDBLOCK
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
+#else
+#define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == EWOULDBLOCK)
+#endif
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
-#define ERRNO_IS_ACCEPT_EAGAIN(e)    ((e) == EAGAIN || (e) == ECONNABORTED)
+#define ERRNO_IS_ACCEPT_EAGAIN(e)    (ERRNO_IS_EAGAIN(e) || (e) == ECONNABORTED)
 #define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
   ((e) == EMFILE || (e) == ENFILE || (e) == ENOBUFS || (e) == ENOMEM)
 #define ERRNO_IS_EADDRINUSE(e)       ((e) == EADDRINUSE)

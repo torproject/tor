@@ -368,7 +368,11 @@ error_is_eagain(int err)
 #define CLOSE_SOCKET(x) closesocket(x)
 #else
 #define last_error(sock) (errno)
+#if EAGAIN != EWOULDBLOCK
+#define error_is_eagain(err) ((err) == EAGAIN || (err) == EWOULDBLOCK)
+#else
 #define error_is_eagain(err) ((err) == EAGAIN)
+#endif
 #define CLOSE_SOCKET(x) close(x)
 #endif
 
