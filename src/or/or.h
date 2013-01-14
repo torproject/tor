@@ -522,7 +522,9 @@ typedef enum {
 #define CIRCUIT_PURPOSE_TESTING 18
 /** A controller made this circuit and Tor should not use it. */
 #define CIRCUIT_PURPOSE_CONTROLLER 19
-#define CIRCUIT_PURPOSE_MAX_ 19
+/** This circuit is used for path bias probing only */
+#define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 20
+#define CIRCUIT_PURPOSE_MAX_ 20
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255
@@ -2886,6 +2888,14 @@ typedef struct origin_circuit_t {
   /** Kludge to help us prevent the warn in bug #6475 and eventually
    * debug why we are not seeing first hops in some cases. */
   path_state_t path_state : 3;
+
+  /** For path probing. Store the temporary probe stream ID
+   * for response comparison */
+  streamid_t pathbias_probe_id;
+
+  /** For path probing. Store the temporary probe address nonce
+   * (in host byte order) for response comparison. */
+  uint32_t pathbias_probe_nonce;
 
   /** Set iff this is a hidden-service circuit which has timed out
    * according to our current circuit-build timeout, but which has

@@ -39,6 +39,7 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "crypto.h"
+#include "connection_edge.h"
 
 #ifndef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
@@ -1504,6 +1505,171 @@ pathbias_count_build_success(origin_circuit_t *circ)
 }
 
 /**
+ * Send a probe down a circuit that the client attempted to use,
+ * but for which the stream timed out/failed. The probe is a
+ * RELAY_BEGIN cell with a 0.a.b.c destination address, which
+ * the exit will reject and reply back, echoing that address.
+ *
+ * The reason for such probes is because it is possible to bias
+ * a user's paths simply by causing timeouts, and these timeouts
+ * are not possible to differentiate from unresponsive servers.
+ *
+ * The probe is sent at the end of the circuit lifetime for two
+ * reasons: to prevent cyptographic taggers from being able to
+ * drop cells to cause timeouts, and to prevent easy recognition
+ * of probes before any real client traffic happens.
+ *
+ * Returns -1 if we couldn't probe, 0 otherwise.
+ */
+static int
+pathbias_send_usable_probe(circuit_t *circ)
+{
+  /* Based on connection_ap_handshake_send_begin() */
+  char payload[CELL_PAYLOAD_SIZE];
+  int payload_len;
+  origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+  crypt_path_t *cpath_layer = NULL;
+  char *probe_nonce = NULL;
+
+  tor_assert(ocirc);
+
+  cpath_layer = ocirc->cpath->prev;
+
+  if (cpath_layer->state != CPATH_STATE_OPEN) {
+    /* This can happen for cannibalized circuits. Their
+     * last hop isn't yet open */
+    log_info(LD_CIRC,
+             "Got pathbias probe request for unopened circuit %d. "
+             "Opened %d, len %d", ocirc->global_identifier,
+             ocirc->has_opened, ocirc->build_state->desired_path_len);
+    return -1;
+  }
+
+  /* We already went down this road. */
+  if (circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING &&
+      ocirc->pathbias_probe_id) {
+    log_info(LD_CIRC,
+             "Got pathbias probe request for circuit %d with "
+             "outstanding probe", ocirc->global_identifier);
+    return -1;
+  }
+
+  circuit_change_purpose(circ, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
+
+  /* Update timestamp for circuit_expire_building to kill us */
+  tor_gettimeofday(&circ->timestamp_began);
+
+  /* Generate a random address for the nonce */
+  crypto_rand((char*)&ocirc->pathbias_probe_nonce,
+              sizeof(ocirc->pathbias_probe_nonce));
+  ocirc->pathbias_probe_nonce &= 0x00ffffff;
+  probe_nonce = tor_dup_ip(ocirc->pathbias_probe_nonce);
+
+  tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:25", probe_nonce);
+  payload_len = (int)strlen(payload)+1;
+
+  // XXX: need this? Can we assume ipv4 will always be supported?
+  // If not, how do we tell?
+  //if (payload_len <= RELAY_PAYLOAD_SIZE - 4 && edge_conn->begincell_flags) {
+  //  set_uint32(payload + payload_len, htonl(edge_conn->begincell_flags));
+  //  payload_len += 4;
+  //}
+
+  /* Generate+Store stream id, make sure it's non-zero */
+  ocirc->pathbias_probe_id = get_unique_stream_id_by_circ(ocirc);
+
+  if (ocirc->pathbias_probe_id==0) {
+    log_warn(LD_CIRC,
+             "Ran out of stream IDs on circuit %u during "
+             "pathbias probe attempt.", ocirc->global_identifier);
+    tor_free(probe_nonce);
+    return -1;
+  }
+
+  log_info(LD_CIRC,
+           "Sending pathbias testing cell to %s:25 on stream %d for circ %d.",
+           probe_nonce, ocirc->pathbias_probe_id, ocirc->global_identifier);
+  tor_free(probe_nonce);
+
+  /* Send a test relay cell */
+  if (relay_send_command_from_edge(ocirc->pathbias_probe_id, circ,
+                               RELAY_COMMAND_BEGIN, payload,
+                               payload_len, cpath_layer) < 0) {
+    log_notice(LD_CIRC,
+             "Failed to send pathbias probe cell on circuit %d.",
+             ocirc->global_identifier);
+    return -1;
+  }
+
+  /* Mark it freshly dirty so it doesn't get expired in the meantime */
+  circ->timestamp_dirty = time(NULL);
+
+  return 0;
+}
+
+/**
+ * Check the response to a pathbias probe, to ensure the
+ * cell is recognized and the nonce and other probe
+ * characteristics are as expected.
+ *
+ * If the response is valid, return 0. Otherwise return < 0.
+ */
+int
+pathbias_check_probe_response(circuit_t *circ, const cell_t *cell)
+{
+  /* Based on connection_edge_process_relay_cell() */
+  relay_header_t rh;
+  int reason;
+  uint32_t ipv4_host;
+  origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+  tor_assert(cell);
+  tor_assert(ocirc);
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
+
+  relay_header_unpack(&rh, cell->payload);
+
+  reason = rh.length > 0 ?
+        get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
+
+  if (rh.command == RELAY_COMMAND_END &&
+      reason == END_STREAM_REASON_EXITPOLICY &&
+      ocirc->pathbias_probe_id == rh.stream_id) {
+
+    /* Check length+extract host: It is in network order after the reason code.
+     * See connection_edge_end(). */
+    if (rh.length < 9) { /* reason+ipv4+dns_ttl */
+      log_notice(LD_PROTOCOL,
+             "Short path bias probe response length field (%d).", rh.length);
+      return - END_CIRC_REASON_TORPROTOCOL;
+    }
+
+    ipv4_host = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
+
+    /* Check nonce */
+    if (ipv4_host == ocirc->pathbias_probe_nonce) {
+      ocirc->path_state = PATH_STATE_USE_SUCCEEDED;
+      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+      log_info(LD_CIRC,
+               "Got valid path bias probe back for circ %d, stream %d.",
+               ocirc->global_identifier, ocirc->pathbias_probe_id);
+      return 0;
+    } else {
+      log_notice(LD_CIRC,
+               "Got strange probe value 0x%x vs 0x%x back for circ %d, "
+               "stream %d.", ipv4_host, ocirc->pathbias_probe_nonce,
+               ocirc->global_identifier, ocirc->pathbias_probe_id);
+      return -1;
+    }
+  }
+  log_info(LD_CIRC,
+             "Got another cell back back on pathbias probe circuit %d: "
+             "Command: %d, Reason: %d, Stream-id: %d",
+             ocirc->global_identifier, rh.command, reason, rh.stream_id);
+  return -1;
+}
+
+/**
  * Check if a circuit was used and/or closed successfully.
  *
  * If we attempted to use the circuit to carry a stream but failed
@@ -1512,18 +1678,26 @@ pathbias_count_build_success(origin_circuit_t *circ)
  *
  * If we *have* successfully used the circuit, or it appears to
  * have been closed by us locally, count it as a success.
+ *
+ * Returns 0 if we're done making decisions with the circ,
+ * or -1 if we want to probe it first.
  */
-void
+int
 pathbias_check_close(origin_circuit_t *ocirc, int reason)
 {
   circuit_t *circ = &ocirc->base_;
 
   if (!pathbias_should_count(ocirc)) {
-    return;
+    return 0;
   }
 
   if (ocirc->path_state == PATH_STATE_BUILD_SUCCEEDED) {
     if (circ->timestamp_dirty) {
+      if (pathbias_send_usable_probe(circ) == 0)
+        return -1;
+      else
+        pathbias_count_unusable(ocirc);
+
       /* Any circuit where there were attempted streams but no successful
        * streams could be bias */
       log_info(LD_CIRC,
@@ -1533,7 +1707,7 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
             reason, circ->purpose, ocirc->has_opened,
             circuit_state_to_string(circ->state),
             ocirc->build_state->desired_path_len);
-      pathbias_count_unusable(ocirc);
+
     } else {
       if (reason & END_CIRC_REASON_FLAG_REMOTE) {
         /* Unused remote circ close reasons all could be bias */
@@ -1569,6 +1743,8 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
   } else if (ocirc->path_state == PATH_STATE_USE_SUCCEEDED) {
     pathbias_count_successful_close(ocirc);
   }
+
+  return 0;
 }
 
 /**
@@ -2567,6 +2743,9 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit)
 {
   int err_reason = 0;
   warn_if_last_router_excluded(circ, exit);
+
+  tor_gettimeofday(&circ->base_.timestamp_began);
+
   circuit_append_new_exit(circ, exit);
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
   if ((err_reason = circuit_send_next_onion_skin(circ))<0) {

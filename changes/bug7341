@@ -1,0 +1,7 @@
+
+ o Minor features:
+   - Improve circuit build timeout handling for hidden services.
+     In particular: adjust build timeouts more accurately depending
+     upon the number of hop-RTTs that a particular circuit type
+     undergoes. Additionally, launch intro circuits in parallel
+     if they timeout, and take the first one to reply as valid.

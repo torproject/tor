@@ -66,6 +66,11 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
+
+  /* Set timestamp_dirty, because circuit_expire_building expects it,
+   * and the rend cookie also means we've used the circ. */
+  circ->base_.timestamp_dirty = time(NULL);
+
   if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
                                    circ->rend_data->rend_cookie,
@@ -100,6 +105,7 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
+  // XXX: should we not re-extend if hs_circ_has_timed_out?
   if (circ->remaining_relay_early_cells) {
     log_info(LD_REND,
              "Re-extending circ %d, this time to %s.",
@@ -338,6 +344,32 @@ rend_client_rendcirc_has_opened(origin_circuit_t *circ)
   }
 }
 
+/**
+ * Called to close other intro circuits we launched in parallel
+ * due to timeout.
+ */
+static void
+rend_client_close_other_intros(const char *onion_address)
+{
+  circuit_t *c;
+  /* abort parallel intro circs, if any */
+  for (c = circuit_get_global_list_(); c; c = c->next) {
+    if ((c->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
+        c->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
+        !c->marked_for_close && CIRCUIT_IS_ORIGIN(c)) {
+      origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(c);
+      if (oc->rend_data &&
+          !rend_cmp_service_ids(onion_address,
+                                oc->rend_data->onion_address)) {
+        log_info(LD_REND|LD_CIRC, "Closing introduction circuit %d that we "
+                 "built in parallel (Purpose %d).", oc->global_identifier,
+                 c->purpose);
+        circuit_mark_for_close(c, END_CIRC_REASON_TIMEOUT);
+      }
+    }
+  }
+}
+
 /** Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
  */
 int
@@ -389,6 +421,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     circuit_change_purpose(TO_CIRCUIT(circ),
                            CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+
+    /* close any other intros launched in parallel */
+    rend_client_close_other_intros(circ->rend_data->onion_address);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);

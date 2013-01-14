@@ -90,6 +90,7 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
                                              origin_circuit_t *circ,
                                              int dry_run);
 void circuit_clear_isolation(origin_circuit_t *circ);
+streamid_t get_unique_stream_id_by_circ(origin_circuit_t *circ);
 
 /** @name Begin-cell flags
  *
