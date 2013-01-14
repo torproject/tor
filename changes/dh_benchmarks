@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Add benchmarks for DH (1024-bit multiplicative group) and ECDH
-      (P-256) diffie-hellman handshakes to src/or/bench.
