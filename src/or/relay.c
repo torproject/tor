@@ -1176,6 +1176,23 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     return - END_CIRC_REASON_TORPROTOCOL;
   }
 
+  if (rh.stream_id == 0) {
+    switch (rh.command) {
+      case RELAY_COMMAND_BEGIN:
+      case RELAY_COMMAND_CONNECTED:
+      case RELAY_COMMAND_DATA:
+      case RELAY_COMMAND_END:
+      case RELAY_COMMAND_RESOLVE:
+      case RELAY_COMMAND_RESOLVED:
+      case RELAY_COMMAND_BEGIN_DIR:
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay command %d with zero "
+               "stream_id. Dropping.", (int)rh.command);
+        return 0;
+      default:
+        ;
+    }
+  }
+
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 

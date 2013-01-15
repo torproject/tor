@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Reject bogus create and relay cells with 0 circuit ID or 0 stream
+      ID: these could be used to create unexpected streams and circuits
+      which would count as "present" to some parts of Tor but "absent"
+      to others, leading to zombie circuits and streams or to a
+      bandwidth DOS. Fixes bug 7889; bugfix on every released version of
+      Tor. Reported by "oftc_must_be_destroyed".
+

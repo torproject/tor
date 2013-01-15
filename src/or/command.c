@@ -221,6 +221,14 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
+  if (cell->circ_id == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received a create cell (type %d) from %s:%d with zero circID; "
+           " ignoring.", (int)cell->command, conn->_base.address,
+           conn->_base.port);
+    return;
+  }
+
   /* If the high bit of the circuit ID is not as expected, close the
    * circ. */
   id_is_high = cell->circ_id & (1<<15);
