@@ -560,7 +560,8 @@ check_created_cell(const created_cell_t *cell)
 {
   switch (cell->cell_type) {
   case CELL_CREATED:
-    if (cell->handshake_len != TAP_ONIONSKIN_REPLY_LEN)
+    if (cell->handshake_len != TAP_ONIONSKIN_REPLY_LEN &&
+        cell->handshake_len != NTOR_REPLY_LEN)
       return -1;
     break;
   case CELL_CREATED_FAST:
