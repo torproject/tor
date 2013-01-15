@@ -2578,7 +2578,7 @@ typedef enum {
 
 struct fast_handshake_state_t;
 struct ntor_handshake_state_t;
-#define ONION_HANDSHAKE_TYPE_TAP 0x0000
+#define ONION_HANDSHAKE_TYPE_TAP  0x0000
 #define ONION_HANDSHAKE_TYPE_FAST 0x0001
 #define ONION_HANDSHAKE_TYPE_NTOR 0x0002
 typedef struct {

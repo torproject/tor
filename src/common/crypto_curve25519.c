@@ -208,3 +208,4 @@ curve25519_public_from_base64(curve25519_public_key_t *pkey,
     return -1;
   }
 }
+

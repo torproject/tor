@@ -374,10 +374,10 @@ onion_skin_server_handshake(int type,
 
 /** Perform the final (client-side) step of a circuit-creation handshake of
  * type <b>type</b>, using our state in <b>handshake_state</b> and the
- * server's response in <b>reply</b> On success, generate <b>keys_out_len</b>
+ * server's response in <b>reply</b>. On success, generate <b>keys_out_len</b>
  * bytes worth of key material in <b>keys_out_len</b>, set
  * <b>rend_authenticator_out</b> to the "KH" field that can be used to
- * establish introduction points at this hop, and return 0.  On failure,
+ * establish introduction points at this hop, and return 0. On failure,
  * return -1. */
 int
 onion_skin_client_handshake(int type,

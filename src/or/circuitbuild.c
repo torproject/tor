@@ -1437,7 +1437,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
   }
 
   /* Don't count cannibalized/reused circs for path bias
-   * build success.. They get counted under use success */
+   * "build" success, since they get counted under "use" success. */
   if (!circ->has_opened) {
     if (circ->cpath && circ->cpath->extend_info) {
       guard = entry_guard_get_by_id_digest(
@@ -1515,7 +1515,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
  * are not possible to differentiate from unresponsive servers.
  *
  * The probe is sent at the end of the circuit lifetime for two
- * reasons: to prevent cyptographic taggers from being able to
+ * reasons: to prevent cryptographic taggers from being able to
  * drop cells to cause timeouts, and to prevent easy recognition
  * of probes before any real client traffic happens.
  *
@@ -1556,7 +1556,7 @@ pathbias_send_usable_probe(circuit_t *circ)
 
   circuit_change_purpose(circ, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
 
-  /* Update timestamp for circuit_expire_building to kill us */
+  /* Update timestamp for when circuit_expire_building() should kill us */
   tor_gettimeofday(&circ->timestamp_began);
 
   /* Generate a random address for the nonce */
@@ -1596,8 +1596,8 @@ pathbias_send_usable_probe(circuit_t *circ)
                                RELAY_COMMAND_BEGIN, payload,
                                payload_len, cpath_layer) < 0) {
     log_notice(LD_CIRC,
-             "Failed to send pathbias probe cell on circuit %d.",
-             ocirc->global_identifier);
+               "Failed to send pathbias probe cell on circuit %d.",
+               ocirc->global_identifier);
     return -1;
   }
 
@@ -1710,7 +1710,7 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
 
     } else {
       if (reason & END_CIRC_REASON_FLAG_REMOTE) {
-        /* Unused remote circ close reasons all could be bias */
+        /* Remote circ close reasons on an unused circuit all could be bias */
         log_info(LD_CIRC,
             "Circuit %d remote-closed without successful use for reason %d. "
             "Circuit purpose %d currently %d,%s. Len %d.",
@@ -1836,6 +1836,8 @@ pathbias_count_unusable(origin_circuit_t *circ)
    /* In rare cases, CIRCUIT_PURPOSE_TESTING can get converted to
     * CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT and have no guards here.
     * No need to log that case. */
+    /* XXX note cut-and-paste code in this function compared to nearby
+     * functions. Would be nice to refactor. -RD */
     log_info(LD_CIRC,
         "Stream-failing circuit has no known guard. "
         "Circuit is a %s currently %s",
@@ -1886,11 +1888,11 @@ pathbias_count_timeout(origin_circuit_t *circ)
 double
 pathbias_get_closed_count(entry_guard_t *guard)
 {
-  circuit_t *circ = global_circuitlist;
+  circuit_t *circ;
   int open_circuits = 0;
 
-  /* Count currently open circuits. Give them the benefit of the doubt */
-  for ( ; circ; circ = circ->next) {
+  /* Count currently open circuits. Give them the benefit of the doubt. */
+  for (circ = global_circuitlist; circ; circ = circ->next) {
     origin_circuit_t *ocirc = NULL;
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
         circ->marked_for_close) /* already counted */
@@ -1903,8 +1905,8 @@ pathbias_get_closed_count(entry_guard_t *guard)
 
     if (ocirc->path_state >= PATH_STATE_BUILD_SUCCEEDED &&
         fast_memeq(guard->identity,
-                ocirc->cpath->extend_info->identity_digest,
-                DIGEST_LEN)) {
+                   ocirc->cpath->extend_info->identity_digest,
+                   DIGEST_LEN)) {
       open_circuits++;
     }
   }
@@ -1928,9 +1930,10 @@ pathbias_get_success_count(entry_guard_t *guard)
 }
 
 /** Increment the number of times we successfully extended a circuit to
- * 'guard', first checking if the failure rate is high enough that we should
- * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
- * guard looks fine. */
+ * <b>guard</b>, first checking if the failure rate is high enough that
+ * we should eliminate the guard. Return -1 if the guard looks no good;
+ * return 0 if the guard looks fine.
+ */
 static int
 entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
 {
@@ -1949,7 +1952,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
         if (!guard->path_bias_disabled) {
           log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing an extremely large amount of "
-                 "circuits. To avoid potential route manipluation attacks, "
+                 "circuits. To avoid potential route manipulation attacks, "
                  "Tor has disabled use of this guard. "
                  "Success counts are %ld/%ld. %ld circuits completed, %ld "
                  "were unusable, %ld collapsed, and %ld timed out. For "
@@ -1992,7 +1995,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
                  "Your Guard %s=%s is failing a very large amount of "
                  "circuits. Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
-                 "you or the potentially the guard itself. "
+                 "you or potentially the guard itself. "
                  "Success counts are %ld/%ld. %ld circuits completed, %ld "
                  "were unusable, %ld collapsed, and %ld timed out. For "
                  "reference, your timeout cutoff is %ld seconds.",
@@ -2058,10 +2061,9 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
   return 0;
 }
 
-/** A created or extended cell came back to us on the circuit, and it included
- * reply_cell as its body.  (If <b>reply_type</b> is CELL_CREATED, the body
- * contains (the second DH key, plus KH).  If <b>reply_type</b> is
- * CELL_CREATED_FAST, the body contains a secret y and a hash H(x|y).)
+/** A "created" cell <b>reply</b> came back to us on circuit <b>circ</b>.
+ * (The body of <b>reply</b> varies depending on what sort of handshake
+ * this is.)
  *
  * Calculate the appropriate keys and digests, make sure KH is
  * correct, and initialize this hop of the cpath.
@@ -2117,9 +2119,9 @@ circuit_finish_handshake(origin_circuit_t *circ,
 
 /** We received a relay truncated cell on circ.
  *
- * Since we don't ask for truncates currently, getting a truncated
+ * Since we don't send truncates currently, getting a truncated
  * means that a connection broke or an extend failed. For now,
- * just give up: for circ to close, and return 0.
+ * just give up: force circ to close, and return 0.
  */
 int
 circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
@@ -2130,7 +2132,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer, int reason)
   tor_assert(circ);
   tor_assert(layer);
 
-  /* XXX Since we don't ask for truncates currently, getting a truncated
+  /* XXX Since we don't send truncates currently, getting a truncated
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
@@ -2223,15 +2225,18 @@ onionskin_answer(or_circuit_t *circ,
   return 0;
 }
 
-/** Choose a length for a circuit of purpose <b>purpose</b>.
- * Default length is 3 + the number of endpoints that would give something
- * away. If the routerlist <b>routers</b> doesn't have enough routers
+/** Choose a length for a circuit of purpose <b>purpose</b>: three + the
+ * number of endpoints that would give something away about our destination.
+ *
+ * If the routerlist <b>nodes</b> doesn't have enough routers
  * to handle the desired path length, return as large a path length as
  * is feasible, except if it's less than 2, in which case return -1.
+ * XXX ^^ I think this behavior is a hold-over from back when we had only a
+ *     few relays in the network, and certainly back before guards existed.
+ *     We should very likely get rid of it. -RD
  */
 static int
-new_route_len(uint8_t purpose, extend_info_t *exit,
-              smartlist_t *nodes)
+new_route_len(uint8_t purpose, extend_info_t *exit, smartlist_t *nodes)
 {
   int num_acceptable_routers;
   int routelen;
