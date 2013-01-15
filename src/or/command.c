@@ -223,9 +223,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
 
   if (cell->circ_id == 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received a create cell (type %d) from %s:%d with zero circID; "
-           " ignoring.", (int)cell->command, conn->_base.address,
-           conn->_base.port);
+           "Received a create cell (type %d) from %s with zero circID; "
+           " ignoring.", (int)cell->command,
+           channel_get_actual_remote_descr(chan));
     return;
   }
 
