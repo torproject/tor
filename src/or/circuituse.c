@@ -452,15 +452,15 @@ circuit_expire_building(void)
   SET_CUTOFF(stream_cutoff, MAX(options->CircuitStreamTimeout,15)*1000 + 1000);
 
   /* Be lenient with cannibalized circs. They already survived the official
-   * CBT, and they're usually not perf-critical. */
+   * CBT, and they're usually not performance-critical. */
   SET_CUTOFF(cannibalized_cutoff,
              MAX(circ_times.close_ms*(4/6.0),
                  options->CircuitStreamTimeout * 1000) + 1000);
 
-  // Intro circs have an extra round trip (and are also 4 hops long)
+  /* Intro circs have an extra round trip (and are also 4 hops long) */
   SET_CUTOFF(c_intro_cutoff, circ_times.timeout_ms * (14/6.0) + 1000);
 
-  // Server intro circs have an extra round trip
+  /* Server intro circs have an extra round trip */
   SET_CUTOFF(s_intro_cutoff, circ_times.timeout_ms * (9/6.0) + 1000);
 
   SET_CUTOFF(close_cutoff, circ_times.close_ms);
