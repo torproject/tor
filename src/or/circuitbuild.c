@@ -2177,7 +2177,8 @@ onionskin_answer(or_circuit_t *circ,
   crypt_path_t *tmp_cpath;
 
   if (created_cell_format(&cell, created_cell) < 0) {
-    log_warn(LD_BUG,"couldn't format created cell");
+    log_warn(LD_BUG,"couldn't format created cell (type=%d, len=%d)",
+             (int)created_cell->cell_type, (int)created_cell->handshake_len);
     return -1;
   }
   cell.circ_id = circ->p_circ_id;
