@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Fix backward compatibility logic when receiving an embedded ntor
-      handshake tunneled in a CREATE cell. This clears up the "Bug: couldn't
-      format CREATED cell" warning. Fix for bug 7959; bugfix on
-      0.2.4.8-alpha.
-

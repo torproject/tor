@@ -1,4 +1,12 @@
-Changes in version 0.2.4.9-alpha - 2013-01-??
+Changes in version 0.2.4.9-alpha - 2013-01-15
+  Tor 0.2.4.9-alpha provides a quick fix to make the new ntor handshake
+  work more robustly.
+
+  o Major bugfixes:
+    - Fix backward compatibility logic when receiving an embedded ntor
+      handshake tunneled in a CREATE cell. This clears up the "Bug:
+      couldn't format CREATED cell" warning. Fixes bug 7959; bugfix
+      on 0.2.4.8-alpha.
 
 
 Changes in version 0.2.4.8-alpha - 2013-01-14
