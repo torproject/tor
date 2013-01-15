@@ -1,3 +1,6 @@
+Changes in version 0.2.4.9-alpha - 2013-01-??
+
+
 Changes in version 0.2.4.8-alpha - 2013-01-14
   Tor 0.2.4.8-alpha introduces directory guards to reduce user enumeration
   risks, adds a new stronger and faster circuit handshake, and offers
