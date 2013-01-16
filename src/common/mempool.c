@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2012, The Tor Project, Inc. */
+/* Copyright (c) 2007-2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 #if 1
 /* Tor dependencies */
