@@ -931,7 +931,7 @@ rend_service_requires_uptime(rend_service_t *service)
 
   for (i=0; i < smartlist_len(service->ports); ++i) {
     p = smartlist_get(service->ports, i);
-    if (smartlist_string_num_isin(get_options()->LongLivedPorts,
+    if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
                                   p->virtual_port))
       return 1;
   }
@@ -2774,7 +2774,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       char *hs_dir_ip;
       const node_t *node;
       hs_dir = smartlist_get(responsible_dirs, j);
-      if (smartlist_digest_isin(renddesc->successful_uploads,
+      if (smartlist_contains_digest(renddesc->successful_uploads,
                                 hs_dir->identity_digest))
         /* Don't upload descriptor if we succeeded in doing so last time. */
         continue;
@@ -2809,7 +2809,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                hs_dir->or_port);
       tor_free(hs_dir_ip);
       /* Remember successful upload to this router for next time. */
-      if (!smartlist_digest_isin(successful_uploads, hs_dir->identity_digest))
+      if (!smartlist_contains_digest(successful_uploads,
+                                     hs_dir->identity_digest))
         smartlist_add(successful_uploads, hs_dir->identity_digest);
     }
     smartlist_clear(responsible_dirs);
@@ -2827,7 +2828,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
     if (!renddesc->successful_uploads)
       renddesc->successful_uploads = smartlist_new();
     SMARTLIST_FOREACH(successful_uploads, const char *, c, {
-      if (!smartlist_digest_isin(renddesc->successful_uploads, c)) {
+      if (!smartlist_contains_digest(renddesc->successful_uploads, c)) {
         char *hsdir_id = tor_memdup(c, DIGEST_LEN);
         smartlist_add(renddesc->successful_uploads, hsdir_id);
       }

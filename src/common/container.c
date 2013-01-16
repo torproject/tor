@@ -163,7 +163,7 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
 /** Return true iff some element E of sl has E==element.
  */
 int
-smartlist_isin(const smartlist_t *sl, const void *element)
+smartlist_contains(const smartlist_t *sl, const void *element)
 {
   int i;
   for (i=0; i < sl->num_used; i++)
@@ -176,7 +176,7 @@ smartlist_isin(const smartlist_t *sl, const void *element)
  * !strcmp(E,<b>element</b>)
  */
 int
-smartlist_string_isin(const smartlist_t *sl, const char *element)
+smartlist_contains_string(const smartlist_t *sl, const char *element)
 {
   int i;
   if (!sl) return 0;
@@ -203,7 +203,7 @@ smartlist_string_pos(const smartlist_t *sl, const char *element)
  * !strcasecmp(E,<b>element</b>)
  */
 int
-smartlist_string_isin_case(const smartlist_t *sl, const char *element)
+smartlist_contains_string_case(const smartlist_t *sl, const char *element)
 {
   int i;
   if (!sl) return 0;
@@ -217,11 +217,11 @@ smartlist_string_isin_case(const smartlist_t *sl, const char *element)
  * to the decimal encoding of <b>num</b>.
  */
 int
-smartlist_string_num_isin(const smartlist_t *sl, int num)
+smartlist_contains_int_as_string(const smartlist_t *sl, int num)
 {
   char buf[32]; /* long enough for 64-bit int, and then some. */
   tor_snprintf(buf,sizeof(buf),"%d", num);
-  return smartlist_string_isin(sl, buf);
+  return smartlist_contains_string(sl, buf);
 }
 
 /** Return true iff the two lists contain the same strings in the same
@@ -247,7 +247,7 @@ smartlist_strings_eq(const smartlist_t *sl1, const smartlist_t *sl2)
  * tor_memeq(E,<b>element</b>,DIGEST_LEN)
  */
 int
-smartlist_digest_isin(const smartlist_t *sl, const char *element)
+smartlist_contains_digest(const smartlist_t *sl, const char *element)
 {
   int i;
   if (!sl) return 0;
@@ -257,19 +257,19 @@ smartlist_digest_isin(const smartlist_t *sl, const char *element)
   return 0;
 }
 
-/** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
+/** Return true iff some element E of sl2 has smartlist_contains(sl1,E).
  */
 int
 smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
 {
   int i;
   for (i=0; i < sl2->num_used; i++)
-    if (smartlist_isin(sl1, sl2->list[i]))
+    if (smartlist_contains(sl1, sl2->list[i]))
       return 1;
   return 0;
 }
 
-/** Remove every element E of sl1 such that !smartlist_isin(sl2,E).
+/** Remove every element E of sl1 such that !smartlist_contains(sl2,E).
  * Does not preserve the order of sl1.
  */
 void
@@ -277,13 +277,13 @@ smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2)
 {
   int i;
   for (i=0; i < sl1->num_used; i++)
-    if (!smartlist_isin(sl2, sl1->list[i])) {
+    if (!smartlist_contains(sl2, sl1->list[i])) {
       sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
 }
 
-/** Remove every element E of sl1 such that smartlist_isin(sl2,E).
+/** Remove every element E of sl1 such that smartlist_contains(sl2,E).
  * Does not preserve the order of sl1.
  */
 void

@@ -804,7 +804,8 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
   const node_t *exitnode;
   int num=0;
   time_t now = time(NULL);
-  int need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
+  int need_uptime = smartlist_contains_int_as_string(
+                                   get_options()->LongLivedPorts,
                                    conn ? conn->socks_request->port : port);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -1621,7 +1622,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
   want_onehop = conn->want_onehop;
 
   need_uptime = !conn->want_onehop && !conn->use_begindir &&
-                smartlist_string_num_isin(options->LongLivedPorts,
+                smartlist_contains_int_as_string(options->LongLivedPorts,
                                           conn->socks_request->port);
 
   if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)

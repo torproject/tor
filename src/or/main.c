@@ -422,7 +422,7 @@ connection_unlink(connection_t *conn)
 void
 add_connection_to_closeable_list(connection_t *conn)
 {
-  tor_assert(!smartlist_isin(closeable_connection_lst, conn));
+  tor_assert(!smartlist_contains(closeable_connection_lst, conn));
   tor_assert(conn->marked_for_close);
   assert_connection_ok(conn, time(NULL));
   smartlist_add(closeable_connection_lst, conn);
@@ -432,14 +432,14 @@ add_connection_to_closeable_list(connection_t *conn)
 int
 connection_is_on_closeable_list(connection_t *conn)
 {
-  return smartlist_isin(closeable_connection_lst, conn);
+  return smartlist_contains(closeable_connection_lst, conn);
 }
 
 /** Return true iff conn is in the current poll array. */
 int
 connection_in_array(connection_t *conn)
 {
-  return smartlist_isin(connection_array, conn);
+  return smartlist_contains(connection_array, conn);
 }
 
 /** Set <b>*array</b> to an array of all connections, and <b>*n</b>
@@ -666,7 +666,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
       tor_event_base_loopexit(tor_libevent_get_base(), &tv);
     }
   } else {
-    tor_assert(smartlist_isin(active_linked_connection_lst, conn));
+    tor_assert(smartlist_contains(active_linked_connection_lst, conn));
   }
 }
 
@@ -686,7 +686,7 @@ connection_stop_reading_from_linked_conn(connection_t *conn)
      * so let's leave it alone for now. */
     smartlist_remove(active_linked_connection_lst, conn);
   } else {
-    tor_assert(!smartlist_isin(active_linked_connection_lst, conn));
+    tor_assert(!smartlist_contains(active_linked_connection_lst, conn));
   }
 }
 

@@ -1,0 +1,2 @@
+ o Code simplifications and refactoring:
+   - Rename "isin" functions to "contains", for grammar. Fixes ticket 5285.

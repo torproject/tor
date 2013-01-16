@@ -1858,7 +1858,7 @@ router_rebuild_descriptor(int force)
          member = node_get_by_nickname(name, 1);
        if (!member) {
          int is_legal = is_legal_nickname_or_hexdigest(name);
-         if (!smartlist_string_isin(warned_nonexistent_family, name) &&
+         if (!smartlist_contains_string(warned_nonexistent_family, name) &&
              !is_legal_hexdigest(name)) {
            if (is_legal)
              log_warn(LD_CONFIG,
@@ -1884,7 +1884,7 @@ router_rebuild_descriptor(int force)
          base16_encode(fp+1,HEX_DIGEST_LEN+1,
                        member->identity, DIGEST_LEN);
          smartlist_add(ri->declared_family, fp);
-         if (smartlist_string_isin(warned_nonexistent_family, name))
+         if (smartlist_contains_string(warned_nonexistent_family, name))
            smartlist_string_remove(warned_nonexistent_family, name);
        }
     skip:

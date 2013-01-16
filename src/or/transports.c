@@ -428,7 +428,7 @@ static void
 add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
 {
   tor_assert(mp->transports_to_launch);
-  if (!smartlist_string_isin(mp->transports_to_launch, transport))
+  if (!smartlist_contains_string(mp->transports_to_launch, transport))
     smartlist_add(mp->transports_to_launch, tor_strdup(transport));
 }
 
@@ -453,7 +453,7 @@ proxy_needs_restart(const managed_proxy_t *mp)
     goto needs_restart;
 
   SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
-    if (!smartlist_string_isin(mp->transports_to_launch, t->name))
+    if (!smartlist_contains_string(mp->transports_to_launch, t->name))
       goto needs_restart;
 
   } SMARTLIST_FOREACH_END(t);

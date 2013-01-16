@@ -829,9 +829,10 @@ static int
 consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
 {
   const or_options_t *options = get_options();
-  int reject = smartlist_string_num_isin(options->RejectPlaintextPorts, port);
+  int reject = smartlist_contains_int_as_string(
+                                     options->RejectPlaintextPorts, port);
 
-  if (smartlist_string_num_isin(options->WarnPlaintextPorts, port)) {
+  if (smartlist_contains_int_as_string(options->WarnPlaintextPorts, port)) {
     log_warn(LD_APP, "Application request to port %d: this port is "
              "commonly used for unencrypted protocols. Please make sure "
              "you don't send anything you would mind the rest of the "

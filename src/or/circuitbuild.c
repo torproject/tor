@@ -2301,7 +2301,7 @@ circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
   enough = (smartlist_len(sl) == 0);
   for (i = 0; i < smartlist_len(sl); ++i) {
     port = smartlist_get(sl, i);
-    if (smartlist_string_num_isin(LongLivedServices, *port))
+    if (smartlist_contains_int_as_string(LongLivedServices, *port))
       *need_uptime = 1;
     tor_free(port);
   }
