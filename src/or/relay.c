@@ -734,7 +734,11 @@ connection_ap_process_end_not_open(
     }
   }
 
-  if (rh->length > 0 && edge_reason_is_retriable(reason) &&
+  if (rh->length == 0) {
+    reason = END_STREAM_REASON_MISC;
+  }
+
+  if (edge_reason_is_retriable(reason) &&
       /* avoid retry if rend */
       !connection_edge_is_rendezvous_stream(edge_conn)) {
     const char *chosen_exit_digest =
