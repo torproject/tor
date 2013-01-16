@@ -1501,9 +1501,17 @@ learned_router_identity(const tor_addr_t *addr, uint16_t port,
   bridge_info_t *bridge =
     get_configured_bridge_by_addr_port_digest(addr, port, digest);
   if (bridge && tor_digest_is_zero(bridge->identity)) {
+    char *transport_info = NULL;
+    const char *transport_name =
+      find_transport_name_by_bridge_addrport(addr, port);
+    if (transport_name)
+      tor_asprintf(&transport_info, " (with transport '%s')", transport_name);
+
     memcpy(bridge->identity, digest, DIGEST_LEN);
-    log_notice(LD_DIR, "Learned fingerprint %s for bridge %s",
-               hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port));
+    log_notice(LD_DIR, "Learned fingerprint %s for bridge %s%s.",
+               hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port),
+               transport_info ? transport_info : "");
+    tor_free(transport_info);
   }
 }
 
@@ -1629,7 +1637,9 @@ find_bridge_by_digest(const char *digest)
   return NULL;
 }
 
-/* DOCDOC find_transport_name_by_bridge_addrport */
+/** Given the <b>addr</b> and <b>port</b> of a bridge, if that bridge
+ *  supports a pluggable transport, return its name. Otherwise, return
+ *  NULL. */
 const char *
 find_transport_name_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 {
