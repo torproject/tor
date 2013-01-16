@@ -99,7 +99,7 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a \
 	src/common/libor-crypto.a $(LIBDONNA) \
 	src/common/libor-event.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 
 ORHEADERS = \
 	src/or/addressmap.h				\
