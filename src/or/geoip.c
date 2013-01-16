@@ -515,67 +515,6 @@ client_history_clear(void)
   }
 }
 
-/** How often do we update our estimate which share of v2 and v3 directory
- * requests is sent to us? We could as well trigger updates of shares from
- * network status updates, but that means adding a lot of calls into code
- * that is independent from geoip stats (and keeping them up-to-date). We
- * are perfectly fine with an approximation of 15-minute granularity. */
-#define REQUEST_SHARE_INTERVAL (15 * 60)
-
-/** When did we last determine which share of v2 and v3 directory requests
- * is sent to us? */
-static time_t last_time_determined_shares = 0;
-
-/** Sum of products of v2 shares times the number of seconds for which we
- * consider these shares as valid. */
-static double v2_share_times_seconds;
-
-/** Sum of products of v3 shares times the number of seconds for which we
- * consider these shares as valid. */
-static double v3_share_times_seconds;
-
-/** Number of seconds we are determining v2 and v3 shares. */
-static int share_seconds;
-
-/** Try to determine which fraction of v2 and v3 directory requests aimed at
- * caches will be sent to us at time <b>now</b> and store that value in
- * order to take a mean value later on. */
-static void
-geoip_determine_shares(time_t now)
-{
-  double v2_share = 0.0, v3_share = 0.0;
-  if (router_get_my_share_of_directory_requests(&v2_share, &v3_share) < 0)
-    return;
-  if (last_time_determined_shares) {
-    v2_share_times_seconds += v2_share *
-        ((double) (now - last_time_determined_shares));
-    v3_share_times_seconds += v3_share *
-        ((double) (now - last_time_determined_shares));
-    share_seconds += (int)(now - last_time_determined_shares);
-  }
-  last_time_determined_shares = now;
-}
-
-/** Calculate which fraction of v2 and v3 directory requests aimed at caches
- * have been sent to us since the last call of this function up to time
- * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
- * fractions of v2 and v3 protocol shares we expect to have seen. Reset
- * counters afterwards. Return 0 on success, -1 on failure (e.g. when zero
- * seconds have passed since the last call).*/
-static int
-geoip_get_mean_shares(time_t now, double *v2_share_out,
-                         double *v3_share_out)
-{
-  geoip_determine_shares(now);
-  if (!share_seconds)
-    return -1;
-  *v2_share_out = v2_share_times_seconds / ((double) share_seconds);
-  *v3_share_out = v3_share_times_seconds / ((double) share_seconds);
-  v2_share_times_seconds = v3_share_times_seconds = 0.0;
-  share_seconds = 0;
-  return 0;
-}
-
 /** Note that we've seen a client connect from the IP <b>addr</b>
  * at time <b>now</b>. Ignored by all but bridges and directories if
  * configured accordingly. */
@@ -622,10 +561,6 @@ geoip_note_client_seen(geoip_client_action_t action,
       else
         ++country->n_v2_ns_requests;
     }
-
-    /* Periodically determine share of requests that we should see */
-    if (last_time_determined_shares + REQUEST_SHARE_INTERVAL < now)
-      geoip_determine_shares(now);
   }
 }
 
@@ -1137,9 +1072,6 @@ geoip_reset_dirreq_stats(time_t now)
       }
     }
   }
-  v2_share_times_seconds = v3_share_times_seconds = 0.0;
-  last_time_determined_shares = 0;
-  share_seconds = 0;
   memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
   memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
   {
@@ -1168,10 +1100,8 @@ char *
 geoip_format_dirreq_stats(time_t now)
 {
   char t[ISO_TIME_LEN+1];
-  double v2_share = 0.0, v3_share = 0.0;
   int i;
   char *v3_ips_string, *v2_ips_string, *v3_reqs_string, *v2_reqs_string,
-       *v2_share_string = NULL, *v3_share_string = NULL,
        *v3_direct_dl_string, *v2_direct_dl_string,
        *v3_tunneled_dl_string, *v2_tunneled_dl_string;
   char *result;
@@ -1198,13 +1128,6 @@ geoip_format_dirreq_stats(time_t now)
   }
 #undef RESPONSE_GRANULARITY
 
-  if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    tor_asprintf(&v2_share_string, "dirreq-v2-share %0.2f%%\n",
-                 v2_share*100);
-    tor_asprintf(&v3_share_string, "dirreq-v3-share %0.2f%%\n",
-                 v3_share*100);
-  }
-
   v2_direct_dl_string = geoip_get_dirreq_history(
                         GEOIP_CLIENT_NETWORKSTATUS_V2, DIRREQ_DIRECT);
   v3_direct_dl_string = geoip_get_dirreq_history(
@@ -1225,8 +1148,6 @@ geoip_format_dirreq_stats(time_t now)
                    "not-found=%u,not-modified=%u,busy=%u\n"
               "dirreq-v2-resp ok=%u,unavailable=%u,"
                    "not-found=%u,not-modified=%u,busy=%u\n"
-              "%s"
-              "%s"
               "dirreq-v3-direct-dl %s\n"
               "dirreq-v2-direct-dl %s\n"
               "dirreq-v3-tunneled-dl %s\n"
@@ -1248,8 +1169,6 @@ geoip_format_dirreq_stats(time_t now)
               ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
               ns_v2_responses[GEOIP_REJECT_NOT_MODIFIED],
               ns_v2_responses[GEOIP_REJECT_BUSY],
-              v2_share_string ? v2_share_string : "",
-              v3_share_string ? v3_share_string : "",
               v3_direct_dl_string ? v3_direct_dl_string : "",
               v2_direct_dl_string ? v2_direct_dl_string : "",
               v3_tunneled_dl_string ? v3_tunneled_dl_string : "",
@@ -1260,8 +1179,6 @@ geoip_format_dirreq_stats(time_t now)
   tor_free(v2_ips_string);
   tor_free(v3_reqs_string);
   tor_free(v2_reqs_string);
-  tor_free(v2_share_string);
-  tor_free(v3_share_string);
   tor_free(v3_direct_dl_string);
   tor_free(v2_direct_dl_string);
   tor_free(v3_tunneled_dl_string);

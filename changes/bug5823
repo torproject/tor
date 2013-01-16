@@ -1,0 +1,4 @@
+  o Removed featurs:
+    - Stop exporting estimates of v2 and v3 directory traffic shares
+      in extrainfo documents. They were unneeded and sometimes inaccurate.
+      Resolves ticket 5823.
