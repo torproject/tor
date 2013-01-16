@@ -1442,11 +1442,7 @@ connection_connect(connection_t *conn, const char *address,
      * Warn if we do, and refuse to make the connection. */
     static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
     char *m;
-#ifdef _WIN32
-    *socket_error = WSAENETUNREACH;
-#else
-    *socket_error = ENETUNREACH;
-#endif
+    *socket_error = SOCK_ERRNO(ENETUNREACH);
     if ((m = rate_limit_log(&disablenet_violated, approx_time()))) {
       log_warn(LD_BUG, "Tried to open a socket with DisableNetwork set.%s", m);
       tor_free(m);
