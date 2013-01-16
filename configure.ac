@@ -689,13 +689,20 @@ if test x$enable_curve25519 != xno; then
             [tor_cv_can_use_curve25519_donna_c64=cross],
 	    [tor_cv_can_use_curve25519_donna_c64=no])])])
 
+  AC_CHECK_HEADERS([crypto_scalarmult_curve25519.h \
+                    nacl/crypto_scalarmult_curve25519.h])
+
   AC_CACHE_CHECK([whether we can use curve25519 from nacl],
     tor_cv_can_use_curve25519_nacl,
     [tor_saved_LIBS="$LIBS"
      LIBS="$LIBS -lnacl"
      AC_LINK_IFELSE(
        [AC_LANG_PROGRAM([dnl
+         #ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
          #include <crypto_scalarmult_curve25519.h>
+	 #elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
+	 #include <nacl/crypto_scalarmult_curve25519.h>
+	 #endif
          #ifdef crypto_scalarmult_curve25519_ref_BYTES
 	 #error Hey, this is the reference implementation!
 	 #endif

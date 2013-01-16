@@ -22,7 +22,11 @@ int curve25519_donna(uint8_t *mypublic,
                      const uint8_t *secret, const uint8_t *basepoint);
 #endif
 #ifdef USE_CURVE25519_NACL
+#ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
 #include <crypto_scalarmult_curve25519.h>
+#elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
+#include <nacl/crypto_scalarmult_curve25519.h>
+#endif
 #endif
 
 int
