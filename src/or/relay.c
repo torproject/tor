@@ -710,7 +710,7 @@ connection_ap_process_end_not_open(
   struct in_addr in;
   node_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
-  int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
+  int control_reason;
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   (void) layer_hint; /* unused */
 
@@ -737,6 +737,8 @@ connection_ap_process_end_not_open(
   if (rh->length == 0) {
     reason = END_STREAM_REASON_MISC;
   }
+
+  control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
 
   if (edge_reason_is_retriable(reason) &&
       /* avoid retry if rend */
