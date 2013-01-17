@@ -954,7 +954,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
   return 1;
 }
 
-/** <b>query</b> is a base-32'ed service id. If it's malformed, return -1.
+/** <b>query</b> is a base32'ed service id. If it's malformed, return -1.
  * Else look it up.
  *   - If it is found, point *desc to it, and write its length into
  *     *desc_len, and return 1.
