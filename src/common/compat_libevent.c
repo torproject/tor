@@ -407,38 +407,14 @@ void
 tor_check_libevent_version(const char *m, int server,
                            const char **badness_out)
 {
-  int buggy = 0, iffy = 0, slow = 0, thread_unsafe = 0;
+  int thread_unsafe = 0;
   le_version_t version;
   const char *v = NULL;
   const char *badness = NULL;
   const char *sad_os = "";
+  (void) m;
 
   version = tor_get_libevent_version(&v);
-
-  /* It would be better to disable known-buggy methods rather than warning
-   * about them.  But the problem is that with older versions of Libevent,
-   * it's not trivial to get them to change their methods once they're
-   * initialized... and with newer versions of Libevent, they aren't actually
-   * broken.  But we should revisit this if we ever find a post-1.4 version
-   * of Libevent where we need to disable a given method. */
-  if (!strcmp(m, "kqueue")) {
-    if (version < V_OLD(1,1,'b'))
-      buggy = 1;
-  } else if (!strcmp(m, "epoll")) {
-    if (version < V(1,1,0))
-      iffy = 1;
-  } else if (!strcmp(m, "poll")) {
-    if (version < V_OLD(1,0,'e'))
-      buggy = 1;
-    if (version < V(1,1,0))
-      slow = 1;
-  } else if (!strcmp(m, "select")) {
-    if (version < V(1,1,0))
-      slow = 1;
-  } else if (!strcmp(m, "win32")) {
-    if (version < V_OLD(1,1,'b'))
-      buggy = 1;
-  }
 
   /* Libevent versions before 1.3b do very badly on operating systems with
    * user-space threading implementations. */
@@ -459,22 +435,6 @@ tor_check_libevent_version(const char *m, int server,
         "Libevent version %s often crashes when running a Tor server with %s. "
         "Please use the latest version of libevent (1.3b or later)",v,sad_os);
     badness = "BROKEN";
-  } else if (buggy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are serious bugs in using %s with libevent %s. "
-        "Please use the latest version of libevent.", m, v);
-    badness = "BROKEN";
-  } else if (iffy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are minor bugs in using %s with libevent %s. "
-        "You may want to use the latest version of libevent.", m, v);
-    badness = "BUGGY";
-  } else if (slow && server) {
-    log(LOG_WARN, LD_GENERAL,
-        "libevent %s can be very slow with %s. "
-        "When running a server, please use the latest version of libevent.",
-        v,m);
-    badness = "SLOW";
   }
 
   *badness_out = badness;
