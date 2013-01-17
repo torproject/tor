@@ -362,35 +362,19 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
 static int
 tor_errno_to_tls_error(int e)
 {
-#if defined(_WIN32)
   switch (e) {
-    case WSAECONNRESET: // most common
+    case SOCK_ERRNO(ECONNRESET): // most common
       return TOR_TLS_ERROR_CONNRESET;
-    case WSAETIMEDOUT:
+    case SOCK_ERRNO(ETIMEDOUT):
       return TOR_TLS_ERROR_TIMEOUT;
-    case WSAENETUNREACH:
-    case WSAEHOSTUNREACH:
+    case SOCK_ERRNO(EHOSTUNREACH):
+    case SOCK_ERRNO(ENETUNREACH):
       return TOR_TLS_ERROR_NO_ROUTE;
-    case WSAECONNREFUSED:
+    case SOCK_ERRNO(ECONNREFUSED):
       return TOR_TLS_ERROR_CONNREFUSED; // least common
     default:
       return TOR_TLS_ERROR_MISC;
   }
-#else
-  switch (e) {
-    case ECONNRESET: // most common
-      return TOR_TLS_ERROR_CONNRESET;
-    case ETIMEDOUT:
-      return TOR_TLS_ERROR_TIMEOUT;
-    case EHOSTUNREACH:
-    case ENETUNREACH:
-      return TOR_TLS_ERROR_NO_ROUTE;
-    case ECONNREFUSED:
-      return TOR_TLS_ERROR_CONNREFUSED; // least common
-    default:
-      return TOR_TLS_ERROR_MISC;
-  }
-#endif
 }
 
 /** Given a TOR_TLS_* error code, return a string equivalent. */
