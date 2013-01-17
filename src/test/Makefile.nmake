@@ -1,6 +1,7 @@
-all: test.exe
+all: test.exe test-child.exe bench.exe
 
-CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common /I ..\or \
+    /I ..\ext
 
 LIBS = ..\..\..\build-alpha\lib\libevent.lib \
  ..\..\..\build-alpha\lib\libcrypto.lib \
@@ -11,10 +12,20 @@ LIBS = ..\..\..\build-alpha\lib\libevent.lib \
 
 TEST_OBJECTS = test.obj test_addr.obj test_containers.obj \
 	test_crypto.obj test_data.obj test_dir.obj test_microdesc.obj \
-	test_pt.obj test_util.obj test_config.obj tinytest.obj
+	test_pt.obj test_util.obj test_config.obj test_cell_formats.obj \
+	test_replay.obj test_introduce.obj tinytest.obj
+
+tinytest.obj: ..\ext\tinytest.c
+	$(CC) $(CFLAGS) /D snprintf=_snprintf /c ..\ext\tinytest.c
 
 test.exe: $(TEST_OBJECTS)
-	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib $(TEST_OBJECTS)
+	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib $(TEST_OBJECTS) /Fe$@
+
+bench.exe: bench.obj
+	$(CC) $(CFLAGS) bench.obj $(LIBS) ..\common\*.lib /Fe$@
+
+test-child.exe: test-child.obj
+	$(CC) $(CFLAGS) test-child.obj /Fe$@
 
 clean:
-	del $(TEST_OBJECTS) *.lib test.exe
+	del *.obj *.lib test.exe bench.exe test-child.exe

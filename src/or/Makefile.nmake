@@ -1,28 +1,70 @@
 all: tor.exe
 
-CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common
+CFLAGS = /I ..\win32 /I ..\..\..\build-alpha\include /I ..\common \
+    /I ..\ext
 
-LIBS = ..\..\..\build-alpha\lib\libevent.a \
- ..\..\..\build-alpha\lib\libcrypto.a \
- ..\..\..\build-alpha\lib\libssl.a \
- ..\..\..\build-alpha\lib\libz.a \
+LIBS = ..\..\..\build-alpha\lib\libevent.lib \
+ ..\..\..\build-alpha\lib\libcrypto.lib \
+ ..\..\..\build-alpha\lib\libssl.lib \
+ ..\..\..\build-alpha\lib\libz.lib \
  ws2_32.lib advapi32.lib shell32.lib
 
-LIBTOR_OBJECTS = buffers.obj channel.obj channeltls.obj circuitbuild.obj \
-	circuitlist.obj circuitmux.obj circuitmux_ewma.obj circuituse.obj \
-	command.obj config.obj connection.obj connection_edge.obj \
-	connection_or.obj control.obj cpuworker.obj directory.obj \
-	dirserv.obj dirvote.obj dns.obj dnsserv.obj geoip.obj hibernate.obj \
-	main.obj microdesc.obj networkstatus.obj nodelist.obj onion.obj \
-	policies.obj reasons.obj relay.obj rendclient.obj rendcommon.obj \
-	rendmid.obj rendservice.obj rephist.obj router.obj routerlist.obj \
-	routerparse.obj status.obj config_codedigest.obj ntmain.obj
+LIBTOR_OBJECTS = \
+  addressmap.obj \
+  buffers.obj \
+  channel.obj \
+  channeltls.obj \
+  circuitbuild.obj \
+  circuitlist.obj \
+  circuitmux.obj \
+  circuitmux_ewma.obj \
+  circuitstats.obj \
+  circuituse.obj \
+  command.obj \
+  config.obj \
+  config_codedigest.obj \
+  confparse.obj \
+  connection.obj \
+  connection_edge.obj \
+  connection_or.obj \
+  control.obj \
+  cpuworker.obj \
+  directory.obj \
+  dirserv.obj \
+  dirvote.obj \
+  dns.obj \
+  dnsserv.obj \
+  entrynodes.obj \
+  geoip.obj \
+  hibernate.obj \
+  main.obj \
+  microdesc.obj \
+  networkstatus.obj \
+  nodelist.obj \
+  ntmain.obj \
+  onion.obj \
+  policies.obj \
+  reasons.obj \
+  relay.obj \
+  rendclient.obj \
+  rendcommon.obj \
+  rendmid.obj \
+  rendservice.obj \
+  rephist.obj \
+  replaycache.obj \
+  router.obj \
+  routerlist.obj \
+  routerparse.obj \
+  routerset.obj \
+  statefile.obj \
+  status.obj \
+  transports.obj
 
 libtor.lib: $(LIBTOR_OBJECTS)
-	lib $(LIBTOR_OBJECTS) /out:libtor.lib
+	lib $(LIBTOR_OBJECTS) /out:$@
 
 tor.exe: libtor.lib tor_main.obj
-	$(CC) $(CFLAGS) $(LIBS) libtor.lib ..\common\*.lib tor_main.obj
+	$(CC) $(CFLAGS) $(LIBS) libtor.lib ..\common\*.lib tor_main.obj /Fe$@
 
 clean:
 	del $(LIBTOR_OBJECTS) *.lib tor.exe

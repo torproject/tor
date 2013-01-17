@@ -1,0 +1,4 @@
+  o Features (portability):
+    - Build correctly with MSVC and Makefile.nmake. This resolves
+      numerous bugs and fixes reported by ultramage, including 7305,
+      7308, 7309, 7310, 7312, 7313, 7315, 7316, and 7669.

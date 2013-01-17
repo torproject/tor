@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Replace all calls to snprintf outside of src/ext with tor_snprintf.
+      Fix for bug 7304.
+  o Code simplification and refactoring:
+    - Remove the #define to replace snprintf with _snprintf on windows;
+      they have different semantics, and all of our callers should be
+      using tor_snprintf anyway. Partial fix for bug 7304.
