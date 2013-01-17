@@ -54,7 +54,9 @@ typedef uint32_t le_version_t;
  * it is. */
 #define LE_OTHER V(0,0,99)
 
+#if 0
 static le_version_t tor_get_libevent_version(const char **v_out);
+#endif
 
 #if defined(HAVE_EVENT_SET_LOG_CALLBACK) || defined(RUNNING_DOXYGEN)
 /** A string which, if it appears in a libevent log, should be ignored. */
@@ -364,6 +366,7 @@ le_versions_compatibility(le_version_t v)
     return 5;
 }
 
+#if 0
 /** Return the version number of the currently running version of Libevent.
  * See le_version_t for info on the format.
  */
@@ -386,6 +389,7 @@ tor_get_libevent_version(const char **v_out)
     *v_out = v;
   return r;
 }
+#endif
 
 /** Return a string representation of the version of the currently running
  * version of Libevent. */
@@ -408,13 +412,11 @@ tor_check_libevent_version(const char *m, int server,
                            const char **badness_out)
 {
   int thread_unsafe = 0;
-  le_version_t version;
   const char *v = NULL;
   const char *badness = NULL;
   const char *sad_os = "";
   (void) m;
-
-  version = tor_get_libevent_version(&v);
+  (void) server;
 
   /* Libevent versions before 1.3b do very badly on operating systems with
    * user-space threading implementations. */
