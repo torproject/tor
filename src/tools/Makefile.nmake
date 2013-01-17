@@ -6,8 +6,8 @@ LIBS = ..\..\..\build-alpha\lib\libevent.lib \
  ..\..\..\build-alpha\lib\libcrypto.lib \
  ..\..\..\build-alpha\lib\libssl.lib \
  ..\..\..\build-alpha\lib\libz.lib \
- ws2_32.lib advapi32.lib shell32.lib
-
+ ws2_32.lib advapi32.lib shell32.lib \
+ crypt32.lib gdi32.lib user32.lib
 
 tor-gencert.exe: tor-gencert.obj
 	$(CC) $(CFLAGS) $(LIBS) ..\common\*.lib tor-gencert.obj
