@@ -6,9 +6,13 @@ LIBOR_OBJECTS = address.obj compat.obj container.obj di_ops.obj \
 	log.obj memarea.obj mempool.obj procmon.obj util.obj \
 	util_codedigest.obj
 
-LIBOR_CRYPTO_OBJECTS = aes.obj crypto.obj torgzip.obj tortls.obj
+LIBOR_CRYPTO_OBJECTS = aes.obj crypto.obj torgzip.obj tortls.obj \
+	crypto_curve25519.obj curve25519-donna.obj
 
 LIBOR_EVENT_OBJECTS = compat_libevent.obj
+
+curve25519-donna.obj: ..\ext\curve25519_donna\curve25519-donna.c
+	$(CC) $(CFLAGS) /D inline=_inline /c ..\ext\curve25519_donna\curve25519-donna.c
 
 libor.lib: $(LIBOR_OBJECTS)
 	lib $(LIBOR_OBJECTS) /out:libor.lib

@@ -44,6 +44,9 @@ LIBTOR_OBJECTS = \
   nodelist.obj \
   ntmain.obj \
   onion.obj \
+  onion_fast.obj \
+  onion_ntor.obj \
+  onion_tap.obj \
   policies.obj \
   reasons.obj \
   relay.obj \
