@@ -30,18 +30,17 @@ void geoip_note_client_seen(geoip_client_action_t action,
                             const tor_addr_t *addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
 
-void geoip_note_ns_response(geoip_client_action_t action,
-                            geoip_ns_response_t response);
+void geoip_note_ns_response(geoip_ns_response_t response);
 int geoip_get_client_history(geoip_client_action_t action,
                              char **country_str, char **ipver_str);
-char *geoip_get_request_history(geoip_client_action_t action);
+char *geoip_get_request_history(void);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer,
                          const char **errmsg);
 void geoip_free_all(void);
 
 void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
-                        geoip_client_action_t action, dirreq_type_t type);
+                        dirreq_type_t type);
 void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                                dirreq_state_t new_state);
 

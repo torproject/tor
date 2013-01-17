@@ -1745,14 +1745,13 @@ test_geoip(void)
 
   /* Note a successful network status response and make sure that it
    * appears in the history string. */
-  geoip_note_ns_response(GEOIP_CLIENT_NETWORKSTATUS, GEOIP_SUCCESS);
+  geoip_note_ns_response(GEOIP_SUCCESS);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_3, s);
   tor_free(s);
 
   /* Start a tunneled directory request. */
-  geoip_start_dirreq((uint64_t) 1, 1024, GEOIP_CLIENT_NETWORKSTATUS,
-                     DIRREQ_TUNNELED);
+  geoip_start_dirreq((uint64_t) 1, 1024, DIRREQ_TUNNELED);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_4, s);
 
