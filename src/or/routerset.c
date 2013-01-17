@@ -226,6 +226,45 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
   return 0;
 }
 
+/** If *<b>setp</b> includes at least one country code, or if
+ * <b>only_some_cc_set</b> is 0, add the ?? and A1 country codes to
+ * *<b>setp</b>, creating it as needed.  Return true iff *<b>setp</b> changed.
+ */
+int
+routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set)
+{
+  routerset_t *set;
+  int add_unknown, add_a1;
+  if (only_if_some_cc_set) {
+    if (!*setp || smartlist_len((*setp)->country_names) == 0)
+      return 0;
+  }
+  if (!*setp)
+    *setp = routerset_new();
+
+  set = *setp;
+
+  add_unknown = ! smartlist_contains_string_case(set->country_names, "??") &&
+    geoip_get_country("??") >= 0;
+  add_a1 = ! smartlist_contains_string_case(set->country_names, "a1") &&
+    geoip_get_country("A1") >= 0;
+
+  if (add_unknown) {
+    smartlist_add(set->country_names, tor_strdup("??"));
+    smartlist_add(set->list, tor_strdup("{??}"));
+  }
+  if (add_a1) {
+    smartlist_add(set->country_names, tor_strdup("a1"));
+    smartlist_add(set->country_names, tor_strdup("{a1}"));
+  }
+
+  if (add_unknown || add_a1) {
+    routerset_refresh_countries(set);
+    return 1;
+  }
+  return 0;
+}
+
 /** Return true iff we can tell that <b>ei</b> is a member of <b>set</b>. */
 int
 routerset_contains_extendinfo(const routerset_t *set, const extend_info_t *ei)
