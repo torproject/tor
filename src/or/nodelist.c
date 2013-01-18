@@ -1253,10 +1253,12 @@ get_dir_info_status_string(void)
  * descriptors for.  Store the former in *<b>num_usable</b> and the latter in
  * *<b>num_present</b>.  If <b>in_set</b> is non-NULL, only consider those
  * routers in <b>in_set</b>.  If <b>exit_only</b> is true, only consider nodes
- * with the Exit flag.
+ * with the Exit flag.  If *descs_out is present, add a node_t for each
+ * usable descriptor to it.
  */
 static void
 count_usable_descriptors(int *num_present, int *num_usable,
+                         smartlist_t *descs_out,
                          const networkstatus_t *consensus,
                          const or_options_t *options, time_t now,
                          routerset_t *in_set, int exit_only)
@@ -1266,6 +1268,10 @@ count_usable_descriptors(int *num_present, int *num_usable,
 
   SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, routerstatus_t *, rs)
     {
+       const node_t *node = node_get_by_id(rs->identity_digest);
+       if (!node)
+         continue; /* This would be a bug: every entry in the consensus is
+                    * supposed to have a node. */
        if (exit_only && ! rs->is_exit)
          continue;
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
@@ -1282,6 +1288,8 @@ count_usable_descriptors(int *num_present, int *num_usable,
            /* we have the descriptor listed in the consensus. */
            ++*num_present;
          }
+         if (descs_out)
+           smartlist_add(descs_out, (node_t*)node);
        }
      }
   SMARTLIST_FOREACH_END(rs);
@@ -1306,7 +1314,7 @@ count_loading_descriptors_progress(void)
   if (!consensus)
     return 0; /* can't count descriptors if we have no list of them */
 
-  count_usable_descriptors(&num_present, &num_usable,
+  count_usable_descriptors(&num_present, &num_usable, NULL,
                            consensus, get_options(), now, NULL, 0);
 
   if (num_usable == 0)
@@ -1355,9 +1363,10 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-  count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
+  count_usable_descriptors(&num_present, &num_usable, NULL,
+                           consensus, options, now,
                            NULL, 0);
-  count_usable_descriptors(&num_exit_present, &num_exit_usable,
+  count_usable_descriptors(&num_exit_present, &num_exit_usable, NULL,
                            consensus, options, now, options->ExitNodes, 1);
 
 /* What fraction of desired server descriptors do we need before we will
@@ -1391,7 +1400,8 @@ update_router_have_minimum_dir_info(void)
 
   /* Check for entry nodes. */
   if (options->EntryNodes) {
-    count_usable_descriptors(&num_present, &num_usable, consensus, options,
+    count_usable_descriptors(&num_present, &num_usable, NULL,
+                             consensus, options,
                              now, options->EntryNodes, 0);
 
     if (!num_usable || !num_present) {
