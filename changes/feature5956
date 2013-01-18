@@ -1,0 +1,6 @@
+  o Major features:
+    - When deciding whether we have enough descriptors to build circuits,
+      instead of looking at raw circuit counts, look at which fraction of
+      (bandwidth-weighted) paths we're able to build. This approach keeps
+      clients from building circuits if their paths are likely to stand out
+      statistically. Fixes issue 5956.

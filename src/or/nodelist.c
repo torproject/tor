@@ -1213,7 +1213,7 @@ static int have_min_dir_info = 0;
 static int need_to_update_have_min_dir_info = 1;
 /** String describing what we're missing before we have enough directory
  * info. */
-static char dir_info_status[128] = "";
+static char dir_info_status[256] = "";
 
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "more than half the
@@ -1299,6 +1299,66 @@ count_usable_descriptors(int *num_present, int *num_usable,
             md ? "microdesc" : "desc", exit_only ? " exits" : "s");
 }
 
+/** Return an extimate of which fraction of usable paths through the Tor
+ * network we have available for use. */
+static double
+compute_frac_paths_available(const networkstatus_t *consensus,
+                             const or_options_t *options, time_t now,
+                             int *num_present_out, int *num_usable_out,
+                             char **status_out)
+{
+  smartlist_t *guards = smartlist_new();
+  smartlist_t *mid    = smartlist_new();
+  smartlist_t *exits  = smartlist_new();
+  smartlist_t *myexits= smartlist_new();
+  double f_guard, f_mid, f_exit, f_myexit;
+  int np, nu; /* Ignored */
+
+  count_usable_descriptors(num_present_out, num_usable_out,
+                           mid, consensus, options, now, NULL, 0);
+  if (options->EntryNodes) {
+    count_usable_descriptors(&np, &nu, guards, consensus, options, now,
+                             options->EntryNodes, 0);
+  } else {
+    SMARTLIST_FOREACH(mid, const node_t *, node, {
+      if (node->is_possible_guard)
+        smartlist_add(guards, (node_t*)node);
+    });
+  }
+
+  count_usable_descriptors(&np, &nu, exits, consensus, options, now,
+                           NULL, 1);
+  count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
+                           options->ExitNodes, 1);
+
+  f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD);
+  f_mid   = frac_nodes_with_descriptors(mid,    WEIGHT_FOR_MID);
+  f_exit  = frac_nodes_with_descriptors(exits,  WEIGHT_FOR_EXIT);
+  f_myexit= frac_nodes_with_descriptors(myexits,WEIGHT_FOR_EXIT);
+
+  smartlist_free(guards);
+  smartlist_free(mid);
+  smartlist_free(exits);
+  smartlist_free(myexits);
+
+  /* This is a tricky point here: we don't want to make it easy for a
+   * directory to trickle exits to us until it learns which exits we have
+   * configured, so require that we have a threshold both of total exits
+   * and usable exits. */
+  if (f_myexit < f_exit)
+    f_exit = f_myexit;
+
+  tor_asprintf(status_out,
+               "%02d%% of guards bw, "
+               "%02d%% of midpoint bw, and "
+               "%02d%% of exit bw",
+               (int)(f_guard*100),
+               (int)(f_mid*100),
+               (int)(f_exit*100));
+
+  return f_guard * f_mid * f_exit;
+}
+
 /** We just fetched a new set of descriptors. Compute how far through
  * the "loading descriptors" bootstrapping phase we are, so we can inform
  * the controller of our progress. */
@@ -1333,8 +1393,6 @@ count_loading_descriptors_progress(void)
 static void
 update_router_have_minimum_dir_info(void)
 {
-  int num_present = 0, num_usable=0;
-  int num_exit_present = 0, num_exit_usable = 0;
   time_t now = time(NULL);
   int res;
   const or_options_t *options = get_options();
@@ -1363,57 +1421,32 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-  count_usable_descriptors(&num_present, &num_usable, NULL,
-                           consensus, options, now,
-                           NULL, 0);
-  count_usable_descriptors(&num_exit_present, &num_exit_usable, NULL,
-                           consensus, options, now, options->ExitNodes, 1);
+  {
+    char *status = NULL;
+    int num_present=0, num_usable=0;
+    double paths = compute_frac_paths_available(consensus, options, now,
+                                                &num_present, &num_usable,
+                                                &status);
 
-/* What fraction of desired server descriptors do we need before we will
- * build circuits? */
-#define FRAC_USABLE_NEEDED .75
-/* What fraction of desired _exit_ server descriptors do we need before we
- * will build circuits? */
-#define FRAC_EXIT_USABLE_NEEDED .5
+/* What fraction of desired paths do we need before we will build circuits? */
+#define FRAC_USABLE_NEEDED .6
 
-  if (num_present < num_usable * FRAC_USABLE_NEEDED) {
-    tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "We have only %d/%d usable %sdescriptors.",
-                 num_present, num_usable, using_md ? "micro" : "");
-    res = 0;
-    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
-    goto done;
-  } else if (num_present < 2) {
-    tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d %sdescriptor%s here and believed reachable!",
-                 num_present, using_md ? "micro" : "", num_present ? "" : "s");
-    res = 0;
-    goto done;
-  } else if (num_exit_present < num_exit_usable * FRAC_EXIT_USABLE_NEEDED) {
-    tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "We have only %d/%d usable exit node descriptors.",
-                 num_exit_present, num_exit_usable);
-    res = 0;
-    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
-    goto done;
-  }
-
-  /* Check for entry nodes. */
-  if (options->EntryNodes) {
-    count_usable_descriptors(&num_present, &num_usable, NULL,
-                             consensus, options,
-                             now, options->EntryNodes, 0);
-
-    if (!num_usable || !num_present) {
+    if (paths < FRAC_USABLE_NEEDED) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                   "We have only %d/%d usable entry node %sdescriptors.",
-                   num_present, num_usable, using_md?"micro":"");
+                   "We need more %sdescriptors: we have %d/%d, and "
+                   "can only build %02d%% of likely paths. (We have %s.)",
+                   using_md?"micro":"", num_present, num_usable,
+                   (int)(paths*100), status);
+      /* log_notice(LD_NET, "%s", dir_info_status); */
+      tor_free(status);
       res = 0;
+      control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
       goto done;
     }
-  }
 
-  res = 1;
+    tor_free(status);
+    res = 1;
+  }
 
  done:
   if (res && !have_min_dir_info) {
