@@ -1706,8 +1706,8 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
 /** Given a list of routers and a weighting rule as in
  * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
  * values for each node and store them in a freshly allocated
- * *<b>bandwidths_out</b> of the same length as <b>sl</b>. Return 0 on
- * success, -1 on failure. */
+ * *<b>bandwidths_out</b> of the same length as <b>sl</b>, and holding results
+ * as doubles. Return 0 on success, -1 on failure. */
 static int
 compute_weighted_bandwidths(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule,
@@ -1859,6 +1859,44 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   return 0;
 }
 
+/** For all nodes in <b>sl</b>, return the fraction of those nodes, weighted
+ * by their weighted bandwidths with rule <b>rule</b>, for which we have
+ * descriptors. */
+double
+frac_nodes_with_descriptors(const smartlist_t *sl,
+                            bandwidth_weight_rule_t rule)
+{
+  u64_dbl_t *bandwidths = NULL;
+  double total, present;
+
+  if (smartlist_len(sl) == 0)
+    return 0.0;
+
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0) {
+    int n_with_descs = 0;
+    SMARTLIST_FOREACH(sl, const node_t *, node, {
+      if (node_has_descriptor(node))
+        n_with_descs++;
+    });
+    return ((double)n_with_descs) / (double)smartlist_len(sl);
+  }
+
+  total = present = 0.0;
+  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+    const double bw = bandwidths[node_sl_idx].dbl;
+    total += bw;
+    if (node_has_descriptor(node))
+      present += bw;
+  } SMARTLIST_FOREACH_END(node);
+
+  tor_free(bandwidths);
+
+  if (total < 1.0)
+    return 0;
+
+  return present / total;
+}
+
 /** Helper function:
  * choose a random node_t element of smartlist <b>sl</b>, weighted by
  * the advertised bandwidth of each element.
@@ -1873,7 +1911,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
  * guards proportionally less.
  */
 static const node_t *
-smartlist_choose_node_by_bandwidth(smartlist_t *sl,
+smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
                                    bandwidth_weight_rule_t rule)
 {
   unsigned int i;
@@ -2079,7 +2117,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 /** Choose a random element of status list <b>sl</b>, weighted by
  * the advertised bandwidth of each node */
 const node_t *
-node_sl_choose_by_bandwidth(smartlist_t *sl,
+node_sl_choose_by_bandwidth(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule)
 { /*XXXX MOVE */
   const node_t *ret;
