@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - Do not report status verbosely from autogen.sh unless the -v flag
+      is specified. Fixes issue 4664. Patch from Onizuka.
+

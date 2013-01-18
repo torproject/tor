@@ -1,7 +1,17 @@
 #!/bin/sh
 
 if [ -x "`which autoreconf 2>/dev/null`" ] ; then
-  exec autoreconf -ivf
+  opt="-if"
+
+  for i in $@; do
+    case "$i" in
+      -v)
+        opt=$opt"v"
+        ;;
+    esac
+  done
+
+  exec autoreconf $opt
 fi
 
 set -e
