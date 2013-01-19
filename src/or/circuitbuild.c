@@ -2071,55 +2071,14 @@ pathbias_count_timeout(origin_circuit_t *circ)
 }
 
 /**
- * Return the number of circuits counted as successfully closed for
- * this guard.
- *
- * Also add in the currently open circuits to give them the benefit
- * of the doubt.
+ * Helper function to count all of the currently opened circuits
+ * for a guard that are in a given path state range. The state
+ * range is inclusive on both ends.
  */
-double
-pathbias_get_close_success_count(entry_guard_t *guard)
-{
-  circuit_t *circ;
-  int open_circuits = 0;
-
-  /* Count currently open circuits. Give them the benefit of the doubt. */
-  for (circ = global_circuitlist; circ; circ = circ->next) {
-    origin_circuit_t *ocirc = NULL;
-    if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
-        circ->marked_for_close) /* already counted */
-      continue;
-
-    ocirc = TO_ORIGIN_CIRCUIT(circ);
-
-    if (!ocirc->cpath || !ocirc->cpath->extend_info)
-      continue;
-
-    /* Don't count known failed or already counted circuits */
-    if (ocirc->path_state >= PATH_STATE_USE_FAILED)
-      continue;
-
-    if (ocirc->path_state >= PATH_STATE_BUILD_SUCCEEDED &&
-        pathbias_should_count(ocirc) &&
-        fast_memeq(guard->identity,
-                   ocirc->cpath->extend_info->identity_digest,
-                   DIGEST_LEN)) {
-      open_circuits++;
-    }
-  }
-
-  return guard->successful_circuits_closed + open_circuits;
-}
-
-/**
- * Return the number of circuits counted as successfully used
- * this guard.
- *
- * Also add in the currently open circuits that we are attempting
- * to use to give them the benefit of the doubt.
- */
-double
-pathbias_get_use_success_count(entry_guard_t *guard)
+static int
+pathbias_count_circs_in_states(entry_guard_t *guard,
+                              path_state_t from,
+                              path_state_t to)
 {
   circuit_t *circ = global_circuitlist;
   int open_circuits = 0;
@@ -2136,11 +2095,8 @@ pathbias_get_use_success_count(entry_guard_t *guard)
     if (!ocirc->cpath || !ocirc->cpath->extend_info)
       continue;
 
-    /* Don't count known failed or already counted circuits */
-    if (ocirc->path_state >= PATH_STATE_USE_FAILED)
-      continue;
-
-    if (ocirc->path_state >= PATH_STATE_USE_ATTEMPTED &&
+    if (ocirc->path_state >= from &&
+        ocirc->path_state <= to &&
         pathbias_should_count(ocirc) &&
         fast_memeq(guard->identity,
                 ocirc->cpath->extend_info->identity_digest,
@@ -2149,7 +2105,39 @@ pathbias_get_use_success_count(entry_guard_t *guard)
     }
   }
 
-  return guard->use_successes + open_circuits;
+  return open_circuits;
+}
+
+/**
+ * Return the number of circuits counted as successfully closed for
+ * this guard.
+ *
+ * Also add in the currently open circuits to give them the benefit
+ * of the doubt.
+ */
+double
+pathbias_get_close_success_count(entry_guard_t *guard)
+{
+  return guard->successful_circuits_closed +
+         pathbias_count_circs_in_states(guard,
+                       PATH_STATE_BUILD_SUCCEEDED,
+                       PATH_STATE_USE_SUCCEEDED);
+}
+
+/**
+ * Return the number of circuits counted as successfully used
+ * this guard.
+ *
+ * Also add in the currently open circuits that we are attempting
+ * to use to give them the benefit of the doubt.
+ */
+double
+pathbias_get_use_success_count(entry_guard_t *guard)
+{
+  return guard->use_successes +
+         pathbias_count_circs_in_states(guard,
+                       PATH_STATE_USE_ATTEMPTED,
+                       PATH_STATE_USE_SUCCEEDED);
 }
 
 /**
@@ -2252,6 +2240,10 @@ pathbias_check_use_rate(entry_guard_t *guard)
   if (guard->use_attempts > pathbias_get_scale_use_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
+    int opened_attempts = pathbias_count_circs_in_states(guard,
+            PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_ATTEMPTED);
+    guard->use_attempts -= opened_attempts;
+
     log_info(LD_CIRC,
              "Scaling pathbias use counts to (%f/%f)*(%d/%d) for guard %s=%s",
              guard->use_successes, guard->use_attempts,
@@ -2263,6 +2255,8 @@ pathbias_check_use_rate(entry_guard_t *guard)
 
     guard->use_attempts /= scale_factor;
     guard->use_successes /= scale_factor;
+
+    guard->use_attempts += opened_attempts;
   }
 
   return 0;
@@ -2393,6 +2387,13 @@ pathbias_check_close_rate(entry_guard_t *guard)
   if (guard->circ_attempts > pathbias_get_scale_threshold(options)) {
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
+    int opened_attempts = pathbias_count_circs_in_states(guard,
+            PATH_STATE_BUILD_ATTEMPTED, PATH_STATE_BUILD_ATTEMPTED);
+    int opened_built = pathbias_count_circs_in_states(guard,
+                        PATH_STATE_BUILD_SUCCEEDED,
+                        PATH_STATE_USE_FAILED);
+    guard->circ_attempts -= opened_attempts;
+    guard->circ_successes -= opened_built;
     log_info(LD_CIRC,
              "Scaling pathbias counts to (%f/%f)*(%d/%d) for guard %s=%s",
              guard->circ_successes, guard->circ_attempts,
@@ -2412,6 +2413,9 @@ pathbias_check_close_rate(entry_guard_t *guard)
     guard->successful_circuits_closed /= scale_factor;
     guard->collapsed_circuits /= scale_factor;
     guard->unusable_circuits /= scale_factor;
+
+    guard->circ_attempts += opened_attempts;
+    guard->circ_successes += opened_built;
   }
 
   return 0;
