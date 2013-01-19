@@ -38,7 +38,6 @@ typedef struct geoip_ipv6_entry_t {
 /** A per-country record for GeoIP request history. */
 typedef struct geoip_country_t {
   char countrycode[3];
-  uint32_t n_v2_ns_requests;
   uint32_t n_v3_ns_requests;
 } geoip_country_t;
 
@@ -515,67 +514,6 @@ client_history_clear(void)
   }
 }
 
-/** How often do we update our estimate which share of v2 and v3 directory
- * requests is sent to us? We could as well trigger updates of shares from
- * network status updates, but that means adding a lot of calls into code
- * that is independent from geoip stats (and keeping them up-to-date). We
- * are perfectly fine with an approximation of 15-minute granularity. */
-#define REQUEST_SHARE_INTERVAL (15 * 60)
-
-/** When did we last determine which share of v2 and v3 directory requests
- * is sent to us? */
-static time_t last_time_determined_shares = 0;
-
-/** Sum of products of v2 shares times the number of seconds for which we
- * consider these shares as valid. */
-static double v2_share_times_seconds;
-
-/** Sum of products of v3 shares times the number of seconds for which we
- * consider these shares as valid. */
-static double v3_share_times_seconds;
-
-/** Number of seconds we are determining v2 and v3 shares. */
-static int share_seconds;
-
-/** Try to determine which fraction of v2 and v3 directory requests aimed at
- * caches will be sent to us at time <b>now</b> and store that value in
- * order to take a mean value later on. */
-static void
-geoip_determine_shares(time_t now)
-{
-  double v2_share = 0.0, v3_share = 0.0;
-  if (router_get_my_share_of_directory_requests(&v2_share, &v3_share) < 0)
-    return;
-  if (last_time_determined_shares) {
-    v2_share_times_seconds += v2_share *
-        ((double) (now - last_time_determined_shares));
-    v3_share_times_seconds += v3_share *
-        ((double) (now - last_time_determined_shares));
-    share_seconds += (int)(now - last_time_determined_shares);
-  }
-  last_time_determined_shares = now;
-}
-
-/** Calculate which fraction of v2 and v3 directory requests aimed at caches
- * have been sent to us since the last call of this function up to time
- * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
- * fractions of v2 and v3 protocol shares we expect to have seen. Reset
- * counters afterwards. Return 0 on success, -1 on failure (e.g. when zero
- * seconds have passed since the last call).*/
-static int
-geoip_get_mean_shares(time_t now, double *v2_share_out,
-                         double *v3_share_out)
-{
-  geoip_determine_shares(now);
-  if (!share_seconds)
-    return -1;
-  *v2_share_out = v2_share_times_seconds / ((double) share_seconds);
-  *v3_share_out = v3_share_times_seconds / ((double) share_seconds);
-  v2_share_times_seconds = v3_share_times_seconds = 0.0;
-  share_seconds = 0;
-  return 0;
-}
-
 /** Note that we've seen a client connect from the IP <b>addr</b>
  * at time <b>now</b>. Ignored by all but bridges and directories if
  * configured accordingly. */
@@ -610,22 +548,14 @@ geoip_note_client_seen(geoip_client_action_t action,
   else
     ent->last_seen_in_minutes = 0;
 
-  if (action == GEOIP_CLIENT_NETWORKSTATUS ||
-      action == GEOIP_CLIENT_NETWORKSTATUS_V2) {
+  if (action == GEOIP_CLIENT_NETWORKSTATUS) {
     int country_idx = geoip_get_country_by_addr(addr);
     if (country_idx < 0)
       country_idx = 0; /** unresolved requests are stored at index 0. */
     if (country_idx >= 0 && country_idx < smartlist_len(geoip_countries)) {
       geoip_country_t *country = smartlist_get(geoip_countries, country_idx);
-      if (action == GEOIP_CLIENT_NETWORKSTATUS)
-        ++country->n_v3_ns_requests;
-      else
-        ++country->n_v2_ns_requests;
+      ++country->n_v3_ns_requests;
     }
-
-    /* Periodically determine share of requests that we should see */
-    if (last_time_determined_shares + REQUEST_SHARE_INTERVAL < now)
-      geoip_determine_shares(now);
   }
 }
 
@@ -652,36 +582,24 @@ geoip_remove_old_clients(time_t cutoff)
                           &cutoff);
 }
 
-/** How many responses are we giving to clients requesting v2 network
- * statuses? */
-static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
-
 /** How many responses are we giving to clients requesting v3 network
  * statuses? */
 static uint32_t ns_v3_responses[GEOIP_NS_RESPONSE_NUM];
 
-/** Note that we've rejected a client's request for a v2 or v3 network
- * status, encoded in <b>action</b> for reason <b>reason</b> at time
- * <b>now</b>. */
+/** Note that we've rejected a client's request for a v3 network status
+ * for reason <b>reason</b> at time <b>now</b>. */
 void
-geoip_note_ns_response(geoip_client_action_t action,
-                       geoip_ns_response_t response)
+geoip_note_ns_response(geoip_ns_response_t response)
 {
   static int arrays_initialized = 0;
   if (!get_options()->DirReqStatistics)
     return;
   if (!arrays_initialized) {
-    memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
     memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
     arrays_initialized = 1;
   }
-  tor_assert(action == GEOIP_CLIENT_NETWORKSTATUS ||
-             action == GEOIP_CLIENT_NETWORKSTATUS_V2);
   tor_assert(response < GEOIP_NS_RESPONSE_NUM);
-  if (action == GEOIP_CLIENT_NETWORKSTATUS)
-    ns_v3_responses[response]++;
-  else
-    ns_v2_responses[response]++;
+  ns_v3_responses[response]++;
 }
 
 /** Do not mention any country from which fewer than this number of IPs have
@@ -736,7 +654,6 @@ typedef struct dirreq_map_entry_t {
   unsigned int state:3; /**< State of this directory request. */
   unsigned int type:1; /**< Is this a direct or a tunneled request? */
   unsigned int completed:1; /**< Is this request complete? */
-  unsigned int action:2; /**< Is this a v2 or v3 request? */
   /** When did we receive the request and started sending the response? */
   struct timeval request_time;
   size_t response_size; /**< What is the size of the response in bytes? */
@@ -805,12 +722,11 @@ dirreq_map_get_(dirreq_type_t type, uint64_t dirreq_id)
 }
 
 /** Note that an either direct or tunneled (see <b>type</b>) directory
- * request for a network status with unique ID <b>dirreq_id</b> of size
- * <b>response_size</b> and action <b>action</b> (either v2 or v3) has
- * started. */
+ * request for a v3 network status with unique ID <b>dirreq_id</b> of size
+ * <b>response_size</b> has started. */
 void
 geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
-                   geoip_client_action_t action, dirreq_type_t type)
+                   dirreq_type_t type)
 {
   dirreq_map_entry_t *ent;
   if (!get_options()->DirReqStatistics)
@@ -819,7 +735,6 @@ geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
   ent->dirreq_id = dirreq_id;
   tor_gettimeofday(&ent->request_time);
   ent->response_size = response_size;
-  ent->action = action;
   ent->type = type;
   dirreq_map_put_(ent, type, dirreq_id);
 }
@@ -860,8 +775,7 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
  * times by deciles and quartiles. Return NULL if we have not observed
  * requests for long enough. */
 static char *
-geoip_get_dirreq_history(geoip_client_action_t action,
-                           dirreq_type_t type)
+geoip_get_dirreq_history(dirreq_type_t type)
 {
   char *result = NULL;
   smartlist_t *dirreq_completed = NULL;
@@ -871,13 +785,10 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   struct timeval now;
 
   tor_gettimeofday(&now);
-  if (action != GEOIP_CLIENT_NETWORKSTATUS &&
-      action != GEOIP_CLIENT_NETWORKSTATUS_V2)
-    return NULL;
   dirreq_completed = smartlist_new();
   for (ptr = HT_START(dirreqmap, &dirreq_map); ptr; ptr = next) {
     ent = *ptr;
-    if (ent->action != action || ent->type != type) {
+    if (ent->type != type) {
       next = HT_NEXT(dirreqmap, &dirreq_map, ptr);
       continue;
     } else {
@@ -1063,18 +974,15 @@ geoip_get_client_history(geoip_client_action_t action,
 }
 
 /** Return a newly allocated string holding the per-country request history
- * for <b>action</b> in a format suitable for an extra-info document, or NULL
- * on failure. */
+ * for v3 network statuses in a format suitable for an extra-info document,
+ * or NULL on failure. */
 char *
-geoip_get_request_history(geoip_client_action_t action)
+geoip_get_request_history(void)
 {
   smartlist_t *entries, *strings;
   char *result;
   unsigned granularity = IP_GRANULARITY;
 
-  if (action != GEOIP_CLIENT_NETWORKSTATUS &&
-      action != GEOIP_CLIENT_NETWORKSTATUS_V2)
-    return NULL;
   if (!geoip_countries)
     return NULL;
 
@@ -1082,8 +990,7 @@ geoip_get_request_history(geoip_client_action_t action)
   SMARTLIST_FOREACH_BEGIN(geoip_countries, geoip_country_t *, c) {
       uint32_t tot = 0;
       c_hist_t *ent;
-      tot = (action == GEOIP_CLIENT_NETWORKSTATUS) ?
-            c->n_v3_ns_requests : c->n_v2_ns_requests;
+      tot = c->n_v3_ns_requests;
       if (!tot)
         continue;
       ent = tor_malloc_zero(sizeof(c_hist_t));
@@ -1121,14 +1028,13 @@ void
 geoip_reset_dirreq_stats(time_t now)
 {
   SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-      c->n_v2_ns_requests = c->n_v3_ns_requests = 0;
+      c->n_v3_ns_requests = 0;
   });
   {
     clientmap_entry_t **ent, **next, *this;
     for (ent = HT_START(clientmap, &client_history); ent != NULL;
          ent = next) {
-      if ((*ent)->action == GEOIP_CLIENT_NETWORKSTATUS ||
-          (*ent)->action == GEOIP_CLIENT_NETWORKSTATUS_V2) {
+      if ((*ent)->action == GEOIP_CLIENT_NETWORKSTATUS) {
         this = *ent;
         next = HT_NEXT_RMV(clientmap, &client_history, ent);
         tor_free(this);
@@ -1137,10 +1043,6 @@ geoip_reset_dirreq_stats(time_t now)
       }
     }
   }
-  v2_share_times_seconds = v3_share_times_seconds = 0.0;
-  last_time_determined_shares = 0;
-  share_seconds = 0;
-  memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
   memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
   {
     dirreq_map_entry_t **ent, **next, *this;
@@ -1168,12 +1070,9 @@ char *
 geoip_format_dirreq_stats(time_t now)
 {
   char t[ISO_TIME_LEN+1];
-  double v2_share = 0.0, v3_share = 0.0;
   int i;
-  char *v3_ips_string, *v2_ips_string, *v3_reqs_string, *v2_reqs_string,
-       *v2_share_string = NULL, *v3_share_string = NULL,
-       *v3_direct_dl_string, *v2_direct_dl_string,
-       *v3_tunneled_dl_string, *v2_tunneled_dl_string;
+  char *v3_ips_string, *v3_reqs_string, *v3_direct_dl_string,
+       *v3_tunneled_dl_string;
   char *result;
 
   if (!start_of_dirreq_stats_interval)
@@ -1182,90 +1081,45 @@ geoip_format_dirreq_stats(time_t now)
   tor_assert(now >= start_of_dirreq_stats_interval);
 
   format_iso_time(t, now);
-  geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2, &v2_ips_string,
-                           NULL);
   geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS, &v3_ips_string, NULL);
-  v2_reqs_string = geoip_get_request_history(
-                   GEOIP_CLIENT_NETWORKSTATUS_V2);
-  v3_reqs_string = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
+  v3_reqs_string = geoip_get_request_history();
 
 #define RESPONSE_GRANULARITY 8
   for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
-    ns_v2_responses[i] = round_uint32_to_next_multiple_of(
-                               ns_v2_responses[i], RESPONSE_GRANULARITY);
     ns_v3_responses[i] = round_uint32_to_next_multiple_of(
                                ns_v3_responses[i], RESPONSE_GRANULARITY);
   }
 #undef RESPONSE_GRANULARITY
 
-  if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    tor_asprintf(&v2_share_string, "dirreq-v2-share %0.2f%%\n",
-                 v2_share*100);
-    tor_asprintf(&v3_share_string, "dirreq-v3-share %0.2f%%\n",
-                 v3_share*100);
-  }
-
-  v2_direct_dl_string = geoip_get_dirreq_history(
-                        GEOIP_CLIENT_NETWORKSTATUS_V2, DIRREQ_DIRECT);
-  v3_direct_dl_string = geoip_get_dirreq_history(
-                        GEOIP_CLIENT_NETWORKSTATUS, DIRREQ_DIRECT);
-
-  v2_tunneled_dl_string = geoip_get_dirreq_history(
-                          GEOIP_CLIENT_NETWORKSTATUS_V2, DIRREQ_TUNNELED);
-  v3_tunneled_dl_string = geoip_get_dirreq_history(
-                          GEOIP_CLIENT_NETWORKSTATUS, DIRREQ_TUNNELED);
+  v3_direct_dl_string = geoip_get_dirreq_history(DIRREQ_DIRECT);
+  v3_tunneled_dl_string = geoip_get_dirreq_history(DIRREQ_TUNNELED);
 
   /* Put everything together into a single string. */
   tor_asprintf(&result, "dirreq-stats-end %s (%d s)\n"
               "dirreq-v3-ips %s\n"
-              "dirreq-v2-ips %s\n"
               "dirreq-v3-reqs %s\n"
-              "dirreq-v2-reqs %s\n"
               "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
                    "not-found=%u,not-modified=%u,busy=%u\n"
-              "dirreq-v2-resp ok=%u,unavailable=%u,"
-                   "not-found=%u,not-modified=%u,busy=%u\n"
-              "%s"
-              "%s"
               "dirreq-v3-direct-dl %s\n"
-              "dirreq-v2-direct-dl %s\n"
-              "dirreq-v3-tunneled-dl %s\n"
-              "dirreq-v2-tunneled-dl %s\n",
+              "dirreq-v3-tunneled-dl %s\n",
               t,
               (unsigned) (now - start_of_dirreq_stats_interval),
               v3_ips_string ? v3_ips_string : "",
-              v2_ips_string ? v2_ips_string : "",
               v3_reqs_string ? v3_reqs_string : "",
-              v2_reqs_string ? v2_reqs_string : "",
               ns_v3_responses[GEOIP_SUCCESS],
               ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
               ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
               ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
               ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
               ns_v3_responses[GEOIP_REJECT_BUSY],
-              ns_v2_responses[GEOIP_SUCCESS],
-              ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
-              ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
-              ns_v2_responses[GEOIP_REJECT_NOT_MODIFIED],
-              ns_v2_responses[GEOIP_REJECT_BUSY],
-              v2_share_string ? v2_share_string : "",
-              v3_share_string ? v3_share_string : "",
               v3_direct_dl_string ? v3_direct_dl_string : "",
-              v2_direct_dl_string ? v2_direct_dl_string : "",
-              v3_tunneled_dl_string ? v3_tunneled_dl_string : "",
-              v2_tunneled_dl_string ? v2_tunneled_dl_string : "");
+              v3_tunneled_dl_string ? v3_tunneled_dl_string : "");
 
   /* Free partial strings. */
   tor_free(v3_ips_string);
-  tor_free(v2_ips_string);
   tor_free(v3_reqs_string);
-  tor_free(v2_reqs_string);
-  tor_free(v2_share_string);
-  tor_free(v3_share_string);
   tor_free(v3_direct_dl_string);
-  tor_free(v2_direct_dl_string);
   tor_free(v3_tunneled_dl_string);
-  tor_free(v2_tunneled_dl_string);
 
   return result;
 }
