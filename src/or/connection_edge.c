@@ -637,6 +637,16 @@ connection_ap_expire_beginning(void)
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (seconds_idle >= options->SocksTimeout) {
+        /* Path bias: We need to probe the circuit to ensure validity.
+         * Roll its state back if it succeeded so that we do so upon close. */
+        if (TO_ORIGIN_CIRCUIT(circ)->path_state == PATH_STATE_USE_SUCCEEDED) {
+          log_info(LD_CIRC,
+                   "Rolling back pathbias use state to 'attempted' for timed "
+                   "out rend circ %d",
+                   TO_ORIGIN_CIRCUIT(circ)->global_identifier);
+          TO_ORIGIN_CIRCUIT(circ)->path_state = PATH_STATE_USE_ATTEMPTED;
+        }
+
         log_fn(severity, LD_REND,
                "Rend stream is %d seconds late. Giving up on address"
                " '%s.onion'.",
@@ -805,6 +815,15 @@ connection_ap_detach_retriable(entry_connection_t *conn,
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
   ENTRY_TO_CONN(conn)->timestamp_lastread = time(NULL);
+
+  /* Path bias: We need to probe the circuit to ensure validity.
+   * Roll its state back if it succeeded so that we do so upon close. */
+  if (circ->path_state == PATH_STATE_USE_SUCCEEDED) {
+    log_info(LD_CIRC,
+             "Rolling back pathbias use state to 'attempted' for detached "
+             "circuit %d", circ->global_identifier);
+    circ->path_state = PATH_STATE_USE_ATTEMPTED;
+  }
 
   if (conn->pending_optimistic_data) {
     generic_buffer_set_to_copy(&conn->sending_optimistic_data,
