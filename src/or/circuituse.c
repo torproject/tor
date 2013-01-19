@@ -668,18 +668,6 @@ circuit_expire_building(void)
           circuit_build_times_set_timeout(&circ_times);
         }
       }
-
-      if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
-          victim->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
-        /* For path bias: we want to let these guys live for a while
-         * so we get a chance to test them. */
-        log_info(LD_CIRC,
-                 "Allowing cannibalized circuit %d time to finish building "
-                 "as a pathbias testing circ.",
-                 TO_ORIGIN_CIRCUIT(victim)->global_identifier);
-        circuit_change_purpose(victim, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
-        continue; /* It now should have a longer timeout next time */
-      }
     }
 
     /* If this is a hidden service client circuit which is far enough
@@ -1517,7 +1505,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
          * If we decide to probe the initial portion of these circs,
          * (up to the adversaries final hop), we need to remove this.
          */
-        circ->path_state = PATH_STATE_USE_SUCCEEDED;
+
         /* This must be called before the purpose change */
         pathbias_check_close(circ, END_CIRC_REASON_FINISHED);
       }

@@ -823,9 +823,6 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 
       /* We're done with measurement circuits here. Just close them */
       if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-        /* If a measurement circ ever gets back to us, consider it
-         * succeeded for path bias */
-        circ->path_state = PATH_STATE_USE_SUCCEEDED;
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
       }
       return 0;
@@ -3140,9 +3137,7 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit)
     return -1;
   }
 
-  /* Set timestamp_dirty, so we can check it for path use bias */
-  if (!circ->base_.timestamp_dirty)
-    circ->base_.timestamp_dirty = time(NULL);
+  // XXX: Should cannibalized circuits be dirty or not? Not easy to say..
 
   return 0;
 }
