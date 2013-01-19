@@ -71,6 +71,9 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
    * and the rend cookie also means we've used the circ. */
   circ->base_.timestamp_dirty = time(NULL);
 
+  /* We've attempted to use this circuit. Probe it if we fail */
+  pathbias_count_use_attempt(circ);
+
   if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
                                    circ->rend_data->rend_cookie,
@@ -316,6 +319,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
    * state. */
   introcirc->base_.timestamp_dirty = time(NULL);
 
+  pathbias_count_use_attempt(introcirc);
+
   goto cleanup;
 
  perm_err:
@@ -395,7 +400,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 
   /* For path bias: This circuit was used successfully. Valid
    * nacks and acks count. */
-  circ->path_state = PATH_STATE_USE_SUCCEEDED;
+  pathbias_mark_use_success(circ);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -902,7 +907,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
    * Waiting any longer opens us up to attacks from Bob. He could induce
    * Alice to attempt to connect to his hidden service and never reply
    * to her rend requests */
-  circ->path_state = PATH_STATE_USE_SUCCEEDED;
+  pathbias_mark_use_success(circ);
 
   /* XXXX This is a pretty brute-force approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather

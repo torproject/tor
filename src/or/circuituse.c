@@ -2037,6 +2037,8 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
   if (!circ->base_.timestamp_dirty)
     circ->base_.timestamp_dirty = time(NULL);
 
+  pathbias_count_use_attempt(circ);
+
   link_apconn_to_circ(conn, circ, cpath);
   tor_assert(conn->socks_request);
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
@@ -2163,6 +2165,11 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
        * feasibility, at this point.
        */
       rendcirc->base_.timestamp_dirty = time(NULL);
+
+      /* We've also attempted to use them. If they fail, we need to
+       * probe them for path bias */
+      pathbias_count_use_attempt(rendcirc);
+
       link_apconn_to_circ(conn, rendcirc, NULL);
       if (connection_ap_handshake_send_begin(conn) < 0)
         return 0; /* already marked, let them fade away */
@@ -2214,6 +2221,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
         case 0: /* success */
           rendcirc->base_.timestamp_dirty = time(NULL);
           introcirc->base_.timestamp_dirty = time(NULL);
+
+          pathbias_count_use_attempt(introcirc);
+          pathbias_count_use_attempt(rendcirc);
+
           assert_circuit_ok(TO_CIRCUIT(rendcirc));
           assert_circuit_ok(TO_CIRCUIT(introcirc));
           return 0;

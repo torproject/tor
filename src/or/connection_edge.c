@@ -37,6 +37,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "circuitbuild.h"
 
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>
@@ -2205,8 +2206,10 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
                U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
                endreason);
     } else {
-      TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit)->path_state
-          = PATH_STATE_USE_SUCCEEDED;
+      // XXX: Hrmm. It looks like optimistic data can't go through this
+      // codepath, but someone should probably test it and make sure.
+      // We don't want to mark optimistically opened streams as successful.
+      pathbias_mark_use_success(TO_ORIGIN_CIRCUIT(conn->edge_.on_circuit));
     }
   }
 
@@ -2480,7 +2483,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     connection_exit_connect(n_stream);
 
     /* For path bias: This circuit was used successfully */
-    origin_circ->path_state = PATH_STATE_USE_SUCCEEDED;
+    pathbias_mark_use_success(origin_circ);
 
     tor_free(address);
     return 0;

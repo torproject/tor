@@ -2838,6 +2838,15 @@ typedef enum {
     PATH_STATE_BUILD_ATTEMPTED = 1,
     /** This circuit has been completely built */
     PATH_STATE_BUILD_SUCCEEDED = 2,
+    /** Did we try to attach any SOCKS streams or hidserv introductions to
+      * this circuit?
+      *
+      * Note: If we ever implement end-to-end stream timing through test
+      * stream probes (#5707), we must *not* set this for those probes
+      * (or any other automatic streams) because the adversary could
+      * just tag at a later point.
+      */
+    PATH_STATE_USE_ATTEMPTED = 3,
     /** Did any SOCKS streams or hidserv introductions actually succeed on
       * this circuit?
       *
@@ -2846,13 +2855,20 @@ typedef enum {
       * (or any other automatic streams) because the adversary could
       * just tag at a later point.
       */
-    PATH_STATE_USE_SUCCEEDED = 3,
+    PATH_STATE_USE_SUCCEEDED = 4,
 
     /**
      * This is a special state to indicate that we got a corrupted
      * relay cell on a circuit and we don't intend to probe it.
      */
-    PATH_STATE_USE_FAILED = 4,
+    PATH_STATE_USE_FAILED = 5,
+
+    /**
+     * This is a special state to indicate that we already counted
+     * the circuit. Used to guard against potential state machine
+     * violations.
+     */
+    PATH_STATE_ALREADY_COUNTED = 6,
 } path_state_t;
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
@@ -2997,7 +3013,6 @@ typedef struct origin_circuit_t {
    * ISO_STREAM. */
   uint64_t associated_isolated_stream_global_id;
   /**@}*/
-
 } origin_circuit_t;
 
 /** An or_circuit_t holds information needed to implement a circuit at an
@@ -3909,7 +3924,16 @@ typedef struct {
   int PathBiasScaleThreshold;
   int PathBiasScaleFactor;
   int PathBiasMultFactor;
-  int PathBiasUseCloseCounts;
+  /** @} */
+
+  /**
+   * Parameters for path-bias use detection
+   * @{
+   */
+  int PathBiasUseThreshold;
+  double PathBiasNoticeUseRate;
+  double PathBiasExtremeUseRate;
+  int PathBiasScaleUseThreshold;
   /** @} */
 
   int IPv6Exit; /**< Do we support exiting to IPv6 addresses? */
