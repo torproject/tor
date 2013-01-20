@@ -1582,9 +1582,11 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
       pathbias_check_use_rate(guard);
       guard->use_attempts++;
 
-      log_debug(LD_CIRC, "Marked circuit %d as used for guard %s=%s.",
-               circ->global_identifier, guard->nickname,
-               hex_str(guard->identity, DIGEST_LEN));
+      log_debug(LD_CIRC,
+               "Marked circuit %d (%f/%f) as used for guard %s=%s.",
+               circ->global_identifier,
+               guard->use_successes, guard->use_attempts,
+               guard->nickname, hex_str(guard->identity, DIGEST_LEN));
     }
 
     circ->path_state = PATH_STATE_USE_ATTEMPTED;
@@ -1664,9 +1666,11 @@ pathbias_count_use_success(origin_circuit_t *circ)
       guard->use_successes++;
 
       log_debug(LD_CIRC,
-                "Marked circuit %d as used successfully for guard %s=%s.",
-               circ->global_identifier, guard->nickname,
-               hex_str(guard->identity, DIGEST_LEN));
+                "Marked circuit %d (%f/%f) as used successfully for guard "
+                "%s=%s.",
+                circ->global_identifier, guard->use_successes,
+                guard->use_attempts, guard->nickname,
+                hex_str(guard->identity, DIGEST_LEN));
     }
   }
 
