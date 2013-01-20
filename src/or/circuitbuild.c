@@ -2244,12 +2244,6 @@ pathbias_check_use_rate(entry_guard_t *guard)
             PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_ATTEMPTED);
     guard->use_attempts -= opened_attempts;
 
-    log_info(LD_CIRC,
-             "Scaling pathbias use counts to (%f/%f)*(%d/%d) for guard %s=%s",
-             guard->use_successes, guard->use_attempts,
-             mult_factor, scale_factor, guard->nickname,
-             hex_str(guard->identity, DIGEST_LEN));
-
     guard->use_attempts *= mult_factor;
     guard->use_successes *= mult_factor;
 
@@ -2257,6 +2251,11 @@ pathbias_check_use_rate(entry_guard_t *guard)
     guard->use_successes /= scale_factor;
 
     guard->use_attempts += opened_attempts;
+
+    log_info(LD_CIRC,
+             "Scaled pathbias use counts to %f/%f for guard %s=%s",
+             guard->use_successes, guard->use_attempts,
+             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
   }
 
   return 0;
@@ -2394,11 +2393,6 @@ pathbias_check_close_rate(entry_guard_t *guard)
                         PATH_STATE_USE_FAILED);
     guard->circ_attempts -= opened_attempts;
     guard->circ_successes -= opened_built;
-    log_info(LD_CIRC,
-             "Scaling pathbias counts to (%f/%f)*(%d/%d) for guard %s=%s",
-             guard->circ_successes, guard->circ_attempts,
-             mult_factor, scale_factor, guard->nickname,
-             hex_str(guard->identity, DIGEST_LEN));
 
     guard->circ_attempts *= mult_factor;
     guard->circ_successes *= mult_factor;
@@ -2416,6 +2410,12 @@ pathbias_check_close_rate(entry_guard_t *guard)
 
     guard->circ_attempts += opened_attempts;
     guard->circ_successes += opened_built;
+
+    log_info(LD_CIRC,
+             "Scaled pathbias counts to (%f,%f)/%f for guard %s=%s",
+             guard->circ_successes, guard->successful_circuits_closed,
+             guard->circ_attempts, guard->nickname,
+             hex_str(guard->identity, DIGEST_LEN));
   }
 
   return 0;
