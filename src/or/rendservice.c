@@ -3068,7 +3068,8 @@ rend_services_introduce(void)
       if (intro->time_expiring + INTRO_POINT_EXPIRATION_GRACE_PERIOD > now) {
         /* This intro point has completely expired.  Remove it, and
          * mark the circuit for close if it's still alive. */
-        if (intro_circ != NULL) {
+        if (intro_circ != NULL &&
+            intro_circ->base_.purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
           circuit_mark_for_close(TO_CIRCUIT(intro_circ),
                                  END_CIRC_REASON_FINISHED);
         }

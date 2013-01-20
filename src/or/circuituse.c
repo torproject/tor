@@ -1078,7 +1078,10 @@ circuit_expire_old_circuits_clientside(void)
                 "purpose %d)",
                 circ->n_circ_id, (long)(now.tv_sec - circ->timestamp_dirty),
                 circ->purpose);
-      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+      /* Don't do this magic for testing circuits. Their death is governed
+       * by circuit_expire_building */
+      if (circ->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
+        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (timercmp(&circ->timestamp_began, &cutoff, <)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
