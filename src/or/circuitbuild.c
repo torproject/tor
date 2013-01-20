@@ -2105,6 +2105,9 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
         fast_memeq(guard->identity,
                 ocirc->cpath->extend_info->identity_digest,
                 DIGEST_LEN)) {
+      log_debug(LD_CIRC, "Found opened circuit %d in path_state %s",
+                ocirc->global_identifier,
+                pathbias_state_to_string(ocirc->path_state));
       open_circuits++;
     }
   }
@@ -2245,7 +2248,7 @@ pathbias_check_use_rate(entry_guard_t *guard)
     const int scale_factor = pathbias_get_scale_factor(options);
     const int mult_factor = pathbias_get_mult_factor(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
-            PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_ATTEMPTED);
+            PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
     guard->use_attempts -= opened_attempts;
 
     guard->use_attempts *= mult_factor;
@@ -2257,8 +2260,8 @@ pathbias_check_use_rate(entry_guard_t *guard)
     guard->use_attempts += opened_attempts;
 
     log_info(LD_CIRC,
-             "Scaled pathbias use counts to %f/%f for guard %s=%s",
-             guard->use_successes, guard->use_attempts,
+             "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
+             guard->use_successes, guard->use_attempts, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
   }
 
@@ -2416,10 +2419,11 @@ pathbias_check_close_rate(entry_guard_t *guard)
     guard->circ_successes += opened_built;
 
     log_info(LD_CIRC,
-             "Scaled pathbias counts to (%f,%f)/%f for guard %s=%s",
+             "Scaled pathbias counts to (%f,%f)/%f (%d/%d open) for guard "
+             "%s=%s",
              guard->circ_successes, guard->successful_circuits_closed,
-             guard->circ_attempts, guard->nickname,
-             hex_str(guard->identity, DIGEST_LEN));
+             guard->circ_attempts, opened_built, opened_attempts,
+             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
   }
 
   return 0;
