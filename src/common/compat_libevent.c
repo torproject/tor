@@ -187,13 +187,6 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
   /* some paths below don't use torcfg, so avoid unused variable warnings */
   (void)torcfg;
 
-#ifdef __APPLE__
-  if (MACOSX_KQUEUE_IS_BROKEN ||
-      tor_get_libevent_version(NULL) < V_OLD(1,1,'b')) {
-    setenv("EVENT_NOKQUEUE","1",1);
-  }
-#endif
-
 #ifdef HAVE_EVENT2_EVENT_H
   {
     int attempts = 0;
@@ -411,35 +404,9 @@ void
 tor_check_libevent_version(const char *m, int server,
                            const char **badness_out)
 {
-  int thread_unsafe = 0;
-  const char *v = NULL;
-  const char *badness = NULL;
-  const char *sad_os = "";
   (void) m;
   (void) server;
-
-  /* Libevent versions before 1.3b do very badly on operating systems with
-   * user-space threading implementations. */
-#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
-  if (server && version < V_OLD(1,3,'b')) {
-    thread_unsafe = 1;
-    sad_os = "BSD variants";
-  }
-#elif defined(__APPLE__) || defined(__darwin__)
-  if (server && version < V_OLD(1,3,'b')) {
-    thread_unsafe = 1;
-    sad_os = "Mac OS X";
-  }
-#endif
-
-  if (thread_unsafe) {
-    log(LOG_WARN, LD_GENERAL,
-        "Libevent version %s often crashes when running a Tor server with %s. "
-        "Please use the latest version of libevent (1.3b or later)",v,sad_os);
-    badness = "BROKEN";
-  }
-
-  *badness_out = badness;
+  *badness_out = NULL;
 }
 
 #if defined(LIBEVENT_VERSION)
