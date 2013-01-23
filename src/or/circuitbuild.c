@@ -1727,6 +1727,16 @@ pathbias_send_usable_probe(circuit_t *circ)
     return -1;
   }
 
+  /* Can't probe if the channel isn't open */
+  if (circ->n_chan == NULL ||
+      (circ->n_chan->state != CHANNEL_STATE_OPEN
+       && circ->n_chan->state != CHANNEL_STATE_MAINT)) {
+    log_info(LD_CIRC,
+             "Skipping pathbias probe for circuit %d: Channel is not open.",
+             ocirc->global_identifier);
+    return -1;
+  }
+
   circuit_change_purpose(circ, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
 
   /* Update timestamp for when circuit_expire_building() should kill us */

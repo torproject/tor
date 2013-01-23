@@ -8,3 +8,4 @@
     - Remove a source of rounding error during path bias count scaling.
     - Don't count cannibalized circuits as used for path bias until we
       actually try to use them.
+    - Fix circuit_package_relay_cell warning message about n_chan==NULL.
