@@ -89,6 +89,10 @@ MOCK_DECL(void, control_event_bootstrap_problem,(const char *warn,
                                                  int reason));
 
 void control_event_clients_seen(const char *controller_str);
+void control_event_transport_launched(const char *mode,
+                                      const char *transport_name,
+                                      tor_addr_t *addr, uint16_t port);
+
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE

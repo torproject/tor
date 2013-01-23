@@ -82,7 +82,8 @@
 #define EVENT_BUILDTIMEOUT_SET     0x0017
 #define EVENT_SIGNAL           0x0018
 #define EVENT_CONF_CHANGED     0x0019
-#define EVENT_MAX_             0x0019
+#define EVENT_TRANSPORT_LAUNCHED 0x0020
+#define EVENT_MAX_             0x0020
 /* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -958,6 +959,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
   { EVENT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
+  { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { 0, NULL },
 };
 
@@ -4735,6 +4737,21 @@ control_event_clients_seen(const char *controller_str)
 {
   send_control_event(EVENT_CLIENTS_SEEN, 0,
     "650 CLIENTS_SEEN %s\r\n", controller_str);
+}
+
+/** A new pluggable transport called <b>transport_name</b> was
+ *  launched on <b>addr</b>:<b>port</b>. <b>mode</b> is either
+ *  "server" or "client" depending on the mode of the pluggable
+ *  transport.
+ *  "650" SP "TRANSPORT_LAUNCHED" SP Mode SP Name SP Address SP Port
+ */
+void
+control_event_transport_launched(const char *mode, const char *transport_name,
+                                 tor_addr_t *addr, uint16_t port)
+{
+  send_control_event(EVENT_TRANSPORT_LAUNCHED, ALL_FORMATS,
+                     "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n",
+                     mode, transport_name, fmt_addr(addr), port);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */
