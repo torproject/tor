@@ -1376,9 +1376,9 @@ is non-zero):
     If set, and we are an exit node, allow clients to use us for IPv6
     traffic. (Default: 0)
 
-**MaxOnionsPending** __NUM__::
-    If you have more than this number of onionskins queued for decrypt, reject
-    new ones. (Default: 100)
+**MaxOnionQueueDelay** __NUM__ [**msec**|**second**]::
+    If we have more onionskins queued for processing than we can process in
+    this amount of time, reject new ones. (Default: 1750 msec)
 
 **MyFamily** __node__,__node__,__...__::
     Declare that this Tor server is controlled or administered by a group or

@@ -13,6 +13,7 @@
 #include "or.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "cpuworker.h"
 #include "onion.h"
 #include "onion_fast.h"
 #include "onion_ntor.h"
@@ -20,29 +21,71 @@
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
+#include "tor_queue.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
+  TAILQ_ENTRY(onion_queue_t) next;
   or_circuit_t *circ;
   create_cell_t *onionskin;
   time_t when_added;
-  struct onion_queue_t *next;
 } onion_queue_t;
 
 /** 5 seconds on the onion queue til we just send back a destroy */
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
-/** First and last elements in the linked list of circuits waiting for CPU
- * workers, or NULL if the list is empty.
- * @{ */
-static onion_queue_t *ol_list=NULL;
-static onion_queue_t *ol_tail=NULL;
-/**@}*/
-/** Length of ol_list */
-static int ol_length=0;
+/** Queue of circuits waiting for CPU workers, or NULL if the list is empty.*/
+TAILQ_HEAD(onion_queue_head_t, onion_queue_t) ol_list =
+  TAILQ_HEAD_INITIALIZER(ol_list);
 
-/* XXXX Check lengths vs MAX_ONIONSKIN_{CHALLENGE,REPLY}_LEN */
+/** Number of entries of each type currently in ol_list. */
+static int ol_entries[MAX_ONION_HANDSHAKE_TYPE+1];
+
+static void onion_queue_entry_remove(onion_queue_t *victim);
+
+/* XXXX024 Check lengths vs MAX_ONIONSKIN_{CHALLENGE,REPLY}_LEN.
+ *
+ * (By which I think I meant, "make sure that no
+ * X_ONIONSKIN_CHALLENGE/REPLY_LEN is greater than
+ * MAX_ONIONSKIN_CHALLENGE/REPLY_LEN."  Also, make sure that we can pass
+ * over-large values via EXTEND2/EXTENDED2, for future-compatibility.*/
+
+/** Return true iff we have room to queue another oninoskin of type
+ * <b>type</b>. */
+static int
+have_room_for_onionskin(uint16_t type)
+{
+  const or_options_t *options = get_options();
+  int num_cpus;
+  uint64_t tap_usec, ntor_usec;
+  /* If we've got fewer than 50 entries, we always have room for one more. */
+  if (ol_entries[ONION_HANDSHAKE_TYPE_TAP] +
+      ol_entries[ONION_HANDSHAKE_TYPE_NTOR] < 50)
+    return 1;
+  num_cpus = get_num_cpus(options);
+  /* Compute how many microseconds we'd expect to need to clear all
+   * onionskins in the current queue. */
+  tap_usec  = estimated_usec_for_onionskins(
+                                    ol_entries[ONION_HANDSHAKE_TYPE_TAP],
+                                    ONION_HANDSHAKE_TYPE_TAP) / num_cpus;
+  ntor_usec = estimated_usec_for_onionskins(
+                                    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+                                    ONION_HANDSHAKE_TYPE_NTOR) / num_cpus;
+  /* See whether that exceeds MaxOnionQueueDelay. If so, we can't queue
+   * this. */
+  if ((tap_usec + ntor_usec) / 1000 > (uint64_t)options->MaxOnionQueueDelay)
+    return 0;
+#ifdef CURVE25519_ENABLED
+  /* If we support the ntor handshake, then don't let TAP handshakes use
+   * more than 2/3 of the space on the queue. */
+  if (type == ONION_HANDSHAKE_TYPE_TAP &&
+      tap_usec / 1000 > (uint64_t)options->MaxOnionQueueDelay * 2 / 3)
+    return 0;
+#endif
+
+  return 1;
+}
 
 /** Add <b>circ</b> to the end of ol_list and return 0, except
  * if ol_list is too long, in which case do nothing and return -1.
@@ -58,19 +101,7 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   tmp->onionskin = onionskin;
   tmp->when_added = now;
 
-  if (!ol_tail) {
-    tor_assert(!ol_list);
-    tor_assert(!ol_length);
-    ol_list = tmp;
-    ol_tail = tmp;
-    ol_length++;
-    return 0;
-  }
-
-  tor_assert(ol_list);
-  tor_assert(!ol_tail->next);
-
-  if (ol_length >= get_options()->MaxOnionsPending) {
+  if (!have_room_for_onionskin(onionskin->handshake_type)) {
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
     static ratelim_t last_warned =
       RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
@@ -87,13 +118,19 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
     return -1;
   }
 
-  ol_length++;
-  ol_tail->next = tmp;
-  ol_tail = tmp;
-  while ((int)(now - ol_list->when_added) >= ONIONQUEUE_WAIT_CUTOFF) {
-    /* cull elderly requests. */
-    circ = ol_list->circ;
-    onion_pending_remove(ol_list->circ);
+  ++ol_entries[onionskin->handshake_type];
+  circ->onionqueue_entry = tmp;
+  TAILQ_INSERT_TAIL(&ol_list, tmp, next);
+
+  /* cull elderly requests. */
+  while (1) {
+    onion_queue_t *head = TAILQ_FIRST(&ol_list);
+    if (now - head->when_added < (time_t)ONIONQUEUE_WAIT_CUTOFF)
+      break;
+
+    circ = head->circ;
+    circ->onionqueue_entry = NULL;
+    onion_queue_entry_remove(head);
     log_info(LD_CIRC,
              "Circuit create request is too old; canceling due to overload.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
@@ -108,17 +145,21 @@ or_circuit_t *
 onion_next_task(create_cell_t **onionskin_out)
 {
   or_circuit_t *circ;
+  onion_queue_t *head = TAILQ_FIRST(&ol_list);
 
-  if (!ol_list)
+  if (!head)
     return NULL; /* no onions pending, we're done */
 
-  tor_assert(ol_list->circ);
-  tor_assert(ol_list->circ->p_chan); /* make sure it's still valid */
-  tor_assert(ol_length > 0);
-  circ = ol_list->circ;
-  *onionskin_out = ol_list->onionskin;
-  ol_list->onionskin = NULL; /* prevent free. */
-  onion_pending_remove(ol_list->circ);
+  tor_assert(head->circ);
+  tor_assert(head->circ->p_chan); /* make sure it's still valid */
+  circ = head->circ;
+  if (head->onionskin &&
+      head->onionskin->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
+    --ol_entries[head->onionskin->handshake_type];
+  *onionskin_out = head->onionskin;
+  head->onionskin = NULL; /* prevent free. */
+  circ->onionqueue_entry = NULL;
+  onion_queue_entry_remove(head);
   return circ;
 }
 
@@ -128,37 +169,29 @@ onion_next_task(create_cell_t **onionskin_out)
 void
 onion_pending_remove(or_circuit_t *circ)
 {
-  onion_queue_t *tmpo, *victim;
+  onion_queue_t *victim;
 
-  if (!ol_list)
-    return; /* nothing here. */
+  if (!circ)
+    return;
 
-  /* first check to see if it's the first entry */
-  tmpo = ol_list;
-  if (tmpo->circ == circ) {
-    /* it's the first one. remove it from the list. */
-    ol_list = tmpo->next;
-    if (!ol_list)
-      ol_tail = NULL;
-    ol_length--;
-    victim = tmpo;
-  } else { /* we need to hunt through the rest of the list */
-    for ( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
-    if (!tmpo->next) {
-      log_debug(LD_GENERAL,
-                "circ (p_circ_id %d) not in list, probably at cpuworker.",
-                circ->p_circ_id);
-      return;
-    }
-    /* now we know tmpo->next->circ == circ */
-    victim = tmpo->next;
-    tmpo->next = victim->next;
-    if (ol_tail == victim)
-      ol_tail = tmpo;
-    ol_length--;
-  }
+  victim = circ->onionqueue_entry;
+  if (victim)
+    onion_queue_entry_remove(victim);
+}
 
-  /* now victim points to the element that needs to be removed */
+/** Remove a queue entry <b>victim</b> from the queue, unlinking it from
+ * its circuit and freeing it and any structures it owns.*/
+static void
+onion_queue_entry_remove(onion_queue_t *victim)
+{
+  TAILQ_REMOVE(&ol_list, victim, next);
+
+  if (victim->circ)
+    victim->circ->onionqueue_entry = NULL;
+
+  if (victim->onionskin &&
+      victim->onionskin->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
+    --ol_entries[victim->onionskin->handshake_type];
 
   tor_free(victim->onionskin);
   tor_free(victim);
@@ -168,14 +201,11 @@ onion_pending_remove(or_circuit_t *circ)
 void
 clear_pending_onions(void)
 {
-  while (ol_list) {
-    onion_queue_t *victim = ol_list;
-    ol_list = victim->next;
-    tor_free(victim->onionskin);
-    tor_free(victim);
+  onion_queue_t *victim;
+  while ((victim = TAILQ_FIRST(&ol_list))) {
+    onion_queue_entry_remove(victim);
   }
-  ol_list = ol_tail = NULL;
-  ol_length = 0;
+  memset(ol_entries, 0, sizeof(ol_entries));
 }
 
 /* ============================================================ */

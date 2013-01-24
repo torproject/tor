@@ -2584,6 +2584,7 @@ struct ntor_handshake_state_t;
 #define ONION_HANDSHAKE_TYPE_TAP  0x0000
 #define ONION_HANDSHAKE_TYPE_FAST 0x0001
 #define ONION_HANDSHAKE_TYPE_NTOR 0x0002
+#define MAX_ONION_HANDSHAKE_TYPE 0x0002
 typedef struct {
   uint16_t tag;
   union {
@@ -3000,6 +3001,8 @@ typedef struct origin_circuit_t {
 
 } origin_circuit_t;
 
+struct onion_queue_t;
+
 /** An or_circuit_t holds information needed to implement a circuit at an
  * OR. */
 typedef struct or_circuit_t {
@@ -3013,6 +3016,9 @@ typedef struct or_circuit_t {
    * cells to p_chan.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_p_chan;
+  /** Pointer to an entry on the onion queue, if this circuit is waiting for a
+   * chance to give an onionskin to a cpuworker. Used only in onion.c */
+  struct onion_queue_t *onionqueue_entry;
 
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;
@@ -3496,9 +3502,7 @@ typedef struct {
                              * and try a new circuit if the stream has been
                              * waiting for this many seconds. If zero, use
                              * our default internal timeout schedule. */
-  int MaxOnionsPending; /**< How many circuit CREATE requests do we allow
-                         * to wait simultaneously before we start dropping
-                         * them? */
+  int MaxOnionQueueDelay; /**<DOCDOC*/
   int NewCircuitPeriod; /**< How long do we use a circuit before building
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
