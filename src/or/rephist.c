@@ -2313,7 +2313,7 @@ rep_hist_format_exit_stats(time_t now)
 time_t
 rep_hist_exit_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *str = NULL;
 
   if (!start_of_exit_stats_interval)
     return 0; /* Not initialized. */
@@ -2329,19 +2329,12 @@ rep_hist_exit_stats_write(time_t now)
   rep_hist_reset_exit_stats(now);
 
   /* Try to write to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-    goto done;
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "exit-stats", str, "exit port statistics");
   }
-  filename = get_datadir_fname2("stats", "exit-stats");
-  if (write_str_to_file(filename, str, 0) < 0)
-    log_warn(LD_HIST, "Unable to write exit port statistics to disk!");
 
  done:
   tor_free(str);
-  tor_free(statsdir);
-  tor_free(filename);
   return start_of_exit_stats_interval + WRITE_STATS_INTERVAL;
 }
 
@@ -2598,7 +2591,7 @@ time_t
 rep_hist_buffer_stats_write(time_t now)
 {
   circuit_t *circ;
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *str = NULL;
 
   if (!start_of_buffer_stats_interval)
     return 0; /* Not initialized. */
@@ -2617,19 +2610,12 @@ rep_hist_buffer_stats_write(time_t now)
   rep_hist_reset_buffer_stats(now);
 
   /* Try to write to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-    goto done;
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "buffer-stats", str, "buffer statistics");
   }
-  filename = get_datadir_fname2("stats", "buffer-stats");
-  if (write_str_to_file(filename, str, 0) < 0)
-    log_warn(LD_HIST, "Unable to write buffer stats to disk!");
 
  done:
   tor_free(str);
-  tor_free(filename);
-  tor_free(statsdir);
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
 
@@ -2741,7 +2727,7 @@ rep_hist_format_desc_stats(time_t now)
 time_t
 rep_hist_desc_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *filename = NULL, *str = NULL;
 
   if (!start_of_served_descs_stats_interval)
     return 0; /* We're not collecting stats. */
@@ -2751,10 +2737,8 @@ rep_hist_desc_stats_write(time_t now)
   str = rep_hist_format_desc_stats(now);
   tor_assert(str != NULL);
 
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-      goto done;
+  if (check_or_create_data_subdir("stats") < 0) {
+    goto done;
   }
   filename = get_datadir_fname2("stats", "served-desc-stats");
   if (append_bytes_to_file(filename, str, strlen(str), 0) < 0)
@@ -2763,7 +2747,6 @@ rep_hist_desc_stats_write(time_t now)
   rep_hist_reset_desc_stats(now);
 
  done:
-  tor_free(statsdir);
   tor_free(filename);
   tor_free(str);
   return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
@@ -2981,7 +2964,7 @@ rep_hist_format_conn_stats(time_t now)
 time_t
 rep_hist_conn_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *str = NULL;
 
   if (!start_of_conn_stats_interval)
     return 0; /* Not initialized. */
@@ -2995,19 +2978,12 @@ rep_hist_conn_stats_write(time_t now)
   rep_hist_reset_conn_stats(now);
 
   /* Try to write to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-    goto done;
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "conn-stats", str, "connection statistics");
   }
-  filename = get_datadir_fname2("stats", "conn-stats");
-  if (write_str_to_file(filename, str, 0) < 0)
-    log_warn(LD_HIST, "Unable to write conn stats to disk!");
 
  done:
   tor_free(str);
-  tor_free(filename);
-  tor_free(statsdir);
   return start_of_conn_stats_interval + WRITE_STATS_INTERVAL;
 }
 
