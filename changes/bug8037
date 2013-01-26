@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Correctly store microdescriptors and extrainfo descriptors with
+      an internal NUL byte. Fixes bug 8037; bugfix on 0.2.0.1-alpha.
+      Bug reported by "cypherpunks".

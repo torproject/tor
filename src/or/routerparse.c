@@ -1494,7 +1494,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   extrainfo = tor_malloc_zero(sizeof(extrainfo_t));
   extrainfo->cache_info.is_extrainfo = 1;
   if (cache_copy)
-    extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+    extrainfo->cache_info.signed_descriptor_body = tor_memdup_nulterm(s, end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;
   memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
@@ -4237,7 +4237,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
       md->bodylen = start_of_next_microdesc - cp;
       if (copy_body)
-        md->body = tor_strndup(cp, md->bodylen);
+        md->body = tor_memdup_nulterm(cp, md->bodylen);
       else
         md->body = (char*)cp;
       md->off = cp - start;

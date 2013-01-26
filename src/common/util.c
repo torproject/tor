@@ -282,6 +282,20 @@ tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
   return dup;
 }
 
+/** As tor_memdup(), but add an extra 0 byte at the end of the resulting
+ * memory. */
+void *
+tor_memdup_nulterm(const void *mem, size_t len DMALLOC_PARAMS)
+{
+  char *dup;
+  tor_assert(len < SIZE_T_CEILING+1);
+  tor_assert(mem);
+  dup = tor_malloc_(len+1 DMALLOC_FN_ARGS);
+  memcpy(dup, mem, len);
+  dup[len] = '\0';
+  return dup;
+}
+
 /** Helper for places that need to take a function pointer to the right
  * spelling of "free()". */
 void

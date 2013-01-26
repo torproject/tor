@@ -83,6 +83,8 @@ char *tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
 void *tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
+void *tor_memdup_nulterm_(const void *mem, size_t len DMALLOC_PARAMS)
+  ATTR_MALLOC ATTR_NONNULL((1));
 void tor_free_(void *mem);
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
@@ -117,6 +119,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_strdup(s)          tor_strdup_(s DMALLOC_ARGS)
 #define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)
 #define tor_memdup(s, n)       tor_memdup_(s, n DMALLOC_ARGS)
+#define tor_memdup_nulterm(s, n)       tor_memdup_nulterm_(s, n DMALLOC_ARGS)
 
 void tor_log_mallinfo(int severity);
 
