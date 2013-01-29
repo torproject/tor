@@ -1387,6 +1387,22 @@ count_loading_descriptors_progress(void)
                BOOTSTRAP_STATUS_LOADING_DESCRIPTORS));
 }
 
+/** Return the fraction of paths needed before we're willing to build
+ * circuits, as configured in <b>options</b>, or in the consensus <b>ns</b>. */
+static double
+get_frac_paths_needed_for_circs(const or_options_t *options,
+                                const networkstatus_t *ns)
+{
+#define DFLT_PCT_USABLE_NEEDED 60
+  if (options->PathsNeededToBuildCircuits >= 1.0) {
+    return options->PathsNeededToBuildCircuits;
+  } else {
+    return networkstatus_get_param(ns, "min_paths_for_circs_pct",
+                                   DFLT_PCT_USABLE_NEEDED,
+                                   25, 95)/100.0;
+  }
+}
+
 /** Change the value of have_min_dir_info, setting it true iff we have enough
  * network and router information to build circuits.  Clear the value of
  * need_to_update_have_min_dir_info. */
@@ -1428,10 +1444,7 @@ update_router_have_minimum_dir_info(void)
                                                 &num_present, &num_usable,
                                                 &status);
 
-/* What fraction of desired paths do we need before we will build circuits? */
-#define FRAC_USABLE_NEEDED .6
-
-    if (paths < FRAC_USABLE_NEEDED) {
+    if (paths < get_frac_paths_needed_for_circs(options,consensus)) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
                    "We need more %sdescriptors: we have %d/%d, and "
                    "can only build %02d%% of likely paths. (We have %s.)",
