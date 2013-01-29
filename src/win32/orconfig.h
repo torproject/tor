@@ -151,6 +151,9 @@
 /* Define to 1 iff NULL is represented by a 0 in memory. */
 #define NULL_REP_IS_ZERO_BYTES 1
 
+/* Define to 1 iff memset(0) sets doubles to 0.0 */
+#define DOUBLE_0_REP_IS_ZERO_BYTES 1
+
 /* Name of package */
 #define PACKAGE "tor"
 
