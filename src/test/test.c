@@ -1529,59 +1529,35 @@ test_geoip(void)
   *dirreq_stats_1 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips ab=8\n"
-      "dirreq-v2-ips \n"
       "dirreq-v3-reqs ab=8\n"
-      "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
           "not-modified=0,busy=0\n"
-      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
-          "busy=0\n"
       "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n",
   *dirreq_stats_2 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
-      "dirreq-v2-ips \n"
       "dirreq-v3-reqs \n"
-      "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=0,not-enough-sigs=0,unavailable=0,not-found=0,"
           "not-modified=0,busy=0\n"
-      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
-          "busy=0\n"
       "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n",
   *dirreq_stats_3 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
-      "dirreq-v2-ips \n"
       "dirreq-v3-reqs \n"
-      "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
           "not-modified=0,busy=0\n"
-      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
-          "busy=0\n"
       "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=0\n",
   *dirreq_stats_4 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips \n"
-      "dirreq-v2-ips \n"
       "dirreq-v3-reqs \n"
-      "dirreq-v2-reqs \n"
       "dirreq-v3-resp ok=8,not-enough-sigs=0,unavailable=0,not-found=0,"
           "not-modified=0,busy=0\n"
-      "dirreq-v2-resp ok=0,unavailable=0,not-found=0,not-modified=0,"
-          "busy=0\n"
       "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v2-direct-dl complete=0,timeout=0,running=0\n"
-      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=4\n"
-      "dirreq-v2-tunneled-dl complete=0,timeout=0,running=0\n",
+      "dirreq-v3-tunneled-dl complete=0,timeout=0,running=4\n",
   *entry_stats_1 =
       "entry-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "entry-ips ab=8\n",
