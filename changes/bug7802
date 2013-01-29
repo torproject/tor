@@ -1,0 +1,11 @@
+  o Minor features:
+    - Path Use Bias: Perform separate accounting for successful circuit use.
+      Separate statistics on stream attempt versus success rates are kept
+      for each guard. Configurable thresholds are provided to determine
+      when to emit log messages or disable use of guards that fail too
+      many stream attempts.
+  o Minor bugfixes:
+    - Remove a source of rounding error during path bias count scaling.
+    - Don't count cannibalized circuits as used for path bias until we
+      actually try to use them.
+    - Fix circuit_package_relay_cell warning message about n_chan==NULL.

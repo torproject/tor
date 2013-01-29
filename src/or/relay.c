@@ -730,7 +730,7 @@ connection_ap_process_end_not_open(
        * We rely on recognized+digest being strong enough to make
        * tags unlikely to allow us to get tagged, yet 'recognized'
        * reason codes here. */
-      circ->path_state = PATH_STATE_USE_SUCCEEDED;
+      pathbias_mark_use_success(circ);
     }
   }
 

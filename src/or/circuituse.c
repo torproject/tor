@@ -668,18 +668,6 @@ circuit_expire_building(void)
           circuit_build_times_set_timeout(&circ_times);
         }
       }
-
-      if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
-          victim->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
-        /* For path bias: we want to let these guys live for a while
-         * so we get a chance to test them. */
-        log_info(LD_CIRC,
-                 "Allowing cannibalized circuit %d time to finish building "
-                 "as a pathbias testing circ.",
-                 TO_ORIGIN_CIRCUIT(victim)->global_identifier);
-        circuit_change_purpose(victim, CIRCUIT_PURPOSE_PATH_BIAS_TESTING);
-        continue; /* It now should have a longer timeout next time */
-      }
     }
 
     /* If this is a hidden service client circuit which is far enough
@@ -1090,7 +1078,10 @@ circuit_expire_old_circuits_clientside(void)
                 "purpose %d)",
                 circ->n_circ_id, (long)(now.tv_sec - circ->timestamp_dirty),
                 circ->purpose);
-      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+      /* Don't do this magic for testing circuits. Their death is governed
+       * by circuit_expire_building */
+      if (circ->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
+        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (timercmp(&circ->timestamp_began, &cutoff, <)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
@@ -1517,7 +1508,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
          * If we decide to probe the initial portion of these circs,
          * (up to the adversaries final hop), we need to remove this.
          */
-        circ->path_state = PATH_STATE_USE_SUCCEEDED;
+
         /* This must be called before the purpose change */
         pathbias_check_close(circ, END_CIRC_REASON_FINISHED);
       }
@@ -2037,6 +2028,8 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
   if (!circ->base_.timestamp_dirty)
     circ->base_.timestamp_dirty = time(NULL);
 
+  pathbias_count_use_attempt(circ);
+
   link_apconn_to_circ(conn, circ, cpath);
   tor_assert(conn->socks_request);
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
@@ -2163,6 +2156,11 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
        * feasibility, at this point.
        */
       rendcirc->base_.timestamp_dirty = time(NULL);
+
+      /* We've also attempted to use them. If they fail, we need to
+       * probe them for path bias */
+      pathbias_count_use_attempt(rendcirc);
+
       link_apconn_to_circ(conn, rendcirc, NULL);
       if (connection_ap_handshake_send_begin(conn) < 0)
         return 0; /* already marked, let them fade away */
@@ -2214,6 +2212,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
         case 0: /* success */
           rendcirc->base_.timestamp_dirty = time(NULL);
           introcirc->base_.timestamp_dirty = time(NULL);
+
+          pathbias_count_use_attempt(introcirc);
+          pathbias_count_use_attempt(rendcirc);
+
           assert_circuit_ok(TO_CIRCUIT(rendcirc));
           assert_circuit_ok(TO_CIRCUIT(introcirc));
           return 0;

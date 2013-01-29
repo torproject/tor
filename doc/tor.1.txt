@@ -1242,16 +1242,11 @@ The following options are useful only for clients (that is, if
 
 **PathBiasMultFactor** __NUM__ +
 
-**PathBiasScaleFactor** __NUM__ +
-
-**PathBiasUseCloseCounts** __NUM__::
+**PathBiasScaleFactor** __NUM__::
     These options override the default behavior of Tor's (**currently
     experimental**) path bias detection algorithm. To try to find broken or
     misbehaving guard nodes, Tor looks for nodes where more than a certain
-    fraction of circuits through that guard fail to get built. If
-    PathBiasUseCloseCounts is set to 1 (the default), usage-based accounting is
-    performed, and circuits that fail to carry streams are also counted as
-    failures. +
+    fraction of circuits through that guard fail to get built.
  +
     The PathBiasCircThreshold option controls how many circuits we need to build
     through a guard before we make these checks.  The PathBiasNoticeRate,
@@ -1269,6 +1264,28 @@ The following options are useful only for clients (that is, if
     Tor uses reasonable defaults from the networkstatus consensus document.
     If no defaults are available there, these options default to 150, .70,
     .50, .30, 0, 300, 1, and 2 respectively.
+
+**PathBiasUseThreshold** __NUM__ +
+
+**PathBiasNoticeUseRate** __NUM__ +
+
+**PathBiasExtremeUseRate** __NUM__ +
+
+**PathBiasScaleUseThreshold** __NUM__::
+    Similar to the above options, these options override the default behavior
+    of Tor's (**currently experimental**) path use bias detection algorithm.
+ +
+    Where as the path bias parameters govern thresholds for successfully
+    building circuits, these four path use bias parameters govern thresholds
+    only for circuit usage. Circuits which receive no stream usage
+    are not counted by this detection algorithm. A used circuit is considered
+    successful if it is capable of carrying streams or otherwise receiving
+    well-formed responses to RELAY cells.
+ +
+    By default, or if a negative value is provided for one of these options,
+    Tor uses reasonable defaults from the networkstatus consensus document.
+    If no defaults are available there, these options default to 20, .90,
+    .70, and 100, respectively.
 
 **ClientUseIPv6** **0**|**1**::
     If this option is set to 1, Tor might connect to entry nodes over

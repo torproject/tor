@@ -1384,9 +1384,6 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
     goto err;
   memcpy(cpath->rend_circ_nonce, keys, DIGEST_LEN);
 
-  /* For path bias: This intro circuit was used successfully */
-  circuit->path_state = PATH_STATE_USE_SUCCEEDED;
-
   goto done;
 
  log_error:
@@ -2511,6 +2508,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     goto err;
   }
 
+  /* We've attempted to use this circuit */
+  pathbias_count_use_attempt(circuit);
+
   goto done;
 
  err:
@@ -2558,6 +2558,10 @@ rend_service_intro_established(origin_circuit_t *circuit,
            "Received INTRO_ESTABLISHED cell on circuit %d for service %s",
            circuit->base_.n_circ_id, serviceid);
 
+  /* Getting a valid INTRODUCE_ESTABLISHED means we've successfully
+   * used the circ */
+  pathbias_mark_use_success(circuit);
+
   return 0;
  err:
   circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_TORPROTOCOL);
@@ -2588,6 +2592,9 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* Declare the circuit dirty to avoid reuse, and for path-bias */
   if (!circuit->base_.timestamp_dirty)
     circuit->base_.timestamp_dirty = time(NULL);
+
+  /* This may be redundant */
+  pathbias_count_use_attempt(circuit);
 
   hop = circuit->build_state->service_pending_final_cpath_ref->cpath;
 
@@ -3061,7 +3068,8 @@ rend_services_introduce(void)
       if (intro->time_expiring + INTRO_POINT_EXPIRATION_GRACE_PERIOD > now) {
         /* This intro point has completely expired.  Remove it, and
          * mark the circuit for close if it's still alive. */
-        if (intro_circ != NULL) {
+        if (intro_circ != NULL &&
+            intro_circ->base_.purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
           circuit_mark_for_close(TO_CIRCUIT(intro_circ),
                                  END_CIRC_REASON_FINISHED);
         }

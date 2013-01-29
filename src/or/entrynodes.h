@@ -61,6 +61,9 @@ typedef struct entry_guard_t {
                                 *  attempted, but none succeeded. */
   double timeouts; /**< Number of 'right-censored' circuit timeouts for this
                        * guard. */
+  double use_attempts; /**< Number of circuits we tried to use with streams */
+  double use_successes; /**< Number of successfully used circuits using
+                               * this guard as first hop. */
 } entry_guard_t;
 
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
@@ -113,8 +116,8 @@ int find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
 
 int validate_pluggable_transports_config(void);
 
-double pathbias_get_closed_count(entry_guard_t *gaurd);
-double pathbias_get_success_count(entry_guard_t *guard);
+double pathbias_get_close_success_count(entry_guard_t *guard);
+double pathbias_get_use_success_count(entry_guard_t *guard);
 
 #endif
 
