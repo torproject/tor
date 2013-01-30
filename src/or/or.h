@@ -2827,8 +2827,18 @@ typedef struct circuit_t {
 
 /**
  * Describes the circuit building process in simplified terms based
- * on the path bias accounting state for a circuit. Created to prevent
- * overcounting due to unknown cases of circuit reuse. See Bug #6475.
+ * on the path bias accounting state for a circuit.
+ *
+ * NOTE: These state values are enumerated in the order for which we
+ * expect circuits to transition through them. If you add states,
+ * you need to preserve this overall ordering. The various pathbias
+ * state transition and accounting functions (pathbias_mark_* and
+ * pathbias_count_*) contain ordinal comparisons to enforce proper
+ * state transitions for corrections.
+ *
+ * This state machine and the associated logic was created to prevent
+ * miscounting due to unknown cases of circuit reuse. See also tickets
+ * #6475 and #7802.
  */
 typedef enum {
     /** This circuit is "new". It has not yet completed a first hop
@@ -2851,10 +2861,8 @@ typedef enum {
     /** Did any SOCKS streams or hidserv introductions actually succeed on
       * this circuit?
       *
-      * Note: If we ever implement end-to-end stream timing through test
-      * stream probes (#5707), we must *not* set this for those probes
-      * (or any other automatic streams) because the adversary could
-      * just tag at a later point.
+      * If any streams detatch/fail from this circuit, the code transitions
+      * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe.
       */
     PATH_STATE_USE_SUCCEEDED = 4,
 
@@ -2905,8 +2913,11 @@ typedef struct origin_circuit_t {
    * cannibalized circuits. */
   unsigned int has_opened : 1;
 
-  /** Kludge to help us prevent the warn in bug #6475 and eventually
-   * debug why we are not seeing first hops in some cases. */
+  /**
+   * Path bias state machine. Used to ensure integrity of our
+   * circuit building and usage accounting. See path_state_t
+   * for more details.
+   */
   ENUM_BF(path_state_t) path_state : 3;
 
   /** For path probing. Store the temporary probe stream ID

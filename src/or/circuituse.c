@@ -1498,15 +1498,17 @@ circuit_launch_by_extend_info(uint8_t purpose,
            purpose == CIRCUIT_PURPOSE_C_INTRODUCING) &&
           circ->path_state == PATH_STATE_BUILD_SUCCEEDED) {
         /* Path bias: Cannibalized rends pre-emptively count as a
-         * successfully used circ. We don't wait until the extend,
-         * because the rend point could be malicious.
+         * successfully built but unused closed circuit. We don't
+         * wait until the extend (or the close) because the rend
+         * point could be malicious.
          *
          * Same deal goes for client side introductions. Clients
          * can be manipulated to connect repeatedly to them
          * (especially web clients).
          *
          * If we decide to probe the initial portion of these circs,
-         * (up to the adversaries final hop), we need to remove this.
+         * (up to the adversary's final hop), we need to remove this,
+         * or somehow mark the circuit with a special path state.
          */
 
         /* This must be called before the purpose change */

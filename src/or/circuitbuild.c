@@ -1605,13 +1605,13 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
 }
 
 /**
- * Check the circuit's path stat is appropriate and it as successfully
- * used.
+ * Check the circuit's path state is appropriate and mark it as
+ * successfully used. Used for path bias usage accounting.
  *
  * We don't actually increment the guard's counters until
- * pathbias_check_close().
- *
- * Used for path bias usage accounting.
+ * pathbias_check_close(), because the circuit can still transition
+ * back to PATH_STATE_USE_ATTEMPTED if a stream fails later (this
+ * is done so we can probe the circuit for liveness at close).
  */
 void
 pathbias_mark_use_success(origin_circuit_t *circ)
