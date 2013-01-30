@@ -3946,6 +3946,9 @@ typedef struct {
 
   /** Autobool: should we use the ntor handshake if we can? */
   int UseNTorHandshake;
+
+  /** Fraction: */
+  double PathsNeededToBuildCircuits;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

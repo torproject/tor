@@ -331,6 +331,7 @@ static config_var_t option_vars_[] = {
   V(PathBiasExtremeUseRate,         DOUBLE,   "-1"),
   V(PathBiasScaleUseThreshold,      INT,      "-1"),
 
+  V(PathsNeededToBuildCircuits,  DOUBLE,   "-1"),
   OBSOLETE("PathlenCoinWeight"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
   V(PerConnBWRate,               MEMUNIT,  "0"),
@@ -2390,6 +2391,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
     return -1;
+  }
+
+  if (options->PathsNeededToBuildCircuits >= 0.0) {
+    if (options->PathsNeededToBuildCircuits < 0.25) {
+      log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too low. Increasing "
+               "to 0.25");
+      options->PathsNeededToBuildCircuits = 0.25;
+    } else if (options->PathsNeededToBuildCircuits < 0.95) {
+      log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too high. Decreasing "
+               "to 0.95");
+      options->PathsNeededToBuildCircuits = 0.95;
+    }
   }
 
   if (options->MaxClientCircuitsPending <= 0 ||

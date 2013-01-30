@@ -42,6 +42,9 @@
 /****************************************************************************/
 
 /* static function prototypes */
+static int compute_weighted_bandwidths(const smartlist_t *sl,
+                                       bandwidth_weight_rule_t rule,
+                                       u64_dbl_t **bandwidths_out);
 static const routerstatus_t *router_pick_directory_server_impl(
                                            dirinfo_type_t auth, int flags);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
@@ -1681,8 +1684,34 @@ kb_to_bytes(uint32_t bw)
  * guards proportionally less.
  */
 static const node_t *
-smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
+smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
                                            bandwidth_weight_rule_t rule)
+{
+  u64_dbl_t *bandwidths=NULL;
+
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0)
+    return NULL;
+
+  scale_array_elements_to_u64(bandwidths, smartlist_len(sl),
+                              &sl_last_total_weighted_bw);
+
+  {
+    int idx = choose_array_element_by_weight(bandwidths,
+                                             smartlist_len(sl));
+    tor_free(bandwidths);
+    return idx < 0 ? NULL : smartlist_get(sl, idx);
+  }
+}
+
+/** Given a list of routers and a weighting rule as in
+ * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
+ * values for each node and store them in a freshly allocated
+ * *<b>bandwidths_out</b> of the same length as <b>sl</b>, and holding results
+ * as doubles. Return 0 on success, -1 on failure. */
+static int
+compute_weighted_bandwidths(const smartlist_t *sl,
+                            bandwidth_weight_rule_t rule,
+                            u64_dbl_t **bandwidths_out)
 {
   int64_t weight_scale;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
@@ -1702,7 +1731,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
              "Empty routerlist passed in to consensus weight node "
              "selection for rule %s",
              bandwidth_weight_rule_to_string(rule));
-    return NULL;
+    return -1;
   }
 
   weight_scale = circuit_build_times_get_bw_scale(NULL);
@@ -1756,7 +1785,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
     log_debug(LD_CIRC,
               "Got negative bandwidth weights. Defaulting to old selection"
               " algorithm.");
-    return NULL; // Use old algorithm.
+    return -1; // Use old algorithm.
   }
 
   Wg /= weight_scale;
@@ -1786,7 +1815,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
         log_warn(LD_BUG,
                  "Consensus is not listing bandwidths. Defaulting back to "
                  "old router selection algorithm.");
-        return NULL;
+        return -1;
       }
       this_bw = kb_to_bytes(node->rs->bandwidth);
     } else if (node->ri) {
@@ -1819,20 +1848,53 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
       sl_last_weighted_bw_of_me = (uint64_t) bandwidths[node_sl_idx].dbl;
   } SMARTLIST_FOREACH_END(node);
 
-  log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
+  log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
+            "on weights "
             "Wg=%f Wm=%f We=%f Wd=%f with total bw "U64_FORMAT,
             bandwidth_weight_rule_to_string(rule),
             Wg, Wm, We, Wd, U64_PRINTF_ARG(weighted_bw));
 
-  scale_array_elements_to_u64(bandwidths, smartlist_len(sl),
-                              &sl_last_total_weighted_bw);
+  *bandwidths_out = bandwidths;
 
-  {
-    int idx = choose_array_element_by_weight(bandwidths,
-                                             smartlist_len(sl));
-    tor_free(bandwidths);
-    return idx < 0 ? NULL : smartlist_get(sl, idx);
+  return 0;
+}
+
+/** For all nodes in <b>sl</b>, return the fraction of those nodes, weighted
+ * by their weighted bandwidths with rule <b>rule</b>, for which we have
+ * descriptors. */
+double
+frac_nodes_with_descriptors(const smartlist_t *sl,
+                            bandwidth_weight_rule_t rule)
+{
+  u64_dbl_t *bandwidths = NULL;
+  double total, present;
+
+  if (smartlist_len(sl) == 0)
+    return 0.0;
+
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0) {
+    int n_with_descs = 0;
+    SMARTLIST_FOREACH(sl, const node_t *, node, {
+      if (node_has_descriptor(node))
+        n_with_descs++;
+    });
+    return ((double)n_with_descs) / (double)smartlist_len(sl);
   }
+
+  total = present = 0.0;
+  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+    const double bw = bandwidths[node_sl_idx].dbl;
+    total += bw;
+    if (node_has_descriptor(node))
+      present += bw;
+  } SMARTLIST_FOREACH_END(node);
+
+  tor_free(bandwidths);
+
+  if (total < 1.0)
+    return 0;
+
+  return present / total;
 }
 
 /** Helper function:
@@ -1849,7 +1911,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
  * guards proportionally less.
  */
 static const node_t *
-smartlist_choose_node_by_bandwidth(smartlist_t *sl,
+smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
                                    bandwidth_weight_rule_t rule)
 {
   unsigned int i;
@@ -2055,7 +2117,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
 /** Choose a random element of status list <b>sl</b>, weighted by
  * the advertised bandwidth of each node */
 const node_t *
-node_sl_choose_by_bandwidth(smartlist_t *sl,
+node_sl_choose_by_bandwidth(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule)
 { /*XXXX MOVE */
   const node_t *ret;

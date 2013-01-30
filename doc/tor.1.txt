@@ -1299,6 +1299,18 @@ The following options are useful only for clients (that is, if
     things may influence the choice. This option breaks a tie to the
     favor of IPv6. (Default: 0)
 
+**PathsNeededToBuildCircuits** __NUM__::
+    Tor clients don't build circuits for user traffic until they know
+    about enough of the network so that they could potentially construct
+    enough of the possible paths through the network. If this option
+    is set to a fraction between 0.25 and 0.95, Tor won't build circuits
+    until it has enough descriptors or microdescriptors to construct
+    that fraction of possible paths. Note that setting this option too low
+    can make your Tor client less anonymous, and setting it too high can
+    prevent your Tor client from bootstrapping.  If this option is negative,
+    Tor will use a default value chosen by the directory
+    authorities. (Default: -1.)
+
 
 SERVER OPTIONS
 --------------
