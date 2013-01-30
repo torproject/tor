@@ -33,7 +33,7 @@
 
 typedef struct cell_queue_entry_s cell_queue_entry_t;
 struct cell_queue_entry_s {
-  SIMPLEQ_ENTRY(cell_queue_entry_s) next;
+  TOR_SIMPLEQ_ENTRY(cell_queue_entry_s) next;
   enum {
     CELL_QUEUE_FIXED,
     CELL_QUEUE_VAR,
@@ -89,7 +89,7 @@ HT_HEAD(channel_idmap, channel_idmap_entry_s) channel_identity_map =
 typedef struct channel_idmap_entry_s {
   HT_ENTRY(channel_idmap_entry_s) node;
   uint8_t digest[DIGEST_LEN];
-  LIST_HEAD(channel_list_s, channel_s) channel_list;
+  TOR_LIST_HEAD(channel_list_s, channel_s) channel_list;
 } channel_idmap_entry_t;
 
 static INLINE unsigned
@@ -554,10 +554,10 @@ channel_add_to_digest_map(channel_t *chan)
   if (! ent) {
     ent = tor_malloc(sizeof(channel_idmap_entry_t));
     memcpy(ent->digest, chan->identity_digest, DIGEST_LEN);
-    LIST_INIT(&ent->channel_list);
+    TOR_LIST_INIT(&ent->channel_list);
     HT_INSERT(channel_idmap, &channel_identity_map, ent);
   }
-  LIST_INSERT_HEAD(&ent->channel_list, chan, next_with_same_id);
+  TOR_LIST_INSERT_HEAD(&ent->channel_list, chan, next_with_same_id);
 
   log_debug(LD_CHANNEL,
             "Added channel %p (global ID " U64_FORMAT ") "
@@ -612,7 +612,7 @@ channel_remove_from_digest_map(channel_t *chan)
 #endif
 
   /* Pull it out of its list, wherever that list is */
-  LIST_REMOVE(chan, next_with_same_id);
+  TOR_LIST_REMOVE(chan, next_with_same_id);
 
   memcpy(search.digest, chan->identity_digest, DIGEST_LEN);
   ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
@@ -621,7 +621,7 @@ channel_remove_from_digest_map(channel_t *chan)
   if (ent) {
     /* Okay, it's here */
 
-    if (LIST_EMPTY(&ent->channel_list)) {
+    if (TOR_LIST_EMPTY(&ent->channel_list)) {
       HT_REMOVE(channel_idmap, &channel_identity_map, ent);
       tor_free(ent);
     }
@@ -691,7 +691,7 @@ channel_find_by_remote_digest(const char *identity_digest)
   memcpy(search.digest, identity_digest, DIGEST_LEN);
   ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
   if (ent) {
-    rv = LIST_FIRST(&ent->channel_list);
+    rv = TOR_LIST_FIRST(&ent->channel_list);
   }
 
   return rv;
@@ -709,7 +709,7 @@ channel_next_with_digest(channel_t *chan)
 {
   tor_assert(chan);
 
-  return LIST_NEXT(chan, next_with_same_id);
+  return TOR_LIST_NEXT(chan, next_with_same_id);
 }
 
 /**
@@ -735,8 +735,8 @@ channel_init(channel_t *chan)
   chan->next_circ_id = crypto_rand_int(1 << 15);
 
   /* Initialize queues. */
-  SIMPLEQ_INIT(&chan->incoming_queue);
-  SIMPLEQ_INIT(&chan->outgoing_queue);
+  TOR_SIMPLEQ_INIT(&chan->incoming_queue);
+  TOR_SIMPLEQ_INIT(&chan->outgoing_queue);
 
   /* Initialize list entries. */
   memset(&chan->next_with_same_id, 0, sizeof(chan->next_with_same_id));
@@ -879,16 +879,16 @@ channel_force_free(channel_t *chan)
   }
 
   /* We might still have a cell queue; kill it */
-  SIMPLEQ_FOREACH_SAFE(cell, &chan->incoming_queue, next, cell_tmp) {
+  TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->incoming_queue, next, cell_tmp) {
       cell_queue_entry_free(cell, 0);
   }
-  SIMPLEQ_INIT(&chan->incoming_queue);
+  TOR_SIMPLEQ_INIT(&chan->incoming_queue);
 
   /* Outgoing cell queue is similar, but we can have to free packed cells */
-  SIMPLEQ_FOREACH_SAFE(cell, &chan->outgoing_queue, next, cell_tmp) {
+  TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->outgoing_queue, next, cell_tmp) {
     cell_queue_entry_free(cell, 0);
   }
-  SIMPLEQ_INIT(&chan->outgoing_queue);
+  TOR_SIMPLEQ_INIT(&chan->outgoing_queue);
 
   tor_free(chan);
 }
@@ -1051,7 +1051,7 @@ channel_set_cell_handlers(channel_t *chan,
   chan->var_cell_handler = var_cell_handler;
 
   /* Re-run the queue if we have one and there's any reason to */
-  if (! SIMPLEQ_EMPTY(&chan->incoming_queue) &&
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue) &&
       try_again &&
       (chan->cell_handler ||
        chan->var_cell_handler)) channel_process_cells(chan);
@@ -1686,7 +1686,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
   }
 
   /* Can we send it right out?  If so, try */
-  if (SIMPLEQ_EMPTY(&chan->outgoing_queue) &&
+  if (TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue) &&
       chan->state == CHANNEL_STATE_OPEN) {
     /* Pick the right write function for this cell type and save the result */
     switch (q->type) {
@@ -1728,7 +1728,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
      * used the stack.
      */
     tmp = cell_queue_entry_dup(q);
-    SIMPLEQ_INSERT_TAIL(&chan->outgoing_queue, tmp, next);
+    TOR_SIMPLEQ_INSERT_TAIL(&chan->outgoing_queue, tmp, next);
     /* Try to process the queue? */
     if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
   }
@@ -1914,15 +1914,15 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
     channel_do_open_actions(chan);
 
     /* Check for queued cells to process */
-    if (! SIMPLEQ_EMPTY(&chan->incoming_queue))
+    if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
       channel_process_cells(chan);
-    if (! SIMPLEQ_EMPTY(&chan->outgoing_queue))
+    if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue))
       channel_flush_cells(chan);
   } else if (to_state == CHANNEL_STATE_CLOSED ||
              to_state == CHANNEL_STATE_ERROR) {
     /* Assert that all queues are empty */
-    tor_assert(SIMPLEQ_EMPTY(&chan->incoming_queue));
-    tor_assert(SIMPLEQ_EMPTY(&chan->outgoing_queue));
+    tor_assert(TOR_SIMPLEQ_EMPTY(&chan->incoming_queue));
+    tor_assert(TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue));
   }
 }
 
@@ -2096,7 +2096,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   /* If we aren't in CHANNEL_STATE_OPEN, nothing goes through */
   if (chan->state == CHANNEL_STATE_OPEN) {
     while ((unlimited || num_cells > flushed) &&
-           NULL != (q = SIMPLEQ_FIRST(&chan->outgoing_queue))) {
+           NULL != (q = TOR_SIMPLEQ_FIRST(&chan->outgoing_queue))) {
 
       if (1) {
         /*
@@ -2185,7 +2185,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
         }
 
         /* if q got NULLed out, we used it and should remove the queue entry */
-        if (!q) SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
+        if (!q) TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
         /* No cell removed from list, so we can't go on any further */
         else break;
       }
@@ -2193,7 +2193,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   }
 
   /* Did we drain the queue? */
-  if (SIMPLEQ_EMPTY(&chan->outgoing_queue)) {
+  if (TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue)) {
     channel_timestamp_drained(chan);
   }
 
@@ -2227,7 +2227,7 @@ channel_more_to_flush(channel_t *chan)
   tor_assert(chan);
 
   /* Check if we have any queued */
-  if (! SIMPLEQ_EMPTY(&chan->incoming_queue))
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
       return 1;
 
   /* Check if any circuits would like to queue some */
@@ -2435,13 +2435,13 @@ channel_process_cells(channel_t *chan)
   if (!(chan->cell_handler ||
         chan->var_cell_handler)) return;
   /* Nothing we can do if we have no cells */
-  if (SIMPLEQ_EMPTY(&chan->incoming_queue)) return;
+  if (TOR_SIMPLEQ_EMPTY(&chan->incoming_queue)) return;
 
   /*
    * Process cells until we're done or find one we have no current handler
    * for.
    */
-  while (NULL != (q = SIMPLEQ_FIRST(&chan->incoming_queue))) {
+  while (NULL != (q = TOR_SIMPLEQ_FIRST(&chan->incoming_queue))) {
     tor_assert(q);
     tor_assert(q->type == CELL_QUEUE_FIXED ||
                q->type == CELL_QUEUE_VAR);
@@ -2449,7 +2449,7 @@ channel_process_cells(channel_t *chan)
     if (q->type == CELL_QUEUE_FIXED &&
         chan->cell_handler) {
       /* Handle a fixed-length cell */
-      SIMPLEQ_REMOVE_HEAD(&chan->incoming_queue, next);
+      TOR_SIMPLEQ_REMOVE_HEAD(&chan->incoming_queue, next);
       tor_assert(q->u.fixed.cell);
       log_debug(LD_CHANNEL,
                 "Processing incoming cell_t %p for channel %p (global ID "
@@ -2461,7 +2461,7 @@ channel_process_cells(channel_t *chan)
     } else if (q->type == CELL_QUEUE_VAR &&
                chan->var_cell_handler) {
       /* Handle a variable-length cell */
-      SIMPLEQ_REMOVE_HEAD(&chan->incoming_queue, next);
+      TOR_SIMPLEQ_REMOVE_HEAD(&chan->incoming_queue, next);
       tor_assert(q->u.var.var_cell);
       log_debug(LD_CHANNEL,
                 "Processing incoming var_cell_t %p for channel %p (global ID "
@@ -2496,7 +2496,7 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->cell_handler)) need_to_queue = 1;
-  if (! SIMPLEQ_EMPTY(&chan->incoming_queue))
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
     need_to_queue = 1;
 
   /* Timestamp for receiving */
@@ -2522,7 +2522,7 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
               "(global ID " U64_FORMAT ")",
               cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
-    SIMPLEQ_INSERT_TAIL(&chan->incoming_queue, q, next);
+    TOR_SIMPLEQ_INSERT_TAIL(&chan->incoming_queue, q, next);
     if (chan->cell_handler ||
         chan->var_cell_handler) {
       channel_process_cells(chan);
@@ -2549,7 +2549,7 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->var_cell_handler)) need_to_queue = 1;
-  if (! SIMPLEQ_EMPTY(&chan->incoming_queue))
+  if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))
     need_to_queue = 1;
 
   /* Timestamp for receiving */
@@ -2575,7 +2575,7 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
               "(global ID " U64_FORMAT ")",
               var_cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
-    SIMPLEQ_INSERT_TAIL(&chan->incoming_queue, q, next);
+    TOR_SIMPLEQ_INSERT_TAIL(&chan->incoming_queue, q, next);
     if (chan->cell_handler ||
         chan->var_cell_handler) {
       channel_process_cells(chan);
@@ -3115,7 +3115,7 @@ chan_cell_queue_len(const chan_cell_queue_t *queue)
 {
   int r = 0;
   cell_queue_entry_t *cell;
-  SIMPLEQ_FOREACH(cell, queue, next)
+  TOR_SIMPLEQ_FOREACH(cell, queue, next)
     ++r;
   return r;
 }
@@ -3504,7 +3504,7 @@ channel_has_queued_writes(channel_t *chan)
   tor_assert(chan);
   tor_assert(chan->has_queued_writes);
 
-  if (! SIMPLEQ_EMPTY(&chan->outgoing_queue)) {
+  if (! TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue)) {
     has_writes = 1;
   } else {
     /* Check with the lower layer */

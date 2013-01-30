@@ -26,7 +26,7 @@
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
-  TAILQ_ENTRY(onion_queue_t) next;
+  TOR_TAILQ_ENTRY(onion_queue_t) next;
   or_circuit_t *circ;
   create_cell_t *onionskin;
   time_t when_added;
@@ -36,8 +36,8 @@ typedef struct onion_queue_t {
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
 /** Queue of circuits waiting for CPU workers, or NULL if the list is empty.*/
-TAILQ_HEAD(onion_queue_head_t, onion_queue_t) ol_list =
-  TAILQ_HEAD_INITIALIZER(ol_list);
+TOR_TAILQ_HEAD(onion_queue_head_t, onion_queue_t) ol_list =
+  TOR_TAILQ_HEAD_INITIALIZER(ol_list);
 
 /** Number of entries of each type currently in ol_list. */
 static int ol_entries[MAX_ONION_HANDSHAKE_TYPE+1];
@@ -120,11 +120,11 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 
   ++ol_entries[onionskin->handshake_type];
   circ->onionqueue_entry = tmp;
-  TAILQ_INSERT_TAIL(&ol_list, tmp, next);
+  TOR_TAILQ_INSERT_TAIL(&ol_list, tmp, next);
 
   /* cull elderly requests. */
   while (1) {
-    onion_queue_t *head = TAILQ_FIRST(&ol_list);
+    onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list);
     if (now - head->when_added < (time_t)ONIONQUEUE_WAIT_CUTOFF)
       break;
 
@@ -145,7 +145,7 @@ or_circuit_t *
 onion_next_task(create_cell_t **onionskin_out)
 {
   or_circuit_t *circ;
-  onion_queue_t *head = TAILQ_FIRST(&ol_list);
+  onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list);
 
   if (!head)
     return NULL; /* no onions pending, we're done */
@@ -184,7 +184,7 @@ onion_pending_remove(or_circuit_t *circ)
 static void
 onion_queue_entry_remove(onion_queue_t *victim)
 {
-  TAILQ_REMOVE(&ol_list, victim, next);
+  TOR_TAILQ_REMOVE(&ol_list, victim, next);
 
   if (victim->circ)
     victim->circ->onionqueue_entry = NULL;
@@ -202,7 +202,7 @@ void
 clear_pending_onions(void)
 {
   onion_queue_t *victim;
-  while ((victim = TAILQ_FIRST(&ol_list))) {
+  while ((victim = TOR_TAILQ_FIRST(&ol_list))) {
     onion_queue_entry_remove(victim);
   }
   memset(ol_entries, 0, sizeof(ol_entries));

@@ -19,7 +19,7 @@ typedef void (*channel_cell_handler_fn_ptr)(channel_t *, cell_t *);
 typedef void (*channel_var_cell_handler_fn_ptr)(channel_t *, var_cell_t *);
 
 struct cell_queue_entry_s;
-SIMPLEQ_HEAD(chan_cell_queue, cell_queue_entry_s) incoming_queue;
+TOR_SIMPLEQ_HEAD(chan_cell_queue, cell_queue_entry_s) incoming_queue;
 typedef struct chan_cell_queue chan_cell_queue_t;
 
 /*
@@ -125,7 +125,7 @@ struct channel_s {
    * Linked list of channels with the same identity digest, for the
    * digest->channel map
    */
-  LIST_ENTRY(channel_s) next_with_same_id;
+  TOR_LIST_ENTRY(channel_s) next_with_same_id;
 
   /* List of incoming cells to handle */
   chan_cell_queue_t incoming_queue;
