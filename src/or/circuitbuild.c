@@ -1539,6 +1539,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
       if (circ->path_state == PATH_STATE_BUILD_ATTEMPTED) {
         circ->path_state = PATH_STATE_BUILD_SUCCEEDED;
         guard->circ_successes++;
+        entry_guards_changed();
 
         log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
                  guard->circ_successes, guard->circ_attempts,
@@ -1623,6 +1624,7 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
     if (guard) {
       pathbias_check_use_rate(guard);
       guard->use_attempts++;
+      entry_guards_changed();
 
       log_debug(LD_CIRC,
                "Marked circuit %d (%f/%f) as used for guard %s=%s.",
@@ -1706,6 +1708,7 @@ pathbias_count_use_success(origin_circuit_t *circ)
                 circ->cpath->extend_info->identity_digest);
     if (guard) {
       guard->use_successes++;
+      entry_guards_changed();
 
       log_debug(LD_CIRC,
                 "Marked circuit %d (%f/%f) as used successfully for guard "
@@ -2244,6 +2247,7 @@ pathbias_check_use_rate(entry_guard_t *guard)
                  tor_lround(circ_times.close_ms/1000));
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
+          entry_guards_changed();
           return -1;
         }
       } else if (!guard->path_bias_extreme) {
@@ -2315,6 +2319,7 @@ pathbias_check_use_rate(entry_guard_t *guard)
              "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
              guard->use_successes, guard->use_attempts, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+    entry_guards_changed();
   }
 
   return 0;
@@ -2366,6 +2371,7 @@ pathbias_check_close_rate(entry_guard_t *guard)
                  tor_lround(circ_times.close_ms/1000));
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
+          entry_guards_changed();
           return -1;
         }
       } else if (!guard->path_bias_extreme) {
@@ -2469,6 +2475,8 @@ pathbias_check_close_rate(entry_guard_t *guard)
 
     guard->circ_attempts += opened_attempts;
     guard->circ_successes += opened_built;
+
+    entry_guards_changed();
 
     log_info(LD_CIRC,
              "Scaled pathbias counts to (%f,%f)/%f (%d/%d open) for guard "
