@@ -3872,8 +3872,9 @@ connection_flushed_some(connection_t *conn)
   return r;
 }
 
-/** We just finished flushing bytes from conn-\>outbuf, and there
- * are no more bytes remaining.
+/** We just finished flushing bytes to the appropriately low network layer,
+ * and there are no more bytes remaining in conn-\>outbuf, conn-\>bev, or
+ * conn-\>tls to be flushed.
  *
  * This function just passes conn to the connection-specific
  * connection_*_finished_flushing() function.
