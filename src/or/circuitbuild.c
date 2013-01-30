@@ -1175,38 +1175,31 @@ pathbias_get_scale_threshold(const or_options_t *options)
 }
 
 /**
- * The scale factor is the denominator for our scaling
- * of circuit counts for our path bias window.
+ * Compute the path bias scaling ratio from the consensus
+ * parameters pb_multfactor/pb_scalefactor.
  *
- * Note that our use of doubles for the path bias state
- * file means that powers of 2 work best here.
+ * Returns a value in (0, 1.0] which we multiply our pathbias
+ * counts with to scale them down.
  */
-static int
-pathbias_get_scale_factor(const or_options_t *options)
+static double
+pathbias_get_scale_ratio(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_SCALE_FACTOR 2
-  if (options->PathBiasScaleFactor >= 1)
-    return options->PathBiasScaleFactor;
-  else
-    return networkstatus_get_param(NULL, "pb_scalefactor",
-                                DFLT_PATH_BIAS_SCALE_FACTOR, 1, INT32_MAX);
-}
-
-/**
- * The mult factor is the numerator for our scaling
- * of circuit counts for our path bias window. It
- * allows us to scale by fractions.
- */
-static int
-pathbias_get_mult_factor(const or_options_t *options)
-{
-#define DFLT_PATH_BIAS_MULT_FACTOR 1
-  if (options->PathBiasMultFactor >= 1)
-    return options->PathBiasMultFactor;
-  else
-    return networkstatus_get_param(NULL, "pb_multfactor",
-                                DFLT_PATH_BIAS_MULT_FACTOR, 1,
-                                pathbias_get_scale_factor(options));
+  /*
+   * The scale factor is the denominator for our scaling
+   * of circuit counts for our path bias window.
+   *
+   * Note that our use of doubles for the path bias state
+   * file means that powers of 2 work best here.
+   */
+  int denominator = networkstatus_get_param(NULL, "pb_scalefactor",
+                              2, 2, INT32_MAX);
+  /**
+   * The mult factor is the numerator for our scaling
+   * of circuit counts for our path bias window. It
+   * allows us to scale by fractions.
+   */
+  return networkstatus_get_param(NULL, "pb_multfactor",
+                              1, 1, denominator)/((double)denominator);
 }
 
 /** The minimum number of circuit usage attempts before we start
@@ -2301,17 +2294,13 @@ pathbias_check_use_rate(entry_guard_t *guard)
 
   /* If we get a ton of circuits, just scale everything down */
   if (guard->use_attempts > pathbias_get_scale_use_threshold(options)) {
-    const int scale_factor = pathbias_get_scale_factor(options);
-    const int mult_factor = pathbias_get_mult_factor(options);
+    double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
     guard->use_attempts -= opened_attempts;
 
-    guard->use_attempts *= mult_factor;
-    guard->use_successes *= mult_factor;
-
-    guard->use_attempts /= scale_factor;
-    guard->use_successes /= scale_factor;
+    guard->use_attempts *= scale_ratio;
+    guard->use_successes *= scale_ratio;
 
     guard->use_attempts += opened_attempts;
 
@@ -2449,8 +2438,7 @@ pathbias_check_close_rate(entry_guard_t *guard)
 
   /* If we get a ton of circuits, just scale everything down */
   if (guard->circ_attempts > pathbias_get_scale_threshold(options)) {
-    const int scale_factor = pathbias_get_scale_factor(options);
-    const int mult_factor = pathbias_get_mult_factor(options);
+    double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_BUILD_ATTEMPTED, PATH_STATE_BUILD_ATTEMPTED);
     int opened_built = pathbias_count_circs_in_states(guard,
@@ -2459,19 +2447,12 @@ pathbias_check_close_rate(entry_guard_t *guard)
     guard->circ_attempts -= opened_attempts;
     guard->circ_successes -= opened_built;
 
-    guard->circ_attempts *= mult_factor;
-    guard->circ_successes *= mult_factor;
-    guard->timeouts *= mult_factor;
-    guard->successful_circuits_closed *= mult_factor;
-    guard->collapsed_circuits *= mult_factor;
-    guard->unusable_circuits *= mult_factor;
-
-    guard->circ_attempts /= scale_factor;
-    guard->circ_successes /= scale_factor;
-    guard->timeouts /= scale_factor;
-    guard->successful_circuits_closed /= scale_factor;
-    guard->collapsed_circuits /= scale_factor;
-    guard->unusable_circuits /= scale_factor;
+    guard->circ_attempts *= scale_ratio;
+    guard->circ_successes *= scale_ratio;
+    guard->timeouts *= scale_ratio;
+    guard->successful_circuits_closed *= scale_ratio;
+    guard->collapsed_circuits *= scale_ratio;
+    guard->unusable_circuits *= scale_ratio;
 
     guard->circ_attempts += opened_attempts;
     guard->circ_successes += opened_built;

@@ -321,8 +321,8 @@ static config_var_t option_vars_[] = {
   V(PathBiasWarnRate,            DOUBLE,   "-1"),
   V(PathBiasExtremeRate,         DOUBLE,   "-1"),
   V(PathBiasScaleThreshold,      INT,      "-1"),
-  V(PathBiasScaleFactor,         INT,      "-1"),
-  V(PathBiasMultFactor,          INT,      "-1"),
+  OBSOLETE("PathBiasScaleFactor"),
+  OBSOLETE("PathBiasMultFactor"),
   V(PathBiasDropGuards,          AUTOBOOL, "0"),
   OBSOLETE("PathBiasUseCloseCounts"),
 

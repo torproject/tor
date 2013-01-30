@@ -3949,8 +3949,6 @@ typedef struct {
   double PathBiasExtremeRate;
   int PathBiasDropGuards;
   int PathBiasScaleThreshold;
-  int PathBiasScaleFactor;
-  int PathBiasMultFactor;
   /** @} */
 
   /**
