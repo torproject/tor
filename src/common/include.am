@@ -14,9 +14,13 @@ else
 libor_extra_source=
 endif
 
+src_common_libcurve25519_donna_a_CFLAGS=
+
 if BUILD_CURVE25519_DONNA
 src_common_libcurve25519_donna_a_SOURCES=\
 	src/ext/curve25519_donna/curve25519-donna.c
+src_common_libcurve25519_donna_a_CFLAGS+=\
+	@F_OMIT_FRAME_POINTER@
 noinst_LIBRARIES+=src/common/libcurve25519_donna.a
 LIBDONNA=src/common/libcurve25519_donna.a
 else
@@ -29,8 +33,6 @@ else
 LIBDONNA=
 endif
 endif
-
-src_common_libcurve25519_donna_a_CFLAGS =
 
 if CURVE25519_ENABLED
 libcrypto_extra_source=src/common/crypto_curve25519.c

@@ -583,6 +583,19 @@ if test x$enable_linker_hardening != xno; then
 fi
 
 dnl ------------------------------------------------------
+dnl Now see if we have a -fomit-frame-pointer compiler option.
+
+saved_CFLAGS="$CFLAGS"
+TOR_CHECK_CFLAGS(-fomit-frame-pointer)
+if test "$saved_CFLAGS" != "$CFLAGS"; then
+  F_OMIT_FRAME_POINTER='-fomit-frame-pointer'
+else
+  F_OMIT_FRAME_POINTER=''
+fi
+CFLAGS="$saved_CFLAGS"
+AC_SUBST(F_OMIT_FRAME_POINTER)
+
+dnl ------------------------------------------------------
 dnl Where do you live, libnatpmp?  And how do we call you?
 dnl There are no packages for Debian or Redhat as of this patch
 
