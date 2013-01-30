@@ -2920,6 +2920,18 @@ typedef struct origin_circuit_t {
    */
   ENUM_BF(path_state_t) path_state : 3;
 
+  /**
+   * Tristate variable to guard against pathbias miscounting
+   * due to circuit purpose transitions changing the decision
+   * of pathbias_should_count(). This variable is informational
+   * only. The current results of pathbias_should_count() are
+   * the official decision for pathbias accounting.
+   */
+  uint8_t pathbias_shouldcount;
+#define PATHBIAS_SHOULDCOUNT_UNDECIDED 0
+#define PATHBIAS_SHOULDCOUNT_IGNORED   1
+#define PATHBIAS_SHOULDCOUNT_COUNTED   2
+
   /** For path probing. Store the temporary probe stream ID
    * for response comparison */
   streamid_t pathbias_probe_id;

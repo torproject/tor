@@ -1352,6 +1352,24 @@ pathbias_should_count(origin_circuit_t *circ)
           circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED ||
           (circ->base_.purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
            circ->base_.purpose <= CIRCUIT_PURPOSE_C_INTRODUCE_ACKED)) {
+
+    /* Check to see if the shouldcount result has changed due to a
+     * unexpected purpose change that would affect our results.
+     *
+     * The reason we check the path state too here is because for the
+     * cannibalized versions of these purposes, we count them as successful
+     * before their purpose change.
+     */
+    if (circ->pathbias_shouldcount == PATHBIAS_SHOULDCOUNT_COUNTED
+            && circ->path_state != PATH_STATE_ALREADY_COUNTED) {
+      log_info(LD_BUG,
+               "Circuit %d is now being ignored despite being counted "
+               "in the past. Purpose is %s, path state is %s",
+               circ->global_identifier,
+               circuit_purpose_to_string(circ->base_.purpose),
+               pathbias_state_to_string(circ->path_state));
+    }
+    circ->pathbias_shouldcount = PATHBIAS_SHOULDCOUNT_IGNORED;
     return 0;
   }
 
@@ -1374,8 +1392,32 @@ pathbias_should_count(origin_circuit_t *circ)
       }
       tor_fragile_assert();
     }
+
+    /* Check to see if the shouldcount result has changed due to a
+     * unexpected change that would affect our results */
+    if (circ->pathbias_shouldcount == PATHBIAS_SHOULDCOUNT_COUNTED) {
+      log_info(LD_BUG,
+               "One-hop circuit %d is now being ignored despite being counted "
+               "in the past. Purpose is %s, path state is %s",
+               circ->global_identifier,
+               circuit_purpose_to_string(circ->base_.purpose),
+               pathbias_state_to_string(circ->path_state));
+    }
+    circ->pathbias_shouldcount = PATHBIAS_SHOULDCOUNT_IGNORED;
     return 0;
   }
+
+  /* Check to see if the shouldcount result has changed due to a
+   * unexpected purpose change that would affect our results */
+  if (circ->pathbias_shouldcount == PATHBIAS_SHOULDCOUNT_IGNORED) {
+      log_info(LD_BUG,
+              "Circuit %d is now being counted despite being ignored "
+              "in the past. Purpose is %s, path state is %s",
+              circ->global_identifier,
+              circuit_purpose_to_string(circ->base_.purpose),
+              pathbias_state_to_string(circ->path_state));
+  }
+  circ->pathbias_shouldcount = PATHBIAS_SHOULDCOUNT_COUNTED;
 
   return 1;
 }
