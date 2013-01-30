@@ -1349,9 +1349,9 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     f_exit = f_myexit;
 
   tor_asprintf(status_out,
-               "%02d%% of guards bw, "
-               "%02d%% of midpoint bw, and "
-               "%02d%% of exit bw",
+               "%d%% of guards bw, "
+               "%d%% of midpoint bw, and "
+               "%d%% of exit bw",
                (int)(f_guard*100),
                (int)(f_mid*100),
                (int)(f_exit*100));
@@ -1447,7 +1447,7 @@ update_router_have_minimum_dir_info(void)
     if (paths < get_frac_paths_needed_for_circs(options,consensus)) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
                    "We need more %sdescriptors: we have %d/%d, and "
-                   "can only build %02d%% of likely paths. (We have %s.)",
+                   "can only build %d%% of likely paths. (We have %s.)",
                    using_md?"micro":"", num_present, num_usable,
                    (int)(paths*100), status);
       /* log_notice(LD_NET, "%s", dir_info_status); */
