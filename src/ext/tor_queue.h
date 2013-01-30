@@ -32,8 +32,8 @@
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
  */
 
-#ifndef	_SYS_QUEUE_H_
-#define	_SYS_QUEUE_H_
+#ifndef	TOR_QUEUE_H_
+#define	TOR_QUEUE_H_
 
 /*
  * This file defines five types of data structures: singly-linked lists, 
@@ -83,78 +83,73 @@
  */
 
 #if defined(QUEUE_MACRO_DEBUG) || (defined(_KERNEL) && defined(DIAGNOSTIC))
-#define _Q_INVALIDATE(a) (a) = ((void *)-1)
+#define TOR_Q_INVALIDATE_(a) (a) = ((void *)-1)
 #else
-#define _Q_INVALIDATE(a)
+#define TOR_Q_INVALIDATE_(a)
 #endif
 
 /*
  * Singly-linked List definitions.
  */
-#define SLIST_HEAD(name, type)						\
+#define TOR_SLIST_HEAD(name, type)						\
 struct name {								\
 	struct type *slh_first;	/* first element */			\
 }
  
-#define	SLIST_HEAD_INITIALIZER(head)					\
+#define	TOR_SLIST_HEAD_INITIALIZER(head)					\
 	{ NULL }
  
-/* XXXX This macro name conflicts with a typedef in winnt.h, so Tor
- * has to redefine it. */
 #define TOR_SLIST_ENTRY(type)						\
 struct {								\
 	struct type *sle_next;	/* next element */			\
 }
-#ifndef _WIN32
-#define SLIST_ENTRY(type) TOR_SLIST_ENTRY(type)
-#endif
  
 /*
  * Singly-linked List access methods.
  */
-#define	SLIST_FIRST(head)	((head)->slh_first)
-#define	SLIST_END(head)		NULL
-#define	SLIST_EMPTY(head)	(SLIST_FIRST(head) == SLIST_END(head))
-#define	SLIST_NEXT(elm, field)	((elm)->field.sle_next)
+#define	TOR_SLIST_FIRST(head)	((head)->slh_first)
+#define	TOR_SLIST_END(head)		NULL
+#define	TOR_SLIST_EMPTY(head)	(SLIST_FIRST(head) == TOR_SLIST_END(head))
+#define	TOR_SLIST_NEXT(elm, field)	((elm)->field.sle_next)
 
-#define	SLIST_FOREACH(var, head, field)					\
-	for((var) = SLIST_FIRST(head);					\
-	    (var) != SLIST_END(head);					\
-	    (var) = SLIST_NEXT(var, field))
+#define	TOR_SLIST_FOREACH(var, head, field)					\
+	for((var) = TOR_SLIST_FIRST(head);					\
+	    (var) != TOR_SLIST_END(head);					\
+	    (var) = TOR_SLIST_NEXT(var, field))
 
-#define	SLIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = SLIST_FIRST(head);				\
-	    (var) && ((tvar) = SLIST_NEXT(var, field), 1);		\
+#define	TOR_SLIST_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TOR_SLIST_FIRST(head);				\
+	    (var) && ((tvar) = TOR_SLIST_NEXT(var, field), 1);		\
 	    (var) = (tvar))
 
 /*
  * Singly-linked List functions.
  */
-#define	SLIST_INIT(head) {						\
-	SLIST_FIRST(head) = SLIST_END(head);				\
+#define	TOR_SLIST_INIT(head) {						\
+	TOR_SLIST_FIRST(head) = TOR_SLIST_END(head);				\
 }
 
-#define	SLIST_INSERT_AFTER(slistelm, elm, field) do {			\
+#define	TOR_SLIST_INSERT_AFTER(slistelm, elm, field) do {			\
 	(elm)->field.sle_next = (slistelm)->field.sle_next;		\
 	(slistelm)->field.sle_next = (elm);				\
 } while (0)
 
-#define	SLIST_INSERT_HEAD(head, elm, field) do {			\
+#define	TOR_SLIST_INSERT_HEAD(head, elm, field) do {			\
 	(elm)->field.sle_next = (head)->slh_first;			\
 	(head)->slh_first = (elm);					\
 } while (0)
 
-#define	SLIST_REMOVE_AFTER(elm, field) do {				\
+#define	TOR_SLIST_REMOVE_AFTER(elm, field) do {				\
 	(elm)->field.sle_next = (elm)->field.sle_next->field.sle_next;	\
 } while (0)
 
-#define	SLIST_REMOVE_HEAD(head, field) do {				\
+#define	TOR_SLIST_REMOVE_HEAD(head, field) do {				\
 	(head)->slh_first = (head)->slh_first->field.sle_next;		\
 } while (0)
 
-#define SLIST_REMOVE(head, elm, type, field) do {			\
+#define TOR_SLIST_REMOVE(head, elm, type, field) do {			\
 	if ((head)->slh_first == (elm)) {				\
-		SLIST_REMOVE_HEAD((head), field);			\
+		TOR_SLIST_REMOVE_HEAD((head), field);			\
 	} else {							\
 		struct type *curelm = (head)->slh_first;		\
 									\
@@ -162,22 +157,22 @@ struct {								\
 			curelm = curelm->field.sle_next;		\
 		curelm->field.sle_next =				\
 		    curelm->field.sle_next->field.sle_next;		\
-		_Q_INVALIDATE((elm)->field.sle_next);			\
+		TOR_Q_INVALIDATE_((elm)->field.sle_next);			\
 	}								\
 } while (0)
 
 /*
  * List definitions.
  */
-#define LIST_HEAD(name, type)						\
+#define TOR_LIST_HEAD(name, type)						\
 struct name {								\
 	struct type *lh_first;	/* first element */			\
 }
 
-#define LIST_HEAD_INITIALIZER(head)					\
+#define TOR_LIST_HEAD_INITIALIZER(head)					\
 	{ NULL }
 
-#define LIST_ENTRY(type)						\
+#define TOR_LIST_ENTRY(type)						\
 struct {								\
 	struct type *le_next;	/* next element */			\
 	struct type **le_prev;	/* address of previous next element */	\
@@ -186,29 +181,29 @@ struct {								\
 /*
  * List access methods
  */
-#define	LIST_FIRST(head)		((head)->lh_first)
-#define	LIST_END(head)			NULL
-#define	LIST_EMPTY(head)		(LIST_FIRST(head) == LIST_END(head))
-#define	LIST_NEXT(elm, field)		((elm)->field.le_next)
+#define	TOR_LIST_FIRST(head)		((head)->lh_first)
+#define	TOR_LIST_END(head)			NULL
+#define	TOR_LIST_EMPTY(head)		(TOR_LIST_FIRST(head) == TOR_LIST_END(head))
+#define	TOR_LIST_NEXT(elm, field)		((elm)->field.le_next)
 
-#define LIST_FOREACH(var, head, field)					\
-	for((var) = LIST_FIRST(head);					\
-	    (var)!= LIST_END(head);					\
-	    (var) = LIST_NEXT(var, field))
+#define TOR_LIST_FOREACH(var, head, field)					\
+	for((var) = TOR_LIST_FIRST(head);					\
+	    (var)!= TOR_LIST_END(head);					\
+	    (var) = TOR_LIST_NEXT(var, field))
 
-#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = LIST_FIRST(head);				\
-	    (var) && ((tvar) = LIST_NEXT(var, field), 1);		\
+#define	TOR_LIST_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TOR_LIST_FIRST(head);				\
+	    (var) && ((tvar) = TOR_LIST_NEXT(var, field), 1);		\
 	    (var) = (tvar))
 
 /*
  * List functions.
  */
-#define	LIST_INIT(head) do {						\
-	LIST_FIRST(head) = LIST_END(head);				\
+#define	TOR_LIST_INIT(head) do {						\
+	TOR_LIST_FIRST(head) = TOR_LIST_END(head);				\
 } while (0)
 
-#define LIST_INSERT_AFTER(listelm, elm, field) do {			\
+#define TOR_LIST_INSERT_AFTER(listelm, elm, field) do {			\
 	if (((elm)->field.le_next = (listelm)->field.le_next) != NULL)	\
 		(listelm)->field.le_next->field.le_prev =		\
 		    &(elm)->field.le_next;				\
@@ -216,52 +211,52 @@ struct {								\
 	(elm)->field.le_prev = &(listelm)->field.le_next;		\
 } while (0)
 
-#define	LIST_INSERT_BEFORE(listelm, elm, field) do {			\
+#define	TOR_LIST_INSERT_BEFORE(listelm, elm, field) do {			\
 	(elm)->field.le_prev = (listelm)->field.le_prev;		\
 	(elm)->field.le_next = (listelm);				\
 	*(listelm)->field.le_prev = (elm);				\
 	(listelm)->field.le_prev = &(elm)->field.le_next;		\
 } while (0)
 
-#define LIST_INSERT_HEAD(head, elm, field) do {				\
+#define TOR_LIST_INSERT_HEAD(head, elm, field) do {				\
 	if (((elm)->field.le_next = (head)->lh_first) != NULL)		\
 		(head)->lh_first->field.le_prev = &(elm)->field.le_next;\
 	(head)->lh_first = (elm);					\
 	(elm)->field.le_prev = &(head)->lh_first;			\
 } while (0)
 
-#define LIST_REMOVE(elm, field) do {					\
+#define TOR_LIST_REMOVE(elm, field) do {					\
 	if ((elm)->field.le_next != NULL)				\
 		(elm)->field.le_next->field.le_prev =			\
 		    (elm)->field.le_prev;				\
 	*(elm)->field.le_prev = (elm)->field.le_next;			\
-	_Q_INVALIDATE((elm)->field.le_prev);				\
-	_Q_INVALIDATE((elm)->field.le_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.le_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.le_next);				\
 } while (0)
 
-#define LIST_REPLACE(elm, elm2, field) do {				\
+#define TOR_LIST_REPLACE(elm, elm2, field) do {				\
 	if (((elm2)->field.le_next = (elm)->field.le_next) != NULL)	\
 		(elm2)->field.le_next->field.le_prev =			\
 		    &(elm2)->field.le_next;				\
 	(elm2)->field.le_prev = (elm)->field.le_prev;			\
 	*(elm2)->field.le_prev = (elm2);				\
-	_Q_INVALIDATE((elm)->field.le_prev);				\
-	_Q_INVALIDATE((elm)->field.le_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.le_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.le_next);				\
 } while (0)
 
 /*
  * Simple queue definitions.
  */
-#define SIMPLEQ_HEAD(name, type)					\
+#define TOR_SIMPLEQ_HEAD(name, type)					\
 struct name {								\
 	struct type *sqh_first;	/* first element */			\
 	struct type **sqh_last;	/* addr of last next element */		\
 }
 
-#define SIMPLEQ_HEAD_INITIALIZER(head)					\
+#define TOR_SIMPLEQ_HEAD_INITIALIZER(head)					\
 	{ NULL, &(head).sqh_first }
 
-#define SIMPLEQ_ENTRY(type)						\
+#define TOR_SIMPLEQ_ENTRY(type)						\
 struct {								\
 	struct type *sqe_next;	/* next element */			\
 }
@@ -269,53 +264,53 @@ struct {								\
 /*
  * Simple queue access methods.
  */
-#define	SIMPLEQ_FIRST(head)	    ((head)->sqh_first)
-#define	SIMPLEQ_END(head)	    NULL
-#define	SIMPLEQ_EMPTY(head)	    (SIMPLEQ_FIRST(head) == SIMPLEQ_END(head))
-#define	SIMPLEQ_NEXT(elm, field)    ((elm)->field.sqe_next)
+#define	TOR_SIMPLEQ_FIRST(head)	    ((head)->sqh_first)
+#define	TOR_SIMPLEQ_END(head)	    NULL
+#define	TOR_SIMPLEQ_EMPTY(head)	    (TOR_SIMPLEQ_FIRST(head) == TOR_SIMPLEQ_END(head))
+#define	TOR_SIMPLEQ_NEXT(elm, field)    ((elm)->field.sqe_next)
 
-#define SIMPLEQ_FOREACH(var, head, field)				\
-	for((var) = SIMPLEQ_FIRST(head);				\
-	    (var) != SIMPLEQ_END(head);					\
-	    (var) = SIMPLEQ_NEXT(var, field))
+#define TOR_SIMPLEQ_FOREACH(var, head, field)				\
+	for((var) = TOR_SIMPLEQ_FIRST(head);				\
+	    (var) != TOR_SIMPLEQ_END(head);					\
+	    (var) = TOR_SIMPLEQ_NEXT(var, field))
 
-#define	SIMPLEQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = SIMPLEQ_FIRST(head);				\
-	    (var) && ((tvar) = SIMPLEQ_NEXT(var, field), 1);		\
+#define	TOR_SIMPLEQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TOR_SIMPLEQ_FIRST(head);				\
+	    (var) && ((tvar) = TOR_SIMPLEQ_NEXT(var, field), 1);		\
 	    (var) = (tvar))
 
 /*
  * Simple queue functions.
  */
-#define	SIMPLEQ_INIT(head) do {						\
+#define	TOR_SIMPLEQ_INIT(head) do {						\
 	(head)->sqh_first = NULL;					\
 	(head)->sqh_last = &(head)->sqh_first;				\
 } while (0)
 
-#define SIMPLEQ_INSERT_HEAD(head, elm, field) do {			\
+#define TOR_SIMPLEQ_INSERT_HEAD(head, elm, field) do {			\
 	if (((elm)->field.sqe_next = (head)->sqh_first) == NULL)	\
 		(head)->sqh_last = &(elm)->field.sqe_next;		\
 	(head)->sqh_first = (elm);					\
 } while (0)
 
-#define SIMPLEQ_INSERT_TAIL(head, elm, field) do {			\
+#define TOR_SIMPLEQ_INSERT_TAIL(head, elm, field) do {			\
 	(elm)->field.sqe_next = NULL;					\
 	*(head)->sqh_last = (elm);					\
 	(head)->sqh_last = &(elm)->field.sqe_next;			\
 } while (0)
 
-#define SIMPLEQ_INSERT_AFTER(head, listelm, elm, field) do {		\
+#define TOR_SIMPLEQ_INSERT_AFTER(head, listelm, elm, field) do {		\
 	if (((elm)->field.sqe_next = (listelm)->field.sqe_next) == NULL)\
 		(head)->sqh_last = &(elm)->field.sqe_next;		\
 	(listelm)->field.sqe_next = (elm);				\
 } while (0)
 
-#define SIMPLEQ_REMOVE_HEAD(head, field) do {			\
+#define TOR_SIMPLEQ_REMOVE_HEAD(head, field) do {			\
 	if (((head)->sqh_first = (head)->sqh_first->field.sqe_next) == NULL) \
 		(head)->sqh_last = &(head)->sqh_first;			\
 } while (0)
 
-#define SIMPLEQ_REMOVE_AFTER(head, elm, field) do {			\
+#define TOR_SIMPLEQ_REMOVE_AFTER(head, elm, field) do {			\
 	if (((elm)->field.sqe_next = (elm)->field.sqe_next->field.sqe_next) \
 	    == NULL)							\
 		(head)->sqh_last = &(elm)->field.sqe_next;		\
@@ -324,16 +319,16 @@ struct {								\
 /*
  * Tail queue definitions.
  */
-#define TAILQ_HEAD(name, type)						\
+#define TOR_TAILQ_HEAD(name, type)						\
 struct name {								\
 	struct type *tqh_first;	/* first element */			\
 	struct type **tqh_last;	/* addr of last next element */		\
 }
 
-#define TAILQ_HEAD_INITIALIZER(head)					\
+#define TOR_TAILQ_HEAD_INITIALIZER(head)					\
 	{ NULL, &(head).tqh_first }
 
-#define TAILQ_ENTRY(type)						\
+#define TOR_TAILQ_ENTRY(type)						\
 struct {								\
 	struct type *tqe_next;	/* next element */			\
 	struct type **tqe_prev;	/* address of previous next element */	\
@@ -342,49 +337,49 @@ struct {								\
 /* 
  * tail queue access methods 
  */
-#define	TAILQ_FIRST(head)		((head)->tqh_first)
-#define	TAILQ_END(head)			NULL
-#define	TAILQ_NEXT(elm, field)		((elm)->field.tqe_next)
-#define TAILQ_LAST(head, headname)					\
+#define	TOR_TAILQ_FIRST(head)		((head)->tqh_first)
+#define	TOR_TAILQ_END(head)			NULL
+#define	TOR_TAILQ_NEXT(elm, field)		((elm)->field.tqe_next)
+#define TOR_TAILQ_LAST(head, headname)					\
 	(*(((struct headname *)((head)->tqh_last))->tqh_last))
 /* XXX */
-#define TAILQ_PREV(elm, headname, field)				\
+#define TOR_TAILQ_PREV(elm, headname, field)				\
 	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
-#define	TAILQ_EMPTY(head)						\
-	(TAILQ_FIRST(head) == TAILQ_END(head))
+#define	TOR_TAILQ_EMPTY(head)						\
+	(TOR_TAILQ_FIRST(head) == TOR_TAILQ_END(head))
 
-#define TAILQ_FOREACH(var, head, field)					\
-	for((var) = TAILQ_FIRST(head);					\
-	    (var) != TAILQ_END(head);					\
-	    (var) = TAILQ_NEXT(var, field))
+#define TOR_TAILQ_FOREACH(var, head, field)					\
+	for((var) = TOR_TAILQ_FIRST(head);					\
+	    (var) != TOR_TAILQ_END(head);					\
+	    (var) = TOR_TAILQ_NEXT(var, field))
 
-#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = TAILQ_FIRST(head);					\
-	    (var) != TAILQ_END(head) &&					\
-	    ((tvar) = TAILQ_NEXT(var, field), 1);			\
+#define	TOR_TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TOR_TAILQ_FIRST(head);					\
+	    (var) != TOR_TAILQ_END(head) &&					\
+	    ((tvar) = TOR_TAILQ_NEXT(var, field), 1);			\
 	    (var) = (tvar))
 
 
-#define TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
-	for((var) = TAILQ_LAST(head, headname);				\
-	    (var) != TAILQ_END(head);					\
-	    (var) = TAILQ_PREV(var, headname, field))
+#define TOR_TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
+	for((var) = TOR_TAILQ_LAST(head, headname);				\
+	    (var) != TOR_TAILQ_END(head);					\
+	    (var) = TOR_TAILQ_PREV(var, headname, field))
 
-#define	TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
-	for ((var) = TAILQ_LAST(head, headname);			\
-	    (var) != TAILQ_END(head) &&					\
-	    ((tvar) = TAILQ_PREV(var, headname, field), 1);		\
+#define	TOR_TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
+	for ((var) = TOR_TAILQ_LAST(head, headname);			\
+	    (var) != TOR_TAILQ_END(head) &&					\
+	    ((tvar) = TOR_TAILQ_PREV(var, headname, field), 1);		\
 	    (var) = (tvar))
 
 /*
  * Tail queue functions.
  */
-#define	TAILQ_INIT(head) do {						\
+#define	TOR_TAILQ_INIT(head) do {						\
 	(head)->tqh_first = NULL;					\
 	(head)->tqh_last = &(head)->tqh_first;				\
 } while (0)
 
-#define TAILQ_INSERT_HEAD(head, elm, field) do {			\
+#define TOR_TAILQ_INSERT_HEAD(head, elm, field) do {			\
 	if (((elm)->field.tqe_next = (head)->tqh_first) != NULL)	\
 		(head)->tqh_first->field.tqe_prev =			\
 		    &(elm)->field.tqe_next;				\
@@ -394,14 +389,14 @@ struct {								\
 	(elm)->field.tqe_prev = &(head)->tqh_first;			\
 } while (0)
 
-#define TAILQ_INSERT_TAIL(head, elm, field) do {			\
+#define TOR_TAILQ_INSERT_TAIL(head, elm, field) do {			\
 	(elm)->field.tqe_next = NULL;					\
 	(elm)->field.tqe_prev = (head)->tqh_last;			\
 	*(head)->tqh_last = (elm);					\
 	(head)->tqh_last = &(elm)->field.tqe_next;			\
 } while (0)
 
-#define TAILQ_INSERT_AFTER(head, listelm, elm, field) do {		\
+#define TOR_TAILQ_INSERT_AFTER(head, listelm, elm, field) do {		\
 	if (((elm)->field.tqe_next = (listelm)->field.tqe_next) != NULL)\
 		(elm)->field.tqe_next->field.tqe_prev =			\
 		    &(elm)->field.tqe_next;				\
@@ -411,25 +406,25 @@ struct {								\
 	(elm)->field.tqe_prev = &(listelm)->field.tqe_next;		\
 } while (0)
 
-#define	TAILQ_INSERT_BEFORE(listelm, elm, field) do {			\
+#define	TOR_TAILQ_INSERT_BEFORE(listelm, elm, field) do {			\
 	(elm)->field.tqe_prev = (listelm)->field.tqe_prev;		\
 	(elm)->field.tqe_next = (listelm);				\
 	*(listelm)->field.tqe_prev = (elm);				\
 	(listelm)->field.tqe_prev = &(elm)->field.tqe_next;		\
 } while (0)
 
-#define TAILQ_REMOVE(head, elm, field) do {				\
+#define TOR_TAILQ_REMOVE(head, elm, field) do {				\
 	if (((elm)->field.tqe_next) != NULL)				\
 		(elm)->field.tqe_next->field.tqe_prev =			\
 		    (elm)->field.tqe_prev;				\
 	else								\
 		(head)->tqh_last = (elm)->field.tqe_prev;		\
 	*(elm)->field.tqe_prev = (elm)->field.tqe_next;			\
-	_Q_INVALIDATE((elm)->field.tqe_prev);				\
-	_Q_INVALIDATE((elm)->field.tqe_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.tqe_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.tqe_next);				\
 } while (0)
 
-#define TAILQ_REPLACE(head, elm, elm2, field) do {			\
+#define TOR_TAILQ_REPLACE(head, elm, elm2, field) do {			\
 	if (((elm2)->field.tqe_next = (elm)->field.tqe_next) != NULL)	\
 		(elm2)->field.tqe_next->field.tqe_prev =		\
 		    &(elm2)->field.tqe_next;				\
@@ -437,23 +432,23 @@ struct {								\
 		(head)->tqh_last = &(elm2)->field.tqe_next;		\
 	(elm2)->field.tqe_prev = (elm)->field.tqe_prev;			\
 	*(elm2)->field.tqe_prev = (elm2);				\
-	_Q_INVALIDATE((elm)->field.tqe_prev);				\
-	_Q_INVALIDATE((elm)->field.tqe_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.tqe_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.tqe_next);				\
 } while (0)
 
 /*
  * Circular queue definitions.
  */
-#define CIRCLEQ_HEAD(name, type)					\
+#define TOR_CIRCLEQ_HEAD(name, type)					\
 struct name {								\
 	struct type *cqh_first;		/* first element */		\
 	struct type *cqh_last;		/* last element */		\
 }
 
-#define CIRCLEQ_HEAD_INITIALIZER(head)					\
-	{ CIRCLEQ_END(&head), CIRCLEQ_END(&head) }
+#define TOR_CIRCLEQ_HEAD_INITIALIZER(head)					\
+	{ TOR_CIRCLEQ_END(&head), TOR_CIRCLEQ_END(&head) }
 
-#define CIRCLEQ_ENTRY(type)						\
+#define TOR_CIRCLEQ_ENTRY(type)						\
 struct {								\
 	struct type *cqe_next;		/* next element */		\
 	struct type *cqe_prev;		/* previous element */		\
@@ -462,112 +457,112 @@ struct {								\
 /*
  * Circular queue access methods 
  */
-#define	CIRCLEQ_FIRST(head)		((head)->cqh_first)
-#define	CIRCLEQ_LAST(head)		((head)->cqh_last)
-#define	CIRCLEQ_END(head)		((void *)(head))
-#define	CIRCLEQ_NEXT(elm, field)	((elm)->field.cqe_next)
-#define	CIRCLEQ_PREV(elm, field)	((elm)->field.cqe_prev)
-#define	CIRCLEQ_EMPTY(head)						\
-	(CIRCLEQ_FIRST(head) == CIRCLEQ_END(head))
+#define	TOR_CIRCLEQ_FIRST(head)		((head)->cqh_first)
+#define	TOR_CIRCLEQ_LAST(head)		((head)->cqh_last)
+#define	TOR_CIRCLEQ_END(head)		((void *)(head))
+#define	TOR_CIRCLEQ_NEXT(elm, field)	((elm)->field.cqe_next)
+#define	TOR_CIRCLEQ_PREV(elm, field)	((elm)->field.cqe_prev)
+#define	TOR_CIRCLEQ_EMPTY(head)						\
+	(TOR_CIRCLEQ_FIRST(head) == TOR_CIRCLEQ_END(head))
 
-#define CIRCLEQ_FOREACH(var, head, field)				\
-	for((var) = CIRCLEQ_FIRST(head);				\
-	    (var) != CIRCLEQ_END(head);					\
-	    (var) = CIRCLEQ_NEXT(var, field))
+#define TOR_CIRCLEQ_FOREACH(var, head, field)				\
+	for((var) = TOR_CIRCLEQ_FIRST(head);				\
+	    (var) != TOR_CIRCLEQ_END(head);					\
+	    (var) = TOR_CIRCLEQ_NEXT(var, field))
 
-#define	CIRCLEQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = CIRCLEQ_FIRST(head);				\
-	    (var) != CIRCLEQ_END(head) &&				\
-	    ((tvar) = CIRCLEQ_NEXT(var, field), 1);			\
+#define	TOR_CIRCLEQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TOR_CIRCLEQ_FIRST(head);				\
+	    (var) != TOR_CIRCLEQ_END(head) &&				\
+	    ((tvar) = TOR_CIRCLEQ_NEXT(var, field), 1);			\
 	    (var) = (tvar))
 
-#define CIRCLEQ_FOREACH_REVERSE(var, head, field)			\
-	for((var) = CIRCLEQ_LAST(head);					\
-	    (var) != CIRCLEQ_END(head);					\
-	    (var) = CIRCLEQ_PREV(var, field))
+#define TOR_CIRCLEQ_FOREACH_REVERSE(var, head, field)			\
+	for((var) = TOR_CIRCLEQ_LAST(head);					\
+	    (var) != TOR_CIRCLEQ_END(head);					\
+	    (var) = TOR_CIRCLEQ_PREV(var, field))
 
-#define	CIRCLEQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
-	for ((var) = CIRCLEQ_LAST(head, headname);			\
-	    (var) != CIRCLEQ_END(head) && 				\
-	    ((tvar) = CIRCLEQ_PREV(var, headname, field), 1);		\
+#define	TOR_CIRCLEQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
+	for ((var) = TOR_CIRCLEQ_LAST(head, headname);			\
+	    (var) != TOR_CIRCLEQ_END(head) && 				\
+	    ((tvar) = TOR_CIRCLEQ_PREV(var, headname, field), 1);		\
 	    (var) = (tvar))
 
 /*
  * Circular queue functions.
  */
-#define	CIRCLEQ_INIT(head) do {						\
-	(head)->cqh_first = CIRCLEQ_END(head);				\
-	(head)->cqh_last = CIRCLEQ_END(head);				\
+#define	TOR_CIRCLEQ_INIT(head) do {						\
+	(head)->cqh_first = TOR_CIRCLEQ_END(head);				\
+	(head)->cqh_last = TOR_CIRCLEQ_END(head);				\
 } while (0)
 
-#define CIRCLEQ_INSERT_AFTER(head, listelm, elm, field) do {		\
+#define TOR_CIRCLEQ_INSERT_AFTER(head, listelm, elm, field) do {		\
 	(elm)->field.cqe_next = (listelm)->field.cqe_next;		\
 	(elm)->field.cqe_prev = (listelm);				\
-	if ((listelm)->field.cqe_next == CIRCLEQ_END(head))		\
+	if ((listelm)->field.cqe_next == TOR_CIRCLEQ_END(head))		\
 		(head)->cqh_last = (elm);				\
 	else								\
 		(listelm)->field.cqe_next->field.cqe_prev = (elm);	\
 	(listelm)->field.cqe_next = (elm);				\
 } while (0)
 
-#define CIRCLEQ_INSERT_BEFORE(head, listelm, elm, field) do {		\
+#define TOR_CIRCLEQ_INSERT_BEFORE(head, listelm, elm, field) do {		\
 	(elm)->field.cqe_next = (listelm);				\
 	(elm)->field.cqe_prev = (listelm)->field.cqe_prev;		\
-	if ((listelm)->field.cqe_prev == CIRCLEQ_END(head))		\
+	if ((listelm)->field.cqe_prev == TOR_CIRCLEQ_END(head))		\
 		(head)->cqh_first = (elm);				\
 	else								\
 		(listelm)->field.cqe_prev->field.cqe_next = (elm);	\
 	(listelm)->field.cqe_prev = (elm);				\
 } while (0)
 
-#define CIRCLEQ_INSERT_HEAD(head, elm, field) do {			\
+#define TOR_CIRCLEQ_INSERT_HEAD(head, elm, field) do {			\
 	(elm)->field.cqe_next = (head)->cqh_first;			\
-	(elm)->field.cqe_prev = CIRCLEQ_END(head);			\
-	if ((head)->cqh_last == CIRCLEQ_END(head))			\
+	(elm)->field.cqe_prev = TOR_CIRCLEQ_END(head);			\
+	if ((head)->cqh_last == TOR_CIRCLEQ_END(head))			\
 		(head)->cqh_last = (elm);				\
 	else								\
 		(head)->cqh_first->field.cqe_prev = (elm);		\
 	(head)->cqh_first = (elm);					\
 } while (0)
 
-#define CIRCLEQ_INSERT_TAIL(head, elm, field) do {			\
-	(elm)->field.cqe_next = CIRCLEQ_END(head);			\
+#define TOR_CIRCLEQ_INSERT_TAIL(head, elm, field) do {			\
+	(elm)->field.cqe_next = TOR_CIRCLEQ_END(head);			\
 	(elm)->field.cqe_prev = (head)->cqh_last;			\
-	if ((head)->cqh_first == CIRCLEQ_END(head))			\
+	if ((head)->cqh_first == TOR_CIRCLEQ_END(head))			\
 		(head)->cqh_first = (elm);				\
 	else								\
 		(head)->cqh_last->field.cqe_next = (elm);		\
 	(head)->cqh_last = (elm);					\
 } while (0)
 
-#define	CIRCLEQ_REMOVE(head, elm, field) do {				\
-	if ((elm)->field.cqe_next == CIRCLEQ_END(head))			\
+#define	TOR_CIRCLEQ_REMOVE(head, elm, field) do {				\
+	if ((elm)->field.cqe_next == TOR_CIRCLEQ_END(head))			\
 		(head)->cqh_last = (elm)->field.cqe_prev;		\
 	else								\
 		(elm)->field.cqe_next->field.cqe_prev =			\
 		    (elm)->field.cqe_prev;				\
-	if ((elm)->field.cqe_prev == CIRCLEQ_END(head))			\
+	if ((elm)->field.cqe_prev == TOR_CIRCLEQ_END(head))			\
 		(head)->cqh_first = (elm)->field.cqe_next;		\
 	else								\
 		(elm)->field.cqe_prev->field.cqe_next =			\
 		    (elm)->field.cqe_next;				\
-	_Q_INVALIDATE((elm)->field.cqe_prev);				\
-	_Q_INVALIDATE((elm)->field.cqe_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.cqe_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.cqe_next);				\
 } while (0)
 
-#define CIRCLEQ_REPLACE(head, elm, elm2, field) do {			\
+#define TOR_CIRCLEQ_REPLACE(head, elm, elm2, field) do {			\
 	if (((elm2)->field.cqe_next = (elm)->field.cqe_next) ==		\
-	    CIRCLEQ_END(head))						\
+	    TOR_CIRCLEQ_END(head))						\
 		(head).cqh_last = (elm2);				\
 	else								\
 		(elm2)->field.cqe_next->field.cqe_prev = (elm2);	\
 	if (((elm2)->field.cqe_prev = (elm)->field.cqe_prev) ==		\
-	    CIRCLEQ_END(head))						\
+	    TOR_CIRCLEQ_END(head))						\
 		(head).cqh_first = (elm2);				\
 	else								\
 		(elm2)->field.cqe_prev->field.cqe_next = (elm2);	\
-	_Q_INVALIDATE((elm)->field.cqe_prev);				\
-	_Q_INVALIDATE((elm)->field.cqe_next);				\
+	TOR_Q_INVALIDATE_((elm)->field.cqe_prev);				\
+	TOR_Q_INVALIDATE_((elm)->field.cqe_next);				\
 } while (0)
 
 #endif	/* !_SYS_QUEUE_H_ */
