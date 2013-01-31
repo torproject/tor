@@ -112,6 +112,7 @@ int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free(document_signature_t *sig);
 document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
+int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 
 #endif
 

@@ -2239,6 +2239,21 @@ networkstatus_get_param(const networkstatus_t *ns, const char *param_name,
                                  default_val, min_val, max_val);
 }
 
+/**
+ * Retrieve the consensus parameter that governs the
+ * fixed-point precision of our network balancing 'bandwidth-weights'
+ * (which are themselves integer consensus values). We divide them
+ * by this value and ensure they never exceed this value.
+ */
+int
+networkstatus_get_weight_scale_param(networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "bwweightscale",
+                                 BW_WEIGHT_SCALE,
+                                 BW_MIN_WEIGHT_SCALE,
+                                 BW_MAX_WEIGHT_SCALE);
+}
+
 /** Return the value of a integer bw weight parameter from the networkstatus
  * <b>ns</b> whose name is <b>weight_name</b>.  If <b>ns</b> is NULL, try
  * loading the latest consensus ourselves. Return <b>default_val</b> if no
@@ -2255,7 +2270,7 @@ networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight_name,
   if (!ns || !ns->weight_params)
     return default_val;
 
-  max = circuit_build_times_get_bw_scale(ns);
+  max = networkstatus_get_weight_scale_param(ns);
   param = get_net_param_from_list(ns->weight_params, weight_name,
                                   default_val, -1,
                                   BW_MAX_WEIGHT_SCALE);
