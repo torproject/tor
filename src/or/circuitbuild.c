@@ -2402,7 +2402,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  "amount of circuits. "
                  "Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
-                 "you or the potentially the guard itself. "
+                 "you or potentially the guard itself. "
                  "Success counts are %ld/%ld. Use counts are %ld/%ld. "
                  "%ld circuits completed, %ld were unusable, %ld collapsed, "
                  "and %ld timed out. "
