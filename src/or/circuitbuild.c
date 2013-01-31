@@ -2002,6 +2002,10 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
       pathbias_count_use_success(ocirc);
       break;
 
+    case PATH_STATE_USE_FAILED:
+      pathbias_count_use_failed(ocirc);
+      break;
+
     default:
       // Other states are uninteresting. No stats to count.
       break;
