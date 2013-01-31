@@ -68,8 +68,9 @@ static void pathbias_count_build_success(origin_circuit_t *circ);
 static void pathbias_count_successful_close(origin_circuit_t *circ);
 static void pathbias_count_collapse(origin_circuit_t *circ);
 static void pathbias_count_use_failed(origin_circuit_t *circ);
-static int pathbias_check_use_rate(entry_guard_t *guard);
-static int pathbias_check_close_rate(entry_guard_t *guard);
+static void pathbias_measure_use_rate(entry_guard_t *guard);
+static void pathbias_measure_close_rate(entry_guard_t *guard);
+static void pathbias_scale_use_rates(entry_guard_t *guard);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -1615,7 +1616,8 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
     guard = entry_guard_get_by_id_digest(
                 circ->cpath->extend_info->identity_digest);
     if (guard) {
-      pathbias_check_use_rate(guard);
+      pathbias_measure_use_rate(guard);
+      pathbias_scale_use_rates(guard);
       guard->use_attempts++;
       entry_guards_changed();
 
@@ -2202,11 +2204,9 @@ pathbias_get_use_success_count(entry_guard_t *guard)
  *
  * If pathbias_get_dropguards() is set, we also disable the use of
  * very failure prone guards.
- *
- * Returns -1 if we decided to disable the guard, 0 otherwise.
  */
-static int
-pathbias_check_use_rate(entry_guard_t *guard)
+static void
+pathbias_measure_use_rate(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
 
@@ -2241,7 +2241,7 @@ pathbias_check_use_rate(entry_guard_t *guard)
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
           entry_guards_changed();
-          return -1;
+          return;
         }
       } else if (!guard->path_bias_extreme) {
         guard->path_bias_extreme = 1;
@@ -2291,27 +2291,6 @@ pathbias_check_use_rate(entry_guard_t *guard)
       }
     }
   }
-
-  /* If we get a ton of circuits, just scale everything down */
-  if (guard->use_attempts > pathbias_get_scale_use_threshold(options)) {
-    double scale_ratio = pathbias_get_scale_ratio(options);
-    int opened_attempts = pathbias_count_circs_in_states(guard,
-            PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
-    guard->use_attempts -= opened_attempts;
-
-    guard->use_attempts *= scale_ratio;
-    guard->use_successes *= scale_ratio;
-
-    guard->use_attempts += opened_attempts;
-
-    log_info(LD_CIRC,
-             "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
-             guard->use_successes, guard->use_attempts, opened_attempts,
-             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
-    entry_guards_changed();
-  }
-
-  return 0;
 }
 
 /**
@@ -2323,10 +2302,14 @@ pathbias_check_use_rate(entry_guard_t *guard)
  * If pathbias_get_dropguards() is set, we also disable the use of
  * very failure prone guards.
  *
- * Returns -1 if we decided to disable the guard, 0 otherwise.
+ * XXX: This function shares similar log messages and checks to
+ * pathbias_measure_use_rate(). It may be possible to combine them
+ * eventually, especially if we can ever remove the need for 3
+ * levels of closure warns (if the overall circuit failure rate
+ * goes down with ntor).
  */
-static int
-pathbias_check_close_rate(entry_guard_t *guard)
+static void
+pathbias_measure_close_rate(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
 
@@ -2361,7 +2344,7 @@ pathbias_check_close_rate(entry_guard_t *guard)
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
           entry_guards_changed();
-          return -1;
+          return;
         }
       } else if (!guard->path_bias_extreme) {
         guard->path_bias_extreme = 1;
@@ -2435,6 +2418,21 @@ pathbias_check_close_rate(entry_guard_t *guard)
       }
     }
   }
+}
+
+/**
+ * This function scales the path bias use rates if we have
+ * more data than the scaling threshold. This allows us to
+ * be more sensitive to recent measurements.
+ *
+ * XXX: The attempt count transfer stuff here might be done
+ * better by keeping separate pending counters that get
+ * transfered at circuit close.
+ */
+void
+pathbias_scale_close_rates(entry_guard_t *guard)
+{
+  const or_options_t *options = get_options();
 
   /* If we get a ton of circuits, just scale everything down */
   if (guard->circ_attempts > pathbias_get_scale_threshold(options)) {
@@ -2466,8 +2464,40 @@ pathbias_check_close_rate(entry_guard_t *guard)
              guard->circ_attempts, opened_built, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
   }
+}
 
-  return 0;
+/**
+ * This function scales the path bias circuit close rates if we have
+ * more data than the scaling threshold. This allows us to be more
+ * sensitive to recent measurements.
+ *
+ * XXX: The attempt count transfer stuff here might be done
+ * better by keeping separate pending counters that get
+ * transfered at circuit close.
+ */
+void
+pathbias_scale_use_rates(entry_guard_t *guard)
+{
+  const or_options_t *options = get_options();
+
+  /* If we get a ton of circuits, just scale everything down */
+  if (guard->use_attempts > pathbias_get_scale_use_threshold(options)) {
+    double scale_ratio = pathbias_get_scale_ratio(options);
+    int opened_attempts = pathbias_count_circs_in_states(guard,
+            PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
+    guard->use_attempts -= opened_attempts;
+
+    guard->use_attempts *= scale_ratio;
+    guard->use_successes *= scale_ratio;
+
+    guard->use_attempts += opened_attempts;
+
+    log_info(LD_CIRC,
+             "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
+             guard->use_successes, guard->use_attempts, opened_attempts,
+             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+    entry_guards_changed();
+  }
 }
 
 /** Increment the number of times we successfully extended a circuit to
@@ -2479,9 +2509,12 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
 {
   entry_guards_changed();
 
-  if (pathbias_check_close_rate(guard) < 0)
+  pathbias_measure_close_rate(guard);
+
+  if (guard->path_bias_disabled)
     return -1;
 
+  pathbias_scale_close_rates(guard);
   guard->circ_attempts++;
 
   log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
