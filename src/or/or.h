@@ -2862,7 +2862,8 @@ typedef enum {
       * this circuit?
       *
       * If any streams detatch/fail from this circuit, the code transitions
-      * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe.
+      * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe. See
+      * pathbias_mark_use_rollback() for that.
       */
     PATH_STATE_USE_SUCCEEDED = 4,
 

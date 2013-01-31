@@ -1678,6 +1678,31 @@ pathbias_mark_use_success(origin_circuit_t *circ)
 }
 
 /**
+ * If a stream ever detatches from a circuit in a retriable way,
+ * we need to mark this circuit as still needing either another
+ * successful stream, or in need of a probe.
+ *
+ * An adversary could let the first stream request succeed (ie the
+ * resolve), but then tag and timeout the remainder (via cell
+ * dropping), forcing them on new circuits.
+ *
+ * Rolling back the state will cause us to probe such circuits, which
+ * should lead to probe failures in the event of such tagging due to
+ * either unrecognized cells coming in while we wait for the probe,
+ * or the cipher state getting out of sync in the case of dropped cells.
+ */
+void
+pathbias_mark_use_rollback(origin_circuit_t *circ)
+{
+  if (circ->path_state == PATH_STATE_USE_SUCCEEDED) {
+    log_info(LD_CIRC,
+             "Rolling back pathbias use state to 'attempted' for detached "
+             "circuit %d", circ->global_identifier);
+    circ->path_state = PATH_STATE_USE_ATTEMPTED;
+  }
+}
+
+/**
  * Actually count a circuit success towards a guard's usage counters
  * if the path state is appropriate.
  */
