@@ -1,0 +1,8 @@
+  o Build improvements (bizarre platform detection):
+    - Try to detect it if we are ever building on a platform where
+      memset(...,0,...) does not set the value of a double to 0.0.  Such
+      platforms are permitted by the C standard, though in practice
+      they're pretty rare (since IEEE 754 is nigh-ubiquitous). We don't
+      currently support them, but it's better to detect them and fail
+      than to perform erroneously.
+
