@@ -1270,14 +1270,14 @@ get_interface_addresses_raw(int severity)
   /* This interface, AFAICT, only supports AF_INET addresses */
   fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
-    log(severity, LD_NET, "socket failed: %s", strerror(errno));
+    tor_log(severity, LD_NET, "socket failed: %s", strerror(errno));
     goto done;
   }
   /* Guess how much space we need. */
   ifc.ifc_len = sz = 15*1024;
   ifc.ifc_ifcu.ifcu_req = tor_malloc(sz);
   if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
-    log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
+    tor_log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
     close(fd);
     goto done;
   }

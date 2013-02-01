@@ -2636,10 +2636,10 @@ void
 channel_dumpstats(int severity)
 {
   if (all_channels && smartlist_len(all_channels) > 0) {
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "Dumping statistics about %d channels:",
         smartlist_len(all_channels));
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "%d are active, and %d are done and waiting for cleanup",
         (active_channels != NULL) ?
           smartlist_len(active_channels) : 0,
@@ -2649,10 +2649,10 @@ channel_dumpstats(int severity)
     SMARTLIST_FOREACH(all_channels, channel_t *, chan,
                       channel_dump_statistics(chan, severity));
 
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "Done spamming about channels now");
   } else {
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "No channels to dump");
   }
 }
@@ -2668,10 +2668,10 @@ void
 channel_listener_dumpstats(int severity)
 {
   if (all_listeners && smartlist_len(all_listeners) > 0) {
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "Dumping statistics about %d channel listeners:",
         smartlist_len(all_listeners));
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "%d are active and %d are done and waiting for cleanup",
         (active_listeners != NULL) ?
           smartlist_len(active_listeners) : 0,
@@ -2681,10 +2681,10 @@ channel_listener_dumpstats(int severity)
     SMARTLIST_FOREACH(all_listeners, channel_listener_t *, chan_l,
                       channel_listener_dump_statistics(chan_l, severity));
 
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "Done spamming about channel listeners now");
   } else {
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "No channel listeners to dump");
   }
 }
@@ -3139,13 +3139,13 @@ channel_dump_statistics(channel_t *chan, int severity)
 
   age = (double)(now - chan->timestamp_created);
 
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       "Channel " U64_FORMAT " (at %p) with transport %s is in state "
       "%s (%d)",
       U64_PRINTF_ARG(chan->global_identifier), chan,
       channel_describe_transport(chan),
       channel_state_to_string(chan->state), chan->state);
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " was created at " U64_FORMAT
       " (" U64_FORMAT " seconds ago) "
       "and last active at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
@@ -3158,14 +3158,14 @@ channel_dump_statistics(channel_t *chan, int severity)
   /* Handle digest and nickname */
   if (!tor_digest_is_zero(chan->identity_digest)) {
     if (chan->nickname) {
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel " U64_FORMAT " says it is connected "
           "to an OR with digest %s and nickname %s",
           U64_PRINTF_ARG(chan->global_identifier),
           hex_str(chan->identity_digest, DIGEST_LEN),
           chan->nickname);
     } else {
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel " U64_FORMAT " says it is connected "
           "to an OR with digest %s and no known nickname",
           U64_PRINTF_ARG(chan->global_identifier),
@@ -3173,13 +3173,13 @@ channel_dump_statistics(channel_t *chan, int severity)
     }
   } else {
     if (chan->nickname) {
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel " U64_FORMAT " does not know the digest"
           " of the OR it is connected to, but reports its nickname is %s",
           U64_PRINTF_ARG(chan->global_identifier),
           chan->nickname);
     } else {
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel " U64_FORMAT " does not know the digest"
           " or the nickname of the OR it is connected to",
           U64_PRINTF_ARG(chan->global_identifier));
@@ -3191,7 +3191,7 @@ channel_dump_statistics(channel_t *chan, int severity)
   if (have_remote_addr) {
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
     remote_addr_str = tor_dup_addr(&remote_addr);
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         " * Channel " U64_FORMAT " says its remote address"
         " is %s, and gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
@@ -3203,7 +3203,7 @@ channel_dump_statistics(channel_t *chan, int severity)
     tor_free(actual);
   } else {
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         " * Channel " U64_FORMAT " does not know its remote "
         "address, but gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
@@ -3214,7 +3214,7 @@ channel_dump_statistics(channel_t *chan, int severity)
   }
 
   /* Handle marks */
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " has these marks: %s %s %s "
       "%s %s %s",
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3233,7 +3233,7 @@ channel_dump_statistics(channel_t *chan, int severity)
         "incoming" : "outgoing");
 
   /* Describe queues */
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " has %d queued incoming cells"
       " and %d queued outgoing cells",
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3241,7 +3241,7 @@ channel_dump_statistics(channel_t *chan, int severity)
       chan_cell_queue_len(&chan->outgoing_queue));
 
   /* Describe circuits */
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " has %d active circuits out of"
       " %d in total",
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3251,25 +3251,25 @@ channel_dump_statistics(channel_t *chan, int severity)
          circuitmux_num_circuits(chan->cmux) : 0);
 
   /* Describe timestamps */
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " was last used by a "
       "client at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
       U64_PRINTF_ARG(chan->timestamp_client),
       U64_PRINTF_ARG(now - chan->timestamp_client));
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " was last drained at "
       U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
       U64_PRINTF_ARG(chan->timestamp_drained),
       U64_PRINTF_ARG(now - chan->timestamp_drained));
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " last received a cell "
       "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
       U64_PRINTF_ARG(chan->timestamp_recv),
       U64_PRINTF_ARG(now - chan->timestamp_recv));
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " last trasmitted a cell "
       "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3277,7 +3277,7 @@ channel_dump_statistics(channel_t *chan, int severity)
       U64_PRINTF_ARG(now - chan->timestamp_xmit));
 
   /* Describe counters and rates */
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " has received "
       U64_FORMAT " cells and transmitted " U64_FORMAT,
       U64_PRINTF_ARG(chan->global_identifier),
@@ -3288,13 +3288,13 @@ channel_dump_statistics(channel_t *chan, int severity)
     if (chan->n_cells_recved > 0) {
       avg = (double)(chan->n_cells_recved) / age;
       if (avg >= 1.0) {
-        log(severity, LD_GENERAL,
+        tor_log(severity, LD_GENERAL,
             " * Channel " U64_FORMAT " has averaged %f "
             "cells received per second",
             U64_PRINTF_ARG(chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
-        log(severity, LD_GENERAL,
+        tor_log(severity, LD_GENERAL,
             " * Channel " U64_FORMAT " has averaged %f "
             "seconds between received cells",
             U64_PRINTF_ARG(chan->global_identifier), interval);
@@ -3303,13 +3303,13 @@ channel_dump_statistics(channel_t *chan, int severity)
     if (chan->n_cells_xmitted > 0) {
       avg = (double)(chan->n_cells_xmitted) / age;
       if (avg >= 1.0) {
-        log(severity, LD_GENERAL,
+        tor_log(severity, LD_GENERAL,
             " * Channel " U64_FORMAT " has averaged %f "
             "cells transmitted per second",
             U64_PRINTF_ARG(chan->global_identifier), avg);
       } else if (avg >= 0.0) {
         interval = 1.0 / avg;
-        log(severity, LD_GENERAL,
+        tor_log(severity, LD_GENERAL,
             " * Channel " U64_FORMAT " has averaged %f "
             "seconds between transmitted cells",
             U64_PRINTF_ARG(chan->global_identifier), interval);
@@ -3337,13 +3337,13 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
 
   age = (double)(now - chan_l->timestamp_created);
 
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       "Channel listener " U64_FORMAT " (at %p) with transport %s is in "
       "state %s (%d)",
       U64_PRINTF_ARG(chan_l->global_identifier), chan_l,
       channel_listener_describe_transport(chan_l),
       channel_listener_state_to_string(chan_l->state), chan_l->state);
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel listener " U64_FORMAT " was created at " U64_FORMAT
       " (" U64_FORMAT " seconds ago) "
       "and last active at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
@@ -3353,7 +3353,7 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
       U64_PRINTF_ARG(chan_l->timestamp_active),
       U64_PRINTF_ARG(now - chan_l->timestamp_active));
 
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
       " * Channel listener " U64_FORMAT " last accepted an incoming "
         "channel at " U64_FORMAT " (" U64_FORMAT " seconds ago) "
         "and has accepted " U64_FORMAT " channels in total",
@@ -3371,13 +3371,13 @@ channel_listener_dump_statistics(channel_listener_t *chan_l, int severity)
       chan_l->n_accepted > 0) {
     avg = (double)(chan_l->n_accepted) / age;
     if (avg >= 1.0) {
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel listener " U64_FORMAT " has averaged %f incoming "
           "channels per second",
           U64_PRINTF_ARG(chan_l->global_identifier), avg);
     } else if (avg >= 0.0) {
       interval = 1.0 / avg;
-      log(severity, LD_GENERAL,
+      tor_log(severity, LD_GENERAL,
           " * Channel listener " U64_FORMAT " has averaged %f seconds "
           "between incoming channels",
           U64_PRINTF_ARG(chan_l->global_identifier), interval);

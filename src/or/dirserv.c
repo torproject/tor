@@ -2017,7 +2017,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       median_uint32(bandwidths_excluding_exits, n_active_nonexit);
   }
 
-  log(LOG_INFO, LD_DIRSERV,
+  log_info(LD_DIRSERV,
       "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
       "For Fast: %lu bytes/sec. "
       "For Guard: WFU %.03f%%, time-known %lu sec, "

@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Rename Tor's logging function log() to tor_log(), to avoid conflicts
+      with the natural logarithm function from the system libm.  Resolves
+      ticket 7599.

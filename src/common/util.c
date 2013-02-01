@@ -20,7 +20,6 @@
 #define UTIL_PRIVATE
 #include "util.h"
 #include "torlog.h"
-#undef log
 #include "crypto.h"
 #include "torint.h"
 #include "container.h"
@@ -323,8 +322,8 @@ tor_log_mallinfo(int severity)
  * ===== */
 
 /**
- * Returns the natural logarithm of d base 2.  We define this wrapper here so
- * as to make it easier not to conflict with Tor's log() macro.
+ * Returns the natural logarithm of d base e.  We defined this wrapper here so
+ * to avoid conflicts with old versions of tor_log(), which were named log().
  */
 double
 tor_mathlog(double d)

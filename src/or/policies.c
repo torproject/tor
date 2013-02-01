@@ -881,7 +881,7 @@ exit_policy_remove_redundancies(smartlist_t *dest)
         char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
         policy_write_item(p1, sizeof(p1), tmp, 0);
         policy_write_item(p2, sizeof(p2), ap, 0);
-        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s (%d).  It is made "
+        log_debug(LD_CONFIG, "Removing exit policy %s (%d).  It is made "
             "redundant by %s (%d).", p1, j, p2, i);
         smartlist_del_keeporder(dest, j--);
         addr_policy_free(tmp);
@@ -910,7 +910,7 @@ exit_policy_remove_redundancies(smartlist_t *dest)
           char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
           policy_write_item(p1, sizeof(p1), ap, 0);
           policy_write_item(p2, sizeof(p2), tmp, 0);
-          log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
+          log_debug(LD_CONFIG, "Removing exit policy %s.  It is already "
               "covered by %s.", p1, p2);
           smartlist_del_keeporder(dest, i--);
           addr_policy_free(ap);

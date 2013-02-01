@@ -2647,7 +2647,7 @@ dump_routerlist_mem_usage(int severity)
   SMARTLIST_FOREACH(routerlist->old_routers, signed_descriptor_t *, sd,
                     olddescs += sd->signed_descriptor_len);
 
-  log(severity, LD_DIR,
+  tor_log(severity, LD_DIR,
       "In %d live descriptors: "U64_FORMAT" bytes.  "
       "In %d old descriptors: "U64_FORMAT" bytes.",
       smartlist_len(routerlist->routers), U64_PRINTF_ARG(livedescs),

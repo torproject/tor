@@ -731,7 +731,7 @@ connection_mark_for_close_internal_(connection_t *conn,
   tor_assert(file);
 
   if (conn->marked_for_close) {
-    log(LOG_WARN,LD_BUG,"Duplicate call to connection_mark_for_close at %s:%d"
+    log_warn(LD_BUG,"Duplicate call to connection_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line, conn->marked_for_close_file,
         conn->marked_for_close);
     tor_fragile_assert();
@@ -2530,7 +2530,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
         *bucket = burst;
       }
     }
-    log(LOG_DEBUG, LD_NET,"%s now %d.", name, *bucket);
+    log_debug(LD_NET,"%s now %d.", name, *bucket);
   }
 }
 
@@ -3897,7 +3897,7 @@ client_check_address_changed(tor_socket_t sock)
   } else {
     /* The interface changed.  We're a client, so we need to regenerate our
      * keys.  First, reset the state. */
-    log(LOG_NOTICE, LD_NET, "Our IP address has changed.  Rotating keys...");
+    log_notice(LD_NET, "Our IP address has changed.  Rotating keys...");
     tor_addr_copy(*last_interface_ip_ptr, &iface_addr);
     SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t*, a_ptr, tor_free(a_ptr));
     smartlist_clear(outgoing_addrs);
@@ -4109,14 +4109,14 @@ connection_dump_buffer_mem_stats(int severity)
     total_alloc += alloc_by_type[i];
   }
 
-  log(severity, LD_GENERAL,
+  tor_log(severity, LD_GENERAL,
      "In buffers for %d connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
       smartlist_len(conns),
       U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
   for (i=CONN_TYPE_MIN_; i <= CONN_TYPE_MAX_; ++i) {
     if (!n_conns_by_type[i])
       continue;
-    log(severity, LD_GENERAL,
+    tor_log(severity, LD_GENERAL,
         "  For %d %s connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
         n_conns_by_type[i], conn_type_to_string(i),
         U64_PRINTF_ARG(used_by_type[i]), U64_PRINTF_ARG(alloc_by_type[i]));

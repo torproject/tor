@@ -3304,7 +3304,7 @@ rend_service_dump_stats(int severity)
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    log(severity, LD_GENERAL, "Service configured in \"%s\":",
+    tor_log(severity, LD_GENERAL, "Service configured in \"%s\":",
         service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
@@ -3312,11 +3312,11 @@ rend_service_dump_stats(int severity)
 
       circ = find_intro_circuit(intro, service->pk_digest);
       if (!circ) {
-        log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
+        tor_log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
             j, safe_name);
         continue;
       }
-      log(severity, LD_GENERAL, "  Intro point %d at %s: circuit is %s",
+      tor_log(severity, LD_GENERAL, "  Intro point %d at %s: circuit is %s",
           j, safe_name, circuit_state_to_string(circ->base_.state));
     }
   }

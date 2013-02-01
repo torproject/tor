@@ -2024,8 +2024,9 @@ dump_cell_pool_usage(int severity)
       n_cells += TO_OR_CIRCUIT(c)->p_chan_cells.n;
     ++n_circs;
   }
-  log(severity, LD_MM, "%d cells allocated on %d circuits. %d cells leaked.",
-      n_cells, n_circs, total_cells_allocated - n_cells);
+  tor_log(severity, LD_MM,
+          "%d cells allocated on %d circuits. %d cells leaked.",
+          n_cells, n_circs, total_cells_allocated - n_cells);
   mp_pool_log_status(cell_pool, severity);
 }
 

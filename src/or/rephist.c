@@ -648,7 +648,7 @@ rep_hist_dump_stats(time_t now, int severity)
 
   rep_history_clean(now - get_options()->RephistTrackTime);
 
-  log(severity, LD_HIST, "--------------- Dumping history information:");
+  tor_log(severity, LD_HIST, "--------------- Dumping history information:");
 
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
@@ -673,7 +673,7 @@ rep_hist_dump_stats(time_t now, int severity)
     } else {
       uptime=1.0;
     }
-    log(severity, LD_HIST,
+    tor_log(severity, LD_HIST,
         "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%); "
         "wmtbf %lu:%02lu:%02lu",
         name1, hexdigest1,
@@ -707,7 +707,7 @@ rep_hist_dump_stats(time_t now, int severity)
         else
           len += ret;
       }
-      log(severity, LD_HIST, "%s", buffer);
+      tor_log(severity, LD_HIST, "%s", buffer);
     }
   }
 }
@@ -2042,7 +2042,7 @@ note_crypto_pk_op(pk_op_t operation)
 void
 dump_pk_ops(int severity)
 {
-  log(severity, LD_HIST,
+  tor_log(severity, LD_HIST,
       "PK operations: %lu directory objects signed, "
       "%lu directory objects verified, "
       "%lu routerdescs signed, "

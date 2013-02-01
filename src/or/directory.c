@@ -1860,7 +1860,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     const char *flavname = conn->requested_resource;
     if (status_code != 200) {
       int severity = (status_code == 304) ? LOG_INFO : LOG_WARN;
-      log(severity, LD_DIR,
+      tor_log(severity, LD_DIR,
           "Received http status code %d (%s) from server "
           "'%s:%d' while fetching consensus directory.",
            status_code, escaped(reason), conn->base_.address,

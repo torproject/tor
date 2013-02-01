@@ -783,8 +783,8 @@ circuit_dump_conn_details(int severity,
                           int this_circid,
                           int other_circid)
 {
-  log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), "
-      "state %d (%s), born %ld:",
+  tor_log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d "
+      "(other side %d), state %d (%s), born %ld:",
       conn_array_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
@@ -846,8 +846,8 @@ circuit_dump_chan_details(int severity,
                           int this_circid,
                           int other_circid)
 {
-  log(severity, LD_CIRC, "Conn %p has %s circuit: circID %d (other side %d), "
-      "state %d (%s), born %ld:",
+  tor_log(severity, LD_CIRC, "Conn %p has %s circuit: circID %d "
+      "(other side %d), state %d (%s), born %ld:",
       chan, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
@@ -1343,7 +1343,7 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
   tor_assert(file);
 
   if (circ->marked_for_close) {
-    log(LOG_WARN,LD_BUG,
+    log_warn(LD_BUG,
         "Duplicate call to circuit_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line,
         circ->marked_for_close_file, circ->marked_for_close);
