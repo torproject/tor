@@ -1238,11 +1238,7 @@ The following options are useful only for clients (that is, if
 
 **PathBiasDropGuards** __NUM__ +
 
-**PathBiasScaleThreshold** __NUM__ +
-
-**PathBiasMultFactor** __NUM__ +
-
-**PathBiasScaleFactor** __NUM__::
+**PathBiasScaleThreshold** __NUM__::
     These options override the default behavior of Tor's (**currently
     experimental**) path bias detection algorithm. To try to find broken or
     misbehaving guard nodes, Tor looks for nodes where more than a certain
@@ -1256,14 +1252,13 @@ The following options are useful only for clients (that is, if
     is set to 1, we disable use of that guard. +
  +
     When we have seen more than PathBiasScaleThreshold
-    circuits through a guard, we scale our observations by
-    PathBiasMultFactor/PathBiasScaleFactor, so that new observations don't get
-    swamped by old ones. +
+    circuits through a guard, we scale our observations by 0.5 (governed by
+    the consensus) so that new observations don't get swamped by old ones. +
  +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
     If no defaults are available there, these options default to 150, .70,
-    .50, .30, 0, 300, 1, and 2 respectively.
+    .50, .30, 0, and 300 respectively.
 
 **PathBiasUseThreshold** __NUM__ +
 

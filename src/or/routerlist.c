@@ -1734,7 +1734,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     return -1;
   }
 
-  weight_scale = circuit_build_times_get_bw_scale(NULL);
+  weight_scale = networkstatus_get_weight_scale_param(NULL);
 
   if (rule == WEIGHT_FOR_GUARD) {
     Wg = networkstatus_get_bw_weight(NULL, "Wgg", -1);

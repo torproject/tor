@@ -183,16 +183,6 @@ circuit_build_times_quantile_cutoff(void)
   return num/100.0;
 }
 
-/* DOCDOC circuit_build_times_get_bw_scale */
-int
-circuit_build_times_get_bw_scale(networkstatus_t *ns)
-{
-  return networkstatus_get_param(ns, "bwweightscale",
-                                 BW_WEIGHT_SCALE,
-                                 BW_MIN_WEIGHT_SCALE,
-                                 BW_MAX_WEIGHT_SCALE);
-}
-
 /**
  * Retrieve and bounds-check the cbtclosequantile consensus paramter.
  *

@@ -321,8 +321,8 @@ static config_var_t option_vars_[] = {
   V(PathBiasWarnRate,            DOUBLE,   "-1"),
   V(PathBiasExtremeRate,         DOUBLE,   "-1"),
   V(PathBiasScaleThreshold,      INT,      "-1"),
-  V(PathBiasScaleFactor,         INT,      "-1"),
-  V(PathBiasMultFactor,          INT,      "-1"),
+  OBSOLETE("PathBiasScaleFactor"),
+  OBSOLETE("PathBiasMultFactor"),
   V(PathBiasDropGuards,          AUTOBOOL, "0"),
   OBSOLETE("PathBiasUseCloseCounts"),
 
@@ -2647,6 +2647,37 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "LearnCircuitBuildTimeout.",
         options->CircuitBuildTimeout,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
+  }
+
+  if (options->PathBiasNoticeRate > 1.0) {
+    tor_asprintf(msg,
+              "PathBiasNoticeRate is too high. "
+              "It must be between 0 and 1.0");
+    return -1;
+  }
+  if (options->PathBiasWarnRate > 1.0) {
+    tor_asprintf(msg,
+              "PathBiasWarnRate is too high. "
+              "It must be between 0 and 1.0");
+    return -1;
+  }
+  if (options->PathBiasExtremeRate > 1.0) {
+    tor_asprintf(msg,
+              "PathBiasExtremeRate is too high. "
+              "It must be between 0 and 1.0");
+    return -1;
+  }
+  if (options->PathBiasNoticeUseRate > 1.0) {
+    tor_asprintf(msg,
+              "PathBiasNoticeUseRate is too high. "
+              "It must be between 0 and 1.0");
+    return -1;
+  }
+  if (options->PathBiasExtremeUseRate > 1.0) {
+    tor_asprintf(msg,
+              "PathBiasExtremeUseRate is too high. "
+              "It must be between 0 and 1.0");
+    return -1;
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {

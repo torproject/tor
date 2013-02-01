@@ -52,6 +52,7 @@ static config_var_t state_vars_[] = {
   VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardPathBias",      LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuardPathUseBias",   LINELIST_S,  EntryGuards,             NULL),
   V(EntryGuards,                 LINELIST_V,  NULL),
 
   VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
