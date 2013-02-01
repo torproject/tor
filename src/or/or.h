@@ -3883,6 +3883,11 @@ typedef struct {
   char *GeoIPFile;
   char *GeoIPv6File;
 
+  /** Autobool: if auto, then any attempt to Exclude{Exit,}Nodes a particular
+   * country code will exclude all nodes in ?? and A1.  If true, all nodes in
+   * ?? and A1 are excluded. Has no effect if we don't know any GeoIP data. */
+  int GeoIPExcludeUnknown;
+
   /** If true, SIGHUP should reload the torrc.  Sometimes controllers want
    * to make this false. */
   int ReloadTorrcOnSIGHUP;

@@ -31,6 +31,7 @@ int routerset_contains_node(const routerset_t *set, const node_t *node);
 void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
                              const routerset_t *excludeset,
                              int running_only);
+int routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set);
 #if 0
 void routersets_get_node_disjunction(smartlist_t *target,
                                 const smartlist_t *source,

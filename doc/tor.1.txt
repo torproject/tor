@@ -679,7 +679,11 @@ The following options are useful only for clients (that is, if
     Note also that if you are a relay, this (and the other node selection
     options below) only affects your own circuits that Tor builds for you.
     Clients can still build circuits through you to any node.  Controllers
-    can tell Tor to build circuits through any node.
+    can tell Tor to build circuits through any node. +
+ +
+    Country codes are case-insensitive. The code "\{??}" refers to nodes whose
+    country can't be identified. No country code, including \{??}, works if
+    no GeoIPFile can be loaded. See also the GeoIPExcludeUnknown option below.
 
 
 **ExcludeExitNodes** __node__,__node__,__...__::
@@ -688,6 +692,14 @@ The following options are useful only for clients (that is, if
     node that delivers traffic for you outside the Tor network.   Note that any
     node listed in ExcludeNodes is automatically considered to be part of this
     list too.  See also the caveats on the "ExitNodes" option below.
+
+**GeoIPExcludeUnknown** **0**|**1**|**auto**::
+    If this option is set to 'auto', then whenever any country code is set in
+    ExcludeNodes or ExcludeEntryNodes, all nodes with unknown country (\{??} and
+    possibly \{A1}) are treated as excluded as well. If this option is set to
+    '1', then all unknown countries are treated as excluded in ExcludeNodes
+    and ExcludeEntryNodes.  This option has no effect when a GeoIP file isn't
+    configured or can't be found.  (Default: auto)
 
 **ExitNodes** __node__,__node__,__...__::
     A list of identity fingerprints, nicknames, country codes and address

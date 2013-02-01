@@ -1,0 +1,9 @@
+  o Minor features:
+    - When any country code is listed in ExcludeNodes or
+      ExcludeExitNodes, and we have GeoIP information, also exclude
+      all nodes with unknown countries ({??} and {A1} if
+      present). This behavior is controlled by the new
+      GeoIPExcludeUnknown option: you can make such nodes always
+      excluded with 'GeoIPExcludeUnknown 1', and disable the feature
+      with 'GeoIPExcludeUnknown 0'. Setting 'GeoIPExcludeUnknown auto'
+      gets you the default behavior.  Implements feature 7706.
