@@ -322,7 +322,7 @@ tor_log_mallinfo(int severity)
  * ===== */
 
 /**
- * Returns the natural logarithm of d base 2.  We defined this wrapper here so
+ * Returns the natural logarithm of d base e.  We defined this wrapper here so
  * to avoid conflicts with old versions of tor_log(), which were named log().
  */
 double

@@ -17,6 +17,7 @@
 #ifdef _WIN32
 #include <tchar.h>
 #endif
+#include <math.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -3240,6 +3241,20 @@ test_util_set_env_var_in_sl(void *ptr)
   smartlist_free(expected_resulting_env_vars);
 }
 
+static void
+test_util_mathlog(void *arg)
+{
+  double d;
+  (void) arg;
+
+  d = tor_mathlog(2.718281828);
+  tt_double_op(fabs(d - 1.0), <, .000001);
+  d = tor_mathlog(10);
+  tt_double_op(fabs(d - 2.30258509), <, .000001);
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -3296,6 +3311,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_tiny_limit, 0),
   UTIL_TEST(read_file_eof_two_loops, 0),
   UTIL_TEST(read_file_eof_zero_bytes, 0),
+  UTIL_TEST(mathlog, 0),
   END_OF_TESTCASES
 };
 
