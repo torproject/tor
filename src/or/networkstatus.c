@@ -561,7 +561,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   if (warn >= 0) {
     SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
       {
-        log(severity, LD_DIR, "Consensus includes unrecognized authority "
+        tor_log(severity, LD_DIR, "Consensus includes unrecognized authority "
                  "'%s' at %s:%d (contact %s; identity %s)",
                  voter->nickname, voter->address, (int)voter->dir_port,
                  voter->contact?voter->contact:"n/a",
@@ -569,7 +569,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       });
     SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
       {
-        log(severity, LD_DIR, "Looks like we need to download a new "
+        tor_log(severity, LD_DIR, "Looks like we need to download a new "
                  "certificate from authority '%s' at %s:%d (contact %s; "
                  "identity %s)",
                  voter->nickname, voter->address, (int)voter->dir_port,
@@ -578,7 +578,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       });
     SMARTLIST_FOREACH(missing_authorities, dir_server_t *, ds,
       {
-        log(severity, LD_DIR, "Consensus does not include configured "
+        tor_log(severity, LD_DIR, "Consensus does not include configured "
                  "authority '%s' at %s:%d (identity %s)",
                  ds->nickname, ds->address, (int)ds->dir_port,
                  hex_str(ds->v3_identity_digest, DIGEST_LEN));
@@ -614,7 +614,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                       "because we were missing the keys.", n_missing_key);
       }
       joined = smartlist_join_strings(sl, " ", 0, NULL);
-      log(severity, LD_DIR, "%s", joined);
+      tor_log(severity, LD_DIR, "%s", joined);
       tor_free(joined);
       SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
       smartlist_free(sl);

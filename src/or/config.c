@@ -1092,7 +1092,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
   logs_marked = 1;
-  if (options_init_logs(options, 0)<0) { /* Configure the log(s) */
+  if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
     *msg = tor_strdup("Failed to init Log options. See logs for details.");
     goto rollback;
   }
@@ -1268,7 +1268,7 @@ options_act(const or_options_t *old_options)
     return -1;
 
 #ifdef NON_ANONYMOUS_MODE_ENABLED
-  log(LOG_WARN, LD_GENERAL, "This copy of Tor was compiled to run in a "
+  log_warn(LD_GENERAL, "This copy of Tor was compiled to run in a "
       "non-anonymous mode. It will provide NO ANONYMITY.");
 #endif
 
@@ -1770,7 +1770,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     (*new)->value = want_arg ? tor_strdup(argv[i+1]) : tor_strdup("");
     (*new)->command = command;
     (*new)->next = NULL;
-    log(LOG_DEBUG, LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
+    log_debug(LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
         (*new)->key, (*new)->value);
 
     new = &((*new)->next);
@@ -2218,7 +2218,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   int n_ports=0;
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
-#define COMPLAIN(arg) STMT_BEGIN log(LOG_WARN, LD_CONFIG, arg); STMT_END
+#define COMPLAIN(arg) STMT_BEGIN log_warn(LD_CONFIG, arg); STMT_END
 
   tor_assert(msg);
   *msg = NULL;
@@ -2227,7 +2227,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       (!strcmpstart(uname, "Windows 95") ||
        !strcmpstart(uname, "Windows 98") ||
        !strcmpstart(uname, "Windows Me"))) {
-    log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
+    log_warn(LD_CONFIG, "Tor is running as a server, but you are "
         "running %s; this probably won't work. See "
         "https://wiki.torproject.org/TheOnionRouter/TorFAQ#ServerOS "
         "for details.", uname);
@@ -2256,7 +2256,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (server_mode(options) && !options->ContactInfo)
-    log(LOG_NOTICE, LD_CONFIG, "Your ContactInfo config option is not set. "
+    log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
         "Please consider setting it, so we can contact you if your server is "
         "misconfigured or something else goes wrong.");
 
@@ -2268,7 +2268,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
         config_line_append(&options->Logs, "Log", "warn stdout");
   }
 
-  if (options_init_logs(options, 1)<0) /* Validate the log(s) */
+  if (options_init_logs(options, 1)<0) /* Validate the tor_log(s) */
     REJECT("Failed to validate Log options. See logs for details.");
 
   if (authdir_mode(options)) {
@@ -2286,7 +2286,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* XXXX require that the only port not be DirPort? */
   /* XXXX require that at least one port be listened-upon. */
   if (n_ports == 0 && !options->RendConfigLines)
-    log(LOG_WARN, LD_CONFIG,
+    log_warn(LD_CONFIG,
         "SocksPort, TransPort, NATDPort, DNSPort, and ORPort are all "
         "undefined, and there aren't any hidden services configured.  "
         "Tor will still run, but probably won't do anything.");
@@ -2446,7 +2446,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       });
       new_line->value = smartlist_join_strings(instead,",",0,NULL);
       /* These have been deprecated since 0.1.1.5-alpha-cvs */
-      log(LOG_NOTICE, LD_CONFIG,
+      log_notice(LD_CONFIG,
           "Converting FascistFirewall and FirewallPorts "
           "config options to new format: \"ReachableAddresses %s\"",
           new_line->value);
@@ -2461,7 +2461,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
         new_line->key = tor_strdup("ReachableDirAddresses");
         new_line->value = tor_strdup("*:80");
         options->ReachableDirAddresses = new_line;
-        log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall config option "
+        log_notice(LD_CONFIG, "Converting FascistFirewall config option "
             "to new format: \"ReachableDirAddresses *:80\"");
       }
       if (!options->ReachableORAddresses) {
@@ -2469,7 +2469,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
         new_line->key = tor_strdup("ReachableORAddresses");
         new_line->value = tor_strdup("*:443");
         options->ReachableORAddresses = new_line;
-        log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall config option "
+        log_notice(LD_CONFIG, "Converting FascistFirewall config option "
             "to new format: \"ReachableORAddresses *:443\"");
       }
     }
@@ -3423,7 +3423,7 @@ find_torrc_filename(int argc, char **argv,
   for (i = 1; i < argc; ++i) {
     if (i < argc-1 && !strcmp(argv[i],fname_opt)) {
       if (fname) {
-        log(LOG_WARN, LD_CONFIG, "Duplicate %s options on command line.",
+        log_warn(LD_CONFIG, "Duplicate %s options on command line.",
             fname_opt);
         tor_free(fname);
       }
@@ -3486,7 +3486,7 @@ load_torrc_from_disk(int argc, char **argv, int defaults_file)
   fname = find_torrc_filename(argc, argv, defaults_file,
                               &using_default_torrc, &ignore_missing_torrc);
   tor_assert(fname);
-  log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
+  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname);
 
   tor_free(*fname_var);
   *fname_var = fname;
@@ -3496,18 +3496,18 @@ load_torrc_from_disk(int argc, char **argv, int defaults_file)
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc) {
       if (!defaults_file)
-        log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
+        log_notice(LD_CONFIG, "Configuration file \"%s\" not present, "
             "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
       *fname_var = NULL;
       cf = tor_strdup("");
     } else {
-      log(LOG_WARN, LD_CONFIG,
+      log_warn(LD_CONFIG,
           "Unable to open configuration file \"%s\".", fname);
       goto err;
     }
   } else {
-    log(LOG_NOTICE, LD_CONFIG, "Read configuration file \"%s\".", fname);
+    log_notice(LD_CONFIG, "Read configuration file \"%s\".", fname);
   }
 
   return cf;
@@ -3599,7 +3599,7 @@ options_init_from_torrc(int argc, char **argv)
   tor_free(cf);
   tor_free(cf_defaults);
   if (errmsg) {
-    log(LOG_WARN,LD_CONFIG,"%s", errmsg);
+    log_warn(LD_CONFIG,"%s", errmsg);
     tor_free(errmsg);
   }
   return retval < 0 ? -1 : 0;
@@ -5383,7 +5383,7 @@ check_server_ports(const smartlist_t *ports,
   }
 
   if (n_low_port && options->AccountingMax) {
-    log(LOG_WARN, LD_CONFIG,
+    log_warn(LD_CONFIG,
           "You have set AccountingMax to use hibernation. You have also "
           "chosen a low DirPort or OrPort. This combination can make Tor stop "
           "working when it tries to re-attach the port after a period of "

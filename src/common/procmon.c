@@ -321,7 +321,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
   its_dead_jim = its_dead_jim && (errno == ESRCH);
 #endif
 
-  log(its_dead_jim ? LOG_NOTICE : LOG_INFO,
+  tor_log(its_dead_jim ? LOG_NOTICE : LOG_INFO,
       procmon->log_domain, "Monitored process "PID_T_FORMAT" is %s.",
       procmon->pid,
       its_dead_jim ? "dead" : "still alive");

@@ -95,7 +95,7 @@ routerset_refresh_countries(routerset_t *target)
       tor_assert(cc < target->n_countries);
       bitarray_set(target->countries, cc);
     } else {
-      log(LOG_WARN, LD_CONFIG, "Country code '%s' is not recognized.",
+      log_warn(LD_CONFIG, "Country code '%s' is not recognized.",
           country);
     }
   } SMARTLIST_FOREACH_END(country);

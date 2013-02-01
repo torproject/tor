@@ -534,7 +534,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 	ns->failed_times++;
 
 	if (add_timeout_event(ns, (struct timeval *) timeout) < 0) {
-		log(EVDNS_LOG_WARN,
+		tor_log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
@@ -550,19 +550,19 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	/* then don't do anything */
 	if (!ns->state) return;
 
-	log(EVDNS_LOG_WARN, "Nameserver %s has failed: %s",
+	tor_log(EVDNS_LOG_WARN, "Nameserver %s has failed: %s",
 		debug_ntop((struct sockaddr *)&ns->address), msg);
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
-		log(EVDNS_LOG_WARN, "All nameservers have failed");
+		tor_log(EVDNS_LOG_WARN, "All nameservers have failed");
 	}
 
 	ns->state = 0;
 	ns->failed_times = 1;
 
 	if (add_timeout_event(ns, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
-		log(EVDNS_LOG_WARN,
+		tor_log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
@@ -593,7 +593,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 static void
 nameserver_up(struct nameserver *const ns) {
 	if (ns->state) return;
-	log(EVDNS_LOG_WARN, "Nameserver %s is back up",
+	tor_log(EVDNS_LOG_WARN, "Nameserver %s is back up",
 		debug_ntop((struct sockaddr *)&ns->address));
 	del_timeout_event(ns);
 	ns->state = 1;
@@ -624,7 +624,7 @@ request_finished(struct evdns_request *const req, struct evdns_request **head) {
 		}
 	}
 
-	log(EVDNS_LOG_DEBUG, "Removing timeout for request %lx",
+	tor_log(EVDNS_LOG_DEBUG, "Removing timeout for request %lx",
 		(unsigned long) req);
 	del_timeout_event(req);
 
@@ -776,7 +776,7 @@ reply_handle(struct evdns_request *const req, u16 flags, u32 ttl, struct reply *
 			 * confusing."  Treat this as a timeout, not a failure.
 			 */
 			/*XXXX refactor the parts of */
-			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
+			tor_log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
 				"will allow the request to time out.",
 				debug_ntop((struct sockaddr *)&req->ns->address));
 			break;
@@ -1268,7 +1268,7 @@ nameserver_read(struct nameserver *ns) {
 		}
 		/* XXX Match port too? */
 		if (!sockaddr_eq(sa, (struct sockaddr*)&ns->address, 0)) {
-			log(EVDNS_LOG_WARN,
+			tor_log(EVDNS_LOG_WARN,
 				"Address mismatch on received DNS packet.  Address was %s",
 				debug_ntop(sa));
 			return;
@@ -1294,7 +1294,7 @@ server_port_read(struct evdns_server_port *s) {
 		if (r < 0) {
 			int err = last_error(s->socket);
 			if (error_is_eagain(err)) return;
-			log(EVDNS_LOG_WARN, "Error %s (%d) while reading request.",
+			tor_log(EVDNS_LOG_WARN, "Error %s (%d) while reading request.",
 				tor_socket_strerror(err), err);
 			return;
 		}
@@ -1314,7 +1314,7 @@ server_port_flush(struct evdns_server_port *port)
 			int err = last_error(port->socket);
 			if (error_is_eagain(err))
 				return;
-			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", tor_socket_strerror(err), err);
+			tor_log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", tor_socket_strerror(err), err);
 		}
 		if (server_request_free(req)) {
 			/* we released the last reference to req->port. */
@@ -1331,7 +1331,7 @@ server_port_flush(struct evdns_server_port *port)
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
 	if (event_add(&port->event, NULL) < 0) {
-		log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
+		tor_log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
 		/* ???? Do more? */
 	}
 }
@@ -1349,7 +1349,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
 			  nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
-		log(EVDNS_LOG_WARN, "Error from libevent when adding event for %s",
+		tor_log(EVDNS_LOG_WARN, "Error from libevent when adding event for %s",
 			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
 	}
@@ -1859,7 +1859,7 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 			event_set(&port->event, port->socket, (port->closing?0:EV_READ) | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
 
 			if (event_add(&port->event, NULL) < 0) {
-				log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server");
+				tor_log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server");
 			}
 
 		}
@@ -1995,7 +1995,7 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 	(void) fd;
 	(void) events;
 
-	log(EVDNS_LOG_DEBUG, "Request %lx timed out", (unsigned long) arg);
+	tor_log(EVDNS_LOG_DEBUG, "Request %lx timed out", (unsigned long) arg);
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
@@ -2074,11 +2074,11 @@ evdns_request_transmit(struct evdns_request *req) {
 		 * and make us retransmit the request anyway. */
 	default:
 		/* transmitted; we need to check for timeout. */
-		log(EVDNS_LOG_DEBUG,
+		tor_log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
 
 		if (add_timeout_event(req, &global_timeout) < 0) {
-			log(EVDNS_LOG_WARN,
+			tor_log(EVDNS_LOG_WARN,
 				"Error from libevent when adding timer for request %lx",
 				(unsigned long) req);
 			/* ???? Do more? */
@@ -2126,7 +2126,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	addr = mm_malloc(sizeof(struct sockaddr_storage));
 	memcpy(addr, &ns->address, sizeof(struct sockaddr_storage));
 
-	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntop((struct sockaddr *)&ns->address));
+	tor_log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntop((struct sockaddr *)&ns->address));
 
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, addr);
 	if (!req) {
@@ -2282,14 +2282,14 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	if (server) {
 		do {
 			if (sockaddr_eq(address, (struct sockaddr *)&server->address, 1)) {
-				log(EVDNS_LOG_DEBUG, "Duplicate nameserver.");
+				tor_log(EVDNS_LOG_DEBUG, "Duplicate nameserver.");
 				return 3;
 			}
 			server = server->next;
 		} while (server != started_at);
 	}
 	if (addrlen > (int)sizeof(ns->address)) {
-		log(EVDNS_LOG_DEBUG, "Addrlen %d too long.", (int)addrlen);
+		tor_log(EVDNS_LOG_DEBUG, "Addrlen %d too long.", (int)addrlen);
 		return 2;
 	}
 
@@ -2315,14 +2315,14 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	    !sockaddr_is_loopback((struct sockaddr*)&global_bind_address)) {
 		if (bind(ns->socket, (struct sockaddr *)&global_bind_address,
 				 global_bind_addrlen) < 0) {
-			log(EVDNS_LOG_DEBUG, "Couldn't bind to outgoing address.");
+			tor_log(EVDNS_LOG_DEBUG, "Couldn't bind to outgoing address.");
 			err = 2;
 			goto out2;
 		}
 	}
 
 	if (connect(ns->socket, address, addrlen) != 0) {
-		log(EVDNS_LOG_DEBUG, "Couldn't open socket to nameserver.");
+		tor_log(EVDNS_LOG_DEBUG, "Couldn't open socket to nameserver.");
 		err = 2;
 		goto out2;
 	}
@@ -2331,12 +2331,12 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	ns->state = 1;
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
-		log(EVDNS_LOG_DEBUG, "Couldn't add event for nameserver.");
+		tor_log(EVDNS_LOG_DEBUG, "Couldn't add event for nameserver.");
 		err = 2;
 		goto out2;
 	}
 
-	log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntop(address));
+	tor_log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntop(address));
 
 	/* insert this nameserver into the list of them */
 	if (!server_head) {
@@ -2360,7 +2360,7 @@ out2:
 out1:
 	CLEAR(ns);
 	mm_free(ns);
-	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntop(address), err);
+	tor_log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntop(address), err);
 	return err;
 }
 
@@ -2393,18 +2393,18 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	 * ipv4
 	 */
 
-	log(EVDNS_LOG_DEBUG, "Trying to add nameserver <%s>", ip_as_string);
+	tor_log(EVDNS_LOG_DEBUG, "Trying to add nameserver <%s>", ip_as_string);
 
 	cp = strchr(ip_as_string, ':');
 	if (*ip_as_string == '[') {
 		size_t len;
 		if (!(cp = strchr(ip_as_string, ']'))) {
-			log(EVDNS_LOG_DEBUG, "Nameserver missing closing ]");
+			tor_log(EVDNS_LOG_DEBUG, "Nameserver missing closing ]");
 			return 4;
 		}
 		len = cp-(ip_as_string + 1);
 		if (len > sizeof(buf)-1) {
-			log(EVDNS_LOG_DEBUG, "[Nameserver] does not fit in buffer.");
+			tor_log(EVDNS_LOG_DEBUG, "[Nameserver] does not fit in buffer.");
 			return 4;
 		}
 		memcpy(buf, ip_as_string+1, len);
@@ -2422,7 +2422,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	} else if (cp) {
 		is_ipv6 = 0;
 		if (cp - ip_as_string > (int)sizeof(buf)-1) {
-			log(EVDNS_LOG_DEBUG, "Nameserver does not fit in buffer.");
+			tor_log(EVDNS_LOG_DEBUG, "Nameserver does not fit in buffer.");
 			return 4;
 		}
 		memcpy(buf, ip_as_string, cp-ip_as_string);
@@ -2440,7 +2440,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	} else {
 		port = strtoint(port_part);
 		if (port <= 0 || port > 65535) {
-			log(EVDNS_LOG_DEBUG, "Nameserver port <%s> out of range",
+			tor_log(EVDNS_LOG_DEBUG, "Nameserver port <%s> out of range",
 				port_part);
 			return 4;
 		}
@@ -2457,7 +2457,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(port);
 		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr)) {
-			log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
+			tor_log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
 			return 4;
 		}
 		return _evdns_nameserver_add_impl((struct sockaddr*)&sin6,
@@ -2471,7 +2471,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(port);
 		if (!inet_aton(addr_part, &sin.sin_addr)) {
-			log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
+			tor_log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
 			return 4;
 		}
 		return _evdns_nameserver_add_impl((struct sockaddr*)&sin,
@@ -2594,7 +2594,7 @@ request_submit(struct evdns_request *const req) {
 /* exported function */
 int evdns_resolve_ipv4(const char *name, int flags,
 					   evdns_callback_type callback, void *ptr) {
-	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
+	tor_log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct evdns_request *const req =
 			request_new(TYPE_A, name, flags, callback, ptr);
@@ -2610,7 +2610,7 @@ int evdns_resolve_ipv4(const char *name, int flags,
 /* exported function */
 int evdns_resolve_ipv6(const char *name, int flags,
 					   evdns_callback_type callback, void *ptr) {
-	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
+	tor_log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct evdns_request *const req =
 			request_new(TYPE_AAAA, name, flags, callback, ptr);
@@ -2634,7 +2634,7 @@ int evdns_resolve_reverse(const struct in_addr *in, int flags, evdns_callback_ty
 			(int)(u8)((a>>8 )&0xff),
 			(int)(u8)((a>>16)&0xff),
 			(int)(u8)((a>>24)&0xff));
-	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
+	tor_log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
 	request_submit(req);
@@ -2658,7 +2658,7 @@ int evdns_resolve_reverse_ipv6(const struct in6_addr *in, int flags, evdns_callb
 	}
 	assert(cp + strlen("ip6.arpa") < buf+sizeof(buf));
 	memcpy(cp, "ip6.arpa", strlen("ip6.arpa")+1);
-	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
+	tor_log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
 	request_submit(req);
@@ -2874,7 +2874,7 @@ search_try_next(struct evdns_request *const req) {
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				/* yep, we need to try it raw */
 				struct evdns_request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
-				log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
+				tor_log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
 					return 0;
@@ -2885,7 +2885,7 @@ search_try_next(struct evdns_request *const req) {
 
 		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
 				if (!new_name) return 1;
-		log(EVDNS_LOG_DEBUG, "Search: now trying %s (%d)", new_name, req->search_index);
+		tor_log(EVDNS_LOG_DEBUG, "Search: now trying %s (%d)", new_name, req->search_index);
 		newreq = request_new(req->request_type, new_name, req->search_flags, req->user_callback, req->user_pointer);
 		mm_free(new_name);
 		if (!newreq) return 1;
@@ -2955,7 +2955,7 @@ evdns_set_option(const char *option, const char *val, int flags)
 		const int ndots = strtoint(val);
 		if (ndots == -1) return -1;
 		if (!(flags & DNS_OPTION_SEARCH)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting ndots to %d", ndots);
+		tor_log(EVDNS_LOG_DEBUG, "Setting ndots to %d", ndots);
 		if (!global_search_state) global_search_state = search_state_new();
 		if (!global_search_state) return -1;
 		global_search_state->ndots = ndots;
@@ -2963,20 +2963,20 @@ evdns_set_option(const char *option, const char *val, int flags)
 		const int timeout = strtoint(val);
 		if (timeout == -1) return -1;
 		if (!(flags & DNS_OPTION_MISC)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting timeout to %d", timeout);
+		tor_log(EVDNS_LOG_DEBUG, "Setting timeout to %d", timeout);
 		global_timeout.tv_sec = timeout;
 	} else if (!strncmp(option, "max-timeouts:", 12)) {
 		const int maxtimeout = strtoint_clipped(val, 1, 255);
 		if (maxtimeout == -1) return -1;
 		if (!(flags & DNS_OPTION_MISC)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting maximum allowed timeouts to %d",
+		tor_log(EVDNS_LOG_DEBUG, "Setting maximum allowed timeouts to %d",
 			maxtimeout);
 		global_max_nameserver_timeout = maxtimeout;
 	} else if (!strncmp(option, "max-inflight:", 13)) {
 		const int maxinflight = strtoint_clipped(val, 1, 65000);
 		if (maxinflight == -1) return -1;
 		if (!(flags & DNS_OPTION_MISC)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting maximum inflight requests to %d",
+		tor_log(EVDNS_LOG_DEBUG, "Setting maximum inflight requests to %d",
 			maxinflight);
 		global_max_requests_inflight = maxinflight;
 	} else if (!strncmp(option, "attempts:", 9)) {
@@ -2984,12 +2984,12 @@ evdns_set_option(const char *option, const char *val, int flags)
 		if (retries == -1) return -1;
 		if (retries > 255) retries = 255;
 		if (!(flags & DNS_OPTION_MISC)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting retries to %d", retries);
+		tor_log(EVDNS_LOG_DEBUG, "Setting retries to %d", retries);
 		global_max_retransmits = retries;
 	} else if (!strncmp(option, "randomize-case:", 15)) {
 		int randcase = strtoint(val);
 		if (!(flags & DNS_OPTION_MISC)) return 0;
-		log(EVDNS_LOG_DEBUG, "Setting randomize_case to %d", randcase);
+		tor_log(EVDNS_LOG_DEBUG, "Setting randomize_case to %d", randcase);
 		global_randomize_case = randcase;
 	}
 	return 0;
@@ -3047,7 +3047,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	char *start;
 	int err = 0;
 
-	log(EVDNS_LOG_DEBUG, "Parsing resolv.conf file %s", filename);
+	tor_log(EVDNS_LOG_DEBUG, "Parsing resolv.conf file %s", filename);
 
 	fd = tor_open_cloexec(filename, O_RDONLY, 0);
 	if (fd < 0) {
@@ -3146,13 +3146,13 @@ load_nameservers_with_getnetworkparams(void)
 	GetNetworkParams_fn_t fn;
 
 	if (!(handle = load_windows_system_library(TEXT("iphlpapi.dll")))) {
-		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
+		tor_log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		/* right now status = 0, doesn't that mean "good" - mikec */
 		status = -1;
 		goto done;
 	}
 	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, TEXT("GetNetworkParams")))) {
-		log(EVDNS_LOG_WARN, "Could not get address of function.");
+		tor_log(EVDNS_LOG_WARN, "Could not get address of function.");
 		/* same as above */
 		status = -1;
 		goto done;
@@ -3173,7 +3173,7 @@ load_nameservers_with_getnetworkparams(void)
 		fixed = buf;
 		r = fn(fixed, &size);
 		if (r != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG, "fn() failed.");
+			tor_log(EVDNS_LOG_DEBUG, "fn() failed.");
 			status = -1;
 			goto done;
 		}
@@ -3185,12 +3185,12 @@ load_nameservers_with_getnetworkparams(void)
 	while (ns) {
 		r = evdns_nameserver_ip_add_line(ns->IpAddress.String);
 		if (r) {
-			log(EVDNS_LOG_DEBUG,"Could not add nameserver %s to list, "
+			tor_log(EVDNS_LOG_DEBUG,"Could not add nameserver %s to list, "
 				"error: %d; status: %d",
 				(ns->IpAddress.String),(int)GetLastError(), r);
 			status = r;
 		} else {
-			log(EVDNS_LOG_DEBUG,"Successfully added %s as nameserver",ns->IpAddress.String);
+			tor_log(EVDNS_LOG_DEBUG,"Successfully added %s as nameserver",ns->IpAddress.String);
 			added_any++;
 		}
 
@@ -3198,7 +3198,7 @@ load_nameservers_with_getnetworkparams(void)
 	}
 
 	if (!added_any) {
-		log(EVDNS_LOG_DEBUG, "No nameservers added.");
+		tor_log(EVDNS_LOG_DEBUG, "No nameservers added.");
 		if (status == 0)
 			status = -1;
 	} else {
@@ -3254,10 +3254,10 @@ load_nameservers_from_registry(void)
 
 #define TRY(k, name)													\
 	if (!found && config_nameserver_from_reg_key(k,TEXT(name)) == 0) {	\
-		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);		\
+		tor_log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);		\
 		found = 1;														\
 	} else if (!found) {												\
-		log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",			\
+		tor_log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",			\
 			#k,#name);													\
 	}
 
@@ -3266,14 +3266,14 @@ load_nameservers_from_registry(void)
 
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
 						 KEY_READ, &nt_key) != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
+			tor_log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
 		r = RegOpenKeyEx(nt_key, TEXT("Interfaces"), 0,
 						 KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 						 &interfaces_key);
 		if (r != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
+			tor_log(EVDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
 			return -1;
 		}
 		TRY(nt_key, "NameServer");
@@ -3286,7 +3286,7 @@ load_nameservers_from_registry(void)
 		HKEY win_key = 0;
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 						 KEY_READ, &win_key) != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG, "Couldn't open registry key, %d", (int)GetLastError());
+			tor_log(EVDNS_LOG_DEBUG, "Couldn't open registry key, %d", (int)GetLastError());
 			return -1;
 		}
 		TRY(win_key, "NameServer");
@@ -3294,7 +3294,7 @@ load_nameservers_from_registry(void)
 	}
 
 	if (found == 0) {
-		log(EVDNS_LOG_WARN,"Didn't find any nameservers.");
+		tor_log(EVDNS_LOG_WARN,"Didn't find any nameservers.");
 	}
 
 	return found ? 0 : -1;

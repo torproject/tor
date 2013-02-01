@@ -76,19 +76,19 @@ libevent_logging_callback(int severity, const char *msg)
   }
   switch (severity) {
     case _EVENT_LOG_DEBUG:
-      log(LOG_DEBUG, LD_NOCB|LD_NET, "Message from libevent: %s", buf);
+      log_debug(LD_NOCB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_MSG:
-      log(LOG_INFO, LD_NOCB|LD_NET, "Message from libevent: %s", buf);
+      log_info(LD_NOCB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_WARN:
-      log(LOG_WARN, LD_NOCB|LD_GENERAL, "Warning from libevent: %s", buf);
+      log_warn(LD_NOCB|LD_GENERAL, "Warning from libevent: %s", buf);
       break;
     case _EVENT_LOG_ERR:
-      log(LOG_ERR, LD_NOCB|LD_GENERAL, "Error from libevent: %s", buf);
+      log_err(LD_NOCB|LD_GENERAL, "Error from libevent: %s", buf);
       break;
     default:
-      log(LOG_WARN, LD_NOCB|LD_GENERAL, "Message [%d] from libevent: %s",
+      log_warn(LD_NOCB|LD_GENERAL, "Message [%d] from libevent: %s",
           severity, buf);
       break;
   }
@@ -261,13 +261,13 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
-  log(LOG_INFO, LD_GENERAL,
+  log_info(LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), tor_libevent_get_method());
 #else
-  log(LOG_NOTICE, LD_GENERAL,
+  log_notice(LD_GENERAL,
       "Initialized old libevent (version 1.0b or earlier).");
-  log(LOG_WARN, LD_GENERAL,
+  log_warn(LD_GENERAL,
       "You have a *VERY* old version of libevent.  It is likely to be buggy; "
       "please build Tor with a more recent version.");
 #endif
@@ -440,7 +440,7 @@ tor_check_libevent_header_compatibility(void)
 
     verybad = compat1 != compat2;
 
-    log(verybad ? LOG_WARN : LOG_NOTICE,
+    tor_log(verybad ? LOG_WARN : LOG_NOTICE,
         LD_GENERAL, "We were compiled with headers from version %s "
         "of Libevent, but we're using a Libevent library that says it's "
         "version %s.", HEADER_VERSION, event_get_version());

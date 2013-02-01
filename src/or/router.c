@@ -391,14 +391,14 @@ init_key_from_file(const char *fname, int generate, int severity)
   crypto_pk_t *prkey = NULL;
 
   if (!(prkey = crypto_pk_new())) {
-    log(severity, LD_GENERAL,"Error constructing key");
+    tor_log(severity, LD_GENERAL,"Error constructing key");
     goto error;
   }
 
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      log(severity, LD_FS,"Can't read key from \"%s\"", fname);
+      tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
       if (generate) {
@@ -406,7 +406,7 @@ init_key_from_file(const char *fname, int generate, int severity)
           if (try_locking(get_options(), 0)<0) {
             /* Make sure that --list-fingerprint only creates new keys
              * if there is no possibility for a deadlock. */
-            log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
+            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
                 "writing any new keys.", fname);
             /*XXXX The 'other process' might make a key in a second or two;
              * maybe we should wait for it. */
@@ -416,16 +416,16 @@ init_key_from_file(const char *fname, int generate, int severity)
         log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
                  fname);
         if (crypto_pk_generate_key(prkey)) {
-          log(severity, LD_GENERAL,"Error generating onion key");
+          tor_log(severity, LD_GENERAL,"Error generating onion key");
           goto error;
         }
         if (crypto_pk_check_key(prkey) <= 0) {
-          log(severity, LD_GENERAL,"Generated key seems invalid");
+          tor_log(severity, LD_GENERAL,"Generated key seems invalid");
           goto error;
         }
         log_info(LD_GENERAL, "Generated key seems valid");
         if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-          log(severity, LD_FS,
+          tor_log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);
           goto error;
         }
@@ -435,7 +435,7 @@ init_key_from_file(const char *fname, int generate, int severity)
       return prkey;
     case FN_FILE:
       if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        log(severity, LD_GENERAL,"Error loading private key.");
+        tor_log(severity, LD_GENERAL,"Error loading private key.");
         goto error;
       }
       return prkey;
@@ -465,7 +465,7 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      log(severity, LD_FS,"Can't read key from \"%s\"", fname);
+      tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
       if (generate) {
@@ -473,7 +473,7 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
           if (try_locking(get_options(), 0)<0) {
             /* Make sure that --list-fingerprint only creates new keys
              * if there is no possibility for a deadlock. */
-            log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
+            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
                 "writing any new keys.", fname);
             /*XXXX The 'other process' might make a key in a second or two;
              * maybe we should wait for it. */
@@ -485,7 +485,7 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
         if (curve25519_keypair_generate(keys_out, 1) < 0)
           goto error;
         if (curve25519_keypair_write_to_file(keys_out, fname, tag)<0) {
-          log(severity, LD_FS,
+          tor_log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);
           memset(keys_out, 0, sizeof(*keys_out));
           goto error;
@@ -498,12 +498,12 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
       {
         char *tag_in=NULL;
         if (curve25519_keypair_read_from_file(keys_out, &tag_in, fname) < 0) {
-          log(severity, LD_GENERAL,"Error loading private key.");
+          tor_log(severity, LD_GENERAL,"Error loading private key.");
           tor_free(tag_in);
           goto error;
         }
         if (!tag_in || strcmp(tag_in, tag)) {
-          log(severity, LD_GENERAL,"Unexpected tag %s on private key.",
+          tor_log(severity, LD_GENERAL,"Unexpected tag %s on private key.",
               escaped(tag_in));
           tor_free(tag_in);
           goto error;
@@ -631,13 +631,13 @@ v3_authority_check_key_expiry(void)
     return;
 
   if (time_left <= 0) {
-    log(badness, LD_DIR, "Your v3 authority certificate has expired."
+    tor_log(badness, LD_DIR, "Your v3 authority certificate has expired."
         " Generate a new one NOW.");
   } else if (time_left <= 24*60*60) {
-    log(badness, LD_DIR, "Your v3 authority certificate expires in %d hours;"
+    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d hours;"
         " Generate a new one NOW.", time_left/(60*60));
   } else {
-    log(badness, LD_DIR, "Your v3 authority certificate expires in %d days;"
+    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d days;"
         " Generate a new one soon.", time_left/(24*60*60));
   }
   last_warned = now;
@@ -902,7 +902,7 @@ init_keys(void)
   tor_free(cp);
   tor_free(keydir);
 
-  log(LOG_NOTICE, LD_GENERAL,
+  log_notice(LD_GENERAL,
       "Your Tor server's identity key fingerprint is '%s %s'",
       options->Nickname, fingerprint);
   if (!authdir_mode(options))
@@ -1062,10 +1062,10 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 
   if (advertising != new_choice) {
     if (new_choice == 1) {
-      log(LOG_NOTICE, LD_DIR, "Advertising DirPort as %d", dir_port);
+      log_notice(LD_DIR, "Advertising DirPort as %d", dir_port);
     } else {
       tor_assert(reason);
-      log(LOG_NOTICE, LD_DIR, "Not advertising DirPort (Reason: %s)", reason);
+      log_notice(LD_DIR, "Not advertising DirPort (Reason: %s)", reason);
     }
     advertising = new_choice;
   }
