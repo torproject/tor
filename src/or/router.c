@@ -406,8 +406,8 @@ init_key_from_file(const char *fname, int generate, int severity)
           if (try_locking(get_options(), 0)<0) {
             /* Make sure that --list-fingerprint only creates new keys
              * if there is no possibility for a deadlock. */
-            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
-                "writing any new keys.", fname);
+            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". "
+                    "Not writing any new keys.", fname);
             /*XXXX The 'other process' might make a key in a second or two;
              * maybe we should wait for it. */
             goto error;
@@ -473,8 +473,8 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
           if (try_locking(get_options(), 0)<0) {
             /* Make sure that --list-fingerprint only creates new keys
              * if there is no possibility for a deadlock. */
-            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
-                "writing any new keys.", fname);
+            tor_log(severity, LD_FS, "Another Tor process has locked \"%s\". "
+                    "Not writing any new keys.", fname);
             /*XXXX The 'other process' might make a key in a second or two;
              * maybe we should wait for it. */
             goto error;
@@ -632,13 +632,13 @@ v3_authority_check_key_expiry(void)
 
   if (time_left <= 0) {
     tor_log(badness, LD_DIR, "Your v3 authority certificate has expired."
-        " Generate a new one NOW.");
+            " Generate a new one NOW.");
   } else if (time_left <= 24*60*60) {
-    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d hours;"
-        " Generate a new one NOW.", time_left/(60*60));
+    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d "
+            "hours; Generate a new one NOW.", time_left/(60*60));
   } else {
-    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d days;"
-        " Generate a new one soon.", time_left/(24*60*60));
+    tor_log(badness, LD_DIR, "Your v3 authority certificate expires in %d "
+            "days; Generate a new one soon.", time_left/(24*60*60));
   }
   last_warned = now;
 }

@@ -783,8 +783,8 @@ circuit_dump_conn_details(int severity,
                           int this_circid,
                           int other_circid)
 {
-  tor_log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), "
-      "state %d (%s), born %ld:",
+  tor_log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d "
+      "(other side %d), state %d (%s), born %ld:",
       conn_array_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
@@ -846,8 +846,8 @@ circuit_dump_chan_details(int severity,
                           int this_circid,
                           int other_circid)
 {
-  tor_log(severity, LD_CIRC, "Conn %p has %s circuit: circID %d (other side %d), "
-      "state %d (%s), born %ld:",
+  tor_log(severity, LD_CIRC, "Conn %p has %s circuit: circID %d "
+      "(other side %d), state %d (%s), born %ld:",
       chan, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
