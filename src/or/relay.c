@@ -1443,7 +1443,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
             /*XXXX024: Downgrade this back to LOG_PROTOCOL_WARN after a while*/
             log_fn(LOG_WARN, LD_PROTOCOL,
                    "Bug/attack: unexpected sendme cell from client. "
-                   "Closing circ.");
+                   "Closing circ (window %d).",
+                   circ->package_window);
             return -END_CIRC_REASON_TORPROTOCOL;
           }
           circ->package_window += CIRCWINDOW_INCREMENT;
