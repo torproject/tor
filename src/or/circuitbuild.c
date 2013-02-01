@@ -1194,6 +1194,7 @@ pathbias_get_scale_ratio(const or_options_t *options)
    */
   int denominator = networkstatus_get_param(NULL, "pb_scalefactor",
                               2, 2, INT32_MAX);
+  (void) options;
   /**
    * The mult factor is the numerator for our scaling
    * of circuit counts for our path bias window. It
@@ -2458,7 +2459,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
  * better by keeping separate pending counters that get
  * transfered at circuit close.
  */
-void
+static void
 pathbias_scale_close_rates(entry_guard_t *guard)
 {
   const or_options_t *options = get_options();
