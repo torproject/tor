@@ -1884,6 +1884,16 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
           node->is_running);
 }
 
+/** Helper for dirserv_compute_performance_thresholds(): Decide whether to
+ * include a router in our calculations, and return true iff we should. */
+static int
+router_counts_toward_thresholds(const node_t *node, time_t now,
+                                const digestmap_t *omit_as_sybil)
+{
+  return node->ri && router_is_active(node->ri, node, now) &&
+    !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest);
+}
+
 /** Look through the routerlist, the Mean Time Between Failure history, and
  * the Weighted Fractional Uptime history, and use them to set thresholds for
  * the Stable, Fast, and Guard flags.  Update the fields stable_uptime,
@@ -1935,9 +1945,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
 
   /* Now, fill in the arrays. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
-    routerinfo_t *ri = node->ri;
-    if (ri && router_is_active(ri, node, now) &&
-        !digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
+    if (router_counts_toward_thresholds(node, now, omit_as_sybil)) {
+      routerinfo_t *ri = node->ri;
       const char *id = ri->cache_info.identity_digest;
       uint32_t bw;
       node->is_exit = (!router_exit_policy_rejects_all(ri) &&
@@ -1998,9 +2007,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
   n_familiar = 0;
 
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
-      routerinfo_t *ri = node->ri;
-      if (ri && router_is_active(ri, node, now) &&
-          !digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
+      if (router_counts_toward_thresholds(node, now, omit_as_sybil)) {
+        routerinfo_t *ri = node->ri;
         const char *id = ri->cache_info.identity_digest;
         long tk = rep_hist_get_weighted_time_known(id, now);
         if (tk < guard_tk)
