@@ -33,13 +33,20 @@ int
 curve25519_impl(uint8_t *output, const uint8_t *secret,
                 const uint8_t *basepoint)
 {
+  uint8_t bp[CURVE25519_PUBKEY_LEN];
+  int r;
+  memcpy(bp, basepoint, CURVE25519_PUBKEY_LEN);
+  /* Clear the high bit, in case our backend foolishly looks at it. */
+  bp[31] &= 0x7f;
 #ifdef USE_CURVE25519_DONNA
-  return curve25519_donna(output, secret, basepoint);
+  r = curve25519_donna(output, secret, bp);
 #elif defined(USE_CURVE25519_NACL)
-  return crypto_scalarmult_curve25519(output, secret, basepoint);
+  r = crypto_scalarmult_curve25519(output, secret, bp);
 #else
 #error "No implementation of curve25519 is available."
 #endif
+  memwipe(bp, 0, sizeof(bp));
+  return r;
 }
 
 /* ==============================

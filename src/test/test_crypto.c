@@ -941,6 +941,8 @@ test_crypto_curve25519_impl(void *arg)
   /* adapted from curve25519_donna, which adapted it from test-curve25519
      version 20050915, by D. J. Bernstein, Public domain. */
 
+  const int randomize_high_bit = (arg != NULL);
+
   unsigned char e1k[32];
   unsigned char e2k[32];
   unsigned char e1e2k[32];
@@ -952,12 +954,19 @@ test_crypto_curve25519_impl(void *arg)
   const int loop_max=10000;
   char *mem_op_hex_tmp = NULL;
 
-  (void)arg;
-
   for (loop = 0; loop < loop_max; ++loop) {
     curve25519_impl(e1k,e1,k);
     curve25519_impl(e2e1k,e2,e1k);
     curve25519_impl(e2k,e2,k);
+    if (randomize_high_bit) {
+      /* We require that the high bit of the public key be ignored. So if
+       * we're doing this variant test, we randomize the high bit of e2k, and
+       * make sure that the handshake still works out the same as it would
+       * otherwise. */
+      uint8_t byte;
+      crypto_rand((char*)&byte, 1);
+      e2k[31] |= (byte & 0x80);
+    }
     curve25519_impl(e1e2k,e1,e2k);
     test_memeq(e1e2k, e2e1k, 32);
     if (loop == loop_max-1) {
@@ -1135,6 +1144,7 @@ struct testcase_t crypto_tests[] = {
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
 #ifdef CURVE25519_ENABLED
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
+  { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y" },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
