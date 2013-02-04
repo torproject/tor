@@ -1893,7 +1893,8 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
  *
  * Also, set the is_exit flag of each router appropriately. */
 static void
-dirserv_compute_performance_thresholds(routerlist_t *rl)
+dirserv_compute_performance_thresholds(routerlist_t *rl,
+                                       digestmap_t *omit_as_sybil)
 {
   int n_active, n_active_nonexit, n_familiar;
   uint32_t *uptimes, *bandwidths, *bandwidths_excluding_exits;
@@ -1935,7 +1936,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   /* Now, fill in the arrays. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
     routerinfo_t *ri = node->ri;
-    if (ri && router_is_active(ri, node, now)) {
+    if (ri && router_is_active(ri, node, now) &&
+        !digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
       const char *id = ri->cache_info.identity_digest;
       uint32_t bw;
       node->is_exit = (!router_exit_policy_rejects_all(ri) &&
@@ -1997,7 +1999,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
       routerinfo_t *ri = node->ri;
-      if (ri && router_is_active(ri, node, now)) {
+      if (ri && router_is_active(ri, node, now) &&
+          !digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
         const char *id = ri->cache_info.identity_digest;
         long tk = rep_hist_get_weighted_time_known(id, now);
         if (tk < guard_tk)
@@ -2751,12 +2754,12 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     dirserv_set_router_is_running(ri, now);
   });
 
-  dirserv_compute_performance_thresholds(rl);
-
   routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
+
+  dirserv_compute_performance_thresholds(rl, omit_as_sybil);
 
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();
@@ -3008,13 +3011,12 @@ generate_v2_networkstatus_opinion(void)
     dirserv_set_router_is_running(ri, now);
   });
 
-  dirserv_compute_performance_thresholds(rl);
-
   routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
-
   omit_as_sybil = get_possible_sybil_list(routers);
+
+  dirserv_compute_performance_thresholds(rl, omit_as_sybil);
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (ri->cache_info.published_on >= cutoff) {
