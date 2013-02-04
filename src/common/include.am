@@ -52,6 +52,7 @@ src_common_libor_a_SOURCES = \
 src_common_libor_crypto_a_SOURCES = \
   src/common/aes.c		\
   src/common/crypto.c		\
+  src/common/crypto_format.c	\
   src/common/torgzip.c		\
   src/common/tortls.c		\
   $(libcrypto_extra_source)
