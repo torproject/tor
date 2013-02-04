@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Compile correctly with the --disable-curve25519 option. Fix for
+      bug 8153; bugfix on 0.2.4.8-alpha.

@@ -51,18 +51,18 @@ int curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
                                       char **tag_out,
                                       const char *fname);
 
+#ifdef CRYPTO_CURVE25519_PRIVATE
+int curve25519_impl(uint8_t *output, const uint8_t *secret,
+                    const uint8_t *basepoint);
+#endif
+#endif
+
 #define CURVE25519_BASE64_PADDED_LEN 44
 
 int curve25519_public_from_base64(curve25519_public_key_t *pkey,
                                   const char *input);
 int curve25519_public_to_base64(char *output,
                                 const curve25519_public_key_t *pkey);
-
-#ifdef CRYPTO_CURVE25519_PRIVATE
-int curve25519_impl(uint8_t *output, const uint8_t *secret,
-                    const uint8_t *basepoint);
-#endif
-#endif
 
 #endif
 
