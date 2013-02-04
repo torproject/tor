@@ -1,5 +1,7 @@
   o Major bugfixes (security, directory authority):
     - When computing directory thresholds, ignore any rejected-as-sybil
       nodes during the computation so that they can't influence Fast,
-      Guard, etc.  Fixes bug 8146.
+      Guard, etc. Fixes bug 8146.
 
+    - When computing thresholds for flags, never let the threshold for
+      the Fast flag to 4096 bytes. Fixes bug 8145.

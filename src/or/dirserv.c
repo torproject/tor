@@ -1986,9 +1986,12 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
 
   {
     /* We can vote on a parameter for the minimum and maximum. */
+#define ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG 4096
     int32_t min_fast, max_fast;
     min_fast = networkstatus_get_param(NULL, "FastFlagMinThreshold",
-                                       0, 0, INT32_MAX);
+      ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
+      ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
+      INT32_MAX);
     max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
                                        INT32_MAX, min_fast, INT32_MAX);
     if (fast_bandwidth < (uint32_t)min_fast)
