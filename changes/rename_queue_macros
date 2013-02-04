@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Rename all macros in our local copy of queue.h to begin with TOR_;
-      this seems the only good way to permanently prevent conflicts
-      with queue.h on various operating systems. Fixes bug 8107; bugfix on
-      0.2.4.6-alpha.
-

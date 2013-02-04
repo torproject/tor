@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability)
-    - Remove a couple of extraneous semicolos that were upsetting the
-      cparser library. Patch by Christian Grothoff. Fixes bug 7115;
-      bugfix on 0.2.2.1-alpha.

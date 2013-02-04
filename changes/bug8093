@@ -1,4 +1,0 @@
-  o Minor features:
-    - Improve the log message when "Bug/attack: unexpected sendme cell
-      from client" occurs, to help us track bug 8093.
-

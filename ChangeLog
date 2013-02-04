@@ -1,4 +1,140 @@
-Changes in version 0.2.4.10-alpha - 2013-0?-??
+Changes in version 0.2.4.10-alpha - 2013-02-04
+  Tor 0.2.4.10-alpha adds defenses at the directory authority level from
+  certain attacks that flood the network with relays; changes the queue
+  for circuit create requests from a sized-based limit to a time-based
+  limit; resumes building with MSVC on Windows; and fixes a wide variety
+  of other issues.
+
+  o Major bugfixes (directory authority):
+    - When computing directory thresholds, ignore any rejected-as-sybil
+      nodes during the computation so that they can't influence Fast,
+      Guard, etc. (We shoud have done this for proposal 109.) Fixes
+      bug 8146.
+    - When marking a node as a likely sybil, reset its uptime metrics
+      to zero, so that it cannot time towards getting marked as Guard,
+      Stable, or HSDir. (We shoud have done this for proposal 109.) Fixes
+      bug 8147.
+
+  o Major bugfixes:
+    - When a TLS write is partially successful but incomplete, remember
+      that the flushed part has been flushed, and notice that bytes were
+      actually written. Reported and fixed pseudonymously. Fixes bug
+      7708; bugfix on Tor 0.1.0.5-rc.
+    - Reject bogus create and relay cells with 0 circuit ID or 0 stream
+      ID: these could be used to create unexpected streams and circuits
+      which would count as "present" to some parts of Tor but "absent"
+      to others, leading to zombie circuits and streams or to a bandwidth
+      denial-of-service. Fixes bug 7889; bugfix on every released version
+      of Tor. Reported by "oftc_must_be_destroyed".
+    - Rename all macros in our local copy of queue.h to begin with "TOR_".
+      This change seems the only good way to permanently prevent conflicts
+      with queue.h on various operating systems. Fixes bug 8107; bugfix
+      on 0.2.4.6-alpha.
+
+  o Major features (relay):
+    - Instead of limiting the number of queued onionskins (aka circuit
+      create requests) to a fixed, hard-to-configure number, we limit
+      the size of the queue based on how many we expect to be able to
+      process in a given amount of time. We estimate the time it will
+      take to process an onionskin based on average processing time
+      of previous onionskins. Closes ticket 7291. You'll never have to
+      configure MaxOnionsPending again.
+
+  o Major features (portability):
+    - Resume building correctly with MSVC and Makefile.nmake. This patch
+      resolves numerous bugs and fixes reported by ultramage, including
+      7305, 7308, 7309, 7310, 7312, 7313, 7315, 7316, and 7669.
+    - Make the ntor and curve25519 code build correctly with MSVC.
+      Fix on 0.2.4.8-alpha.
+
+  o Minor features:
+    - When directory authorities are computing thresholds for flags,
+      never let the threshold for the Fast flag fall below 4096
+      bytes. Also, do not consider nodes with extremely low bandwidths
+      when deciding thresholds for various directory flags. This change
+      should raise our threshold for Fast relays, possibly in turn
+      improving overall network performance; see ticket 1854. Resolves
+      ticket 8145.
+    - The Tor client now ignores sub-domain components of a .onion
+      address. This change makes HTTP "virtual" hosting
+      possible: http://foo.aaaaaaaaaaaaaaaa.onion/ and
+      http://bar.aaaaaaaaaaaaaaaa.onion/ can be two different websites
+      hosted on the same hidden service. Implements proposal 204.
+    - We compute the overhead from passing onionskins back and forth to
+      cpuworkers, and report it when dumping statistics in response to
+      SIGUSR1. Supports ticket 7291.
+
+  o Minor features (path selection):
+    - When deciding whether we have enough descriptors to build circuits,
+      instead of looking at raw relay counts, look at which fraction
+      of (bandwidth-weighted) paths we're able to build. This approach
+      keeps clients from building circuits if their paths are likely to
+      stand out statistically. The default fraction of paths needed is
+      taken from the consensus directory; you can override it with the
+      new PathsNeededToBuildCircuits option. Fixes ticket 5956.
+    - When any country code is listed in ExcludeNodes or ExcludeExitNodes,
+      and we have GeoIP information, also exclude all nodes with unknown
+      countries "??" and "A1". This behavior is controlled by the
+      new GeoIPExcludeUnknown option: you can make such nodes always
+      excluded with "GeoIPExcludeUnknown 1", and disable the feature
+      with "GeoIPExcludeUnknown 0". Setting "GeoIPExcludeUnknown auto"
+      gets you the default behavior. Implements feature 7706.
+    - Path Use Bias: Perform separate accounting for successful circuit
+      use. Keep separate statistics on stream attempt rates versus stream
+      success rates for each guard. Provide configurable thresholds to
+      determine when to emit log messages or disable use of guards that
+      fail too many stream attempts. Resolves ticket 7802.
+
+  o Minor features (log messages):
+    - When learning a fingerprint for a bridge, log its corresponding
+      transport type. Implements ticket 7896.
+    - Improve the log message when "Bug/attack: unexpected sendme cell
+      from client" occurs, to help us track bug 8093.
+
+  o Minor bugfixes:
+    - Remove a couple of extraneous semicolons that were upsetting the
+      cparser library. Patch by Christian Grothoff. Fixes bug 7115;
+      bugfix on 0.2.2.1-alpha.
+    - Remove a source of rounding error during path bias count scaling;
+      don't count cannibalized circuits as used for path bias until we
+      actually try to use them; and fix a circuit_package_relay_cell()
+      warning message about n_chan==NULL. Fixes bug 7802.
+    - Detect nacl when its headers are in a nacl/ subdirectory. Also,
+      actually link against nacl when we're configured to use it. Fixes
+      bug 7972; bugfix on 0.2.4.8-alpha.
+    - Compile correctly with the --disable-curve25519 option. Fixes
+      bug 8153; bugfix on 0.2.4.8-alpha.
+
+  o Build improvements:
+    - Do not report status verbosely from autogen.sh unless the -v flag
+      is specified. Fixes issue 4664. Patch from Onizuka.
+    - Replace all calls to snprintf() outside of src/ext with
+      tor_snprintf(). Also remove the #define to replace snprintf with
+      _snprintf on Windows; they have different semantics, and all of
+      our callers should be using tor_snprintf() anyway. Fixes bug 7304.
+    - Try to detect if we are ever building on a platform where
+      memset(...,0,...) does not set the value of a double to 0.0. Such
+      platforms are permitted by the C standard, though in practice
+      they're pretty rare (since IEEE 754 is nigh-ubiquitous). We don't
+      currently support them, but it's better to detect them and fail
+      than to perform erroneously.
+
+  o Removed features:
+    - Stop exporting estimates of v2 and v3 directory traffic shares
+      in extrainfo documents. They were unneeded and sometimes inaccurate.
+      Also stop exporting any v2 directory request statistics. Resolves
+      ticket 5823.
+    - Drop support for detecting and warning about versions of Libevent
+      before 1.3e. Nothing reasonable ships with them any longer;
+      warning the user about them shouldn't be needed. Resolves ticket
+      6826.
+
+  o Code simplifications and refactoring:
+    - Rename "isin" functions to "contains", for grammar. Resolves
+      ticket 5285.
+    - Rename Tor's logging function log() to tor_log(), to avoid conflicts
+      with the natural logarithm function from the system libm. Resolves
+      ticket 7599.
 
 
 Changes in version 0.2.4.9-alpha - 2013-01-15

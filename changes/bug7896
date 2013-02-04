@@ -1,3 +1,0 @@
-  o Minor features:
-    - When learning a fingerprint for a bridge, log its corresponding
-      transport type. Implements ticket 7896.

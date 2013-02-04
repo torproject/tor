@@ -1,5 +1,0 @@
-  o Minor features:
-    - Ignore sub-domain components of a .onion address. This makes HTTP "virtual"
-      hosting possible: http://foo.aaaaaaaaaaaaaaaa.onion/ and
-      http//bar.aaaaaaaaaaaaaaaa.onion/ can be two different websites hosted at
-      the same location. Implements proposal 204.

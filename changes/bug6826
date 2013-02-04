@@ -1,5 +1,0 @@
-  o Removed features:
-    - Drop support for detecting and warning about versions of Libevent
-      before 1.3e. Nothing reasonable ships with them any longer;
-      warning the user about them shouldn't be needed. Resolves ticket
-      6826.

@@ -1,6 +1,0 @@
-  o Build fixes (MSVC):
-    - Correctly define HAVE_EVENT_BASE_LOOPEXIT, since we only build
-      with MSVC when using Libevent 2.0 or later. Fixes bug 7308.
-      Reported by "ultramage".
-    - Make the ntor and curve25519 code build correctly with MSVC.
-      Fix on 0.2.4.8-alpha.

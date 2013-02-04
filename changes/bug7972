@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Detect nacl when its headers are in a nacl/ subdirectory. Fixes bug
-      7972; bugfix on 0.2.4.8-alpha.
-    - Actually link against nacl when we're configured to use it. Fixes bug
-      7972; bugfix on 0.2.4.8-alpha.
