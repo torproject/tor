@@ -1313,6 +1313,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *myexits= smartlist_new();
   double f_guard, f_mid, f_exit, f_myexit;
   int np, nu; /* Ignored */
+  const int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
 
   count_usable_descriptors(num_present_out, num_usable_out,
                            mid, consensus, options, now, NULL, 0);
@@ -1321,8 +1322,13 @@ compute_frac_paths_available(const networkstatus_t *consensus,
                              options->EntryNodes, 0);
   } else {
     SMARTLIST_FOREACH(mid, const node_t *, node, {
-      if (node->is_possible_guard)
-        smartlist_add(guards, (node_t*)node);
+      if (authdir) {
+        if (node->rs && node->rs->is_possible_guard)
+          smartlist_add(guards, (node_t*)node);
+      } else {
+        if (node->is_possible_guard)
+          smartlist_add(guards, (node_t*)node);
+      }
     });
   }
 
