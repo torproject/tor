@@ -1884,6 +1884,10 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
           node->is_running);
 }
 
+/** Don't consider routers with less bandwidth than this when computing
+ * thresholds. */
+#define ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER 4096
+
 /** Helper for dirserv_compute_performance_thresholds(): Decide whether to
  * include a router in our calculations, and return true iff we should. */
 static int
@@ -1891,7 +1895,9 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
                                 const digestmap_t *omit_as_sybil)
 {
   return node->ri && router_is_active(node->ri, node, now) &&
-    !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest);
+    !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest) &&
+    (router_get_advertised_bandwidth(node->ri) >=
+       ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER);
 }
 
 /** Look through the routerlist, the Mean Time Between Failure history, and

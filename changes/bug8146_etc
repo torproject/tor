@@ -5,3 +5,6 @@
 
     - When computing thresholds for flags, never let the threshold for
       the Fast flag to 4096 bytes. Fixes bug 8145.
+    - Do not consider nodes with extremely low bandwidths when deciding
+      thresholds for various directory flags. Another fix for 8145.
+
