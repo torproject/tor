@@ -8,3 +8,6 @@
     - Do not consider nodes with extremely low bandwidths when deciding
       thresholds for various directory flags. Another fix for 8145.
 
+    - When marking a node as a likely sybil, reset its uptime metrics
+      to zero, so that it cannot time towards getting marked as Guard,
+      Stable, or HSDir. Fix for bug 8147.

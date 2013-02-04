@@ -24,6 +24,8 @@ void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
 
+void rep_hist_make_router_pessimal(const char *id, time_t when);
+
 void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
 

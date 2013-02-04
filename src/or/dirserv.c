@@ -2776,6 +2776,11 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
 
+  DIGESTMAP_FOREACH(omit_as_sybil, sybil_id, void *, ignore) {
+    (void) ignore;
+    rep_hist_make_router_pessimal(sybil_id, now);
+  } DIGESTMAP_FOREACH_END;
+
   dirserv_compute_performance_thresholds(rl, omit_as_sybil);
 
   routerstatuses = smartlist_new();
