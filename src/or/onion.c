@@ -82,6 +82,8 @@ have_room_for_onionskin(uint16_t type)
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
       tap_usec / 1000 > (uint64_t)options->MaxOnionQueueDelay * 2 / 3)
     return 0;
+#else
+  (void) type;
 #endif
 
   return 1;
