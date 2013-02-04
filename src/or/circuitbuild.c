@@ -2164,11 +2164,11 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
                               path_state_t from,
                               path_state_t to)
 {
-  circuit_t *circ = global_circuitlist;
+  circuit_t *circ;
   int open_circuits = 0;
 
-  /* Count currently open circuits. Give them the benefit of the doubt */
-  for ( ; circ; circ = circ->next) {
+  /* Count currently open circuits. Give them the benefit of the doubt. */
+  for (circ = global_circuitlist; circ; circ = circ->next) {
     origin_circuit_t *ocirc = NULL;
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
         circ->marked_for_close) /* already counted */
@@ -2183,8 +2183,8 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
         ocirc->path_state <= to &&
         pathbias_should_count(ocirc) &&
         fast_memeq(guard->identity,
-                ocirc->cpath->extend_info->identity_digest,
-                DIGEST_LEN)) {
+                   ocirc->cpath->extend_info->identity_digest,
+                   DIGEST_LEN)) {
       log_debug(LD_CIRC, "Found opened circuit %d in path_state %s",
                 ocirc->global_identifier,
                 pathbias_state_to_string(ocirc->path_state));
@@ -2252,7 +2252,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
           log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing to carry an extremely large "
                  "amount of stream on its circuits. "
-                 "To avoid potential route manipluation attacks, Tor has "
+                 "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
                  "Use counts are %ld/%ld. Success counts are %ld/%ld. "
                  "%ld circuits completed, %ld were unusable, %ld collapsed, "
@@ -2355,7 +2355,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
           log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing an extremely large "
                  "amount of circuits. "
-                 "To avoid potential route manipluation attacks, Tor has "
+                 "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
                  "Success counts are %ld/%ld. Use counts are %ld/%ld. "
                  "%ld circuits completed, %ld were unusable, %ld collapsed, "
@@ -2531,9 +2531,10 @@ pathbias_scale_use_rates(entry_guard_t *guard)
 }
 
 /** Increment the number of times we successfully extended a circuit to
- * 'guard', first checking if the failure rate is high enough that we should
- * eliminate the guard.  Return -1 if the guard looks no good; return 0 if the
- * guard looks fine. */
+ * <b>guard</b>, first checking if the failure rate is high enough that
+ * we should eliminate the guard. Return -1 if the guard looks no good;
+ * return 0 if the guard looks fine.
+ */
 static int
 entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
 {
