@@ -1,0 +1,5 @@
+  o Minor features (directory authority):
+    - Include inside each vote a statement of the performance
+      thresholds that made the authority vote for its flags. Implements
+      ticket 8151.
+ 
