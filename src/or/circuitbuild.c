@@ -2336,7 +2336,10 @@ pathbias_measure_use_rate(entry_guard_t *guard)
  * pathbias_measure_use_rate(). It may be possible to combine them
  * eventually, especially if we can ever remove the need for 3
  * levels of closure warns (if the overall circuit failure rate
- * goes down with ntor).
+ * goes down with ntor). One way to do so would be to multiply
+ * the build rate with the use rate to get an idea of the total
+ * fraction of the total network paths the user is able to use.
+ * See ticket #8159.
  */
 static void
 pathbias_measure_close_rate(entry_guard_t *guard)
