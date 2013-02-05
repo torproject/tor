@@ -134,6 +134,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char fu[ISO_TIME_LEN+1];
     char vu[ISO_TIME_LEN+1];
     char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
+    /* XXXX Abstraction violation: should be pulling a field out of v3_ns.*/
+    char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
@@ -160,6 +162,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "voting-delay %d %d\n"
                  "%s" /* versions */
                  "known-flags %s\n"
+                 "flag-thresholds %s\n"
                  "params %s\n"
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
@@ -169,6 +172,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
                  flags,
+                 flag_thresholds,
                  params,
                  voter->nickname, fingerprint, voter->address,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
@@ -181,6 +185,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
     tor_free(params);
     tor_free(flags);
+    tor_free(flag_thresholds);
     tor_free(methods);
     outp = status + strlen(status);
     endp = status + len;

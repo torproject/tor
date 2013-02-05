@@ -2059,6 +2059,30 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
   tor_free(wfus);
 }
 
+/** Give a statement of our current performance thresholds for inclusion
+ * in a vote document. */
+char *
+dirserv_get_flag_thresholds_line(void)
+{
+  char *result=NULL;
+  tor_asprintf(&result,
+      "stable-uptime=%lu stable-mtbf=%lu "
+      "fast-speed=%lu "
+      "guard-wfu=%.03f%% guard-tk=%lu "
+      "guard-bw-inc-exits=%lu guard-bw-exc-exits=%lu "
+      "enough-mtbf=%d",
+      (unsigned long)stable_uptime,
+      (unsigned long)stable_mtbf,
+      (unsigned long)fast_bandwidth,
+      guard_wfu*100,
+      (unsigned long)guard_tk,
+      (unsigned long)guard_bandwidth_including_exits,
+      (unsigned long)guard_bandwidth_excluding_exits,
+      enough_mtbf_info ? 1 : 0);
+
+  return result;
+}
+
 /** Given a platform string as in a routerinfo_t (possibly null), return a
  * newly allocated version string for a networkstatus document, or NULL if the
  * platform doesn't give a Tor version. */
