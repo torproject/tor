@@ -1222,7 +1222,7 @@ pathbias_get_min_use(const or_options_t *options)
 static double
 pathbias_get_notice_use_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_NOTICE_USE_PCT 90
+#define DFLT_PATH_BIAS_NOTICE_USE_PCT 80
   if (options->PathBiasNoticeUseRate >= 0.0)
     return options->PathBiasNoticeUseRate;
   else
@@ -1238,7 +1238,7 @@ pathbias_get_notice_use_rate(const or_options_t *options)
 double
 pathbias_get_extreme_use_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_EXTREME_USE_PCT 70
+#define DFLT_PATH_BIAS_EXTREME_USE_PCT 60
   if (options->PathBiasExtremeUseRate >= 0.0)
     return options->PathBiasExtremeUseRate;
   else
