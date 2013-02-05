@@ -8,11 +8,11 @@ Changes in version 0.2.4.10-alpha - 2013-02-04
   o Major bugfixes (directory authority):
     - When computing directory thresholds, ignore any rejected-as-sybil
       nodes during the computation so that they can't influence Fast,
-      Guard, etc. (We shoud have done this for proposal 109.) Fixes
+      Guard, etc. (We should have done this for proposal 109.) Fixes
       bug 8146.
     - When marking a node as a likely sybil, reset its uptime metrics
       to zero, so that it cannot time towards getting marked as Guard,
-      Stable, or HSDir. (We shoud have done this for proposal 109.) Fixes
+      Stable, or HSDir. (We should have done this for proposal 109.) Fixes
       bug 8147.
 
   o Major bugfixes:
