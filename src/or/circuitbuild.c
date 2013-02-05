@@ -2273,8 +2273,8 @@ pathbias_measure_use_rate(entry_guard_t *guard)
           entry_guards_changed();
           return;
         }
-      } else if (!guard->path_bias_extreme) {
-        guard->path_bias_extreme = 1;
+      } else if (!guard->path_bias_use_extreme) {
+        guard->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing to carry an extremely large "
                  "amount of streams on its circuits. "
@@ -2297,8 +2297,8 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       }
     } else if (pathbias_get_use_success_count(guard)/guard->use_attempts
                < pathbias_get_notice_use_rate(options)) {
-      if (!guard->path_bias_noticed) {
-        guard->path_bias_noticed = 1;
+      if (!guard->path_bias_use_noticed) {
+        guard->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
                  "Your Guard %s=%s is failing to carry more streams on its "
                  "circuits than usual. "

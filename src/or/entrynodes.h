@@ -39,6 +39,10 @@ typedef struct entry_guard_t {
                                        * bias for this node already? */
   unsigned int path_bias_disabled : 1; /**< Have we disabled this node because
                                         * of path bias issues? */
+  unsigned int path_bias_use_noticed : 1; /**< Did we alert the user about path
+                                       * use bias for this node already? */
+  unsigned int path_bias_use_extreme : 1; /**< Did we alert the user about path
+                                       * use bias for this node already? */
   unsigned int is_dir_cache : 1; /**< Is this node a directory cache? */
   time_t bad_since; /**< 0 if this guard is currently usable, or the time at
                       * which it was observed to become (according to the
