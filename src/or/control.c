@@ -3843,8 +3843,9 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 
   orconn_target_get_name(name, sizeof(name), conn);
   send_control_event(EVENT_OR_CONN_STATUS, ALL_FORMATS,
-                              "650 ORCONN %s %s %s%s%s\r\n",
+                              "650 ORCONN %s %s ID="U64_FORMAT" %s%s%s\r\n",
                               name, status,
+                              U64_PRINTF_ARG(conn->base_.global_identifier),
                               reason ? "REASON=" : "",
                               orconn_end_reason_to_control_string(reason),
                               ncircs_buf);
