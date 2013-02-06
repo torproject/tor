@@ -839,6 +839,7 @@ typedef enum {
 #define CELL_AUTH_CHALLENGE 130
 #define CELL_AUTHENTICATE 131
 #define CELL_AUTHORIZE 132
+#define CELL_MAX_ 132
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
@@ -1087,6 +1088,21 @@ typedef struct insertion_time_queue_t {
   struct insertion_time_elem_t *last; /**< Last element in queue. */
 } insertion_time_queue_t;
 
+/** Number of cells with the same command consecutively added to a circuit
+ * queue; used for cell statistics only in TestingTorNetwork mode. */
+typedef struct insertion_command_elem_t {
+  struct insertion_command_elem_t *next; /**< Next element in queue. */
+  /** Which command did these consecutively added cells have? */
+  uint8_t command;
+  unsigned counter; /**< How many cells were inserted? */
+} insertion_command_elem_t;
+
+/** Queue of insertion commands. */
+typedef struct insertion_command_queue_t {
+  struct insertion_command_elem_t *first; /**< First element in queue. */
+  struct insertion_command_elem_t *last; /**< Last element in queue. */
+} insertion_command_queue_t;
+
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
@@ -1094,6 +1110,8 @@ typedef struct cell_queue_t {
   packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty. */
   int n; /**< The number of cells in the queue. */
   insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
+ /** Commands of inserted cells. */
+  insertion_command_queue_t *insertion_commands;
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -2730,6 +2748,19 @@ typedef struct {
 
 struct create_cell_t;
 
+/** Entry in the cell stats list of a circuit; used only when
+ * TestingTorNetwork is set. */
+typedef struct testing_cell_stats_entry_t {
+  uint8_t command; /**< cell command number. */
+  /** Waiting time in centiseconds if this event is for a removed cell,
+   * or 0 if this event is for adding a cell to the queue.  22 bits can
+   * store more than 11 hours, enough to assume that a circuit with this
+   * delay would long have been closed. */
+  unsigned int waiting_time:22;
+  unsigned int removed:1; /**< 0 for added to, 1 for removed from queue. */
+  unsigned int exit_ward:1; /**< 0 for app-ward, 1 for exit-ward. */
+} testing_cell_stats_entry_t;
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
@@ -2855,6 +2886,11 @@ typedef struct circuit_t {
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_chan;
+
+  /** Various statistics about cells being added to or removed from this
+   * circuit's queues; used only when TestingTorNetwork is set and cleared
+   * after being sent to control port. */
+  smartlist_t *testing_cell_stats;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given

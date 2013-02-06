@@ -2045,6 +2045,10 @@ static mp_pool_t *cell_pool = NULL;
  * statistics. */
 static mp_pool_t *it_pool = NULL;
 
+/** Memory pool to allocate insertion_command_elem_t objects used for cell
+ * statistics in TestingTorNetwork mode. */
+static mp_pool_t *ic_pool = NULL;
+
 /** Allocate structures to hold cells. */
 void
 init_cell_pool(void)
@@ -2053,8 +2057,8 @@ init_cell_pool(void)
   cell_pool = mp_pool_new(sizeof(packed_cell_t), 128*1024);
 }
 
-/** Free all storage used to hold cells (and insertion times if we measure
- * cell statistics). */
+/** Free all storage used to hold cells (and insertion times/commands if we
+ * measure cell statistics and/or are in TestingTorNetwork mode). */
 void
 free_cell_pool(void)
 {
@@ -2066,6 +2070,10 @@ free_cell_pool(void)
   if (it_pool) {
     mp_pool_destroy(it_pool);
     it_pool = NULL;
+  }
+  if (ic_pool) {
+    mp_pool_destroy(ic_pool);
+    ic_pool = NULL;
   }
 }
 
@@ -2145,14 +2153,16 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
   ++queue->n;
 }
 
-/** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
+/** Append a newly allocated copy of <b>cell</b> to the end of the
+ * <b>exit_ward</b> (or app-ward) <b>queue</b> of <b>circ</b>. */
 void
-cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
+cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
+                              int exit_ward, const cell_t *cell,
                               int wide_circ_ids)
 {
   packed_cell_t *copy = packed_cell_copy(cell, wide_circ_ids);
   /* Remember the time when this cell was put in the queue. */
-  if (get_options()->CellStatistics) {
+  if (get_options()->CellStatistics || get_options()->TestingTorNetwork) {
     struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
@@ -2178,6 +2188,38 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
         it_queue->last = elem;
       } else {
         it_queue->first = it_queue->last = elem;
+      }
+    }
+  }
+  /* Remember that we added a cell to the queue, and remember the cell
+   * command. */
+  if (get_options()->TestingTorNetwork) {
+    insertion_command_queue_t *ic_queue = queue->insertion_commands;
+    testing_cell_stats_entry_t *ent =
+                      tor_malloc_zero(sizeof(testing_cell_stats_entry_t));
+    ent->command = cell->command;
+    ent->exit_ward = exit_ward;
+    if (!circ->testing_cell_stats)
+      circ->testing_cell_stats = smartlist_new();
+    smartlist_add(circ->testing_cell_stats, ent);
+    if (!ic_pool)
+      ic_pool = mp_pool_new(sizeof(insertion_command_elem_t), 1024);
+    if (!ic_queue) {
+      ic_queue = tor_malloc_zero(sizeof(insertion_command_queue_t));
+      queue->insertion_commands = ic_queue;
+    }
+    if (ic_queue->last && ic_queue->last->command == cell->command) {
+      ic_queue->last->counter++;
+    } else {
+      insertion_command_elem_t *elem = mp_pool_get(ic_pool);
+      elem->next = NULL;
+      elem->command = cell->command;
+      elem->counter = 1;
+      if (ic_queue->last) {
+        ic_queue->last->next = elem;
+        ic_queue->last = elem;
+      } else {
+        ic_queue->first = ic_queue->last = elem;
       }
     }
   }
@@ -2386,7 +2428,8 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
     cell = cell_queue_pop(queue);
 
     /* Calculate the exact time that this cell has spent in the queue. */
-    if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
+    if (get_options()->CellStatistics ||
+        get_options()->TestingTorNetwork) {
       struct timeval tvnow;
       uint32_t flushed;
       uint32_t cell_waiting_time;
@@ -2400,7 +2443,6 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
                              "recently enabled.");
       } else {
         insertion_time_elem_t *elem = it_queue->first;
-        or_circ = TO_OR_CIRCUIT(circ);
         cell_waiting_time =
             (uint32_t)((flushed * 10L + SECONDS_IN_A_DAY * 1000L -
                         elem->insertion_time * 10L) %
@@ -2413,8 +2455,38 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
             it_queue->last = NULL;
           mp_pool_release(elem);
         }
-        or_circ->total_cell_waiting_time += cell_waiting_time;
-        or_circ->processed_cells++;
+        if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
+          or_circ = TO_OR_CIRCUIT(circ);
+          or_circ->total_cell_waiting_time += cell_waiting_time;
+          or_circ->processed_cells++;
+        }
+        if (get_options()->TestingTorNetwork) {
+          insertion_command_queue_t *ic_queue = queue->insertion_commands;
+          if (!ic_queue || !ic_queue->first) {
+            log_info(LD_BUG, "Cannot determine command of cell, which "
+                             "is a bug, because TestingTorNetwork cannot "
+                             "be enabled while running.");
+          } else {
+            testing_cell_stats_entry_t *ent =
+                        tor_malloc_zero(sizeof(testing_cell_stats_entry_t));
+            insertion_command_elem_t *ic_elem = ic_queue->first;
+            ent->command = ic_elem->command;
+            ic_elem->counter--;
+            if (ic_elem->counter < 1) {
+              ic_queue->first = ic_elem->next;
+              if (ic_elem == ic_queue->last)
+                ic_queue->last = NULL;
+              mp_pool_release(ic_elem);
+            }
+            ent->waiting_time = (unsigned int)cell_waiting_time / 10;
+            ent->removed = 1;
+            if (circ->n_chan == chan)
+              ent->exit_ward = 1;
+            if (!circ->testing_cell_stats)
+              circ->testing_cell_stats = smartlist_new();
+            smartlist_add(circ->testing_cell_stats, ent);
+          }
+        }
       }
     }
 
@@ -2470,10 +2542,12 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 {
   cell_queue_t *queue;
   int streams_blocked;
+  int exit_ward;
   if (circ->marked_for_close)
     return;
 
-  if (direction == CELL_DIRECTION_OUT) {
+  exit_ward = (direction == CELL_DIRECTION_OUT);
+  if (exit_ward) {
     queue = &circ->n_chan_cells;
     streams_blocked = circ->streams_blocked_on_n_chan;
   } else {
@@ -2482,7 +2556,8 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     streams_blocked = circ->streams_blocked_on_p_chan;
   }
 
-  cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids);
+  cell_queue_append_packed_copy(circ, queue, exit_ward, cell,
+                                chan->wide_circ_ids);
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */

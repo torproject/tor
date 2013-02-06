@@ -83,7 +83,8 @@
 #define EVENT_SIGNAL           0x0018
 #define EVENT_CONF_CHANGED     0x0019
 #define EVENT_CONN_BW          0x001A
-#define EVENT_MAX_             0x001A
+#define EVENT_CELL_STATS       0x001B
+#define EVENT_MAX_             0x001B
 /* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -960,6 +961,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
   { EVENT_CONN_BW, "CONN_BW" },
+  { EVENT_CELL_STATS, "CELL_STATS" },
   { 0, NULL },
 };
 
@@ -3952,6 +3954,167 @@ control_event_conn_bandwidth_used(void)
       EVENT_IS_INTERESTING(EVENT_CONN_BW)) {
     SMARTLIST_FOREACH(get_connection_array(), connection_t *, conn,
                       control_event_conn_bandwidth(conn));
+  }
+  return 0;
+}
+
+extern circuit_t *global_circuitlist;
+
+/** Convert the cell <b>command</b> into a lower-case, human-readable
+ * string. */
+static const char *
+cell_command_to_string(uint8_t command)
+{
+  switch (command) {
+    case CELL_PADDING: return "padding";
+    case CELL_CREATE: return "create";
+    case CELL_CREATED: return "created";
+    case CELL_RELAY: return "relay";
+    case CELL_DESTROY: return "destroy";
+    case CELL_CREATE_FAST: return "create_fast";
+    case CELL_CREATED_FAST: return "created_fast";
+    case CELL_VERSIONS: return "versions";
+    case CELL_NETINFO: return "netinfo";
+    case CELL_RELAY_EARLY: return "relay_early";
+    case CELL_CREATE2: return "create2";
+    case CELL_CREATED2: return "created2";
+    case CELL_VPADDING: return "vpadding";
+    case CELL_CERTS: return "certs";
+    case CELL_AUTH_CHALLENGE: return "auth_challenge";
+    case CELL_AUTHENTICATE: return "authenticate";
+    case CELL_AUTHORIZE: return "authorize";
+    default: return "unrecognized";
+  }
+}
+
+/** Helper: append a cell statistics string to <code>event_parts</code>,
+ * prefixed with <code>key</code>=.  Statistics consist of comma-separated
+ * key:value pairs with lower-case command strings as keys and cell
+ * numbers or total waiting times as values.  A key:value pair is included
+ * if the entry in <code>include_if_positive</code> is positive, but with
+ * the (possibly zero) entry from <code>number_to_include</code>.  If no
+ * entry in <code>include_if_positive</code> is positive, no string will
+ * be added to <code>event_parts</code>. */
+static void
+append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
+                             uint64_t *include_if_positive,
+                             uint64_t *number_to_include)
+{
+  smartlist_t *key_value_strings = smartlist_new();
+  int i;
+  for (i = 0; i <= CELL_MAX_; i++) {
+    if (include_if_positive[i] > 0) {
+      smartlist_add_asprintf(key_value_strings, "%s:"U64_FORMAT,
+                             cell_command_to_string(i),
+                             U64_PRINTF_ARG(number_to_include[i]));
+    }
+  }
+  if (key_value_strings->num_used > 0) {
+    char *joined = smartlist_join_strings(key_value_strings, ",", 0, NULL);
+    char *result;
+    tor_asprintf(&result, "%s=%s", key, joined);
+    smartlist_add(event_parts, result);
+    SMARTLIST_FOREACH(key_value_strings, char *, cp, tor_free(cp));
+    tor_free(joined);
+  }
+  smartlist_free(key_value_strings);
+}
+
+/** A second or more has elapsed: tell any interested control connection
+ * how many cells have been processed for a given circuit. */
+int
+control_event_circuit_cell_stats(void)
+{
+  /* These arrays temporarily consume slightly over 6 KiB on the stack
+   * every second, most of which are wasted for the non-existant commands
+   * between CELL_RELAY_EARLY (9) and CELL_VPADDING (128).  But nothing
+   * beats the stack when it comes to performance. */
+  uint64_t added_cells_appward[CELL_MAX_ + 1],
+           added_cells_exitward[CELL_MAX_ + 1],
+           removed_cells_appward[CELL_MAX_ + 1],
+           removed_cells_exitward[CELL_MAX_ + 1],
+           total_time_appward[CELL_MAX_ + 1],
+           total_time_exitward[CELL_MAX_ + 1];
+  circuit_t *circ;
+  if (!get_options()->TestingTorNetwork ||
+      !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
+    return 0;
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    smartlist_t *event_parts;
+    char *event_string;
+
+    if (!circ->testing_cell_stats)
+      continue;
+
+    memset(added_cells_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    memset(added_cells_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    memset(removed_cells_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    memset(removed_cells_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    memset(total_time_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    memset(total_time_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
+    SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
+                            testing_cell_stats_entry_t *, ent) {
+      tor_assert(ent->command <= CELL_MAX_);
+      if (!ent->removed && !ent->exit_ward) {
+        added_cells_appward[ent->command] += 1;
+      } else if (!ent->removed && ent->exit_ward) {
+        added_cells_exitward[ent->command] += 1;
+      } else if (!ent->exit_ward) {
+        removed_cells_appward[ent->command] += 1;
+        total_time_appward[ent->command] += ent->waiting_time * 10;
+      } else {
+        removed_cells_exitward[ent->command] += 1;
+        total_time_exitward[ent->command] += ent->waiting_time * 10;
+      }
+      tor_free(ent);
+    } SMARTLIST_FOREACH_END(ent);
+    smartlist_free(circ->testing_cell_stats);
+    circ->testing_cell_stats = NULL;
+
+    event_parts = smartlist_new();
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+      char *id_string;
+      tor_asprintf(&id_string, "ID=%lu",
+                   (unsigned long)ocirc->global_identifier);
+      smartlist_add(event_parts, id_string);
+    } else {
+      or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+      char *queue_string, *conn_string;
+      tor_asprintf(&queue_string, "InboundQueue=%lu",
+                   (unsigned long)or_circ->p_circ_id);
+      tor_asprintf(&conn_string, "InboundConn="U64_FORMAT,
+                   U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
+      smartlist_add(event_parts, queue_string);
+      smartlist_add(event_parts, conn_string);
+      append_cell_stats_by_command(event_parts, "InboundAdded",
+                  added_cells_appward, added_cells_appward);
+      append_cell_stats_by_command(event_parts, "InboundRemoved",
+                  removed_cells_appward, removed_cells_appward);
+      append_cell_stats_by_command(event_parts, "InboundTime",
+                  removed_cells_appward, total_time_appward);
+    }
+    if (circ->n_chan) {
+      char *queue_string, *conn_string;
+      tor_asprintf(&queue_string, "OutboundQueue=%lu",
+                       (unsigned long)circ->n_circ_id);
+      tor_asprintf(&conn_string, "OutboundConn="U64_FORMAT,
+                   U64_PRINTF_ARG(circ->n_chan->global_identifier));
+      smartlist_add(event_parts, queue_string);
+      smartlist_add(event_parts, conn_string);
+      append_cell_stats_by_command(event_parts, "OutboundAdded",
+                  added_cells_exitward, added_cells_exitward);
+      append_cell_stats_by_command(event_parts, "OutboundRemoved",
+                  removed_cells_exitward, removed_cells_exitward);
+      append_cell_stats_by_command(event_parts, "OutboundTime",
+                  removed_cells_exitward, total_time_exitward);
+    }
+    event_string = smartlist_join_strings(event_parts, " ", 0, NULL);
+    send_control_event(EVENT_CELL_STATS, ALL_FORMATS,
+                       "650 CELL_STATS %s\r\n", event_string);
+    SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));
+    smartlist_free(event_parts);
+    tor_free(event_string);
   }
   return 0;
 }
