@@ -351,6 +351,8 @@ connection_remove(connection_t *conn)
             (int)conn->s, conn_type_to_string(conn->type),
             smartlist_len(connection_array));
 
+  control_event_conn_bandwidth(conn);
+
   tor_assert(conn->conn_array_index >= 0);
   current_index = conn->conn_array_index;
   connection_unregister_events(conn); /* This is redundant, but cheap. */
@@ -1638,6 +1640,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
   control_event_stream_bandwidth_used();
+  control_event_conn_bandwidth_used();
 
   if (server_mode(options) &&
       !net_is_disabled() &&

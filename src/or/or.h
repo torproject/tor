@@ -1230,6 +1230,12 @@ typedef struct connection_t {
 
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
+
+  /** Bytes read since last call to control_event_conn_bandwidth_used() */
+  uint32_t n_read;
+
+  /** Bytes written since last call to control_event_conn_bandwidth_used() */
+  uint32_t n_written;
 } connection_t;
 
 /** Subtype of connection_t; used for a listener socket. */

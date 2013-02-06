@@ -82,7 +82,8 @@
 #define EVENT_BUILDTIMEOUT_SET     0x0017
 #define EVENT_SIGNAL           0x0018
 #define EVENT_CONF_CHANGED     0x0019
-#define EVENT_MAX_             0x0019
+#define EVENT_CONN_BW          0x001A
+#define EVENT_MAX_             0x001A
 /* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -958,6 +959,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
   { EVENT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
+  { EVENT_CONN_BW, "CONN_BW" },
   { 0, NULL },
 };
 
@@ -3903,6 +3905,54 @@ control_event_stream_bandwidth_used(void)
     SMARTLIST_FOREACH_END(conn);
   }
 
+  return 0;
+}
+
+/** Print out CONN_BW event for a single OR/DIR/EXIT <b>conn</b> and reset
+  * bandwidth counters. */
+int
+control_event_conn_bandwidth(connection_t *conn)
+{
+  const char *conn_type_str;
+  if (!get_options()->TestingTorNetwork ||
+      !EVENT_IS_INTERESTING(EVENT_CONN_BW))
+    return 0;
+  if (!conn->n_read && !conn->n_written)
+    return 0;
+  switch (conn->type) {
+    case CONN_TYPE_OR:
+      conn_type_str = "OR";
+      break;
+    case CONN_TYPE_DIR:
+      conn_type_str = "DIR";
+      break;
+    case CONN_TYPE_EXIT:
+      conn_type_str = "EXIT";
+      break;
+    default:
+      return 0;
+  }
+  send_control_event(EVENT_CONN_BW, ALL_FORMATS,
+                     "650 CONN_BW ID="U64_FORMAT" TYPE=%s "
+                     "READ=%lu WRITTEN=%lu\r\n",
+                     U64_PRINTF_ARG(conn->global_identifier),
+                     conn_type_str,
+                     (unsigned long)conn->n_read,
+                     (unsigned long)conn->n_written);
+  conn->n_written = conn->n_read = 0;
+  return 0;
+}
+
+/** A second or more has elapsed: tell any interested control
+ * connections how much bandwidth connections have used. */
+int
+control_event_conn_bandwidth_used(void)
+{
+  if (get_options()->TestingTorNetwork &&
+      EVENT_IS_INTERESTING(EVENT_CONN_BW)) {
+    SMARTLIST_FOREACH(get_connection_array(), connection_t *, conn,
+                      control_event_conn_bandwidth(conn));
+  }
   return 0;
 }
 
