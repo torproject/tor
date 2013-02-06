@@ -1477,6 +1477,12 @@ typedef struct or_connection_t {
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
+  /** Last emptied read token bucket in msec since midnight; only used in
+   * TestingTorNetwork mode. */
+  uint32_t read_emptied_time;
+  /** Last emptied write token bucket in msec since midnight; only used in
+   * TestingTorNetwork mode. */
+  uint32_t write_emptied_time;
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)

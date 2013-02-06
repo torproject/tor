@@ -84,7 +84,8 @@
 #define EVENT_CONF_CHANGED     0x0019
 #define EVENT_CONN_BW          0x001A
 #define EVENT_CELL_STATS       0x001B
-#define EVENT_MAX_             0x001B
+#define EVENT_TB_EMPTY         0x001C
+#define EVENT_MAX_             0x001C
 /* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -962,6 +963,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
   { EVENT_CONN_BW, "CONN_BW" },
   { EVENT_CELL_STATS, "CELL_STATS" },
+  { EVENT_TB_EMPTY, "TB_EMPTY" },
   { 0, NULL },
 };
 
@@ -4115,6 +4117,104 @@ control_event_circuit_cell_stats(void)
     SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));
     smartlist_free(event_parts);
     tor_free(event_string);
+  }
+  return 0;
+}
+
+/** Helper: return the time in millis that a given bucket was empty,
+ * capped at the time in millis since last refilling that bucket.  Return
+ * 0 if the bucket was not empty during the last refill period. */
+static uint32_t
+bucket_millis_empty(int prev_tokens, uint32_t last_empty_time,
+                    uint32_t milliseconds_elapsed)
+{
+  uint32_t result = 0, refilled;
+  if (prev_tokens <= 0) {
+    struct timeval tvnow;
+    tor_gettimeofday_cached(&tvnow);
+    refilled = (uint32_t)((tvnow.tv_sec % 86400L) * 1000L +
+               (uint32_t)tvnow.tv_usec / (uint32_t)1000L);
+    result = (uint32_t)((refilled + 86400L * 1000L - last_empty_time) %
+             (86400L * 1000L));
+    if (result > milliseconds_elapsed)
+      result = milliseconds_elapsed;
+  }
+  return result;
+}
+
+/** Token buckets have been refilled: tell any interested control
+ * connections how global and relay token buckets have changed. */
+int
+control_event_refill_global(int global_read, int prev_global_read,
+                            uint32_t global_read_emptied_time,
+                            int global_write, int prev_global_write,
+                            uint32_t global_write_emptied_time,
+                            int relay_read, int prev_relay_read,
+                            uint32_t relay_read_emptied_time,
+                            int relay_write, int prev_relay_write,
+                            uint32_t relay_write_emptied_time,
+                            uint32_t milliseconds_elapsed)
+{
+  uint32_t global_read_empty_time, global_write_empty_time,
+      relay_read_empty_time, relay_write_empty_time;
+  if (!get_options()->TestingTorNetwork ||
+      !EVENT_IS_INTERESTING(EVENT_TB_EMPTY))
+    return 0;
+  if (prev_global_read == global_read &&
+      prev_global_write == global_write &&
+      prev_relay_read == relay_read &&
+      prev_relay_write == relay_write)
+    return 0;
+  if (prev_global_read <= 0 && prev_global_write <= 0) {
+    global_read_empty_time = bucket_millis_empty(prev_global_read,
+        global_read_emptied_time, milliseconds_elapsed);
+    global_write_empty_time = bucket_millis_empty(prev_global_write,
+        global_write_emptied_time, milliseconds_elapsed);
+    send_control_event(EVENT_TB_EMPTY, ALL_FORMATS,
+                       "650 TB_EMPTY GLOBAL READ=%d WRITTEN=%d "
+                       "LAST=%d\r\n",
+                       global_read_empty_time, global_write_empty_time,
+                       milliseconds_elapsed);
+  }
+  if (prev_relay_read <= 0 && prev_relay_write <= 0) {
+    relay_read_empty_time = bucket_millis_empty(prev_relay_read,
+        relay_read_emptied_time, milliseconds_elapsed);
+    relay_write_empty_time = bucket_millis_empty(prev_relay_write,
+        relay_write_emptied_time, milliseconds_elapsed);
+    send_control_event(EVENT_TB_EMPTY, ALL_FORMATS,
+                       "650 TB_EMPTY RELAY READ=%d WRITTEN=%d "
+                       "LAST=%d\r\n",
+                       relay_read_empty_time, relay_write_empty_time,
+                       milliseconds_elapsed);
+  }
+  return 0;
+}
+
+/** Token buckets of a connection have been refilled: tell any interested
+ * control connections how per-connection token buckets have changed. */
+int
+control_event_refill_conn(or_connection_t *or_conn,
+                          int prev_read, int prev_write,
+                          uint32_t milliseconds_elapsed)
+{
+  uint32_t read_bucket_empty_time, write_bucket_empty_time;
+  if (!get_options()->TestingTorNetwork ||
+      !EVENT_IS_INTERESTING(EVENT_TB_EMPTY))
+    return 0;
+  if (prev_read == or_conn->read_bucket &&
+      prev_write == or_conn->write_bucket)
+    return 0;
+  if (prev_read <= 0 || prev_write <= 0) {
+    read_bucket_empty_time = bucket_millis_empty(prev_read,
+        or_conn->read_emptied_time, milliseconds_elapsed);
+    write_bucket_empty_time = bucket_millis_empty(prev_write,
+        or_conn->write_emptied_time, milliseconds_elapsed);
+    send_control_event(EVENT_TB_EMPTY, ALL_FORMATS,
+                       "650 TB_EMPTY ORCONN ID="U64_FORMAT" READ=%d "
+                       "WRITTEN=%d LAST=%d\r\n",
+                       U64_PRINTF_ARG(or_conn->base_.global_identifier),
+                       read_bucket_empty_time, write_bucket_empty_time,
+                       milliseconds_elapsed);
   }
   return 0;
 }

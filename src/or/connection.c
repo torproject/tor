@@ -2541,6 +2541,27 @@ record_num_bytes_transferred(connection_t *conn,
 #endif
 
 #ifndef USE_BUFFEREVENTS
+/** Last emptied global or relay buckets in msec since midnight; only used
+ * in TestingTorNetwork mode. */
+static uint32_t global_relayed_read_emptied = 0,
+                global_relayed_write_emptied = 0,
+                global_read_emptied = 0,
+                global_write_emptied = 0;
+
+/** Check if a bucket has just run out of tokens, and if so, note the
+ * timestamp for TB_EMPTY events; only used in TestingTorNetwork mode. */
+static void
+connection_buckets_empty_ts(uint32_t *timestamp_var, int tokens_before,
+                            size_t tokens_removed)
+{
+  if (tokens_before > 0 && tokens_before - (int)tokens_removed <= 0) {
+    struct timeval tvnow;
+    tor_gettimeofday_cached(&tvnow);
+    *timestamp_var = (uint32_t)(((tvnow.tv_sec % 86400L) * 1000L) +
+        ((uint32_t)tvnow.tv_usec / (uint32_t)1000L));
+  }
+}
+
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
  * onto <b>conn</b>. Decrement buckets appropriately. */
 static void
@@ -2562,6 +2583,28 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
+
+  /* If one or more of our token buckets ran dry just now, note the
+   * timestamp for TB_EMPTY events. */
+  if (get_options()->TestingTorNetwork) {
+    if (connection_counts_as_relayed_traffic(conn, now)) {
+      connection_buckets_empty_ts(&global_relayed_read_emptied,
+                                  global_relayed_read_bucket, num_read);
+      connection_buckets_empty_ts(&global_relayed_write_emptied,
+                                  global_relayed_write_bucket, num_written);
+    }
+    connection_buckets_empty_ts(&global_read_emptied, global_read_bucket,
+                                num_read);
+    connection_buckets_empty_ts(&global_write_emptied, global_write_bucket,
+                                num_written);
+    if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+      or_connection_t *or_conn = TO_OR_CONN(conn);
+      connection_buckets_empty_ts(&or_conn->read_emptied_time,
+                                  or_conn->read_bucket, num_read);
+      connection_buckets_empty_ts(&or_conn->write_emptied_time,
+                                  or_conn->write_bucket, num_written);
+    }
+  }
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= (int)num_read;
@@ -2677,6 +2720,11 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   smartlist_t *conns = get_connection_array();
   int bandwidthrate, bandwidthburst, relayrate, relayburst;
 
+  int prev_global_read = global_read_bucket;
+  int prev_global_write = global_write_bucket;
+  int prev_relay_read = global_relayed_read_bucket;
+  int prev_relay_write = global_relayed_write_bucket;
+
   bandwidthrate = (int)options->BandwidthRate;
   bandwidthburst = (int)options->BandwidthBurst;
 
@@ -2711,12 +2759,25 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                   milliseconds_elapsed,
                                   "global_relayed_write_bucket");
 
+  control_event_refill_global(global_read_bucket, prev_global_read,
+                              global_read_emptied, global_write_bucket,
+                              prev_global_write, global_write_emptied,
+                              global_relayed_read_bucket, prev_relay_read,
+                              global_relayed_read_emptied,
+                              global_relayed_write_bucket, prev_relay_write,
+                              global_relayed_write_emptied,
+                              milliseconds_elapsed);
+
   /* refill the per-connection buckets */
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       int orbandwidthrate = or_conn->bandwidthrate;
       int orbandwidthburst = or_conn->bandwidthburst;
+
+      int prev_conn_read = or_conn->read_bucket;
+      int prev_conn_write = or_conn->write_bucket;
+
       if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->read_bucket,
                                         orbandwidthrate,
@@ -2731,6 +2792,9 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                         milliseconds_elapsed,
                                         "or_conn->write_bucket");
       }
+
+      control_event_refill_conn(or_conn, prev_conn_read, prev_conn_write,
+                                (uint32_t)milliseconds_elapsed);
     }
 
     if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */
