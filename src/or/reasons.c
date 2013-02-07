@@ -105,7 +105,12 @@ stream_end_reason_to_socks5_response(int reason)
     case END_STREAM_REASON_DESTROY:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_DONE:
-      return SOCKS5_SUCCEEDED;
+      /* Note that 'DONE' usually indicates a successful close from the other
+       * side of the stream... but if we receive it before a connected cell --
+       * that is, before we have sent a SOCKS reply -- that means that the
+       * other side of the circuit closed the connection before telling us it
+       * was complete. */
+      return SOCKS5_CONNECTION_REFUSED;
     case END_STREAM_REASON_TIMEOUT:
       return SOCKS5_TTL_EXPIRED;
     case END_STREAM_REASON_NOROUTE:
