@@ -984,6 +984,12 @@ if test "$tor_cv_size_t_signed" = yes; then
   AC_MSG_ERROR([You have a signed size_t; that's grossly nonconformant.])
 fi
 
+AX_CHECK_SIGN([enum always],
+       [ AC_DEFINE(ENUM_VALS_ARE_SIGNED, 1, [Define if enum is always signed]) ],
+       [ : ], [
+ enum always { AAA, BBB, CCC };
+])
+
 AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
