@@ -1444,12 +1444,9 @@ connection_connect(connection_t *conn, const char *address,
     /* We should never even try to connect anyplace if DisableNetwork is set.
      * Warn if we do, and refuse to make the connection. */
     static ratelim_t disablenet_violated = RATELIM_INIT(30*60);
-    char *m;
     *socket_error = SOCK_ERRNO(ENETUNREACH);
-    if ((m = rate_limit_log(&disablenet_violated, approx_time()))) {
-      log_warn(LD_BUG, "Tried to open a socket with DisableNetwork set.%s", m);
-      tor_free(m);
-    }
+    log_fn_ratelim(&disablenet_violated, LOG_WARN, LD_BUG,
+                   "Tried to open a socket with DisableNetwork set.");
     tor_fragile_assert();
     return -1;
   }

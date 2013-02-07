@@ -540,17 +540,13 @@ circuit_expire_building(void)
         continue;
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
-        char *m;
-        if ((m = rate_limit_log(&relax_timeout_limit, approx_time()))) {
-          log_notice(LD_CIRC,
+        log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
                  "No circuits are opened. Relaxed timeout for "
                  "a circuit with channel state %s to %ldms. "
                  "However, it appears the circuit has timed out anyway. "
-                 "%d guards are live. %s",
+                 "%d guards are live.",
                  channel_state_to_string(victim->n_chan->state),
-                     (long)circ_times.close_ms, num_live_entry_guards(0), m);
-          tor_free(m);
-        }
+                 (long)circ_times.close_ms, num_live_entry_guards(0));
       }
     }
 

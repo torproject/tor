@@ -140,11 +140,12 @@ static char *domain_to_string(log_domain_mask_t domain,
                              char *buf, size_t buflen);
 static INLINE char *format_msg(char *buf, size_t buf_len,
            log_domain_mask_t domain, int severity, const char *funcname,
+           const char *suffix,
            const char *format, va_list ap, size_t *msg_len_out)
-  CHECK_PRINTF(6,0);
+  CHECK_PRINTF(7,0);
 static void logv(int severity, log_domain_mask_t domain, const char *funcname,
-                 const char *format, va_list ap)
-  CHECK_PRINTF(4,0);
+                 const char *suffix, const char *format, va_list ap)
+  CHECK_PRINTF(5,0);
 
 /** Name of the application: used to generate the message we write at the
  * start of each new log. */
@@ -251,6 +252,7 @@ log_tor_version(logfile_t *lf, int reset)
 static INLINE char *
 format_msg(char *buf, size_t buf_len,
            log_domain_mask_t domain, int severity, const char *funcname,
+           const char *suffix,
            const char *format, va_list ap, size_t *msg_len_out)
 {
   size_t n;
@@ -312,6 +314,13 @@ format_msg(char *buf, size_t buf_len,
     n = buf_len;
   } else {
     n += r;
+    if (suffix) {
+      size_t suffix_len = strlen(suffix);
+      if (buf_len-n >= suffix_len) {
+        memcpy(buf+n, suffix, suffix_len);
+        n += suffix_len;
+      }
+    }
   }
   buf[n]='\n';
   buf[n+1]='\0';
@@ -325,7 +334,7 @@ format_msg(char *buf, size_t buf_len,
  */
 static void
 logv(int severity, log_domain_mask_t domain, const char *funcname,
-     const char *format, va_list ap)
+     const char *suffix, const char *format, va_list ap)
 {
   char buf[10024];
   size_t msg_len = 0;
@@ -361,8 +370,8 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
     if (!formatted) {
       end_of_prefix =
-        format_msg(buf, sizeof(buf), domain, severity, funcname, format, ap,
-                   &msg_len);
+        format_msg(buf, sizeof(buf), domain, severity, funcname, suffix,
+                   format, ap, &msg_len);
       formatted = 1;
     }
 
@@ -426,7 +435,7 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(severity, domain, NULL, format, ap);
+  logv(severity, domain, NULL, NULL, format, ap);
   va_end(ap);
 }
 
@@ -443,8 +452,24 @@ log_fn_(int severity, log_domain_mask_t domain, const char *fn,
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(severity, domain, fn, format, ap);
+  logv(severity, domain, fn, NULL, format, ap);
   va_end(ap);
+}
+void
+log_fn_ratelim_(ratelim_t *ratelim, int severity, log_domain_mask_t domain,
+                const char *fn, const char *format, ...)
+{
+  va_list ap;
+  char *m;
+  if (severity > log_global_min_severity_)
+    return;
+  m = rate_limit_log(ratelim, approx_time());
+  if (m == NULL)
+      return;
+  va_start(ap, format);
+  logv(severity, domain, fn, m, format, ap);
+  va_end(ap);
+  tor_free(m);
 }
 #else
 /** @{ */
@@ -460,9 +485,25 @@ log_fn_(int severity, log_domain_mask_t domain, const char *format, ...)
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(severity, domain, log_fn_function_name_, format, ap);
+  logv(severity, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
+}
+void
+log_fn_ratelim_(ratelim_t *ratelim, int severity, log_domain_mask_t domain,
+                const char *format, ...)
+{
+  va_list ap;
+  char *m;
+  if (severity > log_global_min_severity_)
+    return;
+  m = rate_limit_log(ratelim, approx_time());
+  if (m == NULL)
+      return;
+  va_start(ap, format);
+  logv(severity, domain, log_fn_function_name_, m, format, ap);
+  va_end(ap);
+  tor_free(m);
 }
 void
 log_debug_(log_domain_mask_t domain, const char *format, ...)
@@ -472,7 +513,7 @@ log_debug_(log_domain_mask_t domain, const char *format, ...)
   if (PREDICT_LIKELY(LOG_DEBUG > log_global_min_severity_))
     return;
   va_start(ap,format);
-  logv(LOG_DEBUG, domain, log_fn_function_name_, format, ap);
+  logv(LOG_DEBUG, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
 }
@@ -483,7 +524,7 @@ log_info_(log_domain_mask_t domain, const char *format, ...)
   if (LOG_INFO > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(LOG_INFO, domain, log_fn_function_name_, format, ap);
+  logv(LOG_INFO, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
 }
@@ -494,7 +535,7 @@ log_notice_(log_domain_mask_t domain, const char *format, ...)
   if (LOG_NOTICE > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(LOG_NOTICE, domain, log_fn_function_name_, format, ap);
+  logv(LOG_NOTICE, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
 }
@@ -505,7 +546,7 @@ log_warn_(log_domain_mask_t domain, const char *format, ...)
   if (LOG_WARN > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(LOG_WARN, domain, log_fn_function_name_, format, ap);
+  logv(LOG_WARN, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
 }
@@ -516,7 +557,7 @@ log_err_(log_domain_mask_t domain, const char *format, ...)
   if (LOG_ERR > log_global_min_severity_)
     return;
   va_start(ap,format);
-  logv(LOG_ERR, domain, log_fn_function_name_, format, ap);
+  logv(LOG_ERR, domain, log_fn_function_name_, NULL, format, ap);
   va_end(ap);
   log_fn_function_name_ = NULL;
 }
