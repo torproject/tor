@@ -5,6 +5,7 @@ dnl See LICENSE for licensing information
 
 AC_INIT([tor],[0.2.4.10-alpha-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
@@ -957,8 +958,9 @@ AC_CHECK_TYPES([rlim_t], , ,
 #endif
 ])
 
-AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
-AC_RUN_IFELSE([AC_LANG_SOURCE([
+AX_CHECK_SIGN([time_t],
+       [ AC_DEFINE(TIME_T_IS_SIGNED, 1, [Define if time_t is signed]) ],
+       [ : ], [
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -968,31 +970,15 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }])],
-  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross)
 ])
 
-if test "$tor_cv_time_t_signed" = cross; then
-  AC_MSG_NOTICE([Cross compiling: assuming that time_t is signed.])
-fi
-
-if test "$tor_cv_time_t_signed" != no; then
-  AC_DEFINE([TIME_T_IS_SIGNED], 1,
-            [Define to 1 iff time_t is signed])
-fi
-
-AC_CACHE_CHECK([whether size_t is signed], tor_cv_size_t_signed, [
-AC_RUN_IFELSE([AC_LANG_SOURCE([
+AX_CHECK_SIGN([size_t],
+       [ tor_cv_size_t_signed=yes ],
+       [ tor_cv_size_t_signed=no ], [
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-int main(int c, char**v) { if (((size_t)-1)<0) return 1; else return 0; }])],
-  tor_cv_size_t_signed=no, tor_cv_size_t_signed=yes, tor_cv_size_t_signed=cross)
 ])
-
-if test "$tor_cv_size_t_signed" = cross; then
-  AC_MSG_NOTICE([Cross compiling: assuming that size_t is not signed.])
-fi
 
 if test "$tor_cv_size_t_signed" = yes; then
   AC_MSG_ERROR([You have a signed size_t; that's grossly nonconformant.])

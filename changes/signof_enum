@@ -1,0 +1,4 @@
+  o Code simplifications and refactoring:
+    - Use Ville Laurikari's implementation of AX_CHECK_SIGN() to determine
+      the signs of types during autoconf. This is better than our old
+      approach, which didn't work when cross-compiling.
