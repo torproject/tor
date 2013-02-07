@@ -1222,7 +1222,7 @@ pathbias_get_min_use(const or_options_t *options)
 static double
 pathbias_get_notice_use_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_NOTICE_USE_PCT 90
+#define DFLT_PATH_BIAS_NOTICE_USE_PCT 80
   if (options->PathBiasNoticeUseRate >= 0.0)
     return options->PathBiasNoticeUseRate;
   else
@@ -1238,7 +1238,7 @@ pathbias_get_notice_use_rate(const or_options_t *options)
 double
 pathbias_get_extreme_use_rate(const or_options_t *options)
 {
-#define DFLT_PATH_BIAS_EXTREME_USE_PCT 70
+#define DFLT_PATH_BIAS_EXTREME_USE_PCT 60
   if (options->PathBiasExtremeUseRate >= 0.0)
     return options->PathBiasExtremeUseRate;
   else
@@ -2273,8 +2273,8 @@ pathbias_measure_use_rate(entry_guard_t *guard)
           entry_guards_changed();
           return;
         }
-      } else if (!guard->path_bias_extreme) {
-        guard->path_bias_extreme = 1;
+      } else if (!guard->path_bias_use_extreme) {
+        guard->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
                  "Your Guard %s=%s is failing to carry an extremely large "
                  "amount of streams on its circuits. "
@@ -2297,8 +2297,8 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       }
     } else if (pathbias_get_use_success_count(guard)/guard->use_attempts
                < pathbias_get_notice_use_rate(options)) {
-      if (!guard->path_bias_noticed) {
-        guard->path_bias_noticed = 1;
+      if (!guard->path_bias_use_noticed) {
+        guard->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
                  "Your Guard %s=%s is failing to carry more streams on its "
                  "circuits than usual. "
@@ -2336,7 +2336,10 @@ pathbias_measure_use_rate(entry_guard_t *guard)
  * pathbias_measure_use_rate(). It may be possible to combine them
  * eventually, especially if we can ever remove the need for 3
  * levels of closure warns (if the overall circuit failure rate
- * goes down with ntor).
+ * goes down with ntor). One way to do so would be to multiply
+ * the build rate with the use rate to get an idea of the total
+ * fraction of the total network paths the user is able to use.
+ * See ticket #8159.
  */
 static void
 pathbias_measure_close_rate(entry_guard_t *guard)
@@ -2457,7 +2460,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
  *
  * XXX: The attempt count transfer stuff here might be done
  * better by keeping separate pending counters that get
- * transfered at circuit close.
+ * transfered at circuit close. See ticket #8160.
  */
 static void
 pathbias_scale_close_rates(entry_guard_t *guard)
@@ -2503,7 +2506,7 @@ pathbias_scale_close_rates(entry_guard_t *guard)
  *
  * XXX: The attempt count transfer stuff here might be done
  * better by keeping separate pending counters that get
- * transfered at circuit close.
+ * transfered at circuit close. See ticket #8160.
  */
 void
 pathbias_scale_use_rates(entry_guard_t *guard)

@@ -1291,8 +1291,8 @@ The following options are useful only for clients (that is, if
  +
     By default, or if a negative value is provided for one of these options,
     Tor uses reasonable defaults from the networkstatus consensus document.
-    If no defaults are available there, these options default to 20, .90,
-    .70, and 100, respectively.
+    If no defaults are available there, these options default to 20, .80,
+    .60, and 100, respectively.
 
 **ClientUseIPv6** **0**|**1**::
     If this option is set to 1, Tor might connect to entry nodes over
