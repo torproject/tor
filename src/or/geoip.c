@@ -1350,8 +1350,11 @@ load_bridge_stats(time_t now)
 
   fname = get_datadir_fname2("stats", "bridge-stats");
   contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (contents && validate_bridge_stats(contents, now))
+  if (contents && validate_bridge_stats(contents, now)) {
     bridge_stats_extrainfo = contents;
+  } else {
+    tor_free(contents);
+  }
 
   tor_free(fname);
 }

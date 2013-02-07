@@ -833,8 +833,10 @@ add_file_log(const log_severity_list_t *severity, const char *filename)
   fd = tor_open_cloexec(filename, O_WRONLY|O_CREAT|O_APPEND, 0644);
   if (fd<0)
     return -1;
-  if (tor_fd_seekend(fd)<0)
+  if (tor_fd_seekend(fd)<0) {
+    close(fd);
     return -1;
+  }
 
   LOCK_LOGS();
   add_stream_log_impl(severity, filename, fd);

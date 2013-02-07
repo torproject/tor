@@ -3143,6 +3143,8 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
                            "SERVERNONCE=%s\r\n",
                            server_hash_encoded,
                            server_nonce_encoded);
+
+  tor_free(client_nonce);
   return 0;
 }
 

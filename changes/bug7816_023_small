@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix various places where we leak file descriptors or memory on
+      error cases. Spotted by coverity. Fixes parts of bug 7816.
