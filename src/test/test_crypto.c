@@ -1144,7 +1144,7 @@ struct testcase_t crypto_tests[] = {
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
 #ifdef CURVE25519_ENABLED
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
-  { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y" },
+  { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
