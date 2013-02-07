@@ -2144,20 +2144,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                          digest, digest_len,
                                          legacy_signing_key)) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
-        return NULL; /* This leaks, but it should never happen. */
+        goto done;
       }
       smartlist_add(chunks, tor_strdup(sigbuf));
     }
   }
 
   result = smartlist_join_strings(chunks, "", 0, NULL);
-
-  tor_free(client_versions);
-  tor_free(server_versions);
-  SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
-  smartlist_free(flags);
-  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
-  smartlist_free(chunks);
 
   {
     networkstatus_t *c;
@@ -2166,7 +2159,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       log_err(LD_BUG, "Generated a networkstatus consensus we couldn't "
               "parse.");
       tor_free(result);
-      return NULL;
+      goto done;
     }
     // Verify balancing parameters
     if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS && added_weights) {
@@ -2174,6 +2167,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
     }
     networkstatus_vote_free(c);
   }
+
+ done:
+
+  tor_free(client_versions);
+  tor_free(server_versions);
+  SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
+  smartlist_free(flags);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
 
   return result;
 }

@@ -2399,6 +2399,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                             "ipv6-policy %s\n", p6);
       if (result<0) {
         log_warn(LD_BUG,"Descriptor printf of policy ran out of room");
+        tor_free(p6);
         return -1;
       }
       written += result;
