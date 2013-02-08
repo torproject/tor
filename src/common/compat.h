@@ -582,11 +582,6 @@ typedef enum {
   SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED = 0x08,
 } socks5_reply_status_t;
 
-/* ===== Insecure rng */
-void tor_init_weak_random(unsigned seed);
-long tor_weak_random(void);
-#define TOR_RAND_MAX (RAND_MAX)
-
 /* ===== OS compatibility */
 const char *get_uname(void);
 

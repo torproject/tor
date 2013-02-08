@@ -196,8 +196,10 @@ static uint64_t onionskins_usec_roundtrip[MAX_ONION_HANDSHAKE_TYPE+1];
  * time. (microseconds) */
 #define MAX_BELIEVABLE_ONIONSKIN_DELAY (2*1000*1000)
 
+static tor_weak_rng_t request_sample_rng = TOR_WEAK_RNG_INIT;
+
 /** Return true iff we'd like to measure a handshake of type
- * <b>onionskin_type</b>. */
+ * <b>onionskin_type</b>. Call only from the main thread. */
 static int
 should_time_request(uint16_t onionskin_type)
 {
@@ -210,7 +212,7 @@ should_time_request(uint16_t onionskin_type)
     return 1;
   /** Otherwise, measure with P=1/128.  We avoid doing this for every
    * handshake, since the measurement itself can take a little time. */
-  return tor_weak_random() < (TOR_RAND_MAX/128);
+  return tor_weak_random_one_in_n(&request_sample_rng, 128);
 }
 
 /** Return an estimate of how many microseconds we will need for a single
@@ -560,6 +562,7 @@ static void
 spawn_enough_cpuworkers(void)
 {
   int num_cpuworkers_needed = get_num_cpus(get_options());
+  int reseed = 0;
 
   if (num_cpuworkers_needed < MIN_CPUWORKERS)
     num_cpuworkers_needed = MIN_CPUWORKERS;
@@ -572,7 +575,11 @@ spawn_enough_cpuworkers(void)
       return;
     }
     num_cpuworkers++;
+    reseed++;
   }
+
+  if (reseed)
+    crypto_seed_weak_rng(&request_sample_rng);
 }
 
 /** Take a pending task from the queue and assign it to 'cpuworker'. */

@@ -2337,12 +2337,12 @@ crypto_dh_free(crypto_dh_t *dh)
   (OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,8,'c'))
 
 /** Set the seed of the weak RNG to a random value. */
-static void
-seed_weak_rng(void)
+void
+crypto_seed_weak_rng(tor_weak_rng_t *rng)
 {
   unsigned seed;
   crypto_rand((void*)&seed, sizeof(seed));
-  tor_init_weak_random(seed);
+  tor_init_weak_random(rng, seed);
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
@@ -2426,7 +2426,7 @@ crypto_seed_rng(int startup)
   }
 
   memwipe(buf, 0, sizeof(buf));
-  seed_weak_rng();
+
   if (rand_poll_ok || load_entropy_ok)
     return 0;
   else

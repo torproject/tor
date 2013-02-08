@@ -2391,6 +2391,7 @@ tor_init(int argc, char *argv[])
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
+  stream_choice_seed_weak_rng();
 
   return 0;
 }

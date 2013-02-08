@@ -2059,30 +2059,6 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
   return -1;
 }
 
-/** Initialize the insecure libc RNG. */
-void
-tor_init_weak_random(unsigned seed)
-{
-#ifdef _WIN32
-  srand(seed);
-#else
-  srandom(seed);
-#endif
-}
-
-/** Return a randomly chosen value in the range 0..TOR_RAND_MAX.  This
- * entropy will not be cryptographically strong; do not rely on it
- * for anything an adversary should not be able to predict. */
-long
-tor_weak_random(void)
-{
-#ifdef _WIN32
-  return rand();
-#else
-  return random();
-#endif
-}
-
 /** Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
 /** True iff uname_result is set. */
