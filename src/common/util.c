@@ -5010,8 +5010,10 @@ tor_init_weak_random(tor_weak_rng_t *rng, unsigned seed)
 int32_t
 tor_weak_random(tor_weak_rng_t *rng)
 {
-  /* Here's a linear congruential generator. OpenBSD and glibc use it. We
-   * don't want to use windows's rand(), because that returns values in the
+  /* Here's a linear congruential generator. OpenBSD and glibc use these
+   * parameters; they aren't too bad, and should have maximal period over the
+   * range 0..INT32_MAX. We don't want to use the platform rand() or random(),
+   * since some platforms have bad weak RNGs that only return values in the
    * range 0..INT16_MAX, which just isn't enough. */
   rng->state = (rng->state * 1103515245 + 12345) & 0x7fffffff;
   return (int32_t) rng->state;
