@@ -3242,6 +3242,34 @@ test_util_set_env_var_in_sl(void *ptr)
 }
 
 static void
+test_util_weak_random(void *arg)
+{
+  int i, j, n[16];
+  tor_weak_rng_t rng;
+  (void) arg;
+
+  tor_init_weak_random(&rng, (unsigned)time(NULL));
+
+  for (i = 1; i <= 256; ++i) {
+    for (j=0;j<100;++j) {
+      int r = tor_weak_random_range(&rng, i);
+      tt_int_op(0, <=, r);
+      tt_int_op(r, <, i);
+    }
+  }
+
+  memset(n,0,sizeof(n));
+  for (j=0;j<8192;++j) {
+    n[tor_weak_random_range(&rng, 16)]++;
+  }
+
+  for (i=0;i<16;++i)
+    tt_int_op(n[i], >, 0);
+ done:
+  ;
+}
+
+static void
 test_util_mathlog(void *arg)
 {
   double d;
@@ -3312,6 +3340,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_two_loops, 0),
   UTIL_TEST(read_file_eof_zero_bytes, 0),
   UTIL_TEST(mathlog, 0),
+  UTIL_TEST(weak_random, 0),
   END_OF_TESTCASES
 };
 
