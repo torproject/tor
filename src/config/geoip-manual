@@ -5,7 +5,9 @@
 
 # Remove MaxMind entry 0.116.0.0-0.119.255.255 which MaxMind says is AT,
 # but which is part of reserved range 0.0.0.0/8.  -KL 2012-06-13
-"0.116.0.0","0.119.255.255","7602176","7864319","",""
+# Disabled, because MaxMind apparently removed this range from their
+# database.  -KL 2013-02-08
+#"0.116.0.0","0.119.255.255","7602176","7864319","",""
 
 # NL, because previous MaxMind entry 31.171.128.0-31.171.133.255 is NL,
 # and RIR delegation files say 31.171.128.0-31.171.135.255 is NL.
