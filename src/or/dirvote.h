@@ -109,6 +109,11 @@ ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                            const microdesc_t *md,
                                            int consensus_method_low,
                                            int consensus_method_high);
+vote_microdesc_hash_t *dirvote_format_all_microdesc_vote_lines(
+                                        const routerinfo_t *ri,
+                                        time_t now,
+                                        smartlist_t *microdescriptors_out);
+
 int vote_routerstatus_find_microdesc_hash(char *digest256_out,
                                           const vote_routerstatus_t *vrs,
                                           int method,

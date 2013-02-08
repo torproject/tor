@@ -3651,6 +3651,47 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
   return ret;
 }
 
+/** Array of start and end of consensus methods used for supported
+    microdescriptor formats. */
+static const struct consensus_method_range_t {
+  int low;
+  int high;
+} microdesc_consensus_methods[] = {
+  {MIN_METHOD_FOR_MICRODESC, MIN_METHOD_FOR_A_LINES - 1},
+  {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
+  {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
+  {MIN_METHOD_FOR_NTOR_KEY, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {-1, -1}
+};
+
+vote_microdesc_hash_t *
+dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
+                                        smartlist_t *microdescriptors_out)
+{
+  const struct consensus_method_range_t *cmr;
+  vote_microdesc_hash_t *result = NULL;
+
+  for (cmr = microdesc_consensus_methods;
+       cmr->low != -1 && cmr->high != -1;
+       cmr++) {
+    microdesc_t *md = dirvote_create_microdescriptor(ri, cmr->low);
+    if (md) {
+      char buf[128];
+      vote_microdesc_hash_t *h;
+      dirvote_format_microdesc_vote_line(buf, sizeof(buf), md,
+                                         cmr->low, cmr->high);
+      h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+      h->microdesc_hash_line = tor_strdup(buf);
+      h->next = result;
+      result = h;
+      md->last_listed = now;
+      smartlist_add(microdescriptors_out, md);
+    }
+  }
+
+  return result;
+}
+
 /** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
  * the digest algorithm <b>alg</b>, decode it and copy it into
  * <b>digest256_out</b> and return 0.  Otherwise return -1. */
