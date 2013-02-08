@@ -1795,9 +1795,17 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
       num_streams++;
       if (tor_weak_random_one_in_n(&stream_choice_rng, num_streams)) {
         chosen_stream = conn;
-      /* Invariant: chosen_stream has been chosen uniformly at random from
-       * among the first num_streams streams on first_conn. */
       }
+      /* Invariant: chosen_stream has been chosen uniformly at random from
+       * among the first num_streams streams on first_conn.
+       *
+       * (Note that we iterate over every stream on the circuit, so that after
+       * we've considered the first stream, we've chosen it with P=1; and
+       * after we consider the second stream, we've switched to it with P=1/2
+       * and stayed with the first stream with P=1/2; and after we've
+       * considered the third stream, we've switched to it with P=1/3 and
+       * remained with one of the first two streams with P=(2/3), giving each
+       * one P=(1/2)(2/3) )=(1/3).) */
     }
   }
 
