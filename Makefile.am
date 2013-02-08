@@ -7,6 +7,8 @@
 # 1.9 means we require automake vesion 1.9
 AUTOMAKE_OPTIONS = foreign 1.9 subdir-objects
 
+ACLOCAL_AMFLAGS = -I m4
+
 noinst_LIBRARIES=
 EXTRA_DIST=
 noinst_HEADERS=

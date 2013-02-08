@@ -136,8 +136,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define DBL_TO_U64(x) ((uint64_t) (x))
 #endif
 
-#if defined(_MSC_VER)
-/* XXXX024 we should instead have a more general check for "Is enum signed?"*/
+#ifdef ENUM_VALS_ARE_SIGNED
 #define ENUM_BF(t) unsigned
 #else
 /** Wrapper for having a bitfield of an enumerated type. Where possible, we
