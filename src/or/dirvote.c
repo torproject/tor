@@ -3664,6 +3664,8 @@ static const struct consensus_method_range_t {
   {-1, -1}
 };
 
+/** Helper type used when generating the microdescriptor lines in a directory
+ * vote. */
 typedef struct microdesc_vote_line_t {
   int low;
   int high;
@@ -3671,6 +3673,9 @@ typedef struct microdesc_vote_line_t {
   struct microdesc_vote_line_t *next;
 } microdesc_vote_line_t;
 
+/** Generate and return a linked list of all the lines that should appear to
+ * describe a router's microdescriptor versions in a directory vote.
+ * Add the generated microdescriptors to <b>microdescriptors_out</b>. */
 vote_microdesc_hash_t *
 dirvote_format_all_microdesc_vote_lines(const routerinfo_t *ri, time_t now,
                                         smartlist_t *microdescriptors_out)
