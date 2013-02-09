@@ -865,30 +865,30 @@ tor_digest_is_zero(const char *digest)
   return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
 }
 
-/** Return true if <b>string</b> is a valid '<key>=<value>' string.
+/** Return true if <b>string</b> is a valid '<key>=[<value>]' string.
  *  <value> is optional, to indicate the empty string. */
 int
 string_is_key_value(const char *string)
 {
   /* position of equal sign in string */
-  char *equal_sign_pos = NULL;
+  const char *equal_sign_pos = NULL;
 
   tor_assert(string);
 
-  if (strlen(string) < 2) { /* "x=a" is shortest args string */
-    log_warn(LD_GENERAL, "'%s' is too short to be a k=v value.", string);
+  if (strlen(string) < 2) { /* "x=" is shortest args string */
+    log_warn(LD_GENERAL, "'%s' is too short to be a k=v value.", escaped(string));
     return 0;
   }
 
   equal_sign_pos = strchr(string, '=');
   if (!equal_sign_pos) {
-    log_warn(LD_GENERAL, "'%s' is not a k=v value.", string);
+    log_warn(LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
     return 0;
   }
 
   /* validate that the '=' is not in the beginning of the string. */
   if (equal_sign_pos == string) {
-    log_warn(LD_GENERAL, "'%s' is not a valid k=v value.", string);
+    log_warn(LD_GENERAL, "'%s' is not a valid k=v value.", escaped(string));
     return 0;
   }
 
@@ -1279,9 +1279,10 @@ wrap_string(smartlist_t *out, const char *string, size_t width,
   }
 }
 
-/** Escape every character of <b>string</b> that belongs to the set of
- *  characters <b>set</b>. Use <b>escape_char</b> as the character to
- *  use for escaping. */
+/** Escape every ";" or "\" character of <b>string</b>. Use
+ *  <b>escape_char</b> as the character to use for escaping.
+ *  The returned string is allocated on the heap and it's the
+ *  responsibility of the caller to free it. */
 char *
 tor_escape_str_for_socks_arg(const char *string)
 {
@@ -1294,8 +1295,8 @@ tor_escape_str_for_socks_arg(const char *string)
 
   length = strlen(string);
 
-  if (!length)
-    return NULL;
+  if (!length) /* If we were given the empty string, return the same. */
+    return tor_strdup("");
   /* (new_length > SIZE_MAX) => ((length * 2) + 1 > SIZE_MAX) =>
      (length*2 > SIZE_MAX - 1) => (length > (SIZE_MAX - 1)/2) */
   if (length > (SIZE_MAX - 1)/2) /* check for overflow */
@@ -1304,7 +1305,7 @@ tor_escape_str_for_socks_arg(const char *string)
   /* this should be enough even if all characters must be escaped */
   new_length = (length * 2) + 1;
 
-  new_string = new_cp = tor_malloc_zero(new_length);
+  new_string = new_cp = tor_malloc(new_length);
 
   while (*string) {
     if (strchr(chars_to_escape, *string))
@@ -1312,6 +1313,8 @@ tor_escape_str_for_socks_arg(const char *string)
 
     *new_cp++ = *string++;
   }
+
+  *new_cp = '\0'; /* NUL-terminate the new string */
 
   return new_string;
 }

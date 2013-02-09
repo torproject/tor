@@ -1585,7 +1585,7 @@ get_proxy_type(void)
 /* One byte for the version, one for the command, two for the
    port, and four for the addr... and, one more for the
    username NUL: */
-#define SOCKS4_STANDARD_BUFFER_SIZE 1 + 1 + 2 + 4 + 1
+#define SOCKS4_STANDARD_BUFFER_SIZE (1 + 1 + 2 + 4 + 1)
 
 /** Write a proxy request of <b>type</b> (socks4, socks5, https) to conn
  * for conn->addr:conn->port, authenticating with the auth details given
@@ -1688,6 +1688,9 @@ connection_proxy_connect(connection_t *conn, int type)
       memcpy(buf + 2, &portn, 2); /* port */
       memcpy(buf + 4, &ip4addr, 4); /* addr */
 
+      /* Next packet field is the userid. If we have pluggable
+         transport SOCKS arguments, we have to embed them
+         there. Otherwise, we use an empty userid.  */
       if (socks_args_string) { /* place the SOCKS args string: */
         tor_assert(strlen(socks_args_string) > 0);
         tor_assert(buf_size >=
@@ -1951,6 +1954,8 @@ connection_read_proxy_handshake(connection_t *conn)
           break;
         }
 
+        /* Username and password lengths should have been checked
+           above and during torrc parsing. */
         tor_assert(usize <= MAX_SOCKS5_AUTH_FIELD_SIZE &&
                    psize <= MAX_SOCKS5_AUTH_FIELD_SIZE);
         reqsize = 3 + usize + psize;

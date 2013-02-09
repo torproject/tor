@@ -2875,14 +2875,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     size_t len;
 
     len = strlen(options->Socks5ProxyUsername);
-    if (len < 1 || len > 255)
+    if (len < 1 || len > MAX_SOCKS5_AUTH_FIELD_SIZE)
       REJECT("Socks5ProxyUsername must be between 1 and 255 characters.");
 
     if (!options->Socks5ProxyPassword)
       REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
 
     len = strlen(options->Socks5ProxyPassword);
-    if (len < 1 || len > 255)
+    if (len < 1 || len > MAX_SOCKS5_AUTH_FIELD_SIZE)
       REJECT("Socks5ProxyPassword must be between 1 and 255 characters.");
   } else if (options->Socks5ProxyPassword)
     REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
@@ -4120,11 +4120,12 @@ parse_bridge_line(const char *line, int validate_only)
       field = smartlist_get(items, 0);
       smartlist_del_keeporder(items, 0);
 
-      /* If '=', it's a k=v value pair. */
-      if (strchr(field, '=')) {
+      /* If it's a key=value pair, then it's a SOCKS argument for the
+         transport proxy... */
+      if (string_is_key_value(field)) {
         socks_args = smartlist_new();
         smartlist_add(socks_args, field);
-      } else { /* If no '=', it's the fingerprint. */
+      } else { /* ...otherwise, it's the bridge fingerprint. */
         fingerprint = field;
       }
 

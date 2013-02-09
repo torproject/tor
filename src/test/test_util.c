@@ -813,14 +813,21 @@ test_util_escape_string_socks(void)
   test_streq(escaped_string, "First rule: Do not use \\;");
   tor_free(escaped_string);
 
-  /** Ilegal: Empty string. */
+  /** Empty string. */
   escaped_string = tor_escape_str_for_socks_arg("");
-  test_assert(!escaped_string);
+  test_assert(escaped_string);
+  test_streq(escaped_string, "");
+  tor_free(escaped_string);
 
   /** Escape all characters. */
   escaped_string = tor_escape_str_for_socks_arg(";\\;\\");
   test_assert(escaped_string);
   test_streq(escaped_string, "\\;\\\\\\;\\\\");
+  tor_free(escaped_string);
+
+  escaped_string = tor_escape_str_for_socks_arg(";");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "\\;");
   tor_free(escaped_string);
 
  done:
@@ -834,7 +841,10 @@ test_util_string_is_key_value(void *ptr)
   test_assert(string_is_key_value("key=value"));
   test_assert(string_is_key_value("k=v"));
   test_assert(string_is_key_value("key="));
+  test_assert(string_is_key_value("x="));
+  test_assert(string_is_key_value("xx="));
   test_assert(!string_is_key_value("=value"));
+  test_assert(!string_is_key_value("=x"));
   test_assert(!string_is_key_value("="));
 
   /* ??? */
