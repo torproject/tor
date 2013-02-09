@@ -13,7 +13,7 @@
 #define TOR_ONION_FAST_H
 
 #define CREATE_FAST_LEN DIGEST_LEN
-#define CREATED_FAST_LEN DIGEST_LEN*2
+#define CREATED_FAST_LEN (DIGEST_LEN*2)
 
 typedef struct fast_handshake_state_t {
   uint8_t state[DIGEST_LEN];

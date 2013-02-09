@@ -88,7 +88,7 @@ typedef struct rend_service_port_config_t {
 
 /** How many seconds should we wait for new HS descriptors to reach
  * our clients before we close an expiring intro point? */
-#define INTRO_POINT_EXPIRATION_GRACE_PERIOD 5*60
+#define INTRO_POINT_EXPIRATION_GRACE_PERIOD (5*60)
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {

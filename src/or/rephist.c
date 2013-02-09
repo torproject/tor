@@ -1549,7 +1549,7 @@ rep_hist_get_bandwidth_lines(void)
   /* [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
 /* The n,n,n part above. Largest representation of a uint64_t is 20 chars
  * long, plus the comma. */
-#define MAX_HIST_VALUE_LEN 21*NUM_TOTALS
+#define MAX_HIST_VALUE_LEN (21*NUM_TOTALS)
   len = (67+MAX_HIST_VALUE_LEN)*4;
   buf = tor_malloc_zero(len);
   cp = buf;

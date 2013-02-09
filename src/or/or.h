@@ -4586,12 +4586,12 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * sooner.)
  *
  * XXX023 Should this be configurable? */
-#define INTRO_POINT_LIFETIME_MIN_SECONDS 18*60*60
+#define INTRO_POINT_LIFETIME_MIN_SECONDS (18*60*60)
 /** The maximum number of seconds that an introduction point will last
  * before expiring due to old age.
  *
  * XXX023 Should this be configurable? */
-#define INTRO_POINT_LIFETIME_MAX_SECONDS 24*60*60
+#define INTRO_POINT_LIFETIME_MAX_SECONDS (24*60*60)
 
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
