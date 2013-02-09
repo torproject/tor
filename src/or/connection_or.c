@@ -521,8 +521,7 @@ connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen, temp;
   ssize_t n, flushed;
-  size_t cell_network_size = conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
-    CELL_MAX_NETWORK_SIZE - 2;
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
 
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
@@ -1764,8 +1763,7 @@ or_handshake_state_record_cell(or_connection_t *conn,
                                const cell_t *cell,
                                int incoming)
 {
-  size_t cell_network_size = conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
-    CELL_MAX_NETWORK_SIZE - 2;
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
   crypto_digest_t *d, **dptr;
   packed_cell_t packed;
   if (incoming) {
@@ -1857,8 +1855,7 @@ void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 {
   packed_cell_t networkcell;
-  size_t cell_network_size = (conn->wide_circ_ids) ?
-    CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
 
   tor_assert(cell);
   tor_assert(conn);
@@ -1948,8 +1945,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
       var_cell_free(var_cell);
     } else {
       const int wide_circ_ids = conn->wide_circ_ids;
-      const size_t cell_network_size = wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
-        CELL_MAX_NETWORK_SIZE - 2;
+      size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
       char buf[CELL_MAX_NETWORK_SIZE];
       cell_t cell;
       if (connection_get_inbuf_len(TO_CONN(conn))

@@ -1049,9 +1049,8 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   uint8_t command;
   uint16_t length;
   const int wide_circ_ids = linkproto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
-  const int circ_id_len = wide_circ_ids ? 4 : 2;
-  const unsigned header_len = wide_circ_ids ? VAR_CELL_MAX_HEADER_SIZE :
-    VAR_CELL_MAX_HEADER_SIZE - 2;
+  const int circ_id_len = get_circ_id_size(wide_circ_ids);
+  const unsigned header_len = get_var_cell_header_size(wide_circ_ids);
   check();
   *out = NULL;
   if (buf->datalen < header_len)
@@ -1132,9 +1131,8 @@ fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
   var_cell_t *cell;
   int result = 0;
   const int wide_circ_ids = linkproto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
-  const int circ_id_len = wide_circ_ids ? 4 : 2;
-  const unsigned header_len = wide_circ_ids ? VAR_CELL_MAX_HEADER_SIZE :
-    VAR_CELL_MAX_HEADER_SIZE - 2;
+  const int circ_id_len = get_circ_id_size(wide_circ_ids);
+  const unsigned header_len = get_var_cell_header_size(wide_circ_ids);
 
   *out = NULL;
   buf_len = evbuffer_get_length(buf);

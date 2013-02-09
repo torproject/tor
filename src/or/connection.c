@@ -2166,8 +2166,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN)
       conn_bucket = or_conn->read_bucket;
-    base = or_conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
-      CELL_MAX_NETWORK_SIZE - 2;
+    base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
   if (!connection_is_rate_limited(conn)) {
@@ -2205,8 +2204,7 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
       if (or_conn->write_bucket < conn_bucket)
         conn_bucket = or_conn->write_bucket >= 0 ?
                         or_conn->write_bucket : 0;
-    base = or_conn->wide_circ_ids ? CELL_MAX_NETWORK_SIZE :
-      CELL_MAX_NETWORK_SIZE - 2;
+    base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
   if (connection_counts_as_relayed_traffic(conn, now) &&

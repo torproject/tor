@@ -869,6 +869,23 @@ typedef enum {
 /** Maximum length of a header on a variable-length cell. */
 #define VAR_CELL_MAX_HEADER_SIZE 7
 
+static int get_cell_network_size(int wide_circ_ids);
+static INLINE int get_cell_network_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
+}
+static int get_var_cell_header_size(int wide_circ_ids);
+static INLINE int get_var_cell_header_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? VAR_CELL_MAX_HEADER_SIZE :
+    VAR_CELL_MAX_HEADER_SIZE - 2;
+}
+static int get_circ_id_size(int wide_circ_ids);
+static INLINE int get_circ_id_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? 4 : 2;
+}
+
 /** Number of bytes in a relay cell's header (not including general cell
  * header). */
 #define RELAY_HEADER_SIZE (1+2+2+4+2)

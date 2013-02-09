@@ -600,8 +600,7 @@ channel_tls_write_packed_cell_method(channel_t *chan,
                                      packed_cell_t *packed_cell)
 {
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
-  size_t cell_network_size = (chan->wide_circ_ids) ?
-    CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
+  size_t cell_network_size = get_cell_network_size(chan->wide_circ_ids);
 
   tor_assert(tlschan);
   tor_assert(packed_cell);
