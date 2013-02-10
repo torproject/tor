@@ -1206,8 +1206,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR,"Router nickname is invalid");
     goto err;
   }
-  router->address = tor_strdup(tok->args[1]);
-  if (!tor_inet_aton(router->address, &in)) {
+  if (!tor_inet_aton(tok->args[1], &in)) {
     log_warn(LD_DIR,"Router address is not an IP address.");
     goto err;
   }

@@ -1876,8 +1876,6 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     } else {
       if (tor_addr_family(&bridge->addr) == AF_INET) {
         ri->addr = tor_addr_to_ipv4h(&bridge->addr);
-        tor_free(ri->address);
-        ri->address = tor_dup_ip(ri->addr);
         ri->or_port = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "

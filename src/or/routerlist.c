@@ -2538,7 +2538,6 @@ routerinfo_free(routerinfo_t *router)
     return;
 
   tor_free(router->cache_info.signed_descriptor_body);
-  tor_free(router->address);
   tor_free(router->nickname);
   tor_free(router->platform);
   tor_free(router->contact_info);
@@ -4743,7 +4742,7 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
   }
 
   /* If any key fields differ, they're different. */
-  if (strcasecmp(r1->address, r2->address) ||
+  if (r1->addr != r2->addr ||
       strcasecmp(r1->nickname, r2->nickname) ||
       r1->or_port != r2->or_port ||
       !tor_addr_eq(&r1->ipv6_addr, &r2->ipv6_addr) ||

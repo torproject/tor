@@ -1759,7 +1759,6 @@ router_rebuild_descriptor(int force)
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
-  ri->address = tor_dup_ip(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
@@ -2218,6 +2217,7 @@ int
 router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                              crypto_pk_t *ident_key)
 {
+  char *address;
   char *onion_pkey; /* Onion key, PEM-encoded. */
   char *identity_pkey; /* Identity key, PEM-encoded. */
   char digest[DIGEST_LEN];
@@ -2292,6 +2292,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     }
   }
 
+  address = tor_dup_ip(router->addr);
+
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
                     "router %s %s %d 0 %d\n"
@@ -2307,7 +2309,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "signing-key\n%s"
                     "%s%s%s%s",
     router->nickname,
-    router->address,
+    address,
     router->or_port,
     decide_to_advertise_dirport(options, router->dir_port),
     extra_or_address ? extra_or_address : "",
@@ -2328,6 +2330,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     options->HidServDirectoryV2 ? "hidden-service-dir\n" : "",
     options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
 
+  tor_free(address);
   tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);
