@@ -1739,7 +1739,6 @@ find_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
 static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
-  char *address;
   const or_options_t *options = get_options();
 
   if (connection_get_by_type_addr_port_purpose(
@@ -1754,15 +1753,12 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
-  address = tor_dup_addr(&bridge->addr);
-
-  directory_initiate_command(address, &bridge->addr,
+  directory_initiate_command(&bridge->addr,
                              bridge->port, 0/*no dirport*/,
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
                              DIRIND_ONEHOP, "authority.z", NULL, 0, 0);
-  tor_free(address);
 }
 
 /** Fetching the bridge descriptor from the bridge authority returned a

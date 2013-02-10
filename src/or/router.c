@@ -1143,7 +1143,7 @@ consider_testing_reachability(int test_or, int test_dir)
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command(me->address, &addr,
+    directory_initiate_command(&addr,
                                me->or_port, me->dir_port,
                                me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
