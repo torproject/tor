@@ -438,7 +438,7 @@ validate_addr_policies(const or_options_t *options, char **msg)
 
   if (policies_parse_exit_policy(options->ExitPolicy, &addr_policy,
                                  options->IPv6Exit,
-                                 options->ExitPolicyRejectPrivate, NULL,
+                                 options->ExitPolicyRejectPrivate, 0,
                                  !options->BridgeRelay))
     REJECT("Error in ExitPolicy entry.");
 
@@ -940,7 +940,7 @@ exit_policy_remove_redundancies(smartlist_t *dest)
 int
 policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                            int ipv6_exit,
-                           int rejectprivate, const char *local_address,
+                           int rejectprivate, uint32_t local_address,
                            int add_default_policy)
 {
   if (!ipv6_exit) {
@@ -950,7 +950,7 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
     append_exit_policy_string(dest, "reject private:*");
     if (local_address) {
       char buf[POLICY_BUF_LEN];
-      tor_snprintf(buf, sizeof(buf), "reject %s:*", local_address);
+      tor_snprintf(buf, sizeof(buf), "reject %s:*", fmt_addr32(local_address));
       append_exit_policy_string(dest, buf);
     }
   }

@@ -1824,7 +1824,7 @@ router_rebuild_descriptor(int force)
     policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                                options->IPv6Exit,
                                options->ExitPolicyRejectPrivate,
-                               ri->address, !options->BridgeRelay);
+                               ri->addr, !options->BridgeRelay);
   }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy, AF_INET) &&

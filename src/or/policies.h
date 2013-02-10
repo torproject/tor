@@ -44,7 +44,7 @@ addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
 
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                int ipv6exit,
-                               int rejectprivate, const char *local_address,
+                               int rejectprivate, uint32_t local_address,
                                int add_default_policy);
 void policies_exit_policy_append_reject_star(smartlist_t **dest);
 void policies_set_node_exitpolicy_to_reject_all(node_t *exitrouter);
