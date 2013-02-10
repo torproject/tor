@@ -1882,7 +1882,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "
                  "address %s:%d.",
-                 ri->nickname, ri->address, ri->or_port);
+                 ri->nickname, fmt_addr32(ri->addr), ri->or_port);
       } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
         tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
         ri->ipv6_orport = bridge->port;

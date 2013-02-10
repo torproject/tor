@@ -564,27 +564,30 @@ int
 inform_testing_reachability(void)
 {
   char dirbuf[128];
+  char *address;
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
+  address = tor_dup_ip(me->addr);
   control_event_server_status(LOG_NOTICE,
                               "CHECKING_REACHABILITY ORADDRESS=%s:%d",
-                              me->address, me->or_port);
+                              address, me->or_port);
   if (me->dir_port) {
     tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
-                 me->address, me->dir_port);
+                 address, me->dir_port);
     control_event_server_status(LOG_NOTICE,
                                 "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
-                                me->address, me->dir_port);
+                                address, me->dir_port);
   }
   log_notice(LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
                          "(this may take up to %d minutes -- look for log "
                          "messages indicating success)",
-      me->address, me->or_port,
+      address, me->or_port,
       me->dir_port ? dirbuf : "",
       me->dir_port ? "are" : "is",
       TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
 
+  tor_free(address);
   return 1;
 }
 

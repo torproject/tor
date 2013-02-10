@@ -1131,7 +1131,7 @@ consider_testing_reachability(int test_or, int test_dir)
     /* XXX IPv6 self testing */
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
-             me->address, me->or_port);
+             fmt_addr32(me->addr), me->or_port);
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
     extend_info_free(ei);
@@ -1158,6 +1158,7 @@ router_orport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!can_reach_or_port && me) {
+    char *address = tor_dup_ip(me->addr);
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->PublishServerDescriptor_ != NO_DIRINFO ?
@@ -1166,7 +1167,8 @@ router_orport_found_reachable(void)
     mark_my_descriptor_dirty("ORPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                me->address, me->or_port);
+                                address, me->or_port);
+    tor_free(address);
   }
 }
 
@@ -1176,6 +1178,7 @@ router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!can_reach_dir_port && me) {
+    char *address = tor_dup_ip(me->addr);
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
@@ -1183,7 +1186,8 @@ router_dirport_found_reachable(void)
       mark_my_descriptor_dirty("DirPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
-                                me->address, me->dir_port);
+                                address, me->dir_port);
+    tor_free(address);
   }
 }
 
