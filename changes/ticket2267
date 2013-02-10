@@ -1,0 +1,8 @@
+  o Minor features:
+    - Refactor resolve_my_address() so it returns the method by which we
+      decided our public IP address (explicitly configured, resolved from
+      explicit hostname, guessed from interfaces, learned by gethostname).
+      Now we can provide more helpful log messages when a relay guesses
+      its IP address incorrectly (e.g. due to unexpected lines in
+      /etc/hosts). Resolves ticket 2267.
+

@@ -1891,20 +1891,32 @@ list_torrc_options(void)
 /** Last value actually set by resolve_my_address. */
 static uint32_t last_resolved_addr = 0;
 /**
- * Based on <b>options-\>Address</b>, guess our public IP address and put it
- * (in host order) into *<b>addr_out</b>. If <b>hostname_out</b> is provided,
- * set *<b>hostname_out</b> to a new string holding the hostname we used to
- * get the address. Return 0 if all is well, or -1 if we can't find a suitable
+ * Use <b>options-\>Address</b> to guess our public IP address.
+ *
+ * Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
+ *
+ * If we are returning 0:
+ *   - Put our public IP address (in host order) into *<b>addr_out</b>.
+ *   - If <b>method_out</b> is non-NULL, set *<b>method_out</b> to a static
+ *     string describing how we arrived at our answer.
+ *   - If <b>hostname_out</b> is non-NULL, and we resolved a hostname to
+ *     get our address, set *<b>hostname_out</b> to a newly allocated string
+ *     holding that hostname. (If we didn't get our address by resolving a
+ *     hostname, set *<b>hostname_out</b> to NULL.)
+ *
  * XXXX ipv6
  */
 int
 resolve_my_address(int warn_severity, const or_options_t *options,
-                   uint32_t *addr_out, char **hostname_out)
+                   uint32_t *addr_out,
+                   const char **method_out, char **hostname_out)
 {
   struct in_addr in;
   uint32_t addr; /* host order */
   char hostname[256];
+  const char *method_used;
+  const char *hostname_used;
   int explicit_ip=1;
   int explicit_hostname=1;
   int from_interface=0;
@@ -1914,6 +1926,10 @@ resolve_my_address(int warn_severity, const or_options_t *options,
                           LOG_NOTICE : warn_severity;
 
   tor_assert(addr_out);
+
+  /*
+   * Step one: Fill in 'hostname' to be our best guess.
+   */
 
   if (address && *address) {
     strlcpy(hostname, address, sizeof(hostname));
@@ -1925,10 +1941,14 @@ resolve_my_address(int warn_severity, const or_options_t *options,
       log_fn(warn_severity, LD_NET,"Error obtaining local hostname");
       return -1;
     }
-    log_debug(LD_CONFIG,"Guessed local host name as '%s'",hostname);
+    log_debug(LD_CONFIG, "Guessed local host name as '%s'", hostname);
   }
 
-  /* now we know hostname. resolve it and keep only the IP address */
+  /*
+   * Step two: Now that we know 'hostname', parse it or resolve it. If
+   * it doesn't parse or resolve, look at the interface address. Set 'addr'
+   * to be our (host-order) 32-bit answer.
+   */
 
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
@@ -1985,6 +2005,11 @@ resolve_my_address(int warn_severity, const or_options_t *options,
                               * illformed */
   }
 
+  /*
+   * Step three: Check whether 'addr' is an internal IP address, and error
+   * out if it is and we don't want that.
+   */
+
   addr_string = tor_dup_ip(addr);
   if (is_internal_IP(addr, 0)) {
     /* make sure we're ok with publishing an internal IP */
@@ -2009,37 +2034,65 @@ resolve_my_address(int warn_severity, const or_options_t *options,
     }
   }
 
-  log_debug(LD_CONFIG, "Resolved Address to '%s'.", fmt_addr32(addr));
+  /*
+   * Step four: We have a winner! 'addr' is our answer for sure, and
+   * 'addr_string' is its string form. Fill out the various fields to
+   * say how we decided it.
+   */
+
+  log_debug(LD_CONFIG, "Resolved Address to '%s'.", addr_string);
+
+  if (explicit_ip) {
+    method_used = "CONFIGURED";
+    hostname_used = NULL;
+  } else if (explicit_hostname) {
+    method_used = "RESOLVED";
+    hostname_used = hostname;
+  } else if (from_interface) {
+    method_used = "INTERFACE";
+    hostname_used = NULL;
+  } else {
+    method_used = "GETHOSTNAME";
+    hostname_used = hostname;
+  }
+
   *addr_out = addr;
+  if (method_out)
+    *method_out = method_used;
+  if (hostname_out)
+    *hostname_out = hostname_used ? tor_strdup(hostname_used) : NULL;
+
+  /*
+   * Step five: Check if the answer has changed since last time (or if
+   * there was no last time), and if so call various functions to keep
+   * us up-to-date.
+   */
+
   if (last_resolved_addr && last_resolved_addr != *addr_out) {
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET,
-               "Your IP address seems to have changed to %s. Updating.",
-               addr_string);
+               "Your IP address seems to have changed to %s "
+               "(METHOD=%s %s%s). Updating.",
+               addr_string, method_used,
+               hostname_used ? "HOSTNAME=" : "",
+               hostname_used ? hostname_used : "");
     ip_address_changed(0);
   }
+
   if (last_resolved_addr != *addr_out) {
-    const char *method;
-    const char *h = hostname;
-    if (explicit_ip) {
-      method = "CONFIGURED";
-      h = NULL;
-    } else if (explicit_hostname) {
-      method = "RESOLVED";
-    } else if (from_interface) {
-      method = "INTERFACE";
-      h = NULL;
-    } else {
-      method = "GETHOSTNAME";
-    }
     control_event_server_status(LOG_NOTICE,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s %s%s",
-                                addr_string, method, h?"HOSTNAME=":"", h);
+                                addr_string, method_used,
+                                hostname_used ? "HOSTNAME=" : "",
+                                hostname_used ? hostname_used : "");
   }
   last_resolved_addr = *addr_out;
-  if (hostname_out)
-    *hostname_out = tor_strdup(hostname);
+
+  /*
+   * And finally, clean up and return success.
+   */
+
   tor_free(addr_string);
   return 0;
 }
@@ -2287,7 +2340,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (authdir_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(LOG_WARN, options, &tmp, NULL) < 0)
+    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 
