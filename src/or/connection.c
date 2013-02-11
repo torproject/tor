@@ -603,6 +603,7 @@ connection_free_(connection_t *conn)
     connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
     tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
     tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
+    tor_free(TO_OR_CONN(conn)->ext_or_transport);
   }
 
 #ifdef USE_BUFFEREVENTS

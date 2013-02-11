@@ -12,6 +12,7 @@
 #include "ext_orport.h"
 #include "control.h"
 #include "config.h"
+#include "util.h"
 #include "main.h"
 
 /** Allocate and return a structure capable of holding an Extended
@@ -381,6 +382,7 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 /** Extended ORPort commands (Transport-to-Bridge) */
 #define EXT_OR_CMD_TB_DONE 0x0000
 #define EXT_OR_CMD_TB_USERADDR 0x0001
+#define EXT_OR_CMD_TB_TRANSPORT 0x0002
 
 /** Extended ORPort commands (Bridge-to-Transport) */
 #define EXT_OR_CMD_BT_OKAY 0x1000
@@ -395,8 +397,8 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
  *
  *  Return 0 on success and -1 on error. */
 static int
-connection_ext_or_handle_useraddr(connection_t *conn,
-                                  const char *payload, uint16_t len)
+connection_ext_or_handle_cmd_useraddr(connection_t *conn,
+                                      const char *payload, uint16_t len)
 {
   /* Copy address string. */
   tor_addr_t addr;
@@ -436,6 +438,32 @@ connection_ext_or_handle_useraddr(connection_t *conn,
 
   return 0;
 }
+
+/** Process a TRANSPORT command from the Extended
+ *  ORPort. <b>payload</b> is a payload of size <b>len</b>.
+ *
+ *  If the TRANSPORT command was well formed, register the name of the
+ *  transport on <b>conn</b>.
+ *
+ *  Return 0 on success and -1 on error. */
+static int
+connection_ext_or_handle_cmd_transport(or_connection_t *conn,
+                                       const char *payload, uint16_t len)
+{
+  char *transport_str = tor_malloc(len + 1); /* NUL-terminate the string */
+  memcpy(transport_str, payload, len);
+  transport_str[len] = 0;
+
+  /* Transport names MUST be C-identifiers. */
+  if (!string_is_C_identifier(transport_str)) {
+    tor_free(transport_str);
+    return -1;
+  }
+
+  conn->ext_or_transport = transport_str;
+  return 0;
+}
+
 
 /** Process Extended ORPort messages from <b>or_conn</b>. */
 int
@@ -480,14 +508,23 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
 
       log_debug(LD_NET, "Received DONE.");
 
+      /* If the transport proxy did not use the TRANSPORT command to
+       * specify the transport name, mark this as unknown transport. */
+      if (!or_conn->ext_or_transport)
+        or_conn->ext_or_transport = tor_strdup("<?\?>");
+
       connection_write_ext_or_command(conn, EXT_OR_CMD_BT_OKAY, NULL, 0);
 
       /* can't transition immediately; need to flush first. */
       conn->state = EXT_OR_CONN_STATE_FLUSHING;
       connection_stop_reading(conn);
     } else if (command->cmd == EXT_OR_CMD_TB_USERADDR) {
-      if (connection_ext_or_handle_useraddr(conn,
+      if (connection_ext_or_handle_cmd_useraddr(conn,
                                             command->body, command->len) < 0)
+        goto err;
+    } else if (command->cmd == EXT_OR_CMD_TB_TRANSPORT) {
+      if (connection_ext_or_handle_cmd_transport(or_conn,
+                                             command->body, command->len) < 0)
         goto err;
     } else {
       log_notice(LD_NET,"Got Extended ORPort command we don't regognize (%u).",

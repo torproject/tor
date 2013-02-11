@@ -1452,6 +1452,9 @@ typedef struct or_connection_t {
   char *ext_or_conn_id;
   /** Client hash of the Extended ORPort authentication scheme */
   char *ext_or_auth_correct_client_hash;
+  /** Name of the pluggable transport that is obfuscating this
+      connection. If no pluggable transports are used, it's NULL. */
+  char *ext_or_transport;
 
   char *nickname; /**< Nickname of OR on other side (if any). */
 
