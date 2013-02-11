@@ -943,6 +943,24 @@ test_crypto_curve25519_impl(void *arg)
 
   const int randomize_high_bit = (arg != NULL);
 
+#ifdef SLOW_CURVE25519_TEST
+  const int loop_max=10000;
+  const char e1_expected[]    = "4faf81190869fd742a33691b0e0824d5"
+                                "7e0329f4dd2819f5f32d130f1296b500";
+  const char e2k_expected[]   = "05aec13f92286f3a781ccae98995a3b9"
+                                "e0544770bc7de853b38f9100489e3e79";
+  const char e1e2k_expected[] = "cd6e8269104eb5aaee886bd2071fba88"
+                                "bd13861475516bc2cd2b6e005e805064";
+#else
+  const int loop_max=200;
+  const char e1_expected[]    = "bc7112cde03f97ef7008cad1bdc56be3"
+                                "c6a1037d74cceb3712e9206871dcf654";
+  const char e2k_expected[]   = "dd8fa254fb60bdb5142fe05b1f5de44d"
+                                "8e3ee1a63c7d14274ea5d4c67f065467";
+  const char e1e2k_expected[] = "7ddb98bd89025d2347776b33901b3e7e"
+                                "c0ee98cb2257a4545c0cfb2ca3e1812b";
+#endif
+
   unsigned char e1k[32];
   unsigned char e2k[32];
   unsigned char e1e2k[32];
@@ -951,7 +969,7 @@ test_crypto_curve25519_impl(void *arg)
   unsigned char e2[32] = {5};
   unsigned char k[32] = {9};
   int loop, i;
-  const int loop_max=10000;
+
   char *mem_op_hex_tmp = NULL;
 
   for (loop = 0; loop < loop_max; ++loop) {
@@ -977,15 +995,9 @@ test_crypto_curve25519_impl(void *arg)
     for (i = 0;i < 32;++i) k[i] ^= e1e2k[i];
   }
 
-  test_memeq_hex(e1,
-                 "4faf81190869fd742a33691b0e0824d5"
-                 "7e0329f4dd2819f5f32d130f1296b500");
-  test_memeq_hex(e2k,
-                 "05aec13f92286f3a781ccae98995a3b9"
-                 "e0544770bc7de853b38f9100489e3e79");
-  test_memeq_hex(e1e2k,
-                 "cd6e8269104eb5aaee886bd2071fba88"
-                 "bd13861475516bc2cd2b6e005e805064");
+  test_memeq_hex(e1, e1_expected);
+  test_memeq_hex(e2k, e2k_expected);
+  test_memeq_hex(e1e2k, e1e2k_expected);
 
  done:
   tor_free(mem_op_hex_tmp);
