@@ -2724,7 +2724,7 @@ test_util_join_win_cmdline(void *ptr)
   }
 
  done:
-  ;
+  tor_free(joined_argv);
 }
 
 #define MAX_SPLIT_LINE_COUNT 4

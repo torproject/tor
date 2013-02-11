@@ -1082,6 +1082,7 @@ test_crypto_curve25519_persist(void *arg)
   tt_int_op(0,==,curve25519_keypair_write_to_file(&keypair, fname, "testing"));
   tt_int_op(0,==,curve25519_keypair_read_from_file(&keypair2, &tag, fname));
   tt_str_op(tag,==,"testing");
+  tor_free(tag);
 
   test_memeq(keypair.pubkey.public_key,
              keypair2.pubkey.public_key,
@@ -1109,6 +1110,7 @@ test_crypto_curve25519_persist(void *arg)
   fname = tor_strdup(get_fname("bogus_keypair"));
 
   tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+  tor_free(tag);
 
   content[69] ^= 0xff;
   tt_int_op(0, ==, write_bytes_to_file(fname, content, st.st_size, 1));
@@ -1117,6 +1119,7 @@ test_crypto_curve25519_persist(void *arg)
  done:
   tor_free(fname);
   tor_free(content);
+  tor_free(tag);
 }
 
 #endif

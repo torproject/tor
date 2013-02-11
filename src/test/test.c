@@ -1789,6 +1789,7 @@ test_geoip(void)
 
  done:
   tor_free(s);
+  tor_free(v);
 }
 
 /** Run unit tests for stats code. */

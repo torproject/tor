@@ -164,6 +164,7 @@ bench_onion_TAP(void)
     int s;
     dh = crypto_dh_dup(dh_out);
     s = onion_skin_TAP_client_handshake(dh, or, key_out, sizeof(key_out));
+    crypto_dh_free(dh);
     tor_assert(s == 0);
   }
   end = perftime();
@@ -203,6 +204,7 @@ bench_onion_ntor(void)
   end = perftime();
   printf("Client-side, part 1: %f usec.\n", NANOCOUNT(start, end, iters)/1e3);
 
+  state = NULL;
   onion_skin_ntor_create(nodeid, &keypair1.pubkey, &state, os);
   start = perftime();
   for (i = 0; i < iters; ++i) {

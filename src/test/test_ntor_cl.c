@@ -43,12 +43,10 @@ client1(int argc, char **argv)
   /* client1 nodeID B -> msg state */
   curve25519_public_key_t B;
   uint8_t node_id[DIGEST_LEN];
-  ntor_handshake_state_t *state;
+  ntor_handshake_state_t *state = NULL;
   uint8_t msg[NTOR_ONIONSKIN_LEN];
 
   char buf[1024];
-
-  memset(&state, 0, sizeof(state));
 
   N_ARGS(4);
   BASE16(2, node_id, DIGEST_LEN);
@@ -63,6 +61,7 @@ client1(int argc, char **argv)
   printf("%s\n", buf);
   base16_encode(buf, sizeof(buf), (void*)state, sizeof(*state));
   printf("%s\n", buf);
+
   ntor_handshake_state_free(state);
   return 0;
 }
@@ -77,8 +76,9 @@ server1(int argc, char **argv)
   int keybytes;
 
   uint8_t msg_out[NTOR_REPLY_LEN];
-  uint8_t *keys;
-  char *hexkeys;
+  uint8_t *keys = NULL;
+  char *hexkeys = NULL;
+  int result = 0;
 
   char buf[256];
 
@@ -98,7 +98,8 @@ server1(int argc, char **argv)
                                 msg_in, keymap, NULL, node_id, msg_out, keys,
                                 (size_t)keybytes)<0) {
     fprintf(stderr, "handshake failed");
-    return 2;
+    result = 2;
+    goto done;
   }
 
   base16_encode(buf, sizeof(buf), (const char*)msg_out, sizeof(msg_out));
@@ -106,9 +107,10 @@ server1(int argc, char **argv)
   base16_encode(hexkeys, keybytes*2+1, (const char*)keys, keybytes);
   printf("%s\n", hexkeys);
 
+ done:
   tor_free(keys);
   tor_free(hexkeys);
-  return 0;
+  return result;
 }
 
 static int
@@ -119,6 +121,7 @@ client2(int argc, char **argv)
   int keybytes;
   uint8_t *keys;
   char *hexkeys;
+  int result = 0;
 
   N_ARGS(5);
   BASE16(2, (&state), sizeof(state));
@@ -129,16 +132,17 @@ client2(int argc, char **argv)
   hexkeys = tor_malloc(keybytes*2+1);
   if (onion_skin_ntor_client_handshake(&state, msg, keys, keybytes)<0) {
     fprintf(stderr, "handshake failed");
-    return 2;
+    result = 2;
+    goto done;
   }
 
   base16_encode(hexkeys, keybytes*2+1, (const char*)keys, keybytes);
   printf("%s\n", hexkeys);
 
+ done:
   tor_free(keys);
   tor_free(hexkeys);
-
-  return 0;
+  return result;
 }
 
 int
