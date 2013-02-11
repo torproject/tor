@@ -2111,8 +2111,8 @@ check_descriptor_ipaddress_changed(time_t now)
     tor_addr_from_ipv4h(&tmp_prev, prev);
     tor_addr_from_ipv4h(&tmp_cur, cur);
 
-    tor_asprintf(&source, "METHOD=%s %s%s", method,
-                 hostname ? "HOSTNAME=" : "",
+    tor_asprintf(&source, "METHOD=%s%s%s", method,
+                 hostname ? " HOSTNAME=" : "",
                  hostname ? hostname : "");
 
     log_addr_has_changed(LOG_NOTICE, &tmp_prev, &tmp_cur, source);

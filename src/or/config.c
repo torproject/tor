@@ -2073,18 +2073,18 @@ resolve_my_address(int warn_severity, const or_options_t *options,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET,
                "Your IP address seems to have changed to %s "
-               "(METHOD=%s %s%s). Updating.",
+               "(METHOD=%s%s%s). Updating.",
                addr_string, method_used,
-               hostname_used ? "HOSTNAME=" : "",
+               hostname_used ? " HOSTNAME=" : "",
                hostname_used ? hostname_used : "");
     ip_address_changed(0);
   }
 
   if (last_resolved_addr != *addr_out) {
     control_event_server_status(LOG_NOTICE,
-                                "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s %s%s",
+                                "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s%s%s",
                                 addr_string, method_used,
-                                hostname_used ? "HOSTNAME=" : "",
+                                hostname_used ? " HOSTNAME=" : "",
                                 hostname_used ? hostname_used : "");
   }
   last_resolved_addr = *addr_out;
