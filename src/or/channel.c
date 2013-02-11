@@ -2379,7 +2379,8 @@ channel_do_open_actions(channel_t *chan)
     /* only report it to the geoip module if it's not a known router */
     if (!router_get_by_id_digest(chan->identity_digest)) {
       if (channel_get_addr_if_possible(chan, &remote_addr)) {
-        geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &remote_addr,
+        /* XXXX 5040/4773 : Is this 'NULL' right? */
+        geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &remote_addr, NULL,
                                now);
       }
       /* Otherwise the underlying transport can't tell us this, so skip it */

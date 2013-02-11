@@ -1741,20 +1741,20 @@ test_geoip(void)
   /* Put 9 observations in AB... */
   for (i=32; i < 40; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
   }
   SET_TEST_ADDRESS(225);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
   /* and 3 observations in XY, several times. */
   for (j=0; j < 10; ++j)
     for (i=52; i < 55; ++i) {
       SET_TEST_ADDRESS(i);
-      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-3600);
+      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-3600);
     }
   /* and 17 observations in ZZ... */
   for (i=110; i < 127; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   }
   geoip_get_client_history(GEOIP_CLIENT_CONNECT, &s, &v);
   test_assert(s);
@@ -1803,7 +1803,7 @@ test_geoip(void)
   /* Start testing dirreq statistics by making sure that we don't collect
    * dirreq stats without initializing them. */
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
 
@@ -1811,7 +1811,7 @@ test_geoip(void)
    * dirreq-stats history string. */
   geoip_dirreq_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_1, s);
   tor_free(s);
@@ -1820,7 +1820,7 @@ test_geoip(void)
    * don't generate a history string. */
   geoip_dirreq_stats_term();
   SET_TEST_ADDRESS(101);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
 
@@ -1828,7 +1828,7 @@ test_geoip(void)
    * that we get an all empty history string. */
   geoip_dirreq_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   geoip_reset_dirreq_stats(now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_2, s);
@@ -1855,7 +1855,7 @@ test_geoip(void)
   /* Start testing entry statistics by making sure that we don't collect
    * anything without initializing entry stats. */
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
 
@@ -1863,7 +1863,7 @@ test_geoip(void)
    * entry-stats history string. */
   geoip_entry_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_1, s);
   tor_free(s);
@@ -1872,7 +1872,7 @@ test_geoip(void)
    * don't generate a history string. */
   geoip_entry_stats_term();
   SET_TEST_ADDRESS(101);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
 
@@ -1880,7 +1880,7 @@ test_geoip(void)
    * that we get an all empty history string. */
   geoip_entry_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   geoip_reset_entry_stats(now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_2, s);

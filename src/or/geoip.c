@@ -461,6 +461,10 @@ geoip_db_digest(sa_family_t family)
 typedef struct clientmap_entry_t {
   HT_ENTRY(clientmap_entry_t) node;
   tor_addr_t addr;
+ /* Name of pluggable transport used by this client. NULL if no
+    pluggable transport was used. */
+  char *transport_name;
+
   /** Time when we last saw this IP address, in MINUTES since the epoch.
    *
    * (This will run out of space around 4011 CE.  If Tor is still in use around
@@ -519,7 +523,9 @@ client_history_clear(void)
  * configured accordingly. */
 void
 geoip_note_client_seen(geoip_client_action_t action,
-                       const tor_addr_t *addr, time_t now)
+                       const tor_addr_t *addr,
+                       const char *transport_name,
+                       time_t now)
 {
   const or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
@@ -534,12 +540,18 @@ geoip_note_client_seen(geoip_client_action_t action,
       return;
   }
 
+  log_debug(LD_GENERAL, "Seen client from '%s' with transport '%s'.",
+            safe_str_client(fmt_addr((addr))),
+            transport_name ? transport_name : "<no transport>");
+
   tor_addr_copy(&lookup.addr, addr);
   lookup.action = (int)action;
   ent = HT_FIND(clientmap, &client_history, &lookup);
   if (! ent) {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     tor_addr_copy(&ent->addr, addr);
+    if (transport_name)
+      ent->transport_name = tor_strdup(transport_name);
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
   }
@@ -566,6 +578,7 @@ remove_old_client_helper_(struct clientmap_entry_t *ent, void *_cutoff)
 {
   time_t cutoff = *(time_t*)_cutoff / 60;
   if (ent->last_seen_in_minutes < cutoff) {
+    tor_free(ent->transport_name);
     tor_free(ent);
     return 1;
   } else {
@@ -1515,6 +1528,7 @@ geoip_free_all(void)
     for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
       this = *ent;
       next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      tor_free(this->transport_name);
       tor_free(this);
     }
     HT_CLEAR(clientmap, &client_history);
