@@ -1944,7 +1944,7 @@ router_rebuild_descriptor(int force)
        sending them on an unencrypted connection, don't allow them to try. */
     ri->cache_info.send_unencrypted = 0;
     if (ei)
-      ei->cache_info.send_unencrypted = 0
+      ei->cache_info.send_unencrypted = 0;
   } else {
     ri->cache_info.send_unencrypted = 1;
     if (ei)
