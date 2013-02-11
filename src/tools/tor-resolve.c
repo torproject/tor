@@ -4,7 +4,6 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-
 #include "compat.h"
 #include "../common/util.h"
 #include "address.h"
@@ -187,7 +186,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
            int reverse, int version,
            tor_addr_t *result_addr, char **result_hostname)
 {
-  int s;
+  int s = -1;
   struct sockaddr_in socksaddr;
   char *req = NULL;
   ssize_t len = 0;
@@ -202,7 +201,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s<0) {
     log_sock_error("creating_socket", -1);
-    return -1;
+    goto err;
   }
 
   memset(&socksaddr, 0, sizeof(socksaddr));
@@ -211,28 +210,28 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   socksaddr.sin_addr.s_addr = htonl(sockshost);
   if (connect(s, (struct sockaddr*)&socksaddr, sizeof(socksaddr))) {
     log_sock_error("connecting to SOCKS host", s);
-    return -1;
+    goto err;
   }
 
   if (version == 5) {
     char method_buf[2];
     if (write_all(s, "\x05\x01\x00", 3, 1) != 3) {
       log_err(LD_NET, "Error sending SOCKS5 method list.");
-      return -1;
+      goto err;
     }
     if (read_all(s, method_buf, 2, 1) != 2) {
       log_err(LD_NET, "Error reading SOCKS5 methods.");
-      return -1;
+      goto err;
     }
     if (method_buf[0] != '\x05') {
       log_err(LD_NET, "Unrecognized socks version: %u",
               (unsigned)method_buf[0]);
-      return -1;
+      goto err;
     }
     if (method_buf[1] != '\x00') {
       log_err(LD_NET, "Unrecognized socks authentication method: %u",
               (unsigned)method_buf[1]);
-      return -1;
+      goto err;
     }
   }
 
@@ -240,12 +239,12 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
                                          version))<0) {
     log_err(LD_BUG,"Error generating SOCKS request");
     tor_assert(!req);
-    return -1;
+    goto err;
   }
   if (write_all(s, req, len, 1) != len) {
     log_sock_error("sending SOCKS request", s);
     tor_free(req);
-    return -1;
+    goto err;
   }
   tor_free(req);
 
@@ -253,22 +252,22 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     char reply_buf[RESPONSE_LEN_4];
     if (read_all(s, reply_buf, RESPONSE_LEN_4, 1) != RESPONSE_LEN_4) {
       log_err(LD_NET, "Error reading SOCKS4 response.");
-      return -1;
+      goto err;
     }
     if (parse_socks4a_resolve_response(hostname,
                                        reply_buf, RESPONSE_LEN_4,
                                        result_addr)<0) {
-      return -1;
+      goto err;
     }
   } else {
     char reply_buf[16];
     if (read_all(s, reply_buf, 4, 1) != 4) {
       log_err(LD_NET, "Error reading SOCKS5 response.");
-      return -1;
+      goto err;
     }
     if (reply_buf[0] != 5) {
       log_err(LD_NET, "Bad SOCKS5 reply version.");
-      return -1;
+      goto err;
     }
     /* Give a user some useful feedback about SOCKS5 errors */
     if (reply_buf[1] != 0) {
@@ -282,20 +281,20 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
             "to Tor; we suggest an application that uses SOCKS 4a.",
             hostname);
       }
-      return -1;
+      goto err;
     }
     if (reply_buf[3] == 1) {
       /* IPv4 address */
       if (read_all(s, reply_buf, 4, 1) != 4) {
         log_err(LD_NET, "Error reading address in socks5 response.");
-        return -1;
+        goto err;
       }
       tor_addr_from_ipv4n(result_addr, get_uint32(reply_buf));
     } else if (reply_buf[3] == 4) {
       /* IPv6 address */
       if (read_all(s, reply_buf, 16, 1) != 16) {
         log_err(LD_NET, "Error reading address in socks5 response.");
-        return -1;
+        goto err;
       }
       tor_addr_from_ipv6_bytes(result_addr, reply_buf);
     } else if (reply_buf[3] == 3) {
@@ -303,19 +302,23 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       size_t result_len;
       if (read_all(s, reply_buf, 1, 1) != 1) {
         log_err(LD_NET, "Error reading address_length in socks5 response.");
-        return -1;
+        goto err;
       }
       result_len = *(uint8_t*)(reply_buf);
       *result_hostname = tor_malloc(result_len+1);
       if (read_all(s, *result_hostname, result_len, 1) != (int) result_len) {
         log_err(LD_NET, "Error reading hostname in socks5 response.");
-        return -1;
+        goto err;
       }
       (*result_hostname)[result_len] = '\0';
     }
   }
 
+  tor_close_socket(s);
   return 0;
+ err:
+  tor_close_socket(s);
+  return -1;
 }
 
 /** Print a usage message and exit. */
