@@ -55,6 +55,8 @@ static void channel_tls_close_method(channel_t *chan);
 static const char * channel_tls_describe_transport_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
+static int
+channel_tls_get_transport_name_method(channel_t *chan, char **transport_out);
 static const char *
 channel_tls_get_remote_descr_method(channel_t *chan, int flags);
 static int channel_tls_has_queued_writes_method(channel_t *chan);
@@ -114,6 +116,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->describe_transport = channel_tls_describe_transport_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
   chan->get_remote_descr = channel_tls_get_remote_descr_method;
+  chan->get_transport_name = channel_tls_get_transport_name_method;
   chan->has_queued_writes = channel_tls_has_queued_writes_method;
   chan->is_canonical = channel_tls_is_canonical_method;
   chan->matches_extend_info = channel_tls_matches_extend_info_method;
@@ -403,6 +406,30 @@ channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out)
   tor_addr_copy(addr_out, &(TO_CONN(tlschan->conn)->addr));
 
   return 1;
+}
+
+/**
+ * Get the name of the pluggable transport used by a channel_tls_t.
+ *
+ * This implements the get_transport_name for channel_tls_t. If the
+ * channel uses a pluggable transport, copy its name to
+ * <b>transport_out</b> and return 0. If the channel did not use a
+ * pluggable transport, return -1. */
+
+static int
+channel_tls_get_transport_name_method(channel_t *chan, char **transport_out)
+{
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+  tor_assert(transport_out);
+  tor_assert(tlschan->conn);
+
+  if (!tlschan->conn->ext_or_transport)
+    return -1;
+
+  *transport_out = tor_strdup(tlschan->conn->ext_or_transport);
+  return 0;
 }
 
 /**
