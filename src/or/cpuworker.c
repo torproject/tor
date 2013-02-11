@@ -222,10 +222,10 @@ uint64_t
 estimated_usec_for_onionskins(uint32_t n_requests, uint16_t onionskin_type)
 {
   if (onionskin_type > MAX_ONION_HANDSHAKE_TYPE) /* should be impossible */
-    return 1000 * n_requests;
+    return 1000 * (uint64_t)n_requests;
   if (PREDICT_UNLIKELY(onionskins_n_processed[onionskin_type] < 100)) {
     /* Until we have 100 data points, just asssume everything takes 1 msec. */
-    return 1000 * n_requests;
+    return 1000 * (uint64_t)n_requests;
   } else {
     /* This can't overflow: we'll never have more than 500000 onionskins
      * measured in onionskin_usec_internal, and they won't take anything near
