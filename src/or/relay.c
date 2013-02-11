@@ -1563,11 +1563,12 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   circuit_t *circ;
   const unsigned domain = conn->base_.type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
   int sending_from_optimistic = 0;
-  const int sending_optimistically =
-    conn->base_.type == CONN_TYPE_AP &&
-    conn->base_.state != AP_CONN_STATE_OPEN;
   entry_connection_t *entry_conn =
     conn->base_.type == CONN_TYPE_AP ? EDGE_TO_ENTRY_CONN(conn) : NULL;
+  const int sending_optimistically =
+    entry_conn &&
+    conn->base_.type == CONN_TYPE_AP &&
+    conn->base_.state != AP_CONN_STATE_OPEN;
   crypt_path_t *cpath_layer = conn->cpath_layer;
 
   tor_assert(conn);
