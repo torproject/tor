@@ -838,17 +838,17 @@ static void
 test_util_string_is_key_value(void *ptr)
 {
   (void)ptr;
-  test_assert(string_is_key_value("key=value"));
-  test_assert(string_is_key_value("k=v"));
-  test_assert(string_is_key_value("key="));
-  test_assert(string_is_key_value("x="));
-  test_assert(string_is_key_value("xx="));
-  test_assert(!string_is_key_value("=value"));
-  test_assert(!string_is_key_value("=x"));
-  test_assert(!string_is_key_value("="));
+  test_assert(string_is_key_value(LOG_WARN, "key=value"));
+  test_assert(string_is_key_value(LOG_WARN, "k=v"));
+  test_assert(string_is_key_value(LOG_WARN, "key="));
+  test_assert(string_is_key_value(LOG_WARN, "x="));
+  test_assert(string_is_key_value(LOG_WARN, "xx="));
+  test_assert(!string_is_key_value(LOG_WARN, "=value"));
+  test_assert(!string_is_key_value(LOG_WARN, "=x"));
+  test_assert(!string_is_key_value(LOG_WARN, "="));
 
   /* ??? */
-  /* test_assert(!string_is_key_value("===")); */
+  /* test_assert(!string_is_key_value(LOG_WARN, "===")); */
  done:
   ;
 }

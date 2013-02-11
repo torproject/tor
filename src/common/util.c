@@ -866,9 +866,10 @@ tor_digest_is_zero(const char *digest)
 }
 
 /** Return true if <b>string</b> is a valid '<key>=[<value>]' string.
- *  <value> is optional, to indicate the empty string. */
+ *  <value> is optional, to indicate the empty string. Log at logging
+ *  <b>severity</b> if something ugly happens. */
 int
-string_is_key_value(const char *string)
+string_is_key_value(int severity, const char *string)
 {
   /* position of equal sign in string */
   const char *equal_sign_pos = NULL;
@@ -876,19 +877,21 @@ string_is_key_value(const char *string)
   tor_assert(string);
 
   if (strlen(string) < 2) { /* "x=" is shortest args string */
-    log_warn(LD_GENERAL, "'%s' is too short to be a k=v value.", escaped(string));
+    tor_log(severity, LD_GENERAL, "'%s' is too short to be a k=v value.",
+            escaped(string));
     return 0;
   }
 
   equal_sign_pos = strchr(string, '=');
   if (!equal_sign_pos) {
-    log_warn(LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
+    tor_log(severity, LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
     return 0;
   }
 
   /* validate that the '=' is not in the beginning of the string. */
   if (equal_sign_pos == string) {
-    log_warn(LD_GENERAL, "'%s' is not a valid k=v value.", escaped(string));
+    tor_log(severity, LD_GENERAL, "'%s' is not a valid k=v value.",
+            escaped(string));
     return 0;
   }
 

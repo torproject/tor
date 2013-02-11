@@ -1633,36 +1633,51 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
   } SMARTLIST_FOREACH_END(bridge);
 }
 
-/** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
- * is set, it tells us the identity key too.  If we already had the
- * bridge in our list, unmark it, and don't actually add anything new.
- * If <b>transport_name</b> is non-NULL - the bridge is associated with a
- * pluggable transport - we assign the transport to the bridge.
- * If <b>transport_name</b> is non-NULL - the bridge is associated
- * with a pluggable transport - we assign the transport to the bridge.
- * If <b>socks_args</b> is non-NULL, it's a smartlist carrying
- * key=value pairs to be passed to the pluggable transports
- * proxy. This function steals reference of the smartlist. */
+/** Register the bridge information in <b>bridge_line</b> to the
+ *  bridge subsystem. Steals reference of <b>bridge_line</b>. */
 void
-bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
-                       const char *digest, const char *transport_name,
-                       smartlist_t *socks_args)
+bridge_add_from_config(bridge_line_t *bridge_line)
 {
   bridge_info_t *b;
 
-  bridge_resolve_conflicts(addr, port, digest, transport_name);
+  { /* Log the bridge we are about to register: */
+    log_debug(LD_GENERAL, "Registering bridge at %s (transport: %s) (%s)",
+              fmt_addrport(&bridge_line->addr, bridge_line->port),
+              bridge_line->transport_name ?
+              bridge_line->transport_name : "no transport",
+              tor_digest_is_zero(bridge_line->digest) ?
+              "no key listed" : hex_str(bridge_line->digest, DIGEST_LEN));
+
+    if (bridge_line->socks_args) { /* print socks arguments */
+      int i = 0;
+
+      tor_assert(smartlist_len(bridge_line->socks_args) > 0);
+
+      log_debug(LD_GENERAL, "Bridge uses %d SOCKS arguments:",
+                smartlist_len(bridge_line->socks_args));
+      SMARTLIST_FOREACH(bridge_line->socks_args, const char *, arg,
+                        log_debug(LD_CONFIG, "%d: %s", ++i, arg));
+    }
+  }
+
+  bridge_resolve_conflicts(&bridge_line->addr,
+                           bridge_line->port,
+                           bridge_line->digest,
+                           bridge_line->transport_name);
 
   b = tor_malloc_zero(sizeof(bridge_info_t));
-  tor_addr_copy(&b->addr, addr);
-  b->port = port;
-  if (digest)
-    memcpy(b->identity, digest, DIGEST_LEN);
-  if (transport_name)
-    b->transport_name = tor_strdup(transport_name);
+  tor_addr_copy(&b->addr, &bridge_line->addr);
+  b->port = bridge_line->port;
+  if (bridge_line->digest)
+    memcpy(b->identity, bridge_line->digest, DIGEST_LEN);
+  if (bridge_line->transport_name)
+    b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
-  b->socks_args = socks_args;
+  b->socks_args = bridge_line->socks_args;
   if (!bridge_list)
     bridge_list = smartlist_new();
+
+  tor_free(bridge_line); /* Deallocate bridge_line now. */
 
   smartlist_add(bridge_list, b);
 }

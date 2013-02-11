@@ -96,5 +96,19 @@ int addressmap_register_auto(const char *from, const char *to,
                              addressmap_entry_source_t addrmap_source,
                              const char **msg);
 
+/** Represents the information stored in a torrc Bridge line. */
+typedef struct bridge_line_t {
+  tor_addr_t addr; /* The IP address of the bridge. */
+  uint16_t port; /* The TCP port of the bridge. */
+  char *transport_name; /* The name of the pluggable transport that
+                           should be used to connect to the bridge. */
+  char digest[DIGEST_LEN]; /* The bridge's identity key digest. */
+  smartlist_t *socks_args;; /* SOCKS arguments for the pluggable
+                               transport proxy. */
+} bridge_line_t;
+
+void bridge_line_free(bridge_line_t *bridge_line);
+bridge_line_t *parse_bridge_line(const char *line);
+
 #endif
 
