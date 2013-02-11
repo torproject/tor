@@ -3834,12 +3834,13 @@ tor_spawn_background(const char *const filename, const char **argv,
   child_state = CHILD_STATE_MAXFD;
 
 #ifdef _SC_OPEN_MAX
-  if (-1 != max_fd) {
+  if (-1 == max_fd) {
     max_fd = (int) sysconf(_SC_OPEN_MAX);
-    if (max_fd == -1)
+    if (max_fd == -1) {
       max_fd = DEFAULT_MAX_FD;
       log_warn(LD_GENERAL,
                "Cannot find maximum file descriptor, assuming %d", max_fd);
+    }
   }
 #else
   max_fd = DEFAULT_MAX_FD;
