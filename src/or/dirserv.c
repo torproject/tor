@@ -66,19 +66,6 @@ static cached_dir_t *the_directory = NULL;
 /** For authoritative directories: the current (v1) network status. */
 static cached_dir_t the_runningrouters;
 
-/** Array of start and end of consensus methods used for supported
-    microdescriptor formats. */
-static const struct consensus_method_range_t {
-  int low;
-  int high;
-} microdesc_consensus_methods[] = {
-  {MIN_METHOD_FOR_MICRODESC, MIN_METHOD_FOR_A_LINES - 1},
-  {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
-  {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
-  {MIN_METHOD_FOR_NTOR_KEY, MAX_SUPPORTED_CONSENSUS_METHOD},
-  {-1, -1}
-};
-
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
@@ -2811,11 +2798,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   microdescriptors = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
-    const struct consensus_method_range_t *cmr = NULL;
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t *rs;
       vote_routerstatus_t *vrs;
-      microdesc_t *md;
       node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       if (!node)
         continue;
@@ -2833,23 +2818,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
         rs->is_flagged_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
-      for (cmr = microdesc_consensus_methods;
-           cmr->low != -1 && cmr->high != -1;
-           cmr++) {
-        md = dirvote_create_microdescriptor(ri, cmr->low);
-        if (md) {
-          char buf[128];
-          vote_microdesc_hash_t *h;
-          dirvote_format_microdesc_vote_line(buf, sizeof(buf), md,
-                                             cmr->low, cmr->high);
-          h = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
-          h->microdesc_hash_line = tor_strdup(buf);
-          h->next = vrs->microdesc;
-          vrs->microdesc = h;
-          md->last_listed = now;
-          smartlist_add(microdescriptors, md);
-        }
-      }
+      vrs->microdesc = dirvote_format_all_microdesc_vote_lines(ri, now,
+                                                        microdescriptors);
 
       smartlist_add(routerstatuses, vrs);
     }
