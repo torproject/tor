@@ -1942,9 +1942,13 @@ router_rebuild_descriptor(int force)
        anyway, since they don't have a DirPort, and always connect to the
        bridge authority anonymously.  But just in case they somehow think of
        sending them on an unencrypted connection, don't allow them to try. */
-    ri->cache_info.send_unencrypted = ei->cache_info.send_unencrypted = 0;
+    ri->cache_info.send_unencrypted = 0;
+    if (ei)
+      ei->cache_info.send_unencrypted = 0
   } else {
-    ri->cache_info.send_unencrypted = ei->cache_info.send_unencrypted = 1;
+    ri->cache_info.send_unencrypted = 1;
+    if (ei)
+      ei->cache_info.send_unencrypted = 1;
   }
 
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
