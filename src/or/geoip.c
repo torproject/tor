@@ -782,6 +782,107 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
   }
 }
 
+/** Return the bridge-ip-transports string that should be inserted in
+ *  our extra-info descriptor. Return NULL if the bridge-ip-transports
+ *  line should be empty.  */
+char *
+geoip_get_transport_history(void)
+{
+  unsigned granularity = IP_GRANULARITY;
+  /** String hash table <name of transport> -> <number of users>. */
+  strmap_t *transport_counts = strmap_new();
+  void *ptr;
+  intptr_t val;
+
+  /** Smartlist that contains copies of the names of the transports
+      that have been used. */
+  smartlist_t *transports_used = smartlist_new();
+
+  /* Special string to signify that no transport was used for this
+     connection. Pluggable transport names can't have symbols in their
+     names, so this string will never collide with a real transport. */
+  static const char* no_transport_str = "<OR>";
+
+  clientmap_entry_t **ent;
+  const char *transport_name = NULL;
+  smartlist_t *string_chunks = smartlist_new();
+  char *the_string = NULL;
+  int i = 0;
+
+  /* If we haven't seen any clients yet, return NULL. */
+  if (HT_EMPTY(&client_history))
+    goto done;
+
+  /** We do the following steps to form the transport history string:
+   *  a) Foreach client that uses a pluggable transport, we increase the
+   *  times that transport was used by one. If the client did not use
+   *  a transport, we increase the number of times someone connected
+   *  without obfuscation.
+   *  b) Foreach transport we observed, we write its transport history
+   *  string and push it to string_chunks. So, for example, if we've
+   *  seen 665 obfs2 clients, we write "obfs2=665".
+   *  c) We concatenate string_chunks to form the final string.
+   */
+
+  log_debug(LD_GENERAL,"Starting iteration for transport history. %d clients.",
+            HT_SIZE(&client_history));
+
+  /* Loop through all clients. */
+  HT_FOREACH(ent, clientmap, &client_history) {
+    transport_name = (*ent)->transport_name;
+    if (!transport_name)
+      transport_name = no_transport_str;
+
+    /* Increase the count for this transport name. */
+    ptr = strmap_get(transport_counts, transport_name);
+    val = (intptr_t)ptr;
+    val++;
+    ptr = (void*)val;
+    strmap_set(transport_counts, transport_name, ptr);
+
+    /* If it's the first time we see this transport, note it. */
+    if (!smartlist_contains_string(transports_used, transport_name))
+      smartlist_add(transports_used, tor_strdup(transport_name));
+
+    log_debug(LD_GENERAL, "Client from '%s' with transport '%s'. "
+              "I've now seen %d clients.",
+              safe_str_client(fmt_addr(&(*ent)->addr)),
+              transport_name ? transport_name : "<no transport>",
+              (int)val);
+  }
+
+  /* Sort the transport names (helps with unit testing). */
+  smartlist_sort_strings(transports_used);
+
+  /* Loop through all seen transports. */
+  SMARTLIST_FOREACH_BEGIN(transports_used, const char *, transport_name) {
+    void *transport_count_ptr = strmap_get(transport_counts, transport_name);
+    unsigned int transport_count = (uintptr_t) transport_count_ptr;
+    i++; /* counter so that we don't add a comma if it's the last transport. */
+
+    log_debug(LD_GENERAL, "We got %u clients with transport '%s'.",
+              transport_count, transport_name);
+
+    smartlist_add_asprintf(string_chunks, "%s=%u%s",
+                           transport_name,
+                           round_to_next_multiple_of(transport_count, granularity),
+                           i != smartlist_len(transports_used) ? "," : "");
+  } SMARTLIST_FOREACH_END(transport_name);
+
+  the_string = smartlist_join_strings(string_chunks, "", 0, NULL);
+
+  log_debug(LD_GENERAL, "Final bridge-ip-transports string: '%s'", the_string);
+
+ done:
+  strmap_free(transport_counts, NULL);
+  SMARTLIST_FOREACH(transports_used, char *, s, tor_free(s));
+  smartlist_free(transports_used);
+  SMARTLIST_FOREACH(string_chunks, char *, s, tor_free(s));
+  smartlist_free(string_chunks);
+
+  return the_string;
+}
+
 /** Return a newly allocated comma-separated string containing statistics
  * on network status downloads. The string contains the number of completed
  * requests, timeouts, and still running requests as well as the download
@@ -1202,6 +1303,8 @@ validate_bridge_stats(const char *stats_str, time_t now)
   const char *BRIDGE_STATS_END = "bridge-stats-end ";
   const char *BRIDGE_IPS = "bridge-ips ";
   const char *BRIDGE_IPS_EMPTY_LINE = "bridge-ips\n";
+  const char *BRIDGE_TRANSPORTS = "bridge-ip-transports ";
+  const char *BRIDGE_TRANSPORTS_EMPTY_LINE = "bridge-ip-transports\n";
   const char *tmp;
   time_t stats_end_time;
   int seconds;
@@ -1236,6 +1339,16 @@ validate_bridge_stats(const char *stats_str, time_t now)
       return 0;
   }
 
+  /* Parse: "bridge-ip-transports PT=N,PT=N,..." */
+  tmp = find_str_at_start_of_line(stats_str, BRIDGE_TRANSPORTS);
+  if (!tmp) {
+    /* Look if there is an empty "bridge-ip-transports" line */
+    tmp = find_str_at_start_of_line(stats_str, BRIDGE_TRANSPORTS_EMPTY_LINE);
+    if (!tmp)
+      return 0;
+  }
+
+
   return 1;
 }
 
@@ -1249,7 +1362,8 @@ static char *bridge_stats_extrainfo = NULL;
 char *
 geoip_format_bridge_stats(time_t now)
 {
-  char *out = NULL, *country_data = NULL, *ipver_data = NULL;
+  char *out = NULL;
+  char *country_data = NULL, *ipver_data = NULL, *transport_data = NULL;
   long duration = now - start_of_bridge_stats_interval;
   char written[ISO_TIME_LEN+1];
 
@@ -1260,16 +1374,20 @@ geoip_format_bridge_stats(time_t now)
 
   format_iso_time(written, now);
   geoip_get_client_history(GEOIP_CLIENT_CONNECT, &country_data, &ipver_data);
+  transport_data = geoip_get_transport_history();
 
   tor_asprintf(&out,
                "bridge-stats-end %s (%ld s)\n"
                "bridge-ips %s\n"
-               "bridge-ip-versions %s\n",
+               "bridge-ip-versions %s\n"
+               "bridge-ip-transports %s\n",
                written, duration,
                country_data ? country_data : "",
-               ipver_data ? ipver_data : "");
+               ipver_data ? ipver_data : "",
+               transport_data ? transport_data : "");
   tor_free(country_data);
   tor_free(ipver_data);
+  tor_free(transport_data);
 
   return out;
 }
@@ -1544,5 +1662,6 @@ geoip_free_all(void)
   }
 
   clear_geoip_db();
+  tor_free(bridge_stats_extrainfo);
 }
 
