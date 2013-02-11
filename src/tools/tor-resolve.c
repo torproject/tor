@@ -201,7 +201,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s<0) {
     log_sock_error("creating_socket", -1);
-    goto err;
+    return -1;
   }
 
   memset(&socksaddr, 0, sizeof(socksaddr));
