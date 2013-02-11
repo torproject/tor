@@ -2121,7 +2121,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                        digest, digest_len,
                                        signing_key)) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
-      return NULL; /* This leaks, but it should never happen. */
+      goto done;
     }
     smartlist_add(chunks, tor_strdup(sigbuf));
 
