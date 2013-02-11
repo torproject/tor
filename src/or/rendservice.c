@@ -1119,11 +1119,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   crypt_path_t *cpath = NULL;
   char hexcookie[9];
   int circ_needs_uptime;
-  char intro_key_digest[DIGEST_LEN];
-  size_t auth_len = 0;
-  char auth_data[REND_DESC_COOKIE_LEN];
   time_t now = time(NULL);
-  char diffie_hellman_hash[DIGEST_LEN];
   time_t elapsed;
   int replay;
 
@@ -1296,8 +1292,9 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* If the service performs client authorization, check included auth data. */
   if (service->clients) {
-    if (auth_len > 0) {
-      if (rend_check_authorization(service, auth_data)) {
+    if (parsed_req->version == 3 && parsed_req->u.v3.auth_len > 0) {
+      if (rend_check_authorization(service,
+                                   (const char*)parsed_req->u.v3.auth_data)) {
         log_info(LD_REND, "Authorization data in INTRODUCE2 cell are valid.");
       } else {
         log_info(LD_REND, "The authorization data that are contained in "
@@ -1410,9 +1407,6 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memwipe(buf, 0, sizeof(buf));
   memwipe(serviceid, 0, sizeof(serviceid));
   memwipe(hexcookie, 0, sizeof(hexcookie));
-  memwipe(intro_key_digest, 0, sizeof(intro_key_digest));
-  memwipe(auth_data, 0, sizeof(auth_data));
-  memwipe(diffie_hellman_hash, 0, sizeof(diffie_hellman_hash));
 
   /* Free the parsed cell */
   if (parsed_req) {
