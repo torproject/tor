@@ -255,7 +255,7 @@ routerset_add_unknown_ccs(routerset_t **setp, int only_if_some_cc_set)
   }
   if (add_a1) {
     smartlist_add(set->country_names, tor_strdup("a1"));
-    smartlist_add(set->country_names, tor_strdup("{a1}"));
+    smartlist_add(set->list, tor_strdup("{a1}"));
   }
 
   if (add_unknown || add_a1) {
