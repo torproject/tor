@@ -124,8 +124,10 @@ bench_onion_TAP(void)
 
   key = crypto_pk_new();
   key2 = crypto_pk_new();
-  crypto_pk_generate_key_with_bits(key, 1024);
-  crypto_pk_generate_key_with_bits(key2, 1024);
+  if (crypto_pk_generate_key_with_bits(key, 1024) < 0)
+    goto done;
+  if (crypto_pk_generate_key_with_bits(key2, 1024) < 0)
+    goto done;
 
   reset_perftime();
   start = perftime();
@@ -171,7 +173,9 @@ bench_onion_TAP(void)
   printf("Client-side, part 2: %f usec.\n",
          NANOCOUNT(start, end, iters)/1e3);
 
+ done:
   crypto_pk_free(key);
+  crypto_pk_free(key2);
 }
 
 #ifdef CURVE25519_ENABLED

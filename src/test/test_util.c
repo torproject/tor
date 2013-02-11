@@ -53,7 +53,6 @@ test_util_read_until_eof_impl(const char *fname, size_t file_len,
   fd = open(fifo_name, O_RDONLY|O_BINARY);
   tt_int_op(fd, >=, 0);
   str = read_file_to_str_until_eof(fd, read_limit, &sz);
-  close(fd);
   tt_assert(str != NULL);
 
   if (read_limit < file_len)
@@ -69,6 +68,8 @@ test_util_read_until_eof_impl(const char *fname, size_t file_len,
   tor_free(fifo_name);
   tor_free(test_str);
   tor_free(str);
+  if (fd >= 0)
+    close(fd);
 }
 
 static void

@@ -24,7 +24,6 @@ test_replaycache_alloc(void)
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
-  if (!r) goto done;
 
  done:
   if (r) replaycache_free(r);
@@ -40,7 +39,6 @@ test_replaycache_miss(void)
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
-  if (!r) goto done;
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
@@ -61,7 +59,6 @@ test_replaycache_hit(void)
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
-  if (!r) goto done;
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
@@ -87,7 +84,6 @@ test_replaycache_age(void)
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
-  if (!r) goto done;
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
@@ -119,7 +115,6 @@ test_replaycache_elapsed(void)
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
-  if (!r) goto done;
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
@@ -146,7 +141,6 @@ test_replaycache_noexpire(void)
 
   r = replaycache_new(0, 0);
   test_assert(r != NULL);
-  if (!r) goto done;
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
