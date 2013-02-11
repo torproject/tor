@@ -1678,6 +1678,7 @@ test_geoip(void)
    * the connecting clients added above. */
   geoip_bridge_stats_init(now);
   s = geoip_format_bridge_stats(now + 86400);
+  test_assert(s);
   test_streq(bridge_stats_1, s);
   tor_free(s);
 
