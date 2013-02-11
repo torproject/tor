@@ -1712,7 +1712,7 @@ static int router_guess_address_from_dir_headers(uint32_t *guess);
 int
 router_pick_published_address(const or_options_t *options, uint32_t *addr)
 {
-  if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL) < 0) {
+  if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL, 0) < 0) {
     log_info(LD_CONFIG, "Could not determine our address locally. "
              "Checking if directory headers provide any hints.");
     if (router_guess_address_from_dir_headers(addr) < 0) {
@@ -2103,7 +2103,7 @@ check_descriptor_ipaddress_changed(time_t now)
 
   /* XXXX ipv6 */
   prev = desc_routerinfo->addr;
-  if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname) < 0) {
+  if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname, 0) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
@@ -2159,7 +2159,7 @@ router_new_address_suggestion(const char *suggestion,
   }
 
   /* XXXX ipv6 */
-  if (resolve_my_address(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
+  if (resolve_my_address(LOG_INFO, options, &cur, NULL, NULL, 0) >= 0) {
     /* We're all set -- we already know our address. Great. */
     tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
                                                    need it later */

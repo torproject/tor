@@ -3951,7 +3951,8 @@ trusted_dir_server_new(const char *nickname, const char *address,
   dir_server_t *result;
 
   if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(LOG_WARN, get_options(), &a, NULL, &hostname) < 0) {
+    if (resolve_my_address(LOG_WARN, get_options(),
+                           &a, NULL, &hostname, 0) < 0) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
