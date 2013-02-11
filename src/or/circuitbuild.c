@@ -1307,7 +1307,8 @@ pathbias_is_new_circ_attempt(origin_circuit_t *circ)
   /* cpath is a circular list. We want circs with more than one hop,
    * and the second hop must be waiting for keys still (it's just
    * about to get them). */
-  return circ->cpath->next != circ->cpath &&
+  return circ->cpath &&
+         circ->cpath->next != circ->cpath &&
          circ->cpath->next->state == CPATH_STATE_AWAITING_KEYS;
 #else
   /* If tagging attacks are no longer possible, we probably want to
@@ -1315,7 +1316,8 @@ pathbias_is_new_circ_attempt(origin_circuit_t *circ)
    * timing-based tagging is still more useful than per-hop failure.
    * In which case, we'd never want to use this.
    */
-  return circ->cpath->state == CPATH_STATE_AWAITING_KEYS;
+  return circ->cpath &&
+         circ->cpath->state == CPATH_STATE_AWAITING_KEYS;
 #endif
 }
 
