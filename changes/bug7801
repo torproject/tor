@@ -1,0 +1,13 @@
+  o Minor bugfixes:
+    - When choosing which stream on a formerly stalled circuit to wake
+      first, make better use of the platform's weak RNG.  Previously, we
+      had been using the % ("modulo") operator to try to generate a 1/N
+      chance of picking each stream, but this behaves badly with many
+      platforms' choice of weak RNG. Fix for bug 7801; bugfix on
+      0.2.2.20-alpha.
+    - Use our own weak RNG when we need a weak RNG. Windows's rand()
+      and Irix's random() only return 15 bits; Solaris's random()
+      returns more bits but its RAND_MAX says it only returns 15, and
+      so on.  Fixes another aspect of bug 7801; bugfix on
+      0.2.2.20-alpha.
+
