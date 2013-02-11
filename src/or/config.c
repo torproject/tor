@@ -777,9 +777,12 @@ set_options(or_options_t *new_val, char **msg)
         line = get_assigned_option(&options_format, new_val, var_name, 1);
 
         if (line) {
-          for (; line; line = line->next) {
+          config_line_t *next;
+          for (; line; line = next) {
+            next = line->next;
             smartlist_add(elements, line->key);
             smartlist_add(elements, line->value);
+            tor_free(line);
           }
         } else {
           smartlist_add(elements, (char*)options_format.vars[i].name);
