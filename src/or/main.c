@@ -1407,7 +1407,7 @@ run_scheduled_events(time_t now)
  * that would require an upload? */
 #define CHECK_DESCRIPTOR_INTERVAL (60)
 /** How often do we (as a router) check whether our IP address has changed? */
-#define CHECK_IPADDRESS_INTERVAL (15*60)
+#define CHECK_IPADDRESS_INTERVAL (60)
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
