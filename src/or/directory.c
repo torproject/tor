@@ -478,7 +478,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
        */
       /* XXX024 Not all bridges handle conditional consensus downloading,
        * so, for now, never assume the server supports that. -PP */
-      const node_t *node = choose_random_entry(NULL, type);
+      const node_t *node = choose_random_dirguard(type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
         tor_addr_t addr;

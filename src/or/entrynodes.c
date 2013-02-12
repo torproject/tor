@@ -848,6 +848,14 @@ node_understands_microdescriptors(const node_t *node)
 static int
 node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
 {
+  /* Checking dirinfo for any type other than microdescriptors isn't required
+     yet, since we only choose directory guards that can support microdescs,
+     routerinfos, and networkstatuses, AND we don't use directory guards if
+     we're configured to do direct downloads of anything else. The only case
+     where we might have a guard that doesn't know about a type of directory
+     information is when we're retrieving directory information from a
+     bridge. */
+
   if ((dirinfo & MICRODESC_DIRINFO) &&
       !node_understands_microdescriptors(node))
     return 0;
@@ -862,9 +870,9 @@ node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
  * only select from nodes that know how to answer directory questions
  * of that type. */
 const node_t *
-choose_random_entry(cpath_build_state_t *state, dirinfo_type_t dirinfo)
+choose_random_entry(cpath_build_state_t *state)
 {
-  return choose_random_entry_impl(state, 0, dirinfo);
+  return choose_random_entry_impl(state, 0, 0);
 }
 
 /** Pick a live (up and listed) directory guard from entry_guards for
@@ -892,12 +900,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   int need_descriptor = !for_directory;
   const int num_needed = for_directory ? options->NumDirectoryGuards :
     options->NumEntryGuards;
-
-  /* Checking dirinfo_type isn't required yet, since we only choose directory
-     guards that can support microdescs, routerinfos, and networkstatuses, AND
-     we don't use directory guards if we're configured to do direct downloads
-     of anything else. */
-  (void) dirinfo_type;
 
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
@@ -2012,7 +2014,7 @@ int
 any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
-  return choose_random_entry(NULL, NO_DIRINFO)!=NULL ? 1 : 0;
+  return choose_random_entry(NULL) != NULL;
 }
 
 /** Return 1 if there are any directory conns fetching bridge descriptors

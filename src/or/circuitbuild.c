@@ -3373,7 +3373,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
     /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
-    return choose_random_entry(state, NO_DIRINFO);
+    return choose_random_entry(state);
   }
 
   excluded = smartlist_new();
