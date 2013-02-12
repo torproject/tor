@@ -2750,7 +2750,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   tor_assert(private_key);
   tor_assert(cert);
 
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname, 0)<0) {
+  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     return NULL;
   }
@@ -2960,7 +2960,7 @@ generate_v2_networkstatus_opinion(void)
 
   private_key = get_server_identity_key();
 
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname, 0)<0) {
+  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     goto done;
   }

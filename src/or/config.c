@@ -1893,6 +1893,13 @@ list_torrc_options(void)
 
 /** Last value actually set by resolve_my_address. */
 static uint32_t last_resolved_addr = 0;
+
+/** Accessor for last_resolved_addr from outside this file. */
+uint32_t get_last_resolved_addr(void)
+{
+  return last_resolved_addr;
+}
+
 /**
  * Use <b>options-\>Address</b> to guess our public IP address.
  *
@@ -1908,16 +1915,12 @@ static uint32_t last_resolved_addr = 0;
  *     holding that hostname. (If we didn't get our address by resolving a
  *     hostname, set *<b>hostname_out</b> to NULL.)
  *
- * If <b>use_cached_addr</b> is true, and we have a plausible answer,
- * provide that answer and return.
- *
  * XXXX ipv6
  */
 int
 resolve_my_address(int warn_severity, const or_options_t *options,
                    uint32_t *addr_out,
-                   const char **method_out, char **hostname_out,
-                   int use_cached_addr)
+                   const char **method_out, char **hostname_out)
 {
   struct in_addr in;
   uint32_t addr; /* host order */
@@ -1933,18 +1936,6 @@ resolve_my_address(int warn_severity, const or_options_t *options,
                           LOG_NOTICE : warn_severity;
 
   tor_assert(addr_out);
-
-  /*
-   * Step zero: if used_cached_addr is true, and we have a cached answer,
-   * just return it and be done.
-   */
-
-  if (use_cached_addr && last_resolved_addr) {
-    *addr_out = last_resolved_addr;
-    if (method_out)
-      *method_out = "CACHED";
-    return 0;
-  }
 
   /*
    * Step one: Fill in 'hostname' to be our best guess.
@@ -2359,7 +2350,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (authdir_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL, 0) < 0)
+    if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 

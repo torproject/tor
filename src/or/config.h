@@ -26,10 +26,10 @@ const char *get_short_version(void);
 setopt_err_t options_trial_assign(config_line_t *list, int use_defaults,
                                   int clear_first, char **msg);
 
+uint32_t get_last_resolved_addr(void);
 int resolve_my_address(int warn_severity, const or_options_t *options,
                        uint32_t *addr_out,
-                       const char **method_out, char **hostname_out,
-                       int use_cached_addr);
+                       const char **method_out, char **hostname_out);
 int is_local_addr(const tor_addr_t *addr);
 void options_init(or_options_t *options);
 char *options_dump(const or_options_t *options, int minimal);
