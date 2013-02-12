@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Stop marking every relay as having been down for one hour every
+      time we restart a directory authority. These artificial downtimes
+      were messing with our Stable and Guard flag calculations. Fixes
+      bug 8218 (introduced by the fix for 1035). Bugfix on 0.2.2.23-alpha.
+
