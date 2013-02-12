@@ -1537,7 +1537,8 @@ is non-zero):
     Prevent nodes that don't appear in the consensus from exiting using this
     relay.  If the option is 1, we always block exit attempts from such
     nodes; if it's 0, we never do, and if the option is "auto", then we do
-    whatever the authorities suggest in the consensus. (Default: auto)
+    whatever the authorities suggest in the consensus (and block if the consensus
+    is quiet on the issue). (Default: auto)
 
 **ServerDNSResolvConfFile** __filename__::
     Overrides the default DNS configuration with the configuration in
