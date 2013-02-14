@@ -1157,7 +1157,6 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_v3_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
-  static time_t time_to_check_ipaddress = 0;
   static time_t time_to_shrink_memory = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
@@ -1403,11 +1402,10 @@ run_scheduled_events(time_t now)
   /** 2. Periodically, we consider force-uploading our descriptor
    * (if we've passed our internal checks). */
 
-/** How often do we check whether part of our router info has changed in a way
- * that would require an upload? */
+/** How often do we check whether part of our router info has changed in a
+ * way that would require an upload? That includes checking whether our IP
+ * address has changed. */
 #define CHECK_DESCRIPTOR_INTERVAL (60)
-/** How often do we (as a router) check whether our IP address has changed? */
-#define CHECK_IPADDRESS_INTERVAL (15*60)
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
@@ -1415,10 +1413,7 @@ run_scheduled_events(time_t now)
     static int dirport_reachability_count = 0;
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     check_descriptor_bandwidth_changed(now);
-    if (time_to_check_ipaddress < now) {
-      time_to_check_ipaddress = now + CHECK_IPADDRESS_INTERVAL;
-      check_descriptor_ipaddress_changed(now);
-    }
+    check_descriptor_ipaddress_changed(now);
     mark_my_descriptor_dirty_if_too_old(now);
     consider_publishable_server(0);
     /* also, check religiously for reachability, if it's within the first

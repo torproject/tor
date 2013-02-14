@@ -1,0 +1,11 @@
+  o Minor bugfixes:
+    - Stop trying to resolve our hostname so often (e.g. every time we
+      think about doing a directory fetch). Now we reuse the cached
+      answer in some cases. Fixes bugs 1992 (bugfix on 0.2.0.20-rc)
+      and 2410 (bugfix on 0.1.2.2-alpha).
+
+  o Minor features:
+    - Make bridge relays check once a minute for whether their IP
+      address has changed, rather than only every 15 minutes. Resolves
+      bugs 1913 and 1992.
+

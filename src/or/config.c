@@ -1893,6 +1893,13 @@ list_torrc_options(void)
 
 /** Last value actually set by resolve_my_address. */
 static uint32_t last_resolved_addr = 0;
+
+/** Accessor for last_resolved_addr from outside this file. */
+uint32_t get_last_resolved_addr(void)
+{
+  return last_resolved_addr;
+}
+
 /**
  * Use <b>options-\>Address</b> to guess our public IP address.
  *
