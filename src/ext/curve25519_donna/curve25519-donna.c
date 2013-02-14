@@ -46,8 +46,10 @@
  * from the sample implementation.
  */
 
+#include "orconfig.h"
+
 #include <string.h>
-#include <stdint.h>
+#include "torint.h"
 
 typedef uint8_t u8;
 typedef int32_t s32;
