@@ -1153,6 +1153,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
+  int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0;
 
   if (!consensus)
@@ -1192,6 +1193,8 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     if ((type & MICRODESC_DIRINFO) && !is_trusted &&
         !node->rs->version_supports_microdesc_cache)
       continue;
+    if (for_guard && node->using_as_guard)
+      continue; /* Don't make the same node a guard twice. */
     if (try_excluding &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
                                         country)) {

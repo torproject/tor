@@ -362,7 +362,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   } else {
     const routerstatus_t *rs;
     rs = router_pick_directory_server(MICRODESC_DIRINFO|V3_DIRINFO,
-                                      PDS_PREFER_TUNNELED_DIR_CONNS_);
+                                      PDS_PREFER_TUNNELED_DIR_CONNS_|PDS_FOR_GUARD);
     if (!rs)
       return NULL;
     node = node_get_by_id(rs->identity_digest);
