@@ -2233,6 +2233,9 @@ typedef struct node_t {
   /** Local info: we treat this node as if it rejects everything */
   unsigned int rejects_all:1;
 
+  /** Local info: this node is in our list of guards */
+  unsigned int using_as_guard:1;
+
   /* Local info: derived. */
 
   /** True if the IPv6 OR port is preferred over the IPv4 OR port.  */
