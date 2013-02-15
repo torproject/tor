@@ -4203,6 +4203,9 @@ control_event_guard_deferred(void)
 #endif
 }
 
+/** Largest amount that we'll backdate chosen_on_date */
+#define CHOSEN_ON_DATE_SLOP (30*86400)
+
 /** Add a new (preferably stable and fast) router to our
  * entry_guards list. Return a pointer to the router if we succeed,
  * or NULL if we can't find any more suitable entries.
@@ -4241,7 +4244,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend)
    * don't all select them on the same day, and b) avoid leaving a
    * precise timestamp in the state file about when we first picked
    * this guard. For details, see the Jan 2010 or-dev thread. */
-  entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
+  entry->chosen_on_date = time(NULL) - crypto_rand_int(CHOSEN_ON_DATE_SLOP);
   entry->chosen_by_version = tor_strdup(VERSION);
   if (prepend)
     smartlist_insert(entry_guards, 0, entry);
@@ -4285,15 +4288,40 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e);
 }
 
+/**
+ * Return the minimum lifetime of working entry guard, in seconds,
+ * as given in the consensus networkstatus.
+ */
+static int32_t
+guards_get_lifetime(void)
+{
+  const or_options_t *options = get_options();
+#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
+#define MIN_GUARD_LIFETIME  (86400 * 60)   /* Two months. */
+#define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
+
+  if (options->GuardLifetime >= 1) {
+    return CLAMP(MIN_GUARD_LIFETIME,
+                 options->GuardLifetime,
+                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
+  }
+
+  return networkstatus_get_param(NULL, "GuardLifetime",
+                                 DFLT_GUARD_LIFETIME,
+                                 MIN_GUARD_LIFETIME,
+                                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
+}
+
 /** Remove any entry guard which was selected by an unknown version of Tor,
  * or which was selected by a version of Tor that's known to select
- * entry guards badly, or which was selected more 2 months ago. */
+ * entry guards badly, or which was selected a long time ago */
 /* XXXX The "obsolete guards" and "chosen long ago guards" things should
  * probably be different functions. */
 static int
 remove_obsolete_entry_guards(time_t now)
 {
   int changed = 0, i;
+  int32_t guard_lifetime = guards_get_lifetime();
 
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
@@ -4324,8 +4352,8 @@ remove_obsolete_entry_guards(time_t now)
       }
       tor_free(tor_ver);
     }
-    if (!version_is_bad && entry->chosen_on_date + 3600*24*60 < now) {
-      /* It's been 2 months since the date listed in our state file. */
+    if (!version_is_bad && entry->chosen_on_date + guard_lifetime < now) {
+      /* It's been too long since the date listed in our state file. */
       msg = "was selected several months ago";
       date_is_bad = 1;
     }
