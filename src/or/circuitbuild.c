@@ -25,6 +25,7 @@
 #include "directory.h"
 #include "entrynodes.h"
 #include "main.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"

@@ -108,7 +108,7 @@ int any_pending_bridge_descriptor_fetches(void);
 int entries_known_but_down(const or_options_t *options);
 void entries_retry_all(const or_options_t *options);
 
-int any_bridges_dont_support_microdescriptors(void);
+int any_bridge_supports_microdescriptors(void);
 
 void entry_guards_free_all(void);
 

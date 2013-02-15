@@ -1,0 +1,7 @@
+  o Minor features:
+    - Teach bridge-using clients to avoid 0.2.2 bridges when making
+      microdescriptor-related dir requests, and only fall back to normal
+      descriptors if none of their bridges can handle microdescriptors
+      (as opposed to the fix in ticket 4013, which caused them to fall
+      back to normal descriptors if *any* of their bridges preferred
+      them). Resolves ticket 4994.

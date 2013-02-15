@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "entrynodes.h"
 #include "main.h"
+#include "microdesc.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "router.h"
@@ -829,11 +830,45 @@ entry_list_is_constrained(const or_options_t *options)
   return 0;
 }
 
+/** Return true iff this node can answer directory questions about
+ * microdescriptors. */
+static int
+node_understands_microdescriptors(const node_t *node)
+{
+  tor_assert(node);
+  if (node->rs && node->rs->version_supports_microdesc_cache)
+    return 1;
+  if (node->ri && tor_version_supports_microdescriptors(node->ri->platform))
+    return 1;
+  return 0;
+}
+
+/** Return true iff <b>node</b> is able to answer directory questions
+ * of type <b>dirinfo</b>. */
+static int
+node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
+{
+  /* Checking dirinfo for any type other than microdescriptors isn't required
+     yet, since we only choose directory guards that can support microdescs,
+     routerinfos, and networkstatuses, AND we don't use directory guards if
+     we're configured to do direct downloads of anything else. The only case
+     where we might have a guard that doesn't know about a type of directory
+     information is when we're retrieving directory information from a
+     bridge. */
+
+  if ((dirinfo & MICRODESC_DIRINFO) &&
+      !node_understands_microdescriptors(node))
+    return 0;
+  return 1;
+}
+
 /** Pick a live (up and listed) entry guard from entry_guards. If
  * <b>state</b> is non-NULL, this is for a specific circuit --
  * make sure not to pick this circuit's exit or any node in the
  * exit's family. If <b>state</b> is NULL, we're looking for a random
- * guard (likely a bridge). */
+ * guard (likely a bridge).  If <b>dirinfo</b> is not NO_DIRINFO, then
+ * only select from nodes that know how to answer directory questions
+ * of that type. */
 const node_t *
 choose_random_entry(cpath_build_state_t *state)
 {
@@ -866,12 +901,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   const int num_needed = for_directory ? options->NumDirectoryGuards :
     options->NumEntryGuards;
 
-  /* Checking dirinfo_type isn't required yet, since we only choose directory
-     guards that can support microdescs, routerinfos, and networkstatuses, AND
-     we don't use directory guards if we're configured to do direct downloads
-     of anything else. */
-  (void) dirinfo_type;
-
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
     consider_exit_family = 1;
@@ -903,6 +932,9 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
         continue; /* don't pick the same node for entry and exit */
       if (consider_exit_family && smartlist_contains(exit_family, node))
         continue; /* avoid relays that are family members of our exit */
+      if (dirinfo_type != NO_DIRINFO &&
+          !node_can_handle_dirinfo(node, dirinfo_type))
+        continue; /* this node won't be able to answer our dir questions */
 #if 0 /* since EntryNodes is always strict now, this clause is moot */
       if (options->EntryNodes &&
           !routerset_contains_node(options->EntryNodes, node)) {
@@ -1982,7 +2014,7 @@ int
 any_bridge_descriptors_known(void)
 {
   tor_assert(get_options()->UseBridges);
-  return choose_random_entry(NULL)!=NULL ? 1 : 0;
+  return choose_random_entry(NULL) != NULL;
 }
 
 /** Return 1 if there are any directory conns fetching bridge descriptors
@@ -2064,29 +2096,24 @@ entries_retry_all(const or_options_t *options)
   entries_retry_helper(options, 1);
 }
 
-/** Return true if we've ever had a bridge running a Tor version that can't
- * provide microdescriptors to us. In that case fall back to asking for
- * full descriptors. Eventually all bridges will support microdescriptors
- * and we can take this check out; see bug 4013. */
+/** Return true if at least one of our bridges runs a Tor version that can
+ * provide microdescriptors to us. If not, we'll fall back to asking for
+ * full descriptors. */
 int
-any_bridges_dont_support_microdescriptors(void)
+any_bridge_supports_microdescriptors(void)
 {
   const node_t *node;
-  static int ever_answered_yes = 0;
   if (!get_options()->UseBridges || !entry_guards)
     return 0;
-  if (ever_answered_yes)
-    return 1; /* if we ever answer 'yes', always answer 'yes' */
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
     node = node_get_by_id(e->identity);
-    if (node && node->ri &&
+    if (node && node->is_running &&
         node_is_bridge(node) && node_is_a_configured_bridge(node) &&
-        !tor_version_supports_microdescriptors(node->ri->platform)) {
+        node_understands_microdescriptors(node)) {
       /* This is one of our current bridges, and we know enough about
-       * it to know that it won't be able to answer our microdescriptor
+       * it to know that it will be able to answer our microdescriptor
        * questions. */
-      ever_answered_yes = 1;
-      return 1;
+       return 1;
     }
   } SMARTLIST_FOREACH_END(e);
   return 0;
