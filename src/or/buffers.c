@@ -1056,7 +1056,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   *out = NULL;
   if (buf->datalen < header_len)
     return 0;
-  peek_from_buf(hdr, sizeof(hdr), buf);
+  peek_from_buf(hdr, header_len, buf);
 
   command = get_uint8(hdr + circ_id_len);
   if (!(cell_command_is_var_length(command, linkproto)))
