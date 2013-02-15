@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When detecting the largest possible file descriptor (in order to close
+      all file descriptors when launching a new program), actually use
+      _SC_OPEN_MAX. The old code for doing this was very, very broken.
+      Fix for bug 8209; bugfix on 0.2.3.1-alpha. Found by Coverity; this
+      is CID 743383.
