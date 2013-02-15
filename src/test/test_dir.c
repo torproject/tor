@@ -766,10 +766,310 @@ get_detached_sigs(networkstatus_t *ns, networkstatus_t *ns2)
   return r;
 }
 
-/** Run unit tests for generating and parsing V3 consensus networkstatus
- * documents. */
+/**
+ * Generate a routerstatus for v3_networkstatus test
+ */
+static vote_routerstatus_t *
+gen_routerstatus_for_v3ns(int idx, time_t now)
+{
+  vote_routerstatus_t *vrs;
+  routerstatus_t *rs;
+  tor_addr_t addr_ipv6;
+
+  switch (idx) {
+    case 0:
+      /* Generate the first routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.2.14");
+      rs->published_on = now-1500;
+      strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
+      memset(rs->identity_digest, 3, DIGEST_LEN);
+      memset(rs->descriptor_digest, 78, DIGEST_LEN);
+      rs->addr = 0x99008801;
+      rs->or_port = 443;
+      rs->dir_port = 8000;
+      /* all flags but running cleared */
+      rs->is_flagged_running = 1;
+      break;
+    case 1:
+      /* Generate the second routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.2.0.5");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
+      memset(rs->identity_digest, 5, DIGEST_LEN);
+      memset(rs->descriptor_digest, 77, DIGEST_LEN);
+      rs->addr = 0x99009901;
+      rs->or_port = 443;
+      rs->dir_port = 0;
+      tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+      tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
+      rs->ipv6_orport = 4711;
+      rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
+        rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
+      break;
+    case 2:
+      /* Generate the third routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.0.3");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
+      memset(rs->identity_digest, 33, DIGEST_LEN);
+      memset(rs->descriptor_digest, 79, DIGEST_LEN);
+      rs->addr = 0xAA009901;
+      rs->or_port = 400;
+      rs->dir_port = 9999;
+      rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
+        rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
+        rs->is_possible_guard = 1;
+      break;
+    case 3:
+      /* Generate a fourth routerstatus that is not running. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.6.3");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
+      memset(rs->identity_digest, 34, DIGEST_LEN);
+      memset(rs->descriptor_digest, 47, DIGEST_LEN);
+      rs->addr = 0xC0000203;
+      rs->or_port = 500;
+      rs->dir_port = 1999;
+      /* Running flag (and others) cleared */
+      break;
+    case 4:
+      /* No more for this test; return NULL */
+      vrs = NULL;
+      break;
+    default:
+      /* Shouldn't happen */
+      test_assert(0);
+  }
+
+ done:
+  return vrs;
+}
+
+/** Apply tweaks to the vote list for each voter */
 static void
-test_dir_v3_networkstatus(void)
+vote_tweaks_for_v3ns(networkstatus_t *v, int voter, time_t now)
+{
+  vote_routerstatus_t *vrs;
+  const char *msg = NULL;
+
+  test_assert(v);
+  (void)now;
+
+  if (voter == 1) {
+    measured_bw_line_t mbw;
+    memset(mbw.node_id, 33, sizeof(mbw.node_id));
+    mbw.bw = 1024;
+    test_assert(measured_bw_line_apply(&mbw,
+                v->routerstatus_list) == 1);
+  } else if (voter == 2 || voter == 3) {
+    /* Monkey around with the list a bit */
+    vrs = smartlist_get(v->routerstatus_list, 2);
+    smartlist_del_keeporder(v->routerstatus_list, 2);
+    tor_free(vrs->version);
+    tor_free(vrs);
+    vrs = smartlist_get(v->routerstatus_list, 0);
+    vrs->status.is_fast = 1;
+
+    if (voter == 3) {
+      vrs = smartlist_get(v->routerstatus_list, 0);
+      smartlist_del_keeporder(v->routerstatus_list, 0);
+      tor_free(vrs->version);
+      tor_free(vrs);
+      vrs = smartlist_get(v->routerstatus_list, 0);
+      memset(vrs->status.descriptor_digest, (int)'Z', DIGEST_LEN);
+      test_assert(router_add_to_routerlist(
+                  generate_ri_from_rs(vrs), &msg,0,0) >= 0);
+    }
+  }
+
+ done:
+  return;
+}
+
+/**
+ * Test a parsed vote_routerstatus_t for v3_networkstatus test
+ */
+static void
+test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
+{
+  routerstatus_t *rs;
+  tor_addr_t addr_ipv6;
+
+  test_assert(vrs);
+  rs = &(vrs->status);
+  test_assert(rs);
+
+  /* Split out by digests to test */
+  if (tor_memeq(rs->identity_digest,
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+                "\x3\x3\x3\x3",
+                DIGEST_LEN) &&
+                (voter == 1)) {
+    /* Check the first routerstatus. */
+    test_streq(vrs->version, "0.1.2.14");
+    test_eq(rs->published_on, now-1500);
+    test_streq(rs->nickname, "router2");
+    test_memeq(rs->identity_digest,
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+               "\x3\x3\x3\x3",
+               DIGEST_LEN);
+    test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+    test_eq(rs->addr, 0x99008801);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 8000);
+    test_eq(vrs->flags, U64_LITERAL(16)); // no flags except "running"
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+                       "\x5\x5\x5\x5",
+                       DIGEST_LEN) &&
+                       (voter == 1 || voter == 2)) {
+    test_memeq(rs->identity_digest,
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+               "\x5\x5\x5\x5",
+               DIGEST_LEN);
+
+    if (voter == 1) {
+      /* Check the second routerstatus. */
+      test_streq(vrs->version, "0.2.0.5");
+      test_eq(rs->published_on, now-1000);
+      test_streq(rs->nickname, "router1");
+    }
+    test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+    test_eq(rs->addr, 0x99009901);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 0);
+    tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+    test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
+    test_eq(rs->ipv6_orport, 4711);
+    if (voter == 1) {
+      test_eq(vrs->flags, U64_LITERAL(254)); // all flags except "authority."
+    } else {
+      /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) */
+      test_eq(vrs->flags, U64_LITERAL(974));
+    }
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
+                       DIGEST_LEN) &&
+                       (voter == 1 || voter == 2)) {
+    /* Check the measured bandwidth bits */
+    test_assert(vrs->status.has_measured_bw &&
+                vrs->status.measured_bw == 1024);
+  } else {
+    /*
+     * Didn't expect this, but the old unit test only checked some of them,
+     * so don't assert.
+     */
+    /* test_assert(0); */
+  }
+
+ done:
+  return;
+}
+
+/**
+ * Test a consensus for v3_networkstatus_test
+ */
+static void
+test_consensus_for_v3ns(networkstatus_t *con, time_t now)
+{
+  (void)now;
+
+  test_assert(con);
+  test_assert(!con->cert);
+  test_eq(2, smartlist_len(con->routerstatus_list));
+  /* There should be two listed routers: one with identity 3, one with
+   * identity 5. */
+
+ done:
+  return;
+}
+
+/**
+ * Test a router list entry for v3_networkstatus test
+ */
+static void
+test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
+{
+  tor_addr_t addr_ipv6;
+
+  test_assert(rs);
+
+  /* There should be two listed routers: one with identity 3, one with
+   * identity 5. */
+  /* This one showed up in 2 digests. */
+  if (tor_memeq(rs->identity_digest,
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+                "\x3\x3",
+                DIGEST_LEN)) {
+    test_memeq(rs->identity_digest,
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+               DIGEST_LEN);
+    test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+    test_assert(!rs->is_authority);
+    test_assert(!rs->is_exit);
+    test_assert(!rs->is_fast);
+    test_assert(!rs->is_possible_guard);
+    test_assert(!rs->is_stable);
+    /* (If it wasn't running it wouldn't be here) */
+    test_assert(rs->is_flagged_running);
+    test_assert(!rs->is_v2_dir);
+    test_assert(!rs->is_valid);
+    test_assert(!rs->is_named);
+    /* XXXX check version */
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+                       "\x5\x5\x5\x5",
+                       DIGEST_LEN)) {
+    /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
+    test_memeq(rs->identity_digest,
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+               DIGEST_LEN);
+    test_streq(rs->nickname, "router1");
+    test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+    test_eq(rs->published_on, now-1000);
+    test_eq(rs->addr, 0x99009901);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 0);
+    tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+    test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
+    test_eq(rs->ipv6_orport, 4711);
+    test_assert(!rs->is_authority);
+    test_assert(rs->is_exit);
+    test_assert(rs->is_fast);
+    test_assert(rs->is_possible_guard);
+    test_assert(rs->is_stable);
+    test_assert(rs->is_flagged_running);
+    test_assert(rs->is_v2_dir);
+    test_assert(rs->is_valid);
+    test_assert(!rs->is_named);
+    /* XXXX check version */
+  } else {
+    /* Weren't expecting this... */
+    test_assert(0);
+  }
+
+ done:
+  return;
+}
+
+/** Run a unit tests for generating and parsing networkstatuses, with
+ * the supply test fns. */
+static void
+test_a_networkstatus(
+    vote_routerstatus_t * (*vrs_gen)(int idx, time_t now),
+    void (*vote_tweaks)(networkstatus_t *v, int voter, time_t now),
+    void (*vrs_test)(vote_routerstatus_t *vrs, int voter, time_t now),
+    void (*consensus_test)(networkstatus_t *con, time_t now),
+    void (*rs_test)(routerstatus_t *rs, time_t now))
 {
   authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
   crypto_pk_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
@@ -782,8 +1082,8 @@ test_dir_v3_networkstatus(void)
   networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL,
     *con_md=NULL;
   vote_routerstatus_t *vrs;
-  tor_addr_t addr_ipv6;
   routerstatus_t *rs;
+  int idx, n_rs, n_vrs;
   char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL, *cp;
   smartlist_t *votes = smartlist_new();
 
@@ -794,6 +1094,10 @@ test_dir_v3_networkstatus(void)
   char *consensus_text_md=NULL;
   networkstatus_t *con2=NULL, *con_md2=NULL, *con3=NULL, *con_md3=NULL;
   ns_detached_signatures_t *dsig1=NULL, *dsig2=NULL;
+
+  test_assert(vrs_gen);
+  test_assert(rs_test);
+  test_assert(vrs_test);
 
   /* Parse certificates and keys. */
   cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
@@ -852,72 +1156,18 @@ test_dir_v3_networkstatus(void)
   smartlist_split_string(vote->net_params, "circuitwindow=101 foo=990",
                          NULL, 0, 0);
   vote->routerstatus_list = smartlist_new();
-  /* add the first routerstatus. */
-  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-  rs = &vrs->status;
-  vrs->version = tor_strdup("0.1.2.14");
-  rs->published_on = now-1500;
-  strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
-  memset(rs->identity_digest, 3, DIGEST_LEN);
-  memset(rs->descriptor_digest, 78, DIGEST_LEN);
-  rs->addr = 0x99008801;
-  rs->or_port = 443;
-  rs->dir_port = 8000;
-  /* all flags but running cleared */
-  rs->is_flagged_running = 1;
-  smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
-
-  /* add the second routerstatus. */
-  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-  rs = &vrs->status;
-  vrs->version = tor_strdup("0.2.0.5");
-  rs->published_on = now-1000;
-  strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
-  memset(rs->identity_digest, 5, DIGEST_LEN);
-  memset(rs->descriptor_digest, 77, DIGEST_LEN);
-  rs->addr = 0x99009901;
-  rs->or_port = 443;
-  rs->dir_port = 0;
-  tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
-  tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
-  rs->ipv6_orport = 4711;
-  rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
-    rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
-  smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
-
-  /* add the third routerstatus. */
-  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-  rs = &vrs->status;
-  vrs->version = tor_strdup("0.1.0.3");
-  rs->published_on = now-1000;
-  strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
-  memset(rs->identity_digest, 33, DIGEST_LEN);
-  memset(rs->descriptor_digest, 79, DIGEST_LEN);
-  rs->addr = 0xAA009901;
-  rs->or_port = 400;
-  rs->dir_port = 9999;
-  rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-    rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
-    rs->is_possible_guard = 1;
-  smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
-
-  /* add a fourth routerstatus that is not running. */
-  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-  rs = &vrs->status;
-  vrs->version = tor_strdup("0.1.6.3");
-  rs->published_on = now-1000;
-  strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
-  memset(rs->identity_digest, 34, DIGEST_LEN);
-  memset(rs->descriptor_digest, 47, DIGEST_LEN);
-  rs->addr = 0xC0000203;
-  rs->or_port = 500;
-  rs->dir_port = 1999;
-  /* Running flag (and others) cleared */
-  smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
+  /* add routerstatuses */
+  idx = 0;
+  do {
+    vrs = vrs_gen(idx, now);
+    if (vrs) {
+      smartlist_add(vote->routerstatus_list, vrs);
+      test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs),
+                                           &msg,0,0)>=0);
+      ++idx;
+    }
+  } while (vrs);
+  n_vrs = idx;
 
   /* dump the vote and try to parse it. */
   v1_text = format_networkstatus_vote(sign_skey_1, vote);
@@ -948,47 +1198,15 @@ test_dir_v3_networkstatus(void)
   cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
   test_streq(cp, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  test_eq(smartlist_len(v1->routerstatus_list), 4);
-  /* Check the first routerstatus. */
-  vrs = smartlist_get(v1->routerstatus_list, 0);
-  rs = &vrs->status;
-  test_streq(vrs->version, "0.1.2.14");
-  test_eq(rs->published_on, now-1500);
-  test_streq(rs->nickname, "router2");
-  test_memeq(rs->identity_digest,
-             "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
-             DIGEST_LEN);
-  test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-  test_eq(rs->addr, 0x99008801);
-  test_eq(rs->or_port, 443);
-  test_eq(rs->dir_port, 8000);
-  test_eq(vrs->flags, U64_LITERAL(16)); // no flags except "running"
-  /* Check the second routerstatus. */
-  vrs = smartlist_get(v1->routerstatus_list, 1);
-  rs = &vrs->status;
-  test_streq(vrs->version, "0.2.0.5");
-  test_eq(rs->published_on, now-1000);
-  test_streq(rs->nickname, "router1");
-  test_memeq(rs->identity_digest,
-             "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
-             DIGEST_LEN);
-  test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-  test_eq(rs->addr, 0x99009901);
-  test_eq(rs->or_port, 443);
-  test_eq(rs->dir_port, 0);
-  test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-  test_eq(rs->ipv6_orport, 4711);
-  test_eq(vrs->flags, U64_LITERAL(254)); // all flags except "authority."
+  test_eq(smartlist_len(v1->routerstatus_list), n_vrs);
 
-  {
-    measured_bw_line_t mbw;
-    memset(mbw.node_id, 33, sizeof(mbw.node_id));
-    mbw.bw = 1024;
-    test_assert(measured_bw_line_apply(&mbw,
-                v1->routerstatus_list) == 1);
-    vrs = smartlist_get(v1->routerstatus_list, 2);
-    test_assert(vrs->status.has_measured_bw &&
-                vrs->status.measured_bw == 1024);
+  if (vote_tweaks) vote_tweaks(v1, 1, now);
+
+  /* Check the routerstatuses. */
+  for (idx = 0; idx < n_vrs; ++idx) {
+    vrs = smartlist_get(v1->routerstatus_list, idx);
+    test_assert(vrs);
+    vrs_test(vrs, 1, now);
   }
 
   /* Generate second vote. It disagrees on some of the times,
@@ -1013,25 +1231,28 @@ test_dir_v3_networkstatus(void)
   smartlist_add(vote->known_flags, tor_strdup("MadeOfCheese"));
   smartlist_add(vote->known_flags, tor_strdup("MadeOfTin"));
   smartlist_sort_strings(vote->known_flags);
-  vrs = smartlist_get(vote->routerstatus_list, 2);
-  smartlist_del_keeporder(vote->routerstatus_list, 2);
-  tor_free(vrs->version);
-  tor_free(vrs);
-  vrs = smartlist_get(vote->routerstatus_list, 0);
-  vrs->status.is_fast = 1;
-  /* generate and parse. */
+
+  /* generate and parse v2. */
   v2_text = format_networkstatus_vote(sign_skey_2, vote);
   test_assert(v2_text);
   v2 = networkstatus_parse_vote_from_string(v2_text, NULL, NS_TYPE_VOTE);
   test_assert(v2);
+
+  if (vote_tweaks) vote_tweaks(v2, 2, now);
+
   /* Check that flags come out right.*/
   cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
   test_streq(cp, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
              "Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  vrs = smartlist_get(v2->routerstatus_list, 1);
-  /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) */
-  test_eq(vrs->flags, U64_LITERAL(974));
+
+  /* Check the routerstatuses. */
+  n_vrs = smartlist_len(v2->routerstatus_list);
+  for (idx = 0; idx < n_vrs; ++idx) {
+    vrs = smartlist_get(v2->routerstatus_list, idx);
+    test_assert(vrs);
+    vrs_test(vrs, 2, now);
+  }
 
   /* Generate the third vote. */
   vote->published = now;
@@ -1054,19 +1275,14 @@ test_dir_v3_networkstatus(void)
   crypto_pk_get_digest(cert3->identity_key, voter->identity_digest);
   /* This one has a legacy id. */
   memset(voter->legacy_id_digest, (int)'A', DIGEST_LEN);
-  vrs = smartlist_get(vote->routerstatus_list, 0);
-  smartlist_del_keeporder(vote->routerstatus_list, 0);
-  tor_free(vrs->version);
-  tor_free(vrs);
-  vrs = smartlist_get(vote->routerstatus_list, 0);
-  memset(vrs->status.descriptor_digest, (int)'Z', DIGEST_LEN);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
 
   v3 = networkstatus_parse_vote_from_string(v3_text, NULL, NS_TYPE_VOTE);
   test_assert(v3);
+
+  if (vote_tweaks) vote_tweaks(v3, 3, now);
 
   /* Compute a consensus as voter 3. */
   smartlist_add(votes, v3);
@@ -1127,51 +1343,15 @@ test_dir_v3_networkstatus(void)
   test_same_voter(smartlist_get(con->voters, 3),
                   smartlist_get(v3->voters, 0));
 
-  test_assert(!con->cert);
-  test_eq(2, smartlist_len(con->routerstatus_list));
-  /* There should be two listed routers: one with identity 3, one with
-   * identity 5. */
-  /* This one showed up in 2 digests. */
-  rs = smartlist_get(con->routerstatus_list, 0);
-  test_memeq(rs->identity_digest,
-             "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
-             DIGEST_LEN);
-  test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-  test_assert(!rs->is_authority);
-  test_assert(!rs->is_exit);
-  test_assert(!rs->is_fast);
-  test_assert(!rs->is_possible_guard);
-  test_assert(!rs->is_stable);
-  /* (If it wasn't running it wouldn't be here) */
-  test_assert(rs->is_flagged_running);
-  test_assert(!rs->is_v2_dir);
-  test_assert(!rs->is_valid);
-  test_assert(!rs->is_named);
-  /* XXXX check version */
+  consensus_test(con, now);
 
-  rs = smartlist_get(con->routerstatus_list, 1);
-  /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
-  test_memeq(rs->identity_digest,
-             "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
-             DIGEST_LEN);
-  test_streq(rs->nickname, "router1");
-  test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-  test_eq(rs->published_on, now-1000);
-  test_eq(rs->addr, 0x99009901);
-  test_eq(rs->or_port, 443);
-  test_eq(rs->dir_port, 0);
-  test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
-  test_eq(rs->ipv6_orport, 4711);
-  test_assert(!rs->is_authority);
-  test_assert(rs->is_exit);
-  test_assert(rs->is_fast);
-  test_assert(rs->is_possible_guard);
-  test_assert(rs->is_stable);
-  test_assert(rs->is_flagged_running);
-  test_assert(rs->is_v2_dir);
-  test_assert(rs->is_valid);
-  test_assert(!rs->is_named);
-  /* XXXX check version */
+  /* Check the routerstatuses. */
+  n_rs = smartlist_len(con->routerstatus_list);
+  for (idx = 0; idx < n_rs; ++idx) {
+    rs = smartlist_get(con->routerstatus_list, idx);
+    test_assert(rs);
+    rs_test(rs, now);
+  }
 
   /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
    * The second one hasn't signed.  The fourth one has signed: validate it. */
@@ -1372,6 +1552,18 @@ test_dir_v3_networkstatus(void)
     ns_detached_signatures_free(dsig1);
   if (dsig2)
     ns_detached_signatures_free(dsig2);
+}
+
+/** Run unit tests for generating and parsing V3 consensus networkstatus
+ * documents. */
+static void
+test_dir_v3_networkstatus(void)
+{
+  test_a_networkstatus(gen_routerstatus_for_v3ns,
+                       vote_tweaks_for_v3ns,
+                       test_vrs_for_v3ns,
+                       test_consensus_for_v3ns,
+                       test_routerstatus_for_v3ns);
 }
 
 static void
