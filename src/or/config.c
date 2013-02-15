@@ -1895,7 +1895,8 @@ list_torrc_options(void)
 static uint32_t last_resolved_addr = 0;
 
 /** Accessor for last_resolved_addr from outside this file. */
-uint32_t get_last_resolved_addr(void)
+uint32_t
+get_last_resolved_addr(void)
 {
   return last_resolved_addr;
 }
