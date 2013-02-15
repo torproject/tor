@@ -869,11 +869,29 @@ typedef enum {
 
 /** Number of bytes in a cell, minus cell header. */
 #define CELL_PAYLOAD_SIZE 509
-/** Number of bytes in a cell transmitted over the network. */
-#define CELL_NETWORK_SIZE 512
+/** Number of bytes in a cell transmitted over the network, in the longest
+ * form */
+#define CELL_MAX_NETWORK_SIZE 514
 
-/** Length of a header on a variable-length cell. */
-#define VAR_CELL_HEADER_SIZE 5
+/** Maximum length of a header on a variable-length cell. */
+#define VAR_CELL_MAX_HEADER_SIZE 7
+
+static int get_cell_network_size(int wide_circ_ids);
+static INLINE int get_cell_network_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
+}
+static int get_var_cell_header_size(int wide_circ_ids);
+static INLINE int get_var_cell_header_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? VAR_CELL_MAX_HEADER_SIZE :
+    VAR_CELL_MAX_HEADER_SIZE - 2;
+}
+static int get_circ_id_size(int wide_circ_ids);
+static INLINE int get_circ_id_size(int wide_circ_ids)
+{
+  return wide_circ_ids ? 4 : 2;
+}
 
 /** Number of bytes in a relay cell's header (not including general cell
  * header). */
@@ -882,7 +900,7 @@ typedef enum {
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
 /** Identifies a circuit on an or_connection */
-typedef uint16_t circid_t;
+typedef uint32_t circid_t;
 /** Identifies a stream on a circuit */
 typedef uint16_t streamid_t;
 
@@ -1051,7 +1069,7 @@ typedef struct var_cell_t {
 /** A cell as packed for writing to the network. */
 typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
-  char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
+  char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
 } packed_cell_t;
 
 /** Number of cells added to a circuit queue including their insertion
@@ -1400,6 +1418,7 @@ typedef struct or_connection_t {
   /** True iff this is an outgoing connection. */
   unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
+  unsigned int wide_circ_ids:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
 

@@ -2064,10 +2064,10 @@ dump_cell_pool_usage(int severity)
 
 /** Allocate a new copy of packed <b>cell</b>. */
 static INLINE packed_cell_t *
-packed_cell_copy(const cell_t *cell)
+packed_cell_copy(const cell_t *cell, int wide_circ_ids)
 {
   packed_cell_t *c = packed_cell_new();
-  cell_pack(c, cell);
+  cell_pack(c, cell, wide_circ_ids);
   c->next = NULL;
   return c;
 }
@@ -2089,9 +2089,10 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 
 /** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
-cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
+cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
+                              int wide_circ_ids)
 {
-  packed_cell_t *copy = packed_cell_copy(cell);
+  packed_cell_t *copy = packed_cell_copy(cell, wide_circ_ids);
   /* Remember the time when this cell was put in the queue. */
   if (get_options()->CellStatistics) {
     struct timeval now;
@@ -2423,7 +2424,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     streams_blocked = circ->streams_blocked_on_p_chan;
   }
 
-  cell_queue_append_packed_copy(queue, cell);
+  cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids);
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */

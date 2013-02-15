@@ -31,7 +31,7 @@
 #define MIN_CPUWORKERS 1
 
 /** The tag specifies which circuit this onionskin was from. */
-#define TAG_LEN 10
+#define TAG_LEN 12
 
 /** How many cpuworkers we have running right now. */
 static int num_cpuworkers=0;
@@ -72,7 +72,7 @@ tag_pack(uint8_t *tag, uint64_t chan_id, circid_t circ_id)
   /*XXXX RETHINK THIS WHOLE MESS !!!! !NM NM NM NM*/
   /*XXXX DOUBLEPLUSTHIS!!!! AS AS AS AS*/
   set_uint64(tag, chan_id);
-  set_uint16(tag+8, circ_id);
+  set_uint32(tag+8, circ_id);
 }
 
 /** Unpack <b>tag</b> into addr, port, and circ_id.
@@ -81,7 +81,7 @@ static void
 tag_unpack(const uint8_t *tag, uint64_t *chan_id, circid_t *circ_id)
 {
   *chan_id = get_uint64(tag);
-  *circ_id = get_uint16(tag+8);
+  *circ_id = get_uint32(tag+8);
 }
 
 /** Magic numbers to make sure our cpuworker_requests don't grow any

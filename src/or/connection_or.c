@@ -352,33 +352,56 @@ connection_or_get_num_circuits(or_connection_t *conn)
  * should set it or clear it as appropriate.
  */
 void
-cell_pack(packed_cell_t *dst, const cell_t *src)
+cell_pack(packed_cell_t *dst, const cell_t *src, int wide_circ_ids)
 {
   char *dest = dst->body;
-  set_uint16(dest, htons(src->circ_id));
-  set_uint8(dest+2, src->command);
-  memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
+  if (wide_circ_ids) {
+    set_uint32(dest, htonl(src->circ_id));
+    dest += 4;
+  } else {
+    set_uint16(dest, htons(src->circ_id));
+    dest += 2;
+    memset(dest+CELL_MAX_NETWORK_SIZE-2, 0, 2); /*make sure it's clear */
+  }
+  set_uint8(dest, src->command);
+  memcpy(dest+1, src->payload, CELL_PAYLOAD_SIZE);
 }
 
 /** Unpack the network-order buffer <b>src</b> into a host-order
  * cell_t structure <b>dest</b>.
  */
 static void
-cell_unpack(cell_t *dest, const char *src)
+cell_unpack(cell_t *dest, const char *src, int wide_circ_ids)
 {
-  dest->circ_id = ntohs(get_uint16(src));
-  dest->command = get_uint8(src+2);
-  memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
+  if (wide_circ_ids) {
+    dest->circ_id = ntohl(get_uint32(src));
+    src += 4;
+  } else {
+    dest->circ_id = ntohs(get_uint16(src));
+    src += 2;
+  }
+  dest->command = get_uint8(src);
+  memcpy(dest->payload, src+1, CELL_PAYLOAD_SIZE);
 }
 
-/** Write the header of <b>cell</b> into the first VAR_CELL_HEADER_SIZE
- * bytes of <b>hdr_out</b>. */
-void
-var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
+/** Write the header of <b>cell</b> into the first VAR_CELL_MAX_HEADER_SIZE
+ * bytes of <b>hdr_out</b>. Returns number of bytes used. */
+int
+var_cell_pack_header(const var_cell_t *cell, char *hdr_out, int wide_circ_ids)
 {
-  set_uint16(hdr_out, htons(cell->circ_id));
-  set_uint8(hdr_out+2, cell->command);
-  set_uint16(hdr_out+3, htons(cell->payload_len));
+  int r;
+  if (wide_circ_ids) {
+    set_uint32(hdr_out, htonl(cell->circ_id));
+    hdr_out += 4;
+    r = VAR_CELL_MAX_HEADER_SIZE;
+  } else {
+    set_uint16(hdr_out, htons(cell->circ_id));
+    hdr_out += 2;
+    r = VAR_CELL_MAX_HEADER_SIZE - 2;
+  }
+  set_uint8(hdr_out, cell->command);
+  set_uint16(hdr_out+1, htons(cell->payload_len));
+  return r;
 }
 
 /** Allocate and return a new var_cell_t with <b>payload_len</b> bytes of
@@ -498,6 +521,7 @@ connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen, temp;
   ssize_t n, flushed;
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
 
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
@@ -505,7 +529,7 @@ connection_or_flushed_some(or_connection_t *conn)
   if (datalen < OR_CONN_LOWWATER) {
     while ((conn->chan) && channel_tls_more_to_flush(conn->chan)) {
       /* Compute how many more cells we want at most */
-      n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, CELL_NETWORK_SIZE);
+      n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
       /* Bail out if we don't want any more */
       if (n <= 0) break;
       /* We're still here; try to flush some more cells */
@@ -1533,7 +1557,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   tor_assert(conn->chan);
-  channel_set_circid_type(TLS_CHAN_TO_BASE(conn->chan), identity_rcvd);
+  channel_set_circid_type(TLS_CHAN_TO_BASE(conn->chan), identity_rcvd, 1);
+
   crypto_pk_free(identity_rcvd);
 
   if (started_here)
@@ -1739,10 +1764,12 @@ or_handshake_state_free(or_handshake_state_t *state)
  * authenticate cell.)
  */
 void
-or_handshake_state_record_cell(or_handshake_state_t *state,
+or_handshake_state_record_cell(or_connection_t *conn,
+                               or_handshake_state_t *state,
                                const cell_t *cell,
                                int incoming)
 {
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
   crypto_digest_t *d, **dptr;
   packed_cell_t packed;
   if (incoming) {
@@ -1764,8 +1791,8 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
   d = *dptr;
   /* Re-packing like this is a little inefficient, but we don't have to do
      this very often at all. */
-  cell_pack(&packed, cell);
-  crypto_digest_add_bytes(d, packed.body, sizeof(packed.body));
+  cell_pack(&packed, cell, conn->wide_circ_ids);
+  crypto_digest_add_bytes(d, packed.body, cell_network_size);
   memwipe(&packed, 0, sizeof(packed));
 }
 
@@ -1778,12 +1805,14 @@ or_handshake_state_record_cell(or_handshake_state_t *state,
  * authenticate cell.)
  */
 void
-or_handshake_state_record_var_cell(or_handshake_state_t *state,
+or_handshake_state_record_var_cell(or_connection_t *conn,
+                                   or_handshake_state_t *state,
                                    const var_cell_t *cell,
                                    int incoming)
 {
   crypto_digest_t *d, **dptr;
-  char buf[VAR_CELL_HEADER_SIZE];
+  int n;
+  char buf[VAR_CELL_MAX_HEADER_SIZE];
   if (incoming) {
     if (!state->digest_received_data)
       return;
@@ -1797,8 +1826,8 @@ or_handshake_state_record_var_cell(or_handshake_state_t *state,
 
   d = *dptr;
 
-  var_cell_pack_header(cell, buf);
-  crypto_digest_add_bytes(d, buf, sizeof(buf));
+  n = var_cell_pack_header(cell, buf, conn->wide_circ_ids);
+  crypto_digest_add_bytes(d, buf, n);
   crypto_digest_add_bytes(d, (const char *)cell->payload, cell->payload_len);
 
   memwipe(buf, 0, sizeof(buf));
@@ -1832,20 +1861,21 @@ void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 {
   packed_cell_t networkcell;
+  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
 
   tor_assert(cell);
   tor_assert(conn);
 
-  cell_pack(&networkcell, cell);
+  cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
-  connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
+  connection_write_to_buf(networkcell.body, cell_network_size, TO_CONN(conn));
 
   /* Touch the channel's active timestamp if there is one */
   if (conn->chan)
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
-    or_handshake_state_record_cell(conn->handshake_state, cell, 0);
+    or_handshake_state_record_cell(conn, conn->handshake_state, cell, 0);
 
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
@@ -1859,15 +1889,16 @@ void
 connection_or_write_var_cell_to_buf(const var_cell_t *cell,
                                     or_connection_t *conn)
 {
-  char hdr[VAR_CELL_HEADER_SIZE];
+  int n;
+  char hdr[VAR_CELL_MAX_HEADER_SIZE];
   tor_assert(cell);
   tor_assert(conn);
-  var_cell_pack_header(cell, hdr);
-  connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
+  n = var_cell_pack_header(cell, hdr, conn->wide_circ_ids);
+  connection_write_to_buf(hdr, n, TO_CONN(conn));
   connection_write_to_buf((char*)cell->payload,
                           cell->payload_len, TO_CONN(conn));
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
-    or_handshake_state_record_var_cell(conn->handshake_state, cell, 0);
+    or_handshake_state_record_var_cell(conn, conn->handshake_state, cell, 0);
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
 
@@ -1920,10 +1951,12 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
       channel_tls_handle_var_cell(var_cell, conn);
       var_cell_free(var_cell);
     } else {
-      char buf[CELL_NETWORK_SIZE];
+      const int wide_circ_ids = conn->wide_circ_ids;
+      size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
+      char buf[CELL_MAX_NETWORK_SIZE];
       cell_t cell;
       if (connection_get_inbuf_len(TO_CONN(conn))
-          < CELL_NETWORK_SIZE) /* whole response available? */
+          < cell_network_size) /* whole response available? */
         return 0; /* not yet */
 
       /* Touch the channel's active timestamp if there is one */
@@ -1931,11 +1964,11 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
         channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
       circuit_build_times_network_is_live(&circ_times);
-      connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, TO_CONN(conn));
+      connection_fetch_from_buf(buf, cell_network_size, TO_CONN(conn));
 
       /* retrieve cell info from buf (create the host-order struct from the
        * network-order string) */
-      cell_unpack(&cell, buf);
+      cell_unpack(&cell, buf, wide_circ_ids);
 
       channel_tls_handle_cell(&cell, conn);
     }
@@ -1943,7 +1976,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
 }
 
 /** Array of recognized link protocol versions. */
-static const uint16_t or_protocol_versions[] = { 1, 2, 3 };
+static const uint16_t or_protocol_versions[] = { 1, 2, 3, 4 };
 /** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
   (int)( sizeof(or_protocol_versions)/sizeof(uint16_t) );

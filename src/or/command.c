@@ -231,7 +231,10 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
 
   /* If the high bit of the circuit ID is not as expected, close the
    * circ. */
-  id_is_high = cell->circ_id & (1<<15);
+  if (chan->wide_circ_ids)
+    id_is_high = cell->circ_id & (1u<<31);
+  else
+    id_is_high = cell->circ_id & (1u<<15);
   if ((id_is_high &&
        chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
       (!id_is_high &&

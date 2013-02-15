@@ -1045,28 +1045,34 @@ cell_command_is_var_length(uint8_t command, int linkproto)
 int
 fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 {
-  char hdr[VAR_CELL_HEADER_SIZE];
+  char hdr[VAR_CELL_MAX_HEADER_SIZE];
   var_cell_t *result;
   uint8_t command;
   uint16_t length;
+  const int wide_circ_ids = linkproto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
+  const int circ_id_len = get_circ_id_size(wide_circ_ids);
+  const unsigned header_len = get_var_cell_header_size(wide_circ_ids);
   check();
   *out = NULL;
-  if (buf->datalen < VAR_CELL_HEADER_SIZE)
+  if (buf->datalen < header_len)
     return 0;
   peek_from_buf(hdr, sizeof(hdr), buf);
 
-  command = get_uint8(hdr+2);
+  command = get_uint8(hdr + circ_id_len);
   if (!(cell_command_is_var_length(command, linkproto)))
     return 0;
 
-  length = ntohs(get_uint16(hdr+3));
-  if (buf->datalen < (size_t)(VAR_CELL_HEADER_SIZE+length))
+  length = ntohs(get_uint16(hdr + circ_id_len + 1));
+  if (buf->datalen < (size_t)(header_len+length))
     return 1;
   result = var_cell_new(length);
   result->command = command;
-  result->circ_id = ntohs(get_uint16(hdr));
+  if (wide_circ_ids)
+    result->circ_id = ntohl(get_uint32(hdr));
+  else
+    result->circ_id = ntohs(get_uint16(hdr));
 
-  buf_remove_from_front(buf, VAR_CELL_HEADER_SIZE);
+  buf_remove_from_front(buf, header_len);
   peek_from_buf((char*) result->payload, length, buf);
   buf_remove_from_front(buf, length);
   check();
@@ -1125,30 +1131,36 @@ fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
   uint16_t cell_length;
   var_cell_t *cell;
   int result = 0;
+  const int wide_circ_ids = linkproto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
+  const int circ_id_len = get_circ_id_size(wide_circ_ids);
+  const unsigned header_len = get_var_cell_header_size(wide_circ_ids);
 
   *out = NULL;
   buf_len = evbuffer_get_length(buf);
-  if (buf_len < VAR_CELL_HEADER_SIZE)
+  if (buf_len < header_len)
     return 0;
 
-  n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr, NULL);
-  tor_assert(n >= VAR_CELL_HEADER_SIZE);
+  n = inspect_evbuffer(buf, &hdr, header_len, &free_hdr, NULL);
+  tor_assert(n >= header_len);
 
-  command = get_uint8(hdr+2);
+  command = get_uint8(hdr + circ_id_len);
   if (!(cell_command_is_var_length(command, linkproto))) {
     goto done;
   }
 
-  cell_length = ntohs(get_uint16(hdr+3));
-  if (buf_len < (size_t)(VAR_CELL_HEADER_SIZE+cell_length)) {
+  cell_length = ntohs(get_uint16(hdr + circ_id_len + 1));
+  if (buf_len < (size_t)(header_len+cell_length)) {
     result = 1; /* Not all here yet. */
     goto done;
   }
 
   cell = var_cell_new(cell_length);
   cell->command = command;
-  cell->circ_id = ntohs(get_uint16(hdr));
-  evbuffer_drain(buf, VAR_CELL_HEADER_SIZE);
+  if (wide_circ_ids)
+    cell->circ_id = ntohl(get_uint32(hdr));
+  else
+    cell->circ_id = ntohs(get_uint16(hdr));
+  evbuffer_drain(buf, header_len);
   evbuffer_remove(buf, cell->payload, cell_length);
   *out = cell;
   result = 1;

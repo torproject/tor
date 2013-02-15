@@ -60,10 +60,12 @@ int connection_or_client_learned_peer_id(or_connection_t *conn,
 time_t connection_or_client_used(or_connection_t *conn);
 int connection_or_get_num_circuits(or_connection_t *conn);
 void or_handshake_state_free(or_handshake_state_t *state);
-void or_handshake_state_record_cell(or_handshake_state_t *state,
+void or_handshake_state_record_cell(or_connection_t *conn,
+                                    or_handshake_state_t *state,
                                     const cell_t *cell,
                                     int incoming);
-void or_handshake_state_record_var_cell(or_handshake_state_t *state,
+void or_handshake_state_record_var_cell(or_connection_t *conn,
+                                        or_handshake_state_t *state,
                                         const var_cell_t *cell,
                                         int incoming);
 
@@ -84,10 +86,14 @@ int connection_or_send_authenticate_cell(or_connection_t *conn, int type);
 
 int is_or_protocol_version_known(uint16_t version);
 
-void cell_pack(packed_cell_t *dest, const cell_t *src);
-void var_cell_pack_header(const var_cell_t *cell, char *hdr_out);
+void cell_pack(packed_cell_t *dest, const cell_t *src, int wide_circ_ids);
+int var_cell_pack_header(const var_cell_t *cell, char *hdr_out,
+                         int wide_circ_ids);
 var_cell_t *var_cell_new(uint16_t payload_len);
 void var_cell_free(var_cell_t *cell);
+
+/** DOCDOC */
+#define MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS 4
 
 #endif
 
