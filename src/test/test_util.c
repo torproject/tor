@@ -2713,7 +2713,7 @@ test_util_join_win_cmdline(void *ptr)
   };
 
   int i;
-  char *joined_argv;
+  char *joined_argv = NULL;
 
   (void)ptr;
 
