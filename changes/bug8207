@@ -1,0 +1,7 @@
+  o Major bugfixes (hidden services):
+    - Allow hidden service authentication to succeed again. When we
+      refactored the hidden service introduction code back in 0.2.4.1-alpha,
+      we didn't update the code that checks whether authentication
+      information is present, causing all authentication checks to
+      return "false". Fix for bug 8207; bugfix on 0.2.4.1-alpha. Found by
+      Coverity; this is CID 718615. 
