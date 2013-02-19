@@ -1388,7 +1388,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
   const char *flavor_name;
-#define DEFAULT_MAX_UNMEASURED_BW 20
   uint32_t max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
   int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
@@ -1611,7 +1610,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
     }
   }
-
 
   /* Add the actual router entries. */
   {

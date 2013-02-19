@@ -56,6 +56,10 @@
  * Unmeasured=1 flag for unmeasured bandwidths */
 #define MIN_METHOD_TO_CLIP_UNMEASURED_BW 17
 
+/** Default bandwidth to clip unmeasured bandwidths to using method >=
+ * MIN_METHOD_TO_CLIP_UNMEASURED_BW */
+#define DEFAULT_MAX_UNMEASURED_BW 20
+
 void dirvote_free_all(void);
 
 /* vote manipulation */

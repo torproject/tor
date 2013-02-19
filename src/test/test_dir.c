@@ -746,6 +746,17 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
     strlen(r->cache_info.signed_descriptor_body);
   r->exit_policy = smartlist_new();
   r->cache_info.published_on = ++published + time(NULL);
+  if (rs->has_bandwidth) {
+    /*
+     * Multiply by 1000 because the routerinfo_t and the routerstatus_t
+     * seem to use different units (*sigh*) and because we seem stuck on
+     * icky and perverse decimal kilobytes (*double sigh*) - see
+     * router_get_advertised_bandwidth_capped() of routerlist.c and
+     * routerstatus_format_entry() of dirserv.c.
+     */
+    r->bandwidthrate = rs->bandwidth * 1000;
+    r->bandwidthcapacity = rs->bandwidth * 1000;
+  }
   return r;
 }
 
@@ -1684,6 +1695,384 @@ test_dir_random_weighted(void *testdata)
   ;
 }
 
+/* Function pointers for test_dir_clip_unmeasured_bw() */
+
+/**
+ * Generate a routerstatus for clip_unmeasured_bw test; based on the
+ * v3_networkstatus ones.
+ */
+static vote_routerstatus_t *
+gen_routerstatus_for_umbw(int idx, time_t now)
+{
+  vote_routerstatus_t *vrs;
+  routerstatus_t *rs;
+  tor_addr_t addr_ipv6;
+
+  switch (idx) {
+    case 0:
+      /* Generate the first routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.2.14");
+      rs->published_on = now-1500;
+      strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
+      memset(rs->identity_digest, 3, DIGEST_LEN);
+      memset(rs->descriptor_digest, 78, DIGEST_LEN);
+      rs->addr = 0x99008801;
+      rs->or_port = 443;
+      rs->dir_port = 8000;
+      /* all flags but running cleared */
+      rs->is_flagged_running = 1;
+      /*
+       * This one has measured bandwidth below the clip cutoff, and
+       * so shouldn't be clipped; we'll have to test that it isn't
+       * later.
+       */
+      rs->has_measured_bw = 1;
+      rs->has_bandwidth = 1;
+      rs->measured_bw = rs->bandwidth = DEFAULT_MAX_UNMEASURED_BW / 2;
+      break;
+    case 1:
+      /* Generate the second routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.2.0.5");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
+      memset(rs->identity_digest, 5, DIGEST_LEN);
+      memset(rs->descriptor_digest, 77, DIGEST_LEN);
+      rs->addr = 0x99009901;
+      rs->or_port = 443;
+      rs->dir_port = 0;
+      tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+      tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
+      rs->ipv6_orport = 4711;
+      rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
+        rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
+      /*
+       * This one has measured bandwidth above the clip cutoff, and
+       * so shouldn't be clipped; we'll have to test that it isn't
+       * later.
+       */
+      rs->has_measured_bw = 1;
+      rs->has_bandwidth = 1;
+      rs->measured_bw = rs->bandwidth = 2 * DEFAULT_MAX_UNMEASURED_BW;
+      break;
+    case 2:
+      /* Generate the third routerstatus. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.0.3");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
+      memset(rs->identity_digest, 0x33, DIGEST_LEN);
+      memset(rs->descriptor_digest, 79, DIGEST_LEN);
+      rs->addr = 0xAA009901;
+      rs->or_port = 400;
+      rs->dir_port = 9999;
+      rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
+        rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
+        rs->is_possible_guard = 1;
+      /*
+       * This one has unmeasured bandwidth above the clip cutoff, and
+       * so should be clipped; we'll have to test that it isn't
+       * later.
+       */
+      rs->has_measured_bw = 0;
+      rs->has_bandwidth = 1;
+      rs->measured_bw = 0;
+      rs->bandwidth = 2 * DEFAULT_MAX_UNMEASURED_BW;
+      break;
+    case 3:
+      /* Generate a fourth routerstatus that is not running. */
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      vrs->version = tor_strdup("0.1.6.3");
+      rs->published_on = now-1000;
+      strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
+      memset(rs->identity_digest, 0x34, DIGEST_LEN);
+      memset(rs->descriptor_digest, 47, DIGEST_LEN);
+      rs->addr = 0xC0000203;
+      rs->or_port = 500;
+      rs->dir_port = 1999;
+      /* all flags but running cleared */
+      rs->is_flagged_running = 1;
+      /*
+       * This one has unmeasured bandwidth below the clip cutoff, and
+       * so shouldn't be clipped; we'll have to test that it isn't
+       * later.
+       */
+      rs->has_measured_bw = 0;
+      rs->has_bandwidth = 1;
+      rs->measured_bw = 0;
+      rs->bandwidth = DEFAULT_MAX_UNMEASURED_BW / 2;
+      break;
+    case 4:
+      /* No more for this test; return NULL */
+      vrs = NULL;
+      break;
+    default:
+      /* Shouldn't happen */
+      test_assert(0);
+  }
+
+ done:
+  return vrs;
+}
+
+/** Apply tweaks to the vote list for each voter; for the umbw test this is
+ * just adding the right consensus methods to let clipping happen */
+static void
+vote_tweaks_for_umbw(networkstatus_t *v, int voter, time_t now)
+{
+  test_assert(v);
+  (void)voter;
+  (void)now;
+
+  test_assert(v->supported_methods);
+  smartlist_clear(v->supported_methods);
+  /* Method 17 is MIN_METHOD_TO_CLIP_UNMEASURED_BW */
+  smartlist_split_string(v->supported_methods,
+                         "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17",
+                         NULL, 0, -1);
+
+ done:
+  return;
+}
+
+/**
+ * Test a parsed vote_routerstatus_t for umbw test.
+ */
+static void
+test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
+{
+  routerstatus_t *rs;
+  tor_addr_t addr_ipv6;
+
+  (void)voter;
+  test_assert(vrs);
+  rs = &(vrs->status);
+  test_assert(rs);
+
+  /* Split out by digests to test */
+  if (tor_memeq(rs->identity_digest,
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+                DIGEST_LEN)) {
+    /*
+     * Check the first routerstatus - measured bandwidth below the clip
+     * cutoff.
+     */
+    test_streq(vrs->version, "0.1.2.14");
+    test_eq(rs->published_on, now-1500);
+    test_streq(rs->nickname, "router2");
+    test_memeq(rs->identity_digest,
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+               DIGEST_LEN);
+    test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+    test_eq(rs->addr, 0x99008801);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 8000);
+    test_assert(rs->has_bandwidth);
+    test_assert(rs->has_measured_bw);
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW / 2);
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+                       DIGEST_LEN)) {
+
+    /*
+     * Check the second routerstatus - measured bandwidth above the clip
+     * cutoff.
+     */
+    test_streq(vrs->version, "0.2.0.5");
+    test_eq(rs->published_on, now-1000);
+    test_streq(rs->nickname, "router1");
+    test_memeq(rs->identity_digest,
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+               DIGEST_LEN);
+    test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+    test_eq(rs->addr, 0x99009901);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 0);
+    tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+    test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
+    test_eq(rs->ipv6_orport, 4711);
+    test_assert(rs->has_bandwidth);
+    test_assert(rs->has_measured_bw);
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
+    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW * 2);
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
+                       "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
+                       DIGEST_LEN)) {
+    /*
+     * Check the third routerstatus - unmeasured bandwidth above the clip
+     * cutoff; this one should be clipped later on in the consensus, but
+     * appears unclipped in the vote.
+     */
+    test_assert(rs->has_bandwidth);
+    test_assert(!(rs->has_measured_bw));
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
+    test_eq(rs->measured_bw, 0);
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
+                       "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
+                       DIGEST_LEN)) {
+    /*
+     * Check the fourth routerstatus - unmeasured bandwidth below the clip
+     * cutoff; this one should not be clipped.
+     */
+    test_assert(rs->has_bandwidth);
+    test_assert(!(rs->has_measured_bw));
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_eq(rs->measured_bw, 0);
+  } else {
+    test_assert(0);
+  }
+
+ done:
+  return;
+}
+
+/**
+ * Test a consensus for v3_networkstatus_test
+ */
+static void
+test_consensus_for_umbw(networkstatus_t *con, time_t now)
+{
+  (void)now;
+
+  test_assert(con);
+  test_assert(!con->cert);
+  /* test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW); */
+  test_assert(con->consensus_method >= 16);
+  test_eq(4, smartlist_len(con->routerstatus_list));
+  /* There should be four listed routers; all voters saw the same in this */
+
+ done:
+  return;
+}
+
+/**
+ * Test a router list entry for umbw test
+ */
+static void
+test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
+{
+  tor_addr_t addr_ipv6;
+
+  test_assert(rs);
+
+  /* There should be four listed routers, as constructed above */
+  if (tor_memeq(rs->identity_digest,
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+                DIGEST_LEN)) {
+    test_memeq(rs->identity_digest,
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3"
+               "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+               DIGEST_LEN);
+    test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+    test_assert(!rs->is_authority);
+    test_assert(!rs->is_exit);
+    test_assert(!rs->is_fast);
+    test_assert(!rs->is_possible_guard);
+    test_assert(!rs->is_stable);
+    /* (If it wasn't running it wouldn't be here) */
+    test_assert(rs->is_flagged_running);
+    test_assert(!rs->is_v2_dir);
+    test_assert(!rs->is_valid);
+    test_assert(!rs->is_named);
+    /* This one should have measured bandwidth below the clip cutoff */
+    test_assert(rs->has_bandwidth);
+    test_assert(rs->has_measured_bw);
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW / 2);
+  } else if (tor_memeq(rs->identity_digest,
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+                       "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+                       DIGEST_LEN)) {
+    /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
+    test_memeq(rs->identity_digest,
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
+               "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+               DIGEST_LEN);
+    test_streq(rs->nickname, "router1");
+    test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+    test_eq(rs->published_on, now-1000);
+    test_eq(rs->addr, 0x99009901);
+    test_eq(rs->or_port, 443);
+    test_eq(rs->dir_port, 0);
+    tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
+    test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
+    test_eq(rs->ipv6_orport, 4711);
+    test_assert(!rs->is_authority);
+    test_assert(rs->is_exit);
+    test_assert(rs->is_fast);
+    test_assert(rs->is_possible_guard);
+    test_assert(rs->is_stable);
+    test_assert(rs->is_flagged_running);
+    test_assert(rs->is_v2_dir);
+    test_assert(rs->is_valid);
+    test_assert(!rs->is_named);
+    /* This one should have measured bandwidth above the clip cutoff */
+    test_assert(rs->has_bandwidth);
+    test_assert(rs->has_measured_bw);
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
+    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW * 2);
+  } else if (tor_memeq(rs->identity_digest,
+                "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
+                "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
+                DIGEST_LEN)) {
+    /*
+     * This one should have unmeasured bandwidth above the clip cutoff,
+     * and so should be clipped
+     */
+    test_assert(rs->has_bandwidth);
+    test_assert(!(rs->has_measured_bw));
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW);
+    test_eq(rs->measured_bw, 0);
+  } else if (tor_memeq(rs->identity_digest,
+                "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
+                "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
+                DIGEST_LEN)) {
+    /*
+     * This one should have unmeasured bandwidth below the clip cutoff,
+     * and so should not be clipped
+     */
+    test_assert(rs->has_bandwidth);
+    test_assert(!(rs->has_measured_bw));
+    test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_eq(rs->measured_bw, 0);
+  } else {
+    /* Weren't expecting this... */
+    test_assert(0);
+  }
+
+ done:
+  return;
+}
+
+/**
+ * Compute a consensus involving clipping unmeasured bandwidth with consensus
+ * method 17; this uses the same test_a_networkstatus() function that the
+ * v3_networkstatus test uses.
+ */
+
+static void
+test_dir_clip_unmeasured_bw(void)
+{
+  test_a_networkstatus(gen_routerstatus_for_umbw,
+                       vote_tweaks_for_umbw,
+                       test_vrs_for_umbw,
+                       test_consensus_for_umbw,
+                       test_routerstatus_for_umbw);
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
 
@@ -1701,6 +2090,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(v3_networkstatus),
   DIR(random_weighted),
   DIR(scale_bw),
+  DIR_LEGACY(clip_unmeasured_bw),
   END_OF_TESTCASES
 };
 
