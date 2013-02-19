@@ -188,6 +188,6 @@ src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS)
 	  touch src/or/or_sha1.i; \
 	fi
 
-CLEANFILES+= micro-revision.i
+CLEANFILES+= micro-revision.i src/or/micro-revision.i
 
 FORCE:
