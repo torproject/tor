@@ -2716,7 +2716,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
 }
 
 /** Return true iff <b>s</b> is a valid server nickname. (That is, a string
- * containing between 1 and MAX_NICKNAME_LEN chracters from
+ * containing between 1 and MAX_NICKNAME_LEN characters from
  * LEGAL_NICKNAME_CHARACTERS.) */
 int
 is_legal_nickname(const char *s)
@@ -2742,7 +2742,7 @@ is_legal_nickname_or_hexdigest(const char *s)
 /** Return true iff <b>s</b> is a valid hex-encoded identity-key
  * digest. (That is, an optional $, followed by 40 hex characters,
  * followed by either nothing, or = or ~ followed by a nickname, or
- * a character other thant =, ~, or a hex character.)
+ * a character other than =, ~, or a hex character.)
  */
 int
 is_legal_hexdigest(const char *s)
