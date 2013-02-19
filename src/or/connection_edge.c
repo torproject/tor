@@ -674,12 +674,10 @@ connection_ap_expire_beginning(void)
     /* un-mark it as ending, since we're going to reuse it */
     conn->edge_has_sent_end = 0;
     conn->end_reason = 0;
-    /* kludge to make us not try this circuit again, yet to allow
-     * current streams on it to survive if they can: make it
-     * unattractive to use for new streams */
-    /* XXXX024 this is a kludgy way to do this. */
-    tor_assert(circ->timestamp_dirty);
-    circ->timestamp_dirty -= options->MaxCircuitDirtiness;
+    /* make us not try this circuit again, but allow
+     * current streams on it to survive if they can */
+    mark_circuit_unusable_for_new_conns(TO_ORIGIN_CIRCUIT(circ));
+
     /* give our stream another 'cutoff' seconds to try */
     conn->base_.timestamp_lastread += cutoff;
     if (entry_conn->num_socks_retries < 250) /* avoid overflow */
@@ -1806,9 +1804,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 
     /* Mark this circuit "unusable for new streams". */
-    /* XXXX024 this is a kludgy way to do this. */
-    tor_assert(circ->base_.timestamp_dirty);
-    circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+    mark_circuit_unusable_for_new_conns(circ);
     return -1;
   }
 
@@ -1899,9 +1895,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 
     /* Mark this circuit "unusable for new streams". */
-    /* XXXX024 this is a kludgy way to do this. */
-    tor_assert(circ->base_.timestamp_dirty);
-    circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+    mark_circuit_unusable_for_new_conns(circ);
     return -1;
   }
 
