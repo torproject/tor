@@ -212,7 +212,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           vrs) {
     vote_microdesc_hash_t *h;
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, NS_V3_VOTE) < 0) {
+                                  vrs->version, NS_V3_VOTE, vrs) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
@@ -1388,6 +1388,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
   const char *flavor_name;
+  uint32_t max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
   int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
@@ -1586,6 +1587,30 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(dir_sources);
   }
 
+  if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
+    char *max_unmeasured_param = NULL;
+    /* XXXX Extract this code into a common function */
+    if (params) {
+      if (strcmpstart(params, "maxunmeasuredbw=") == 0)
+        max_unmeasured_param = params;
+      else
+        max_unmeasured_param = strstr(params, " maxunmeasuredbw=");
+    }
+    if (max_unmeasured_param) {
+      int ok = 0;
+      char *eq = strchr(max_unmeasured_param, '=');
+      if (eq) {
+        max_unmeasured_bw = (uint32_t)
+          tor_parse_ulong(eq+1, 10, 1, UINT32_MAX, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_DIR, "Bad element '%s' in max unmeasured bw param",
+                   escaped(max_unmeasured_param));
+          max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
+        }
+      }
+    }
+  }
+
   /* Add the actual router entries. */
   {
     int *index; /* index[j] is the current index into votes[j]. */
@@ -1612,6 +1637,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int *named_flag; /* Index of the flag "Named" for votes[j] */
     int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
     int chosen_named_idx;
+    int n_authorities_measuring_bandwidth;
 
     strmap_t *name_to_id_map = strmap_new();
     char conflict[DIGEST_LEN];
@@ -1700,6 +1726,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
       } SMARTLIST_FOREACH_END(v);
     }
 
+    /* We need to know how many votes measure bandwidth. */
+    n_authorities_measuring_bandwidth = 0;
+    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
+       if (v->has_measured_bws) {
+         ++n_authorities_measuring_bandwidth;
+       }
+    );
+
     /* Now go through all the votes */
     flag_counts = tor_malloc(sizeof(int) * smartlist_len(flags));
     while (1) {
@@ -1769,8 +1803,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
 
         /* count bandwidths */
-        if (rs->status.has_measured_bw)
-          measured_bws[num_mbws++] = rs->status.measured_bw;
+        if (rs->has_measured_bw)
+          measured_bws[num_mbws++] = rs->measured_bw;
 
         if (rs->status.has_bandwidth)
           bandwidths[num_bandwidths++] = rs->status.bandwidth;
@@ -1863,10 +1897,19 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Pick a bandwidth */
       if (consensus_method >= 6 && num_mbws > 2) {
         rs_out.has_bandwidth = 1;
+        rs_out.bw_is_unmeasured = 0;
         rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
+        rs_out.bw_is_unmeasured = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+        if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
+            n_authorities_measuring_bandwidth > 2) {
+          /* Cap non-measured bandwidths. */
+          if (rs_out.bandwidth > max_unmeasured_bw) {
+            rs_out.bandwidth = max_unmeasured_bw;
+          }
+        }
       }
 
       /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
@@ -1987,7 +2030,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
         routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                  rs_format);
+                                  rs_format, NULL);
         smartlist_add(chunks, tor_strdup(buf));
       }
       /*     Now an m line, if applicable. */
@@ -2008,7 +2051,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        smartlist_add_asprintf(chunks, "w Bandwidth=%d\n", rs_out.bandwidth);
+        int unmeasured = rs_out.bw_is_unmeasured &&
+          consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n", rs_out.bandwidth,
+                               unmeasured?" Unmeasured=1":"");
       }
 
       /*     Now the exitpolicy summary line. */
@@ -2051,6 +2097,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     // Parse params, extract BW_WEIGHT_SCALE if present
     // DO NOT use consensus_param_bw_weight_scale() in this code!
     // The consensus is not formed yet!
+    /* XXXX Extract this code into a common function */
     if (params) {
       if (strcmpstart(params, "bwweightscale=") == 0)
         bw_weight_param = params;

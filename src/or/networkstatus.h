@@ -38,6 +38,8 @@ int router_set_networkstatus_v2(const char *s, time_t arrived_at,
 void networkstatus_v2_list_clean(time_t now);
 int compare_digest_to_routerstatus_entry(const void *_key,
                                          const void **_member);
+int compare_digest_to_vote_routerstatus_entry(const void *_key,
+                                              const void **_member);
 const routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
 const routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,

@@ -937,6 +937,17 @@ compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
   return tor_memcmp(key, rs->identity_digest, DIGEST_LEN);
 }
 
+/** Helper for bsearching a list of routerstatus_t pointers: compare a
+ * digest in the key to the identity digest of a routerstatus_t. */
+int
+compare_digest_to_vote_routerstatus_entry(const void *_key,
+                                          const void **_member)
+{
+  const char *key = _key;
+  const vote_routerstatus_t *vrs = *_member;
+  return tor_memcmp(key, vrs->status.identity_digest, DIGEST_LEN);
+}
+
 /** As networkstatus_v2_find_entry, but do not return a const pointer */
 routerstatus_t *
 networkstatus_v2_find_mutable_entry(networkstatus_v2_t *ns, const char *digest)
@@ -2117,7 +2128,7 @@ char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
   char buf[RS_ENTRY_LEN+1];
-  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, NS_CONTROL_PORT);
+  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, NS_CONTROL_PORT, NULL);
   return tor_strdup(buf);
 }
 

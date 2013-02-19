@@ -1974,9 +1974,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
           goto err;
         }
         rs->has_bandwidth = 1;
-      } else if (!strcmpstart(tok->args[i], "Measured=")) {
+      } else if (!strcmpstart(tok->args[i], "Measured=") && vote_rs) {
         int ok;
-        rs->measured_bw =
+        vote_rs->measured_bw =
             (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
                                       10, 0, UINT32_MAX, &ok, NULL);
         if (!ok) {
@@ -1984,7 +1984,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
                    escaped(tok->args[i]));
           goto err;
         }
-        rs->has_measured_bw = 1;
+        vote_rs->has_measured_bw = 1;
+        vote->has_measured_bws = 1;
+      } else if (!strcmpstart(tok->args[i], "Unmeasured=1")) {
+        rs->bw_is_unmeasured = 1;
       }
     }
   }
@@ -2060,6 +2063,14 @@ compare_routerstatus_entries(const void **_a, const void **_b)
 {
   const routerstatus_t *a = *_a, *b = *_b;
   return fast_memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
+}
+
+int
+compare_vote_routerstatus_entries(const void **_a, const void **_b)
+{
+  const vote_routerstatus_t *a = *_a, *b = *_b;
+  return fast_memcmp(a->status.identity_digest, b->status.identity_digest,
+                     DIGEST_LEN);
 }
 
 /** Helper: used in call to _smartlist_uniq to clear out duplicate entries. */
