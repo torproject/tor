@@ -783,7 +783,7 @@ get_detached_sigs(networkstatus_t *ns, networkstatus_t *ns2)
 static vote_routerstatus_t *
 gen_routerstatus_for_v3ns(int idx, time_t now)
 {
-  vote_routerstatus_t *vrs;
+  vote_routerstatus_t *vrs=NULL;
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
 
@@ -1715,7 +1715,7 @@ static uint32_t alternate_clip_bw = 0;
 static vote_routerstatus_t *
 gen_routerstatus_for_umbw(int idx, time_t now)
 {
-  vote_routerstatus_t *vrs;
+  vote_routerstatus_t *vrs = NULL;
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
   uint32_t max_unmeasured_bw = (alternate_clip_bw > 0) ?
