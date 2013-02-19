@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Downgrade an assertion in connection_ap_expire_beginning to
+      an LD_BUG message. The fix for bug 8024 should prevent this
+      message from displaying, but just in case a warn that we can
+      diagnose is better than more assert crashes. Fix for bug 8065;
+      bugfix on 0.2.4.8-alpha.

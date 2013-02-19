@@ -651,7 +651,16 @@ connection_ap_expire_beginning(void)
       }
       continue;
     }
-    tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
+    if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL) {
+      log_warn(LD_BUG, "circuit->purpose == CIRCUIT_PURPOSE_C_GENERAL failed. "
+               "The purpose on the circuit was %s; it was in state %s, "
+               "path_state %s.",
+               circuit_purpose_to_string(circ->purpose),
+               circuit_state_to_string(circ->state),
+               CIRCUIT_IS_ORIGIN(circ) ?
+                 pathbias_state_to_string(TO_ORIGIN_CIRCUIT(circ)->path_state) :
+                 "none");
+    }
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit %s."
            " Retrying on a new circuit.",
