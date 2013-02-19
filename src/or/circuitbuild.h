@@ -66,6 +66,7 @@ int pathbias_check_probe_response(circuit_t *circ, const cell_t *cell);
 void pathbias_count_use_attempt(origin_circuit_t *circ);
 void pathbias_mark_use_success(origin_circuit_t *circ);
 void pathbias_mark_use_rollback(origin_circuit_t *circ);
+const char *pathbias_state_to_string(path_state_t state);
 
 #endif
 

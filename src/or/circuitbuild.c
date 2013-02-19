@@ -1269,7 +1269,7 @@ pathbias_get_scale_use_threshold(const or_options_t *options)
 /**
  * Convert a Guard's path state to string.
  */
-static const char *
+const char *
 pathbias_state_to_string(path_state_t state)
 {
   switch (state) {
