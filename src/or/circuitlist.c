@@ -1300,9 +1300,8 @@ circuit_mark_all_unused_circs(void)
  * This is useful for letting the user change pseudonyms, so new
  * streams will not be linkable to old streams.
  */
-/* XXX024 this is a bad name for what this function does */
 void
-circuit_expire_all_dirty_circs(void)
+circuit_mark_all_dirty_circs_as_unusable(void)
 {
   circuit_t *circ;
 

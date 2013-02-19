@@ -1500,7 +1500,7 @@ options_act(const or_options_t *old_options)
                "preferred or excluded node lists. "
                "Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
-      circuit_expire_all_dirty_circs();
+      circuit_mark_all_dirty_circs_as_unusable();
       revise_trackexithosts = 1;
     }
 
