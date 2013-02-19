@@ -2715,7 +2715,9 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   return result;
 }
 
-/** Return true iff <b>s</b> is a legally valid server nickname. */
+/** Return true iff <b>s</b> is a valid server nickname. (That is, a string
+ * containing between 1 and MAX_NICKNAME_LEN chracters from
+ * LEGAL_NICKNAME_CHARACTERS.) */
 int
 is_legal_nickname(const char *s)
 {
@@ -2726,7 +2728,7 @@ is_legal_nickname(const char *s)
     strspn(s,LEGAL_NICKNAME_CHARACTERS) == len;
 }
 
-/** Return true iff <b>s</b> is a legally valid server nickname or
+/** Return true iff <b>s</b> is a valid server nickname or
  * hex-encoded identity-key digest. */
 int
 is_legal_nickname_or_hexdigest(const char *s)
@@ -2737,8 +2739,11 @@ is_legal_nickname_or_hexdigest(const char *s)
     return is_legal_hexdigest(s);
 }
 
-/** Return true iff <b>s</b> is a legally valid hex-encoded identity-key
- * digest. */
+/** Return true iff <b>s</b> is a valid hex-encoded identity-key
+ * digest. (That is, an optional $, followed by 40 hex characters,
+ * followed by either nothing, or = or ~ followed by a nickname, or
+ * a character other thant =, ~, or a hex character.)
+ */
 int
 is_legal_hexdigest(const char *s)
 {
