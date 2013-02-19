@@ -972,8 +972,8 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                        DIGEST_LEN) &&
                        (voter == 1 || voter == 2)) {
     /* Check the measured bandwidth bits */
-    test_assert(vrs->status.has_measured_bw &&
-                vrs->status.measured_bw == 1024);
+    test_assert(vrs->has_measured_bw &&
+                vrs->measured_bw == 1024);
   } else {
     /*
      * Didn't expect this, but the old unit test only checked some of them,
@@ -1728,9 +1728,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        * so shouldn't be clipped; we'll have to test that it isn't
        * later.
        */
-      rs->has_measured_bw = 1;
+      vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
-      rs->measured_bw = rs->bandwidth = DEFAULT_MAX_UNMEASURED_BW / 2;
+      vrs->measured_bw = rs->bandwidth = DEFAULT_MAX_UNMEASURED_BW / 2;
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -1754,9 +1754,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        * so shouldn't be clipped; we'll have to test that it isn't
        * later.
        */
-      rs->has_measured_bw = 1;
+      vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
-      rs->measured_bw = rs->bandwidth = 2 * DEFAULT_MAX_UNMEASURED_BW;
+      vrs->measured_bw = rs->bandwidth = 2 * DEFAULT_MAX_UNMEASURED_BW;
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -1778,9 +1778,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        * so should be clipped; we'll have to test that it isn't
        * later.
        */
-      rs->has_measured_bw = 0;
+      vrs->has_measured_bw = 0;
       rs->has_bandwidth = 1;
-      rs->measured_bw = 0;
+      vrs->measured_bw = 0;
       rs->bandwidth = 2 * DEFAULT_MAX_UNMEASURED_BW;
       break;
     case 3:
@@ -1802,9 +1802,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        * so shouldn't be clipped; we'll have to test that it isn't
        * later.
        */
-      rs->has_measured_bw = 0;
+      vrs->has_measured_bw = 0;
       rs->has_bandwidth = 1;
-      rs->measured_bw = 0;
+      vrs->measured_bw = 0;
       rs->bandwidth = DEFAULT_MAX_UNMEASURED_BW / 2;
       break;
     case 4:
@@ -1875,9 +1875,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->or_port, 443);
     test_eq(rs->dir_port, 8000);
     test_assert(rs->has_bandwidth);
-    test_assert(rs->has_measured_bw);
+    test_assert(vrs->has_measured_bw);
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
-    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_eq(vrs->measured_bw, DEFAULT_MAX_UNMEASURED_BW / 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
@@ -1902,9 +1902,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
     test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     test_eq(rs->ipv6_orport, 4711);
     test_assert(rs->has_bandwidth);
-    test_assert(rs->has_measured_bw);
+    test_assert(vrs->has_measured_bw);
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
-    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW * 2);
+    test_eq(vrs->measured_bw, DEFAULT_MAX_UNMEASURED_BW * 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
@@ -1915,9 +1915,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * appears unclipped in the vote.
      */
     test_assert(rs->has_bandwidth);
-    test_assert(!(rs->has_measured_bw));
+    test_assert(!(vrs->has_measured_bw));
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
-    test_eq(rs->measured_bw, 0);
+    test_eq(vrs->measured_bw, 0);
   } else if (tor_memeq(rs->identity_digest,
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
@@ -1927,9 +1927,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      * cutoff; this one should not be clipped.
      */
     test_assert(rs->has_bandwidth);
-    test_assert(!(rs->has_measured_bw));
+    test_assert(!(vrs->has_measured_bw));
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
-    test_eq(rs->measured_bw, 0);
+    test_eq(vrs->measured_bw, 0);
   } else {
     test_assert(0);
   }
@@ -1989,9 +1989,8 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     test_assert(!rs->is_named);
     /* This one should have measured bandwidth below the clip cutoff */
     test_assert(rs->has_bandwidth);
-    test_assert(rs->has_measured_bw);
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
-    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW / 2);
+    test_assert(!(rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
@@ -2021,9 +2020,8 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     test_assert(!rs->is_named);
     /* This one should have measured bandwidth above the clip cutoff */
     test_assert(rs->has_bandwidth);
-    test_assert(rs->has_measured_bw);
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW * 2);
-    test_eq(rs->measured_bw, DEFAULT_MAX_UNMEASURED_BW * 2);
+    test_assert(!(rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
                 "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
                 "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
@@ -2033,9 +2031,8 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
      * and so should be clipped
      */
     test_assert(rs->has_bandwidth);
-    test_assert(!(rs->has_measured_bw));
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW);
-    test_eq(rs->measured_bw, 0);
+    test_assert(rs->bw_is_unmeasured);
   } else if (tor_memeq(rs->identity_digest,
                 "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
                 "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
@@ -2045,9 +2042,8 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
      * and so should not be clipped
      */
     test_assert(rs->has_bandwidth);
-    test_assert(!(rs->has_measured_bw));
     test_eq(rs->bandwidth, DEFAULT_MAX_UNMEASURED_BW / 2);
-    test_eq(rs->measured_bw, 0);
+    test_assert(rs->bw_is_unmeasured);
   } else {
     /* Weren't expecting this... */
     test_assert(0);
