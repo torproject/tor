@@ -2072,9 +2072,8 @@ typedef struct routerstatus_t {
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
-  unsigned int has_measured_bw:1; /**< The vote/consensus had a measured bw */
-
-  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
+  unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
+                                    * the Unmeasured flag set. */
 
   uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
@@ -2318,6 +2317,8 @@ typedef struct vote_routerstatus_t {
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
+  unsigned int has_measured_bw:1; /**< The vote had a measured bw */
+  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;

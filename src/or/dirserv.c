@@ -2114,13 +2114,15 @@ version_from_platform(const char *platform)
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
  *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
  *        consensus entry.
- *   NS_V3_VOTE - Output a complete V3 NS vote
+ *   NS_V3_VOTE - Output a complete V3 NS vote. If <b>vrs</b> is present,
+ *        it contains additional information for the vote.
  *   NS_CONTROL_PORT - Output a NS document for the control port
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
                           const routerstatus_t *rs, const char *version,
-                          routerstatus_format_type_t format)
+                          routerstatus_format_type_t format,
+                          const vote_routerstatus_t *vrs)
 {
   int r;
   char *cp;
@@ -2266,10 +2268,10 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       return -1;
     }
     cp += strlen(cp);
-    if (format == NS_V3_VOTE && rs->has_measured_bw) {
+    if (format == NS_V3_VOTE && vrs && vrs->has_measured_bw) {
       *--cp = '\0'; /* Kill "\n" */
       r = tor_snprintf(cp, buf_len - (cp-buf),
-                       " Measured=%d\n", rs->measured_bw);
+                       " Measured=%d\n", vrs->measured_bw);
       if (r<0) {
         log_warn(LD_BUG, "Not enough space in buffer for weight line.");
         return -1;
@@ -2652,12 +2654,12 @@ int
 measured_bw_line_apply(measured_bw_line_t *parsed_line,
                        smartlist_t *routerstatuses)
 {
-  routerstatus_t *rs = NULL;
+  vote_routerstatus_t *rs = NULL;
   if (!routerstatuses)
     return 0;
 
   rs = smartlist_bsearch(routerstatuses, parsed_line->node_id,
-                         compare_digest_to_routerstatus_entry);
+                         compare_digest_to_vote_routerstatus_entry);
 
   if (rs) {
     rs->has_measured_bw = 1;
@@ -2672,7 +2674,7 @@ measured_bw_line_apply(measured_bw_line_t *parsed_line,
 
 /**
  * Read the measured bandwidth file and apply it to the list of
- * routerstatuses. Returns -1 on error, 0 otherwise.
+ * vote_routerstatus_t. Returns -1 on error, 0 otherwise.
  */
 int
 dirserv_read_measured_bandwidths(const char *from_file,
@@ -2714,7 +2716,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
 
   if (routerstatuses)
-    smartlist_sort(routerstatuses, compare_routerstatus_entries);
+    smartlist_sort(routerstatuses, compare_vote_routerstatus_entries);
 
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
@@ -3080,7 +3082,8 @@ generate_v2_networkstatus_opinion(void)
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(&rs);
 
-      if (routerstatus_format_entry(outp, endp-outp, &rs, version, NS_V2)) {
+      if (routerstatus_format_entry(outp, endp-outp, &rs, version, NS_V2,
+                                    NULL)) {
         log_warn(LD_BUG, "Unable to print router status.");
         tor_free(version);
         goto done;

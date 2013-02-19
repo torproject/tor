@@ -212,7 +212,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           vrs) {
     vote_microdesc_hash_t *h;
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, NS_V3_VOTE) < 0) {
+                                  vrs->version, NS_V3_VOTE, vrs) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
@@ -1803,8 +1803,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
 
         /* count bandwidths */
-        if (rs->status.has_measured_bw)
-          measured_bws[num_mbws++] = rs->status.measured_bw;
+        if (rs->has_measured_bw)
+          measured_bws[num_mbws++] = rs->measured_bw;
 
         if (rs->status.has_bandwidth)
           bandwidths[num_bandwidths++] = rs->status.bandwidth;
@@ -1897,10 +1897,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Pick a bandwidth */
       if (consensus_method >= 6 && num_mbws > 2) {
         rs_out.has_bandwidth = 1;
-        rs_out.has_measured_bw = 1;
+        rs_out.bw_is_unmeasured = 0;
         rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
+        rs_out.bw_is_unmeasured = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
         if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
             n_authorities_measuring_bandwidth > 2) {
@@ -2029,7 +2030,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
         routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                  rs_format);
+                                  rs_format, NULL);
         smartlist_add(chunks, tor_strdup(buf));
       }
       /*     Now an m line, if applicable. */
@@ -2050,7 +2051,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        int unmeasured = ! rs_out.has_measured_bw &&
+        int unmeasured = rs_out.bw_is_unmeasured &&
           consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
         smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n", rs_out.bandwidth,
                                unmeasured?" Unmeasured=1":"");
