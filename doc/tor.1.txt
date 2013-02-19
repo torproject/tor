@@ -1159,7 +1159,9 @@ The following options are useful only for clients (that is, if
 
 **DNSPort** \['address':]__port__|**auto** [_isolation flags_]::
     If non-zero, open this port to listen for UDP DNS requests, and resolve
-    them anonymously.  Set the port to "auto" to have Tor pick a port for
+    them anonymously.  This port only handles A, AAAA, and PTR requests---it
+    doesn't handle arbitrary DNS request types. Set the port to "auto" to
+    have Tor pick a port for
     you. This directive can be specified multiple times to bind to multiple
     addresses/ports. See SOCKSPort for an explanation of isolation
     flags. (Default: 0)
