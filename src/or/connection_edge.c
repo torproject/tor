@@ -658,8 +658,8 @@ connection_ap_expire_beginning(void)
                circuit_purpose_to_string(circ->purpose),
                circuit_state_to_string(circ->state),
                CIRCUIT_IS_ORIGIN(circ) ?
-                 pathbias_state_to_string(TO_ORIGIN_CIRCUIT(circ)->path_state) :
-                 "none");
+                pathbias_state_to_string(TO_ORIGIN_CIRCUIT(circ)->path_state) :
+                "none");
     }
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit %s."
