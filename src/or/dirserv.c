@@ -2908,10 +2908,10 @@ static cached_dir_t *
 generate_v2_networkstatus_opinion(void)
 {
   cached_dir_t *r = NULL;
-  size_t len, identity_pkey_len;
+  size_t identity_pkey_len;
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,
     *identity_pkey = NULL, *hostname = NULL;
-  char *outp, *endp;
+  size_t status_len;
   const or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
   char published[ISO_TIME_LEN+1];
@@ -2930,6 +2930,7 @@ generate_v2_networkstatus_opinion(void)
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
   digestmap_t *omit_as_sybil = NULL;
+  smartlist_t *chunks = NULL;
 
   private_key = get_server_identity_key();
 
@@ -2968,12 +2969,8 @@ generate_v2_networkstatus_opinion(void)
     version_lines = tor_strdup("");
   }
 
-  len = 4096+strlen(client_versions)+strlen(server_versions);
-  len += identity_pkey_len*2;
-  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
-
-  status = tor_malloc(len);
-  tor_snprintf(status, len,
+  chunks = smartlist_new();
+  smartlist_add_asprintf(chunks,
                "network-status-version 2\n"
                "dir-source %s %s %d\n"
                "fingerprint %s\n"
@@ -2993,8 +2990,6 @@ generate_v2_networkstatus_opinion(void)
                versioning ? " Versions" : "",
                version_lines,
                identity_pkey);
-  outp = status + strlen(status);
-  endp = status + len;
 
   /* precompute this part, since we need it to decide what "stable"
    * means. */
@@ -3027,29 +3022,28 @@ generate_v2_networkstatus_opinion(void)
 
       {
         char *rsf = routerstatus_format_entry(&rs, version, NS_V2, NULL);
-        if (rsf) {
-          memcpy(outp, rsf, strlen(rsf)+1);
-          outp += strlen(outp);
-          tor_free(rsf);
-        }
+        if (rsf)
+          smartlist_add(chunks, rsf);
       }
       tor_free(version);
     }
   } SMARTLIST_FOREACH_END(ri);
 
-  if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
-                   options->Nickname)<0) {
-    log_warn(LD_BUG, "Unable to write signature line.");
-    goto done;
-  }
+  smartlist_add_asprintf(chunks, "directory-signature %s\n",
+                         options->Nickname);
+
+  status = smartlist_join_strings(chunks, "", 0, NULL);
+#define MAX_V2_OPINION_SIGNATURE_LEN 4096
+  status_len = strlen(status) + MAX_V2_OPINION_SIGNATURE_LEN + 1;
+  status = tor_realloc(status, status_len);
+
   if (router_get_networkstatus_v2_hash(status, digest)<0) {
     log_warn(LD_BUG, "Unable to hash network status");
     goto done;
   }
-  outp += strlen(outp);
 
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,DIGEST_LEN,
+  if (router_append_dirobj_signature(status, status_len,digest,DIGEST_LEN,
                                      private_key)<0) {
     log_warn(LD_BUG, "Unable to sign router status.");
     goto done;
@@ -3076,6 +3070,10 @@ generate_v2_networkstatus_opinion(void)
   }
 
  done:
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+    smartlist_free(chunks);
+  }
   tor_free(client_versions);
   tor_free(server_versions);
   tor_free(version_lines);
