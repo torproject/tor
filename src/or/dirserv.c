@@ -2090,11 +2090,10 @@ version_from_platform(const char *platform)
   return NULL;
 }
 
-/** Helper: write the router-status information in <b>rs</b> into <b>buf</b>,
- * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
- * Use the same format as in network-status documents.  If <b>version</b> is
- * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
- * failure.
+/** Helper: write the router-status information in <b>rs</b> into a newly
+ * allocated character buffer.  Use the same format as in network-status
+ * documents.  If <b>version</b> is non-NULL, add a "v" line for the platform.
+ * Return 0 on success, -1 on failure.
  *
  * The format argument has one of the following values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
@@ -2105,25 +2104,25 @@ version_from_platform(const char *platform)
  *        it contains additional information for the vote.
  *   NS_CONTROL_PORT - Output a NS document for the control port
  */
-int
-routerstatus_format_entry(char *buf, size_t buf_len,
-                          const routerstatus_t *rs, const char *version,
+char *
+routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                           routerstatus_format_type_t format,
                           const vote_routerstatus_t *vrs)
 {
-  int r;
-  char *cp;
   char *summary;
+  char *result = NULL;
 
   char published[ISO_TIME_LEN+1];
   char identity64[BASE64_DIGEST_LEN+1];
   char digest64[BASE64_DIGEST_LEN+1];
+  smartlist_t *chunks = NULL;
 
   format_iso_time(published, rs->published_on);
   digest_to_base64(identity64, rs->identity_digest);
   digest_to_base64(digest64, rs->descriptor_digest);
 
-  r = tor_snprintf(buf, buf_len,
+  chunks = smartlist_new();
+  smartlist_add_asprintf(chunks,
                    "r %s %s %s%s%s %s %d %d\n",
                    rs->nickname,
                    identity64,
@@ -2133,11 +2132,6 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    fmt_addr32(rs->addr),
                    (int)rs->or_port,
                    (int)rs->dir_port);
-  if (r<0) {
-    log_warn(LD_BUG, "Not enough space in buffer.");
-    return -1;
-  }
-  cp = buf + strlen(buf);
 
   /* TODO: Maybe we want to pass in what we need to build the rest of
    * this here, instead of in the caller. Then we could use the
@@ -2146,25 +2140,18 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
   /* V3 microdesc consensuses don't have "a" lines. */
   if (format == NS_V3_CONSENSUS_MICRODESC)
-    return 0;
+    goto done;
 
   /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {
-    r = tor_snprintf(cp, buf_len - (cp-buf),
-                     "a %s\n",
-                     fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
-    if (r<0) {
-      log_warn(LD_BUG, "Not enough space in buffer.");
-      return -1;
-    }
-    cp += strlen(cp);
+    smartlist_add_asprintf(chunks, "a %s\n",
+                           fmt_addrport(&rs->ipv6_addr, rs->ipv6_orport));
   }
 
   if (format == NS_V3_CONSENSUS)
-    return 0;
+    goto done;
 
-  /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
-  r = tor_snprintf(cp, buf_len - (cp-buf),
+  smartlist_add_asprintf(chunks,
                    "s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
@@ -2180,20 +2167,11 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_unnamed?" Unnamed":"",
                    rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
-  if (r<0) {
-    log_warn(LD_BUG, "Not enough space in buffer.");
-    return -1;
-  }
-  cp += strlen(cp);
 
   /* length of "opt v \n" */
 #define V_LINE_OVERHEAD 7
   if (version && strlen(version) < MAX_V_LINE_LEN - V_LINE_OVERHEAD) {
-    if (tor_snprintf(cp, buf_len - (cp-buf), "v %s\n", version)<0) {
-      log_warn(LD_BUG, "Unable to print router version.");
-      return -1;
-    }
-    cp += strlen(cp);
+    smartlist_add_asprintf(chunks, "v %s\n", version);
   }
 
   if (format != NS_V2) {
@@ -2213,7 +2191,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
         log_warn(LD_BUG, "Cannot get any descriptor for %s "
             "(wanted descriptor %s).",
             id, dd);
-        return -1;
+        goto err;
       }
 
       /* This assert can fire for the control port, because
@@ -2247,39 +2225,32 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       tor_assert(desc);
       bw = router_get_advertised_bandwidth_capped(desc) / 1000;
     }
-    r = tor_snprintf(cp, buf_len - (cp-buf),
-                     "w Bandwidth=%d\n", bw);
+    smartlist_add_asprintf(chunks,
+                     "w Bandwidth=%d", bw);
 
-    if (r<0) {
-      log_warn(LD_BUG, "Not enough space in buffer.");
-      return -1;
-    }
-    cp += strlen(cp);
     if (format == NS_V3_VOTE && vrs && vrs->has_measured_bw) {
-      *--cp = '\0'; /* Kill "\n" */
-      r = tor_snprintf(cp, buf_len - (cp-buf),
-                       " Measured=%d\n", vrs->measured_bw);
-      if (r<0) {
-        log_warn(LD_BUG, "Not enough space in buffer for weight line.");
-        return -1;
-      }
-      cp += strlen(cp);
+      smartlist_add_asprintf(chunks,
+                       " Measured=%d", vrs->measured_bw);
     }
+    smartlist_add(chunks, tor_strdup("\n"));
 
     if (desc) {
       summary = policy_summarize(desc->exit_policy, AF_INET);
-      r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
-      if (r<0) {
-        log_warn(LD_BUG, "Not enough space in buffer.");
-        tor_free(summary);
-        return -1;
-      }
-      cp += strlen(cp);
+      smartlist_add_asprintf(chunks, "p %s\n", summary);
       tor_free(summary);
     }
   }
 
-  return 0;
+ done:
+  result = smartlist_join_strings(chunks, "", 0, NULL);
+
+ err:
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+    smartlist_free(chunks);
+  }
+
+  return result;
 }
 
 /** Helper for sorting: compares two routerinfos first by address, and then by
@@ -3054,14 +3025,15 @@ generate_v2_networkstatus_opinion(void)
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(&rs);
 
-      if (routerstatus_format_entry(outp, endp-outp, &rs, version, NS_V2,
-                                    NULL)) {
-        log_warn(LD_BUG, "Unable to print router status.");
-        tor_free(version);
-        goto done;
+      {
+        char *rsf = routerstatus_format_entry(&rs, version, NS_V2, NULL);
+        if (rsf) {
+          memcpy(outp, rsf, strlen(rsf)+1);
+          outp += strlen(outp);
+          tor_free(rsf);
+        }
       }
       tor_free(version);
-      outp += strlen(outp);
     }
   } SMARTLIST_FOREACH_END(ri);
 

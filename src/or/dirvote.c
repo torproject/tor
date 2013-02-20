@@ -171,15 +171,12 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   SMARTLIST_FOREACH_BEGIN(v3_ns->routerstatus_list, vote_routerstatus_t *,
                           vrs) {
-#define MAX_VOTE_ROUTERSTATUS_LEN 8192
-    char rs_buf[MAX_VOTE_ROUTERSTATUS_LEN];
+    char *rsf;
     vote_microdesc_hash_t *h;
-    if (routerstatus_format_entry(rs_buf, sizeof(rs_buf), &vrs->status,
-                                  vrs->version, NS_V3_VOTE, vrs) < 0) {
-      log_warn(LD_BUG, "Unable to print router status; skipping");
-      continue;
-    }
-    smartlist_add(chunks, tor_strdup(rs_buf));
+    rsf = routerstatus_format_entry(&vrs->status,
+                                    vrs->version, NS_V3_VOTE, vrs);
+    if (rsf)
+      smartlist_add(chunks, rsf);
 
     for (h = vrs->microdesc; h; h = h->next) {
       smartlist_add(chunks, tor_strdup(h->microdesc_hash_line));
@@ -1982,12 +1979,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       {
-        char buf[4096];
+        char *buf;
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
-        routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                  rs_format, NULL);
-        smartlist_add(chunks, tor_strdup(buf));
+        buf = routerstatus_format_entry(&rs_out, NULL, rs_format, NULL);
+        if (buf)
+          smartlist_add(chunks, buf);
       }
       /*     Now an m line, if applicable. */
       if (flavor == FLAV_MICRODESC &&

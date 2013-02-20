@@ -129,7 +129,7 @@ size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 size_t dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed);
 
-int routerstatus_format_entry(char *buf, size_t buf_len,
+char *routerstatus_format_entry(
                               const routerstatus_t *rs, const char *platform,
                               routerstatus_format_type_t format,
                               const vote_routerstatus_t *vrs);
