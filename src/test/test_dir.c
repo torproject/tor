@@ -73,7 +73,8 @@ test_dir_nicknames(void)
 static void
 test_dir_formats(void)
 {
-  char buf[8192], buf2[8192];
+  char *buf = NULL;
+  char buf2[8192];
   char platform[256];
   char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
@@ -142,8 +143,8 @@ test_dir_formats(void)
   test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str,
                                                     &pk3_str_len));
 
-  memset(buf, 0, 2048);
-  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
+  buf = router_dump_router_to_string(r1, pk2);
+  test_assert(buf);
 
   strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
           "or-address [1:2:3:4::]:9999\n"
@@ -170,8 +171,10 @@ test_dir_formats(void)
                              * twice */
 
   test_streq(buf, buf2);
+  tor_free(buf);
 
-  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
+  buf = router_dump_router_to_string(r1, pk2);
+  test_assert(buf);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp1);
@@ -232,6 +235,7 @@ test_dir_formats(void)
   if (r2)
     routerinfo_free(r2);
 
+  tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
   tor_free(pk3_str);
