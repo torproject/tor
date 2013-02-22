@@ -170,10 +170,12 @@ int router_exit_policy_rejects_all(const routerinfo_t *router);
 
 dir_server_t *trusted_dir_server_new(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
+                       const tor_addr_port_t *addrport_ipv6,
                        const char *digest, const char *v3_auth_digest,
                        dirinfo_type_t type, double weight);
 dir_server_t *fallback_dir_server_new(const tor_addr_t *addr,
                                       uint16_t dir_port, uint16_t or_port,
+                                      const tor_addr_port_t *addrport_ipv6,
                                       const char *id_digest, double weight);
 void dir_server_add(dir_server_t *ent);
 

@@ -5538,6 +5538,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   smartlist_t *items = NULL;
   int r;
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
+  tor_addr_port_t ipv6_addrport, *ipv6_addrport_ptr = NULL;
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
@@ -5594,6 +5595,19 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
       } else {
         type |= V3_DIRINFO|EXTRAINFO_DIRINFO|MICRODESC_DIRINFO;
       }
+    } else if (!strcasecmpstart(flag, "ipv6=")) {
+      if (ipv6_addrport_ptr) {
+        log_warn(LD_CONFIG, "Redundant ipv6 addr/port on DirAuthority line");
+      } else {
+        if (tor_addr_port_parse(LOG_WARN, flag+strlen("ipv6="),
+                                &ipv6_addrport.addr, &ipv6_addrport.port) < 0
+            || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
+          log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on DirAuthority line",
+                   escaped(flag));
+          goto err;
+        }
+        ipv6_addrport_ptr = &ipv6_addrport;
+      }
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirAuthority line",
                flag);
@@ -5636,6 +5650,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
               address, (int)dir_port, (char*)smartlist_get(items,0));
     if (!(ds = trusted_dir_server_new(nickname, address, dir_port, or_port,
+                                      ipv6_addrport_ptr,
                                       digest, v3_digest, type, weight)))
       goto err;
     dir_server_add(ds);
@@ -5673,6 +5688,7 @@ parse_dir_fallback_line(const char *line,
   int ok;
   char id[DIGEST_LEN];
   char *address=NULL;
+  tor_addr_port_t ipv6_addrport, *ipv6_addrport_ptr = NULL;
   double weight=1.0;
 
   memset(id, 0, sizeof(id));
@@ -5691,6 +5707,19 @@ parse_dir_fallback_line(const char *line,
     } else if (!strcmpstart(cp, "id=")) {
       ok = !base16_decode(id, DIGEST_LEN,
                           cp+strlen("id="), strlen(cp)-strlen("id="));
+    } else if (!strcasecmpstart(cp, "ipv6=")) {
+      if (ipv6_addrport_ptr) {
+        log_warn(LD_CONFIG, "Redundant ipv6 addr/port on FallbackDir line");
+      } else {
+        if (tor_addr_port_parse(LOG_WARN, cp+strlen("ipv6="),
+                                &ipv6_addrport.addr, &ipv6_addrport.port) < 0
+            || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
+          log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on FallbackDir line",
+                   escaped(cp));
+          goto end;
+        }
+        ipv6_addrport_ptr = &ipv6_addrport;
+      }
     } else if (!strcmpstart(cp, "weight=")) {
       int ok;
       const char *wstring = cp + strlen("weight=");
@@ -5732,7 +5761,8 @@ parse_dir_fallback_line(const char *line,
 
   if (!validate_only) {
     dir_server_t *ds;
-    ds = fallback_dir_server_new(&addr, dirport, orport, id, weight);
+    ds = fallback_dir_server_new(&addr, dirport, orport, ipv6_addrport_ptr,
+                                 id, weight);
     if (!ds) {
       log_warn(LD_CONFIG, "Couldn't create FallbackDir %s", escaped(line));
       goto end;
