@@ -2911,7 +2911,6 @@ generate_v2_networkstatus_opinion(void)
   size_t identity_pkey_len;
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,
     *identity_pkey = NULL, *hostname = NULL;
-  size_t status_len;
   const or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
   char published[ISO_TIME_LEN+1];
@@ -3032,22 +3031,20 @@ generate_v2_networkstatus_opinion(void)
   smartlist_add_asprintf(chunks, "directory-signature %s\n",
                          options->Nickname);
 
-  status = smartlist_join_strings(chunks, "", 0, NULL);
-#define MAX_V2_OPINION_SIGNATURE_LEN 4096
-  status_len = strlen(status) + MAX_V2_OPINION_SIGNATURE_LEN + 1;
-  status = tor_realloc(status, status_len);
-
-  if (router_get_networkstatus_v2_hash(status, digest)<0) {
-    log_warn(LD_BUG, "Unable to hash network status");
-    goto done;
-  }
+  crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
 
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(status, status_len,digest,DIGEST_LEN,
-                                     private_key)<0) {
-    log_warn(LD_BUG, "Unable to sign router status.");
-    goto done;
+  {
+    char *sig;
+    if (!(sig = router_get_dirobj_signature(digest,DIGEST_LEN,
+                                            private_key))) {
+      log_warn(LD_BUG, "Unable to sign router status.");
+      goto done;
+    }
+    smartlist_add(chunks, sig);
   }
+
+  status = smartlist_join_strings(chunks, "", 0, NULL);
 
   {
     networkstatus_v2_t *ns;

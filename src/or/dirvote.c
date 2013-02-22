@@ -75,7 +75,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   char *client_versions_line = NULL, *server_versions_line = NULL;
   networkstatus_voter_info_t *voter;
   char *status = NULL;
-  size_t status_len;
 
   tor_assert(private_signing_key);
   tor_assert(v3_ns->type == NS_TYPE_VOTE || v3_ns->type == NS_TYPE_OPINION);
@@ -185,6 +184,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   smartlist_add(chunks, tor_strdup("directory-footer\n"));
 
+  /* The digest includes everything up through the space after
+   * directory-signature.  (Yuck.) */
+  crypto_digest_smartlist(digest, DIGEST_LEN, chunks,
+                          "directory-signature ", DIGEST_SHA1);
+
   {
     char signing_key_fingerprint[FINGERPRINT_LEN+1];
     if (crypto_pk_get_fingerprint(private_signing_key,
@@ -197,21 +201,18 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                            signing_key_fingerprint);
   }
 
-  status = smartlist_join_strings(chunks, "", 0, NULL);
-#define MAX_VOTE_SIGNATURE_LEN 4096
-  status_len = strlen(status) + MAX_VOTE_SIGNATURE_LEN + 1;
-  status = tor_realloc(status, status_len);
-
-  if (router_get_networkstatus_v3_hash(status, digest, DIGEST_SHA1)<0)
-    goto err;
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(status+strlen(status),
-                                     status_len,
-                                     digest, DIGEST_LEN,
-                                     private_signing_key)<0) {
-    log_warn(LD_BUG, "Unable to sign networkstatus vote.");
-    goto err;
+  {
+    char *sig = router_get_dirobj_signature(digest, DIGEST_LEN,
+                                            private_signing_key);
+    if (!sig) {
+      log_warn(LD_BUG, "Unable to sign networkstatus vote.");
+      goto err;
+    }
+    smartlist_add(chunks, sig);
   }
+
+  status = smartlist_join_strings(chunks, "", 0, NULL);
 
   {
     networkstatus_t *v;
@@ -477,24 +478,6 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   }
 
   return most;
-}
-
-/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
- * at <b>digest_out</b> to the hash of the concatenation of those strings,
- * computed with the algorithm <b>alg</b>. */
-static void
-hash_list_members(char *digest_out, size_t len_out,
-                  smartlist_t *lst, digest_algorithm_t alg)
-{
-  crypto_digest_t *d;
-  if (alg == DIGEST_SHA1)
-    d = crypto_digest_new();
-  else
-    d = crypto_digest256_new(alg);
-  SMARTLIST_FOREACH(lst, const char *, cp,
-                    crypto_digest_add_bytes(d, cp, strlen(cp)));
-  crypto_digest_get_digest(d, digest_out, len_out);
-  crypto_digest_free(d);
 }
 
 /** Sorting helper: compare two strings based on their values as base-ten
@@ -2095,12 +2078,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
     size_t digest_len =
       flavor == FLAV_NS ? DIGEST_LEN : DIGEST256_LEN;
     const char *algname = crypto_digest_algorithm_get_name(digest_alg);
-    char sigbuf[4096];
+    char *signature;
 
     smartlist_add(chunks, tor_strdup("directory-signature "));
 
     /* Compute the hash of the chunks. */
-    hash_list_members(digest, digest_len, chunks, digest_alg);
+    crypto_digest_smartlist(digest, digest_len, chunks, "", digest_alg);
 
     /* Get the fingerprints */
     crypto_pk_get_fingerprint(identity_key, fingerprint, 0);
@@ -2116,14 +2099,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
                    signing_key_fingerprint);
     }
     /* And the signature. */
-    sigbuf[0] = '\0';
-    if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
-                                       digest, digest_len,
-                                       signing_key)) {
+    if (!(signature = router_get_dirobj_signature(digest, digest_len,
+                                                  signing_key))) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
       goto done;
     }
-    smartlist_add(chunks, tor_strdup(sigbuf));
+    smartlist_add(chunks, signature);
 
     if (legacy_id_key_digest && legacy_signing_key && consensus_method >= 3) {
       smartlist_add(chunks, tor_strdup("directory-signature "));
@@ -2139,14 +2120,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
                      algname, fingerprint,
                      signing_key_fingerprint);
       }
-      sigbuf[0] = '\0';
-      if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
-                                         digest, digest_len,
-                                         legacy_signing_key)) {
+
+      if (!(signature = router_get_dirobj_signature(digest, digest_len,
+                                                    legacy_signing_key))) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         goto done;
       }
-      smartlist_add(chunks, tor_strdup(sigbuf));
+      smartlist_add(chunks, signature);
     }
   }
 

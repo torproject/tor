@@ -683,20 +683,19 @@ router_get_extrainfo_hash(const char *s, size_t s_len, char *digest)
                               "\nrouter-signature",'\n', DIGEST_SHA1);
 }
 
-/** Helper: used to generate signatures for routers, directories and
- * network-status objects.  Given a digest in <b>digest</b> and a secret
- * <b>private_key</b>, generate an PKCS1-padded signature, BASE64-encode it,
- * surround it with -----BEGIN/END----- pairs, and write it to the
- * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
- * failure.
- */
-int
-router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
-                               size_t digest_len, crypto_pk_t *private_key)
+/** DOCDOC */
+char *
+router_get_dirobj_signature(const char *digest,
+                            size_t digest_len,
+                            crypto_pk_t *private_key)
 {
   char *signature;
   size_t i, keysize;
   int siglen;
+  char *buf = NULL;
+  size_t buf_len;
+  /* overestimate of BEGIN/END lines total len. */
+#define BEGIN_END_OVERHEAD_LEN 64
 
   keysize = crypto_pk_keysize(private_key);
   signature = tor_malloc(keysize);
@@ -706,7 +705,12 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
     log_warn(LD_BUG,"Couldn't sign digest.");
     goto err;
   }
-  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
+
+  /* The *2 here is a ridiculous overestimate of base-64 overhead. */
+  buf_len = (siglen * 2) + BEGIN_END_OVERHEAD_LEN;
+  buf = tor_malloc(buf_len);
+
+  if (strlcpy(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
 
   i = strlen(buf);
@@ -719,13 +723,42 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
     goto truncated;
 
   tor_free(signature);
-  return 0;
+  return buf;
 
  truncated:
   log_warn(LD_BUG,"tried to exceed string length.");
  err:
   tor_free(signature);
-  return -1;
+  tor_free(buf);
+  return NULL;
+}
+
+/** Helper: used to generate signatures for routers, directories and
+ * network-status objects.  Given a digest in <b>digest</b> and a secret
+ * <b>private_key</b>, generate an PKCS1-padded signature, BASE64-encode it,
+ * surround it with -----BEGIN/END----- pairs, and write it to the
+ * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
+ * failure.
+ */
+int
+router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
+                               size_t digest_len, crypto_pk_t *private_key)
+{
+  size_t sig_len, s_len;
+  char *sig = router_get_dirobj_signature(digest, digest_len, private_key);
+  if (!sig) {
+    log_warn(LD_BUG, "No signature generated");
+    return -1;
+  }
+  sig_len = strlen(sig);
+  s_len = strlen(buf);
+  if (sig_len + s_len + 1 > buf_len) {
+    log_warn(LD_BUG, "Not enough room for signature");
+    tor_free(sig);
+    return -1;
+  }
+  memcpy(buf+s_len, sig, sig_len+1);
+  return 0;
 }
 
 /** Return VS_RECOMMENDED if <b>myversion</b> is contained in

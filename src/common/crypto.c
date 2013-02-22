@@ -1631,6 +1631,29 @@ crypto_digest_assign(crypto_digest_t *into,
   memcpy(into,from,sizeof(crypto_digest_t));
 }
 
+
+/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
+ * at <b>digest_out</b> to the hash of the concatenation of those strings,
+ * plus the optional string <b>append</b>, computed with the algorithm
+ * <b>alg</b>. */
+void
+crypto_digest_smartlist(char *digest_out, size_t len_out,
+                        const smartlist_t *lst, const char *append,
+                        digest_algorithm_t alg)
+{
+  crypto_digest_t *d;
+  if (alg == DIGEST_SHA1)
+    d = crypto_digest_new();
+  else
+    d = crypto_digest256_new(alg);
+  SMARTLIST_FOREACH(lst, const char *, cp,
+                    crypto_digest_add_bytes(d, cp, strlen(cp)));
+  if (append)
+    crypto_digest_add_bytes(d, append, strlen(append));
+  crypto_digest_get_digest(d, digest_out, len_out);
+  crypto_digest_free(d);
+}
+
 /** Compute the HMAC-SHA-1 of the <b>msg_len</b> bytes in <b>msg</b>, using
  * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
  * in <b>hmac_out</b>.

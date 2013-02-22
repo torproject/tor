@@ -2248,7 +2248,6 @@ router_dump_router_to_string(routerinfo_t *router,
   const or_options_t *options = get_options();
   smartlist_t *chunks = NULL;
   char *output = NULL;
-  size_t output_len;
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
@@ -2395,24 +2394,22 @@ router_dump_router_to_string(routerinfo_t *router,
   /* Sign the descriptor */
   smartlist_add(chunks, tor_strdup("router-signature\n"));
 
-  output = smartlist_join_strings(chunks, "", 0, NULL);
-#define MAX_DESC_SIGNATURE_LEN 4096
-  output_len = strlen(output) + MAX_DESC_SIGNATURE_LEN + 1;
-  output = tor_realloc(output, output_len);
-
-  if (router_get_router_hash(output, strlen(output), digest) < 0) {
-    goto err;
-  }
+  crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
 
   note_crypto_pk_op(SIGN_RTR);
-  if (router_append_dirobj_signature(output, output_len,
-                                     digest,DIGEST_LEN,ident_key)<0) {
-    log_warn(LD_BUG, "Couldn't sign router descriptor");
-    goto err;
+  {
+    char *sig;
+    if (!(sig = router_get_dirobj_signature(digest, DIGEST_LEN, ident_key))) {
+      log_warn(LD_BUG, "Couldn't sign router descriptor");
+      goto err;
+    }
+    smartlist_add(chunks, sig);
   }
 
   /* include a last '\n' */
-  strlcat(output, "\n", output_len);
+  smartlist_add(chunks, tor_strdup("\n"));
+
+  output = smartlist_join_strings(chunks, "", 0, NULL);
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   {
