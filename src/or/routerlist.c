@@ -339,7 +339,6 @@ trusted_dirs_remove_old_certs(void)
   time_t now = time(NULL);
 #define DEAD_CERT_LIFETIME (2*24*60*60)
 #define OLD_CERT_LIFETIME (7*24*60*60)
-#define CERT_EXPIRY_SKEW (60*60)
   if (!trusted_dir_certs)
     return;
 

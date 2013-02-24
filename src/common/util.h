@@ -112,7 +112,6 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
 #define tor_malloc_zero(size)  tor_malloc_zero_(size DMALLOC_ARGS)
 #define tor_calloc(nmemb,size) tor_calloc_(nmemb, size DMALLOC_ARGS)
-#define tor_malloc_roundup(szp) _tor_malloc_roundup(szp DMALLOC_ARGS)
 #define tor_realloc(ptr, size) tor_realloc_(ptr, size DMALLOC_ARGS)
 #define tor_strdup(s)          tor_strdup_(s DMALLOC_ARGS)
 #define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)

@@ -113,8 +113,8 @@ crypto_get_rsa_padding_overhead(int padding)
 {
   switch (padding)
     {
-    case RSA_PKCS1_OAEP_PADDING: return 42;
-    case RSA_PKCS1_PADDING: return 11;
+    case RSA_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
+    case RSA_PKCS1_PADDING: return PKCS1_PADDING_OVERHEAD;
     default: tor_assert(0); return -1;
     }
 }

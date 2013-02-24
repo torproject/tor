@@ -124,10 +124,6 @@ static INLINE void free_execve_args(char **arg);
 #define PROTO_CMETHODS_DONE "CMETHODS DONE"
 #define PROTO_SMETHODS_DONE "SMETHODS DONE"
 
-/** Number of environment variables for managed proxy clients/servers. */
-#define ENVIRON_SIZE_CLIENT 3
-#define ENVIRON_SIZE_SERVER 7 /* XXX known to be too high, but that's ok */
-
 /** The first and only supported - at the moment - configuration
     protocol version. */
 #define PROTO_VERSION_ONE 1
