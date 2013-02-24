@@ -57,9 +57,6 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
  * Voting
  * =====*/
 
-/* Overestimated. */
-#define MICRODESC_LINE_LEN 80
-
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */

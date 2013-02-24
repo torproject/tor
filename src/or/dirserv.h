@@ -29,14 +29,6 @@
 
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
-/** Length of "r Authority BadDirectory BadExit Exit Fast Guard HSDir Named
- * Running Stable Unnamed V2Dir Valid\n". */
-#define MAX_FLAG_LINE_LEN 96
-/** Length of "w" line for weighting.  Currently at most
- * "w Bandwidth=<uint32t> Measured=<uint32t>\n" */
-#define MAX_WEIGHT_LINE_LEN (12+10+10+10+1)
-/** Maximum length of an exit policy summary line. */
-#define MAX_POLICY_LINE_LEN (3+MAX_EXITPOLICY_SUMMARY_LEN)
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
