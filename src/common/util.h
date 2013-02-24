@@ -215,8 +215,6 @@ int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 struct smartlist_t;
-void wrap_string(struct smartlist_t *out, const char *string, size_t width,
-                 const char *prefix0, const char *prefixRest);
 int tor_vsscanf(const char *buf, const char *pattern, va_list ap)
 #ifdef __GNUC__
   __attribute__((format(scanf, 2, 0)))

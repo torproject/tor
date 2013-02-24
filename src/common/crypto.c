@@ -1294,23 +1294,6 @@ crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out, int add_space)
   return 0;
 }
 
-/** Return true iff <b>s</b> is in the correct format for a fingerprint.
- */
-int
-crypto_pk_check_fingerprint_syntax(const char *s)
-{
-  int i;
-  for (i = 0; i < FINGERPRINT_LEN; ++i) {
-    if ((i%5) == 4) {
-      if (!TOR_ISSPACE(s[i])) return 0;
-    } else {
-      if (!TOR_ISXDIGIT(s[i])) return 0;
-    }
-  }
-  if (s[FINGERPRINT_LEN]) return 0;
-  return 1;
-}
-
 /* symmetric crypto */
 
 /** Return a pointer to the key set for the cipher in <b>env</b>.
