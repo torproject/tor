@@ -1641,6 +1641,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
   control_event_stream_bandwidth_used();
   control_event_conn_bandwidth_used();
+  control_event_circ_bandwidth_used();
   control_event_circuit_cell_stats();
 
   if (server_mode(options) &&

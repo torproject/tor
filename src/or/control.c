@@ -46,6 +46,8 @@
 #include <sys/resource.h>
 #endif
 
+extern circuit_t *global_circuitlist; /* from circuitlist.c */
+
 #include "procmon.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
@@ -85,7 +87,8 @@
 #define EVENT_CONN_BW          0x001A
 #define EVENT_CELL_STATS       0x001B
 #define EVENT_TB_EMPTY         0x001C
-#define EVENT_MAX_             0x001C
+#define EVENT_CIRC_BANDWIDTH_USED   0x001D
+#define EVENT_MAX_             0x001D
 /* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -260,8 +263,8 @@ control_update_global_event_mask(void)
    * we want to hear...*/
   control_adjust_event_log_severity();
 
-  /* ...then, if we've started logging stream bw, clear the appropriate
-   * fields. */
+  /* ...then, if we've started logging stream or circ bw, clear the
+   * appropriate fields. */
   if (! (old_mask & EVENT_STREAM_BANDWIDTH_USED) &&
       (new_mask & EVENT_STREAM_BANDWIDTH_USED)) {
     SMARTLIST_FOREACH(conns, connection_t *, conn,
@@ -271,6 +274,17 @@ control_update_global_event_mask(void)
         edge_conn->n_written = edge_conn->n_read = 0;
       }
     });
+  }
+  if (! (old_mask & EVENT_CIRC_BANDWIDTH_USED) &&
+      (new_mask & EVENT_CIRC_BANDWIDTH_USED)) {
+    circuit_t *circ;
+    origin_circuit_t *ocirc;
+    for (circ = global_circuitlist; circ; circ = circ->next) {
+      if (!CIRCUIT_IS_ORIGIN(circ))
+        continue;
+      ocirc = TO_ORIGIN_CIRCUIT(circ);
+      ocirc->n_written = ocirc->n_read = 0;
+    }
   }
 }
 
@@ -964,6 +978,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CONN_BW, "CONN_BW" },
   { EVENT_CELL_STATS, "CELL_STATS" },
   { EVENT_TB_EMPTY, "TB_EMPTY" },
+  { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { 0, NULL },
 };
 
@@ -3865,6 +3880,8 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 int
 control_event_stream_bandwidth(edge_connection_t *edge_conn)
 {
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
   if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
     if (!edge_conn->n_read && !edge_conn->n_written)
       return 0;
@@ -3875,6 +3892,12 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
                        (unsigned long)edge_conn->n_read,
                        (unsigned long)edge_conn->n_written);
 
+    circ = circuit_get_by_edge_conn(edge_conn);
+    if (circ && CIRCUIT_IS_ORIGIN(circ)) {
+      ocirc = TO_ORIGIN_CIRCUIT(circ);
+      ocirc->n_read += edge_conn->n_read;
+      ocirc->n_written += edge_conn->n_written;
+    }
     edge_conn->n_written = edge_conn->n_read = 0;
   }
 
@@ -3907,6 +3930,33 @@ control_event_stream_bandwidth_used(void)
         edge_conn->n_written = edge_conn->n_read = 0;
     }
     SMARTLIST_FOREACH_END(conn);
+  }
+
+  return 0;
+}
+
+/** A second or more has elapsed: tell any interested control connections
+ * how much bandwidth origin circuits have used. */
+int
+control_event_circ_bandwidth_used(void)
+{
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
+  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+    return 0;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
+    if (!ocirc->n_read && !ocirc->n_written)
+      continue;
+    send_control_event(EVENT_CIRC_BANDWIDTH_USED, ALL_FORMATS,
+                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu\r\n",
+                       ocirc->global_identifier,
+                       (unsigned long)ocirc->n_read,
+                       (unsigned long)ocirc->n_written);
+    ocirc->n_written = ocirc->n_read = 0;
   }
 
   return 0;
@@ -3959,8 +4009,6 @@ control_event_conn_bandwidth_used(void)
   }
   return 0;
 }
-
-extern circuit_t *global_circuitlist;
 
 /** Convert the cell <b>command</b> into a lower-case, human-readable
  * string. */

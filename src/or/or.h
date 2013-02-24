@@ -2967,6 +2967,15 @@ typedef struct origin_circuit_t {
   /** Linked list of AP streams (or EXIT streams if hidden service)
    * associated with this circuit. */
   edge_connection_t *p_streams;
+
+  /** Bytes read from any attached stream since last call to
+   * control_event_circ_bandwidth_used() */
+  uint32_t n_read;
+
+  /** Bytes written to any attached stream since last call to
+   * control_event_circ_bandwidth_used() */
+  uint32_t n_written;
+
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.
    */
