@@ -49,7 +49,6 @@ int rend_cache_store(const char *desc, size_t desc_len, int published,
 int rend_cache_store_v2_desc_as_client(const char *desc,
                                        const rend_data_t *rend_query);
 int rend_cache_store_v2_desc_as_dir(const char *desc);
-int rend_cache_size(void);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                uint8_t period, rend_auth_type_t auth_type,

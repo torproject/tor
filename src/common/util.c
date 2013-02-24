@@ -1253,42 +1253,6 @@ wrap_string(smartlist_t *out, const char *string, size_t width,
  * Time
  * ===== */
 
-/**
- * Converts struct timeval to a double value.
- * Preserves microsecond precision, but just barely.
- * Error is approx +/- 0.1 usec when dealing with epoch values.
- */
-double
-tv_to_double(const struct timeval *tv)
-{
-  double conv = tv->tv_sec;
-  conv += tv->tv_usec/1000000.0;
-  return conv;
-}
-
-/**
- * Converts timeval to milliseconds.
- */
-int64_t
-tv_to_msec(const struct timeval *tv)
-{
-  int64_t conv = ((int64_t)tv->tv_sec)*1000L;
-  /* Round ghetto-style */
-  conv += ((int64_t)tv->tv_usec+500)/1000L;
-  return conv;
-}
-
-/**
- * Converts timeval to microseconds.
- */
-int64_t
-tv_to_usec(const struct timeval *tv)
-{
-  int64_t conv = ((int64_t)tv->tv_sec)*1000000L;
-  conv += tv->tv_usec;
-  return conv;
-}
-
 /** Return the number of microseconds elapsed between *start and *end.
  */
 long

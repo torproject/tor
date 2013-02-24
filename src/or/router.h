@@ -132,8 +132,6 @@ const char *routerstatus_describe(const routerstatus_t *ri);
 const char *extend_info_describe(const extend_info_t *ei);
 
 void router_get_verbose_nickname(char *buf, const routerinfo_t *router);
-void routerstatus_get_verbose_nickname(char *buf,
-                                       const routerstatus_t *router);
 void router_reset_warnings(void);
 void router_reset_reachability(void);
 void router_free_all(void);
