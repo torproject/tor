@@ -24,7 +24,7 @@
        downtime and of key compromise).
 
    o Performance:
-     - Must have sufficient bandwidth: at least 300 kB/s symmetric,
+     - Must have sufficient bandwidth: at least 10mbit/s symmetric,
        though in practice the inbound traffic can be considerably less.
 
    o Availability:
