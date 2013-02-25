@@ -1620,6 +1620,34 @@ test_rend_fns(void)
   tor_free(intro_points_encrypted);
 }
 
+  /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
+   * using ipv4.  Since our fake geoip database is the same between
+   * ipv4 and ipv6, we should get the same result no matter which
+   * address family we pick for each IP. */
+#define SET_TEST_ADDRESS(i) do {                \
+    if ((i) & 1) {                              \
+      SET_TEST_IPV6(i);                         \
+      tor_addr_from_in6(&addr, &in6);           \
+    } else {                                    \
+      tor_addr_from_ipv4h(&addr, (uint32_t) i); \
+    }                                           \
+  } while (0)
+
+  /* Make sure that country ID actually works. */
+#define SET_TEST_IPV6(i) \
+  do {                                                          \
+    set_uint32(in6.s6_addr + 12, htonl((uint32_t) (i)));        \
+  } while (0)
+#define CHECK_COUNTRY(country, val) do {                                \
+    /* test ipv4 country lookup */                                      \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
+    /* test ipv6 country lookup */                                      \
+    SET_TEST_IPV6(val);                                                 \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
+  } while (0)
+
 /** Run unit tests for GeoIP code. */
 static void
 test_geoip(void)
@@ -1694,21 +1722,6 @@ test_geoip(void)
   test_eq(4, geoip_get_n_countries());
   memset(&in6, 0, sizeof(in6));
 
-  /* Make sure that country ID actually works. */
-#define SET_TEST_IPV6(i) \
-  do {                                                          \
-    set_uint32(in6.s6_addr + 12, htonl((uint32_t) (i)));        \
-  } while (0)
-#define CHECK_COUNTRY(country, val) do {                                \
-    /* test ipv4 country lookup */                                      \
-    test_streq(country,                                                 \
-               geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
-    /* test ipv6 country lookup */                                      \
-    SET_TEST_IPV6(val);                                                 \
-    test_streq(country,                                                 \
-               geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
-  } while (0)
-
   CHECK_COUNTRY("??", 3);
   CHECK_COUNTRY("ab", 32);
   CHECK_COUNTRY("??", 5);
@@ -1720,21 +1733,6 @@ test_geoip(void)
   test_eq(0, geoip_get_country_by_ipv4(3));
   SET_TEST_IPV6(3);
   test_eq(0, geoip_get_country_by_ipv6(&in6));
-
-#undef CHECK_COUNTRY
-
-  /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
-   * using ipv4.  Since our fake geoip database is the same between
-   * ipv4 and ipv6, we should get the same result no matter which
-   * address family we pick for each IP. */
-#define SET_TEST_ADDRESS(i) do {                \
-    if ((i) & 1) {                              \
-      SET_TEST_IPV6(i);                         \
-      tor_addr_from_in6(&addr, &in6);           \
-    } else {                                    \
-      tor_addr_from_ipv4h(&addr, (uint32_t) i); \
-    }                                           \
-  } while (0)
 
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
@@ -1886,8 +1884,6 @@ test_geoip(void)
   test_streq(entry_stats_2, s);
   tor_free(s);
 
-#undef SET_TEST_ADDRESS
-#undef SET_TEST_IPV6
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
@@ -1897,6 +1893,74 @@ test_geoip(void)
   tor_free(s);
   tor_free(v);
 }
+
+static void
+test_geoip_with_pt(void)
+{
+  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
+  char *s = NULL;
+  int i;
+  tor_addr_t addr;
+  struct in6_addr in6;
+
+  get_options_mutable()->BridgeRelay = 1;
+  get_options_mutable()->BridgeRecordUsageByCountry = 1;
+
+  /* No clients seen yet. */
+  s = geoip_get_transport_history();
+  tor_assert(!s);
+
+  /* 4 connections without a pluggable transport */
+  for (i=0; i < 4; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
+  }
+
+  /* 9 connections with "when" */
+  for (i=4; i < 13; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "when", now-7200);
+  }
+
+  /* one connection with "I" */
+  SET_TEST_ADDRESS(13);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "I", now-7200);
+
+  /* 14 connections with "was" */
+  for (i=14; i < 28; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "was", now-7200);
+  }
+
+  /* 131 connections with "a" */
+  for (i=28; i < 159; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "a", now-7200);
+  }
+
+  /* 8 connections with "yout" */
+  for (i=159; i < 167; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "yout", now-7200);
+  }
+
+
+  /* Test the transport history string. */
+  s = geoip_get_transport_history();
+  tor_assert(s);
+  test_streq(s, "<OR>=8,I=8,a=136,was=16,when=16,yout=8");
+
+  /* Stop collecting entry statistics. */
+  geoip_entry_stats_term();
+  get_options_mutable()->EntryStatistics = 0;
+
+ done:
+  tor_free(s);
+}
+
+#undef SET_TEST_ADDRESS
+#undef SET_TEST_IPV6
+#undef CHECK_COUNTRY
 
 /** Run unit tests for stats code. */
 static void
@@ -2099,6 +2163,7 @@ static struct testcase_t test_array[] = {
   ENT(policies),
   ENT(rend_fns),
   ENT(geoip),
+  FORK(geoip_with_pt),
   FORK(stats),
 
   END_OF_TESTCASES
