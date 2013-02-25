@@ -1658,7 +1658,8 @@ test_geoip(void)
   const char *bridge_stats_1 =
       "bridge-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "bridge-ips zz=24,xy=8\n"
-      "bridge-ip-versions v4=16,v6=16\n",
+      "bridge-ip-versions v4=16,v6=16\n"
+      "bridge-ip-transports <OR>=24\n",
   *dirreq_stats_1 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips ab=8\n"
