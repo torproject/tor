@@ -60,6 +60,7 @@ time_t geoip_bridge_stats_write(time_t now);
 void geoip_bridge_stats_term(void);
 const char *geoip_get_bridge_stats_extrainfo(time_t);
 char *geoip_get_bridge_stats_controller(time_t);
+char *format_client_stats_heartbeat(time_t now);
 
 #endif
 

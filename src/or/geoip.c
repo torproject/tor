@@ -1292,6 +1292,38 @@ format_bridge_stats_controller(time_t now)
   return out;
 }
 
+/** Return a newly allocated string holding our bridge usage stats by
+ * country in a format suitable for inclusion in our heartbeat
+ * message. Return NULL on failure.  */
+char *
+format_client_stats_heartbeat(time_t now)
+{
+  char *out = NULL;
+  int n_clients = 0;
+  clientmap_entry_t **ent;
+  double elapsed_time = 0;
+
+  if (!start_of_bridge_stats_interval)
+    return NULL; /* Not initialized. */
+
+  /* count unique IPs */
+  HT_FOREACH(ent, clientmap, &client_history) {
+    /* only count directly connecting clients */
+    if ((*ent)->action != GEOIP_CLIENT_CONNECT)
+      continue;
+    n_clients++;
+  }
+
+  elapsed_time = difftime(now, start_of_bridge_stats_interval);
+
+  tor_asprintf(&out, "Heartbeat: "
+               "Since the last %ld hours, I have seen %d unique clients.",
+               tor_lround(elapsed_time / 3600),
+               n_clients);
+
+  return out;
+}
+
 /** Write bridge statistics to $DATADIR/stats/bridge-stats and return
  * when we should next try to write statistics. */
 time_t

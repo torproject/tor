@@ -14,6 +14,7 @@
 #include "router.h"
 #include "circuitlist.h"
 #include "main.h"
+#include "geoip.h"
 
 /** Return the total number of circuits. */
 static int
@@ -87,7 +88,6 @@ log_heartbeat(time_t now)
   const routerinfo_t *me;
 
   const or_options_t *options = get_options();
-  (void)now;
 
   if (public_server_mode(options)) {
     /* Let's check if we are in the current cached consensus. */
@@ -111,6 +111,14 @@ log_heartbeat(time_t now)
     log_notice(LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
         100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
              U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+
+  if (options->BridgeRelay) {
+    char *msg = NULL;
+    msg = format_client_stats_heartbeat(now);
+    if (msg)
+      log_notice(LD_HEARTBEAT, "%s", msg);
+    tor_free(msg);
+  }
 
   tor_free(uptime);
   tor_free(bw_sent);
