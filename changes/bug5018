@@ -1,0 +1,3 @@
+  o Minor features:
+    - Don't launch pluggable transport proxies that contribute
+      transports we don't need. Resolves ticket 5018.

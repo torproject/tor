@@ -1761,6 +1761,29 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
   } SMARTLIST_FOREACH_END(bridge);
 }
 
+/** Return True if we have a bridge that uses a transport with name
+ *  <b>transport_name</b>. */
+int
+transport_is_needed(const char *transport_name)
+{
+  int retval;
+  smartlist_t *needed_transports = NULL;
+
+  if (!bridge_list)
+    return 0;
+
+  needed_transports = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
+    if (bridge->transport_name)
+      smartlist_add(needed_transports, bridge->transport_name);
+  } SMARTLIST_FOREACH_END(bridge);
+
+  retval = smartlist_string_isin(needed_transports, transport_name);
+  smartlist_free(needed_transports);
+  return retval;
+}
+
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
  * is set, it tells us the identity key too.  If we already had the
  * bridge in our list, unmark it, and don't actually add anything new.
