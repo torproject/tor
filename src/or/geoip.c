@@ -865,7 +865,8 @@ geoip_get_transport_history(void)
 
     smartlist_add_asprintf(string_chunks, "%s=%u%s",
                            transport_name,
-                           round_to_next_multiple_of(transport_count, granularity),
+                           round_to_next_multiple_of(transport_count,
+                                                     granularity),
                            i != smartlist_len(transports_used) ? "," : "");
   } SMARTLIST_FOREACH_END(transport_name);
 
@@ -1347,7 +1348,6 @@ validate_bridge_stats(const char *stats_str, time_t now)
     if (!tmp)
       return 0;
   }
-
 
   return 1;
 }

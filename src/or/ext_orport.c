@@ -464,7 +464,6 @@ connection_ext_or_handle_cmd_transport(or_connection_t *conn,
   return 0;
 }
 
-
 /** Process Extended ORPort messages from <b>or_conn</b>. */
 int
 connection_ext_or_process_inbuf(or_connection_t *or_conn)
