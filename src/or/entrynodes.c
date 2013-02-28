@@ -133,6 +133,8 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
   if (node) {
     int is_dir = node_is_dir(node) && node->rs &&
       node->rs->version_supports_microdesc_cache;
+    if (options->UseBridges && node_is_a_configured_bridge(node))
+      is_dir = 1;
     if (e->is_dir_cache != is_dir) {
       e->is_dir_cache = is_dir;
       changed = 1;
@@ -354,6 +356,8 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
       }
       entry->is_dir_cache = node->rs &&
         node->rs->version_supports_microdesc_cache;
+      if (get_options()->UseBridges && node_is_a_configured_bridge(node))
+        entry->is_dir_cache = 1;
       return NULL;
     }
   } else if (!for_directory) {
