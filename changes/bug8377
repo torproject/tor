@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Correctly recognize that [::1] is a loopback address. Fixes bug #8377;
+      bugfix on 0.2.1.3-alpha.
