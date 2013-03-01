@@ -381,6 +381,8 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   memcpy(entry->identity, node->identity, DIGEST_LEN);
   entry->is_dir_cache = node_is_dir(node) &&
     node->rs && node->rs->version_supports_microdesc_cache;
+  if (get_options()->UseBridges && node_is_a_configured_bridge(node))
+    entry->is_dir_cache = 1;
 
   /* Choose expiry time smudged over the past month. The goal here
    * is to a) spread out when Tor clients rotate their guards, so they
