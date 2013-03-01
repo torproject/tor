@@ -1565,32 +1565,6 @@ addr_mask_get_bits(uint32_t mask)
   return -1;
 }
 
-/** Compare two addresses <b>a1</b> and <b>a2</b> for equality under a
- * netmask of <b>mbits</b> bits.  Return -1, 0, or 1.
- *
- * XXXX_IP6 Temporary function to allow masks as bitcounts everywhere.  This
- * will be replaced with an IPv6-aware version as soon as 32-bit addresses are
- * no longer passed around.
- */
-int
-addr_mask_cmp_bits(uint32_t a1, uint32_t a2, maskbits_t bits)
-{
-  if (bits > 32)
-    bits = 32;
-  else if (bits == 0)
-    return 0;
-
-  a1 >>= (32-bits);
-  a2 >>= (32-bits);
-
-  if (a1 < a2)
-    return -1;
-  else if (a1 > a2)
-    return 1;
-  else
-    return 0;
-}
-
 /** Parse a string <b>s</b> in the format of (*|port(-maxport)?)?, setting the
  * various *out pointers as appropriate.  Return 0 on success, -1 on failure.
  */

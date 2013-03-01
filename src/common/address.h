@@ -220,7 +220,6 @@ int addr_port_lookup(int severity, const char *addrport, char **address,
 int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);
 int addr_mask_get_bits(uint32_t mask);
-int addr_mask_cmp_bits(uint32_t a1, uint32_t a2, maskbits_t bits);
 /** Length of a buffer to allocate to hold the results of tor_inet_ntoa.*/
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
