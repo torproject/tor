@@ -821,43 +821,130 @@ test_onion_handshake(void)
   crypto_dh_t *c_dh = NULL;
   char c_buf[TAP_ONIONSKIN_CHALLENGE_LEN];
   char c_keys[40];
-
   /* server-side */
   char s_buf[TAP_ONIONSKIN_REPLY_LEN];
   char s_keys[40];
-
+  int i;
   /* shared */
-  crypto_pk_t *pk = NULL;
+  crypto_pk_t *pk = NULL, *pk2 = NULL;
 
   pk = pk_generate(0);
+  pk2 = pk_generate(1);
 
   /* client handshake 1. */
   memset(c_buf, 0, TAP_ONIONSKIN_CHALLENGE_LEN);
   test_assert(! onion_skin_TAP_create(pk, &c_dh, c_buf));
 
-  /* server handshake */
-  memset(s_buf, 0, TAP_ONIONSKIN_REPLY_LEN);
-  memset(s_keys, 0, 40);
-  test_assert(! onion_skin_TAP_server_handshake(c_buf, pk, NULL,
+  for (i = 1; i <= 3; ++i) {
+    crypto_pk_t *k1, *k2;
+    if (i==1) {
+      /* server handshake: only one key known. */
+      k1 = pk;  k2 = NULL;
+    } else if (i==2) {
+      /* server handshake: try the right key first. */
+      k1 = pk;  k2 = pk2;
+    } else {
+      /* server handshake: try the right key second. */
+      k1 = pk2; k2 = pk;
+    }
+
+    memset(s_buf, 0, TAP_ONIONSKIN_REPLY_LEN);
+    memset(s_keys, 0, 40);
+    test_assert(! onion_skin_TAP_server_handshake(c_buf, k1, k2,
+                                                  s_buf, s_keys, 40));
+
+    /* client handshake 2 */
+    memset(c_keys, 0, 40);
+    test_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+
+    test_memeq(c_keys, s_keys, 40);
+    memset(s_buf, 0, 40);
+    test_memneq(c_keys, s_buf, 40);
+  }
+ done:
+  crypto_dh_free(c_dh);
+  crypto_pk_free(pk);
+  crypto_pk_free(pk2);
+}
+
+static void
+test_bad_onion_handshake(void *arg)
+{
+  char junk_buf[TAP_ONIONSKIN_CHALLENGE_LEN];
+  char junk_buf2[TAP_ONIONSKIN_CHALLENGE_LEN];
+  /* client-side */
+  crypto_dh_t *c_dh = NULL;
+  char c_buf[TAP_ONIONSKIN_CHALLENGE_LEN];
+  char c_keys[40];
+  /* server-side */
+  char s_buf[TAP_ONIONSKIN_REPLY_LEN];
+  char s_keys[40];
+  /* shared */
+  crypto_pk_t *pk = NULL, *pk2 = NULL;
+
+  (void)arg;
+
+  pk = pk_generate(0);
+  pk2 = pk_generate(1);
+
+  /* Server: Case 1: the encrypted data is degenerate. */
+  memset(junk_buf, 0, sizeof(junk_buf));
+  crypto_pk_public_hybrid_encrypt(pk, junk_buf2, TAP_ONIONSKIN_CHALLENGE_LEN,
+                               junk_buf, DH_KEY_LEN, PK_PKCS1_OAEP_PADDING, 1);
+  tt_int_op(-1, ==,
+            onion_skin_TAP_server_handshake(junk_buf2, pk, NULL,
                                             s_buf, s_keys, 40));
 
-  /* client handshake 2 */
-  memset(c_keys, 0, 40);
-  test_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+  /* Server: Case 2: the encrypted data is not long enough. */
+  memset(junk_buf, 0, sizeof(junk_buf));
+  memset(junk_buf2, 0, sizeof(junk_buf2));
+  crypto_pk_public_encrypt(pk, junk_buf2, sizeof(junk_buf2),
+                               junk_buf, 48, PK_PKCS1_OAEP_PADDING);
+  tt_int_op(-1, ==,
+            onion_skin_TAP_server_handshake(junk_buf2, pk, NULL,
+                                            s_buf, s_keys, 40));
 
-  if (memcmp(c_keys, s_keys, 40)) {
-    puts("Aiiiie");
-    exit(1);
-  }
-  test_memeq(c_keys, s_keys, 40);
-  memset(s_buf, 0, 40);
-  test_memneq(c_keys, s_buf, 40);
+  /* client handshake 1: do it straight. */
+  memset(c_buf, 0, TAP_ONIONSKIN_CHALLENGE_LEN);
+  test_assert(! onion_skin_TAP_create(pk, &c_dh, c_buf));
+
+  /* Server: Case 3: we just don't have the right key. */
+  tt_int_op(-1, ==,
+            onion_skin_TAP_server_handshake(c_buf, pk2, NULL,
+                                            s_buf, s_keys, 40));
+
+  /* Server: Case 4: The RSA-encrypted portion is corrupt. */
+  c_buf[64] ^= 33;
+  tt_int_op(-1, ==,
+            onion_skin_TAP_server_handshake(c_buf, pk, NULL,
+                                            s_buf, s_keys, 40));
+  c_buf[64] ^= 33;
+
+  /* (Let the server procede) */
+  tt_int_op(0, ==,
+            onion_skin_TAP_server_handshake(c_buf, pk, NULL,
+                                            s_buf, s_keys, 40));
+
+  /* Client: Case 1: The server sent back junk. */
+  s_buf[64] ^= 33;
+  tt_int_op(-1, ==,
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+  s_buf[64] ^= 33;
+
+  /* Let the client finish; make sure it can. */
+  tt_int_op(0, ==,
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+  test_memeq(s_keys, c_keys, 40);
+
+  /* Client: Case 2: The server sent back a degenerate DH. */
+  memset(s_buf, 0, sizeof(s_buf));
+  tt_int_op(-1, ==,
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
 
  done:
-  if (c_dh)
-    crypto_dh_free(c_dh);
-  if (pk)
-    crypto_pk_free(pk);
+  crypto_dh_free(c_dh);
+  crypto_pk_free(pk);
+  crypto_pk_free(pk2);
 }
 
 #ifdef CURVE25519_ENABLED
@@ -1991,6 +2078,7 @@ static struct testcase_t test_array[] = {
   ENT(buffers),
   { "buffer_copy", test_buffer_copy, 0, NULL, NULL },
   ENT(onion_handshake),
+  { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
 #ifdef CURVE25519_ENABLED
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
 #endif
