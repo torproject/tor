@@ -44,6 +44,10 @@ test_addr_basic(void)
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
   tor_free(cp);
+
+  test_assert(addr_port_lookup(LOG_WARN, "localhost:3", &cp, &u32, NULL));
+  tor_free(cp);
+
   test_eq(0, addr_mask_get_bits(0x0u));
   test_eq(32, addr_mask_get_bits(0xFFFFFFFFu));
   test_eq(16, addr_mask_get_bits(0xFFFF0000u));
@@ -217,11 +221,12 @@ test_addr_ip6_helpers(void)
   /* ==== Converting to and from sockaddr_t. */
   sin = (struct sockaddr_in *)&sa_storage;
   sin->sin_family = AF_INET;
-  sin->sin_port = 9090;
+  sin->sin_port = htons(9090);
   sin->sin_addr.s_addr = htonl(0x7f7f0102); /*127.127.1.2*/
-  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin, NULL);
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin, &port1);
   test_eq(tor_addr_family(&t1), AF_INET);
   test_eq(tor_addr_to_ipv4h(&t1), 0x7f7f0102);
+  tt_int_op(port1, ==, 9090);
 
   memset(&sa_storage, 0, sizeof(sa_storage));
   test_eq(sizeof(struct sockaddr_in),
@@ -235,8 +240,9 @@ test_addr_ip6_helpers(void)
   sin6->sin6_family = AF_INET6;
   sin6->sin6_port = htons(7070);
   sin6->sin6_addr.s6_addr[0] = 128;
-  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6, NULL);
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6, &port1);
   test_eq(tor_addr_family(&t1), AF_INET6);
+  tt_int_op(port1, ==, 7070);
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 0);
   test_streq(p1, "8000::");
 
@@ -464,6 +470,9 @@ test_addr_ip6_helpers(void)
   test_eq(0, i);
   i = tor_addr_parse_PTR_name(&t1, "Foobar.baz", AF_UNSPEC, 1);
   test_eq(0, i);
+  i = tor_addr_parse_PTR_name(&t1, "9999999999999999999999999999.in-addr.arpa",
+                              AF_UNSPEC, 1);
+  test_eq(-1, i);
   i = tor_addr_parse_PTR_name(&t1, "1.0.168.192.in-addr.arpa",
                                          AF_UNSPEC, 1);
   test_eq(1, i);
@@ -843,6 +852,91 @@ test_virtaddrmap(void *data)
   ;
 }
 
+static void
+test_addr_localname(void *arg)
+{
+  (void)arg;
+  tt_assert(tor_addr_hostname_is_local("localhost"));
+  tt_assert(tor_addr_hostname_is_local("LOCALHOST"));
+  tt_assert(tor_addr_hostname_is_local("LocalHost"));
+  tt_assert(tor_addr_hostname_is_local("local"));
+  tt_assert(tor_addr_hostname_is_local("LOCAL"));
+  tt_assert(tor_addr_hostname_is_local("here.now.local"));
+  tt_assert(tor_addr_hostname_is_local("here.now.LOCAL"));
+
+
+  tt_assert(!tor_addr_hostname_is_local(" localhost"));
+  tt_assert(!tor_addr_hostname_is_local("www.torproject.org"));
+ done:
+  ;
+}
+
+static void
+test_addr_dup_ip(void *arg)
+{
+  char *v = NULL;
+  (void)arg;
+#define CHECK(ip, s) do {                         \
+    v = tor_dup_ip(ip);                           \
+    tt_str_op(v,==,(s));                          \
+    tor_free(v);                                  \
+  } while (0)
+
+  CHECK(0xffffffff, "255.255.255.255");
+  CHECK(0x00000000, "0.0.0.0");
+  CHECK(0x7f000001, "127.0.0.1");
+  CHECK(0x01020304, "1.2.3.4");
+
+#undef CHECK
+ done:
+  tor_free(v);
+}
+
+static void
+test_addr_sockaddr_to_str(void *arg)
+{
+  char *v = NULL;
+  struct sockaddr_in sin;
+  struct sockaddr_in6 sin6;
+  struct sockaddr_storage ss;
+#ifdef HAVE_SYS_UN_H
+  struct sockaddr_un sun;
+#endif
+#define CHECK(sa, s) do {                                       \
+    v = tor_sockaddr_to_str((const struct sockaddr*) &(sa));    \
+    tt_str_op(v,==,(s));                                        \
+    tor_free(v);                                                \
+  } while (0)
+  (void)arg;
+
+  memset(&ss,0,sizeof(ss));
+  ss.ss_family = AF_UNSPEC;
+  CHECK(ss, "unspec");
+
+  memset(&sin,0,sizeof(sin));
+  sin.sin_family = AF_INET;
+  sin.sin_addr.s_addr = htonl(0x7f808001);
+  sin.sin_port = htons(1234);
+  CHECK(sin, "127.128.128.1:1234");
+
+#ifdef HAVE_SYS_UN_H
+  memset(&sun,0,sizeof(sun));
+  sun.sun_family = AF_UNIX;
+  strlcpy(sun.sun_path, "/here/is/a/path", sizeof(sun.sun_path));
+  CHECK(sun, "unix:/here/is/a/path");
+#endif
+
+  memset(&sin6,0,sizeof(sin6));
+  sin6.sin6_family = AF_INET6;
+  memcpy(sin6.sin6_addr.s6_addr, "\x20\x00\x00\x00\x00\x00\x00\x00"
+                                 "\x00\x1a\x2b\x3c\x4d\x5e\x00\x01", 16);
+  sin6.sin6_port = htons(1234);
+  CHECK(sin6, "[2000::1a:2b3c:4d5e:1]:1234");
+
+ done:
+  tor_free(v);
+}
+
 #define ADDR_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
 
@@ -851,6 +945,9 @@ struct testcase_t addr_tests[] = {
   ADDR_LEGACY(ip6_helpers),
   ADDR_LEGACY(parse),
   { "virtaddr", test_virtaddrmap, 0, NULL, NULL },
+  { "localname", test_addr_localname, 0, NULL, NULL },
+  { "dup_ip", test_addr_dup_ip, 0, NULL, NULL },
+  { "sockaddr_to_str", test_addr_sockaddr_to_str, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
