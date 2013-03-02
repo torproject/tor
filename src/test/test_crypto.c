@@ -608,22 +608,6 @@ test_crypto_formats(void)
     tor_free(data2);
   }
 
-  /* Check fingerprint */
-  {
-    test_assert(crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 0000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 00000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ACD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
-  }
-
  done:
   tor_free(data1);
   tor_free(data2);
