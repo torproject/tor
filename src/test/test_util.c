@@ -3284,6 +3284,42 @@ test_util_mathlog(void *arg)
   ;
 }
 
+static void
+test_util_round_to_next_multiple_of(void *arg)
+{
+  (void)arg;
+
+  test_assert(round_uint64_to_next_multiple_of(0,1) == 0);
+  test_assert(round_uint64_to_next_multiple_of(0,7) == 0);
+
+  test_assert(round_uint64_to_next_multiple_of(99,1) == 99);
+  test_assert(round_uint64_to_next_multiple_of(99,7) == 105);
+  test_assert(round_uint64_to_next_multiple_of(99,9) == 99);
+
+ done:
+  ;
+}
+
+static void
+test_util_strclear(void *arg)
+{
+  static const char *vals[] = { "", "a", "abcdef", "abcdefgh", NULL };
+  int i;
+  char *v = NULL;
+  (void)arg;
+
+  for (i = 0; vals[i]; ++i) {
+    size_t n;
+    v = tor_strdup(vals[i]);
+    n = strlen(v);
+    tor_strclear(v);
+    tt_assert(tor_mem_is_zero(v, n+1));
+    tor_free(v);
+  }
+ done:
+  tor_free(v);
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -3313,6 +3349,8 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
+  UTIL_TEST(round_to_next_multiple_of, 0),
+  UTIL_TEST(strclear, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),
   UTIL_TEST(asprintf, 0),
