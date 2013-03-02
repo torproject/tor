@@ -269,34 +269,6 @@ test_crypto_sha(void)
                        "96177A9CB410FF61F20015AD");
   tt_int_op(i, ==, 0);
 
-  /* Test HMAC-SHA-1 with test cases from RFC2202. */
-
-  /* Case 1. */
-  memset(key, 0x0b, 20);
-  crypto_hmac_sha1(digest, key, 20, "Hi There", 8);
-  test_streq(hex_str(digest, 20),
-             "B617318655057264E28BC0B6FB378C8EF146BE00");
-  /* Case 2. */
-  crypto_hmac_sha1(digest, "Jefe", 4, "what do ya want for nothing?", 28);
-  test_streq(hex_str(digest, 20),
-             "EFFCDF6AE5EB2FA2D27416D5F184DF9C259A7C79");
-
-  /* Case 4. */
-  base16_decode(key, 25,
-                "0102030405060708090a0b0c0d0e0f10111213141516171819", 50);
-  memset(data, 0xcd, 50);
-  crypto_hmac_sha1(digest, key, 25, data, 50);
-  test_streq(hex_str(digest, 20),
-             "4C9007F4026250C6BC8414F9BF50C86C2D7235DA");
-
-  /* Case 5. */
-  memset(key, 0xaa, 80);
-  crypto_hmac_sha1(digest, key, 80,
-                   "Test Using Larger Than Block-Size Key - Hash Key First",
-                   54);
-  test_streq(hex_str(digest, 20),
-             "AA4AE5E15272D00E95705637CE8A3B55ED402112");
-
   /* Test HMAC-SHA256 with test cases from wikipedia and RFC 4231 */
 
   /* Case empty (wikipedia) */

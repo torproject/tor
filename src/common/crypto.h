@@ -218,9 +218,6 @@ void crypto_digest_get_digest(crypto_digest_t *digest,
 crypto_digest_t *crypto_digest_dup(const crypto_digest_t *digest);
 void crypto_digest_assign(crypto_digest_t *into,
                           const crypto_digest_t *from);
-void crypto_hmac_sha1(char *hmac_out,
-                      const char *key, size_t key_len,
-                      const char *msg, size_t msg_len);
 void crypto_hmac_sha256(char *hmac_out,
                         const char *key, size_t key_len,
                         const char *msg, size_t msg_len);

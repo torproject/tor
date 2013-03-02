@@ -1631,21 +1631,6 @@ crypto_digest_assign(crypto_digest_t *into,
   memcpy(into,from,sizeof(crypto_digest_t));
 }
 
-/** Compute the HMAC-SHA-1 of the <b>msg_len</b> bytes in <b>msg</b>, using
- * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
- * in <b>hmac_out</b>.
- */
-void
-crypto_hmac_sha1(char *hmac_out,
-                 const char *key, size_t key_len,
-                 const char *msg, size_t msg_len)
-{
-  tor_assert(key_len < INT_MAX);
-  tor_assert(msg_len < INT_MAX);
-  HMAC(EVP_sha1(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
-       (unsigned char*)hmac_out, NULL);
-}
-
 /** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
  * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST256_LEN-byte
  * result in <b>hmac_out</b>.
