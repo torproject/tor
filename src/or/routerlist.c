@@ -54,8 +54,6 @@ static const routerstatus_t *router_pick_dirserver_generic(
                               smartlist_t *sourcelist,
                               dirinfo_type_t type, int flags);
 static void mark_all_dirservers_up(smartlist_t *server_list);
-static int router_nickname_matches(const routerinfo_t *router,
-                                   const char *nickname);
 static void dir_server_free(dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
@@ -1462,30 +1460,6 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
   nodelist_add_node_and_family(sl, node);
 }
 
-/** Return 1 iff any member of the (possibly NULL) comma-separated list
- * <b>list</b> is an acceptable nickname or hexdigest for <b>router</b>.  Else
- * return 0.
- */
-int
-router_nickname_is_in_list(const routerinfo_t *router, const char *list)
-{
-  smartlist_t *nickname_list;
-  int v = 0;
-
-  if (!list)
-    return 0; /* definitely not */
-  tor_assert(router);
-
-  nickname_list = smartlist_new();
-  smartlist_split_string(nickname_list, list, ",",
-    SPLIT_SKIP_SPACE|SPLIT_STRIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(nickname_list, const char *, cp,
-                    if (router_nickname_matches(router, cp)) {v=1;break;});
-  SMARTLIST_FOREACH(nickname_list, char *, cp, tor_free(cp));
-  smartlist_free(nickname_list);
-  return v;
-}
-
 /** Add every suitable node from our nodelist to <b>sl</b>, so that
  * we can pick a node for a circuit.
  */
@@ -2297,31 +2271,6 @@ router_is_named(const routerinfo_t *router)
 
   return (digest &&
           tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN));
-}
-
-/** Return true iff the digest of <b>router</b>'s identity key,
- * encoded in hexadecimal, matches <b>hexdigest</b> (which is
- * optionally prefixed with a single dollar sign).  Return false if
- * <b>hexdigest</b> is malformed, or it doesn't match.  */
-static INLINE int
-router_hex_digest_matches(const routerinfo_t *router, const char *hexdigest)
-{
-  return hex_digest_nickname_matches(hexdigest,
-                                     router->cache_info.identity_digest,
-                                     router->nickname,
-                                     router_is_named(router));
-}
-
-/** Return true if <b>router</b>'s nickname matches <b>nickname</b>
- * (case-insensitive), or if <b>router's</b> identity key digest
- * matches a hexadecimal value stored in <b>nickname</b>.  Return
- * false otherwise. */
-static int
-router_nickname_matches(const routerinfo_t *router, const char *nickname)
-{
-  if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
-    return 1;
-  return router_hex_digest_matches(router, nickname);
 }
 
 /** Return true iff <b>digest</b> is the digest of the identity key of a
@@ -4050,17 +3999,6 @@ clear_dir_servers(void)
     trusted_dir_servers = smartlist_new();
   }
   router_dir_info_changed();
-}
-
-/** Return 1 if any trusted dir server supports v1 directories,
- * else return 0. */
-int
-any_trusted_dir_is_v1_authority(void)
-{
-  if (trusted_dir_servers)
-    return get_n_authorities(V1_DIRINFO) > 0;
-
-  return 0;
 }
 
 /** For every current directory connection whose purpose is <b>purpose</b>,
