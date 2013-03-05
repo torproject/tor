@@ -4098,5 +4098,7 @@ dirserv_free_all(void)
   cached_v2_networkstatus = NULL;
   strmap_free(cached_consensuses, free_cached_dir_);
   cached_consensuses = NULL;
+
+  dirserv_clear_measured_bw_cache();
 }
 
