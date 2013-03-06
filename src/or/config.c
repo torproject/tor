@@ -2380,6 +2380,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
   }
 
+  if (options->DisableV2DirectoryInfo_ && ! authdir_mode(options)) {
+    REJECT("DisableV2DirectoryInfo_ set, but we aren't an authority.");
+  }
+
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);

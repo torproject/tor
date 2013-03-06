@@ -4005,7 +4005,8 @@ typedef struct {
    * make it temporarily disableable, in order to do fast testing and be
    * able to turn it back on if it turns out to be non-workable.
    *
-   * XXXX024 Don't actually leave this in.
+   * XXXX025 Make this always-on, or always-off.  Right now, it's only
+   * enableable for authorities.
    */
   int DisableV2DirectoryInfo_;
 
