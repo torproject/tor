@@ -90,9 +90,9 @@ static void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 static void dirserv_clear_measured_bw_cache(void);
 static void dirserv_expire_measured_bw_cache(time_t now);
 static int dirserv_get_measured_bw_cache_size(void);
-static int dirserv_query_measured_bw_cache(char *node_id, long *bw_out,
+static int dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
                                            time_t *as_of_out);
-static uint32_t dirserv_get_bandwidth_for_router(routerinfo_t *ri);
+static uint32_t dirserv_get_bandwidth_for_router(const routerinfo_t *ri);
 
 /************** Measured Bandwidth parsing code ******/
 #define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
@@ -2162,7 +2162,7 @@ dirserv_get_measured_bw_cache_size(void)
 /** Query the cache by identity digest, return value indicates whether
  * we found it. */
 static int
-dirserv_query_measured_bw_cache(char *node_id, long *bw_out,
+dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
                                 time_t *as_of_out)
 {
   mbw_cache_entry_t *v = NULL;
@@ -2185,7 +2185,7 @@ dirserv_query_measured_bw_cache(char *node_id, long *bw_out,
  * preferring measured to advertised values if available. */
 
 static uint32_t
-dirserv_get_bandwidth_for_router(routerinfo_t *ri)
+dirserv_get_bandwidth_for_router(const routerinfo_t *ri)
 {
   uint32_t bw = 0;
   /*
