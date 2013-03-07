@@ -85,7 +85,7 @@ static const signed_descriptor_t *get_signed_descriptor_by_fp(
                                                         time_t publish_cutoff);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
-static void dirserv_cache_measured_bw(measured_bw_line_t *parsed_line,
+static void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
                                       time_t as_of);
 static void dirserv_clear_measured_bw_cache(void);
 static void dirserv_expire_measured_bw_cache(time_t now);
@@ -2067,7 +2067,8 @@ static digestmap_t *mbw_cache = NULL;
 /** Store a measured bandwidth cache entry when reading the measured
  * bandwidths file. */
 static void
-dirserv_cache_measured_bw(measured_bw_line_t *parsed_line, time_t as_of)
+dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
+                          time_t as_of)
 {
   mbw_cache_entry_t *e = NULL;
 
