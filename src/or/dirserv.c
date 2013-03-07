@@ -2125,7 +2125,7 @@ dirserv_expire_measured_bw_cache(time_t now)
       e = (mbw_cache_entry_t *)e_v;
       if (e) {
         /* Check for expiration and remove if so */
-        if (now - e->as_of > MAX_MEASUREMENT_AGE) {
+        if (now > e->as_of + MAX_MEASUREMENT_AGE) {
           tor_free(e);
           rmv = 1;
         }
