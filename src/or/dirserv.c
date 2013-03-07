@@ -2127,7 +2127,8 @@ dirserv_get_measured_bw_cache_size(void)
 }
 
 /** Query the cache by identity digest, return value indicates whether
- * we found it. */
+ * we found it. The bw_out and as_of_out pointers receive the cached
+ * bandwidth value and the time it was cached if not NULL. */
 int
 dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
                                 time_t *as_of_out)
