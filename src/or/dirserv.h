@@ -138,10 +138,22 @@ void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
 
 #ifdef DIRSERV_PRIVATE
+
+/* Put the MAX_MEASUREMENT_AGE #define here so unit tests can see it */
+#define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
+
 int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
 
 int measured_bw_line_apply(measured_bw_line_t *parsed_line,
                            smartlist_t *routerstatuses);
+
+void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
+                               time_t as_of);
+void dirserv_clear_measured_bw_cache(void);
+void dirserv_expire_measured_bw_cache(time_t now);
+int dirserv_get_measured_bw_cache_size(void);
+int dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
+                                    time_t *as_of_out);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

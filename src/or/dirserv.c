@@ -85,17 +85,7 @@ static const signed_descriptor_t *get_signed_descriptor_by_fp(
                                                         time_t publish_cutoff);
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
-static void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
-                                      time_t as_of);
-static void dirserv_clear_measured_bw_cache(void);
-static void dirserv_expire_measured_bw_cache(time_t now);
-static int dirserv_get_measured_bw_cache_size(void);
-static int dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
-                                           time_t *as_of_out);
 static uint32_t dirserv_get_bandwidth_for_router(const routerinfo_t *ri);
-
-/************** Measured Bandwidth parsing code ******/
-#define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
 
 /************** Fingerprint handling code ************/
 
@@ -2066,7 +2056,7 @@ static digestmap_t *mbw_cache = NULL;
 
 /** Store a measured bandwidth cache entry when reading the measured
  * bandwidths file. */
-static void
+void
 dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
                           time_t as_of)
 {
@@ -2096,7 +2086,7 @@ dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 }
 
 /** Clear and free the measured bandwidth cache */
-static void
+void
 dirserv_clear_measured_bw_cache(void)
 {
   if (mbw_cache) {
@@ -2107,7 +2097,7 @@ dirserv_clear_measured_bw_cache(void)
 }
 
 /** Scan the measured bandwidth cache and remove expired entries */
-static void
+void
 dirserv_expire_measured_bw_cache(time_t now)
 {
   digestmap_iter_t *itr = NULL;
@@ -2152,7 +2142,7 @@ dirserv_expire_measured_bw_cache(time_t now)
 }
 
 /** Get the current size of the measured bandwidth cache */
-static int
+int
 dirserv_get_measured_bw_cache_size(void)
 {
   if (mbw_cache) return digestmap_size(mbw_cache);
@@ -2161,7 +2151,7 @@ dirserv_get_measured_bw_cache_size(void)
 
 /** Query the cache by identity digest, return value indicates whether
  * we found it. */
-static int
+int
 dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
                                 time_t *as_of_out)
 {

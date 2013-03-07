@@ -575,6 +575,83 @@ test_dir_measured_bw(void)
   return;
 }
 
+#define MBWC_INIT_TIME 1000
+
+/** Do the measured bandwidth cache unit test */
+static void
+test_dir_measured_bw_cache(void)
+{
+  /* Initial fake time_t for testing */
+  time_t curr = MBWC_INIT_TIME;
+  /* Some measured_bw_line_ts */
+  measured_bw_line_t mbwl[3];
+  /* For receiving output on cache queries */
+  long bw;
+  time_t as_of;
+
+  /* First, clear the cache and assert that it's empty */
+  dirserv_clear_measured_bw_cache();
+  test_eq(dirserv_get_measured_bw_cache_size(), 0);
+  /*
+   * Set up test mbwls; none of the dirserv_cache_*() functions care about
+   * the node_hex field.
+   */
+  memset(mbwl[0].node_id, 0x01, DIGEST_LEN);
+  mbwl[0].bw = 20;
+  memset(mbwl[1].node_id, 0x02, DIGEST_LEN);
+  mbwl[1].bw = 40;
+  memset(mbwl[2].node_id, 0x03, DIGEST_LEN);
+  mbwl[2].bw = 80;
+  /* Try caching something */
+  dirserv_cache_measured_bw(&(mbwl[0]), curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 1);
+  /* Okay, let's see if we can retrieve it */
+  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, &bw, &as_of));
+  test_eq(bw, 20);
+  test_eq(as_of, MBWC_INIT_TIME);
+  /* Try retrieving it without some outputs */
+  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, NULL));
+  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, &bw, NULL));
+  test_eq(bw, 20);
+  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, &as_of));
+  test_eq(as_of, MBWC_INIT_TIME);
+  /* Now expire it */
+  curr += MAX_MEASUREMENT_AGE + 1;
+  dirserv_expire_measured_bw_cache(curr);
+  /* Check that the cache is empty */
+  test_eq(dirserv_get_measured_bw_cache_size(), 0);
+  /* Check that we can't retrieve it */
+  test_assert(!dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, NULL));
+  /* Try caching a few things now */
+  dirserv_cache_measured_bw(&(mbwl[0]), curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 1);
+  curr += MAX_MEASUREMENT_AGE / 4;
+  dirserv_cache_measured_bw(&(mbwl[1]), curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 2);
+  curr += MAX_MEASUREMENT_AGE / 4;
+  dirserv_cache_measured_bw(&(mbwl[2]), curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 3);
+  curr += MAX_MEASUREMENT_AGE / 4 + 1;
+  /* Do an expire that's too soon to get any of them */
+  dirserv_expire_measured_bw_cache(curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 3);
+  /* Push the oldest one off the cliff */
+  curr += MAX_MEASUREMENT_AGE / 4;
+  dirserv_expire_measured_bw_cache(curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 2);
+  /* And another... */
+  curr += MAX_MEASUREMENT_AGE / 4;
+  dirserv_expire_measured_bw_cache(curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 1);
+  /* This should empty it out again */
+  curr += MAX_MEASUREMENT_AGE / 4;
+  dirserv_expire_measured_bw_cache(curr);
+  test_eq(dirserv_get_measured_bw_cache_size(), 0);
+
+ done:
+  return;
+}
+
 static void
 test_dir_param_voting(void)
 {
@@ -2141,6 +2218,7 @@ struct testcase_t dir_tests[] = {
   DIR(scale_bw),
   DIR_LEGACY(clip_unmeasured_bw),
   DIR_LEGACY(clip_unmeasured_bw_alt),
+  DIR_LEGACY(measured_bw_cache),
   END_OF_TESTCASES
 };
 
