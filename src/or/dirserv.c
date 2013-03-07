@@ -2100,38 +2100,15 @@ dirserv_clear_measured_bw_cache(void)
 void
 dirserv_expire_measured_bw_cache(time_t now)
 {
-  digestmap_iter_t *itr = NULL;
-  const char *k = NULL;
-  void *e_v = NULL;
-  mbw_cache_entry_t *e = NULL;
-  int rmv;
 
   if (mbw_cache) {
-    /* Start iterating */
-    itr = digestmap_iter_init(mbw_cache);
-    while (!digestmap_iter_done(itr)) {
-      rmv = 0;
-      digestmap_iter_get(itr, &k, &e_v);
-      e = (mbw_cache_entry_t *)e_v;
-      if (e) {
-        /* Check for expiration and remove if so */
-        if (now > e->as_of + MAX_MEASUREMENT_AGE) {
-          tor_free(e);
-          rmv = 1;
-        }
-      } else {
-        /* Weird; remove it and complain */
-        log_warn(LD_BUG, "Saw NULL entry in measured bandwidth cache");
-        rmv = 1;
+    /* Iterate through the cache and check each entry */
+    DIGESTMAP_FOREACH_MODIFY(mbw_cache, k, mbw_cache_entry_t *, e) {
+      if (now > e->as_of + MAX_MEASUREMENT_AGE) {
+        tor_free(e);
+        MAP_DEL_CURRENT(k);
       }
-
-      /* Advance, or remove and advance */
-      if (rmv) {
-        itr = digestmap_iter_next_rmv(mbw_cache, itr);
-      } else {
-        itr = digestmap_iter_next(mbw_cache, itr);
-      }
-    }
+    } DIGESTMAP_FOREACH_END;
 
     /* Check if we cleared the whole thing and free if so */
     if (digestmap_size(mbw_cache) == 0) {
