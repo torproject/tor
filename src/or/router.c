@@ -659,6 +659,10 @@ router_initialize_tls_context(void)
     else if (!strcasecmp(options->TLSECGroup, "P224"))
       flags |= TOR_TLS_CTX_USE_ECDHE_P224;
   }
+  if (!lifetime) { /* we should guess a good ssl cert lifetime */
+    /* choose between 1 and 365 days */
+    lifetime = 1*24*3600 + crypto_rand_int(364*24*3600);
+  }
 
   /* It's ok to pass lifetime in as an unsigned int, since
    * config_parse_interval() checked it. */

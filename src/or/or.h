@@ -4008,7 +4008,8 @@ typedef struct {
    */
   int DisableV2DirectoryInfo_;
 
-  /** What expiry time shall we place on our SSL certs? */
+  /** What expiry time shall we place on our SSL certs? "0" means we
+   * should guess a suitable value. */
   int SSLKeyLifetime;
 
 } or_options_t;

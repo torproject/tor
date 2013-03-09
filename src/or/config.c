@@ -380,7 +380,7 @@ static config_var_t option_vars_[] = {
   V(SocksPolicy,                 LINELIST, NULL),
   VPORT(SocksPort,                   LINELIST, NULL),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
-  V(SSLKeyLifetime,              INTERVAL, "365 days"),
+  V(SSLKeyLifetime,              INTERVAL, "0"),
   OBSOLETE("StatusFetchPeriod"),
   V(StrictNodes,                 BOOL,     "0"),
   OBSOLETE("SysLog"),
