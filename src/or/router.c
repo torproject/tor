@@ -650,6 +650,7 @@ router_initialize_tls_context(void)
 {
   unsigned int flags = 0;
   const or_options_t *options = get_options();
+  int lifetime = options->SSLKeyLifetime;
   if (public_server_mode(options))
     flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
   if (options->TLSECGroup) {
@@ -659,11 +660,13 @@ router_initialize_tls_context(void)
       flags |= TOR_TLS_CTX_USE_ECDHE_P224;
   }
 
+  /* It's ok to pass lifetime in as an unsigned int, since
+   * config_parse_interval() checked it. */
   return tor_tls_context_init(flags,
                               get_tlsclient_identity_key(),
-                              server_mode(get_options()) ?
+                              server_mode(options) ?
                               get_server_identity_key() : NULL,
-                              MAX_SSL_KEY_LIFETIME_ADVERTISED);
+                              (unsigned int)lifetime);
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.

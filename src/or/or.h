@@ -177,8 +177,6 @@
 #define MIN_ONION_KEY_LIFETIME (7*24*60*60)
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME_INTERNAL (2*60*60)
-/** What expiry time shall we place on our SSL certs? */
-#define MAX_SSL_KEY_LIFETIME_ADVERTISED (365*24*60*60)
 
 /** How old do we allow a router to get before removing it
  * from the router list? In seconds. */
@@ -4009,6 +4007,9 @@ typedef struct {
    * enableable for authorities.
    */
   int DisableV2DirectoryInfo_;
+
+  /** What expiry time shall we place on our SSL certs? */
+  int SSLKeyLifetime;
 
 } or_options_t;
 
