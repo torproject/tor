@@ -234,7 +234,7 @@ static X509* tor_tls_create_certificate(crypto_pk_t *rsa,
                                         crypto_pk_t *rsa_sign,
                                         const char *cname,
                                         const char *cname_sign,
-                                        unsigned int lifetime);
+                                        unsigned int cert_lifetime);
 
 static int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     crypto_pk_t *identity,
@@ -608,9 +608,10 @@ tor_x509_name_new(const char *cname)
 /** Generate and sign an X509 certificate with the public key <b>rsa</b>,
  * signed by the private key <b>rsa_sign</b>.  The commonName of the
  * certificate will be <b>cname</b>; the commonName of the issuer will be
- * <b>cname_sign</b>. The cert will be valid for <b>cert_lifetime</b> seconds
- * starting from now.  Return a certificate on success, NULL on
- * failure.
+ * <b>cname_sign</b>. The cert will be valid for <b>cert_lifetime</b>
+ * seconds, starting from some time in the past.
+ *
+ * Return a certificate on success, NULL on failure.
  */
 static X509 *
 tor_tls_create_certificate(crypto_pk_t *rsa,
@@ -632,7 +633,12 @@ tor_tls_create_certificate(crypto_pk_t *rsa,
 
   tor_tls_init();
 
-  start_time = time(NULL);
+  /* Make sure we're part-way through the certificate lifetime, rather
+   * than having it start right now. Don't choose quite uniformly, since
+   * then we might pick a time where we're about to expire. Lastly, be
+   * sure to start on a day boundary. */
+  start_time = time(NULL) - crypto_rand_int(cert_lifetime) + 2*24*3600;
+  start_time -= start_time % (24*3600);
 
   tor_assert(rsa);
   tor_assert(cname);
