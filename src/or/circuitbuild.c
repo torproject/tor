@@ -523,7 +523,7 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
     log_warn(LD_CIRC,"failed to get unique circID.");
     return -1;
   }
-  log_debug(LD_CIRC,"Chosen circID %u.", id);
+  log_debug(LD_CIRC,"Chosen circID %u.", (unsigned)id);
   circuit_set_n_circid_chan(circ, id, circ->n_chan);
 
   memset(&cell, 0, sizeof(cell_t));

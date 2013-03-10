@@ -425,9 +425,9 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
           } else {
             /* Complain and move on */
             log_warn(LD_CIRC,
-                     "Circuit %d/channel " U64_FORMAT " had direction == "
+                     "Circuit %u/channel " U64_FORMAT " had direction == "
                      "CELL_DIRECTION_IN, but isn't an or_circuit_t",
-                     to_remove->circ_id,
+                     (unsigned)to_remove->circ_id,
                      U64_PRINTF_ARG(to_remove->chan_id));
           }
 
@@ -449,16 +449,16 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
         } else {
           /* Complain and move on */
           log_warn(LD_CIRC,
-                   "Couldn't find circuit %d (for channel " U64_FORMAT ")",
-                   to_remove->circ_id,
+                   "Couldn't find circuit %u (for channel " U64_FORMAT ")",
+                   (unsigned)to_remove->circ_id,
                    U64_PRINTF_ARG(to_remove->chan_id));
         }
       } else {
         /* Complain and move on */
         log_warn(LD_CIRC,
-                 "Couldn't find channel " U64_FORMAT " (for circuit id %d)",
+                 "Couldn't find channel " U64_FORMAT " (for circuit id %u)",
                  U64_PRINTF_ARG(to_remove->chan_id),
-                 to_remove->circ_id);
+                 (unsigned)to_remove->circ_id);
       }
 
       /* Assert that we don't have un-freed policy data for this circuit */
@@ -905,7 +905,7 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
     log_info(LD_CIRC,
              "Circuit %u on channel " U64_FORMAT " was already attached to "
              "cmux %p (trying to attach to %p)",
-             circ_id, U64_PRINTF_ARG(channel_id),
+             (unsigned)circ_id, U64_PRINTF_ARG(channel_id),
              ((direction == CELL_DIRECTION_OUT) ?
                 circ->n_mux : TO_OR_CIRCUIT(circ)->p_mux),
              cmux);
@@ -938,7 +938,7 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
      */
     log_debug(LD_CIRC,
              "Attaching circuit %u on channel " U64_FORMAT " to cmux %p",
-             circ_id, U64_PRINTF_ARG(channel_id), cmux);
+              (unsigned)circ_id, U64_PRINTF_ARG(channel_id), cmux);
 
     /*
      * Assert that the circuit doesn't already have a mux for this
@@ -1138,8 +1138,8 @@ circuitmux_make_circuit_active(circuitmux_t *cmux, circuit_t *circ,
   /* If we're already active, log a warning and finish */
   if (already_active) {
     log_warn(LD_CIRC,
-             "Circuit %d on channel " U64_FORMAT " was already active",
-             circ_id, U64_PRINTF_ARG(chan->global_identifier));
+             "Circuit %u on channel " U64_FORMAT " was already active",
+             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier));
     return;
   }
 
@@ -1236,7 +1236,7 @@ circuitmux_make_circuit_inactive(circuitmux_t *cmux, circuit_t *circ,
   if (already_inactive) {
     log_warn(LD_CIRC,
              "Circuit %d on channel " U64_FORMAT " was already inactive",
-             circ_id, U64_PRINTF_ARG(chan->global_identifier));
+             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier));
     return;
   }
 

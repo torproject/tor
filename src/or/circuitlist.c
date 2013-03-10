@@ -780,13 +780,13 @@ circuit_dump_conn_details(int severity,
                           circuit_t *circ,
                           int conn_array_index,
                           const char *type,
-                          int this_circid,
-                          int other_circid)
+                          circid_t this_circid,
+                          circid_t other_circid)
 {
-  tor_log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d "
-      "(other side %d), state %d (%s), born %ld:",
-      conn_array_index, type, this_circid, other_circid, circ->state,
-      circuit_state_to_string(circ->state),
+  tor_log(severity, LD_CIRC, "Conn %d has %s circuit: circID %u "
+      "(other side %u), state %d (%s), born %ld:",
+      conn_array_index, type, (unsigned)this_circid, (unsigned)other_circid,
+      circ->state, circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
@@ -843,12 +843,12 @@ circuit_dump_chan_details(int severity,
                           circuit_t *circ,
                           channel_t *chan,
                           const char *type,
-                          int this_circid,
-                          int other_circid)
+                          circid_t this_circid,
+                          circid_t other_circid)
 {
-  tor_log(severity, LD_CIRC, "Conn %p has %s circuit: circID %d "
-      "(other side %d), state %d (%s), born %ld:",
-      chan, type, this_circid, other_circid, circ->state,
+  tor_log(severity, LD_CIRC, "Conn %p has %s circuit: circID %u "
+      "(other side %u), state %d (%s), born %ld:",
+      chan, type, (unsigned)this_circid, (unsigned)other_circid, circ->state,
       circuit_state_to_string(circ->state),
       (long)circ->timestamp_began.tv_sec);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
@@ -943,16 +943,16 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan)
   if (found && found->circuit) {
     log_debug(LD_CIRC,
               "circuit_get_by_circid_channel_impl() returning circuit %p for"
-              " circ_id %d, channel ID " U64_FORMAT " (%p)",
-              found->circuit, circ_id,
+              " circ_id %u, channel ID " U64_FORMAT " (%p)",
+              found->circuit, (unsigned)circ_id,
               U64_PRINTF_ARG(chan->global_identifier), chan);
     return found->circuit;
   }
 
   log_debug(LD_CIRC,
             "circuit_get_by_circid_channel_impl() found nothing for"
-            " circ_id %d, channel ID " U64_FORMAT " (%p)",
-            circ_id,
+            " circ_id %u, channel ID " U64_FORMAT " (%p)",
+            (unsigned)circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
   return NULL;

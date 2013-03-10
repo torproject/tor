@@ -16,7 +16,6 @@
  *   callbacks registered in command_setup_channel(),
  *   called when channels are created in circuitbuild.c
  */
-
 #include "or.h"
 #include "channel.h"
 #include "circuitbuild.h"
@@ -195,9 +194,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   tor_assert(chan);
 
   log_debug(LD_OR,
-            "Got a CREATE cell for circ_id %d on channel " U64_FORMAT
+            "Got a CREATE cell for circ_id %u on channel " U64_FORMAT
             " (%p)",
-            cell->circ_id,
+            (unsigned)cell->circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
   if (we_are_hibernating()) {
@@ -240,8 +239,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
       (!id_is_high &&
        chan->circ_id_type == CIRC_ID_TYPE_LOWER)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received create cell with unexpected circ_id %d. Closing.",
-           cell->circ_id);
+           "Received create cell with unexpected circ_id %u. Closing.",
+           (unsigned)cell->circ_id);
     channel_send_destroy(cell->circ_id, chan,
                          END_CIRC_REASON_TORPROTOCOL);
     return;
@@ -250,9 +249,10 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
   if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
     const node_t *node = node_get_by_id(chan->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received CREATE cell (circID %d) for known circ. "
+           "Received CREATE cell (circID %u) for known circ. "
            "Dropping (age %d).",
-           cell->circ_id, (int)(time(NULL) - channel_when_created(chan)));
+           (unsigned)cell->circ_id,
+           (int)(time(NULL) - channel_when_created(chan)));
     if (node) {
       char *p = esc_for_log(node_get_platform(node));
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -341,8 +341,8 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
 
   if (!circ) {
     log_info(LD_OR,
-             "(circID %d) unknown circ (probably got a destroy earlier). "
-             "Dropping.", cell->circ_id);
+             "(circID %u) unknown circ (probably got a destroy earlier). "
+             "Dropping.", (unsigned)cell->circ_id);
     return;
   }
 
@@ -412,8 +412,9 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
 
   if (!circ) {
     log_debug(LD_OR,
-              "unknown circuit %d on connection from %s. Dropping.",
-              cell->circ_id, channel_get_canonical_remote_descr(chan));
+              "unknown circuit %u on connection from %s. Dropping.",
+              (unsigned)cell->circ_id,
+              channel_get_canonical_remote_descr(chan));
     return;
   }
 
@@ -447,9 +448,9 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
       or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
       if (or_circ->remaining_relay_early_cells == 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_OR,
-               "Received too many RELAY_EARLY cells on circ %d from %s."
+               "Received too many RELAY_EARLY cells on circ %u from %s."
                "  Closing circuit.",
-               cell->circ_id,
+               (unsigned)cell->circ_id,
                safe_str(channel_get_canonical_remote_descr(chan)));
         circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
         return;
@@ -487,11 +488,12 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
 
   circ = circuit_get_by_circid_channel(cell->circ_id, chan);
   if (!circ) {
-    log_info(LD_OR,"unknown circuit %d on connection from %s. Dropping.",
-             cell->circ_id, channel_get_canonical_remote_descr(chan));
+    log_info(LD_OR,"unknown circuit %u on connection from %s. Dropping.",
+             (unsigned)cell->circ_id,
+             channel_get_canonical_remote_descr(chan));
     return;
   }
-  log_debug(LD_OR,"Received for circID %d.",cell->circ_id);
+  log_debug(LD_OR,"Received for circID %u.",(unsigned)cell->circ_id);
 
   reason = (uint8_t)cell->payload[0];
 

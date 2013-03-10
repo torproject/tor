@@ -111,14 +111,14 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
   // XXX: should we not re-extend if hs_circ_has_timed_out?
   if (circ->remaining_relay_early_cells) {
     log_info(LD_REND,
-             "Re-extending circ %d, this time to %s.",
-             circ->base_.n_circ_id,
+             "Re-extending circ %u, this time to %s.",
+             (unsigned)circ->base_.n_circ_id,
              safe_str_client(extend_info_describe(extend_info)));
     result = circuit_extend_to_new_exit(circ, extend_info);
   } else {
     log_info(LD_REND,
-             "Closing intro circ %d (out of RELAY_EARLY cells).",
-             circ->base_.n_circ_id);
+             "Closing intro circ %u (out of RELAY_EARLY cells).",
+             (unsigned)circ->base_.n_circ_id);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
     /* connection_ap_handshake_attach_circuit will launch a new intro circ. */
     result = 0;
@@ -386,8 +386,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 
   if (circ->base_.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_warn(LD_PROTOCOL,
-             "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
-             circ->base_.n_circ_id);
+             "Received REND_INTRODUCE_ACK on unexpected circuit %u.",
+             (unsigned)circ->base_.n_circ_id);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
     return -1;
   }
