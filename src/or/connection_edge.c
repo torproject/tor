@@ -218,8 +218,8 @@ int
 connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
 {
   if (!conn->base_.marked_for_close) {
-    log_info(LD_EDGE,
-             "CircID %d: At an edge. Marking connection for close.", circ_id);
+    log_info(LD_EDGE, "CircID %u: At an edge. Marking connection for close.",
+             (unsigned) circ_id);
     if (conn->base_.type == CONN_TYPE_AP) {
       entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
       connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_DESTROY);
@@ -1847,8 +1847,8 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
   edge_conn->deliver_window = STREAMWINDOW_START;
   base_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   log_info(LD_APP,"Address/port sent, ap socket "TOR_SOCKET_T_FORMAT
-           ", n_circ_id %d",
-           base_conn->s, circ->base_.n_circ_id);
+           ", n_circ_id %u",
+           base_conn->s, (unsigned)circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
 
   /* If there's queued-up data, send it now */
@@ -1949,8 +1949,8 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   base_conn->address = tor_strdup("(Tor_internal)");
   base_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket "TOR_SOCKET_T_FORMAT
-           ", n_circ_id %d",
-           base_conn->s, circ->base_.n_circ_id);
+           ", n_circ_id %u",
+           base_conn->s, (unsigned)circ->base_.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_NEW, 0);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);
   return 0;

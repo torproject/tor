@@ -9,7 +9,6 @@
  * \brief Functions to handle OR connections, TLS handshaking, and
  * cells on the network.
  **/
-
 #include "or.h"
 #include "buffers.h"
 /*

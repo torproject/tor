@@ -11,7 +11,6 @@
  *
  * Right now, we only use this for processing onionskins.
  **/
-
 #include "or.h"
 #include "buffers.h"
 #include "channel.h"
@@ -341,8 +340,8 @@ connection_cpu_process_inbuf(connection_t *conn)
     circ = NULL;
     log_debug(LD_OR,
               "Unpacking cpuworker reply, chan_id is " U64_FORMAT
-              ", circ_id is %d",
-              U64_PRINTF_ARG(chan_id), circ_id);
+              ", circ_id is %u",
+              U64_PRINTF_ARG(chan_id), (unsigned)circ_id);
     p_chan = channel_find_by_global_id(chan_id);
 
     if (p_chan)

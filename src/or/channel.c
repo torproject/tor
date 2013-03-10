@@ -2607,17 +2607,17 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
     cell.command = CELL_DESTROY;
     cell.payload[0] = (uint8_t) reason;
     log_debug(LD_OR,
-              "Sending destroy (circID %d) on channel %p "
+              "Sending destroy (circID %u) on channel %p "
               "(global ID " U64_FORMAT ")",
-              circ_id, chan,
+              (unsigned)circ_id, chan,
               U64_PRINTF_ARG(chan->global_identifier));
 
     channel_write_cell(chan, &cell);
   } else {
     log_warn(LD_BUG,
-             "Someone called channel_send_destroy() for circID %d "
+             "Someone called channel_send_destroy() for circID %u "
              "on a channel " U64_FORMAT " at %p in state %s (%d)",
-             circ_id, U64_PRINTF_ARG(chan->global_identifier),
+             (unsigned)circ_id, U64_PRINTF_ARG(chan->global_identifier),
              chan, channel_state_to_string(chan->state),
              chan->state);
   }
