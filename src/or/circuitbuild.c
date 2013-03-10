@@ -540,6 +540,7 @@ circuit_build_times_get_initial_timeout(void)
    * Check if we have LearnCircuitBuildTimeout, and if we don't,
    * always use CircuitBuildTimeout, no questions asked.
    */
+  /*XXXX025 this logic could be cleaned up a lot. */
   if (get_options()->LearnCircuitBuildTimeout) {
     if (!unit_tests && get_options()->CircuitBuildTimeout) {
       timeout = get_options()->CircuitBuildTimeout*1000;
@@ -552,7 +553,10 @@ circuit_build_times_get_initial_timeout(void)
       timeout = circuit_build_times_initial_timeout();
     }
   } else {
-    timeout = get_options()->CircuitBuildTimeout*1000;
+    if (get_options()->CircuitBuildTimeout > 0)
+      timeout = get_options()->CircuitBuildTimeout*1000;
+    else
+      timeout = circuit_build_times_initial_timeout();
   }
 
   return timeout;
