@@ -695,9 +695,9 @@ circuit_expire_building(void)
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
-        log_info(LD_CIRC,"Marking circ %d (state %d:%s, purpose %d) "
+        log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
                  "as timed-out HS circ",
-                 victim->n_circ_id,
+                 (unsigned)victim->n_circ_id,
                  victim->state, circuit_state_to_string(victim->state),
                  victim->purpose);
         TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
@@ -713,9 +713,9 @@ circuit_expire_building(void)
     if (!(options->CloseHSServiceRendCircuitsImmediatelyOnTimeout) &&
         !(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out) &&
         victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      log_info(LD_CIRC,"Marking circ %d (state %d:%s, purpose %d) "
+      log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
                "as timed-out HS circ; relaunching rendezvous attempt.",
-               victim->n_circ_id,
+               (unsigned)victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
       TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
@@ -728,7 +728,7 @@ circuit_expire_building(void)
                "Abandoning circ %u %s:%d (state %d,%d:%s, purpose %d, "
                "len %d)", TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                channel_get_canonical_remote_descr(victim->n_chan),
-               victim->n_circ_id,
+               (unsigned)victim->n_circ_id,
                TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose,
@@ -737,7 +737,8 @@ circuit_expire_building(void)
       log_info(LD_CIRC,
                "Abandoning circ %u %d (state %d,%d:%s, purpose %d, len %d)",
                TO_ORIGIN_CIRCUIT(victim)->global_identifier,
-               victim->n_circ_id, TO_ORIGIN_CIRCUIT(victim)->has_opened,
+               (unsigned)victim->n_circ_id,
+               TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state,
                circuit_state_to_string(victim->state), victim->purpose,
                TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len);
@@ -1070,9 +1071,10 @@ circuit_expire_old_circuits_clientside(void)
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness <
           now.tv_sec &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
-      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %ld sec ago, "
+      log_debug(LD_CIRC, "Closing n_circ_id %u (dirty %ld sec ago, "
                 "purpose %d)",
-                circ->n_circ_id, (long)(now.tv_sec - circ->timestamp_dirty),
+                (unsigned)circ->n_circ_id,
+                (long)(now.tv_sec - circ->timestamp_dirty),
                 circ->purpose);
       /* Don't do this magic for testing circuits. Their death is governed
        * by circuit_expire_building */
@@ -1153,8 +1155,8 @@ circuit_expire_old_circuits_serverside(time_t now)
         !or_circ->n_streams && !or_circ->resolving_streams &&
         or_circ->p_chan &&
         channel_when_last_xmit(or_circ->p_chan) <= cutoff) {
-      log_info(LD_CIRC, "Closing circ_id %d (empty %d secs ago)",
-               or_circ->p_circ_id,
+      log_info(LD_CIRC, "Closing circ_id %u (empty %d secs ago)",
+               (unsigned)or_circ->p_circ_id,
                (int)(now - channel_when_last_xmit(or_circ->p_chan)));
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     }
@@ -1896,8 +1898,8 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   const node_t *exitnode;
 
   /* add it into the linked list of streams on this circuit */
-  log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
-            circ->base_.n_circ_id);
+  log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %u.",
+            (unsigned)circ->base_.n_circ_id);
   /* reset it, so we can measure circ timeouts */
   ENTRY_TO_CONN(apconn)->timestamp_lastread = time(NULL);
   ENTRY_TO_EDGE_CONN(apconn)->next_stream = circ->p_streams;
@@ -2121,8 +2123,8 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       return retval;
 
     log_debug(LD_APP|LD_CIRC,
-              "Attaching apconn to circ %d (stream %d sec old).",
-              circ->base_.n_circ_id, conn_age);
+              "Attaching apconn to circ %u (stream %d sec old).",
+              (unsigned)circ->base_.n_circ_id, conn_age);
     /* print the circ's path, so people can figure out which circs are
      * sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
@@ -2147,7 +2149,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       log_info(LD_REND,
                "rend joined circ %d already here. attaching. "
                "(stream %d sec old)",
-               rendcirc->base_.n_circ_id, conn_age);
+               (unsigned)rendcirc->base_.n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use
        * them, since the process of rebuilding a rendezvous circ is so
        * expensive. There is a tradeoff between linkability and
@@ -2168,9 +2170,9 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     if (rendcirc && (rendcirc->base_.purpose ==
                      CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)) {
       log_info(LD_REND,
-               "pending-join circ %d already here, with intro ack. "
+               "pending-join circ %u already here, with intro ack. "
                "Stalling. (stream %d sec old)",
-                rendcirc->base_.n_circ_id, conn_age);
+               (unsigned)rendcirc->base_.n_circ_id, conn_age);
       return 0;
     }
 
@@ -2182,10 +2184,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     if (retval > 0) {
       /* one has already sent the intro. keep waiting. */
       tor_assert(introcirc);
-      log_info(LD_REND, "Intro circ %d present and awaiting ack (rend %d). "
+      log_info(LD_REND, "Intro circ %u present and awaiting ack (rend %u). "
                "Stalling. (stream %d sec old)",
-               introcirc->base_.n_circ_id,
-               rendcirc ? rendcirc->base_.n_circ_id : 0,
+               (unsigned)introcirc->base_.n_circ_id,
+               rendcirc ? (unsigned)rendcirc->base_.n_circ_id : 0,
                conn_age);
       return 0;
     }
@@ -2195,16 +2197,17 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     if (rendcirc && introcirc &&
         rendcirc->base_.purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       log_info(LD_REND,
-               "ready rend circ %d already here (no intro-ack yet on "
-               "intro %d). (stream %d sec old)",
-               rendcirc->base_.n_circ_id,
-               introcirc->base_.n_circ_id, conn_age);
+               "ready rend circ %u already here (no intro-ack yet on "
+               "intro %u). (stream %d sec old)",
+               (unsigned)rendcirc->base_.n_circ_id,
+               (unsigned)introcirc->base_.n_circ_id, conn_age);
 
       tor_assert(introcirc->base_.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if (introcirc->base_.state == CIRCUIT_STATE_OPEN) {
-        log_info(LD_REND,"found open intro circ %d (rend %d); sending "
+        log_info(LD_REND,"found open intro circ %u (rend %u); sending "
                  "introduction. (stream %d sec old)",
-                 introcirc->base_.n_circ_id, rendcirc->base_.n_circ_id,
+                 (unsigned)introcirc->base_.n_circ_id,
+                 (unsigned)rendcirc->base_.n_circ_id,
                  conn_age);
         switch (rend_client_send_introduction(introcirc, rendcirc)) {
         case 0: /* success */
@@ -2228,10 +2231,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       }
     }
 
-    log_info(LD_REND, "Intro (%d) and rend (%d) circs are not both ready. "
+    log_info(LD_REND, "Intro (%u) and rend (%u) circs are not both ready. "
              "Stalling conn. (%d sec old)",
-             introcirc ? introcirc->base_.n_circ_id : 0,
-             rendcirc ? rendcirc->base_.n_circ_id : 0, conn_age);
+             introcirc ? (unsigned)introcirc->base_.n_circ_id : 0,
+             rendcirc ? (unsigned)rendcirc->base_.n_circ_id : 0, conn_age);
     return 0;
   }
 }
