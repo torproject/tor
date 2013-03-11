@@ -1500,8 +1500,13 @@ is non-zero):
 **ShutdownWaitLength** __NUM__::
     When we get a SIGINT and we're a server, we begin shutting down:
     we close listeners and start refusing new circuits. After **NUM**
-    seconds, we exit. If we get a second SIGINT, we exit immedi-
-    ately. (Default: 30 seconds)
+    seconds, we exit. If we get a second SIGINT, we exit immediately.
+    (Default: 30 seconds)
+
+**SSLKeyLifetime** __N__ **minutes**|**hours**|**days**|**weeks**::
+    When creating a link certificate for our outermost SSL handshake,
+    set its lifetime to this amount of time. If set to 0, Tor will choose
+    some reasonable random defaults. (Default: 0)
 
 **HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
     Log a heartbeat message every **HeartbeatPeriod** seconds. This is

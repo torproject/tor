@@ -650,6 +650,7 @@ router_initialize_tls_context(void)
 {
   unsigned int flags = 0;
   const or_options_t *options = get_options();
+  int lifetime = options->SSLKeyLifetime;
   if (public_server_mode(options))
     flags |= TOR_TLS_CTX_IS_PUBLIC_SERVER;
   if (options->TLSECGroup) {
@@ -658,12 +659,28 @@ router_initialize_tls_context(void)
     else if (!strcasecmp(options->TLSECGroup, "P224"))
       flags |= TOR_TLS_CTX_USE_ECDHE_P224;
   }
+  if (!lifetime) { /* we should guess a good ssl cert lifetime */
 
+    /* choose between 5 and 365 days, and round to the day */
+    lifetime = 5*24*3600 + crypto_rand_int(361*24*3600);
+    lifetime -= lifetime % (24*3600);
+
+    if (crypto_rand_int(2)) {
+      /* Half the time we expire at midnight, and half the time we expire
+       * one second before midnight. (Some CAs wobble their expiry times a
+       * bit in practice, perhaps to reduce collision attacks; see ticket
+       * 8443 for details about observed certs in the wild.) */
+      lifetime--;
+    }
+  }
+
+  /* It's ok to pass lifetime in as an unsigned int, since
+   * config_parse_interval() checked it. */
   return tor_tls_context_init(flags,
                               get_tlsclient_identity_key(),
-                              server_mode(get_options()) ?
+                              server_mode(options) ?
                               get_server_identity_key() : NULL,
-                              MAX_SSL_KEY_LIFETIME_ADVERTISED);
+                              (unsigned int)lifetime);
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.
