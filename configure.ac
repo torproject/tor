@@ -972,6 +972,10 @@ AX_CHECK_SIGN([time_t],
 #endif
 ])
 
+if test "$ax_cv_decl_time_t_signed" = no; then
+  AC_MSG_WARN([You have an unsigned time_t; some things will probably break. Please tell the Tor developers about your interesting platform.])
+fi
+
 AX_CHECK_SIGN([size_t],
        [ tor_cv_size_t_signed=yes ],
        [ tor_cv_size_t_signed=no ], [

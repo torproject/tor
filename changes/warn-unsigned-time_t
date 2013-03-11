@@ -1,0 +1,5 @@
+  o Build improvements:
+    - Warn if building on a platform with an unsigned time_t: there
+      are too many places where Tor currently assumes that time_t can
+      hold negative values. We'd like to fix them all, but probably
+      some will remain.
