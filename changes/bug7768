@@ -1,0 +1,3 @@
+  o Documentation fixes:
+    - Update tor-fw-helper.1.txt to describe its options with their
+      correct names. Fixes bug 7768.
