@@ -69,7 +69,7 @@ Changes in version 0.2.4.11-alpha - 2013-03-11
       we could wind up in a situation where users with such backends would
       be distinguishable from users without. Fixes bug 8121; bugfix on
       0.2.4.8-alpha.
-    - Update to the February 6 2013 Maxmind GeoLite Country database.
+    - Update to the March 6 2013 Maxmind GeoLite Country database.
 
   o Minor bugfixes (clients):
     - When we receive a RELAY_END cell with the reason DONE, or with no
