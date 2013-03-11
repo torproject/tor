@@ -1417,8 +1417,8 @@ typedef struct or_connection_t {
   unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   unsigned int wide_circ_ids:1;
-  uint8_t link_proto; /**< What protocol version are we using? 0 for
-                       * "none negotiated yet." */
+  uint16_t link_proto; /**< What protocol version are we using? 0 for
+                        * "none negotiated yet." */
 
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
