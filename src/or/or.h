@@ -3999,6 +3999,17 @@ typedef struct {
 
   /** Fraction: */
   double PathsNeededToBuildCircuits;
+
+  /** Do we serve v2 directory info at all?  This is a temporary option, since
+   * we'd like to disable v2 directory serving entirely, but we need a way to
+   * make it temporarily disableable, in order to do fast testing and be
+   * able to turn it back on if it turns out to be non-workable.
+   *
+   * XXXX025 Make this always-on, or always-off.  Right now, it's only
+   * enableable for authorities.
+   */
+  int DisableV2DirectoryInfo_;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

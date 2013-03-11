@@ -2805,6 +2805,19 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     const char *key = url + strlen("/tor/status/");
     long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
+    if (options->DisableV2DirectoryInfo_ && !is_v3) {
+      static ratelim_t reject_v2_ratelim = RATELIM_INIT(1800);
+      char *m;
+      write_http_status_line(conn, 404, "Not found");
+      smartlist_free(dir_fps);
+      geoip_note_ns_response(GEOIP_REJECT_NOT_FOUND);
+      if ((m = rate_limit_log(&reject_v2_ratelim, approx_time()))) {
+        log_notice(LD_DIR, "Rejected a v2 networkstatus request.%s", m);
+        tor_free(m);
+      }
+      goto done;
+    }
+
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
