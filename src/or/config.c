@@ -213,7 +213,7 @@ static config_var_t option_vars_[] = {
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
-  V(DisableV2DirectoryInfo_,     BOOL,     "1"),
+  V(DisableV2DirectoryInfo_,     BOOL,     "0"),
   V(DynamicDHGroups,             BOOL,     "0"),
   VPORT(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
