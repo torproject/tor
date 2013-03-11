@@ -415,7 +415,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   microdesc_t **mdp;
   smartlist_t *wrote;
   ssize_t size;
-  off_t off = 0;
+  off_t off = 0, off_real;
   int orig_size, new_size;
 
   if (cache == NULL) {
@@ -458,6 +458,14 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     tor_assert(((size_t)size) == annotation_len + md->bodylen);
     md->off = off + annotation_len;
     off += size;
+    off_real = tor_fd_getpos(fd);
+    if (off_real != off) {
+      log_warn(LD_BUG, "Discontinuity in position in microdescriptor cache."
+               "By my count, I'm at "I64_FORMAT
+               ", but I should be at "I64_FORMAT,
+               I64_PRINTF_ARG(off), I64_PRINTF_ARG(off_real));
+      off = off_real;
+    }
     if (md->saved_location != SAVED_IN_CACHE) {
       tor_free(md->body);
       md->saved_location = SAVED_IN_CACHE;
