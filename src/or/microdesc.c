@@ -70,7 +70,7 @@ HT_GENERATE(microdesc_map, microdesc_t, node,
  * *<b>annotation_len_out</b> to the number of bytes written as
  * annotations. */
 static ssize_t
-dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
+dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
   size_t written;
@@ -80,10 +80,10 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
     char annotation[ISO_TIME_LEN+32];
     format_iso_time(buf, md->last_listed);
     tor_snprintf(annotation, sizeof(annotation), "@last-listed %s\n", buf);
-    if (fputs(annotation, f) < 0) {
+    if (write_all(fd, annotation, strlen(annotation), 0) < 0) {
       log_warn(LD_DIR,
                "Couldn't write microdescriptor annotation: %s",
-               strerror(ferror(f)));
+               strerror(errno));
       return -1;
     }
     r += strlen(annotation);
@@ -92,13 +92,13 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
     *annotation_len_out = 0;
   }
 
-  md->off = (off_t) ftell(f);
-  written = fwrite(md->body, 1, md->bodylen, f);
+  md->off = tor_fd_getpos(fd);
+  written = write_all(fd, md->body, md->bodylen, 0);
   if (written != md->bodylen) {
     log_warn(LD_DIR,
              "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
              (unsigned long)written, (unsigned long)md->bodylen,
-             strerror(ferror(f)));
+             strerror(errno));
     return -1;
   }
   r += md->bodylen;
@@ -197,15 +197,15 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
 {
   smartlist_t *added;
   open_file_t *open_file = NULL;
-  FILE *f = NULL;
+  int fd = -1;
   //  int n_added = 0;
   ssize_t size = 0;
 
   if (where == SAVED_NOWHERE && !no_save) {
-    f = start_writing_to_stdio_file(cache->journal_fname,
-                                    OPEN_FLAGS_APPEND|O_BINARY,
-                                    0600, &open_file);
-    if (!f) {
+    fd = start_writing_to_file(cache->journal_fname,
+                               OPEN_FLAGS_APPEND|O_BINARY,
+                               0600, &open_file);
+    if (fd < 0) {
       log_warn(LD_DIR, "Couldn't append to journal in %s: %s",
                cache->journal_fname, strerror(errno));
       return NULL;
@@ -227,9 +227,9 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     }
 
     /* Okay, it's a new one. */
-    if (f) {
+    if (fd >= 0) {
       size_t annotation_len;
-      size = dump_microdescriptor(f, md, &annotation_len);
+      size = dump_microdescriptor(fd, md, &annotation_len);
       if (size < 0) {
         /* we already warned in dump_microdescriptor; */
         abort_writing_to_file(open_file);
@@ -251,7 +251,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     cache->total_len_seen += md->bodylen;
   } SMARTLIST_FOREACH_END(md);
 
-  if (f)
+  if (fd >= 0)
     finish_writing_to_file(open_file); /*XXX Check me.*/
 
   {
@@ -405,7 +405,7 @@ int
 microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 {
   open_file_t *open_file;
-  FILE *f;
+  int fd = -1;
   microdesc_t **mdp;
   smartlist_t *wrote;
   ssize_t size;
@@ -429,10 +429,10 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
 
-  f = start_writing_to_stdio_file(cache->cache_fname,
-                                  OPEN_FLAGS_REPLACE|O_BINARY,
-                                  0600, &open_file);
-  if (!f)
+  fd = start_writing_to_file(cache->cache_fname,
+                             OPEN_FLAGS_REPLACE|O_BINARY,
+                             0600, &open_file);
+  if (fd < 0)
     return -1;
 
   wrote = smartlist_new();
@@ -443,7 +443,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     if (md->no_save)
       continue;
 
-    size = dump_microdescriptor(f, md, &annotation_len);
+    size = dump_microdescriptor(fd, md, &annotation_len);
     if (size < 0) {
       /* XXX handle errors from dump_microdescriptor() */
       /* log?  return -1?  die?  coredump the universe? */
