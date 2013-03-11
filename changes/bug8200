@@ -1,5 +1,0 @@
-  o Minor bugfix:
-    - Stop sending a stray "(null)" in some cases for the server status
-      "EXTERNAL_ADDRESS" controller event. Resolves bug 8200; bugfix
-      on 0.1.2.6-alpha.
-

@@ -1,3 +1,148 @@
+Changes in version 0.2.4.11-alpha - 2013-03-11
+  Tor 0.2.4.11-alpha makes relay measurement by directory authorities
+  more robust, makes hidden service authentication work again, and
+  resolves a DPI fingerprint for Tor's SSL transport.
+
+  o Major features (directory authorities):
+    - Directory authorities now support a new consensus method (17)
+      where they cap the published bandwidth of servers for which
+      insufficient bandwidth measurements exist. Fixes part of bug 2286.
+    - Directory authorities that set "DisableV2DirectoryInfo_ 1" no longer
+      serve any v2 directory information. Now we can test disabling the
+      old deprecated v2 directory format, and see whether doing so has
+      any effect on network load. Begins to fix bug 6783.
+    - Directory authorities now include inside each vote a statement of
+      the performance thresholds they used when assigning flags.
+      Implements ticket 8151.
+
+  o Major bugfixes (directory authorities):
+    - Stop marking every relay as having been down for one hour every
+      time we restart a directory authority. These artificial downtimes
+      were messing with our Stable and Guard flag calculations. Fixes
+      bug 8218 (introduced by the fix for 1035). Bugfix on 0.2.2.23-alpha.
+
+  o Major bugfixes (hidden services):
+    - Allow hidden service authentication to succeed again. When we
+      refactored the hidden service introduction code back
+      in 0.2.4.1-alpha, we didn't update the code that checks
+      whether authentication information is present, causing all
+      authentication checks to return "false". Fix for bug 8207; bugfix
+      on 0.2.4.1-alpha. Found by Coverity; this is CID 718615.
+
+  o Minor features (relays, bridges):
+    - Make bridge relays check once a minute for whether their IP
+      address has changed, rather than only every 15 minutes. Resolves
+      bugs 1913 and 1992.
+    - Refactor resolve_my_address() so it returns the method by which we
+      decided our public IP address (explicitly configured, resolved from
+      explicit hostname, guessed from interfaces, learned by gethostname).
+      Now we can provide more helpful log messages when a relay guesses
+      its IP address incorrectly (e.g. due to unexpected lines in
+      /etc/hosts). Resolves ticket 2267.
+    - Teach bridge-using clients to avoid 0.2.2 bridges when making
+      microdescriptor-related dir requests, and only fall back to normal
+      descriptors if none of their bridges can handle microdescriptors
+      (as opposed to the fix in ticket 4013, which caused them to fall
+      back to normal descriptors if *any* of their bridges preferred
+      them). Resolves ticket 4994.
+    - Randomize the lifetime of our SSL link certificate, so censors can't
+      use the static value for filtering Tor flows. Resolves ticket 8443;
+      related to ticket 4014 which was included in 0.2.2.33.
+
+  o Minor features (portability):
+    - Tweak the curve25519-donna*.c implementations to tolerate systems
+      that lack stdint.h. Fixes bug 3894; bugfix on 0.2.4.8-alpha.
+    - Use Ville Laurikari's implementation of AX_CHECK_SIGN() to determine
+      the signs of types during autoconf. This is better than our old
+      approach, which didn't work when cross-compiling.
+    - Detect the sign of enum values, rather than assuming that MSC is the
+      only compiler where enum types are all signed. Fixes bug 7727;
+      bugfix on 0.2.4.10-alpha.
+
+  o Minor features (other):
+    - Say "KBytes" rather than "KB" in the man page (for various values
+      of K), to further reduce confusion about whether Tor counts in
+      units of memory or fractions of units of memory. Resolves ticket 7054.
+    - Clear the high bit on curve25519 public keys before passing them to
+      our backend, in case we ever wind up using a backend that doesn't do
+      so itself. If we used such a backend, and *didn't* clear the high bit,
+      we could wind up in a situation where users with such backends would
+      be distinguishable from users without. Fixes bug 8121; bugfix on
+      0.2.4.8-alpha.
+    - Update to the February 6 2013 Maxmind GeoLite Country database.
+
+  o Minor bugfixes (clients):
+    - When we receive a RELAY_END cell with the reason DONE, or with no
+      reason, before receiving a RELAY_CONNECTED cell, report the SOCKS
+      status as "connection refused". Previously we reported these cases
+      as success but then immediately closed the connection. Fixes bug
+      7902; bugfix on 0.1.0.1-rc. Reported by "oftc_must_be_destroyed".
+    - Downgrade an assertion in connection_ap_expire_beginning to an
+      LD_BUG message. The fix for bug 8024 should prevent this message
+      from displaying, but just in case, a warn that we can diagnose
+      is better than more assert crashes. Fixes bug 8065; bugfix on
+      0.2.4.8-alpha.
+    - Lower path use bias thresholds to .80 for notice and .60 for warn.
+      Also make the rate limiting flags for the path use bias log messages
+      independent from the original path bias flags. Fixes bug 8161;
+      bugfix on 0.2.4.10-alpha.
+
+  o Minor bugfixes (relays):
+    - Stop trying to resolve our hostname so often (e.g. every time we
+      think about doing a directory fetch). Now we reuse the cached
+      answer in some cases. Fixes bugs 1992 (bugfix on 0.2.0.20-rc)
+      and 2410 (bugfix on 0.1.2.2-alpha).
+    - Stop sending a stray "(null)" in some cases for the server status
+      "EXTERNAL_ADDRESS" controller event. Resolves bug 8200; bugfix
+      on 0.1.2.6-alpha.
+    - When choosing which stream on a formerly stalled circuit to wake
+      first, make better use of the platform's weak RNG. Previously,
+      we had been using the % ("modulo") operator to try to generate a
+      1/N chance of picking each stream, but this behaves badly with
+      many platforms' choice of weak RNG. Fixes bug 7801; bugfix on
+      0.2.2.20-alpha.
+    - Use our own weak RNG when we need a weak RNG. Windows's rand() and
+      Irix's random() only return 15 bits; Solaris's random() returns more
+      bits but its RAND_MAX says it only returns 15, and so on. Motivated
+      by the fix for bug 7801; bugfix on 0.2.2.20-alpha.
+
+  o Minor bugfixes (directory authorities):
+    - Directory authorities now use less space when formatting identical
+      microdescriptor lines in directory votes. Fixes bug 8158; bugfix
+      on 0.2.4.1-alpha.
+
+  o Minor bugfixes (memory leaks spotted by Coverity -- bug 7816):
+    - Avoid leaking memory if we fail to compute a consensus signature
+      or we generate a consensus we can't parse. Bugfix on 0.2.0.5-alpha.
+    - Fix a memory leak when receiving headers from an HTTPS proxy. Bugfix
+      on 0.2.1.1-alpha.
+    - Fix a memory leak during safe-cookie controller authentication.
+      Bugfix on 0.2.3.13-alpha.
+    - Avoid memory leak of IPv6 policy content if we fail to format it into
+      a router descriptor. Bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (other code correctness issues):
+    - Avoid a crash if we fail to generate an extrainfo descriptor.
+      Fixes bug 8208; bugfix on 0.2.3.16-alpha. Found by Coverity;
+      this is CID 718634.
+    - When detecting the largest possible file descriptor (in order to
+      close all file descriptors when launching a new program), actually
+      use _SC_OPEN_MAX. The old code for doing this was very, very broken.
+      Fixes bug 8209; bugfix on 0.2.3.1-alpha. Found by Coverity; this
+      is CID 743383.
+    - Fix a copy-and-paste error when adding a missing A1 to a routerset
+      because of GeoIPExcludeUnknown. Fix for Coverity CID 980650.
+      Bugfix on 0.2.4.10-alpha.
+    - Fix an impossible-to-trigger integer overflow when estimating how
+      long our onionskin queue would take. (This overflow would require us
+      to accept 4 million onionskins before processing 100 of them.) Fixes
+      bug 8210; bugfix on 0.2.4.10-alpha.
+
+  o Code simplification and refactoring:
+    - Add a wrapper function for the common "log a message with a
+      rate-limit" case.
+
+
 Changes in version 0.2.4.10-alpha - 2013-02-04
   Tor 0.2.4.10-alpha adds defenses at the directory authority level from
   certain attacks that flood the network with relays; changes the queue

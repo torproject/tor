@@ -1,4 +1,0 @@
-  o Minor features:
-    - Randomize the lifetime of our SSL link certificate, so censors can't
-      use the static value for filtering Tor flows. Resolves ticket 8443;
-      related to ticket 4014 which was included in 0.2.2.33.

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Add a wrapper function for the common "log a message with a rate-limit"
-      case.

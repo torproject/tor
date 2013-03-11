@@ -1,4 +1,0 @@
-  o Minor bugfixes (man page):
-    - Say "KBytes" rather than "KB" in the man page (for various values
-      of K), to further reduce confusion about whether Tor counts in
-      units of memory or fractions of units of memory. Fixes bug 7054.

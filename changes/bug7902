@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - When we receive a RELAY_END cell with the reason DONE, or with no
-      reason, before receiving a RELAY_CONNECTED cell, report the SOCKS
-      status as "connection refused."  Previously we reporting these
-      cases as success but then immediately closing the connection.
-      Fixes bug 7902; bugfix on 0.1.0.1-rc. Reported by "oftc_must_
-      be_destroyed."

@@ -1,7 +1,0 @@
-  o Minor features:
-    - Clear the high bit on curve25519 public keys before passing them to
-      our backend, in case we ever wind up using a backend that doesn't do
-      so itself. If we used such a backend, and *didn't* clear the high bit,
-      we could wind up in a situation where users with such backends would
-      be distinguishable from users without. Fix for bug 8121; bugfix on
-      0.2.4.8-alpha.

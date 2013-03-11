@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a copy-and-paste error when adding a missing A1 to a routerset
-      because of GeoIPExcludeUnknown. Fix for coverity CID 980650.
-      Bugfix on 0.2.4.10-alpha.

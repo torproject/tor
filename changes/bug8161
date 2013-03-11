@@ -1,6 +1,0 @@
- o Minor changes:
-   - Lower path use bias thresholds to .80 for notice and .60 for warn.
-     Fixes bug #8161; bugfix on 0.2.4.10-alpa.
-   - Make the rate limiting flags for the path use bias log messages
-     independent from the original path bias flags. Fixes bug #8161;
-     bugfix on 0.2.4.10-alpha.

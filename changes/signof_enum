@@ -1,7 +1,0 @@
-  o Code simplifications and refactoring:
-    - Use Ville Laurikari's implementation of AX_CHECK_SIGN() to determine
-      the signs of types during autoconf. This is better than our old
-      approach, which didn't work when cross-compiling.
-    - Detect the sign of enum values, rather than assuming that MSC is the
-      only compiler where enum types are all signed. Fix for bug 7727;
-      bugfix on 0.2.4.10-alpha.
