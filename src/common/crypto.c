@@ -3000,6 +3000,12 @@ memwipe(void *mem, uint8_t byte, size_t sz)
 }
 
 #ifdef TOR_IS_MULTITHREADED
+
+#ifndef OPENSSL_THREADS
+#error OpenSSL has been built without thread support. Tor requires an \
+ OpenSSL library with thread support enabled.
+#endif
+
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */
 static void
 openssl_locking_cb_(int mode, int n, const char *file, int line)
