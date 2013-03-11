@@ -213,6 +213,7 @@ static config_var_t option_vars_[] = {
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
+  V(DisableV2DirectoryInfo_,     BOOL,     "0"),
   V(DynamicDHGroups,             BOOL,     "0"),
   VPORT(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
@@ -2377,6 +2378,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TokenBucketRefillInterval <= 0
       || options->TokenBucketRefillInterval > 1000) {
     REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
+  }
+
+  if (options->DisableV2DirectoryInfo_ && ! authdir_mode(options)) {
+    REJECT("DisableV2DirectoryInfo_ set, but we aren't an authority.");
   }
 
   if (options->ExcludeExitNodes || options->ExcludeNodes) {

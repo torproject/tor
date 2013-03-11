@@ -1,0 +1,6 @@
+  o Major features (deprecation):
+    - There's now a "DisableV2DirectoryInfo_" option that prevents us
+      from serving any directory requests for v2 directory information.
+      This is for us to test disabling the old deprecated V2 directory
+      format, so that we can see whether doing so has any effect on
+      network load. Part of a fix for bug 6783.
