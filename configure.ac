@@ -980,7 +980,7 @@ AX_CHECK_SIGN([size_t],
 #endif
 ])
 
-if test "$tor_cv_size_t_signed" = yes; then
+if test "$ax_cv_decl_size_t_signed" = yes; then
   AC_MSG_ERROR([You have a signed size_t; that's grossly nonconformant.])
 fi
 
