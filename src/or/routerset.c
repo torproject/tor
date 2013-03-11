@@ -141,7 +141,7 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
         log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
         smartlist_add(target->policies, p);
       } else {
-        log_warn(LD_CONFIG, "Entry '%s' in %s is misformed.", nick,
+        log_warn(LD_CONFIG, "Entry '%s' in %s is malformed.", nick,
                  description);
         r = -1;
         tor_free(nick);

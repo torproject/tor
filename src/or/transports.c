@@ -339,12 +339,12 @@ transport_add_from_config(const tor_addr_t *addr, uint16_t port,
     transport_free(t);
     return -1;
   case 1:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s.",
+    log_info(LD_GENERAL, "Successfully registered transport %s at %s.",
              t->name, fmt_addrport(&t->addr, t->port));
      transport_free(t); /* falling */
      return 0;
   case 0:
-    log_info(LD_GENERAL, "Succesfully registered transport %s at %s.",
+    log_info(LD_GENERAL, "Successfully registered transport %s at %s.",
              t->name, fmt_addrport(&t->addr, t->port));
     return 0;
   }
@@ -676,10 +676,10 @@ register_client_proxy(const managed_proxy_t *mp)
       transport_free(transport_tmp);
       break;
     case 0:
-      log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
+      log_info(LD_GENERAL, "Successfully registered transport %s", t->name);
       break;
     case 1:
-      log_info(LD_GENERAL, "Succesfully registered transport %s", t->name);
+      log_info(LD_GENERAL, "Successfully registered transport %s", t->name);
       transport_free(transport_tmp);
       break;
     }
