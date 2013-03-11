@@ -251,8 +251,14 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     cache->total_len_seen += md->bodylen;
   } SMARTLIST_FOREACH_END(md);
 
-  if (fd >= 0)
-    finish_writing_to_file(open_file); /*XXX Check me.*/
+  if (fd >= 0) {
+    if (finish_writing_to_file(open_file) < 0) {
+      log_warn(LD_DIR, "Error appending to microdescriptor file: %s",
+               strerror(errno));
+      smartlist_clear(added);
+      return added;
+    }
+  }
 
   {
     networkstatus_t *ns = networkstatus_get_latest_consensus();
@@ -459,10 +465,14 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     smartlist_add(wrote, md);
   }
 
+  if (finish_writing_to_file(open_file) < 0) {
+    log_warn(LD_DIR, "Error rebuilding microdescriptor cache: %s",
+             strerror(errno));
+    return -1;
+  }
+
   if (cache->cache_content)
     tor_munmap_file(cache->cache_content);
-
-  finish_writing_to_file(open_file); /*XXX Check me.*/
 
   cache->cache_content = tor_mmap_file(cache->cache_fname);
 
