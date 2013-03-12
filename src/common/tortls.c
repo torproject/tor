@@ -1997,6 +1997,10 @@ tor_tls_free(tor_tls_t *tls)
   if (!tls)
     return;
   tor_assert(tls->ssl);
+  {
+    size_t r,w;
+    tor_tls_get_n_raw_bytes(tls,&r,&w); /* ensure written_by_tls is updated */
+  }
 #ifdef SSL_set_tlsext_host_name
   SSL_set_tlsext_host_name(tls->ssl, NULL);
 #endif
@@ -2048,6 +2052,13 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   }
 }
 
+/** Total number of bytes that we've used TLS to send.  Used to track TLS
+ * overhead. */
+static uint64_t total_bytes_written_over_tls = 0;
+/** Total number of bytes that TLS has put on the network for us. Used to
+ * track TLS overhead. */
+static uint64_t total_bytes_written_by_tls = 0;
+
 /** Underlying function for TLS writing.  Write up to <b>n</b>
  * characters from <b>cp</b> onto <b>tls</b>.  On success, returns the
  * number of characters written.  On failure, returns TOR_TLS_ERROR,
@@ -2074,6 +2085,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   r = SSL_write(tls->ssl, cp, (int)n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO, LD_NET);
   if (err == TOR_TLS_DONE) {
+    total_bytes_written_over_tls += r;
     return r;
   }
   if (err == TOR_TLS_WANTWRITE || err == TOR_TLS_WANTREAD) {
@@ -2563,8 +2575,21 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
              "r=%lu, last_read=%lu, w=%lu, last_written=%lu",
              r, tls->last_read_count, w, tls->last_write_count);
   }
+  total_bytes_written_by_tls += *n_written;
   tls->last_read_count = r;
   tls->last_write_count = w;
+}
+
+/** Return a ratio of the bytes that TLS has sent to the bytes that we've told
+ * it to send. Used to track whether our TLS records are getting too tiny. */
+double
+tls_get_write_overhead_ratio(void)
+{
+  if (total_bytes_written_over_tls == 0)
+    return 1.0;
+
+  return U64_TO_DBL(total_bytes_written_by_tls) /
+    U64_TO_DBL(total_bytes_written_over_tls);
 }
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL
