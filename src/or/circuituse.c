@@ -105,6 +105,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    tor_addr_t addr;
+    const int family = tor_addr_parse(&addr, conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
@@ -125,9 +127,7 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
-          tor_addr_t addr;
-          int r = tor_addr_parse(&addr, conn->socks_request->address);
-          if (r < 0 ||
+          if (family < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
             return 0;
@@ -138,6 +138,13 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         /* don't use three-hop circuits -- that could hurt our anonymity. */
         return 0;
       }
+    }
+    if (origin_circ->prepend_policy && family != -1) {
+      int r = compare_tor_addr_to_addr_policy(&addr,
+                                              conn->socks_request->port,
+                                              origin_circ->prepend_policy);
+      if (r == ADDR_POLICY_REJECTED)
+        return 0;
     }
     if (exitnode && !connection_ap_can_use_exit(conn, exitnode)) {
       /* can't exit from this router */
