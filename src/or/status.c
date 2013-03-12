@@ -14,6 +14,7 @@
 #include "router.h"
 #include "circuitlist.h"
 #include "main.h"
+#include "hibernate.h"
 
 /** Return the total number of circuits. */
 static int
@@ -85,11 +86,12 @@ log_heartbeat(time_t now)
   char *bw_rcvd = NULL;
   char *uptime = NULL;
   const routerinfo_t *me;
+  const int hibernating = we_are_hibernating();
 
   const or_options_t *options = get_options();
   (void)now;
 
-  if (public_server_mode(options)) {
+  if (public_server_mode(options) && !hibernating) {
     /* Let's check if we are in the current cached consensus. */
     if (!(me = router_get_my_routerinfo()))
       return -1; /* Something stinks, we won't even attempt this. */
@@ -104,10 +106,11 @@ log_heartbeat(time_t now)
   bw_sent = bytes_to_usage(get_bytes_written());
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
-         "circuits open. I've sent %s and received %s.",
-         uptime, count_circuits(),bw_sent,bw_rcvd);
+         "circuits open. I've sent %s and received %s.%s",
+         uptime, count_circuits(),bw_sent,bw_rcvd,
+         hibernating?" We are currently hibernating.":"");
 
-  if (stats_n_data_cells_packaged)
+  if (stats_n_data_cells_packaged && !hibernating)
     log_notice(LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
         100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
              U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );

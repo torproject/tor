@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Don't log inappropriate heartbeat messages when hibernating: a
+      hibernating node is _expected_ to drop out of the consensus,
+      decide it isn't bootstrapped, and so forth.  Fixes part of bug
+      #7302; bugfix on 0.2.3.1-alpha.
