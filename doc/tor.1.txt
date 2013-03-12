@@ -962,7 +962,7 @@ The following options are useful only for clients (that is, if
 **GuardLifetime**  __N__ **days**|**weeks**|**months**::
     If nonzero, and UseEntryGuards is set, minimum time to keep a guard before
     picking a new one. If zero, we use the GuardLifetime parameter from the
-    consensus directory.  No value here may  be less than 2 months or greater
+    consensus directory.  No value here may  be less than 1 month or greater
     than 5 years; out-of-range values are clamped. (Default: 0)
 
 **SafeSocks** **0**|**1**::

@@ -4290,13 +4290,15 @@ entry_guard_free(entry_guard_t *e)
 
 /**
  * Return the minimum lifetime of working entry guard, in seconds,
- * as given in the consensus networkstatus.
+ * as given in the consensus networkstatus.  (Plus CHOSEN_ON_DATE_SLOP,
+ * so that we can do the chosen_on_date randomization while achieving the
+ * desired minimum lifetime.)
  */
 static int32_t
 guards_get_lifetime(void)
 {
   const or_options_t *options = get_options();
-#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
+#define DFLT_GUARD_LIFETIME (86400 * 30)   /* One month. */
 #define MIN_GUARD_LIFETIME  (86400 * 60)   /* Two months. */
 #define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
 
