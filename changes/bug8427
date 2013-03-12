@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - If we encounter a write failure on a SOCKS connection before we
+      finish our SOCKS handshake, don't warn that we closed the
+      connection before we could send a SOCKS reply. Fixes bug 8427;
+      bugfix on 0.1.0.1-rc.
