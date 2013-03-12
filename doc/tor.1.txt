@@ -959,7 +959,7 @@ The following options are useful only for clients (that is, if
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
     as long-term entries for our circuits. (Default: 3)
 
-**HeartbeatPeriod**  __N__ **days**|**weeks**|**months**::
+**GuardLifetime**  __N__ **days**|**weeks**|**months**::
     If nonzero, and UseEntryGuards is set, minimum time to keep a guard before
     picking a new one. If zero, we use the GuardLifetime parameter from the
     consensus directory.  No value here may  be less than 2 months or greater
