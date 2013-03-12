@@ -4717,6 +4717,9 @@ control_event_bootstrap_problem(const char *warn, int reason)
       !any_pending_bridge_descriptor_fetches())
     recommendation = "warn";
 
+  if (we_are_hibernating())
+    recommendation = "ignore";
+
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
   status = bootstrap_percent; /* set status back to the actual number */

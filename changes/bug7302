@@ -2,4 +2,10 @@
     - Don't log inappropriate heartbeat messages when hibernating: a
       hibernating node is _expected_ to drop out of the consensus,
       decide it isn't bootstrapped, and so forth.  Fixes part of bug
-      #7302; bugfix on 0.2.3.1-alpha.
+      7302; bugfix on 0.2.3.1-alpha.
+
+    - Don't complain about bootstrapping problems while hibernating.
+      These complaints reflect a general code problems, but not one
+      with any problematic effects. (No connections are actually
+      opened.) Fixes part of bug 7302; bugfix on 0.2.3.2-alpha.
+
