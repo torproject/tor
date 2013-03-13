@@ -39,7 +39,9 @@ smartlist_t *microdesc_list_missing_digest256(networkstatus_t *ns,
                                               int downloadable_only,
                                               digestmap_t *skip);
 
-void microdesc_free(microdesc_t *md);
+void microdesc_free_(microdesc_t *md, const char *fname, int line);
+#define microdesc_free(md) \
+  microdesc_free_((md), __FILE__, __LINE__)
 void microdesc_free_all(void);
 
 void update_microdesc_downloads(time_t now);
