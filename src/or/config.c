@@ -3761,15 +3761,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->LearnCircuitBuildTimeout = 0;
   }
 
-  if (!(options->LearnCircuitBuildTimeout) &&
-        options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
+  if (!options->LearnCircuitBuildTimeout && options->CircuitBuildTimeout &&
+      options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,
-        "CircuitBuildTimeout is shorter (%d seconds) than recommended "
-        "(%d seconds), and LearnCircuitBuildTimeout is disabled.  "
+        "CircuitBuildTimeout is shorter (%d seconds) than the recommended "
+        "minimum (%d seconds), and LearnCircuitBuildTimeout is disabled.  "
         "If tor isn't working, raise this value or enable "
         "LearnCircuitBuildTimeout.",
         options->CircuitBuildTimeout,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
+  } else if (!options->LearnCircuitBuildTimeout &&
+             !options->CircuitBuildTimeout) {
+    log_notice(LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but didn't "
+               "a CircuitBuildTimeout. I'll pick a plausible default.");
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
