@@ -207,6 +207,61 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   }
 }
 
+/** Mark that circuit id <b>id</b> shouldn't be used on channel <b>chan</b>,
+ * even if there is no circuit on the channel. We use this to keep the
+ * circuit id from getting re-used while we have queued but not yet sent
+ * a destroy cell. */
+void
+channel_mark_circid_unusable(channel_t *chan, circid_t id)
+{
+  chan_circid_circuit_map_t search;
+  chan_circid_circuit_map_t *ent;
+
+  /* See if there's an entry there. That wouldn't be good. */
+  memset(&search, 0, sizeof(search));
+  search.chan = chan;
+  search.circ_id = id;
+  ent = HT_FIND(chan_circid_map, &chan_circid_map, &search);
+
+  if (ent && ent->circuit) {
+    /* we have a problem. */
+    log_warn(LD_BUG, "Tried to mark %u unusable on %p, but there was already "
+             "a circuit there.", (unsigned)id, chan);
+  } else if (ent) {
+    /* It's already marked. */
+  } else {
+    ent = tor_malloc_zero(sizeof(chan_circid_circuit_map_t));
+    ent->chan = chan;
+    ent->circ_id = id;
+    /* leave circuit at NULL */
+    HT_INSERT(chan_circid_map, &chan_circid_map, ent);
+  }
+}
+
+/** Mark that a circuit id <b>id</b> can be used again on <b>chan</b>.
+ * We use this to re-enable the circuit ID after we've sent a destroy cell.
+ */
+void
+channel_mark_circid_usable(channel_t *chan, circid_t id)
+{
+  chan_circid_circuit_map_t search;
+  chan_circid_circuit_map_t *ent;
+
+  /* See if there's an entry there. That wouldn't be good. */
+  memset(&search, 0, sizeof(search));
+  search.chan = chan;
+  search.circ_id = id;
+  ent = HT_REMOVE(chan_circid_map, &chan_circid_map, &search);
+  if (ent && ent->circuit) {
+    log_warn(LD_BUG, "Tried to mark %u usable on %p, but there was already "
+             "a circuit there.", (unsigned)id, chan);
+    return;
+  }
+  if (_last_circid_chan_ent == ent)
+    _last_circid_chan_ent = NULL;
+  tor_free(ent);
+}
+
 /** Set the p_conn field of a circuit <b>circ</b>, along
  * with the corresponding circuit ID, and add the circuit as appropriate
  * to the (chan,id)-\>circuit map. */
@@ -928,9 +983,13 @@ circuit_get_by_global_id(uint32_t id)
  *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
  *  - circ is attached to <b>chan</b>, either as p_chan or n_chan.
  * Return NULL if no such circuit exists.
+ *
+ * If <b>found_entry_out</b> is provided, set it to true if we have a
+ * placeholder entry for circid/chan, and leave it unset otherwise.
  */
 static INLINE circuit_t *
-circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan)
+circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan,
+                                   int *found_entry_out)
 {
   chan_circid_circuit_map_t search;
   chan_circid_circuit_map_t *found;
@@ -951,14 +1010,20 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan)
               " circ_id %u, channel ID " U64_FORMAT " (%p)",
               found->circuit, (unsigned)circ_id,
               U64_PRINTF_ARG(chan->global_identifier), chan);
+    if (found_entry_out)
+      *found_entry_out = 1;
     return found->circuit;
   }
 
   log_debug(LD_CIRC,
-            "circuit_get_by_circid_channel_impl() found nothing for"
+            "circuit_get_by_circid_channel_impl() found %s for"
             " circ_id %u, channel ID " U64_FORMAT " (%p)",
+            found ? "placeholder" : "nothing",
             (unsigned)circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
+
+  if (found_entry_out)
+    *found_entry_out = found ? 1 : 0;
 
   return NULL;
   /* The rest of this checks for bugs. Disabled by default. */
@@ -993,7 +1058,7 @@ circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan)
 circuit_t *
 circuit_get_by_circid_channel(circid_t circ_id, channel_t *chan)
 {
-  circuit_t *circ = circuit_get_by_circid_channel_impl(circ_id, chan);
+  circuit_t *circ = circuit_get_by_circid_channel_impl(circ_id, chan, NULL);
   if (!circ || circ->marked_for_close)
     return NULL;
   else
@@ -1009,7 +1074,7 @@ circuit_t *
 circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
                                              channel_t *chan)
 {
-  return circuit_get_by_circid_channel_impl(circ_id, chan);
+  return circuit_get_by_circid_channel_impl(circ_id, chan, NULL);
 }
 
 /** Return true iff the circuit ID <b>circ_id</b> is currently used by a
@@ -1017,7 +1082,9 @@ circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
 int
 circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan)
 {
-  return circuit_get_by_circid_channel_impl(circ_id, chan) != NULL;
+  int found = 0;
+  return circuit_get_by_circid_channel_impl(circ_id, chan, &found) != NULL
+    || found;
 }
 
 /** Return the circuit that a given edge connection is using. */
@@ -1585,7 +1652,7 @@ assert_circuit_ok(const circuit_t *c)
       /* We use the _impl variant here to make sure we don't fail on marked
        * circuits, which would not be returned by the regular function. */
       circuit_t *c2 = circuit_get_by_circid_channel_impl(c->n_circ_id,
-                                                         c->n_chan);
+                                                         c->n_chan, NULL);
       tor_assert(c == c2);
     }
   }
@@ -1593,7 +1660,7 @@ assert_circuit_ok(const circuit_t *c)
     if (or_circ->p_circ_id) {
       /* ibid */
       circuit_t *c2 = circuit_get_by_circid_channel_impl(or_circ->p_circ_id,
-                                                         or_circ->p_chan);
+                                                         or_circ->p_chan, NULL);
       tor_assert(c == c2);
     }
   }
