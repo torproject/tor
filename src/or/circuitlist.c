@@ -531,6 +531,9 @@ circuit_purpose_to_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_CONTROLLER:
       return "Circuit made by controller";
 
+    case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
+      return "Path-bias testing circuit";
+
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
       return buf;
