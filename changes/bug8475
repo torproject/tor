@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - If configured via ClientDNSRejectInternalAddresses not to report
+      DNS queries which have resolved to internal addresses, apply that
+      rule to IPv6 as well. Fixes bug 8475; bugfix on 0.2.0.7-alpha.
