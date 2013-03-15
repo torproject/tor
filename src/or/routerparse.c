@@ -3902,8 +3902,15 @@ tokenize_string(memarea_t *area,
   tor_assert(area);
 
   s = &start;
-  if (!end)
+  if (!end) {
     end = start+strlen(start);
+  } else {
+    /* it's only meaningful to check for nuls if we got an end-of-string ptr */
+    if (memchr(start, '\0', end-start)) {
+      log_warn(LD_DIR, "parse error: internal NUL character.");
+      return -1;
+    }
+  }
   for (i = 0; i < NIL_; ++i)
     counts[i] = 0;
 
