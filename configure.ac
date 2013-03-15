@@ -706,7 +706,7 @@ if test x$enable_curve25519 != xno; then
   AC_CHECK_HEADERS([crypto_scalarmult_curve25519.h \
                     nacl/crypto_scalarmult_curve25519.h])
 
-  AC_CACHE_CHECK([whether we can use curve25519 from nacl],
+  AC_CACHE_CHECK([for nacl compiled with a fast curve25519 implementation],
     tor_cv_can_use_curve25519_nacl,
     [tor_saved_LIBS="$LIBS"
      LIBS="$LIBS -lnacl"
@@ -718,7 +718,7 @@ if test x$enable_curve25519 != xno; then
 	 #include <nacl/crypto_scalarmult_curve25519.h>
 	 #endif
          #ifdef crypto_scalarmult_curve25519_ref_BYTES
-	 #error Hey, this is the reference implementation!
+	 #error Hey, this is the reference implementation! That's not fast.
 	 #endif
        ], [
 	 unsigned char *a, *b, *c; crypto_scalarmult_curve25519(a,b,c);
