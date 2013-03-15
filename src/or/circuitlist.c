@@ -262,18 +262,68 @@ channel_mark_circid_usable(channel_t *chan, circid_t id)
   tor_free(ent);
 }
 
+/** Called to indicate that a DESTROY is pending on <b>chan</b> with
+ * circuit ID <b>id</b>, but hasn't been sent yet. */
+void
+channel_note_destroy_pending(channel_t *chan, circid_t id)
+{
+  circuit_t *circ = circuit_get_by_circid_channel_even_if_marked(id,chan);
+  if (circ) {
+    if (circ->n_chan == chan && circ->n_circ_id == id) {
+      circ->n_delete_pending = 1;
+    } else {
+      or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+      if (orcirc->p_chan == chan && orcirc->p_circ_id == id) {
+        circ->p_delete_pending = 1;
+      }
+    }
+    return;
+  }
+  channel_mark_circid_unusable(chan, id);
+}
+
+/** Called to indicate that a DESTROY is no longer pending on <b>chan</b> with
+ * circuit ID <b>id</b> -- typically, because it has been sent. */
+void
+channel_note_destroy_not_pending(channel_t *chan, circid_t id)
+{
+  circuit_t *circ = circuit_get_by_circid_channel_even_if_marked(id,chan);
+  if (circ) {
+    if (circ->n_chan == chan && circ->n_circ_id == id) {
+      circ->n_delete_pending = 0;
+    } else {
+      or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+      if (orcirc->p_chan == chan && orcirc->p_circ_id == id) {
+        circ->p_delete_pending = 0;
+      }
+    }
+    /* XXXX this shouldn't happen; log a bug here. */
+    return;
+  }
+  channel_mark_circid_usable(chan, id);
+}
+
 /** Set the p_conn field of a circuit <b>circ</b>, along
  * with the corresponding circuit ID, and add the circuit as appropriate
  * to the (chan,id)-\>circuit map. */
 void
-circuit_set_p_circid_chan(or_circuit_t *circ, circid_t id,
+circuit_set_p_circid_chan(or_circuit_t *or_circ, circid_t id,
                           channel_t *chan)
 {
-  circuit_set_circid_chan_helper(TO_CIRCUIT(circ), CELL_DIRECTION_IN,
-                                 id, chan);
+  circuit_t *circ = TO_CIRCUIT(or_circ);
+  channel_t *old_chan = or_circ->p_chan;
+  circid_t old_id = or_circ->p_circ_id;
+
+  circuit_set_circid_chan_helper(circ, CELL_DIRECTION_IN, id, chan);
 
   if (chan)
-    tor_assert(bool_eq(circ->p_chan_cells.n, circ->next_active_on_p_chan));
+    tor_assert(bool_eq(or_circ->p_chan_cells.n,
+                       or_circ->next_active_on_p_chan));
+
+  if (circ->p_delete_pending && old_chan) {
+    channel_mark_circid_unusable(old_chan, old_id);
+    circ->p_delete_pending = 0;
+  }
 }
 
 /** Set the n_conn field of a circuit <b>circ</b>, along
@@ -283,10 +333,18 @@ void
 circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
                           channel_t *chan)
 {
+  channel_t *old_chan = circ->n_chan;
+  circid_t old_id = circ->n_circ_id;
+
   circuit_set_circid_chan_helper(circ, CELL_DIRECTION_OUT, id, chan);
 
   if (chan)
     tor_assert(bool_eq(circ->n_chan_cells.n, circ->next_active_on_n_chan));
+
+  if (circ->n_delete_pending && old_chan) {
+    channel_mark_circid_unusable(old_chan, old_id);
+    circ->n_delete_pending = 1;
+  }
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
