@@ -158,10 +158,6 @@ int can_complete_circuit=0;
 /** How long do we let a directory connection stall before expiring it? */
 #define DIR_CONN_MAX_STALL (5*60)
 
-/** How long do we let OR connections handshake before we decide that
- * they are obsolete? */
-#define TLS_HANDSHAKE_TIMEOUT (60)
-
 /** Decides our behavior when no logs are configured/before any
  * logs have been configured.  For 0, we log notice to stdout as normal.
  * For 1, we log warnings only.  For 2, we log nothing.

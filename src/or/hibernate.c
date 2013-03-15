@@ -506,10 +506,6 @@ accounting_run_housekeeping(time_t now)
   }
 }
 
-/** When we have no idea how fast we are, how long do we assume it will take
- * us to exhaust our bandwidth? */
-#define GUESS_TIME_TO_USE_BANDWIDTH (24*60*60)
-
 /** Based on our interval and our estimated bandwidth, choose a
  * deterministic (but random-ish) time to wake up. */
 static void

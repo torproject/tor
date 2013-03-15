@@ -407,10 +407,8 @@ test_dir_split_fps(void *testdata)
     "0123456789ABCdef0123456789ABCdef0123456789ABCdef0123456789ABCdef"
 #define B64_1 "/g2v+JEnOJvGdVhpEjEjRVEZPu4"
 #define B64_2 "3q2+75mZmZERERmZmRERERHwC6Q"
-#define B64_3 "sz/wDbM/8A2zP/ANsz/wDbM/8A0"
 #define B64_256_1 "8/Pz8/u7vz8/Pz+7vz8/Pz+7u/Pz8/P7u/Pz8/P7u78"
 #define B64_256_2 "zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw"
-#define B64_256_3 "ASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4mrze8"
 
   /* no flags set */
   dir_split_resource_into_fingerprints("A+C+B", sl, NULL, 0);
