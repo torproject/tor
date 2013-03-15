@@ -1565,32 +1565,6 @@ addr_mask_get_bits(uint32_t mask)
   return -1;
 }
 
-/** Compare two addresses <b>a1</b> and <b>a2</b> for equality under a
- * netmask of <b>mbits</b> bits.  Return -1, 0, or 1.
- *
- * XXXX_IP6 Temporary function to allow masks as bitcounts everywhere.  This
- * will be replaced with an IPv6-aware version as soon as 32-bit addresses are
- * no longer passed around.
- */
-int
-addr_mask_cmp_bits(uint32_t a1, uint32_t a2, maskbits_t bits)
-{
-  if (bits > 32)
-    bits = 32;
-  else if (bits == 0)
-    return 0;
-
-  a1 >>= (32-bits);
-  a2 >>= (32-bits);
-
-  if (a1 < a2)
-    return -1;
-  else if (a1 > a2)
-    return 1;
-  else
-    return 0;
-}
-
 /** Parse a string <b>s</b> in the format of (*|port(-maxport)?)?, setting the
  * various *out pointers as appropriate.  Return 0 on success, -1 on failure.
  */
@@ -1641,93 +1615,6 @@ parse_port_range(const char *port, uint16_t *port_min_out,
   *port_max_out = (uint16_t) port_max;
 
   return 0;
-}
-
-/** Parse a string <b>s</b> in the format of
- * (IP(/mask|/mask-bits)?|*)(:(*|port(-maxport))?)?, setting the various
- * *out pointers as appropriate.  Return 0 on success, -1 on failure.
- */
-int
-parse_addr_and_port_range(const char *s, uint32_t *addr_out,
-                          maskbits_t *maskbits_out, uint16_t *port_min_out,
-                          uint16_t *port_max_out)
-{
-  char *address;
-  char *mask, *port, *endptr;
-  struct in_addr in;
-  int bits;
-
-  tor_assert(s);
-  tor_assert(addr_out);
-  tor_assert(maskbits_out);
-  tor_assert(port_min_out);
-  tor_assert(port_max_out);
-
-  address = tor_strdup(s);
-  /* Break 'address' into separate strings.
-   */
-  mask = strchr(address,'/');
-  port = strchr(mask?mask:address,':');
-  if (mask)
-    *mask++ = '\0';
-  if (port)
-    *port++ = '\0';
-  /* Now "address" is the IP|'*' part...
-   *     "mask" is the Mask|Maskbits part...
-   * and "port" is the *|port|min-max part.
-   */
-
-  if (strcmp(address,"*")==0) {
-    *addr_out = 0;
-  } else if (tor_inet_aton(address, &in) != 0) {
-    *addr_out = ntohl(in.s_addr);
-  } else {
-    log_warn(LD_GENERAL, "Malformed IP %s in address pattern; rejecting.",
-             escaped(address));
-    goto err;
-  }
-
-  if (!mask) {
-    if (strcmp(address,"*")==0)
-      *maskbits_out = 0;
-    else
-      *maskbits_out = 32;
-  } else {
-    endptr = NULL;
-    bits = (int) strtol(mask, &endptr, 10);
-    if (!*endptr) {
-      /* strtol handled the whole mask. */
-      if (bits < 0 || bits > 32) {
-        log_warn(LD_GENERAL,
-                 "Bad number of mask bits on address range; rejecting.");
-        goto err;
-      }
-      *maskbits_out = bits;
-    } else if (tor_inet_aton(mask, &in) != 0) {
-      bits = addr_mask_get_bits(ntohl(in.s_addr));
-      if (bits < 0) {
-        log_warn(LD_GENERAL,
-                 "Mask %s on address range isn't a prefix; dropping",
-                 escaped(mask));
-        goto err;
-      }
-      *maskbits_out = bits;
-    } else {
-      log_warn(LD_GENERAL,
-               "Malformed mask %s on address range; rejecting.",
-               escaped(mask));
-      goto err;
-    }
-  }
-
-  if (parse_port_range(port, port_min_out, port_max_out)<0)
-    goto err;
-
-  tor_free(address);
-  return 0;
- err:
-  tor_free(address);
-  return -1;
 }
 
 /** Given an IPv4 in_addr struct *<b>in</b> (in network order, as usual),

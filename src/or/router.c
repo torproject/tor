@@ -2983,23 +2983,6 @@ router_get_verbose_nickname(char *buf, const routerinfo_t *router)
   strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
 }
 
-/** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
- * verbose representation of the identity of <b>router</b>.  The format is:
- *  A dollar sign.
- *  The upper-case hexadecimal encoding of the SHA1 hash of router's identity.
- *  A "=" if the router is named; a "~" if it is not.
- *  The router's nickname.
- **/
-void
-routerstatus_get_verbose_nickname(char *buf, const routerstatus_t *router)
-{
-  buf[0] = '$';
-  base16_encode(buf+1, HEX_DIGEST_LEN+1, router->identity_digest,
-                DIGEST_LEN);
-  buf[1+HEX_DIGEST_LEN] = router->is_named ? '=' : '~';
-  strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
-}
-
 /** Forget that we have issued any router-related warnings, so that we'll
  * warn again if we see the same errors. */
 void

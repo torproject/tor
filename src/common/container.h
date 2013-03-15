@@ -675,11 +675,6 @@ median_int32(int32_t *array, int n_elements)
 {
   return find_nth_int32(array, n_elements, (n_elements-1)/2);
 }
-static INLINE long
-median_long(long *array, int n_elements)
-{
-  return find_nth_long(array, n_elements, (n_elements-1)/2);
-}
 
 #endif
 

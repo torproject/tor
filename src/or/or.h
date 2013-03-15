@@ -4465,15 +4465,6 @@ typedef struct vote_timing_t {
 
 /********************************* geoip.c **************************/
 
-/** Round all GeoIP results to the next multiple of this value, to avoid
- * leaking information. */
-#define DIR_RECORD_USAGE_GRANULARITY 8
-/** Time interval: Flush geoip data to disk this often. */
-#define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
-/** How long do we have to have observed per-country request history before
- * we are willing to talk about it? */
-#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (12*60*60)
-
 /** Indicates an action that we might be noting geoip statistics on.
  * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
  * the others, we're not.

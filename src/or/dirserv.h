@@ -76,7 +76,6 @@ int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);
 int directory_fetches_dir_info_later(const or_options_t *options);
 int directory_caches_v2_dir_info(const or_options_t *options);
-#define directory_caches_v1_dir_info(o) directory_caches_v2_dir_info(o)
 int directory_caches_unknown_auth_certs(const or_options_t *options);
 int directory_caches_dir_info(const or_options_t *options);
 int directory_permits_begindir_requests(const or_options_t *options);

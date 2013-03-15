@@ -1979,11 +1979,6 @@ const struct testcase_setup_t legacy_setup = {
 
 #define ENT(name)                                                       \
   { #name, legacy_test_helper, 0, &legacy_setup, test_ ## name }
-#define SUBENT(group, name)                                             \
-  { #group "_" #name, legacy_test_helper, 0, &legacy_setup,             \
-      test_ ## group ## _ ## name }
-#define DISABLED(name)                                                  \
-  { #name, legacy_test_helper, TT_SKIP, &legacy_setup, test_ ## name }
 #define FORK(name)                                                      \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_ ## name }
 
