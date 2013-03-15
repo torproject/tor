@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+ /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
@@ -2601,9 +2601,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
-  if (options->EntryNodes && !options->UseEntryGuards)
-    log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
-             "EntryNodes will be ignored.");
+  if (options->EntryNodes && !options->UseEntryGuards) {
+    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
+  }
 
   options->AllowInvalid_ = 0;
   if (options->AllowInvalidNodes) {
