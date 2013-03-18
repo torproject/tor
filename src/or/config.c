@@ -299,6 +299,7 @@ static config_var_t option_vars_[] = {
   V(MaxClientCircuitsPending,    UINT,     "32"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
+  V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),

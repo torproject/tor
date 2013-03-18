@@ -3870,6 +3870,10 @@ typedef struct {
    * consensus vote on the 'params' line. */
   char *ConsensusParams;
 
+  /** Authority only: minimum number of measured bandwidths we must see
+   * before we only beliee measured bandwidths to assign flags. */
+  int MinMeasuredBWsForAuthToIgnoreAdvertised;
+
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
