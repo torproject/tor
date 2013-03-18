@@ -1,0 +1,6 @@
+  o Minor bugfixes (protocol conformance):
+    - Fix a misframing issue when reading the version numbers in a
+      VERSIONS cell. Previously we would recognize [00 01 00 02] as
+      'version 1, version 2, and version 0x100', when it should have
+      only included versions 1 and 2. Fixes bug 8059; bugfix on
+      0.2.0.10-alpha. Reported pseudonymously.
