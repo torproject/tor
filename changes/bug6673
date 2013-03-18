@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - Detect and reject attempts to build Tor with threading support
+      when OpenSSL have been compiled with threading support disabled.
+      Fixes bug 6673.
