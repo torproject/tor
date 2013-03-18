@@ -535,12 +535,15 @@ spawn_cpuworker(void)
 
   conn = connection_new(CONN_TYPE_CPUWORKER, AF_UNIX);
 
-  set_socket_nonblocking(fd);
-
   /* set up conn so it's got all the data we need to remember */
   conn->s = fd;
   conn->address = tor_strdup("localhost");
   tor_addr_make_unspec(&conn->addr);
+
+  if (set_socket_nonblocking(fd) == -1) {
+    connection_free(conn); /* this closes fd */
+    return -1;
+  }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for cpuworker failed. Giving up.");

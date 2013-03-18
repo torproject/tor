@@ -918,8 +918,11 @@ make_socket_reuseable(tor_socket_t sock)
    * right after somebody else has let it go. But REUSEADDR on win32
    * means you can bind to the port _even when somebody else
    * already has it bound_. So, don't do that on Win32. */
-  setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
-             (socklen_t)sizeof(one));
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
+             (socklen_t)sizeof(one)) == -1) {
+    log_warn(LD_NET, "Error setting SO_REUSEADDR flag: %s",
+             tor_socket_strerror(errno));
+  }
 #endif
 }
 
@@ -1102,7 +1105,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       tor_assert(0);
   }
 
-  set_socket_nonblocking(s);
+  if (set_socket_nonblocking(s) == -1) {
+    tor_close_socket(s);
+    goto err;
+  }
 
   lis_conn = listener_connection_new(type, listensockaddr->sa_family);
   conn = TO_CONN(lis_conn);
@@ -1265,7 +1271,10 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             (int)news,(int)conn->s);
 
   make_socket_reuseable(news);
-  set_socket_nonblocking(news);
+  if (set_socket_nonblocking(news) == -1) {
+    tor_close_socket(news);
+    return 0;
+  }
 
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
@@ -1494,7 +1503,11 @@ connection_connect(connection_t *conn, const char *address,
     }
   }
 
-  set_socket_nonblocking(s);
+  if (set_socket_nonblocking(s) == -1) {
+    *socket_error = tor_socket_errno(s);
+    tor_close_socket(s);
+    return -1;
+  }
 
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(s, (int)options->ConstrainedSockSize);
