@@ -937,6 +937,41 @@ test_addr_sockaddr_to_str(void *arg)
   tor_free(v);
 }
 
+static void
+test_addr_is_loopback(void *data)
+{
+  static const struct loopback_item {
+    const char *name;
+    int is_loopback;
+  } loopback_items[] = {
+    { "::1", 1 },
+    { "127.0.0.1", 1 },
+    { "127.99.100.101", 1 },
+    { "128.99.100.101", 0 },
+    { "8.8.8.8", 0 },
+    { "0.0.0.0", 0 },
+    { "::2", 0 },
+    { "::", 0 },
+    { "::1.0.0.0", 0 },
+    { NULL, 0 }
+  };
+
+  int i;
+  tor_addr_t addr;
+  (void)data;
+
+  for (i=0; loopback_items[i].name; ++i) {
+    tt_int_op(tor_addr_parse(&addr, loopback_items[i].name), >=, 0);
+    tt_int_op(tor_addr_is_loopback(&addr), ==, loopback_items[i].is_loopback);
+  }
+
+  tor_addr_make_unspec(&addr);
+  tt_int_op(tor_addr_is_loopback(&addr), ==, 0);
+
+ done:
+  ;
+}
+
 #define ADDR_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
 
@@ -948,6 +983,7 @@ struct testcase_t addr_tests[] = {
   { "localname", test_addr_localname, 0, NULL, NULL },
   { "dup_ip", test_addr_dup_ip, 0, NULL, NULL },
   { "sockaddr_to_str", test_addr_sockaddr_to_str, 0, NULL, NULL },
+  { "is_loopback", test_addr_is_loopback, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

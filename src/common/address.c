@@ -817,7 +817,8 @@ tor_addr_is_loopback(const tor_addr_t *addr)
     case AF_INET6: {
       /* ::1 */
       uint32_t *a32 = tor_addr_to_in6_addr32(addr);
-      return (a32[0] == 0) && (a32[1] == 0) && (a32[2] == 0) && (a32[3] == 1);
+      return (a32[0] == 0) && (a32[1] == 0) && (a32[2] == 0) &&
+        (ntohl(a32[3]) == 1);
     }
     case AF_INET:
       /* 127.0.0.1 */
