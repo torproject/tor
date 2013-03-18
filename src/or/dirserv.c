@@ -2434,9 +2434,10 @@ routerstatus_format_entry(char *buf, size_t buf_len,
         return -1;
       }
 
-      /* This assert can fire for the control port, because
+      /* This assert could fire for the control port, because
        * it can request NS documents before all descriptors
-       * have been fetched. */
+       * have been fetched. Therefore, we only do this test when
+       * format != NS_CONTROL_PORT. */
       if (tor_memneq(desc->cache_info.signed_descriptor_digest,
             rs->descriptor_digest,
             DIGEST_LEN)) {
