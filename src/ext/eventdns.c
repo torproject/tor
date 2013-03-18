@@ -2275,7 +2275,6 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
 	struct nameserver *ns;
-	int flags;
 
 	int err = 0;
 	if (server) {
