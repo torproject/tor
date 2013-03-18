@@ -2945,6 +2945,10 @@ typedef struct origin_circuit_t {
    */
   ENUM_BF(path_state_t) path_state : 3;
 
+  /* If this flag is set, we should not consider attaching any more
+   * connections to this circuit. */
+  unsigned int unusable_for_new_conns : 1;
+
   /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision

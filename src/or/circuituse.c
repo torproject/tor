@@ -85,10 +85,14 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
   }
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-      purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
+      purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
     if (circ->timestamp_dirty &&
        circ->timestamp_dirty+get_options()->MaxCircuitDirtiness <= now)
       return 0;
+  }
+
+  if (origin_circ->unusable_for_new_conns)
+    return 0;
 
   /* decide if this circ is suitable for this conn */
 
@@ -799,8 +803,11 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness > now)) {
-      cpath_build_state_t *build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      cpath_build_state_t *build_state = origin_circ->build_state;
       if (build_state->is_internal || build_state->onehop_tunnel)
+        continue;
+      if (!origin_circ->unusable_for_new_conns)
         continue;
 
       exitnode = build_state_get_exit_node(build_state);
@@ -843,6 +850,7 @@ circuit_predict_and_launch_new(void)
   /* First, count how many of each type of circuit we have already. */
   for (circ=global_circuitlist;circ;circ = circ->next) {
     cpath_build_state_t *build_state;
+    origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     if (circ->marked_for_close)
@@ -851,7 +859,10 @@ circuit_predict_and_launch_new(void)
       continue; /* only count clean circs */
     if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
       continue; /* only pay attention to general-purpose circs */
-    build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+    origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (origin_circ->unusable_for_new_conns)
+      continue;
+    build_state = origin_circ->build_state;
     if (build_state->onehop_tunnel)
       continue;
     num++;
@@ -2275,3 +2286,22 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
   }
 }
 
+/** Mark <b>circ</b> so that no more connections can be attached to it. */
+void
+mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
+{
+  const or_options_t *options = get_options();
+  tor_assert(circ);
+
+  /* XXXX025 This is a kludge; we're only keeping it around in case there's
+   * something that doesn't check unusable_for_new_conns, and to avoid
+   * deeper refactoring of our expiration logic. */
+  if (! circ->base_.timestamp_dirty)
+    circ->base_.timestamp_dirty = approx_time();
+  if (options->MaxCircuitDirtiness >= circ->base_.timestamp_dirty)
+    circ->base_.timestamp_dirty = 1; /* prevent underflow */
+  else
+    circ->base_.timestamp_dirty -= options->MaxCircuitDirtiness;
+
+  circ->unusable_for_new_conns = 1;
+}

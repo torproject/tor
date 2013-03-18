@@ -1125,7 +1125,7 @@ signewnym_impl(time_t now)
     return;
   }
 
-  circuit_expire_all_dirty_circs();
+  circuit_mark_all_dirty_circs_as_unusable();
   addressmap_clear_transient();
   rend_client_purge_state();
   time_of_last_signewnym = now;
@@ -1844,7 +1844,7 @@ do_hup(void)
   /* Rotate away from the old dirty circuits. This has to be done
    * after we've read the new options, but before we start using
    * circuits for directory fetches. */
-  circuit_expire_all_dirty_circs();
+  circuit_mark_all_dirty_circs_as_unusable();
 
   /* retry appropriate downloads */
   router_reset_status_download_failures();
