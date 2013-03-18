@@ -2939,7 +2939,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   failed = smartlist_new();
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!is_keyval_pair(arg)) {
-          if (dnsserv_launch_request(arg, is_reverse)<0)
+          if (dnsserv_launch_request(arg, is_reverse, conn)<0)
             smartlist_add(failed, (char*)arg);
       }
   });
@@ -3742,7 +3742,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     }
   }
 
-  if (tp == STREAM_EVENT_NEW) {
+  if (tp == STREAM_EVENT_NEW || tp == STREAM_EVENT_NEW_RESOLVE) {
     tor_snprintf(addrport_buf,sizeof(addrport_buf), " SOURCE_ADDR=%s:%d",
                  ENTRY_TO_CONN(conn)->address, ENTRY_TO_CONN(conn)->port);
   } else {
@@ -3752,11 +3752,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   if (tp == STREAM_EVENT_NEW_RESOLVE) {
     purpose = " PURPOSE=DNS_REQUEST";
   } else if (tp == STREAM_EVENT_NEW) {
-    if (ENTRY_TO_EDGE_CONN(conn)->is_dns_request ||
-        (conn->socks_request &&
-         SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)))
-      purpose = " PURPOSE=DNS_REQUEST";
-    else if (conn->use_begindir) {
+    if (conn->use_begindir) {
       connection_t *linked = ENTRY_TO_CONN(conn)->linked_conn;
       int linked_dir_purpose = -1;
       if (linked && linked->type == CONN_TYPE_DIR)
