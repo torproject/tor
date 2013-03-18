@@ -1172,10 +1172,22 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     return -errno;
 
 #if defined(FD_CLOEXEC)
-  if (SOCKET_OK(fd[0]))
-    fcntl(fd[0], F_SETFD, FD_CLOEXEC);
-  if (SOCKET_OK(fd[1]))
-    fcntl(fd[1], F_SETFD, FD_CLOEXEC);
+  if (SOCKET_OK(fd[0])) {
+    r = fcntl(fd[0], F_SETFD, FD_CLOEXEC);
+    if (r == -1) {
+      close(fd[0]);
+      close(fd[1]);
+      return -errno;
+    }
+  }
+  if (SOCKET_OK(fd[1])) {
+    r = fcntl(fd[1], F_SETFD, FD_CLOEXEC);
+    if (r == -1) {
+      close(fd[0]);
+      close(fd[1]);
+      return -errno;
+    }
+  }
 #endif
   goto sockets_ok; /* So that sockets_ok will not be unused. */
 
