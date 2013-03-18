@@ -367,12 +367,21 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   } else {
     const routerstatus_t *rs;
     rs = router_pick_directory_server(MICRODESC_DIRINFO|V3_DIRINFO,
-                                      PDS_PREFER_TUNNELED_DIR_CONNS_);
+                                      PDS_PREFER_TUNNELED_DIR_CONNS_|PDS_FOR_GUARD);
     if (!rs)
       return NULL;
     node = node_get_by_id(rs->identity_digest);
     if (!node)
       return NULL;
+  }
+  if (node->using_as_guard)
+    return NULL;
+  if (entry_guard_get_by_id_digest(node->identity) != NULL) {
+    log_info(LD_CIRC, "I was about to add a duplicate entry guard.");
+    /* This can happen if we choose a guard, then the node goes away, then
+     * comes back. */
+    ((node_t*) node)->using_as_guard = 1;
+    return NULL;
   }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
   log_info(LD_CIRC, "Chose %s as new entry guard.",
@@ -391,6 +400,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
    * this guard. For details, see the Jan 2010 or-dev thread. */
   entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
   entry->chosen_by_version = tor_strdup(VERSION);
+  ((node_t*)node)->using_as_guard = 1;
   if (prepend)
     smartlist_insert(entry_guards, 0, entry);
   else
@@ -730,6 +740,21 @@ entry_nodes_should_be_added(void)
   should_add_entry_nodes = 1;
 }
 
+/** Update the using_as_guard fields of all the nodes. We do this after we
+ * remove entry guards from the list: This is the only function that clears
+ * the using_as_guard field. */
+static void
+update_node_guard_status(void)
+{
+  smartlist_t *nodes = nodelist_get_list();
+  SMARTLIST_FOREACH(nodes, node_t *, node, node->using_as_guard = 0);
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+    node_t *node = node_get_mutable_by_id(entry->identity);
+    if (node)
+      node->using_as_guard = 1;
+  } SMARTLIST_FOREACH_END(entry);
+}
+
 /** Adjust the entry guards list so that it only contains entries from
  * EntryNodes, adding new entries from EntryNodes to the list as needed. */
 static void
@@ -813,6 +838,8 @@ entry_guards_set_from_config(const or_options_t *options)
    * EntryNodes. */
   SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                     entry_guard_free(e));
+
+  update_node_guard_status();
 
   smartlist_free(entry_nodes);
   smartlist_free(worse_entry_nodes);
@@ -1269,6 +1296,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
      * few lines, so we don't have to re-dirty it */
     if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;
+
+    update_node_guard_status();
   }
   digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;
