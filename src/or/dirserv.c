@@ -66,7 +66,11 @@ static cached_dir_t *the_directory = NULL;
 /** For authoritative directories: the current (v1) network status. */
 static cached_dir_t the_runningrouters;
 
-/** Total number of routers with measured bandwidth */
+/** Total number of routers with measured bandwidth; this is set by
+ * dirserv_count_measured_bws() before the loop in
+ * dirserv_generate_networkstatus_vote_obj() and checked by
+ * dirserv_get_credible_bandwidth() and
+ * dirserv_compute_performance_thresholds() */
 static int routers_with_measured_bw = 0;
 
 static void directory_remove_invalid(void);
