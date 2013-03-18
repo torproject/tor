@@ -154,6 +154,7 @@ void dirserv_expire_measured_bw_cache(time_t now);
 int dirserv_get_measured_bw_cache_size(void);
 int dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
                                     time_t *as_of_out);
+int dirserv_has_measured_bw(const char *node_id);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

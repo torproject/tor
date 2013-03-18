@@ -1886,8 +1886,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
 {
   /* Have measured bw? */
   int have_mbw =
-    dirserv_query_measured_bw_cache(node->ri->cache_info.identity_digest,
-                                    NULL, NULL);
+    dirserv_has_measured_bw(node->ri->cache_info.identity_digest);
 
   return node->ri && router_is_active(node->ri, node, now) &&
     !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest) &&
@@ -2166,6 +2165,13 @@ dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
   return rv;
 }
 
+/** Predicate wrapper for dirserv_query_measured_bw_cache() */
+int
+dirserv_has_measured_bw(const char *node_id)
+{
+  return dirserv_query_measured_bw_cache(node_id, NULL, NULL);
+}
+
 /** Get the best estimate of a router's bandwidth for dirauth purposes,
  * preferring measured to advertised values if available. */
 
@@ -2214,8 +2220,7 @@ dirserv_count_measured_bws(routerlist_t *rl)
   /* Iterate over the routerlist and count measured bandwidths */
   SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
     /* Check if we know a measured bandwidth for this one */
-    if (dirserv_query_measured_bw_cache(ri->cache_info.identity_digest,
-                                        NULL, NULL)) {
+    if (dirserv_has_measured_bw(ri->cache_info.identity_digest)) {
       ++routers_with_measured_bw;
     }
   } SMARTLIST_FOREACH_END(ri);
