@@ -1398,6 +1398,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "'truncate' unsupported at origin. Dropping.");
         return 0;
       }
+      if (circ->n_hop) {
+        if (circ->n_chan)
+          log_warn(LD_BUG, "n_chan and n_hop set on the same circuit!");
+        extend_info_free(circ->n_hop);
+        circ->n_hop = NULL;
+        tor_free(circ->n_chan_create_cell);
+        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
+      }
       if (circ->n_chan) {
         uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);
         circuit_clear_cell_queue(circ, circ->n_chan);
