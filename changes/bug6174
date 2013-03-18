@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - When we mark a circuit as unusable for new circuits, have it
+      continue to be unusable for new circuits even if MaxCircuitDirtiness
+      is increased too much at the wrong time, or the system clock jumped
+      backwards. Fix for bug 6174; bugfix on 0.0.2pre26.
+     
