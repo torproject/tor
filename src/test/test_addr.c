@@ -864,7 +864,6 @@ test_addr_localname(void *arg)
   tt_assert(tor_addr_hostname_is_local("here.now.local"));
   tt_assert(tor_addr_hostname_is_local("here.now.LOCAL"));
 
-
   tt_assert(!tor_addr_hostname_is_local(" localhost"));
   tt_assert(!tor_addr_hostname_is_local("www.torproject.org"));
  done:
