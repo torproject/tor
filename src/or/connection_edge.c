@@ -1945,13 +1945,14 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
                            string_addr, payload_len) < 0)
     return -1; /* circuit is closed, don't continue */
 
-  tor_free(base_conn->address); /* Maybe already set by dnsserv. */
-  base_conn->address = tor_strdup("(Tor_internal)");
+  if (!base_conn->address) {
+    /* This might be unnecessary. XXXX */
+    base_conn->address = tor_dup_addr(&base_conn->addr);
+  }
   base_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket "TOR_SOCKET_T_FORMAT
            ", n_circ_id %u",
            base_conn->s, (unsigned)circ->base_.n_circ_id);
-  control_event_stream_status(ap_conn, STREAM_EVENT_NEW, 0);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);
   return 0;
 }
@@ -2201,9 +2202,11 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
 
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
-  control_event_stream_status(conn,
-     status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED,
-                              endreason);
+  if (!SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
+    control_event_stream_status(conn, status==SOCKS5_SUCCEEDED ?
+                                STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED,
+                                endreason);
+  }
 
   /* Flag this stream's circuit as having completed a stream successfully
    * (for path bias) */

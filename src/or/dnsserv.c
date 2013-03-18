@@ -147,7 +147,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
     return;
   }
 
-  control_event_stream_status(entry_conn, STREAM_EVENT_NEW, 0);
+  control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
   /* Now, unless a controller asked us to leave streams unattached,
   * throw the connection over to get rewritten (which will
@@ -170,7 +170,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
  * response; -1 if we couldn't launch the request.
  */
 int
-dnsserv_launch_request(const char *name, int reverse)
+dnsserv_launch_request(const char *name, int reverse, control_connection_t *control_conn)
 {
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
@@ -180,6 +180,10 @@ dnsserv_launch_request(const char *name, int reverse)
   entry_conn = entry_connection_new(CONN_TYPE_AP, AF_INET);
   conn = ENTRY_TO_EDGE_CONN(entry_conn);
   conn->base_.state = AP_CONN_STATE_RESOLVE_WAIT;
+
+  tor_addr_copy(&TO_CONN(conn)->addr, &control_conn->base_.addr);
+  TO_CONN(conn)->port = control_conn->base_.port;
+  TO_CONN(conn)->address = tor_dup_addr(&control_conn->base_.addr);
 
   if (reverse)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
@@ -202,6 +206,8 @@ dnsserv_launch_request(const char *name, int reverse)
     connection_free(TO_CONN(conn));
     return -1;
   }
+
+  control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
   /* Now, unless a controller asked us to leave streams unattached,
   * throw the connection over to get rewritten (which will
