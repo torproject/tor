@@ -1878,7 +1878,10 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
 #define ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER 4096
 
 /** Helper for dirserv_compute_performance_thresholds(): Decide whether to
- * include a router in our calculations, and return true iff we should. */
+ * include a router in our calculations, and return true iff we should; the
+ * require_mbw parameter is passed in by
+ * dirserv_compute_performance_thresholds() and controls whether we ever
+ * count routers with only advertised bandwidths */
 static int
 router_counts_toward_thresholds(const node_t *node, time_t now,
                                 const digestmap_t *omit_as_sybil,
