@@ -170,7 +170,8 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
  * response; -1 if we couldn't launch the request.
  */
 int
-dnsserv_launch_request(const char *name, int reverse, control_connection_t *control_conn)
+dnsserv_launch_request(const char *name, int reverse,
+                       control_connection_t *control_conn)
 {
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
