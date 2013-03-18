@@ -3398,6 +3398,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     });
   }
   /* and exclude current entry guards and their families, if applicable */
+  /*XXXX025 use the using_as_guard flag to accomplish this.*/
   if (options->UseEntryGuards) {
     SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
       {

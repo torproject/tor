@@ -2249,6 +2249,9 @@ typedef struct node_t {
   /** Local info: we treat this node as if it rejects everything */
   unsigned int rejects_all:1;
 
+  /** Local info: this node is in our list of guards */
+  unsigned int using_as_guard:1;
+
   /* Local info: derived. */
 
   /** True if the IPv6 OR port is preferred over the IPv4 OR port.  */
@@ -4783,6 +4786,10 @@ typedef struct dir_server_t {
  */
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
+
+/** This node is to be chosen as a directory guard, so don't choose any
+ * node that's currently a guard. */
+#define PDS_FOR_GUARD (1<<5)
 
 #define PDS_PREFER_TUNNELED_DIR_CONNS_ (1<<16)
 
