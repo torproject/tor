@@ -683,7 +683,12 @@ router_get_extrainfo_hash(const char *s, size_t s_len, char *digest)
                               "\nrouter-signature",'\n', DIGEST_SHA1);
 }
 
-/** DOCDOC */
+/** Helper: used to generate signatures for routers, directories and
+ * network-status objects.  Given a <b>digest_len</b>-byte digest in
+ * <b>digest</b> and a secret <b>private_key</b>, generate an PKCS1-padded
+ * signature, BASE64-encode it, surround it with -----BEGIN/END----- pairs,
+ * and return the new signature on success or NULL on failure.
+ */
 char *
 router_get_dirobj_signature(const char *digest,
                             size_t digest_len,

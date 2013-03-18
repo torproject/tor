@@ -1635,7 +1635,8 @@ crypto_digest_assign(crypto_digest_t *into,
 /** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
  * at <b>digest_out</b> to the hash of the concatenation of those strings,
  * plus the optional string <b>append</b>, computed with the algorithm
- * <b>alg</b>. */
+ * <b>alg</b>.
+ * <b>out_len</b> must be \<= DIGEST256_LEN. */
 void
 crypto_digest_smartlist(char *digest_out, size_t len_out,
                         const smartlist_t *lst, const char *append,
