@@ -137,8 +137,13 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
 
   fd = open(path, flags, mode);
 #ifdef FD_CLOEXEC
-  if (fd >= 0)
-        fcntl(fd, F_SETFD, FD_CLOEXEC);
+  if (fd >= 0) {
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+      log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+      close(fd);
+      return -1;
+    }
+  }
 #endif
   return fd;
 }
@@ -150,8 +155,13 @@ tor_fopen_cloexec(const char *path, const char *mode)
 {
   FILE *result = fopen(path, mode);
 #ifdef FD_CLOEXEC
-  if (result != NULL)
-    fcntl(fileno(result), F_SETFD, FD_CLOEXEC);
+  if (result != NULL) {
+    if (fcntl(fileno(result), F_SETFD, FD_CLOEXEC) == -1) {
+      log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+      fclose(result);
+      return NULL;
+    }
+  }
 #endif
   return result;
 }
@@ -1024,7 +1034,15 @@ tor_open_socket(int domain, int type, int protocol)
     return s;
 
 #if defined(FD_CLOEXEC)
-  fcntl(s, F_SETFD, FD_CLOEXEC);
+  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+    log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+#if defined(_WIN32)
+    closesocket(s);
+#else
+    close(s);
+#endif
+    return -1;
+  }
 #endif
 
   goto socket_ok; /* So that socket_ok will not be unused. */
@@ -1059,7 +1077,11 @@ tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr, socklen_t *len)
     return s;
 
 #if defined(FD_CLOEXEC)
-  fcntl(s, F_SETFD, FD_CLOEXEC);
+  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+    log_warn(LD_NET, "Couldn't set FD_CLOEXEC: %s", strerror(errno));
+    close(s);
+    return TOR_INVALID_SOCKET;
+  }
 #endif
 
   goto socket_ok; /* So that socket_ok will not be unused. */
@@ -1083,17 +1105,31 @@ get_n_open_sockets(void)
   return n;
 }
 
-/** Turn <b>socket</b> into a nonblocking socket.
+/** Turn <b>socket</b> into a nonblocking socket. Return 0 on success, -1
+ * on failure.
  */
-void
+int
 set_socket_nonblocking(tor_socket_t socket)
 {
 #if defined(_WIN32)
   unsigned long nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
-  fcntl(socket, F_SETFL, O_NONBLOCK);
+  int flags;
+
+  flags = fcntl(socket, F_GETFL, 0);
+  if (flags == -1) {
+    log_warn(LD_NET, "Couldn't get file status flags: %s", strerror(errno));
+    return -1;
+  }
+  flags |= O_NONBLOCK;
+  if (fcntl(socket, F_SETFL, flags) == -1) {
+    log_warn(LD_NET, "Couldn't set file status flags: %s", strerror(errno));
+    return -1;
+  }
 #endif
+
+  return 0;
 }
 
 /**

@@ -2306,7 +2306,12 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 		ioctlsocket(ns->socket, FIONBIO, &nonblocking);
 	}
 #else
-	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
+	if (fcntl(ns->socket, F_SETFL, O_NONBLOCK) == -1) {
+		evdns_log(EVDNS_LOG_WARN, "Error %s (%d) while settings file status flags.",
+				  tor_socket_strerror(errno), errno);
+		err = 2;
+		goto out2;
+	}
 #endif
 
 	if (global_bind_addr_is_set &&
