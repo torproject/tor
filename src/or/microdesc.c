@@ -550,7 +550,7 @@ microdesc_check_counts(void)
 /** Deallocate a single microdescriptor.  Note: the microdescriptor MUST have
  * previously been removed from the cache if it had ever been inserted. */
 void
-microdesc_free(microdesc_t *md)
+microdesc_free_(microdesc_t *md, const char *fname, int lineno)
 {
   if (!md)
     return;
@@ -561,12 +561,12 @@ microdesc_free(microdesc_t *md)
     microdesc_cache_t *cache = get_microdesc_cache();
     microdesc_t *md2 = HT_FIND(microdesc_map, &cache->map, md);
     if (md2 == md) {
-      log_warn(LD_BUG, "microdesc_free() called, but md was still in "
-               "microdesc_map");
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
+               "in microdesc_map", fname, lineno);
       HT_REMOVE(microdesc_map, &cache->map, md);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_in_map set, but "
-               "microdesc was not in the map.");
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d with held_in_map "
+               "set, but microdesc was not in the map.", fname, lineno);
     }
     tor_fragile_assert();
   }
@@ -580,11 +580,13 @@ microdesc_free(microdesc_t *md)
         }
       });
     if (found) {
-      log_warn(LD_BUG, "microdesc_free() called, but md was still referenced "
-               "%d node(s); held_by_nodes == %u", found, md->held_by_nodes);
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
+               "referenced %d node(s); held_by_nodes == %u",
+               fname, lineno, found, md->held_by_nodes);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set to %u, "
-               "but md was not referenced by any nodes", md->held_by_nodes);
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d with held_by_nodes "
+               "set to %u, but md was not referenced by any nodes",
+               fname, lineno, md->held_by_nodes);
     }
     tor_fragile_assert();
   }
