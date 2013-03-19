@@ -2313,8 +2313,33 @@ compute_num_cpus_impl(void)
     return (int)info.dwNumberOfProcessors;
   else
     return -1;
-#elif defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)
-  long cpus = sysconf(_SC_NPROCESSORS_CONF);
+#elif defined(HAVE_SYSCONF)
+#ifdef _SC_NPROCESSORS_CONF
+  long cpus_conf = sysconf(_SC_NPROCESSORS_CONF);
+#else
+  long cpus_conf = -1;
+#endif
+#ifdef _SC_NPROCESSORS_ONLN
+  long cpus_onln = sysconf(_SC_NPROCESSORS_ONLN);
+#else
+  long cpus_onln = -1;
+#endif
+  long cpus = -1;
+
+  if (cpus_conf > 0 && cpus_onln < 0) {
+    cpus = cpus_conf;
+  } else if (cpus_onln > 0 && cpus_conf < 0) {
+    cpus = cpus_onln;
+  } else if (cpus_onln > 0 && cpus_conf > 0) {
+    if (cpus_onln < cpus_conf) {
+      log_notice(LD_GENERAL, "I think we have %ld CPUS, but only %ld of them "
+                 "are available. Telling Tor to only use %ld. You can over"
+                 "ride this with the NumCPUs option",
+                 cpus_conf, cpus_onln, cpus_onln);
+    }
+    cpus = cpus_onln;
+  }
+
   if (cpus >= 1 && cpus < INT_MAX)
     return (int)cpus;
   else
