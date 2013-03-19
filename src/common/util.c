@@ -2501,10 +2501,13 @@ unescape_string(const char *s, char **result, size_t *size_out)
  * key portion and *<b>value_out</b> to a new string holding the value portion
  * of the line, and return a pointer to the start of the next line.  If we run
  * out of data, return a pointer to the end of the string.  If we encounter an
- * error, return NULL.
+ * error, return NULL and set *<b>err_out</b> (if provided) to an error
+ * message.
  */
 const char *
-parse_config_line_from_str(const char *line, char **key_out, char **value_out)
+parse_config_line_from_str_verbose(const char *line, char **key_out,
+                                   char **value_out,
+                                   const char **err_out)
 {
   /* I believe the file format here is supposed to be:
      FILE = (EMPTYLINE | LINE)* (EMPTYLASTLINE | LASTLINE)?
@@ -2578,12 +2581,18 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 
   /* Find the end of the line. */
   if (*line == '\"') { // XXX No continuation handling is done here
-    if (!(line = unescape_string(line, value_out, NULL)))
-       return NULL;
+    if (!(line = unescape_string(line, value_out, NULL))) {
+      if (err_out)
+        *err_out = "Invalid escape sequence in quoted string";
+      return NULL;
+    }
     while (*line == ' ' || *line == '\t')
       ++line;
-    if (*line && *line != '#' && *line != '\n')
+    if (*line && *line != '#' && *line != '\n') {
+      if (err_out)
+        *err_out = "Excess data after quoted string";
       return NULL;
+    }
   } else {
     /* Look for the end of the line. */
     while (*line && *line != '\n' && (*line != '#' || continuation)) {

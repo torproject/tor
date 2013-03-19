@@ -373,8 +373,11 @@ char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;
-const char *parse_config_line_from_str(const char *line,
-                                       char **key_out, char **value_out);
+const char *parse_config_line_from_str_verbose(const char *line,
+                                       char **key_out, char **value_out,
+                                       const char **err_out);
+#define parse_config_line_from_str(line,key_out,value_out) \
+  parse_config_line_from_str_verbose((line),(key_out),(value_out),NULL)
 char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
 int path_is_relative(const char *filename);
