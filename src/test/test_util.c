@@ -796,6 +796,64 @@ test_util_expand_filename(void)
 }
 #endif
 
+/** Test tor_escape_str_for_socks_arg(). */
+static void
+test_util_escape_string_socks(void)
+{
+  char *escaped_string = NULL;
+
+  /** Simple backslash escape. */
+  escaped_string = tor_escape_str_for_socks_arg("This is a backslash: \\");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "This is a backslash: \\\\");
+  tor_free(escaped_string);
+
+  /** Simple semicolon escape. */
+  escaped_string = tor_escape_str_for_socks_arg("First rule: Do not use ;");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "First rule: Do not use \\;");
+  tor_free(escaped_string);
+
+  /** Empty string. */
+  escaped_string = tor_escape_str_for_socks_arg("");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "");
+  tor_free(escaped_string);
+
+  /** Escape all characters. */
+  escaped_string = tor_escape_str_for_socks_arg(";\\;\\");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "\\;\\\\\\;\\\\");
+  tor_free(escaped_string);
+
+  escaped_string = tor_escape_str_for_socks_arg(";");
+  test_assert(escaped_string);
+  test_streq(escaped_string, "\\;");
+  tor_free(escaped_string);
+
+ done:
+  tor_free(escaped_string);
+}
+
+static void
+test_util_string_is_key_value(void *ptr)
+{
+  (void)ptr;
+  test_assert(string_is_key_value(LOG_WARN, "key=value"));
+  test_assert(string_is_key_value(LOG_WARN, "k=v"));
+  test_assert(string_is_key_value(LOG_WARN, "key="));
+  test_assert(string_is_key_value(LOG_WARN, "x="));
+  test_assert(string_is_key_value(LOG_WARN, "xx="));
+  test_assert(!string_is_key_value(LOG_WARN, "=value"));
+  test_assert(!string_is_key_value(LOG_WARN, "=x"));
+  test_assert(!string_is_key_value(LOG_WARN, "="));
+
+  /* ??? */
+  /* test_assert(!string_is_key_value(LOG_WARN, "===")); */
+ done:
+  ;
+}
+
 /** Test basic string functionality. */
 static void
 test_util_strmisc(void)
@@ -3263,6 +3321,8 @@ struct testcase_t util_tests[] = {
 #ifndef _WIN32
   UTIL_LEGACY(expand_filename),
 #endif
+  UTIL_LEGACY(escape_string_socks),
+  UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),

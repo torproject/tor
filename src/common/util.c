@@ -865,6 +865,39 @@ tor_digest_is_zero(const char *digest)
   return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
 }
 
+/** Return true if <b>string</b> is a valid '<key>=[<value>]' string.
+ *  <value> is optional, to indicate the empty string. Log at logging
+ *  <b>severity</b> if something ugly happens. */
+int
+string_is_key_value(int severity, const char *string)
+{
+  /* position of equal sign in string */
+  const char *equal_sign_pos = NULL;
+
+  tor_assert(string);
+
+  if (strlen(string) < 2) { /* "x=" is shortest args string */
+    tor_log(severity, LD_GENERAL, "'%s' is too short to be a k=v value.",
+            escaped(string));
+    return 0;
+  }
+
+  equal_sign_pos = strchr(string, '=');
+  if (!equal_sign_pos) {
+    tor_log(severity, LD_GENERAL, "'%s' is not a k=v value.", escaped(string));
+    return 0;
+  }
+
+  /* validate that the '=' is not in the beginning of the string. */
+  if (equal_sign_pos == string) {
+    tor_log(severity, LD_GENERAL, "'%s' is not a valid k=v value.",
+            escaped(string));
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
 int
 tor_digest256_is_zero(const char *digest)
@@ -1174,6 +1207,46 @@ escaped(const char *s)
     escaped_val_ = NULL;
 
   return escaped_val_;
+}
+
+/** Escape every ";" or "\" character of <b>string</b>. Use
+ *  <b>escape_char</b> as the character to use for escaping.
+ *  The returned string is allocated on the heap and it's the
+ *  responsibility of the caller to free it. */
+char *
+tor_escape_str_for_socks_arg(const char *string)
+{
+  char *new_string = NULL;
+  char *new_cp = NULL;
+  size_t length, new_length;
+  static const char *chars_to_escape = ";\\";
+
+  tor_assert(string);
+
+  length = strlen(string);
+
+  if (!length) /* If we were given the empty string, return the same. */
+    return tor_strdup("");
+  /* (new_length > SIZE_MAX) => ((length * 2) + 1 > SIZE_MAX) =>
+     (length*2 > SIZE_MAX - 1) => (length > (SIZE_MAX - 1)/2) */
+  if (length > (SIZE_MAX - 1)/2) /* check for overflow */
+    return NULL;
+
+  /* this should be enough even if all characters must be escaped */
+  new_length = (length * 2) + 1;
+
+  new_string = new_cp = tor_malloc(new_length);
+
+  while (*string) {
+    if (strchr(chars_to_escape, *string))
+      *new_cp++ = '\\';
+
+    *new_cp++ = *string++;
+  }
+
+  *new_cp = '\0'; /* NUL-terminate the new string */
+
+  return new_string;
 }
 
 /* =====

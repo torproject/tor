@@ -484,7 +484,6 @@ static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
 static int check_nickname_list(const char *lst, const char *name, char **msg);
 
-static int parse_bridge_line(const char *line, int validate_only);
 static int parse_client_transport_line(const char *line, int validate_only);
 
 static int parse_server_transport_line(const char *line, int validate_only);
@@ -1299,11 +1298,13 @@ options_act(const or_options_t *old_options)
   if (options->Bridges) {
     mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
-      if (parse_bridge_line(cl->value, 0)<0) {
+      bridge_line_t *bridge_line = parse_bridge_line(cl->value);
+      if (!bridge_line) {
         log_warn(LD_BUG,
                  "Previously validated Bridge line could not be added!");
         return -1;
       }
+      bridge_add_from_config(bridge_line);
     }
     sweep_bridge_list();
   }
@@ -2946,14 +2947,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     size_t len;
 
     len = strlen(options->Socks5ProxyUsername);
-    if (len < 1 || len > 255)
+    if (len < 1 || len > MAX_SOCKS5_AUTH_FIELD_SIZE)
       REJECT("Socks5ProxyUsername must be between 1 and 255 characters.");
 
     if (!options->Socks5ProxyPassword)
       REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
 
     len = strlen(options->Socks5ProxyPassword);
-    if (len < 1 || len > 255)
+    if (len < 1 || len > MAX_SOCKS5_AUTH_FIELD_SIZE)
       REJECT("Socks5ProxyPassword must be between 1 and 255 characters.");
   } else if (options->Socks5ProxyPassword)
     REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
@@ -3037,8 +3038,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If you set UseBridges, you must set TunnelDirConns.");
 
   for (cl = options->Bridges; cl; cl = cl->next) {
-    if (parse_bridge_line(cl->value, 1)<0)
-      REJECT("Bridge line did not parse. See logs for details.");
+      bridge_line_t *bridge_line = parse_bridge_line(cl->value);
+      if (!bridge_line)
+        REJECT("Bridge line did not parse. See logs for details.");
+      bridge_line_free(bridge_line);
   }
 
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
@@ -4096,21 +4099,72 @@ options_init_logs(or_options_t *options, int validate_only)
   return ok?0:-1;
 }
 
+/** Given a smartlist of SOCKS arguments to be passed to a transport
+ *  proxy in <b>args</b>, validate them and return -1 if they are
+ *  corrupted. Return 0 if they seem OK. */
+static int
+validate_transport_socks_arguments(const smartlist_t *args)
+{
+  char *socks_string = NULL;
+  size_t socks_string_len;
+
+  tor_assert(args);
+  tor_assert(smartlist_len(args) > 0);
+
+  SMARTLIST_FOREACH_BEGIN(args, const char *, s) {
+    if (!string_is_key_value(LOG_WARN, s)) { /* items should be k=v items */
+      log_warn(LD_CONFIG, "'%s' is not a k=v item.", s);
+      return -1;
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  socks_string = pt_stringify_socks_args(args);
+  if (!socks_string)
+    return -1;
+
+  socks_string_len = strlen(socks_string);
+  tor_free(socks_string);
+
+  if (socks_string_len > MAX_SOCKS5_AUTH_SIZE_TOTAL) {
+    log_warn(LD_CONFIG, "SOCKS arguments can't be more than %u bytes (%lu).",
+             MAX_SOCKS5_AUTH_SIZE_TOTAL,
+             (unsigned long) socks_string_len);
+    return -1;
+  }
+
+  return 0;
+}
+
+/** Deallocate a bridge_line_t structure. */
+/* private */ void
+bridge_line_free(bridge_line_t *bridge_line)
+{
+  if (!bridge_line)
+    return;
+
+  if (bridge_line->socks_args) {
+    SMARTLIST_FOREACH(bridge_line->socks_args, char*, s, tor_free(s));
+    smartlist_free(bridge_line->socks_args);
+  }
+  tor_free(bridge_line->transport_name);
+  tor_free(bridge_line);
+}
+
 /** Read the contents of a Bridge line from <b>line</b>. Return 0
  * if the line is well-formed, and -1 if it isn't. If
  * <b>validate_only</b> is 0, and the line is well-formed, then add
- * the bridge described in the line to our internal bridge list. */
-static int
-parse_bridge_line(const char *line, int validate_only)
+ * the bridge described in the line to our internal bridge list.
+ *
+ * Bridge line format:
+ * Bridge [transport] IP:PORT [id-fingerprint] [k=v] [k=v] ...
+ */
+/* private */ bridge_line_t *
+parse_bridge_line(const char *line)
 {
   smartlist_t *items = NULL;
-  int r;
   char *addrport=NULL, *fingerprint=NULL;
-  char *transport_name=NULL;
-  char *field1=NULL;
-  tor_addr_t addr;
-  uint16_t port = 0;
-  char digest[DIGEST_LEN];
+  char *field=NULL;
+  bridge_line_t *bridge_line = tor_malloc_zero(sizeof(bridge_line_t));
 
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
@@ -4120,68 +4174,102 @@ parse_bridge_line(const char *line, int validate_only)
     goto err;
   }
 
-  /* field1 is either a transport name or addrport */
-  field1 = smartlist_get(items, 0);
+  /* first field is either a transport name or addrport */
+  field = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
 
-  if (!(strstr(field1, ".") || strstr(field1, ":"))) {
-    /* new-style bridge line */
-    transport_name = field1;
+  if (string_is_C_identifier(field)) {
+    /* It's a transport name. */
+    bridge_line->transport_name = field;
     if (smartlist_len(items) < 1) {
       log_warn(LD_CONFIG, "Too few items to Bridge line.");
       goto err;
     }
-    addrport = smartlist_get(items, 0);
+    addrport = smartlist_get(items, 0); /* Next field is addrport then. */
     smartlist_del_keeporder(items, 0);
   } else {
-    addrport = field1;
+    addrport = field;
   }
 
-  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
+  /* Parse addrport. */
+  if (tor_addr_port_lookup(addrport,
+                           &bridge_line->addr, &bridge_line->port)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
   }
-  if (!port) {
+  if (!bridge_line->port) {
     log_info(LD_CONFIG,
              "Bridge address '%s' has no port; using default port 443.",
              addrport);
-    port = 443;
+    bridge_line->port = 443;
   }
 
+  /* If transports are enabled, next field could be a fingerprint or a
+     socks argument. If transports are disabled, next field must be
+     a fingerprint. */
   if (smartlist_len(items)) {
-    fingerprint = smartlist_join_strings(items, "", 0, NULL);
+    if (bridge_line->transport_name) { /* transports enabled: */
+      field = smartlist_get(items, 0);
+      smartlist_del_keeporder(items, 0);
+
+      /* If it's a key=value pair, then it's a SOCKS argument for the
+         transport proxy... */
+      if (string_is_key_value(LOG_DEBUG, field)) {
+        bridge_line->socks_args = smartlist_new();
+        smartlist_add(bridge_line->socks_args, field);
+      } else { /* ...otherwise, it's the bridge fingerprint. */
+        fingerprint = field;
+      }
+
+    } else { /* transports disabled: */
+      fingerprint = smartlist_join_strings(items, "", 0, NULL);
+    }
+  }
+
+  /* Handle fingerprint, if it was provided. */
+  if (fingerprint) {
     if (strlen(fingerprint) != HEX_DIGEST_LEN) {
       log_warn(LD_CONFIG, "Key digest for Bridge is wrong length.");
       goto err;
     }
-    if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
+    if (base16_decode(bridge_line->digest, DIGEST_LEN,
+                      fingerprint, HEX_DIGEST_LEN)<0) {
       log_warn(LD_CONFIG, "Unable to decode Bridge key digest.");
       goto err;
     }
   }
 
-  if (!validate_only) {
-    log_debug(LD_DIR, "Bridge at %s (transport: %s) (%s)",
-              fmt_addrport(&addr, port),
-              transport_name ? transport_name : "no transport",
-              fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(&addr, port,
-                           fingerprint ? digest : NULL, transport_name);
+  /* If we are using transports, any remaining items in the smartlist
+     should be k=v values. */
+  if (bridge_line->transport_name && smartlist_len(items)) {
+    if (!bridge_line->socks_args)
+      bridge_line->socks_args = smartlist_new();
+
+    /* append remaining items of 'items' to 'socks_args' */
+    smartlist_add_all(bridge_line->socks_args, items);
+    smartlist_clear(items);
+
+    tor_assert(smartlist_len(bridge_line->socks_args) > 0);
   }
 
-  r = 0;
+  if (bridge_line->socks_args) {
+    if (validate_transport_socks_arguments(bridge_line->socks_args) < 0)
+      goto err;
+  }
+
   goto done;
 
  err:
-  r = -1;
+  bridge_line_free(bridge_line);
+  bridge_line = NULL;
 
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
-  tor_free(transport_name);
   tor_free(fingerprint);
-  return r;
+
+  return bridge_line;
 }
 
 /** Read the contents of a ClientTransportPlugin line from

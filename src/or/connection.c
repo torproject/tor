@@ -44,6 +44,7 @@
 #include "router.h"
 #include "transports.h"
 #include "routerparse.h"
+#include "transports.h"
 
 #ifdef USE_BUFFEREVENTS
 #include <event2/event.h>
@@ -1574,6 +1575,32 @@ connection_proxy_state_to_string(int state)
   return states[state];
 }
 
+/** Returns the global proxy type used by tor. Use this function for
+ *  logging or high-level purposes, don't use it to fill the
+ *  <b>proxy_type</b> field of or_connection_t; use the actual proxy
+ *  protocol instead.*/
+static int
+get_proxy_type(void)
+{
+  const or_options_t *options = get_options();
+
+  if (options->HTTPSProxy)
+    return PROXY_CONNECT;
+  else if (options->Socks4Proxy)
+    return PROXY_SOCKS4;
+  else if (options->Socks5Proxy)
+    return PROXY_SOCKS5;
+  else if (options->ClientTransportPlugin)
+    return PROXY_PLUGGABLE;
+  else
+    return PROXY_NONE;
+}
+
+/* One byte for the version, one for the command, two for the
+   port, and four for the addr... and, one more for the
+   username NUL: */
+#define SOCKS4_STANDARD_BUFFER_SIZE (1 + 1 + 2 + 4 + 1)
+
 /** Write a proxy request of <b>type</b> (socks4, socks5, https) to conn
  * for conn->addr:conn->port, authenticating with the auth details given
  * in the configuration (if available). SOCKS 5 and HTTP CONNECT proxies
@@ -1628,16 +1655,44 @@ connection_proxy_connect(connection_t *conn, int type)
     }
 
     case PROXY_SOCKS4: {
-      unsigned char buf[9];
+      unsigned char *buf;
       uint16_t portn;
       uint32_t ip4addr;
+      size_t buf_size = 0;
+      char *socks_args_string = NULL;
 
-      /* Send a SOCKS4 connect request with empty user id */
+      /* Send a SOCKS4 connect request */
 
       if (tor_addr_family(&conn->addr) != AF_INET) {
         log_warn(LD_NET, "SOCKS4 client is incompatible with IPv6");
         return -1;
       }
+
+      { /* If we are here because we are trying to connect to a
+           pluggable transport proxy, check if we have any SOCKS
+           arguments to transmit. If we do, compress all arguments to
+           a single string in 'socks_args_string': */
+
+        if (get_proxy_type() == PROXY_PLUGGABLE) {
+          socks_args_string =
+            pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
+          if (socks_args_string)
+            log_debug(LD_NET, "Sending out '%s' as our SOCKS argument string.",
+                      socks_args_string);
+        }
+      }
+
+      { /* Figure out the buffer size we need for the SOCKS message: */
+
+        buf_size = SOCKS4_STANDARD_BUFFER_SIZE;
+
+        /* If we have a SOCKS argument string, consider its size when
+           calculating the buffer size: */
+        if (socks_args_string)
+          buf_size += strlen(socks_args_string);
+      }
+
+      buf = tor_malloc_zero(buf_size);
 
       ip4addr = tor_addr_to_ipv4n(&conn->addr);
       portn = htons(conn->port);
@@ -1646,9 +1701,23 @@ connection_proxy_connect(connection_t *conn, int type)
       buf[1] = SOCKS_COMMAND_CONNECT; /* command */
       memcpy(buf + 2, &portn, 2); /* port */
       memcpy(buf + 4, &ip4addr, 4); /* addr */
-      buf[8] = 0; /* userid (empty) */
 
-      connection_write_to_buf((char *)buf, sizeof(buf), conn);
+      /* Next packet field is the userid. If we have pluggable
+         transport SOCKS arguments, we have to embed them
+         there. Otherwise, we use an empty userid.  */
+      if (socks_args_string) { /* place the SOCKS args string: */
+        tor_assert(strlen(socks_args_string) > 0);
+        tor_assert(buf_size >=
+                   SOCKS4_STANDARD_BUFFER_SIZE + strlen(socks_args_string));
+        strlcpy((char *)buf + 8, socks_args_string, buf_size - 8);
+        tor_free(socks_args_string);
+      } else {
+        buf[8] = 0; /* no userid */
+      }
+
+      connection_write_to_buf((char *)buf, buf_size, conn);
+      tor_free(buf);
+
       conn->proxy_state = PROXY_SOCKS4_WANT_CONNECT_OK;
       break;
     }
@@ -1660,8 +1729,13 @@ connection_proxy_connect(connection_t *conn, int type)
 
       buf[0] = 5; /* version */
 
+      /* We have to use SOCKS5 authentication, if we have a
+         Socks5ProxyUsername or if we want to pass arguments to our
+         pluggable transport proxy: */
+      if ((options->Socks5ProxyUsername) ||
+          (get_proxy_type() == PROXY_PLUGGABLE &&
+           (get_socks_args_by_bridge_addrport(&conn->addr, conn->port)))) {
       /* number of auth methods */
-      if (options->Socks5ProxyUsername) {
         buf[1] = 2;
         buf[2] = 0x00; /* no authentication */
         buf[3] = 0x02; /* rfc1929 Username/Passwd auth */
@@ -1855,15 +1929,49 @@ connection_read_proxy_handshake(connection_t *conn)
         unsigned char buf[1024];
         size_t reqsize, usize, psize;
         const char *user, *pass;
+        char *socks_args_string = NULL;
 
-        user = get_options()->Socks5ProxyUsername;
-        pass = get_options()->Socks5ProxyPassword;
-        tor_assert(user && pass);
+        if (get_proxy_type() == PROXY_PLUGGABLE) {
+          socks_args_string =
+            pt_get_socks_args_for_proxy_addrport(&conn->addr, conn->port);
+          if (!socks_args_string) {
+            log_warn(LD_NET, "Could not create SOCKS args string.");
+            ret = -1;
+            break;
+          }
 
-        /* XXX len of user and pass must be <= 255 !!! */
-        usize = strlen(user);
-        psize = strlen(pass);
-        tor_assert(usize <= 255 && psize <= 255);
+          log_debug(LD_NET, "SOCKS5 arguments: %s", socks_args_string);
+          tor_assert(strlen(socks_args_string) > 0);
+          tor_assert(strlen(socks_args_string) <= MAX_SOCKS5_AUTH_SIZE_TOTAL);
+
+          if (strlen(socks_args_string) > MAX_SOCKS5_AUTH_FIELD_SIZE) {
+            user = socks_args_string;
+            usize = MAX_SOCKS5_AUTH_FIELD_SIZE;
+            pass = socks_args_string + MAX_SOCKS5_AUTH_FIELD_SIZE;
+            psize = strlen(socks_args_string) - MAX_SOCKS5_AUTH_FIELD_SIZE;
+          } else {
+            user = socks_args_string;
+            usize = strlen(socks_args_string);
+            pass = "\0";
+            psize = 1;
+          }
+        } else if (get_options()->Socks5ProxyUsername) {
+          user = get_options()->Socks5ProxyUsername;
+          pass = get_options()->Socks5ProxyPassword;
+          tor_assert(user && pass);
+          usize = strlen(user);
+          psize = strlen(pass);
+        } else {
+          log_err(LD_BUG, "We entered %s for no reason!", __func__);
+          tor_fragile_assert();
+          ret = -1;
+          break;
+        }
+
+        /* Username and password lengths should have been checked
+           above and during torrc parsing. */
+        tor_assert(usize <= MAX_SOCKS5_AUTH_FIELD_SIZE &&
+                   psize <= MAX_SOCKS5_AUTH_FIELD_SIZE);
         reqsize = 3 + usize + psize;
 
         buf[0] = 1; /* negotiation version */
@@ -1871,6 +1979,9 @@ connection_read_proxy_handshake(connection_t *conn)
         memcpy(buf + 2, user, usize);
         buf[2 + usize] = psize;
         memcpy(buf + 3 + usize, pass, psize);
+
+        if (socks_args_string)
+          tor_free(socks_args_string);
 
         connection_write_to_buf((char *)buf, reqsize, conn);
 
@@ -4338,7 +4449,7 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
              options->Bridges) {
     const transport_t *transport = NULL;
     int r;
-    r = find_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
     if (r<0)
       return -1;
     if (transport) { /* transport found */
@@ -4351,24 +4462,6 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
 
   *proxy_type = PROXY_NONE;
   return 0;
-}
-
-/** Returns the global proxy type used by tor. */
-static int
-get_proxy_type(void)
-{
-  const or_options_t *options = get_options();
-
-  if (options->HTTPSProxy)
-    return PROXY_CONNECT;
-  else if (options->Socks4Proxy)
-    return PROXY_SOCKS4;
-  else if (options->Socks5Proxy)
-    return PROXY_SOCKS5;
-  else if (options->ClientTransportPlugin)
-    return PROXY_PLUGGABLE;
-  else
-    return PROXY_NONE;
 }
 
 /** Log a failed connection to a proxy server.

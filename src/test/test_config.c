@@ -10,6 +10,8 @@
 #include "confparse.h"
 #include "connection_edge.h"
 #include "test.h"
+#include "util.h"
+#include "address.h"
 
 static void
 test_config_addressmap(void *arg)
@@ -169,11 +171,159 @@ test_config_addressmap(void *arg)
   ;
 }
 
+/* Test helper function: Make sure that a bridge line gets parsed
+ * properly. Also make sure that the resulting bridge_line_t structure
+ * has its fields set correctly. */
+static void
+good_bridge_line_test(const char *string, const char *test_addrport,
+                      const char *test_digest, const char *test_transport,
+                      const smartlist_t *test_socks_args)
+{
+  char *tmp = NULL;
+  bridge_line_t *bridge_line = parse_bridge_line(string);
+  test_assert(bridge_line);
+
+  /* test addrport */
+  tmp = tor_strdup(fmt_addrport(&bridge_line->addr, bridge_line->port));
+  test_streq(test_addrport, tmp);
+  tor_free(tmp);
+
+  /* If we were asked to validate a digest, but we did not get a
+     digest after parsing, we failed. */
+  if (test_digest && tor_digest_is_zero(bridge_line->digest))
+    test_assert(0);
+
+  /* If we were not asked to validate a digest, and we got a digest
+     after parsing, we failed again. */
+  if (!test_digest && !tor_digest_is_zero(bridge_line->digest))
+    test_assert(0);
+
+  /* If we were asked to validate a digest, and we got a digest after
+     parsing, make sure it's correct. */
+  if (test_digest) {
+    tmp = tor_strdup(hex_str(bridge_line->digest, DIGEST_LEN));
+    tor_strlower(tmp);
+    test_streq(test_digest, tmp);
+    tor_free(tmp);
+  }
+
+  /* If we were asked to validate a transport name, make sure tha it
+     matches with the transport name that was parsed. */
+  if (test_transport && !bridge_line->transport_name)
+    test_assert(0);
+  if (!test_transport && bridge_line->transport_name)
+    test_assert(0);
+  if (test_transport)
+    test_streq(test_transport, bridge_line->transport_name);
+
+  /* Validate the SOCKS argument smartlist. */
+  if (test_socks_args && !bridge_line->socks_args)
+    test_assert(0);
+  if (!test_socks_args && bridge_line->socks_args)
+    test_assert(0);
+  if (test_socks_args)
+    test_assert(smartlist_strings_eq(test_socks_args,
+                                     bridge_line->socks_args));
+
+ done:
+  tor_free(tmp);
+  bridge_line_free(bridge_line);
+}
+
+/* Test helper function: Make sure that a bridge line is
+ * unparseable. */
+static void
+bad_bridge_line_test(const char *string)
+{
+  bridge_line_t *bridge_line = parse_bridge_line(string);
+  test_assert(!bridge_line);
+
+ done:
+  bridge_line_free(bridge_line);
+}
+
+static void
+test_config_parse_bridge_line(void *arg)
+{
+  (void) arg;
+  good_bridge_line_test("192.0.2.1:4123",
+                        "192.0.2.1:4123", NULL, NULL, NULL);
+
+  good_bridge_line_test("192.0.2.1",
+                        "192.0.2.1:443", NULL, NULL, NULL);
+
+  good_bridge_line_test("transport [::1]",
+                        "[::1]:443", NULL, "transport", NULL);
+
+  good_bridge_line_test("transport 192.0.2.1:12 "
+                        "4352e58420e68f5e40bf7c74faddccd9d1349413",
+                        "192.0.2.1:12",
+                        "4352e58420e68f5e40bf7c74faddccd9d1349413",
+                        "transport", NULL);
+
+  {
+    smartlist_t *sl_tmp = smartlist_new();
+    smartlist_add_asprintf(sl_tmp, "twoandtwo=five");
+
+    good_bridge_line_test("transport 192.0.2.1:12 "
+                    "4352e58420e68f5e40bf7c74faddccd9d1349413 twoandtwo=five",
+                    "192.0.2.1:12", "4352e58420e68f5e40bf7c74faddccd9d1349413",
+                    "transport", sl_tmp);
+
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+  }
+
+  {
+    smartlist_t *sl_tmp = smartlist_new();
+    smartlist_add_asprintf(sl_tmp, "twoandtwo=five");
+    smartlist_add_asprintf(sl_tmp, "z=z");
+
+    good_bridge_line_test("transport 192.0.2.1:12 twoandtwo=five z=z",
+                          "192.0.2.1:12", NULL, "transport", sl_tmp);
+
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+  }
+
+  good_bridge_line_test("192.0.2.1:1231 "
+                        "4352e58420e68f5e40bf7c74faddccd9d1349413",
+                        "192.0.2.1:1231",
+                        "4352e58420e68f5e40bf7c74faddccd9d1349413",
+                        NULL, NULL);
+
+  /* Empty line */
+  bad_bridge_line_test("");
+  /* bad transport name */
+  bad_bridge_line_test("tr$n_sp0r7 190.20.2.2");
+  /* weird ip address */
+  bad_bridge_line_test("a.b.c.d");
+  /* invalid fpr */
+  bad_bridge_line_test("2.2.2.2:1231 4352e58420e68f5e40bf7c74faddccd9d1349");
+  /* no k=v in the end */
+  bad_bridge_line_test("obfs2 2.2.2.2:1231 "
+                       "4352e58420e68f5e40bf7c74faddccd9d1349413 what");
+  /* no addrport */
+  bad_bridge_line_test("asdw");
+  /* huge k=v value that can't fit in SOCKS fields */
+  bad_bridge_line_test(
+           "obfs2 2.2.2.2:1231 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           "aa=b");
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(addressmap, 0),
+  CONFIG_TEST(parse_bridge_line, 0),
   END_OF_TESTCASES
 };
 

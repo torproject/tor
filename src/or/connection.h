@@ -89,6 +89,14 @@ int connection_connect(connection_t *conn, const char *address,
                        const tor_addr_t *addr,
                        uint16_t port, int *socket_error);
 
+/** Maximum size of information that we can fit into SOCKS5 username
+    or password fields. */
+#define MAX_SOCKS5_AUTH_FIELD_SIZE 255
+
+/** Total maximum size of information that we can fit into SOCKS5
+    username and password fields. */
+#define MAX_SOCKS5_AUTH_SIZE_TOTAL 2*MAX_SOCKS5_AUTH_FIELD_SIZE
+
 int connection_proxy_connect(connection_t *conn, int type);
 int connection_read_proxy_handshake(connection_t *conn);
 void log_failed_proxy_connection(connection_t *conn);
