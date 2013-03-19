@@ -255,6 +255,7 @@ static config_var_t option_vars_[] = {
 #endif
   OBSOLETE("GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays"),
   OBSOLETE("Group"),
+  V(GuardLifetime,               INTERVAL, "0 minutes"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(AccelName,                   STRING,   NULL),

@@ -1049,6 +1049,12 @@ The following options are useful only for clients (that is, if
     If UseEntryGuardsAsDirectoryGuards is enabled, we try to make sure we
     have at least NUM routers to use as directory guards. (Default: 3)
 
+**GuardLifetime**  __N__ **days**|**weeks**|**months**::
+    If nonzero, and UseEntryGuards is set, minimum time to keep a guard before
+    picking a new one. If zero, we use the GuardLifetime parameter from the
+    consensus directory.  No value here may  be less than 1 month or greater
+    than 5 years; out-of-range values are clamped. (Default: 0)
+
 **SafeSocks** **0**|**1**::
     When this option is enabled, Tor will reject application connections that
     use unsafe variants of the socks protocol -- ones that only provide an IP

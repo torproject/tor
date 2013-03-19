@@ -172,6 +172,17 @@ int n_bits_set_u8(uint8_t v);
  * overflow. */
 #define CEIL_DIV(a,b) (((a)+(b)-1)/(b))
 
+/* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
+ * return <b>min</b> if <b>v</b> is smaller than <b>min</b>, or <b>max</b> if
+ * <b>b</b> is larger than <b>max</b>.
+ *
+ * Requires that <b>min</b> is no more than <b>max</b>. May evaluate any of
+ * its arguments more than once! */
+#define CLAMP(min,v,max)                        \
+  ( ((v) < (min)) ? (min) :                     \
+    ((v) > (max)) ? (max) :                     \
+    (v) )
+
 /* String manipulation */
 
 /** Allowable characters in a hexadecimal string. */
