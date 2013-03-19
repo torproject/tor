@@ -688,6 +688,24 @@ node_exit_policy_rejects_all(const node_t *node)
     return 1;
 }
 
+/** Return true iff the exit policy for <b>node</b> is such that we can treat
+ * rejecting an address of type <b>family</b> unexpectedly as a sign of that
+ * node's failure. */
+int
+node_exit_policy_is_exact(const node_t *node, sa_family_t family)
+{
+  if (family == AF_UNSPEC) {
+    return 1; /* Rejecting an address but not telling us what address
+               * is a bad sign. */
+  } else if (family == AF_INET) {
+    return node->ri != NULL;
+  } else if (family == AF_INET6) {
+    return 0;
+  }
+  tor_fragile_assert();
+  return 1;
+}
+
 /** Return list of tor_addr_port_t with all OR ports (in the sense IP
  * addr + TCP port) for <b>node</b>.  Caller must free all elements
  * using tor_free() and free the list using smartlist_free().

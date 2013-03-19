@@ -3066,6 +3066,10 @@ typedef struct origin_circuit_t {
    * ISO_STREAM. */
   uint64_t associated_isolated_stream_global_id;
   /**@}*/
+  /** A list of addr_policy_t for this circuit in particular. Used by
+   * adjust_exit_policy_from_exitpolicy_failure.
+   */
+  smartlist_t *prepend_policy;
 } origin_circuit_t;
 
 struct onion_queue_t;
