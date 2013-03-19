@@ -14,7 +14,7 @@ tor-fw-helper - Manage upstream firewall/NAT devices
 
 SYNOPSIS
 --------
-**tor-fw-helper** [-h|--help] [-T|--test] [-v|--verbose] [-g|--fetch-public-ip]
+**tor-fw-helper** [-h|--help] [-T|--test-commandline] [-v|--verbose] [-g|--fetch-public-ip]
  [-p __external port__:__internal_port__]
 
 DESCRIPTION
@@ -33,7 +33,7 @@ OPTIONS
 **-v** or **--verbose**::
     Display verbose output.
 
-**-T** or **--test**::
+**-T** or **--test-commandline**::
     Display test information and print the test information in
     tor-fw-helper.log
 
