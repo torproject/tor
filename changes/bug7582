@@ -1,0 +1,9 @@
+  o Major bugfixes:
+
+    - When an exit node tells us that it is rejecting because of its
+      exit policy a stream we expected it to accept (because of its exit
+      policy), do not mark the node as useless for exiting if our
+      expectation was only based on an exit policy summary.  Instead,
+      mark the circuit as unsuitable for that particular address. Fixes
+      part of bug 7582; bugfix on 0.2.3.2-alpha.
+
