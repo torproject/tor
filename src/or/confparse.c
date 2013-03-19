@@ -1103,6 +1103,8 @@ static struct unit_table_t time_units[] = {
   { "days",     24*60*60 },
   { "week",     7*24*60*60 },
   { "weeks",    7*24*60*60 },
+  { "month",    2629728, }, /* about 30.437 days */
+  { "months",   2629728, },
   { NULL, 0 },
 };
 

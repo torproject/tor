@@ -1,0 +1,4 @@
+  o Major security fixes:
+    - Make the default guard lifetime controllable via a new
+      GuardLifetime torrc option and a GuardLifetime consensus
+      parameter. Start of a fix for bug 8240; bugfix on 0.1.1.11-alpha.
