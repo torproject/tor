@@ -1783,18 +1783,18 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        if (memchr(data+2, SOCKS_NO_AUTH, nummethods)) {
-          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
-                                            method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
-          r=0;
-        } else if (memchr(data+2, SOCKS_USER_PASS, nummethods)) {
+        if (memchr(data+2, SOCKS_USER_PASS, nummethods)) {
           req->auth_type = SOCKS_USER_PASS;
           req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
                                               auth method */
           req->socks_version = 5; /* remember we've already negotiated auth */
           log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+          r=0;
+        } else if (memchr(data+2, SOCKS_NO_AUTH, nummethods)) {
+          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
+                                            method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
           r=0;
         } else {
           log_warn(LD_APP,
