@@ -2019,6 +2019,11 @@ The following options are used for running a testing Tor network.
     time. Changing this requires that **TestingTorNetwork** is set. (Default:
     10 minutes)
 
+**TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+    Minimum value for the Fast flag.  Overrides the ordinary minimum taken
+    from the consensus when TestingTorNetwork is set. (Default: 0.)
+
+
 SIGNALS
 -------
 

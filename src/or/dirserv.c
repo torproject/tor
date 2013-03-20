@@ -1894,11 +1894,17 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
   /* Have measured bw? */
   int have_mbw =
     dirserv_has_measured_bw(node->ri->cache_info.identity_digest);
+  uint64_t min_bw = ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER;
+  const or_options_t *options = get_options();
+
+  if (options->TestingTorNetwork) {
+    min_bw = (int64_t)options->TestingMinExitFlagThreshold;
+  }
 
   return node->ri && router_is_active(node->ri, node, now) &&
     !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest) &&
-    (dirserv_get_credible_bandwidth(node->ri) >=
-       ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER) && (have_mbw || !require_mbw);
+    (dirserv_get_credible_bandwidth(node->ri) >= min_bw) &&
+    (have_mbw || !require_mbw);
 }
 
 /** Look through the routerlist, the Mean Time Between Failure history, and
@@ -2005,6 +2011,9 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       INT32_MAX);
+    if (options->TestingTorNetwork) {
+      min_fast = (int32_t)options->TestingMinFastFlagThreshold;
+    }
     max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
                                        INT32_MAX, min_fast, INT32_MAX);
     if (fast_bandwidth < (uint32_t)min_fast)

@@ -3912,6 +3912,12 @@ typedef struct {
    * of certain configuration options. */
   int TestingTorNetwork;
 
+  /** Minimum value for the Exit flag threshold on testing networks. */
+  uint64_t TestingMinExitFlagThreshold;
+
+  /** Minimum value for the Fast flag threshold on testing networks. */
+  uint64_t TestingMinFastFlagThreshold;
+
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help
    * the bridge authority guess which countries have blocked access to us. */

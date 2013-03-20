@@ -2312,3 +2312,4 @@ mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
 
   circ->unusable_for_new_conns = 1;
 }
+
