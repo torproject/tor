@@ -2005,6 +2005,9 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       INT32_MAX);
+    if (options->TestingTorNetwork) {
+      min_fast = (int32_t)options->TestingMinFastFlagThreshold;
+    }
     max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
                                        INT32_MAX, min_fast, INT32_MAX);
     if (fast_bandwidth < (uint32_t)min_fast)
