@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Behave correctly when the user disables LearnCircuitBuildTimeout
+      but doesn't tell us what they would like the timeout to be. Fixes
+      bug 6304; bugfix on 0.2.2.14-alpha. 
