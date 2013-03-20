@@ -1140,12 +1140,15 @@ connection_edge_process_relay_cell_not_open(
                                   2+answer_len));
     else
       ttl = -1;
-    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-      uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
-      if (get_options()->ClientDNSRejectInternalAddresses &&
-          is_internal_IP(addr, 0)) {
+    if (answer_type == RESOLVED_TYPE_IPV4 ||
+        answer_type == RESOLVED_TYPE_IPV6) {
+      tor_addr_t addr;
+      if (decode_address_from_payload(&addr, cell->payload+RELAY_HEADER_SIZE,
+                                      rh->length) &&
+          tor_addr_is_internal(&addr, 0) &&
+          get_options()->ClientDNSRejectInternalAddresses) {
         log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
-                 fmt_addr32(addr));
+                 fmt_addr(&addr));
         connection_ap_handshake_socks_resolved(entry_conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0, NULL, 0, TIME_MAX);
