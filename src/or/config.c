@@ -5787,6 +5787,7 @@ parse_port_config(smartlist_t *out,
     int port;
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
+    int prefer_no_auth = 0;
 
     char *addrport;
     uint16_t ptmp=0;
@@ -5916,6 +5917,11 @@ parse_port_config(smartlist_t *out,
           no = 1;
           elt += 2;
         }
+        if (!strcasecmp(elt, "PreferSOCKSNoAuth")) {
+          prefer_no_auth = ! no;
+          continue;
+        }
+
         if (!strcasecmpend(elt, "s"))
           elt[strlen(elt)-1] = '\0'; /* kill plurals. */
 
@@ -5959,6 +5965,9 @@ parse_port_config(smartlist_t *out,
       cfg->all_addrs = all_addrs;
       cfg->ipv4_only = ipv4_only;
       cfg->ipv6_only = ipv6_only;
+      cfg->socks_prefer_no_auth = prefer_no_auth;
+      if (! (isolation & ISO_SOCKSAUTH))
+        cfg->socks_prefer_no_auth = 1;
 
       smartlist_add(out, cfg);
     }
