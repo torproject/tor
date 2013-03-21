@@ -343,7 +343,7 @@ circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
 
   if (circ->n_delete_pending && old_chan) {
     channel_mark_circid_unusable(old_chan, old_id);
-    circ->n_delete_pending = 1;
+    circ->n_delete_pending = 0;
   }
 }
 

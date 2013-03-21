@@ -10,6 +10,7 @@
 #include "channel.h"
 #include "circuitlist.h"
 #include "circuitmux.h"
+#include "relay.h"
 
 /*
  * Private typedefs for circuitmux.c
@@ -114,6 +115,18 @@ struct circuitmux_s {
    * a circuit, we advance this pointer to the next circuit in the ring.
    */
   struct circuit_t *active_circuits_head, *active_circuits_tail;
+
+  /** List of queued destroy cells */
+  cell_queue_t destroy_cell_queue;
+  /** Boolean: True iff the last cell to circuitmux_get_first_active_circuit
+   * returned the destroy queue. Used to force alternation between
+   * destroy/non-destroy cells.
+   *
+   * XXXX There is no reason to think that alternating is a particularly good
+   * approach -- it's just designed to prevent destroys from starving other
+   * cells completely.
+   */
+  unsigned int last_cell_was_destroy : 1;
 
   /*
    * Circuitmux policy; if this is non-NULL, it can override the built-
@@ -508,6 +521,8 @@ circuitmux_free(circuitmux_t *cmux)
     tor_free(cmux->chanid_circid_map);
   }
 
+  cell_queue_clear(&cmux->destroy_cell_queue);
+
   tor_free(cmux);
 }
 
@@ -816,7 +831,7 @@ circuitmux_num_cells(circuitmux_t *cmux)
 {
   tor_assert(cmux);
 
-  return cmux->n_cells;
+  return cmux->n_cells + cmux->destroy_cell_queue.n;
 }
 
 /**
@@ -1368,16 +1383,36 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
 /**
  * Pick a circuit to send from, using the active circuits list or a
  * circuitmux policy if one is available.  This is called from channel.c.
+ *
+ * If we would rather send a destroy cell, return NULL and set
+ * *<b>destroy_queue_out</b> to the destroy queue.
+ *
+ * If we have nothing to send, set *<b>destroy_queue_out</b> to NULL and
+ * return NULL.
  */
 
 circuit_t *
-circuitmux_get_first_active_circuit(circuitmux_t *cmux)
+circuitmux_get_first_active_circuit(circuitmux_t *cmux,
+                                    cell_queue_t **destroy_queue_out)
 {
   circuit_t *circ = NULL;
 
   tor_assert(cmux);
+  tor_assert(destroy_queue_out);
 
-  if (cmux->n_active_circuits > 0) {
+  *destroy_queue_out = NULL;
+
+  if (cmux->destroy_cell_queue.n &&
+        (!cmux->last_cell_was_destroy || cmux->n_active_circuits == 0)) {
+    /* We have destroy cells to send, and either we just sent a relay cell,
+     * or we have no relay cells to send. */
+
+    /* XXXX We should let the cmux policy have some say in this eventually. */
+    /* XXXX Alternating is not a terribly brilliant approach here. */
+    *destroy_queue_out = &cmux->destroy_cell_queue;
+
+    cmux->last_cell_was_destroy = 1;
+  } else if (cmux->n_active_circuits > 0) {
     /* We also must have a cell available for this to be the case */
     tor_assert(cmux->n_cells > 0);
     /* Do we have a policy-provided circuit selector? */
@@ -1389,7 +1424,11 @@ circuitmux_get_first_active_circuit(circuitmux_t *cmux)
       tor_assert(cmux->active_circuits_head);
       circ = cmux->active_circuits_head;
     }
-  } else tor_assert(cmux->n_cells == 0);
+    cmux->last_cell_was_destroy = 0;
+  } else {
+    tor_assert(cmux->n_cells == 0);
+    tor_assert(cmux->destroy_cell_queue.n == 0);
+  }
 
   return circ;
 }
@@ -1743,3 +1782,29 @@ circuitmux_assert_okay_pass_three(circuitmux_t *cmux)
   }
 }
 
+/*DOCDOC */
+void
+circuitmux_append_destroy_cell(channel_t *chan,
+                               circuitmux_t *cmux,
+                               circid_t circ_id,
+                               uint8_t reason)
+{
+  cell_t cell;
+  memset(&cell, 0, sizeof(cell_t));
+  cell.circ_id = circ_id;
+  cell.command = CELL_DESTROY;
+  cell.payload[0] = (uint8_t) reason;
+
+  cell_queue_append_packed_copy(&cmux->destroy_cell_queue, &cell,
+                                chan->wide_circ_ids, 0);
+
+  /* XXXX Duplicate code from append_cell_to_circuit_queue */
+  if (!channel_has_queued_writes(chan)) {
+    /* There is no data at all waiting to be sent on the outbuf.  Add a
+     * cell, so that we can notice when it gets flushed, flushed_some can
+     * get called, and we can start putting more data onto the buffer then.
+     */
+    log_debug(LD_GENERAL, "Primed a buffer.");
+    channel_flush_from_first_active_circuit(chan, 1);
+  }
+}

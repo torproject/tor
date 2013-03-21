@@ -122,6 +122,8 @@ static cell_queue_entry_t *
 cell_queue_entry_new_fixed(cell_t *cell);
 static cell_queue_entry_t *
 cell_queue_entry_new_var(var_cell_t *var_cell);
+static int is_destroy_cell(channel_t *chan,
+                           const cell_queue_entry_t *q, circid_t *circid_out);
 
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
@@ -1685,6 +1687,13 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
     chan->timestamp_last_added_nonpadding = approx_time();
   }
 
+  {
+    circid_t circ_id;
+    if (is_destroy_cell(chan, q, &circ_id)) {
+      channel_note_destroy_not_pending(chan, circ_id);
+    }
+  }
+
   /* Can we send it right out?  If so, try */
   if (TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue) &&
       chan->state == CHANNEL_STATE_OPEN) {
@@ -2607,6 +2616,43 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
   }
 }
 
+/** DOCDOC */
+static int
+is_destroy_cell(channel_t *chan,
+                const cell_queue_entry_t *q, circid_t *circid_out)
+{
+  *circid_out = 0;
+  switch (q->type) {
+    case CELL_QUEUE_FIXED:
+      if (q->u.fixed.cell->command == CELL_DESTROY) {
+        *circid_out = q->u.fixed.cell->circ_id;
+        return 1;
+      }
+      break;
+    case CELL_QUEUE_VAR:
+      if (q->u.var.var_cell->command == CELL_DESTROY) {
+        *circid_out = q->u.var.var_cell->circ_id;
+        return 1;
+      }
+      break;
+    case CELL_QUEUE_PACKED:
+      if (chan->wide_circ_ids) {
+        if (q->u.packed.packed_cell->body[4] == CELL_DESTROY) {
+          *circid_out = ntohl(get_uint32(q->u.packed.packed_cell->body));
+          return 1;
+        }
+      } else {
+        if (q->u.packed.packed_cell->body[2] == CELL_DESTROY) {
+          *circid_out = ntohs(get_uint16(q->u.packed.packed_cell->body));
+          return 1;
+        }
+      }
+      break;
+  }
+  return 0;
+}
+
+
 /**
  * Send destroy cell on a channel
  *
@@ -2618,25 +2664,20 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 int
 channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
 {
-  cell_t cell;
-
   tor_assert(chan);
 
   /* Check to make sure we can send on this channel first */
   if (!(chan->state == CHANNEL_STATE_CLOSING ||
         chan->state == CHANNEL_STATE_CLOSED ||
-        chan->state == CHANNEL_STATE_ERROR)) {
-    memset(&cell, 0, sizeof(cell_t));
-    cell.circ_id = circ_id;
-    cell.command = CELL_DESTROY;
-    cell.payload[0] = (uint8_t) reason;
+        chan->state == CHANNEL_STATE_ERROR) &&
+      chan->cmux) {
+    channel_note_destroy_pending(chan, circ_id);
+    circuitmux_append_destroy_cell(chan, chan->cmux, circ_id, reason);
     log_debug(LD_OR,
               "Sending destroy (circID %u) on channel %p "
               "(global ID " U64_FORMAT ")",
               (unsigned)circ_id, chan,
               U64_PRINTF_ARG(chan->global_identifier));
-
-    channel_write_cell(chan, &cell);
   } else {
     log_warn(LD_BUG,
              "Someone called channel_send_destroy() for circID %u "
