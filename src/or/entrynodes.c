@@ -1766,8 +1766,7 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   b = tor_malloc_zero(sizeof(bridge_info_t));
   tor_addr_copy(&b->addr, &bridge_line->addr);
   b->port = bridge_line->port;
-  if (bridge_line->digest)
-    memcpy(b->identity, bridge_line->digest, DIGEST_LEN);
+  memcpy(b->identity, bridge_line->digest, DIGEST_LEN);
   if (bridge_line->transport_name)
     b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
