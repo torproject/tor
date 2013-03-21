@@ -860,7 +860,7 @@ test_util_strmisc(void)
 {
   char buf[1024];
   int i;
-  char *cp;
+  char *cp, *cp_tmp;
 
   /* Test strl operations */
   test_eq(5, strlcpy(buf, "Hello", 0));
@@ -1063,20 +1063,20 @@ test_util_strmisc(void)
   /* Test strndup and memdup */
   {
     const char *s = "abcdefghijklmnopqrstuvwxyz";
-    cp = tor_strndup(s, 30);
-    test_streq(cp, s); /* same string, */
-    test_neq_ptr(cp, s); /* but different pointers. */
-    tor_free(cp);
+    cp_tmp = tor_strndup(s, 30);
+    test_streq(cp_tmp, s); /* same string, */
+    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tor_free(cp_tmp);
 
-    cp = tor_strndup(s, 5);
-    test_streq(cp, "abcde");
-    tor_free(cp);
+    cp_tmp = tor_strndup(s, 5);
+    test_streq(cp_tmp, "abcde");
+    tor_free(cp_tmp);
 
     s = "a\0b\0c\0d\0e\0";
-    cp = tor_memdup(s,10);
-    test_memeq(cp, s, 10); /* same ram, */
-    test_neq_ptr(cp, s); /* but different pointers. */
-    tor_free(cp);
+    cp_tmp = tor_memdup(s,10);
+    test_memeq(cp_tmp, s, 10); /* same ram, */
+    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tor_free(cp_tmp);
   }
 
   /* Test str-foo functions */
@@ -1155,7 +1155,7 @@ test_util_strmisc(void)
   tt_int_op(strcmp_len("blah", "", 0),    ==, 0);
 
  done:
-  ;
+  tor_free(cp_tmp);
 }
 
 static void
