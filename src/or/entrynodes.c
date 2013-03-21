@@ -463,8 +463,8 @@ static int32_t
 guards_get_lifetime(void)
 {
   const or_options_t *options = get_options();
-#define DFLT_GUARD_LIFETIME (86400 * 30)   /* One month. */
-#define MIN_GUARD_LIFETIME  (86400 * 60)   /* Two months. */
+#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
+#define MIN_GUARD_LIFETIME  (86400 * 30)   /* One months. */
 #define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
 
   if (options->GuardLifetime >= 1) {
