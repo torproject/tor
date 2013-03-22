@@ -682,6 +682,7 @@ init_circuit_base(circuit_t *circ)
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
+  cell_queue_init(&circ->n_chan_cells);
 
   circuit_add(circ);
 }
@@ -727,6 +728,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
     circuit_set_p_circid_chan(circ, p_circ_id, p_chan);
 
   circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
+  cell_queue_init(&circ->p_chan_cells);
 
   init_circuit_base(TO_CIRCUIT(circ));
 

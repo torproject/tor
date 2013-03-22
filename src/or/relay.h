@@ -51,6 +51,7 @@ size_t packed_cell_mem_cost(void);
 /* For channeltls.c */
 void packed_cell_free(packed_cell_t *cell);
 
+void cell_queue_init(cell_queue_t *queue);
 void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
