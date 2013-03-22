@@ -1050,7 +1050,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     switch (rh.command) {
       case RELAY_COMMAND_BEGIN:
       case RELAY_COMMAND_CONNECTED:
-      case RELAY_COMMAND_DATA:
       case RELAY_COMMAND_END:
       case RELAY_COMMAND_RESOLVE:
       case RELAY_COMMAND_RESOLVED:
@@ -1135,7 +1134,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       circuit_consider_sending_sendme(circ, layer_hint);
 
-      if (!conn) {
+      if (rh.stream_id == 0) {
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
+               "stream_id. Dropping.");
+        return 0;
+      } else if (!conn) {
         log_info(domain,"data cell dropped, unknown stream (streamid %d).",
                  rh.stream_id);
         return 0;
