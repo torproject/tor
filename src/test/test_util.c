@@ -802,7 +802,7 @@ test_util_strmisc(void)
 {
   char buf[1024];
   int i;
-  char *cp, *cp_tmp;
+  char *cp, *cp_tmp = NULL;
 
   /* Test strl operations */
   test_eq(5, strlcpy(buf, "Hello", 0));
