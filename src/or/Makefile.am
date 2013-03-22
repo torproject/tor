@@ -32,6 +32,7 @@ libtor_a_SOURCES = \
 	dirvote.c				\
 	dns.c					\
 	dnsserv.c				\
+	fp_pair.c				\
 	geoip.c					\
 	hibernate.c				\
 	main.c					\
@@ -96,6 +97,7 @@ noinst_HEADERS = \
 	dnsserv.h				\
 	eventdns.h				\
 	eventdns_tor.h				\
+	fp_pair.h				\
 	geoip.h					\
 	hibernate.h				\
 	main.h					\
