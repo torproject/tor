@@ -169,7 +169,7 @@ curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
 
  end:
   if (content) {
-    memwipe(content, 0, st.st_size);
+    memwipe(content, 0, (size_t) st.st_size);
     tor_free(content);
   }
   if (r != 0) {
