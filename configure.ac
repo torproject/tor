@@ -667,10 +667,11 @@ if test x$enable_curve25519 != xno; then
           uint64_t a = ((uint64_t)2000000000) * 1000000000;
 	  uint64_t b = ((uint64_t)1234567890) << 24;
 	  uint128_t c = ((uint128_t)a) * b;
-	  return ((uint64_t)(c>>96)) == 522859 &&
-	         ((uint64_t)(c>>64))&0xffffffffL == 3604448702L &&
-                 ((uint64_t)(c>>32))&0xffffffffL == 2351960064L &&
-                 ((uint64_t)(c))&0xffffffffL == 0;
+	  int ok = ((uint64_t)(c>>96)) == 522859 &&
+	           (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                   (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                   (((uint64_t)(c))&0xffffffffL) == 0;
+          return !ok;
         ])],
 	[tor_cv_can_use_curve25519_donna_c64=yes],
         [tor_cv_can_use_curve25519_donna_c64=no],
@@ -682,10 +683,11 @@ if test x$enable_curve25519 != xno; then
               uint64_t a = ((uint64_t)2000000000) * 1000000000;
 	      uint64_t b = ((uint64_t)1234567890) << 24;
 	      uint128_t c = ((uint128_t)a) * b;
-	      return ((uint64_t)(c>>96)) == 522859 &&
-	             ((uint64_t)(c>>64))&0xffffffffL == 3604448702L &&
-                     ((uint64_t)(c>>32))&0xffffffffL == 2351960064L &&
-                     ((uint64_t)(c))&0xffffffffL == 0;
+	      int ok = ((uint64_t)(c>>96)) == 522859 &&
+	             (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                     (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                     (((uint64_t)(c))&0xffffffffL) == 0;
+              return !ok;
             ])],
             [tor_cv_can_use_curve25519_donna_c64=cross],
 	    [tor_cv_can_use_curve25519_donna_c64=no])])])

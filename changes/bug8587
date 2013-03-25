@@ -1,0 +1,5 @@
+  o Minor bugfixes (build):
+    - Build Tor correctly on 32-bit platforms where the compiler can build
+      but not run code using the "uint128_t" construction. Fixes bug 8587;
+      bugfix on 0.2.4.8-alpha.
+
