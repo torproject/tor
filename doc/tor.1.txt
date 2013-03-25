@@ -1431,7 +1431,9 @@ is non-zero):
     that they are in the same \'family', Tor clients will not use them in the
     same circuit. (Each server only needs to list the other servers in its
     family; it doesn't need to list itself, but it won't hurt.) Do not list
-    any bridge relay as it would compromise its concealment.
+    any bridge relay as it would compromise its concealment. When listing a
+    node, it is preferable to do so as a fingerprint as opposed to a nickname
+    as fingerprints are a more reliable mechanism for identifying a node.
 
 **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
