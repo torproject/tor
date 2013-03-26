@@ -1913,7 +1913,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
-      if (consensus_method >= 11) {
+      if (consensus_method >= MIN_METHOD_TO_CUT_BADEXIT_WEIGHT) {
         is_exit = is_exit && !is_bad_exit;
       }
 
@@ -2210,7 +2210,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     }
     // Verify balancing parameters
     if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS && added_weights) {
-      networkstatus_verify_bw_weights(c);
+      networkstatus_verify_bw_weights(c, consensus_method);
     }
     networkstatus_vote_free(c);
   }

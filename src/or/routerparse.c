@@ -2257,7 +2257,7 @@ networkstatus_v2_parse_from_string(const char *s)
 
 /** Verify the bandwidth weights of a network status document */
 int
-networkstatus_verify_bw_weights(networkstatus_t *ns)
+networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
 {
   int64_t weight_scale;
   int64_t G=0, M=0, E=0, D=0, T=0;
@@ -2343,14 +2343,21 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
 
   // Then, gather G, M, E, D, T to determine case
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
+    int is_exit = 0;
+    if (consensus_method >= MIN_METHOD_TO_CUT_BADEXIT_WEIGHT) {
+      /* Bug #2203: Don't count bad exits as exits for balancing */
+      is_exit = rs->is_exit && !rs->is_bad_exit;
+    } else {
+      is_exit = rs->is_exit;
+    }
     if (rs->has_bandwidth) {
       T += rs->bandwidth;
-      if (rs->is_exit && rs->is_possible_guard) {
+      if (is_exit && rs->is_possible_guard) {
         D += rs->bandwidth;
         Gtotal += Wgd*rs->bandwidth;
         Mtotal += Wmd*rs->bandwidth;
         Etotal += Wed*rs->bandwidth;
-      } else if (rs->is_exit) {
+      } else if (is_exit) {
         E += rs->bandwidth;
         Mtotal += Wme*rs->bandwidth;
         Etotal += Wee*rs->bandwidth;
