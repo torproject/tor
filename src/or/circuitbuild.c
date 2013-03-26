@@ -1378,7 +1378,7 @@ pathbias_should_count(origin_circuit_t *circ)
     if (circ->build_state->desired_path_len != 1 ||
         !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&count_limit, approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
                "One-hop circuit has length %d. Path state is %s. "
                "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
