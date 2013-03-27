@@ -2030,7 +2030,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       }
     } else {
       log_info(LD_BUG, "Found an entry in networkstatus with no "
-               "microdescriptor digest. (Router %s=%s at %s:%d.)",
+               "microdescriptor digest. (Router %s ($%s) at %s:%d.)",
                rs->nickname, hex_str(rs->identity_digest, DIGEST_LEN),
                fmt_addr32(rs->addr), rs->or_port);
     }
