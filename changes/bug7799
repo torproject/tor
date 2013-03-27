@@ -1,0 +1,3 @@
+ o Minor changes (log clarification)
+   - Add more detail to a log message about relaxed timeouts. Hopefully
+     this additional detail will allow us to diagnose the cause of bug 7799.
