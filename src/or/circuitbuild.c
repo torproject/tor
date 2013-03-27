@@ -1539,7 +1539,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
         guard->circ_successes++;
         entry_guards_changed();
 
-        log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
+        log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
@@ -1558,7 +1558,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
 
       if (guard->circ_attempts < guard->circ_successes) {
         log_notice(LD_BUG, "Unexpectedly high successes counts (%f/%f) "
-                 "for guard %s=%s",
+                 "for guard %s ($%s)",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
@@ -1626,7 +1626,7 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
       entry_guards_changed();
 
       log_debug(LD_CIRC,
-               "Marked circuit %d (%f/%f) as used for guard %s=%s.",
+               "Marked circuit %d (%f/%f) as used for guard %s ($%s).",
                circ->global_identifier,
                guard->use_successes, guard->use_attempts,
                guard->nickname, hex_str(guard->identity, DIGEST_LEN));
@@ -1736,7 +1736,7 @@ pathbias_count_use_success(origin_circuit_t *circ)
 
       log_debug(LD_CIRC,
                 "Marked circuit %d (%f/%f) as used successfully for guard "
-                "%s=%s.",
+                "%s ($%s).",
                 circ->global_identifier, guard->use_successes,
                 guard->use_attempts, guard->nickname,
                 hex_str(guard->identity, DIGEST_LEN));
@@ -2253,7 +2253,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!guard->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry an extremely large "
+                 "Your Guard %s ($%s) is failing to carry an extremely large "
                  "amount of stream on its circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -2279,7 +2279,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       } else if (!guard->path_bias_use_extreme) {
         guard->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry an extremely large "
+                 "Your Guard %s ($%s) is failing to carry an extremely large "
                  "amount of streams on its circuits. "
                  "This could indicate a route manipulation attack, network "
                  "overload, bad local network connectivity, or a bug. "
@@ -2303,7 +2303,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (!guard->path_bias_use_noticed) {
         guard->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry more streams on its "
+                 "Your Guard %s ($%s) is failing to carry more streams on its "
                  "circuits than usual. "
                  "Most likely this means the Tor network is overloaded "
                  "or your network connection is poor. "
@@ -2359,7 +2359,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!guard->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing an extremely large "
+                 "Your Guard %s ($%s) is failing an extremely large "
                  "amount of circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -2385,7 +2385,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       } else if (!guard->path_bias_extreme) {
         guard->path_bias_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing an extremely large "
+                 "Your Guard %s ($%s) is failing an extremely large "
                  "amount of circuits. "
                  "This could indicate a route manipulation attack, "
                  "extreme network overload, or a bug. "
@@ -2409,7 +2409,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!guard->path_bias_warned) {
         guard->path_bias_warned = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing a very large "
+                 "Your Guard %s ($%s) is failing a very large "
                  "amount of circuits. "
                  "Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
@@ -2434,7 +2434,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!guard->path_bias_noticed) {
         guard->path_bias_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s=%s is failing more circuits than "
+                 "Your Guard %s ($%s) is failing more circuits than "
                  "usual. "
                  "Most likely this means the Tor network is overloaded. "
                  "Success counts are %ld/%ld. Use counts are %ld/%ld. "
@@ -2495,7 +2495,7 @@ pathbias_scale_close_rates(entry_guard_t *guard)
 
     log_info(LD_CIRC,
              "Scaled pathbias counts to (%f,%f)/%f (%d/%d open) for guard "
-             "%s=%s",
+             "%s ($%s)",
              guard->circ_successes, guard->successful_circuits_closed,
              guard->circ_attempts, opened_built, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
@@ -2529,7 +2529,7 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     guard->use_attempts += opened_attempts;
 
     log_info(LD_CIRC,
-             "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
+             "Scaled pathbias use counts to %f/%f (%d open) for guard %s ($%s)",
              guard->use_successes, guard->use_attempts, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
     entry_guards_changed();
@@ -2554,7 +2554,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
   pathbias_scale_close_rates(guard);
   guard->circ_attempts++;
 
-  log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
+  log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
            guard->circ_successes, guard->circ_attempts, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;
