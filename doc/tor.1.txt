@@ -1432,6 +1432,9 @@ is non-zero):
     same circuit. (Each server only needs to list the other servers in its
     family; it doesn't need to list itself, but it won't hurt.) Do not list
     any bridge relay as it would compromise its concealment.
+ +
+    When listing a node, it's better to list it by fingerprint than by
+    nickname: fingerprints are more reliable.
 
 **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
