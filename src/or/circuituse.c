@@ -529,7 +529,12 @@ circuit_expire_building(void)
     if (timercmp(&victim->timestamp_began, &cutoff, >))
       continue; /* it's still young, leave it alone */
 
-    if (!any_opened_circs) {
+    /* We need to double-check the opened state here because
+     * we don't want to consider opened 1-hop dircon circuits for
+     * deciding when to relax the timeout, but we *do* want to relax
+     * those circuits too if nothing else is opened *and* they still
+     * aren't either. */
+    if (!any_opened_circs && victim->state != CIRCUIT_STATE_OPEN) {
       /* It's still young enough that we wouldn't close it, right? */
       if (timercmp(&victim->timestamp_began, &close_cutoff, >)) {
         if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
