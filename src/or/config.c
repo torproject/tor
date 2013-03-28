@@ -2485,7 +2485,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too low. Increasing "
                "to 0.25");
       options->PathsNeededToBuildCircuits = 0.25;
-    } else if (options->PathsNeededToBuildCircuits < 0.95) {
+    } else if (options->PathsNeededToBuildCircuits > 0.95) {
       log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too high. Decreasing "
                "to 0.95");
       options->PathsNeededToBuildCircuits = 0.95;
