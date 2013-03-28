@@ -1232,11 +1232,11 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
       format_local_iso_time(last_live_buf, cbt->liveness.network_last_live);
       format_local_iso_time(start_time_buf, start_time);
       format_local_iso_time(now_buf, now);
-      log_warn(LD_BUG,
-               "Circuit somehow completed a hop while the network was "
-               "not live. Network was last live at %s, but circuit launched "
-               "at %s. It's now %s.", last_live_buf, start_time_buf,
-               now_buf);
+      log_notice(LD_CIRC,
+               "A circuit somehow completed a hop while the network was "
+               "not live. The network was last live at %s, but the circuit "
+               "launched at %s. It's now %s. This could mean your clock "
+               "changed.", last_live_buf, start_time_buf, now_buf);
     }
     cbt->liveness.nonlive_timeouts++;
     if (cbt->liveness.nonlive_timeouts == 1) {

@@ -2010,6 +2010,9 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
       pathbias_count_use_failed(ocirc);
       break;
 
+    case PATH_STATE_NEW_CIRC:
+    case PATH_STATE_BUILD_ATTEMPTED:
+    case PATH_STATE_ALREADY_COUNTED:
     default:
       // Other states are uninteresting. No stats to count.
       break;

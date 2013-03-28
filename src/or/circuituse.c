@@ -671,7 +671,7 @@ circuit_expire_building(void)
                      circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(&circ_times,
                                          first_hop_succeeded,
-                                         victim->timestamp_began.tv_sec)) {
+                                         victim->timestamp_created.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
       }
