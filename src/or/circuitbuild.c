@@ -803,6 +803,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
       }
 
+      pathbias_count_build_success(circ);
+      circuit_rep_hist_note_result(circ);
+      circuit_has_opened(circ); /* do other actions as necessary */
+
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
         can_complete_circuit=1;
@@ -818,10 +822,6 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
           consider_testing_reachability(1, 1);
         }
       }
-
-      pathbias_count_build_success(circ);
-      circuit_rep_hist_note_result(circ);
-      circuit_has_opened(circ); /* do other actions as necessary */
 
       /* We're done with measurement circuits here. Just close them */
       if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
@@ -1378,7 +1378,7 @@ pathbias_should_count(origin_circuit_t *circ)
     if (circ->build_state->desired_path_len != 1 ||
         !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&count_limit, approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
                "One-hop circuit has length %d. Path state is %s. "
                "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,

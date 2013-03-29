@@ -54,7 +54,7 @@ void dump_distinct_digest_count(int severity);
 int compare_routerstatus_entries(const void **_a, const void **_b);
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
-int networkstatus_verify_bw_weights(networkstatus_t *ns);
+int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  const char **eos_out,
                                                  networkstatus_type_t ns_type);
