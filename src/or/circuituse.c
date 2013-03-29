@@ -529,15 +529,25 @@ circuit_expire_building(void)
     if (timercmp(&victim->timestamp_began, &cutoff, >))
       continue; /* it's still young, leave it alone */
 
-    if (!any_opened_circs) {
+    /* We need to double-check the opened state here because
+     * we don't want to consider opened 1-hop dircon circuits for
+     * deciding when to relax the timeout, but we *do* want to relax
+     * those circuits too if nothing else is opened *and* they still
+     * aren't either. */
+    if (!any_opened_circs && victim->state != CIRCUIT_STATE_OPEN) {
       /* It's still young enough that we wouldn't close it, right? */
       if (timercmp(&victim->timestamp_began, &close_cutoff, >)) {
         if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
           int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath->state
                                       == CPATH_STATE_OPEN;
           log_info(LD_CIRC,
-                 "No circuits are opened. Relaxing timeout for "
-                 "a circuit with channel state %s. %d guards are live.",
+                 "No circuits are opened. Relaxing timeout for circuit %d "
+                 "(a %s %d-hop circuit in state %s with channel state %s). "
+                 "%d guards are live.",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 circuit_purpose_to_string(victim->purpose),
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  num_live_entry_guards(0));
 
@@ -552,10 +562,14 @@ circuit_expire_building(void)
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
         log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
-                 "No circuits are opened. Relaxed timeout for "
-                 "a circuit with channel state %s to %ldms. "
-                 "However, it appears the circuit has timed out anyway. "
-                 "%d guards are live.",
+                 "No circuits are opened. Relaxed timeout for circuit %d "
+                 "(a %s %d-hop circuit in state %s with channel state %s) to "
+                 "%ldms. However, it appears the circuit has timed out "
+                 "anyway. %d guards are live.",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 circuit_purpose_to_string(victim->purpose),
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  (long)circ_times.close_ms, num_live_entry_guards(0));
       }
