@@ -34,6 +34,9 @@
 /** Lowest consensus method that generates microdescriptors */
 #define MIN_METHOD_FOR_MICRODESC 8
 
+/** Lowest consensus method that doesn't count bad exits as exits for weight */
+#define MIN_METHOD_TO_CUT_BADEXIT_WEIGHT 11
+
 /** Lowest consensus method that ensures a majority of authorities voted
   * for a param. */
 #define MIN_METHOD_FOR_MAJORITY_PARAMS 12
