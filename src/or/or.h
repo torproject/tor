@@ -2488,10 +2488,6 @@ typedef struct desc_store_t {
    * filename for a temporary file when rebuilding the store, and .new to this
    * filename for the journal. */
   const char *fname_base;
-  /** Alternative (obsolete) value for fname_base: if the file named by
-   * fname_base isn't present, we read from here instead, but we never write
-   * here. */
-  const char *fname_alt_base;
   /** Human-readable description of what this store contains. */
   const char *description;
 

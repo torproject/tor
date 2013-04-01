@@ -831,32 +831,18 @@ router_rebuild_store(int flags, desc_store_t *store)
 static int
 router_reload_router_list_impl(desc_store_t *store)
 {
-  char *fname = NULL, *altname = NULL, *contents = NULL;
+  char *fname = NULL, *contents = NULL;
   struct stat st;
-  int read_from_old_location = 0;
   int extrainfo = (store->type == EXTRAINFO_STORE);
-  time_t now = time(NULL);
   store->journal_len = store->store_len = 0;
 
   fname = get_datadir_fname(store->fname_base);
-  if (store->fname_alt_base)
-    altname = get_datadir_fname(store->fname_alt_base);
 
   if (store->mmap) /* get rid of it first */
     tor_munmap_file(store->mmap);
   store->mmap = NULL;
 
   store->mmap = tor_mmap_file(fname);
-  if (!store->mmap && altname && file_status(altname) == FN_FILE) {
-    read_from_old_location = 1;
-    log_notice(LD_DIR, "Couldn't read %s; trying to load routers from old "
-               "location %s.", fname, altname);
-    if ((store->mmap = tor_mmap_file(altname)))
-      read_from_old_location = 1;
-  }
-  if (altname && !read_from_old_location) {
-    remove_file_if_very_old(altname, now);
-  }
   if (store->mmap) {
     store->store_len = store->mmap->size;
     if (extrainfo)
@@ -873,14 +859,6 @@ router_reload_router_list_impl(desc_store_t *store)
   fname = get_datadir_fname_suffix(store->fname_base, ".new");
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (read_from_old_location) {
-    tor_free(altname);
-    altname = get_datadir_fname_suffix(store->fname_alt_base, ".new");
-    if (!contents)
-      contents = read_file_to_str(altname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-    else
-      remove_file_if_very_old(altname, now);
-  }
   if (contents) {
     if (extrainfo)
       router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL,
@@ -893,9 +871,8 @@ router_reload_router_list_impl(desc_store_t *store)
   }
 
   tor_free(fname);
-  tor_free(altname);
 
-  if (store->journal_len || read_from_old_location) {
+  if (store->journal_len) {
     /* Always clear the journal on startup.*/
     router_rebuild_store(RRS_FORCE, store);
   } else if (!extrainfo) {
@@ -2469,7 +2446,6 @@ router_get_routerlist(void)
     routerlist->extra_info_map = eimap_new();
 
     routerlist->desc_store.fname_base = "cached-descriptors";
-    routerlist->desc_store.fname_alt_base = "cached-routers";
     routerlist->extrainfo_store.fname_base = "cached-extrainfo";
 
     routerlist->desc_store.type = ROUTER_STORE;
