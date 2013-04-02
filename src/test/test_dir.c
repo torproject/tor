@@ -82,9 +82,11 @@ test_dir_formats(void)
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
   crypto_pk_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
-  routerinfo_t *rp1 = NULL;
+  routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
+  or_options_t *options = get_options_mutable();
+  const addr_policy_t *p;
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
@@ -133,8 +135,8 @@ test_dir_formats(void)
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_new();
-  smartlist_add(r2->exit_policy, ex2);
   smartlist_add(r2->exit_policy, ex1);
+  smartlist_add(r2->exit_policy, ex2);
   r2->nickname = tor_strdup("Fred");
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
@@ -144,7 +146,11 @@ test_dir_formats(void)
   test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str,
                                                     &pk3_str_len));
 
+  /* XXXX025 router_dump_to_string should really take this from ri.*/
+  options->ContactInfo = tor_strdup("Magri White "
+                                    "<magri@elsewhere.example.com>");
   buf = router_dump_router_to_string(r1, pk2);
+  tor_free(options->ContactInfo);
   test_assert(buf);
 
   strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
@@ -167,6 +173,8 @@ test_dir_formats(void)
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "contact Magri White <magri@elsewhere.example.com>\n",
+          sizeof(buf2));
   strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
@@ -189,35 +197,62 @@ test_dir_formats(void)
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   //test_assert(rp1->exit_policy == NULL);
 
-#if 0
-  /* XXX Once we have exit policies, test this again. XXX */
-  strlcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n", sizeof(buf2));
+  strlcpy(buf2,
+          "router Fred 1.1.1.1 9005 0 0\n"
+          "platform Tor "VERSION" on ", sizeof(buf2));
+  strlcat(buf2, get_uname(), sizeof(buf2));
+  strlcat(buf2, "\n"
+          "protocols Link 1 2 Circuit 1\n"
+          "published 1970-01-01 00:00:05\n"
+          "fingerprint ", sizeof(buf2));
+  test_assert(!crypto_pk_get_fingerprint(pk1, fingerprint, 1));
+  strlcat(buf2, fingerprint, sizeof(buf2));
+  strlcat(buf2, "\nuptime 0\n"
+          "bandwidth 3000 3000 3000\n", sizeof(buf2));
+  strlcat(buf2, "onion-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
-  strlcat(buf2, "accept *:80\nreject 18.*:24\n\n", sizeof(buf2));
-  test_assert(router_dump_router_to_string(buf, 2048, &r2, pk2)>0);
-  test_streq(buf, buf2);
+  strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
+  strlcat(buf2, "router-signature\n", sizeof(buf2));
 
+  buf = router_dump_router_to_string(r2, pk1);
+  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
+                             * twice */
+  test_streq(buf, buf2);
+  tor_free(buf);
+
+  buf = router_dump_router_to_string(r2, pk1);
   cp = buf;
-  rp2 = router_parse_entry_from_string(&cp,1);
+  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp2);
-  test_streq(rp2->address, r2.address);
-  test_eq(rp2->or_port, r2.or_port);
-  test_eq(rp2->dir_port, r2.dir_port);
-  test_eq(rp2->bandwidth, r2.bandwidth);
+  test_streq(rp2->address, r2->address);
+  test_eq(rp2->or_port, r2->or_port);
+  test_eq(rp2->dir_port, r2->dir_port);
+  test_eq(rp2->bandwidthrate, r2->bandwidthrate);
+  test_eq(rp2->bandwidthburst, r2->bandwidthburst);
+  test_eq(rp2->bandwidthcapacity, r2->bandwidthcapacity);
   test_assert(crypto_pk_cmp_keys(rp2->onion_pkey, pk2) == 0);
   test_assert(crypto_pk_cmp_keys(rp2->identity_pkey, pk1) == 0);
-  test_eq(rp2->exit_policy->policy_type, EXIT_POLICY_ACCEPT);
-  test_streq(rp2->exit_policy->string, "accept *:80");
-  test_streq(rp2->exit_policy->address, "*");
-  test_streq(rp2->exit_policy->port, "80");
-  test_eq(rp2->exit_policy->next->policy_type, EXIT_POLICY_REJECT);
-  test_streq(rp2->exit_policy->next->string, "reject 18.*:24");
-  test_streq(rp2->exit_policy->next->address, "18.*");
-  test_streq(rp2->exit_policy->next->port, "24");
-  test_assert(rp2->exit_policy->next->next == NULL);
 
+  test_eq(smartlist_len(rp2->exit_policy), 2);
+
+  p = smartlist_get(rp2->exit_policy, 0);
+  test_eq(p->policy_type, ADDR_POLICY_ACCEPT);
+  test_assert(tor_addr_is_null(&p->addr));
+  test_eq(p->maskbits, 0);
+  test_eq(p->prt_min, 80);
+  test_eq(p->prt_max, 80);
+
+  p = smartlist_get(rp2->exit_policy, 1);
+  test_eq(p->policy_type, ADDR_POLICY_REJECT);
+  test_assert(tor_addr_eq(&p->addr, &ex2->addr));
+  test_eq(p->maskbits, 8);
+  test_eq(p->prt_min, 24);
+  test_eq(p->prt_max, 24);
+
+#if 0
   /* Okay, now for the directories. */
   {
     fingerprint_list = smartlist_new();

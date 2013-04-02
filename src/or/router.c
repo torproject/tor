@@ -2235,6 +2235,8 @@ char *
 router_dump_router_to_string(routerinfo_t *router,
                              crypto_pk_t *ident_key)
 {
+  /* XXXX025 Make this look entirely at its arguments, and not at globals.
+   */
   char *onion_pkey = NULL; /* Onion key, PEM-encoded. */
   char *identity_pkey = NULL; /* Identity key, PEM-encoded. */
   char digest[DIGEST_LEN];
