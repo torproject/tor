@@ -78,10 +78,10 @@ test_dir_formats(void)
   char buf2[8192];
   char platform[256];
   char fingerprint[FINGERPRINT_LEN+1];
-  char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
-  size_t pk1_str_len, pk2_str_len, pk3_str_len;
+  char *pk1_str = NULL, *pk2_str = NULL, *cp;
+  size_t pk1_str_len, pk2_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
-  crypto_pk_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
@@ -90,9 +90,8 @@ test_dir_formats(void)
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
-  pk3 = pk_generate(2);
 
-  test_assert(pk1 && pk2 && pk3);
+  test_assert(pk1 && pk2);
 
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
@@ -143,8 +142,6 @@ test_dir_formats(void)
                                                     &pk1_str_len));
   test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
                                                     &pk2_str_len));
-  test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str,
-                                                    &pk3_str_len));
 
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
@@ -274,10 +271,8 @@ test_dir_formats(void)
   tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
-  tor_free(pk3_str);
   if (pk1) crypto_pk_free(pk1);
   if (pk2) crypto_pk_free(pk2);
-  if (pk3) crypto_pk_free(pk3);
   if (rp1) routerinfo_free(rp1);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
