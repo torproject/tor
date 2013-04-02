@@ -3439,6 +3439,10 @@ connection_handle_write_impl(connection_t *conn, int force)
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(TO_EDGE_CONN(conn));
+      if (conn->type == CONN_TYPE_AP) {
+        /* writing failed; we couldn't send a SOCKS reply if we wanted to */
+        TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
+      }
 
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       connection_mark_for_close(conn);
