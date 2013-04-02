@@ -131,6 +131,9 @@ test_dir_formats(void)
   r2->or_port = 9005;
   r2->dir_port = 0;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
+  r2->onion_curve25519_pkey = tor_malloc_zero(sizeof(curve25519_public_key_t));
+  curve25519_public_from_base64(r2->onion_curve25519_pkey,
+                                "skyinAnvardNostarsNomoonNowindormistsorsnow");
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_new();
@@ -211,6 +214,8 @@ test_dir_formats(void)
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "ntor-onion-key "
+          "skyinAnvardNostarsNomoonNowindormistsorsnow=\n", sizeof(buf2));
   strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
   strlcat(buf2, "router-signature\n", sizeof(buf2));
 
@@ -230,6 +235,9 @@ test_dir_formats(void)
   test_eq(rp2->bandwidthrate, r2->bandwidthrate);
   test_eq(rp2->bandwidthburst, r2->bandwidthburst);
   test_eq(rp2->bandwidthcapacity, r2->bandwidthcapacity);
+  test_memeq(rp2->onion_curve25519_pkey->public_key,
+             r2->onion_curve25519_pkey->public_key,
+             CURVE25519_PUBKEY_LEN);
   test_assert(crypto_pk_cmp_keys(rp2->onion_pkey, pk2) == 0);
   test_assert(crypto_pk_cmp_keys(rp2->identity_pkey, pk1) == 0);
 
