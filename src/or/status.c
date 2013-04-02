@@ -85,6 +85,7 @@ log_heartbeat(time_t now)
   char *bw_rcvd = NULL;
   char *uptime = NULL;
   const routerinfo_t *me;
+  double r = tls_get_write_overhead_ratio();
 
   const or_options_t *options = get_options();
   (void)now;
@@ -111,6 +112,11 @@ log_heartbeat(time_t now)
     log_notice(LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
         100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
              U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+
+  if (r > 1.0) {
+    double overhead = ( r - 1.0 ) * 100.0;
+    log_notice(LD_HEARTBEAT, "TLS write overhead: %.f%%", overhead);
+  }
 
   tor_free(uptime);
   tor_free(bw_sent);

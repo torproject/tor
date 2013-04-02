@@ -1,0 +1,5 @@
+  o Minor features:
+    - Add another diagnostic to the heartbeat message: track and log
+      overhead that TLS is adding to the data we write.  If this is
+      high, we are sending too little data to SSL_write at a time.
+      Diagnostic for bug 7707.
