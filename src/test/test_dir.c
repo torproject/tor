@@ -863,6 +863,13 @@ gen_routerstatus_for_v3ns(int idx, time_t now)
       /* Shouldn't happen */
       test_assert(0);
   }
+  if (vrs) {
+    vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+    tor_asprintf(&vrs->microdesc->microdesc_hash_line,
+                 "m 9,10,11,12,13,14,15,16,17 "
+                 "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
+                 idx);
+  }
 
  done:
   return vrs;
@@ -1831,6 +1838,13 @@ gen_routerstatus_for_umbw(int idx, time_t now)
     default:
       /* Shouldn't happen */
       test_assert(0);
+  }
+  if (vrs) {
+    vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+    tor_asprintf(&vrs->microdesc->microdesc_hash_line,
+                 "m 9,10,11,12,13,14,15,16,17 "
+                 "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
+                 idx);
   }
 
  done:
