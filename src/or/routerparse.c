@@ -662,18 +662,6 @@ router_get_networkstatus_v3_hashes(const char *s, digests_t *digests)
                                 ' ');
 }
 
-/** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
- * string in <b>s</b>.  Return 0 on success, -1 on failure. */
-int
-router_get_networkstatus_v3_hash(const char *s, char *digest,
-                                 digest_algorithm_t alg)
-{
-  return router_get_hash_impl(s, strlen(s), digest,
-                              "network-status-version",
-                              "\ndirectory-signature",
-                              ' ', alg);
-}
-
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the <b>s_len</b>-byte
  * extrainfo string at <b>s</b>.  Return 0 on success, -1 on failure. */
 int
