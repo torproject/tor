@@ -1,0 +1,5 @@
+  o Removed features:
+    - Remove migration code from when we renamed the "cached-routers"
+      file to "cached-descriptors" back in 0.2.0.8-alpha. This
+      incidentally resolves #6502 by cleaning up the related code
+      a bit. Patch from Akshay Hebbar.
