@@ -2217,6 +2217,39 @@ test_dir_v2_dir(void *arg)
   cached_dir_decref(v2);
 }
 
+static void
+test_dir_fmt_control_ns(void *arg)
+{
+  char *s = NULL;
+  routerstatus_t rs;
+  (void)arg;
+
+  memset(&rs, 0, sizeof(rs));
+  rs.published_on = 1364925198;
+  strlcpy(rs.nickname, "TetsuoMilk", sizeof(rs.nickname));
+  memcpy(rs.identity_digest, "Stately, plump Buck ", DIGEST_LEN);
+  memcpy(rs.descriptor_digest, "Mulligan came up fro", DIGEST_LEN);
+  rs.addr = 0x20304050;
+  rs.or_port = 9001;
+  rs.dir_port = 9002;
+  rs.is_exit = 1;
+  rs.is_fast = 1;
+  rs.is_flagged_running = 1;
+  rs.has_bandwidth = 1;
+  rs.bandwidth = 1000;
+
+  s = networkstatus_getinfo_helper_single(&rs);
+  tt_assert(s);
+  tt_str_op(s, ==,
+            "r TetsuoMilk U3RhdGVseSwgcGx1bXAgQnVjayA "
+               "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2013-04-02 17:53:18 "
+               "32.48.64.80 9001 9002\n"
+            "s Exit Fast Running\n"
+            "w Bandwidth=1000\n");
+
+ done:
+  tor_free(s);
+}
 
 #define DIR_LEGACY(name)                                                   \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
@@ -2238,6 +2271,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw),
   DIR_LEGACY(clip_unmeasured_bw_alt),
   DIR(v2_dir, TT_FORK),
+  DIR(fmt_control_ns, 0),
   END_OF_TESTCASES
 };
 
