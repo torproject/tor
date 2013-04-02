@@ -120,6 +120,7 @@ int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
 
 int measured_bw_line_apply(measured_bw_line_t *parsed_line,
                            smartlist_t *routerstatuses);
+cached_dir_t *generate_v2_networkstatus_opinion(void);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

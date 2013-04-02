@@ -2904,7 +2904,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 /** For v2 authoritative directories only: Replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object.  */
-static cached_dir_t *
+cached_dir_t *
 generate_v2_networkstatus_opinion(void)
 {
   cached_dir_t *r = NULL;
