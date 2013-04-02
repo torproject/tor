@@ -95,6 +95,8 @@ void tor_tls_get_buffer_sizes(tor_tls_t *tls,
                               size_t *rbuf_capacity, size_t *rbuf_bytes,
                               size_t *wbuf_capacity, size_t *wbuf_bytes);
 
+double tls_get_write_overhead_ratio(void);
+
 int tor_tls_used_v1_handshake(tor_tls_t *tls);
 int tor_tls_received_v3_certificate(tor_tls_t *tls);
 int tor_tls_get_num_server_handshakes(tor_tls_t *tls);
