@@ -560,7 +560,7 @@ addressmap_register(const char *address, char *new_address, time_t expires,
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
            safe_str_client(address),
            safe_str_client(ent->new_address));
-  control_event_address_mapped(address, ent->new_address, expires, NULL);
+  control_event_address_mapped(address, ent->new_address, expires, NULL, 1);
 }
 
 /** An attempt to resolve <b>address</b> failed at some OR.
