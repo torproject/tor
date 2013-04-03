@@ -1734,6 +1734,13 @@ pathbias_count_use_success(origin_circuit_t *circ)
       guard->use_successes++;
       entry_guards_changed();
 
+      if (guard->use_attempts < guard->use_successes) {
+        log_notice(LD_BUG, "Unexpectedly high use successes counts (%f/%f) "
+                 "for guard %s=%s",
+                 guard->use_successes, guard->use_attempts,
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+      }
+
       log_debug(LD_CIRC,
                 "Marked circuit %d (%f/%f) as used successfully for guard "
                 "%s ($%s).",
@@ -2481,6 +2488,9 @@ pathbias_scale_close_rates(entry_guard_t *guard)
     int opened_built = pathbias_count_circs_in_states(guard,
                         PATH_STATE_BUILD_SUCCEEDED,
                         PATH_STATE_USE_FAILED);
+    /* Verify that the counts are sane before and after scaling */
+    int counts_are_sane = (guard->circ_attempts >= guard->circ_successes);
+
     guard->circ_attempts -= opened_attempts;
     guard->circ_successes -= opened_built;
 
@@ -2502,6 +2512,16 @@ pathbias_scale_close_rates(entry_guard_t *guard)
              guard->circ_successes, guard->successful_circuits_closed,
              guard->circ_attempts, opened_built, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+
+    /* Have the counts just become invalid by this scaling attempt? */
+    if (counts_are_sane && guard->circ_attempts < guard->circ_successes) {
+      log_notice(LD_BUG,
+               "Scaling has mangled pathbias counts to %f/%f (%d/%d open) "
+               "for guard %s ($%s)",
+               guard->circ_successes, guard->circ_attempts, opened_built,
+               opened_attempts, guard->nickname,
+               hex_str(guard->identity, DIGEST_LEN));
+    }
   }
 }
 
@@ -2524,6 +2544,9 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
+    /* Verify that the counts are sane before and after scaling */
+    int counts_are_sane = (guard->use_attempts >= guard->use_successes);
+
     guard->use_attempts -= opened_attempts;
 
     guard->use_attempts *= scale_ratio;
@@ -2535,6 +2558,17 @@ pathbias_scale_use_rates(entry_guard_t *guard)
              "Scaled pathbias use counts to %f/%f (%d open) for guard %s ($%s)",
              guard->use_successes, guard->use_attempts, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+
+    /* Have the counts just become invalid by this scaling attempt? */
+    if (counts_are_sane && guard->use_attempts < guard->use_successes) {
+      log_notice(LD_BUG,
+               "Scaling has mangled pathbias usage counts to %f/%f "
+               "(%d open) for guard %s ($%s)",
+               guard->circ_successes, guard->circ_attempts,
+               opened_attempts, guard->nickname,
+               hex_str(guard->identity, DIGEST_LEN));
+    }
+
     entry_guards_changed();
   }
 }
