@@ -1215,6 +1215,21 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         continue;
       }
 
+      if (use_cnt < success_cnt) {
+        int severity = LOG_INFO;
+        /* If this state file was written by a Tor that would have
+         * already fixed it, then the overcounting bug is still there.. */
+        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+          severity = LOG_NOTICE;
+        }
+        log_fn(severity, LD_BUG,
+                   "State file contains unexpectedly high usage success "
+                   "counts %lf/%lf for Guard %s ($%s)",
+                   success_cnt, use_cnt,
+                   node->nickname, hex_str(node->identity, DIGEST_LEN));
+        success_cnt = use_cnt;
+      }
+
       node->use_attempts = use_cnt;
       node->use_successes = success_cnt;
 
@@ -1263,6 +1278,21 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         timeouts = 0;
         collapsed = 0;
         unusable = 0;
+      }
+
+      if (hop_cnt < success_cnt) {
+        int severity = LOG_INFO;
+        /* If this state file was written by a Tor that would have
+         * already fixed it, then the overcounting bug is still there.. */
+        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+          severity = LOG_NOTICE;
+        }
+        log_fn(severity, LD_BUG,
+                "State file contains unexpectedly high success counts "
+                "%lf/%lf for Guard %s ($%s)",
+                success_cnt, hop_cnt,
+                node->nickname, hex_str(node->identity, DIGEST_LEN));
+        success_cnt = hop_cnt;
       }
 
       node->circ_attempts = hop_cnt;
