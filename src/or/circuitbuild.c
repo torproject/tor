@@ -2555,9 +2555,9 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     guard->use_attempts += opened_attempts;
 
     log_info(LD_CIRC,
-             "Scaled pathbias use counts to %f/%f (%d open) for guard %s ($%s)",
-             guard->use_successes, guard->use_attempts, opened_attempts,
-             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+           "Scaled pathbias use counts to %f/%f (%d open) for guard %s ($%s)",
+           guard->use_successes, guard->use_attempts, opened_attempts,
+           guard->nickname, hex_str(guard->identity, DIGEST_LEN));
 
     /* Have the counts just become invalid by this scaling attempt? */
     if (counts_are_sane && guard->use_attempts < guard->use_successes) {
