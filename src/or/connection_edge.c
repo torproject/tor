@@ -2040,11 +2040,8 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
                                       int ttl,
                                       time_t expires)
 {
-
-  if (ttl >= 0 && (answer_type == RESOLVED_TYPE_IPV4 ||
-                   answer_type == RESOLVED_TYPE_HOSTNAME)) {
-    return; /* we already told the controller. */
-  } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
+  expires = time(NULL) + ttl;
+  if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
     char *cp = tor_dup_ip(ntohl(get_uint32(answer)));
     control_event_address_mapped(conn->socks_request->address,
                                  cp, expires, NULL);
@@ -2116,8 +2113,9 @@ connection_ap_handshake_socks_resolved(entry_connection_t *conn,
       conn->socks_request->has_finished = 1;
       return;
     } else {
-      /* This must be a request from the controller. We already sent
-       * a mapaddress if there's a ttl. */
+      /* This must be a request from the controller. Since answers to those
+       * requests are not cached, they do not generate an ADDRMAP event on
+       * their own. */
       tell_controller_about_resolved_result(conn, answer_type, answer_len,
                                             (char*)answer, ttl, expires);
       conn->socks_request->has_finished = 1;
