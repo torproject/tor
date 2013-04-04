@@ -88,7 +88,13 @@ setup_directory(void)
 {
   static int is_setup = 0;
   int r;
+  char rnd[256], rnd32[256];
   if (is_setup) return;
+
+/* Due to base32 limitation needs to be a multiple of 5. */
+#define RAND_PATH_BYTES 5
+  crypto_rand(rnd, RAND_PATH_BYTES);
+  base32_encode(rnd32, sizeof(rnd32), rnd, RAND_PATH_BYTES);
 
 #ifdef _WIN32
   {
@@ -98,11 +104,11 @@ setup_directory(void)
     if (!GetTempPathA(sizeof(buf),buf))
       tmp = "c:\\windows\\temp";
     tor_snprintf(temp_dir, sizeof(temp_dir),
-                 "%s\\tor_test_%d", tmp, (int)getpid());
+                 "%s\\tor_test_%d_%s", tmp, (int)getpid(), rnd32);
     r = mkdir(temp_dir);
   }
 #else
-  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
+  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s", (int) getpid(), rnd32);
   r = mkdir(temp_dir, 0700);
 #endif
   if (r) {
@@ -2094,6 +2100,7 @@ main(int c, const char **v)
     return 1;
   }
   crypto_set_tls_dh_prime(NULL);
+  crypto_seed_rng(1);
   rep_hist_init();
   network_init();
   setup_directory();
@@ -2105,8 +2112,6 @@ main(int c, const char **v)
     tor_free(errmsg);
     return 1;
   }
-
-  crypto_seed_rng(1);
 
   atexit(remove_directory);
 

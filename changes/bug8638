@@ -1,0 +1,3 @@
+ o Minor features
+   In our testsuite, create temporary directories with a bit more entropy
+   in their name to make name collissions less likely.  Fixes bug 8638.
