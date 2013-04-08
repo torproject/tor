@@ -9,6 +9,12 @@
 # database.  -KL 2013-02-08
 #"0.116.0.0","0.119.255.255","7602176","7864319","",""
 
+# IN, though could as well be UA.  Previous MaxMind entry
+# 5.56.23.0-5.56.23.127 is IN, next MaxMind entry 5.56.24.0-5.56.31.255 is
+# UA, and RIR delegation files say the entire block
+# 5.56.16.0-5.56.23.255 is DE.  -KL 2013-04-08
+"5.56.23.128","5.56.23.255","87562112","87562239","IN","India"
+
 # GB, because previous MaxMind entry 31.6.16.0-31.6.25.255 is GB, and RIR
 # delegation files say entire range 31.6.0.0-31.6.63.255 is GB.
 # -KL 2013-03-07
@@ -46,16 +52,21 @@
 # GB.  -KL 2013-03-07
 "46.166.135.0","46.166.139.255","782665472","782666751","GB","United Kingdom"
 
+# SE, because previous MaxMind entry 46.246.66.0-46.246.71.255 is SE, and
+# RIR delegation files say entire range 46.246.0.0-46.246.127.255 is SE.
+# -KL 2013-03-07
+"46.246.72.0","46.246.79.255","787892224","787894271","SE","Sweden"
+
+# SE, because MaxMind range 46.246.88.0-46.246.127.255 is subdivided into
+# a mix of SE and A1, and RIR delegation files say entire range
+# 46.246.0.0-46.246.127.255 is SE.  -KL 2013-04-08
+"46.246.88.0","46.246.88.92","787896320","787896412","SE","Sweden"
+
 # US, though could as well be CA.  Previous MaxMind entry
 # 64.237.32.52-64.237.34.127 is US, next MaxMind entry
 # 64.237.34.144-64.237.34.151 is CA, and RIR delegation files say the
 # entire block 64.237.32.0-64.237.63.255 is US.  -KL 2012-11-27
 "64.237.34.128","64.237.34.143","1089282688","1089282703","US","United States"
-
-# SE, because previous MaxMind entry 46.246.66.0-46.246.71.255 is SE, and
-# RIR delegation files say entire range 46.246.0.0-46.246.127.255 is SE.
-# -KL 2013-03-07
-"46.246.72.0","46.246.79.255","787892224","787894271","SE","Sweden"
 
 # Removing, because RIR delegation files don't even have an entry for this
 # single-address range, and there's no previous or next range in MaxMind.
@@ -92,6 +103,26 @@
 # -KL 2013-03-07
 "77.242.196.0","77.242.196.255","1307755520","1307755775","GB","United Kingdom"
 
+# GB, despite neither previous (FI) nor next (FR) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 79.141.160.0-79.141.175.255 is GB.  -KL 2013-04-08
+"79.141.160.0","79.141.162.255","1334681600","1334682367","GB","United Kingdom"
+
+# GB, despite neither previous (FR) nor next (DK) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 79.141.160.0-79.141.175.255 is GB.  -KL 2013-04-08
+"79.141.164.0","79.141.164.255","1334682624","1334682879","GB","United Kingdom"
+
+# GB, despite neither previous (DK) nor next (CH) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 79.141.160.0-79.141.175.255 is GB.  -KL 2013-04-08
+"79.141.166.0","79.141.166.255","1334683136","1334683391","GB","United Kingdom"
+
+# GB, despite neither previous (CH) nor next (IT) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 79.141.160.0-79.141.175.255 is GB.  -KL 2013-04-08
+"79.141.168.0","79.141.175.255","1334683648","1334685695","GB","United Kingdom"
+
 # SE, because previous MaxMind entry 80.67.11.200-80.67.13.255 is SE, and
 # RIR delegation files say entire range 80.67.0.0-80.67.15.255 is SE.
 # -KL 2013-03-07
@@ -101,6 +132,11 @@
 # RIR delegation files say entire range 81.171.64.0-81.171.127.255 is NL.
 # -KL 2013-03-07
 "81.171.81.0","81.171.81.127","1370181888","1370182015","NL","Netherlands"
+
+# BE, because next MaxMind entry 86.39.147.0-86.39.148.31 is BE, and RIR
+# delegation files say entire range 86.39.128.0-86.39.255.255 is BE.
+# -KL 2013-04-08
+"86.39.146.0","86.39.146.255","1445433856","1445434111","BE","Belgium"
 
 # GB, despite neither previous (GE) nor next (LV) MaxMind entry being GB,
 # but because RIR delegation files agree with both previous and next
@@ -117,6 +153,21 @@
 # MaxMind entry and say GB for 91.238.214.0-91.238.215.255.
 # -KL 2012-11-27
 "91.238.214.0","91.238.215.255","1542379008","1542379519","GB","United Kingdom"
+
+# GB, despite neither previous (RU) nor next (FR) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 95.141.16.0-95.141.31.255 is GB.  -KL 2013-04-08
+"95.141.16.0","95.141.16.255","1603080192","1603080447","GB","United Kingdom"
+
+# GB, despite neither previous (FR) nor next (LU) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 95.141.16.0-95.141.31.255 is GB.  -KL 2013-04-08
+"95.141.18.0","95.141.29.47","1603080704","1603083567","GB","United Kingdom"
+
+# GB, despite neither previous (LU) nor next (IT) MaxMind entry being GB,
+# but because RIR delegation files say entire range
+# 95.141.16.0-95.141.31.255 is GB.  -KL 2013-04-08
+"95.141.30.48","95.141.31.255","1603083824","1603084287","GB","United Kingdom"
 
 # US, because next MaxMind entry 173.0.16.0-173.0.65.255 is US, and RIR
 # delegation files say 173.0.0.0-173.0.15.255 is US.  -KL 2012-11-27
@@ -143,10 +194,10 @@
 # -KL 2013-03-07
 "178.33.213.212","178.33.213.215","2988561876","2988561879","FR","France"
 
-# SE, because next MaxMind entry 178.73.196.0-178.73.197.255 is SE, and
+# SE, because next MaxMind entry 178.73.196.113-178.73.196.126 is SE, and
 # RIR delegation files say entire range 178.73.192.0-178.73.255.255 is SE.
-# -KL 2013-03-07
-"178.73.192.0","178.73.195.255","2991177728","2991178751","SE","Sweden"
+# -KL 2013-04-08
+"178.73.192.0","178.73.196.112","2991177728","2991178864","SE","Sweden"
 
 # SE, because previous MaxMind entry 178.73.213.0-178.73.215.255 is SE,
 # and RIR delegation files say entire range 178.73.192.0-178.73.255.255 is
@@ -164,6 +215,10 @@
 # MaxMind entry and say EU for 193.200.150.0-193.200.150.255.
 # -KL 2012-11-27
 "193.200.150.0","193.200.150.255","3251148288","3251148543","EU","Europe"
+
+# GB, because next MaxMind entry 195.13.64.0-195.13.68.159 is GB, and RIR
+# delegation files say exact entry is GB.  -KL 2013-04-08
+"195.13.60.0","195.13.63.255","3272424448","3272425471","GB","United Kingdom"
 
 # US, because previous MaxMind entry 199.96.68.0-199.96.87.127 is US, and
 # RIR delegation files say 199.96.80.0-199.96.87.255 is US.
