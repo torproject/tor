@@ -1830,7 +1830,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
     }
   }
   if (need_capacity) {
-    uint32_t bw = dirserv_get_bandwidth_for_router(router);
+    uint32_t bw = dirserv_get_credible_bandwidth(router);
     if (bw < fast_bandwidth)
       return 1;
   }
