@@ -2214,7 +2214,7 @@ dirserv_get_bandwidth_for_router(const routerinfo_t *ri)
       bw = (uint32_t)mbw;
     } else {
       /* If not, fall back to advertised */
-      bw = router_get_advertised_bandwidth(ri);
+      bw = router_get_advertised_bandwidth(ri) / 1000;
     }
   }
 
@@ -2263,7 +2263,7 @@ dirserv_get_credible_bandwidth(const routerinfo_t *ri)
       bw = 0;
     } else {
       /* Return an advertised bandwidth otherwise */
-      bw = router_get_advertised_bandwidth(ri);
+      bw = router_get_advertised_bandwidth_capped(ri) / 1000;
     }
   } else {
     /* We have the measured bandwidth in mbw */
