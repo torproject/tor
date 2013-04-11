@@ -1967,9 +1967,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
       bandwidths_kb[n_active] = bw_kb = dirserv_get_credible_bandwidth_kb(ri);
-      if (node->is_exit && !node->is_bad_exit) {
-        ;
-      } else {
+      if (!node->is_exit || node->is_bad_exit) {
         bandwidths_excluding_exits_kb[n_active_nonexit] = bw_kb;
         ++n_active_nonexit;
       }
