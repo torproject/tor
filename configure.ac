@@ -676,30 +676,38 @@ if test x$enable_curve25519 != xno; then
       [AC_LANG_PROGRAM([dnl
         #include <stdint.h>
         typedef unsigned uint128_t __attribute__((mode(TI)));
+	int func(uint64_t a, uint64_t b) {
+  	     uint128_t c = ((uint128_t)a) * b;
+             int ok = ((uint64_t)(c>>96)) == 522859 &&
+	           (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                   (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                   (((uint64_t)(c))&0xffffffffL) == 0;
+             return ok;
+        }
 	], [dnl
-          uint64_t a = ((uint64_t)2000000000) * 1000000000;
-	  uint64_t b = ((uint64_t)1234567890) << 24;
-	  uint128_t c = ((uint128_t)a) * b;
-	  return ((uint64_t)(c>>96)) == 522859 &&
-	         ((uint64_t)(c>>64))&0xffffffffL == 3604448702L &&
-                 ((uint64_t)(c>>32))&0xffffffffL == 2351960064L &&
-                 ((uint64_t)(c))&0xffffffffL == 0;
+	  int ok = func( ((uint64_t)2000000000) * 1000000000,
+	  	         ((uint64_t)1234567890) << 24);
+          return !ok;
         ])],
 	[tor_cv_can_use_curve25519_donna_c64=yes],
         [tor_cv_can_use_curve25519_donna_c64=no],
 	[AC_COMPILE_IFELSE(
           [AC_LANG_PROGRAM([dnl
-            #include <stdint.h>
-            typedef unsigned uint128_t __attribute__((mode(TI)));
-            ], [dnl
-              uint64_t a = ((uint64_t)2000000000) * 1000000000;
-	      uint64_t b = ((uint64_t)1234567890) << 24;
-	      uint128_t c = ((uint128_t)a) * b;
-	      return ((uint64_t)(c>>96)) == 522859 &&
-	             ((uint64_t)(c>>64))&0xffffffffL == 3604448702L &&
-                     ((uint64_t)(c>>32))&0xffffffffL == 2351960064L &&
-                     ((uint64_t)(c))&0xffffffffL == 0;
-            ])],
+        #include <stdint.h>
+        typedef unsigned uint128_t __attribute__((mode(TI)));
+	int func(uint64_t a, uint64_t b) {
+  	     uint128_t c = ((uint128_t)a) * b;
+             int ok = ((uint64_t)(c>>96)) == 522859 &&
+	           (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                   (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                   (((uint64_t)(c))&0xffffffffL) == 0;
+             return ok;
+        }
+	], [dnl
+	  int ok = func( ((uint64_t)2000000000) * 1000000000,
+	  	         ((uint64_t)1234567890) << 24);
+          return !ok;
+        ])],
             [tor_cv_can_use_curve25519_donna_c64=cross],
 	    [tor_cv_can_use_curve25519_donna_c64=no])])])
 
