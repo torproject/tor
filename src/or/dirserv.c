@@ -1783,10 +1783,6 @@ static uint32_t guard_bandwidth_including_exits_kb = 0;
 /** If exits can't be guards, then all guards must have a bandwidth this
  * high. */
 static uint32_t guard_bandwidth_excluding_exits_kb = 0;
-/** Total bandwidth of all the routers we're considering. */
-static uint64_t total_bandwidth_kb = 0;
-/** Total bandwidth of all the exit routers we're considering. */
-static uint64_t total_exit_bandwidth_kb = 0;
 
 /** Helper: estimate the uptime of a router given its stated uptime and the
  * amount of time since it last stated its stated uptime. */
@@ -1912,7 +1908,6 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
  * the Stable, Fast, and Guard flags.  Update the fields stable_uptime,
  * stable_mtbf, enough_mtbf_info, guard_wfu, guard_tk, fast_bandwidth,
  * guard_bandwidh_including_exits, guard_bandwidth_excluding_exits,
- * total_bandwidth, and total_exit_bandwidth.
  *
  * Also, set the is_exit flag of each router appropriately. */
 static void
@@ -1939,8 +1934,6 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
   guard_bandwidth_excluding_exits_kb = 0;
   guard_tk = 0;
   guard_wfu = 0;
-  total_bandwidth_kb = 0;
-  total_exit_bandwidth_kb = 0;
 
   /* Initialize arrays that will hold values for each router.  We'll
    * sort them and use that to compute thresholds. */
@@ -1974,9 +1967,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
       bandwidths_kb[n_active] = bw_kb = dirserv_get_credible_bandwidth_kb(ri);
-      total_bandwidth_kb += bw_kb;
       if (node->is_exit && !node->is_bad_exit) {
-        total_exit_bandwidth_kb += bw_kb;
+        ;
       } else {
         bandwidths_excluding_exits_kb[n_active_nonexit] = bw_kb;
         ++n_active_nonexit;
