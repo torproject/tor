@@ -362,7 +362,7 @@ test_socks_5_unsupported_commands(void *ptr)
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
   test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
+  test_eq(2, socks->reply[1]);
   ADD_DATA(buf, "\x05\x03\x00\x01\x02\x02\x02\x01\x01\x01");
   test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                get_options()->SafeSocks), -1);
