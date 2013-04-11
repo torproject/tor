@@ -5097,6 +5097,7 @@ parse_port_config(smartlist_t *out,
     int port;
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
+    int prefer_no_auth = 0;
 
     char *addrport;
     uint16_t ptmp=0;
@@ -5264,6 +5265,9 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
           prefer_ipv6_automap = ! no;
           continue;
+        } else if (!strcasecmp(elt, "PreferSOCKSNoAuth")) {
+          prefer_no_auth = ! no;
+          continue;
         }
 
         if (!strcasecmpend(elt, "s"))
@@ -5323,6 +5327,9 @@ parse_port_config(smartlist_t *out,
       cfg->use_cached_ipv4_answers = use_cached_ipv4;
       cfg->use_cached_ipv6_answers = use_cached_ipv6;
       cfg->prefer_ipv6_virtaddr = prefer_ipv6_automap;
+      cfg->socks_prefer_no_auth = prefer_no_auth;
+      if (! (isolation & ISO_SOCKSAUTH))
+        cfg->socks_prefer_no_auth = 1;
 
       smartlist_add(out, cfg);
     }

@@ -1249,6 +1249,10 @@ typedef struct listener_connection_t {
   /** One or more ISO_ flags to describe how to isolate streams. */
   uint8_t isolation_flags;
   /**@}*/
+  /** For SOCKS connections only: If this is set, we will choose "no
+   * authentication" instead of "username/password" authentication if both
+   * are offered. Used as input to parse_socks. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /** For a SOCKS listeners, these fields describe whether we should
    * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
@@ -3241,6 +3245,10 @@ typedef struct port_cfg_t {
   uint8_t isolation_flags; /**< Zero or more isolation flags */
   int session_group; /**< A session group, or -1 if this port is not in a
                       * session group. */
+  /* Socks only: */
+  /** When both no-auth and user/pass are advertised by a SOCKS client, select
+   * no-auth. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /* Server port types (or, dir) only: */
   unsigned int no_advertise : 1;
@@ -4157,6 +4165,10 @@ struct socks_request_t {
                               * make sure we send back a socks reply for
                               * every connection. */
   unsigned int got_auth : 1; /**< Have we received any authentication data? */
+  /** If this is set, we will choose "no authentication" instead of
+   * "username/password" authentication if both are offered. Used as input to
+   * parse_socks. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /** Number of bytes in username; 0 if username is NULL */
   size_t usernamelen;

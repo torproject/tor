@@ -1146,6 +1146,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   lis_conn->use_cached_ipv4_answers = port_cfg->use_cached_ipv4_answers;
   lis_conn->use_cached_ipv6_answers = port_cfg->use_cached_ipv6_answers;
   lis_conn->prefer_ipv6_virtaddr = port_cfg->prefer_ipv6_virtaddr;
+  lis_conn->socks_prefer_no_auth = port_cfg->socks_prefer_no_auth;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1325,6 +1326,11 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     tor_addr_copy(&newconn->addr, &addr);
     newconn->port = port;
     newconn->address = tor_dup_addr(&addr);
+
+    if (new_type == CONN_TYPE_AP) {
+      TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
+        TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
+    }
 
   } else if (conn->socket_family == AF_UNIX) {
     /* For now only control ports can be Unix domain sockets
