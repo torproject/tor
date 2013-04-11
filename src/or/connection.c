@@ -3377,8 +3377,8 @@ connection_outbuf_too_full(connection_t *conn)
 
 /** Try to flush more bytes onto <b>conn</b>-\>s.
  *
- * This function gets called either from conn_write() in main.c
- * when poll() has declared that conn wants to write, or below
+ * This function gets called either from conn_write_callback() in main.c
+ * when libevent tells us that conn wants to write, or below
  * from connection_write_to_buf() when an entire TLS record is ready.
  *
  * Update <b>conn</b>-\>timestamp_lastwritten to now, and call flush_buf
