@@ -379,15 +379,22 @@ relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
-                           crypt_path_t *layer_hint, streamid_t on_stream)
+                           crypt_path_t *layer_hint, streamid_t on_stream,
+                           const char *filename, int lineno)
 {
   channel_t *chan; /* where to send the cell */
 
   if (cell_direction == CELL_DIRECTION_OUT) {
     crypt_path_t *thishop; /* counter for repeated crypts */
     chan = circ->n_chan;
-    if (!CIRCUIT_IS_ORIGIN(circ) || !chan) {
-      log_warn(LD_BUG,"outgoing relay cell has n_chan==NULL. Dropping.");
+    if (!chan) {
+      log_warn(LD_BUG,"outgoing relay cell sent from %s:%d has n_chan==NULL."
+               " Dropping.", filename, lineno);
+      return 0; /* just drop it */
+    }
+    if (!CIRCUIT_IS_ORIGIN(circ)) {
+      log_warn(LD_BUG,"outgoing relay cell sent from %s:%d on non-origin "
+               "circ. Dropping.", filename, lineno);
       return 0; /* just drop it */
     }
 
@@ -548,9 +555,10 @@ relay_command_to_string(uint8_t command)
  * return 0.
  */
 int
-relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
-                             uint8_t relay_command, const char *payload,
-                             size_t payload_len, crypt_path_t *cpath_layer)
+relay_send_command_from_edge_(streamid_t stream_id, circuit_t *circ,
+                              uint8_t relay_command, const char *payload,
+                              size_t payload_len, crypt_path_t *cpath_layer,
+                              const char *filename, int lineno)
 {
   cell_t cell;
   relay_header_t rh;
@@ -633,7 +641,7 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
   }
 
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer,
-                                 stream_id) < 0) {
+                                 stream_id, filename, lineno) < 0) {
     log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
