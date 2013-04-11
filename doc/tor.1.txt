@@ -972,6 +972,15 @@ The following options are useful only for clients (that is, if
         should get automapped (according to AutomapHostsOnResove),
         if we could return either an IPv4 or an IPv6 answer, prefer
         an IPv6 answer. (On by default.)
+    **PreferSOCKSNoAuth**;;
+        Ordinarily, when an application offers both "username/password
+        authentication" and "no authentication" to Tor via SOCKS5, Tor
+        selects username/password authentication so that IsolateSOCKSAuth can
+        work.  This can confuse some applications, if they offer a
+        username/password combination then get confused when asked for
+        one. You can disable this behavior, so that Tor will select "No
+        authentication" when IsolateSOCKSAuth is disabled, or when this
+        option is set.
 
 **SOCKSListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
