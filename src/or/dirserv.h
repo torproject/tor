@@ -151,8 +151,8 @@ void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 void dirserv_clear_measured_bw_cache(void);
 void dirserv_expire_measured_bw_cache(time_t now);
 int dirserv_get_measured_bw_cache_size(void);
-int dirserv_query_measured_bw_cache(const char *node_id, long *bw_out,
-                                    time_t *as_of_out);
+int dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_out,
+                                       time_t *as_of_out);
 int dirserv_has_measured_bw(const char *node_id);
 #endif
 

@@ -1388,7 +1388,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
   const char *flavor_name;
-  uint32_t max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
+  uint32_t max_unmeasured_bw_kb = DEFAULT_MAX_UNMEASURED_BW_KB;
   int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
@@ -1600,12 +1600,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int ok = 0;
       char *eq = strchr(max_unmeasured_param, '=');
       if (eq) {
-        max_unmeasured_bw = (uint32_t)
+        max_unmeasured_bw_kb = (uint32_t)
           tor_parse_ulong(eq+1, 10, 1, UINT32_MAX, &ok, NULL);
         if (!ok) {
           log_warn(LD_DIR, "Bad element '%s' in max unmeasured bw param",
                    escaped(max_unmeasured_param));
-          max_unmeasured_bw = DEFAULT_MAX_UNMEASURED_BW;
+          max_unmeasured_bw_kb = DEFAULT_MAX_UNMEASURED_BW_KB;
         }
       }
     }
@@ -1622,9 +1622,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *chosen_flags = smartlist_new();
     smartlist_t *versions = smartlist_new();
     smartlist_t *exitsummaries = smartlist_new();
-    uint32_t *bandwidths = tor_malloc(sizeof(uint32_t) * smartlist_len(votes));
-    uint32_t *measured_bws = tor_malloc(sizeof(uint32_t) *
-                                        smartlist_len(votes));
+    uint32_t *bandwidths_kb = tor_malloc(sizeof(uint32_t) *
+                                         smartlist_len(votes));
+    uint32_t *measured_bws_kb = tor_malloc(sizeof(uint32_t) *
+                                           smartlist_len(votes));
     int num_bandwidths;
     int num_mbws;
 
@@ -1804,10 +1805,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         /* count bandwidths */
         if (rs->has_measured_bw)
-          measured_bws[num_mbws++] = rs->measured_bw;
+          measured_bws_kb[num_mbws++] = rs->measured_bw_kb;
 
         if (rs->status.has_bandwidth)
-          bandwidths[num_bandwidths++] = rs->status.bandwidth;
+          bandwidths_kb[num_bandwidths++] = rs->status.bandwidth_kb;
       } SMARTLIST_FOREACH_END(v);
 
       /* We don't include this router at all unless more than half of
@@ -1898,16 +1899,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
       if (consensus_method >= 6 && num_mbws > 2) {
         rs_out.has_bandwidth = 1;
         rs_out.bw_is_unmeasured = 0;
-        rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
+        rs_out.bandwidth_kb = median_uint32(measured_bws_kb, num_mbws);
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bw_is_unmeasured = 1;
-        rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+        rs_out.bandwidth_kb = median_uint32(bandwidths_kb, num_bandwidths);
         if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW &&
             n_authorities_measuring_bandwidth > 2) {
           /* Cap non-measured bandwidths. */
-          if (rs_out.bandwidth > max_unmeasured_bw) {
-            rs_out.bandwidth = max_unmeasured_bw;
+          if (rs_out.bandwidth_kb > max_unmeasured_bw_kb) {
+            rs_out.bandwidth_kb = max_unmeasured_bw_kb;
           }
         }
       }
@@ -1919,15 +1920,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS) {
         if (rs_out.has_bandwidth) {
-          T += rs_out.bandwidth;
+          T += rs_out.bandwidth_kb;
           if (is_exit && is_guard)
-            D += rs_out.bandwidth;
+            D += rs_out.bandwidth_kb;
           else if (is_exit)
-            E += rs_out.bandwidth;
+            E += rs_out.bandwidth_kb;
           else if (is_guard)
-            G += rs_out.bandwidth;
+            G += rs_out.bandwidth_kb;
           else
-            M += rs_out.bandwidth;
+            M += rs_out.bandwidth_kb;
         } else {
           log_warn(LD_BUG, "Missing consensus bandwidth for router %s",
               rs_out.nickname);
@@ -2053,7 +2054,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       if (rs_out.has_bandwidth) {
         int unmeasured = rs_out.bw_is_unmeasured &&
           consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
-        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n", rs_out.bandwidth,
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n",
+                               rs_out.bandwidth_kb,
                                unmeasured?" Unmeasured=1":"");
       }
 
@@ -2080,8 +2082,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(chosen_flags);
     smartlist_free(versions);
     smartlist_free(exitsummaries);
-    tor_free(bandwidths);
-    tor_free(measured_bws);
+    tor_free(bandwidths_kb);
+    tor_free(measured_bws_kb);
   }
 
   if (consensus_method >= MIN_METHOD_FOR_FOOTER) {

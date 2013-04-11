@@ -1793,7 +1793,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
                  "old router selection algorithm.");
         return -1;
       }
-      this_bw = kb_to_bytes(node->rs->bandwidth);
+      this_bw = kb_to_bytes(node->rs->bandwidth_kb);
     } else if (node->ri) {
       /* bridge or other descriptor not in our consensus */
       this_bw = bridge_get_advertised_bandwidth_bounded(node->ri);
@@ -1944,7 +1944,7 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
     is_guard = node->is_possible_guard;
     if (node->rs) {
       if (node->rs->has_bandwidth) {
-        this_bw = kb_to_bytes(node->rs->bandwidth);
+        this_bw = kb_to_bytes(node->rs->bandwidth_kb);
       } else { /* guess */
         is_known = 0;
       }
