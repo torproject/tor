@@ -71,7 +71,7 @@ HT_GENERATE(microdesc_map, microdesc_t, node,
  * *<b>annotation_len_out</b> to the number of bytes written as
  * annotations. */
 static ssize_t
-dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
+dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
   size_t written;
@@ -81,10 +81,10 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
     char annotation[ISO_TIME_LEN+32];
     format_iso_time(buf, md->last_listed);
     tor_snprintf(annotation, sizeof(annotation), "@last-listed %s\n", buf);
-    if (fputs(annotation, f) < 0) {
+    if (write_all(fd, annotation, strlen(annotation), 0) < 0) {
       log_warn(LD_DIR,
                "Couldn't write microdescriptor annotation: %s",
-               strerror(ferror(f)));
+               strerror(errno));
       return -1;
     }
     r += strlen(annotation);
@@ -93,13 +93,13 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
     *annotation_len_out = 0;
   }
 
-  md->off = (off_t) ftell(f);
-  written = fwrite(md->body, 1, md->bodylen, f);
+  md->off = tor_fd_getpos(fd);
+  written = write_all(fd, md->body, md->bodylen, 0);
   if (written != md->bodylen) {
     log_warn(LD_DIR,
              "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
              (unsigned long)written, (unsigned long)md->bodylen,
-             strerror(ferror(f)));
+             strerror(errno));
     return -1;
   }
   r += md->bodylen;
@@ -198,15 +198,15 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
 {
   smartlist_t *added;
   open_file_t *open_file = NULL;
-  FILE *f = NULL;
+  int fd = -1;
   //  int n_added = 0;
   ssize_t size = 0;
 
   if (where == SAVED_NOWHERE && !no_save) {
-    f = start_writing_to_stdio_file(cache->journal_fname,
-                                    OPEN_FLAGS_APPEND|O_BINARY,
-                                    0600, &open_file);
-    if (!f) {
+    fd = start_writing_to_file(cache->journal_fname,
+                               OPEN_FLAGS_APPEND|O_BINARY,
+                               0600, &open_file);
+    if (fd < 0) {
       log_warn(LD_DIR, "Couldn't append to journal in %s: %s",
                cache->journal_fname, strerror(errno));
       return NULL;
@@ -228,9 +228,9 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     }
 
     /* Okay, it's a new one. */
-    if (f) {
+    if (fd >= 0) {
       size_t annotation_len;
-      size = dump_microdescriptor(f, md, &annotation_len);
+      size = dump_microdescriptor(fd, md, &annotation_len);
       if (size < 0) {
         /* we already warned in dump_microdescriptor */
         abort_writing_to_file(open_file);
@@ -252,8 +252,14 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     cache->total_len_seen += md->bodylen;
   } SMARTLIST_FOREACH_END(md);
 
-  if (f)
-    finish_writing_to_file(open_file); /*XXX Check me.*/
+  if (fd >= 0) {
+    if (finish_writing_to_file(open_file) < 0) {
+      log_warn(LD_DIR, "Error appending to microdescriptor file: %s",
+               strerror(errno));
+      smartlist_clear(added);
+      return added;
+    }
+  }
 
   {
     networkstatus_t *ns = networkstatus_get_latest_consensus();
@@ -406,11 +412,11 @@ int
 microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 {
   open_file_t *open_file;
-  FILE *f;
+  int fd = -1;
   microdesc_t **mdp;
   smartlist_t *wrote;
   ssize_t size;
-  off_t off = 0;
+  off_t off = 0, off_real;
   int orig_size, new_size;
 
   if (cache == NULL) {
@@ -430,10 +436,10 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
 
-  f = start_writing_to_stdio_file(cache->cache_fname,
-                                  OPEN_FLAGS_REPLACE|O_BINARY,
-                                  0600, &open_file);
-  if (!f)
+  fd = start_writing_to_file(cache->cache_fname,
+                             OPEN_FLAGS_REPLACE|O_BINARY,
+                             0600, &open_file);
+  if (fd < 0)
     return -1;
 
   wrote = smartlist_new();
@@ -444,7 +450,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     if (md->no_save)
       continue;
 
-    size = dump_microdescriptor(f, md, &annotation_len);
+    size = dump_microdescriptor(fd, md, &annotation_len);
     if (size < 0) {
       /* XXX handle errors from dump_microdescriptor() */
       /* log?  return -1?  die?  coredump the universe? */
@@ -453,6 +459,14 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     tor_assert(((size_t)size) == annotation_len + md->bodylen);
     md->off = off + annotation_len;
     off += size;
+    off_real = tor_fd_getpos(fd);
+    if (off_real != off) {
+      log_warn(LD_BUG, "Discontinuity in position in microdescriptor cache."
+               "By my count, I'm at "I64_FORMAT
+               ", but I should be at "I64_FORMAT,
+               I64_PRINTF_ARG(off), I64_PRINTF_ARG(off_real));
+      off = off_real;
+    }
     if (md->saved_location != SAVED_IN_CACHE) {
       tor_free(md->body);
       md->saved_location = SAVED_IN_CACHE;
@@ -460,10 +474,14 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     smartlist_add(wrote, md);
   }
 
+  if (finish_writing_to_file(open_file) < 0) {
+    log_warn(LD_DIR, "Error rebuilding microdescriptor cache: %s",
+             strerror(errno));
+    return -1;
+  }
+
   if (cache->cache_content)
     tor_munmap_file(cache->cache_content);
-
-  finish_writing_to_file(open_file); /*XXX Check me.*/
 
   cache->cache_content = tor_mmap_file(cache->cache_fname);
 
@@ -532,7 +550,7 @@ microdesc_check_counts(void)
 /** Deallocate a single microdescriptor.  Note: the microdescriptor MUST have
  * previously been removed from the cache if it had ever been inserted. */
 void
-microdesc_free(microdesc_t *md)
+microdesc_free_(microdesc_t *md, const char *fname, int lineno)
 {
   if (!md)
     return;
@@ -543,12 +561,12 @@ microdesc_free(microdesc_t *md)
     microdesc_cache_t *cache = get_microdesc_cache();
     microdesc_t *md2 = HT_FIND(microdesc_map, &cache->map, md);
     if (md2 == md) {
-      log_warn(LD_BUG, "microdesc_free() called, but md was still in "
-               "microdesc_map");
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
+               "in microdesc_map", fname, lineno);
       HT_REMOVE(microdesc_map, &cache->map, md);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_in_map set, but "
-               "microdesc was not in the map.");
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d with held_in_map "
+               "set, but microdesc was not in the map.", fname, lineno);
     }
     tor_fragile_assert();
   }
@@ -562,11 +580,13 @@ microdesc_free(microdesc_t *md)
         }
       });
     if (found) {
-      log_warn(LD_BUG, "microdesc_free() called, but md was still referenced "
-               "%d node(s); held_by_nodes == %u", found, md->held_by_nodes);
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
+               "referenced %d node(s); held_by_nodes == %u",
+               fname, lineno, found, md->held_by_nodes);
     } else {
-      log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set to %u, "
-               "but md was not referenced by any nodes", md->held_by_nodes);
+      log_warn(LD_BUG, "microdesc_free() called from %s:%d with held_by_nodes "
+               "set to %u, but md was not referenced by any nodes",
+               fname, lineno, md->held_by_nodes);
     }
     tor_fragile_assert();
   }

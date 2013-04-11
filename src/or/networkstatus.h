@@ -75,7 +75,6 @@ void update_certificate_downloads(time_t now);
 int consensus_is_waiting_for_certs(void);
 int client_would_use_router(const routerstatus_t *rs, time_t now,
                             const or_options_t *options);
-networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_t *networkstatus_get_latest_consensus(void);
 networkstatus_t *networkstatus_get_latest_consensus_by_flavor(
                                                   consensus_flavor_t f);

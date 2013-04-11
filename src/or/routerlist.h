@@ -42,7 +42,6 @@ int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
-int router_nickname_is_in_list(const routerinfo_t *router, const char *list);
 const routerinfo_t *routerlist_find_my_routerinfo(void);
 uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);
 uint32_t router_get_advertised_bandwidth_capped(const routerinfo_t *router);
@@ -146,7 +145,6 @@ void dir_server_add(dir_server_t *ent);
 
 void authority_cert_free(authority_cert_t *cert);
 void clear_dir_servers(void);
-int any_trusted_dir_is_v1_authority(void);
 void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                                   networkstatus_t *consensus);
 void update_router_descriptor_downloads(time_t now);

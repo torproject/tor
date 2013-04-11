@@ -24,6 +24,7 @@
 #include "entrynodes.h"
 #include "main.h"
 #include "microdesc.h"
+#include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "router.h"
@@ -332,6 +333,9 @@ control_event_guard_deferred(void)
 #endif
 }
 
+/** Largest amount that we'll backdate chosen_on_date */
+#define CHOSEN_ON_DATE_SLOP (30*86400)
+
 /** Add a new (preferably stable and fast) router to our
  * entry_guards list. Return a pointer to the router if we succeed,
  * or NULL if we can't find any more suitable entries.
@@ -367,12 +371,21 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   } else {
     const routerstatus_t *rs;
     rs = router_pick_directory_server(MICRODESC_DIRINFO|V3_DIRINFO,
-                                      PDS_PREFER_TUNNELED_DIR_CONNS_);
+                              PDS_PREFER_TUNNELED_DIR_CONNS_|PDS_FOR_GUARD);
     if (!rs)
       return NULL;
     node = node_get_by_id(rs->identity_digest);
     if (!node)
       return NULL;
+  }
+  if (node->using_as_guard)
+    return NULL;
+  if (entry_guard_get_by_id_digest(node->identity) != NULL) {
+    log_info(LD_CIRC, "I was about to add a duplicate entry guard.");
+    /* This can happen if we choose a guard, then the node goes away, then
+     * comes back. */
+    ((node_t*) node)->using_as_guard = 1;
+    return NULL;
   }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
   log_info(LD_CIRC, "Chose %s as new entry guard.",
@@ -391,6 +404,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
    * this guard. For details, see the Jan 2010 or-dev thread. */
   entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
   entry->chosen_by_version = tor_strdup(VERSION);
+  ((node_t*)node)->using_as_guard = 1;
   if (prepend)
     smartlist_insert(entry_guards, 0, entry);
   else
@@ -435,6 +449,32 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e);
 }
 
+/**
+ * Return the minimum lifetime of working entry guard, in seconds,
+ * as given in the consensus networkstatus.  (Plus CHOSEN_ON_DATE_SLOP,
+ * so that we can do the chosen_on_date randomization while achieving the
+ * desired minimum lifetime.)
+ */
+static int32_t
+guards_get_lifetime(void)
+{
+  const or_options_t *options = get_options();
+#define DFLT_GUARD_LIFETIME (86400 * 60)   /* Two months. */
+#define MIN_GUARD_LIFETIME  (86400 * 30)   /* One months. */
+#define MAX_GUARD_LIFETIME  (86400 * 1826) /* Five years. */
+
+  if (options->GuardLifetime >= 1) {
+    return CLAMP(MIN_GUARD_LIFETIME,
+                 options->GuardLifetime,
+                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
+  }
+
+  return networkstatus_get_param(NULL, "GuardLifetime",
+                                 DFLT_GUARD_LIFETIME,
+                                 MIN_GUARD_LIFETIME,
+                                 MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
+}
+
 /** Remove any entry guard which was selected by an unknown version of Tor,
  * or which was selected by a version of Tor that's known to select
  * entry guards badly, or which was selected more 2 months ago. */
@@ -444,6 +484,7 @@ static int
 remove_obsolete_entry_guards(time_t now)
 {
   int changed = 0, i;
+  int32_t guard_lifetime = guards_get_lifetime();
 
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
@@ -474,8 +515,8 @@ remove_obsolete_entry_guards(time_t now)
       }
       tor_free(tor_ver);
     }
-    if (!version_is_bad && entry->chosen_on_date + 3600*24*60 < now) {
-      /* It's been 2 months since the date listed in our state file. */
+    if (!version_is_bad && entry->chosen_on_date + guard_lifetime < now) {
+      /* It's been too long since the date listed in our state file. */
       msg = "was selected several months ago";
       date_is_bad = 1;
     }
@@ -730,6 +771,21 @@ entry_nodes_should_be_added(void)
   should_add_entry_nodes = 1;
 }
 
+/** Update the using_as_guard fields of all the nodes. We do this after we
+ * remove entry guards from the list: This is the only function that clears
+ * the using_as_guard field. */
+static void
+update_node_guard_status(void)
+{
+  smartlist_t *nodes = nodelist_get_list();
+  SMARTLIST_FOREACH(nodes, node_t *, node, node->using_as_guard = 0);
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+    node_t *node = node_get_mutable_by_id(entry->identity);
+    if (node)
+      node->using_as_guard = 1;
+  } SMARTLIST_FOREACH_END(entry);
+}
+
 /** Adjust the entry guards list so that it only contains entries from
  * EntryNodes, adding new entries from EntryNodes to the list as needed. */
 static void
@@ -813,6 +869,8 @@ entry_guards_set_from_config(const or_options_t *options)
    * EntryNodes. */
   SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                     entry_guard_free(e));
+
+  update_node_guard_status();
 
   smartlist_free(entry_nodes);
   smartlist_free(worse_entry_nodes);
@@ -1153,6 +1211,21 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         continue;
       }
 
+      if (use_cnt < success_cnt) {
+        int severity = LOG_INFO;
+        /* If this state file was written by a Tor that would have
+         * already fixed it, then the overcounting bug is still there.. */
+        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+          severity = LOG_NOTICE;
+        }
+        log_fn(severity, LD_BUG,
+                   "State file contains unexpectedly high usage success "
+                   "counts %lf/%lf for Guard %s ($%s)",
+                   success_cnt, use_cnt,
+                   node->nickname, hex_str(node->identity, DIGEST_LEN));
+        success_cnt = use_cnt;
+      }
+
       node->use_attempts = use_cnt;
       node->use_successes = success_cnt;
 
@@ -1201,6 +1274,21 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         timeouts = 0;
         collapsed = 0;
         unusable = 0;
+      }
+
+      if (hop_cnt < success_cnt) {
+        int severity = LOG_INFO;
+        /* If this state file was written by a Tor that would have
+         * already fixed it, then the overcounting bug is still there.. */
+        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+          severity = LOG_NOTICE;
+        }
+        log_fn(severity, LD_BUG,
+                "State file contains unexpectedly high success counts "
+                "%lf/%lf for Guard %s ($%s)",
+                success_cnt, hop_cnt,
+                node->nickname, hex_str(node->identity, DIGEST_LEN));
+        success_cnt = hop_cnt;
       }
 
       node->circ_attempts = hop_cnt;
@@ -1269,6 +1357,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
      * few lines, so we don't have to re-dirty it */
     if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;
+
+    update_node_guard_status();
   }
   digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;

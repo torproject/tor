@@ -9,12 +9,9 @@ EXTRA_DIST+= \
 	contrib/tor-ctrl.sh			\
 	contrib/tor-exit-notice.html		\
 	contrib/tor-mingw.nsi.in		\
-	contrib/tor-tsocks.conf			\
 	contrib/tor.ico				\
 	contrib/tor.nsi.in			\
 	contrib/tor.sh				\
 	contrib/torctl
-
-conf_DATA+= contrib/tor-tsocks.conf
 
 bin_SCRIPTS+= contrib/torify

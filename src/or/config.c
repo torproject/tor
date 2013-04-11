@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+ /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
@@ -255,6 +255,7 @@ static config_var_t option_vars_[] = {
 #endif
   OBSOLETE("GiveGuardFlagTo_CVE_2011_2768_VulnerableRelays"),
   OBSOLETE("Group"),
+  V(GuardLifetime,               INTERVAL, "0 minutes"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(AccelName,                   STRING,   NULL),
@@ -300,6 +301,7 @@ static config_var_t option_vars_[] = {
   V(MaxClientCircuitsPending,    UINT,     "32"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
+  V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
@@ -339,6 +341,8 @@ static config_var_t option_vars_[] = {
   V(PerConnBWRate,               MEMUNIT,  "0"),
   V(PidFile,                     STRING,   NULL),
   V(TestingTorNetwork,           BOOL,     "0"),
+  V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
+  V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
   V(OptimisticData,              AUTOBOOL, "auto"),
   V(PortForwarding,              BOOL,     "0"),
   V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
@@ -1502,7 +1506,7 @@ options_act(const or_options_t *old_options)
                "preferred or excluded node lists. "
                "Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
-      circuit_expire_all_dirty_circs();
+      circuit_mark_all_dirty_circs_as_unusable();
       revise_trackexithosts = 1;
     }
 
@@ -2481,7 +2485,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too low. Increasing "
                "to 0.25");
       options->PathsNeededToBuildCircuits = 0.25;
-    } else if (options->PathsNeededToBuildCircuits < 0.95) {
+    } else if (options->PathsNeededToBuildCircuits > 0.95) {
       log_warn(LD_CONFIG, "PathsNeededToBuildCircuits is too high. Decreasing "
                "to 0.95");
       options->PathsNeededToBuildCircuits = 0.95;
@@ -2601,9 +2605,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
-  if (options->EntryNodes && !options->UseEntryGuards)
-    log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
-             "EntryNodes will be ignored.");
+  if (options->EntryNodes && !options->UseEntryGuards) {
+    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
+  }
 
   options->AllowInvalid_ = 0;
   if (options->AllowInvalidNodes) {
@@ -2721,15 +2725,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "http://freehaven.net/anonbib/#hs-attack06 for details.");
   }
 
-  if (!(options->LearnCircuitBuildTimeout) &&
-        options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
+  if (!options->LearnCircuitBuildTimeout && options->CircuitBuildTimeout &&
+      options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,
-        "CircuitBuildTimeout is shorter (%d seconds) than recommended "
-        "(%d seconds), and LearnCircuitBuildTimeout is disabled.  "
+        "CircuitBuildTimeout is shorter (%d seconds) than the recommended "
+        "minimum (%d seconds), and LearnCircuitBuildTimeout is disabled.  "
         "If tor isn't working, raise this value or enable "
         "LearnCircuitBuildTimeout.",
         options->CircuitBuildTimeout,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
+  } else if (!options->LearnCircuitBuildTimeout &&
+             !options->CircuitBuildTimeout) {
+    log_notice(LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but didn't "
+               "a CircuitBuildTimeout. I'll pick a plausible default.");
   }
 
   if (options->PathBiasNoticeRate > 1.0) {

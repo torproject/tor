@@ -802,7 +802,7 @@ test_util_strmisc(void)
 {
   char buf[1024];
   int i;
-  char *cp;
+  char *cp, *cp_tmp = NULL;
 
   /* Test strl operations */
   test_eq(5, strlcpy(buf, "Hello", 0));
@@ -1005,20 +1005,20 @@ test_util_strmisc(void)
   /* Test strndup and memdup */
   {
     const char *s = "abcdefghijklmnopqrstuvwxyz";
-    cp = tor_strndup(s, 30);
-    test_streq(cp, s); /* same string, */
-    test_neq_ptr(cp, s); /* but different pointers. */
-    tor_free(cp);
+    cp_tmp = tor_strndup(s, 30);
+    test_streq(cp_tmp, s); /* same string, */
+    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tor_free(cp_tmp);
 
-    cp = tor_strndup(s, 5);
-    test_streq(cp, "abcde");
-    tor_free(cp);
+    cp_tmp = tor_strndup(s, 5);
+    test_streq(cp_tmp, "abcde");
+    tor_free(cp_tmp);
 
     s = "a\0b\0c\0d\0e\0";
-    cp = tor_memdup(s,10);
-    test_memeq(cp, s, 10); /* same ram, */
-    test_neq_ptr(cp, s); /* but different pointers. */
-    tor_free(cp);
+    cp_tmp = tor_memdup(s,10);
+    test_memeq(cp_tmp, s, 10); /* same ram, */
+    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tor_free(cp_tmp);
   }
 
   /* Test str-foo functions */
@@ -1052,79 +1052,6 @@ test_util_strmisc(void)
     test_assert(!tor_memstr(haystack, 7, "cadd"));
     test_assert(!tor_memstr(haystack, 7, "fe"));
     test_assert(!tor_memstr(haystack, 7, "ababcade"));
-  }
-
-  /* Test wrap_string */
-  {
-    smartlist_t *sl = smartlist_new();
-    wrap_string(sl,
-                "This is a test of string wrapping functionality: woot. "
-                    "a functionality? w00t w00t...!",
-                10, "", "");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp,
-            "This is a\ntest of\nstring\nwrapping\nfunctional\nity: woot.\n"
-               "a\nfunctional\nity? w00t\nw00t...!\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "This is a test of string wrapping functionality: woot.",
-                16, "### ", "# ");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp,
-             "### This is a\n# test of string\n# wrapping\n# functionality:\n"
-             "# woot.\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "A test of string wrapping...", 6, "### ", "# ");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp,
-               "### A\n# test\n# of\n# stri\n# ng\n# wrap\n# ping\n# ...\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "Wrapping test", 6, "#### ", "# ");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "#### W\n# rapp\n# ing\n# test\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "Small test", 6, "### ", "#### ");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "### Sm\n#### a\n#### l\n#### l\n#### t\n#### e"
-                   "\n#### s\n#### t\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "First null", 6, NULL, "> ");
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "First\n> null\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "Second null", 6, "> ", NULL);
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "> Seco\nnd\nnull\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-
-    wrap_string(sl, "Both null", 6, NULL, NULL);
-    cp = smartlist_join_strings(sl, "", 0, NULL);
-    test_streq(cp, "Both\nnull\n");
-    tor_free(cp);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_free(sl);
-
-    /* Can't test prefixes that have the same length as the line width, because
-       the function has an assert */
   }
 
   /* Test hex_str */
@@ -1170,7 +1097,7 @@ test_util_strmisc(void)
   tt_int_op(strcmp_len("blah", "", 0),    ==, 0);
 
  done:
-  ;
+  tor_free(cp_tmp);
 }
 
 static void

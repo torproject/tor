@@ -1452,13 +1452,6 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
              command);
 }
 
-/** Return the number of entries in our rendezvous descriptor cache. */
-int
-rend_cache_size(void)
-{
-  return strmap_size(rend_cache);
-}
-
 /** Allocate and return a new rend_data_t with the same
  * contents as <b>query</b>. */
 rend_data_t *

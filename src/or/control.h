@@ -53,7 +53,8 @@ int control_event_stream_bandwidth_used(void);
 void control_event_logmsg(int severity, uint32_t domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
-                                 time_t expires, const char *error);
+                                 time_t expires, const char *error,
+                                 const int cached);
 int control_event_or_authdir_new_descriptor(const char *action,
                                             const char *desc,
                                             size_t desclen,

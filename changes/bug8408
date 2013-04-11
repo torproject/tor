@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Allow TestingTorNetworks to override the 4096-byte minimum for the Fast
+      threshold. Otherwise they can't bootstrap until they've observed more
+      traffic. Fixes bug 8508; bugfix on 0.2.4.10-alpha.

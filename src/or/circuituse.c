@@ -85,10 +85,14 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
   }
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-      purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
+      purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
     if (circ->timestamp_dirty &&
        circ->timestamp_dirty+get_options()->MaxCircuitDirtiness <= now)
       return 0;
+  }
+
+  if (origin_circ->unusable_for_new_conns)
+    return 0;
 
   /* decide if this circ is suitable for this conn */
 
@@ -105,6 +109,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    tor_addr_t addr;
+    const int family = tor_addr_parse(&addr, conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
@@ -125,9 +131,7 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
-          tor_addr_t addr;
-          int r = tor_addr_parse(&addr, conn->socks_request->address);
-          if (r < 0 ||
+          if (family < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
             return 0;
@@ -138,6 +142,13 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         /* don't use three-hop circuits -- that could hurt our anonymity. */
         return 0;
       }
+    }
+    if (origin_circ->prepend_policy && family != -1) {
+      int r = compare_tor_addr_to_addr_policy(&addr,
+                                              conn->socks_request->port,
+                                              origin_circ->prepend_policy);
+      if (r == ADDR_POLICY_REJECTED)
+        return 0;
     }
     if (exitnode && !connection_ap_can_use_exit(conn, exitnode)) {
       /* can't exit from this router */
@@ -518,15 +529,25 @@ circuit_expire_building(void)
     if (timercmp(&victim->timestamp_began, &cutoff, >))
       continue; /* it's still young, leave it alone */
 
-    if (!any_opened_circs) {
+    /* We need to double-check the opened state here because
+     * we don't want to consider opened 1-hop dircon circuits for
+     * deciding when to relax the timeout, but we *do* want to relax
+     * those circuits too if nothing else is opened *and* they still
+     * aren't either. */
+    if (!any_opened_circs && victim->state != CIRCUIT_STATE_OPEN) {
       /* It's still young enough that we wouldn't close it, right? */
       if (timercmp(&victim->timestamp_began, &close_cutoff, >)) {
         if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
           int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath->state
                                       == CPATH_STATE_OPEN;
           log_info(LD_CIRC,
-                 "No circuits are opened. Relaxing timeout for "
-                 "a circuit with channel state %s. %d guards are live.",
+                 "No circuits are opened. Relaxing timeout for circuit %d "
+                 "(a %s %d-hop circuit in state %s with channel state %s). "
+                 "%d guards are live.",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 circuit_purpose_to_string(victim->purpose),
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  num_live_entry_guards(0));
 
@@ -541,10 +562,14 @@ circuit_expire_building(void)
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
         log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
-                 "No circuits are opened. Relaxed timeout for "
-                 "a circuit with channel state %s to %ldms. "
-                 "However, it appears the circuit has timed out anyway. "
-                 "%d guards are live.",
+                 "No circuits are opened. Relaxed timeout for circuit %d "
+                 "(a %s %d-hop circuit in state %s with channel state %s) to "
+                 "%ldms. However, it appears the circuit has timed out "
+                 "anyway. %d guards are live.",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 circuit_purpose_to_string(victim->purpose),
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  (long)circ_times.close_ms, num_live_entry_guards(0));
       }
@@ -660,7 +685,7 @@ circuit_expire_building(void)
                      circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(&circ_times,
                                          first_hop_succeeded,
-                                         victim->timestamp_began.tv_sec)) {
+                                         victim->timestamp_created.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
       }
@@ -799,8 +824,11 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness > now)) {
-      cpath_build_state_t *build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+      origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+      cpath_build_state_t *build_state = origin_circ->build_state;
       if (build_state->is_internal || build_state->onehop_tunnel)
+        continue;
+      if (!origin_circ->unusable_for_new_conns)
         continue;
 
       exitnode = build_state_get_exit_node(build_state);
@@ -843,6 +871,7 @@ circuit_predict_and_launch_new(void)
   /* First, count how many of each type of circuit we have already. */
   for (circ=global_circuitlist;circ;circ = circ->next) {
     cpath_build_state_t *build_state;
+    origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     if (circ->marked_for_close)
@@ -851,7 +880,10 @@ circuit_predict_and_launch_new(void)
       continue; /* only count clean circs */
     if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
       continue; /* only pay attention to general-purpose circs */
-    build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+    origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (origin_circ->unusable_for_new_conns)
+      continue;
+    build_state = origin_circ->build_state;
     if (build_state->onehop_tunnel)
       continue;
     num++;
@@ -2273,5 +2305,25 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),
                                           old_purpose);
   }
+}
+
+/** Mark <b>circ</b> so that no more connections can be attached to it. */
+void
+mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
+{
+  const or_options_t *options = get_options();
+  tor_assert(circ);
+
+  /* XXXX025 This is a kludge; we're only keeping it around in case there's
+   * something that doesn't check unusable_for_new_conns, and to avoid
+   * deeper refactoring of our expiration logic. */
+  if (! circ->base_.timestamp_dirty)
+    circ->base_.timestamp_dirty = approx_time();
+  if (options->MaxCircuitDirtiness >= circ->base_.timestamp_dirty)
+    circ->base_.timestamp_dirty = 1; /* prevent underflow */
+  else
+    circ->base_.timestamp_dirty -= options->MaxCircuitDirtiness;
+
+  circ->unusable_for_new_conns = 1;
 }
 

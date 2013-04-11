@@ -17,6 +17,7 @@
 #include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "circuituse.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
@@ -53,6 +54,10 @@ static int circuit_resume_edge_reading_helper(edge_connection_t *conn,
 static int circuit_consider_stop_edge_reading(circuit_t *circ,
                                               crypt_path_t *layer_hint);
 static int circuit_queue_streams_are_blocked(circuit_t *circ);
+static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
+                                                  entry_connection_t *conn,
+                                                  node_t *node,
+                                                  const tor_addr_t *addr);
 
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
@@ -710,7 +715,6 @@ connection_ap_process_end_not_open(
     relay_header_t *rh, cell_t *cell, origin_circuit_t *circ,
     entry_connection_t *conn, crypt_path_t *layer_hint)
 {
-  struct in_addr in;
   node_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
   int control_reason;
@@ -753,10 +757,10 @@ connection_ap_process_end_not_open(
              stream_end_reason_to_string(reason));
     exitrouter = node_get_mutable_by_id(chosen_exit_digest);
     switch (reason) {
-      case END_STREAM_REASON_EXITPOLICY:
+      case END_STREAM_REASON_EXITPOLICY: {
+        tor_addr_t addr;
+        tor_addr_make_unspec(&addr);
         if (rh->length >= 5) {
-          tor_addr_t addr;
-
           int ttl = -1;
           tor_addr_make_unspec(&addr);
           if (rh->length == 5 || rh->length == 9) {
@@ -808,16 +812,11 @@ connection_ap_process_end_not_open(
           }
         }
         /* check if he *ought* to have allowed it */
-        if (exitrouter &&
-            (rh->length < 5 ||
-             (tor_inet_aton(conn->socks_request->address, &in) &&
-              !conn->chosen_exit_name))) {
-          log_info(LD_APP,
-                 "Exitrouter %s seems to be more restrictive than its exit "
-                 "policy. Not using this router as exit for now.",
-                 node_describe(exitrouter));
-          policies_set_node_exitpolicy_to_reject_all(exitrouter);
-        }
+
+        adjust_exit_policy_from_exitpolicy_failure(circ,
+                                                   conn,
+                                                   exitrouter,
+                                                   &addr);
 
         if (conn->chosen_exit_optional ||
             conn->chosen_exit_retries) {
@@ -837,6 +836,7 @@ connection_ap_process_end_not_open(
           return 0;
         /* else, conn will get closed below */
         break;
+      }
       case END_STREAM_REASON_CONNECTREFUSED:
         if (!conn->chosen_exit_optional)
           break; /* break means it'll close, below */
@@ -851,9 +851,7 @@ connection_ap_process_end_not_open(
           /* We haven't retried too many times; reattach the connection. */
           circuit_log_path(LOG_INFO,LD_APP,circ);
           /* Mark this circuit "unusable for new streams". */
-          /* XXXX024 this is a kludgy way to do this. */
-          tor_assert(circ->base_.timestamp_dirty);
-          circ->base_.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+          mark_circuit_unusable_for_new_conns(circ);
 
           if (conn->chosen_exit_optional) {
             /* stop wanting a specific exit */
@@ -899,6 +897,47 @@ connection_ap_process_end_not_open(
   if (!ENTRY_TO_CONN(conn)->marked_for_close)
     connection_mark_unattached_ap(conn, control_reason);
   return 0;
+}
+
+/** Called when we have gotten an END_REASON_EXITPOLICY failure on <b>circ</b>
+ * for <b>conn</b>, while attempting to connect via <b>node</b>.  If the node
+ * told us which address it rejected, then <b>addr</b> is that address;
+ * otherwise it is AF_UNSPEC.
+ *
+ * If we are sure the node should have allowed this address, mark the node as
+ * having a reject *:* exit policy.  Otherwise, mark the circuit as unusable
+ * for this particular address.
+ **/
+static void
+adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
+                                           entry_connection_t *conn,
+                                           node_t *node,
+                                           const tor_addr_t *addr)
+{
+  int make_reject_all = 0;
+  const sa_family_t family = tor_addr_family(addr);
+
+  if (node) {
+    tor_addr_t tmp;
+    int asked_for_family = tor_addr_parse(&tmp, conn->socks_request->address);
+    if (family == AF_UNSPEC) {
+      make_reject_all = 1;
+    } else if (node_exit_policy_is_exact(node, family) &&
+               asked_for_family != -1 && !conn->chosen_exit_name) {
+      make_reject_all = 1;
+    }
+
+    if (make_reject_all) {
+      log_info(LD_APP,
+               "Exitrouter %s seems to be more restrictive than its exit "
+               "policy. Not using this router as exit for now.",
+               node_describe(node));
+      policies_set_node_exitpolicy_to_reject_all(node);
+    }
+  }
+
+  if (family != AF_UNSPEC)
+    addr_policy_append_reject_addr(&circ->prepend_policy, addr);
 }
 
 /** Helper: change the socks_request-&gt;address field on conn to the
@@ -1101,12 +1140,15 @@ connection_edge_process_relay_cell_not_open(
                                   2+answer_len));
     else
       ttl = -1;
-    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-      uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
-      if (get_options()->ClientDNSRejectInternalAddresses &&
-          is_internal_IP(addr, 0)) {
+    if (answer_type == RESOLVED_TYPE_IPV4 ||
+        answer_type == RESOLVED_TYPE_IPV6) {
+      tor_addr_t addr;
+      if (decode_address_from_payload(&addr, cell->payload+RELAY_HEADER_SIZE,
+                                      rh->length) &&
+          tor_addr_is_internal(&addr, 0) &&
+          get_options()->ClientDNSRejectInternalAddresses) {
         log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
-                 fmt_addr32(addr));
+                 fmt_addr(&addr));
         connection_ap_handshake_socks_resolved(entry_conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0, NULL, 0, TIME_MAX);
@@ -1397,6 +1439,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
                "'truncate' unsupported at origin. Dropping.");
         return 0;
+      }
+      if (circ->n_hop) {
+        if (circ->n_chan)
+          log_warn(LD_BUG, "n_chan and n_hop set on the same circuit!");
+        extend_info_free(circ->n_hop);
+        circ->n_hop = NULL;
+        tor_free(circ->n_chan_create_cell);
+        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
       if (circ->n_chan) {
         uint8_t trunc_reason = get_uint8(cell->payload + RELAY_HEADER_SIZE);

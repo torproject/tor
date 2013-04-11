@@ -9,7 +9,7 @@ torify(1)
 
 NAME
 ----
-torify - wrapper for torsocks or tsocks and tor
+torify - wrapper for torsocks and tor
 
 SYNOPSIS
 --------
@@ -18,36 +18,24 @@ SYNOPSIS
 DESCRIPTION
 -----------
 **torify** is a simple wrapper that attempts to find the best underlying Tor
-wrapper available on a system. It calls torsocks or tsocks with a tor specific
+wrapper available on a system. It calls torsocks with a tor specific
 configuration file. +
 
 torsocks is an improved wrapper that explicitly rejects UDP, safely resolves DNS
 lookups and properly socksifies your TCP connections. +
-
-tsocks itself is a wrapper between the tsocks library and the application that
-you would like to run socksified. +
 
 Please note that since both method use LD_PRELOAD, torify cannot be applied to
 suid binaries.
 
 WARNING
 -------
-You should also be aware that the way tsocks currently works only TCP
-connections are socksified. Be aware that this will in most circumstances not
-include hostname lookups which would still be routed through your normal system
-resolver to your usual resolving nameservers. The **tor-resolve**(1) tool can be
-useful as a workaround in some cases. The Tor FAQ at
-https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ might have further
-information on this subject. +
-
 When used with torsocks, torify should not leak DNS requests or UDP data. +
 
 Both will leak ICMP data.
 
 SEE ALSO
 --------
-**tor**(1), **tor-resolve**(1), **torsocks**(1), **tsocks**(1),
-**tsocks.conf**(5).
+**tor**(1), **tor-resolve**(1), **torsocks**(1)
 
 AUTHORS
 -------

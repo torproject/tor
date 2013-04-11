@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix some logic errors when the user manually overrides the
+      PathsNeededToBuildCircuits option in torrc. Fixes bug 8599; bugfix
+      on 0.2.4.10-alpha.

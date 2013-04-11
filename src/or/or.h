@@ -1417,8 +1417,8 @@ typedef struct or_connection_t {
   unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   unsigned int wide_circ_ids:1;
-  uint8_t link_proto; /**< What protocol version are we using? 0 for
-                       * "none negotiated yet." */
+  uint16_t link_proto; /**< What protocol version are we using? 0 for
+                        * "none negotiated yet." */
 
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
@@ -2249,6 +2249,9 @@ typedef struct node_t {
   /** Local info: we treat this node as if it rejects everything */
   unsigned int rejects_all:1;
 
+  /** Local info: this node is in our list of guards */
+  unsigned int using_as_guard:1;
+
   /* Local info: derived. */
 
   /** True if the IPv6 OR port is preferred over the IPv4 OR port.  */
@@ -2942,6 +2945,10 @@ typedef struct origin_circuit_t {
    */
   ENUM_BF(path_state_t) path_state : 3;
 
+  /* If this flag is set, we should not consider attaching any more
+   * connections to this circuit. */
+  unsigned int unusable_for_new_conns : 1;
+
   /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision
@@ -3059,6 +3066,10 @@ typedef struct origin_circuit_t {
    * ISO_STREAM. */
   uint64_t associated_isolated_stream_global_id;
   /**@}*/
+  /** A list of addr_policy_t for this circuit in particular. Used by
+   * adjust_exit_policy_from_exitpolicy_failure.
+   */
+  smartlist_t *prepend_policy;
 } origin_circuit_t;
 
 struct onion_queue_t;
@@ -3868,6 +3879,10 @@ typedef struct {
    * consensus vote on the 'params' line. */
   char *ConsensusParams;
 
+  /** Authority only: minimum number of measured bandwidths we must see
+   * before we only beliee measured bandwidths to assign flags. */
+  int MinMeasuredBWsForAuthToIgnoreAdvertised;
+
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
@@ -3894,6 +3909,12 @@ typedef struct {
    * couple of other configuration options and allow to change the values
    * of certain configuration options. */
   int TestingTorNetwork;
+
+  /** Minimum value for the Exit flag threshold on testing networks. */
+  uint64_t TestingMinExitFlagThreshold;
+
+  /** Minimum value for the Fast flag threshold on testing networks. */
+  uint64_t TestingMinFastFlagThreshold;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help
@@ -4012,6 +4033,8 @@ typedef struct {
    * should guess a suitable value. */
   int SSLKeyLifetime;
 
+  /** How long (seconds) do we keep a guard before picking a new one? */
+  int GuardLifetime;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -4465,15 +4488,6 @@ typedef struct vote_timing_t {
 
 /********************************* geoip.c **************************/
 
-/** Round all GeoIP results to the next multiple of this value, to avoid
- * leaking information. */
-#define DIR_RECORD_USAGE_GRANULARITY 8
-/** Time interval: Flush geoip data to disk this often. */
-#define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
-/** How long do we have to have observed per-country request history before
- * we are willing to talk about it? */
-#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (12*60*60)
-
 /** Indicates an action that we might be noting geoip statistics on.
  * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
  * the others, we're not.
@@ -4792,6 +4806,10 @@ typedef struct dir_server_t {
  */
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
+
+/** This node is to be chosen as a directory guard, so don't choose any
+ * node that's currently a guard. */
+#define PDS_FOR_GUARD (1<<5)
 
 #define PDS_PREFER_TUNNELED_DIR_CONNS_ (1<<16)
 

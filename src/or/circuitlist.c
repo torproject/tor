@@ -24,6 +24,7 @@
 #include "nodelist.h"
 #include "onion.h"
 #include "onion_fast.h"
+#include "policies.h"
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -531,6 +532,9 @@ circuit_purpose_to_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_CONTROLLER:
       return "Circuit made by controller";
 
+    case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
+      return "Path-bias testing circuit";
+
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
       return buf;
@@ -653,6 +657,7 @@ circuit_free(circuit_t *circ)
       memwipe(ocirc->socks_password, 0x06, ocirc->socks_password_len);
       tor_free(ocirc->socks_password);
     }
+    addr_policy_list_free(ocirc->prepend_policy);
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     /* Remember cell statistics for this circuit before deallocating. */
@@ -1204,6 +1209,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal) &&
+          !circ->unusable_for_new_conns &&
           circ->remaining_relay_early_cells &&
           circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN &&
           !circ->build_state->onehop_tunnel &&
@@ -1299,20 +1305,17 @@ circuit_mark_all_unused_circs(void)
  * This is useful for letting the user change pseudonyms, so new
  * streams will not be linkable to old streams.
  */
-/* XXX024 this is a bad name for what this function does */
 void
-circuit_expire_all_dirty_circs(void)
+circuit_mark_all_dirty_circs_as_unusable(void)
 {
   circuit_t *circ;
-  const or_options_t *options = get_options();
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
-        circ->timestamp_dirty)
-      /* XXXX024 This is a screwed-up way to say "This is too dirty
-       * for new circuits. */
-      circ->timestamp_dirty -= options->MaxCircuitDirtiness;
+        circ->timestamp_dirty) {
+      mark_circuit_unusable_for_new_conns(TO_ORIGIN_CIRCUIT(circ));
+    }
   }
 }
 

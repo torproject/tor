@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - When unable to find any working directory nodes to use as a
+      directory guard, give up rather than adding the same non-working
+      nodes to the list over and over. Fixes bug 8231; bugfix on
+      0.2.4.8-alpha.

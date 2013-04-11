@@ -97,10 +97,10 @@ usage(void)
 {
   fprintf(stderr, "tor-fw-helper usage:\n"
           " [-h|--help]\n"
-          " [-T|--Test]\n"
+          " [-T|--test-commandline]\n"
           " [-v|--verbose]\n"
           " [-g|--fetch-public-ip]\n"
-          " [-p|--forward-port ([<external port>]:<internal port>])\n");
+          " [-p|--forward-port ([<external port>]:<internal port>)]\n");
 }
 
 /** Log commandline options to a hardcoded file <b>tor-fw-helper.log</b> in the

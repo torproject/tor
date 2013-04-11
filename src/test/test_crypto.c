@@ -636,22 +636,6 @@ test_crypto_formats(void)
     tor_free(data2);
   }
 
-  /* Check fingerprint */
-  {
-    test_assert(crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 0000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 00000"));
-    test_assert(!crypto_pk_check_fingerprint_syntax(
-                "ACD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
-  }
-
  done:
   tor_free(data1);
   tor_free(data2);
@@ -1113,7 +1097,7 @@ test_crypto_curve25519_persist(void *arg)
   tor_free(tag);
 
   content[69] ^= 0xff;
-  tt_int_op(0, ==, write_bytes_to_file(fname, content, st.st_size, 1));
+  tt_int_op(0, ==, write_bytes_to_file(fname, content, (size_t)st.st_size, 1));
   tt_int_op(-1, ==, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
 
  done:

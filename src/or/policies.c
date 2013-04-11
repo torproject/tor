@@ -837,6 +837,24 @@ append_exit_policy_string(smartlist_t **policy, const char *more)
   }
 }
 
+/** Add "reject <b>addr</b>:*" to <b>dest</b>, creating the list as needed. */
+void
+addr_policy_append_reject_addr(smartlist_t **dest, const tor_addr_t *addr)
+{
+  addr_policy_t p, *add;
+  memset(&p, 0, sizeof(p));
+  p.policy_type = ADDR_POLICY_REJECT;
+  p.maskbits = tor_addr_family(addr) == AF_INET6 ? 128 : 32;
+  tor_addr_copy(&p.addr, addr);
+  p.prt_min = 1;
+  p.prt_max = 65535;
+
+  add = addr_policy_get_canonical_entry(&p);
+  if (!*dest)
+    *dest = smartlist_new();
+  smartlist_add(*dest, add);
+}
+
 /** Detect and excise "dead code" from the policy *<b>dest</b>. */
 static void
 exit_policy_remove_redundancies(smartlist_t *dest)

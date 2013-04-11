@@ -803,6 +803,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
       }
 
+      pathbias_count_build_success(circ);
+      circuit_rep_hist_note_result(circ);
+      circuit_has_opened(circ); /* do other actions as necessary */
+
       if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
         can_complete_circuit=1;
@@ -818,10 +822,6 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
           consider_testing_reachability(1, 1);
         }
       }
-
-      pathbias_count_build_success(circ);
-      circuit_rep_hist_note_result(circ);
-      circuit_has_opened(circ); /* do other actions as necessary */
 
       /* We're done with measurement circuits here. Just close them */
       if (circ->base_.purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
@@ -901,7 +901,7 @@ circuit_note_clock_jumped(int seconds_elapsed)
   control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",
                               "CLOCK_JUMPED");
   circuit_mark_all_unused_circs();
-  circuit_expire_all_dirty_circs();
+  circuit_mark_all_dirty_circs_as_unusable();
 }
 
 /** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
@@ -1378,7 +1378,7 @@ pathbias_should_count(origin_circuit_t *circ)
     if (circ->build_state->desired_path_len != 1 ||
         !circ->build_state->onehop_tunnel) {
       if ((rate_msg = rate_limit_log(&count_limit, approx_time()))) {
-        log_notice(LD_BUG,
+        log_info(LD_BUG,
                "One-hop circuit has length %d. Path state is %s. "
                "Circuit is a %s currently %s.%s",
                circ->build_state->desired_path_len,
@@ -1539,7 +1539,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
         guard->circ_successes++;
         entry_guards_changed();
 
-        log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
+        log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       } else {
@@ -1558,7 +1558,7 @@ pathbias_count_build_success(origin_circuit_t *circ)
 
       if (guard->circ_attempts < guard->circ_successes) {
         log_notice(LD_BUG, "Unexpectedly high successes counts (%f/%f) "
-                 "for guard %s=%s",
+                 "for guard %s ($%s)",
                  guard->circ_successes, guard->circ_attempts,
                  guard->nickname, hex_str(guard->identity, DIGEST_LEN));
       }
@@ -1626,7 +1626,7 @@ pathbias_count_use_attempt(origin_circuit_t *circ)
       entry_guards_changed();
 
       log_debug(LD_CIRC,
-               "Marked circuit %d (%f/%f) as used for guard %s=%s.",
+               "Marked circuit %d (%f/%f) as used for guard %s ($%s).",
                circ->global_identifier,
                guard->use_successes, guard->use_attempts,
                guard->nickname, hex_str(guard->identity, DIGEST_LEN));
@@ -1734,9 +1734,16 @@ pathbias_count_use_success(origin_circuit_t *circ)
       guard->use_successes++;
       entry_guards_changed();
 
+      if (guard->use_attempts < guard->use_successes) {
+        log_notice(LD_BUG, "Unexpectedly high use successes counts (%f/%f) "
+                 "for guard %s=%s",
+                 guard->use_successes, guard->use_attempts,
+                 guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+      }
+
       log_debug(LD_CIRC,
                 "Marked circuit %d (%f/%f) as used successfully for guard "
-                "%s=%s.",
+                "%s ($%s).",
                 circ->global_identifier, guard->use_successes,
                 guard->use_attempts, guard->nickname,
                 hex_str(guard->identity, DIGEST_LEN));
@@ -2010,6 +2017,9 @@ pathbias_check_close(origin_circuit_t *ocirc, int reason)
       pathbias_count_use_failed(ocirc);
       break;
 
+    case PATH_STATE_NEW_CIRC:
+    case PATH_STATE_BUILD_ATTEMPTED:
+    case PATH_STATE_ALREADY_COUNTED:
     default:
       // Other states are uninteresting. No stats to count.
       break;
@@ -2253,7 +2263,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!guard->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry an extremely large "
+                 "Your Guard %s ($%s) is failing to carry an extremely large "
                  "amount of stream on its circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -2279,7 +2289,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       } else if (!guard->path_bias_use_extreme) {
         guard->path_bias_use_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry an extremely large "
+                 "Your Guard %s ($%s) is failing to carry an extremely large "
                  "amount of streams on its circuits. "
                  "This could indicate a route manipulation attack, network "
                  "overload, bad local network connectivity, or a bug. "
@@ -2303,7 +2313,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
       if (!guard->path_bias_use_noticed) {
         guard->path_bias_use_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s=%s is failing to carry more streams on its "
+                 "Your Guard %s ($%s) is failing to carry more streams on its "
                  "circuits than usual. "
                  "Most likely this means the Tor network is overloaded "
                  "or your network connection is poor. "
@@ -2359,7 +2369,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (pathbias_get_dropguards(options)) {
         if (!guard->path_bias_disabled) {
           log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing an extremely large "
+                 "Your Guard %s ($%s) is failing an extremely large "
                  "amount of circuits. "
                  "To avoid potential route manipulation attacks, Tor has "
                  "disabled use of this guard. "
@@ -2385,7 +2395,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       } else if (!guard->path_bias_extreme) {
         guard->path_bias_extreme = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing an extremely large "
+                 "Your Guard %s ($%s) is failing an extremely large "
                  "amount of circuits. "
                  "This could indicate a route manipulation attack, "
                  "extreme network overload, or a bug. "
@@ -2409,7 +2419,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!guard->path_bias_warned) {
         guard->path_bias_warned = 1;
         log_warn(LD_CIRC,
-                 "Your Guard %s=%s is failing a very large "
+                 "Your Guard %s ($%s) is failing a very large "
                  "amount of circuits. "
                  "Most likely this means the Tor network is "
                  "overloaded, but it could also mean an attack against "
@@ -2434,7 +2444,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
       if (!guard->path_bias_noticed) {
         guard->path_bias_noticed = 1;
         log_notice(LD_CIRC,
-                 "Your Guard %s=%s is failing more circuits than "
+                 "Your Guard %s ($%s) is failing more circuits than "
                  "usual. "
                  "Most likely this means the Tor network is overloaded. "
                  "Success counts are %ld/%ld. Use counts are %ld/%ld. "
@@ -2478,6 +2488,9 @@ pathbias_scale_close_rates(entry_guard_t *guard)
     int opened_built = pathbias_count_circs_in_states(guard,
                         PATH_STATE_BUILD_SUCCEEDED,
                         PATH_STATE_USE_FAILED);
+    /* Verify that the counts are sane before and after scaling */
+    int counts_are_sane = (guard->circ_attempts >= guard->circ_successes);
+
     guard->circ_attempts -= opened_attempts;
     guard->circ_successes -= opened_built;
 
@@ -2495,10 +2508,20 @@ pathbias_scale_close_rates(entry_guard_t *guard)
 
     log_info(LD_CIRC,
              "Scaled pathbias counts to (%f,%f)/%f (%d/%d open) for guard "
-             "%s=%s",
+             "%s ($%s)",
              guard->circ_successes, guard->successful_circuits_closed,
              guard->circ_attempts, opened_built, opened_attempts,
              guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+
+    /* Have the counts just become invalid by this scaling attempt? */
+    if (counts_are_sane && guard->circ_attempts < guard->circ_successes) {
+      log_notice(LD_BUG,
+               "Scaling has mangled pathbias counts to %f/%f (%d/%d open) "
+               "for guard %s ($%s)",
+               guard->circ_successes, guard->circ_attempts, opened_built,
+               opened_attempts, guard->nickname,
+               hex_str(guard->identity, DIGEST_LEN));
+    }
   }
 }
 
@@ -2521,6 +2544,9 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     double scale_ratio = pathbias_get_scale_ratio(options);
     int opened_attempts = pathbias_count_circs_in_states(guard,
             PATH_STATE_USE_ATTEMPTED, PATH_STATE_USE_SUCCEEDED);
+    /* Verify that the counts are sane before and after scaling */
+    int counts_are_sane = (guard->use_attempts >= guard->use_successes);
+
     guard->use_attempts -= opened_attempts;
 
     guard->use_attempts *= scale_ratio;
@@ -2529,9 +2555,20 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     guard->use_attempts += opened_attempts;
 
     log_info(LD_CIRC,
-             "Scaled pathbias use counts to %f/%f (%d open) for guard %s=%s",
-             guard->use_successes, guard->use_attempts, opened_attempts,
-             guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+           "Scaled pathbias use counts to %f/%f (%d open) for guard %s ($%s)",
+           guard->use_successes, guard->use_attempts, opened_attempts,
+           guard->nickname, hex_str(guard->identity, DIGEST_LEN));
+
+    /* Have the counts just become invalid by this scaling attempt? */
+    if (counts_are_sane && guard->use_attempts < guard->use_successes) {
+      log_notice(LD_BUG,
+               "Scaling has mangled pathbias usage counts to %f/%f "
+               "(%d open) for guard %s ($%s)",
+               guard->circ_successes, guard->circ_attempts,
+               opened_attempts, guard->nickname,
+               hex_str(guard->identity, DIGEST_LEN));
+    }
+
     entry_guards_changed();
   }
 }
@@ -2554,7 +2591,7 @@ entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
   pathbias_scale_close_rates(guard);
   guard->circ_attempts++;
 
-  log_info(LD_CIRC, "Got success count %f/%f for guard %s=%s",
+  log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
            guard->circ_successes, guard->circ_attempts, guard->nickname,
            hex_str(guard->identity, DIGEST_LEN));
   return 0;
@@ -3398,6 +3435,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     });
   }
   /* and exclude current entry guards and their families, if applicable */
+  /*XXXX025 use the using_as_guard flag to accomplish this.*/
   if (options->UseEntryGuards) {
     SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
       {

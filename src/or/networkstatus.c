@@ -1432,18 +1432,6 @@ consensus_is_waiting_for_certs(void)
     ? 1 : 0;
 }
 
-/** Return the network status with a given identity digest. */
-networkstatus_v2_t *
-networkstatus_v2_get_by_digest(const char *digest)
-{
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-    {
-      if (tor_memeq(ns->identity_digest, digest, DIGEST_LEN))
-        return ns;
-    });
-  return NULL;
-}
-
 /** Return the most recent consensus that we have downloaded, or NULL if we
  * don't have one. */
 networkstatus_t *

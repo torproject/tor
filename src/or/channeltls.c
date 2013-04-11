@@ -1208,7 +1208,7 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 
   tor_assert(chan->conn->handshake_state);
   end = cell->payload + cell->payload_len;
-  for (cp = cell->payload; cp+1 < end; ++cp) {
+  for (cp = cell->payload; cp+1 < end; cp += 2) {
     uint16_t v = ntohs(get_uint16(cp));
     if (is_or_protocol_version_known(v) && v > highest_supported_version)
       highest_supported_version = v;

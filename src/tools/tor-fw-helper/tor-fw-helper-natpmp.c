@@ -93,16 +93,20 @@ wait_until_fd_readable(tor_socket_t fd, struct timeval *timeout)
 {
   int r;
   fd_set fds;
+
+#ifndef WIN32
   if (fd >= FD_SETSIZE) {
     fprintf(stderr, "E: NAT-PMP FD_SETSIZE error %d\n", fd);
     return -1;
   }
+#endif
+
   FD_ZERO(&fds);
   FD_SET(fd, &fds);
   r = select(fd+1, &fds, NULL, NULL, timeout);
   if (r == -1) {
     fprintf(stderr, "V: select failed in wait_until_fd_readable: %s\n",
-            strerror(errno));
+            tor_socket_strerror(tor_socket_errno(fd)));
     return -1;
   }
   /* XXXX we should really check to see whether fd was readable, or we timed
@@ -140,12 +144,12 @@ tor_natpmp_add_tcp_mapping(uint16_t internal_port, uint16_t external_port,
     if (is_verbose)
       fprintf(stderr, "V: attempting to readnatpmpreponseorretry...\n");
     r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
-    sav_errno = errno;
+    sav_errno = tor_socket_errno(state->natpmp.s);
 
     if (r<0 && r!=NATPMP_TRYAGAIN) {
       fprintf(stderr, "E: readnatpmpresponseorretry failed %d\n", r);
       fprintf(stderr, "E: errno=%d '%s'\n", sav_errno,
-              strerror(sav_errno));
+              tor_socket_strerror(sav_errno));
     }
 
   } while (r == NATPMP_TRYAGAIN);
@@ -198,7 +202,7 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
     if (tor_fw_options->verbose)
       fprintf(stderr, "V: NAT-PMP attempting to read reponse...\n");
     r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
-    sav_errno = errno;
+    sav_errno = tor_socket_errno(state->natpmp.s);
 
     if (tor_fw_options->verbose)
       fprintf(stderr, "V: NAT-PMP readnatpmpresponseorretry returned"
@@ -208,7 +212,7 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
       fprintf(stderr, "E: NAT-PMP readnatpmpresponseorretry failed %d\n",
               r);
       fprintf(stderr, "E: NAT-PMP errno=%d '%s'\n", sav_errno,
-              strerror(sav_errno));
+              tor_socket_strerror(sav_errno));
     }
 
   } while (r == NATPMP_TRYAGAIN );

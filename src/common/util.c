@@ -1176,118 +1176,9 @@ escaped(const char *s)
   return escaped_val_;
 }
 
-/** Rudimentary string wrapping code: given a un-wrapped <b>string</b> (no
- * newlines!), break the string into newline-terminated lines of no more than
- * <b>width</b> characters long (not counting newline) and insert them into
- * <b>out</b> in order.  Precede the first line with prefix0, and subsequent
- * lines with prefixRest.
- */
-/* This uses a stupid greedy wrapping algorithm right now:
- *  - For each line:
- *    - Try to fit as much stuff as possible, but break on a space.
- *    - If the first "word" of the line will extend beyond the allowable
- *      width, break the word at the end of the width.
- */
-void
-wrap_string(smartlist_t *out, const char *string, size_t width,
-            const char *prefix0, const char *prefixRest)
-{
-  size_t p0Len, pRestLen, pCurLen;
-  const char *eos, *prefixCur;
-  tor_assert(out);
-  tor_assert(string);
-  tor_assert(width);
-  if (!prefix0)
-    prefix0 = "";
-  if (!prefixRest)
-    prefixRest = "";
-
-  p0Len = strlen(prefix0);
-  pRestLen = strlen(prefixRest);
-  tor_assert(width > p0Len && width > pRestLen);
-  eos = strchr(string, '\0');
-  tor_assert(eos);
-  pCurLen = p0Len;
-  prefixCur = prefix0;
-
-  while ((eos-string)+pCurLen > width) {
-    const char *eol = string + width - pCurLen;
-    while (eol > string && *eol != ' ')
-      --eol;
-    /* eol is now the last space that can fit, or the start of the string. */
-    if (eol > string) {
-      size_t line_len = (eol-string) + pCurLen + 2;
-      char *line = tor_malloc(line_len);
-      memcpy(line, prefixCur, pCurLen);
-      memcpy(line+pCurLen, string, eol-string);
-      line[line_len-2] = '\n';
-      line[line_len-1] = '\0';
-      smartlist_add(out, line);
-      string = eol + 1;
-    } else {
-      size_t line_len = width + 2;
-      char *line = tor_malloc(line_len);
-      memcpy(line, prefixCur, pCurLen);
-      memcpy(line+pCurLen, string, width - pCurLen);
-      line[line_len-2] = '\n';
-      line[line_len-1] = '\0';
-      smartlist_add(out, line);
-      string += width-pCurLen;
-    }
-    prefixCur = prefixRest;
-    pCurLen = pRestLen;
-  }
-
-  if (string < eos) {
-    size_t line_len = (eos-string) + pCurLen + 2;
-    char *line = tor_malloc(line_len);
-    memcpy(line, prefixCur, pCurLen);
-    memcpy(line+pCurLen, string, eos-string);
-    line[line_len-2] = '\n';
-    line[line_len-1] = '\0';
-    smartlist_add(out, line);
-  }
-}
-
 /* =====
  * Time
  * ===== */
-
-/**
- * Converts struct timeval to a double value.
- * Preserves microsecond precision, but just barely.
- * Error is approx +/- 0.1 usec when dealing with epoch values.
- */
-double
-tv_to_double(const struct timeval *tv)
-{
-  double conv = tv->tv_sec;
-  conv += tv->tv_usec/1000000.0;
-  return conv;
-}
-
-/**
- * Converts timeval to milliseconds.
- */
-int64_t
-tv_to_msec(const struct timeval *tv)
-{
-  int64_t conv = ((int64_t)tv->tv_sec)*1000L;
-  /* Round ghetto-style */
-  conv += ((int64_t)tv->tv_usec+500)/1000L;
-  return conv;
-}
-
-/**
- * Converts timeval to microseconds.
- */
-int64_t
-tv_to_usec(const struct timeval *tv)
-{
-  int64_t conv = ((int64_t)tv->tv_sec)*1000000L;
-  conv += tv->tv_usec;
-  return conv;
-}
 
 /** Return the number of microseconds elapsed between *start and *end.
  */
@@ -2537,10 +2428,13 @@ unescape_string(const char *s, char **result, size_t *size_out)
  * key portion and *<b>value_out</b> to a new string holding the value portion
  * of the line, and return a pointer to the start of the next line.  If we run
  * out of data, return a pointer to the end of the string.  If we encounter an
- * error, return NULL.
+ * error, return NULL and set *<b>err_out</b> (if provided) to an error
+ * message.
  */
 const char *
-parse_config_line_from_str(const char *line, char **key_out, char **value_out)
+parse_config_line_from_str_verbose(const char *line, char **key_out,
+                                   char **value_out,
+                                   const char **err_out)
 {
   /* I believe the file format here is supposed to be:
      FILE = (EMPTYLINE | LINE)* (EMPTYLASTLINE | LASTLINE)?
@@ -2614,12 +2508,18 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 
   /* Find the end of the line. */
   if (*line == '\"') { // XXX No continuation handling is done here
-    if (!(line = unescape_string(line, value_out, NULL)))
-       return NULL;
+    if (!(line = unescape_string(line, value_out, NULL))) {
+      if (err_out)
+        *err_out = "Invalid escape sequence in quoted string";
+      return NULL;
+    }
     while (*line == ' ' || *line == '\t')
       ++line;
-    if (*line && *line != '#' && *line != '\n')
+    if (*line && *line != '#' && *line != '\n') {
+      if (err_out)
+        *err_out = "Excess data after quoted string";
       return NULL;
+    }
   } else {
     /* Look for the end of the line. */
     while (*line && *line != '\n' && (*line != '#' || continuation)) {

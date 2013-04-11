@@ -113,8 +113,8 @@ crypto_get_rsa_padding_overhead(int padding)
 {
   switch (padding)
     {
-    case RSA_PKCS1_OAEP_PADDING: return 42;
-    case RSA_PKCS1_PADDING: return 11;
+    case RSA_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
+    case RSA_PKCS1_PADDING: return PKCS1_PADDING_OVERHEAD;
     default: tor_assert(0); return -1;
     }
 }
@@ -1292,23 +1292,6 @@ crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out, int add_space)
     strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);
   }
   return 0;
-}
-
-/** Return true iff <b>s</b> is in the correct format for a fingerprint.
- */
-int
-crypto_pk_check_fingerprint_syntax(const char *s)
-{
-  int i;
-  for (i = 0; i < FINGERPRINT_LEN; ++i) {
-    if ((i%5) == 4) {
-      if (!TOR_ISSPACE(s[i])) return 0;
-    } else {
-      if (!TOR_ISXDIGIT(s[i])) return 0;
-    }
-  }
-  if (s[FINGERPRINT_LEN]) return 0;
-  return 1;
 }
 
 /* symmetric crypto */
@@ -3000,6 +2983,12 @@ memwipe(void *mem, uint8_t byte, size_t sz)
 }
 
 #ifdef TOR_IS_MULTITHREADED
+
+#ifndef OPENSSL_THREADS
+#error OpenSSL has been built without thread support. Tor requires an \
+ OpenSSL library with thread support enabled.
+#endif
+
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */
 static void
 openssl_locking_cb_(int mode, int n, const char *file, int line)

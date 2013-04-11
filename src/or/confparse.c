@@ -91,12 +91,15 @@ config_get_lines(const char *string, config_line_t **result, int extended)
 {
   config_line_t *list = NULL, **next;
   char *k, *v;
+  const char *parse_err;
 
   next = &list;
   do {
     k = v = NULL;
-    string = parse_config_line_from_str(string, &k, &v);
+    string = parse_config_line_from_str_verbose(string, &k, &v, &parse_err);
     if (!string) {
+      log_warn(LD_CONFIG, "Error while parsing configuration: %s",
+               parse_err?parse_err:"<unknown>");
       config_free_lines(list);
       tor_free(k);
       tor_free(v);
@@ -1100,6 +1103,8 @@ static struct unit_table_t time_units[] = {
   { "days",     24*60*60 },
   { "week",     7*24*60*60 },
   { "weeks",    7*24*60*60 },
+  { "month",    2629728, }, /* about 30.437 days */
+  { "months",   2629728, },
   { NULL, 0 },
 };
 

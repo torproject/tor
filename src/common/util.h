@@ -112,7 +112,6 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_malloc(size)       tor_malloc_(size DMALLOC_ARGS)
 #define tor_malloc_zero(size)  tor_malloc_zero_(size DMALLOC_ARGS)
 #define tor_calloc(nmemb,size) tor_calloc_(nmemb, size DMALLOC_ARGS)
-#define tor_malloc_roundup(szp) _tor_malloc_roundup(szp DMALLOC_ARGS)
 #define tor_realloc(ptr, size) tor_realloc_(ptr, size DMALLOC_ARGS)
 #define tor_strdup(s)          tor_strdup_(s DMALLOC_ARGS)
 #define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)
@@ -173,6 +172,17 @@ int n_bits_set_u8(uint8_t v);
  * overflow. */
 #define CEIL_DIV(a,b) (((a)+(b)-1)/(b))
 
+/* Return <b>v</b> if it's between <b>min</b> and <b>max</b>.  Otherwise
+ * return <b>min</b> if <b>v</b> is smaller than <b>min</b>, or <b>max</b> if
+ * <b>b</b> is larger than <b>max</b>.
+ *
+ * Requires that <b>min</b> is no more than <b>max</b>. May evaluate any of
+ * its arguments more than once! */
+#define CLAMP(min,v,max)                        \
+  ( ((v) < (min)) ? (min) :                     \
+    ((v) > (max)) ? (max) :                     \
+    (v) )
+
 /* String manipulation */
 
 /** Allowable characters in a hexadecimal string. */
@@ -216,8 +226,6 @@ int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 struct smartlist_t;
-void wrap_string(struct smartlist_t *out, const char *string, size_t width,
-                 const char *prefix0, const char *prefixRest);
 int tor_vsscanf(const char *buf, const char *pattern, va_list ap)
 #ifdef __GNUC__
   __attribute__((format(scanf, 2, 0)))
@@ -240,9 +248,6 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
-double tv_to_double(const struct timeval *tv);
-int64_t tv_to_msec(const struct timeval *tv);
-int64_t tv_to_usec(const struct timeval *tv);
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
 int tor_timegm(const struct tm *tm, time_t *time_out);
@@ -375,8 +380,11 @@ char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;
-const char *parse_config_line_from_str(const char *line,
-                                       char **key_out, char **value_out);
+const char *parse_config_line_from_str_verbose(const char *line,
+                                       char **key_out, char **value_out,
+                                       const char **err_out);
+#define parse_config_line_from_str(line,key_out,value_out) \
+  parse_config_line_from_str_verbose((line),(key_out),(value_out),NULL)
 char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
 int path_is_relative(const char *filename);

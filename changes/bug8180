@@ -1,0 +1,7 @@
+  o Minor bugfixes (security usability):
+    - Elevate the severity of the warning message when setting
+      EntryNodes but disabling UseGuardNodes to an error. The outcome
+      of letting Tor procede with those options enabled (which causes
+      EntryNodes to get ignored) is sufficiently different from what
+      was expected that it's best to just refuse to proceed. Fixes bug
+      8180; bugfix on 0.2.3.11-alpha.

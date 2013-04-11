@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Correct our check for which versions of Tor support the EXTEND2
+      cell.  We had been willing to send it to Tor 0.2.4.7-alpha and
+      later, when support was really added in version 0.2.4.8-alpha.
+      Fixes bug 8464; bugfix on 0.2.4.8-alpha.

@@ -1751,6 +1751,14 @@ channel_write_cell(channel_t *chan, cell_t *cell)
   tor_assert(chan);
   tor_assert(cell);
 
+  if (chan->state == CHANNEL_STATE_CLOSING) {
+    log_debug(LD_CHANNEL, "Discarding cell_t %p on closing channel %p with "
+              "global ID "U64_FORMAT, cell, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
+    tor_free(cell);
+    return;
+  }
+
   log_debug(LD_CHANNEL,
             "Writing cell_t %p to channel %p with global ID "
             U64_FORMAT,
@@ -1776,6 +1784,14 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
 
   tor_assert(chan);
   tor_assert(packed_cell);
+
+  if (chan->state == CHANNEL_STATE_CLOSING) {
+    log_debug(LD_CHANNEL, "Discarding packed_cell_t %p on closing channel %p "
+              "with global ID "U64_FORMAT, packed_cell, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
+    packed_cell_free(packed_cell);
+    return;
+  }
 
   log_debug(LD_CHANNEL,
             "Writing packed_cell_t %p to channel %p with global ID "
@@ -1804,6 +1820,14 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
 
   tor_assert(chan);
   tor_assert(var_cell);
+
+  if (chan->state == CHANNEL_STATE_CLOSING) {
+    log_debug(LD_CHANNEL, "Discarding var_cell_t %p on closing channel %p "
+              "with global ID "U64_FORMAT, var_cell, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
+    var_cell_free(var_cell);
+    return;
+  }
 
   log_debug(LD_CHANNEL,
             "Writing var_cell_t %p to channel %p with global ID "

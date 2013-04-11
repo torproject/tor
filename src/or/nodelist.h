@@ -41,6 +41,7 @@ int node_get_purpose(const node_t *node);
   (node_get_purpose((node)) == ROUTER_PURPOSE_BRIDGE)
 int node_is_me(const node_t *node);
 int node_exit_policy_rejects_all(const node_t *node);
+int node_exit_policy_is_exact(const node_t *node, sa_family_t family);
 smartlist_t *node_get_all_orports(const node_t *node);
 int node_allows_single_hop_exits(const node_t *node);
 const char *node_get_nickname(const node_t *node);

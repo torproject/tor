@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - When autodetecting the number of CPUs, use the number of available
+      CPUs in preferernce to the number of configured CPUs. Inform the
+      user if this reduces the number of avialable CPUs. Fix for bug 8002.
+      Bugfix on 0.2.3.1-alpha.
