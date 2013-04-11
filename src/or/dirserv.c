@@ -1879,7 +1879,7 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
 
 /** Don't consider routers with less bandwidth than this when computing
  * thresholds. */
-#define ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER 4096
+#define ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER 4
 
 /** Helper for dirserv_compute_performance_thresholds(): Decide whether to
  * include a router in our calculations, and return true iff we should; the
@@ -1994,7 +1994,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
     /* The 12.5th percentile bandwidth is fast. */
     fast_bandwidth = find_nth_uint32(bandwidths, n_active, n_active/8);
     /* (Now bandwidths is sorted.) */
-    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH/2)
+    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH/(2 * 1000))
       fast_bandwidth = bandwidths[n_active/4];
     guard_bandwidth_including_exits = bandwidths[(n_active-1)/2];
     guard_tk = find_nth_long(tks, n_active, n_active/8);
@@ -2005,14 +2005,14 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
 
   {
     /* We can vote on a parameter for the minimum and maximum. */
-#define ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG 4096
+#define ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG 4
     int32_t min_fast, max_fast;
     min_fast = networkstatus_get_param(NULL, "FastFlagMinThreshold",
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       ABSOLUTE_MIN_VALUE_FOR_FAST_FLAG,
       INT32_MAX);
     if (options->TestingTorNetwork) {
-      min_fast = (int32_t)options->TestingMinFastFlagThreshold;
+      min_fast = (int32_t)options->TestingMinFastFlagThreshold/1000;
     }
     max_fast = networkstatus_get_param(NULL, "FastFlagMaxThreshold",
                                        INT32_MAX, min_fast, INT32_MAX);
@@ -2024,8 +2024,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
   /* Protect sufficiently fast nodes from being pushed out of the set
    * of Fast nodes. */
   if (options->AuthDirFastGuarantee &&
-      fast_bandwidth > options->AuthDirFastGuarantee)
-    fast_bandwidth = (uint32_t)options->AuthDirFastGuarantee;
+      fast_bandwidth > options->AuthDirFastGuarantee/1000)
+    fast_bandwidth = (uint32_t)options->AuthDirFastGuarantee/1000;
 
   /* Now that we have a time-known that 7/8 routers are known longer than,
    * fill wfus with the wfu of every such "familiar" router. */
@@ -2056,9 +2056,10 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
 
   log_info(LD_DIRSERV,
       "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
-      "For Fast: %lu bytes/sec. "
+      "For Fast: %lu kilobytes/sec. "
       "For Guard: WFU %.03f%%, time-known %lu sec, "
-      "and bandwidth %lu or %lu bytes/sec. We%s have enough stability data.",
+      "and bandwidth %lu or %lu kilobytes/sec. "
+      "We%s have enough stability data.",
       (unsigned long)stable_uptime,
       (unsigned long)stable_mtbf,
       (unsigned long)fast_bandwidth,
@@ -2723,7 +2724,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
   if (node->is_fast &&
       ((options->AuthDirGuardBWGuarantee &&
-        routerbw >= options->AuthDirGuardBWGuarantee) ||
+        routerbw >= options->AuthDirGuardBWGuarantee/1000) ||
        routerbw >= MIN(guard_bandwidth_including_exits,
                        guard_bandwidth_excluding_exits)) &&
       is_router_version_good_for_possible_guard(ri->platform)) {
