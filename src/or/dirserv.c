@@ -1911,7 +1911,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
  * the Weighted Fractional Uptime history, and use them to set thresholds for
  * the Stable, Fast, and Guard flags.  Update the fields stable_uptime,
  * stable_mtbf, enough_mtbf_info, guard_wfu, guard_tk, fast_bandwidth,
- * guard_bandwidh_including_exits, guard_bandwidth_excluding_exits,
+ * guard_bandwidth_including_exits, guard_bandwidth_excluding_exits,
  * total_bandwidth, and total_exit_bandwidth.
  *
  * Also, set the is_exit flag of each router appropriately. */
