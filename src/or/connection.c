@@ -2954,7 +2954,20 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
         return 0;
-      case TOR_TLS_WANTREAD: /* we're already reading */
+      case TOR_TLS_WANTREAD:
+        if (conn->in_connection_handle_write) {
+          /* We've been invoked from connection_handle_write, because we're
+           * waiting for a TLS renegotiation, the renegotiation started, and
+           * SSL_read returned WANTWRITE.  But now SSL_read is saying WANTREAD
+           * again.  Stop waiting for write events now, or else we'll
+           * busy-loop until data arrives for us to read. */
+          connection_stop_writing(conn);
+          if (!connection_is_reading(conn))
+            connection_start_reading(conn);
+        }
+        /* we're already reading, one hopes */
+        result = 0;
+        break;
       case TOR_TLS_DONE: /* no data read, so nothing to process */
         result = 0;
         break; /* so we call bucket_decrement below */
@@ -3513,7 +3526,9 @@ connection_handle_write(connection_t *conn, int force)
 {
     int res;
     tor_gettimeofday_cache_clear();
+    conn->in_connection_handle_write = 1;
     res = connection_handle_write_impl(conn, force);
+    conn->in_connection_handle_write = 0;
     return res;
 }
 
