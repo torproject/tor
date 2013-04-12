@@ -1165,6 +1165,9 @@ typedef struct connection_t {
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
   unsigned int in_flushed_some:1;
+  /** True if connection_handle_write is currently running on this connection.
+   */
+  unsigned int in_connection_handle_write:1;
 
   /* For linked connections:
    */
