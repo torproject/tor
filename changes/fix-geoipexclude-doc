@@ -1,0 +1,4 @@
+  o Documentation fixes:
+    - Fix the GeoIPExcludeUnknown documentation to refer to ExcludeExitNodes
+      rather than the currently nonexistent ExcludeEntryNodes. Spotted by
+      "hamahangi" on tor-talk.
