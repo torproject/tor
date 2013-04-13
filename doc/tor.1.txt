@@ -695,10 +695,10 @@ The following options are useful only for clients (that is, if
 
 **GeoIPExcludeUnknown** **0**|**1**|**auto**::
     If this option is set to 'auto', then whenever any country code is set in
-    ExcludeNodes or ExcludeEntryNodes, all nodes with unknown country (\{??} and
+    ExcludeNodes or ExcludeExitNodes, all nodes with unknown country (\{??} and
     possibly \{A1}) are treated as excluded as well. If this option is set to
     '1', then all unknown countries are treated as excluded in ExcludeNodes
-    and ExcludeEntryNodes.  This option has no effect when a GeoIP file isn't
+    and ExcludeExitNodes.  This option has no effect when a GeoIP file isn't
     configured or can't be found.  (Default: auto)
 
 **ExitNodes** __node__,__node__,__...__::
