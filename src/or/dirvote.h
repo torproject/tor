@@ -61,7 +61,7 @@
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW */
-#define DEFAULT_MAX_UNMEASURED_BW 20
+#define DEFAULT_MAX_UNMEASURED_BW_KB 20
 
 void dirvote_free_all(void);
 

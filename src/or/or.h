@@ -2101,7 +2101,7 @@ typedef struct routerstatus_t {
   unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
                                     * the Unmeasured flag set. */
 
-  uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
+  uint32_t bandwidth_kb; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
   char *exitsummary; /**< exit policy summary -
                       * XXX weasel: this probably should not stay a string. */
@@ -2347,7 +2347,7 @@ typedef struct vote_routerstatus_t {
   char *version; /**< The version that the authority says this router is
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
-  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
+  uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;
@@ -4479,7 +4479,7 @@ typedef enum {
 typedef struct measured_bw_line_t {
   char node_id[DIGEST_LEN];
   char node_hex[MAX_HEX_NICKNAME_LEN+1];
-  long int bw;
+  long int bw_kb;
 } measured_bw_line_t;
 
 #endif
