@@ -1163,6 +1163,9 @@ typedef struct connection_t {
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
   unsigned int in_flushed_some:1;
+  /** True if connection_handle_write is currently running on this connection.
+   */
+  unsigned int in_connection_handle_write:1;
 
   /* For linked connections:
    */
@@ -1247,6 +1250,10 @@ typedef struct listener_connection_t {
   /** One or more ISO_ flags to describe how to isolate streams. */
   uint8_t isolation_flags;
   /**@}*/
+  /** For SOCKS connections only: If this is set, we will choose "no
+   * authentication" instead of "username/password" authentication if both
+   * are offered. Used as input to parse_socks. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /** For a SOCKS listeners, these fields describe whether we should
    * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
@@ -2092,7 +2099,7 @@ typedef struct routerstatus_t {
   unsigned int bw_is_unmeasured:1; /**< This is a consensus entry, with
                                     * the Unmeasured flag set. */
 
-  uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
+  uint32_t bandwidth_kb; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
   char *exitsummary; /**< exit policy summary -
                       * XXX weasel: this probably should not stay a string. */
@@ -2338,7 +2345,7 @@ typedef struct vote_routerstatus_t {
   char *version; /**< The version that the authority says this router is
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
-  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
+  uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;
@@ -3243,6 +3250,10 @@ typedef struct port_cfg_t {
   uint8_t isolation_flags; /**< Zero or more isolation flags */
   int session_group; /**< A session group, or -1 if this port is not in a
                       * session group. */
+  /* Socks only: */
+  /** When both no-auth and user/pass are advertised by a SOCKS client, select
+   * no-auth. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /* Server port types (or, dir) only: */
   unsigned int no_advertise : 1;
@@ -4159,6 +4170,10 @@ struct socks_request_t {
                               * make sure we send back a socks reply for
                               * every connection. */
   unsigned int got_auth : 1; /**< Have we received any authentication data? */
+  /** If this is set, we will choose "no authentication" instead of
+   * "username/password" authentication if both are offered. Used as input to
+   * parse_socks. */
+  unsigned int socks_prefer_no_auth : 1;
 
   /** Number of bytes in username; 0 if username is NULL */
   size_t usernamelen;
@@ -4466,7 +4481,7 @@ typedef enum {
 typedef struct measured_bw_line_t {
   char node_id[DIGEST_LEN];
   char node_hex[MAX_HEX_NICKNAME_LEN+1];
-  long int bw;
+  long int bw_kb;
 } measured_bw_line_t;
 
 #endif

@@ -1,0 +1,13 @@
+  o Major bugfixes:
+
+    - Many SOCKS5 clients, when configured to offer a username/password,
+      offer both username/password authentication and "no authentication".
+      Tor had previously preferred no authentication, but this was
+      problematic when trying to make applications get proper stream
+      isolation with IsolateSOCKSAuth. Now, on any SOCKS port with
+      IsolateSOCKSAuth turned on (which is the default), Tor selects
+      username/password authentication if it's offered. If this confuses your
+      application, you can disable it on a per-SOCKSPort basis via
+      PreferSOCKSNoAuth. Fixes bug 8117; bugfix on 0.2.3.3-alpha.
+
+

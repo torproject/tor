@@ -508,7 +508,7 @@ test_dir_split_fps(void *testdata)
 }
 
 static void
-test_dir_measured_bw(void)
+test_dir_measured_bw_kb(void)
 {
   measured_bw_line_t mbwl;
   int i;
@@ -564,7 +564,7 @@ test_dir_measured_bw(void)
   for (i = 0; strcmp(lines_pass[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
     test_assert(measured_bw_line_parse(&mbwl, lines_pass[i]) == 0);
-    test_assert(mbwl.bw == 1024);
+    test_assert(mbwl.bw_kb == 1024);
     test_assert(strcmp(mbwl.node_hex,
                 "557365204145532d32353620696e73746561642e") == 0);
   }
@@ -577,7 +577,7 @@ test_dir_measured_bw(void)
 
 /** Do the measured bandwidth cache unit test */
 static void
-test_dir_measured_bw_cache(void)
+test_dir_measured_bw_kb_cache(void)
 {
   /* Initial fake time_t for testing */
   time_t curr = MBWC_INIT_TIME;
@@ -595,23 +595,23 @@ test_dir_measured_bw_cache(void)
    * the node_hex field.
    */
   memset(mbwl[0].node_id, 0x01, DIGEST_LEN);
-  mbwl[0].bw = 20;
+  mbwl[0].bw_kb = 20;
   memset(mbwl[1].node_id, 0x02, DIGEST_LEN);
-  mbwl[1].bw = 40;
+  mbwl[1].bw_kb = 40;
   memset(mbwl[2].node_id, 0x03, DIGEST_LEN);
-  mbwl[2].bw = 80;
+  mbwl[2].bw_kb = 80;
   /* Try caching something */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
   test_eq(dirserv_get_measured_bw_cache_size(), 1);
   /* Okay, let's see if we can retrieve it */
-  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, &bw, &as_of));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, &as_of));
   test_eq(bw, 20);
   test_eq(as_of, MBWC_INIT_TIME);
   /* Try retrieving it without some outputs */
-  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, NULL));
-  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, &bw, NULL));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, NULL));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, NULL));
   test_eq(bw, 20);
-  test_assert(dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, &as_of));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, &as_of));
   test_eq(as_of, MBWC_INIT_TIME);
   /* Now expire it */
   curr += MAX_MEASUREMENT_AGE + 1;
@@ -619,7 +619,7 @@ test_dir_measured_bw_cache(void)
   /* Check that the cache is empty */
   test_eq(dirserv_get_measured_bw_cache_size(), 0);
   /* Check that we can't retrieve it */
-  test_assert(!dirserv_query_measured_bw_cache(mbwl[0].node_id, NULL, NULL));
+  test_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, NULL));
   /* Try caching a few things now */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
   test_eq(dirserv_get_measured_bw_cache_size(), 1);
@@ -829,8 +829,8 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
      * router_get_advertised_bandwidth_capped() of routerlist.c and
      * routerstatus_format_entry() of dirserv.c.
      */
-    r->bandwidthrate = rs->bandwidth * 1000;
-    r->bandwidthcapacity = rs->bandwidth * 1000;
+    r->bandwidthrate = rs->bandwidth_kb * 1000;
+    r->bandwidthcapacity = rs->bandwidth_kb * 1000;
   }
   return r;
 }
@@ -952,7 +952,7 @@ vote_tweaks_for_v3ns(networkstatus_t *v, int voter, time_t now)
   if (voter == 1) {
     measured_bw_line_t mbw;
     memset(mbw.node_id, 33, sizeof(mbw.node_id));
-    mbw.bw = 1024;
+    mbw.bw_kb = 1024;
     test_assert(measured_bw_line_apply(&mbw,
                 v->routerstatus_list) == 1);
   } else if (voter == 2 || voter == 3) {
@@ -1048,7 +1048,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                        (voter == 1 || voter == 2)) {
     /* Check the measured bandwidth bits */
     test_assert(vrs->has_measured_bw &&
-                vrs->measured_bw == 1024);
+                vrs->measured_bw_kb == 1024);
   } else {
     /*
      * Didn't expect this, but the old unit test only checked some of them,
@@ -1779,12 +1779,12 @@ test_dir_random_weighted(void *testdata)
   ;
 }
 
-/* Function pointers for test_dir_clip_unmeasured_bw() */
+/* Function pointers for test_dir_clip_unmeasured_bw_kb() */
 
 static uint32_t alternate_clip_bw = 0;
 
 /**
- * Generate a routerstatus for clip_unmeasured_bw test; based on the
+ * Generate a routerstatus for clip_unmeasured_bw_kb test; based on the
  * v3_networkstatus ones.
  */
 static vote_routerstatus_t *
@@ -1793,8 +1793,8 @@ gen_routerstatus_for_umbw(int idx, time_t now)
   vote_routerstatus_t *vrs = NULL;
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
+    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   switch (idx) {
     case 0:
@@ -1818,7 +1818,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        */
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
-      vrs->measured_bw = rs->bandwidth = max_unmeasured_bw / 2;
+      vrs->measured_bw_kb = rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -1844,7 +1844,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        */
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
-      vrs->measured_bw = rs->bandwidth = 2 * max_unmeasured_bw;
+      vrs->measured_bw_kb = rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -1868,8 +1868,8 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        */
       vrs->has_measured_bw = 0;
       rs->has_bandwidth = 1;
-      vrs->measured_bw = 0;
-      rs->bandwidth = 2 * max_unmeasured_bw;
+      vrs->measured_bw_kb = 0;
+      rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
       break;
     case 3:
       /* Generate a fourth routerstatus that is not running. */
@@ -1892,8 +1892,8 @@ gen_routerstatus_for_umbw(int idx, time_t now)
        */
       vrs->has_measured_bw = 0;
       rs->has_bandwidth = 1;
-      vrs->measured_bw = 0;
-      rs->bandwidth = max_unmeasured_bw / 2;
+      vrs->measured_bw_kb = 0;
+      rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
       break;
     case 4:
       /* No more for this test; return NULL */
@@ -1922,7 +1922,7 @@ vote_tweaks_for_umbw(networkstatus_t *v, int voter, time_t now)
 
   test_assert(v->supported_methods);
   smartlist_clear(v->supported_methods);
-  /* Method 17 is MIN_METHOD_TO_CLIP_UNMEASURED_BW */
+  /* Method 17 is MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB */
   smartlist_split_string(v->supported_methods,
                          "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17",
                          NULL, 0, -1);
@@ -1948,8 +1948,8 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
 {
   routerstatus_t *rs;
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
+    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   (void)voter;
   test_assert(vrs);
@@ -1978,8 +1978,8 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->dir_port, 8000);
     test_assert(rs->has_bandwidth);
     test_assert(vrs->has_measured_bw);
-    test_eq(rs->bandwidth, max_unmeasured_bw / 2);
-    test_eq(vrs->measured_bw, max_unmeasured_bw / 2);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb / 2);
+    test_eq(vrs->measured_bw_kb, max_unmeasured_bw_kb / 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
@@ -2005,8 +2005,8 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->ipv6_orport, 4711);
     test_assert(rs->has_bandwidth);
     test_assert(vrs->has_measured_bw);
-    test_eq(rs->bandwidth, max_unmeasured_bw * 2);
-    test_eq(vrs->measured_bw, max_unmeasured_bw * 2);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb * 2);
+    test_eq(vrs->measured_bw_kb, max_unmeasured_bw_kb * 2);
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33",
@@ -2018,8 +2018,8 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      */
     test_assert(rs->has_bandwidth);
     test_assert(!(vrs->has_measured_bw));
-    test_eq(rs->bandwidth, max_unmeasured_bw * 2);
-    test_eq(vrs->measured_bw, 0);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb * 2);
+    test_eq(vrs->measured_bw_kb, 0);
   } else if (tor_memeq(rs->identity_digest,
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
                        "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34",
@@ -2030,8 +2030,8 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
      */
     test_assert(rs->has_bandwidth);
     test_assert(!(vrs->has_measured_bw));
-    test_eq(rs->bandwidth, max_unmeasured_bw / 2);
-    test_eq(vrs->measured_bw, 0);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb / 2);
+    test_eq(vrs->measured_bw_kb, 0);
   } else {
     test_assert(0);
   }
@@ -2050,7 +2050,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
 
   test_assert(con);
   test_assert(!con->cert);
-  /* test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW); */
+  /* test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB); */
   test_assert(con->consensus_method >= 16);
   test_eq(4, smartlist_len(con->routerstatus_list));
   /* There should be four listed routers; all voters saw the same in this */
@@ -2066,8 +2066,8 @@ static void
 test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
 {
   tor_addr_t addr_ipv6;
-  uint32_t max_unmeasured_bw = (alternate_clip_bw > 0) ?
-    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW;
+  uint32_t max_unmeasured_bw_kb = (alternate_clip_bw > 0) ?
+    alternate_clip_bw : DEFAULT_MAX_UNMEASURED_BW_KB;
 
   test_assert(rs);
 
@@ -2093,7 +2093,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     test_assert(!rs->is_named);
     /* This one should have measured bandwidth below the clip cutoff */
     test_assert(rs->has_bandwidth);
-    test_eq(rs->bandwidth, max_unmeasured_bw / 2);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb / 2);
     test_assert(!(rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
@@ -2124,7 +2124,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     test_assert(!rs->is_named);
     /* This one should have measured bandwidth above the clip cutoff */
     test_assert(rs->has_bandwidth);
-    test_eq(rs->bandwidth, max_unmeasured_bw * 2);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb * 2);
     test_assert(!(rs->bw_is_unmeasured));
   } else if (tor_memeq(rs->identity_digest,
                 "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
@@ -2135,7 +2135,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
      * and so should be clipped
      */
     test_assert(rs->has_bandwidth);
-    test_eq(rs->bandwidth, max_unmeasured_bw);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb);
     test_assert(rs->bw_is_unmeasured);
   } else if (tor_memeq(rs->identity_digest,
                 "\x34\x34\x34\x34\x34\x34\x34\x34\x34\x34"
@@ -2146,7 +2146,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
      * and so should not be clipped
      */
     test_assert(rs->has_bandwidth);
-    test_eq(rs->bandwidth, max_unmeasured_bw / 2);
+    test_eq(rs->bandwidth_kb, max_unmeasured_bw_kb / 2);
     test_assert(rs->bw_is_unmeasured);
   } else {
     /* Weren't expecting this... */
@@ -2164,7 +2164,7 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
  */
 
 static void
-test_dir_clip_unmeasured_bw(void)
+test_dir_clip_unmeasured_bw_kb(void)
 {
   /* Run the test with the default clip bandwidth */
   alternate_clip_bw = 0;
@@ -2176,20 +2176,20 @@ test_dir_clip_unmeasured_bw(void)
 }
 
 /**
- * This version of test_dir_clip_unmeasured_bw() uses a non-default choice of
+ * This version of test_dir_clip_unmeasured_bw_kb() uses a non-default choice of
  * clip bandwidth.
  */
 
 static void
-test_dir_clip_unmeasured_bw_alt(void)
+test_dir_clip_unmeasured_bw_kb_alt(void)
 {
   /*
    * Try a different one; this value is chosen so that the below-the-cutoff
    * unmeasured nodes the test uses, at alternate_clip_bw / 2, will be above
-   * DEFAULT_MAX_UNMEASURED_BW and if the consensus incorrectly uses that
+   * DEFAULT_MAX_UNMEASURED_BW_KB and if the consensus incorrectly uses that
    * cutoff it will fail the test.
    */
-  alternate_clip_bw = 3 * DEFAULT_MAX_UNMEASURED_BW;
+  alternate_clip_bw = 3 * DEFAULT_MAX_UNMEASURED_BW_KB;
   test_a_networkstatus(gen_routerstatus_for_umbw,
                        vote_tweaks_for_umbw,
                        test_vrs_for_umbw,
@@ -2209,14 +2209,14 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps),
-  DIR_LEGACY(measured_bw),
+  DIR_LEGACY(measured_bw_kb),
   DIR_LEGACY(param_voting),
   DIR_LEGACY(v3_networkstatus),
   DIR(random_weighted),
   DIR(scale_bw),
-  DIR_LEGACY(clip_unmeasured_bw),
-  DIR_LEGACY(clip_unmeasured_bw_alt),
-  DIR_LEGACY(measured_bw_cache),
+  DIR_LEGACY(clip_unmeasured_bw_kb),
+  DIR_LEGACY(clip_unmeasured_bw_kb_alt),
+  DIR_LEGACY(measured_bw_kb_cache),
   END_OF_TESTCASES
 };
 

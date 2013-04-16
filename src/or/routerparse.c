@@ -1966,9 +1966,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmpstart(tok->args[i], "Bandwidth=")) {
         int ok;
-        rs->bandwidth = (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
-                                                  10, 0, UINT32_MAX,
-                                                  &ok, NULL);
+        rs->bandwidth_kb =
+          (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
+                                    10, 0, UINT32_MAX,
+                                    &ok, NULL);
         if (!ok) {
           log_warn(LD_DIR, "Invalid Bandwidth %s", escaped(tok->args[i]));
           goto err;
@@ -1976,7 +1977,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->has_bandwidth = 1;
       } else if (!strcmpstart(tok->args[i], "Measured=") && vote_rs) {
         int ok;
-        vote_rs->measured_bw =
+        vote_rs->measured_bw_kb =
             (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
                                       10, 0, UINT32_MAX, &ok, NULL);
         if (!ok) {
@@ -2351,23 +2352,23 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
       is_exit = rs->is_exit;
     }
     if (rs->has_bandwidth) {
-      T += rs->bandwidth;
+      T += rs->bandwidth_kb;
       if (is_exit && rs->is_possible_guard) {
-        D += rs->bandwidth;
-        Gtotal += Wgd*rs->bandwidth;
-        Mtotal += Wmd*rs->bandwidth;
-        Etotal += Wed*rs->bandwidth;
+        D += rs->bandwidth_kb;
+        Gtotal += Wgd*rs->bandwidth_kb;
+        Mtotal += Wmd*rs->bandwidth_kb;
+        Etotal += Wed*rs->bandwidth_kb;
       } else if (is_exit) {
-        E += rs->bandwidth;
-        Mtotal += Wme*rs->bandwidth;
-        Etotal += Wee*rs->bandwidth;
+        E += rs->bandwidth_kb;
+        Mtotal += Wme*rs->bandwidth_kb;
+        Etotal += Wee*rs->bandwidth_kb;
       } else if (rs->is_possible_guard) {
-        G += rs->bandwidth;
-        Gtotal += Wgg*rs->bandwidth;
-        Mtotal += Wmg*rs->bandwidth;
+        G += rs->bandwidth_kb;
+        Gtotal += Wgg*rs->bandwidth_kb;
+        Mtotal += Wmg*rs->bandwidth_kb;
       } else {
-        M += rs->bandwidth;
-        Mtotal += Wmm*rs->bandwidth;
+        M += rs->bandwidth_kb;
+        Mtotal += Wmm*rs->bandwidth_kb;
       }
     } else {
       log_warn(LD_BUG, "Missing consensus bandwidth for router %s",

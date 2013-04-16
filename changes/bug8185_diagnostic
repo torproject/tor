@@ -1,0 +1,3 @@
+  o Minor features:
+    - Improve debugging output to attempt to diagnose the underlying
+      cause of bug 8185.

@@ -1781,6 +1781,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(data+1);
+        int have_user_pass, have_no_auth;
         int r=0;
         tor_assert(!req->socks_version);
         if (datalen < 2u+nummethods) {
@@ -1791,18 +1792,20 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           return -1;
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        if (memchr(data+2, SOCKS_NO_AUTH, nummethods)) {
-          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
-                                            method */
-          req->socks_version = 5; /* remember we've already negotiated auth */
-          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
-          r=0;
-        } else if (memchr(data+2, SOCKS_USER_PASS, nummethods)) {
+        have_user_pass = (memchr(data+2, SOCKS_USER_PASS, nummethods) !=NULL);
+        have_no_auth   = (memchr(data+2, SOCKS_NO_AUTH,   nummethods) !=NULL);
+        if (have_user_pass && !(have_no_auth && req->socks_prefer_no_auth)) {
           req->auth_type = SOCKS_USER_PASS;
           req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
                                               auth method */
           req->socks_version = 5; /* remember we've already negotiated auth */
           log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+          r=0;
+        } else if (have_no_auth) {
+          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
+                                            method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
           r=0;
         } else {
           log_warn(LD_APP,
