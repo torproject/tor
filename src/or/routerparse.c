@@ -1494,7 +1494,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   extrainfo = tor_malloc_zero(sizeof(extrainfo_t));
   extrainfo->cache_info.is_extrainfo = 1;
   if (cache_copy)
-    extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+    extrainfo->cache_info.signed_descriptor_body = tor_memdup_nulterm(s, end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;
   memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
@@ -3921,8 +3921,15 @@ tokenize_string(memarea_t *area,
   tor_assert(area);
 
   s = &start;
-  if (!end)
+  if (!end) {
     end = start+strlen(start);
+  } else {
+    /* it's only meaningful to check for nuls if we got an end-of-string ptr */
+    if (memchr(start, '\0', end-start)) {
+      log_warn(LD_DIR, "parse error: internal NUL character.");
+      return -1;
+    }
+  }
   for (i = 0; i < NIL_; ++i)
     counts[i] = 0;
 
@@ -4256,7 +4263,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
       md->bodylen = start_of_next_microdesc - cp;
       if (copy_body)
-        md->body = tor_strndup(cp, md->bodylen);
+        md->body = tor_memdup_nulterm(cp, md->bodylen);
       else
         md->body = (char*)cp;
       md->off = cp - start;
