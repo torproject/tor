@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix some bugs in tor-fw-helper-natpmp when trying to build and
-      run it on Windows. More bugs likely remain. Patch from Gisle Vanem.
-      Fixes bug 7280; bugfix on 0.2.3.1-alpha.

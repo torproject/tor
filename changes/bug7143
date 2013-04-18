@@ -1,4 +1,0 @@
-  o Minor bugfixes (build):
-    - Add the old src/or/micro-revision.i filename to CLEANFILES.
-      On the off chance that somebody has one, it will go away as soon
-      as they run "make clean". Fix for bug 7143; bugfix on 0.2.4.1-alpha.

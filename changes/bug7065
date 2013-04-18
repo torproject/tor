@@ -1,5 +1,0 @@
- o Minor bugfix (log cleanups):
-   - Eliminate several instances where we use Nickname=ID to refer to
-     nodes in logs. Use Nickname (ID) instead. (Elsewhere, we still use
-     $ID=Nickname, which is also acceptable.) Fixes bug #7065. Bugfix
-     on 0.2.3.21-rc, 0.2.4.5-alpha, 0.2.4.8-alpha, and 0.2.4.10-alpha.

@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Increase the width of the field used to remember a connection's
-      link protocol version to two bytes. Harmless for now, since the
-      only currently recognized versions are one byte long.  Reported
-      pseudynmously.  Fixes bug 8062, bugfix on 0.2.0.10-alpha.

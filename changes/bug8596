@@ -1,3 +1,0 @@
-  o Minor features:
-    - Add CACHED keyword to ADDRMAP events in the control protocol to indicate
-      whether a DNS result will be cached or not.

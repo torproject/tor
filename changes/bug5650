@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Avoid a bug where our response to TLS renegotation under certain
-      network conditions could lead to a busy-loop, with 100% CPU
-      consumption. Fixes bug 5650; bugfix on 0.2.0.16-alpha.
-

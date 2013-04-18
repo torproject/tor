@@ -1,4 +1,0 @@
-  o Minor features (bug diagnostic):
-    - If we fail to free a microdescriptor because of bug #7164, log
-      the filename and line number from which we tried to free it.
-      This should help us finally fix #7164.

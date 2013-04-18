@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix the handling of a TRUNCATE cell when it arrives while the circuit
-      extension is in progress. Fixes bug 7947; bugfix on 0.0.7.1.
-

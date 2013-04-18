@@ -1,7 +1,0 @@
- o Minor changes (log clarification)
-   - Add more detail to a log message about relaxed timeouts. Hopefully
-     this additional detail will allow us to diagnose the cause of bug 7799.
- o Minor bugfixes
-   - Don't attempt to relax the timeout of already opened 1-hop circuits.
-     They might never timeout. This should eliminate some/all cases of
-     the relaxed timeout log message.

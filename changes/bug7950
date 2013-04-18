@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When rejecting a configuration because we were unable to parse a
-      quoted string, log an actual error message. Fix for bug 7950;
-      bugfix on 0.2.0.16-alpha.

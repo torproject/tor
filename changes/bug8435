@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - When dirserv.c computes flags and thresholds, ignore advertised
-      bandwidths if we have more than a threshold number of routers with
-      measured bandwidths.

@@ -1,6 +1,0 @@
-  o Bugfixes:
-    - Fix compilation warning with some versions of clang that would prefer
-      the -Wswitch-enum compiler flag to warn about switch statements with
-      missing enum values, even if those switch statements have a default:
-      statement. Fixes bug 8598; bugfix on 0.2.4.10-alpha.
-
