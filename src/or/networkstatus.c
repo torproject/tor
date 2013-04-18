@@ -1878,11 +1878,12 @@ networkstatus_note_certs_arrived(void)
     if (!waiting->consensus)
       continue;
     if (networkstatus_check_consensus_signature(waiting->consensus, 0)>=0) {
+      char *waiting_body = waiting->body;
       if (!networkstatus_set_current_consensus(
-                                 waiting->body,
+                                 waiting_body,
                                  networkstatus_get_flavor_name(i),
                                  NSSET_WAS_WAITING_FOR_CERTS)) {
-        tor_free(waiting->body);
+        tor_free(waiting_body);
       }
     }
   }
