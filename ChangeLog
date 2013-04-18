@@ -1,4 +1,10 @@
 Changes in version 0.2.4.12-alpha - 2013-04-18
+  Tor 0.2.4.12-alpha moves Tor forward on several fronts: it starts the
+  process for lengthening the guard rotation period, makes directory
+  authority opinions in the consensus a bit less gameable, makes socks5
+  username/password circuit isolation actually work, and fixes a wide
+  variety of other issues.
+
   o Major features:
     - Raise the default time that a client keeps an entry guard from
       "1-2 months" to "2-3 months", as suggested by Tariq Elahi's WPES
@@ -14,7 +20,7 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       bandwidths as having bandwidth 0. Resolves ticket 8435.
 
   o Major bugfixes (assert / resource use):
-    - Avoid a bug where our response to TLS renegotation under certain
+    - Avoid a bug where our response to TLS renegotiation under certain
       network conditions could lead to a busy-loop, with 100% CPU
       consumption. Fixes bug 5650; bugfix on 0.2.0.16-alpha.
     - Avoid an assertion when we discover that we'd like to write a cell
@@ -58,10 +64,6 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
     - Add CACHED keyword to ADDRMAP events in the control protocol
       to indicate whether a DNS result will be cached or not. Resolves
       ticket 8596.
-    - Eliminate several instances where we use "Nickname=ID" to refer to
-      nodes in logs. Use "Nickname (ID)" instead. (Elsewhere, we still use
-      "$ID=Nickname", which is also acceptable.) Fixes bug 7065. Bugfix
-      on 0.2.3.21-rc, 0.2.4.5-alpha, 0.2.4.8-alpha, and 0.2.4.10-alpha.
     - Update to the April 3 2013 Maxmind GeoLite Country database.
 
   o Minor features (build):
@@ -77,20 +79,20 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       some will remain.
 
   o Minor bugfixes (build):
+    - Fix some bugs in tor-fw-helper-natpmp when trying to build and
+      run it on Windows. More bugs likely remain. Patch from Gisle Vanem.
+      Fixes bug 7280; bugfix on 0.2.3.1-alpha.
+    - Add the old src/or/micro-revision.i filename to CLEANFILES.
+      On the off chance that somebody has one, it will go away as soon
+      as they run "make clean". Fix for bug 7143; bugfix on 0.2.4.1-alpha.
+    - Build Tor correctly on 32-bit platforms where the compiler can build
+      but not run code using the "uint128_t" construction. Fixes bug 8587;
+      bugfix on 0.2.4.8-alpha.
     - Fix compilation warning with some versions of clang that would
       prefer the -Wswitch-enum compiler flag to warn about switch
       statements with missing enum values, even if those switch
       statements have a "default:" statement. Fixes bug 8598; bugfix
       on 0.2.4.10-alpha.
-    - Build Tor correctly on 32-bit platforms where the compiler can build
-      but not run code using the "uint128_t" construction. Fixes bug 8587;
-      bugfix on 0.2.4.8-alpha.
-    - Add the old src/or/micro-revision.i filename to CLEANFILES.
-      On the off chance that somebody has one, it will go away as soon
-      as they run "make clean". Fix for bug 7143; bugfix on 0.2.4.1-alpha.
-    - Fix some bugs in tor-fw-helper-natpmp when trying to build and
-      run it on Windows. More bugs likely remain. Patch from Gisle Vanem.
-      Fixes bug 7280; bugfix on 0.2.3.1-alpha.
 
   o Minor bugfixes (protocol):
     - Fix the handling of a TRUNCATE cell when it arrives while the
@@ -108,7 +110,7 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       later, when support was really added in version 0.2.4.8-alpha.
       Fixes bug 8464; bugfix on 0.2.4.8-alpha.
 
-  o Minor bugfixes (correctness):
+  o Minor bugfixes (other):
     - Correctly store microdescriptors and extrainfo descriptors with
       an internal NUL byte. Fixes bug 8037; bugfix on 0.2.0.1-alpha.
       Bug reported by "cypherpunks".
@@ -121,6 +123,10 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       additional checks and log messages to the scaling of Path Bias
       counts, in case there still are remaining issues with scaling.
       Should help resolve bug 8235.
+    - Eliminate several instances where we use "Nickname=ID" to refer to
+      nodes in logs. Use "Nickname (ID)" instead. (Elsewhere, we still use
+      "$ID=Nickname", which is also acceptable.) Fixes bug 7065. Bugfix
+      on 0.2.3.21-rc, 0.2.4.5-alpha, 0.2.4.8-alpha, and 0.2.4.10-alpha.
 
   o Minor bugfixes (syscalls):
     - Always check the return values of functions fcntl() and
@@ -134,21 +140,18 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
 
   o Minor bugfixes (config):
     - When rejecting a configuration because we were unable to parse a
-      quoted string, log an actual error message. Fix for bug 7950;
-      bugfix on 0.2.0.16-alpha.
+      quoted string, log an actual error message. Fixes bug 7950; bugfix
+      on 0.2.0.16-alpha.
     - Behave correctly when the user disables LearnCircuitBuildTimeout
       but doesn't tell us what they would like the timeout to be. Fixes
       bug 6304; bugfix on 0.2.2.14-alpha.
     - When autodetecting the number of CPUs, use the number of available
       CPUs in preference to the number of configured CPUs. Inform the
-      user if this reduces the number of available CPUs. Fixes bug 8002.
-      Bugfix on 0.2.3.1-alpha.
-    - Elevate the severity of the warning message when setting
-      EntryNodes but disabling UseGuardNodes to an error. The outcome
-      of letting Tor proceed with those options enabled (which causes
-      EntryNodes to get ignored) is sufficiently different from what
-      was expected that it's best to just refuse to proceed. Fixes bug
-      8180; bugfix on 0.2.3.11-alpha.
+      user if this reduces the number of available CPUs. Fixes bug 8002;
+      bugfix on 0.2.3.1-alpha.
+    - Make it an error when you set EntryNodes but disable UseGuardNodes,
+      since it will (surprisingly to some users) ignore EntryNodes. Fixes
+      bug 8180; bugfix on 0.2.3.11-alpha.
     - Allow TestingTorNetworks to override the 4096-byte minimum for
       the Fast threshold. Otherwise they can't bootstrap until they've
       observed more traffic. Fixes bug 8508; bugfix on 0.2.4.10-alpha.
@@ -159,28 +162,29 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
   o Minor bugfixes (log messages to help diagnose bugs):
     - If we fail to free a microdescriptor because of bug 7164, log
       the filename and line number from which we tried to free it.
-      This should help us finally fix bug 7164.
     - Add another diagnostic to the heartbeat message: track and log
       overhead that TLS is adding to the data we write. If this is
       high, we are sending too little data to SSL_write at a time.
       Diagnostic for bug 7707.
-    - Add more detail to a log message about relaxed timeouts. Hopefully
-      this additional detail will allow us to diagnose the cause of
-      bug 7799.
+    - Add more detail to a log message about relaxed timeouts, to help
+      track bug 7799.
     - Warn more aggressively when flushing microdescriptors to a
       microdescriptor cache fails, in an attempt to mitigate bug 8031,
       or at least make it more diagnosable.
-    - Improve debugging output to attempt to diagnose the underlying
-      cause of bug 8185.
+    - Improve debugging output to help track down bug 8185 ("Bug:
+      outgoing relay cell has n_chan==NULL. Dropping.")
     - Log the purpose of a path-bias testing circuit correctly.
       Improves a log message from bug 8477; bugfix on 0.2.4.8-alpha.
 
   o Minor bugfixes (0.2.4.x log messages that were too noisy):
+    - Don't attempt to relax the timeout of already opened 1-hop circuits.
+      They might never timeout. This should eliminate some/all cases of
+      the relaxed timeout log message.
     - Use circuit creation time for network liveness evaluation. This
       should eliminate warning log messages about liveness caused
       by changes in timeout evaluation. Fixes bug 6572; bugfix on
       0.2.4.8-alpha.
-    - Reduce a path bias length check notice log to info. The notice
+    - Reduce a path bias length check from notice to info. The message
       is triggered when creating controller circuits. Fixes bug 8196;
       bugfix on 0.2.4.8-alpha.
     - Fix a path state issue that triggered a notice during relay startup.
@@ -198,17 +202,14 @@ Changes in version 0.2.4.12-alpha - 2013-04-18
       bug 8377; bugfix on 0.2.1.3-alpha.
     - Fix a directory authority warn caused when we have a large amount
       of badexit bandwidth. Fixes bug 8419; bugfix on 0.2.2.10-alpha.
-    - Don't attempt to relax the timeout of already opened 1-hop circuits.
-      They might never timeout. This should eliminate some/all cases of
-      the relaxed timeout log message.
     - Don't log inappropriate heartbeat messages when hibernating: a
       hibernating node is _expected_ to drop out of the consensus,
-      decide it isn't bootstrapped, and so forth. Fixes bug
-      7302; bugfix on 0.2.3.1-alpha.
+      decide it isn't bootstrapped, and so forth. Fixes bug 7302;
+      bugfix on 0.2.3.1-alpha.
     - Don't complain about bootstrapping problems while hibernating.
       These complaints reflect a general code problem, but not one
-      with any problematic effects. (No connections are actually
-      opened.) Fixes part of bug 7302; bugfix on 0.2.3.2-alpha.
+      with any problematic effects (no connections are actually
+      opened). Fixes part of bug 7302; bugfix on 0.2.3.2-alpha.
 
   o Documentation fixes:
     - Update tor-fw-helper.1.txt and tor-fw-helper.c to make option
