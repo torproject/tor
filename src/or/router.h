@@ -90,8 +90,8 @@ int router_is_me(const routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);
 int router_pick_published_address(const or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
-int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
-                                 crypto_pk_t *ident_key);
+char *router_dump_router_to_string(routerinfo_t *router,
+                                   crypto_pk_t *ident_key);
 void router_get_prim_orport(const routerinfo_t *router,
                             tor_addr_port_t *addr_port_out);
 void router_get_pref_orport(const routerinfo_t *router,

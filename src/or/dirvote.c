@@ -57,9 +57,6 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
  * Voting
  * =====*/
 
-/* Overestimated. */
-#define MICRODESC_LINE_LEN 80
-
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
@@ -67,17 +64,14 @@ char *
 format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
-  size_t len;
-  char *status = NULL;
+  smartlist_t *chunks;
   const char *client_versions = NULL, *server_versions = NULL;
-  char *outp, *endp;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
-  routerlist_t *rl = router_get_routerlist();
-  char *version_lines = NULL;
-  int r;
+  char *client_versions_line = NULL, *server_versions_line = NULL;
   networkstatus_voter_info_t *voter;
+  char *status = NULL;
 
   tor_assert(private_signing_key);
   tor_assert(v3_ns->type == NS_TYPE_VOTE || v3_ns->type == NS_TYPE_OPINION);
@@ -91,43 +85,20 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   client_versions = v3_ns->client_versions;
   server_versions = v3_ns->server_versions;
 
-  if (client_versions || server_versions) {
-    size_t v_len = 64;
-    char *cp;
-    if (client_versions)
-      v_len += strlen(client_versions);
-    if (server_versions)
-      v_len += strlen(server_versions);
-    version_lines = tor_malloc(v_len);
-    cp = version_lines;
-    if (client_versions) {
-      r = tor_snprintf(cp, v_len-(cp-version_lines),
-                   "client-versions %s\n", client_versions);
-      if (r < 0) {
-        log_err(LD_BUG, "Insufficient memory for client-versions line");
-        tor_assert(0);
-      }
-      cp += strlen(cp);
-    }
-    if (server_versions) {
-      r = tor_snprintf(cp, v_len-(cp-version_lines),
-                   "server-versions %s\n", server_versions);
-      if (r < 0) {
-        log_err(LD_BUG, "Insufficient memory for server-versions line");
-        tor_assert(0);
-      }
-    }
+  if (client_versions) {
+    tor_asprintf(&client_versions_line, "client-versions %s\n",
+                 client_versions);
   } else {
-    version_lines = tor_strdup("");
+    client_versions_line = tor_strdup("");
+  }
+  if (server_versions) {
+    tor_asprintf(&server_versions_line, "server-versions %s\n",
+                 server_versions);
+  } else {
+    server_versions_line = tor_strdup("");
   }
 
-  len = 8192;
-  len += strlen(version_lines);
-  len += (RS_ENTRY_LEN+MICRODESC_LINE_LEN)*smartlist_len(rl->routers);
-  len += strlen("\ndirectory-footer\n");
-  len += v3_ns->cert->cache_info.signed_descriptor_len;
-
-  status = tor_malloc(len);
+  chunks = smartlist_new();
   {
     char published[ISO_TIME_LEN+1];
     char va[ISO_TIME_LEN+1];
@@ -151,7 +122,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       params = tor_strdup("");
 
     tor_assert(cert);
-    r = tor_snprintf(status, len,
+    smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
                  "consensus-methods %s\n"
@@ -160,7 +131,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "fresh-until %s\n"
                  "valid-until %s\n"
                  "voting-delay %d %d\n"
-                 "%s" /* versions */
+                 "%s%s" /* versions */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
@@ -170,7 +141,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  methods,
                  published, va, fu, vu,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
-                 version_lines,
+                 client_versions_line,
+                 server_versions_line,
                  flags,
                  flag_thresholds,
                  params,
@@ -178,92 +150,66 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
                  voter->contact);
 
-    if (r < 0) {
-      log_err(LD_BUG, "Insufficient memory for network status line");
-      tor_assert(0);
-    }
-
     tor_free(params);
     tor_free(flags);
     tor_free(flag_thresholds);
     tor_free(methods);
-    outp = status + strlen(status);
-    endp = status + len;
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
       base16_encode(fpbuf, sizeof(fpbuf), voter->legacy_id_digest, DIGEST_LEN);
-      r = tor_snprintf(outp, endp-outp, "legacy-dir-key %s\n", fpbuf);
-      if (r < 0) {
-        log_err(LD_BUG, "Insufficient memory for legacy-dir-key line");
-        tor_assert(0);
-      }
-      outp += strlen(outp);
+      smartlist_add_asprintf(chunks, "legacy-dir-key %s\n", fpbuf);
     }
 
-    tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
-    memcpy(outp, cert->cache_info.signed_descriptor_body,
-           cert->cache_info.signed_descriptor_len);
-
-    outp += cert->cache_info.signed_descriptor_len;
+    smartlist_add(chunks, tor_strndup(cert->cache_info.signed_descriptor_body,
+                                      cert->cache_info.signed_descriptor_len));
   }
 
   SMARTLIST_FOREACH_BEGIN(v3_ns->routerstatus_list, vote_routerstatus_t *,
                           vrs) {
+    char *rsf;
     vote_microdesc_hash_t *h;
-    if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, NS_V3_VOTE, vrs) < 0) {
-      log_warn(LD_BUG, "Unable to print router status.");
-      goto err;
-    }
-    outp += strlen(outp);
+    rsf = routerstatus_format_entry(&vrs->status,
+                                    vrs->version, NS_V3_VOTE, vrs);
+    if (rsf)
+      smartlist_add(chunks, rsf);
 
     for (h = vrs->microdesc; h; h = h->next) {
-      size_t mlen = strlen(h->microdesc_hash_line);
-      if (outp+mlen >= endp) {
-        log_warn(LD_BUG, "Can't fit microdesc line in vote.");
-      }
-      memcpy(outp, h->microdesc_hash_line, mlen+1);
-      outp += strlen(outp);
+      smartlist_add(chunks, tor_strdup(h->microdesc_hash_line));
     }
   } SMARTLIST_FOREACH_END(vrs);
 
-  r = tor_snprintf(outp, endp-outp, "directory-footer\n");
-  if (r < 0) {
-    log_err(LD_BUG, "Insufficient memory for directory-footer line");
-    tor_assert(0);
-  }
-  outp += strlen(outp);
+  smartlist_add(chunks, tor_strdup("directory-footer\n"));
+
+  /* The digest includes everything up through the space after
+   * directory-signature.  (Yuck.) */
+  crypto_digest_smartlist(digest, DIGEST_LEN, chunks,
+                          "directory-signature ", DIGEST_SHA1);
 
   {
     char signing_key_fingerprint[FINGERPRINT_LEN+1];
-    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
-      log_warn(LD_BUG, "Unable to start signature line.");
-      goto err;
-    }
-    outp += strlen(outp);
-
     if (crypto_pk_get_fingerprint(private_signing_key,
                                   signing_key_fingerprint, 0)<0) {
       log_warn(LD_BUG, "Unable to get fingerprint for signing key");
       goto err;
     }
-    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
-                     signing_key_fingerprint)<0) {
-      log_warn(LD_BUG, "Unable to end signature line.");
-      goto err;
-    }
-    outp += strlen(outp);
+
+    smartlist_add_asprintf(chunks, "directory-signature %s %s\n", fingerprint,
+                           signing_key_fingerprint);
   }
 
-  if (router_get_networkstatus_v3_hash(status, digest, DIGEST_SHA1)<0)
-    goto err;
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest, DIGEST_LEN,
-                                     private_signing_key)<0) {
-    log_warn(LD_BUG, "Unable to sign networkstatus vote.");
-    goto err;
+  {
+    char *sig = router_get_dirobj_signature(digest, DIGEST_LEN,
+                                            private_signing_key);
+    if (!sig) {
+      log_warn(LD_BUG, "Unable to sign networkstatus vote.");
+      goto err;
+    }
+    smartlist_add(chunks, sig);
   }
+
+  status = smartlist_join_strings(chunks, "", 0, NULL);
 
   {
     networkstatus_t *v;
@@ -282,7 +228,12 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  err:
   tor_free(status);
  done:
-  tor_free(version_lines);
+  tor_free(client_versions_line);
+  tor_free(server_versions_line);
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+    smartlist_free(chunks);
+  }
   return status;
 }
 
@@ -524,24 +475,6 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   }
 
   return most;
-}
-
-/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
- * at <b>digest_out</b> to the hash of the concatenation of those strings,
- * computed with the algorithm <b>alg</b>. */
-static void
-hash_list_members(char *digest_out, size_t len_out,
-                  smartlist_t *lst, digest_algorithm_t alg)
-{
-  crypto_digest_t *d;
-  if (alg == DIGEST_SHA1)
-    d = crypto_digest_new();
-  else
-    d = crypto_digest256_new(alg);
-  SMARTLIST_FOREACH(lst, const char *, cp,
-                    crypto_digest_add_bytes(d, cp, strlen(cp)));
-  crypto_digest_get_digest(d, digest_out, len_out);
-  crypto_digest_free(d);
 }
 
 /** Sorting helper: compare two strings based on their values as base-ten
@@ -2027,12 +1960,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       {
-        char buf[4096];
+        char *buf;
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
-        routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                  rs_format, NULL);
-        smartlist_add(chunks, tor_strdup(buf));
+        buf = routerstatus_format_entry(&rs_out, NULL, rs_format, NULL);
+        if (buf)
+          smartlist_add(chunks, buf);
       }
       /*     Now an m line, if applicable. */
       if (flavor == FLAV_MICRODESC &&
@@ -2144,12 +2077,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
     size_t digest_len =
       flavor == FLAV_NS ? DIGEST_LEN : DIGEST256_LEN;
     const char *algname = crypto_digest_algorithm_get_name(digest_alg);
-    char sigbuf[4096];
+    char *signature;
 
     smartlist_add(chunks, tor_strdup("directory-signature "));
 
     /* Compute the hash of the chunks. */
-    hash_list_members(digest, digest_len, chunks, digest_alg);
+    crypto_digest_smartlist(digest, digest_len, chunks, "", digest_alg);
 
     /* Get the fingerprints */
     crypto_pk_get_fingerprint(identity_key, fingerprint, 0);
@@ -2165,14 +2098,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
                    signing_key_fingerprint);
     }
     /* And the signature. */
-    sigbuf[0] = '\0';
-    if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
-                                       digest, digest_len,
-                                       signing_key)) {
+    if (!(signature = router_get_dirobj_signature(digest, digest_len,
+                                                  signing_key))) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
       goto done;
     }
-    smartlist_add(chunks, tor_strdup(sigbuf));
+    smartlist_add(chunks, signature);
 
     if (legacy_id_key_digest && legacy_signing_key && consensus_method >= 3) {
       smartlist_add(chunks, tor_strdup("directory-signature "));
@@ -2188,14 +2119,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
                      algname, fingerprint,
                      signing_key_fingerprint);
       }
-      sigbuf[0] = '\0';
-      if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
-                                         digest, digest_len,
-                                         legacy_signing_key)) {
+
+      if (!(signature = router_get_dirobj_signature(digest, digest_len,
+                                                    legacy_signing_key))) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         goto done;
       }
-      smartlist_add(chunks, tor_strdup(sigbuf));
+      smartlist_add(chunks, signature);
     }
   }
 
