@@ -1614,7 +1614,6 @@ crypto_digest_assign(crypto_digest_t *into,
   memcpy(into,from,sizeof(crypto_digest_t));
 }
 
-
 /** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
  * at <b>digest_out</b> to the hash of the concatenation of those strings,
  * plus the optional string <b>append</b>, computed with the algorithm
