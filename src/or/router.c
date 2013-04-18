@@ -1944,9 +1944,8 @@ router_rebuild_descriptor(int force)
     /* ri was allocated with tor_malloc_zero, so there is no need to
      * zero ri->cache_info.extra_info_digest here. */
   }
-  ri->cache_info.signed_descriptor_body = tor_malloc(8192);
-  if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
-                                   ri, get_server_identity_key()) < 0) {
+  if (! (ri->cache_info.signed_descriptor_body = router_dump_router_to_string(
+                                           ri, get_server_identity_key()))) {
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
     routerinfo_free(ri);
     extrainfo_free(ei);
@@ -2246,54 +2245,54 @@ get_platform_str(char *platform, size_t len)
 #define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
 
 /** OR only: Given a routerinfo for this router, and an identity key to sign
- * with, encode the routerinfo as a signed server descriptor and write the
- * result into <b>s</b>, using at most <b>maxlen</b> bytes.  Return -1 on
- * failure, and the number of bytes used on success.
+ * with, encode the routerinfo as a signed server descriptor and return a new
+ * string encoding the result, or NULL on failure.
  */
-int
-router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
+char *
+router_dump_router_to_string(routerinfo_t *router,
                              crypto_pk_t *ident_key)
 {
-  char *onion_pkey; /* Onion key, PEM-encoded. */
-  char *identity_pkey; /* Identity key, PEM-encoded. */
+  /* XXXX025 Make this look entirely at its arguments, and not at globals.
+   */
+  char *onion_pkey = NULL; /* Onion key, PEM-encoded. */
+  char *identity_pkey = NULL; /* Identity key, PEM-encoded. */
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
   int has_extra_info_digest;
   char extra_info_digest[HEX_DIGEST_LEN+1];
   size_t onion_pkeylen, identity_pkeylen;
-  size_t written;
-  int result=0;
-  char *family_line;
+  char *family_line = NULL;
   char *extra_or_address = NULL;
   const or_options_t *options = get_options();
+  smartlist_t *chunks = NULL;
+  char *output = NULL;
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
     log_warn(LD_BUG,"Tried to sign a router with a private key that didn't "
              "match router's public key!");
-    return -1;
+    goto err;
   }
 
   /* record our fingerprint, so we can include it in the descriptor */
   if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 1)<0) {
     log_err(LD_BUG,"Error computing fingerprint");
-    return -1;
+    goto err;
   }
 
   /* PEM-encode the onion key */
   if (crypto_pk_write_public_key_to_string(router->onion_pkey,
                                            &onion_pkey,&onion_pkeylen)<0) {
     log_warn(LD_BUG,"write onion_pkey to string failed!");
-    return -1;
+    goto err;
   }
 
   /* PEM-encode the identity key */
   if (crypto_pk_write_public_key_to_string(router->identity_pkey,
                                         &identity_pkey,&identity_pkeylen)<0) {
     log_warn(LD_BUG,"write identity_pkey to string failed!");
-    tor_free(onion_pkey);
-    return -1;
+    goto err;
   }
 
   /* Encode the publication time. */
@@ -2328,8 +2327,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     }
   }
 
+  chunks = smartlist_new();
   /* Generate the easy portion of the router descriptor. */
-  result = tor_snprintf(s, maxlen,
+  smartlist_add_asprintf(chunks,
                     "router %s %s %d 0 %d\n"
                     "%s"
                     "platform %s\n"
@@ -2364,28 +2364,11 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     options->HidServDirectoryV2 ? "hidden-service-dir\n" : "",
     options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
 
-  tor_free(family_line);
-  tor_free(onion_pkey);
-  tor_free(identity_pkey);
-  tor_free(extra_or_address);
-
-  if (result < 0) {
-    log_warn(LD_BUG,"descriptor snprintf #1 ran out of room!");
-    return -1;
-  }
-  /* From now on, we use 'written' to remember the current length of 's'. */
-  written = result;
-
   if (options->ContactInfo && strlen(options->ContactInfo)) {
     const char *ci = options->ContactInfo;
     if (strchr(ci, '\n') || strchr(ci, '\r'))
       ci = escaped(ci);
-    result = tor_snprintf(s+written,maxlen-written, "contact %s\n", ci);
-    if (result<0) {
-      log_warn(LD_BUG,"descriptor snprintf #2 ran out of room!");
-      return -1;
-    }
-    written += result;
+    smartlist_add_asprintf(chunks, "contact %s\n", ci);
   }
 
 #ifdef CURVE25519_ENABLED
@@ -2394,105 +2377,92 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     base64_encode(kbuf, sizeof(kbuf),
                   (const char *)router->onion_curve25519_pkey->public_key,
                   CURVE25519_PUBKEY_LEN);
-    result = tor_snprintf(s+written,maxlen-written, "ntor-onion-key %s",
-                          kbuf);
-    if (result<0) {
-      log_warn(LD_BUG,"descriptor snprintf ran out of room!");
-      return -1;
-    }
-    written += result;
+    smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
   }
 #endif
 
   /* Write the exit policy to the end of 's'. */
   if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
-    strlcat(s+written, "reject *:*\n", maxlen-written);
-    written += strlen("reject *:*\n");
+    smartlist_add(chunks, tor_strdup("reject *:*\n"));
   } else if (router->exit_policy) {
     int i;
     for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
+      char pbuf[POLICY_BUF_LEN];
       addr_policy_t *tmpe = smartlist_get(router->exit_policy, i);
+      int result;
       if (tor_addr_family(&tmpe->addr) == AF_INET6)
         continue; /* Don't include IPv6 parts of address policy */
-      result = policy_write_item(s+written, maxlen-written, tmpe, 1);
+      result = policy_write_item(pbuf, POLICY_BUF_LEN, tmpe, 1);
       if (result < 0) {
         log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
-        return -1;
+        goto err;
       }
-      tor_assert(result == (int)strlen(s+written));
-      written += result;
-      if (written+2 > maxlen) {
-        log_warn(LD_BUG,"descriptor policy_write_item ran out of room (2)!");
-        return -1;
-      }
-      s[written++] = '\n';
+      smartlist_add_asprintf(chunks, "%s\n", pbuf);
     }
   }
 
   if (router->ipv6_exit_policy) {
     char *p6 = write_short_policy(router->ipv6_exit_policy);
     if (p6 && strcmp(p6, "reject 1-65535")) {
-      result = tor_snprintf(s+written, maxlen-written,
+      smartlist_add_asprintf(chunks,
                             "ipv6-policy %s\n", p6);
-      if (result<0) {
-        log_warn(LD_BUG,"Descriptor printf of policy ran out of room");
-        tor_free(p6);
-        return -1;
-      }
-      written += result;
     }
     tor_free(p6);
   }
 
-  if (written + DIROBJ_MAX_SIG_LEN > maxlen) {
-    /* Not enough room for signature. */
-    log_warn(LD_BUG,"not enough room left in descriptor for signature!");
-    return -1;
-  }
-
   /* Sign the descriptor */
-  strlcpy(s+written, "router-signature\n", maxlen-written);
-  written += strlen(s+written);
-  s[written] = '\0';
-  if (router_get_router_hash(s, strlen(s), digest) < 0) {
-    return -1;
-  }
+  smartlist_add(chunks, tor_strdup("router-signature\n"));
+
+  crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
 
   note_crypto_pk_op(SIGN_RTR);
-  if (router_append_dirobj_signature(s+written,maxlen-written,
-                                     digest,DIGEST_LEN,ident_key)<0) {
-    log_warn(LD_BUG, "Couldn't sign router descriptor");
-    return -1;
+  {
+    char *sig;
+    if (!(sig = router_get_dirobj_signature(digest, DIGEST_LEN, ident_key))) {
+      log_warn(LD_BUG, "Couldn't sign router descriptor");
+      goto err;
+    }
+    smartlist_add(chunks, sig);
   }
-  written += strlen(s+written);
 
-  if (written+2 > maxlen) {
-    log_warn(LD_BUG,"Not enough room to finish descriptor.");
-    return -1;
-  }
   /* include a last '\n' */
-  s[written] = '\n';
-  s[written+1] = 0;
+  smartlist_add(chunks, tor_strdup("\n"));
+
+  output = smartlist_join_strings(chunks, "", 0, NULL);
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   {
     char *s_dup;
     const char *cp;
     routerinfo_t *ri_tmp;
-    cp = s_dup = tor_strdup(s);
+    cp = s_dup = tor_strdup(output);
     ri_tmp = router_parse_entry_from_string(cp, NULL, 1, 0, NULL);
     if (!ri_tmp) {
       log_err(LD_BUG,
               "We just generated a router descriptor we can't parse.");
-      log_err(LD_BUG, "Descriptor was: <<%s>>", s);
-      return -1;
+      log_err(LD_BUG, "Descriptor was: <<%s>>", output);
+      goto err;
     }
     tor_free(s_dup);
     routerinfo_free(ri_tmp);
   }
 #endif
 
-  return (int)written+1;
+  goto done;
+
+ err:
+  tor_free(output); /* sets output to NULL */
+ done:
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+    smartlist_free(chunks);
+  }
+  tor_free(family_line);
+  tor_free(onion_pkey);
+  tor_free(identity_pkey);
+  tor_free(extra_or_address);
+
+  return output;
 }
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for
