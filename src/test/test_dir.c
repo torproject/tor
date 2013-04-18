@@ -611,7 +611,7 @@ test_dir_measured_bw_kb_cache(void)
   test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, NULL));
   test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, NULL));
   test_eq(bw, 20);
-  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, &as_of));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL,&as_of));
   test_eq(as_of, MBWC_INIT_TIME);
   /* Now expire it */
   curr += MAX_MEASUREMENT_AGE + 1;
@@ -619,7 +619,7 @@ test_dir_measured_bw_kb_cache(void)
   /* Check that the cache is empty */
   test_eq(dirserv_get_measured_bw_cache_size(), 0);
   /* Check that we can't retrieve it */
-  test_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, NULL));
+  test_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL,NULL));
   /* Try caching a few things now */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
   test_eq(dirserv_get_measured_bw_cache_size(), 1);
@@ -2050,7 +2050,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
 
   test_assert(con);
   test_assert(!con->cert);
-  /* test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB); */
+  // test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
   test_assert(con->consensus_method >= 16);
   test_eq(4, smartlist_len(con->routerstatus_list));
   /* There should be four listed routers; all voters saw the same in this */
@@ -2176,8 +2176,8 @@ test_dir_clip_unmeasured_bw_kb(void)
 }
 
 /**
- * This version of test_dir_clip_unmeasured_bw_kb() uses a non-default choice of
- * clip bandwidth.
+ * This version of test_dir_clip_unmeasured_bw_kb() uses a non-default choice
+ * of clip bandwidth.
  */
 
 static void
