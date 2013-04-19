@@ -72,7 +72,7 @@ int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
-int control_event_conf_changed(smartlist_t *elements);
+int control_event_conf_changed(const smartlist_t *elements);
 int control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                                    buildtimeout_set_event_t type);
 int control_event_signal(uintptr_t signal);
