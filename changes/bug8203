@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Make the format and order of STREAM events for DNS lookups consistent
-      among the various ways to launch DNS lookups. Fix for bug 8203;
-      bugfix on 0.2.0.24-rc. Patch by "Desoxy."

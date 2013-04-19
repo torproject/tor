@@ -1,3 +1,0 @@
-  o Critical bugfixes:
-    - When dirserv.c computes flags and thresholds, use measured bandwidths
-      in preference to advertised ones.

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a crash if we fail to generate an extrinfo descriptor.
-      Fixes bug 8208; bugfix on 0.2.3.16-alpha. Found by Coverity;
-      this is CID 718634.

@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Correctly store microdescriptors and extrainfo descriptors with
-      an internal NUL byte. Fixes bug 8037; bugfix on 0.2.0.1-alpha.
-      Bug reported by "cypherpunks".
-
-  o Minor features:
-    - Reject as invalid most directory objects containing a
-      NUL. Belt-and-suspender fix for bug 8037.

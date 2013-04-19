@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - Use direct writes rather than stdio when building microdescriptor
-      caches, in an attempt to mitigate bug 8031, or at least make it
-      less common.
-    - Warn more aggressively when flushing microdescriptors to a
-      microdescriptor cache fails, in an attempt to mitegate bug 8031,
-      or at least make it more diagnosable.

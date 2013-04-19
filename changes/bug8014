@@ -1,5 +1,0 @@
-  o Minor usability improvements (build):
-    - Clarify that when autconf is checking for nacl, it is checking
-      specifically for nacl with a fast curve25519 implementation.
-      Fixes bug 8014.
-

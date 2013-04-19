@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Avoid an assertion when we discover that we'd like to write a cell
-      onto a closing connection: just discard the cell. Fixes another
-      case of bug 7350; bugfix on 0.2.4.4-alpha.

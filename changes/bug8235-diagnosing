@@ -1,5 +1,0 @@
- o Minor features (diagnostic)
-   - If the state file's path bias counts are invalid (presumably from a
-     buggy tor prior to 0.2.4.10-alpha), make them correct.
-   - Add additional checks and log messages to the scaling of Path Bias
-     counts, in case there still are remaining issues with scaling.

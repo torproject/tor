@@ -1,5 +1,0 @@
-  o Major features (directory authority):
-    - Directory authorities now support a new consensus method (17)
-      where they cap the published bandwidth of servers for which
-      insufficient bandwidth measurements exist. Fixes part of bug
-      2286.

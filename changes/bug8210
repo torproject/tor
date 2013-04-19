@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Fix an impossible-to-trigger integer overflow when
-      estimating how long out onionskin queue would take.  (This overflow
-      would require us to accept 4 million onionskins before processing
-      100 of them.) Fixes bug 8210; bugfix on 0.2.4.10-alpha.
-       

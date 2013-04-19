@@ -1,3 +1,0 @@
-  o Documentation fixes:
-    - Update tor-fw-helper.1.txt and tor-fw-helper.c to make option
-      names match. Fixes bug 7768.

@@ -1,4 +1,0 @@
- o Minor bugfixes (log messages)
-   - Use circuit creation time for network liveness evaluation. This
-     should eliminate warning log messages about liveness caused by
-     changes in timeout evaluation. Fixes bug 6572; bugfix on 0.2.4.8-alpha.

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Log the purpose of a path-bias testing circuit correctly.
-      Improves a log message from bug 8477; bugfix on 0.2.4.8-alpha.  

@@ -1,7 +1,0 @@
-  o Minor bugfixes (memory leak, controller):
-    - Fix a memory leak during safe-cookie controller authentication.
-      Spotted by Coverity. Fixes part of bug 7816; bugfix on 0.2.3.13-alpha.
-
-  o Minor bugfixes (memory leak, HTTPS proxy support):
-    - Fix a memory leak when receiving headers from an HTTPS proxy.
-      Spotted by Coverity. Fixes part of bug 7816; bugfix on 0.2.1.1-alpha.

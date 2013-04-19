@@ -1,9 +1,0 @@
-  o Removed files:
-    - The tor-tsocks.conf is no longer distributed or installed. We
-      recommend that tsocks users use torsocks instead. Resolves
-      ticket 8290.
-
-  o Documentation fixes:
-    - The torify manpage no longer refers to tsocks; torify hasn't
-      supported tsocks since 0.2.3.14-alpha.
-    - The manpages no longer reference tsocks.

@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Always check the return values of functions fcntl() and
-      setsockopt(). We don't believe these are ever actually failing in
-      practice, but better safe than sorry. Also, checking these return
-      values should please some analysis tools (like Coverity). Patch
-      from 'flupzor'. Fix for bug 8206; bugfix on all versions of Tor.
