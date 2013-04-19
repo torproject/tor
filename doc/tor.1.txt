@@ -1253,9 +1253,9 @@ The following options are useful only for clients (that is, if
     it too early might make your client stand out. If this option is 0, your
     Tor client won't use the ntor handshake. If it's 1, your Tor client
     will use the ntor handshake to extend circuits through servers that
-    support it. If this option is "auto" (recommended), then your client
+    support it. If this option is "auto", then your client
     will use the ntor handshake once enough directory authorities recommend
-    it. (Default: auto)
+    it. (Default: 1)
 
 **PathBiasCircThreshold** __NUM__ +
 
