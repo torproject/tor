@@ -21,13 +21,13 @@ if (! @ARGV) {
 Usage:
    findMergedChanges.pl [--merged/--unmerged/--weird/--list] [--branch=<branchname] changes/*
 
-A change is "merged" if it has ever been merged to release-0.2.2 and it has had
+A change is "merged" if it has ever been merged to release-0.2.4 and it has had
 no subsequent changes in master.
 
-A change is "unmerged" if it has never been merged to release-0.2.2 and it
+A change is "unmerged" if it has never been merged to release-0.2.4 and it
 has had changes in master.
 
-A change is "weird" if it has been merged to release-0.2.2 and it *has* had
+A change is "weird" if it has been merged to release-0.2.4 and it *has* had
 subsequent changes in master.
 
 Suggested application:
@@ -36,7 +36,7 @@ Suggested application:
 EOF
 }
 
-my $target_branch = "origin/release-0.2.2";
+my $target_branch = "origin/release-0.2.4";
 
 while (@ARGV and $ARGV[0] =~ /^--/) {
     my $flag = shift @ARGV;
