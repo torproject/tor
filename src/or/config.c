@@ -619,12 +619,13 @@ set_options(or_options_t *new_val, char **msg)
             tor_free(line);
           }
         } else {
-          smartlist_add(elements, (char*)options_format.vars[i].name);
+          smartlist_add(elements, tor_strdup(options_format.vars[i].name));
           smartlist_add(elements, NULL);
         }
       }
     }
     control_event_conf_changed(elements);
+    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
   }
 
