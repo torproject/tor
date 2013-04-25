@@ -5577,7 +5577,8 @@ get_first_listener_addrport_string(int listener_type)
          to iterate all listener connections and find out in which
          port it ended up listening: */
       if (cfg->port == CFG_AUTO_PORT) {
-        port = router_get_active_listener_port_by_type(listener_type);
+        port = router_get_active_listener_port_by_type_af(listener_type,
+                                                  tor_addr_family(&cfg->addr));
         if (!port)
           return NULL;
       } else {
