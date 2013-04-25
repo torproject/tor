@@ -1459,13 +1459,18 @@ consider_publishable_server(int force)
 /** XXX not a very good interface. it's not reliable when there are
     multiple listeners. */
 uint16_t
-router_get_active_listener_port_by_type(int listener_type)
+router_get_active_listener_port_by_type_af(int listener_type,
+                                           sa_family_t family)
 {
   /* Iterate all connections, find one of the right kind and return
      the port. Not very sophisticated or fast, but effective. */
-  const connection_t *c = connection_get_by_type(listener_type);
-  if (c)
-    return c->port;
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    if (conn->type == listener_type && !conn->marked_for_close &&
+        conn->socket_family == family) {
+      return conn->port;
+    }
+  } SMARTLIST_FOREACH_END(conn);
 
   return 0;
 }
@@ -1477,13 +1482,24 @@ router_get_active_listener_port_by_type(int listener_type)
 uint16_t
 router_get_advertised_or_port(const or_options_t *options)
 {
-  int port = get_primary_or_port();
+  return router_get_advertised_or_port_by_af(options, AF_INET);
+}
+
+/** As router_get_advertised_or_port(), but allows an address family argument.
+ */
+uint16_t
+router_get_advertised_or_port_by_af(const or_options_t *options,
+                                    sa_family_t family)
+{
+  int port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                                  family);
   (void)options;
 
   /* If the port is in 'auto' mode, we have to use
      router_get_listener_port_by_type(). */
   if (port == CFG_AUTO_PORT)
-    return router_get_active_listener_port_by_type(CONN_TYPE_OR_LISTENER);
+    return router_get_active_listener_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                                      family);
 
   return port;
 }
@@ -1503,7 +1519,8 @@ router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
     return dirport;
 
   if (dirport_configured == CFG_AUTO_PORT)
-    return router_get_active_listener_port_by_type(CONN_TYPE_DIR_LISTENER);
+    return router_get_active_listener_port_by_type_af(CONN_TYPE_DIR_LISTENER,
+                                                      AF_INET);
 
   return dirport_configured;
 }
