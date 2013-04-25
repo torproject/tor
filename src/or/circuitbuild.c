@@ -2491,7 +2491,7 @@ pathbias_scale_close_rates(entry_guard_t *guard)
     /* Verify that the counts are sane before and after scaling */
     int counts_are_sane = (guard->circ_attempts >= guard->circ_successes);
 
-    guard->circ_attempts -= opened_attempts;
+    guard->circ_attempts -= (opened_attempts+opened_built);
     guard->circ_successes -= opened_built;
 
     guard->circ_attempts *= scale_ratio;
@@ -2501,7 +2501,7 @@ pathbias_scale_close_rates(entry_guard_t *guard)
     guard->collapsed_circuits *= scale_ratio;
     guard->unusable_circuits *= scale_ratio;
 
-    guard->circ_attempts += opened_attempts;
+    guard->circ_attempts += (opened_attempts+opened_built);
     guard->circ_successes += opened_built;
 
     entry_guards_changed();

@@ -1215,7 +1215,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         int severity = LOG_INFO;
         /* If this state file was written by a Tor that would have
          * already fixed it, then the overcounting bug is still there.. */
-        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+        if (tor_version_as_new_as(state_version, "0.2.4.13-alpha")) {
           severity = LOG_NOTICE;
         }
         log_fn(severity, LD_BUG,
@@ -1280,7 +1280,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         int severity = LOG_INFO;
         /* If this state file was written by a Tor that would have
          * already fixed it, then the overcounting bug is still there.. */
-        if (tor_version_as_new_as(state_version, "0.2.4.12-alpha")) {
+        if (tor_version_as_new_as(state_version, "0.2.4.13-alpha")) {
           severity = LOG_NOTICE;
         }
         log_fn(severity, LD_BUG,
