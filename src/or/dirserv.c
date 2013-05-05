@@ -1898,7 +1898,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
   }
 
   return node->ri && router_is_active(node->ri, node, now) &&
-    !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest) &&
+    !digestmap_get(omit_as_sybil, node->identity) &&
     (dirserv_get_credible_bandwidth_kb(node->ri) >= min_bw_kb) &&
     (have_mbw || !require_mbw);
 }
