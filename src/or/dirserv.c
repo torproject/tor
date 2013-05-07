@@ -1889,7 +1889,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
 {
   /* Have measured bw? */
   int have_mbw =
-    dirserv_has_measured_bw(node->ri->cache_info.identity_digest);
+    dirserv_has_measured_bw(node->identity);
   uint64_t min_bw_kb = ABSOLUTE_MIN_BW_VALUE_TO_CONSIDER_KB;
   const or_options_t *options = get_options();
 
@@ -1898,7 +1898,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
   }
 
   return node->ri && router_is_active(node->ri, node, now) &&
-    !digestmap_get(omit_as_sybil, node->ri->cache_info.identity_digest) &&
+    !digestmap_get(omit_as_sybil, node->identity) &&
     (dirserv_get_credible_bandwidth_kb(node->ri) >= min_bw_kb) &&
     (have_mbw || !require_mbw);
 }
@@ -1959,7 +1959,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
     if (router_counts_toward_thresholds(node, now, omit_as_sybil,
                                         require_mbw)) {
       routerinfo_t *ri = node->ri;
-      const char *id = ri->cache_info.identity_digest;
+      const char *id = node->identity;
       uint32_t bw_kb;
       node->is_exit = (!router_exit_policy_rejects_all(ri) &&
                        exit_policy_is_general_exit(ri->exit_policy));
