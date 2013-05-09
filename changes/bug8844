@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Prevent the get_freelists() function from running off the end of
+      the list of freelists if it somehow gets an unrecognized
+      allocation. Fixes bug 8844; bugfix on 0.2.0.16-alpha. Reported by
+      eugenis.
+
