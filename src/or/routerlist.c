@@ -593,7 +593,7 @@ authority_cert_dl_failed(const char *id_digest,
                     id_digest, DIGEST_LEN);
       base16_encode(sk_digest_str, sizeof(sk_digest_str),
                     signing_key_digest, DIGEST_LEN);
-      log_warn(LD_DIR,
+      log_warn(LD_BUG,
                "Got failure for cert fetch with (fp,sk) = (%s,%s), with "
                "status %d, but knew nothing about the download.",
                id_digest_str, sk_digest_str, status);
