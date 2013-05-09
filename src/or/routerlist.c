@@ -660,8 +660,57 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
   missing_cert_digests = smartlist_new();
   missing_id_digests = smartlist_new();
 
+  /*
+   * First, we get the lists of already pending downloads so we don't
+   * duplicate effort.
+   */
   list_pending_downloads(pending_id, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   list_pending_fpsk_downloads(pending_cert);
+
+  /*
+   * Now, we download any trusted authority certs we don't have by
+   * identity digest only.  This gets the latest cert for that authority.
+   */
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
+    int found = 0;
+    if (!(ds->type & V3_DIRINFO))
+      continue;
+    if (smartlist_digest_isin(missing_id_digests, ds->v3_identity_digest))
+      continue;
+    cl = get_cert_list(ds->v3_identity_digest);
+    SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+      if (now < cert->expires) {
+        /* It's not expired, and we weren't looking for something to
+         * verify a consensus with.  Call it done. */
+        download_status_reset(&(cl->dl_status_by_id));
+        /* No sense trying to download it specifically by signing key hash */
+        download_status_reset_by_sk_in_cl(cl, cert->signing_key_digest);
+        found = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(cert);
+    if (!found &&
+        download_status_is_ready(&(cl->dl_status_by_id), now,
+                                 MAX_CERT_DL_FAILURES) &&
+        !digestmap_get(pending_id, ds->v3_identity_digest)) {
+      log_info(LD_DIR,
+               "No current certificate known for authority %s "
+               "(ID digest %s); launching request.",
+               ds->nickname, hex_str(ds->v3_identity_digest, DIGEST_LEN));
+      smartlist_add(missing_id_digests, ds->v3_identity_digest);
+    }
+  } SMARTLIST_FOREACH_END(ds);
+
+  /*
+   * Next, if we have a consensus, scan through it and look for anything
+   * signed with a key from a cert we don't have.  Those get downloaded
+   * by (fp,sk) pair, but if we don't know any certs at all for the fp
+   * (identity digest), and it's one of the trusted dir server certs
+   * we started off above or a pending download in pending_id, don't
+   * try to get it yet.  Most likely, the one we'll get for that will
+   * have the right signing key too, and we'd just be downloading
+   * redundantly.
+   */
   if (status) {
     SMARTLIST_FOREACH_BEGIN(status->voters, networkstatus_voter_info_t *,
                             voter) {
@@ -671,7 +720,28 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       if (!cache &&
           !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
         continue; /* We are not a cache, and we don't know this authority.*/
+
+      /*
+       * If we don't know *any* cert for this authority, and a download by ID
+       * is pending or we added it to missing_id_digests above, skip this
+       * one for now to avoid duplicate downloads.
+       */
       cl = get_cert_list(voter->identity_digest);
+      if (smartlist_len(cl->certs) == 0) {
+        /* We have no certs at all for this one */
+
+        /* Do we have a download of one pending? */
+        if (digestmap_get(pending_id, voter->identity_digest))
+          continue;
+
+        /*
+         * Are we about to launch a download of one due to the trusted
+         * dir server check above?
+         */
+        if (smartlist_digest_isin(missing_id_digests, voter->identity_digest))
+          continue;
+      }
+
       SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
         cert = authority_cert_get_by_digests(voter->identity_digest,
                                              sig->signing_key_digest);
@@ -718,35 +788,6 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       } SMARTLIST_FOREACH_END(sig);
     } SMARTLIST_FOREACH_END(voter);
   }
-  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
-    int found = 0;
-    if (!(ds->type & V3_DIRINFO))
-      continue;
-    if (smartlist_digest_isin(missing_id_digests, ds->v3_identity_digest))
-      continue;
-    cl = get_cert_list(ds->v3_identity_digest);
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
-      if (now < cert->expires) {
-        /* It's not expired, and we weren't looking for something to
-         * verify a consensus with.  Call it done. */
-        download_status_reset(&(cl->dl_status_by_id));
-        /* No sense trying to download it specifically by signing key hash */
-        download_status_reset_by_sk_in_cl(cl, cert->signing_key_digest);
-        found = 1;
-        break;
-      }
-    });
-    if (!found &&
-        download_status_is_ready(&(cl->dl_status_by_id), now,
-                                 MAX_CERT_DL_FAILURES) &&
-        !digestmap_get(pending_id, ds->v3_identity_digest)) {
-      log_info(LD_DIR,
-               "No current certificate known for authority %s "
-               "(ID digest %s); launching request.",
-               ds->nickname, hex_str(ds->v3_identity_digest, DIGEST_LEN));
-      smartlist_add(missing_id_digests, ds->v3_identity_digest);
-    }
-  } SMARTLIST_FOREACH_END(ds);
 
   /* Do downloads by identity digest */
   if (smartlist_len(missing_id_digests) > 0) {
