@@ -309,9 +309,13 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
                from_store ? "cached" : "downloaded",
                ds ? ds->nickname : "an old or new authority");
 
-      /* a duplicate on a download should be treated as a failure, since it
-       * probably means we wanted a different secret key or we are trying to
-       * replace an expired cert that has not in fact been updated. */
+      /*
+       * A duplicate on download should be treated as a failure, so we call
+       * authority_cert_dl_failed() to reset the download status to make sure
+       * we can't try again.  Since we've implemented the fp-sk mechanism
+       * to download certs by signing key, this should be much rarer than it
+       * was and is perhaps cause for concern.
+       */
       if (!from_store) {
         if (authdir_mode(get_options())) {
           log_warn(LD_DIR,
