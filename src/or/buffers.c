@@ -148,7 +148,8 @@ static INLINE chunk_freelist_t *
 get_freelist(size_t alloc)
 {
   int i;
-  for (i=0; freelists[i].alloc_size <= alloc; ++i) {
+  for (i=0; (freelists[i].alloc_size <= alloc &&
+             freelists[i].alloc_size); ++i ) {
     if (freelists[i].alloc_size == alloc) {
       return &freelists[i];
     }
