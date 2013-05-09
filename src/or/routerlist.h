@@ -13,7 +13,20 @@
 
 int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);
-int trusted_dirs_load_certs_from_string(const char *contents, int from_store,
+
+/*
+ * Pass one of these as source to trusted_dirs_load_certs_from_string()
+ * to indicate whence string originates; this controls error handling
+ * behavior such as marking downloads as failed.
+ */
+
+#define TRUSTED_DIRS_CERTS_SRC_SELF 0
+#define TRUSTED_DIRS_CERTS_SRC_FROM_STORE 1
+#define TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST 2
+#define TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST 3
+#define TRUSTED_DIRS_CERTS_SRC_FROM_VOTE 4
+
+int trusted_dirs_load_certs_from_string(const char *contents, int source,
                                         int flush);
 void trusted_dirs_flush_certs_to_disk(void);
 authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
@@ -21,7 +34,8 @@ authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
 void authority_cert_get_all(smartlist_t *certs_out);
-void authority_cert_dl_failed(const char *id_digest, int status);
+void authority_cert_dl_failed(const char *id_digest,
+                              const char *signing_key_digest, int status);
 void authority_certs_fetch_missing(networkstatus_t *status, time_t now);
 int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
