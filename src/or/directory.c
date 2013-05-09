@@ -803,6 +803,8 @@ connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
 static void
 connection_dir_download_cert_failed(dir_connection_t *conn, int status)
 {
+  const char *fp_pfx = "fp/";
+  const char *fpsk_pfx = "fp-sk/";
   smartlist_t *failed;
   tor_assert(conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE);
 
@@ -814,19 +816,20 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
    * with "fp/") or download by fingerprint/signing key pair
    * (resource starts with "fp-sk/").
    */
-  if (!strcmpstart(conn->requested_resource, "fp/")) {
+  if (!strcmpstart(conn->requested_resource, fp_pfx)) {
     /* Download by fingerprint case */
-    dir_split_resource_into_fingerprints(conn->requested_resource + 3,
+    dir_split_resource_into_fingerprints(conn->requested_resource +
+                                         strlen(fp_pfx),
                                          failed, NULL, DSR_HEX);
     SMARTLIST_FOREACH_BEGIN(failed, char *, cp) {
       /* Null signing key digest indicates download by fp only */
       authority_cert_dl_failed(cp, NULL, status);
       tor_free(cp);
     } SMARTLIST_FOREACH_END(cp);
-  } else if (!strcmpstart(conn->requested_resource, "fp-sk/")) {
+  } else if (!strcmpstart(conn->requested_resource, fpsk_pfx)) {
     /* Download by (fp,sk) pairs */
-    dir_split_resource_into_fingerprint_pairs(conn->requested_resource + 5,
-                                              failed);
+    dir_split_resource_into_fingerprint_pairs(conn->requested_resource +
+                                              strlen(fpsk_pfx), failed);
     SMARTLIST_FOREACH_BEGIN(failed, fp_pair_t *, cp) {
       authority_cert_dl_failed(cp->first, cp->second, status);
       tor_free(cp);
