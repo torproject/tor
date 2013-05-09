@@ -791,23 +791,33 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
   /* Do downloads by identity digest */
   if (smartlist_len(missing_id_digests) > 0) {
+    int need_plus = 0;
     smartlist_t *fps = smartlist_new();
+
     smartlist_add(fps, tor_strdup("fp/"));
 
-    SMARTLIST_FOREACH(missing_id_digests, const char *, d, {
-      char *fp;
+    SMARTLIST_FOREACH_BEGIN(missing_id_digests, const char *, d) {
+      char *fp = NULL;
+
       if (digestmap_get(pending_id, d))
         continue;
-      fp = tor_malloc(HEX_DIGEST_LEN+2);
-      base16_encode(fp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
-      fp[HEX_DIGEST_LEN] = '+';
-      fp[HEX_DIGEST_LEN+1] = '\0';
+
+      base16_encode(id_digest_str, sizeof(id_digest_str),
+                    d, DIGEST_LEN);
+
+      if (need_plus) {
+        tor_asprintf(&fp, "+%s", id_digest_str);
+      } else {
+        /* No need for tor_asprintf() in this case; first one gets no '+' */
+        fp = tor_strdup(id_digest_str);
+        need_plus = 1;
+      }
+
       smartlist_add(fps, fp);
-    });
+    } SMARTLIST_FOREACH_END(d);
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
-      resource[strlen(resource)-1] = '\0';
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS);
       tor_free(resource);
@@ -820,38 +830,31 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
   /* Do downloads by identity digest/signing key pair */
   if (smartlist_len(missing_cert_digests) > 0) {
+    int need_plus = 0;
     smartlist_t *fp_pairs = smartlist_new();
-    int need_plus = 0, offset = 0;
 
     smartlist_add(fp_pairs, tor_strdup("fp-sk/"));
 
     SMARTLIST_FOREACH_BEGIN(missing_cert_digests, const fp_pair_t *, d) {
-      char *fp_pair;
+      char *fp_pair = NULL;
 
       if (fp_pair_map_get(pending_cert, d))
         continue;
 
-      fp_pair = tor_malloc(2*HEX_DIGEST_LEN+3);
-      offset = 0;
+      /* Construct string encodings of the digests */
+      base16_encode(id_digest_str, sizeof(id_digest_str),
+                    d->first, DIGEST_LEN);
+      base16_encode(sk_digest_str, sizeof(sk_digest_str),
+                    d->second, DIGEST_LEN);
+
+      /* Now tor_asprintf() */
       if (need_plus) {
-        fp_pair[offset++] = '+';
+        tor_asprintf(&fp_pair, "+%s-%s", id_digest_str, sk_digest_str);
       } else {
-        /* Prepend a '+' to all but the first in the list */
+        /* First one in the list doesn't get a '+' */
+        tor_asprintf(&fp_pair, "%s-%s", id_digest_str, sk_digest_str);
         need_plus = 1;
       }
-
-      /* Encode the first fingerprint */
-      base16_encode(fp_pair + offset, HEX_DIGEST_LEN+1,
-                    d->first, DIGEST_LEN);
-      offset += HEX_DIGEST_LEN;
-      /* Add a '-' to separate them */
-      fp_pair[offset++] = '-';
-      /* Encode the second fingerprint */
-      base16_encode(fp_pair + offset, HEX_DIGEST_LEN+1,
-                    d->second, DIGEST_LEN);
-      offset += HEX_DIGEST_LEN;
-      /* Add a NUL */
-      fp_pair[offset++] = '\0';
 
       /* Add it to the list of pairs to request */
       smartlist_add(fp_pairs, fp_pair);
@@ -859,7 +862,6 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
-      resource[strlen(resource)-1] = '\0';
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS);
       tor_free(resource);
