@@ -813,6 +813,18 @@ test_buffers(void)
   buf_free(buf);
   buf = NULL;
 
+  /* Try adding a string too long for any freelist. */
+  {
+    char *cp = tor_malloc_zero(65536);
+    buf = buf_new();
+    write_to_buf(cp, 65536, buf);
+    tor_free(cp);
+
+    tt_int_op(buf_datalen(buf), ==, 65536);
+    buf_free(buf);
+    buf = NULL;
+  }
+
  done:
   if (buf)
     buf_free(buf);
