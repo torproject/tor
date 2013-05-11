@@ -28,58 +28,58 @@ test_pt_parsing(void)
   mp->transports = smartlist_new();
 
   /* incomplete cmethod */
-  strcpy(line,"CMETHOD trebuchet");
+  strlcpy(line,"CMETHOD trebuchet",sizeof(line));
   test_assert(parse_cmethod_line(line, mp) < 0);
 
   reset_mp(mp);
 
   /* wrong proxy type */
-  strcpy(line,"CMETHOD trebuchet dog 127.0.0.1:1999");
+  strlcpy(line,"CMETHOD trebuchet dog 127.0.0.1:1999",sizeof(line));
   test_assert(parse_cmethod_line(line, mp) < 0);
 
   reset_mp(mp);
 
   /* wrong addrport */
-  strcpy(line,"CMETHOD trebuchet socks4 abcd");
+  strlcpy(line,"CMETHOD trebuchet socks4 abcd",sizeof(line));
   test_assert(parse_cmethod_line(line, mp) < 0);
 
   reset_mp(mp);
 
   /* correct line */
-  strcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999");
+  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
   test_assert(parse_cmethod_line(line, mp) == 0);
   test_assert(smartlist_len(mp->transports));
 
   reset_mp(mp);
 
   /* incomplete smethod */
-  strcpy(line,"SMETHOD trebuchet");
+  strlcpy(line,"SMETHOD trebuchet",sizeof(line));
   test_assert(parse_smethod_line(line, mp) < 0);
 
   reset_mp(mp);
 
   /* wrong addr type */
-  strcpy(line,"SMETHOD trebuchet abcd");
+  strlcpy(line,"SMETHOD trebuchet abcd",sizeof(line));
   test_assert(parse_smethod_line(line, mp) < 0);
 
   reset_mp(mp);
 
   /* cowwect */
-  strcpy(line,"SMETHOD trebuchy 127.0.0.1:1999");
+  strlcpy(line,"SMETHOD trebuchy 127.0.0.1:1999",sizeof(line));
   test_assert(parse_smethod_line(line, mp) == 0);
 
   reset_mp(mp);
 
   /* unsupported version */
-  strcpy(line,"VERSION 666");
+  strlcpy(line,"VERSION 666",sizeof(line));
   test_assert(parse_version(line, mp) < 0);
 
   /* incomplete VERSION */
-  strcpy(line,"VERSION ");
+  strlcpy(line,"VERSION ",sizeof(line));
   test_assert(parse_version(line, mp) < 0);
 
   /* correct VERSION */
-  strcpy(line,"VERSION 1");
+  strlcpy(line,"VERSION 1",sizeof(line));
   test_assert(parse_version(line, mp) == 0);
 
  done:
@@ -99,32 +99,32 @@ test_pt_protocol(void)
 
   /* various wrong protocol runs: */
 
-  strcpy(line,"VERSION 1");
+  strlcpy(line,"VERSION 1",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strcpy(line,"VERSION 1");
+  strlcpy(line,"VERSION 1",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_BROKEN);
 
   reset_mp(mp);
 
-  strcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999");
+  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_BROKEN);
 
   reset_mp(mp);
 
   /* correct protocol run: */
-  strcpy(line,"VERSION 1");
+  strlcpy(line,"VERSION 1",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999");
+  strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
-  strcpy(line,"CMETHODS DONE");
+  strlcpy(line,"CMETHODS DONE",sizeof(line));
   handle_proxy_line(line, mp);
   test_assert(mp->conf_state == PT_PROTO_CONFIGURED);
 
