@@ -35,6 +35,7 @@ LIBTOR_OBJECTS = \
   dirvote.obj \
   dns.obj \
   dnsserv.obj \
+  fp_pair.obj \
   entrynodes.obj \
   geoip.obj \
   hibernate.obj \
