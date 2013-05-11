@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #include "or.h"
+#include "fp_pair.h"
 #include "test.h"
 
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
@@ -826,6 +827,88 @@ test_di_map(void *arg)
   dimap_free(map, NULL);
 }
 
+/** Run unit tests for fp_pair-to-void* map functions */
+static void
+test_container_fp_pair_map(void)
+{
+  fp_pair_map_t *map;
+  fp_pair_t fp1, fp2, fp3, fp4, fp5, fp6;
+  void *v;
+  fp_pair_map_iter_t *iter;
+  fp_pair_t k;
+
+  map = fp_pair_map_new();
+  test_assert(map);
+  test_eq(fp_pair_map_size(map), 0);
+  test_assert(fp_pair_map_isempty(map));
+
+  memset(fp1.first, 0x11, DIGEST_LEN);
+  memset(fp1.second, 0x12, DIGEST_LEN);
+  memset(fp2.first, 0x21, DIGEST_LEN);
+  memset(fp2.second, 0x22, DIGEST_LEN);
+  memset(fp3.first, 0x31, DIGEST_LEN);
+  memset(fp3.second, 0x32, DIGEST_LEN);
+  memset(fp4.first, 0x41, DIGEST_LEN);
+  memset(fp4.second, 0x42, DIGEST_LEN);
+  memset(fp5.first, 0x51, DIGEST_LEN);
+  memset(fp5.second, 0x52, DIGEST_LEN);
+  memset(fp6.first, 0x61, DIGEST_LEN);
+  memset(fp6.second, 0x62, DIGEST_LEN);
+
+  v = fp_pair_map_set(map, &fp1, (void*)99);
+  test_eq(v, NULL);
+  test_assert(!fp_pair_map_isempty(map));
+  v = fp_pair_map_set(map, &fp2, (void*)101);
+  test_eq(v, NULL);
+  v = fp_pair_map_set(map, &fp1, (void*)100);
+  test_eq(v, (void*)99);
+  test_eq_ptr(fp_pair_map_get(map, &fp1), (void*)100);
+  test_eq_ptr(fp_pair_map_get(map, &fp2), (void*)101);
+  test_eq_ptr(fp_pair_map_get(map, &fp3), NULL);
+  fp_pair_map_assert_ok(map);
+
+  v = fp_pair_map_remove(map, &fp2);
+  fp_pair_map_assert_ok(map);
+  test_eq_ptr(v, (void*)101);
+  test_eq_ptr(fp_pair_map_get(map, &fp2), NULL);
+  test_eq_ptr(fp_pair_map_remove(map, &fp2), NULL);
+
+  fp_pair_map_set(map, &fp2, (void*)101);
+  fp_pair_map_set(map, &fp3, (void*)102);
+  fp_pair_map_set(map, &fp4, (void*)103);
+  test_eq(fp_pair_map_size(map), 4);
+  fp_pair_map_assert_ok(map);
+  fp_pair_map_set(map, &fp5, (void*)104);
+  fp_pair_map_set(map, &fp6, (void*)105);
+  fp_pair_map_assert_ok(map);
+
+  /* Test iterator. */
+  iter = fp_pair_map_iter_init(map);
+  while (!fp_pair_map_iter_done(iter)) {
+    fp_pair_map_iter_get(iter, &k, &v);
+    test_eq_ptr(v, fp_pair_map_get(map, &k));
+
+    if (tor_memeq(&fp2, &k, sizeof(fp2))) {
+      iter = fp_pair_map_iter_next_rmv(map, iter);
+    } else {
+      iter = fp_pair_map_iter_next(map, iter);
+    }
+  }
+
+  /* Make sure we removed fp2, but not the others. */
+  test_eq_ptr(fp_pair_map_get(map, &fp2), NULL);
+  test_eq_ptr(fp_pair_map_get(map, &fp5), (void*)104);
+
+  fp_pair_map_assert_ok(map);
+  /* Clean up after ourselves. */
+  fp_pair_map_free(map, NULL);
+  map = NULL;
+
+ done:
+  if (map)
+    fp_pair_map_free(map, NULL);
+}
+
 #define CONTAINER_LEGACY(name)                                          \
   { #name, legacy_test_helper, 0, &legacy_setup, test_container_ ## name }
 
@@ -841,6 +924,7 @@ struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(pqueue),
   CONTAINER_LEGACY(order_functions),
   { "di_map", test_di_map, 0, NULL, NULL },
+  CONTAINER_LEGACY(fp_pair_map),
   END_OF_TESTCASES
 };
 

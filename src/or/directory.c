@@ -856,19 +856,43 @@ connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
 static void
 connection_dir_download_cert_failed(dir_connection_t *conn, int status)
 {
+  const char *fp_pfx = "fp/";
+  const char *fpsk_pfx = "fp-sk/";
   smartlist_t *failed;
   tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_CERTIFICATE);
 
   if (!conn->requested_resource)
     return;
   failed = smartlist_new();
-  dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                       failed, NULL, DSR_HEX);
-  SMARTLIST_FOREACH(failed, char *, cp,
-  {
-    authority_cert_dl_failed(cp, status);
-    tor_free(cp);
-  });
+  /*
+   * We have two cases download by fingerprint (resource starts
+   * with "fp/") or download by fingerprint/signing key pair
+   * (resource starts with "fp-sk/").
+   */
+  if (!strcmpstart(conn->requested_resource, fp_pfx)) {
+    /* Download by fingerprint case */
+    dir_split_resource_into_fingerprints(conn->requested_resource +
+                                         strlen(fp_pfx),
+                                         failed, NULL, DSR_HEX);
+    SMARTLIST_FOREACH_BEGIN(failed, char *, cp) {
+      /* Null signing key digest indicates download by fp only */
+      authority_cert_dl_failed(cp, NULL, status);
+      tor_free(cp);
+    } SMARTLIST_FOREACH_END(cp);
+  } else if (!strcmpstart(conn->requested_resource, fpsk_pfx)) {
+    /* Download by (fp,sk) pairs */
+    dir_split_resource_into_fingerprint_pairs(conn->requested_resource +
+                                              strlen(fpsk_pfx), failed);
+    SMARTLIST_FOREACH_BEGIN(failed, fp_pair_t *, cp) {
+      authority_cert_dl_failed(cp->first, cp->second, status);
+      tor_free(cp);
+    } SMARTLIST_FOREACH_END(cp);
+  } else {
+    log_warn(LD_DIR,
+             "Don't know what to do with failure for cert fetch %s",
+             conn->requested_resource);
+  }
+
   smartlist_free(failed);
 
   update_certificate_downloads(time(NULL));
@@ -1634,6 +1658,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   int was_compressed=0;
   time_t now = time(NULL);
+  int src_code;
 
   switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
@@ -1902,14 +1927,34 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     log_info(LD_DIR,"Received authority certificates (size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
-    if (trusted_dirs_load_certs_from_string(body, 0, 1)<0) {
-      log_warn(LD_DIR, "Unable to parse fetched certificates");
-      /* if we fetched more than one and only some failed, the successful
-       * ones got flushed to disk so it's safe to call this on them */
-      connection_dir_download_cert_failed(conn, status_code);
+
+    /*
+     * Tell trusted_dirs_load_certs_from_string() whether it was by fp
+     * or fp-sk pair.
+     */
+    src_code = -1;
+    if (!strcmpstart(conn->requested_resource, "fp/")) {
+      src_code = TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST;
+    } else if (!strcmpstart(conn->requested_resource, "fp-sk/")) {
+      src_code = TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST;
+    }
+
+    if (src_code != -1) {
+      if (trusted_dirs_load_certs_from_string(body, src_code, 1)<0) {
+        log_warn(LD_DIR, "Unable to parse fetched certificates");
+        /* if we fetched more than one and only some failed, the successful
+         * ones got flushed to disk so it's safe to call this on them */
+        connection_dir_download_cert_failed(conn, status_code);
+      } else {
+        directory_info_has_arrived(now, 0);
+        log_info(LD_DIR, "Successfully loaded certificates from fetch.");
+      }
     } else {
-      directory_info_has_arrived(now, 0);
-      log_info(LD_DIR, "Successfully loaded certificates from fetch.");
+      log_warn(LD_DIR,
+               "Couldn't figure out what to do with fetched certificates for "
+               "unknown resource %s",
+               conn->requested_resource);
+      connection_dir_download_cert_failed(conn, status_code);
     }
   }
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {

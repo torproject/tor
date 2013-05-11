@@ -1,0 +1,8 @@
+  o Critical bugfixes:
+    - Distinguish downloading an authority certificate by identity digest from
+      downloading one by identity digest/signing key digest pair; formerly we
+      always request them only by identity digest and get the newest one even
+      when we wanted one with a different signing key.  Then we would complain
+      about being given a certificate we already had, and never get the one we
+      really wanted.  Now we use the "fp-sk/" resource as well as the "fp/"
+      resource to request the one we want.  Fixes bug 5595.
