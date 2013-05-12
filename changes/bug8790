@@ -1,0 +1,6 @@
+  o Minor code improvements:
+    - Remove instances of strcpy from the unit tests. They weren't
+      hurting anything, since they were only in the unit tests, but
+      it's embarassing to have strcpy() in the code at all, and some
+      analysis tools don't like it. Fixes 8790. Patch from Arlo Breault.
+
