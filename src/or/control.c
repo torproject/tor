@@ -1572,7 +1572,8 @@ munge_extrainfo_into_routerinfo(const char *ri_body,
     if (!(cp = tor_memstr(ei_body, ei_len, kwd)))
       continue;
     ++cp;
-    eol = memchr(cp, '\n', ei_len - (cp-ei_body));
+    if (!(eol = memchr(cp, '\n', ei_len - (cp-ei_body))))
+      continue;
     memcpy(outp, cp, eol-cp+1);
     outp += eol-cp+1;
   }
