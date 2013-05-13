@@ -156,23 +156,34 @@ def apply_manual_changes(assignments, manual_assignments):
                     entry['end_num'] == manual_entry['end_num']:
                 if len(manual_entry['country_code']) != 2:
                     print '-%s' % (line, )  # only remove, don't replace
-                else:
+                    del manual_dict[start_num]
+                elif entry['country_code'] != \
+                        manual_entry['country_code']:
                     new_line = format_line_with_other_country(entry,
                             manual_entry)
                     print '-%s\n+%s' % (line, new_line, )
                     result.append(new_line)
-                del manual_dict[start_num]
+                    del manual_dict[start_num]
+                else:
+                    print ('Warning: not applying ineffective manual '
+                           'change:\n  %s\n  %s' % (line, manual_line, ))
+                    result.append(line)
             else:
-                print ('Warning: only partial match between '
-                       'original/automatically replaced assignment and '
-                       'manual assignment:\n  %s\n  %s\nNot applying '
-                       'manual change.' % (line, manual_line, ))
+                print ('Warning: not applying manual change that is only '
+                       'a partial match:\n  %s\n  %s' %
+                       (line, manual_line, ))
                 result.append(line)
+        elif 'country_code' in entry and \
+                entry['country_code'] == 'A1':
+            print ('Warning: no manual replacement for A1 entry:\n  %s'
+                % (line, ))
+            result.append(line)
         else:
             result.append(line)
     if len(manual_dict) > 0:
-        print ('Warning: could not apply all manual assignments:  %s' %
-                ('\n  '.join(manual_dict.values())), )
+        print 'Warning: could not apply all manual assignments:'
+        for line in manual_dict.values():
+            print '  %s' % (line, )
     return result
 
 def write_file(path, assignments, long_format=True):
