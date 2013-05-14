@@ -1468,6 +1468,22 @@ AC_CONFIG_FILES([
         src/config/torrc.sample
 ])
 
+if test x$asciidoc = xtrue && test $ASCIIDOC = "none" ; then
+  regular_mans=(doc/tor doc/tor-gencert doc/tor-resolve doc/torify)
+  for file in $regular_mans ; do
+    if ! [[ -f $file.1.in ]] || ! [[ -f $file.html.in ]] ; then
+      echo "==================================";
+      echo;
+      echo "You need asciidoc installed to be able to build the manpage.";
+      echo "To build without manpages, use the --disable-asciidoc argument";
+      echo "when calling configure.";
+      echo;
+      echo "==================================";
+      exit 1;
+    fi
+  done
+fi
+
 AC_OUTPUT
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
