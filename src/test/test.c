@@ -468,7 +468,7 @@ test_socks_5_no_authenticate(void *ptr)
                                     get_options()->SafeSocks));
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_eq(2, socks->usernamelen);
@@ -507,7 +507,7 @@ test_socks_5_authenticate(void *ptr)
                                    get_options()->SafeSocks));
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_eq(2, socks->usernamelen);
@@ -547,7 +547,7 @@ test_socks_5_authenticate_with_data(void *ptr)
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_streq("2.2.2.2", socks->address);
