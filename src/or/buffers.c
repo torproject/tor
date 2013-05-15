@@ -1751,7 +1751,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         return 0;
       }
       req->replylen = 2; /* 2 bytes of response */
-      req->reply[0] = 5;
+      req->reply[0] = 1; /* authversion == 1 */
       req->reply[1] = 0; /* authentication successful */
       log_debug(LD_APP,
                "socks5: Accepted username/password without checking.");

@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Follow the socks5 protocol when offering username/password
+      authentication. The fix for bug 8117 exposed this bug, and it
+      turns out real-world applications like Pidgin do care. Bugfix on
+      0.2.3.2-alpha; fixes bug 8879.
