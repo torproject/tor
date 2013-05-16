@@ -394,7 +394,7 @@ test_crypto_pk(void)
   char *encoded = NULL;
   char data1[1024], data2[1024], data3[1024];
   size_t size;
-  int i, j, p, len;
+  int i, len;
 
   /* Public-key ciphers */
   pk1 = pk_generate(0);
@@ -478,19 +478,16 @@ test_crypto_pk(void)
 
   /* Try with hybrid encryption wrappers. */
   crypto_rand(data1, 1024);
-  for (i = 0; i < 2; ++i) {
-    for (j = 85; j < 140; ++j) {
-      memset(data2,0,1024);
-      memset(data3,0,1024);
-      p = (i==0)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
-      len = crypto_pk_public_hybrid_encrypt(pk1,data2,sizeof(data2),
-                                            data1,j,p,0);
-      test_assert(len>=0);
-      len = crypto_pk_private_hybrid_decrypt(pk1,data3,sizeof(data3),
-                                             data2,len,p,1);
-      test_eq(len,j);
-      test_memeq(data1,data3,j);
-    }
+  for (i = 85; i < 140; ++i) {
+    memset(data2,0,1024);
+    memset(data3,0,1024);
+    len = crypto_pk_public_hybrid_encrypt(pk1,data2,sizeof(data2),
+                                          data1,i,PK_PKCS1_OAEP_PADDING,0);
+    test_assert(len>=0);
+    len = crypto_pk_private_hybrid_decrypt(pk1,data3,sizeof(data3),
+                                           data2,len,PK_PKCS1_OAEP_PADDING,1);
+    test_eq(len,i);
+    test_memeq(data1,data3,i);
   }
 
   /* Try copy_full */

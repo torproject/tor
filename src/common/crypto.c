@@ -114,7 +114,6 @@ crypto_get_rsa_padding_overhead(int padding)
   switch (padding)
     {
     case RSA_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
-    case RSA_PKCS1_PADDING: return PKCS1_PADDING_OVERHEAD;
     default: tor_assert(0); return -1;
     }
 }
@@ -126,7 +125,6 @@ crypto_get_rsa_padding(int padding)
 {
   switch (padding)
     {
-    case PK_PKCS1_PADDING: return RSA_PKCS1_PADDING;
     case PK_PKCS1_OAEP_PADDING: return RSA_PKCS1_OAEP_PADDING;
     default: tor_assert(0); return -1;
     }

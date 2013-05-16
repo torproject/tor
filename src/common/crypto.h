@@ -69,13 +69,9 @@
  * signs removed. */
 #define BASE64_DIGEST256_LEN 43
 
-/** Constant used to indicate PKCS1 padding for public-key encryption */
-#define PK_PKCS1_PADDING      60001
 /** Constant used to indicate OAEP padding for public-key encryption */
 #define PK_PKCS1_OAEP_PADDING 60002
 
-/** Number of bytes added for PKCS1 padding. */
-#define PKCS1_PADDING_OVERHEAD 11
 /** Number of bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
