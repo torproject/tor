@@ -629,9 +629,6 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
   return n_failures >= N_AUTH_CERT_DL_FAILURES_TO_BUG_USER;
 }
 
-/** How many times will we try to fetch a certificate before giving up? */
-#define MAX_CERT_DL_FAILURES 8
-
 /** Try to download any v3 authority certificates that we may be missing.  If
  * <b>status</b> is provided, try to get all the ones that were used to sign
  * <b>status</b>.  Additionally, try to have a non-expired certificate for
@@ -703,7 +700,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
     } SMARTLIST_FOREACH_END(cert);
     if (!found &&
         download_status_is_ready(&(cl->dl_status_by_id), now,
-                                 MAX_CERT_DL_FAILURES) &&
+                                 get_options()->TestingCertMaxDownloadTries) &&
         !digestmap_get(pending_id, ds->v3_identity_digest)) {
       log_info(LD_DIR,
                "No current certificate known for authority %s "
@@ -765,7 +762,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
         }
         if (download_status_is_ready_by_sk_in_cl(
               cl, sig->signing_key_digest,
-              now, MAX_CERT_DL_FAILURES) &&
+              now, get_options()->TestingCertMaxDownloadTries) &&
             !fp_pair_map_get_by_digests(pending_cert,
                                         voter->identity_digest,
                                         sig->signing_key_digest)) {
@@ -4450,12 +4447,8 @@ initiate_descriptor_downloads(const routerstatus_t *source,
  * try to split our requests into at least this many requests. */
 #define MIN_REQUESTS 3
 /** If we want fewer than this many descriptors, wait until we
- * want more, or until MAX_CLIENT_INTERVAL_WITHOUT_REQUEST has
- * passed. */
+ * want more, or until TestingClientMaxIntervalWithoutRequest has passed. */
 #define MAX_DL_TO_DELAY 16
-/** When directory clients have only a few servers to request, they batch
- * them until they have more, or until this amount of time has passed. */
-#define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
 
 /** Given a <b>purpose</b> (FETCH_MICRODESC or FETCH_SERVERDESC) and a list of
  * router descriptor digests or microdescriptor digest256s in
@@ -4487,7 +4480,7 @@ launch_descriptor_downloads(int purpose,
       should_delay = 0;
     } else {
       should_delay = (last_descriptor_download_attempted +
-                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
+                      options->TestingClientMaxIntervalWithoutRequest) > now;
       if (!should_delay && n_downloadable) {
         if (last_descriptor_download_attempted) {
           log_info(LD_DIR,
@@ -4760,7 +4753,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         continue; /* We have an in-progress download. */
       }
       if (!download_status_is_ready(&rs->dl_status, now,
-                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
+                          options->TestingDescriptorMaxDownloadTries)) {
         ++n_delayed; /* Not ready for retry. */
         continue;
       }
@@ -4920,7 +4913,7 @@ update_extrainfo_downloads(time_t now)
         continue;
       }
       if (!download_status_is_ready(&sd->ei_dl_status, now,
-                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
+                          options->TestingDescriptorMaxDownloadTries)) {
         ++n_delay;
         continue;
       }

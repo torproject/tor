@@ -26,6 +26,9 @@ typedef enum config_type_t {
   CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to UTC. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
                               * optional whitespace. */
+  CONFIG_TYPE_CSV_INTERVAL, /**< A list of strings, separated by commas and
+                              * optional whitespace, representing intervals in
+                              * seconds, with optional units */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
   CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
                              * mixed with other keywords. */

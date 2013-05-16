@@ -662,7 +662,7 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
       continue;
     if (downloadable_only &&
         !download_status_is_ready(&rs->dl_status, now,
-                                  MAX_MICRODESC_DOWNLOAD_FAILURES))
+                  get_options()->TestingMicrodescMaxDownloadTries))
       continue;
     if (skip && digestmap_get(skip, rs->descriptor_digest))
       continue;

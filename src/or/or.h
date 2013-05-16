@@ -2279,14 +2279,6 @@ typedef struct node_t {
 
 } node_t;
 
-/** How many times will we try to download a router's descriptor before giving
- * up? */
-#define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
-
-/** How many times will we try to download a microdescriptor before giving
- * up? */
-#define MAX_MICRODESC_DOWNLOAD_FAILURES 8
-
 /** Contents of a v2 (non-consensus, non-vote) network status object. */
 typedef struct networkstatus_v2_t {
   /** When did we receive the network-status document? */
@@ -3914,6 +3906,51 @@ typedef struct {
    * probably not have propagated to enough caches.  Only altered on testing
    * networks. */
   int TestingEstimatedDescriptorPropagationTime;
+
+  /** Schedule for when servers should download things in general.  Only
+   * altered on testing networks. */
+  smartlist_t *TestingServerDownloadSchedule;
+
+  /** Schedule for when clients should download things in general.  Only
+   * altered on testing networks. */
+  smartlist_t *TestingClientDownloadSchedule;
+
+  /** Schedule for when servers should download consensuses.  Only altered
+   * on testing networks. */
+  smartlist_t *TestingServerConsensusDownloadSchedule;
+
+  /** Schedule for when clients should download consensuses.  Only altered
+   * on testing networks. */
+  smartlist_t *TestingClientConsensusDownloadSchedule;
+
+  /** Schedule for when clients should download bridge descriptors.  Only
+   * altered on testing networks. */
+  smartlist_t *TestingBridgeDownloadSchedule;
+
+  /** When directory clients have only a few descriptors to request, they
+   * batch them until they have more, or until this amount of time has
+   * passed.  Only altered on testing networks. */
+  int TestingClientMaxIntervalWithoutRequest;
+
+  /** How long do we let a directory connection stall before expiring
+   * it?  Only altered on testing networks. */
+  int TestingDirConnectionMaxStall;
+
+  /** How many times will we try to fetch a consensus before we give
+   * up?  Only altered on testing networks. */
+  int TestingConsensusMaxDownloadTries;
+
+  /** How many times will we try to download a router's descriptor before
+   * giving up?  Only altered on testing networks. */
+  int TestingDescriptorMaxDownloadTries;
+
+  /** How many times will we try to download a microdescriptor before
+   * giving up?  Only altered on testing networks. */
+  int TestingMicrodescMaxDownloadTries;
+
+  /** How many times will we try to fetch a certificate before giving
+   * up?  Only altered on testing networks. */
+  int TestingCertMaxDownloadTries;
 
   /** If true, we take part in a testing network. Change the defaults of a
    * couple of other configuration options and allow to change the values

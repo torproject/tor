@@ -2005,6 +2005,17 @@ The following options are used for running a testing Tor network.
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
        TestingEstimatedDescriptorPropagationTime 0 minutes
+       TestingServerDownloadSchedule 0, 0, 0, 5, 10, 15, 20, 30, 60
+       TestingClientDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
+       TestingServerConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
+       TestingClientConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
+       TestingBridgeDownloadSchedule 60, 30, 30, 60
+       TestingClientMaxIntervalWithoutRequest 5 seconds
+       TestingDirConnectionMaxStall 30 seconds
+       TestingConsensusMaxDownloadTries 80
+       TestingDescriptorMaxDownloadTries 80
+       TestingMicrodescMaxDownloadTries 80
+       TestingCertMaxDownloadTries 80
 
 **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
     Like V3AuthVotingInterval, but for initial voting interval before the first
@@ -2035,6 +2046,56 @@ The following options are used for running a testing Tor network.
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken
     from the consensus when TestingTorNetwork is set. (Default: 0.)
 
+**TestingServerDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when servers should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0, 0, 0, 60, 60, 120,
+    300, 900, 2147483647)
+
+**TestingClientDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download things in general. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
+    2147483647)
+
+**TestingServerConsensusDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when servers should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
+    1800, 1800, 1800, 1800, 1800, 3600, 7200)
+
+**TestingClientConsensusDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download consensuses. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
+    1800, 3600, 3600, 3600, 10800, 21600, 43200)
+
+**TestingBridgeDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download bridge descriptors. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 3600, 900, 900, 3600)
+
+**TestingClientMaxIntervalWithoutRequest** __N__ **seconds**|**minutes**::
+    When directory clients have only a few descriptors to request, they batch
+    them until they have more, or until this amount of time has passed.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 10
+    minutes)
+
+**TestingDirConnectionMaxStall** __N__ **seconds**|**minutes**::
+    Let a directory connection stall this long before expiring it.
+    Changing this requires that **TestingTorNetwork** is set. (Default:
+    5 minutes)
+
+**TestingConsensusMaxDownloadTries** __NUM__::
+    Try this often to download a consensus before giving up. Changing
+    this requires that **TestingTorNetwork** is set. (Default: 8)
+
+**TestingDescriptorMaxDownloadTries** __NUM__::
+    Try this often to download a router descriptor before giving up.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
+
+**TestingMicrodescMaxDownloadTries** __NUM__::
+    Try this often to download a microdesc descriptor before giving up.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
+
+**TestingCertMaxDownloadTries** __NUM__::
+    Try this often to download a v3 authority certificate before giving up.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
 SIGNALS
 -------

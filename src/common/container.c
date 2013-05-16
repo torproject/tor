@@ -243,6 +243,25 @@ smartlist_strings_eq(const smartlist_t *sl1, const smartlist_t *sl2)
   return 1;
 }
 
+/** Return true iff the two lists contain the same ints in the same order,
+ * or if they are both NULL. */
+int
+smartlist_ints_eq(const smartlist_t *sl1, const smartlist_t *sl2)
+{
+  if (sl1 == NULL)
+    return sl2 == NULL;
+  if (sl2 == NULL)
+    return 0;
+  if (smartlist_len(sl1) != smartlist_len(sl2))
+    return 0;
+  SMARTLIST_FOREACH(sl1, int *, cp1, {
+      int *cp2 = smartlist_get(sl2, cp1_sl_idx);
+      if (*cp1 != *cp2)
+        return 0;
+    });
+  return 1;
+}
+
 /** Return true iff <b>sl</b> has some element E such that
  * tor_memeq(E,<b>element</b>,DIGEST_LEN)
  */

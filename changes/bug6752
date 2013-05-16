@@ -1,0 +1,5 @@
+ o Minor features:
+   - Lower directory fetch retry schedules and maximum interval without
+     directory requests, and raise maximum download tries in testing
+     networks. Implements #6752.
+
