@@ -1471,7 +1471,7 @@ AC_CONFIG_FILES([
 if test x$asciidoc = xtrue && test $ASCIIDOC = "none" ; then
   regular_mans=(doc/tor doc/tor-gencert doc/tor-resolve doc/torify)
   for file in $regular_mans ; do
-    if ! [[ -f $file.1.in ]] || ! [[ -f $file.html.in ]] ; then
+    if ! [[ -f $srcdir/$file.1.in ]] || ! [[ -f $srcdir/$file.html.in ]] ; then
       echo "==================================";
       echo;
       echo "You need asciidoc installed to be able to build the manpage.";
