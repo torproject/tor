@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Give a less useless error message when the user asks for an IPv4
+      address on an IPv6-only port, or vice versa.  Fixes bug 8846; bugfix
+      on 0.2.4.7-alpha.
