@@ -3696,7 +3696,7 @@ Changes in version 0.2.3.4-alpha - 2011-09-13
       by an attacker who controls both an introduction point and a
       rendezvous point, and who uses the malleability of AES-CTR to
       alter the encrypted g^x portion of the INTRODUCE1 cell. We think
-      that these attacks is infeasible (requiring the attacker to send
+      that these attacks are infeasible (requiring the attacker to send
       on the order of zettabytes of altered cells in a short interval),
       but we'd rather block them off in case there are any classes of
       this attack that we missed. Reported by Willem Pinckaers.
