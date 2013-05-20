@@ -941,7 +941,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 {
   listener_connection_t *lis_conn;
   connection_t *conn;
-  tor_socket_t s; /* the socket we're going to make */
+  tor_socket_t s = TOR_INVALID_SOCKET;  /* the socket we're going to make */
   or_options_t const *options = get_options();
 #if defined(HAVE_PWD_H) && defined(HAVE_SYS_UN_H)
   struct passwd *pw = NULL;
@@ -989,7 +989,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       /* We need to set IPV6_V6ONLY so that this socket can't get used for
        * IPv4 connections. */
       if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY,
-                     (void*)&one, sizeof(one))<0) {
+                     (void*)&one, sizeof(one)) < 0) {
         int e = tor_socket_errno(s);
         log_warn(LD_NET, "Error setting IPV6_V6ONLY flag: %s",
                  tor_socket_strerror(e));
@@ -1005,7 +1005,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         helpfulhint = ". Is Tor already running?";
       log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
                tor_socket_strerror(e), helpfulhint);
-      tor_close_socket(s);
       goto err;
     }
 
@@ -1013,7 +1012,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       if (listen(s,SOMAXCONN) < 0) {
         log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
                  tor_socket_strerror(tor_socket_errno(s)));
-        tor_close_socket(s);
         goto err;
       }
     }
@@ -1062,7 +1060,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (bind(s, listensockaddr, (socklen_t)sizeof(struct sockaddr_un)) == -1) {
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
-      tor_close_socket(s);
       goto err;
     }
 #ifdef HAVE_PWD_H
@@ -1071,12 +1068,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       if (pw == NULL) {
         log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
                  address, options->User);
-        tor_close_socket(s);
         goto err;
       } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
         log_warn(LD_NET,"Unable to chown() %s socket: %s.",
                  address, strerror(errno));
-        tor_close_socket(s);
         goto err;
       }
     }
@@ -1086,30 +1081,26 @@ connection_listener_new(const struct sockaddr *listensockaddr,
        * platforms. */
       if (chmod(address, 0660) < 0) {
         log_warn(LD_FS,"Unable to make %s group-writable.", address);
-        tor_close_socket(s);
         goto err;
       }
     }
 
-    if (listen(s,SOMAXCONN) < 0) {
+    if (listen(s, SOMAXCONN) < 0) {
       log_warn(LD_NET, "Could not listen on %s: %s", address,
                tor_socket_strerror(tor_socket_errno(s)));
-      tor_close_socket(s);
       goto err;
     }
 #else
     (void)options;
 #endif /* HAVE_SYS_UN_H */
   } else {
-      log_err(LD_BUG,"Got unexpected address family %d.",
-              listensockaddr->sa_family);
-      tor_assert(0);
+    log_err(LD_BUG, "Got unexpected address family %d.",
+            listensockaddr->sa_family);
+    tor_assert(0);
   }
 
-  if (set_socket_nonblocking(s) == -1) {
-    tor_close_socket(s);
+  if (set_socket_nonblocking(s) == -1)
     goto err;
-  }
 
   lis_conn = listener_connection_new(type, listensockaddr->sa_family);
   conn = TO_CONN(lis_conn);
@@ -1169,6 +1160,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   return conn;
 
  err:
+  if (SOCKET_OK(s))
+    tor_close_socket(s);
   return NULL;
 }
 
