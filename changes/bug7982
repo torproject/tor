@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+     - Copy-paste description for PathBias params from man page into or.h
+       comment.  Fixes bug 7982.

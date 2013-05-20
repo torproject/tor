@@ -4002,6 +4002,27 @@ typedef struct {
   /**
    * Parameters for path-bias detection.
    * @{
+   * These options override the default behavior of Tor's (**currently
+   * experimental**) path bias detection algorithm. To try to find broken or
+   * misbehaving guard nodes, Tor looks for nodes where more than a certain
+   * fraction of circuits through that guard fail to get built.
+   *
+   * The PathBiasCircThreshold option controls how many circuits we need to
+   * build through a guard before we make these checks.  The
+   * PathBiasNoticeRate, PathBiasWarnRate and PathBiasExtremeRate options
+   * control what fraction of circuits must succeed through a guard so we
+   * won't write log messages.  If less than PathBiasExtremeRate circuits
+   * succeed *and* PathBiasDropGuards is set to 1, we disable use of that
+   * guard.
+   *
+   * When we have seen more than PathBiasScaleThreshold circuits through a
+   * guard, we scale our observations by 0.5 (governed by the consensus) so
+   * that new observations don't get swamped by old ones.
+   *
+   * By default, or if a negative value is provided for one of these options,
+   * Tor uses reasonable defaults from the networkstatus consensus document.
+   * If no defaults are available there, these options default to 150, .70,
+   * .50, .30, 0, and 300 respectively.
    */
   int PathBiasCircThreshold;
   double PathBiasNoticeRate;
@@ -4014,6 +4035,20 @@ typedef struct {
   /**
    * Parameters for path-bias use detection
    * @{
+   * Similar to the above options, these options override the default behavior
+   * of Tor's (**currently experimental**) path use bias detection algorithm.
+   *
+   * Where as the path bias parameters govern thresholds for successfully
+   * building circuits, these four path use bias parameters govern thresholds
+   * only for circuit usage. Circuits which receive no stream usage are not
+   * counted by this detection algorithm. A used circuit is considered
+   * successful if it is capable of carrying streams or otherwise receiving
+   * well-formed responses to RELAY cells.
+   *
+   * By default, or if a negative value is provided for one of these options,
+   * Tor uses reasonable defaults from the networkstatus consensus document.
+   * If no defaults are available there, these options default to 20, .80,
+   * .60, and 100, respectively.
    */
   int PathBiasUseThreshold;
   double PathBiasNoticeUseRate;
