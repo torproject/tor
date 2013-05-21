@@ -1,0 +1,3 @@
+  o Minor features:
+    - Downgrade "unexpected SENDME" warnings to protocol-warn for 0.2.4,
+      for bug 8093.

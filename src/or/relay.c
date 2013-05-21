@@ -1494,9 +1494,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         if (layer_hint) {
           if (layer_hint->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {
-            /*XXXX024: Downgrade this back to LOG_PROTOCOL_WARN after a while*/
-            log_fn(LOG_WARN, LD_PROTOCOL,
-                   "Bug/attack: unexpected sendme cell from exit relay. "
+            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                   "Unexpected sendme cell from exit relay. "
                    "Closing circ.");
             return -END_CIRC_REASON_TORPROTOCOL;
           }
@@ -1507,9 +1506,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         } else {
           if (circ->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {
-            /*XXXX024: Downgrade this back to LOG_PROTOCOL_WARN after a while*/
-            log_fn(LOG_WARN, LD_PROTOCOL,
-                   "Bug/attack: unexpected sendme cell from client. "
+            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                   "Unexpected sendme cell from client. "
                    "Closing circ (window %d).",
                    circ->package_window);
             return -END_CIRC_REASON_TORPROTOCOL;
