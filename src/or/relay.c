@@ -1494,7 +1494,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         if (layer_hint) {
           if (layer_hint->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {
-            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+            static struct ratelim_t exit_warn_ratelim = RATELIM_INIT(600);
+            log_fn_ratelim(&exit_warn_ratelim, LOG_WARN, LD_PROTOCOL,
                    "Unexpected sendme cell from exit relay. "
                    "Closing circ.");
             return -END_CIRC_REASON_TORPROTOCOL;
@@ -1506,7 +1507,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         } else {
           if (circ->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {
-            log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+            static struct ratelim_t client_warn_ratelim = RATELIM_INIT(600);
+            log_fn_ratelim(&client_warn_ratelim, LOG_WARN, LD_PROTOCOL,
                    "Unexpected sendme cell from client. "
                    "Closing circ (window %d).",
                    circ->package_window);

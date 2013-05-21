@@ -1,0 +1,3 @@
+  o Minor features:
+    - Return the "unexpected sendme" warnings to a warn severity, but make
+      them rate limited. Related to ticket #8093.
