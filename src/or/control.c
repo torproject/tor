@@ -41,6 +41,8 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "rendclient.h"
+#include "rendcommon.h"
 
 #ifndef _WIN32
 #include <pwd.h>
@@ -1713,6 +1715,25 @@ getinfo_helper_dir(control_connection_t *control_conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+  } else if (!strcmpstart(question, "hs/client/desc/id/")) {
+    char *msg;
+    rend_cache_entry_t *e = NULL;
+
+    question += strlen("hs/client/desc/id/");
+    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+      tor_asprintf(&msg, "\"%s\" invalid address.", question);
+      *errmsg = msg;
+      return -1;
+    }
+
+    if (rend_cache_lookup_entry(question, -1, &e) > 0) {
+      /* Descriptor found in cache */
+      *answer = tor_strdup(e->desc);
+    } else {
+      tor_asprintf(&msg, "\"%s\" not found in cache.", question);
+      *errmsg = msg;
+      return -1;
+    }
   } else if (!strcmpstart(question, "md/id/")) {
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"));
     const microdesc_t *md = NULL;
@@ -2176,6 +2197,8 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("md/id/", dir, "Microdescriptors by ID"),
   PREFIX("md/name/", dir, "Microdescriptors by name"),
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
+  PREFIX("hs/client/desc/id", dir,
+         "Hidden Service descriptor in client's cache by onion."),
   PREFIX("net/listeners/", listeners, "Bound addresses by type"),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
