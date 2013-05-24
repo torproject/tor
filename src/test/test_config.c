@@ -170,7 +170,7 @@ test_config_addressmap(void *arg)
  done:
   ;
 }
- 
+
 static int
 is_private_dir(const char* path)
 {
@@ -180,7 +180,7 @@ is_private_dir(const char* path)
     return 0;
   }
 #if !defined (_WIN32) || defined (WINCE)
-  if (st.st_mode != (S_IFDIR | 0700)) {
+  if ((st.st_mode & (S_IFDIR | 0777)) != (S_IFDIR | 0700)) {
     return 0;
   }
 #endif
@@ -190,11 +190,14 @@ is_private_dir(const char* path)
 static void
 test_config_check_or_create_data_subdir(void *arg)
 {
-  or_options_t* options = get_options_mutable();
-  options->DataDirectory = "test_data";
-  const char* subdir = "test_stats";
-  const char* subpath = get_datadir_fname(subdir);
+  or_options_t *options = get_options_mutable();
+  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
+  const char *subdir = "test_stats";
+  const char *subpath = get_datadir_fname(subdir);
   struct stat st;
+  int r;
+  unsigned group_permission;
+  (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
   mkdir(options->DataDirectory);
@@ -202,7 +205,7 @@ test_config_check_or_create_data_subdir(void *arg)
   mkdir(options->DataDirectory, 0700);
 #endif
 
-  int r = stat(subpath, &st);
+  r = stat(subpath, &st);
 
   // The subdirectory shouldn't exist yet,
   // but should be created by the call to check_or_create_data_subdir.
@@ -215,7 +218,7 @@ test_config_check_or_create_data_subdir(void *arg)
   test_assert(!check_or_create_data_subdir(subdir));
 
 #if !defined (_WIN32) || defined (WINCE)
-  unsigned group_permission = st.st_mode | 0070;
+  group_permission = st.st_mode | 0070;
   r = chmod(subpath, group_permission);
 
   if (r) {
@@ -229,16 +232,16 @@ test_config_check_or_create_data_subdir(void *arg)
   test_assert(is_private_dir(subpath));
 #endif
 
-  done:
-    rmdir(subpath);
-    rmdir(options->DataDirectory);
+ done:
+  rmdir(subpath);
+  tor_free(datadir);
 }
 
 static void
-test_config_write_to_data_subdir(void* arg)
+test_config_write_to_data_subdir(void *arg)
 {
   or_options_t* options = get_options_mutable();
-  options->DataDirectory = "test_data";
+  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
   const char* subdir = "test_stats";
   const char* fname = "test_file";
   const char* str =
@@ -258,6 +261,7 @@ test_config_write_to_data_subdir(void* arg)
       "sanctus est Lorem ipsum dolor sit amet.";
   const char* subpath = get_datadir_fname(subdir);
   const char* filepath = get_datadir_fname2(subdir, fname);
+  (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
   mkdir(options->DataDirectory);
@@ -282,6 +286,7 @@ test_config_write_to_data_subdir(void* arg)
   remove(filepath);
   rmdir(subpath);
   rmdir(options->DataDirectory);
+  tor_free(datadir);
 }
 
 /* Test helper function: Make sure that a bridge line gets parsed
@@ -437,8 +442,8 @@ test_config_parse_bridge_line(void *arg)
 struct testcase_t config_tests[] = {
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
-  CONFIG_TEST(check_or_create_data_subdir, 0),
-  CONFIG_TEST(write_to_data_subdir, 0),
+  CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
+  CONFIG_TEST(write_to_data_subdir, TT_FORK),
   END_OF_TESTCASES
 };
 
