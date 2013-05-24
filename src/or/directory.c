@@ -3723,10 +3723,12 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   } SMARTLIST_FOREACH_END(fp);
 }
 
-/** Decide which download schedule we want to use, and then return a
- * pointer to it along with a pointer to its length. Helper function for
- * download_status_increment_failure() and download_status_reset(). */
-static smartlist_t *
+/** Decide which download schedule we want to use based on descriptor type
+ * in <b>dls</b> and whether we are acting as directory <b>server</b>, and
+ * then return a list of int pointers defining download delays in seconds.
+ * Helper function for download_status_increment_failure() and
+ * download_status_reset(). */
+static const smartlist_t *
 find_dl_schedule_and_len(download_status_t *dls, int server)
 {
   switch (dls->schedule) {
@@ -3755,7 +3757,7 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
-  smartlist_t *schedule;
+  const smartlist_t *schedule;
   int increment;
   tor_assert(dls);
   if (status_code != 503 || server) {
@@ -3803,7 +3805,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 void
 download_status_reset(download_status_t *dls)
 {
-  smartlist_t *schedule = find_dl_schedule_and_len(
+  const smartlist_t *schedule = find_dl_schedule_and_len(
                           dls, get_options()->DirPort_set);
 
   dls->n_download_failures = 0;

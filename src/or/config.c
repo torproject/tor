@@ -2315,8 +2315,9 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-/** Return 0 if every setting in <b>options</b> is reasonable, and a
- * permissible transition from <b>old_options</b>. Else return -1.
+/** Return 0 if every setting in <b>options</b> is reasonable, does not
+ * differ from <b>default_options</b> unless in testing Tor networks, and
+ * is a permissible transition from <b>old_options</b>. Else return -1.
  * Should have no side effects, except for normalizing the contents of
  * <b>options</b>.
  *
@@ -3211,33 +3212,43 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "ignore you.");
   }
 
-  if (default_options->TestingV3AuthInitialVotingInterval !=
-              options->TestingV3AuthInitialVotingInterval &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingV3AuthInitialVotingInterval may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+#define CHECK_DEFAULT(arg) \
+  STMT_BEGIN if (default_options->arg != options->arg && \
+      !options->TestingTorNetwork && \
+      !options->UsingTestNetworkDefaults_) { \
+    REJECT("Testing* options may only be changed in testing Tor " \
+           "networks!"); \
+  } STMT_END
+  CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
+  CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
+  CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+  CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
+  CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
+  CHECK_DEFAULT(TestingServerDownloadSchedule);
+  CHECK_DEFAULT(TestingClientDownloadSchedule);
+  CHECK_DEFAULT(TestingServerConsensusDownloadSchedule);
+  CHECK_DEFAULT(TestingClientConsensusDownloadSchedule);
+  CHECK_DEFAULT(TestingBridgeDownloadSchedule);
+  CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
+  CHECK_DEFAULT(TestingDirConnectionMaxStall);
+  CHECK_DEFAULT(TestingConsensusMaxDownloadTries);
+  CHECK_DEFAULT(TestingDescriptorMaxDownloadTries);
+  CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
+  CHECK_DEFAULT(TestingCertMaxDownloadTries);
+#undef CHECK_DEFAULT
+
+  if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
   } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
     REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
 
-  if (default_options->TestingV3AuthInitialVoteDelay !=
-              options->TestingV3AuthInitialVoteDelay &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingV3AuthInitialVoteDelay may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
     REJECT("TestingV3AuthInitialVoteDelay is way too low.");
   }
 
-  if (default_options->TestingV3AuthInitialDistDelay !=
-              options->TestingV3AuthInitialDistDelay &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingV3AuthInitialDistDelay may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
     REJECT("TestingV3AuthInitialDistDelay is way too low.");
   }
 
@@ -3248,124 +3259,49 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "must be less than half TestingV3AuthInitialVotingInterval");
   }
 
-  if (default_options->TestingAuthDirTimeToLearnReachability !=
-              options->TestingAuthDirTimeToLearnReachability &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingAuthDirTimeToLearnReachability may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingAuthDirTimeToLearnReachability < 0) {
+  if (options->TestingAuthDirTimeToLearnReachability < 0) {
     REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
   } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
     COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
   }
 
-  if (default_options->TestingEstimatedDescriptorPropagationTime !=
-              options->TestingEstimatedDescriptorPropagationTime &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingEstimatedDescriptorPropagationTime may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingEstimatedDescriptorPropagationTime < 0) {
+  if (options->TestingEstimatedDescriptorPropagationTime < 0) {
     REJECT("TestingEstimatedDescriptorPropagationTime must be non-negative.");
   } else if (options->TestingEstimatedDescriptorPropagationTime > 60*60) {
     COMPLAIN("TestingEstimatedDescriptorPropagationTime is insanely high.");
   }
 
-  if (!smartlist_ints_eq(options->TestingServerDownloadSchedule,
-                 default_options->TestingServerDownloadSchedule) &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingServerDownloadSchedule may only be changed in testing "
-           "Tor networks!");
-  }
-
-  if (!smartlist_ints_eq(options->TestingClientDownloadSchedule,
-                 default_options->TestingClientDownloadSchedule) &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingClientDownloadSchedule may only be changed in testing "
-           "Tor networks!");
-  }
-
-  if (!smartlist_ints_eq(options->TestingServerConsensusDownloadSchedule,
-                 default_options->TestingServerConsensusDownloadSchedule) &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingServerConsensusDownloadSchedule may only be changed "
-           "in testing Tor networks!");
-  }
-
-  if (!smartlist_ints_eq(options->TestingClientConsensusDownloadSchedule,
-                 default_options->TestingClientConsensusDownloadSchedule) &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingClientConsensusDownloadSchedule may only be changed "
-           "in testing Tor networks!");
-  }
-
-  if (!smartlist_ints_eq(options->TestingBridgeDownloadSchedule,
-                 default_options->TestingBridgeDownloadSchedule) &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingBridgeDownloadSchedule may only be changed in testing "
-           "Tor networks!");
-  }
-
-  if (default_options->TestingClientMaxIntervalWithoutRequest !=
-              options->TestingClientMaxIntervalWithoutRequest &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingClientMaxIntervalWithoutRequest may only be changed "
-           "in testing Tor networks!");
-  } else if (options->TestingClientMaxIntervalWithoutRequest < 1) {
+  if (options->TestingClientMaxIntervalWithoutRequest < 1) {
     REJECT("TestingClientMaxIntervalWithoutRequest is way too low.");
   } else if (options->TestingClientMaxIntervalWithoutRequest > 3600) {
     COMPLAIN("TestingClientMaxIntervalWithoutRequest is insanely high.");
   }
 
-  if (default_options->TestingDirConnectionMaxStall !=
-              options->TestingDirConnectionMaxStall &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingDirConnectionMaxStall may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingDirConnectionMaxStall < 5) {
+  if (options->TestingDirConnectionMaxStall < 5) {
     REJECT("TestingDirConnectionMaxStall is way too low.");
   } else if (options->TestingDirConnectionMaxStall > 3600) {
     COMPLAIN("TestingDirConnectionMaxStall is insanely high.");
   }
 
-  if (default_options->TestingConsensusMaxDownloadTries !=
-              options->TestingConsensusMaxDownloadTries &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingConsensusMaxDownloadTries may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingConsensusMaxDownloadTries < 2) {
+  if (options->TestingConsensusMaxDownloadTries < 2) {
     REJECT("TestingConsensusMaxDownloadTries must be greater than 1.");
   } else if (options->TestingConsensusMaxDownloadTries > 800) {
     COMPLAIN("TestingConsensusMaxDownloadTries is insanely high.");
   }
 
-  if (default_options->TestingDescriptorMaxDownloadTries !=
-              options->TestingDescriptorMaxDownloadTries &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingDescriptorMaxDownloadTries may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingDescriptorMaxDownloadTries < 2) {
+  if (options->TestingDescriptorMaxDownloadTries < 2) {
     REJECT("TestingDescriptorMaxDownloadTries must be greater than 1.");
   } else if (options->TestingDescriptorMaxDownloadTries > 800) {
     COMPLAIN("TestingDescriptorMaxDownloadTries is insanely high.");
   }
 
-  if (default_options->TestingMicrodescMaxDownloadTries !=
-              options->TestingMicrodescMaxDownloadTries &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingMicrodescMaxDownloadTries may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingMicrodescMaxDownloadTries < 2) {
+  if (options->TestingMicrodescMaxDownloadTries < 2) {
     REJECT("TestingMicrodescMaxDownloadTries must be greater than 1.");
   } else if (options->TestingMicrodescMaxDownloadTries > 800) {
     COMPLAIN("TestingMicrodescMaxDownloadTries is insanely high.");
   }
 
-  if (default_options->TestingCertMaxDownloadTries !=
-              options->TestingCertMaxDownloadTries &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingCertMaxDownloadTries may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingCertMaxDownloadTries < 2) {
+  if (options->TestingCertMaxDownloadTries < 2) {
     REJECT("TestingCertMaxDownloadTries must be greater than 1.");
   } else if (options->TestingCertMaxDownloadTries > 800) {
     COMPLAIN("TestingCertMaxDownloadTries is insanely high.");

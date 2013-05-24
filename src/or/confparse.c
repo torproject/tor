@@ -588,7 +588,6 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
   const void *value;
   config_line_t *result;
   smartlist_t *csv_str;
-  char *s;
   tor_assert(options && key);
 
   CONFIG_CHECK(fmt, options);
@@ -676,8 +675,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
         csv_str = smartlist_new();
         SMARTLIST_FOREACH_BEGIN(*(smartlist_t**)value, int *, i)
           {
-            tor_asprintf(&s, "%d", *i);
-            smartlist_add(csv_str, s);
+            smartlist_add_asprintf(csv_str, "%d", *i);
           }
         SMARTLIST_FOREACH_END(i);
         result->value = smartlist_join_strings(csv_str, ",", 0, NULL);

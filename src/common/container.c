@@ -243,8 +243,8 @@ smartlist_strings_eq(const smartlist_t *sl1, const smartlist_t *sl2)
   return 1;
 }
 
-/** Return true iff the two lists contain the same ints in the same order,
- * or if they are both NULL. */
+/** Return true iff the two lists contain the same int pointer values in
+ * the same order, or if they are both NULL. */
 int
 smartlist_ints_eq(const smartlist_t *sl1, const smartlist_t *sl2)
 {
