@@ -839,7 +839,7 @@ typedef enum {
 #define CELL_AUTH_CHALLENGE 130
 #define CELL_AUTHENTICATE 131
 #define CELL_AUTHORIZE 132
-#define CELL_MAX_ 132
+#define CELL_COMMAND_MAX_ 132
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
@@ -1089,7 +1089,7 @@ typedef struct insertion_time_queue_t {
 } insertion_time_queue_t;
 
 /** Number of cells with the same command consecutively added to a circuit
- * queue; used for cell statistics only in TestingTorNetwork mode. */
+ * queue; used for cell statistics only if CELL_STATS events are enabled. */
 typedef struct insertion_command_elem_t {
   struct insertion_command_elem_t *next; /**< Next element in queue. */
   /** Which command did these consecutively added cells have? */
@@ -2756,8 +2756,8 @@ typedef struct {
 
 struct create_cell_t;
 
-/** Entry in the cell stats list of a circuit; used only when
- * TestingTorNetwork is set. */
+/** Entry in the cell stats list of a circuit; used only if CELL_STATS
+ * events are enabled. */
 typedef struct testing_cell_stats_entry_t {
   uint8_t command; /**< cell command number. */
   /** Waiting time in centiseconds if this event is for a removed cell,
@@ -2766,7 +2766,7 @@ typedef struct testing_cell_stats_entry_t {
    * delay would long have been closed. */
   unsigned int waiting_time:22;
   unsigned int removed:1; /**< 0 for added to, 1 for removed from queue. */
-  unsigned int exit_ward:1; /**< 0 for app-ward, 1 for exit-ward. */
+  unsigned int exitward:1; /**< 0 for app-ward, 1 for exit-ward. */
 } testing_cell_stats_entry_t;
 
 /**
@@ -2896,8 +2896,8 @@ typedef struct circuit_t {
   struct circuit_t *prev_active_on_n_chan;
 
   /** Various statistics about cells being added to or removed from this
-   * circuit's queues; used only when TestingTorNetwork is set and cleared
-   * after being sent to control port. */
+   * circuit's queues; used only if CELL_STATS events are enabled and
+   * cleared after being sent to control port. */
   smartlist_t *testing_cell_stats;
 } circuit_t;
 
@@ -3987,6 +3987,9 @@ typedef struct {
 
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
+
+  /** Enable CELL_STATS events.  Only altered on testing networks. */
+  int TestingEnableCellStatsEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help

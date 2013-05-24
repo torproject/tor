@@ -19,6 +19,7 @@
 #include "circuitlist.h"
 #include "circuitstats.h"
 #include "circuituse.h"
+#include "command.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
@@ -45,8 +46,6 @@
 #include <pwd.h>
 #include <sys/resource.h>
 #endif
-
-extern circuit_t *global_circuitlist; /* from circuitlist.c */
 
 #include "procmon.h"
 
@@ -279,7 +278,7 @@ control_update_global_event_mask(void)
       (new_mask & EVENT_CIRC_BANDWIDTH_USED)) {
     circuit_t *circ;
     origin_circuit_t *ocirc;
-    for (circ = global_circuitlist; circ; circ = circ->next) {
+    for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
       if (!CIRCUIT_IS_ORIGIN(circ))
         continue;
       ocirc = TO_ORIGIN_CIRCUIT(circ);
@@ -3944,7 +3943,7 @@ control_event_circ_bandwidth_used(void)
   if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
@@ -4009,64 +4008,126 @@ control_event_conn_bandwidth_used(void)
   return 0;
 }
 
-/** Convert the cell <b>command</b> into a lower-case, human-readable
- * string. */
-static const char *
-cell_command_to_string(uint8_t command)
+/** Helper structure: temporarily stores cell statistics for a circuit. */
+typedef struct cell_stats_t {
+  /** Number of cells added in app-ward direction by command. */
+  uint64_t added_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells added in exit-ward direction by command. */
+  uint64_t added_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in app-ward direction by command. */
+  uint64_t removed_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in exit-ward direction by command. */
+  uint64_t removed_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in app-ward direction by command. */
+  uint64_t total_time_appward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in exit-ward direction by command. */
+  uint64_t total_time_exitward[CELL_COMMAND_MAX_ + 1];
+} cell_stats_t;
+
+/** Helper: iterate over cell statistics of <b>circ</b> and sum up added
+ * cells, removed cells, and waiting times by cell command and direction.
+ * Store results in <b>cell_stats</b>.  Free cell statistics of the
+ * circuit afterwards. */
+static void
+sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
 {
-  switch (command) {
-    case CELL_PADDING: return "padding";
-    case CELL_CREATE: return "create";
-    case CELL_CREATED: return "created";
-    case CELL_RELAY: return "relay";
-    case CELL_DESTROY: return "destroy";
-    case CELL_CREATE_FAST: return "create_fast";
-    case CELL_CREATED_FAST: return "created_fast";
-    case CELL_VERSIONS: return "versions";
-    case CELL_NETINFO: return "netinfo";
-    case CELL_RELAY_EARLY: return "relay_early";
-    case CELL_CREATE2: return "create2";
-    case CELL_CREATED2: return "created2";
-    case CELL_VPADDING: return "vpadding";
-    case CELL_CERTS: return "certs";
-    case CELL_AUTH_CHALLENGE: return "auth_challenge";
-    case CELL_AUTHENTICATE: return "authenticate";
-    case CELL_AUTHORIZE: return "authorize";
-    default: return "unrecognized";
-  }
+  memset(cell_stats, 0, sizeof(cell_stats_t));
+  SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
+                          testing_cell_stats_entry_t *, ent) {
+    tor_assert(ent->command <= CELL_COMMAND_MAX_);
+    if (!ent->removed && !ent->exitward) {
+      cell_stats->added_cells_appward[ent->command] += 1;
+    } else if (!ent->removed && ent->exitward) {
+      cell_stats->added_cells_exitward[ent->command] += 1;
+    } else if (!ent->exitward) {
+      cell_stats->removed_cells_appward[ent->command] += 1;
+      cell_stats->total_time_appward[ent->command] += ent->waiting_time * 10;
+    } else {
+      cell_stats->removed_cells_exitward[ent->command] += 1;
+      cell_stats->total_time_exitward[ent->command] += ent->waiting_time * 10;
+    }
+    tor_free(ent);
+  } SMARTLIST_FOREACH_END(ent);
+  smartlist_free(circ->testing_cell_stats);
+  circ->testing_cell_stats = NULL;
 }
 
 /** Helper: append a cell statistics string to <code>event_parts</code>,
  * prefixed with <code>key</code>=.  Statistics consist of comma-separated
  * key:value pairs with lower-case command strings as keys and cell
  * numbers or total waiting times as values.  A key:value pair is included
- * if the entry in <code>include_if_positive</code> is positive, but with
+ * if the entry in <code>include_if_non_zero</code> is not zero, but with
  * the (possibly zero) entry from <code>number_to_include</code>.  If no
- * entry in <code>include_if_positive</code> is positive, no string will
+ * entry in <code>include_if_non_zero</code> is positive, no string will
  * be added to <code>event_parts</code>. */
 static void
 append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
-                             uint64_t *include_if_positive,
+                             uint64_t *include_if_non_zero,
                              uint64_t *number_to_include)
 {
   smartlist_t *key_value_strings = smartlist_new();
   int i;
-  for (i = 0; i <= CELL_MAX_; i++) {
-    if (include_if_positive[i] > 0) {
+  for (i = 0; i <= CELL_COMMAND_MAX_; i++) {
+    if (include_if_non_zero[i] > 0) {
       smartlist_add_asprintf(key_value_strings, "%s:"U64_FORMAT,
                              cell_command_to_string(i),
                              U64_PRINTF_ARG(number_to_include[i]));
     }
   }
-  if (key_value_strings->num_used > 0) {
+  if (smartlist_len(key_value_strings) > 0) {
     char *joined = smartlist_join_strings(key_value_strings, ",", 0, NULL);
-    char *result;
-    tor_asprintf(&result, "%s=%s", key, joined);
-    smartlist_add(event_parts, result);
+    smartlist_add_asprintf(event_parts, "%s=%s", key, joined);
     SMARTLIST_FOREACH(key_value_strings, char *, cp, tor_free(cp));
     tor_free(joined);
   }
   smartlist_free(key_value_strings);
+}
+
+/** Helper: format <b>cell_stats</b> for <b>circ</b> for inclusion in a
+ * CELL_STATS event and write result string to <b>event_string</b>. */
+static void
+format_cell_stats(char **event_string, circuit_t *circ,
+                  cell_stats_t *cell_stats)
+{
+  smartlist_t *event_parts = smartlist_new();
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    smartlist_add_asprintf(event_parts, "ID=%lu",
+                 (unsigned long)ocirc->global_identifier);
+  } else {
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+    smartlist_add_asprintf(event_parts, "InboundQueue=%lu",
+                 (unsigned long)or_circ->p_circ_id);
+    smartlist_add_asprintf(event_parts, "InboundConn="U64_FORMAT,
+                 U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
+    append_cell_stats_by_command(event_parts, "InboundAdded",
+                                 cell_stats->added_cells_appward,
+                                 cell_stats->added_cells_appward);
+    append_cell_stats_by_command(event_parts, "InboundRemoved",
+                                 cell_stats->removed_cells_appward,
+                                 cell_stats->removed_cells_appward);
+    append_cell_stats_by_command(event_parts, "InboundTime",
+                                 cell_stats->removed_cells_appward,
+                                 cell_stats->total_time_appward);
+  }
+  if (circ->n_chan) {
+    smartlist_add_asprintf(event_parts, "OutboundQueue=%lu",
+                     (unsigned long)circ->n_circ_id);
+    smartlist_add_asprintf(event_parts, "OutboundConn="U64_FORMAT,
+                 U64_PRINTF_ARG(circ->n_chan->global_identifier));
+    append_cell_stats_by_command(event_parts, "OutboundAdded",
+                                 cell_stats->added_cells_exitward,
+                                 cell_stats->added_cells_exitward);
+    append_cell_stats_by_command(event_parts, "OutboundRemoved",
+                                 cell_stats->removed_cells_exitward,
+                                 cell_stats->removed_cells_exitward);
+    append_cell_stats_by_command(event_parts, "OutboundTime",
+                                 cell_stats->removed_cells_exitward,
+                                 cell_stats->total_time_exitward);
+  }
+  *event_string = smartlist_join_strings(event_parts, " ", 0, NULL);
+  SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));
+  smartlist_free(event_parts);
 }
 
 /** A second or more has elapsed: tell any interested control connection
@@ -4074,97 +4135,23 @@ append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
 int
 control_event_circuit_cell_stats(void)
 {
-  /* These arrays temporarily consume slightly over 6 KiB on the stack
-   * every second, most of which are wasted for the non-existant commands
-   * between CELL_RELAY_EARLY (9) and CELL_VPADDING (128).  But nothing
-   * beats the stack when it comes to performance. */
-  uint64_t added_cells_appward[CELL_MAX_ + 1],
-           added_cells_exitward[CELL_MAX_ + 1],
-           removed_cells_appward[CELL_MAX_ + 1],
-           removed_cells_exitward[CELL_MAX_ + 1],
-           total_time_appward[CELL_MAX_ + 1],
-           total_time_exitward[CELL_MAX_ + 1];
   circuit_t *circ;
-  if (!get_options()->TestingTorNetwork ||
+  cell_stats_t *cell_stats;
+  char *event_string;
+  if (!get_options()->TestingEnableCellStatsEvent ||
       !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
     return 0;
-  for (circ = global_circuitlist; circ; circ = circ->next) {
-    smartlist_t *event_parts;
-    char *event_string;
-
+  cell_stats = tor_malloc(sizeof(cell_stats_t));;
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (!circ->testing_cell_stats)
       continue;
-
-    memset(added_cells_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    memset(added_cells_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    memset(removed_cells_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    memset(removed_cells_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    memset(total_time_appward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    memset(total_time_exitward, 0, (CELL_MAX_ + 1) * sizeof(uint64_t));
-    SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
-                            testing_cell_stats_entry_t *, ent) {
-      tor_assert(ent->command <= CELL_MAX_);
-      if (!ent->removed && !ent->exit_ward) {
-        added_cells_appward[ent->command] += 1;
-      } else if (!ent->removed && ent->exit_ward) {
-        added_cells_exitward[ent->command] += 1;
-      } else if (!ent->exit_ward) {
-        removed_cells_appward[ent->command] += 1;
-        total_time_appward[ent->command] += ent->waiting_time * 10;
-      } else {
-        removed_cells_exitward[ent->command] += 1;
-        total_time_exitward[ent->command] += ent->waiting_time * 10;
-      }
-      tor_free(ent);
-    } SMARTLIST_FOREACH_END(ent);
-    smartlist_free(circ->testing_cell_stats);
-    circ->testing_cell_stats = NULL;
-
-    event_parts = smartlist_new();
-    if (CIRCUIT_IS_ORIGIN(circ)) {
-      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-      char *id_string;
-      tor_asprintf(&id_string, "ID=%lu",
-                   (unsigned long)ocirc->global_identifier);
-      smartlist_add(event_parts, id_string);
-    } else {
-      or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-      char *queue_string, *conn_string;
-      tor_asprintf(&queue_string, "InboundQueue=%lu",
-                   (unsigned long)or_circ->p_circ_id);
-      tor_asprintf(&conn_string, "InboundConn="U64_FORMAT,
-                   U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
-      smartlist_add(event_parts, queue_string);
-      smartlist_add(event_parts, conn_string);
-      append_cell_stats_by_command(event_parts, "InboundAdded",
-                  added_cells_appward, added_cells_appward);
-      append_cell_stats_by_command(event_parts, "InboundRemoved",
-                  removed_cells_appward, removed_cells_appward);
-      append_cell_stats_by_command(event_parts, "InboundTime",
-                  removed_cells_appward, total_time_appward);
-    }
-    if (circ->n_chan) {
-      char *queue_string, *conn_string;
-      tor_asprintf(&queue_string, "OutboundQueue=%lu",
-                       (unsigned long)circ->n_circ_id);
-      tor_asprintf(&conn_string, "OutboundConn="U64_FORMAT,
-                   U64_PRINTF_ARG(circ->n_chan->global_identifier));
-      smartlist_add(event_parts, queue_string);
-      smartlist_add(event_parts, conn_string);
-      append_cell_stats_by_command(event_parts, "OutboundAdded",
-                  added_cells_exitward, added_cells_exitward);
-      append_cell_stats_by_command(event_parts, "OutboundRemoved",
-                  removed_cells_exitward, removed_cells_exitward);
-      append_cell_stats_by_command(event_parts, "OutboundTime",
-                  removed_cells_exitward, total_time_exitward);
-    }
-    event_string = smartlist_join_strings(event_parts, " ", 0, NULL);
+    sum_up_cell_stats_by_command(circ, cell_stats);
+    format_cell_stats(&event_string, circ, cell_stats);
     send_control_event(EVENT_CELL_STATS, ALL_FORMATS,
                        "650 CELL_STATS %s\r\n", event_string);
-    SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));
-    smartlist_free(event_parts);
     tor_free(event_string);
   }
+  tor_free(cell_stats);
   return 0;
 }
 
