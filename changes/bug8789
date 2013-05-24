@@ -1,0 +1,3 @@
+   o Code simplifications and refactoring:
+     - Clean up exit path from connection_listener_new. Closes bug
+       8789. Patch from Arlo Breault.

@@ -940,7 +940,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                            const port_cfg_t *port_cfg)
 {
   listener_connection_t *lis_conn;
-  connection_t *conn;
+  connection_t *conn = NULL;
   tor_socket_t s = TOR_INVALID_SOCKET;  /* the socket we're going to make */
   or_options_t const *options = get_options();
 #if defined(HAVE_PWD_H) && defined(HAVE_SYS_UN_H)
@@ -1106,6 +1106,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   conn = TO_CONN(lis_conn);
   conn->socket_family = listensockaddr->sa_family;
   conn->s = s;
+  s = TOR_INVALID_SOCKET; /* Prevent double-close */
   conn->address = tor_strdup(address);
   conn->port = gotPort;
   tor_addr_copy(&conn->addr, &addr);
@@ -1141,7 +1142,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
-    connection_free(conn);
     goto err;
   }
 
@@ -1162,6 +1162,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
  err:
   if (SOCKET_OK(s))
     tor_close_socket(s);
+  if (conn)
+    connection_free(conn);
+
   return NULL;
 }
 
