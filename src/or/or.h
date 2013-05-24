@@ -1249,11 +1249,13 @@ typedef struct connection_t {
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /** Bytes read since last call to control_event_conn_bandwidth_used() */
-  uint32_t n_read;
+  /** Bytes read since last call to control_event_conn_bandwidth_used().
+   * Only used if we're configured to emit CONN_BW events. */
+  uint32_t n_read_conn_bw;
 
-  /** Bytes written since last call to control_event_conn_bandwidth_used() */
-  uint32_t n_written;
+  /** Bytes written since last call to control_event_conn_bandwidth_used().
+   * Only used if we're configured to emit CONN_BW events. */
+  uint32_t n_written_conn_bw;
 } connection_t;
 
 /** Subtype of connection_t; used for a listener socket. */
@@ -3982,6 +3984,9 @@ typedef struct {
 
   /** Minimum value for the Fast flag threshold on testing networks. */
   uint64_t TestingMinFastFlagThreshold;
+
+  /** Enable CONN_BW events.  Only altered on testing networks. */
+  int TestingEnableConnBwEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help

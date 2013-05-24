@@ -2005,6 +2005,7 @@ The following options are used for running a testing Tor network.
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
        TestingEstimatedDescriptorPropagationTime 0 minutes
+       TestingEnableConnBwEvent 1
 
 **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
     Like V3AuthVotingInterval, but for initial voting interval before the first
@@ -2034,6 +2035,11 @@ The following options are used for running a testing Tor network.
 **TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken
     from the consensus when TestingTorNetwork is set. (Default: 0.)
+
+**TestingEnableConnBwEvent** **0**|**1**::
+    If this option is set, then Tor controllers may register for CONN_BW
+    events.  Changing this requires that **TestingTorNetwork** is set.
+    (Default: 0)
 
 
 SIGNALS

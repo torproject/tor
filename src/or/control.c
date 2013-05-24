@@ -3967,10 +3967,10 @@ int
 control_event_conn_bandwidth(connection_t *conn)
 {
   const char *conn_type_str;
-  if (!get_options()->TestingTorNetwork ||
+  if (!get_options()->TestingEnableConnBwEvent ||
       !EVENT_IS_INTERESTING(EVENT_CONN_BW))
     return 0;
-  if (!conn->n_read && !conn->n_written)
+  if (!conn->n_read_conn_bw && !conn->n_written_conn_bw)
     return 0;
   switch (conn->type) {
     case CONN_TYPE_OR:
@@ -3990,9 +3990,9 @@ control_event_conn_bandwidth(connection_t *conn)
                      "READ=%lu WRITTEN=%lu\r\n",
                      U64_PRINTF_ARG(conn->global_identifier),
                      conn_type_str,
-                     (unsigned long)conn->n_read,
-                     (unsigned long)conn->n_written);
-  conn->n_written = conn->n_read = 0;
+                     (unsigned long)conn->n_read_conn_bw,
+                     (unsigned long)conn->n_written_conn_bw);
+  conn->n_written_conn_bw = conn->n_read_conn_bw = 0;
   return 0;
 }
 
@@ -4001,7 +4001,7 @@ control_event_conn_bandwidth(connection_t *conn)
 int
 control_event_conn_bandwidth_used(void)
 {
-  if (get_options()->TestingTorNetwork &&
+  if (get_options()->TestingEnableConnBwEvent &&
       EVENT_IS_INTERESTING(EVENT_CONN_BW)) {
     SMARTLIST_FOREACH(get_connection_array(), connection_t *, conn,
                       control_event_conn_bandwidth(conn));

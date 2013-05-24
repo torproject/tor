@@ -3224,16 +3224,16 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
       }
     }
 
-    /* In TestingTorNetwork mode, update conn->n_read for OR/DIR/EXIT
-     * connections, checking for overflow. */
-    if (get_options()->TestingTorNetwork &&
+    /* If CONN_BW events are enabled, update conn->n_read_conn_bw for
+     * OR/DIR/EXIT connections, checking for overflow. */
+    if (get_options()->TestingEnableConnBwEvent &&
        (conn->type == CONN_TYPE_OR ||
         conn->type == CONN_TYPE_DIR ||
         conn->type == CONN_TYPE_EXIT)) {
-      if (PREDICT_LIKELY(UINT32_MAX - conn->n_read > n_read))
-        conn->n_read += (int)n_read;
+      if (PREDICT_LIKELY(UINT32_MAX - conn->n_read_conn_bw > n_read))
+        conn->n_read_conn_bw += (int)n_read;
       else
-        conn->n_read = UINT32_MAX;
+        conn->n_read_conn_bw = UINT32_MAX;
     }
   }
 
@@ -3691,16 +3691,16 @@ connection_handle_write_impl(connection_t *conn, int force)
     }
   }
 
-  /* In TestingTorNetwork mode, update conn->n_written for OR/DIR/EXIT
-   * connections, checking for overflow. */
-  if (n_written && get_options()->TestingTorNetwork &&
+  /* If CONN_BW events are enabled, update conn->n_written_conn_bw for
+   * OR/DIR/EXIT connections, checking for overflow. */
+  if (n_written && get_options()->TestingEnableConnBwEvent &&
      (conn->type == CONN_TYPE_OR ||
       conn->type == CONN_TYPE_DIR ||
       conn->type == CONN_TYPE_EXIT)) {
-    if (PREDICT_LIKELY(UINT32_MAX - conn->n_written > n_written))
-      conn->n_written += (int)n_written;
+    if (PREDICT_LIKELY(UINT32_MAX - conn->n_written_conn_bw > n_written))
+      conn->n_written_conn_bw += (int)n_written;
     else
-      conn->n_written = UINT32_MAX;
+      conn->n_written_conn_bw = UINT32_MAX;
   }
 
   connection_buckets_decrement(conn, approx_time(), n_read, n_written);
