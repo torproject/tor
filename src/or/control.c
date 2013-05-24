@@ -3858,18 +3858,17 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   }
   ncircs += connection_or_get_num_circuits(conn);
   if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
-    tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",
-                 reason ? " " : "", ncircs);
+    tor_snprintf(ncircs_buf, sizeof(ncircs_buf), " NCIRCS=%d", ncircs);
   }
 
   orconn_target_get_name(name, sizeof(name), conn);
   send_control_event(EVENT_OR_CONN_STATUS, ALL_FORMATS,
-                              "650 ORCONN %s %s ID="U64_FORMAT" %s%s%s\r\n",
+                              "650 ORCONN %s %s%s%s%s ID="U64_FORMAT"\r\n",
                               name, status,
-                              U64_PRINTF_ARG(conn->base_.global_identifier),
-                              reason ? "REASON=" : "",
+                              reason ? " REASON=" : "",
                               orconn_end_reason_to_control_string(reason),
-                              ncircs_buf);
+                              ncircs_buf,
+                              U64_PRINTF_ARG(conn->base_.global_identifier));
 
   return 0;
 }
