@@ -59,6 +59,10 @@ char *options_get_datadir_fname2_suffix(const or_options_t *options,
 #define get_datadir_fname_suffix(sub1, suffix) \
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
+int check_or_create_data_subdir(const char *subdir);
+int write_to_data_subdir(const char* subdir, const char* fname,
+                         const char* str, const char* descr);
+
 int get_num_cpus(const or_options_t *options);
 
 const smartlist_t *get_configured_ports(void);

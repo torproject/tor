@@ -5961,6 +5961,43 @@ options_get_datadir_fname2_suffix(const or_options_t *options,
   return fname;
 }
 
+/** Check wether the data directory has a private subdirectory
+ * <b>subdir</b>. If not, try to create it. Return 0 on success,
+ * -1 otherwise. */
+int
+check_or_create_data_subdir(const char *subdir)
+{
+  char *statsdir = get_datadir_fname(subdir);
+  int return_val = 0;
+
+  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+    log_warn(LD_HIST, "Unable to create %s/ directory!", subdir);
+    return_val = -1;
+  }
+  tor_free(statsdir);
+  return return_val;
+}
+
+/** Create a file named <b>fname</b> with contents <b>str</b> in the
+ * subdirectory <b>subdir</b> of the data directory. <b>descr</b>
+ * should be a short description of the file's content and will be
+ * used for the warning message, if it's present and the write process
+ * fails. Return 0 on success, -1 otherwise.*/
+int
+write_to_data_subdir(const char* subdir, const char* fname,
+                     const char* str, const char* descr)
+{
+  char *filename = get_datadir_fname2(subdir, fname);
+  int return_val = 0;
+
+  if (write_str_to_file(filename, str, 0) < 0) {
+    log_warn(LD_HIST, "Unable to write %s to disk!", descr ? descr : fname);
+    return_val = -1;
+  }
+  tor_free(filename);
+  return return_val;
+}
+
 /** Given a file name check to see whether the file exists but has not been
  * modified for a very long time.  If so, remove it. */
 void

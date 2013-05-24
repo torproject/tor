@@ -171,6 +171,124 @@ test_config_addressmap(void *arg)
   ;
 }
 
+static int
+is_private_dir(const char* path)
+{
+  struct stat st;
+  int r = stat(path, &st);
+  if (r) {
+    return 0;
+  }
+#if !defined (_WIN32) || defined (WINCE)
+  if ((st.st_mode & (S_IFDIR | 0777)) != (S_IFDIR | 0700)) {
+    return 0;
+  }
+#endif
+  return 1;
+}
+
+static void
+test_config_check_or_create_data_subdir(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
+  const char *subdir = "test_stats";
+  const char *subpath = get_datadir_fname(subdir);
+  struct stat st;
+  int r;
+  unsigned group_permission;
+  (void)arg;
+
+#if defined (_WIN32) && !defined (WINCE)
+  mkdir(options->DataDirectory);
+#else
+  mkdir(options->DataDirectory, 0700);
+#endif
+
+  r = stat(subpath, &st);
+
+  // The subdirectory shouldn't exist yet,
+  // but should be created by the call to check_or_create_data_subdir.
+  test_assert(r && (errno == ENOENT));
+  test_assert(!check_or_create_data_subdir(subdir));
+  test_assert(is_private_dir(subpath));
+
+  // The check should return 0, if the directory already exists
+  // and is private to the user.
+  test_assert(!check_or_create_data_subdir(subdir));
+
+#if !defined (_WIN32) || defined (WINCE)
+  group_permission = st.st_mode | 0070;
+  r = chmod(subpath, group_permission);
+
+  if (r) {
+    test_fail_msg("Changing permissions for the subdirectory failed.");
+  }
+
+  // If the directory exists, but its mode is too permissive
+  // a call to check_or_create_data_subdir should reset the mode.
+  test_assert(!is_private_dir(subpath));
+  test_assert(!check_or_create_data_subdir(subdir));
+  test_assert(is_private_dir(subpath));
+#endif
+
+ done:
+  rmdir(subpath);
+  tor_free(datadir);
+}
+
+static void
+test_config_write_to_data_subdir(void *arg)
+{
+  or_options_t* options = get_options_mutable();
+  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
+  const char* subdir = "test_stats";
+  const char* fname = "test_file";
+  const char* str =
+      "Lorem ipsum dolor sit amet, consetetur sadipscing\n"
+      "elitr, sed diam nonumy eirmod\n"
+      "tempor invidunt ut labore et dolore magna aliquyam\n"
+      "erat, sed diam voluptua.\n"
+      "At vero eos et accusam et justo duo dolores et ea\n"
+      "rebum. Stet clita kasd gubergren,\n"
+      "no sea takimata sanctus est Lorem ipsum dolor sit amet.\n"
+      "Lorem ipsum dolor sit amet,\n"
+      "consetetur sadipscing elitr, sed diam nonumy eirmod\n"
+      "tempor invidunt ut labore et dolore\n"
+      "magna aliquyam erat, sed diam voluptua. At vero eos et\n"
+      "accusam et justo duo dolores et\n"
+      "ea rebum. Stet clita kasd gubergren, no sea takimata\n"
+      "sanctus est Lorem ipsum dolor sit amet.";
+  const char* subpath = get_datadir_fname(subdir);
+  const char* filepath = get_datadir_fname2(subdir, fname);
+  (void)arg;
+
+#if defined (_WIN32) && !defined (WINCE)
+  mkdir(options->DataDirectory);
+#else
+  mkdir(options->DataDirectory, 0700);
+#endif
+
+  // Write attempt shoudl fail, if subdirectory doesn't exist.
+  test_assert(write_to_data_subdir(subdir, fname, str, NULL));
+  check_or_create_data_subdir(subdir);
+
+  // Content of file after write attempt should be
+  // equal to the original string.
+  test_assert(!write_to_data_subdir(subdir, fname, str, NULL));
+  test_streq(read_file_to_str(filepath, 0, NULL), str);
+
+  // A second write operation should overwrite the old content.
+  test_assert(!write_to_data_subdir(subdir, fname, str, NULL));
+  test_streq(read_file_to_str(filepath, 0, NULL), str);
+
+ done:
+  remove(filepath);
+  rmdir(subpath);
+  rmdir(options->DataDirectory);
+  tor_free(datadir);
+}
+
 /* Test helper function: Make sure that a bridge line gets parsed
  * properly. Also make sure that the resulting bridge_line_t structure
  * has its fields set correctly. */
@@ -324,6 +442,8 @@ test_config_parse_bridge_line(void *arg)
 struct testcase_t config_tests[] = {
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
+  CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
+  CONFIG_TEST(write_to_data_subdir, TT_FORK),
   END_OF_TESTCASES
 };
 

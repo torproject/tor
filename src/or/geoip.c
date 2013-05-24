@@ -1132,7 +1132,7 @@ geoip_format_dirreq_stats(time_t now)
 time_t
 geoip_dirreq_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *str = NULL;
 
   if (!start_of_dirreq_stats_interval)
     return 0; /* Not initialized. */
@@ -1146,21 +1146,13 @@ geoip_dirreq_stats_write(time_t now)
   str = geoip_format_dirreq_stats(now);
 
   /* Write dirreq-stats string to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-    goto done;
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "dirreq-stats", str, "dirreq statistics");
+    /* Reset measurement interval start. */
+    geoip_reset_dirreq_stats(now);
   }
-  filename = get_datadir_fname2("stats", "dirreq-stats");
-  if (write_str_to_file(filename, str, 0) < 0)
-    log_warn(LD_HIST, "Unable to write dirreq statistics to disk!");
-
-  /* Reset measurement interval start. */
-  geoip_reset_dirreq_stats(now);
 
  done:
-  tor_free(statsdir);
-  tor_free(filename);
   tor_free(str);
   return start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL;
 }
@@ -1297,7 +1289,7 @@ format_bridge_stats_controller(time_t now)
 time_t
 geoip_bridge_stats_write(time_t now)
 {
-  char *filename = NULL, *val = NULL, *statsdir = NULL;
+  char *val = NULL;
 
   /* Check if 24 hours have passed since starting measurements. */
   if (now < start_of_bridge_stats_interval + WRITE_STATS_INTERVAL)
@@ -1317,24 +1309,20 @@ geoip_bridge_stats_write(time_t now)
   start_of_bridge_stats_interval = now;
 
   /* Write it to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0)
-    goto done;
-  filename = get_datadir_fname2("stats", "bridge-stats");
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "bridge-stats",
+                         bridge_stats_extrainfo, "bridge statistics");
 
-  write_str_to_file(filename, bridge_stats_extrainfo, 0);
-
-  /* Tell the controller, "hey, there are clients!" */
-  {
-    char *controller_str = format_bridge_stats_controller(now);
-    if (controller_str)
-      control_event_clients_seen(controller_str);
-    tor_free(controller_str);
+    /* Tell the controller, "hey, there are clients!" */
+    {
+      char *controller_str = format_bridge_stats_controller(now);
+      if (controller_str)
+        control_event_clients_seen(controller_str);
+      tor_free(controller_str);
+    }
   }
- done:
-  tor_free(filename);
-  tor_free(statsdir);
 
+ done:
   return start_of_bridge_stats_interval + WRITE_STATS_INTERVAL;
 }
 
@@ -1436,7 +1424,7 @@ geoip_format_entry_stats(time_t now)
 time_t
 geoip_entry_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL, *str = NULL;
+  char *str = NULL;
 
   if (!start_of_entry_stats_interval)
     return 0; /* Not initialized. */
@@ -1450,21 +1438,14 @@ geoip_entry_stats_write(time_t now)
   str = geoip_format_entry_stats(now);
 
   /* Write entry-stats string to disk. */
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
-    log_warn(LD_HIST, "Unable to create stats/ directory!");
-    goto done;
-  }
-  filename = get_datadir_fname2("stats", "entry-stats");
-  if (write_str_to_file(filename, str, 0) < 0)
-    log_warn(LD_HIST, "Unable to write entry statistics to disk!");
+  if (!check_or_create_data_subdir("stats")) {
+    write_to_data_subdir("stats", "entry-stats", str, "entry statistics");
 
-  /* Reset measurement interval start. */
-  geoip_reset_entry_stats(now);
+    /* Reset measurement interval start. */
+    geoip_reset_entry_stats(now);
+  }
 
  done:
-  tor_free(statsdir);
-  tor_free(filename);
   tor_free(str);
   return start_of_entry_stats_interval + WRITE_STATS_INTERVAL;
 }
