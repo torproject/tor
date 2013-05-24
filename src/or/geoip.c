@@ -1311,7 +1311,7 @@ geoip_bridge_stats_write(time_t now)
   /* Write it to disk. */
   if (!check_or_create_data_subdir("stats")) {
     write_to_data_subdir("stats", "bridge-stats",
-            bridge_stats_extrainfo, "bridge statistics");
+                         bridge_stats_extrainfo, "bridge statistics");
 
     /* Tell the controller, "hey, there are clients!" */
     {
@@ -1439,10 +1439,10 @@ geoip_entry_stats_write(time_t now)
 
   /* Write entry-stats string to disk. */
   if (!check_or_create_data_subdir("stats")) {
-      write_to_data_subdir("stats", "entry-stats", str, "entry statistics");
+    write_to_data_subdir("stats", "entry-stats", str, "entry statistics");
 
-      /* Reset measurement interval start. */
-      geoip_reset_entry_stats(now);
+    /* Reset measurement interval start. */
+    geoip_reset_entry_stats(now);
   }
 
  done:
