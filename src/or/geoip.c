@@ -1146,7 +1146,7 @@ geoip_dirreq_stats_write(time_t now)
   str = geoip_format_dirreq_stats(now);
 
   /* Write dirreq-stats string to disk. */
-  if (check_or_create_data_subdir("stats") < 0) {
+  if (!check_or_create_data_subdir("stats")) {
     write_to_data_subdir("stats", "dirreq-stats", str, "dirreq statistics");
     /* Reset measurement interval start. */
     geoip_reset_dirreq_stats(now);
