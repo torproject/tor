@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - Detect a missing asciidoc, and warn the user about it, during
+      configure, rather than at build time. Fixes issue 6506. Patch
+      from Arlo Breault.
