@@ -1479,11 +1479,11 @@ typedef struct or_connection_t {
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
-  /** Last emptied read token bucket in msec since midnight; only used in
-   * TestingTorNetwork mode. */
+  /** Last emptied read token bucket in msec since midnight; only used if
+   * TB_EMPTY events are enabled. */
   uint32_t read_emptied_time;
-  /** Last emptied write token bucket in msec since midnight; only used in
-   * TestingTorNetwork mode. */
+  /** Last emptied write token bucket in msec since midnight; only used if
+   * TB_EMPTY events are enabled. */
   uint32_t write_emptied_time;
 } or_connection_t;
 
@@ -3990,6 +3990,9 @@ typedef struct {
 
   /** Enable CELL_STATS events.  Only altered on testing networks. */
   int TestingEnableCellStatsEvent;
+
+  /** Enable TB_EMPTY events.  Only altered on testing networks. */
+  int TestingEnableTbEmptyEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help

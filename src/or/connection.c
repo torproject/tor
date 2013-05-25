@@ -2541,25 +2541,33 @@ record_num_bytes_transferred(connection_t *conn,
 #endif
 
 #ifndef USE_BUFFEREVENTS
-/** Last emptied global or relay buckets in msec since midnight; only used
- * in TestingTorNetwork mode. */
+/** Last time at which the global or relay buckets were emptied in msec
+ * since midnight. */
 static uint32_t global_relayed_read_emptied = 0,
                 global_relayed_write_emptied = 0,
                 global_read_emptied = 0,
                 global_write_emptied = 0;
 
-/** Check if a bucket has just run out of tokens, and if so, note the
- * timestamp for TB_EMPTY events; only used in TestingTorNetwork mode. */
-static void
-connection_buckets_empty_ts(uint32_t *timestamp_var, int tokens_before,
-                            size_t tokens_removed)
+/** Helper: convert given <b>tvnow</b> time value to milliseconds since
+ * midnight. */
+static uint32_t
+msec_since_midnight(struct timeval tvnow)
 {
-  if (tokens_before > 0 && tokens_before - (int)tokens_removed <= 0) {
-    struct timeval tvnow;
-    tor_gettimeofday_cached(&tvnow);
-    *timestamp_var = (uint32_t)(((tvnow.tv_sec % 86400L) * 1000L) +
-        ((uint32_t)tvnow.tv_usec / (uint32_t)1000L));
-  }
+  return (uint32_t)(((tvnow.tv_sec % 86400L) * 1000L) +
+         ((uint32_t)tvnow.tv_usec / (uint32_t)1000L));
+}
+
+/** Check if a bucket which had <b>tokens_before</b> tokens and which got
+ * <b>tokens_removed</b> tokens removed at timestamp <b>tvnow</b> has run
+ * out of tokens, and if so, note the milliseconds since midnight in
+ * <b>timestamp_var</b> for the next TB_EMPTY event. */
+static void
+connection_buckets_note_empty_ts(uint32_t *timestamp_var,
+                                 int tokens_before, size_t tokens_removed,
+                                 struct timeval tvnow)
+{
+  if (tokens_before > 0 && (uint32_t)tokens_before <= tokens_removed)
+    *timestamp_var = msec_since_midnight(tvnow);
 }
 
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
@@ -2586,23 +2594,25 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   /* If one or more of our token buckets ran dry just now, note the
    * timestamp for TB_EMPTY events. */
-  if (get_options()->TestingTorNetwork) {
+  if (get_options()->TestingEnableTbEmptyEvent) {
+    struct timeval tvnow;
+    tor_gettimeofday_cached(&tvnow);
     if (connection_counts_as_relayed_traffic(conn, now)) {
-      connection_buckets_empty_ts(&global_relayed_read_emptied,
-                                  global_relayed_read_bucket, num_read);
-      connection_buckets_empty_ts(&global_relayed_write_emptied,
-                                  global_relayed_write_bucket, num_written);
+      connection_buckets_note_empty_ts(&global_relayed_read_emptied,
+                         global_relayed_read_bucket, num_read, tvnow);
+      connection_buckets_note_empty_ts(&global_relayed_write_emptied,
+                         global_relayed_write_bucket, num_written, tvnow);
     }
-    connection_buckets_empty_ts(&global_read_emptied, global_read_bucket,
-                                num_read);
-    connection_buckets_empty_ts(&global_write_emptied, global_write_bucket,
-                                num_written);
+    connection_buckets_note_empty_ts(&global_read_emptied,
+                       global_read_bucket, num_read, tvnow);
+    connection_buckets_note_empty_ts(&global_write_emptied,
+                       global_write_bucket, num_written, tvnow);
     if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
-      connection_buckets_empty_ts(&or_conn->read_emptied_time,
-                                  or_conn->read_bucket, num_read);
-      connection_buckets_empty_ts(&or_conn->write_emptied_time,
-                                  or_conn->write_bucket, num_written);
+      connection_buckets_note_empty_ts(&or_conn->read_emptied_time,
+                         or_conn->read_bucket, num_read, tvnow);
+      connection_buckets_note_empty_ts(&or_conn->write_emptied_time,
+                         or_conn->write_bucket, num_written, tvnow);
     }
   }
 
@@ -2712,6 +2722,28 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
   }
 }
 
+/** Helper: return the time in milliseconds since <b>last_empty_time</b>
+ * when a bucket ran empty that previously had <b>tokens_before</b> tokens
+ * now has <b>tokens_after</b> tokens after refilling at timestamp
+ * <b>tvnow</b>, capped at <b>milliseconds_elapsed</b> milliseconds since
+ * last refilling that bucket.  Return 0 if the bucket has not been empty
+ * since the last refill or has not been refilled. */
+static uint32_t
+bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
+                    int tokens_after, int milliseconds_elapsed,
+                    struct timeval tvnow)
+{
+  uint32_t result = 0, refilled;
+  if (tokens_before <= 0 && tokens_after > tokens_before) {
+    refilled = msec_since_midnight(tvnow);
+    result = (uint32_t)((refilled + 86400L * 1000L - last_empty_time) %
+             (86400L * 1000L));
+    if (result > (uint32_t)milliseconds_elapsed)
+      result = (uint32_t)milliseconds_elapsed;
+  }
+  return result;
+}
+
 /** Time has passed; increment buckets appropriately. */
 void
 connection_bucket_refill(int milliseconds_elapsed, time_t now)
@@ -2724,6 +2756,7 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   int prev_global_write = global_write_bucket;
   int prev_relay_read = global_relayed_read_bucket;
   int prev_relay_write = global_relayed_write_bucket;
+  struct timeval tvnow; /*< Only used if TB_EMPTY events are enabled. */
 
   bandwidthrate = (int)options->BandwidthRate;
   bandwidthburst = (int)options->BandwidthBurst;
@@ -2759,14 +2792,31 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                   milliseconds_elapsed,
                                   "global_relayed_write_bucket");
 
-  control_event_refill_global(global_read_bucket, prev_global_read,
-                              global_read_emptied, global_write_bucket,
-                              prev_global_write, global_write_emptied,
-                              global_relayed_read_bucket, prev_relay_read,
-                              global_relayed_read_emptied,
-                              global_relayed_write_bucket, prev_relay_write,
-                              global_relayed_write_emptied,
-                              milliseconds_elapsed);
+  /* If buckets were empty before and have now been refilled, tell any
+   * interested controllers. */
+  if (get_options()->TestingEnableTbEmptyEvent) {
+    uint32_t global_read_empty_time, global_write_empty_time,
+             relay_read_empty_time, relay_write_empty_time;
+    tor_gettimeofday_cached(&tvnow);
+    global_read_empty_time = bucket_millis_empty(prev_global_read,
+                             global_read_emptied, global_read_bucket,
+                             milliseconds_elapsed, tvnow);
+    global_write_empty_time = bucket_millis_empty(prev_global_write,
+                              global_write_emptied, global_write_bucket,
+                              milliseconds_elapsed, tvnow);
+    control_event_tb_empty("GLOBAL", global_read_empty_time,
+                           global_write_empty_time, milliseconds_elapsed);
+    relay_read_empty_time = bucket_millis_empty(prev_relay_read,
+                            global_relayed_read_emptied,
+                            global_relayed_read_bucket,
+                            milliseconds_elapsed, tvnow);
+    relay_write_empty_time = bucket_millis_empty(prev_relay_write,
+                             global_relayed_write_emptied,
+                             global_relayed_write_bucket,
+                             milliseconds_elapsed, tvnow);
+    control_event_tb_empty("RELAY", relay_read_empty_time,
+                           relay_write_empty_time, milliseconds_elapsed);
+  }
 
   /* refill the per-connection buckets */
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
@@ -2793,8 +2843,26 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                         "or_conn->write_bucket");
       }
 
-      control_event_refill_conn(or_conn, prev_conn_read, prev_conn_write,
-                                (uint32_t)milliseconds_elapsed);
+      /* If buckets were empty before and have now been refilled, tell any
+       * interested controllers. */
+      if (get_options()->TestingEnableTbEmptyEvent) {
+        char *bucket;
+        uint32_t conn_read_empty_time, conn_write_empty_time;
+        tor_asprintf(&bucket, "ORCONN ID="U64_FORMAT,
+                     U64_PRINTF_ARG(or_conn->base_.global_identifier));
+        conn_read_empty_time = bucket_millis_empty(prev_conn_read,
+                               or_conn->read_emptied_time,
+                               or_conn->read_bucket,
+                               milliseconds_elapsed, tvnow);
+        conn_write_empty_time = bucket_millis_empty(prev_conn_write,
+                                or_conn->write_emptied_time,
+                                or_conn->write_bucket,
+                                milliseconds_elapsed, tvnow);
+        control_event_tb_empty(bucket, conn_read_empty_time,
+                               conn_write_empty_time,
+                               milliseconds_elapsed);
+        tor_free(bucket);
+      }
     }
 
     if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */

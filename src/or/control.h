@@ -54,18 +54,9 @@ int control_event_circ_bandwidth_used(void);
 int control_event_conn_bandwidth(connection_t *conn);
 int control_event_conn_bandwidth_used(void);
 int control_event_circuit_cell_stats(void);
-int control_event_refill_global(int global_read, int prev_global_read,
-                                uint32_t global_read_emptied,
-                                int global_write, int prev_global_write,
-                                uint32_t global_write_emptied,
-                                int relay_read, int prev_relay_read,
-                                uint32_t relay_read_emptied,
-                                int relay_write, int prev_relay_write,
-                                uint32_t relay_write_emptied,
-                                uint32_t milliseconds_elapsed);
-int control_event_refill_conn(or_connection_t *or_conn,
-                              int prev_read, int prev_write,
-                              uint32_t milliseconds_elapsed);
+int control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
+                           uint32_t write_empty_time,
+                           int milliseconds_elapsed);
 void control_event_logmsg(int severity, uint32_t domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,

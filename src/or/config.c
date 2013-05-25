@@ -220,6 +220,7 @@ static config_var_t option_vars_[] = {
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(TestingEnableConnBwEvent,    BOOL,     "0"),
   V(TestingEnableCellStatsEvent, BOOL,     "0"),
+  V(TestingEnableTbEmptyEvent,   BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  ROUTERSET,   NULL),
   V(EntryStatistics,             BOOL,     "0"),
@@ -465,6 +466,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
   V(TestingEnableConnBwEvent,    BOOL,     "1"),
   V(TestingEnableCellStatsEvent, BOOL,     "1"),
+  V(TestingEnableTbEmptyEvent,   BOOL,     "1"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -3249,6 +3251,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TestingEnableCellStatsEvent &&
       !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
     REJECT("TestingEnableCellStatsEvent may only be changed in testing "
+           "Tor networks!");
+  }
+
+  if (options->TestingEnableTbEmptyEvent &&
+      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
+    REJECT("TestingEnableTbEmptyEvent may only be changed in testing "
            "Tor networks!");
   }
 
