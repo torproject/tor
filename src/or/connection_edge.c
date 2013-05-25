@@ -1769,9 +1769,10 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
   }
 
   if (flags == BEGIN_FLAG_IPV4_NOT_OK) {
-    log_warn(LD_BUG, "Hey; I'm about to ask a node for a connection that I "
+    log_warn(LD_EDGE, "I'm about to ask a node for a connection that I "
              "am telling it to fulfil with neither IPv4 nor IPv6. That's "
-             "probably not going to work.");
+             "not going to work. Did you perhaps ask for an IPv6 address "
+             "on an IPv4Only port, or vice versa?");
   }
 
   return flags;

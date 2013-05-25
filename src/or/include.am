@@ -45,6 +45,7 @@ src_or_libtor_a_SOURCES = \
 	src/or/dirvote.c				\
 	src/or/dns.c					\
 	src/or/dnsserv.c				\
+        src/or/fp_pair.c				\
 	src/or/geoip.c					\
 	src/or/entrynodes.c				\
 	src/or/hibernate.c				\
@@ -126,6 +127,7 @@ ORHEADERS = \
 	src/or/dns.h					\
 	src/or/dnsserv.h				\
 	src/or/eventdns_tor.h				\
+	src/or/fp_pair.h				\
 	src/or/geoip.h					\
 	src/or/entrynodes.h				\
 	src/or/hibernate.h				\

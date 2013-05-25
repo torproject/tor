@@ -21,6 +21,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "entrynodes.h"
+#include "fp_pair.h"
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
@@ -40,6 +41,24 @@
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/
+
+DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
+DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(dsmap_, digest_ds_map_t, download_status_t)
+#define SDMAP_FOREACH(map, keyvar, valvar)                              \
+  DIGESTMAP_FOREACH(sdmap_to_digestmap(map), keyvar, signed_descriptor_t *, \
+                    valvar)
+#define RIMAP_FOREACH(map, keyvar, valvar) \
+  DIGESTMAP_FOREACH(rimap_to_digestmap(map), keyvar, routerinfo_t *, valvar)
+#define EIMAP_FOREACH(map, keyvar, valvar) \
+  DIGESTMAP_FOREACH(eimap_to_digestmap(map), keyvar, extrainfo_t *, valvar)
+#define DSMAP_FOREACH(map, keyvar, valvar) \
+  DIGESTMAP_FOREACH(dsmap_to_digestmap(map), keyvar, download_status_t *, \
+                    valvar)
+
+/* Forward declaration for cert_list_t */
+typedef struct cert_list_t cert_list_t;
 
 /* static function prototypes */
 static int compute_weighted_bandwidths(const smartlist_t *sl,
@@ -61,19 +80,14 @@ static const char *signed_descriptor_get_body_impl(
                                               int with_annotations);
 static void list_pending_downloads(digestmap_t *result,
                                    int purpose, const char *prefix);
+static void list_pending_fpsk_downloads(fp_pair_map_t *result);
 static void launch_dummy_descriptor_download_as_needed(time_t now,
                                    const or_options_t *options);
-
-DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
-DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
-DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
-#define SDMAP_FOREACH(map, keyvar, valvar)                              \
-  DIGESTMAP_FOREACH(sdmap_to_digestmap(map), keyvar, signed_descriptor_t *, \
-                    valvar)
-#define RIMAP_FOREACH(map, keyvar, valvar) \
-  DIGESTMAP_FOREACH(rimap_to_digestmap(map), keyvar, routerinfo_t *, valvar)
-#define EIMAP_FOREACH(map, keyvar, valvar) \
-  DIGESTMAP_FOREACH(eimap_to_digestmap(map), keyvar, extrainfo_t *, valvar)
+static void download_status_reset_by_sk_in_cl(cert_list_t *cl,
+                                              const char *digest);
+static int download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
+                                                const char *digest,
+                                                time_t now, int max_failures);
 
 /****************************************************************************/
 
@@ -86,10 +100,17 @@ static smartlist_t *fallback_dir_servers = NULL;
 
 /** List of for a given authority, and download status for latest certificate.
  */
-typedef struct cert_list_t {
-  download_status_t dl_status;
+struct cert_list_t {
+  /*
+   * The keys of download status map are cert->signing_key_digest for pending
+   * downloads by (identity digest/signing key digest) pair; functions such
+   * as authority_cert_get_by_digest() already assume these are unique.
+   */
+  struct digest_ds_map_t *dl_status_map;
+  /* There is also a dlstatus for the download by identity key only */
+  download_status_t dl_status_by_id;
   smartlist_t *certs;
-} cert_list_t;
+};
 /** Map from v3 identity key digest to cert_list_t. */
 static digestmap_t *trusted_dir_certs = NULL;
 /** True iff any key certificate in at least one member of
@@ -133,6 +154,72 @@ get_n_authorities(dirinfo_type_t type)
   return n;
 }
 
+/** Reset the download status of a specified element in a dsmap */
+static void
+download_status_reset_by_sk_in_cl(cert_list_t *cl, const char *digest)
+{
+  download_status_t *dlstatus = NULL;
+
+  tor_assert(cl);
+  tor_assert(digest);
+
+  /* Make sure we have a dsmap */
+  if (!(cl->dl_status_map)) {
+    cl->dl_status_map = dsmap_new();
+  }
+  /* Look for a download_status_t in the map with this digest */
+  dlstatus = dsmap_get(cl->dl_status_map, digest);
+  /* Got one? */
+  if (!dlstatus) {
+    /* Insert before we reset */
+    dlstatus = tor_malloc_zero(sizeof(*dlstatus));
+    dsmap_set(cl->dl_status_map, digest, dlstatus);
+  }
+  tor_assert(dlstatus);
+  /* Go ahead and reset it */
+  download_status_reset(dlstatus);
+}
+
+/**
+ * Return true if the download for this signing key digest in cl is ready
+ * to be re-attempted.
+ */
+static int
+download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
+                                     const char *digest,
+                                     time_t now, int max_failures)
+{
+  int rv = 0;
+  download_status_t *dlstatus = NULL;
+
+  tor_assert(cl);
+  tor_assert(digest);
+
+  /* Make sure we have a dsmap */
+  if (!(cl->dl_status_map)) {
+    cl->dl_status_map = dsmap_new();
+  }
+  /* Look for a download_status_t in the map with this digest */
+  dlstatus = dsmap_get(cl->dl_status_map, digest);
+  /* Got one? */
+  if (dlstatus) {
+    /* Use download_status_is_ready() */
+    rv = download_status_is_ready(dlstatus, now, max_failures);
+  } else {
+    /*
+     * If we don't know anything about it, return 1, since we haven't
+     * tried this one before.  We need to create a new entry here,
+     * too.
+     */
+    dlstatus = tor_malloc_zero(sizeof(*dlstatus));
+    download_status_reset(dlstatus);
+    dsmap_set(cl->dl_status_map, digest, dlstatus);
+    rv = 1;
+  }
+
+  return rv;
+}
+
 #define get_n_v2_authorities() get_n_authorities(V2_DIRINFO)
 
 /** Helper: Return the cert_list_t for an authority whose authority ID is
@@ -146,8 +233,9 @@ get_cert_list(const char *id_digest)
   cl = digestmap_get(trusted_dir_certs, id_digest);
   if (!cl) {
     cl = tor_malloc_zero(sizeof(cert_list_t));
-    cl->dl_status.schedule = DL_SCHED_CONSENSUS;
+    cl->dl_status_by_id.schedule = DL_SCHED_CONSENSUS;
     cl->certs = smartlist_new();
+    cl->dl_status_map = dsmap_new();
     digestmap_set(trusted_dir_certs, id_digest, cl);
   }
   return cl;
@@ -167,7 +255,9 @@ trusted_dirs_reload_certs(void)
   tor_free(filename);
   if (!contents)
     return 0;
-  r = trusted_dirs_load_certs_from_string(contents, 1, 1);
+  r = trusted_dirs_load_certs_from_string(
+        contents,
+        TRUSTED_DIRS_CERTS_SRC_FROM_STORE, 1);
   tor_free(contents);
   return r;
 }
@@ -190,17 +280,23 @@ already_have_cert(authority_cert_t *cert)
 }
 
 /** Load a bunch of new key certificates from the string <b>contents</b>.  If
- * <b>from_store</b> is true, the certificates are from the cache, and we
- * don't need to flush them to disk. If <b>flush</b> is true, we need
- * to flush any changed certificates to disk now.  Return 0 on success, -1
- * if any certs fail to parse. */
+ * <b>source</b> is TRUSTED_DIRS_CERTS_SRC_FROM_STORE, the certificates are
+ * from the cache, and we don't need to flush them to disk.  If we are a
+ * dirauth loading our own cert, source is TRUSTED_DIRS_CERTS_SRC_SELF.
+ * Otherwise, source is download type: TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST
+ * or TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST.  If <b>flush</b> is true, we
+ * need to flush any changed certificates to disk now.  Return 0 on success,
+ * -1 if any certs fail to parse.
+ */
+
 int
-trusted_dirs_load_certs_from_string(const char *contents, int from_store,
+trusted_dirs_load_certs_from_string(const char *contents, int source,
                                     int flush)
 {
   dir_server_t *ds;
   const char *s, *eos;
   int failure_code = 0;
+  int from_store = (source == TRUSTED_DIRS_CERTS_SRC_FROM_STORE);
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
@@ -221,9 +317,13 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                from_store ? "cached" : "downloaded",
                ds ? ds->nickname : "an old or new authority");
 
-      /* a duplicate on a download should be treated as a failure, since it
-       * probably means we wanted a different secret key or we are trying to
-       * replace an expired cert that has not in fact been updated. */
+      /*
+       * A duplicate on download should be treated as a failure, so we call
+       * authority_cert_dl_failed() to reset the download status to make sure
+       * we can't try again.  Since we've implemented the fp-sk mechanism
+       * to download certs by signing key, this should be much rarer than it
+       * was and is perhaps cause for concern.
+       */
       if (!from_store) {
         if (authdir_mode(get_options())) {
           log_warn(LD_DIR,
@@ -237,7 +337,18 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                    ds ? ds->nickname : "an old or new authority");
         }
 
-        authority_cert_dl_failed(cert->cache_info.identity_digest, 404);
+        /*
+         * This is where we care about the source; authority_cert_dl_failed()
+         * needs to know whether the download was by fp or (fp,sk) pair to
+         * twiddle the right bit in the download map.
+         */
+        if (source == TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST) {
+          authority_cert_dl_failed(cert->cache_info.identity_digest,
+                                   NULL, 404);
+        } else if (source == TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST) {
+          authority_cert_dl_failed(cert->cache_info.identity_digest,
+                                   cert->signing_key_digest, 404);
+        }
       }
 
       authority_cert_free(cert);
@@ -452,17 +563,53 @@ authority_cert_get_all(smartlist_t *certs_out)
 }
 
 /** Called when an attempt to download a certificate with the authority with
- * ID <b>id_digest</b> fails with HTTP response code <b>status</b>: remember
- * the failure, so we don't try again immediately. */
+ * ID <b>id_digest</b> and, if not NULL, signed with key signing_key_digest
+ * fails with HTTP response code <b>status</b>: remember the failure, so we
+ * don't try again immediately. */
 void
-authority_cert_dl_failed(const char *id_digest, int status)
+authority_cert_dl_failed(const char *id_digest,
+                         const char *signing_key_digest, int status)
 {
   cert_list_t *cl;
+  download_status_t *dlstatus = NULL;
+  char id_digest_str[2*DIGEST_LEN+1];
+  char sk_digest_str[2*DIGEST_LEN+1];
+
   if (!trusted_dir_certs ||
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return;
 
-  download_status_failed(&cl->dl_status, status);
+  /*
+   * Are we noting a failed download of the latest cert for the id digest,
+   * or of a download by (id, signing key) digest pair?
+   */
+  if (!signing_key_digest) {
+    /* Just by id digest */
+    download_status_failed(&cl->dl_status_by_id, status);
+  } else {
+    /* Reset by (id, signing key) digest pair
+     *
+     * Look for a download_status_t in the map with this digest
+     */
+    dlstatus = dsmap_get(cl->dl_status_map, signing_key_digest);
+    /* Got one? */
+    if (dlstatus) {
+      download_status_failed(dlstatus, status);
+    } else {
+      /*
+       * Do this rather than hex_str(), since hex_str clobbers
+       * old results and we call twice in the param list.
+       */
+      base16_encode(id_digest_str, sizeof(id_digest_str),
+                    id_digest, DIGEST_LEN);
+      base16_encode(sk_digest_str, sizeof(sk_digest_str),
+                    signing_key_digest, DIGEST_LEN);
+      log_warn(LD_BUG,
+               "Got failure for cert fetch with (fp,sk) = (%s,%s), with "
+               "status %d, but knew nothing about the download.",
+               id_digest_str, sk_digest_str, status);
+    }
+  }
 }
 
 /** Return true iff when we've been getting enough failures when trying to
@@ -478,7 +625,7 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return 0;
 
-  n_failures = download_status_get_n_failures(&cl->dl_status);
+  n_failures = download_status_get_n_failures(&cl->dl_status_by_id);
   return n_failures >= N_AUTH_CERT_DL_FAILURES_TO_BUG_USER;
 }
 
@@ -494,20 +641,88 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
 void
 authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 {
-  digestmap_t *pending;
+  /*
+   * The pending_id digestmap tracks pending certificate downloads by
+   * identity digest; the pending_cert digestmap tracks pending downloads
+   * by (identity digest, signing key digest) pairs.
+   */
+  digestmap_t *pending_id;
+  fp_pair_map_t *pending_cert;
   authority_cert_t *cert;
-  smartlist_t *missing_digests;
+  /*
+   * The missing_id_digests smartlist will hold a list of id digests
+   * we want to fetch the newest cert for; the missing_cert_digests
+   * smartlist will hold a list of fp_pair_t with an identity and
+   * signing key digest.
+   */
+  smartlist_t *missing_cert_digests, *missing_id_digests;
   char *resource = NULL;
   cert_list_t *cl;
   const int cache = directory_caches_unknown_auth_certs(get_options());
+  fp_pair_t *fp_tmp = NULL;
+  char id_digest_str[2*DIGEST_LEN+1];
+  char sk_digest_str[2*DIGEST_LEN+1];
 
   if (should_delay_dir_fetches(get_options()))
     return;
 
-  pending = digestmap_new();
-  missing_digests = smartlist_new();
+  pending_cert = fp_pair_map_new();
+  pending_id = digestmap_new();
+  missing_cert_digests = smartlist_new();
+  missing_id_digests = smartlist_new();
 
-  list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
+  /*
+   * First, we get the lists of already pending downloads so we don't
+   * duplicate effort.
+   */
+  list_pending_downloads(pending_id, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
+  list_pending_fpsk_downloads(pending_cert);
+
+  /*
+   * Now, we download any trusted authority certs we don't have by
+   * identity digest only.  This gets the latest cert for that authority.
+   */
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds) {
+    int found = 0;
+    if (!(ds->type & V3_DIRINFO))
+      continue;
+    if (smartlist_contains_digest(missing_id_digests,
+                                  ds->v3_identity_digest))
+      continue;
+    cl = get_cert_list(ds->v3_identity_digest);
+    SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+      if (now < cert->expires) {
+        /* It's not expired, and we weren't looking for something to
+         * verify a consensus with.  Call it done. */
+        download_status_reset(&(cl->dl_status_by_id));
+        /* No sense trying to download it specifically by signing key hash */
+        download_status_reset_by_sk_in_cl(cl, cert->signing_key_digest);
+        found = 1;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(cert);
+    if (!found &&
+        download_status_is_ready(&(cl->dl_status_by_id), now,
+                                 MAX_CERT_DL_FAILURES) &&
+        !digestmap_get(pending_id, ds->v3_identity_digest)) {
+      log_info(LD_DIR,
+               "No current certificate known for authority %s "
+               "(ID digest %s); launching request.",
+               ds->nickname, hex_str(ds->v3_identity_digest, DIGEST_LEN));
+      smartlist_add(missing_id_digests, ds->v3_identity_digest);
+    }
+  } SMARTLIST_FOREACH_END(ds);
+
+  /*
+   * Next, if we have a consensus, scan through it and look for anything
+   * signed with a key from a cert we don't have.  Those get downloaded
+   * by (fp,sk) pair, but if we don't know any certs at all for the fp
+   * (identity digest), and it's one of the trusted dir server certs
+   * we started off above or a pending download in pending_id, don't
+   * try to get it yet.  Most likely, the one we'll get for that will
+   * have the right signing key too, and we'd just be downloading
+   * redundantly.
+   */
   if (status) {
     SMARTLIST_FOREACH_BEGIN(status->voters, networkstatus_voter_info_t *,
                             voter) {
@@ -517,84 +732,164 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       if (!cache &&
           !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
         continue; /* We are not a cache, and we don't know this authority.*/
+
+      /*
+       * If we don't know *any* cert for this authority, and a download by ID
+       * is pending or we added it to missing_id_digests above, skip this
+       * one for now to avoid duplicate downloads.
+       */
       cl = get_cert_list(voter->identity_digest);
+      if (smartlist_len(cl->certs) == 0) {
+        /* We have no certs at all for this one */
+
+        /* Do we have a download of one pending? */
+        if (digestmap_get(pending_id, voter->identity_digest))
+          continue;
+
+        /*
+         * Are we about to launch a download of one due to the trusted
+         * dir server check above?
+         */
+        if (smartlist_contains_digest(missing_id_digests,
+                                      voter->identity_digest))
+          continue;
+      }
+
       SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
         cert = authority_cert_get_by_digests(voter->identity_digest,
                                              sig->signing_key_digest);
         if (cert) {
           if (now < cert->expires)
-            download_status_reset(&cl->dl_status);
+            download_status_reset_by_sk_in_cl(cl, sig->signing_key_digest);
           continue;
         }
-        if (download_status_is_ready(&cl->dl_status, now,
-                                     MAX_CERT_DL_FAILURES) &&
-            !digestmap_get(pending, voter->identity_digest)) {
-          log_info(LD_DIR, "We're missing a certificate from authority "
-                   "with signing key %s: launching request.",
-                   hex_str(sig->signing_key_digest, DIGEST_LEN));
-          smartlist_add(missing_digests, sig->identity_digest);
+        if (download_status_is_ready_by_sk_in_cl(
+              cl, sig->signing_key_digest,
+              now, MAX_CERT_DL_FAILURES) &&
+            !fp_pair_map_get_by_digests(pending_cert,
+                                        voter->identity_digest,
+                                        sig->signing_key_digest)) {
+          /*
+           * Do this rather than hex_str(), since hex_str clobbers
+           * old results and we call twice in the param list.
+           */
+          base16_encode(id_digest_str, sizeof(id_digest_str),
+                        voter->identity_digest, DIGEST_LEN);
+          base16_encode(sk_digest_str, sizeof(sk_digest_str),
+                        sig->signing_key_digest, DIGEST_LEN);
+
+          if (voter->nickname) {
+            log_info(LD_DIR,
+                     "We're missing a certificate from authority %s "
+                     "(ID digest %s) with signing key %s: "
+                     "launching request.",
+                     voter->nickname, id_digest_str, sk_digest_str);
+          } else {
+            log_info(LD_DIR,
+                     "We're missing a certificate from authority ID digest "
+                     "%s with signing key %s: launching request.",
+                     id_digest_str, sk_digest_str);
+          }
+
+          /* Allocate a new fp_pair_t to append */
+          fp_tmp = tor_malloc(sizeof(*fp_tmp));
+          memcpy(fp_tmp->first, voter->identity_digest, sizeof(fp_tmp->first));
+          memcpy(fp_tmp->second, sig->signing_key_digest,
+                 sizeof(fp_tmp->second));
+          smartlist_add(missing_cert_digests, fp_tmp);
         }
       } SMARTLIST_FOREACH_END(sig);
     } SMARTLIST_FOREACH_END(voter);
   }
-  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds) {
-    int found = 0;
-    if (!(ds->type & V3_DIRINFO))
-      continue;
-    if (smartlist_contains_digest(missing_digests, ds->v3_identity_digest))
-      continue;
-    cl = get_cert_list(ds->v3_identity_digest);
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
-      if (now < cert->expires) {
-        /* It's not expired, and we weren't looking for something to
-         * verify a consensus with.  Call it done. */
-        download_status_reset(&cl->dl_status);
-        found = 1;
-        break;
-      }
-    });
-    if (!found &&
-        download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
-        !digestmap_get(pending, ds->v3_identity_digest)) {
-      log_info(LD_DIR, "No current certificate known for authority %s; "
-               "launching request.", ds->nickname);
-        smartlist_add(missing_digests, ds->v3_identity_digest);
-    }
-  } SMARTLIST_FOREACH_END(ds);
 
-  if (!smartlist_len(missing_digests)) {
-    goto done;
-  } else {
+  /* Do downloads by identity digest */
+  if (smartlist_len(missing_id_digests) > 0) {
+    int need_plus = 0;
     smartlist_t *fps = smartlist_new();
+
     smartlist_add(fps, tor_strdup("fp/"));
-    SMARTLIST_FOREACH(missing_digests, const char *, d, {
-        char *fp;
-        if (digestmap_get(pending, d))
-          continue;
-        fp = tor_malloc(HEX_DIGEST_LEN+2);
-        base16_encode(fp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
-        fp[HEX_DIGEST_LEN] = '+';
-        fp[HEX_DIGEST_LEN+1] = '\0';
-        smartlist_add(fps, fp);
-      });
-    if (smartlist_len(fps) == 1) {
-      /* we didn't add any: they were all pending */
-      SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
-      smartlist_free(fps);
-      goto done;
+
+    SMARTLIST_FOREACH_BEGIN(missing_id_digests, const char *, d) {
+      char *fp = NULL;
+
+      if (digestmap_get(pending_id, d))
+        continue;
+
+      base16_encode(id_digest_str, sizeof(id_digest_str),
+                    d, DIGEST_LEN);
+
+      if (need_plus) {
+        tor_asprintf(&fp, "+%s", id_digest_str);
+      } else {
+        /* No need for tor_asprintf() in this case; first one gets no '+' */
+        fp = tor_strdup(id_digest_str);
+        need_plus = 1;
+      }
+
+      smartlist_add(fps, fp);
+    } SMARTLIST_FOREACH_END(d);
+
+    if (smartlist_len(fps) > 1) {
+      resource = smartlist_join_strings(fps, "", 0, NULL);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                   resource, PDS_RETRY_IF_NO_SERVERS);
+      tor_free(resource);
     }
-    resource = smartlist_join_strings(fps, "", 0, NULL);
-    resource[strlen(resource)-1] = '\0';
+    /* else we didn't add any: they were all pending */
+
     SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
     smartlist_free(fps);
   }
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                               resource, PDS_RETRY_IF_NO_SERVERS);
 
- done:
-  tor_free(resource);
-  smartlist_free(missing_digests);
-  digestmap_free(pending, NULL);
+  /* Do downloads by identity digest/signing key pair */
+  if (smartlist_len(missing_cert_digests) > 0) {
+    int need_plus = 0;
+    smartlist_t *fp_pairs = smartlist_new();
+
+    smartlist_add(fp_pairs, tor_strdup("fp-sk/"));
+
+    SMARTLIST_FOREACH_BEGIN(missing_cert_digests, const fp_pair_t *, d) {
+      char *fp_pair = NULL;
+
+      if (fp_pair_map_get(pending_cert, d))
+        continue;
+
+      /* Construct string encodings of the digests */
+      base16_encode(id_digest_str, sizeof(id_digest_str),
+                    d->first, DIGEST_LEN);
+      base16_encode(sk_digest_str, sizeof(sk_digest_str),
+                    d->second, DIGEST_LEN);
+
+      /* Now tor_asprintf() */
+      if (need_plus) {
+        tor_asprintf(&fp_pair, "+%s-%s", id_digest_str, sk_digest_str);
+      } else {
+        /* First one in the list doesn't get a '+' */
+        tor_asprintf(&fp_pair, "%s-%s", id_digest_str, sk_digest_str);
+        need_plus = 1;
+      }
+
+      /* Add it to the list of pairs to request */
+      smartlist_add(fp_pairs, fp_pair);
+    } SMARTLIST_FOREACH_END(d);
+
+    if (smartlist_len(fp_pairs) > 1) {
+      resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                   resource, PDS_RETRY_IF_NO_SERVERS);
+      tor_free(resource);
+    }
+    /* else they were all pending */
+
+    SMARTLIST_FOREACH(fp_pairs, char *, p, tor_free(p));
+    smartlist_free(fp_pairs);
+  }
+
+  smartlist_free(missing_id_digests);
+  SMARTLIST_FOREACH(missing_cert_digests, fp_pair_t *, p, tor_free(p));
+  smartlist_free(missing_cert_digests);
+  digestmap_free(pending_id, NULL);
+  fp_pair_map_free(pending_cert, NULL);
 }
 
 /* Router descriptor storage.
@@ -4076,6 +4371,41 @@ void
 list_pending_microdesc_downloads(digestmap_t *result)
 {
   list_pending_downloads(result, DIR_PURPOSE_FETCH_MICRODESC, "d/");
+}
+
+/** For every certificate we are currently downloading by (identity digest,
+ * signing key digest) pair, set result[fp_pair] to (void *1).
+ */
+static void
+list_pending_fpsk_downloads(fp_pair_map_t *result)
+{
+  const char *pfx = "fp-sk/";
+  smartlist_t *tmp;
+  smartlist_t *conns;
+  const char *resource;
+
+  tor_assert(result);
+
+  tmp = smartlist_new();
+  conns = get_connection_array();
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    if (conn->type == CONN_TYPE_DIR &&
+        conn->purpose == DIR_PURPOSE_FETCH_CERTIFICATE &&
+        !conn->marked_for_close) {
+      resource = TO_DIR_CONN(conn)->requested_resource;
+      if (!strcmpstart(resource, pfx))
+        dir_split_resource_into_fingerprint_pairs(resource + strlen(pfx),
+                                                  tmp);
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  SMARTLIST_FOREACH_BEGIN(tmp, fp_pair_t *, fp) {
+    fp_pair_map_set(result, fp, (void*)1);
+    tor_free(fp);
+  } SMARTLIST_FOREACH_END(fp);
+
+  smartlist_free(tmp);
 }
 
 /** Launch downloads for all the descriptors whose digests or digests256

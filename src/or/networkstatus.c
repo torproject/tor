@@ -1878,11 +1878,12 @@ networkstatus_note_certs_arrived(void)
     if (!waiting->consensus)
       continue;
     if (networkstatus_check_consensus_signature(waiting->consensus, 0)>=0) {
+      char *waiting_body = waiting->body;
       if (!networkstatus_set_current_consensus(
-                                 waiting->body,
+                                 waiting_body,
                                  networkstatus_get_flavor_name(i),
                                  NSSET_WAS_WAITING_FOR_CERTS)) {
-        tor_free(waiting->body);
+        tor_free(waiting_body);
       }
     }
   }
@@ -2115,9 +2116,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
-  char buf[RS_ENTRY_LEN+1];
-  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, NS_CONTROL_PORT, NULL);
-  return tor_strdup(buf);
+  return routerstatus_format_entry(rs, NULL, NS_CONTROL_PORT, NULL);
 }
 
 /** Alloc and return a string describing routerstatuses for the most

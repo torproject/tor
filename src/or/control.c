@@ -4393,7 +4393,7 @@ control_event_guard(const char *nickname, const char *digest,
  * a smartlist_t containing (key, value, ...) pairs in sequence.
  * <b>value</b> can be NULL. */
 int
-control_event_conf_changed(smartlist_t *elements)
+control_event_conf_changed(const smartlist_t *elements)
 {
   int i;
   char *result;

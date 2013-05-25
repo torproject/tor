@@ -108,7 +108,8 @@ setup_directory(void)
     r = mkdir(temp_dir);
   }
 #else
-  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s", (int) getpid(), rnd32);
+  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
+               (int) getpid(), rnd32);
   r = mkdir(temp_dir, 0700);
 #endif
   if (r) {
@@ -467,7 +468,7 @@ test_socks_5_no_authenticate(void *ptr)
                                     get_options()->SafeSocks));
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_eq(2, socks->usernamelen);
@@ -506,7 +507,7 @@ test_socks_5_authenticate(void *ptr)
                                    get_options()->SafeSocks));
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_eq(2, socks->usernamelen);
@@ -546,7 +547,7 @@ test_socks_5_authenticate_with_data(void *ptr)
                                    get_options()->SafeSocks) == 1);
   test_eq(5, socks->socks_version);
   test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
+  test_eq(1, socks->reply[0]);
   test_eq(0, socks->reply[1]);
 
   test_streq("2.2.2.2", socks->address);
@@ -811,6 +812,18 @@ test_buffers(void)
   test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
   buf_free(buf);
   buf = NULL;
+
+  /* Try adding a string too long for any freelist. */
+  {
+    char *cp = tor_malloc_zero(65536);
+    buf = buf_new();
+    write_to_buf(cp, 65536, buf);
+    tor_free(cp);
+
+    tt_int_op(buf_datalen(buf), ==, 65536);
+    buf_free(buf);
+    buf = NULL;
+  }
 
  done:
   if (buf)

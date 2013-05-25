@@ -12,6 +12,7 @@
 #define ROUTERLIST_PRIVATE
 #define HIBERNATE_PRIVATE
 #include "or.h"
+#include "config.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
@@ -73,22 +74,24 @@ test_dir_nicknames(void)
 static void
 test_dir_formats(void)
 {
-  char buf[8192], buf2[8192];
+  char *buf = NULL;
+  char buf2[8192];
   char platform[256];
   char fingerprint[FINGERPRINT_LEN+1];
-  char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
-  size_t pk1_str_len, pk2_str_len, pk3_str_len;
+  char *pk1_str = NULL, *pk2_str = NULL, *cp;
+  size_t pk1_str_len, pk2_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
-  crypto_pk_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
-  routerinfo_t *rp1 = NULL;
+  crypto_pk_t *pk1 = NULL, *pk2 = NULL;
+  routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
+  or_options_t *options = get_options_mutable();
+  const addr_policy_t *p;
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
-  pk3 = pk_generate(2);
 
-  test_assert(pk1 && pk2 && pk3);
+  test_assert(pk1 && pk2);
 
   hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
 
@@ -128,22 +131,27 @@ test_dir_formats(void)
   r2->or_port = 9005;
   r2->dir_port = 0;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
+  r2->onion_curve25519_pkey = tor_malloc_zero(sizeof(curve25519_public_key_t));
+  curve25519_public_from_base64(r2->onion_curve25519_pkey,
+                                "skyinAnvardNostarsNomoonNowindormistsorsnow");
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_new();
-  smartlist_add(r2->exit_policy, ex2);
   smartlist_add(r2->exit_policy, ex1);
+  smartlist_add(r2->exit_policy, ex2);
   r2->nickname = tor_strdup("Fred");
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));
   test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
                                                     &pk2_str_len));
-  test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str,
-                                                    &pk3_str_len));
 
-  memset(buf, 0, 2048);
-  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
+  /* XXXX025 router_dump_to_string should really take this from ri.*/
+  options->ContactInfo = tor_strdup("Magri White "
+                                    "<magri@elsewhere.example.com>");
+  buf = router_dump_router_to_string(r1, pk2);
+  tor_free(options->ContactInfo);
+  test_assert(buf);
 
   strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
           "or-address [1:2:3:4::]:9999\n"
@@ -165,13 +173,17 @@ test_dir_formats(void)
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "contact Magri White <magri@elsewhere.example.com>\n",
+          sizeof(buf2));
   strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
   test_streq(buf, buf2);
+  tor_free(buf);
 
-  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
+  buf = router_dump_router_to_string(r1, pk2);
+  test_assert(buf);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp1);
@@ -185,35 +197,67 @@ test_dir_formats(void)
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   //test_assert(rp1->exit_policy == NULL);
 
-#if 0
-  /* XXX Once we have exit policies, test this again. XXX */
-  strlcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n", sizeof(buf2));
+  strlcpy(buf2,
+          "router Fred 1.1.1.1 9005 0 0\n"
+          "platform Tor "VERSION" on ", sizeof(buf2));
+  strlcat(buf2, get_uname(), sizeof(buf2));
+  strlcat(buf2, "\n"
+          "protocols Link 1 2 Circuit 1\n"
+          "published 1970-01-01 00:00:05\n"
+          "fingerprint ", sizeof(buf2));
+  test_assert(!crypto_pk_get_fingerprint(pk1, fingerprint, 1));
+  strlcat(buf2, fingerprint, sizeof(buf2));
+  strlcat(buf2, "\nuptime 0\n"
+          "bandwidth 3000 3000 3000\n", sizeof(buf2));
+  strlcat(buf2, "onion-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
-  strlcat(buf2, "accept *:80\nreject 18.*:24\n\n", sizeof(buf2));
-  test_assert(router_dump_router_to_string(buf, 2048, &r2, pk2)>0);
-  test_streq(buf, buf2);
+  strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "ntor-onion-key "
+          "skyinAnvardNostarsNomoonNowindormistsorsnow=\n", sizeof(buf2));
+  strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
+  strlcat(buf2, "router-signature\n", sizeof(buf2));
 
+  buf = router_dump_router_to_string(r2, pk1);
+  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
+                             * twice */
+  test_streq(buf, buf2);
+  tor_free(buf);
+
+  buf = router_dump_router_to_string(r2, pk1);
   cp = buf;
-  rp2 = router_parse_entry_from_string(&cp,1);
+  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp2);
-  test_streq(rp2->address, r2.address);
-  test_eq(rp2->or_port, r2.or_port);
-  test_eq(rp2->dir_port, r2.dir_port);
-  test_eq(rp2->bandwidth, r2.bandwidth);
+  test_streq(rp2->address, r2->address);
+  test_eq(rp2->or_port, r2->or_port);
+  test_eq(rp2->dir_port, r2->dir_port);
+  test_eq(rp2->bandwidthrate, r2->bandwidthrate);
+  test_eq(rp2->bandwidthburst, r2->bandwidthburst);
+  test_eq(rp2->bandwidthcapacity, r2->bandwidthcapacity);
+  test_memeq(rp2->onion_curve25519_pkey->public_key,
+             r2->onion_curve25519_pkey->public_key,
+             CURVE25519_PUBKEY_LEN);
   test_assert(crypto_pk_cmp_keys(rp2->onion_pkey, pk2) == 0);
   test_assert(crypto_pk_cmp_keys(rp2->identity_pkey, pk1) == 0);
-  test_eq(rp2->exit_policy->policy_type, EXIT_POLICY_ACCEPT);
-  test_streq(rp2->exit_policy->string, "accept *:80");
-  test_streq(rp2->exit_policy->address, "*");
-  test_streq(rp2->exit_policy->port, "80");
-  test_eq(rp2->exit_policy->next->policy_type, EXIT_POLICY_REJECT);
-  test_streq(rp2->exit_policy->next->string, "reject 18.*:24");
-  test_streq(rp2->exit_policy->next->address, "18.*");
-  test_streq(rp2->exit_policy->next->port, "24");
-  test_assert(rp2->exit_policy->next->next == NULL);
 
+  test_eq(smartlist_len(rp2->exit_policy), 2);
+
+  p = smartlist_get(rp2->exit_policy, 0);
+  test_eq(p->policy_type, ADDR_POLICY_ACCEPT);
+  test_assert(tor_addr_is_null(&p->addr));
+  test_eq(p->maskbits, 0);
+  test_eq(p->prt_min, 80);
+  test_eq(p->prt_max, 80);
+
+  p = smartlist_get(rp2->exit_policy, 1);
+  test_eq(p->policy_type, ADDR_POLICY_REJECT);
+  test_assert(tor_addr_eq(&p->addr, &ex2->addr));
+  test_eq(p->maskbits, 8);
+  test_eq(p->prt_min, 24);
+  test_eq(p->prt_max, 24);
+
+#if 0
   /* Okay, now for the directories. */
   {
     fingerprint_list = smartlist_new();
@@ -232,12 +276,11 @@ test_dir_formats(void)
   if (r2)
     routerinfo_free(r2);
 
+  tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
-  tor_free(pk3_str);
   if (pk1) crypto_pk_free(pk1);
   if (pk2) crypto_pk_free(pk2);
-  if (pk3) crypto_pk_free(pk3);
   if (rp1) routerinfo_free(rp1);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
@@ -611,7 +654,7 @@ test_dir_measured_bw_kb_cache(void)
   test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, NULL));
   test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,&bw, NULL));
   test_eq(bw, 20);
-  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL, &as_of));
+  test_assert(dirserv_query_measured_bw_cache_kb(mbwl[0].node_id,NULL,&as_of));
   test_eq(as_of, MBWC_INIT_TIME);
   /* Now expire it */
   curr += MAX_MEASUREMENT_AGE + 1;
@@ -619,7 +662,7 @@ test_dir_measured_bw_kb_cache(void)
   /* Check that the cache is empty */
   test_eq(dirserv_get_measured_bw_cache_size(), 0);
   /* Check that we can't retrieve it */
-  test_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL, NULL));
+  test_assert(!dirserv_query_measured_bw_cache_kb(mbwl[0].node_id, NULL,NULL));
   /* Try caching a few things now */
   dirserv_cache_measured_bw(&(mbwl[0]), curr);
   test_eq(dirserv_get_measured_bw_cache_size(), 1);
@@ -933,6 +976,13 @@ gen_routerstatus_for_v3ns(int idx, time_t now)
     default:
       /* Shouldn't happen */
       test_assert(0);
+  }
+  if (vrs) {
+    vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+    tor_asprintf(&vrs->microdesc->microdesc_hash_line,
+                 "m 9,10,11,12,13,14,15,16,17 "
+                 "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
+                 idx);
   }
 
  done:
@@ -1903,6 +1953,13 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       /* Shouldn't happen */
       test_assert(0);
   }
+  if (vrs) {
+    vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+    tor_asprintf(&vrs->microdesc->microdesc_hash_line,
+                 "m 9,10,11,12,13,14,15,16,17 "
+                 "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
+                 idx);
+  }
 
  done:
   return vrs;
@@ -2050,7 +2107,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
 
   test_assert(con);
   test_assert(!con->cert);
-  /* test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB); */
+  // test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
   test_assert(con->consensus_method >= 16);
   test_eq(4, smartlist_len(con->routerstatus_list));
   /* There should be four listed routers; all voters saw the same in this */
@@ -2176,8 +2233,8 @@ test_dir_clip_unmeasured_bw_kb(void)
 }
 
 /**
- * This version of test_dir_clip_unmeasured_bw_kb() uses a non-default choice of
- * clip bandwidth.
+ * This version of test_dir_clip_unmeasured_bw_kb() uses a non-default choice
+ * of clip bandwidth.
  */
 
 static void
@@ -2197,26 +2254,138 @@ test_dir_clip_unmeasured_bw_kb_alt(void)
                        test_routerstatus_for_umbw);
 }
 
+extern time_t time_of_process_start; /* from main.c */
+
+static void
+test_dir_v2_dir(void *arg)
+{
+  /* Runs in a forked process: acts like a v2 directory just enough to make and
+   * sign a v2 networkstatus opinion */
+
+  cached_dir_t *v2 = NULL;
+  or_options_t *options = get_options_mutable();
+  crypto_pk_t *id_key = pk_generate(4);
+  (void) arg;
+
+  options->ORPort_set = 1; /* So we believe we're a server. */
+  options->DirPort_set = 1;
+  options->Address = tor_strdup("99.99.99.99");
+  options->Nickname = tor_strdup("TestV2Auth");
+  options->ContactInfo = tor_strdup("TestV2Auth <testv2auth@example.com>");
+  {
+    /* Give it a DirPort */
+    smartlist_t *ports = (smartlist_t *)get_configured_ports();
+    port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t));
+    port->type = CONN_TYPE_DIR_LISTENER;
+    port->port = 9999;
+    smartlist_add(ports, port);
+  }
+  set_server_identity_key(id_key);
+  set_client_identity_key(id_key);
+
+  /* Add a router. */
+  {
+    was_router_added_t wra;
+    const char *msg = NULL;
+    routerinfo_t *r1 = tor_malloc_zero(sizeof(routerinfo_t));
+    r1->address = tor_strdup("18.244.0.1");
+    r1->addr = 0xc0a80001u; /* 192.168.0.1 */
+    r1->cache_info.published_on = time(NULL)-60;
+    r1->or_port = 9000;
+    r1->dir_port = 9003;
+    tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
+    r1->ipv6_orport = 9999;
+    r1->onion_pkey = pk_generate(1);
+    r1->identity_pkey = pk_generate(2);
+    r1->bandwidthrate = 1000;
+    r1->bandwidthburst = 5000;
+    r1->bandwidthcapacity = 10000;
+    r1->exit_policy = NULL;
+    r1->nickname = tor_strdup("Magri");
+    r1->platform = tor_strdup("Tor 0.2.7.7-gamma");
+    r1->cache_info.routerlist_index = -1;
+    r1->cache_info.signed_descriptor_body =
+      router_dump_router_to_string(r1, r1->identity_pkey);
+    r1->cache_info.signed_descriptor_len =
+      strlen(r1->cache_info.signed_descriptor_body);
+    wra = router_add_to_routerlist(r1, &msg, 0, 0);
+    tt_int_op(wra, ==, ROUTER_ADDED_SUCCESSFULLY);
+  }
+
+  /* Prevent call of rep_hist_note_router_unreachable(). */
+  time_of_process_start = time(NULL);
+
+  /* Make a directory so there's somewhere to store the thing */
+#ifdef _WIN32
+  mkdir(get_fname("cached-status"));
+#else
+  mkdir(get_fname("cached-status"), 0700);
+#endif
+
+  v2 = generate_v2_networkstatus_opinion();
+  tt_assert(v2);
+
+ done:
+  crypto_pk_free(id_key);
+  cached_dir_decref(v2);
+}
+
+static void
+test_dir_fmt_control_ns(void *arg)
+{
+  char *s = NULL;
+  routerstatus_t rs;
+  (void)arg;
+
+  memset(&rs, 0, sizeof(rs));
+  rs.published_on = 1364925198;
+  strlcpy(rs.nickname, "TetsuoMilk", sizeof(rs.nickname));
+  memcpy(rs.identity_digest, "Stately, plump Buck ", DIGEST_LEN);
+  memcpy(rs.descriptor_digest, "Mulligan came up fro", DIGEST_LEN);
+  rs.addr = 0x20304050;
+  rs.or_port = 9001;
+  rs.dir_port = 9002;
+  rs.is_exit = 1;
+  rs.is_fast = 1;
+  rs.is_flagged_running = 1;
+  rs.has_bandwidth = 1;
+  rs.bandwidth_kb = 1000;
+
+  s = networkstatus_getinfo_helper_single(&rs);
+  tt_assert(s);
+  tt_str_op(s, ==,
+            "r TetsuoMilk U3RhdGVseSwgcGx1bXAgQnVjayA "
+               "TXVsbGlnYW4gY2FtZSB1cCBmcm8 2013-04-02 17:53:18 "
+               "32.48.64.80 9001 9002\n"
+            "s Exit Fast Running\n"
+            "w Bandwidth=1000\n");
+
+ done:
+  tor_free(s);
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
 
-#define DIR(name)                               \
-  { #name, test_dir_##name, 0, NULL, NULL }
+#define DIR(name,flags)                              \
+  { #name, test_dir_##name, (flags), NULL, NULL }
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
-  DIR(split_fps),
+  DIR(split_fps, 0),
   DIR_LEGACY(measured_bw_kb),
+  DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(param_voting),
   DIR_LEGACY(v3_networkstatus),
-  DIR(random_weighted),
-  DIR(scale_bw),
+  DIR(random_weighted, 0),
+  DIR(scale_bw, 0),
   DIR_LEGACY(clip_unmeasured_bw_kb),
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
-  DIR_LEGACY(measured_bw_kb_cache),
+  DIR(v2_dir, TT_FORK),
+  DIR(fmt_control_ns, 0),
   END_OF_TESTCASES
 };
 

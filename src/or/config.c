@@ -620,12 +620,13 @@ set_options(or_options_t *new_val, char **msg)
             tor_free(line);
           }
         } else {
-          smartlist_add(elements, (char*)options_format.vars[i].name);
+          smartlist_add(elements, tor_strdup(options_format.vars[i].name));
           smartlist_add(elements, NULL);
         }
       }
     }
     control_event_conf_changed(elements);
+    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
   }
 
@@ -5576,7 +5577,8 @@ get_first_listener_addrport_string(int listener_type)
          to iterate all listener connections and find out in which
          port it ended up listening: */
       if (cfg->port == CFG_AUTO_PORT) {
-        port = router_get_active_listener_port_by_type(listener_type);
+        port = router_get_active_listener_port_by_type_af(listener_type,
+                                                  tor_addr_family(&cfg->addr));
         if (!port)
           return NULL;
       } else {
