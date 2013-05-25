@@ -2315,11 +2315,11 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-/** Return 0 if every setting in <b>options</b> is reasonable, does not
- * differ from <b>default_options</b> unless in testing Tor networks, and
- * is a permissible transition from <b>old_options</b>. Else return -1.
- * Should have no side effects, except for normalizing the contents of
- * <b>options</b>.
+/** Return 0 if every setting in <b>options</b> is reasonable, is a
+ * permissible transition from <b>old_options</b>, and none of the
+ * testing-only settings differ from <b>default_options</b> unless in
+ * testing mode.  Else return -1.  Should have no side effects, except for
+ * normalizing the contents of <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  *
