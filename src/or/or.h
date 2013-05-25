@@ -2971,12 +2971,14 @@ typedef struct origin_circuit_t {
   edge_connection_t *p_streams;
 
   /** Bytes read from any attached stream since last call to
-   * control_event_circ_bandwidth_used() */
-  uint32_t n_read;
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_read_circ_bw;
 
   /** Bytes written to any attached stream since last call to
-   * control_event_circ_bandwidth_used() */
-  uint32_t n_written;
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_written_circ_bw;
 
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.

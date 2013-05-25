@@ -237,6 +237,20 @@ log_severity_to_event(int severity)
   }
 }
 
+/** Helper: clear bandwidth counters of all origin circuits. */
+static void
+clear_circ_bw_fields(void)
+{
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
+    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+  }
+}
+
 /** Set <b>global_event_mask*</b> to the bitwise OR of each live control
  * connection's event_mask field. */
 void
@@ -276,14 +290,7 @@ control_update_global_event_mask(void)
   }
   if (! (old_mask & EVENT_CIRC_BANDWIDTH_USED) &&
       (new_mask & EVENT_CIRC_BANDWIDTH_USED)) {
-    circuit_t *circ;
-    origin_circuit_t *ocirc;
-    for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
-      if (!CIRCUIT_IS_ORIGIN(circ))
-        continue;
-      ocirc = TO_ORIGIN_CIRCUIT(circ);
-      ocirc->n_written = ocirc->n_read = 0;
-    }
+    clear_circ_bw_fields();
   }
 }
 
@@ -3893,8 +3900,8 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
     circ = circuit_get_by_edge_conn(edge_conn);
     if (circ && CIRCUIT_IS_ORIGIN(circ)) {
       ocirc = TO_ORIGIN_CIRCUIT(circ);
-      ocirc->n_read += edge_conn->n_read;
-      ocirc->n_written += edge_conn->n_written;
+      ocirc->n_read_circ_bw += edge_conn->n_read;
+      ocirc->n_written_circ_bw += edge_conn->n_written;
     }
     edge_conn->n_written = edge_conn->n_read = 0;
   }
@@ -3947,14 +3954,14 @@ control_event_circ_bandwidth_used(void)
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if (!ocirc->n_read && !ocirc->n_written)
+    if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
       continue;
     send_control_event(EVENT_CIRC_BANDWIDTH_USED, ALL_FORMATS,
                        "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu\r\n",
                        ocirc->global_identifier,
-                       (unsigned long)ocirc->n_read,
-                       (unsigned long)ocirc->n_written);
-    ocirc->n_written = ocirc->n_read = 0;
+                       (unsigned long)ocirc->n_read_circ_bw,
+                       (unsigned long)ocirc->n_written_circ_bw);
+    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
   }
 
   return 0;
