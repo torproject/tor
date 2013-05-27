@@ -970,7 +970,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     log_notice(LD_NET, "Opening %s on %s",
                conn_type_to_string(type), fmt_addrport(&addr, usePort));
 
-    s = tor_open_socket(tor_addr_family(&addr),
+    s = tor_open_socket_nonblocking(tor_addr_family(&addr),
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
                         is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
     if (!SOCKET_OK(s)) {
@@ -1054,7 +1054,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                        strerror(errno));
       goto err;
     }
-    s = tor_open_socket(AF_UNIX, SOCK_STREAM, 0);
+    s = tor_open_socket_nonblocking(AF_UNIX, SOCK_STREAM, 0);
     if (! SOCKET_OK(s)) {
       log_warn(LD_NET,"Socket creation failed: %s.", strerror(errno));
       goto err;
@@ -1101,9 +1101,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
             listensockaddr->sa_family);
     tor_assert(0);
   }
-
-  if (set_socket_nonblocking(s) == -1)
-    goto err;
 
   lis_conn = listener_connection_new(type, listensockaddr->sa_family);
   conn = TO_CONN(lis_conn);
@@ -1252,7 +1249,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(&addrbuf, 0, sizeof(addrbuf));
 
-  news = tor_accept_socket(conn->s,remote,&remotelen);
+  news = tor_accept_socket_nonblocking(conn->s,remote,&remotelen);
   if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
@@ -1272,10 +1269,6 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             (int)news,(int)conn->s);
 
   make_socket_reuseable(news);
-  if (set_socket_nonblocking(news) == -1) {
-    tor_close_socket(news);
-    return 0;
-  }
 
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
@@ -1467,7 +1460,7 @@ connection_connect(connection_t *conn, const char *address,
     return -1;
   }
 
-  s = tor_open_socket(protocol_family,SOCK_STREAM,IPPROTO_TCP);
+  s = tor_open_socket_nonblocking(protocol_family,SOCK_STREAM,IPPROTO_TCP);
   if (! SOCKET_OK(s)) {
     *socket_error = tor_socket_errno(-1);
     log_warn(LD_NET,"Error creating network socket: %s",
@@ -1507,12 +1500,6 @@ connection_connect(connection_t *conn, const char *address,
         }
       }
     }
-  }
-
-  if (set_socket_nonblocking(s) == -1) {
-    *socket_error = tor_socket_errno(s);
-    tor_close_socket(s);
-    return -1;
   }
 
   if (options->ConstrainedSockets)

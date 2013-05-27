@@ -2298,6 +2298,10 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 
+#if 1
+	ns->socket = tor_open_socket_nonblocking(address->sa_family, SOCK_DGRAM, 0);
+	if (!SOCKET_OK(ns->socket)) { err = 1; goto out1; }
+#else
 	ns->socket = tor_open_socket(address->sa_family, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
 #ifdef _WIN32
@@ -2314,6 +2318,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	}
 #endif
 
+#endif /* 1 */
 	if (global_bind_addr_is_set &&
 	    !sockaddr_is_loopback((struct sockaddr*)&global_bind_address)) {
 		if (bind(ns->socket, (struct sockaddr *)&global_bind_address,
@@ -3473,8 +3478,12 @@ main(int c, char **v) {
 	if (servertest) {
 		int sock;
 		struct sockaddr_in my_addr;
+#if 1
+		sock = tor_open_socket_nonblocking(PF_INET, SOCK_DGRAM, 0)
+#else
 		sock = tor_open_socket(PF_INET, SOCK_DGRAM, 0);
 		fcntl(sock, F_SETFL, O_NONBLOCK);
+#endif
 		my_addr.sin_family = AF_INET;
 		my_addr.sin_port = htons(10053);
 		my_addr.sin_addr.s_addr = INADDR_ANY;

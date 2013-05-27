@@ -450,10 +450,22 @@ typedef int socklen_t;
 #define TOR_INVALID_SOCKET (-1)
 #endif
 
+int tor_close_socket_simple(tor_socket_t s);
 int tor_close_socket(tor_socket_t s);
+tor_socket_t tor_open_socket_with_extensions(
+                                           int domain, int type, int protocol,
+                                           int cloexec, int nonblock);
 tor_socket_t tor_open_socket(int domain, int type, int protocol);
+tor_socket_t tor_open_socket_nonblocking(int domain, int type, int protocol);
 tor_socket_t tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr,
                                   socklen_t *len);
+tor_socket_t tor_accept_socket_nonblocking(tor_socket_t sockfd,
+                                           struct sockaddr *addr,
+                                           socklen_t *len);
+tor_socket_t tor_accept_socket_with_extensions(tor_socket_t sockfd,
+                                               struct sockaddr *addr,
+                                               socklen_t *len,
+                                               int cloexec, int nonblock);
 int get_n_open_sockets(void);
 
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
