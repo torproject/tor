@@ -155,8 +155,6 @@ int can_complete_circuit=0;
 /** How often do we 'forgive' undownloadable router descriptors and attempt
  * to download them again? */
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL (60*60)
-/** How long do we let a directory connection stall before expiring it? */
-#define DIR_CONN_MAX_STALL (5*60)
 
 /** Decides our behavior when no logs are configured/before any
  * logs have been configured.  For 0, we log notice to stdout as normal.
@@ -1028,9 +1026,11 @@ run_connection_housekeeping(int i, time_t now)
    * if a server or received if a client) for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
       ((DIR_CONN_IS_SERVER(conn) &&
-        conn->timestamp_lastwritten + DIR_CONN_MAX_STALL < now) ||
+        conn->timestamp_lastwritten
+            + options->TestingDirConnectionMaxStall < now) ||
        (!DIR_CONN_IS_SERVER(conn) &&
-        conn->timestamp_lastread + DIR_CONN_MAX_STALL < now))) {
+        conn->timestamp_lastread
+            + options->TestingDirConnectionMaxStall < now))) {
     log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
              (int)conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider

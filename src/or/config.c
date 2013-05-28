@@ -433,6 +433,23 @@ static config_var_t option_vars_[] = {
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
   V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
+  V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
+                                 "300, 900, 2147483647"),
+  V(TestingClientDownloadSchedule, CSV_INTERVAL, "0, 0, 60, 300, 600, "
+                                 "2147483647"),
+  V(TestingServerConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 60, "
+                                 "300, 600, 1800, 1800, 1800, 1800, "
+                                 "1800, 3600, 7200"),
+  V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 60, "
+                                 "300, 600, 1800, 3600, 3600, 3600, "
+                                 "10800, 21600, 43200"),
+  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "3600, 900, 900, 3600"),
+  V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
+  V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
+  V(TestingConsensusMaxDownloadTries, UINT, "8"),
+  V(TestingDescriptorMaxDownloadTries, UINT, "8"),
+  V(TestingMicrodescMaxDownloadTries, UINT, "8"),
+  V(TestingCertMaxDownloadTries, UINT, "8"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -461,6 +478,21 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
+  V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 5, 10, 15, "
+                                 "20, 30, 60"),
+  V(TestingClientDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, 15, 20, "
+                                 "30, 60"),
+  V(TestingServerConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
+                                 "15, 20, 30, 60"),
+  V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
+                                 "15, 20, 30, 60"),
+  V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "60, 30, 30, 60"),
+  V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
+  V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
+  V(TestingConsensusMaxDownloadTries, UINT, "80"),
+  V(TestingDescriptorMaxDownloadTries, UINT, "80"),
+  V(TestingMicrodescMaxDownloadTries, UINT, "80"),
+  V(TestingCertMaxDownloadTries, UINT, "80"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -475,6 +507,7 @@ static char *get_windows_conf_root(void);
 #endif
 static int options_validate(or_options_t *old_options,
                             or_options_t *options,
+                            or_options_t *default_options,
                             int from_setconf, char **msg);
 static int options_act_reversible(const or_options_t *old_options, char **msg);
 static int options_act(const or_options_t *old_options);
@@ -1851,7 +1884,8 @@ options_trial_assign(config_line_t *list, int use_defaults,
     return r;
   }
 
-  if (options_validate(get_options_mutable(), trial_options, 1, msg) < 0) {
+  if (options_validate(get_options_mutable(), trial_options,
+                       global_default_options, 1, msg) < 0) {
     config_free(&options_format, trial_options);
     return SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
   }
@@ -2281,10 +2315,11 @@ compute_publishserverdescriptor(or_options_t *options)
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
 
-/** Return 0 if every setting in <b>options</b> is reasonable, and a
- * permissible transition from <b>old_options</b>. Else return -1.
- * Should have no side effects, except for normalizing the contents of
- * <b>options</b>.
+/** Return 0 if every setting in <b>options</b> is reasonable, is a
+ * permissible transition from <b>old_options</b>, and none of the
+ * testing-only settings differ from <b>default_options</b> unless in
+ * testing mode.  Else return -1.  Should have no side effects, except for
+ * normalizing the contents of <b>options</b>.
  *
  * On error, tor_strdup an error explanation into *<b>msg</b>.
  *
@@ -2295,7 +2330,7 @@ compute_publishserverdescriptor(or_options_t *options)
  */
 static int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 int from_setconf, char **msg)
+                 or_options_t *default_options, int from_setconf, char **msg)
 {
   int i;
   config_line_t *cl;
@@ -3177,35 +3212,43 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "ignore you.");
   }
 
-  /*XXXX checking for defaults manually like this is a bit fragile.*/
+#define CHECK_DEFAULT(arg) \
+  STMT_BEGIN if (default_options->arg != options->arg && \
+      !options->TestingTorNetwork && \
+      !options->UsingTestNetworkDefaults_) { \
+    REJECT("Testing* options may only be changed in testing Tor " \
+           "networks!"); \
+  } STMT_END
+  CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
+  CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
+  CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+  CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
+  CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
+  CHECK_DEFAULT(TestingServerDownloadSchedule);
+  CHECK_DEFAULT(TestingClientDownloadSchedule);
+  CHECK_DEFAULT(TestingServerConsensusDownloadSchedule);
+  CHECK_DEFAULT(TestingClientConsensusDownloadSchedule);
+  CHECK_DEFAULT(TestingBridgeDownloadSchedule);
+  CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
+  CHECK_DEFAULT(TestingDirConnectionMaxStall);
+  CHECK_DEFAULT(TestingConsensusMaxDownloadTries);
+  CHECK_DEFAULT(TestingDescriptorMaxDownloadTries);
+  CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
+  CHECK_DEFAULT(TestingCertMaxDownloadTries);
+#undef CHECK_DEFAULT
 
-  /* Keep changes to hard-coded values synchronous to man page and default
-   * values table. */
-  if (options->TestingV3AuthInitialVotingInterval != 30*60 &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingV3AuthInitialVotingInterval may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+  if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
   } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
     REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
 
-  if (options->TestingV3AuthInitialVoteDelay != 5*60 &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-
-    REJECT("TestingV3AuthInitialVoteDelay may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
     REJECT("TestingV3AuthInitialVoteDelay is way too low.");
   }
 
-  if (options->TestingV3AuthInitialDistDelay != 5*60 &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingV3AuthInitialDistDelay may only be changed in testing "
-           "Tor networks!");
-  } else if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
     REJECT("TestingV3AuthInitialDistDelay is way too low.");
   }
 
@@ -3216,24 +3259,52 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "must be less than half TestingV3AuthInitialVotingInterval");
   }
 
-  if (options->TestingAuthDirTimeToLearnReachability != 30*60 &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingAuthDirTimeToLearnReachability may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingAuthDirTimeToLearnReachability < 0) {
+  if (options->TestingAuthDirTimeToLearnReachability < 0) {
     REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
   } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
     COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
   }
 
-  if (options->TestingEstimatedDescriptorPropagationTime != 10*60 &&
-      !options->TestingTorNetwork && !options->UsingTestNetworkDefaults_) {
-    REJECT("TestingEstimatedDescriptorPropagationTime may only be changed in "
-           "testing Tor networks!");
-  } else if (options->TestingEstimatedDescriptorPropagationTime < 0) {
+  if (options->TestingEstimatedDescriptorPropagationTime < 0) {
     REJECT("TestingEstimatedDescriptorPropagationTime must be non-negative.");
   } else if (options->TestingEstimatedDescriptorPropagationTime > 60*60) {
     COMPLAIN("TestingEstimatedDescriptorPropagationTime is insanely high.");
+  }
+
+  if (options->TestingClientMaxIntervalWithoutRequest < 1) {
+    REJECT("TestingClientMaxIntervalWithoutRequest is way too low.");
+  } else if (options->TestingClientMaxIntervalWithoutRequest > 3600) {
+    COMPLAIN("TestingClientMaxIntervalWithoutRequest is insanely high.");
+  }
+
+  if (options->TestingDirConnectionMaxStall < 5) {
+    REJECT("TestingDirConnectionMaxStall is way too low.");
+  } else if (options->TestingDirConnectionMaxStall > 3600) {
+    COMPLAIN("TestingDirConnectionMaxStall is insanely high.");
+  }
+
+  if (options->TestingConsensusMaxDownloadTries < 2) {
+    REJECT("TestingConsensusMaxDownloadTries must be greater than 1.");
+  } else if (options->TestingConsensusMaxDownloadTries > 800) {
+    COMPLAIN("TestingConsensusMaxDownloadTries is insanely high.");
+  }
+
+  if (options->TestingDescriptorMaxDownloadTries < 2) {
+    REJECT("TestingDescriptorMaxDownloadTries must be greater than 1.");
+  } else if (options->TestingDescriptorMaxDownloadTries > 800) {
+    COMPLAIN("TestingDescriptorMaxDownloadTries is insanely high.");
+  }
+
+  if (options->TestingMicrodescMaxDownloadTries < 2) {
+    REJECT("TestingMicrodescMaxDownloadTries must be greater than 1.");
+  } else if (options->TestingMicrodescMaxDownloadTries > 800) {
+    COMPLAIN("TestingMicrodescMaxDownloadTries is insanely high.");
+  }
+
+  if (options->TestingCertMaxDownloadTries < 2) {
+    REJECT("TestingCertMaxDownloadTries must be greater than 1.");
+  } else if (options->TestingCertMaxDownloadTries > 800) {
+    COMPLAIN("TestingCertMaxDownloadTries is insanely high.");
   }
 
   if (options->TestingTorNetwork) {
@@ -3850,7 +3921,8 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   }
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, 0, msg) < 0) {
+  if (options_validate(oldoptions, newoptions, newdefaultoptions,
+                       0, msg) < 0) {
     err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
     goto err;
   }
@@ -6087,6 +6159,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_ISOTIME: type = "Time"; break;
         case CONFIG_TYPE_ROUTERSET: type = "RouterList"; break;
         case CONFIG_TYPE_CSV: type = "CommaList"; break;
+        case CONFIG_TYPE_CSV_INTERVAL: type = "TimeIntervalCommaList"; break;
         case CONFIG_TYPE_LINELIST: type = "LineList"; break;
         case CONFIG_TYPE_LINELIST_S: type = "Dependant"; break;
         case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;

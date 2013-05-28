@@ -1203,8 +1203,6 @@ we_want_to_fetch_flavor(const or_options_t *options, int flavor)
   return flavor == usable_consensus_flavor();
 }
 
-/** How many times will we try to fetch a consensus before we give up? */
-#define CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES 8
 /** How long will we hang onto a possibly live consensus for which we're
  * fetching certs before we check whether there is a better one? */
 #define DELAY_WHILE_FETCHING_CERTS (20*60)
@@ -1238,7 +1236,7 @@ update_consensus_networkstatus_downloads(time_t now)
     resource = networkstatus_get_flavor_name(i);
 
     if (!download_status_is_ready(&consensus_dl_status[i], now,
-                                  CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES))
+                             options->TestingConsensusMaxDownloadTries))
       continue; /* We failed downloading a consensus too recently. */
     if (connection_dir_get_by_purpose_and_resource(
                                 DIR_PURPOSE_FETCH_CONSENSUS, resource))

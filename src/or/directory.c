@@ -3723,57 +3723,27 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   } SMARTLIST_FOREACH_END(fp);
 }
 
-/** Schedule for when servers should download things in general. */
-static const int server_dl_schedule[] = {
-  0, 0, 0, 60, 60, 60*2, 60*5, 60*15, INT_MAX
-};
-/** Schedule for when clients should download things in general. */
-static const int client_dl_schedule[] = {
-  0, 0, 60, 60*5, 60*10, INT_MAX
-};
-/** Schedule for when servers should download consensuses. */
-static const int server_consensus_dl_schedule[] = {
-  0, 0, 60, 60*5, 60*10, 60*30, 60*30, 60*30, 60*30, 60*30, 60*60, 60*60*2
-};
-/** Schedule for when clients should download consensuses. */
-static const int client_consensus_dl_schedule[] = {
-  0, 0, 60, 60*5, 60*10, 60*30, 60*60, 60*60, 60*60, 60*60*3, 60*60*6, 60*60*12
-};
-/** Schedule for when clients should download bridge descriptors. */
-static const int bridge_dl_schedule[] = {
-  60*60, 15*60, 15*60, 60*60
-};
-
-/** Decide which download schedule we want to use, and then return a
- * pointer to it along with a pointer to its length. Helper function for
- * download_status_increment_failure() and download_status_reset(). */
-static void
-find_dl_schedule_and_len(download_status_t *dls, int server,
-                         const int **schedule, size_t *schedule_len)
+/** Decide which download schedule we want to use based on descriptor type
+ * in <b>dls</b> and whether we are acting as directory <b>server</b>, and
+ * then return a list of int pointers defining download delays in seconds.
+ * Helper function for download_status_increment_failure() and
+ * download_status_reset(). */
+static const smartlist_t *
+find_dl_schedule_and_len(download_status_t *dls, int server)
 {
   switch (dls->schedule) {
     case DL_SCHED_GENERIC:
-      if (server) {
-        *schedule = server_dl_schedule;
-        *schedule_len = sizeof(server_dl_schedule)/sizeof(int);
-      } else {
-        *schedule = client_dl_schedule;
-        *schedule_len = sizeof(client_dl_schedule)/sizeof(int);
-      }
-      break;
+      if (server)
+        return get_options()->TestingServerDownloadSchedule;
+      else
+        return get_options()->TestingClientDownloadSchedule;
     case DL_SCHED_CONSENSUS:
-      if (server) {
-        *schedule = server_consensus_dl_schedule;
-        *schedule_len = sizeof(server_consensus_dl_schedule)/sizeof(int);
-      } else {
-        *schedule = client_consensus_dl_schedule;
-        *schedule_len = sizeof(client_consensus_dl_schedule)/sizeof(int);
-      }
-      break;
+      if (server)
+        return get_options()->TestingServerConsensusDownloadSchedule;
+      else
+        return get_options()->TestingClientConsensusDownloadSchedule;
     case DL_SCHED_BRIDGE:
-      *schedule = bridge_dl_schedule;
-      *schedule_len = sizeof(bridge_dl_schedule)/sizeof(int);
-      break;
+      return get_options()->TestingBridgeDownloadSchedule;
     default:
       tor_assert(0);
   }
@@ -3787,8 +3757,7 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
-  const int *schedule;
-  size_t schedule_len;
+  const smartlist_t *schedule;
   int increment;
   tor_assert(dls);
   if (status_code != 503 || server) {
@@ -3796,14 +3765,14 @@ download_status_increment_failure(download_status_t *dls, int status_code,
       ++dls->n_download_failures;
   }
 
-  find_dl_schedule_and_len(dls, server, &schedule, &schedule_len);
+  schedule = find_dl_schedule_and_len(dls, server);
 
-  if (dls->n_download_failures < schedule_len)
-    increment = schedule[dls->n_download_failures];
+  if (dls->n_download_failures < smartlist_len(schedule))
+    increment = *(int *)smartlist_get(schedule, dls->n_download_failures);
   else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
     increment = INT_MAX;
   else
-    increment = schedule[schedule_len-1];
+    increment = *(int *)smartlist_get(schedule, smartlist_len(schedule) - 1);
 
   if (increment < INT_MAX)
     dls->next_attempt_at = now+increment;
@@ -3836,14 +3805,11 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 void
 download_status_reset(download_status_t *dls)
 {
-  const int *schedule;
-  size_t schedule_len;
-
-  find_dl_schedule_and_len(dls, get_options()->DirPort_set,
-                           &schedule, &schedule_len);
+  const smartlist_t *schedule = find_dl_schedule_and_len(
+                          dls, get_options()->DirPort_set);
 
   dls->n_download_failures = 0;
-  dls->next_attempt_at = time(NULL) + schedule[0];
+  dls->next_attempt_at = time(NULL) + *(int *)smartlist_get(schedule, 0);
 }
 
 /** Return the number of failures on <b>dls</b> since the last success (if
@@ -3888,7 +3854,8 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     } else {
       dls = router_get_dl_status_by_descriptor_digest(digest);
     }
-    if (!dls || dls->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
+    if (!dls || dls->n_download_failures >=
+                get_options()->TestingDescriptorMaxDownloadTries)
       continue;
     download_status_increment_failure(dls, status_code, cp, server, now);
   } SMARTLIST_FOREACH_END(cp);
@@ -3919,7 +3886,8 @@ dir_microdesc_download_failed(smartlist_t *failed,
     if (!rs)
       continue;
     dls = &rs->dl_status;
-    if (dls->n_download_failures >= MAX_MICRODESC_DOWNLOAD_FAILURES)
+    if (dls->n_download_failures >=
+        get_options()->TestingMicrodescMaxDownloadTries)
       continue;
     {
       char buf[BASE64_DIGEST256_LEN+1];
