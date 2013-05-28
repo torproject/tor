@@ -3212,13 +3212,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "ignore you.");
   }
 
-#define CHECK_DEFAULT(arg) \
-  STMT_BEGIN if (default_options->arg != options->arg && \
-      !options->TestingTorNetwork && \
-      !options->UsingTestNetworkDefaults_) { \
-    REJECT("Testing* options may only be changed in testing Tor " \
-           "networks!"); \
-  } STMT_END
+#define CHECK_DEFAULT(arg)                                              \
+  STMT_BEGIN                                                            \
+    if (!options->TestingTorNetwork &&                                  \
+        !options->UsingTestNetworkDefaults_ &&                          \
+        !config_is_same(&options_format,options,                        \
+                        default_options,#arg)) {                        \
+      REJECT(#arg " may only be changed in testing Tor "                \
+             "networks!");                                              \
+    } STMT_END
   CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
   CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
   CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
