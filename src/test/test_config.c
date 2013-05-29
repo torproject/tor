@@ -196,7 +196,9 @@ test_config_check_or_create_data_subdir(void *arg)
   const char *subpath = get_datadir_fname(subdir);
   struct stat st;
   int r;
+#if !defined (_WIN32) || defined (WINCE)
   unsigned group_permission;
+#endif
   (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
