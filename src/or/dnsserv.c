@@ -183,8 +183,23 @@ dnsserv_launch_request(const char *name, int reverse,
   conn->base_.state = AP_CONN_STATE_RESOLVE_WAIT;
 
   tor_addr_copy(&TO_CONN(conn)->addr, &control_conn->base_.addr);
+#ifdef AF_UNIX
+  /*
+   * The control connection can be AF_UNIX and if so tor_dup_addr will
+   * unhelpfully say "<unknown address type>"; say "(Tor_internal)"
+   * instead.
+   */
+  if (control_conn->base_.socket_family == AF_UNIX) {
+    TO_CONN(conn)->port = 0;
+    TO_CONN(conn)->address = tor_strdup("(Tor_internal)");
+  } else {
+    TO_CONN(conn)->port = control_conn->base_.port;
+    TO_CONN(conn)->address = tor_dup_addr(&control_conn->base_.addr);
+  }
+#else
   TO_CONN(conn)->port = control_conn->base_.port;
   TO_CONN(conn)->address = tor_dup_addr(&control_conn->base_.addr);
+#endif
 
   if (reverse)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
