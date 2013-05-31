@@ -17,6 +17,7 @@
  * part of a subclass (channel_tls_t).
  */
 #define TOR_CHANNEL_INTERNAL_
+#define CONNECTION_PRIVATE
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -2561,7 +2562,7 @@ msec_since_midnight(struct timeval tvnow)
  * <b>tokens_removed</b> tokens removed at timestamp <b>tvnow</b> has run
  * out of tokens, and if so, note the milliseconds since midnight in
  * <b>timestamp_var</b> for the next TB_EMPTY event. */
-static void
+void
 connection_buckets_note_empty_ts(uint32_t *timestamp_var,
                                  int tokens_before, size_t tokens_removed,
                                  struct timeval tvnow)
@@ -2728,7 +2729,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
  * <b>tvnow</b>, capped at <b>milliseconds_elapsed</b> milliseconds since
  * last refilling that bucket.  Return 0 if the bucket has not been empty
  * since the last refill or has not been refilled. */
-static uint32_t
+uint32_t
 bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
                     int tokens_after, int milliseconds_elapsed,
                     struct timeval tvnow)

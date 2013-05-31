@@ -4015,27 +4015,11 @@ control_event_conn_bandwidth_used(void)
   return 0;
 }
 
-/** Helper structure: temporarily stores cell statistics for a circuit. */
-typedef struct cell_stats_t {
-  /** Number of cells added in app-ward direction by command. */
-  uint64_t added_cells_appward[CELL_COMMAND_MAX_ + 1];
-  /** Number of cells added in exit-ward direction by command. */
-  uint64_t added_cells_exitward[CELL_COMMAND_MAX_ + 1];
-  /** Number of cells removed in app-ward direction by command. */
-  uint64_t removed_cells_appward[CELL_COMMAND_MAX_ + 1];
-  /** Number of cells removed in exit-ward direction by command. */
-  uint64_t removed_cells_exitward[CELL_COMMAND_MAX_ + 1];
-  /** Total waiting time of cells in app-ward direction by command. */
-  uint64_t total_time_appward[CELL_COMMAND_MAX_ + 1];
-  /** Total waiting time of cells in exit-ward direction by command. */
-  uint64_t total_time_exitward[CELL_COMMAND_MAX_ + 1];
-} cell_stats_t;
-
 /** Helper: iterate over cell statistics of <b>circ</b> and sum up added
  * cells, removed cells, and waiting times by cell command and direction.
  * Store results in <b>cell_stats</b>.  Free cell statistics of the
  * circuit afterwards. */
-static void
+void
 sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
 {
   memset(cell_stats, 0, sizeof(cell_stats_t));
@@ -4067,7 +4051,7 @@ sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
  * the (possibly zero) entry from <code>number_to_include</code>.  If no
  * entry in <code>include_if_non_zero</code> is positive, no string will
  * be added to <code>event_parts</code>. */
-static void
+void
 append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
                              uint64_t *include_if_non_zero,
                              uint64_t *number_to_include)
@@ -4092,7 +4076,7 @@ append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
 
 /** Helper: format <b>cell_stats</b> for <b>circ</b> for inclusion in a
  * CELL_STATS event and write result string to <b>event_string</b>. */
-static void
+void
 format_cell_stats(char **event_string, circuit_t *circ,
                   cell_stats_t *cell_stats)
 {

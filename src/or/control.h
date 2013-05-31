@@ -97,9 +97,33 @@ void control_event_bootstrap_problem(const char *warn, int reason);
 void control_event_clients_seen(const char *controller_str);
 
 #ifdef CONTROL_PRIVATE
-/* Used only by control.c and test.c */
+/* Used only by control.c and test*.c */
 size_t write_escaped_data(const char *data, size_t len, char **out);
 size_t read_escaped_data(const char *data, size_t len, char **out);
+
+/** Helper structure: temporarily stores cell statistics for a circuit. */
+typedef struct cell_stats_t {
+  /** Number of cells added in app-ward direction by command. */
+  uint64_t added_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells added in exit-ward direction by command. */
+  uint64_t added_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in app-ward direction by command. */
+  uint64_t removed_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in exit-ward direction by command. */
+  uint64_t removed_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in app-ward direction by command. */
+  uint64_t total_time_appward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in exit-ward direction by command. */
+  uint64_t total_time_exitward[CELL_COMMAND_MAX_ + 1];
+} cell_stats_t;
+void sum_up_cell_stats_by_command(circuit_t *circ,
+                                  cell_stats_t *cell_stats);
+void append_cell_stats_by_command(smartlist_t *event_parts,
+                                  const char *key,
+                                  uint64_t *include_if_non_zero,
+                                  uint64_t *number_to_include);
+void format_cell_stats(char **event_string, circuit_t *circ,
+                       cell_stats_t *cell_stats);
 #endif
 
 #endif

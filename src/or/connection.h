@@ -214,5 +214,16 @@ void connection_enable_rate_limiting(connection_t *conn);
 #define connection_type_uses_bufferevent(c) (0)
 #endif
 
+#ifdef CONNECTION_PRIVATE
+/* Used only by connection.c and test*.c */
+uint32_t bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
+                             int tokens_after, int milliseconds_elapsed,
+                             struct timeval tvnow);
+void connection_buckets_note_empty_ts(uint32_t *timestamp_var,
+                                      int tokens_before,
+                                      size_t tokens_removed,
+                                      struct timeval tvnow);
+#endif
+
 #endif
 

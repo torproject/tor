@@ -16,6 +16,7 @@ src_test_test_SOURCES = \
 	src/test/test_addr.c \
 	src/test/test_cell_formats.c \
 	src/test/test_containers.c \
+	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
