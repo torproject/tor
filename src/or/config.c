@@ -5100,6 +5100,27 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname,
   } SMARTLIST_FOREACH_END(port);
 }
 
+/** Warn for every Extended ORPort port in <b>ports</b> that is on a
+ *  publicly routable address. */
+static void
+warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
+{
+  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+    if (port->type != CONN_TYPE_EXT_OR_LISTENER)
+      continue;
+    if (port->is_unix_addr)
+      continue;
+    /* XXX maybe warn even if address is RFC1918? */
+    if (!tor_addr_is_internal(&port->addr, 1)) {
+      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
+               "This is not advised; this address is supposed to only be "
+               "exposed on localhost so that your pluggable transport "
+               "proxies can connect to it.",
+               fmt_addrport(&port->addr, port->port), portname);
+    }
+  } SMARTLIST_FOREACH_END(port);
+}
+
 /** Given a list of port_cfg_t in <b>ports</b>, warn any controller port there
  * is listening on any non-loopback address.  If <b>forbid</b> is true,
  * then emit a stronger warning and remove the port from the list.
@@ -5200,6 +5221,7 @@ parse_port_config(smartlist_t *out,
   smartlist_t *elts;
   int retval = -1;
   const unsigned is_control = (listener_type == CONN_TYPE_CONTROL_LISTENER);
+  const unsigned is_ext_orport = (listener_type == CONN_TYPE_EXT_OR_LISTENER);
   const unsigned allow_no_options = flags & CL_PORT_NO_OPTIONS;
   const unsigned use_server_options = flags & CL_PORT_SERVER_OPTIONS;
   const unsigned warn_nonlocal = flags & CL_PORT_WARN_NONLOCAL;
@@ -5277,6 +5299,8 @@ parse_port_config(smartlist_t *out,
     if (warn_nonlocal && out) {
       if (is_control)
         warn_nonlocal_controller_ports(out, forbid_nonlocal);
+      else if (is_ext_orport)
+        warn_nonlocal_ext_orports(out, portname);
       else
         warn_nonlocal_client_ports(out, portname, listener_type);
     }
@@ -5550,6 +5574,8 @@ parse_port_config(smartlist_t *out,
   if (warn_nonlocal && out) {
     if (is_control)
       warn_nonlocal_controller_ports(out, forbid_nonlocal);
+    else if (is_ext_orport)
+      warn_nonlocal_ext_orports(out, portname);
     else
       warn_nonlocal_client_ports(out, portname, listener_type);
   }
@@ -5699,7 +5725,7 @@ parse_ports(or_options_t *options, int validate_only,
                           options->ExtORPort_lines, NULL,
                           "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
                           "127.0.0.1", 0,
-                          CL_PORT_SERVER_OPTIONS) < 0) {
+                          CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
       *msg = tor_strdup("Invalid ExtORPort configuration");
       goto err;
     }
@@ -5738,6 +5764,8 @@ parse_ports(or_options_t *options, int validate_only,
     !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER);
   options->DNSPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
+  options->ExtORPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER);
 
   if (!validate_only) {
     if (configured_ports) {

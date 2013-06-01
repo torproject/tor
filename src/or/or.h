@@ -3514,6 +3514,7 @@ typedef struct {
   unsigned int ControlPort_set : 1;
   unsigned int DirPort_set : 1;
   unsigned int DNSPort_set : 1;
+  unsigned int ExtORPort_set : 1;
   /**@}*/
 
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
