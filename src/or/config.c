@@ -6464,3 +6464,58 @@ config_maybe_load_geoip_files_(const or_options_t *options,
     config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
 }
 
+/** Initialize cookie authentication (used so far by the ControlPort
+ *  and Extended ORPort).
+ *
+ *  Allocate memory and create a cookie (of length <b>cookie_len</b>)
+ *  in <b>cookie_out</b>.
+ *  Then write it down to <b>fname</b> and prepend it with <b>header</b>.
+ *
+ *  If the whole procedure was successful, set
+ *  <b>cookie_is_set_out</b> to True. */
+int
+init_cookie_authentication(const char *fname, const char *header,
+                           int cookie_len,
+                           uint8_t **cookie_out, int *cookie_is_set_out)
+{
+  char cookie_file_str_len = strlen(header) + cookie_len;
+  char *cookie_file_str = tor_malloc(cookie_file_str_len);
+  int retval = -1;
+
+  /* We don't want to generate a new cookie every time we call
+   * options_act(). One should be enough. */
+  if (*cookie_is_set_out) {
+    retval = 0; /* we are all set */
+    goto done;
+  }
+
+  /* If we've already set the cookie, free it before re-setting
+     it. This can happen if we previously generated a cookie, but
+     couldn't write it to a disk. */
+  if (*cookie_out)
+    tor_free(*cookie_out);
+
+  /* Generate the cookie */
+  *cookie_out = tor_malloc(cookie_len);
+  if (crypto_rand((char *)*cookie_out, cookie_len) < 0)
+    goto done;
+
+  /* Create the string that should be written on the file. */
+  memcpy(cookie_file_str, header, strlen(header));
+  memcpy(cookie_file_str+strlen(header), *cookie_out, cookie_len);
+  if (write_bytes_to_file(fname, cookie_file_str, cookie_file_str_len, 1)) {
+    log_warn(LD_FS,"Error writing auth cookie to %s.", escaped(fname));
+    goto done;
+  }
+
+  /* Success! */
+  log_info(LD_GENERAL, "Generated auth cookie file in '%s'.", escaped(fname));
+  *cookie_is_set_out = 1;
+  retval = 0;
+
+ done:
+  memwipe(cookie_file_str, 0, cookie_file_str_len);
+  tor_free(cookie_file_str);
+  return retval;
+}
+

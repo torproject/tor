@@ -167,7 +167,8 @@ test_ext_or_init_auth(void *arg)
 
   /* Shouldn't be initialized already, or our tests will be a bit
    * meaningless */
-  test_assert(tor_mem_is_zero(ext_or_auth_cookie, 32));
+  ext_or_auth_cookie = tor_malloc_zero(32);
+  test_assert(tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Now make sure we use a temporary file */
   fn = get_fname("ext_cookie_file");
@@ -184,7 +185,7 @@ test_ext_or_init_auth(void *arg)
   test_memeq(cp, "! Extended ORPort Auth Cookie !\x0a", 32);
   test_memeq(cp+32, ext_or_auth_cookie, 32);
   memcpy(cookie0, ext_or_auth_cookie, 32);
-  test_assert(!tor_mem_is_zero(ext_or_auth_cookie, 32));
+  test_assert(!tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Operation should be idempotent. */
   tt_int_op(0, ==, init_ext_or_cookie_authentication(1));
@@ -217,6 +218,7 @@ test_ext_or_cookie_auth(void *arg)
   tt_int_op(strlen(client_hash_input), ==, 46+32+32);
   tt_int_op(strlen(server_hash_input), ==, 46+32+32);
 
+  ext_or_auth_cookie = tor_malloc_zero(32);
   memcpy(ext_or_auth_cookie, "s beside you? When I count, ther", 32);
   ext_or_auth_cookie_is_set = 1;
 
@@ -252,9 +254,9 @@ test_ext_or_cookie_auth(void *arg)
   memcpy(server_hash_input+46+32, reply+32, 32);
   memcpy(client_hash_input+46+32, reply+32, 32);
   /* Check the HMACs are correct... */
-  crypto_hmac_sha256(hmac1, ext_or_auth_cookie, 32, server_hash_input,
+  crypto_hmac_sha256(hmac1, (char*)ext_or_auth_cookie, 32, server_hash_input,
                      46+32+32);
-  crypto_hmac_sha256(hmac2, ext_or_auth_cookie, 32, client_hash_input,
+  crypto_hmac_sha256(hmac2, (char*)ext_or_auth_cookie, 32, client_hash_input,
                      46+32+32);
   test_memeq(hmac1, reply, 32);
   test_memeq(hmac2, client_hash, 32);
@@ -269,9 +271,9 @@ test_ext_or_cookie_auth(void *arg)
   memcpy(server_hash_input+46+32, reply2+32, 32);
   memcpy(client_hash_input+46+32, reply2+32, 32);
   /* Check the HMACs are correct... */
-  crypto_hmac_sha256(hmac1, ext_or_auth_cookie, 32, server_hash_input,
+  crypto_hmac_sha256(hmac1, (char*)ext_or_auth_cookie, 32, server_hash_input,
                      46+32+32);
-  crypto_hmac_sha256(hmac2, ext_or_auth_cookie, 32, client_hash_input,
+  crypto_hmac_sha256(hmac2, (char*)ext_or_auth_cookie, 32, client_hash_input,
                      46+32+32);
   test_memeq(hmac1, reply2, 32);
   test_memeq(hmac2, client_hash2, 32);
@@ -304,6 +306,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
   const char client_nonce[] = "But when I look ahead up the whi";
   (void)arg;
 
+  ext_or_auth_cookie = tor_malloc_zero(32);
   memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
   ext_or_auth_cookie_is_set = 1;
 
@@ -393,6 +396,7 @@ test_ext_or_handshake(void *arg)
   MOCK(connection_write_to_buf_impl_,
        connection_write_to_buf_impl_replacement);
   /* Use same authenticators as for test_ext_or_cookie_auth_testvec */
+  ext_or_auth_cookie = tor_malloc_zero(32);
   memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
   ext_or_auth_cookie_is_set = 1;
 

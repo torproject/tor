@@ -32,7 +32,7 @@ STATIC int handle_client_auth_nonce(const char *client_nonce,
                          char **client_hash_out,
                          char **reply_out, size_t *reply_len_out);
 #ifdef TOR_UNIT_TESTS
-extern char ext_or_auth_cookie[];
+extern uint8_t *ext_or_auth_cookie;
 extern int ext_or_auth_cookie_is_set;
 #endif
 #endif
