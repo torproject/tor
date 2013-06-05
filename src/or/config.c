@@ -413,6 +413,7 @@ static config_var_t option_vars_[] = {
   V(TestingV3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "5 minutes"),
   V(TestingV3AuthInitialDistDelay, INTERVAL, "5 minutes"),
+  V(TestingV3AuthVotingStartOffset, INTERVAL, "0"),
   V(V3AuthVotingInterval,        INTERVAL, "1 hour"),
   V(V3AuthVoteDelay,             INTERVAL, "5 minutes"),
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
@@ -475,6 +476,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingV3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
+  V(TestingV3AuthVotingStartOffset, INTERVAL, "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
@@ -3224,6 +3226,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingV3AuthInitialVotingInterval);
   CHECK_DEFAULT(TestingV3AuthInitialVoteDelay);
   CHECK_DEFAULT(TestingV3AuthInitialDistDelay);
+  CHECK_DEFAULT(TestingV3AuthVotingStartOffset);
   CHECK_DEFAULT(TestingAuthDirTimeToLearnReachability);
   CHECK_DEFAULT(TestingEstimatedDescriptorPropagationTime);
   CHECK_DEFAULT(TestingServerDownloadSchedule);
@@ -3259,6 +3262,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->TestingV3AuthInitialVotingInterval/2) {
     REJECT("TestingV3AuthInitialVoteDelay plus TestingV3AuthInitialDistDelay "
            "must be less than half TestingV3AuthInitialVotingInterval");
+  }
+
+  if (options->TestingV3AuthVotingStartOffset >
+      MIN(options->TestingV3AuthInitialVotingInterval,
+          options->V3AuthVotingInterval)) {
+    REJECT("TestingV3AuthVotingStartOffset is higher than the voting "
+           "interval.");
   }
 
   if (options->TestingAuthDirTimeToLearnReachability < 0) {

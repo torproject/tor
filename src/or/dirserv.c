@@ -3093,7 +3093,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     else
       last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
     v3_out->valid_after =
-      dirvote_get_start_of_next_interval(now, (int)last_consensus_interval);
+      dirvote_get_start_of_next_interval(now, (int)last_consensus_interval,
+                                      options->TestingV3AuthVotingStartOffset);
     format_iso_time(tbuf, v3_out->valid_after);
     log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
                "consensus_set=%d, last_interval=%d",

@@ -13,9 +13,9 @@
 #define TOR_DIRVOTE_H
 
 /** Lowest allowable value for VoteSeconds. */
-#define MIN_VOTE_SECONDS 20
+#define MIN_VOTE_SECONDS 2
 /** Lowest allowable value for DistSeconds. */
-#define MIN_DIST_SECONDS 20
+#define MIN_DIST_SECONDS 2
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
@@ -86,7 +86,9 @@ authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
 /* vote scheduling */
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
-time_t dirvote_get_start_of_next_interval(time_t now, int interval);
+time_t dirvote_get_start_of_next_interval(time_t now,
+                                          int interval,
+                                          int offset);
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 void dirvote_act(const or_options_t *options, time_t now);
 

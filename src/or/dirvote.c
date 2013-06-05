@@ -2523,12 +2523,13 @@ dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
   timing_out->dist_delay = options->V3AuthDistDelay;
 }
 
-/** Return the start of the next interval of size <b>interval</b> (in seconds)
- * after <b>now</b>.  Midnight always starts a fresh interval, and if the last
- * interval of a day would be truncated to less than half its size, it is
- * rolled into the previous interval. */
+/** Return the start of the next interval of size <b>interval</b> (in
+ * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
+ * starts a fresh interval, and if the last interval of a day would be
+ * truncated to less than half its size, it is rolled into the
+ * previous interval. */
 time_t
-dirvote_get_start_of_next_interval(time_t now, int interval)
+dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
 {
   struct tm tm;
   time_t midnight_today=0;
@@ -2555,6 +2556,10 @@ dirvote_get_start_of_next_interval(time_t now, int interval)
    * skip over to the next day. */
   if (next + interval/2 > midnight_tomorrow)
     next = midnight_tomorrow;
+
+  next += offset;
+  if (next - interval > now)
+    next -= interval;
 
   return next;
 }
@@ -2619,8 +2624,10 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
     vote_delay = dist_delay = interval / 4;
 
   start = voting_schedule.interval_starts =
-    dirvote_get_start_of_next_interval(now,interval);
-  end = dirvote_get_start_of_next_interval(start+1, interval);
+    dirvote_get_start_of_next_interval(now,interval,
+                                      options->TestingV3AuthVotingStartOffset);
+  end = dirvote_get_start_of_next_interval(start+1, interval,
+                                      options->TestingV3AuthVotingStartOffset);
 
   tor_assert(end > start);
 
