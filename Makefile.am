@@ -60,6 +60,10 @@ doxygen:
 test: all
 	./src/test/test
 
+# Requires a copy of Chutney in ./chutney
+test-network: all
+	./src/test/test-network.sh
+
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
