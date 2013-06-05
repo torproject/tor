@@ -2023,12 +2023,12 @@ The following options are used for running a testing Tor network.
     **TestingTorNetwork** is set. (Default: 30 minutes)
 
 **TestingV3AuthInitialVoteDelay** __N__ **minutes**|**hours**::
-    Like TestingV3AuthInitialVoteDelay, but for initial voting interval before
+    Like V3AuthVoteDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
 **TestingV3AuthInitialDistDelay** __N__ **minutes**|**hours**::
-    Like TestingV3AuthInitialDistDelay, but for initial voting interval before
+    Like V3AuthDistDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
