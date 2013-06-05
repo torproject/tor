@@ -60,7 +60,8 @@ doxygen:
 test: all
 	./src/test/test
 
-# Requires a copy of Chutney in ./chutney
+# Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
+# Chutney can be cloned from https://git.torproject.org/chutney.git .
 test-network: all
 	./src/test/test-network.sh
 

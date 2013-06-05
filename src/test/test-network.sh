@@ -1,15 +1,17 @@
 #! /bin/sh
 
-CHUTNEY_BASEDIR=./chutney       # FIXME
+# NOTE: Requires Chutney in $CHUTNEY_PATH.
+
 TOR_DIR=$(/bin/pwd)/src/or
 NETWORK_FLAVOUR=basic
 CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 myname=$(/usr/bin/basename $0)
 
-cd $CHUTNEY_BASEDIR || {
-    echo "$myname: missing chutney dir: $CHUTNEY_BASEDIR"
+[ -d "$CHUTNEY_PATH" ] && [ -x "$CHUTNEY_PATH/chutney" ] || {
+    echo "$myname: missing 'chutney' in CHUTNEY_PATH ($CHUTNEY_PATH)"
     exit 1
 }
+cd "$CHUTNEY_PATH"
 PATH=$TOR_DIR:$PATH             # For picking up the right tor binary.
 ./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
 
