@@ -2,10 +2,10 @@
 
 # NOTE: Requires Chutney in $CHUTNEY_PATH.
 
-TOR_DIR=$(/bin/pwd)/src/or
+TOR_DIR=$(pwd)/src/or
 NETWORK_FLAVOUR=basic
 CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
-myname=$(/usr/bin/basename $0)
+myname=$(basename $0)
 
 [ -d "$CHUTNEY_PATH" ] && [ -x "$CHUTNEY_PATH/chutney" ] || {
     echo "$myname: missing 'chutney' in CHUTNEY_PATH ($CHUTNEY_PATH)"
@@ -20,6 +20,6 @@ PATH=$TOR_DIR:$PATH             # For picking up the right tor binary.
 BOOTSTRAP_TIME=18
 echo -n "$myname: sleeping for $BOOTSTRAP_TIME seconds"
 n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
-    /bin/sleep 1; n=$(/usr/bin/expr $n - 1); echo -n .
+    sleep 1; n=$(expr $n - 1); echo -n .
 done; echo ""
 ./chutney verify $CHUTNEY_NETWORK
