@@ -1688,7 +1688,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
 {
   int len, new_len;
   DH *dh = NULL;
-  unsigned char *dh_string_repr = NULL, *cp = NULL;
+  unsigned char *dh_string_repr = NULL;
   char *base64_encoded_dh = NULL;
   char *file_string = NULL;
   int retval = -1;
@@ -1712,15 +1712,8 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   if (!BN_set_word(dh->g, DH_GENERATOR))
     goto done;
 
-  len = i2d_DHparams(dh, NULL);
-  if (len < 0) {
-    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (1).");
-    goto done;
-  }
-
-  cp = dh_string_repr = tor_malloc_zero(len+1);
-  len = i2d_DHparams(dh, &cp);
-  if ((len < 0) || ((cp - dh_string_repr) != len)) {
+  len = i2d_DHparams(dh, &dh_string_repr);
+  if ((len < 0) || (dh_string_repr == NULL)) {
     log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (2).");
     goto done;
   }
@@ -1747,7 +1740,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
  done:
   if (dh)
     DH_free(dh);
-  tor_free(dh_string_repr);
+  OPENSSL_free(dh_string_repr);
   tor_free(base64_encoded_dh);
   tor_free(file_string);
 
