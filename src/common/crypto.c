@@ -1152,22 +1152,21 @@ int
 crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len)
 {
   int len;
-  unsigned char *buf, *cp;
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0 || (size_t)len > dest_len || dest_len > SIZE_T_CEILING)
+  unsigned char *buf = NULL;
+
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  cp = buf = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &cp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
+
+  if ((size_t)len > dest_len || dest_len > SIZE_T_CEILING) {
+    OPENSSL_free(buf);
     return -1;
   }
   /* We don't encode directly into 'dest', because that would be illegal
    * type-punning.  (C99 is smarter than me, C99 is smarter than me...)
    */
   memcpy(dest,buf,len);
-  tor_free(buf);
+  OPENSSL_free(buf);
   return len;
 }
 
@@ -1198,24 +1197,17 @@ crypto_pk_asn1_decode(const char *str, size_t len)
 int
 crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
 {
-  unsigned char *buf, *bufp;
+  unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0)
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  buf = bufp = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &bufp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
-    return -1;
-  }
   if (crypto_digest(digest_out, (char*)buf, len) < 0) {
-    tor_free(buf);
+    OPENSSL_free(buf);
     return -1;
   }
-  tor_free(buf);
+  OPENSSL_free(buf);
   return 0;
 }
 
@@ -1224,24 +1216,17 @@ crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
 int
 crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
 {
-  unsigned char *buf, *bufp;
+  unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0)
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  buf = bufp = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &bufp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
-    return -1;
-  }
   if (crypto_digest_all(digests_out, (char*)buf, len) < 0) {
-    tor_free(buf);
+    OPENSSL_free(buf);
     return -1;
   }
-  tor_free(buf);
+  OPENSSL_free(buf);
   return 0;
 }
 
