@@ -806,24 +806,24 @@ tor_cert_new(X509 *x509_cert)
   tor_cert_t *cert;
   EVP_PKEY *pkey;
   RSA *rsa;
-  int length, length2;
-  unsigned char *cp;
+  int length;
+  unsigned char *buf = NULL;
 
   if (!x509_cert)
     return NULL;
 
-  length = i2d_X509(x509_cert, NULL);
+  length = i2d_X509(x509_cert, &buf);
   cert = tor_malloc_zero(sizeof(tor_cert_t));
-  if (length <= 0) {
+  if (length <= 0 || buf == NULL) {
     tor_free(cert);
     log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
     X509_free(x509_cert);
     return NULL;
   }
   cert->encoded_len = (size_t) length;
-  cp = cert->encoded = tor_malloc(length);
-  length2 = i2d_X509(x509_cert, &cp);
-  tor_assert(length2 == length);
+  cert->encoded = tor_malloc(length);
+  memcpy(cert->encoded, buf, length);
+  OPENSSL_free(buf);
 
   cert->cert = x509_cert;
 
