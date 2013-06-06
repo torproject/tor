@@ -66,12 +66,8 @@ void tor_free_all(int postfork);
 
 int tor_main(int argc, char *argv[]);
 
-#ifdef MAIN_PRIVATE
 int do_main_loop(void);
-int do_list_fingerprint(void);
-void do_hash_password(void);
 int tor_init(int argc, char **argv);
-#endif
 
 #endif
 

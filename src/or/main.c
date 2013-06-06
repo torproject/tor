@@ -10,7 +10,6 @@
  * connections, implements main loop, and drives scheduled events.
  **/
 
-#define MAIN_PRIVATE
 #include "or.h"
 #include "addressmap.h"
 #include "buffers.h"
@@ -1874,7 +1873,7 @@ do_hup(void)
 }
 
 /** Tor main loop. */
-/* static */ int
+int
 do_main_loop(void)
 {
   int loop_result;
@@ -2301,7 +2300,7 @@ handle_signals(int is_parent)
 
 /** Main entry point for the Tor command-line client.
  */
-/* static */ int
+int
 tor_init(int argc, char *argv[])
 {
   char buf[256];
@@ -2567,7 +2566,7 @@ tor_cleanup(void)
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
-/* static */ int
+static int
 do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
@@ -2597,7 +2596,7 @@ do_list_fingerprint(void)
 
 /** Entry point for password hashing: take the desired password from
  * the command line, and print its salted hash to stdout. **/
-/* static */ void
+static void
 do_hash_password(void)
 {
 

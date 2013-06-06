@@ -60,7 +60,7 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
-char *
+STATIC char *
 format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
@@ -587,7 +587,7 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
 /** Helper: given a list of valid networkstatus_t, return a new string
  * containing the contents of the consensus network parameter set.
  */
-/* private */ char *
+STATIC char *
 dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
 {
   int i;

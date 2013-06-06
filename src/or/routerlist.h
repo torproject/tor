@@ -11,6 +11,8 @@
 #ifndef TOR_ROUTERLIST_H
 #define TOR_ROUTERLIST_H
 
+#include "testsupport.h"
+
 int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);
 
@@ -206,9 +208,10 @@ typedef union u64_dbl_t {
   double dbl;
 } u64_dbl_t;
 
-int choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries);
-void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
-                                 uint64_t *total_out);
+STATIC int choose_array_element_by_weight(const u64_dbl_t *entries,
+                                          int n_entries);
+STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
+                                        uint64_t *total_out);
 #endif
 
 #endif

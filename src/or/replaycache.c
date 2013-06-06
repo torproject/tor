@@ -63,7 +63,7 @@ replaycache_new(time_t horizon, time_t interval)
 /** See documentation for replaycache_add_and_test()
  */
 
-int
+STATIC int
 replaycache_add_and_test_internal(
     time_t present, replaycache_t *r, const void *data, int len,
     time_t *elapsed)
@@ -127,7 +127,7 @@ replaycache_add_and_test_internal(
 /** See documentation for replaycache_scrub_if_needed()
  */
 
-void
+STATIC void
 replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
 {
   digestmap_iter_t *itr = NULL;

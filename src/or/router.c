@@ -2249,7 +2249,7 @@ router_guess_address_from_dir_headers(uint32_t *guess)
  * string describing the version of Tor and the operating system we're
  * currently running on.
  */
-void
+STATIC void
 get_platform_str(char *platform, size_t len)
 {
   tor_snprintf(platform, len, "Tor %s on %s",

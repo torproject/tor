@@ -36,6 +36,10 @@
 #include "torlog.h"
 #include "container.h"
 
+/** Given a severity, yields an index into log_severity_list_t.masks to use
+ * for that severity. */
+#define SEVERITY_MASK_IDX(sev) ((sev) - LOG_ERR)
+
 /** @{ */
 /** The string we stick at the end of a log message when it is too long,
  * and its length. */

@@ -1,8 +1,6 @@
 /* Copyright (c) 2008-2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define CRYPTO_PRIVATE
-
 #include "orconfig.h"
 
 #include <stdio.h>

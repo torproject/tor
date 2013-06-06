@@ -29,7 +29,7 @@ int curve25519_donna(uint8_t *mypublic,
 #endif
 #endif
 
-int
+STATIC int
 curve25519_impl(uint8_t *output, const uint8_t *secret,
                 const uint8_t *basepoint)
 {

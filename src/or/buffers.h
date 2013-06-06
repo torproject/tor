@@ -12,6 +12,8 @@
 #ifndef TOR_BUFFERS_H
 #define TOR_BUFFERS_H
 
+#include "testsupport.h"
+
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
@@ -89,7 +91,7 @@ int generic_buffer_set_to_copy(generic_buffer_t **output,
 void assert_buf_ok(buf_t *buf);
 
 #ifdef BUFFERS_PRIVATE
-int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
+STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
 #endif
 
 #endif

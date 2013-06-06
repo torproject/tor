@@ -3,7 +3,6 @@
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define MAIN_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "main.h"

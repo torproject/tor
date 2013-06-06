@@ -6,4 +6,7 @@
       optimizing the production code, while enabling us to take more
       radical measures to let the unit tests test things.
 
+    - The production builds no longer include functions used only
+      in the unit tests; all functions exposed from a module for
+      unit-testing only are now static in production builds.
 

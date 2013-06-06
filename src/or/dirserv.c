@@ -2082,7 +2082,7 @@ static digestmap_t *mbw_cache = NULL;
 
 /** Store a measured bandwidth cache entry when reading the measured
  * bandwidths file. */
-void
+STATIC void
 dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
                           time_t as_of)
 {
@@ -2112,7 +2112,7 @@ dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
 }
 
 /** Clear and free the measured bandwidth cache */
-void
+STATIC void
 dirserv_clear_measured_bw_cache(void)
 {
   if (mbw_cache) {
@@ -2123,7 +2123,7 @@ dirserv_clear_measured_bw_cache(void)
 }
 
 /** Scan the measured bandwidth cache and remove expired entries */
-void
+STATIC void
 dirserv_expire_measured_bw_cache(time_t now)
 {
 
@@ -2145,7 +2145,7 @@ dirserv_expire_measured_bw_cache(time_t now)
 }
 
 /** Get the current size of the measured bandwidth cache */
-int
+STATIC int
 dirserv_get_measured_bw_cache_size(void)
 {
   if (mbw_cache) return digestmap_size(mbw_cache);
@@ -2155,7 +2155,7 @@ dirserv_get_measured_bw_cache_size(void)
 /** Query the cache by identity digest, return value indicates whether
  * we found it. The bw_out and as_of_out pointers receive the cached
  * bandwidth value and the time it was cached if not NULL. */
-int
+STATIC int
 dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_kb_out,
                                    time_t *as_of_out)
 {
@@ -2176,7 +2176,7 @@ dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_kb_out,
 }
 
 /** Predicate wrapper for dirserv_query_measured_bw_cache() */
-int
+STATIC int
 dirserv_has_measured_bw(const char *node_id)
 {
   return dirserv_query_measured_bw_cache_kb(node_id, NULL, NULL);
@@ -2754,7 +2754,7 @@ clear_status_flags_on_sybil(routerstatus_t *rs)
  * into a measured_bw_line_t output structure. Returns -1 on failure
  * or 0 on success.
  */
-int
+STATIC int
 measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
 {
   char *line = tor_strdup(orig_line);
@@ -2835,7 +2835,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
  * of bandwidth statuses. Returns true if a line is found,
  * false otherwise.
  */
-int
+STATIC int
 measured_bw_line_apply(measured_bw_line_t *parsed_line,
                        smartlist_t *routerstatuses)
 {
@@ -3168,7 +3168,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 /** For v2 authoritative directories only: Replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object.  */
-cached_dir_t *
+STATIC cached_dir_t *
 generate_v2_networkstatus_opinion(void)
 {
   cached_dir_t *r = NULL;

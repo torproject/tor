@@ -45,7 +45,9 @@ typedef enum {
   HIBERNATE_STATE_INITIAL=5
 } hibernate_state_t;
 
+#ifdef TOR_UNIT_TESTS
 void hibernate_set_state_for_testing_(hibernate_state_t newstate);
+#endif
 #endif
 
 #endif

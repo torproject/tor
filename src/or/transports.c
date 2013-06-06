@@ -776,7 +776,7 @@ handle_methods_done(const managed_proxy_t *mp)
 
 /** Handle a configuration protocol <b>line</b> received from a
  *  managed proxy <b>mp</b>. */
-void
+STATIC void
 handle_proxy_line(const char *line, managed_proxy_t *mp)
 {
   log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)",
@@ -877,7 +877,7 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
 }
 
 /** Parses an ENV-ERROR <b>line</b> and warns the user accordingly. */
-void
+STATIC void
 parse_env_error(const char *line)
 {
   /* (Length of the protocol string) plus (a space) and (the first char of
@@ -893,7 +893,7 @@ parse_env_error(const char *line)
 
 /** Handles a VERSION <b>line</b>. Updates the configuration protocol
  *  version in <b>mp</b>. */
-int
+STATIC int
 parse_version(const char *line, managed_proxy_t *mp)
 {
   if (strlen(line) < (strlen(PROTO_NEG_SUCCESS) + 2)) {
@@ -934,7 +934,7 @@ parse_method_error(const char *line, int is_server)
 
 /** Parses an SMETHOD <b>line</b> and if well-formed it registers the
  *  new transport in <b>mp</b>. */
-int
+STATIC int
 parse_smethod_line(const char *line, managed_proxy_t *mp)
 {
   int r;
@@ -1011,7 +1011,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
 
 /** Parses a CMETHOD <b>line</b>, and if well-formed it registers
  *  the new transport in <b>mp</b>. */
-int
+STATIC int
 parse_cmethod_line(const char *line, managed_proxy_t *mp)
 {
   int r;

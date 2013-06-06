@@ -45,10 +45,10 @@ replaycache_t * replaycache_new(time_t horizon, time_t interval);
  * testing.  For everything else, use the wrappers below instead.
  */
 
-int replaycache_add_and_test_internal(
+STATIC int replaycache_add_and_test_internal(
     time_t present, replaycache_t *r, const void *data, int len,
     time_t *elapsed);
-void replaycache_scrub_if_needed_internal(
+STATIC void replaycache_scrub_if_needed_internal(
     time_t present, replaycache_t *r);
 
 #endif /* REPLAYCACHE_PRIVATE */

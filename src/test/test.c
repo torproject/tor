@@ -29,7 +29,6 @@ const char tor_git_revision[] = "";
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */
 #define BUFFERS_PRIVATE
-#define CONFIG_PRIVATE
 #define GEOIP_PRIVATE
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE

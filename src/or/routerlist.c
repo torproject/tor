@@ -1801,7 +1801,7 @@ router_get_advertised_bandwidth_capped(const routerinfo_t *router)
  * doubles, convert them to uint64_t, and try to scale them linearly so as to
  * much of the range of uint64_t. If <b>total_out</b> is provided, set it to
  * the sum of all elements in the array _before_ scaling. */
-/* private */ void
+STATIC void
 scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
                             uint64_t *total_out)
 {
@@ -1844,7 +1844,7 @@ gt_i64_timei(uint64_t a, uint64_t b)
  * value, and return the index of that element.  If all elements are 0, choose
  * an index at random. Return -1 on error.
  */
-/* private */ int
+STATIC int
 choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries)
 {
   int i, i_chosen=-1, n_chosen=0;

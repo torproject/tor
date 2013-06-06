@@ -5,9 +5,9 @@
 #define TOR_TESTSUPPORT_H
 
 #ifdef TOR_UNIT_TESTS
-#define STATIC_UNLESS_TESTING
+#define STATIC
 #else
-#define STATIC_UNLESS_TESTING static
+#define STATIC static
 #endif
 
 #endif

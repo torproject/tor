@@ -90,10 +90,7 @@ uint32_t get_effective_bwburst(const or_options_t *options);
 
 char *get_transport_bindaddr_from_config(const char *transport);
 
-#ifdef CONFIG_PRIVATE
-/* Used only by config.c and test.c */
 or_options_t *options_new(void);
-#endif
 
 void config_register_addressmaps(const or_options_t *options);
 /* XXXX024 move to connection_edge.h */

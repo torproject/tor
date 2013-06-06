@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include "torint.h"
+#include "testsupport.h"
 
 /*
   Macro to create an arbitrary OpenSSL version number as used by
@@ -283,7 +284,6 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 /** OpenSSL-based utility functions. */
 void memwipe(void *mem, uint8_t byte, size_t sz);
 
-#ifdef CRYPTO_PRIVATE
 /* Prototypes for private functions only used by tortls.c, crypto.c, and the
  * unit tests. */
 struct rsa_st;
@@ -294,9 +294,8 @@ crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
 struct evp_pkey_st *crypto_pk_get_evp_pkey_(crypto_pk_t *env,
                                                 int private);
 struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
-/* Prototypes for private functions only used by crypto.c and test.c*/
-void add_spaces_to_fp(char *out, size_t outlen, const char *in);
-#endif
+
+void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #endif
 
