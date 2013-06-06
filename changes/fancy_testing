@@ -1,0 +1,9 @@
+  o Build features:
+
+    - Tor now builds each source file in two modes: a mode that avoids
+      exposing identifiers needlessly, and another mode that exposes
+      more identifiers for testing. This lets the compiler do better at
+      optimizing the production code, while enabling us to take more
+      radical measures to let the unit tests test things.
+
+

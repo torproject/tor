@@ -1,5 +1,10 @@
 bin_PROGRAMS+= src/or/tor
-noinst_LIBRARIES+= src/or/libtor.a
+noinst_LIBRARIES += \
+	src/or/libtor.a
+if UNITTESTS_ENABLED
+noinst_LIBRARIES += \
+	src/or/libtor-testing.a
+endif
 
 if BUILD_NT_SERVICES
 tor_platform_source=src/or/ntmain.c
@@ -21,7 +26,7 @@ else
 onion_ntor_source=
 endif
 
-src_or_libtor_a_SOURCES = \
+LIBTOR_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/buffers.c				\
 	src/or/channel.c				\
@@ -77,6 +82,9 @@ src_or_libtor_a_SOURCES = \
 	$(onion_ntor_source)				\
 	src/or/config_codedigest.c
 
+src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
+src_or_libtor_testing_a_SOURCES = $(LIBTOR_A_SOURCES)
+
 #libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
 #	../common/libor-event.a
 
@@ -89,6 +97,8 @@ src/or/tor_main.o: micro-revision.i
 AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""
+
+src_or_libtor_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it

@@ -39,6 +39,10 @@ AC_ARG_ENABLE(static-tor,
    AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir))
 AC_ARG_ENABLE(curve25519,
    AS_HELP_STRING(--disable-curve25519, Build Tor with no curve25519 elliptic-curve crypto support))
+AC_ARG_ENABLE(unittests,
+   AS_HELP_STRING(--disable-unittests, [Don't build unit tests for Tor. Risky!]))
+
+AM_CONDITIONAL(UNITTESTS_ENABLED, test x$unittests != xno)
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";

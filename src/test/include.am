@@ -1,11 +1,15 @@
 TESTS+= src/test/test
 
-noinst_PROGRAMS+= src/test/test src/test/test-child src/test/bench
+noinst_PROGRAMS+= src/test/bench
+if UNITTESTS_ENABLED
+noinst_PROGRAMS+= src/test/test src/test/test-child
+endif
 
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""	       \
-	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext"
+	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext" \
+	-DTOR_UNIT_TESTS
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on Windows, but I assure you that it
@@ -36,9 +40,9 @@ src_test_bench_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
-src_test_test_LDADD = src/or/libtor.a src/common/libor.a \
-	src/common/libor-crypto.a $(LIBDONNA) \
-	src/common/libor-event.a \
+src_test_test_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
+	src/common/libor-crypto-testing.a $(LIBDONNA) \
+	src/common/libor-event-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 

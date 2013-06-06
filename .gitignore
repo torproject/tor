@@ -128,10 +128,13 @@
 /src/common/Makefile.in
 /src/common/common_sha1.i
 /src/common/libor.a
+/src/common/libor-testing.a
 /src/common/libor.lib
 /src/common/libor-crypto.a
+/src/common/libor-crypto-testing.a
 /src/common/libor-crypto.lib
 /src/common/libor-event.a
+/src/common/libor-event-testing.a
 /src/common/libor-event.lib
 /src/common/libcurve25519_donna.a
 /src/common/libcurve25519_donna.lib
@@ -150,6 +153,7 @@
 /src/or/tor
 /src/or/tor.exe
 /src/or/libtor.a
+/src/or/libtor-testing.a
 /src/or/libtor.lib
 
 # /src/test
