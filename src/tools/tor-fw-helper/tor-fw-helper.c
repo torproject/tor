@@ -496,6 +496,6 @@ main(int argc, char **argv)
     smartlist_free(tor_fw_options.ports_to_forward);
   }
 
-  exit(r);
+  exit(0);
 }
 

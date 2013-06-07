@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - The tor-fw-helper program now follows the standard convention and
+      exits with status code "0" on success. Fixes bug 9030; bugfix on
+      0.2.3.1-alpha. Patch by Arlo Breault.
