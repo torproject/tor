@@ -979,29 +979,6 @@ tor_tls_cert_get_key(tor_cert_t *cert)
   return result;
 }
 
-/** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
-int
-tor_tls_evp_pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
-{
-  /* We'd like to do this, but openssl 0.9.7 doesn't have it:
-     return EVP_PKEY_cmp(a,b) == 1;
-  */
-  unsigned char *a_enc = NULL, *b_enc = NULL;
-  int a_len, b_len, result;
-  a_len = i2d_PublicKey(a, &a_enc);
-  b_len = i2d_PublicKey(b, &b_enc);
-  if (a_len != b_len || a_len < 0) {
-    result = 0;
-  } else {
-    result = tor_memeq(a_enc, b_enc, a_len);
-  }
-  if (a_enc)
-    OPENSSL_free(a_enc);
-  if (b_enc)
-    OPENSSL_free(b_enc);
-  return result;
-}
-
 /** Return true iff the other side of <b>tls</b> has authenticated to us, and
  * the key certified in <b>cert</b> is the same as the key they used to do it.
  */
@@ -1017,7 +994,7 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
   link_key = X509_get_pubkey(peercert);
   cert_key = X509_get_pubkey(cert->cert);
 
-  result = link_key && cert_key && tor_tls_evp_pkey_eq(cert_key, link_key);
+  result = link_key && cert_key && EVP_PKEY_cmp(cert_key, link_key) == 1;
 
   X509_free(peercert);
   if (link_key)

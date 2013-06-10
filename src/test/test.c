@@ -2133,7 +2133,6 @@ extern struct testcase_t config_tests[];
 extern struct testcase_t introduce_tests[];
 extern struct testcase_t replaycache_tests[];
 extern struct testcase_t cell_format_tests[];
-extern struct testcase_t tortls_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -2148,7 +2147,6 @@ static struct testgroup_t testgroups[] = {
   { "pt/", pt_tests },
   { "config/", config_tests },
   { "replaycache/", replaycache_tests },
-  { "tortls/", tortls_tests },
   { "introduce/", introduce_tests },
   END_OF_GROUPS
 };

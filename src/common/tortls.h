@@ -138,10 +138,5 @@ int tor_tls_cert_is_valid(int severity,
                           int check_rsa_1024);
 const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 
-#ifdef TORTLS_PRIVATE
-/* Prototypes for private functions only used by the unit tests. */
-int tor_tls_evp_pkey_eq(EVP_PKEY *a, EVP_PKEY *b);
-#endif
-
 #endif
 
