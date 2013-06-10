@@ -1152,22 +1152,21 @@ int
 crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len)
 {
   int len;
-  unsigned char *buf, *cp;
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0 || (size_t)len > dest_len || dest_len > SIZE_T_CEILING)
+  unsigned char *buf = NULL;
+
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  cp = buf = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &cp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
+
+  if ((size_t)len > dest_len || dest_len > SIZE_T_CEILING) {
+    OPENSSL_free(buf);
     return -1;
   }
   /* We don't encode directly into 'dest', because that would be illegal
    * type-punning.  (C99 is smarter than me, C99 is smarter than me...)
    */
   memcpy(dest,buf,len);
-  tor_free(buf);
+  OPENSSL_free(buf);
   return len;
 }
 
@@ -1198,24 +1197,17 @@ crypto_pk_asn1_decode(const char *str, size_t len)
 int
 crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
 {
-  unsigned char *buf, *bufp;
+  unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0)
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  buf = bufp = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &bufp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
-    return -1;
-  }
   if (crypto_digest(digest_out, (char*)buf, len) < 0) {
-    tor_free(buf);
+    OPENSSL_free(buf);
     return -1;
   }
-  tor_free(buf);
+  OPENSSL_free(buf);
   return 0;
 }
 
@@ -1224,24 +1216,17 @@ crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
 int
 crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
 {
-  unsigned char *buf, *bufp;
+  unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0)
+  len = i2d_RSAPublicKey(pk->key, &buf);
+  if (len < 0 || buf == NULL)
     return -1;
-  buf = bufp = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &bufp);
-  if (len < 0) {
-    crypto_log_errors(LOG_WARN,"encoding public key");
-    tor_free(buf);
-    return -1;
-  }
   if (crypto_digest_all(digests_out, (char*)buf, len) < 0) {
-    tor_free(buf);
+    OPENSSL_free(buf);
     return -1;
   }
-  tor_free(buf);
+  OPENSSL_free(buf);
   return 0;
 }
 
@@ -1703,7 +1688,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
 {
   int len, new_len;
   DH *dh = NULL;
-  unsigned char *dh_string_repr = NULL, *cp = NULL;
+  unsigned char *dh_string_repr = NULL;
   char *base64_encoded_dh = NULL;
   char *file_string = NULL;
   int retval = -1;
@@ -1727,15 +1712,8 @@ crypto_store_dynamic_dh_modulus(const char *fname)
   if (!BN_set_word(dh->g, DH_GENERATOR))
     goto done;
 
-  len = i2d_DHparams(dh, NULL);
-  if (len < 0) {
-    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (1).");
-    goto done;
-  }
-
-  cp = dh_string_repr = tor_malloc_zero(len+1);
-  len = i2d_DHparams(dh, &cp);
-  if ((len < 0) || ((cp - dh_string_repr) != len)) {
+  len = i2d_DHparams(dh, &dh_string_repr);
+  if ((len < 0) || (dh_string_repr == NULL)) {
     log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (2).");
     goto done;
   }
@@ -1762,7 +1740,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
  done:
   if (dh)
     DH_free(dh);
-  tor_free(dh_string_repr);
+  OPENSSL_free(dh_string_repr);
   tor_free(base64_encoded_dh);
   tor_free(file_string);
 

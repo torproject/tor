@@ -806,24 +806,24 @@ tor_cert_new(X509 *x509_cert)
   tor_cert_t *cert;
   EVP_PKEY *pkey;
   RSA *rsa;
-  int length, length2;
-  unsigned char *cp;
+  int length;
+  unsigned char *buf = NULL;
 
   if (!x509_cert)
     return NULL;
 
-  length = i2d_X509(x509_cert, NULL);
+  length = i2d_X509(x509_cert, &buf);
   cert = tor_malloc_zero(sizeof(tor_cert_t));
-  if (length <= 0) {
+  if (length <= 0 || buf == NULL) {
     tor_free(cert);
     log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
     X509_free(x509_cert);
     return NULL;
   }
   cert->encoded_len = (size_t) length;
-  cp = cert->encoded = tor_malloc(length);
-  length2 = i2d_X509(x509_cert, &cp);
-  tor_assert(length2 == length);
+  cert->encoded = tor_malloc(length);
+  memcpy(cert->encoded, buf, length);
+  OPENSSL_free(buf);
 
   cert->cert = x509_cert;
 
@@ -980,27 +980,25 @@ tor_tls_cert_get_key(tor_cert_t *cert)
 }
 
 /** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
-static int
-pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
+int
+tor_tls_evp_pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
 {
   /* We'd like to do this, but openssl 0.9.7 doesn't have it:
      return EVP_PKEY_cmp(a,b) == 1;
   */
-  unsigned char *a_enc=NULL, *b_enc=NULL, *a_ptr, *b_ptr;
-  int a_len1, b_len1, a_len2, b_len2, result;
-  a_len1 = i2d_PublicKey(a, NULL);
-  b_len1 = i2d_PublicKey(b, NULL);
-  if (a_len1 != b_len1)
-    return 0;
-  a_ptr = a_enc = tor_malloc(a_len1);
-  b_ptr = b_enc = tor_malloc(b_len1);
-  a_len2 = i2d_PublicKey(a, &a_ptr);
-  b_len2 = i2d_PublicKey(b, &b_ptr);
-  tor_assert(a_len2 == a_len1);
-  tor_assert(b_len2 == b_len1);
-  result = tor_memeq(a_enc, b_enc, a_len1);
-  tor_free(a_enc);
-  tor_free(b_enc);
+  unsigned char *a_enc = NULL, *b_enc = NULL;
+  int a_len, b_len, result;
+  a_len = i2d_PublicKey(a, &a_enc);
+  b_len = i2d_PublicKey(b, &b_enc);
+  if (a_len != b_len || a_len < 0) {
+    result = 0;
+  } else {
+    result = tor_memeq(a_enc, b_enc, a_len);
+  }
+  if (a_enc)
+    OPENSSL_free(a_enc);
+  if (b_enc)
+    OPENSSL_free(b_enc);
   return result;
 }
 
@@ -1019,7 +1017,7 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
   link_key = X509_get_pubkey(peercert);
   cert_key = X509_get_pubkey(cert->cert);
 
-  result = link_key && cert_key && pkey_eq(cert_key, link_key);
+  result = link_key && cert_key && tor_tls_evp_pkey_eq(cert_key, link_key);
 
   X509_free(peercert);
   if (link_key)

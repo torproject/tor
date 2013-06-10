@@ -63,6 +63,11 @@ const char AUTHORITY_SIGNKEY_1[] =
 "Yx4lqK0ca5IkTp3HevwnlWaJgbaOTUspCVshzJBhDA==\n"
 "-----END RSA PRIVATE KEY-----\n";
 
+const char AUTHORITY_SIGNKEY_1_DIGEST[] =
+  "CBF56A83368A5150F1A9AAADAFB4D77F8C4170E2";
+const char AUTHORITY_SIGNKEY_1_DIGEST256[] =
+  "AF7C5468DBE3BA54A052726038D7F15F3C4CA511B1952645B3D96D83A8DFB51C";
+
 /** Second of 3 example authority certificates for unit testing. */
 const char AUTHORITY_CERT_2[] =
 "dir-key-certificate-version 3\n"

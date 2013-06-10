@@ -23,6 +23,7 @@ src_test_test_SOURCES = \
 	src/test/test_microdesc.c \
 	src/test/test_pt.c \
 	src/test/test_replay.c \
+	src/test/test_tortls.c \
 	src/test/test_util.c \
 	src/test/test_config.c \
 	src/ext/tinytest.c
