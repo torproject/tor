@@ -980,8 +980,8 @@ tor_tls_cert_get_key(tor_cert_t *cert)
 }
 
 /** Return true iff <b>a</b> and <b>b</b> represent the same public key. */
-static int
-pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
+int
+tor_tls_evp_pkey_eq(EVP_PKEY *a, EVP_PKEY *b)
 {
   /* We'd like to do this, but openssl 0.9.7 doesn't have it:
      return EVP_PKEY_cmp(a,b) == 1;
@@ -1017,7 +1017,7 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
   link_key = X509_get_pubkey(peercert);
   cert_key = X509_get_pubkey(cert->cert);
 
-  result = link_key && cert_key && pkey_eq(cert_key, link_key);
+  result = link_key && cert_key && tor_tls_evp_pkey_eq(cert_key, link_key);
 
   X509_free(peercert);
   if (link_key)
