@@ -1,3 +1,0 @@
-  o Minor bugfixes (test):
-    - Fix an impossible buffer overrun in the AES unit tests. Fixes bug 8845;
-      bugfix on 0.2.0.7-alpha. Found by eugenis.

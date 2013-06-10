@@ -1,3 +1,67 @@
+Changes in version 0.2.4.13-alpha - 2013-06-1?
+
+  o Major bugfixes:
+    - Avoid a memory leak where we would leak a consensus body when we
+      find that a consensus which we couldn't previously verify due to
+      missing certificates is now verifiable. Fixes bug 8719; bugfix
+      on 0.2.0.10-alpha.
+    - Prevent the get_freelists() function from running off the end of
+      the list of freelists if it somehow gets an unrecognized
+      allocation. Fixes bug 8844; bugfix on 0.2.0.16-alpha. Reported by
+      eugenis.
+    - Follow the socks5 protocol when offering username/password
+      authentication. The fix for bug 8117 exposed this bug, and it
+      turns out real-world applications like Pidgin do care. Bugfix on
+      0.2.3.2-alpha; fixes bug 8879.
+    - We used to always request authority certificates by identity digest,
+      meaning we'd get the newest one even when we wanted one with a
+      different signing key. Then we would complain about being given
+      a certificate we already had, and never get the one we really
+      wanted. Now we use the "fp-sk/" resource as well as the "fp/"
+      resource to request the one we want. Fixes bug 5595; bugfix on
+      0.2.0.8-alpha.
+    - Fix a directory authority crash bug when building a consensus
+      using an older consensus as its basis. Fixes bug 8833. Bugfix
+      on 0.2.4.12-alpha.
+
+  o Minor bugfixes:
+    - Fix an impossible buffer overrun in the AES unit tests. Fixes
+      bug 8845; bugfix on 0.2.0.7-alpha. Found by eugenis.
+    - Fix a memory leak that would occur whenever a configuration
+      option changed. Fixes bug 8718; bugfix on 0.2.3.3-alpha.
+    - Paste the description for PathBias parameters from the man
+      page into or.h, so the code documents them too. Fixes bug 7982;
+      bugfix on 0.2.3.17-beta and 0.2.4.8-alpha.
+    - Relays now treat a changed IPv6 ORPort as sufficient reason to
+      publish an updated descriptor. Fixes bug 6026; bugfix on
+      0.2.4.1-alpha.
+
+  o Minor bugfixes (log messages):
+    - Fix a scaling issue in the path bias accounting code that
+      resulted in "Bug:" log messages from either
+      pathbias_scale_close_rates() or pathbias_count_build_success().
+      This represents a bugfix on a previous bugfix: the original fix
+      attempted in 0.2.4.10-alpha was incomplete. Fixes bug 8235; bugfix
+      on 0.2.4.1-alpha.
+    - Give a less useless error message when the user asks for an IPv4
+      address on an IPv6-only port, or vice versa. Fixes bug 8846; bugfix
+      on 0.2.4.7-alpha.
+
+  o Minor features:
+    - Downgrade "unexpected SENDME" warnings to protocol-warn for 0.2.4.x,
+      to tolerate bug 8093 for now.
+    - Add an "ignoring-advertised-bws" boolean to the flag-threshold lines
+      in directory authority votes to describe whether they have enough
+      measured bandwidths to ignore advertised (relay descriptor)
+      bandwidth claims. Resolves ticket 8711.
+    - Update to the June 5 2013 Maxmind GeoLite Country database.
+
+  o Code simplification and refactoring:
+    - Avoid using character buffers when constructing most directory
+      objects: this approach was unwieldy and error-prone. Instead,
+      build smartlists of strings, and concatenate them when done.
+
+
 Changes in version 0.2.4.12-alpha - 2013-04-18
   Tor 0.2.4.12-alpha moves Tor forward on several fronts: it starts the
   process for lengthening the guard rotation period, makes directory

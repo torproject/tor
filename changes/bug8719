@@ -1,6 +1,0 @@
-  o Major bugfixes (memory leak):
-    - Avoid a memory leak where we would leak a consensus body when we find
-      that a consensus which we couldn't previously verify due to missing
-      certificates is now verifiable. Fixes bug 8719; bugfix on
-      0.2.0.10-alpha.
-

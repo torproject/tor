@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Relays now treat a changed IPv6 ORPort as sufficient reason to
-      publish an updated descriptor. Fix for bug 6026; bugfix for
-      0.2.4.1-alpha.
