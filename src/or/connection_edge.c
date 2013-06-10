@@ -2652,12 +2652,13 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   conn->state = EXIT_CONN_STATE_OPEN;
   if (connection_get_outbuf_len(conn)) {
-    /* in case there are any queued data cells */
-    log_warn(LD_BUG,"newly connected conn had data waiting!");
-//    connection_start_writing(conn);
+    /* in case there are any queued data cells, from e.g. optimistic data */
+    IF_HAS_NO_BUFFEREVENT(conn)
+      connection_watch_events(conn, READ_EVENT|WRITE_EVENT);
+  } else {
+    IF_HAS_NO_BUFFEREVENT(conn)
+      connection_watch_events(conn, READ_EVENT);
   }
-  IF_HAS_NO_BUFFEREVENT(conn)
-    connection_watch_events(conn, READ_EVENT);
 
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(edge_conn)) {
