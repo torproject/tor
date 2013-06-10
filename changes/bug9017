@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Avoid an assertion failure on OpenBSD (and perhaps other BSDs)
+      when an exit connection with optimistic data succeeds immediately
+      rather than returning EINPROGRESS. Fixes bug 9017; bugfix on
+      0.2.3.1-alpha.
+
