@@ -9,7 +9,6 @@
 #include "or.h"
 #include "test.h"
 
-
 static void
 test_tortls_evp_pkey_eq(void)
 {
@@ -27,7 +26,7 @@ test_tortls_evp_pkey_eq(void)
   test_assert(tor_tls_evp_pkey_eq(evp1, evp2) == 0);
   test_assert(tor_tls_evp_pkey_eq(evp1, evp1) == 1);
 
-done:
+ done:
   crypto_pk_free(pk1);
   crypto_pk_free(pk2);
   if (evp1)
@@ -43,3 +42,4 @@ struct testcase_t tortls_tests[] = {
   TORTLS_LEGACY(evp_pkey_eq),
   END_OF_TESTCASES
 };
+

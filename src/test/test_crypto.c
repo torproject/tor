@@ -526,15 +526,15 @@ test_crypto_digests(void)
   r = crypto_pk_get_digest(k, digest);
   test_assert(r == 0);
   test_memeq(hex_str(digest, DIGEST_LEN),
-	     AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
+             AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
 
   r = crypto_pk_get_all_digests(k, &pkey_digests);
 
   test_memeq(hex_str(pkey_digests.d[DIGEST_SHA1], DIGEST_LEN),
-	     AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
+             AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
   test_memeq(hex_str(pkey_digests.d[DIGEST_SHA256], DIGEST256_LEN),
-	     AUTHORITY_SIGNKEY_1_DIGEST256, HEX_DIGEST256_LEN);
-done:
+             AUTHORITY_SIGNKEY_1_DIGEST256, HEX_DIGEST256_LEN);
+ done:
   crypto_pk_free(k);
 }
 
