@@ -9,10 +9,6 @@ Changes in version 0.2.4.13-alpha - 2013-06-1?
       the list of freelists if it somehow gets an unrecognized
       allocation. Fixes bug 8844; bugfix on 0.2.0.16-alpha. Reported by
       eugenis.
-    - Follow the socks5 protocol when offering username/password
-      authentication. The fix for bug 8117 exposed this bug, and it
-      turns out real-world applications like Pidgin do care. Bugfix on
-      0.2.3.2-alpha; fixes bug 8879.
     - We used to always request authority certificates by identity digest,
       meaning we'd get the newest one even when we wanted one with a
       different signing key. Then we would complain about being given
@@ -20,6 +16,14 @@ Changes in version 0.2.4.13-alpha - 2013-06-1?
       wanted. Now we use the "fp-sk/" resource as well as the "fp/"
       resource to request the one we want. Fixes bug 5595; bugfix on
       0.2.0.8-alpha.
+    - Avoid an assertion failure on OpenBSD (and perhaps other BSDs)
+      when an exit connection with optimistic data succeeds immediately
+      rather than returning EINPROGRESS. Fixes bug 9017; bugfix on
+      0.2.3.1-alpha.
+    - Follow the socks5 protocol when offering username/password
+      authentication. The fix for bug 8117 exposed this bug, and it
+      turns out real-world applications like Pidgin do care. Bugfix on
+      0.2.3.2-alpha; fixes bug 8879.
     - Fix a directory authority crash bug when building a consensus
       using an older consensus as its basis. Fixes bug 8833. Bugfix
       on 0.2.4.12-alpha.
