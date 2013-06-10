@@ -1740,7 +1740,8 @@ crypto_store_dynamic_dh_modulus(const char *fname)
  done:
   if (dh)
     DH_free(dh);
-  OPENSSL_free(dh_string_repr);
+  if (dh_string_repr)
+    OPENSSL_free(dh_string_repr);
   tor_free(base64_encoded_dh);
   tor_free(file_string);
 
