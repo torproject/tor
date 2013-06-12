@@ -75,6 +75,10 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
   size_t written;
+  if (md->body == NULL) {
+    *annotation_len_out = 0;
+    return 0;
+  }
   /* XXXX drops unknown annotations. */
   if (md->last_listed) {
     char buf[ISO_TIME_LEN+1];
@@ -447,7 +451,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   HT_FOREACH(mdp, microdesc_map, &cache->map) {
     microdesc_t *md = *mdp;
     size_t annotation_len;
-    if (md->no_save)
+    if (md->no_save || !md->body)
       continue;
 
     size = dump_microdescriptor(fd, md, &annotation_len);
