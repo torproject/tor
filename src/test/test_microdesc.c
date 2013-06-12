@@ -208,10 +208,24 @@ test_md_cache(void *data)
   md3 = NULL; /* it's history now! */
 
   /* rebuild again, make sure it stays gone. */
-  microdesc_cache_rebuild(mc, 1);
+  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
   tt_ptr_op(md1, ==, microdesc_cache_lookup_by_digest256(mc, d1));
   tt_ptr_op(md2, ==, microdesc_cache_lookup_by_digest256(mc, d2));
   tt_ptr_op(NULL, ==, microdesc_cache_lookup_by_digest256(mc, d3));
+
+  /* Re-add md3, and make sure we can rebuild the cache. */
+  added = microdescs_add_to_cache(mc, test_md3_noannotation, NULL,
+                                  SAVED_NOWHERE, 0, time3, NULL);
+  tt_int_op(1, ==, smartlist_len(added));
+  md3 = smartlist_get(added, 0);
+  smartlist_free(added);
+  added = NULL;
+  tt_int_op(md1->saved_location, ==, SAVED_IN_CACHE);
+  tt_int_op(md2->saved_location, ==, SAVED_IN_CACHE);
+  tt_int_op(md3->saved_location, ==, SAVED_IN_JOURNAL);
+
+  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
+  tt_int_op(md3->saved_location, ==, SAVED_IN_CACHE);
 
  done:
   if (options)
