@@ -1223,17 +1223,15 @@ escaped(const char *s)
   return escaped_val_;
 }
 
-/** Escape every ";" or "\" character of <b>string</b>. Use
- *  <b>escape_char</b> as the character to use for escaping.
- *  The returned string is allocated on the heap and it's the
- *  responsibility of the caller to free it. */
+/** Escape every character of <b>string</b> that is in
+ *  <b>chars_to_escape</b>. The returned string is allocated on the
+ *  heap and it's the responsibility of the caller to free it. */
 char *
-tor_escape_str_for_socks_arg(const char *string)
+tor_escape_str_for_socks_arg(const char *string, const char *chars_to_escape)
 {
   char *new_string = NULL;
   char *new_cp = NULL;
   size_t length, new_length;
-  static const char *chars_to_escape = ";\\";
 
   tor_assert(string);
 

@@ -1440,7 +1440,7 @@ pt_stringify_socks_args(const smartlist_t *socks_args)
 
   SMARTLIST_FOREACH_BEGIN(socks_args, const char *, s) {
     /* Escape ';' and '\'. */
-    escaped_string = tor_escape_str_for_socks_arg(s);
+    escaped_string = tor_escape_str_for_socks_arg(s, ";\\");
     if (!escaped_string)
       goto done;
 

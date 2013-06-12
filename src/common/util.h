@@ -231,7 +231,8 @@ int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 
-char *tor_escape_str_for_socks_arg(const char *string);
+char *tor_escape_str_for_socks_arg(const char *string,
+                                   const char *chars_to_escape);
 
 struct smartlist_t;
 int tor_vsscanf(const char *buf, const char *pattern, va_list ap) \
