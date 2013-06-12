@@ -1227,7 +1227,7 @@ escaped(const char *s)
  *  <b>chars_to_escape</b>. The returned string is allocated on the
  *  heap and it's the responsibility of the caller to free it. */
 char *
-tor_escape_str_for_socks_arg(const char *string, const char *chars_to_escape)
+tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
 {
   char *new_string = NULL;
   char *new_cp = NULL;
