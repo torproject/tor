@@ -1,0 +1,7 @@
+  o Major bugfixes (windows):
+    - Open files to be mapped with FILE_SHARE_DELETE so that we can
+      replace them before closing the mapping. This is a likely cause of
+      warnings and crashes when replacing the microdescriptor cache
+      file. Diagnosed based on comments by "doorss" and by Robert
+      Ransom. Possible fix for bug 2077; bugfix on 0.2.2.6-alpha.
+
