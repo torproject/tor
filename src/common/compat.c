@@ -248,7 +248,7 @@ tor_mmap_file(const char *filename)
   strlcpy(tfilename,filename,MAX_PATH);
 #endif
   file_handle = CreateFile(tfilename,
-                           GENERIC_READ, FILE_SHARE_READ,
+                           GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_DELETE,
                            NULL,
                            OPEN_EXISTING,
                            FILE_ATTRIBUTE_NORMAL,
