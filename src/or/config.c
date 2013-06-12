@@ -4671,6 +4671,26 @@ get_transport_bindaddr_from_config(const char *transport)
   return NULL;
 }
 
+/** Given the name of a pluggable transport in <b>transport</b>, check
+ *  the configuration file to see if the user has asked us to pass any
+ *  parameters to the pluggable transport. Return a smartlist
+ *  containing the parameters, otherwise NULL. */
+smartlist_t *
+get_options_for_server_transport(const char *transport)
+{
+  config_line_t *cl;
+  const or_options_t *options = get_options();
+
+  for (cl = options->ServerTransportOptions; cl; cl = cl->next) {
+    smartlist_t *options_sl =
+      get_options_from_transport_options_line(cl->value, transport);
+    if (options_sl)
+      return options_sl;
+  }
+
+  return NULL;
+}
+
 /** Read the contents of a ServerTransportPlugin line from
  * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
  * isn't.

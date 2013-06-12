@@ -1100,6 +1100,48 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   return r;
 }
 
+/** Return a newly allocated string that tor should place in
+ * TOR_PT_SERVER_TRANSPORT_OPTIONS while configuring the server
+ * manged proxy in <b>mp</b>. Return NULL if no such options are found. */
+static char *
+get_transport_options_for_server_proxy(const managed_proxy_t *mp)
+{
+  char *options_string = NULL;
+  smartlist_t *string_sl = smartlist_new();
+
+  tor_assert(mp->is_server);
+
+  /** Loop over the transports of the proxy. If we have options for
+      any of them, format them appropriately and place them in our
+      smartlist. Finally, join our smartlist to get the final
+      string. */
+  SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, const char *, transport) {
+    smartlist_t *options_tmp_sl = NULL;
+    options_tmp_sl = get_options_for_server_transport(transport);
+    if (!options_tmp_sl)
+      continue;
+
+    /** Loop over the options of this transport, escape them, and
+        place them in the smartlist. */
+    SMARTLIST_FOREACH_BEGIN(options_tmp_sl, const char *, options) {
+      char *escaped_opts = tor_escape_str_for_pt_args(options, ":;\\");
+      smartlist_add_asprintf(string_sl, "%s:%s",
+                             transport, escaped_opts);
+      tor_free(escaped_opts);
+    } SMARTLIST_FOREACH_END(options);
+
+    SMARTLIST_FOREACH(options_tmp_sl, char *, c, tor_free(c));
+    smartlist_free(options_tmp_sl);
+  } SMARTLIST_FOREACH_END(transport);
+
+  options_string = smartlist_join_strings(string_sl, ";", 0, NULL);
+
+  SMARTLIST_FOREACH(string_sl, char *, t, tor_free(t));
+  smartlist_free(string_sl);
+
+  return options_string;
+}
+
 /** Return the string that tor should place in TOR_PT_SERVER_BINDADDR
  *  while configuring the server managed proxy in <b>mp</b>. The
  *  string is stored in the heap, and it's the the responsibility of
@@ -1179,6 +1221,14 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
       char *bindaddr_tmp = get_bindaddr_for_server_proxy(mp);
       smartlist_add_asprintf(envs, "TOR_PT_SERVER_BINDADDR=%s", bindaddr_tmp);
       tor_free(bindaddr_tmp);
+    }
+
+    {
+      char *server_transport_options =
+        get_transport_options_for_server_proxy(mp);
+      smartlist_add_asprintf(envs, "TOR_PT_SERVER_TRANSPORT_OPTIONS=%s",
+                             server_transport_options);
+      tor_free(server_transport_options);
     }
 
     /* XXX024 Remove the '=' here once versions of obfsproxy which
