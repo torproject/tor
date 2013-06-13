@@ -1134,7 +1134,9 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
     smartlist_free(options_tmp_sl);
   } SMARTLIST_FOREACH_END(transport);
 
-  options_string = smartlist_join_strings(string_sl, ";", 0, NULL);
+  if (smartlist_len(string_sl)) {
+    options_string = smartlist_join_strings(string_sl, ";", 0, NULL);
+  }
 
   SMARTLIST_FOREACH(string_sl, char *, t, tor_free(t));
   smartlist_free(string_sl);
@@ -1226,9 +1228,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
     {
       char *server_transport_options =
         get_transport_options_for_server_proxy(mp);
-      smartlist_add_asprintf(envs, "TOR_PT_SERVER_TRANSPORT_OPTIONS=%s",
-                             server_transport_options);
-      tor_free(server_transport_options);
+      if (server_transport_options) {
+        smartlist_add_asprintf(envs, "TOR_PT_SERVER_TRANSPORT_OPTIONS=%s",
+                               server_transport_options);
+        tor_free(server_transport_options);
+      }
     }
 
     /* XXX024 Remove the '=' here once versions of obfsproxy which
