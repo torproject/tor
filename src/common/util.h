@@ -233,16 +233,10 @@ const char *escaped(const char *string);
 char *tor_escape_str_for_socks_arg(const char *string);
 
 struct smartlist_t;
-int tor_vsscanf(const char *buf, const char *pattern, va_list ap)
-#ifdef __GNUC__
-  __attribute__((format(scanf, 2, 0)))
-#endif
-  ;
+int tor_vsscanf(const char *buf, const char *pattern, va_list ap) \
+  CHECK_SCANF(2, 0);
 int tor_sscanf(const char *buf, const char *pattern, ...)
-#ifdef __GNUC__
-  __attribute__((format(scanf, 2, 3)))
-#endif
-  ;
+  CHECK_SCANF(2, 3);
 
 void smartlist_add_asprintf(struct smartlist_t *sl, const char *pattern, ...)
   CHECK_PRINTF(2, 3);

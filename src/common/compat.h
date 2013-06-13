@@ -84,12 +84,18 @@
 
 /* ===== Compiler compatibility */
 
-/* GCC can check printf types on arbitrary functions. */
+/* GCC can check printf and scanf types on arbitrary functions. */
 #ifdef __GNUC__
 #define CHECK_PRINTF(formatIdx, firstArg) \
    __attribute__ ((format(printf, formatIdx, firstArg)))
 #else
 #define CHECK_PRINTF(formatIdx, firstArg)
+#endif
+#ifdef __GNUC__
+#define CHECK_SCANF(formatIdx, firstArg) \
+   __attribute__ ((format(scanf, formatIdx, firstArg)))
+#else
+#define CHECK_SCANF(formatIdx, firstArg)
 #endif
 
 /* inline is __inline on windows. */
