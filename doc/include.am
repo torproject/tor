@@ -36,8 +36,6 @@ endif
 
 EXTRA_DIST+= doc/HACKING doc/asciidoc-helper.sh			\
              $(html_in) $(man_in) $(txt_in)			\
-             doc/tor-rpm-creation.txt				\
-             doc/tor-win32-mingw-creation.txt doc/spec/README	\
              doc/state-contents.txt
 
 docdir = @docdir@
