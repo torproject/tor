@@ -2652,7 +2652,6 @@ is_destroy_cell(channel_t *chan,
   return 0;
 }
 
-
 /**
  * Send destroy cell on a channel
  *

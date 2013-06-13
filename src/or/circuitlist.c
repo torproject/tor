@@ -1717,8 +1717,9 @@ assert_circuit_ok(const circuit_t *c)
   if (or_circ && or_circ->p_chan) {
     if (or_circ->p_circ_id) {
       /* ibid */
-      circuit_t *c2 = circuit_get_by_circid_channel_impl(or_circ->p_circ_id,
-                                                         or_circ->p_chan, NULL);
+      circuit_t *c2 =
+        circuit_get_by_circid_channel_impl(or_circ->p_circ_id,
+                                           or_circ->p_chan, NULL);
       tor_assert(c == c2);
     }
   }

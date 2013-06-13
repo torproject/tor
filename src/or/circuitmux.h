@@ -124,6 +124,7 @@ circuit_t * circuitmux_get_first_active_circuit(circuitmux_t *cmux,
                                            cell_queue_t **destroy_queue_out);
 void circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
                                   unsigned int n_cells);
+void circuitmux_notify_xmit_destroy(circuitmux_t *cmux);
 
 /* Circuit interface */
 void circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,

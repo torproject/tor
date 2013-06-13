@@ -127,6 +127,10 @@ struct circuitmux_s {
    * cells completely.
    */
   unsigned int last_cell_was_destroy : 1;
+  /** Destroy counter: increment this when a destroy gets queued, decrement
+   * when we unqueue it, so we can test to make sure they don't starve.
+   */
+  int64_t destroy_ctr;
 
   /*
    * Circuitmux policy; if this is non-NULL, it can override the built-
@@ -205,6 +209,11 @@ circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 static void circuitmux_assert_okay_pass_one(circuitmux_t *cmux);
 static void circuitmux_assert_okay_pass_two(circuitmux_t *cmux);
 static void circuitmux_assert_okay_pass_three(circuitmux_t *cmux);
+
+/* Static global variables */
+
+/** Count the destroy balance to debug destroy queue logic */
+static int64_t global_destroy_ctr = 0;
 
 /* Function definitions */
 
@@ -519,6 +528,25 @@ circuitmux_free(circuitmux_t *cmux)
   if (cmux->chanid_circid_map) {
     HT_CLEAR(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
     tor_free(cmux->chanid_circid_map);
+  }
+
+  /*
+   * We're throwing away some destroys; log the counter and
+   * adjust the global counter by the queue size.
+   */
+  if (cmux->destroy_cell_queue.n > 0) {
+    cmux->destroy_ctr -= cmux->destroy_cell_queue.n;
+    global_destroy_ctr -= cmux->destroy_cell_queue.n;
+    log_debug(LD_CIRC,
+              "Freeing cmux at %p with %u queued destroys; the last cmux "
+              "destroy balance was %ld, global is %ld\n",
+              cmux, cmux->destroy_cell_queue.n,
+              cmux->destroy_ctr, global_destroy_ctr);
+  } else {
+    log_debug(LD_CIRC,
+              "Freeing cmux at %p with no queued destroys, the cmux destroy "
+              "balance was %ld, global is %ld\n",
+              cmux, cmux->destroy_ctr, global_destroy_ctr);
   }
 
   cell_queue_clear(&cmux->destroy_cell_queue);
@@ -1502,6 +1530,24 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   circuitmux_assert_okay_paranoid(cmux);
 }
 
+/**
+ * Notify the circuitmux that a destroy was sent, so we can update
+ * the counter.
+ */
+
+void
+circuitmux_notify_xmit_destroy(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  --(cmux->destroy_ctr);
+  --(global_destroy_ctr);
+  log_debug(LD_CIRC,
+            "Cmux at %p sent a destroy, cmux counter is now %ld, "
+            "global counter is now %ld\n",
+            cmux, cmux->destroy_ctr, global_destroy_ctr);
+}
+
 /*
  * Circuitmux consistency checking assertions
  */
@@ -1798,6 +1844,14 @@ circuitmux_append_destroy_cell(channel_t *chan,
   cell_queue_append_packed_copy(&cmux->destroy_cell_queue, &cell,
                                 chan->wide_circ_ids, 0);
 
+  /* Destroy entering the queue, update counters */
+  ++(cmux->destroy_ctr);
+  ++global_destroy_ctr;
+  log_debug(LD_CIRC,
+            "Cmux at %p queued a destroy for circ %u, "
+            "cmux counter is now %ld, global counter is now %ld\n",
+            cmux, circ_id, cmux->destroy_ctr, global_destroy_ctr);
+
   /* XXXX Duplicate code from append_cell_to_circuit_queue */
   if (!channel_has_queued_writes(chan)) {
     /* There is no data at all waiting to be sent on the outbuf.  Add a
@@ -1808,3 +1862,4 @@ circuitmux_append_destroy_cell(channel_t *chan,
     channel_flush_from_first_active_circuit(chan, 1);
   }
 }
+

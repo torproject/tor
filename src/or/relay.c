@@ -2358,6 +2358,8 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
       tor_assert(destroy_queue->n > 0);
       cell = cell_queue_pop(destroy_queue);
       channel_write_packed_cell(chan, cell);
+      /* Update the cmux destroy counter */
+      circuitmux_notify_xmit_destroy(cmux);
       cell = NULL;
       ++n_flushed;
       continue;
