@@ -2032,6 +2032,10 @@ The following options are used for running a testing Tor network.
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
+**TestingV3AuthVotingStartOffset** __N__ **seconds**|**minutes**|**hours**::
+    Directory authorities offset voting start time by this much.
+    Changing this requires that **TestingTorNetwork** is set. (Default: 0)
+
 **TestingAuthDirTimeToLearnReachability** __N__ **minutes**|**hours**::
     After starting as an authority, do not make claims about whether routers
     are Running until this much time has passed. Changing this requires

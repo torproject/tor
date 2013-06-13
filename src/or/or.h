@@ -3904,6 +3904,10 @@ typedef struct {
    * signatures.  Only altered on testing networks.*/
   int TestingV3AuthInitialDistDelay;
 
+  /** Offset in seconds added to the starting time for consensus
+      voting. Only altered on testing networks. */
+  int TestingV3AuthVotingStartOffset;
+
   /** If an authority has been around for less than this amount of time, it
    * does not believe its reachability information is accurate.  Only
    * altered on testing networks. */

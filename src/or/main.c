@@ -1153,6 +1153,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_v3_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
+  static time_t time_to_download_networkstatus = 0;
   static time_t time_to_shrink_memory = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
@@ -1442,10 +1443,17 @@ run_scheduled_events(time_t now)
     networkstatus_v2_list_clean(now);
     /* Remove dead routers. */
     routerlist_remove_old_routers();
+  }
 
-    /* Also, once per minute, check whether we want to download any
-     * networkstatus documents.
-     */
+  /* 2c. Every minute (or every second if TestingTorNetwork), check
+   * whether we want to download any networkstatus documents. */
+
+/* How often do we check whether we should download network status
+ * documents? */
+#define networkstatus_dl_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
+
+  if (time_to_download_networkstatus < now && !options->DisableNetwork) {
+    time_to_download_networkstatus = now + networkstatus_dl_interval(options);
     update_networkstatus_downloads(now);
   }
 
