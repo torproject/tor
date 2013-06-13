@@ -900,6 +900,18 @@ tor_fd_seekend(int fd)
 #endif
 }
 
+/** Move <b>fd</b> to position <b>pos</b> in the file. Return -1 on error, 0
+ * on success. */
+int
+tor_fd_setpos(int fd, off_t pos)
+{
+#ifdef _WIN32
+  return _lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
+#else
+  return lseek(fd, pos, SEEK_SET) < 0 ? -1 : 0;
+#endif
+}
+
 #undef DEBUG_SOCKET_COUNTING
 #ifdef DEBUG_SOCKET_COUNTING
 /** A bitarray of all fds that should be passed to tor_socket_close(). Only
