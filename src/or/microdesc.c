@@ -75,6 +75,10 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
   size_t written;
+  if (md->body == NULL) {
+    *annotation_len_out = 0;
+    return 0;
+  }
   /* XXXX drops unknown annotations. */
   if (md->last_listed) {
     char buf[ISO_TIME_LEN+1];
@@ -447,7 +451,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   HT_FOREACH(mdp, microdesc_map, &cache->map) {
     microdesc_t *md = *mdp;
     size_t annotation_len;
-    if (md->no_save)
+    if (md->no_save || !md->body)
       continue;
 
     size = dump_microdescriptor(fd, md, &annotation_len);
@@ -474,14 +478,28 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     smartlist_add(wrote, md);
   }
 
+  /* We must do this unmap _before_ we call finish_writing_to_file(), or
+   * windows will not actually replace the file. */
+  if (cache->cache_content)
+    tor_munmap_file(cache->cache_content);
+
   if (finish_writing_to_file(open_file) < 0) {
     log_warn(LD_DIR, "Error rebuilding microdescriptor cache: %s",
              strerror(errno));
+    /* Okay. Let's prevent from making things worse elsewhere. */
+    cache->cache_content = NULL;
+    HT_FOREACH(mdp, microdesc_map, &cache->map) {
+      microdesc_t *md = *mdp;
+      if (md->saved_location == SAVED_IN_CACHE) {
+        md->off = 0;
+        md->saved_location = SAVED_NOWHERE;
+        md->body = NULL;
+        md->bodylen = 0;
+        md->no_save = 1;
+      }
+    }
     return -1;
   }
-
-  if (cache->cache_content)
-    tor_munmap_file(cache->cache_content);
 
   cache->cache_content = tor_mmap_file(cache->cache_fname);
 

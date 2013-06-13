@@ -3981,7 +3981,7 @@ connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
     char *fp256 = smartlist_pop_last(conn->fingerprint_stack);
     microdesc_t *md = microdesc_cache_lookup_by_digest256(cache, fp256);
     tor_free(fp256);
-    if (!md)
+    if (!md || !md->body)
       continue;
     if (conn->zlib_state) {
       /* XXXX024 This 'last' business should actually happen on the last
