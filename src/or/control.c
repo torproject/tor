@@ -1711,8 +1711,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"));
     const microdesc_t *md = NULL;
     if (node) md = node->md;
-    if (md) {
-      tor_assert(md->body);
+    if (md && md->body) {
       *answer = tor_strndup(md->body, md->bodylen);
     }
   } else if (!strcmpstart(question, "md/name/")) {
@@ -1722,8 +1721,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     /* XXXX duplicated code */
     const microdesc_t *md = NULL;
     if (node) md = node->md;
-    if (md) {
-      tor_assert(md->body);
+    if (md && md->body) {
       *answer = tor_strndup(md->body, md->bodylen);
     }
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
