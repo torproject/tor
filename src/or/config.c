@@ -1005,6 +1005,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   int set_conn_limit = 0;
   int r = -1;
   int logs_marked = 0;
+  int old_min_log_level = get_min_log_level();
 
   /* Daemonize _first_, since we only want to open most of this stuff in
    * the subprocess.  Libevent bases can't be reliably inherited across
@@ -1153,6 +1154,13 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     control_adjust_event_log_severity();
     tor_free(severity);
   }
+  if (get_min_log_level() >= LOG_INFO &&
+      get_min_log_level() != old_min_log_level) {
+    log_warn(LD_GENERAL, "Your log may contain sensitive information - you're "
+             "logging above \"notice\". Please log safely. Don't log unless "
+             "it serves an important reason. Overwrite the log afterwards.");
+  }
+
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
   {
     log_notice(LD_NET, "Closing old %s on %s:%d",
@@ -1334,6 +1342,13 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 #endif
+
+  if (options->SafeLogging_ != SAFELOG_SCRUB_ALL &&
+      (!old_options || old_options->SafeLogging_ != options->SafeLogging_)) {
+    log_warn(LD_GENERAL, "Your log may contain sensitive information - you "
+             "disabled SafeLogging. Please log safely. Don't log unless it "
+             "serves an important reason. Overwrite the log afterwards.");
+  }
 
   if (options->Bridges) {
     mark_bridge_list();

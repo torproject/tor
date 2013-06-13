@@ -1,0 +1,4 @@
+  o Minor features:
+    - Raise awareness of safer logging - notice user of potentially
+      unsafe configuration options: logging above "notice" or
+      clearning SafeLogging flag. Fixes #5584.
