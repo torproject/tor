@@ -539,14 +539,17 @@ circuitmux_free(circuitmux_t *cmux)
     global_destroy_ctr -= cmux->destroy_cell_queue.n;
     log_debug(LD_CIRC,
               "Freeing cmux at %p with %u queued destroys; the last cmux "
-              "destroy balance was %ld, global is %ld\n",
+              "destroy balance was "I64_FORMAT", global is "I64_FORMAT,
               cmux, cmux->destroy_cell_queue.n,
-              cmux->destroy_ctr, global_destroy_ctr);
+              I64_PRINTF_ARG(cmux->destroy_ctr),
+              I64_PRINTF_ARG(global_destroy_ctr));
   } else {
     log_debug(LD_CIRC,
               "Freeing cmux at %p with no queued destroys, the cmux destroy "
-              "balance was %ld, global is %ld\n",
-              cmux, cmux->destroy_ctr, global_destroy_ctr);
+              "balance was "I64_FORMAT", global is "I64_FORMAT,
+              cmux,
+              I64_PRINTF_ARG(cmux->destroy_ctr),
+              I64_PRINTF_ARG(global_destroy_ctr));
   }
 
   cell_queue_clear(&cmux->destroy_cell_queue);
@@ -1543,9 +1546,11 @@ circuitmux_notify_xmit_destroy(circuitmux_t *cmux)
   --(cmux->destroy_ctr);
   --(global_destroy_ctr);
   log_debug(LD_CIRC,
-            "Cmux at %p sent a destroy, cmux counter is now %ld, "
-            "global counter is now %ld\n",
-            cmux, cmux->destroy_ctr, global_destroy_ctr);
+            "Cmux at %p sent a destroy, cmux counter is now "I64_FORMAT", "
+            "global counter is now "I64_FORMAT,
+            cmux,
+            I64_PRINTF_ARG(cmux->destroy_ctr),
+            I64_PRINTF_ARG(global_destroy_ctr));
 }
 
 /*
@@ -1848,9 +1853,11 @@ circuitmux_append_destroy_cell(channel_t *chan,
   ++(cmux->destroy_ctr);
   ++global_destroy_ctr;
   log_debug(LD_CIRC,
-            "Cmux at %p queued a destroy for circ %u, "
-            "cmux counter is now %ld, global counter is now %ld\n",
-            cmux, circ_id, cmux->destroy_ctr, global_destroy_ctr);
+            "Cmux at %p queued a destroy for circ %u, cmux counter is now "
+            I64_FORMAT", global counter is now "I64_FORMAT,
+            cmux, circ_id,
+            I64_PRINTF_ARG(cmux->destroy_ctr),
+            I64_PRINTF_ARG(global_destroy_ctr));
 
   /* XXXX Duplicate code from append_cell_to_circuit_queue */
   if (!channel_has_queued_writes(chan)) {
