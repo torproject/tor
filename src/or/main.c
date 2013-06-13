@@ -1450,10 +1450,11 @@ run_scheduled_events(time_t now)
 
 /* How often do we check whether we should download network status
  * documents? */
-#define networkstatus_dl_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
+#define networkstatus_dl_check_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
 
   if (time_to_download_networkstatus < now && !options->DisableNetwork) {
-    time_to_download_networkstatus = now + networkstatus_dl_interval(options);
+    time_to_download_networkstatus =
+      now + networkstatus_dl_check_interval(options);
     update_networkstatus_downloads(now);
   }
 
