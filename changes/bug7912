@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Instead of writing destroy cells directly to outgoing connection
+      buffers, queue them and intersperse them with other outgoing cells.
+      This can prevent a set of resource starvation conditions where too
+      many pending destroy cells prevent data cells from actually getting
+      delivered. Reported by "oftc_must_be_destroyed". Fixes bug 7912;
+      bugfix on 0.2.0.1-alpha.
+

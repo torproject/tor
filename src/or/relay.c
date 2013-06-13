@@ -2148,11 +2148,11 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 /** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
-                              int wide_circ_ids)
+                              int wide_circ_ids, int use_stats)
 {
   packed_cell_t *copy = packed_cell_copy(cell, wide_circ_ids);
   /* Remember the time when this cell was put in the queue. */
-  if (get_options()->CellStatistics) {
+  if (get_options()->CellStatistics && use_stats) {
     struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
@@ -2347,7 +2347,7 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
 {
   circuitmux_t *cmux = NULL;
   int n_flushed = 0;
-  cell_queue_t *queue;
+  cell_queue_t *queue, *destroy_queue=NULL;
   circuit_t *circ;
   or_circuit_t *or_circ;
   int streams_blocked;
@@ -2360,7 +2360,18 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
 
   /* Main loop: pick a circuit, send a cell, update the cmux */
   while (n_flushed < max) {
-    circ = circuitmux_get_first_active_circuit(cmux);
+    circ = circuitmux_get_first_active_circuit(cmux, &destroy_queue);
+    if (destroy_queue) {
+      /* this code is duplicated from some of the logic below. Ugly! XXXX */
+      tor_assert(destroy_queue->n > 0);
+      cell = cell_queue_pop(destroy_queue);
+      channel_write_packed_cell(chan, cell);
+      /* Update the cmux destroy counter */
+      circuitmux_notify_xmit_destroy(cmux);
+      cell = NULL;
+      ++n_flushed;
+      continue;
+    }
     /* If it returns NULL, no cells left to send */
     if (!circ) break;
     assert_cmux_ok_paranoid(chan);
@@ -2482,7 +2493,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     streams_blocked = circ->streams_blocked_on_p_chan;
   }
 
-  cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids);
+  cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids, 1);
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */

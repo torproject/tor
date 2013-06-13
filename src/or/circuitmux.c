@@ -10,6 +10,7 @@
 #include "channel.h"
 #include "circuitlist.h"
 #include "circuitmux.h"
+#include "relay.h"
 
 /*
  * Private typedefs for circuitmux.c
@@ -115,6 +116,22 @@ struct circuitmux_s {
    */
   struct circuit_t *active_circuits_head, *active_circuits_tail;
 
+  /** List of queued destroy cells */
+  cell_queue_t destroy_cell_queue;
+  /** Boolean: True iff the last cell to circuitmux_get_first_active_circuit
+   * returned the destroy queue. Used to force alternation between
+   * destroy/non-destroy cells.
+   *
+   * XXXX There is no reason to think that alternating is a particularly good
+   * approach -- it's just designed to prevent destroys from starving other
+   * cells completely.
+   */
+  unsigned int last_cell_was_destroy : 1;
+  /** Destroy counter: increment this when a destroy gets queued, decrement
+   * when we unqueue it, so we can test to make sure they don't starve.
+   */
+  int64_t destroy_ctr;
+
   /*
    * Circuitmux policy; if this is non-NULL, it can override the built-
    * in round-robin active circuits behavior.  This is how EWMA works in
@@ -192,6 +209,11 @@ circuitmux_prev_active_circ_p(circuitmux_t *cmux, circuit_t *circ);
 static void circuitmux_assert_okay_pass_one(circuitmux_t *cmux);
 static void circuitmux_assert_okay_pass_two(circuitmux_t *cmux);
 static void circuitmux_assert_okay_pass_three(circuitmux_t *cmux);
+
+/* Static global variables */
+
+/** Count the destroy balance to debug destroy queue logic */
+static int64_t global_destroy_ctr = 0;
 
 /* Function definitions */
 
@@ -508,6 +530,30 @@ circuitmux_free(circuitmux_t *cmux)
     tor_free(cmux->chanid_circid_map);
   }
 
+  /*
+   * We're throwing away some destroys; log the counter and
+   * adjust the global counter by the queue size.
+   */
+  if (cmux->destroy_cell_queue.n > 0) {
+    cmux->destroy_ctr -= cmux->destroy_cell_queue.n;
+    global_destroy_ctr -= cmux->destroy_cell_queue.n;
+    log_debug(LD_CIRC,
+              "Freeing cmux at %p with %u queued destroys; the last cmux "
+              "destroy balance was "I64_FORMAT", global is "I64_FORMAT,
+              cmux, cmux->destroy_cell_queue.n,
+              I64_PRINTF_ARG(cmux->destroy_ctr),
+              I64_PRINTF_ARG(global_destroy_ctr));
+  } else {
+    log_debug(LD_CIRC,
+              "Freeing cmux at %p with no queued destroys, the cmux destroy "
+              "balance was "I64_FORMAT", global is "I64_FORMAT,
+              cmux,
+              I64_PRINTF_ARG(cmux->destroy_ctr),
+              I64_PRINTF_ARG(global_destroy_ctr));
+  }
+
+  cell_queue_clear(&cmux->destroy_cell_queue);
+
   tor_free(cmux);
 }
 
@@ -816,7 +862,7 @@ circuitmux_num_cells(circuitmux_t *cmux)
 {
   tor_assert(cmux);
 
-  return cmux->n_cells;
+  return cmux->n_cells + cmux->destroy_cell_queue.n;
 }
 
 /**
@@ -1368,16 +1414,36 @@ circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
 /**
  * Pick a circuit to send from, using the active circuits list or a
  * circuitmux policy if one is available.  This is called from channel.c.
+ *
+ * If we would rather send a destroy cell, return NULL and set
+ * *<b>destroy_queue_out</b> to the destroy queue.
+ *
+ * If we have nothing to send, set *<b>destroy_queue_out</b> to NULL and
+ * return NULL.
  */
 
 circuit_t *
-circuitmux_get_first_active_circuit(circuitmux_t *cmux)
+circuitmux_get_first_active_circuit(circuitmux_t *cmux,
+                                    cell_queue_t **destroy_queue_out)
 {
   circuit_t *circ = NULL;
 
   tor_assert(cmux);
+  tor_assert(destroy_queue_out);
 
-  if (cmux->n_active_circuits > 0) {
+  *destroy_queue_out = NULL;
+
+  if (cmux->destroy_cell_queue.n &&
+        (!cmux->last_cell_was_destroy || cmux->n_active_circuits == 0)) {
+    /* We have destroy cells to send, and either we just sent a relay cell,
+     * or we have no relay cells to send. */
+
+    /* XXXX We should let the cmux policy have some say in this eventually. */
+    /* XXXX Alternating is not a terribly brilliant approach here. */
+    *destroy_queue_out = &cmux->destroy_cell_queue;
+
+    cmux->last_cell_was_destroy = 1;
+  } else if (cmux->n_active_circuits > 0) {
     /* We also must have a cell available for this to be the case */
     tor_assert(cmux->n_cells > 0);
     /* Do we have a policy-provided circuit selector? */
@@ -1389,7 +1455,11 @@ circuitmux_get_first_active_circuit(circuitmux_t *cmux)
       tor_assert(cmux->active_circuits_head);
       circ = cmux->active_circuits_head;
     }
-  } else tor_assert(cmux->n_cells == 0);
+    cmux->last_cell_was_destroy = 0;
+  } else {
+    tor_assert(cmux->n_cells == 0);
+    tor_assert(cmux->destroy_cell_queue.n == 0);
+  }
 
   return circ;
 }
@@ -1461,6 +1531,26 @@ circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
   }
 
   circuitmux_assert_okay_paranoid(cmux);
+}
+
+/**
+ * Notify the circuitmux that a destroy was sent, so we can update
+ * the counter.
+ */
+
+void
+circuitmux_notify_xmit_destroy(circuitmux_t *cmux)
+{
+  tor_assert(cmux);
+
+  --(cmux->destroy_ctr);
+  --(global_destroy_ctr);
+  log_debug(LD_CIRC,
+            "Cmux at %p sent a destroy, cmux counter is now "I64_FORMAT", "
+            "global counter is now "I64_FORMAT,
+            cmux,
+            I64_PRINTF_ARG(cmux->destroy_ctr),
+            I64_PRINTF_ARG(global_destroy_ctr));
 }
 
 /*
@@ -1740,6 +1830,43 @@ circuitmux_assert_okay_pass_three(circuitmux_t *cmux)
 
     /* Advance to the next entry */
     i = HT_NEXT(chanid_circid_muxinfo_map, cmux->chanid_circid_map, i);
+  }
+}
+
+/*DOCDOC */
+void
+circuitmux_append_destroy_cell(channel_t *chan,
+                               circuitmux_t *cmux,
+                               circid_t circ_id,
+                               uint8_t reason)
+{
+  cell_t cell;
+  memset(&cell, 0, sizeof(cell_t));
+  cell.circ_id = circ_id;
+  cell.command = CELL_DESTROY;
+  cell.payload[0] = (uint8_t) reason;
+
+  cell_queue_append_packed_copy(&cmux->destroy_cell_queue, &cell,
+                                chan->wide_circ_ids, 0);
+
+  /* Destroy entering the queue, update counters */
+  ++(cmux->destroy_ctr);
+  ++global_destroy_ctr;
+  log_debug(LD_CIRC,
+            "Cmux at %p queued a destroy for circ %u, cmux counter is now "
+            I64_FORMAT", global counter is now "I64_FORMAT,
+            cmux, circ_id,
+            I64_PRINTF_ARG(cmux->destroy_ctr),
+            I64_PRINTF_ARG(global_destroy_ctr));
+
+  /* XXXX Duplicate code from append_cell_to_circuit_queue */
+  if (!channel_has_queued_writes(chan)) {
+    /* There is no data at all waiting to be sent on the outbuf.  Add a
+     * cell, so that we can notice when it gets flushed, flushed_some can
+     * get called, and we can start putting more data onto the buffer then.
+     */
+    log_debug(LD_GENERAL, "Primed a buffer.");
+    channel_flush_from_first_active_circuit(chan, 1);
   }
 }
 

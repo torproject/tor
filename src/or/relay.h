@@ -53,7 +53,7 @@ void packed_cell_free(packed_cell_t *cell);
 void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
-                                   int wide_circ_ids);
+                                   int wide_circ_ids, int use_stats);
 
 void append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                                   cell_t *cell, cell_direction_t direction,
