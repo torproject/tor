@@ -1,0 +1,3 @@
+  o Normal bugfixes:
+    - Close any circuit that has more cells queued than the spec permits.
+      Fixes bug #9063; bugfix on 0.2.4.12.

@@ -12,7 +12,7 @@ https://gitweb.torproject.org/torspec.git/blob_plain/HEAD:/proposals/001-process
 
 For the latest version of the code, get a copy of git, and
 
-   git clone git://git.torproject.org/git/tor .
+   git clone https://git.torproject.org/git/tor
 
 We talk about Tor on the tor-talk mailing list.  Design proposals and
 discussion belong on the tor-dev mailing list.  We hang around on
@@ -38,9 +38,9 @@ release.  Occasionally, we'll merge an urgent bugfix into the release branch
 before it gets merged into maint, but that's rare.
 
 If you're working on a bugfix for a bug that occurs in a particular version,
-base your bugfix branch on the "maint" branch for the first _actively
-developed_ series that has that bug.  (Right now, that's 0.2.1.)  If you're
-working on a new feature, base it on the master branch.
+base your bugfix branch on the "maint" branch for the first supported series
+that has that bug.  (As of June 2013, we're supporting 0.2.3 and later.) If
+you're working on a new feature, base it on the master branch.
 
 
 How we log changes
@@ -51,7 +51,7 @@ the "changes" toplevel subdirectory.  It should have the format of a
 one-entry changelog section from the current ChangeLog file, as in
 
   o Major bugfixes:
-    - Fix a potential buffer overflow. Fixes bug 9999; bugfix on
+    - Fix a potential buffer overflow. Fixes bug 99999; bugfix on
       0.3.1.4-beta.
 
 To write a changes file, first categorize the change.  Some common categories
@@ -90,10 +90,10 @@ Useful tools
 These aren't strictly necessary for hacking on Tor, but they can help track
 down bugs.
 
-The buildbot
-~~~~~~~~~~~~
+Jenkins
+~~~~~~~
 
-https://buildbot.vidalia-project.net/one_line_per_build
+http://jenkins.torproject.org
 
 Dmalloc
 ~~~~~~~
@@ -182,6 +182,8 @@ Did you remember...
 
    - To build your code while configured with --enable-gcc-warnings?
    - To run "make check-spaces" on your code?
+   - To run "make check-docs" to see whether all new options are on
+     the manpage?
    - To write unit tests, as possible?
    - To base your code on the appropriate branch?
    - To include a file in the "changes" directory as appropriate?
@@ -312,7 +314,7 @@ do your own profiling to determine otherwise.
 Log conventions
 ~~~~~~~~~~~~~~~
 
-https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#LogLevels
+https://trac.torproject.org/projects/tor/wiki/doc/TorFAQ#loglevel
 
 No error or warning messages should be expected during normal OR or OP
 operation.

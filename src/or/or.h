@@ -541,6 +541,8 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
   ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
    (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
+/** True iff the circuit_t c is actually an or_circuit_t */
+#define CIRCUIT_IS_ORCIRC(c) (((circuit_t *)(c))->magic == OR_CIRCUIT_MAGIC)
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -817,6 +819,13 @@ typedef enum {
 #define STREAMWINDOW_START 500
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
+
+/** Maximum number of queued cells on a circuit for which we are the
+ * midpoint before we give up and kill it.  This must be >= circwindow
+ * to avoid killing innocent circuits, and >= circwindow*2 to give
+ * leaky-pipe a chance for being useful someday.
+ */
+#define ORCIRC_MAX_MIDDLE_CELLS (21*(CIRCWINDOW_START_MAX)/10)
 
 /* Cell commands.  These values are defined in tor-spec.txt. */
 #define CELL_PADDING 0

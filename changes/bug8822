@@ -1,0 +1,5 @@
+  o Major bugfixes (windows):
+    - Prevent failures on Windows Vista and later when rebuilding the
+      microdescriptor cache. Diagnosed by Robert Ransom. Fixes bug 8822;
+      bugfix on 0.2.4.12-alpha.
+
