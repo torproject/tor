@@ -1,3 +1,0 @@
-  o Removed documentation:
-    - Remove some of the older contents of doc/ as obsolete; move others
-      to torspec.git. Fixes bug 8965.
