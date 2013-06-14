@@ -2532,8 +2532,10 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                              cell_t *cell, cell_direction_t direction,
                              streamid_t fromstream)
 {
+  or_circuit_t *orcirc = NULL;
   cell_queue_t *queue;
   int streams_blocked;
+
   if (circ->marked_for_close)
     return;
 
@@ -2541,9 +2543,28 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
   } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_conn_cells;
     streams_blocked = circ->streams_blocked_on_p_conn;
+  }
+
+  /* Are we a middle circuit about to exceed ORCIRC_MAX_MIDDLE_CELLS? */
+  if ((circ->n_conn != NULL) && CIRCUIT_IS_ORCIRC(circ)) {
+    orcirc = TO_OR_CIRCUIT(circ);
+    if (orcirc->p_conn) {
+      if (queue->n + 1 >= ORCIRC_MAX_MIDDLE_CELLS) {
+        /* Queueing this cell would put queue over the cap */
+        log_warn(LD_CIRC,
+                 "Got a cell exceeding the cap of %u in the %s direction "
+                 "on middle circ ID %u; killing the circuit.",
+                 ORCIRC_MAX_MIDDLE_CELLS,
+                 (direction == CELL_DIRECTION_OUT) ? "n" : "p",
+                 (direction == CELL_DIRECTION_OUT) ?
+                    circ->n_circ_id : orcirc->p_circ_id);
+        circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+        return;
+      }
+    }
   }
 
   cell_queue_append_packed_copy(queue, cell);
