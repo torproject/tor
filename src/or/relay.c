@@ -2540,7 +2540,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
           (uint32_t)(((double)orcirc->max_middle_cells) *
                      ORCIRC_MAX_MIDDLE_KILL_THRESH);
 
-        if (queue->n + 1 >= hard_max_middle_cells) {
+        if ((unsigned)queue->n + 1 >= hard_max_middle_cells) {
           /* Queueing this cell would put queue over the kill theshold */
           log_warn(LD_CIRC,
                    "Got a cell exceeding the hard cap of %u in the "
@@ -2556,7 +2556,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                         orcirc->p_chan->global_identifier));
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           return;
-        } else if (queue->n + 1 == orcirc->max_middle_cells) {
+        } else if ((unsigned)queue->n + 1 == orcirc->max_middle_cells) {
           /* Only use ==, not >= for this test so we don't spam the log */
           log_warn(LD_CIRC,
                    "While trying to queue a cell, reached the soft cap of %u "
