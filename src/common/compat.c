@@ -870,6 +870,9 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 /** @{ */
 /** Some old versions of Unix didn't define constants for these values,
  * and instead expect you to say 0, 1, or 2. */
+#ifndef SEEK_SET
+#define SEEK_SET 0
+#endif
 #ifndef SEEK_CUR
 #define SEEK_CUR 1
 #endif
