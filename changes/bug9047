@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - If for some reason we fail to write a microdescriptor while
+      rebuilding the cache, do not let the annotations from that
+      microdescriptor linger in the cache file, and do not let the
+      microdescriptor stay recorded as present in its old location.
+      Fixes bug 9047; bugfix on 0.2.2.6-alpha.

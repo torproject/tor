@@ -74,7 +74,7 @@ static ssize_t
 dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 {
   ssize_t r = 0;
-  size_t written;
+  ssize_t written;
   if (md->body == NULL) {
     *annotation_len_out = 0;
     return 0;
@@ -99,10 +99,10 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
 
   md->off = tor_fd_getpos(fd);
   written = write_all(fd, md->body, md->bodylen, 0);
-  if (written != md->bodylen) {
+  if (written != (ssize_t)md->bodylen) {
     log_warn(LD_DIR,
-             "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
-             (unsigned long)written, (unsigned long)md->bodylen,
+             "Couldn't dump microdescriptor (wrote %ld out of %lu): %s",
+             (long)written, (unsigned long)md->bodylen,
              strerror(errno));
     return -1;
   }
@@ -456,8 +456,15 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 
     size = dump_microdescriptor(fd, md, &annotation_len);
     if (size < 0) {
-      /* XXX handle errors from dump_microdescriptor() */
-      /* log?  return -1?  die?  coredump the universe? */
+      if (md->saved_location != SAVED_IN_CACHE)
+        tor_free(md->body);
+      md->saved_location = SAVED_NOWHERE;
+      md->off = 0;
+      md->bodylen = 0;
+      md->no_save = 1;
+
+      /* rewind, in case it was a partial write. */
+      tor_fd_setpos(fd, off);
       continue;
     }
     tor_assert(((size_t)size) == annotation_len + md->bodylen);
