@@ -824,11 +824,12 @@ typedef enum {
 
 /** Maximum number of queued cells on a circuit for which we are the
  * midpoint before we give up and kill it.  This must be >= circwindow
- * to avoid killing innocent circuits.  The ORCIRC_MAX_MIDDLE_KILL_THRESH
+ * to avoid killing innocent circuits, and >= circwindow*2 to give
+ * leaky-pipe a chance of working someday. The ORCIRC_MAX_MIDDLE_KILL_THRESH
  * ratio controls the margin of error between emitting a warning and
  * killing the circuit.
  */
-#define ORCIRC_MAX_MIDDLE_CELLS CIRCWINDOW_START_MAX
+#define ORCIRC_MAX_MIDDLE_CELLS (CIRCWINDOW_START_MAX*2)
 /** Ratio of hard (circuit kill) to soft (warning) thresholds for the
  * ORCIRC_MAX_MIDDLE_CELLS tests.
  */
