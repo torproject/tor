@@ -822,9 +822,10 @@ typedef enum {
 
 /** Maximum number of queued cells on a circuit for which we are the
  * midpoint before we give up and kill it.  This must be >= circwindow
- * to avoid killing innocent circuits.
+ * to avoid killing innocent circuits, and >= circwindow*2 to give
+ * leaky-pipe a chance for being useful someday.
  */
-#define ORCIRC_MAX_MIDDLE_CELLS (11*(CIRCWINDOW_START_MAX)/10)
+#define ORCIRC_MAX_MIDDLE_CELLS (21*(CIRCWINDOW_START_MAX)/10)
 
 /* Cell commands.  These values are defined in tor-spec.txt. */
 #define CELL_PADDING 0
