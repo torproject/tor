@@ -58,6 +58,7 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   entry_connection_t *conn,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
+static int get_max_middle_cells(void);
 
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
@@ -2472,6 +2473,18 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
   return n_flushed;
 }
 
+/** Indicate the current preferred cap for middle circuits; zero disables
+ * the cap.  Right now it's just a constant, ORCIRC_MAX_MIDDLE_CELLS, but
+ * the logic in append_cell_to_circuit_queue() is written to be correct
+ * if we want to base it on a consensus param or something that might change
+ * in the future.
+ */
+static int
+get_max_middle_cells(void)
+{
+  return ORCIRC_MAX_MIDDLE_CELLS;
+}
+
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
  * transmitting in <b>direction</b>. */
 void
@@ -2479,8 +2492,11 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
                              cell_t *cell, cell_direction_t direction,
                              streamid_t fromstream)
 {
+  or_circuit_t *orcirc = NULL;
   cell_queue_t *queue;
   int streams_blocked;
+  uint32_t tgt_max_middle_cells, p_len, n_len, tmp, hard_max_middle_cells;
+
   if (circ->marked_for_close)
     return;
 
@@ -2488,9 +2504,86 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     queue = &circ->n_chan_cells;
     streams_blocked = circ->streams_blocked_on_n_chan;
   } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_chan_cells;
     streams_blocked = circ->streams_blocked_on_p_chan;
+  }
+
+  /* Are we a middle circuit about to exceed ORCIRC_MAX_MIDDLE_CELLS? */
+  if ((circ->n_chan != NULL) && CIRCUIT_IS_ORCIRC(circ)) {
+    orcirc = TO_OR_CIRCUIT(circ);
+    if (orcirc->p_chan) {
+      /* We are a middle circuit if we have both n_chan and p_chan */
+      /* We'll need to know the current preferred maximum */
+      tgt_max_middle_cells = get_max_middle_cells();
+      if (tgt_max_middle_cells > 0) {
+        /* Do we need to initialize middle_max_cells? */
+        if (orcirc->max_middle_cells == 0) {
+          orcirc->max_middle_cells = tgt_max_middle_cells;
+        } else {
+          if (tgt_max_middle_cells > orcirc->max_middle_cells) {
+            /* If we want to increase the cap, we can do so right away */
+            orcirc->max_middle_cells = tgt_max_middle_cells;
+          } else if (tgt_max_middle_cells < orcirc->max_middle_cells) {
+            /*
+             * If we're shrinking the cap, we can't shrink past either queue;
+             * compare tgt_max_middle_cells rather than tgt_max_middle_cells *
+             * ORCIRC_MAX_MIDDLE_KILL_THRESH so the queues don't shrink enough
+             * to generate spurious warnings, either.
+             */
+            n_len = circ->n_chan_cells.n;
+            p_len = orcirc->p_chan_cells.n;
+            tmp = tgt_max_middle_cells;
+            if (tmp < n_len) tmp = n_len;
+            if (tmp < p_len) tmp = p_len;
+            orcirc->max_middle_cells = tmp;
+          }
+          /* else no change */
+        }
+      } else {
+        /* tgt_max_middle_cells == 0 indicates we should disable the cap */
+        orcirc->max_middle_cells = 0;
+      }
+
+      /* Now we know orcirc->max_middle_cells is set correctly */
+      if (orcirc->max_middle_cells > 0) {
+        hard_max_middle_cells =
+          (uint32_t)(((double)orcirc->max_middle_cells) *
+                     ORCIRC_MAX_MIDDLE_KILL_THRESH);
+
+        if ((unsigned)queue->n + 1 >= hard_max_middle_cells) {
+          /* Queueing this cell would put queue over the kill theshold */
+          log_warn(LD_CIRC,
+                   "Got a cell exceeding the hard cap of %u in the "
+                   "%s direction on middle circ ID %u on chan ID "
+                   U64_FORMAT "; killing the circuit.",
+                   hard_max_middle_cells,
+                   (direction == CELL_DIRECTION_OUT) ? "n" : "p",
+                   (direction == CELL_DIRECTION_OUT) ?
+                     circ->n_circ_id : orcirc->p_circ_id,
+                   U64_PRINTF_ARG(
+                     (direction == CELL_DIRECTION_OUT) ?
+                        circ->n_chan->global_identifier :
+                        orcirc->p_chan->global_identifier));
+          circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+          return;
+        } else if ((unsigned)queue->n + 1 == orcirc->max_middle_cells) {
+          /* Only use ==, not >= for this test so we don't spam the log */
+          log_warn(LD_CIRC,
+                   "While trying to queue a cell, reached the soft cap of %u "
+                   "in the %s direction on middle circ ID %u "
+                   "on chan ID " U64_FORMAT ".",
+                   orcirc->max_middle_cells,
+                   (direction == CELL_DIRECTION_OUT) ? "n" : "p",
+                   (direction == CELL_DIRECTION_OUT) ?
+                     circ->n_circ_id : orcirc->p_circ_id,
+                   U64_PRINTF_ARG(
+                     (direction == CELL_DIRECTION_OUT) ?
+                        circ->n_chan->global_identifier :
+                        orcirc->p_chan->global_identifier));
+        }
+      }
+    }
   }
 
   cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids, 1);

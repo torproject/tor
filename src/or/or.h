@@ -543,6 +543,8 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
   ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
    (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
+/** True iff the circuit_t c is actually an or_circuit_t */
+#define CIRCUIT_IS_ORCIRC(c) (((circuit_t *)(c))->magic == OR_CIRCUIT_MAGIC)
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -819,6 +821,19 @@ typedef enum {
 #define STREAMWINDOW_START 500
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
+
+/** Maximum number of queued cells on a circuit for which we are the
+ * midpoint before we give up and kill it.  This must be >= circwindow
+ * to avoid killing innocent circuits, and >= circwindow*2 to give
+ * leaky-pipe a chance of working someday. The ORCIRC_MAX_MIDDLE_KILL_THRESH
+ * ratio controls the margin of error between emitting a warning and
+ * killing the circuit.
+ */
+#define ORCIRC_MAX_MIDDLE_CELLS (CIRCWINDOW_START_MAX*2)
+/** Ratio of hard (circuit kill) to soft (warning) thresholds for the
+ * ORCIRC_MAX_MIDDLE_CELLS tests.
+ */
+#define ORCIRC_MAX_MIDDLE_KILL_THRESH (1.1f)
 
 /* Cell commands.  These values are defined in tor-spec.txt. */
 #define CELL_PADDING 0
@@ -3164,6 +3179,12 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
+
+  /** Maximum cell queue size for a middle relay; this is stored per circuit
+   * so append_cell_to_circuit_queue() can adjust it if it changes.  If set
+   * to zero, it is initialized to the default value.
+   */
+  uint32_t max_middle_cells;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t. */
