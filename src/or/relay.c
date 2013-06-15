@@ -58,7 +58,9 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   entry_connection_t *conn,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
+#if 0
 static int get_max_middle_cells(void);
+#endif
 
 /** Stop reading on edge connections when we have this many cells
  * waiting on the appropriate queue. */
@@ -2473,6 +2475,7 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
   return n_flushed;
 }
 
+#if 0
 /** Indicate the current preferred cap for middle circuits; zero disables
  * the cap.  Right now it's just a constant, ORCIRC_MAX_MIDDLE_CELLS, but
  * the logic in append_cell_to_circuit_queue() is written to be correct
@@ -2484,6 +2487,7 @@ get_max_middle_cells(void)
 {
   return ORCIRC_MAX_MIDDLE_CELLS;
 }
+#endif
 
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
  * transmitting in <b>direction</b>. */
@@ -2495,7 +2499,9 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
   or_circuit_t *orcirc = NULL;
   cell_queue_t *queue;
   int streams_blocked;
+#if 0
   uint32_t tgt_max_middle_cells, p_len, n_len, tmp, hard_max_middle_cells;
+#endif
 
   if (circ->marked_for_close)
     return;
@@ -2509,6 +2515,10 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     streams_blocked = circ->streams_blocked_on_p_chan;
   }
 
+  /*
+   * Disabling this for now because of a possible guard discovery attack
+   */
+#if 0
   /* Are we a middle circuit about to exceed ORCIRC_MAX_MIDDLE_CELLS? */
   if ((circ->n_chan != NULL) && CIRCUIT_IS_ORCIRC(circ)) {
     orcirc = TO_OR_CIRCUIT(circ);
@@ -2585,6 +2595,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
       }
     }
   }
+#endif
 
   cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids, 1);
 
