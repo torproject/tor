@@ -137,6 +137,8 @@ void circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
 void circuitmux_append_destroy_cell(channel_t *chan,
                                     circuitmux_t *cmux, circid_t circ_id,
                                     uint8_t reason);
+void circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux,
+                                              channel_t *chan);
 
 #endif /* TOR_CIRCUITMUX_H */
 

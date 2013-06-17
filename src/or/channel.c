@@ -803,6 +803,7 @@ channel_free(channel_t *chan)
   /* Get rid of cmux */
   if (chan->cmux) {
     circuitmux_detach_all_circuits(chan->cmux);
+    circuitmux_mark_destroyed_circids_usable(chan->cmux, chan);
     circuitmux_free(chan->cmux);
     chan->cmux = NULL;
   }
@@ -2616,6 +2617,29 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
   }
 }
 
+/** If <b>packed_cell</b> on <b>chan</b> is a destroy cell, then set
+ * *<b>circid_out</b> to its circuit ID, and return true.  Otherwise, return
+ * false. */
+/* XXXX Move this function. */
+int
+packed_cell_is_destroy(channel_t *chan,
+                       const packed_cell_t *packed_cell,
+                       circid_t *circid_out)
+{
+  if (chan->wide_circ_ids) {
+    if (packed_cell->body[4] == CELL_DESTROY) {
+      *circid_out = ntohl(get_uint32(packed_cell->body));
+      return 1;
+    }
+  } else {
+    if (packed_cell->body[2] == CELL_DESTROY) {
+      *circid_out = ntohs(get_uint16(packed_cell->body));
+      return 1;
+    }
+  }
+  return 0;
+}
+
 /** DOCDOC */
 static int
 is_destroy_cell(channel_t *chan,
@@ -2636,18 +2660,7 @@ is_destroy_cell(channel_t *chan,
       }
       break;
     case CELL_QUEUE_PACKED:
-      if (chan->wide_circ_ids) {
-        if (q->u.packed.packed_cell->body[4] == CELL_DESTROY) {
-          *circid_out = ntohl(get_uint32(q->u.packed.packed_cell->body));
-          return 1;
-        }
-      } else {
-        if (q->u.packed.packed_cell->body[2] == CELL_DESTROY) {
-          *circid_out = ntohs(get_uint16(q->u.packed.packed_cell->body));
-          return 1;
-        }
-      }
-      break;
+      return packed_cell_is_destroy(chan, q->u.packed.packed_cell, circid_out);
   }
   return 0;
 }

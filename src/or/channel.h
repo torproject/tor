@@ -477,5 +477,9 @@ uint64_t channel_count_xmitted(channel_t *chan);
 
 uint64_t channel_listener_count_accepted(channel_listener_t *chan_l);
 
+int packed_cell_is_destroy(channel_t *chan,
+                           const packed_cell_t *packed_cell,
+                           circid_t *circid_out);
+
 #endif
 
