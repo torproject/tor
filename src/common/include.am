@@ -49,6 +49,7 @@ src_common_libor_a_SOURCES = \
   src/common/procmon.c					\
   src/common/util.c					\
   src/common/util_codedigest.c				\
+  src/common/sandbox.c \
   $(libor_extra_source)
 
 src_common_libor_crypto_a_SOURCES = \
