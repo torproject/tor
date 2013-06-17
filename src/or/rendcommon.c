@@ -1002,6 +1002,10 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
   return 0;
 }
 
+/* Do not allow more than this many introduction points in a hidden service
+ * descriptor */
+#define MAX_INTRO_POINTS 10
+
 /** Parse *desc, calculate its service id, and store it in the cache.
  * If we have a newer v0 descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
@@ -1069,6 +1073,15 @@ rend_cache_store(const char *desc, size_t desc_len, int published,
              safe_str_client(query));
     rend_service_descriptor_free(parsed);
     return -1;
+  }
+  if (parsed->intro_nodes &&
+      smartlist_len(parsed->intro_nodes) > MAX_INTRO_POINTS) {
+    log_warn(LD_REND, "Found too many introduction points on a hidden "
+             "service descriptor for %s. This is probably a (misguided) "
+             "attempt to improve reliability, but it could also be an "
+             "attempt to do a guard enumeration attack. Rejecting.",
+             safe_str_client(query));
+    return -2;
   }
   tor_snprintf(key, sizeof(key), "0%s", query);
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
@@ -1288,6 +1301,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   }
   /* Decode/decrypt introduction points. */
   if (intro_content) {
+    int n_intro_points;
     if (rend_query->auth_type != REND_NO_AUTH &&
         !tor_mem_is_zero(rend_query->descriptor_cookie,
                          sizeof(rend_query->descriptor_cookie))) {
@@ -1308,13 +1322,20 @@ rend_cache_store_v2_desc_as_client(const char *desc,
         intro_size = ipos_decrypted_size;
       }
     }
-    if (rend_parse_introduction_points(parsed, intro_content,
-                                       intro_size) <= 0) {
+    n_intro_points = rend_parse_introduction_points(parsed, intro_content,
+                                                    intro_size);
+    if (n_intro_points <= 0) {
       log_warn(LD_REND, "Failed to parse introduction points. Either the "
                "service has published a corrupt descriptor or you have "
                "provided invalid authorization data.");
       retval = -2;
       goto err;
+    } else if (n_intro_points > MAX_INTRO_POINTS) {
+      log_warn(LD_REND, "Found too many introduction points on a hidden "
+               "service descriptor for %s. This is probably a (misguided) "
+               "attempt to improve reliability, but it could also be an "
+               "attempt to do a guard enumeration attack. Rejecting.",
+               safe_str_client(rend_query->onion_address));
     }
   } else {
     log_info(LD_REND, "Descriptor does not contain any introduction points.");
