@@ -498,6 +498,31 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux)
   cmux->n_cells = 0;
 }
 
+/** Reclaim all circuit IDs currently marked as unusable on <b>chan</b> because
+ * of pending destroy cells in <b>cmux</b>.
+ *
+ * This function must be called AFTER circuits are unlinked from the (channel,
+ * circuid-id) map with circuit_unlink_all_from_channel(), but before calling
+ * circuitmux_free().
+ */
+void
+circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
+{
+  packed_cell_t *cell;
+  int n_bad = 0;
+  for (cell = cmux->destroy_cell_queue.head; cell; cell = cell->next) {
+    circid_t circid = 0;
+    if (packed_cell_is_destroy(chan, cell, &circid)) {
+      channel_mark_circid_usable(chan, circid);
+    } else {
+      ++n_bad;
+    }
+  }
+  if (n_bad)
+    log_warn(LD_BUG, "%d cell(s) on destroy queue did not look like a "
+             "DESTROY cell.", n_bad);
+}
+
 /**
  * Free a circuitmux_t; the circuits must be detached first with
  * circuitmux_detach_all_circuits().
