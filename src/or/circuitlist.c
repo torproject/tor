@@ -1508,18 +1508,18 @@ marked_circuit_free_cells(circuit_t *circ)
     log_warn(LD_BUG, "Called on non-marked circuit");
     return;
   }
-  cell_queue_clear(&circ->n_conn_cells);
+  cell_queue_clear(&circ->n_chan_cells);
   if (! CIRCUIT_IS_ORIGIN(circ))
-    cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_conn_cells);
+    cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_chan_cells);
 }
 
 /** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
 static size_t
 n_cells_in_circ_queues(const circuit_t *c)
 {
-  size_t n = c->n_conn_cells.n;
+  size_t n = c->n_chan_cells.n;
   if (! CIRCUIT_IS_ORIGIN(c))
-    n += TO_OR_CIRCUIT((circuit_t*)c)->p_conn_cells.n;
+    n += TO_OR_CIRCUIT((circuit_t*)c)->p_chan_cells.n;
   return n;
 }
 
