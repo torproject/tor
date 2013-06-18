@@ -46,6 +46,7 @@ void init_cell_pool(void);
 void free_cell_pool(void);
 void clean_cell_pool(void);
 void dump_cell_pool_usage(int severity);
+size_t packed_cell_mem_cost(void);
 
 /* For channeltls.c */
 void packed_cell_free(packed_cell_t *cell);

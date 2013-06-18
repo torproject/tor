@@ -299,6 +299,7 @@ static config_var_t option_vars_[] = {
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
   V(MaxClientCircuitsPending,    UINT,     "32"),
+  V(MaxMemInCellQueues,          MEMUNIT,  "8 GB"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
@@ -2610,7 +2611,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
   }
 
+  if (options->MaxMemInCellQueues < (500 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 500 MB for now. "
+             "Ideally, have it as large as you can afford.");
+    options->MaxMemInCellQueues = (500 << 20);
+  }
+
   options->AllowInvalid_ = 0;
+
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH_BEGIN(options->AllowInvalidNodes, const char *, cp) {
         if (!strcasecmp(cp, "entry"))

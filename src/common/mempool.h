@@ -22,6 +22,8 @@ void mp_pool_destroy(mp_pool_t *pool);
 void mp_pool_assert_ok(mp_pool_t *pool);
 void mp_pool_log_status(mp_pool_t *pool, int severity);
 
+#define MP_POOL_ITEM_OVERHEAD (sizeof(void*))
+
 #define MEMPOOL_STATS
 
 #ifdef MEMPOOL_PRIVATE
