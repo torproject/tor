@@ -204,6 +204,7 @@ bench_onion_ntor(void)
   for (i = 0; i < iters; ++i) {
     onion_skin_ntor_create(nodeid, &keypair1.pubkey, &state, os);
     ntor_handshake_state_free(state);
+    state = NULL;
   }
   end = perftime();
   printf("Client-side, part 1: %f usec.\n", NANOCOUNT(start, end, iters)/1e3);
