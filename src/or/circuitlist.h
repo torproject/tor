@@ -63,6 +63,7 @@ int circuit_count_pending_on_channel(channel_t *chan);
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);
 void circuit_free_all(void);
+void circuits_handle_oom(size_t current_allocation);
 
 void channel_note_destroy_pending(channel_t *chan, circid_t id);
 void channel_note_destroy_not_pending(channel_t *chan, circid_t id);

@@ -3442,6 +3442,10 @@ typedef struct {
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
 
+  uint64_t MaxMemInCellQueues; /**< If we have more memory than this allocated
+                                * for circuit cell queues, run the OOM handler
+                                */
+
   /** @name port booleans
    *
    * Derived booleans: True iff there is a non-listener port on an AF_INET or

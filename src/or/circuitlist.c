@@ -1624,6 +1624,108 @@ circuit_mark_for_close_(circuit_t *circ, int reason, int line,
   }
 }
 
+/** Given a marked circuit <b>circ</b>, aggressively free its cell queues to
+ * recover memory. */
+static void
+marked_circuit_free_cells(circuit_t *circ)
+{
+  if (!circ->marked_for_close) {
+    log_warn(LD_BUG, "Called on non-marked circuit");
+    return;
+  }
+  cell_queue_clear(&circ->n_chan_cells);
+  if (! CIRCUIT_IS_ORIGIN(circ))
+    cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_chan_cells);
+}
+
+/** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
+static size_t
+n_cells_in_circ_queues(const circuit_t *c)
+{
+  size_t n = c->n_chan_cells.n;
+  if (! CIRCUIT_IS_ORIGIN(c))
+    n += TO_OR_CIRCUIT((circuit_t*)c)->p_chan_cells.n;
+  return n;
+}
+
+/** helper to sort a list of circuit_q by total queue lengths, in descending
+ * order. */
+static int
+circuits_compare_by_queue_len_(const void **a_, const void **b_)
+{
+  const circuit_t *a = *a_;
+  const circuit_t *b = *b_;
+  size_t a_n = n_cells_in_circ_queues(a);
+  size_t b_n = n_cells_in_circ_queues(b);
+
+  if (a_n < b_n)
+    return 1;
+  else if (a_n == b_n)
+    return 0;
+  else
+    return -1;
+}
+
+#define FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM 0.90
+
+/** We're out of memory for cells, having allocated <b>current_allocation</b>
+ * bytes' worth.  Kill the 'worst' circuits until we're under
+ * FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM of our maximum usage. */
+void
+circuits_handle_oom(size_t current_allocation)
+{
+  /* Let's hope there's enough slack space for this allocation here... */
+  smartlist_t *circlist = smartlist_new();
+  circuit_t *circ;
+  size_t n_cells_removed=0, n_cells_to_remove;
+  int n_circuits_killed=0;
+  log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
+             "over-long queues. (This behavior is controlled by "
+             "MaxMemInCellQueues.)");
+
+  {
+    size_t mem_target = (size_t)(get_options()->MaxMemInCellQueues *
+                                 FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM);
+    size_t mem_to_recover;
+    if (current_allocation <= mem_target)
+      return;
+    mem_to_recover = current_allocation - mem_target;
+    n_cells_to_remove = CEIL_DIV(mem_to_recover, packed_cell_mem_cost());
+  }
+
+  /* This algorithm itself assumes that you've got enough memory slack
+   * to actually run it. */
+  for (circ = global_circuitlist; circ; circ = circ->next)
+    smartlist_add(circlist, circ);
+
+  /* This is O(n log n); there are faster algorithms we could use instead.
+   * Let's hope this doesn't happen enough to be in the critical path. */
+  smartlist_sort(circlist, circuits_compare_by_queue_len_);
+
+  /* Okay, now the worst circuits are at the front of the list. Let's mark
+   * them, and reclaim their storage aggressively. */
+  SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
+    size_t n = n_cells_in_circ_queues(circ);
+    if (! circ->marked_for_close) {
+      circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    }
+    marked_circuit_free_cells(circ);
+
+    ++n_circuits_killed;
+    n_cells_removed += n;
+    if (n_cells_removed >= n_cells_to_remove)
+      break;
+  } SMARTLIST_FOREACH_END(circ);
+
+  clean_cell_pool(); /* In case this helps. */
+
+  log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
+             U64_PRINTF_ARG(n_cells_removed * packed_cell_mem_cost()),
+             n_circuits_killed);
+
+  smartlist_free(circlist);
+}
+
 /** Verify that cpath layer <b>cp</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
