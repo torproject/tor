@@ -1081,6 +1081,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published,
              "attempt to improve reliability, but it could also be an "
              "attempt to do a guard enumeration attack. Rejecting.",
              safe_str_client(query));
+    rend_service_descriptor_free(parsed);
     return -2;
   }
   tor_snprintf(key, sizeof(key), "0%s", query);
@@ -1336,6 +1337,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
                "attempt to improve reliability, but it could also be an "
                "attempt to do a guard enumeration attack. Rejecting.",
                safe_str_client(rend_query->onion_address));
+      retval = -2;
+      goto err;
     }
   } else {
     log_info(LD_REND, "Descriptor does not contain any introduction points.");
