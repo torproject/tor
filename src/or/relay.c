@@ -2034,7 +2034,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #endif
 
 /** The total number of cells we have allocated from the memory pool. */
-static int total_cells_allocated = 0;
+static size_t total_cells_allocated = 0;
 
 /** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
@@ -2114,7 +2114,7 @@ dump_cell_pool_usage(int severity)
   }
   tor_log(severity, LD_MM,
           "%d cells allocated on %d circuits. %d cells leaked.",
-          n_cells, n_circs, total_cells_allocated - n_cells);
+          n_cells, n_circs, (int)total_cells_allocated - n_cells);
   mp_pool_log_status(cell_pool, severity);
 }
 
@@ -2220,6 +2220,29 @@ cell_queue_pop(cell_queue_t *queue)
   }
   --queue->n;
   return cell;
+}
+
+/** Return the total number of bytes used for each packed_cell in a queue.
+ * Approximate. */
+size_t
+packed_cell_mem_cost(void)
+{
+  return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD +
+    get_options()->CellStatistics ?
+    (sizeof(insertion_time_elem_t)+MP_POOL_ITEM_OVERHEAD) : 0;
+}
+
+/** Check whether we've got too much space used for cells.  If so,
+ * call the OOM handler and return 1.  Otherwise, return 0. */
+static int
+cell_queues_check_size(void)
+{
+  size_t alloc = total_cells_allocated * packed_cell_mem_cost();
+  if (alloc >= get_options()->MaxMemInCellQueues) {
+    circuits_handle_oom(alloc);
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -2512,6 +2535,12 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 #endif
 
   cell_queue_append_packed_copy(queue, cell, chan->wide_circ_ids);
+
+  if (PREDICT_UNLIKELY(cell_queues_check_size())) {
+    /* We ran the OOM handler */
+    if (circ->marked_for_close)
+      return;
+  }
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */
