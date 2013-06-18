@@ -57,6 +57,7 @@ int circuit_count_pending_on_or_conn(or_connection_t *or_conn);
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);
 void circuit_free_all(void);
+void circuits_handle_oom(size_t current_allocation);
 
 #endif
 

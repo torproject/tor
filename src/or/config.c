@@ -343,6 +343,7 @@ static config_var_t _option_vars[] = {
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
   V(MaxClientCircuitsPending,    UINT,     "32"),
+  V(MaxMemInCellQueues,          MEMUNIT,  "8 GB"),
   V(MaxOnionsPending,            UINT,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
@@ -3667,6 +3668,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->EntryNodes && !options->UseEntryGuards)
     log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
              "EntryNodes will be ignored.");
+
+  if (options->MaxMemInCellQueues < (500 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 500 MB for now. "
+             "Ideally, have it as large as you can afford.");
+    options->MaxMemInCellQueues = (500 << 20);
+  }
 
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
