@@ -193,7 +193,7 @@ test_config_check_or_create_data_subdir(void *arg)
   or_options_t *options = get_options_mutable();
   char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
   const char *subdir = "test_stats";
-  const char *subpath = get_datadir_fname(subdir);
+  char *subpath = get_datadir_fname(subdir);
   struct stat st;
   int r;
 #if !defined (_WIN32) || defined (WINCE)
@@ -237,6 +237,7 @@ test_config_check_or_create_data_subdir(void *arg)
  done:
   rmdir(subpath);
   tor_free(datadir);
+  tor_free(subpath);
 }
 
 static void
@@ -261,8 +262,7 @@ test_config_write_to_data_subdir(void *arg)
       "accusam et justo duo dolores et\n"
       "ea rebum. Stet clita kasd gubergren, no sea takimata\n"
       "sanctus est Lorem ipsum dolor sit amet.";
-  const char* subpath = get_datadir_fname(subdir);
-  const char* filepath = get_datadir_fname2(subdir, fname);
+  char* filepath = get_datadir_fname2(subdir, fname);
   (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
@@ -286,9 +286,9 @@ test_config_write_to_data_subdir(void *arg)
 
  done:
   remove(filepath);
-  rmdir(subpath);
   rmdir(options->DataDirectory);
   tor_free(datadir);
+  tor_free(filepath);
 }
 
 /* Test helper function: Make sure that a bridge line gets parsed
