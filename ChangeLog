@@ -1,3 +1,27 @@
+Changes in version 0.2.4.14-alpha - 2013-06-18
+  Tor 0.2.4.14-alpha fixes a pair of client guard enumeration problems
+  present in 0.2.4.13-alpha.
+
+  o Major bugfixes:
+    - When we have too much memory queued in circuits (according to a new
+      MaxMemInCellQueues option), close the circuits consuming the most
+      memory. This prevents us from running out of memory as a relay if
+      circuits fill up faster than they can be drained. Fixes bug 9063;
+      bugfix on the 54th commit of Tor. This bug is a further fix beyond
+      bug 6252, whose fix was merged into 0.2.3.21-rc.
+
+      This change also fixes an earlier approach taken in 0.2.4.13-alpha,
+      where we tried to solve this issue simply by imposing an upper limit
+      on the number of queued cells for a single circuit. That approach
+      proved to be problematic, since there are ways to provoke clients to
+      send a number of cells in excess of any such reasonable limit. Fixes
+      bug 9072; bugfix on 0.2.4.13-alpha.
+
+    - Limit hidden service descriptors to at most ten introduction
+      points, to slow one kind of guard enumeration. Fixes bug 9002;
+      bugfix on 0.1.1.11-alpha.
+
+
 Changes in version 0.2.4.13-alpha - 2013-06-14
   Tor 0.2.4.13-alpha fixes a variety of potential remote crash
   vulnerabilities, makes socks5 username/password circuit isolation
