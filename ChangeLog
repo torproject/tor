@@ -1,5 +1,5 @@
 Changes in version 0.2.4.14-alpha - 2013-06-18
-  Tor 0.2.4.13-alpha fixes a pair of client guard enumeration problems
+  Tor 0.2.4.14-alpha fixes a pair of client guard enumeration problems
   present in 0.2.4.13-alpha.
 
   o Major bugfixes:
