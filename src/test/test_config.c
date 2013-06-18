@@ -202,9 +202,9 @@ test_config_check_or_create_data_subdir(void *arg)
   (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
-  mkdir(options->DataDirectory);
+  tt_int_op(mkdir(options->DataDirectory), ==, 0);
 #else
-  mkdir(options->DataDirectory, 0700);
+  tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);
 #endif
 
   r = stat(subpath, &st);
@@ -266,14 +266,14 @@ test_config_write_to_data_subdir(void *arg)
   (void)arg;
 
 #if defined (_WIN32) && !defined (WINCE)
-  mkdir(options->DataDirectory);
+  tt_int_op(mkdir(options->DataDirectory), ==, 0);
 #else
-  mkdir(options->DataDirectory, 0700);
+  tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);
 #endif
 
   // Write attempt shoudl fail, if subdirectory doesn't exist.
   test_assert(write_to_data_subdir(subdir, fname, str, NULL));
-  check_or_create_data_subdir(subdir);
+  test_assert(! check_or_create_data_subdir(subdir));
 
   // Content of file after write attempt should be
   // equal to the original string.
@@ -285,7 +285,7 @@ test_config_write_to_data_subdir(void *arg)
   test_streq(read_file_to_str(filepath, 0, NULL), str);
 
  done:
-  remove(filepath);
+  (void) unlink(filepath);
   rmdir(options->DataDirectory);
   tor_free(datadir);
   tor_free(filepath);

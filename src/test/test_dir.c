@@ -2317,9 +2317,9 @@ test_dir_v2_dir(void *arg)
 
   /* Make a directory so there's somewhere to store the thing */
 #ifdef _WIN32
-  mkdir(get_fname("cached-status"));
+  tt_int_op(mkdir(get_fname("cached-status")), ==, 0);
 #else
-  mkdir(get_fname("cached-status"), 0700);
+  tt_int_op(mkdir(get_fname("cached-status"), 0700), ==, 0);
 #endif
 
   v2 = generate_v2_networkstatus_opinion();
