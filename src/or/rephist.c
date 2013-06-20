@@ -2599,7 +2599,7 @@ rep_hist_buffer_stats_write(time_t now)
     goto done; /* Not ready to write */
 
   /* Add open circuits to the history. */
-  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
     rep_hist_buffer_stats_add_circ(circ, now);
   }
 

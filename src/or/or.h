@@ -99,6 +99,7 @@
 #include "ht.h"
 #include "replaycache.h"
 #include "crypto_curve25519.h"
+#include "tor_queue.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -2853,7 +2854,8 @@ typedef struct circuit_t {
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
 
-  struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
+  /** Next circuit in linked list of all circuits (global_circuitlist). */
+  TOR_LIST_ENTRY(circuit_t) head;
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not

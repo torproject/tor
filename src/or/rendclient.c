@@ -358,7 +358,7 @@ rend_client_close_other_intros(const char *onion_address)
 {
   circuit_t *c;
   /* abort parallel intro circs, if any */
-  for (c = circuit_get_global_list_(); c; c = c->next) {
+  TOR_LIST_FOREACH(c, circuit_get_global_list_(), head) {
     if ((c->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
         c->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
         !c->marked_for_close && CIRCUIT_IS_ORIGIN(c)) {

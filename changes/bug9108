@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Make global_circuitlist data structure in circuitlist.c
+      a doubly-linked list. Bug #9108.

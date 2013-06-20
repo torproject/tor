@@ -2111,7 +2111,7 @@ dump_cell_pool_usage(int severity)
   circuit_t *c;
   int n_circs = 0;
   int n_cells = 0;
-  for (c = circuit_get_global_list_(); c; c = c->next) {
+  TOR_LIST_FOREACH(c, circuit_get_global_list_(), head) {
     n_cells += c->n_chan_cells.n;
     if (!CIRCUIT_IS_ORIGIN(c))
       n_cells += TO_OR_CIRCUIT(c)->p_chan_cells.n;

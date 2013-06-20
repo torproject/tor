@@ -23,7 +23,7 @@ count_circuits(void)
   circuit_t *circ;
   int nr=0;
 
-  for (circ = circuit_get_global_list_(); circ; circ = circ->next)
+  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head)
     nr++;
 
   return nr;
