@@ -46,13 +46,6 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
-/********* START VARIABLES **********/
-
-/** A global list of all circuits at this hop. */
-extern circuit_t *global_circuitlist;
-
-/********* END VARIABLES ************/
-
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
                                                const char *id_digest);
@@ -2181,7 +2174,7 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
   int open_circuits = 0;
 
   /* Count currently open circuits. Give them the benefit of the doubt. */
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     origin_circuit_t *ocirc = NULL;
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
         circ->marked_for_close) /* already counted */

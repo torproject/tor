@@ -31,12 +31,6 @@
 #include "router.h"
 #include "routerlist.h"
 
-/********* START VARIABLES **********/
-
-extern circuit_t *global_circuitlist; /* from circuitlist.c */
-
-/********* END VARIABLES ************/
-
 static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
@@ -286,7 +280,7 @@ circuit_get_best(const entry_connection_t *conn,
 
   tor_gettimeofday(&now);
 
-  for (circ=global_circuitlist;circ;circ = circ->next) {
+  for (circ=circuit_get_global_list_();circ;circ = circ->next) {
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
@@ -327,7 +321,7 @@ count_pending_general_client_circuits(void)
 
   int count = 0;
 
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (circ->marked_for_close ||
         circ->state == CIRCUIT_STATE_OPEN ||
         circ->purpose != CIRCUIT_PURPOSE_C_GENERAL ||
@@ -375,7 +369,7 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 void
 circuit_expire_building(void)
 {
-  circuit_t *victim, *next_circ = global_circuitlist;
+  circuit_t *victim, *next_circ = circuit_get_global_list_();
   /* circ_times.timeout_ms and circ_times.close_ms are from
    * circuit_build_times_get_initial_timeout() if we haven't computed
    * custom timeouts yet */
@@ -410,7 +404,7 @@ circuit_expire_building(void)
     }
     next_circ = next_circ->next;
   }
-  next_circ = global_circuitlist;
+  next_circ = circuit_get_global_list_();
 
 #define SET_CUTOFF(target, msec) do {                       \
     long ms = tor_lround(msec);                             \
@@ -818,7 +812,7 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
                                    get_options()->LongLivedPorts,
                                    conn ? conn->socks_request->port : port);
 
-  for (circ=global_circuitlist;circ;circ = circ->next) {
+  for (circ=circuit_get_global_list_();circ;circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
@@ -869,7 +863,7 @@ circuit_predict_and_launch_new(void)
   int flags = 0;
 
   /* First, count how many of each type of circuit we have already. */
-  for (circ=global_circuitlist;circ;circ = circ->next) {
+  for (circ=circuit_get_global_list_();circ;circ = circ->next) {
     cpath_build_state_t *build_state;
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
@@ -1093,7 +1087,7 @@ circuit_expire_old_circuits_clientside(void)
     cutoff.tv_sec -= get_options()->CircuitIdleTimeout;
   }
 
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (circ->marked_for_close || !CIRCUIT_IS_ORIGIN(circ))
       continue;
     /* If the circuit has been dirty for too long, and there are no streams
@@ -1176,7 +1170,7 @@ circuit_expire_old_circuits_serverside(time_t now)
   or_circuit_t *or_circ;
   time_t cutoff = now - IDLE_ONE_HOP_CIRC_TIMEOUT;
 
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (circ->marked_for_close || CIRCUIT_IS_ORIGIN(circ))
       continue;
     or_circ = TO_OR_CIRCUIT(circ);
@@ -1223,7 +1217,7 @@ circuit_enough_testing_circs(void)
   if (have_performed_bandwidth_test)
     return 1;
 
-  for (circ = global_circuitlist; circ; circ = circ->next) {
+  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
     if (!circ->marked_for_close && CIRCUIT_IS_ORIGIN(circ) &&
         circ->purpose == CIRCUIT_PURPOSE_TESTING &&
         circ->state == CIRCUIT_STATE_OPEN)
