@@ -3886,6 +3886,10 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       newdefaultoptions = config_dup(&options_format, newoptions);
   }
 
+  if (newdefaultoptions == NULL) {
+    newdefaultoptions = config_dup(&options_format, global_default_options);
+  }
+
   /* Go through command-line variables too */
   retval = config_assign(&options_format, newoptions,
                          global_cmdline_options, 0, 0, msg);
