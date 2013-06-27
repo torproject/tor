@@ -492,6 +492,19 @@ clientmap_entry_hash(const clientmap_entry_t *a)
 static INLINE int
 clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 {
+  /* If one entry contains a transport and the other doesn't, then
+     they are not equal. */
+  if (a->transport_name && !b->transport_name)
+    return 0;
+  if (!a->transport_name && b->transport_name)
+    return 0;
+  /* If entries contain different transports, they they are not
+     equal. */
+  if (a->transport_name &&
+      b->transport_name &&
+      strcmp(a->transport_name, b->transport_name))
+    return 0;
+
   return !tor_addr_compare(&a->addr, &b->addr, CMP_EXACT) &&
          a->action == b->action;
 }
@@ -529,6 +542,8 @@ geoip_note_client_seen(geoip_client_action_t action,
 {
   const or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
+  memset(&lookup, 0, sizeof(clientmap_entry_t));
+
   if (action == GEOIP_CLIENT_CONNECT) {
     /* Only remember statistics as entry guard or as bridge. */
     if (!options->EntryStatistics &&
@@ -546,7 +561,11 @@ geoip_note_client_seen(geoip_client_action_t action,
 
   tor_addr_copy(&lookup.addr, addr);
   lookup.action = (int)action;
+  if (transport_name)
+    lookup.transport_name = tor_strdup(transport_name);
   ent = HT_FIND(clientmap, &client_history, &lookup);
+  tor_free(lookup.transport_name);
+
   if (! ent) {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     tor_addr_copy(&ent->addr, addr);

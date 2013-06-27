@@ -1944,10 +1944,15 @@ test_geoip_with_pt(void)
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "entropy", now-7200);
   }
 
+  /* 2 connections from the same IP with two different transports. */
+  SET_TEST_ADDRESS(++i);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "fire", now-7200);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "google", now-7200);
+
   /* Test the transport history string. */
   s = geoip_get_transport_history();
   tor_assert(s);
-  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,entropy=8");
+  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,entropy=8,fire=8,google=8");
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
