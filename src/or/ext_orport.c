@@ -460,6 +460,12 @@ connection_ext_or_handle_cmd_transport(or_connection_t *conn,
     return -1;
   }
 
+  /* If ext_or_transport is already occupied (because the PT sent two
+   *  TRANSPORT commands), deallocate the old name and keep the new
+   *  one */
+  if (conn->ext_or_transport)
+    tor_free(conn->ext_or_transport);
+
   conn->ext_or_transport = transport_str;
   return 0;
 }

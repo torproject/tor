@@ -807,7 +807,6 @@ geoip_get_transport_history(void)
   const char *transport_name = NULL;
   smartlist_t *string_chunks = smartlist_new();
   char *the_string = NULL;
-  int i = 0;
 
   /* If we haven't seen any clients yet, return NULL. */
   if (HT_EMPTY(&client_history))
@@ -841,7 +840,7 @@ geoip_get_transport_history(void)
     strmap_set(transport_counts, transport_name, ptr);
 
     /* If it's the first time we see this transport, note it. */
-    if (!smartlist_contains_string(transports_used, transport_name))
+    if (val == 1)
       smartlist_add(transports_used, tor_strdup(transport_name));
 
     log_debug(LD_GENERAL, "Client from '%s' with transport '%s'. "
@@ -857,20 +856,18 @@ geoip_get_transport_history(void)
   /* Loop through all seen transports. */
   SMARTLIST_FOREACH_BEGIN(transports_used, const char *, transport_name) {
     void *transport_count_ptr = strmap_get(transport_counts, transport_name);
-    unsigned int transport_count = (uintptr_t) transport_count_ptr;
-    i++; /* counter so that we don't add a comma if it's the last transport. */
+    unsigned int transport_count = (intptr_t) transport_count_ptr;
 
     log_debug(LD_GENERAL, "We got %u clients with transport '%s'.",
               transport_count, transport_name);
 
-    smartlist_add_asprintf(string_chunks, "%s=%u%s",
+    smartlist_add_asprintf(string_chunks, "%s=%u",
                            transport_name,
                            round_to_next_multiple_of(transport_count,
-                                                     granularity),
-                           i != smartlist_len(transports_used) ? "," : "");
+                                                     granularity));
   } SMARTLIST_FOREACH_END(transport_name);
 
-  the_string = smartlist_join_strings(string_chunks, "", 0, NULL);
+  the_string = smartlist_join_strings(string_chunks, ",", 0, NULL);
 
   log_debug(LD_GENERAL, "Final bridge-ip-transports string: '%s'", the_string);
 
