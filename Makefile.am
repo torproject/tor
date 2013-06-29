@@ -60,6 +60,11 @@ doxygen:
 test: all
 	./src/test/test
 
+# Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
+# Chutney can be cloned from https://git.torproject.org/chutney.git .
+test-network: all
+	./src/test/test-network.sh
+
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
