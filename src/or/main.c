@@ -1882,6 +1882,13 @@ do_main_loop(void)
     }
   }
 
+#ifdef USE_BUFFEREVENTS
+  log_warn(LD_GENERAL, "Tor was compiled with the --enable-bufferevents "
+           "option. This is still experimental, and might cause strange "
+           "bugs. If you want a more stable Tor, be sure to build without "
+           "--enable-bufferevents.");
+#endif
+
   handle_signals(1);
 
   /* load the private keys, if we're supposed to have them, and set up the
