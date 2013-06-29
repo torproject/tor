@@ -1,0 +1,4 @@
+  o Minor features:
+    - Issue a warning when running with the bufferevents backend enabled.
+      It's still not stable, and people should know that they're likely
+      to hit unexpected problems. Closes ticket 9147.
