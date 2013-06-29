@@ -1916,38 +1916,38 @@ test_geoip_with_pt(void)
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
   }
 
-  /* 9 connections with "when" */
+  /* 9 connections with "alpha" */
   for (i=4; i < 13; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "when", now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "alpha", now-7200);
   }
 
-  /* one connection with "I" */
+  /* one connection with "beta" */
   SET_TEST_ADDRESS(13);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "I", now-7200);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "beta", now-7200);
 
-  /* 14 connections with "was" */
+  /* 14 connections with "charlie" */
   for (i=14; i < 28; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "was", now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "charlie", now-7200);
   }
 
-  /* 131 connections with "a" */
+  /* 131 connections with "ddr" */
   for (i=28; i < 159; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "a", now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "ddr", now-7200);
   }
 
-  /* 8 connections with "yout" */
+  /* 8 connections with "entropy" */
   for (i=159; i < 167; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "yout", now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "entropy", now-7200);
   }
 
   /* Test the transport history string. */
   s = geoip_get_transport_history();
   tor_assert(s);
-  test_streq(s, "<OR>=8,I=8,a=136,was=16,when=16,yout=8");
+  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,entropy=8");
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
