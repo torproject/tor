@@ -1,3 +1,19 @@
+Changes in version 0.2.4.15-rc - 2013-07-01
+  Tor 0.2.4.15-rc is the first release candidate for the Tor 0.2.4.x
+  series. It fixes a few smaller bugs, but generally appears stable.
+  Please test it and let us know whether it is!
+
+  o Major bugfixes:
+    - When receiving a new configuration file via the control port's
+      LOADCONF command, do not treat the defaults file as absent.
+      Fixes bug 9122; bugfix on 0.2.3.9-alpha.
+
+  o Minor features:
+    - Issue a warning when running with the bufferevents backend enabled.
+      It's still not stable, and people should know that they're likely
+      to hit unexpected problems. Closes ticket 9147.
+
+
 Changes in version 0.2.4.14-alpha - 2013-06-18
   Tor 0.2.4.14-alpha fixes a pair of client guard enumeration problems
   present in 0.2.4.13-alpha.
