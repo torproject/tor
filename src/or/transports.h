@@ -25,6 +25,9 @@ typedef struct transport_t {
   /** Boolean: We are re-parsing our transport list, and we are going to remove
    * this one if we don't find it in the list of configured transports. */
   unsigned marked_for_removal : 1;
+  /** Arguments for this transport that must be written to the
+      extra-info descriptor. */
+  char *extra_info_args;
 } transport_t;
 
 void mark_transport_list(void);
