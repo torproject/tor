@@ -1404,6 +1404,8 @@ pt_get_extra_info_descriptor_string(void)
     tor_assert(mp->transports);
 
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+      char *transport_args = NULL;
+
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
@@ -1419,9 +1421,16 @@ pt_get_extra_info_descriptor_string(void)
         addrport = fmt_addrport(&t->addr, t->port);
       }
 
+      /* If this transport has any arguments with it, prepend a space
+         to them so that we can add them to the transport line. */
+      if (t->extra_info_args)
+        tor_asprintf(&transport_args, " %s", t->extra_info_args);
+
       smartlist_add_asprintf(string_chunks,
-                             "transport %s %s",
-                             t->name, addrport);
+                             "transport %s %s%s",
+                             t->name, addrport,
+                             transport_args ? transport_args : "");
+      tor_free(transport_args);
     } SMARTLIST_FOREACH_END(t);
 
   } SMARTLIST_FOREACH_END(mp);
