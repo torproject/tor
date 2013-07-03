@@ -1727,7 +1727,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
           if (rs->flags & (U64_LITERAL(1) << i))
             ++flag_counts[flag_map[v_sl_idx][i]];
         }
-        if (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx])) {
+        if (named_flag[v_sl_idx] >= 0 &&
+            (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx]))) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
             log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
                        chosen_name, rs->status.nickname);
