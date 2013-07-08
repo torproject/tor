@@ -1590,10 +1590,19 @@ networkstatus_compute_consensus(smartlist_t *votes,
       unnamed_flag[i] = named_flag[i] = -1;
     chosen_named_idx = smartlist_string_pos(flags, "Named");
 
-    /* Build the flag index. */
+    /* Build the flag indexes. Note that no vote can have more than 64 members
+     * for known_flags, so no value will be greater than 63, so it's safe to
+     * do U64_LITERAL(1) << index on these values.  But note also that
+     * named_flag and unnamed_flag are initialized to -1, so we need to check
+     * that they're actually set before doing U64_LITERAL(1) << index with
+     * them.*/
     SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       flag_map[v_sl_idx] = tor_malloc_zero(
                            sizeof(int)*smartlist_len(v->known_flags));
+      if (smartlist_len(v->known_flags) > MAX_KNOWN_FLAGS_IN_VOTE) {
+        log_warn(LD_BUG, "Somehow, a vote has %d entries in known_flags",
+                 smartlist_len(v->known_flags));
+      }
       SMARTLIST_FOREACH_BEGIN(v->known_flags, const char *, fl) {
         int p = smartlist_string_pos(flags, fl);
         tor_assert(p >= 0);
@@ -1727,7 +1736,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
           if (rs->flags & (U64_LITERAL(1) << i))
             ++flag_counts[flag_map[v_sl_idx][i]];
         }
-        if (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx])) {
+        if (named_flag[v_sl_idx] >= 0 &&
+            (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx]))) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
             log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
                        chosen_name, rs->status.nickname);
