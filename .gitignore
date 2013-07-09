@@ -152,6 +152,8 @@
 /src/or/or_sha1.i
 /src/or/tor
 /src/or/tor.exe
+/src/or/tor-cov
+/src/or/tor-cov.exe
 /src/or/libtor.a
 /src/or/libtor-testing.a
 /src/or/libtor.lib

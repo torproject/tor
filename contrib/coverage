@@ -1,0 +1,13 @@
+#!/bin/sh
+# Copyright 2013  The Tor Project, Inc.
+# See LICENSE for licensing information.
+
+# coverage -- run gcov on the appropriate set of object files to extract
+# coverage information.
+
+for fn in src/{or,common}/*.c; do
+    BN=`basename $fn`
+    DN=`dirname $fn`
+    F=`echo $BN | sed -e 's/\.c$//;'`
+    gcov -o $DN/src_*$F.o $fn
+done

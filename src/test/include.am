@@ -31,6 +31,8 @@ src_test_test_SOURCES = \
 	src/test/test_config.c \
 	src/ext/tinytest.c
 
+src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+
 src_test_test_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 
 src_test_bench_SOURCES = \

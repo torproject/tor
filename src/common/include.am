@@ -82,6 +82,10 @@ src_common_libor_event_testing_a_SOURCES = $(LIBOR_EVENT_A_SOURCES)
 src_common_libor_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
 src_common_libor_crypto_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
 src_common_libor_event_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_crypto_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+
 
 COMMONHEADERS = \
   src/common/address.h				\

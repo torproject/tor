@@ -5,6 +5,9 @@ if UNITTESTS_ENABLED
 noinst_LIBRARIES += \
 	src/or/libtor-testing.a
 endif
+if COVERAGE_ENABLED
+noinst_PROGRAMS+= src/or/tor-cov
+endif
 
 if BUILD_NT_SERVICES
 tor_platform_source=src/or/ntmain.c
@@ -99,6 +102,7 @@ AM_CPPFLAGS += -DSHARE_DATADIR="\"$(datadir)\"" \
         -DBINDIR="\"$(bindir)\""
 
 src_or_libtor_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_or_libtor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it
@@ -111,6 +115,18 @@ src_or_tor_LDADD = src/or/libtor.a src/common/libor.a \
 	src/common/libor-event.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+
+if COVERAGE_ENABLED
+src_or_tor_cov_SOURCES = src/or/tor_main.c
+src_or_tor_cov_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_or_tor_cov_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_or_tor_cov_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
+src_or_tor_cov_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
+	src/common/libor-crypto-testing.a $(LIBDONNA) \
+	src/common/libor-event-testing.a \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
+endif
 
 ORHEADERS = \
 	src/or/addressmap.h				\
