@@ -22,7 +22,6 @@
       stub functions, so that the tests can check the function without
       invoking the other functions it calls.
 
-
-
-
+    - Add more unit tests for the <circid,channel>->circuit map, and
+      the destroy-cell-tracking code to fix bug 7912.
 
