@@ -14,3 +14,15 @@
       tests (and a new src/or/tor-cov target) to build with gcov test
       coverage support.
 
+  o Testing:
+
+    - We now have rudimentary function mocking support that our unit
+      tests can use to test functions in isolation. Function mocking
+      lets the tests temporarily replace a function's dependencies with
+      stub functions, so that the tests can check the function without
+      invoking the other functions it calls.
+
+
+
+
+
