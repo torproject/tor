@@ -109,7 +109,7 @@ typedef struct bridge_line_t {
   char *transport_name; /* The name of the pluggable transport that
                            should be used to connect to the bridge. */
   char digest[DIGEST_LEN]; /* The bridge's identity key digest. */
-  smartlist_t *socks_args;; /* SOCKS arguments for the pluggable
+  smartlist_t *socks_args; /* SOCKS arguments for the pluggable
                                transport proxy. */
 } bridge_line_t;
 
