@@ -423,6 +423,11 @@ GENERAL OPTIONS
     proxy authentication that Tor supports; feel free to submit a patch if you
     want it to support others.
 
+**Sandbox** **0**|**1**::
+    If set to 1, Tor will run securely through the use of a syscall sandbox.
+    Otherwise the sandbox will be disabled. The option is currently an 
+    experimental feature. (Default: 0)
+
 **Socks4Proxy** __host__[:__port__]::
     Tor will make all OR connections through the SOCKS 4 proxy at host:port
     (or host:1080 if port is not specified).

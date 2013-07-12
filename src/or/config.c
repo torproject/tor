@@ -40,6 +40,7 @@
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
+#include "sandbox.h"
 #include "util.h"
 #include "routerlist.h"
 #include "routerset.h"
@@ -370,6 +371,7 @@ static config_var_t option_vars_[] = {
   V(RunAsDaemon,                 BOOL,     "0"),
 //  V(RunTesting,                  BOOL,     "0"),
   OBSOLETE("RunTesting"), // currently unused
+  V(Sandbox,                     BOOL,     "0"),
   V(SafeLogging,                 STRING,   "1"),
   V(SafeSocks,                   BOOL,     "0"),
   V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
@@ -1143,6 +1145,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     *msg = tor_strdup("Failed to init Log options. See logs for details.");
     goto rollback;
   }
+
+  sandbox_set_debugging_fd(get_err_logging_fd());
 
  commit:
   r = 0;

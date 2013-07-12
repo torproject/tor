@@ -656,6 +656,12 @@ if test "$upnp" = "true"; then
 fi
 
 dnl ============================================================
+dnl Check for libseccomp
+
+AC_CHECK_HEADERS([seccomp.h])
+AC_SEARCH_LIBS(seccomp_init, [seccomp])
+
+dnl ============================================================
 dnl We need an implementation of curve25519.
 
 dnl set these defaults.

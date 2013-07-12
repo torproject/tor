@@ -142,6 +142,7 @@ int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
 void add_temp_log(int min_severity);
+int get_err_logging_fd(void);
 void close_temp_logs(void);
 void rollback_log_changes(void);
 void mark_logs_temp(void);
