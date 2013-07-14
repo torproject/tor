@@ -75,6 +75,7 @@ COMMONHEADERS = \
   src/common/memarea.h				\
   src/common/mempool.h				\
   src/common/procmon.h				\
+  src/common/sandbox.h				\
   src/common/torgzip.h				\
   src/common/torint.h				\
   src/common/torlog.h				\
