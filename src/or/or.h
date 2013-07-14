@@ -3759,7 +3759,7 @@ typedef struct {
     SAFELOG_SCRUB_ALL, SAFELOG_SCRUB_RELAY, SAFELOG_SCRUB_NONE
   } SafeLogging_;
 
-  int Sandbox; /** < Boolean: should sandboxing be enabled? */
+  int Sandbox; /**< Boolean: should sandboxing be enabled? */
   int SafeSocks; /**< Boolean: should we outright refuse application
                   * connections that use socks4 or socks5-with-local-dns? */
 #define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? \

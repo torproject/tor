@@ -316,7 +316,7 @@ tor_global_sandbox(void)
 #endif
 }
 
-/** Use <b>fd</b> to log non-survivable sandbox violations */
+/** Use <b>fd</b> to log non-survivable sandbox violations. */
 void
 sandbox_set_debugging_fd(int fd)
 {
@@ -326,3 +326,4 @@ sandbox_set_debugging_fd(int fd)
   (void)fd;
 #endif
 }
+
