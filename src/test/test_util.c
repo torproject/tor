@@ -2281,6 +2281,7 @@ test_util_load_win_lib(void *ptr)
 }
 #endif
 
+#ifndef _WIN32
 static void
 clear_hex_errno(char *hex_errno)
 {
@@ -2324,6 +2325,7 @@ test_util_exit_status(void *ptr)
  done:
   ;
 }
+#endif
 
 #ifndef _WIN32
 /** Check that fgets waits until a full line, and not return a partial line, on
@@ -3346,8 +3348,8 @@ struct testcase_t util_tests[] = {
 #ifdef _WIN32
   UTIL_TEST(load_win_lib, 0),
 #endif
-  UTIL_TEST(exit_status, 0),
 #ifndef _WIN32
+  UTIL_TEST(exit_status, 0),
   UTIL_TEST(fgets_eagain, TT_SKIP),
 #endif
   UTIL_TEST(spawn_background_ok, 0),

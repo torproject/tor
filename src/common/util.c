@@ -3443,6 +3443,7 @@ format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
   return len;
 }
 
+#ifndef _WIN32
 /** Format <b>child_state</b> and <b>saved_errno</b> as a hex string placed in
  * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler
  * safe.
@@ -3551,6 +3552,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  done:
   return res;
 }
+#endif
 
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
