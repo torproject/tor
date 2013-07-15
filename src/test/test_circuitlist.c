@@ -71,6 +71,8 @@ test_clist_maps(void *arg)
   channel_t *ch3 = new_fake_channel();
   or_circuit_t *or_c1=NULL, *or_c2=NULL;
 
+  (void) arg;
+
   MOCK(circuitmux_attach_circuit, circuitmux_attach_mock);
   MOCK(circuitmux_detach_circuit, circuitmux_detach_mock);
   memset(&cam, 0, sizeof(cam));
