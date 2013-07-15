@@ -518,11 +518,12 @@ int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
  * <b>n</b> */
 #define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
 
+int format_hex_number_sigsafe(unsigned int x, char *buf, int max_len);
+
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
 
-STATIC int format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
-                                             int max_len);
+#ifndef _WIN32
 STATIC int format_helper_exit_status(unsigned char child_state,
                               int saved_errno, char *hex_errno);
 
@@ -530,6 +531,8 @@ STATIC int format_helper_exit_status(unsigned char child_state,
    leading minus) and newline (no null) */
 #define HEX_ERRNO_SIZE (sizeof(char) * 2 + 1 + \
                         1 + sizeof(int) * 2 + 1)
+#endif
+
 #endif
 
 const char *libor_get_digests(void);

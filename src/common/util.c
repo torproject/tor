@@ -3402,9 +3402,8 @@ tor_join_win_cmdline(const char *argv[])
  * function; it's designed to be used in code paths where you can't call
  * arbitrary C functions.
  */
-STATIC int
-format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
-                                         int max_len)
+int
+format_hex_number_sigsafe(unsigned int x, char *buf, int max_len)
 {
   int len;
   unsigned int tmp;
@@ -3490,8 +3489,8 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   cur = hex_errno;
 
   /* Emit child_state */
-  written = format_hex_number_for_helper_exit_status(child_state,
-                                                     cur, left);
+  written = format_hex_number_sigsafe(child_state, cur, left);
+
   if (written <= 0)
     goto err;
 
@@ -3520,8 +3519,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   }
 
   /* Emit unsigned_errno */
-  written = format_hex_number_for_helper_exit_status(unsigned_errno,
-                                                     cur, left);
+  written = format_hex_number_sigsafe(unsigned_errno, cur, left);
 
   if (written <= 0)
     goto err;

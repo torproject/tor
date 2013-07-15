@@ -2627,7 +2627,7 @@ test_util_spawn_background_partial_read(void *ptr)
 }
 
 /**
- * Test for format_hex_number_for_helper_exit_status()
+ * Test for format_hex_number_sigsafe()
  */
 
 static void
@@ -2653,8 +2653,7 @@ test_util_format_hex_number(void *ptr)
   (void)ptr;
 
   for (i = 0; test_data[i].str != NULL; ++i) {
-    len = format_hex_number_for_helper_exit_status(test_data[i].x,
-        buf, HEX_ERRNO_SIZE);
+    len = format_hex_number_sigsafe(test_data[i].x, buf, HEX_ERRNO_SIZE);
     test_neq(len, 0);
     buf[len] = '\0';
     test_streq(buf, test_data[i].str);
