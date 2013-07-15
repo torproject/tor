@@ -1223,9 +1223,8 @@ escaped(const char *s)
   return escaped_val_;
 }
 
-/** Escape every character of <b>string</b> that is in
- *  <b>chars_to_escape</b>. The returned string is allocated on the
- *  heap and it's the responsibility of the caller to free it. */
+/** Return a newly allocated string equal to <b>string</b>, except that every
+ * character in <b>chars_to_escape</b> is preceded by a backslash. */
 char *
 tor_escape_str_for_pt_args(const char *string, const char *chars_to_escape)
 {
