@@ -102,9 +102,6 @@ create_managed_proxy_environment(const managed_proxy_t *mp);
 
 static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
 
-static void managed_proxy_destroy(managed_proxy_t *mp,
-                                  int also_terminate_process);
-
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void configure_proxy(managed_proxy_t *mp);
 
@@ -694,7 +691,7 @@ register_proxy(const managed_proxy_t *mp)
 }
 
 /** Free memory allocated by managed proxy <b>mp</b>. */
-static void
+STATIC void
 managed_proxy_destroy(managed_proxy_t *mp,
                       int also_terminate_process)
 {
@@ -1103,7 +1100,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
 /** Return a newly allocated string that tor should place in
  * TOR_PT_SERVER_TRANSPORT_OPTIONS while configuring the server
  * manged proxy in <b>mp</b>. Return NULL if no such options are found. */
-static char *
+STATIC char *
 get_transport_options_for_server_proxy(const managed_proxy_t *mp)
 {
   char *options_string = NULL;
@@ -1265,7 +1262,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
  *  <b>proxy_argv</b>.
  *
  * Requires that proxy_argv have at least one element. */
-static managed_proxy_t *
+STATIC managed_proxy_t *
 managed_proxy_create(const smartlist_t *transport_list,
                      char **proxy_argv, int is_server)
 {

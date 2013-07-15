@@ -6,6 +6,8 @@
 #include "orconfig.h"
 #define PT_PRIVATE
 #include "or.h"
+#include "config.h"
+#include "confparse.h"
 #include "transports.h"
 #include "circuitbuild.h"
 #include "test.h"
@@ -87,6 +89,58 @@ test_pt_parsing(void)
 }
 
 static void
+test_pt_get_transport_options(void *arg)
+{
+  char **execve_args;
+  smartlist_t *transport_list = smartlist_new();
+  managed_proxy_t *mp;
+  or_options_t *options = get_options_mutable();
+  char *opt_str = NULL;
+  config_line_t *cl = NULL;
+  (void)arg;
+
+  execve_args = tor_malloc(sizeof(char*)*2);
+  execve_args[0] = tor_strdup("cheeseshop");
+  execve_args[1] = NULL;
+
+  mp = managed_proxy_create(transport_list, execve_args, 1);
+  tt_ptr_op(mp, !=, NULL);
+  opt_str = get_transport_options_for_server_proxy(mp);
+  tt_ptr_op(opt_str, ==, NULL);
+
+  smartlist_add(mp->transports_to_launch, tor_strdup("gruyere"));
+  smartlist_add(mp->transports_to_launch, tor_strdup("roquefort"));
+  smartlist_add(mp->transports_to_launch, tor_strdup("stnectaire"));
+
+  tt_assert(options);
+
+  cl = tor_malloc_zero(sizeof(config_line_t));
+  cl->value = tor_strdup("gruyere melty=10 hardness=se;ven");
+  options->ServerTransportOptions = cl;
+
+  cl = tor_malloc_zero(sizeof(config_line_t));
+  cl->value = tor_strdup("stnectaire melty=4 hardness=three");
+  cl->next = options->ServerTransportOptions;
+  options->ServerTransportOptions = cl;
+
+  cl = tor_malloc_zero(sizeof(config_line_t));
+  cl->value = tor_strdup("pepperjack melty=12 hardness=five");
+  cl->next = options->ServerTransportOptions;
+  options->ServerTransportOptions = cl;
+
+  opt_str = get_transport_options_for_server_proxy(mp);
+  tt_str_op(opt_str, ==,
+            "gruyere:melty=10;gruyere:hardness=se\\;ven;"
+            "stnectaire:melty=4;stnectaire:hardness=three");
+
+ done:
+  tor_free(opt_str);
+  config_free_lines(cl);
+  managed_proxy_destroy(mp, 0);
+  smartlist_free(transport_list);
+}
+
+static void
 test_pt_protocol(void)
 {
   char line[200];
@@ -138,6 +192,8 @@ test_pt_protocol(void)
 struct testcase_t pt_tests[] = {
   PT_LEGACY(parsing),
   PT_LEGACY(protocol),
+  { "get_transport_options", test_pt_get_transport_options, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
