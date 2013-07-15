@@ -879,7 +879,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path)
   cpd_check_t flags = CPD_CHECK_MODE_ONLY;
   if (get_parent_directory(p)<0 || p[0] != '/') {
     log_warn(LD_GENERAL, "Bad unix socket address '%s'.  Tor does not support "
-             "relative patchs for unix sockets.", path);
+             "relative paths for unix sockets.", path);
     goto done;
   }
 

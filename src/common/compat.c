@@ -1754,7 +1754,7 @@ get_user_homedir(const char *username)
  * them for purposes of finding the parent directory.
  *
  * Returns 0 if a parent directory was successfully found, -1 otherwise (fname
- * did not have any path separators or only had them ad the end).
+ * did not have any path separators or only had them at the end).
  * */
 int
 get_parent_directory(char *fname)
