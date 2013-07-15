@@ -2643,7 +2643,8 @@ test_util_format_hex_number(void *ptr)
     {"1", 1},
     {"273A", 0x273a},
     {"FFFF", 0xffff},
-    
+    {"7FFFFFFF", 0x7fffffff},
+    {"FFFFFFFF", 0xffffffff},
 #if UINT_MAX >= 0xffffffff
     {"31BC421D", 0x31bc421d},
     {"FFFFFFFF", 0xffffffff},
@@ -2654,18 +2655,23 @@ test_util_format_hex_number(void *ptr)
   (void)ptr;
 
   for (i = 0; test_data[i].str != NULL; ++i) {
-    len = format_hex_number_sigsafe(test_data[i].x, buf, 32);
+    len = format_hex_number_sigsafe(test_data[i].x, buf, sizeof(buf));
     test_neq(len, 0);
-    buf[len] = '\0';
+    test_eq(len, strlen(buf));
     test_streq(buf, test_data[i].str);
   }
+
+  test_eq(4, format_hex_number_sigsafe(0xffff, buf, 5));
+  test_streq(buf, "FFFF");
+  test_eq(0, format_hex_number_sigsafe(0xffff, buf, 4));
+  test_eq(0, format_hex_number_sigsafe(0, buf, 1));
 
  done:
   return;
 }
 
 /**
- * Test that we can properly format q Windows command line
+ * Test that we can properly format a Windows command line
  */
 static void
 test_util_join_win_cmdline(void *ptr)

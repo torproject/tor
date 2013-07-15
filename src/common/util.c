@@ -3382,13 +3382,13 @@ tor_join_win_cmdline(const char *argv[])
 }
 
 /**
- * Helper function to output hex numbers, called by
- * format_helper_exit_status().  This writes the hexadecimal digits of x into
- * buf, up to max_len digits, and returns the actual number of digits written.
- * If there is insufficient space, it will write nothing and return 0.
+ * Helper function to output hex numbers from within a signal handler.
  *
- * This function DOES NOT add a terminating NUL character to its output: be
- * careful!
+ * Writes the nul-terminated hexadecimal digits of <b>x</b> into a buffer
+ * <b>buf</b> of size <b>buf_len</b>, and return the actual number of digits
+ * written, not counting the terminal NUL.
+ *
+ * If there is insufficient space, write nothing and return 0.
  *
  * This accepts an unsigned int because format_helper_exit_status() needs to
  * call it with a signed int and an unsigned char, and since the C standard
@@ -3403,14 +3403,14 @@ tor_join_win_cmdline(const char *argv[])
  * arbitrary C functions.
  */
 int
-format_hex_number_sigsafe(unsigned int x, char *buf, int max_len)
+format_hex_number_sigsafe(unsigned int x, char *buf, int buf_len)
 {
   int len;
   unsigned int tmp;
   char *cur;
 
   /* Sanity check */
-  if (!buf || max_len <= 0)
+  if (!buf || buf_len <= 1)
     return 0;
 
   /* How many chars do we need for x? */
@@ -3426,7 +3426,7 @@ format_hex_number_sigsafe(unsigned int x, char *buf, int max_len)
   }
 
   /* Bail if we would go past the end of the buffer */
-  if (len > max_len)
+  if (len+1 > buf_len)
     return 0;
 
   /* Point to last one */
@@ -3437,6 +3437,8 @@ format_hex_number_sigsafe(unsigned int x, char *buf, int max_len)
     *cur-- = "0123456789ABCDEF"[x & 0xf];
     x >>= 4;
   } while (x != 0 && cur >= buf);
+
+  buf[len] = '\0';
 
   /* Return len */
   return len;
