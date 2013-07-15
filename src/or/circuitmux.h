@@ -128,7 +128,8 @@ void circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
 void circuitmux_notify_xmit_destroy(circuitmux_t *cmux);
 
 /* Circuit interface */
-MOCK_DECL(void, circuitmux_attach_circuit, (circuitmux_t *cmux, circuit_t *circ,
+MOCK_DECL(void, circuitmux_attach_circuit, (circuitmux_t *cmux,
+                                            circuit_t *circ,
                                             cell_direction_t direction));
 MOCK_DECL(void, circuitmux_detach_circuit,
           (circuitmux_t *cmux, circuit_t *circ));

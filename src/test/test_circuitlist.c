@@ -62,7 +62,6 @@ circuitmux_detach_mock(circuitmux_t *cmux, circuit_t *circ)
     memset(&cdm, 0, sizeof(cdm));                \
   } while (0)
 
-
 static void
 test_clist_maps(void *arg)
 {
@@ -150,8 +149,7 @@ test_clist_maps(void *arg)
   tt_assert(! circuit_id_in_use_on_channel(200, ch2));
   tt_assert(! circuit_id_in_use_on_channel(100, ch1));
 
-
-done:
+ done:
   tor_free(ch1);
   tor_free(ch2);
   tor_free(ch3);
@@ -163,8 +161,8 @@ done:
   UNMOCK(circuitmux_detach_circuit);
 }
 
-
 struct testcase_t circuitlist_tests[] = {
   { "maps", test_clist_maps, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
+
