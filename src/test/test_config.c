@@ -441,7 +441,7 @@ test_config_parse_bridge_line(void *arg)
 static void
 test_config_parse_transport_options_line(void *arg)
 {
-  smartlist_t *options_sl = NULL;
+  smartlist_t *options_sl = NULL, *sl_tmp = NULL;
 
   (void) arg;
 
@@ -462,7 +462,7 @@ test_config_parse_transport_options_line(void *arg)
   }
 
   { /* correct -- no transport specified */
-    smartlist_t *sl_tmp = smartlist_new();
+    sl_tmp = smartlist_new();
     smartlist_add_asprintf(sl_tmp, "ladi=dadi");
     smartlist_add_asprintf(sl_tmp, "weliketo=party");
 
@@ -474,12 +474,14 @@ test_config_parse_transport_options_line(void *arg)
 
     SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
     smartlist_free(sl_tmp);
+    sl_tmp = NULL;
     SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
     smartlist_free(options_sl);
+    options_sl = NULL;
   }
 
   { /* correct -- correct transport specified */
-    smartlist_t *sl_tmp = smartlist_new();
+    sl_tmp = smartlist_new();
     smartlist_add_asprintf(sl_tmp, "ladi=dadi");
     smartlist_add_asprintf(sl_tmp, "weliketo=party");
 
@@ -488,15 +490,23 @@ test_config_parse_transport_options_line(void *arg)
                                               "rook");
     test_assert(options_sl);
     test_assert(smartlist_strings_eq(options_sl, sl_tmp));
-
     SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
     smartlist_free(sl_tmp);
+    sl_tmp = NULL;
     SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
     smartlist_free(options_sl);
+    options_sl = NULL;
   }
 
  done:
-  ;
+  if (options_sl) {
+    SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
+    smartlist_free(options_sl);
+  }
+  if (sl_tmp) {
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+  }
 }
 
 #define CONFIG_TEST(name, flags)                          \
