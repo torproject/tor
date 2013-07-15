@@ -2634,7 +2634,7 @@ static void
 test_util_format_hex_number(void *ptr)
 {
   int i, len;
-  char buf[HEX_ERRNO_SIZE + 1];
+  char buf[33];
   const struct {
     const char *str;
     unsigned int x;
@@ -2643,6 +2643,7 @@ test_util_format_hex_number(void *ptr)
     {"1", 1},
     {"273A", 0x273a},
     {"FFFF", 0xffff},
+    
 #if UINT_MAX >= 0xffffffff
     {"31BC421D", 0x31bc421d},
     {"FFFFFFFF", 0xffffffff},
@@ -2653,7 +2654,7 @@ test_util_format_hex_number(void *ptr)
   (void)ptr;
 
   for (i = 0; test_data[i].str != NULL; ++i) {
-    len = format_hex_number_sigsafe(test_data[i].x, buf, HEX_ERRNO_SIZE);
+    len = format_hex_number_sigsafe(test_data[i].x, buf, 32);
     test_neq(len, 0);
     buf[len] = '\0';
     test_streq(buf, test_data[i].str);
