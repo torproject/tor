@@ -1232,8 +1232,8 @@ crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
 
 /** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
  * every four spaces. */
-/* static */ void
-add_spaces_to_fp(char *out, size_t outlen, const char *in)
+void
+crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
 {
   int n = 0;
   char *end = out+outlen;
@@ -1270,7 +1270,7 @@ crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out, int add_space)
   }
   base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
   if (add_space) {
-    add_spaces_to_fp(fp_out, FINGERPRINT_LEN+1, hexdigest);
+    crypto_add_spaces_to_fp(fp_out, FINGERPRINT_LEN+1, hexdigest);
   } else {
     strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);
   }

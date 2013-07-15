@@ -407,7 +407,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
  * that the name resolution that led us to <b>addr</b> will be valid for
  * <b>ttl</b> seconds. Return -1 on error, or the number of bytes used on
  * success. */
-/* private */int
+STATIC int
 connected_cell_format_payload(uint8_t *payload_out,
                               const tor_addr_t *addr,
                               uint32_t ttl)
@@ -2265,7 +2265,7 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
  * Return -1 in the case where want to send a RELAY_END cell, and < -1 when
  * we don't.
  **/
-/* static */ int
+STATIC int
 begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                  uint8_t *end_reason_out)
 {

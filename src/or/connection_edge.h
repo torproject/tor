@@ -12,6 +12,8 @@
 #ifndef TOR_CONNECTION_EDGE_H
 #define TOR_CONNECTION_EDGE_H
 
+#include "testsupport.h"
+
 #define connection_mark_unattached_ap(conn, endreason) \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
@@ -130,9 +132,9 @@ typedef struct begin_cell_t {
   unsigned is_begindir : 1;
 } begin_cell_t;
 
-int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
+STATIC int begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
                      uint8_t *end_reason_out);
-int connected_cell_format_payload(uint8_t *payload_out,
+STATIC int connected_cell_format_payload(uint8_t *payload_out,
                                   const tor_addr_t *addr,
                                   uint32_t ttl);
 #endif

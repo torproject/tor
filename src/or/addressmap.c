@@ -798,7 +798,7 @@ address_is_in_virtual_range(const char *address)
 /** Return a random address conforming to the virtual address configuration
  * in <b>conf</b>.
  */
-/* private */ void
+STATIC void
 get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
 {
   uint8_t tmp[4];

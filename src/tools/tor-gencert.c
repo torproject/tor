@@ -27,8 +27,6 @@
 #include <assert.h>
 #endif
 
-#define CRYPTO_PRIVATE
-
 #include "compat.h"
 #include "../common/util.h"
 #include "../common/torlog.h"

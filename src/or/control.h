@@ -91,8 +91,8 @@ void control_event_clients_seen(const char *controller_str);
 
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */
-size_t write_escaped_data(const char *data, size_t len, char **out);
-size_t read_escaped_data(const char *data, size_t len, char **out);
+STATIC size_t write_escaped_data(const char *data, size_t len, char **out);
+STATIC size_t read_escaped_data(const char *data, size_t len, char **out);
 #endif
 
 #endif

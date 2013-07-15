@@ -8,7 +8,7 @@
  * \file circuitlist.c
  * \brief Manage the global circuit list.
  **/
-
+#define CIRCUITLIST_PRIVATE
 #include "or.h"
 #include "channel.h"
 #include "circuitbuild.h"
@@ -41,7 +41,6 @@ circuit_t *global_circuitlist=NULL;
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
 
-static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
@@ -736,7 +735,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
 
 /** Deallocate space associated with circ.
  */
-static void
+STATIC void
 circuit_free(circuit_t *circ)
 {
   void *mem;

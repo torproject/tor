@@ -29,9 +29,13 @@
 /* XXXX024 Make this static; add accessor functions. */
 circuit_build_times_t circ_times;
 
+#ifdef TOR_UNIT_TESTS
 /** If set, we're running the unit tests: we should avoid clobbering
  * our state file or accessing get_options() or get_or_state() */
 static int unit_tests = 0;
+#else
+#define unit_tests 0
+#endif
 
 /**
  * This function decides if CBT learning should be disabled. It returns
@@ -438,7 +442,7 @@ circuit_build_times_get_initial_timeout(void)
  * Leave estimated parameters, timeout and network liveness intact
  * for future use.
  */
-void
+STATIC void
 circuit_build_times_reset(circuit_build_times_t *cbt)
 {
   memset(cbt->circuit_build_times, 0, sizeof(cbt->circuit_build_times));
@@ -949,7 +953,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
  * an acceptable approximation because we are only concerned with the
  * accuracy of the CDF of the tail.
  */
-int
+STATIC int
 circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 {
   build_time_t *x=cbt->circuit_build_times;
@@ -1033,7 +1037,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  *
  * Return value is in milliseconds.
  */
-double
+STATIC double
 circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
                                       double quantile)
 {
@@ -1050,6 +1054,7 @@ circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
   return ret;
 }
 
+#ifdef TOR_UNIT_TESTS
 /** Pareto CDF */
 double
 circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
@@ -1060,7 +1065,9 @@ circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
   tor_assert(0 <= ret && ret <= 1.0);
   return ret;
 }
+#endif
 
+#ifdef TOR_UNIT_TESTS
 /**
  * Generate a synthetic time using our distribution parameters.
  *
@@ -1093,7 +1100,9 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   tor_assert(ret > 0);
   return ret;
 }
+#endif
 
+#ifdef TOR_UNIT_TESTS
 /**
  * Estimate an initial alpha parameter by solving the quantile
  * function with a quantile point and a specific timeout value.
@@ -1114,6 +1123,7 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
     (tor_mathlog(cbt->Xm)-tor_mathlog(timeout_ms));
   tor_assert(cbt->alpha > 0);
 }
+#endif
 
 /**
  * Returns true if we need circuits to be built
@@ -1282,7 +1292,7 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
  * to restart the process of building test circuits and estimating a
  * new timeout.
  */
-int
+STATIC int
 circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
 {
   int total_build_times = cbt->total_build_times;
@@ -1546,6 +1556,8 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
              cbt->total_build_times);
   }
 }
+
+#ifdef TOR_UNIT_TESTS
 /** Make a note that we're running unit tests (rather than running Tor
  * itself), so we avoid clobbering our state file. */
 void
@@ -1553,4 +1565,5 @@ circuitbuild_running_unit_tests(void)
 {
   unit_tests = 1;
 }
+#endif
 

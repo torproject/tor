@@ -9,8 +9,6 @@
  * \brief Code to parse and interpret configuration files.
  **/
 
-#define CONFIG_PRIVATE
-
 #include "or.h"
 #include "addressmap.h"
 #include "channel.h"

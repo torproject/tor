@@ -334,7 +334,7 @@ connection_write_str_to_buf(const char *s, control_connection_t *conn)
  * the end. Replace all LF characters sequences with CRLF.  Return the number
  * of bytes in *<b>out</b>.
  */
-/* static */ size_t
+STATIC size_t
 write_escaped_data(const char *data, size_t len, char **out)
 {
   size_t sz_out = len+8;
@@ -382,7 +382,7 @@ write_escaped_data(const char *data, size_t len, char **out)
  * that appears at the start of a line, and replacing all CRLF sequences
  * with LF.   Return the number of
  * bytes in *<b>out</b>. */
-/* static */ size_t
+STATIC size_t
 read_escaped_data(const char *data, size_t len, char **out)
 {
   char *outp;

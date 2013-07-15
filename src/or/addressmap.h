@@ -7,6 +7,8 @@
 #ifndef TOR_ADDRESSMAP_H
 #define TOR_ADDRESSMAP_H
 
+#include "testsupport.h"
+
 void addressmap_init(void);
 void addressmap_clear_excluded_trackexithosts(const or_options_t *options);
 void addressmap_clear_invalid_automaps(const or_options_t *options);
@@ -52,8 +54,8 @@ typedef struct virtual_addr_conf_t {
   maskbits_t bits;
 } virtual_addr_conf_t;
 
-void get_random_virtual_addr(const virtual_addr_conf_t *conf,
-                             tor_addr_t *addr_out);
+STATIC void get_random_virtual_addr(const virtual_addr_conf_t *conf,
+                                    tor_addr_t *addr_out);
 #endif
 
 #endif

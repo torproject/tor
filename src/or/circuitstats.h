@@ -38,28 +38,29 @@ double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
 double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 #ifdef CIRCUITSTATS_PRIVATE
-double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
+STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
                                              double quantile);
-build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
-                                                 double q_lo, double q_hi);
-void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
-                                       double quantile, double time_ms);
-int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
-double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
-void circuitbuild_running_unit_tests(void);
-void circuit_build_times_reset(circuit_build_times_t *cbt);
+STATIC int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
+STATIC void circuit_build_times_reset(circuit_build_times_t *cbt);
 
 /* Network liveness functions */
-int circuit_build_times_network_check_changed(circuit_build_times_t *cbt);
+STATIC int circuit_build_times_network_check_changed(
+                                             circuit_build_times_t *cbt);
+#endif
+
+#ifdef TOR_UNIT_TESTS
+build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
+                                                 double q_lo, double q_hi);
+double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
+void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
+                                       double quantile, double time_ms);
+void circuitbuild_running_unit_tests(void);
 #endif
 
 /* Network liveness functions */
 void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
-
-/* DOCDOC circuit_build_times_get_bw_scale */
-int circuit_build_times_get_bw_scale(networkstatus_t *ns);
 
 #endif
 

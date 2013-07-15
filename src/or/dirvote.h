@@ -12,6 +12,8 @@
 #ifndef TOR_DIRVOTE_H
 #define TOR_DIRVOTE_H
 
+#include "testsupport.h"
+
 /** Lowest allowable value for VoteSeconds. */
 #define MIN_VOTE_SECONDS 2
 /** Lowest allowable value for DistSeconds. */
@@ -136,9 +138,9 @@ document_signature_t *voter_get_sig_by_algorithm(
                            digest_algorithm_t alg);
 
 #ifdef DIRVOTE_PRIVATE
-char *format_networkstatus_vote(crypto_pk_t *private_key,
+STATIC char *format_networkstatus_vote(crypto_pk_t *private_key,
                                  networkstatus_t *v3_ns);
-char *dirvote_compute_params(smartlist_t *votes, int method,
+STATIC char *dirvote_compute_params(smartlist_t *votes, int method,
                              int total_authorities);
 #endif
 

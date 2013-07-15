@@ -15,7 +15,6 @@ const char tor_git_revision[] = "";
 #include "orconfig.h"
 
 #define RELAY_PRIVATE
-#define CONFIG_PRIVATE
 
 #include "or.h"
 #include "onion_tap.h"

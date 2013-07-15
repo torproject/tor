@@ -1,5 +1,15 @@
 
-noinst_LIBRARIES+= src/common/libor.a src/common/libor-crypto.a src/common/libor-event.a
+noinst_LIBRARIES += \
+	src/common/libor.a \
+	src/common/libor-crypto.a \
+	src/common/libor-event.a
+
+if UNITTESTS_ENABLED
+noinst_LIBRARIES += \
+	src/common/libor-testing.a \
+	src/common/libor-crypto-testing.a \
+	src/common/libor-event-testing.a
+endif
 
 EXTRA_DIST+= \
   src/common/common_sha1.i	\
@@ -38,7 +48,7 @@ if CURVE25519_ENABLED
 libcrypto_extra_source=src/common/crypto_curve25519.c
 endif
 
-src_common_libor_a_SOURCES = \
+LIBOR_A_SOURCES = \
   src/common/address.c					\
   src/common/compat.c					\
   src/common/container.c				\
@@ -52,7 +62,7 @@ src_common_libor_a_SOURCES = \
   src/common/sandbox.c					\
   $(libor_extra_source)
 
-src_common_libor_crypto_a_SOURCES = \
+LIBOR_CRYPTO_A_SOURCES = \
   src/common/aes.c		\
   src/common/crypto.c		\
   src/common/crypto_format.c	\
@@ -60,7 +70,23 @@ src_common_libor_crypto_a_SOURCES = \
   src/common/tortls.c		\
   $(libcrypto_extra_source)
 
-src_common_libor_event_a_SOURCES = src/common/compat_libevent.c
+LIBOR_EVENT_A_SOURCES = src/common/compat_libevent.c
+
+src_common_libor_a_SOURCES = $(LIBOR_A_SOURCES)
+src_common_libor_crypto_a_SOURCES = $(LIBOR_CRYPTO_A_SOURCES)
+src_common_libor_event_a_SOURCES = $(LIBOR_EVENT_A_SOURCES)
+
+src_common_libor_testing_a_SOURCES = $(LIBOR_A_SOURCES)
+src_common_libor_crypto_testing_a_SOURCES = $(LIBOR_CRYPTO_A_SOURCES)
+src_common_libor_event_testing_a_SOURCES = $(LIBOR_EVENT_A_SOURCES)
+
+src_common_libor_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_common_libor_crypto_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_common_libor_event_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS $(AM_CPPFLAGS)
+src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_crypto_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+
 
 COMMONHEADERS = \
   src/common/address.h				\
@@ -76,6 +102,7 @@ COMMONHEADERS = \
   src/common/mempool.h				\
   src/common/procmon.h				\
   src/common/sandbox.h				\
+  src/common/testsupport.h			\
   src/common/torgzip.h				\
   src/common/torint.h				\
   src/common/torlog.h				\

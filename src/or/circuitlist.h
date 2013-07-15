@@ -12,6 +12,8 @@
 #ifndef TOR_CIRCUITLIST_H
 #define TOR_CIRCUITLIST_H
 
+#include "testsupport.h"
+
 circuit_t * circuit_get_global_list_(void);
 const char *circuit_state_to_string(int state);
 const char *circuit_purpose_to_controller_string(uint8_t purpose);
@@ -67,6 +69,10 @@ void circuits_handle_oom(size_t current_allocation);
 
 void channel_note_destroy_pending(channel_t *chan, circid_t id);
 void channel_note_destroy_not_pending(channel_t *chan, circid_t id);
+
+#ifdef CIRCUITLIST_PRIVATE
+STATIC void circuit_free(circuit_t *circ);
+#endif
 
 #endif
 

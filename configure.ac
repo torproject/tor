@@ -39,6 +39,15 @@ AC_ARG_ENABLE(static-tor,
    AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir))
 AC_ARG_ENABLE(curve25519,
    AS_HELP_STRING(--disable-curve25519, Build Tor with no curve25519 elliptic-curve crypto support))
+AC_ARG_ENABLE(unittests,
+   AS_HELP_STRING(--disable-unittests, [Don't build unit tests for Tor. Risky!]))
+AC_ARG_ENABLE(coverage,
+   AS_HELP_STRING(--enable-coverage, [Enable coverage support in the unit-test build]))
+
+AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
+AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
+
+echo "COVERAGE: $enable_coverage"
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
@@ -1459,7 +1468,12 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 # CFLAGS="$CFLAGS -Winline"
 fi
 
-
+if test "$enable_coverage" = yes && test "$have_clang" = "no"; then
+   case "$host_os" in
+    darwin*)
+      AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-profiling.])
+   esac
+fi
 
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 

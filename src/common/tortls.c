@@ -48,9 +48,6 @@
 #include "compat_libevent.h"
 #endif
 
-#define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
-#define TORTLS_PRIVATE
-
 #include "crypto.h"
 #include "tortls.h"
 #include "util.h"

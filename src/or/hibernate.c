@@ -1010,6 +1010,7 @@ getinfo_helper_accounting(control_connection_t *conn,
   return 0;
 }
 
+#ifdef TOR_UNIT_TESTS
 /**
  * Manually change the hibernation state.  Private; used only by the unit
  * tests.
@@ -1019,4 +1020,5 @@ hibernate_set_state_for_testing_(hibernate_state_t newstate)
 {
   hibernate_state = newstate;
 }
+#endif
 

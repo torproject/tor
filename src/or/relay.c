@@ -969,7 +969,7 @@ remap_event_helper(entry_connection_t *conn, const tor_addr_t *new_addr)
  * <b>addr_out</b> to the address we're connected to, and <b>ttl_out</b> to
  * the ttl of that address, in seconds, and return 0.  On failure, return
  * -1. */
-int
+STATIC int
 connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
                      tor_addr_t *addr_out, int *ttl_out)
 {

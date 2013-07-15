@@ -120,7 +120,7 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
 
 /** Add an entry to the GeoIP table indicated by <b>family</b>,
  * parsing it from <b>line</b>. The format is as for geoip_load_file(). */
-/*private*/ int
+STATIC int
 geoip_parse_entry(const char *line, sa_family_t family)
 {
   tor_addr_t low_addr, high_addr;
@@ -363,7 +363,7 @@ geoip_load_file(sa_family_t family, const char *filename)
  * be less than geoip_get_n_countries().  To decode it, call
  * geoip_get_country_name().
  */
-int
+STATIC int
 geoip_get_country_by_ipv4(uint32_t ipaddr)
 {
   geoip_ipv4_entry_t *ent;
@@ -379,7 +379,7 @@ geoip_get_country_by_ipv4(uint32_t ipaddr)
  * 0 for the 'unknown country'.  The return value will always be less than
  * geoip_get_n_countries().  To decode it, call geoip_get_country_name().
  */
-int
+STATIC int
 geoip_get_country_by_ipv6(const struct in6_addr *addr)
 {
   geoip_ipv6_entry_t *ent;

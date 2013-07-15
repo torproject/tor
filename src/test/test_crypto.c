@@ -4,7 +4,6 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
-#define CRYPTO_PRIVATE
 #define CRYPTO_CURVE25519_PRIVATE
 #include "or.h"
 #include "test.h"
@@ -632,7 +631,7 @@ test_crypto_formats(void)
     data1 = tor_strdup("ABCD1234ABCD56780000ABCD1234ABCD56780000");
     test_eq(strlen(data1), 40);
     data2 = tor_malloc(FINGERPRINT_LEN+1);
-    add_spaces_to_fp(data2, FINGERPRINT_LEN+1, data1);
+    crypto_add_spaces_to_fp(data2, FINGERPRINT_LEN+1, data1);
     test_streq(data2, "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000");
     tor_free(data1);
     tor_free(data2);

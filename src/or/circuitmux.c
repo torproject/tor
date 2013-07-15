@@ -922,9 +922,9 @@ circuitmux_num_circuits(circuitmux_t *cmux)
  * Attach a circuit to a circuitmux, for the specified direction.
  */
 
-void
-circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
-                          cell_direction_t direction)
+MOCK_IMPL(void,
+circuitmux_attach_circuit,(circuitmux_t *cmux, circuit_t *circ,
+                           cell_direction_t direction))
 {
   channel_t *chan = NULL;
   uint64_t channel_id;
@@ -1071,8 +1071,8 @@ circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
  * no-op if not attached.
  */
 
-void
-circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ)
+MOCK_IMPL(void,
+circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
 {
   chanid_circid_muxinfo_t search, *hashent = NULL;
   /*

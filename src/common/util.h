@@ -15,6 +15,7 @@
 #include "torint.h"
 #include "compat.h"
 #include "di_ops.h"
+#include "testsupport.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -520,9 +521,9 @@ int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
 
-int format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
+STATIC int format_hex_number_for_helper_exit_status(unsigned int x, char *buf,
                                              int max_len);
-int format_helper_exit_status(unsigned char child_state,
+STATIC int format_helper_exit_status(unsigned char child_state,
                               int saved_errno, char *hex_errno);
 
 /* Space for hex values of child state, a slash, saved_errno (with

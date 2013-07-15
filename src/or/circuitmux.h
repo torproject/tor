@@ -10,6 +10,7 @@
 #define TOR_CIRCUITMUX_H
 
 #include "or.h"
+#include "testsupport.h"
 
 typedef struct circuitmux_policy_s circuitmux_policy_t;
 typedef struct circuitmux_policy_data_s circuitmux_policy_data_t;
@@ -127,9 +128,10 @@ void circuitmux_notify_xmit_cells(circuitmux_t *cmux, circuit_t *circ,
 void circuitmux_notify_xmit_destroy(circuitmux_t *cmux);
 
 /* Circuit interface */
-void circuitmux_attach_circuit(circuitmux_t *cmux, circuit_t *circ,
-                               cell_direction_t direction);
-void circuitmux_detach_circuit(circuitmux_t *cmux, circuit_t *circ);
+MOCK_DECL(void, circuitmux_attach_circuit, (circuitmux_t *cmux, circuit_t *circ,
+                                            cell_direction_t direction));
+MOCK_DECL(void, circuitmux_detach_circuit,
+          (circuitmux_t *cmux, circuit_t *circ));
 void circuitmux_clear_num_cells(circuitmux_t *cmux, circuit_t *circ);
 void circuitmux_set_num_cells(circuitmux_t *cmux, circuit_t *circ,
                               unsigned int n_cells);

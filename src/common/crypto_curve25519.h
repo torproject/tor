@@ -4,6 +4,7 @@
 #ifndef TOR_CRYPTO_CURVE25519_H
 #define TOR_CRYPTO_CURVE25519_H
 
+#include "testsupport.h"
 #include "torint.h"
 
 /** Length of a curve25519 public key when encoded. */
@@ -52,8 +53,8 @@ int curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
                                       const char *fname);
 
 #ifdef CRYPTO_CURVE25519_PRIVATE
-int curve25519_impl(uint8_t *output, const uint8_t *secret,
-                    const uint8_t *basepoint);
+STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
+                           const uint8_t *basepoint);
 #endif
 #endif
 

@@ -104,12 +104,12 @@ typedef struct {
   smartlist_t *transports;
 } managed_proxy_t;
 
-int parse_cmethod_line(const char *line, managed_proxy_t *mp);
-int parse_smethod_line(const char *line, managed_proxy_t *mp);
+STATIC int parse_cmethod_line(const char *line, managed_proxy_t *mp);
+STATIC int parse_smethod_line(const char *line, managed_proxy_t *mp);
 
-int parse_version(const char *line, managed_proxy_t *mp);
-void parse_env_error(const char *line);
-void handle_proxy_line(const char *line, managed_proxy_t *mp);
+STATIC int parse_version(const char *line, managed_proxy_t *mp);
+STATIC void parse_env_error(const char *line);
+STATIC void handle_proxy_line(const char *line, managed_proxy_t *mp);
 
 #endif
 

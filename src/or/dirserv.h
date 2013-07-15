@@ -12,6 +12,8 @@
 #ifndef TOR_DIRSERV_H
 #define TOR_DIRSERV_H
 
+#include "testsupport.h"
+
 /** What fraction (1 over this number) of the relay ID space do we
  * (as a directory authority) launch connections to at each reachability
  * test? */
@@ -119,20 +121,21 @@ cached_dir_t *new_cached_dir(char *s, time_t published);
 /* Put the MAX_MEASUREMENT_AGE #define here so unit tests can see it */
 #define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
 
-int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
+STATIC int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
 
-int measured_bw_line_apply(measured_bw_line_t *parsed_line,
+STATIC int measured_bw_line_apply(measured_bw_line_t *parsed_line,
                            smartlist_t *routerstatuses);
 
-void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
+STATIC void dirserv_cache_measured_bw(const measured_bw_line_t *parsed_line,
                                time_t as_of);
-void dirserv_clear_measured_bw_cache(void);
-void dirserv_expire_measured_bw_cache(time_t now);
-int dirserv_get_measured_bw_cache_size(void);
-int dirserv_query_measured_bw_cache_kb(const char *node_id, long *bw_out,
-                                       time_t *as_of_out);
-int dirserv_has_measured_bw(const char *node_id);
-cached_dir_t *generate_v2_networkstatus_opinion(void);
+STATIC void dirserv_clear_measured_bw_cache(void);
+STATIC void dirserv_expire_measured_bw_cache(time_t now);
+STATIC int dirserv_get_measured_bw_cache_size(void);
+STATIC int dirserv_query_measured_bw_cache_kb(const char *node_id,
+                                              long *bw_out,
+                                              time_t *as_of_out);
+STATIC int dirserv_has_measured_bw(const char *node_id);
+STATIC cached_dir_t *generate_v2_networkstatus_opinion(void);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

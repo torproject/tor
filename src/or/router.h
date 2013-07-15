@@ -12,6 +12,8 @@
 #ifndef TOR_ROUTER_H
 #define TOR_ROUTER_H
 
+#include "testsupport.h"
+
 crypto_pk_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_server_identity_key(crypto_pk_t *k);
@@ -146,7 +148,7 @@ smartlist_t *router_get_all_orports(const routerinfo_t *ri);
 
 #ifdef ROUTER_PRIVATE
 /* Used only by router.c and test.c */
-void get_platform_str(char *platform, size_t len);
+STATIC void get_platform_str(char *platform, size_t len);
 #endif
 
 #endif

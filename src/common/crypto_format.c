@@ -3,7 +3,6 @@
 
 /* Formatting and parsing code for crypto-related data structures. */
 
-#define CRYPTO_CURVE25519_PRIVATE
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
