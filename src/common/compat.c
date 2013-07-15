@@ -1746,6 +1746,15 @@ get_user_homedir(const char *username)
  * actually examine the filesystem; does a purely syntactic modification.
  *
  * The parent of the root director is considered to be iteself.
+ *
+ * Path separators are the forward slash (/) everywhere and additionally
+ * the backslash (\) on Win32.
+ *
+ * Cuts off any number of trailing path separators but otherwise ignores
+ * them for purposes of finding the parent directory.
+ *
+ * Returns 0 if a parent directory was successfully found, -1 otherwise (fname
+ * did not have any path separators or only had them ad the end).
  * */
 int
 get_parent_directory(char *fname)
