@@ -13,9 +13,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "orconfig.h"
 #include "sandbox.h"
 #include "torlog.h"
-#include "orconfig.h"
+#include "util.h"
 
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
@@ -202,7 +203,7 @@ static void
 sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = (ucontext_t *) (void_context);
-  char message[64];
+  char message[256];
   int rv = 0, syscall, length, err;
   (void) nr;
 
@@ -214,11 +215,12 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 
   syscall = ctx->uc_mcontext.gregs[REG_SYSCALL];
 
-  /* XXXX Avoid use of snprintf; it isn't on the list of Stuff You're Allowed
-   * To Do In A Signal Handler. */
-  length = snprintf(message, sizeof(message),
-      "\n\n(Sandbox) bad syscall (%d) was caught.\n",
-      syscall);
+  strlcpy(message, "\n\n(Sandbox) Caught a bad syscall attempt (syscall 0x",
+          sizeof(message));
+  (void) format_hex_number_sigsafe(syscall, message+strlen(message),
+                                   sizeof(message)-strlen(message));
+  strlcat(message, ")\n", sizeof(message));
+  length = strlen(message);
 
   err = 0;
   if (sigsys_debugging_fd >= 0) {
