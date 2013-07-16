@@ -22,6 +22,8 @@ static void
 test_pt_parsing(void)
 {
   char line[200];
+  transport_t *transport = NULL;
+  tor_addr_t test_addr;
 
   managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_INFANT;
@@ -48,7 +50,17 @@ test_pt_parsing(void)
   /* correct line */
   strlcpy(line,"CMETHOD trebuchet socks5 127.0.0.1:1999",sizeof(line));
   test_assert(parse_cmethod_line(line, mp) == 0);
-  test_assert(smartlist_len(mp->transports));
+  test_assert(smartlist_len(mp->transports) == 1);
+  transport = smartlist_get(mp->transports, 0);
+  /* test registered address of transport */
+  tor_addr_parse(&test_addr, "127.0.0.1");
+  test_assert(tor_addr_eq(&test_addr, &transport->addr));
+  /* test registered port of transport */
+  test_assert(transport->port == 1999);
+  /* test registered SOCKS version of transport */
+  test_assert(transport->socks_version == PROXY_SOCKS5);
+  /* test registered name of transport */
+  test_streq(transport->name, "trebuchet");
 
   reset_mp(mp);
 
@@ -65,8 +77,17 @@ test_pt_parsing(void)
   reset_mp(mp);
 
   /* cowwect */
-  strlcpy(line,"SMETHOD trebuchy 127.0.0.1:1999",sizeof(line));
+  strlcpy(line,"SMETHOD trebuchy 127.0.0.2:2999",sizeof(line));
   test_assert(parse_smethod_line(line, mp) == 0);
+  test_assert(smartlist_len(mp->transports) == 1);
+  transport = smartlist_get(mp->transports, 0);
+  /* test registered address of transport */
+  tor_addr_parse(&test_addr, "127.0.0.2");
+  test_assert(tor_addr_eq(&test_addr, &transport->addr));
+  /* test registered port of transport */
+  test_assert(transport->port == 2999);
+  /* test registered name of transport */
+  test_streq(transport->name, "trebuchy");
 
   reset_mp(mp);
 
