@@ -486,23 +486,16 @@ static HT_HEAD(clientmap, clientmap_entry_t) client_history =
 static INLINE unsigned
 clientmap_entry_hash(const clientmap_entry_t *a)
 {
-  return ht_improve_hash(tor_addr_hash(&a->addr));
+  unsigned h = tor_addr_hash(&a->addr);
+  if (a->transport_name)
+    h += ht_string_hash(a->transport_name);
+  return ht_improve_hash(h);
 }
 /** Hashtable helper: compare two clientmap_entry_t values for equality. */
 static INLINE int
 clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 {
-  /* If one entry contains a transport and the other doesn't, then
-     they are not equal. */
-  if (a->transport_name && !b->transport_name)
-    return 0;
-  if (!a->transport_name && b->transport_name)
-    return 0;
-  /* If entries contain different transports, they they are not
-     equal. */
-  if (a->transport_name &&
-      b->transport_name &&
-      strcmp(a->transport_name, b->transport_name))
+  if (strcmp_opt(a->transport_name, b->transport_name))
     return 0;
 
   return !tor_addr_compare(&a->addr, &b->addr, CMP_EXACT) &&
