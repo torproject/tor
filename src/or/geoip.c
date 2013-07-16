@@ -507,6 +507,17 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 HT_GENERATE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
             clientmap_entries_eq, 0.6, malloc, realloc, free);
 
+/** Free all storage held by <b>ent</b>. */
+static void
+clientmap_entry_free(clientmap_entry_t *ent)
+{
+  if (!ent)
+    return;
+
+  tor_free(ent->transport_name);
+  tor_free(ent);
+}
+
 /** Clear history of connecting clients used by entry and bridge stats. */
 static void
 client_history_clear(void)
@@ -517,7 +528,7 @@ client_history_clear(void)
     if ((*ent)->action == GEOIP_CLIENT_CONNECT) {
       this = *ent;
       next = HT_NEXT_RMV(clientmap, &client_history, ent);
-      tor_free(this);
+      clientmap_entry_free(this);
     } else {
       next = HT_NEXT(clientmap, &client_history, ent);
     }
@@ -554,10 +565,8 @@ geoip_note_client_seen(geoip_client_action_t action,
 
   tor_addr_copy(&lookup.addr, addr);
   lookup.action = (int)action;
-  if (transport_name)
-    lookup.transport_name = tor_strdup(transport_name);
+  lookup.transport_name = (char*) transport_name;
   ent = HT_FIND(clientmap, &client_history, &lookup);
-  tor_free(lookup.transport_name);
 
   if (! ent) {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
@@ -590,8 +599,7 @@ remove_old_client_helper_(struct clientmap_entry_t *ent, void *_cutoff)
 {
   time_t cutoff = *(time_t*)_cutoff / 60;
   if (ent->last_seen_in_minutes < cutoff) {
-    tor_free(ent->transport_name);
-    tor_free(ent);
+    clientmap_entry_free(ent);
     return 1;
   } else {
     return 0;
@@ -1162,7 +1170,7 @@ geoip_reset_dirreq_stats(time_t now)
       if ((*ent)->action == GEOIP_CLIENT_NETWORKSTATUS) {
         this = *ent;
         next = HT_NEXT_RMV(clientmap, &client_history, ent);
-        tor_free(this);
+        clientmap_entry_free(this);
       } else {
         next = HT_NEXT(clientmap, &client_history, ent);
       }
@@ -1656,8 +1664,7 @@ geoip_free_all(void)
     for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
       this = *ent;
       next = HT_NEXT_RMV(clientmap, &client_history, ent);
-      tor_free(this->transport_name);
-      tor_free(this);
+      clientmap_entry_free(this);
     }
     HT_CLEAR(clientmap, &client_history);
   }
