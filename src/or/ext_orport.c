@@ -515,8 +515,11 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
 
       /* If the transport proxy did not use the TRANSPORT command to
        * specify the transport name, mark this as unknown transport. */
-      if (!or_conn->ext_or_transport)
-        or_conn->ext_or_transport = tor_strdup("<?\?>");
+      if (!or_conn->ext_or_transport) {
+        /* We write this string this way to avoid ??>, which is a C
+         * trigraph. */
+        or_conn->ext_or_transport = tor_strdup("<?" "?>");
+      }
 
       connection_write_ext_or_command(conn, EXT_OR_CMD_BT_OKAY, NULL, 0);
 
