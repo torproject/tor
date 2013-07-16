@@ -1,0 +1,48 @@
+#!/usr/bin/python
+
+import os
+import re
+import subprocess
+import sys
+
+def handle_file(source_fname, cov_fname):
+   
+   lines_blm = subprocess.Popen(["git", "blame", source_fname], stdout=subprocess.PIPE).stdout.readlines()
+   lines_cov = open(cov_fname).readlines()
+
+   # XXXX expensive!
+   while re.match(r'\s*-:\s*0:', lines_cov[0]):
+      del lines_cov[0]
+
+   if len(lines_blm) != len(lines_cov):
+      print >>sys.stderr, "MISMATCH IN NUMBER OF LINES in",source_fname
+
+   for b,c in zip(lines_blm, lines_cov):
+      m = re.match(r'\s*([^\s:]+):', c)
+      if not m:
+         print >>sys.stderr, "CONFUSING LINE %r"% c
+         cov = 'X'
+      elif m.group(1) == '-':
+         cov = '-'
+      elif m.group(1)[0] == '#':
+         cov = '#'
+      elif m.group(1)[0].isdigit():
+         cov = '1'
+      else:
+         print >>sys.stderr, "CONFUSING LINE %r"% c
+         cov = 'X'
+
+      print cov, b,
+
+COV_DIR = sys.argv[1]
+SOURCES = sys.argv[2:]
+
+for fn in SOURCES:
+   _, base = os.path.split(fn)
+   cfn = os.path.join(COV_DIR, base)
+   cfn += ".gcov"
+   if os.path.exists(cfn):
+      handle_file(fn, cfn)
+   else:
+      print >>sys.stderr, "NO FILE EXISTS CALLED ",cfn
+
