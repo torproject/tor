@@ -208,7 +208,6 @@ test_replaycache_scrub(void)
 {
   replaycache_t *r = NULL;
   int result;
-  char digest[DIGEST_LEN];
 
   r = replaycache_new(600, 300);
   test_assert(r != NULL);
