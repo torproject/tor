@@ -1230,7 +1230,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
  *  <b>proxy_argv</b>.
  *
  * Requires that proxy_argv have at least one element. */
-static managed_proxy_t *
+STATIC managed_proxy_t *
 managed_proxy_create(const smartlist_t *transport_list,
                      char **proxy_argv, int is_server)
 {

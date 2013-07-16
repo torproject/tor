@@ -114,6 +114,9 @@ STATIC int parse_version(const char *line, managed_proxy_t *mp);
 STATIC void parse_env_error(const char *line);
 STATIC void handle_proxy_line(const char *line, managed_proxy_t *mp);
 
+STATIC managed_proxy_t *managed_proxy_create(const smartlist_t *transport_list,
+                                             char **proxy_argv, int is_server);
+
 #endif
 
 #endif
