@@ -1,3 +1,12 @@
+/* Copyright (c) 2001 Matej Pfajfar.
+ * Copyright (c) 2001-2004, Roger Dingledine.
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007-2013, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+#ifndef EXT_ORPORT_H
+#define EXT_ORPORT_H
+
 int connection_ext_or_start_auth(or_connection_t *or_conn);
 
 ext_or_cmd_t *ext_or_cmd_new(uint16_t len);
@@ -10,5 +19,7 @@ int connection_ext_or_finished_flushing(or_connection_t *conn);
 int connection_ext_or_process_inbuf(or_connection_t *or_conn);
 
 int init_ext_or_cookie_authentication(int is_enabled);
-char *get_ext_or_auth_cookie_file(void);
+char *get_ext_or_auth_cookie_file_name(void);
+
+#endif
 

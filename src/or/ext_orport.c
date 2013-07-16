@@ -113,7 +113,7 @@ static char ext_or_auth_cookie[EXT_OR_PORT_AUTH_COOKIE_LEN] = {0};
 /** Helper: Return a newly allocated string containing a path to the
  * file where we store our authentication cookie. */
 char *
-get_ext_or_auth_cookie_file(void)
+get_ext_or_auth_cookie_file_name(void)
 {
   const or_options_t *options = get_options();
   if (options->ExtORPortCookieAuthFile &&
@@ -153,7 +153,7 @@ init_ext_or_cookie_authentication(int is_enabled)
   memcpy(cookie_file_string+EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN,
          ext_or_auth_cookie, EXT_OR_PORT_AUTH_COOKIE_LEN);
 
-  fname = get_ext_or_auth_cookie_file();
+  fname = get_ext_or_auth_cookie_file_name();
   if (write_bytes_to_file(fname, cookie_file_string,
                           EXT_OR_PORT_AUTH_COOKIE_FILE_LEN, 1)) {
     log_warn(LD_FS,"Error writing authentication cookie to %s.",

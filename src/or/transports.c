@@ -1265,7 +1265,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
     if (options->ExtORPort_lines) {
       char *ext_or_addrport_tmp =
         get_first_listener_addrport_string(CONN_TYPE_EXT_OR_LISTENER);
-      char *cookie_file_loc = get_ext_or_auth_cookie_file();
+      char *cookie_file_loc = get_ext_or_auth_cookie_file_name();
 
       smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=%s",
                              ext_or_addrport_tmp);
