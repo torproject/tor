@@ -91,6 +91,22 @@ test_pt_parsing(void)
 
   reset_mp(mp);
 
+  /* Include some arguments. Good ones. */
+  strlcpy(line,"SMETHOD trebuchet 127.0.0.1:9999 ARGS:counterweight=3,sling=snappy",
+          sizeof(line));
+  test_assert(parse_smethod_line(line, mp) == 0);
+  tt_int_op(1, ==, smartlist_len(mp->transports));
+  {
+    const transport_t *transport = smartlist_get(mp->transports, 0);
+    tt_assert(transport);
+    tt_str_op(transport->name, ==, "trebuchet");
+    tt_int_op(transport->port, ==, 9999);
+    tt_str_op(fmt_addr(&transport->addr), ==, "127.0.0.1");
+    tt_str_op(transport->extra_info_args, ==,
+              "counterweight=3,sling=snappy");
+  }
+  reset_mp(mp);
+
   /* unsupported version */
   strlcpy(line,"VERSION 666",sizeof(line));
   test_assert(parse_version(line, mp) < 0);
