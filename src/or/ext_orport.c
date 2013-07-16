@@ -165,6 +165,7 @@ init_ext_or_cookie_authentication(int is_enabled)
   log_info(LD_GENERAL, "Generated Extended ORPort cookie file in '%s'.",
            fname);
 
+  memwipe(cookie_file_string, 0, sizeof(cookie_file_string));
   tor_free(fname);
   return 0;
 }
@@ -223,6 +224,9 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
                                 EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
     return -1;
 
+  /* DOCDOC comment this function more, with comments about what the
+   * protocol is. */
+
   /* Get our nonce */
   if (crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN) < 0)
     return -1;
@@ -271,6 +275,9 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
        with the hash sent by the client. */
     TO_OR_CONN(conn)->ext_or_auth_correct_client_hash = correct_client_hash;
 
+    memwipe(hmac_s_msg, 0, hmac_s_msg_len);
+    memwipe(hmac_c_msg, 0, hmac_c_msg_len);
+
     tor_free(hmac_s_msg);
     tor_free(hmac_c_msg);
   }
@@ -290,6 +297,10 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     log_debug(LD_GENERAL,
               "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",
               server_hash_encoded, server_nonce_encoded, client_nonce_encoded);
+
+    memwipe(server_hash_encoded, 0, sizeof(server_hash_encoded));
+    memwipe(server_nonce_encoded, 0, sizeof(server_nonce_encoded));
+    memwipe(client_nonce_encoded, 0, sizeof(client_nonce_encoded));
   }
 
   { /* write reply: (server_hash, server_nonce) */
@@ -297,6 +308,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
     memcpy(reply + EXT_OR_PORT_AUTH_HASH_LEN, server_nonce,
            EXT_OR_PORT_AUTH_NONCE_LEN);
     connection_write_to_buf(reply, sizeof(reply), conn);
+    memwipe(reply, 0, sizeof(reply));
   }
 
   log_debug(LD_GENERAL, "Got client nonce, and sent our own nonce and hash.");
@@ -362,6 +374,8 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 {
   connection_t *conn = TO_CONN(or_conn);
 
+  /* DOCDOC Document the state machine here! */
+
   switch (conn->state) { /* Functionify */
   case EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE:
     return connection_ext_or_auth_neg_auth_type(conn);
@@ -406,9 +420,12 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
   char *addr_str;
   char *address_part=NULL;
   int res;
-  addr_str = tor_malloc(len + 1);
-  memcpy(addr_str, payload, len);
-  addr_str[len] = 0;
+  if (memchr(payload, '\0', len)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Unexpected NUL in ExtORPort UserAddr");
+    return -1;
+  }
+
+  addr_str = tor_memdup_nulterm(payload, len);
 
   res = tor_addr_port_split(LOG_INFO, addr_str, &address_part, &port);
   tor_free(addr_str);
@@ -470,6 +487,9 @@ connection_ext_or_handle_cmd_transport(or_connection_t *conn,
   return 0;
 }
 
+#define EXT_OR_CONN_STATE_IS_AUTHENTICATING(st) \
+  ((st) <= EXT_OR_CONN_STATE_AUTH_MAX)
+
 /** Process Extended ORPort messages from <b>or_conn</b>. */
 int
 connection_ext_or_process_inbuf(or_connection_t *or_conn)
@@ -478,9 +498,11 @@ connection_ext_or_process_inbuf(or_connection_t *or_conn)
   ext_or_cmd_t *command;
   int r;
 
+  /* DOCDOC Document the state machine and transitions in this function */
+
   /* If we are still in the authentication stage, process traffic as
      authentication data: */
-  while (conn->state <= EXT_OR_CONN_STATE_AUTH_MAX) {
+  while (EXT_OR_CONN_STATE_IS_AUTHENTICATING(conn->state)) {
     log_debug(LD_GENERAL, "Got Extended ORPort authentication data (%u).",
               (unsigned int) connection_get_inbuf_len(conn));
     r = connection_ext_or_auth_process_inbuf(or_conn);
