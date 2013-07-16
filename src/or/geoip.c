@@ -810,8 +810,6 @@ geoip_get_transport_history(void)
   unsigned granularity = IP_GRANULARITY;
   /** String hash table <name of transport> -> <number of users>. */
   strmap_t *transport_counts = strmap_new();
-  void *ptr;
-  intptr_t val;
 
   /** Smartlist that contains copies of the names of the transports
       that have been used. */
@@ -847,13 +845,15 @@ geoip_get_transport_history(void)
 
   /* Loop through all clients. */
   HT_FOREACH(ent, clientmap, &client_history) {
+    uintptr_t val;
+    void *ptr;
     transport_name = (*ent)->transport_name;
     if (!transport_name)
       transport_name = no_transport_str;
 
     /* Increase the count for this transport name. */
     ptr = strmap_get(transport_counts, transport_name);
-    val = (intptr_t)ptr;
+    val = (uintptr_t)ptr;
     val++;
     ptr = (void*)val;
     strmap_set(transport_counts, transport_name, ptr);
@@ -875,15 +875,16 @@ geoip_get_transport_history(void)
   /* Loop through all seen transports. */
   SMARTLIST_FOREACH_BEGIN(transports_used, const char *, transport_name) {
     void *transport_count_ptr = strmap_get(transport_counts, transport_name);
-    unsigned int transport_count = (intptr_t) transport_count_ptr;
+    uintptr_t transport_count = (uintptr_t) transport_count_ptr;
 
-    log_debug(LD_GENERAL, "We got %u clients with transport '%s'.",
-              transport_count, transport_name);
+    log_debug(LD_GENERAL, "We got "U64_FORMAT" clients with transport '%s'.",
+              U64_PRINTF_ARG((uint64_t)transport_count), transport_name);
 
-    smartlist_add_asprintf(string_chunks, "%s=%u",
+    smartlist_add_asprintf(string_chunks, "%s="U64_FORMAT,
                            transport_name,
-                           round_to_next_multiple_of(transport_count,
-                                                     granularity));
+                           U64_PRINTF_ARG(round_uint64_to_next_multiple_of(
+                                               (uint64_t)transport_count,
+                                               granularity)));
   } SMARTLIST_FOREACH_END(transport_name);
 
   the_string = smartlist_join_strings(string_chunks, ",", 0, NULL);
