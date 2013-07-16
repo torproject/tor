@@ -467,9 +467,13 @@ static int
 connection_ext_or_handle_cmd_transport(or_connection_t *conn,
                                        const char *payload, uint16_t len)
 {
-  char *transport_str = tor_malloc(len + 1); /* NUL-terminate the string */
-  memcpy(transport_str, payload, len);
-  transport_str[len] = 0;
+  char *transport_str;
+  if (memchr(payload, '\0', len)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Unexpected NUL in ExtORPort Transport");
+    return -1;
+  }
+
+  transport_str = tor_memdup_nulterm(payload, len);
 
   /* Transport names MUST be C-identifiers. */
   if (!string_is_C_identifier(transport_str)) {
