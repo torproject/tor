@@ -12,9 +12,35 @@ for fn in src/or/*.c src/common/*.c; do
     DN=`dirname $fn`
     F=`echo $BN | sed -e 's/\.c$//;'`
     GC="${BN}.gcov"
-    gcov -o $DN/src_*$F.o $fn
-    if [ -n $dst ]
+    # Figure out the object file names
+    ONS=`echo ${DN}/src_*-${F}.o`
+    ONS_WILDCARD_LITERAL="${DN}/src_*-${F}.o"
+    # If the wildcard didn't expand, no files
+    if [ "$ONS" != "${ONS_WILDCARD_LITERAL}" ]
     then
-      mv $GC $dst/$GC
+      for on in $ONS; do
+        # We should have a gcno file
+        GCNO=`echo $on | sed -e 's/\.o$/\.gcno/;'`
+        if [ -e $GCNO ]
+        then
+          # No need to test for gcda, since gcov assumes no execution
+          # if it's absent
+          rm -f $GC
+          gcov -o $on $fn
+          if [ -e $GC ]
+          then
+            if [ -n $dst ]
+            then
+              mv $GC $dst/$GC
+            fi
+          else
+            echo "gcov -o $on $fn didn't make a .gcov file"
+          fi
+        else
+          echo "Couldn't find gcno file for $on"
+        fi
+      done
+    else
+      echo "No object file found matching source file $fn"
     fi
 done
