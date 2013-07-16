@@ -71,6 +71,9 @@ test: all
 test-network: all
 	./src/test/test-network.sh
 
+reset-gcov:
+	rm -f src/*/*.gcda
+
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:

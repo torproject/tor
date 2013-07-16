@@ -5,9 +5,16 @@
 # coverage -- run gcov on the appropriate set of object files to extract
 # coverage information.
 
+dst=$1
+
 for fn in src/or/*.c src/common/*.c; do
     BN=`basename $fn`
     DN=`dirname $fn`
     F=`echo $BN | sed -e 's/\.c$//;'`
+    GC="${BN}.gcov"
     gcov -o $DN/src_*$F.o $fn
+    if [ -n $dst ]
+    then
+      mv $GC $dst/$GC
+    fi
 done
