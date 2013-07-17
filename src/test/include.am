@@ -18,6 +18,7 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 src_test_test_SOURCES = \
 	src/test/test.c \
 	src/test/test_addr.c \
+	src/test/test_buffers.c \
 	src/test/test_cell_formats.c \
 	src/test/test_circuitlist.c \
 	src/test/test_containers.c \
@@ -30,6 +31,7 @@ src_test_test_SOURCES = \
 	src/test/test_options.c \
 	src/test/test_pt.c \
 	src/test/test_replay.c \
+	src/test/test_socks.c \
 	src/test/test_util.c \
 	src/test/test_config.c \
 	src/ext/tinytest.c
