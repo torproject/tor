@@ -6,6 +6,7 @@
 #define BUFFERS_PRIVATE
 #include "or.h"
 #include "buffers.h"
+#include "ext_orport.h"
 #include "test.h"
 
 /** Run unit tests for buffers.c */
@@ -258,9 +259,84 @@ test_buffer_copy(void *arg)
     generic_buffer_free(buf2);
 }
 
+static void
+test_buffer_ext_or_cmd(void *arg)
+{
+  ext_or_cmd_t *cmd = NULL;
+  generic_buffer_t *buf = generic_buffer_new();
+  char *tmp = NULL;
+  (void) arg;
+
+  /* Empty -- should give "not there. */
+  tt_int_op(0, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, ==, cmd);
+
+  /* Three bytes: shouldn't work. */
+  generic_buffer_add(buf, "\x00\x20\x00", 3);
+  tt_int_op(0, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, ==, cmd);
+  tt_int_op(3, ==, generic_buffer_len(buf));
+
+  /* 0020 0000: That's a nil command. It should work. */
+  generic_buffer_add(buf, "\x00", 1);
+  tt_int_op(1, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, !=, cmd);
+  tt_int_op(0x20, ==, cmd->cmd);
+  tt_int_op(0, ==, cmd->len);
+  tt_int_op(0, ==, generic_buffer_len(buf));
+  ext_or_cmd_free(cmd);
+  cmd = NULL;
+
+  /* Now try a length-6 command with one byte missing. */
+  generic_buffer_add(buf, "\x10\x21\x00\x06""abcde", 9);
+  tt_int_op(0, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, ==, cmd);
+  generic_buffer_add(buf, "f", 1);
+  tt_int_op(1, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, !=, cmd);
+  tt_int_op(0x1021, ==, cmd->cmd);
+  tt_int_op(6, ==, cmd->len);
+  test_mem_op("abcdef", ==, cmd->body, 6);
+  tt_int_op(0, ==, generic_buffer_len(buf));
+  ext_or_cmd_free(cmd);
+  cmd = NULL;
+
+  /* Now try a length-10 command with 4 extra bytes. */
+  generic_buffer_add(buf, "\xff\xff\x00\x0a"
+                     "loremipsum\x10\x00\xff\xff", 18);
+  tt_int_op(1, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, !=, cmd);
+  tt_int_op(0xffff, ==, cmd->cmd);
+  tt_int_op(10, ==, cmd->len);
+  test_mem_op("loremipsum", ==, cmd->body, 10);
+  tt_int_op(4, ==, generic_buffer_len(buf));
+  ext_or_cmd_free(cmd);
+  cmd = NULL;
+
+  /* Finally, let's try a maximum-length command. We already have the header
+   * waiting. */
+  tt_int_op(0, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tmp = tor_malloc_zero(65535);
+  generic_buffer_add(buf, tmp, 65535);
+  tt_int_op(1, ==, generic_buffer_fetch_ext_or_cmd(buf, &cmd));
+  tt_ptr_op(NULL, !=, cmd);
+  tt_int_op(0x1000, ==, cmd->cmd);
+  tt_int_op(0xffff, ==, cmd->len);
+  test_mem_op(tmp, ==, cmd->body, 65535);
+  tt_int_op(0, ==, generic_buffer_len(buf));
+  ext_or_cmd_free(cmd);
+  cmd = NULL;
+
+ done:
+  ext_or_cmd_free(cmd);
+  generic_buffer_free(buf);
+  tor_free(tmp);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, 0, NULL, NULL },
   { "copy", test_buffer_copy, 0, NULL, NULL },
+  { "ext_or_cmd", test_buffer_ext_or_cmd, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

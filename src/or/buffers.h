@@ -81,6 +81,8 @@ int fetch_ext_or_command_from_evbuffer(struct evbuffer *buf,
 #define generic_buffer_get(b,buf,buflen) evbuffer_remove((b),(buf),(buflen))
 #define generic_buffer_clear(b) evbuffer_drain((b), evbuffer_get_length((b)))
 #define generic_buffer_free(b) evbuffer_free((b))
+#define generic_buffer_fetch_ext_or_cmd(b, out) \
+  fetch_ext_or_command_from_evbuffer((b), (out))
 #else
 #define generic_buffer_new() buf_new()
 #define generic_buffer_len(b) buf_datalen((b))
@@ -88,6 +90,8 @@ int fetch_ext_or_command_from_evbuffer(struct evbuffer *buf,
 #define generic_buffer_get(b,buf,buflen) fetch_from_buf((buf),(buflen),(b))
 #define generic_buffer_clear(b) buf_clear((b))
 #define generic_buffer_free(b) buf_free((b))
+#define generic_buffer_fetch_ext_or_cmd(b, out) \
+  fetch_ext_or_command_from_buf((b), (out))
 #endif
 int generic_buffer_set_to_copy(generic_buffer_t **output,
                                const generic_buffer_t *input);
