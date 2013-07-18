@@ -438,12 +438,84 @@ test_config_parse_bridge_line(void *arg)
            "aa=b");
 }
 
+static void
+test_config_parse_transport_options_line(void *arg)
+{
+  smartlist_t *options_sl = NULL, *sl_tmp = NULL;
+
+  (void) arg;
+
+  { /* too small line */
+    options_sl = get_options_from_transport_options_line("valley", NULL);
+    test_assert(!options_sl);
+  }
+
+  { /* no k=v values */
+    options_sl = get_options_from_transport_options_line("hit it!", NULL);
+    test_assert(!options_sl);
+  }
+
+  { /* correct line, but wrong transport specified */
+    options_sl =
+      get_options_from_transport_options_line("trebuchet k=v", "rook");
+    test_assert(!options_sl);
+  }
+
+  { /* correct -- no transport specified */
+    sl_tmp = smartlist_new();
+    smartlist_add_asprintf(sl_tmp, "ladi=dadi");
+    smartlist_add_asprintf(sl_tmp, "weliketo=party");
+
+    options_sl =
+      get_options_from_transport_options_line("rook ladi=dadi weliketo=party",
+                                              NULL);
+    test_assert(options_sl);
+    test_assert(smartlist_strings_eq(options_sl, sl_tmp));
+
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+    sl_tmp = NULL;
+    SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
+    smartlist_free(options_sl);
+    options_sl = NULL;
+  }
+
+  { /* correct -- correct transport specified */
+    sl_tmp = smartlist_new();
+    smartlist_add_asprintf(sl_tmp, "ladi=dadi");
+    smartlist_add_asprintf(sl_tmp, "weliketo=party");
+
+    options_sl =
+      get_options_from_transport_options_line("rook ladi=dadi weliketo=party",
+                                              "rook");
+    test_assert(options_sl);
+    test_assert(smartlist_strings_eq(options_sl, sl_tmp));
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+    sl_tmp = NULL;
+    SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
+    smartlist_free(options_sl);
+    options_sl = NULL;
+  }
+
+ done:
+  if (options_sl) {
+    SMARTLIST_FOREACH(options_sl, char *, s, tor_free(s));
+    smartlist_free(options_sl);
+  }
+  if (sl_tmp) {
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+  }
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
+  CONFIG_TEST(parse_transport_options_line, 0),
   CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
   END_OF_TESTCASES

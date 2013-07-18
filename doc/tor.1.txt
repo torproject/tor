@@ -186,6 +186,11 @@ GENERAL OPTIONS
     listening address of any pluggable transport proxy that tries to
     launch __transport__.
 
+**ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
+    When this option is set, Tor will pass the __k=v__ parameters to
+    any pluggable transport proxy that tries to launch __transport__. +
+    (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache)
+
 **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file

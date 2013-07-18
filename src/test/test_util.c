@@ -796,37 +796,37 @@ test_util_expand_filename(void)
 }
 #endif
 
-/** Test tor_escape_str_for_socks_arg(). */
+/** Test tor_escape_str_for_pt_args(). */
 static void
 test_util_escape_string_socks(void)
 {
   char *escaped_string = NULL;
 
   /** Simple backslash escape. */
-  escaped_string = tor_escape_str_for_socks_arg("This is a backslash: \\");
+  escaped_string = tor_escape_str_for_pt_args("This is a backslash: \\",";\\");
   test_assert(escaped_string);
   test_streq(escaped_string, "This is a backslash: \\\\");
   tor_free(escaped_string);
 
   /** Simple semicolon escape. */
-  escaped_string = tor_escape_str_for_socks_arg("First rule: Do not use ;");
+  escaped_string = tor_escape_str_for_pt_args("First rule:Do not use ;",";\\");
   test_assert(escaped_string);
-  test_streq(escaped_string, "First rule: Do not use \\;");
+  test_streq(escaped_string, "First rule:Do not use \\;");
   tor_free(escaped_string);
 
   /** Empty string. */
-  escaped_string = tor_escape_str_for_socks_arg("");
+  escaped_string = tor_escape_str_for_pt_args("", ";\\");
   test_assert(escaped_string);
   test_streq(escaped_string, "");
   tor_free(escaped_string);
 
   /** Escape all characters. */
-  escaped_string = tor_escape_str_for_socks_arg(";\\;\\");
+  escaped_string = tor_escape_str_for_pt_args(";\\;\\", ";\\");
   test_assert(escaped_string);
   test_streq(escaped_string, "\\;\\\\\\;\\\\");
   tor_free(escaped_string);
 
-  escaped_string = tor_escape_str_for_socks_arg(";");
+  escaped_string = tor_escape_str_for_pt_args(";", ";\\");
   test_assert(escaped_string);
   test_streq(escaped_string, "\\;");
   tor_free(escaped_string);

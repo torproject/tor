@@ -3500,6 +3500,9 @@ typedef struct {
   /** List of TCP/IP addresses that transports should listen at. */
   config_line_t *ServerTransportListenAddr;
 
+  /** List of options that must be passed to pluggable transports. */
+  config_line_t *ServerTransportOptions;
+
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
                     * this explicit so we can change how we behave in the
                     * future. */
