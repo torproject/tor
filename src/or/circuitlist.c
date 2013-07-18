@@ -682,6 +682,7 @@ init_circuit_base(circuit_t *circ)
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
+  cell_queue_init(&circ->n_chan_cells);
 
   circuit_add(circ);
 }
@@ -727,6 +728,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
     circuit_set_p_circid_chan(circ, p_circ_id, p_chan);
 
   circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
+  cell_queue_init(&circ->p_chan_cells);
 
   init_circuit_base(TO_CIRCUIT(circ));
 
@@ -1638,7 +1640,7 @@ marked_circuit_free_cells(circuit_t *circ)
 }
 
 /** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
-static size_t
+STATIC size_t
 n_cells_in_circ_queues(const circuit_t *c)
 {
   size_t n = c->n_chan_cells.n;

@@ -2089,7 +2089,7 @@ packed_cell_free_unchecked(packed_cell_t *cell)
 }
 
 /** Allocate and return a new packed_cell_t. */
-static INLINE packed_cell_t *
+STATIC packed_cell_t *
 packed_cell_new(void)
 {
   ++total_cells_allocated;
@@ -2100,6 +2100,8 @@ packed_cell_new(void)
 void
 packed_cell_free(packed_cell_t *cell)
 {
+  if (!cell)
+    return;
   packed_cell_free_unchecked(cell);
 }
 
@@ -2129,7 +2131,6 @@ packed_cell_copy(const cell_t *cell, int wide_circ_ids)
 {
   packed_cell_t *c = packed_cell_new();
   cell_pack(c, cell, wide_circ_ids);
-  c->next = NULL;
   return c;
 }
 
@@ -2137,14 +2138,7 @@ packed_cell_copy(const cell_t *cell, int wide_circ_ids)
 void
 cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 {
-  if (queue->tail) {
-    tor_assert(!queue->tail->next);
-    queue->tail->next = cell;
-  } else {
-    queue->head = cell;
-  }
-  queue->tail = cell;
-  cell->next = NULL;
+  TOR_SIMPLEQ_INSERT_TAIL(&queue->head, cell, next);
   ++queue->n;
 }
 
@@ -2187,18 +2181,24 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
   cell_queue_append(queue, copy);
 }
 
+/** Initialize <b>queue</b> as an empty cell queue. */
+void
+cell_queue_init(cell_queue_t *queue)
+{
+  memset(queue, 0, sizeof(cell_queue_t));
+  TOR_SIMPLEQ_INIT(&queue->head);
+}
+
 /** Remove and free every cell in <b>queue</b>. */
 void
 cell_queue_clear(cell_queue_t *queue)
 {
-  packed_cell_t *cell, *next;
-  cell = queue->head;
-  while (cell) {
-    next = cell->next;
+  packed_cell_t *cell;
+  while ((cell = TOR_SIMPLEQ_FIRST(&queue->head))) {
+    TOR_SIMPLEQ_REMOVE_HEAD(&queue->head, next);
     packed_cell_free_unchecked(cell);
-    cell = next;
   }
-  queue->head = queue->tail = NULL;
+  TOR_SIMPLEQ_INIT(&queue->head);
   queue->n = 0;
   if (queue->insertion_times) {
     while (queue->insertion_times->first) {
@@ -2212,17 +2212,13 @@ cell_queue_clear(cell_queue_t *queue)
 
 /** Extract and return the cell at the head of <b>queue</b>; return NULL if
  * <b>queue</b> is empty. */
-static INLINE packed_cell_t *
+STATIC packed_cell_t *
 cell_queue_pop(cell_queue_t *queue)
 {
-  packed_cell_t *cell = queue->head;
+  packed_cell_t *cell = TOR_SIMPLEQ_FIRST(&queue->head);
   if (!cell)
     return NULL;
-  queue->head = cell->next;
-  if (cell == queue->tail) {
-    tor_assert(!queue->head);
-    queue->tail = NULL;
-  }
+  TOR_SIMPLEQ_REMOVE_HEAD(&queue->head, next);
   --queue->n;
   return cell;
 }

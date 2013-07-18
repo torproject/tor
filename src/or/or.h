@@ -99,6 +99,7 @@
 #include "ht.h"
 #include "replaycache.h"
 #include "crypto_curve25519.h"
+#include "tor_queue.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -1083,7 +1084,8 @@ typedef struct var_cell_t {
 
 /** A cell as packed for writing to the network. */
 typedef struct packed_cell_t {
-  struct packed_cell_t *next; /**< Next cell queued on this circuit. */
+  /** Next cell queued on this circuit. */
+  TOR_SIMPLEQ_ENTRY(packed_cell_t) next;
   char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
 } packed_cell_t;
 
@@ -1105,8 +1107,8 @@ typedef struct insertion_time_queue_t {
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
-  packed_cell_t *head; /**< The first cell, or NULL if the queue is empty. */
-  packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty. */
+  /** Linked list of packed_cell_t*/
+  TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
   int n; /**< The number of cells in the queue. */
   insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
 } cell_queue_t;

@@ -510,7 +510,7 @@ circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux, channel_t *chan)
 {
   packed_cell_t *cell;
   int n_bad = 0;
-  for (cell = cmux->destroy_cell_queue.head; cell; cell = cell->next) {
+  TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
     circid_t circid = 0;
     if (packed_cell_is_destroy(chan, cell, &circid)) {
       channel_mark_circid_usable(chan, circid);

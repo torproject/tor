@@ -72,6 +72,7 @@ void channel_note_destroy_not_pending(channel_t *chan, circid_t id);
 
 #ifdef CIRCUITLIST_PRIVATE
 STATIC void circuit_free(circuit_t *circ);
+STATIC size_t n_cells_in_circ_queues(const circuit_t *c);
 #endif
 
 #endif
