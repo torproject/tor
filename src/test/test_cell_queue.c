@@ -97,7 +97,50 @@ test_cq_manip(void *arg)
   free_cell_pool();
 }
 
+static void
+test_circuit_n_cells(void *arg)
+{
+  packed_cell_t *pc1=NULL, *pc2=NULL, *pc3=NULL, *pc4=NULL, *pc5=NULL;
+  origin_circuit_t *origin_c=NULL;
+  or_circuit_t *or_c=NULL;
+
+  (void)arg;
+
+  init_cell_pool();
+
+  pc1 = packed_cell_new();
+  pc2 = packed_cell_new();
+  pc3 = packed_cell_new();
+  pc4 = packed_cell_new();
+  pc5 = packed_cell_new();
+  tt_assert(pc1 && pc2 && pc3 && pc4 && pc5);
+
+  or_c = or_circuit_new(0, NULL);
+  origin_c = origin_circuit_new();
+  origin_c->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 0);
+  cell_queue_append(&or_c->p_chan_cells, pc1);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 1);
+  cell_queue_append(&or_c->base_.n_chan_cells, pc2);
+  cell_queue_append(&or_c->base_.n_chan_cells, pc3);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 3);
+
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), ==, 0);
+  cell_queue_append(&origin_c->base_.n_chan_cells, pc4);
+  cell_queue_append(&origin_c->base_.n_chan_cells, pc5);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), ==, 2);
+
+ done:
+  circuit_free(TO_CIRCUIT(or_c));
+  circuit_free(TO_CIRCUIT(origin_c));
+
+  free_cell_pool();
+}
+
 struct testcase_t cell_queue_tests[] = {
   { "basic", test_cq_manip, TT_FORK, NULL, NULL, },
+  { "circ_n_cells", test_circuit_n_cells, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
+

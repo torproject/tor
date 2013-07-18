@@ -1640,7 +1640,7 @@ marked_circuit_free_cells(circuit_t *circ)
 }
 
 /** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
-static size_t
+STATIC size_t
 n_cells_in_circ_queues(const circuit_t *c)
 {
   size_t n = c->n_chan_cells.n;
