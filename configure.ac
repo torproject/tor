@@ -47,8 +47,6 @@ AC_ARG_ENABLE(coverage,
 AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
 AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
 
-echo "COVERAGE: $enable_coverage"
-
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
   enable_static_openssl="yes";
