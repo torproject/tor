@@ -2,7 +2,9 @@
 /* See LICENSE for licensing information */
 
 #define CONNECTION_PRIVATE
+#define EXT_ORPORT_PRIVATE
 #include "or.h"
+#include "buffers.h"
 #include "connection.h"
 #include "ext_orport.h"
 #include "test.h"
@@ -59,7 +61,92 @@ test_ext_or_id_map(void *arg)
   connection_or_clear_ext_or_id_map();
 }
 
+/* Simple connection_write_to_buf_impl_ replacement that unconditionally
+ * writes to outbuf. */
+static void
+connection_write_to_buf_impl_replacement(const char *string, size_t len,
+                                         connection_t *conn, int zlib)
+{
+  (void) zlib;
+
+  tor_assert(string);
+  tor_assert(conn);
+  write_to_buf(string, len, conn->outbuf);
+}
+
+static char *
+buf_get_contents(buf_t *buf, size_t *sz_out)
+{
+  char *out;
+  *sz_out = buf_datalen(buf);
+  if (*sz_out >= ULONG_MAX)
+    return NULL; /* C'mon, really? */
+  out = tor_malloc(*sz_out + 1);
+  if (fetch_from_buf(out, (unsigned long)*sz_out, buf) != 0) {
+    tor_free(out);
+    return NULL;
+  }
+  out[*sz_out] = '\0'; /* Hopefully gratuitous. */
+  return out;
+}
+
+static void
+test_ext_or_write_command(void *arg)
+{
+  or_connection_t *c1;
+  char *cp = NULL;
+  char *buf = NULL;
+  size_t sz;
+
+  (void) arg;
+  MOCK(connection_write_to_buf_impl_,
+       connection_write_to_buf_impl_replacement);
+
+  c1 = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  tt_assert(c1);
+
+  /* Length too long */
+  tt_int_op(connection_write_ext_or_command(TO_CONN(c1), 100, "X", 100000),
+            <, 0);
+
+  /* Empty command */
+  tt_int_op(connection_write_ext_or_command(TO_CONN(c1), 0x99, NULL, 0),
+            ==, 0);
+  cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
+  tt_int_op(sz, ==, 4);
+  test_mem_op(cp, ==, "\x00\x99\x00\x00", 4);
+  tor_free(cp);
+
+  /* Medium command. */
+  tt_int_op(connection_write_ext_or_command(TO_CONN(c1), 0x99,
+                                            "Wai\0Hello", 9), ==, 0);
+  cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
+  tt_int_op(sz, ==, 13);
+  test_mem_op(cp, ==, "\x00\x99\x00\x09Wai\x00Hello", 13);
+  tor_free(cp);
+
+  /* Long command */
+  buf = tor_malloc(65535);
+  memset(buf, 'x', 65535);
+  tt_int_op(connection_write_ext_or_command(TO_CONN(c1), 0xf00d,
+                                            buf, 65535), ==, 0);
+  cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
+  tt_int_op(sz, ==, 65539);
+  test_mem_op(cp, ==, "\xf0\x0d\xff\xff", 4);
+  test_mem_op(cp+4, ==, buf, 65535);
+  tor_free(cp);
+
+ done:
+  if (c1)
+    connection_free_(TO_CONN(c1));
+  tor_free(cp);
+  tor_free(buf);
+  UNMOCK(connection_write_to_buf_impl_);
+}
+
 struct testcase_t extorport_tests[] = {
   { "id_map", test_ext_or_id_map, TT_FORK, NULL, NULL },
+  { "write_command", test_ext_or_write_command, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
+

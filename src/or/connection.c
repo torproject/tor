@@ -3714,9 +3714,9 @@ connection_flush(connection_t *conn)
  * it all, so we don't end up with many megabytes of controller info queued at
  * once.
  */
-void
-connection_write_to_buf_impl_(const char *string, size_t len,
-                              connection_t *conn, int zlib)
+MOCK_IMPL(void,
+connection_write_to_buf_impl_,(const char *string, size_t len,
+                               connection_t *conn, int zlib))
 {
   /* XXXX This function really needs to return -1 on failure. */
   int r;

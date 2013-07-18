@@ -6,6 +6,7 @@
  * \brief Code implementing the Extended ORPort.
 */
 
+#define EXT_ORPORT_PRIVATE
 #include "or.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -52,7 +53,7 @@ connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
  *  <b>command</b> as the command type, <b>bodylen</b> as the body
  *  length, and <b>body</b>, if it's present, as the body of the
  *  message. */
-static int
+STATIC int
 connection_write_ext_or_command(connection_t *conn,
                                 uint16_t command,
                                 const char *body,

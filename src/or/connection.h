@@ -130,8 +130,8 @@ int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn, int force);
 int connection_flush(connection_t *conn);
 
-void connection_write_to_buf_impl_(const char *string, size_t len,
-                                   connection_t *conn, int zlib);
+MOCK_DECL(void, connection_write_to_buf_impl_,
+          (const char *string, size_t len, connection_t *conn, int zlib));
 /* DOCDOC connection_write_to_buf */
 static void connection_write_to_buf(const char *string, size_t len,
                                     connection_t *conn);
