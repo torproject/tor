@@ -76,7 +76,7 @@ typedef int (*validate_fn_t)(void*,void*,int,char**);
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
  * configuration or storage format. */
-typedef struct {
+typedef struct config_format_t {
   size_t size; /**< Size of the struct that everything gets parsed into. */
   uint32_t magic; /**< Required 'magic value' to make sure we have a struct
                    * of the right type. */

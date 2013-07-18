@@ -9,6 +9,7 @@
  * \brief Code to parse and interpret configuration files.
  **/
 
+#define CONFIG_PRIVATE
 #include "or.h"
 #include "addressmap.h"
 #include "channel.h"
@@ -509,10 +510,6 @@ static const config_var_t testing_tor_network_defaults[] = {
 #ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
-static int options_validate(or_options_t *old_options,
-                            or_options_t *options,
-                            or_options_t *default_options,
-                            int from_setconf, char **msg);
 static int options_act_reversible(const or_options_t *old_options, char **msg);
 static int options_act(const or_options_t *old_options);
 static int options_transition_allowed(const or_options_t *old,
@@ -556,7 +553,7 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 #define OR_OPTIONS_MAGIC 9090909
 
 /** Configuration format for or_options_t. */
-static config_format_t options_format = {
+STATIC config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, magic_),
@@ -712,7 +709,7 @@ get_short_version(void)
 
 /** Release additional memory allocated in options
  */
-static void
+STATIC void
 or_options_free(or_options_t *options)
 {
   if (!options)
@@ -2349,7 +2346,7 @@ compute_publishserverdescriptor(or_options_t *options)
  * Log line should stay empty. If it's 0, then give us a default log
  * if there are no logs defined.
  */
-static int
+STATIC int
 options_validate(or_options_t *old_options, or_options_t *options,
                  or_options_t *default_options, int from_setconf, char **msg)
 {

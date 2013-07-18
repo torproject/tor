@@ -116,5 +116,17 @@ smartlist_t *get_options_from_transport_options_line(const char *line,
                                                      const char *transport);
 smartlist_t *get_options_for_server_transport(const char *transport);
 
+#ifdef CONFIG_PRIVATE
+#ifdef TOR_UNIT_TESTS
+extern struct config_format_t options_format;
+#endif
+
+STATIC void or_options_free(or_options_t *options);
+STATIC int options_validate(or_options_t *old_options,
+                            or_options_t *options,
+                            or_options_t *default_options,
+                            int from_setconf, char **msg);
+#endif
+
 #endif
 
