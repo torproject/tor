@@ -134,7 +134,8 @@ static smartlist_t *transport_list = NULL;
     SOCKS version <b>socks_ver</b>. */
 static transport_t *
 transport_new(const tor_addr_t *addr, uint16_t port,
-              const char *name, int socks_ver)
+              const char *name, int socks_ver,
+              const char *extra_info_args)
 {
   transport_t *t = tor_malloc_zero(sizeof(transport_t));
 
@@ -142,6 +143,8 @@ transport_new(const tor_addr_t *addr, uint16_t port,
   t->port = port;
   t->name = tor_strdup(name);
   t->socks_version = socks_ver;
+  if (extra_info_args)
+    t->extra_info_args = tor_strdup(extra_info_args);
 
   return t;
 }
@@ -154,6 +157,7 @@ transport_free(transport_t *transport)
     return;
 
   tor_free(transport->name);
+  tor_free(transport->extra_info_args);
   tor_free(transport);
 }
 
@@ -321,7 +325,7 @@ int
 transport_add_from_config(const tor_addr_t *addr, uint16_t port,
                           const char *name, int socks_ver)
 {
-  transport_t *t = transport_new(addr, port, name, socks_ver);
+  transport_t *t = transport_new(addr, port, name, socks_ver, NULL);
 
   int r = transport_add(t);
 
@@ -938,7 +942,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
   smartlist_t *items = NULL;
 
   char *method_name=NULL;
-
+  char *args_string=NULL;
   char *addrport=NULL;
   tor_addr_t tor_addr;
   char *address=NULL;
@@ -954,6 +958,9 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
              "with too few arguments.");
     goto err;
   }
+
+  /* Example of legit SMETHOD line:
+     SMETHOD obfs2 0.0.0.0:25612 ARGS:secret=supersekrit,key=superkey */
 
   tor_assert(!strcmp(smartlist_get(items,0),PROTO_SMETHOD));
 
@@ -982,7 +989,19 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_new(&tor_addr, port, method_name, PROXY_NONE);
+  if (smartlist_len(items) > 3) {
+    /* Seems like there are also some [options] in the SMETHOD line.
+       Let's see if we can parse them. */
+    char *options_string = smartlist_get(items, 3);
+    log_debug(LD_CONFIG, "Got options_string: %s", options_string);
+    if (!strcmpstart(options_string, "ARGS:")) {
+      args_string = options_string+strlen("ARGS:");
+      log_debug(LD_CONFIG, "Got ARGS: %s", args_string);
+    }
+  }
+
+  transport = transport_new(&tor_addr, port, method_name,
+                            PROXY_NONE, args_string);
   if (!transport)
     goto err;
 
@@ -1074,7 +1093,7 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
     goto err;
   }
 
-  transport = transport_new(&tor_addr, port, method_name, socks_ver);
+  transport = transport_new(&tor_addr, port, method_name, socks_ver, NULL);
   if (!transport)
     goto err;
 
@@ -1436,6 +1455,8 @@ pt_get_extra_info_descriptor_string(void)
     tor_assert(mp->transports);
 
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
+      char *transport_args = NULL;
+
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
@@ -1451,9 +1472,16 @@ pt_get_extra_info_descriptor_string(void)
         addrport = fmt_addrport(&t->addr, t->port);
       }
 
+      /* If this transport has any arguments with it, prepend a space
+         to them so that we can add them to the transport line. */
+      if (t->extra_info_args)
+        tor_asprintf(&transport_args, " %s", t->extra_info_args);
+
       smartlist_add_asprintf(string_chunks,
-                             "transport %s %s",
-                             t->name, addrport);
+                             "transport %s %s%s",
+                             t->name, addrport,
+                             transport_args ? transport_args : "");
+      tor_free(transport_args);
     } SMARTLIST_FOREACH_END(t);
 
   } SMARTLIST_FOREACH_END(mp);

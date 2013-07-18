@@ -93,6 +93,22 @@ test_pt_parsing(void)
 
   reset_mp(mp);
 
+  /* Include some arguments. Good ones. */
+  strlcpy(line,"SMETHOD trebuchet 127.0.0.1:9999 ARGS:counterweight=3,sling=snappy",
+          sizeof(line));
+  test_assert(parse_smethod_line(line, mp) == 0);
+  tt_int_op(1, ==, smartlist_len(mp->transports));
+  {
+    const transport_t *transport = smartlist_get(mp->transports, 0);
+    tt_assert(transport);
+    tt_str_op(transport->name, ==, "trebuchet");
+    tt_int_op(transport->port, ==, 9999);
+    tt_str_op(fmt_addr(&transport->addr), ==, "127.0.0.1");
+    tt_str_op(transport->extra_info_args, ==,
+              "counterweight=3,sling=snappy");
+  }
+  reset_mp(mp);
+
   /* unsupported version */
   strlcpy(line,"VERSION 666",sizeof(line));
   test_assert(parse_version(line, mp) < 0);
@@ -207,6 +223,51 @@ test_pt_protocol(void)
   tor_free(mp);
 }
 
+static void
+test_pt_get_extrainfo_string(void *arg)
+{
+  managed_proxy_t *mp1 = NULL, *mp2 = NULL;
+  char **argv1, **argv2;
+  smartlist_t *t1 = smartlist_new(), *t2 = smartlist_new();
+  int r;
+  char *s = NULL;
+  (void) arg;
+
+  argv1 = tor_malloc_zero(sizeof(char*)*3);
+  argv1[0] = tor_strdup("ewige");
+  argv1[1] = tor_strdup("Blumenkraft");
+  argv1[2] = NULL;
+  argv2 = tor_malloc_zero(sizeof(char*)*4);
+  argv2[0] = tor_strdup("und");
+  argv2[1] = tor_strdup("ewige");
+  argv2[2] = tor_strdup("Schlangenkraft");
+  argv2[3] = NULL;
+
+  mp1 = managed_proxy_create(t1, argv1, 1);
+  mp2 = managed_proxy_create(t2, argv2, 1);
+
+  r = parse_smethod_line("SMETHOD hagbard 127.0.0.1:5555", mp1);
+  tt_int_op(r, ==, 0);
+  r = parse_smethod_line("SMETHOD celine 127.0.0.1:1723 ARGS:card=no-enemy",
+                         mp2);
+  tt_int_op(r, ==, 0);
+
+  /* Force these proxies to look "completed" or they won't generate output. */
+  mp1->conf_state = mp2->conf_state = PT_PROTO_COMPLETED;
+
+  s = pt_get_extra_info_descriptor_string();
+  tt_assert(s);
+  tt_str_op(s, ==,
+            "transport hagbard 127.0.0.1:5555\n"
+            "transport celine 127.0.0.1:1723 card=no-enemy\n");
+
+ done:
+  /* XXXX clean up better */
+  smartlist_free(t1);
+  smartlist_free(t2);
+  tor_free(s);
+}
+
 #define PT_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
 
@@ -214,6 +275,8 @@ struct testcase_t pt_tests[] = {
   PT_LEGACY(parsing),
   PT_LEGACY(protocol),
   { "get_transport_options", test_pt_get_transport_options, TT_FORK,
+    NULL, NULL },
+  { "get_extrainfo_string", test_pt_get_extrainfo_string, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
