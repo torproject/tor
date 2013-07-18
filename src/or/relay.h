@@ -82,6 +82,8 @@ int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
 #ifdef RELAY_PRIVATE
 STATIC int connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
                          tor_addr_t *addr_out, int *ttl_out);
+STATIC packed_cell_t *packed_cell_new(void);
+STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
 #endif
 
 #endif

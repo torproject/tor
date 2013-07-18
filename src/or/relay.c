@@ -2089,7 +2089,7 @@ packed_cell_free_unchecked(packed_cell_t *cell)
 }
 
 /** Allocate and return a new packed_cell_t. */
-static INLINE packed_cell_t *
+STATIC packed_cell_t *
 packed_cell_new(void)
 {
   ++total_cells_allocated;
@@ -2100,6 +2100,8 @@ packed_cell_new(void)
 void
 packed_cell_free(packed_cell_t *cell)
 {
+  if (!cell)
+    return;
   packed_cell_free_unchecked(cell);
 }
 
@@ -2210,7 +2212,7 @@ cell_queue_clear(cell_queue_t *queue)
 
 /** Extract and return the cell at the head of <b>queue</b>; return NULL if
  * <b>queue</b> is empty. */
-static INLINE packed_cell_t *
+STATIC packed_cell_t *
 cell_queue_pop(cell_queue_t *queue)
 {
   packed_cell_t *cell = TOR_SIMPLEQ_FIRST(&queue->head);

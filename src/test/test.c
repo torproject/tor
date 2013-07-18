@@ -2133,6 +2133,7 @@ extern struct testcase_t introduce_tests[];
 extern struct testcase_t replaycache_tests[];
 extern struct testcase_t cell_format_tests[];
 extern struct testcase_t circuitlist_tests[];
+extern struct testcase_t cell_queue_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -2142,6 +2143,7 @@ static struct testgroup_t testgroups[] = {
   { "container/", container_tests },
   { "util/", util_tests },
   { "cellfmt/", cell_format_tests },
+  { "cellqueue/", cell_queue_tests },
   { "dir/", dir_tests },
   { "dir/md/", microdesc_tests },
   { "pt/", pt_tests },
