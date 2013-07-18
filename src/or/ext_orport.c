@@ -225,8 +225,12 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
                                 EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
     return -1;
 
-  /* DOCDOC comment this function more, with comments about what the
-   * protocol is. */
+  /* We extract the ClientNonce from the received data, and use it to
+     calculate ServerHash and ServerNonce according to proposal 217.
+
+     We also calculate our own ClientHash value and save it in the
+     connection state. We validate it later against the ClientHash
+     sent by the client.  */
 
   /* Get our nonce */
   if (crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN) < 0)
@@ -375,7 +379,16 @@ connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 {
   connection_t *conn = TO_CONN(or_conn);
 
-  /* DOCDOC Document the state machine here! */
+  /* State transitions of the Extended ORPort authentication protocol:
+
+     EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE (start state) ->
+     EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE ->
+     EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH ->
+     EXT_OR_CONN_STATE_OPEN
+
+     During EXT_OR_CONN_STATE_OPEN, data is handled by
+     connection_ext_or_process_inbuf().
+  */
 
   switch (conn->state) { /* Functionify */
   case EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE:
