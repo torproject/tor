@@ -32,7 +32,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-// GIT TEST
 static ParFilter param_filter[] = {
     // Example entries
     {SCMP_SYS(execve), "/usr/local/bin/tor", 0},
