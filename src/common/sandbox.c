@@ -25,10 +25,17 @@
 
 #if defined(USE_LIBSECCOMP)
 
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <seccomp.h>
 #include <signal.h>
 #include <unistd.h>
+
+static ParFilter param_filter[] = {
+    // Example entries
+    {SCMP_SYS(execve), "/usr/local/bin/tor", 0},
+    {SCMP_SYS(execve), "/usr/local/bin/tor", 0}
+};
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -142,23 +149,61 @@ static int general_filter[] = {
     SCMP_SYS(unlink)
 };
 
-/**
- * Function responsible for setting up and enabling a global syscall filter.
- * The function is a prototype developed for stage 1 of sandboxing Tor.
- * Returns 0 on success.
- */
 static int
-install_glob_syscall_filter(void)
+add_param_filter(scmp_filter_ctx ctx)
 {
-  int rc = 0, i, filter_size;
-  scmp_filter_ctx ctx;
+  int i, filter_size, param_size, rc = 0;
+  void *map = NULL;
 
-  ctx = seccomp_init(SCMP_ACT_TRAP);
-  if (ctx == NULL) {
-    log_err(LD_BUG,"(Sandbox) failed to initialise libseccomp context");
-    rc = -1;
-    goto end;
+  if (param_filter != NULL) {
+    filter_size = sizeof(param_filter) / sizeof(param_filter[0]);
+  } else {
+    filter_size = 0;
   }
+
+  // for each parameter filter
+  for (i = 0; i < filter_size; i++) {
+    if (!param_filter[i].prot) {
+      // allocating protected memory region for parameter
+      param_size = 1 + strnlen(param_filter[i].param, MAX_PARAM_LEN);
+      if (param_size == MAX_PARAM_LEN) {
+        log_warn(LD_BUG, "(Sandbox) Parameter %i length too large!", i);
+      }
+
+      map = mmap(NULL, param_size, PROT_READ | PROT_WRITE, MAP_PRIVATE |
+          MAP_ANON, -1, 0);
+      if (!map) {
+        log_err(LD_BUG,"(Sandbox) failed allocate protected memory!");
+        return -1;
+      }
+
+      // copying from non protected to protected + pointer reassign
+      memcpy(map, param_filter[i].param, param_size);
+      param_filter[i].param = map;
+
+      // protecting from writes
+      if (mprotect(param_filter[i].param, param_size, PROT_READ)) {
+        log_err(LD_BUG,"(Sandbox) failed to protect memory!");
+        return -1;
+      }
+    } // if not protected
+
+    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
+        param_filter[i].param);
+    if (rc != 0) {
+      log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
+          "received libseccomp error %d", i, rc);
+      return rc;
+    }
+  }
+
+  return 0;
+}
+
+static int
+add_noparam_filter(scmp_filter_ctx ctx)
+{
+  int i, filter_size, rc = 0;
 
   if (general_filter != NULL) {
     filter_size = sizeof(general_filter) / sizeof(general_filter[0]);
@@ -172,8 +217,41 @@ install_glob_syscall_filter(void)
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);
-      goto end;
+      return rc;
     }
+  }
+
+  return 0;
+}
+
+/**
+ * Function responsible for setting up and enabling a global syscall filter.
+ * The function is a prototype developed for stage 1 of sandboxing Tor.
+ * Returns 0 on success.
+ */
+static int
+install_glob_syscall_filter(void)
+{
+  int rc = 0;
+  scmp_filter_ctx ctx;
+
+  ctx = seccomp_init(SCMP_ACT_TRAP);
+  if (ctx == NULL) {
+    log_err(LD_BUG,"(Sandbox) failed to initialise libseccomp context");
+    rc = -1;
+    goto end;
+  }
+
+  // add parameter filters
+  if ((rc = add_param_filter(ctx))) {
+    log_err(LD_BUG, "(Sandbox) failed to add param filters!");
+    goto end;
+  }
+
+  // adding filters with no parameters
+  if ((rc = add_noparam_filter(ctx))) {
+    log_err(LD_BUG, "(Sandbox) failed to add param filters!");
+    goto end;
   }
 
   rc = seccomp_load(ctx);

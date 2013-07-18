@@ -30,6 +30,14 @@
 #define __USE_GNU
 #include <sys/ucontext.h>
 
+#define MAX_PARAM_LEN 32
+
+typedef struct {
+  int syscall;
+  char *param;
+  char prot;
+} ParFilter;
+
 /**
  * Linux 32 bit definitions
  */
