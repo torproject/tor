@@ -148,6 +148,8 @@ test_options_validate(void *arg)
   (void)arg;
   setup_log_callback();
 
+  WANT_ERR("ExtORPort 500000", "Invalid ExtORPort");
+
   WANT_ERR_LOG("ServerTransportOptions trebuchet",
                "ServerTransportOptions did not parse",
                LOG_WARN, "Too few arguments");
@@ -157,7 +159,6 @@ test_options_validate(void *arg)
                "ServerTransportOptions did not parse",
                LOG_WARN, "\"slingsnappy\" is not a k=v");
 
-// done:
   clear_log_messages();
   return;
 }

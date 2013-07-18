@@ -10,6 +10,7 @@
  * on connections.
  **/
 
+#define CONNECTION_PRIVATE
 #include "or.h"
 #include "buffers.h"
 /*
@@ -458,7 +459,7 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
  * necessary, close its socket if necessary, and mark the directory as dirty
  * if <b>conn</b> is an OR or OP connection.
  */
-static void
+STATIC void
 connection_free_(connection_t *conn)
 {
   void *mem;

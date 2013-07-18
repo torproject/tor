@@ -214,5 +214,9 @@ void connection_enable_rate_limiting(connection_t *conn);
 #define connection_type_uses_bufferevent(c) (0)
 #endif
 
+#ifdef CONNECTION_PRIVATE
+STATIC void connection_free_(connection_t *conn);
+#endif
+
 #endif
 

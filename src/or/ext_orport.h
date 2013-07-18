@@ -14,6 +14,7 @@ void ext_or_cmd_free(ext_or_cmd_t *cmd);
 void connection_or_set_ext_or_identifier(or_connection_t *conn);
 void connection_or_remove_from_ext_or_id_map(or_connection_t *conn);
 void connection_or_clear_ext_or_id_map(void);
+or_connection_t *connection_or_get_by_ext_or_id(const char *id);
 
 int connection_ext_or_finished_flushing(or_connection_t *conn);
 int connection_ext_or_process_inbuf(or_connection_t *or_conn);
