@@ -16,6 +16,7 @@
 #include "sandbox.h"
 #include "torlog.h"
 #include "orconfig.h"
+#include "torint.h"
 
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
@@ -149,6 +150,30 @@ static int general_filter[] = {
     SCMP_SYS(unlink)
 };
 
+char*
+get_prot_param(char *param)
+{
+  int i, filter_size;
+
+  if (param == NULL)
+    return NULL;
+
+  if (param_filter == NULL) {
+    filter_size = 0;
+  } else {
+    filter_size = sizeof(param_filter) / sizeof(param_filter[0]);
+  }
+
+  for (i = 0; i < filter_size; i++) {
+    if (param_filter[i].prot && !strncmp(param, param_filter[i].param,
+        MAX_PARAM_LEN)) {
+      return param_filter[i].param;
+    }
+  }
+
+  return NULL;
+}
+
 static int
 add_param_filter(scmp_filter_ctx ctx)
 {
@@ -189,7 +214,7 @@ add_param_filter(scmp_filter_ctx ctx)
     } // if not protected
 
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
-        param_filter[i].param);
+        SCMP_A0(SCMP_CMP_EQ, (intptr_t) param_filter[i].param));
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);
