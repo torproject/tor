@@ -1679,7 +1679,7 @@ is non-zero):
     If it hits this threshold, it will begin killing circuits until it
     has recovered at least 10% of this memory.  Do not set this option too
     low, or your relay may be unreliable under load.  This option only
-    effects circuit queues, so the actual process size will be larger than
+    affects circuit queues, so the actual process size will be larger than
     this. (Default: 8GB)
 
 DIRECTORY SERVER OPTIONS
