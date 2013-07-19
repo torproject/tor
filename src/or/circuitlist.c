@@ -1518,8 +1518,10 @@ static size_t
 n_cells_in_circ_queues(const circuit_t *c)
 {
   size_t n = c->n_chan_cells.n;
-  if (! CIRCUIT_IS_ORIGIN(c))
-    n += TO_OR_CIRCUIT((circuit_t*)c)->p_chan_cells.n;
+  if (! CIRCUIT_IS_ORIGIN(c)) {
+    circuit_t *cc = (circuit_t *) c;
+    n += TO_OR_CIRCUIT(cc)->p_chan_cells.n;
+  }
   return n;
 }
 
