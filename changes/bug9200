@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Fix a bug in the voting algorithm that could yield incorrect results
-      when a non-naming authority declared too many flags. Fixes bug 9200;
-      bugfix on 0.2.0.3-alpha.
-

@@ -1,3 +1,19 @@
+Changes in version 0.2.4.16-rc - 2013-07-2?
+  o Major bugfixes:
+    - Fix a bug in the voting algorithm that could yield incorrect results
+      when a non-naming authority declared too many flags. Fixes bug 9200;
+      bugfix on 0.2.0.3-alpha.
+    - Avoid a crash when using --hash-password. Fixes bug 9295; bugfix on
+      0.2.4.15-rc. Found by stem integration tests.
+
+  o Minor bugfixes:
+    - Fix a spurious compilation warning with some older versions of
+      GCC on FreeBSD. Fixes bug 9254; bugfix on 0.2.4.14-alpha.
+
+  o Minor features:
+    - Update to the July 3 2013 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.4.15-rc - 2013-07-01
   Tor 0.2.4.15-rc is the first release candidate for the Tor 0.2.4.x
   series. It fixes a few smaller bugs, but generally appears stable.
