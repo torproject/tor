@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Avoid a crash when using --hash-password. Fixes bug 9295; bugfix on
+      0.2.4.15-rc. Found by stem integration tests.
+
