@@ -94,6 +94,20 @@
 #endif
 
 /* =====
+ * Assertion helper.
+ * ===== */
+/** Helper for tor_assert: report the assertion failure. */
+void
+tor_assertion_failed_(const char *fname, unsigned int line,
+                      const char *func, const char *expr)
+{
+  log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
+          fname, line, func, expr);
+  fprintf(stderr,"%s:%u: %s: Assertion %s failed; aborting.\n",
+          fname, line, func, expr);
+}
+
+/* =====
  * Memory management
  * ===== */
 #ifdef USE_DMALLOC
@@ -5057,4 +5071,3 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
   } while (result >= top);
   return result;
 }
-
