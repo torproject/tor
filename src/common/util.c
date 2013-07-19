@@ -3441,6 +3441,39 @@ format_hex_number_sigsafe(unsigned int x, char *buf, int buf_len)
   return len;
 }
 
+/** As format_hex_number_sigsafe, but format the number in base 10. */
+int
+format_dec_number_sigsafe(unsigned long x, char *buf, int buf_len)
+{
+  int len;
+  unsigned long tmp;
+  char *cp;
+
+  tmp = x;
+  len = 1;
+  while (tmp > 9) {
+    tmp /= 10;
+    ++len;
+  }
+
+  if (len >= buf_len)
+    return 0;
+
+  cp = buf + len;
+  *cp = '\0';
+  do {
+    unsigned digit = x % 10;
+    tor_assert(cp > buf);
+    --cp;
+    *cp = '0' + digit;
+    x /= 10;
+  } while (x);
+
+  tor_assert(cp == buf);
+
+  return len;
+}
+
 #ifndef _WIN32
 /** Format <b>child_state</b> and <b>saved_errno</b> as a hex string placed in
  * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler

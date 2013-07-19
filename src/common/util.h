@@ -520,6 +520,7 @@ int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
 #define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
 
 int format_hex_number_sigsafe(unsigned int x, char *buf, int max_len);
+int format_dec_number_sigsafe(unsigned long x, char *buf, int max_len);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
