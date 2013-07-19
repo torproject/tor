@@ -73,7 +73,8 @@ int rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                      char **intro_points_encrypted_out,
                                      size_t *intro_points_encrypted_size_out,
                                      size_t *encoded_size_out,
-                                     const char **next_out, const char *desc);
+                                     const char **next_out, const char *desc,
+                                     int as_hsdir);
 int rend_decrypt_introduction_points(char **ipos_decrypted,
                                      size_t *ipos_decrypted_size,
                                      const char *descriptor_cookie,

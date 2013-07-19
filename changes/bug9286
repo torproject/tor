@@ -1,0 +1,4 @@
+  o Minor bugfixes (parsing):
+    - Stop accepting milliseconds (or other junk) at the end of
+      descriptor publication times. Fixes bug 9286; bugfix on
+      0.0.2pre25.
