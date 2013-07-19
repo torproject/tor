@@ -3828,6 +3828,7 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (command == CMD_HASH_PASSWORD) {
+    cf_defaults = tor_strdup("");
     cf = tor_strdup("");
   } else {
     cf_defaults = load_torrc_from_disk(argc, argv, 1);
