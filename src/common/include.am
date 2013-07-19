@@ -50,6 +50,7 @@ endif
 
 LIBOR_A_SOURCES = \
   src/common/address.c					\
+  src/common/backtrace.c				\
   src/common/compat.c					\
   src/common/container.c				\
   src/common/di_ops.c					\
@@ -90,6 +91,7 @@ src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 COMMONHEADERS = \
   src/common/address.h				\
+  src/common/backtrace.h			\
   src/common/aes.h				\
   src/common/ciphers.inc			\
   src/common/compat.h				\

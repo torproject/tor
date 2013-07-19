@@ -302,6 +302,8 @@ dnl exports strlcpy without defining it in a header.
 AC_CHECK_FUNCS(
         _NSGetEnviron \
         accept4 \
+        backtrace \
+        backtrace_symbols_fd \
         clock_gettime \
         flock \
         ftime \
@@ -319,6 +321,7 @@ AC_CHECK_FUNCS(
         memmem \
         prctl \
         rint \
+        sigaction \
         socketpair \
         strlcat \
         strlcpy \
@@ -802,6 +805,7 @@ dnl These headers are not essential
 AC_CHECK_HEADERS(
         arpa/inet.h \
         crt_externs.h \
+        execinfo.h \
         grp.h \
         ifaddrs.h \
         inttypes.h \

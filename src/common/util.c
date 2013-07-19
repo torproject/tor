@@ -24,6 +24,7 @@
 #include "torint.h"
 #include "container.h"
 #include "address.h"
+#include "backtrace.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -101,8 +102,13 @@ void
 tor_assertion_failed_(const char *fname, unsigned int line,
                       const char *func, const char *expr)
 {
+  char buf[256];
   log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
           fname, line, func, expr);
+  tor_snprintf(buf, sizeof(buf),
+               "Assertion %s failed in %s at %s:%u",
+               expr, func, fname, line);
+  dump_backtrace(buf);
   fprintf(stderr,"%s:%u: %s: Assertion %s failed; aborting.\n",
           fname, line, func, expr);
 }
