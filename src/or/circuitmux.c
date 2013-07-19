@@ -383,6 +383,7 @@ circuitmux_alloc(void)
   rv = tor_malloc_zero(sizeof(*rv));
   rv->chanid_circid_map = tor_malloc_zero(sizeof(*( rv->chanid_circid_map)));
   HT_INIT(chanid_circid_muxinfo_map, rv->chanid_circid_map);
+  cell_queue_init(&rv->destroy_cell_queue);
 
   return rv;
 }

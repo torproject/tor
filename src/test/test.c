@@ -2133,6 +2133,7 @@ extern struct testcase_t introduce_tests[];
 extern struct testcase_t replaycache_tests[];
 extern struct testcase_t cell_format_tests[];
 extern struct testcase_t circuitlist_tests[];
+extern struct testcase_t circuitmux_tests[];
 extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t options_tests[];
 
@@ -2152,6 +2153,7 @@ static struct testgroup_t testgroups[] = {
   { "replaycache/", replaycache_tests },
   { "introduce/", introduce_tests },
   { "circuitlist/", circuitlist_tests },
+  { "circuitmux/", circuitmux_tests },
   { "options/", options_tests },
   END_OF_GROUPS
 };
