@@ -593,6 +593,9 @@ if test x$enable_linker_hardening != xno; then
     TOR_CHECK_LDFLAGS(-z relro -z now, "$all_ldflags_for_check", "$all_libs_for_check")
 fi
 
+# For backtrace support
+TOR_CHECK_LDFLAGS(-rdynamic)
+
 dnl ------------------------------------------------------
 dnl Now see if we have a -fomit-frame-pointer compiler option.
 
