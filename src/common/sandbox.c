@@ -184,16 +184,6 @@ install_glob_syscall_filter(void)
   return (rc < 0 ? -rc : rc);
 }
 
-/** Additional file descriptor to use when logging seccomp2 failures */
-static int sigsys_debugging_fd = -1;
-
-/** Use the file descriptor <b>fd</b> to log seccomp2 failures. */
-static void
-sigsys_set_debugging_fd(int fd)
-{
-  sigsys_debugging_fd = fd;
-}
-
 /**
  * Function called when a SIGSYS is caught by the application. It notifies the
  * user that an error has occurred and either terminates or allows the
@@ -203,8 +193,8 @@ static void
 sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = (ucontext_t *) (void_context);
-  char message[256];
-  int rv = 0, syscall, length, err;
+  char number[32];
+  int syscall;
   (void) nr;
 
   if (info->si_code != SYS_SECCOMP)
@@ -215,24 +205,11 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 
   syscall = ctx->uc_mcontext.gregs[REG_SYSCALL];
 
-  strlcpy(message, "\n\n(Sandbox) Caught a bad syscall attempt (syscall 0x",
-          sizeof(message));
-  (void) format_hex_number_sigsafe(syscall, message+strlen(message),
-                                   sizeof(message)-strlen(message));
-  strlcat(message, ")\n", sizeof(message));
-  length = strlen(message);
-
-  err = 0;
-  if (sigsys_debugging_fd >= 0) {
-    rv = write(sigsys_debugging_fd, message, length);
-    err += rv != length;
-  }
-
-  rv = write(STDOUT_FILENO, message, length);
-  err += rv != length;
-
-  if (err)
-    _exit(2);
+  format_dec_number_sigsafe(syscall, number, sizeof(number));
+  tor_log_err_sigsafe("(Sandbox) Caught a bad syscall attempt (syscall ",
+                      number,
+                      ")\n",
+                      NULL);
 
 #if defined(DEBUGGING_CLOSE)
   _exit(1);
@@ -318,14 +295,4 @@ tor_global_sandbox(void)
 #endif
 }
 
-/** Use <b>fd</b> to log non-survivable sandbox violations. */
-void
-sandbox_set_debugging_fd(int fd)
-{
-#ifdef USE_LIBSECCOMP
-  sigsys_set_debugging_fd(fd);
-#else
-  (void)fd;
-#endif
-}
 

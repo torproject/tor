@@ -136,7 +136,6 @@ int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
 void add_temp_log(int min_severity);
-int get_err_logging_fd(void);
 void close_temp_logs(void);
 void rollback_log_changes(void);
 void mark_logs_temp(void);
@@ -148,6 +147,10 @@ void set_log_time_granularity(int granularity_msec);
 
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
+
+void tor_log_err_sigsafe(const char *m, ...);
+int tor_log_get_sigsafe_err_fds(const int **out);
+void tor_log_update_sigsafe_err_fds(void);
 
 #if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
 extern int log_global_min_severity_;

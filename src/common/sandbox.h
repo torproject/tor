@@ -48,7 +48,6 @@
 
 #endif // __linux__
 
-void sandbox_set_debugging_fd(int fd);
 int tor_global_sandbox(void);
 
 #endif /* SANDBOX_H_ */

@@ -12,7 +12,6 @@
 #define CONFIG_PRIVATE
 #include "or.h"
 #include "addressmap.h"
-#include "backtrace.h"
 #include "channel.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
@@ -1114,19 +1113,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
   }
 
-  /* Enable crash logging to files */
-  {
-    /* XXXX we might want to set this up earlier, if possible! */
-    char *backtrace_fname = NULL;
-    char *progname = NULL;
-    tor_asprintf(&backtrace_fname, "%s"PATH_SEPARATOR"stack_dump",
-                 options->DataDirectory);
-    tor_asprintf(&progname, "Tor %s", get_version());
-    configure_backtrace_handler(backtrace_fname, progname);
-    tor_free(backtrace_fname);
-    tor_free(progname);
-  }
-
   /* Write control ports to disk as appropriate */
   control_ports_write_to_file();
 
@@ -1156,7 +1142,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     goto rollback;
   }
 
-  sandbox_set_debugging_fd(get_err_logging_fd());
+  tor_log_update_sigsafe_err_fds();
 
  commit:
   r = 0;

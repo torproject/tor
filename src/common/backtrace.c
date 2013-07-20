@@ -5,6 +5,7 @@
 #include "backtrace.h"
 #include "compat.h"
 #include "util.h"
+#include "torlog.h"
 
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
@@ -25,33 +26,7 @@
 #define NO_BACKTRACE_IMPL
 #endif
 
-static char *bt_filename = NULL;
 static char *bt_version = NULL;
-
-#ifndef NO_BACKTRACE_IMPL
-/**DOCDOC*/
-static int
-open_bt_target(void)
-{
-  int fd = -1;
-  if (bt_filename)
-    fd = open(bt_filename, O_WRONLY|O_CREAT|O_APPEND, 0700);
-  return fd;
-}
-#endif
-
-/**DOCDOC*/
-static void
-bt_write(int fd, const char *s, ssize_t n)
-{
-  int r;
-  if (n < 0) n = strlen(s);
-
-  r = write(STDERR_FILENO, s, n);
-  if (fd >= 0)
-    r = write(fd, s, n);
-  (void)r; 
-}
 
 #ifdef USE_BACKTRACE
 #define MAX_DEPTH 256
@@ -61,33 +36,20 @@ static void *cb_buf[MAX_DEPTH];
 void
 dump_backtrace(const char *msg)
 {
-  char timebuf[32];
-  time_t t = time(NULL);
-  int timebuf_len;
   int depth;
-  int fd;
+  const int *fds;
+  int n_fds;
+  int i;
+
   if (!msg) msg = "unspecified crash";
 
   depth = backtrace(cb_buf, MAX_DEPTH);
 
-  t /= 900; t *= 900; /* Round to the previous 15 minutes */
-  timebuf[0] = '\0';
-  timebuf_len = format_dec_number_sigsafe(t, timebuf, sizeof(timebuf));
-
-  fd = open_bt_target();
-  bt_write(fd, "========================================"
-               "====================================\n", -1);
-  bt_write(fd, bt_version, -1);
-  bt_write(fd, " died around T=", -1);
-  bt_write(fd, timebuf, timebuf_len);
-  bt_write(fd, ": ", 2);
-  bt_write(fd, msg, -1);
-  bt_write(fd, "\n", 1);
-  backtrace_symbols_fd(cb_buf, depth, STDERR_FILENO);
-  if (fd >= 0)
-    backtrace_symbols_fd(cb_buf, depth, fd);
-
-  close(fd);
+  tor_log_err_sigsafe(bt_version, " died: ", msg, "\n",
+                      NULL);
+  n_fds = tor_log_get_sigsafe_err_fds(&fds);
+  for (i=0; i < n_fds; ++i)
+    backtrace_symbols_fd(cb_buf, depth, fds[i]);
 }
 
 /**DOCDOC*/
@@ -110,10 +72,7 @@ remove_bt_handler(void)
 void
 dump_backtrace(const char *msg)
 {
-  bt_write(-1, bt_version, -1);
-  bt_write(-1, " died: ", -1);
-  bt_write(-1, msg, -1);
-  bt_write(-1, "\n", -1);
+  tor_log_err_sigsafe(bt_version, " died: ", msg, "\n", NULL);
 }
 
 /**DOCDOC*/
@@ -132,11 +91,8 @@ remove_bt_handler(void)
 
 /**DOCDOC*/
 int
-configure_backtrace_handler(const char *filename, const char *tor_version)
+configure_backtrace_handler(const char *tor_version)
 {
-  tor_free(bt_filename);
-  if (filename)
-    bt_filename = tor_strdup(filename);
   tor_free(bt_version);
   if (!tor_version)
     tor_version = "Tor";
@@ -151,7 +107,6 @@ clean_up_backtrace_handler(void)
 {
   remove_bt_handler();
 
-  tor_free(bt_filename);
   tor_free(bt_version);
 }
 

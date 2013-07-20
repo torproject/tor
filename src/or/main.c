@@ -2685,7 +2685,7 @@ tor_main(int argc, char *argv[])
   }
 #endif
 
-  configure_backtrace_handler(NULL, get_version());
+  configure_backtrace_handler(get_version());
 
   update_approx_time(time(NULL));
   tor_threads_init();
