@@ -28,14 +28,25 @@
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <bits/signum.h>
 #include <seccomp.h>
 #include <signal.h>
 #include <unistd.h>
 
 static ParFilter param_filter[] = {
     // Example entries
-    {SCMP_SYS(execve), (intptr_t)("/usr/local/bin/tor"), 0},
-    {SCMP_SYS(execve), (intptr_t)("/usr/local/bin/tor"), 0}
+    {SCMP_SYS(execve), PARAM_PTR, (intptr_t)("/usr/local/bin/tor"), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGINT), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGTERM), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGPIPE), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGUSR1), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGUSR2), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGHUP), 0},
+#ifdef SIGXFSZ
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGXFSZ), 0},
+#endif
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGCHLD), 0},
+
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -101,7 +112,6 @@ static int general_filter[] = {
     SCMP_SYS(prctl),
     SCMP_SYS(read),
     SCMP_SYS(rename),
-    SCMP_SYS(rt_sigaction),
     SCMP_SYS(rt_sigprocmask),
     SCMP_SYS(rt_sigreturn),
 #ifdef __NR_sigreturn
@@ -166,7 +176,7 @@ get_prot_param(char *param)
 
   for (i = 0; i < filter_size; i++) {
     if (param_filter[i].prot && !strncmp(param, (char*) param_filter[i].param,
-        MAX_PARAM_LEN)) {
+        MAX_PARAM_LEN) && param_filter[i].ptype == PARAM_PTR) {
       return (char*)(param_filter[i].param);
     }
   }
@@ -188,7 +198,7 @@ add_param_filter(scmp_filter_ctx ctx)
 
   // for each parameter filter
   for (i = 0; i < filter_size; i++) {
-    if (!param_filter[i].prot) {
+    if (!param_filter[i].prot && param_filter[i].ptype == PARAM_PTR) {
       // allocating protected memory region for parameter
       param_size = 1 + strnlen((char*) param_filter[i].param, MAX_PARAM_LEN);
       if (param_size == MAX_PARAM_LEN) {
@@ -212,6 +222,8 @@ add_param_filter(scmp_filter_ctx ctx)
         return -1;
       }
     } // if not protected
+
+    param_filter[i].prot = 1;
 
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
         SCMP_A0(SCMP_CMP_EQ, param_filter[i].param));

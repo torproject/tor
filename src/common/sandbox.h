@@ -34,9 +34,15 @@
 
 #define MAX_PARAM_LEN 32
 
+#define PARAM_PTR 0
+#define PARAM_NUM 1
+
 typedef struct {
   int syscall;
-  intptr_t param;  // TODO: make this intptr_t to support multiple types
+
+  char ptype;
+  intptr_t param;
+
   char prot;
 } ParFilter;
 
