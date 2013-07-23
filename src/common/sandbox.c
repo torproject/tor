@@ -35,44 +35,44 @@
 
 static ParFilter param_filter[] = {
     // Example entries
-    {SCMP_SYS(execve), PARAM_PTR, (intptr_t)("/usr/local/bin/tor"), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGINT), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGTERM), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGPIPE), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGUSR1), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGUSR2), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGHUP), 0},
+    {SCMP_SYS(execve), PARAM_PTR, 0, (intptr_t)("/usr/local/bin/tor"), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGINT), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGTERM), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGPIPE), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGUSR1), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGUSR2), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGHUP), 0},
 #ifdef SIGXFSZ
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGXFSZ), 0},
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGXFSZ), 0},
 #endif
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGCHLD), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-certs"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/unverified-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-microdescs"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-microdescs.new"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/unverified-microdesc-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-descriptors"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-descriptors.new"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/cached-extrainfo"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/state.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/unparseable-desc.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR,
+    {SCMP_SYS(open), PARAM_PTR, 0,
         (intptr_t)("/home/cristi/.tor/unparseable-desc"), 0},
 };
 
@@ -253,7 +253,7 @@ add_param_filter(scmp_filter_ctx ctx)
     param_filter[i].prot = 1;
 
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
-        SCMP_A0(SCMP_CMP_EQ, param_filter[i].param));
+        SCMP_CMP(param_filter[i].pindex, SCMP_CMP_EQ, param_filter[i].param));
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);

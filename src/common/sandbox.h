@@ -41,6 +41,7 @@ typedef struct {
   int syscall;
 
   char ptype;
+  char pindex;
   intptr_t param;
 
   char prot;
