@@ -546,7 +546,7 @@ channel_tls_matches_extend_info_method(channel_t *chan,
 }
 
 /**
- * Check if we match a target address
+ * Check if we match a target address; return true iff we do.
  *
  * This implements the matches_target method for channel_tls t_; the upper
  * layer wants to know if this channel matches a target address when extending
@@ -563,8 +563,7 @@ channel_tls_matches_target_method(channel_t *chan,
   tor_assert(target);
   tor_assert(tlschan->conn);
 
-  return tor_addr_compare(&(tlschan->conn->real_addr),
-                          target, CMP_EXACT);
+  return tor_addr_eq(&(tlschan->conn->real_addr), target);
 }
 
 /**
