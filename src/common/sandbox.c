@@ -34,8 +34,8 @@
 
 static ParFilter param_filter[] = {
     // Example entries
-    {SCMP_SYS(execve), "/usr/local/bin/tor", 0},
-    {SCMP_SYS(execve), "/usr/local/bin/tor", 0}
+    {SCMP_SYS(execve), (intptr_t)("/usr/local/bin/tor"), 0},
+    {SCMP_SYS(execve), (intptr_t)("/usr/local/bin/tor"), 0}
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -165,9 +165,9 @@ get_prot_param(char *param)
   }
 
   for (i = 0; i < filter_size; i++) {
-    if (param_filter[i].prot && !strncmp(param, param_filter[i].param,
+    if (param_filter[i].prot && !strncmp(param, (char*) param_filter[i].param,
         MAX_PARAM_LEN)) {
-      return param_filter[i].param;
+      return (char*)(param_filter[i].param);
     }
   }
 
@@ -190,7 +190,7 @@ add_param_filter(scmp_filter_ctx ctx)
   for (i = 0; i < filter_size; i++) {
     if (!param_filter[i].prot) {
       // allocating protected memory region for parameter
-      param_size = 1 + strnlen(param_filter[i].param, MAX_PARAM_LEN);
+      param_size = 1 + strnlen((char*) param_filter[i].param, MAX_PARAM_LEN);
       if (param_size == MAX_PARAM_LEN) {
         log_warn(LD_BUG, "(Sandbox) Parameter %i length too large!", i);
       }
@@ -203,18 +203,18 @@ add_param_filter(scmp_filter_ctx ctx)
       }
 
       // copying from non protected to protected + pointer reassign
-      memcpy(map, param_filter[i].param, param_size);
-      param_filter[i].param = map;
+      memcpy(map, (char*) param_filter[i].param, param_size);
+      param_filter[i].param = (intptr_t) map;
 
       // protecting from writes
-      if (mprotect(param_filter[i].param, param_size, PROT_READ)) {
+      if (mprotect((char*) param_filter[i].param, param_size, PROT_READ)) {
         log_err(LD_BUG,"(Sandbox) failed to protect memory!");
         return -1;
       }
     } // if not protected
 
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
-        SCMP_A0(SCMP_CMP_EQ, (intptr_t) param_filter[i].param));
+        SCMP_A0(SCMP_CMP_EQ, param_filter[i].param));
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);

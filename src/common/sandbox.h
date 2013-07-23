@@ -22,6 +22,8 @@
 
 #endif
 
+#include "torint.h"
+
 /**
  * Linux definitions
  */
@@ -34,7 +36,7 @@
 
 typedef struct {
   int syscall;
-  char *param;
+  intptr_t param;  // TODO: make this intptr_t to support multiple types
   char prot;
 } ParFilter;
 
