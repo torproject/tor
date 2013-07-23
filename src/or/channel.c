@@ -3090,7 +3090,7 @@ channel_get_for_extend(const char *digest,
     if (chan->state != CHANNEL_STATE_OPEN) {
       /* If the address matches, don't launch a new connection for this
        * circuit. */
-      if (!channel_matches_target_addr_for_extend(chan, target_addr))
+      if (channel_matches_target_addr_for_extend(chan, target_addr))
         ++n_inprogress_goodaddr;
       continue;
     }
@@ -4106,7 +4106,7 @@ channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info)
 }
 
 /**
- * Check if a channel matches a given target address
+ * Check if a channel matches a given target address; return true iff we do.
  *
  * This function calls into the lower layer and asks if this channel thinks
  * it matches a given target address for circuit extension purposes.
