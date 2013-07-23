@@ -32,7 +32,7 @@
 #define __USE_GNU
 #include <sys/ucontext.h>
 
-#define MAX_PARAM_LEN 32
+#define MAX_PARAM_LEN 64
 
 #define PARAM_PTR 0
 #define PARAM_NUM 1

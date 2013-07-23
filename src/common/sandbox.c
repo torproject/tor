@@ -46,7 +46,34 @@ static ParFilter param_filter[] = {
     {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGXFSZ), 0},
 #endif
     {SCMP_SYS(rt_sigaction), PARAM_NUM, (intptr_t)(SIGCHLD), 0},
-
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-certs"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-consensus"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/unverified-consensus"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus.tmp"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-microdescs"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-microdescs.new"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/unverified-microdesc-consensus"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-descriptors"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-descriptors.new"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/cached-extrainfo"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/state.tmp"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/unparseable-desc.tmp"), 0},
+    {SCMP_SYS(open), PARAM_PTR,
+        (intptr_t)("/home/cristi/.tor/unparseable-desc"), 0},
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -106,7 +133,6 @@ static int general_filter[] = {
     SCMP_SYS(mprotect),
     SCMP_SYS(mremap),
     SCMP_SYS(munmap),
-    SCMP_SYS(open),
     SCMP_SYS(openat),
     SCMP_SYS(poll),
     SCMP_SYS(prctl),
@@ -175,13 +201,14 @@ get_prot_param(char *param)
   }
 
   for (i = 0; i < filter_size; i++) {
-    if (param_filter[i].prot && !strncmp(param, (char*) param_filter[i].param,
-        MAX_PARAM_LEN) && param_filter[i].ptype == PARAM_PTR) {
+    if (param_filter[i].prot  && param_filter[i].ptype == PARAM_PTR
+        && !strncmp(param, (char*)(param_filter[i].param), MAX_PARAM_LEN)) {
       return (char*)(param_filter[i].param);
     }
   }
 
-  return NULL;
+  log_warn(LD_BUG, "(Sandbox) Parameter %s not found", param);
+  return param;
 }
 
 static int
@@ -213,7 +240,7 @@ add_param_filter(scmp_filter_ctx ctx)
       }
 
       // copying from non protected to protected + pointer reassign
-      memcpy(map, (char*) param_filter[i].param, param_size);
+      memcpy(map, (char*) (param_filter[i].param), param_size);
       param_filter[i].param = (intptr_t) map;
 
       // protecting from writes

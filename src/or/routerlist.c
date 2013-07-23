@@ -37,7 +37,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-
+#include "../common/sandbox.h"
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/
