@@ -45,7 +45,20 @@ typedef struct {
   intptr_t param;
 
   char prot;
-} ParFilter;
+} ParFilterStatic;
+
+struct pfd_elem {
+  int syscall;
+
+  char ptype;
+  char pindex;
+  intptr_t param;
+
+  char prot;
+
+  struct pfd_elem *next;
+};
+typedef struct pfd_elem ParFilterDynamic;
 
 /**
  * Linux 32 bit definitions

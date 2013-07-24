@@ -33,7 +33,9 @@
 #include <signal.h>
 #include <unistd.h>
 
-static ParFilter param_filter[] = {
+ParFilterDynamic *filter_dynamic = NULL;
+
+static ParFilterStatic filter_static[] = {
     // Example entries
     {SCMP_SYS(execve), PARAM_PTR, 0, (intptr_t)("/usr/local/bin/tor"), 0},
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGINT), 0},
@@ -79,7 +81,7 @@ static ParFilter param_filter[] = {
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
  */
-static int general_filter[] = {
+static int filter_nopar_gen[] = {
     SCMP_SYS(access),
     SCMP_SYS(brk),
     SCMP_SYS(clock_gettime),
@@ -194,16 +196,16 @@ get_prot_param(char *param)
   if (param == NULL)
     return NULL;
 
-  if (param_filter == NULL) {
+  if (filter_static == NULL) {
     filter_size = 0;
   } else {
-    filter_size = sizeof(param_filter) / sizeof(param_filter[0]);
+    filter_size = sizeof(filter_static) / sizeof(filter_static[0]);
   }
 
   for (i = 0; i < filter_size; i++) {
-    if (param_filter[i].prot  && param_filter[i].ptype == PARAM_PTR
-        && !strncmp(param, (char*)(param_filter[i].param), MAX_PARAM_LEN)) {
-      return (char*)(param_filter[i].param);
+    if (filter_static[i].prot  && filter_static[i].ptype == PARAM_PTR
+        && !strncmp(param, (char*)(filter_static[i].param), MAX_PARAM_LEN)) {
+      return (char*)(filter_static[i].param);
     }
   }
 
@@ -211,49 +213,103 @@ get_prot_param(char *param)
   return param;
 }
 
+static char*
+prot_strdup(char* str)
+{
+  int param_size = 0;
+  char *res = NULL;
+
+  if (str == NULL)
+    goto out;
+
+  // allocating protected memory region for parameter
+  param_size = 1 + strnlen(str, MAX_PARAM_LEN);
+  if (param_size == MAX_PARAM_LEN) {
+    log_warn(LD_BUG, "(Sandbox) Parameter length too large!");
+  }
+
+  res = (char*) mmap(NULL, param_size, PROT_READ | PROT_WRITE, MAP_PRIVATE |
+      MAP_ANON, -1, 0);
+  if (!res) {
+    log_err(LD_BUG,"(Sandbox) failed allocate protected memory!");
+    goto out;
+  }
+
+  // copying from non protected to protected + pointer reassign
+  memcpy(res, str, param_size);
+
+  // protecting from writes
+  if (mprotect(res, param_size, PROT_READ)) {
+    log_err(LD_BUG,"(Sandbox) failed to protect memory!");
+    return NULL;
+  }
+
+ out:
+   return res;
+}
+
+int
+add_dynamic_param_filter(char *syscall, char ptype, char pindex, intptr_t val)
+{
+  ParFilterDynamic **elem;
+
+  for (elem = &filter_dynamic; *elem != NULL; elem = &(*elem)->next);
+
+  *elem = (ParFilterDynamic*) malloc(sizeof(ParFilterDynamic));
+  (*elem)->next = NULL;
+  (*elem)->pindex = pindex;
+  (*elem)->ptype = ptype;
+
+  switch (ptype) {
+  case PARAM_PTR:
+    (*elem)->param = (intptr_t) prot_strdup((char*) val);
+    (*elem)->prot = 1;
+    break;
+
+  case PARAM_NUM:
+    (*elem)->param = val;
+    (*elem)->prot = 0;
+    break;
+  }
+
+  return 0;
+}
+
 static int
 add_param_filter(scmp_filter_ctx ctx)
 {
-  int i, filter_size, param_size, rc = 0;
-  void *map = NULL;
+  int i, filter_size, rc = 0;
+  ParFilterDynamic *elem;
 
-  if (param_filter != NULL) {
-    filter_size = sizeof(param_filter) / sizeof(param_filter[0]);
+  if (filter_static != NULL) {
+    filter_size = sizeof(filter_static) / sizeof(filter_static[0]);
   } else {
     filter_size = 0;
   }
 
-  // for each parameter filter
+  // for each dynamic parameter filters
+  for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
+    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, elem->syscall, 1,
+           SCMP_CMP(elem->pindex, SCMP_CMP_EQ, elem->param));
+     if (rc != 0) {
+       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+           "error %d", rc);
+       return rc;
+     }
+  }
+
+  // for each static parameter filter
   for (i = 0; i < filter_size; i++) {
-    if (!param_filter[i].prot && param_filter[i].ptype == PARAM_PTR) {
-      // allocating protected memory region for parameter
-      param_size = 1 + strnlen((char*) param_filter[i].param, MAX_PARAM_LEN);
-      if (param_size == MAX_PARAM_LEN) {
-        log_warn(LD_BUG, "(Sandbox) Parameter %i length too large!", i);
-      }
+    if (!filter_static[i].prot && filter_static[i].ptype == PARAM_PTR) {
+      filter_static[i].param = (intptr_t) prot_strdup(
+          (char*) (filter_static[i].param));
+    }
 
-      map = mmap(NULL, param_size, PROT_READ | PROT_WRITE, MAP_PRIVATE |
-          MAP_ANON, -1, 0);
-      if (!map) {
-        log_err(LD_BUG,"(Sandbox) failed allocate protected memory!");
-        return -1;
-      }
+    filter_static[i].prot = 1;
 
-      // copying from non protected to protected + pointer reassign
-      memcpy(map, (char*) (param_filter[i].param), param_size);
-      param_filter[i].param = (intptr_t) map;
-
-      // protecting from writes
-      if (mprotect((char*) param_filter[i].param, param_size, PROT_READ)) {
-        log_err(LD_BUG,"(Sandbox) failed to protect memory!");
-        return -1;
-      }
-    } // if not protected
-
-    param_filter[i].prot = 1;
-
-    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, param_filter[i].syscall, 1,
-        SCMP_CMP(param_filter[i].pindex, SCMP_CMP_EQ, param_filter[i].param));
+    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, filter_static[i].syscall, 1,
+        SCMP_CMP(filter_static[i].pindex, SCMP_CMP_EQ,
+            filter_static[i].param));
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);
@@ -269,15 +325,15 @@ add_noparam_filter(scmp_filter_ctx ctx)
 {
   int i, filter_size, rc = 0;
 
-  if (general_filter != NULL) {
-    filter_size = sizeof(general_filter) / sizeof(general_filter[0]);
+  if (filter_nopar_gen != NULL) {
+    filter_size = sizeof(filter_nopar_gen) / sizeof(filter_nopar_gen[0]);
   } else {
     filter_size = 0;
   }
 
   // add general filters
   for (i = 0; i < filter_size; i++) {
-    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, general_filter[i], 0);
+    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, filter_nopar_gen[i], 0);
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
           "received libseccomp error %d", i, rc);
