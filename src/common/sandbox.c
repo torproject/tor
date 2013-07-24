@@ -192,6 +192,7 @@ char*
 get_prot_param(char *param)
 {
   int i, filter_size;
+  ParFilterDynamic *elem;
 
   if (param == NULL)
     return NULL;
@@ -206,6 +207,13 @@ get_prot_param(char *param)
     if (filter_static[i].prot  && filter_static[i].ptype == PARAM_PTR
         && !strncmp(param, (char*)(filter_static[i].param), MAX_PARAM_LEN)) {
       return (char*)(filter_static[i].param);
+    }
+  }
+
+  for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
+    if (elem->prot  && elem->ptype == PARAM_PTR
+        && !strncmp(param, (char*)(elem->param), MAX_PARAM_LEN)) {
+      return (char*)(elem->param);
     }
   }
 
@@ -270,6 +278,13 @@ add_dynamic_param_filter(char *syscall, char ptype, char pindex, intptr_t val)
     (*elem)->param = val;
     (*elem)->prot = 0;
     break;
+  }
+
+  // TODO: and so on ..?
+  if (!strcmp(syscall, "open")) {
+    (*elem)->syscall = SCMP_SYS(open);
+  } else if (!strcmp(syscall, "rt_sigaction")) {
+    (*elem)->syscall = SCMP_SYS(rt_sigaction);
   }
 
   return 0;

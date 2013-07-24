@@ -81,6 +81,8 @@ typedef struct pfd_elem ParFilterDynamic;
 void sandbox_set_debugging_fd(int fd);
 int tor_global_sandbox(void);
 char* get_prot_param(char *param);
+int add_dynamic_param_filter(char *syscall, char ptype, char pindex,
+    intptr_t val);
 
 #endif /* SANDBOX_H_ */
 
