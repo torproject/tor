@@ -2639,41 +2639,43 @@ find_flashcard_path(PWCHAR path, size_t size)
 }
 #endif
 
-static int
-sandbox_cfg_init_open()
+static sandbox_cfg_t*
+sandbox_init_filter()
 {
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_t *cfg = sandbox_cfg_new();
+
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-certs"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-consensus"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-consensus"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdesc-consensus"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdesc-consensus.tmp"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdescs"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdescs.tmp"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdescs.new"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-microdesc-consensus"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-descriptors"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-descriptors.new"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-extrainfo"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("state.tmp"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unparseable-desc.tmp"));
-  sandbox_cfg_allow_open_filename(NULL,
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unparseable-desc"));
 
-  return 0;
+  return cfg;
 }
 
 /** Main entry point for the Tor process.  Called from main(). */
@@ -2744,10 +2746,9 @@ tor_main(int argc, char *argv[])
     return -1;
 
   if (get_options()->Sandbox) {
-    if (sandbox_cfg_init_open() < 0)
-      return -1;
+    sandbox_cfg_t* cfg = sandbox_init_filter();
 
-    if (tor_global_sandbox()) {
+    if (sandbox_init(cfg)) {
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
       return -1;
     }

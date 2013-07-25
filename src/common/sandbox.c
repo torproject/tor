@@ -228,12 +228,6 @@ prot_strdup(char* str)
    return res;
 }
 
-sandbox_cfg_t*
-sandbox_cfg_new()
-{
-  return NULL;
-}
-
 int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
@@ -253,7 +247,7 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 }
 
 static int
-add_param_filter(scmp_filter_ctx ctx)
+add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
   int i, filter_size, rc = 0;
   sandbox_cfg_t *elem;
@@ -265,7 +259,8 @@ add_param_filter(scmp_filter_ctx ctx)
   }
 
   // for each dynamic parameter filters
-  for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
+  elem = (cfg == NULL) ? filter_dynamic : cfg;
+  for (; elem != NULL; elem = elem->next) {
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, elem->syscall, 1,
            SCMP_CMP(elem->pindex, SCMP_CMP_EQ, elem->param));
      if (rc != 0) {
@@ -327,7 +322,7 @@ add_noparam_filter(scmp_filter_ctx ctx)
  * Returns 0 on success.
  */
 static int
-install_glob_syscall_filter(void)
+install_syscall_filter(sandbox_cfg_t* cfg)
 {
   int rc = 0;
   scmp_filter_ctx ctx;
@@ -340,7 +335,7 @@ install_glob_syscall_filter(void)
   }
 
   // add parameter filters
-  if ((rc = add_param_filter(ctx))) {
+  if ((rc = add_param_filter(ctx, cfg))) {
     log_err(LD_BUG, "(Sandbox) failed to add param filters!");
     goto end;
   }
@@ -450,18 +445,45 @@ install_sigsys_debugging(void)
  * into account various available features for different linux flavours.
  */
 static int
-initialise_libseccomp_sandbox(void)
+initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 {
   if (install_sigsys_debugging())
     return -1;
 
-  if (install_glob_syscall_filter())
+  if (install_syscall_filter(cfg))
     return -2;
 
   return 0;
 }
 
 #endif // USE_LIBSECCOMP
+
+sandbox_cfg_t*
+sandbox_cfg_new() {
+  return NULL;
+}
+
+int
+sandbox_init(sandbox_cfg_t* cfg)
+{
+#if defined(USE_LIBSECCOMP)
+  return initialise_libseccomp_sandbox(cfg);
+
+#elif defined(_WIN32)
+  log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
+      "currently disabled.");
+  return 0;
+
+#elif defined(TARGET_OS_MAC)
+  log_warn(LD_BUG,"Mac OSX sandboxing is not implemented. The feature is "
+      "currently disabled");
+  return 0;
+#else
+  log_warn(LD_BUG,"Sandboxing is not implemented for your platform. The "
+      "feature is currently disabled");
+  return 0;
+#endif
+}
 
 /**
  * Enables the stage 1 general sandbox. It applies a syscall filter which does
@@ -473,7 +495,7 @@ tor_global_sandbox(void)
 {
 
 #if defined(USE_LIBSECCOMP)
-  return initialise_libseccomp_sandbox();
+  return initialise_libseccomp_sandbox(NULL);
 
 #elif defined(_WIN32)
   log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
