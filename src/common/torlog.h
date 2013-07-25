@@ -102,6 +102,9 @@
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */
 #define LD_NOCB (1u<<31)
+/** This log message should not include a function name, even if it otherwise
+ * would. Used as a flag, not a log domain. */
+#define LD_NOFUNCNAME (1u<<30)
 
 /** Mask of zero or more log domains, OR'd together. */
 typedef uint32_t log_domain_mask_t;

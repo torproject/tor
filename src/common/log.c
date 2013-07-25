@@ -87,12 +87,12 @@ should_log_function_name(log_domain_mask_t domain, int severity)
     case LOG_DEBUG:
     case LOG_INFO:
       /* All debugging messages occur in interesting places. */
-      return 1;
+      return (domain & LD_NOFUNCNAME) == 0;
     case LOG_NOTICE:
     case LOG_WARN:
     case LOG_ERR:
       /* We care about places where bugs occur. */
-      return (domain == LD_BUG);
+      return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
     default:
       /* Call assert, not tor_assert, since tor_assert calls log on failure. */
       assert(0); return 0;
@@ -525,10 +525,11 @@ void
 tor_log_update_sigsafe_err_fds(void)
 {
   const logfile_t *lf;
+  int found_real_stderr = 0;
 
   LOCK_LOGS();
-  /* Always try for stderr. This is safe because when we daemonize, we dup2
-   * /dev/null to stderr, */
+  /* Reserve the first one for stderr. This is safe because when we daemonize,
+   * we dup2 /dev/null to stderr, */
   sigsafe_log_fds[0] = STDERR_FILENO;
   n_sigsafe_log_fds = 1;
 
@@ -541,6 +542,8 @@ tor_log_update_sigsafe_err_fds(void)
       continue;
     if (lf->severities->masks[SEVERITY_MASK_IDX(LOG_ERR)] &
         (LD_BUG|LD_GENERAL)) {
+      if (lf->fd == STDERR_FILENO)
+        found_real_stderr = 1;
       /* Avoid duplicates */
       if (int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, lf->fd))
         continue;
@@ -549,6 +552,14 @@ tor_log_update_sigsafe_err_fds(void)
         break;
     }
   }
+
+  if (!found_real_stderr &&
+      int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, STDOUT_FILENO)) {
+    /* Don't use a virtual stderr when we're also logging to stdout. */
+    assert(n_sigsafe_log_fds >= 2); /* Don't use assert inside log functions*/
+    sigsafe_log_fds[0] = sigsafe_log_fds[--n_sigsafe_log_fds];
+  }
+
   UNLOCK_LOGS();
 }
 
