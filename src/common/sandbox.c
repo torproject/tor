@@ -33,9 +33,9 @@
 #include <signal.h>
 #include <unistd.h>
 
-ParFilterDynamic *filter_dynamic = NULL;
+sandbox_cfg_t *filter_dynamic = NULL;
 
-static ParFilterStatic filter_static[] = {
+static sandbox_static_cfg_t filter_static[] = {
     // Example entries
     {SCMP_SYS(execve), PARAM_PTR, 0, (intptr_t)("/usr/local/bin/tor"), 0},
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGINT), 0},
@@ -48,34 +48,6 @@ static ParFilterStatic filter_static[] = {
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGXFSZ), 0},
 #endif
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-certs"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/unverified-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-microdesc-consensus.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-microdescs"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-microdescs.new"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/unverified-microdesc-consensus"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-descriptors"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-descriptors.new"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/cached-extrainfo"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/state.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/unparseable-desc.tmp"), 0},
-    {SCMP_SYS(open), PARAM_PTR, 0,
-        (intptr_t)("/home/cristi/.tor/unparseable-desc"), 0},
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -192,7 +164,7 @@ char*
 get_prot_param(char *param)
 {
   int i, filter_size;
-  ParFilterDynamic *elem;
+  sandbox_cfg_t *elem;
 
   if (param == NULL)
     return NULL;
@@ -256,36 +228,26 @@ prot_strdup(char* str)
    return res;
 }
 
-int
-add_dynamic_param_filter(char *syscall, char ptype, char pindex, intptr_t val)
+sandbox_cfg_t*
+sandbox_cfg_new()
 {
-  ParFilterDynamic **elem;
+  return NULL;
+}
 
-  for (elem = &filter_dynamic; *elem != NULL; elem = &(*elem)->next);
+int
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
+{
+  sandbox_cfg_t *elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
 
-  *elem = (ParFilterDynamic*) malloc(sizeof(ParFilterDynamic));
-  (*elem)->next = NULL;
-  (*elem)->pindex = pindex;
-  (*elem)->ptype = ptype;
+  elem->syscall = SCMP_SYS(open);
+  elem->pindex = 0;
+  elem->ptype = PARAM_PTR;
+  elem->param = (intptr_t) prot_strdup((char*) file);
+  elem->prot = 1;
 
-  switch (ptype) {
-  case PARAM_PTR:
-    (*elem)->param = (intptr_t) prot_strdup((char*) val);
-    (*elem)->prot = 1;
-    break;
-
-  case PARAM_NUM:
-    (*elem)->param = val;
-    (*elem)->prot = 0;
-    break;
-  }
-
-  // TODO: and so on ..?
-  if (!strcmp(syscall, "open")) {
-    (*elem)->syscall = SCMP_SYS(open);
-  } else if (!strcmp(syscall, "rt_sigaction")) {
-    (*elem)->syscall = SCMP_SYS(rt_sigaction);
-  }
+  // fifo
+  elem->next = filter_dynamic;
+  filter_dynamic = elem;
 
   return 0;
 }
@@ -294,7 +256,7 @@ static int
 add_param_filter(scmp_filter_ctx ctx)
 {
   int i, filter_size, rc = 0;
-  ParFilterDynamic *elem;
+  sandbox_cfg_t *elem;
 
   if (filter_static != NULL) {
     filter_size = sizeof(filter_static) / sizeof(filter_static[0]);

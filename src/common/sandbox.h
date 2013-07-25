@@ -45,7 +45,7 @@ typedef struct {
   intptr_t param;
 
   char prot;
-} ParFilterStatic;
+} sandbox_static_cfg_t;
 
 struct pfd_elem {
   int syscall;
@@ -58,7 +58,7 @@ struct pfd_elem {
 
   struct pfd_elem *next;
 };
-typedef struct pfd_elem ParFilterDynamic;
+typedef struct pfd_elem sandbox_cfg_t;
 
 /**
  * Linux 32 bit definitions
@@ -81,8 +81,7 @@ typedef struct pfd_elem ParFilterDynamic;
 void sandbox_set_debugging_fd(int fd);
 int tor_global_sandbox(void);
 char* get_prot_param(char *param);
-int add_dynamic_param_filter(char *syscall, char ptype, char pindex,
-    intptr_t val);
+int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
 
 #endif /* SANDBOX_H_ */
 

@@ -2639,6 +2639,43 @@ find_flashcard_path(PWCHAR path, size_t size)
 }
 #endif
 
+static int
+sandbox_cfg_init_open()
+{
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-certs"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-consensus"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("unverified-consensus"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-microdesc-consensus"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-microdesc-consensus.tmp"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-microdescs"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-microdescs.tmp"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-microdescs.new"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("unverified-microdesc-consensus"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-descriptors"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-descriptors.new"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("cached-extrainfo"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("state.tmp"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("unparseable-desc.tmp"));
+  sandbox_cfg_allow_open_filename(NULL,
+      get_datadir_fname("unparseable-desc"));
+
+  return 0;
+}
+
 /** Main entry point for the Tor process.  Called from main(). */
 /* This function is distinct from main() only so we can link main.c into
  * the unittest binary without conflicting with the unittests' main. */
@@ -2707,6 +2744,9 @@ tor_main(int argc, char *argv[])
     return -1;
 
   if (get_options()->Sandbox) {
+    if (sandbox_cfg_init_open() < 0)
+      return -1;
+
     if (tor_global_sandbox()) {
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
       return -1;
