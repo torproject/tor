@@ -2661,6 +2661,8 @@ sandbox_init_filter()
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdescs.new"));
   sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-microdescs.new.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-microdesc-consensus"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-descriptors"));

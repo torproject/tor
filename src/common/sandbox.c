@@ -48,10 +48,16 @@ static sandbox_static_cfg_t filter_static[] = {
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGXFSZ), 0},
 #endif
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
+    {SCMP_SYS(time), PARAM_NUM, 0, 0, 0},
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
+ *
+ * todo:
+ *  read, write, close - rely on fd
+ *
+ *
  */
 static int filter_nopar_gen[] = {
     SCMP_SYS(access),
@@ -124,7 +130,6 @@ static int filter_nopar_gen[] = {
 #ifdef __NR_stat64
     SCMP_SYS(stat64),
 #endif
-    SCMP_SYS(time),
     SCMP_SYS(uname),
     SCMP_SYS(write),
     SCMP_SYS(exit_group),
@@ -137,27 +142,20 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(getsockname),
     SCMP_SYS(getsockopt),
     SCMP_SYS(listen),
-#if __NR_recv >= 0
-    /* This is a kludge; It's necessary on 64-bit with libseccomp 1.0.0; I
-     * don't know if other 64-bit or other versions require it. */
     SCMP_SYS(recv),
-#endif
     SCMP_SYS(recvmsg),
-#if __NR_send >= 0
-    SCMP_SYS(send),
-#endif
     SCMP_SYS(sendto),
+    SCMP_SYS(send),
     SCMP_SYS(setsockopt),
     SCMP_SYS(socket),
     SCMP_SYS(socketpair),
 
-    // TODO: remove when accept4 is fixed
 #ifdef __NR_socketcall
-    SCMP_SYS(socketcall),
+//    SCMP_SYS(socketcall),
 #endif
 
     SCMP_SYS(recvfrom),
-    SCMP_SYS(unlink)
+    SCMP_SYS(unlink),
 };
 
 char*
