@@ -108,9 +108,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
   tor_snprintf(buf, sizeof(buf),
                "Assertion %s failed in %s at %s:%u",
                expr, func, fname, line);
-  dump_backtrace(buf);
-  fprintf(stderr,"%s:%u: %s: Assertion %s failed; aborting.\n",
-          fname, line, func, expr);
+  log_backtrace(LOG_ERR, LD_BUG, buf);
 }
 
 /* =====
