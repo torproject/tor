@@ -124,42 +124,42 @@ option name with a forward slash.
 GENERAL OPTIONS
 ---------------
 
-**BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**BandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     A token bucket limits the average incoming bandwidth usage on this node to
     the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value.  If you want to run a relay in the
     public network, this needs to be _at the very least_ 30 KBytes (that is,
     30720 bytes). (Default: 1 GByte)
 
-**BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Limit the maximum token bucket size (also known as the burst) to the given
     number of bytes in each direction. (Default: 1 GByte)
 
-**MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**MaxAdvertisedBandwidth** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     If set, we will not advertise more than this amount of bandwidth for our
     BandwidthRate. Server operators who want to reduce the number of clients
     who ask to build circuits through them (since this is proportional to
     advertised bandwidth rate) can thus reduce the CPU demands on their server
     without impacting network performance.
 
-**RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     If not 0, a separate token bucket limits the average incoming bandwidth
     usage for \_relayed traffic_ on this node to the specified number of bytes
     per second, and the average outgoing bandwidth usage to that same value.
     Relayed traffic currently is calculated to include answers to directory
     requests, but that may change in future versions. (Default: 0)
 
-**RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**RelayBandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     If not 0, limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
     (Default: 0)
 
-**PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**PerConnBWRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
-**PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
@@ -1542,7 +1542,7 @@ is non-zero):
     server is still alive and doing useful things. Settings this
     to 0 will disable the heartbeat. (Default: 6 hours)
 
-**AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**::
+**AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**|**TBytes**::
     Never send more than the specified number of bytes in a given accounting
     period, or receive more than that number in the period. For example, with
     AccountingMax set to 1 GByte, a server could send 900 MBytes and
@@ -1874,12 +1874,12 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     Authoritative directories only. Like AuthDirMaxServersPerAddr, but applies
     to addresses shared with directory authorities. (Default: 5)
 
-**AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
     more. (Default: 100 KBytes)
 
-**AuthDirGuardBWGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**AuthDirGuardBWGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Authoritative directories only. If non-zero, this advertised capacity
     or more is always sufficient to satisfy the bandwidth requirement
     for the Guard flag. (Default: 250 KBytes)
@@ -2065,7 +2065,7 @@ The following options are used for running a testing Tor network.
     time. Changing this requires that **TestingTorNetwork** is set. (Default:
     10 minutes)
 
-**TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+**TestingMinFastFlagThreshold** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Minimum value for the Fast flag.  Overrides the ordinary minimum taken
     from the consensus when TestingTorNetwork is set. (Default: 0.)
 
