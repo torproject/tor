@@ -437,8 +437,8 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
     if (resolve->res_status_ipv4 != RES_STATUS_INFLIGHT)
       return;
 
-    if (dns_result == DNS_ERR_NONE && answer_addr) {
-      tor_assert(tor_addr_family(answer_addr) == AF_INET);
+    if (dns_result == DNS_ERR_NONE && answer_addr &&
+        tor_addr_family(answer_addr) == AF_INET) {
       resolve->result_ipv4.addr_ipv4 = tor_addr_to_ipv4h(answer_addr);
       resolve->res_status_ipv4 = RES_STATUS_DONE_OK;
     } else {
@@ -450,8 +450,8 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
     if (resolve->res_status_ipv6 != RES_STATUS_INFLIGHT)
       return;
 
-    if (dns_result == DNS_ERR_NONE && answer_addr) {
-      tor_assert(tor_addr_family(answer_addr) == AF_INET6);
+    if (dns_result == DNS_ERR_NONE && answer_addr &&
+        tor_addr_family(answer_addr) == AF_INET6) {
       memcpy(&resolve->result_ipv6.addr_ipv6,
              tor_addr_to_in6(answer_addr),
              sizeof(struct in6_addr));
