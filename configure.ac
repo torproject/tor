@@ -937,6 +937,8 @@ AC_CHECK_SIZEOF(pid_t)
 
 AC_CHECK_TYPES([uint, u_char, ssize_t])
 
+AC_PC_FROM_UCONTEXT([/bin/true])
+
 dnl used to include sockaddr_storage, but everybody has that.
 AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
 [#ifdef HAVE_SYS_TYPES_H
