@@ -1,0 +1,4 @@
+  o Major bugfixes (DNS):
+    - Avoid an assertion failure when processing DNS replies without the
+      answer types we expected. Fixes bug 9337; bugfix on 0.2.4.7-alpha.
+
