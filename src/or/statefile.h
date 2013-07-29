@@ -7,7 +7,7 @@
 #ifndef TOR_STATEFILE_H
 #define TOR_STATEFILE_H
 
-or_state_t *get_or_state(void);
+MOCK_DECL(or_state_t *,get_or_state,(void));
 int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 

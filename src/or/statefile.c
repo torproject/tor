@@ -117,8 +117,8 @@ static const config_format_t state_format = {
 static or_state_t *global_state = NULL;
 
 /** Return the persistent state struct for this Tor. */
-or_state_t *
-get_or_state(void)
+MOCK_IMPL(or_state_t *,
+get_or_state, (void))
 {
   tor_assert(global_state);
   return global_state;

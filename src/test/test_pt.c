@@ -10,6 +10,7 @@
 #include "transports.h"
 #include "circuitbuild.h"
 #include "util.h"
+#include "statefile.h"
 #include "test.h"
 
 static void
@@ -156,14 +157,14 @@ test_pt_protocol(void)
 }
 
 #ifdef _WIN32
-static smartlist_t *
-tor_get_lines_from_handle_replacement(HANDLE *handle,
-                                      enum stream_status *stream_status_out)
+#define STDIN_HANDLE HANDLE
 #else
-static smartlist_t *
-tor_get_lines_from_handle_replacement(FILE *handle,
-                                      enum stream_status *stream_status_out)
+#define STDIN_HANDLE FILE
 #endif
+
+static smartlist_t *
+tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
+                                      enum stream_status *stream_status_out)
 {
   (void) handle;
   (void) stream_status_out;
@@ -188,7 +189,16 @@ static void
 tor_process_handle_destroy_replacement(process_handle_t *process_handle,
                                        int also_terminate_process)
 {
-  return;
+  (void) process_handle;
+  (void) also_terminate_process;
+}
+
+static or_state_t *dummy_state = NULL;
+
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return dummy_state;
 }
 
 /* Test the configure_proxy() function. */
@@ -199,16 +209,22 @@ test_pt_configure_proxy(void *arg)
   int i;
   managed_proxy_t *mp = NULL;
 
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
   MOCK(tor_get_lines_from_handle,
        tor_get_lines_from_handle_replacement);
   MOCK(tor_process_handle_destroy,
        tor_process_handle_destroy_replacement);
+  MOCK(get_or_state,
+       get_or_state_replacement);
 
   mp = tor_malloc(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
   mp->transports = smartlist_new();
   mp->transports_to_launch = smartlist_new();
   mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
+  mp->argv = tor_malloc_zero(sizeof(char*)*2);
+  mp->argv[0] = tor_strdup("<testcase>");
 
   /* Test the return value of configure_proxy() by calling it some
      times while it is uninitialized and then finally finalizing its
@@ -219,9 +235,11 @@ test_pt_configure_proxy(void *arg)
   test_assert(configure_proxy(mp) == 1);
 
  done:
+  tor_free(dummy_state);
   UNMOCK(tor_get_lines_from_handle);
   UNMOCK(tor_process_handle_destroy);
 }
+
 #define PT_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
 
