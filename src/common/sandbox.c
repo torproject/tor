@@ -117,7 +117,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mprotect),
     SCMP_SYS(mremap),
     SCMP_SYS(munmap),
-    SCMP_SYS(openat),
     SCMP_SYS(poll),
     SCMP_SYS(prctl),
     SCMP_SYS(read),
@@ -158,7 +157,7 @@ static int filter_nopar_gen[] = {
 };
 
 const char*
-sandbox_intern_string(char *param)
+sandbox_intern_string(const char *param)
 {
   int i, filter_size;
   sandbox_cfg_t *elem;
@@ -228,15 +227,25 @@ prot_strdup(char* str)
 int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
-  sandbox_cfg_t *elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  sandbox_cfg_t *elem = NULL;
+  intptr_t prot_str = (intptr_t) prot_strdup((char*) file);
 
+  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(open);
   elem->pindex = 0;
   elem->ptype = PARAM_PTR;
-  elem->param = (intptr_t) prot_strdup((char*) file);
+  elem->param = prot_str;
   elem->prot = 1;
+  elem->next = filter_dynamic;
+  filter_dynamic = elem;
 
-  // fifo
+  // also allow openat
+  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  elem->syscall = SCMP_SYS(openat);
+  elem->pindex = 1;
+  elem->ptype = PARAM_PTR;
+  elem->param = prot_str;
+  elem->prot = 1;
   elem->next = filter_dynamic;
   filter_dynamic = elem;
 

@@ -29,7 +29,9 @@
  */
 #ifdef __linux__
 
+#ifndef __USE_GNU
 #define __USE_GNU
+#endif
 #include <sys/ucontext.h>
 
 #define MAX_PARAM_LEN 64
@@ -80,7 +82,7 @@ typedef struct pfd_elem sandbox_cfg_t;
 
 void sandbox_set_debugging_fd(int fd);
 int tor_global_sandbox(void);
-const char* sandbox_intern_string(char *param);
+const char* sandbox_intern_string(const char *param);
 
 sandbox_cfg_t * sandbox_cfg_new();
 int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
