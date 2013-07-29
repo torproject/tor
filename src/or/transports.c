@@ -712,7 +712,8 @@ managed_proxy_destroy(managed_proxy_t *mp,
   smartlist_free(mp->transports_to_launch);
 
   /* remove it from the list of managed proxies */
-  smartlist_remove(managed_proxy_list, mp);
+  if (managed_proxy_list)
+    smartlist_remove(managed_proxy_list, mp);
 
   /* free the argv */
   free_execve_args(mp->argv);
@@ -749,7 +750,6 @@ handle_finished_proxy(managed_proxy_t *mp)
   }
 
   unconfigured_proxies_n--;
-  tor_assert(unconfigured_proxies_n >= 0);
 }
 
 /** Return true if the configuration of the managed proxy <b>mp</b> is
