@@ -49,6 +49,10 @@ static sandbox_static_cfg_t filter_static[] = {
 #endif
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
     {SCMP_SYS(time), PARAM_NUM, 0, 0, 0},
+
+#ifdef __NR_socketcall
+    {SCMP_SYS(socketcall), PARAM_NUM, 0, 18, 0}, // accept4 workaround
+#endif
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -136,7 +140,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(exit),
 
     // socket syscalls
-    SCMP_SYS(accept4),
+//    SCMP_SYS(accept4),
     SCMP_SYS(bind),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
@@ -149,17 +153,12 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(setsockopt),
     SCMP_SYS(socket),
     SCMP_SYS(socketpair),
-
-#ifdef __NR_socketcall
-//    SCMP_SYS(socketcall),
-#endif
-
     SCMP_SYS(recvfrom),
     SCMP_SYS(unlink),
 };
 
-char*
-get_prot_param(char *param)
+const char*
+sandbox_intern_string(char *param)
 {
   int i, filter_size;
   sandbox_cfg_t *elem;

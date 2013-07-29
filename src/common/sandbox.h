@@ -80,7 +80,7 @@ typedef struct pfd_elem sandbox_cfg_t;
 
 void sandbox_set_debugging_fd(int fd);
 int tor_global_sandbox(void);
-char* get_prot_param(char *param);
+const char* sandbox_intern_string(char *param);
 
 sandbox_cfg_t * sandbox_cfg_new();
 int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
