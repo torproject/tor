@@ -106,8 +106,6 @@ static void managed_proxy_destroy(managed_proxy_t *mp,
                                   int also_terminate_process);
 
 static void handle_finished_proxy(managed_proxy_t *mp);
-static int configure_proxy(managed_proxy_t *mp);
-
 static void parse_method_error(const char *line, int is_server_method);
 #define parse_server_method_error(l) parse_method_error(l, 1)
 #define parse_client_method_error(l) parse_method_error(l, 0)
@@ -590,7 +588,7 @@ pt_configure_remaining_proxies(void)
  *  Return 1 if the transport configuration finished, and return 0
  *  otherwise (if we still have more configuring to do for this
  *  proxy). */
-static int
+STATIC int
 configure_proxy(managed_proxy_t *mp)
 {
   int configuration_finished = 0;
