@@ -3969,9 +3969,9 @@ tor_spawn_background(const char *const filename, const char **argv,
  *  <b>process_handle</b>.
  *  If <b>also_terminate_process</b> is true, also terminate the
  *  process of the process handle. */
-void
-tor_process_handle_destroy(process_handle_t *process_handle,
-                           int also_terminate_process)
+MOCK_IMPL(void,
+tor_process_handle_destroy,(process_handle_t *process_handle,
+                            int also_terminate_process))
 {
   if (!process_handle)
     return;
@@ -4570,8 +4570,8 @@ log_from_handle(HANDLE *pipe, int severity)
 /** Return a smartlist containing lines outputted from
  *  <b>handle</b>. Return NULL on error, and set
  *  <b>stream_status_out</b> appropriately. */
-smartlist_t *
-tor_get_lines_from_handle(FILE *handle, enum stream_status *stream_status_out)
+MOCK_IMPL(smartlist_t *,
+tor_get_lines_from_handle,(FILE *handle, enum stream_status *stream_status_out))
 {
   enum stream_status stream_status;
   char stdout_buf[400];
