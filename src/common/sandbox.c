@@ -33,6 +33,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/epoll.h>
 #include <bits/signum.h>
 
 #include <seccomp.h>
@@ -52,7 +53,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(close),
     SCMP_SYS(clone),
     SCMP_SYS(epoll_create),
-    SCMP_SYS(epoll_ctl),
     SCMP_SYS(epoll_wait),
     SCMP_SYS(fcntl),
 
@@ -326,6 +326,24 @@ sb_fcntl64(scmp_filter_ctx ctx)
 }
 #endif
 
+static int
+sb_epoll_ctl(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(epoll_ctl), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, EPOLL_CTL_ADD));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(epoll_ctl), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, EPOLL_CTL_MOD));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_execve,
@@ -335,7 +353,8 @@ static sandbox_filter_func_t filter_func[] = {
     sb_open,
     sb_openat,
     sb_clock_gettime,
-    sb_fcntl64
+    sb_fcntl64,
+    sb_epoll_ctl
 };
 
 const char*
