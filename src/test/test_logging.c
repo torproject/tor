@@ -96,6 +96,8 @@ test_sigsafe_err(void *arg)
   close(STDERR_FILENO);
   log_err(LD_BUG, "Say, this isn't too cool.");
   tor_log_err_sigsafe("Minimal.\n", NULL);
+
+  set_log_time_granularity(100*1000);
   tor_log_err_sigsafe("Testing any ",
                       "attempt to manually log ",
                       "from a signal.\n",
