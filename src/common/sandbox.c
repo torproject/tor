@@ -58,7 +58,13 @@ static sandbox_static_cfg_t filter_static[] = {
     {SCMP_SYS(socketcall), PARAM_NUM, 0, 18, 0},
 #endif
 
-    {SCMP_SYS(open), PARAM_NUM, 1, O_RDONLY | O_CLOEXEC, 0}
+#ifdef __NR_mmap2
+    {SCMP_SYS(mmap2), PARAM_NUM, 2, PROT_READ, 0},
+    {SCMP_SYS(mmap2), PARAM_NUM, 2, PROT_READ|PROT_WRITE, 0},
+    {SCMP_SYS(mmap2), PARAM_NUM, 3, MAP_PRIVATE|MAP_ANONYMOUS, 0},
+    {SCMP_SYS(mmap2), PARAM_NUM, 3, MAP_PRIVATE, 0},
+#endif
+
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -111,9 +117,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mkdir),
     SCMP_SYS(mlockall),
     SCMP_SYS(mmap),
-#ifdef __NR_mmap2
-    SCMP_SYS(mmap2),
-#endif
     SCMP_SYS(mprotect),
     SCMP_SYS(mremap),
     SCMP_SYS(munmap),
