@@ -86,6 +86,7 @@ const char* sandbox_intern_string(const char *param);
 
 sandbox_cfg_t * sandbox_cfg_new();
 int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
+int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file);
 int sandbox_init(sandbox_cfg_t* cfg);
 
 #endif /* SANDBOX_H_ */

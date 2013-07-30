@@ -2644,8 +2644,9 @@ sandbox_init_filter()
 {
   sandbox_cfg_t *cfg = sandbox_cfg_new();
 
-  sandbox_cfg_allow_open_filename(&cfg,
+  sandbox_cfg_allow_openat_filename(&cfg,
       get_datadir_fname("cached-status"));
+
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-certs"));
   sandbox_cfg_allow_open_filename(&cfg,

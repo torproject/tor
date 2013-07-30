@@ -26,17 +26,21 @@
 
 #if defined(USE_LIBSECCOMP)
 
+#define _GNU_SOURCE
+
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 #include <bits/signum.h>
+
 #include <seccomp.h>
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 sandbox_cfg_t *filter_dynamic = NULL;
 
 static sandbox_static_cfg_t filter_static[] = {
-    // Example entries
     {SCMP_SYS(execve), PARAM_PTR, 0, (intptr_t)("/usr/local/bin/tor"), 0},
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGINT), 0},
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGTERM), 0},
@@ -49,19 +53,16 @@ static sandbox_static_cfg_t filter_static[] = {
 #endif
     {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
     {SCMP_SYS(time), PARAM_NUM, 0, 0, 0},
-
+    // accept4 workaround
 #ifdef __NR_socketcall
-    {SCMP_SYS(socketcall), PARAM_NUM, 0, 18, 0}, // accept4 workaround
+    {SCMP_SYS(socketcall), PARAM_NUM, 0, 18, 0},
 #endif
+
+    {SCMP_SYS(open), PARAM_NUM, 1, O_RDONLY | O_CLOEXEC, 0}
 };
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
- *
- * todo:
- *  read, write, close - rely on fd
- *
- *
  */
 static int filter_nopar_gen[] = {
     SCMP_SYS(access),
@@ -72,7 +73,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_ctl),
     SCMP_SYS(epoll_wait),
-    SCMP_SYS(execve),
     SCMP_SYS(fcntl),
 #ifdef __NR_fcntl64
     /* Older libseccomp versions don't define PNR entries for all of these,
@@ -228,23 +228,29 @@ int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
-  intptr_t prot_str = (intptr_t) prot_strdup((char*) file);
 
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(open);
   elem->pindex = 0;
   elem->ptype = PARAM_PTR;
-  elem->param = prot_str;
+  elem->param = (intptr_t) prot_strdup((char*) file);
   elem->prot = 1;
   elem->next = filter_dynamic;
   filter_dynamic = elem;
 
-  // also allow openat
+  return 0;
+}
+
+int
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
+{
+  sandbox_cfg_t *elem = NULL;
+
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(openat);
   elem->pindex = 1;
   elem->ptype = PARAM_PTR;
-  elem->param = prot_str;
+  elem->param = (intptr_t) prot_strdup((char*) file);;
   elem->prot = 1;
   elem->next = filter_dynamic;
   filter_dynamic = elem;
