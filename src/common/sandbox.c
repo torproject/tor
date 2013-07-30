@@ -39,6 +39,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <time.h>
 
 sandbox_cfg_t *filter_dynamic = NULL;
 
@@ -48,7 +49,6 @@ sandbox_cfg_t *filter_dynamic = NULL;
 static int filter_nopar_gen[] = {
     SCMP_SYS(access),
     SCMP_SYS(brk),
-    SCMP_SYS(clock_gettime),
     SCMP_SYS(close),
     SCMP_SYS(clone),
     SCMP_SYS(epoll_create),
@@ -117,7 +117,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(exit),
 
     // socket syscalls
-//    SCMP_SYS(accept4),
     SCMP_SYS(bind),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
@@ -128,13 +127,14 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(sendto),
     SCMP_SYS(send),
     SCMP_SYS(setsockopt),
-    SCMP_SYS(socket),
     SCMP_SYS(socketpair),
     SCMP_SYS(recvfrom),
     SCMP_SYS(unlink),
 };
 
-static int sb_rt_sigaction(scmp_filter_ctx ctx) {
+static int
+sb_rt_sigaction(scmp_filter_ctx ctx)
+{
   int i, rc;
   int param[] = { SIGINT, SIGTERM, SIGPIPE, SIGUSR1, SIGUSR2, SIGHUP, SIGCHLD,
 #ifdef SIGXFSZ
@@ -152,7 +152,9 @@ static int sb_rt_sigaction(scmp_filter_ctx ctx) {
   return rc;
 }
 
-static int sb_execve(scmp_filter_ctx ctx) {
+static int
+sb_execve(scmp_filter_ctx ctx)
+{
   int rc;
   sandbox_cfg_t *elem;
 
@@ -173,18 +175,24 @@ static int sb_execve(scmp_filter_ctx ctx) {
   return 0;
 }
 
-static int sb_time(scmp_filter_ctx ctx) {
+static int
+sb_time(scmp_filter_ctx ctx)
+{
   return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(time), 1,
        SCMP_CMP(0, SCMP_CMP_EQ, 0));
 }
 
-static int sb_accept4(scmp_filter_ctx ctx) {
+static int
+sb_accept4(scmp_filter_ctx ctx)
+{
   return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 1,
        SCMP_CMP(0, SCMP_CMP_EQ, 18));
 }
 
 #ifdef __NR_mmap2
-static int sb_mmap2(scmp_filter_ctx ctx) {
+static int
+sb_mmap2(scmp_filter_ctx ctx)
+{
   int rc = 0;
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
@@ -206,7 +214,9 @@ static int sb_mmap2(scmp_filter_ctx ctx) {
 #endif
 
 // TODO parameters
-static int sb_open(scmp_filter_ctx ctx) {
+static int
+sb_open(scmp_filter_ctx ctx)
+{
   int rc;
   sandbox_cfg_t *elem;
 
@@ -228,7 +238,9 @@ static int sb_open(scmp_filter_ctx ctx) {
 }
 
 // TODO parameters
-static int sb_openat(scmp_filter_ctx ctx) {
+static int
+sb_openat(scmp_filter_ctx ctx)
+{
   int rc;
   sandbox_cfg_t *elem;
 
@@ -249,6 +261,38 @@ static int sb_openat(scmp_filter_ctx ctx) {
   return 0;
 }
 
+static int
+sb_clock_gettime(scmp_filter_ctx ctx)
+{
+  return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(clock_gettime), 1,
+     SCMP_CMP(0, SCMP_CMP_EQ, CLOCK_MONOTONIC));
+}
+
+// TODO: param not working
+static int
+sb_socket(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 4,
+      SCMP_CMP(0, SCMP_CMP_EQ, 1),
+      SCMP_CMP(1, SCMP_CMP_EQ, PF_INET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC),
+      SCMP_CMP(3, SCMP_CMP_EQ, IPPROTO_TCP));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 4,
+      SCMP_CMP(0, SCMP_CMP_EQ, 1),
+      SCMP_CMP(1, SCMP_CMP_EQ, PF_NETLINK),
+      SCMP_CMP(2, SCMP_CMP_EQ, SOCK_RAW),
+      SCMP_CMP(3, SCMP_CMP_EQ, 0));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_execve,
@@ -256,7 +300,8 @@ static sandbox_filter_func_t filter_func[] = {
     sb_accept4,
     sb_mmap2,
     sb_open,
-    sb_openat
+    sb_openat,
+    sb_clock_gettime,
 };
 
 const char*
@@ -351,7 +396,6 @@ static int
 add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
   int i, rc = 0;
-  sandbox_cfg_t *elem;
 
   // function pointer
   for(i = 0; i < LENGHT(filter_func); i++) {
@@ -361,18 +405,6 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       return rc;
     }
   }
-
-//  // for each dynamic parameter filters
-//  elem = (cfg == NULL) ? filter_dynamic : cfg;
-//  for (; elem != NULL; elem = elem->next) {
-//    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, elem->syscall, 1,
-//           SCMP_CMP(elem->pindex, SCMP_CMP_EQ, elem->param));
-//     if (rc != 0) {
-//       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
-//           "error %d", rc);
-//       return rc;
-//     }
-//  }
 
   return 0;
 }
