@@ -127,6 +127,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(sendto),
     SCMP_SYS(send),
     SCMP_SYS(setsockopt),
+    SCMP_SYS(socket),
     SCMP_SYS(socketpair),
     SCMP_SYS(recvfrom),
     SCMP_SYS(unlink),
@@ -142,10 +143,10 @@ sb_rt_sigaction(scmp_filter_ctx ctx)
 #endif
       };
 
-  for(i = 0; i < LENGHT(param); i++) {
+  for (i = 0; i < LENGHT(param); i++) {
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigaction), 1,
         SCMP_CMP(0, SCMP_CMP_EQ, param[i]));
-    if(rc)
+    if (rc)
       break;
   }
 
@@ -198,14 +199,14 @@ sb_mmap2(scmp_filter_ctx ctx)
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ),
        SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE));
-  if(rc) {
+  if (rc) {
     return rc;
   }
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
        SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_ANONYMOUS));
-  if(rc) {
+  if (rc) {
     return rc;
   }
 
@@ -398,7 +399,7 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   int i, rc = 0;
 
   // function pointer
-  for(i = 0; i < LENGHT(filter_func); i++) {
+  for (i = 0; i < LENGHT(filter_func); i++) {
     if ((filter_func[i])(ctx)) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
           "error %d", rc);
@@ -576,7 +577,8 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 #endif // USE_LIBSECCOMP
 
 sandbox_cfg_t*
-sandbox_cfg_new() {
+sandbox_cfg_new()
+{
   return NULL;
 }
 
