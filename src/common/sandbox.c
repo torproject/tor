@@ -55,11 +55,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(epoll_ctl),
     SCMP_SYS(epoll_wait),
     SCMP_SYS(fcntl),
-#ifdef __NR_fcntl64
-    /* Older libseccomp versions don't define PNR entries for all of these,
-     * so we need to ifdef them here.*/
-    SCMP_SYS(fcntl64),
-#endif
+
     SCMP_SYS(flock),
     SCMP_SYS(fstat),
 #ifdef __NR_fstat64
@@ -294,6 +290,42 @@ sb_socket(scmp_filter_ctx ctx)
   return 0;
 }
 
+// TODO: param not working
+static int
+sb_setsockopt(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_REUSEADDR));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+#ifdef __NR_fcntl64
+static int
+sb_fcntl64(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fcntl64), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, F_GETFL));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fcntl64), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, F_SETFL),
+      SCMP_CMP(2, SCMP_CMP_EQ, O_RDWR|O_NONBLOCK));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+#endif
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_execve,
@@ -303,6 +335,7 @@ static sandbox_filter_func_t filter_func[] = {
     sb_open,
     sb_openat,
     sb_clock_gettime,
+    sb_fcntl64
 };
 
 const char*
