@@ -18,6 +18,8 @@
 #include "orconfig.h"
 #include "torint.h"
 
+#define LENGHT(x) (sizeof(x)) / sizeof(x[0])
+
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
 #endif
@@ -39,33 +41,6 @@
 #include <fcntl.h>
 
 sandbox_cfg_t *filter_dynamic = NULL;
-
-static sandbox_static_cfg_t filter_static[] = {
-    {SCMP_SYS(execve), PARAM_PTR, 0, (intptr_t)("/usr/local/bin/tor"), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGINT), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGTERM), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGPIPE), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGUSR1), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGUSR2), 0},
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGHUP), 0},
-#ifdef SIGXFSZ
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGXFSZ), 0},
-#endif
-    {SCMP_SYS(rt_sigaction), PARAM_NUM, 0, (intptr_t)(SIGCHLD), 0},
-    {SCMP_SYS(time), PARAM_NUM, 0, 0, 0},
-    // accept4 workaround
-#ifdef __NR_socketcall
-    {SCMP_SYS(socketcall), PARAM_NUM, 0, 18, 0},
-#endif
-
-#ifdef __NR_mmap2
-    {SCMP_SYS(mmap2), PARAM_NUM, 2, PROT_READ, 0},
-    {SCMP_SYS(mmap2), PARAM_NUM, 2, PROT_READ|PROT_WRITE, 0},
-    {SCMP_SYS(mmap2), PARAM_NUM, 3, MAP_PRIVATE|MAP_ANONYMOUS, 0},
-    {SCMP_SYS(mmap2), PARAM_NUM, 3, MAP_PRIVATE, 0},
-#endif
-
-};
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -159,27 +134,138 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(unlink),
 };
 
+static int sb_rt_sigaction(scmp_filter_ctx ctx) {
+  int i, rc;
+  int param[] = { SIGINT, SIGTERM, SIGPIPE, SIGUSR1, SIGUSR2, SIGHUP, SIGCHLD,
+#ifdef SIGXFSZ
+      SIGXFSZ
+#endif
+      };
+
+  for(i = 0; i < LENGHT(param); i++) {
+    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigaction), 1,
+        SCMP_CMP(0, SCMP_CMP_EQ, param[i]));
+    if(rc)
+      break;
+  }
+
+  return rc;
+}
+
+static int sb_execve(scmp_filter_ctx ctx) {
+  int rc;
+  sandbox_cfg_t *elem;
+
+  // for each dynamic parameter filters
+  elem = filter_dynamic;
+  for (; elem != NULL; elem = elem->next) {
+    if (elem->prot == 1 && elem->syscall == SCMP_SYS(execve)) {
+      rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
+            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+            "error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
+static int sb_time(scmp_filter_ctx ctx) {
+  return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(time), 1,
+       SCMP_CMP(0, SCMP_CMP_EQ, 0));
+}
+
+static int sb_accept4(scmp_filter_ctx ctx) {
+  return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 1,
+       SCMP_CMP(0, SCMP_CMP_EQ, 18));
+}
+
+#ifdef __NR_mmap2
+static int sb_mmap2(scmp_filter_ctx ctx) {
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ),
+       SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE));
+  if(rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
+       SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_ANONYMOUS));
+  if(rc) {
+    return rc;
+  }
+
+  return 0;
+}
+#endif
+
+// TODO parameters
+static int sb_open(scmp_filter_ctx ctx) {
+  int rc;
+  sandbox_cfg_t *elem;
+
+  // for each dynamic parameter filters
+  elem = filter_dynamic;
+  for (; elem != NULL; elem = elem->next) {
+    if (elem->prot == 1 && elem->syscall == SCMP_SYS(open)) {
+      rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+            "error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
+// TODO parameters
+static int sb_openat(scmp_filter_ctx ctx) {
+  int rc;
+  sandbox_cfg_t *elem;
+
+  // for each dynamic parameter filters
+  elem = filter_dynamic;
+  for (; elem != NULL; elem = elem->next) {
+    if (elem->prot == 1 && elem->syscall == SCMP_SYS(openat)) {
+      rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1,
+            SCMP_CMP(1, SCMP_CMP_EQ, elem->param));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+            "error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
+static sandbox_filter_func_t filter_func[] = {
+    sb_rt_sigaction,
+    sb_execve,
+    sb_time,
+    sb_accept4,
+    sb_mmap2,
+    sb_open,
+    sb_openat
+};
+
 const char*
 sandbox_intern_string(const char *param)
 {
-  int i, filter_size;
   sandbox_cfg_t *elem;
 
   if (param == NULL)
     return NULL;
-
-  if (filter_static == NULL) {
-    filter_size = 0;
-  } else {
-    filter_size = sizeof(filter_static) / sizeof(filter_static[0]);
-  }
-
-  for (i = 0; i < filter_size; i++) {
-    if (filter_static[i].prot  && filter_static[i].ptype == PARAM_PTR
-        && !strncmp(param, (char*)(filter_static[i].param), MAX_PARAM_LEN)) {
-      return (char*)(filter_static[i].param);
-    }
-  }
 
   for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
     if (elem->prot  && elem->ptype == PARAM_PTR
@@ -264,45 +350,29 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 static int
 add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
-  int i, filter_size, rc = 0;
+  int i, rc = 0;
   sandbox_cfg_t *elem;
 
-  if (filter_static != NULL) {
-    filter_size = sizeof(filter_static) / sizeof(filter_static[0]);
-  } else {
-    filter_size = 0;
-  }
-
-  // for each dynamic parameter filters
-  elem = (cfg == NULL) ? filter_dynamic : cfg;
-  for (; elem != NULL; elem = elem->next) {
-    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, elem->syscall, 1,
-           SCMP_CMP(elem->pindex, SCMP_CMP_EQ, elem->param));
-     if (rc != 0) {
-       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
-           "error %d", rc);
-       return rc;
-     }
-  }
-
-  // for each static parameter filter
-  for (i = 0; i < filter_size; i++) {
-    if (!filter_static[i].prot && filter_static[i].ptype == PARAM_PTR) {
-      filter_static[i].param = (intptr_t) prot_strdup(
-          (char*) (filter_static[i].param));
-    }
-
-    filter_static[i].prot = 1;
-
-    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, filter_static[i].syscall, 1,
-        SCMP_CMP(filter_static[i].pindex, SCMP_CMP_EQ,
-            filter_static[i].param));
-    if (rc != 0) {
-      log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "
-          "received libseccomp error %d", i, rc);
+  // function pointer
+  for(i = 0; i < LENGHT(filter_func); i++) {
+    if ((filter_func[i])(ctx)) {
+      log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+          "error %d", rc);
       return rc;
     }
   }
+
+//  // for each dynamic parameter filters
+//  elem = (cfg == NULL) ? filter_dynamic : cfg;
+//  for (; elem != NULL; elem = elem->next) {
+//    rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, elem->syscall, 1,
+//           SCMP_CMP(elem->pindex, SCMP_CMP_EQ, elem->param));
+//     if (rc != 0) {
+//       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+//           "error %d", rc);
+//       return rc;
+//     }
+//  }
 
   return 0;
 }

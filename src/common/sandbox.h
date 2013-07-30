@@ -33,6 +33,7 @@
 #define __USE_GNU
 #endif
 #include <sys/ucontext.h>
+#include <seccomp.h>
 
 #define MAX_PARAM_LEN 64
 
@@ -61,6 +62,8 @@ struct pfd_elem {
   struct pfd_elem *next;
 };
 typedef struct pfd_elem sandbox_cfg_t;
+
+typedef int (*sandbox_filter_func_t)(scmp_filter_ctx ctx);
 
 /**
  * Linux 32 bit definitions
