@@ -34,6 +34,8 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
+#include <sys/prctl.h>
+#include <linux/futex.h>
 #include <bits/signum.h>
 
 #include <seccomp.h>
@@ -55,13 +57,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
     SCMP_SYS(fcntl),
-
-    SCMP_SYS(flock),
     SCMP_SYS(fstat),
 #ifdef __NR_fstat64
     SCMP_SYS(fstat64),
 #endif
-    SCMP_SYS(futex),
     SCMP_SYS(getdents64),
     SCMP_SYS(getegid),
 #ifdef __NR_getegid32
@@ -88,14 +87,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mkdir),
     SCMP_SYS(mlockall),
     SCMP_SYS(mmap),
-    SCMP_SYS(mprotect),
-    SCMP_SYS(mremap),
     SCMP_SYS(munmap),
     SCMP_SYS(poll),
-    SCMP_SYS(prctl),
     SCMP_SYS(read),
     SCMP_SYS(rename),
-    SCMP_SYS(rt_sigprocmask),
     SCMP_SYS(rt_sigreturn),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
@@ -344,8 +339,107 @@ sb_epoll_ctl(scmp_filter_ctx ctx)
   return 0;
 }
 
+/**
+ * If multiple filters need to be added, seccomp needs to be whitelisted in
+ * this list.
+ */
+static int
+sb_prctl(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(prctl), 1,
+      SCMP_CMP(0, SCMP_CMP_EQ, PR_SET_DUMPABLE));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+/**
+ * does not NEED tobe here.. only occurs before filter
+ */
+static int
+sb_mprotect(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+/**
+ * does not NEED tobe here.. only occurs before filter
+ */
+static int
+sb_rt_sigprocmask(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask), 1,
+      SCMP_CMP(0, SCMP_CMP_EQ, SIG_UNBLOCK));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+/**
+ * does not NEED tobe here.. only occurs before filter
+ */
+static int
+sb_flock(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(flock), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, LOCK_EX|LOCK_NB));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+/**
+ * does not NEED tobe here.. only occurs before filter
+ */
+static int
+sb_futex(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(futex), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ,
+          FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+/**
+ * does not NEED tobe here.. only occurs before filter
+ */
+static int
+sb_mremap(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mremap), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, MREMAP_MAYMOVE));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
+    sb_rt_sigprocmask,
     sb_execve,
     sb_time,
     sb_accept4,
@@ -354,7 +448,12 @@ static sandbox_filter_func_t filter_func[] = {
     sb_openat,
     sb_clock_gettime,
     sb_fcntl64,
-    sb_epoll_ctl
+    sb_epoll_ctl,
+    sb_prctl,
+    sb_mprotect,
+    sb_flock,
+    sb_futex,
+    sb_mremap
 };
 
 const char*
