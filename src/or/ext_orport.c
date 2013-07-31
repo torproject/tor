@@ -197,40 +197,19 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
   return 1;
 }
 
-/** Read the client's nonce out of <b>conn</b>, setup the safe-cookie
- *  crypto, and then send our own hash and nonce to the client
- *
- *  Return -1 if there was an error; return 0 if we need more data in
- *  <b>conn</b>, and return 1 if we successfully retrieved the
- *  client's nonce and sent our own. */
+/** DOCDOC */
 static int
-connection_ext_or_auth_handle_client_nonce(connection_t *conn)
+handle_client_auth_nonce(const char *client_nonce, size_t client_nonce_len,
+                         char **client_hash_out,
+                         char**reply_out, size_t *reply_len_out)
 {
   char server_hash[EXT_OR_PORT_AUTH_HASH_LEN] = {0};
-  char client_nonce[EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
   char server_nonce[EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
-  char reply[EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_NONCE_LEN] = {0};
+  char *reply;
+  size_t reply_len;
 
-  if (!ext_or_auth_cookie_is_set) { /* this should not happen */
-    log_warn(LD_BUG, "Extended ORPort authentication cookie was not set. "
-             "That's weird since we should have done that on startup. "
-             "This might be a Tor bug, please file a bug report. ");
+  if (client_nonce_len != EXT_OR_PORT_AUTH_NONCE_LEN)
     return -1;
-  }
-
-  if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_NONCE_LEN)
-    return 0;
-
-  if (connection_fetch_from_buf(client_nonce,
-                                EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
-    return -1;
-
-  /* We extract the ClientNonce from the received data, and use it to
-     calculate ServerHash and ServerNonce according to proposal 217.
-
-     We also calculate our own ClientHash value and save it in the
-     connection state. We validate it later against the ClientHash
-     sent by the client.  */
 
   /* Get our nonce */
   if (crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN) < 0)
@@ -278,7 +257,7 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
 
     /* Store the client hash we generated. We will need to compare it
        with the hash sent by the client. */
-    TO_OR_CONN(conn)->ext_or_auth_correct_client_hash = correct_client_hash;
+    *client_hash_out = correct_client_hash;
 
     memwipe(hmac_s_msg, 0, hmac_s_msg_len);
     memwipe(hmac_c_msg, 0, hmac_c_msg_len);
@@ -309,12 +288,62 @@ connection_ext_or_auth_handle_client_nonce(connection_t *conn)
   }
 
   { /* write reply: (server_hash, server_nonce) */
+
+    reply_len = EXT_OR_PORT_AUTH_COOKIE_LEN+EXT_OR_PORT_AUTH_NONCE_LEN;
+    reply = tor_malloc_zero(reply_len);
     memcpy(reply, server_hash, EXT_OR_PORT_AUTH_HASH_LEN);
     memcpy(reply + EXT_OR_PORT_AUTH_HASH_LEN, server_nonce,
            EXT_OR_PORT_AUTH_NONCE_LEN);
-    connection_write_to_buf(reply, sizeof(reply), conn);
-    memwipe(reply, 0, sizeof(reply));
   }
+
+  *reply_out = reply;
+  *reply_len_out = reply_len;
+
+  return 0;
+}
+
+/** Read the client's nonce out of <b>conn</b>, setup the safe-cookie
+ *  crypto, and then send our own hash and nonce to the client
+ *
+ *  Return -1 if there was an error; return 0 if we need more data in
+ *  <b>conn</b>, and return 1 if we successfully retrieved the
+ *  client's nonce and sent our own. */
+static int
+connection_ext_or_auth_handle_client_nonce(connection_t *conn)
+{
+  char client_nonce[EXT_OR_PORT_AUTH_NONCE_LEN];
+  char *reply=NULL;
+  size_t reply_len=0;
+
+  if (!ext_or_auth_cookie_is_set) { /* this should not happen */
+    log_warn(LD_BUG, "Extended ORPort authentication cookie was not set. "
+             "That's weird since we should have done that on startup. "
+             "This might be a Tor bug, please file a bug report. ");
+    return -1;
+  }
+
+  if (connection_get_inbuf_len(conn) < EXT_OR_PORT_AUTH_NONCE_LEN)
+    return 0;
+
+  if (connection_fetch_from_buf(client_nonce,
+                                EXT_OR_PORT_AUTH_NONCE_LEN, conn) < 0)
+    return -1;
+
+  /* We extract the ClientNonce from the received data, and use it to
+     calculate ServerHash and ServerNonce according to proposal 217.
+
+     We also calculate our own ClientHash value and save it in the
+     connection state. We validate it later against the ClientHash
+     sent by the client.  */
+  if (handle_client_auth_nonce(client_nonce, sizeof(client_nonce),
+                            &TO_OR_CONN(conn)->ext_or_auth_correct_client_hash,
+                            &reply, &reply_len) < 0)
+    return -1;
+
+  connection_write_to_buf(reply, reply_len, conn);
+
+  memwipe(reply, 0, reply_len);
+  tor_free(reply);
 
   log_debug(LD_GENERAL, "Got client nonce, and sent our own nonce and hash.");
 
