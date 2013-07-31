@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <poll.h>
 
 sandbox_cfg_t *filter_dynamic = NULL;
 
@@ -50,7 +51,6 @@ sandbox_cfg_t *filter_dynamic = NULL;
  * stage 1 general Tor sandbox.
  */
 static int filter_nopar_gen[] = {
-    SCMP_SYS(access),
     SCMP_SYS(brk),
     SCMP_SYS(close),
     SCMP_SYS(clone),
@@ -88,24 +88,26 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mlockall),
     SCMP_SYS(mmap),
     SCMP_SYS(munmap),
-    SCMP_SYS(poll),
     SCMP_SYS(read),
     SCMP_SYS(rename),
     SCMP_SYS(rt_sigreturn),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
 #endif
-    SCMP_SYS(set_robust_list),
-    SCMP_SYS(set_thread_area),
-    SCMP_SYS(set_tid_address),
     SCMP_SYS(stat),
 #ifdef __NR_stat64
     SCMP_SYS(stat64),
 #endif
-    SCMP_SYS(uname),
     SCMP_SYS(write),
     SCMP_SYS(exit_group),
     SCMP_SYS(exit),
+
+    // Not needed..
+//    SCMP_SYS(access),
+//    SCMP_SYS(set_robust_list),
+//    SCMP_SYS(set_thread_area),
+//    SCMP_SYS(set_tid_address),
+//    SCMP_SYS(uname),
 
     // socket syscalls
     SCMP_SYS(bind),
@@ -437,6 +439,20 @@ sb_mremap(scmp_filter_ctx ctx)
   return 0;
 }
 
+static int
+sb_poll(scmp_filter_ctx ctx)
+{
+  int rc = 0;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(poll), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, 1),
+      SCMP_CMP(2, SCMP_CMP_EQ, 10));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
@@ -453,7 +469,8 @@ static sandbox_filter_func_t filter_func[] = {
     sb_mprotect,
     sb_flock,
     sb_futex,
-    sb_mremap
+    sb_mremap,
+    sb_poll
 };
 
 const char*
