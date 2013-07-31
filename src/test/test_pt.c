@@ -5,11 +5,14 @@
 
 #include "orconfig.h"
 #define PT_PRIVATE
+#define UTIL_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "confparse.h"
 #include "transports.h"
 #include "circuitbuild.h"
+#include "util.h"
+#include "statefile.h"
 #include "test.h"
 
 static void
@@ -269,6 +272,90 @@ test_pt_get_extrainfo_string(void *arg)
   tor_free(s);
 }
 
+#ifdef _WIN32
+#define STDIN_HANDLE HANDLE
+#else
+#define STDIN_HANDLE FILE
+#endif
+
+static smartlist_t *
+tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
+                                      enum stream_status *stream_status_out)
+{
+  static int times_called = 0;
+  smartlist_t *retval_sl = smartlist_new();
+
+  (void) handle;
+  (void) stream_status_out;
+
+  /* Generate some dummy CMETHOD lines the first 5 times. The 6th
+     time, send 'CMETHODS DONE' to finish configuring the proxy. */
+  if (times_called++ != 5) {
+    smartlist_add_asprintf(retval_sl, "CMETHOD mock%d socks5 127.0.0.1:555%d",
+                           times_called, times_called);
+  } else {
+    smartlist_add(retval_sl, tor_strdup("CMETHODS DONE"));
+  }
+
+  return retval_sl;
+}
+
+/* NOP mock */
+static void
+tor_process_handle_destroy_replacement(process_handle_t *process_handle,
+                                       int also_terminate_process)
+{
+  (void) process_handle;
+  (void) also_terminate_process;
+}
+
+static or_state_t *dummy_state = NULL;
+
+static or_state_t *
+get_or_state_replacement(void)
+{
+  return dummy_state;
+}
+
+/* Test the configure_proxy() function. */
+static void
+test_pt_configure_proxy(void *arg)
+{
+  int i;
+  managed_proxy_t *mp = NULL;
+  (void) arg;
+
+  dummy_state = tor_malloc_zero(sizeof(or_state_t));
+
+  MOCK(tor_get_lines_from_handle,
+       tor_get_lines_from_handle_replacement);
+  MOCK(tor_process_handle_destroy,
+       tor_process_handle_destroy_replacement);
+  MOCK(get_or_state,
+       get_or_state_replacement);
+
+  mp = tor_malloc(sizeof(managed_proxy_t));
+  mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
+  mp->transports = smartlist_new();
+  mp->transports_to_launch = smartlist_new();
+  mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
+  mp->argv = tor_malloc_zero(sizeof(char*)*2);
+  mp->argv[0] = tor_strdup("<testcase>");
+
+  /* Test the return value of configure_proxy() by calling it some
+     times while it is uninitialized and then finally finalizing its
+     configuration. */
+  for (i = 0 ; i < 5 ; i++) {
+    test_assert(configure_proxy(mp) == 0);
+  }
+  test_assert(configure_proxy(mp) == 1);
+
+ done:
+  tor_free(dummy_state);
+  UNMOCK(tor_get_lines_from_handle);
+  UNMOCK(tor_process_handle_destroy);
+}
+
 #define PT_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
 
@@ -278,6 +365,8 @@ struct testcase_t pt_tests[] = {
   { "get_transport_options", test_pt_get_transport_options, TT_FORK,
     NULL, NULL },
   { "get_extrainfo_string", test_pt_get_extrainfo_string, TT_FORK,
+    NULL, NULL },
+  { "configure_proxy",test_pt_configure_proxy, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };
