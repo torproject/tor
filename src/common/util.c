@@ -4477,9 +4477,9 @@ stream_status_to_string(enum stream_status stream_status)
 /** Return a smartlist containing lines outputted from
  *  <b>handle</b>. Return NULL on error, and set
  *  <b>stream_status_out</b> appropriately. */
-smartlist_t *
-tor_get_lines_from_handle(HANDLE *handle,
-                          enum stream_status *stream_status_out)
+MOCK_IMPL(smartlist_t *,
+tor_get_lines_from_handle, (HANDLE *handle,
+                            enum stream_status *stream_status_out))
 {
   int pos;
   char stdout_buf[600] = {0};
