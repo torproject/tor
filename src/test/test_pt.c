@@ -166,11 +166,11 @@ static smartlist_t *
 tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
                                       enum stream_status *stream_status_out)
 {
+  static int times_called = 0;
+  smartlist_t *retval_sl = smartlist_new();
+
   (void) handle;
   (void) stream_status_out;
-  static int times_called = 0;
-
-  smartlist_t *retval_sl = smartlist_new();
 
   /* Generate some dummy CMETHOD lines the first 5 times. The 6th
      time, send 'CMETHODS DONE' to finish configuring the proxy. */
@@ -205,9 +205,9 @@ get_or_state_replacement(void)
 static void
 test_pt_configure_proxy(void *arg)
 {
-  (void) arg;
   int i;
   managed_proxy_t *mp = NULL;
+  (void) arg;
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
