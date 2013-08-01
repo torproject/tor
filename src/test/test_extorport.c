@@ -3,10 +3,13 @@
 
 #define CONNECTION_PRIVATE
 #define EXT_ORPORT_PRIVATE
+#define MAIN_PRIVATE
 #include "or.h"
 #include "buffers.h"
 #include "connection.h"
+#include "control.h"
 #include "ext_orport.h"
+#include "main.h"
 #include "test.h"
 
 /* Test connection_or_remove_from_ext_or_id_map and
@@ -288,12 +291,128 @@ test_ext_or_cookie_auth_testvec(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+ignore_bootstrap_problem(const char *warn, int reason)
+{
+  (void)warn;
+  (void)reason;
+}
+
+static void
+test_ext_or_handshake(void *arg)
+{
+  or_connection_t *conn=NULL;
+  char b[256];
+
+#define WRITE(s,n)                                                      \
+  do {                                                                  \
+    write_to_buf((s), (n), TO_CONN(conn)->inbuf);                       \
+  } while (0)
+#define CONTAINS(s,n)                                           \
+  do {                                                          \
+    tt_int_op((n), <=, sizeof(b));                              \
+    tt_int_op(buf_datalen(TO_CONN(conn)->outbuf), ==, (n));     \
+    if ((n)) {                                                  \
+      fetch_from_buf(b, (n), TO_CONN(conn)->outbuf);            \
+      test_memeq(b, (s), (n));                                  \
+    }                                                           \
+  } while (0)
+
+  (void) arg;
+  MOCK(connection_write_to_buf_impl_,
+       connection_write_to_buf_impl_replacement);
+  /* Use same authenticators as for test_ext_or_cookie_auth_testvec */
+  memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
+  ext_or_auth_cookie_is_set = 1;
+
+  init_connection_lists();
+
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  tt_int_op(0, ==, connection_ext_or_start_auth(conn));
+  /* The server starts by telling us about the one supported authtype. */
+  CONTAINS("\x01\x00", 2);
+  /* Say the client hasn't responded yet. */
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  /* Let's say the client replies badly. */
+  WRITE("\x99", 1);
+  tt_int_op(-1, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  tt_assert(TO_CONN(conn)->marked_for_close);
+  close_closeable_connections();
+  conn = NULL;
+
+  /* Okay, try again. */
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  tt_int_op(0, ==, connection_ext_or_start_auth(conn));
+  CONTAINS("\x01\x00", 2);
+  /* Let's say the client replies sensibly this time. "Yes, AUTHTYPE_COOKIE
+   * sounds delicious. Let's have some of that!" */
+  WRITE("\x01", 1);
+  /* Let's say that the client also sends part of a nonce. */
+  WRITE("But when I look ", 16);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  tt_int_op(TO_CONN(conn)->state, ==,
+            EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE);
+  /* Pump it again. Nothing should happen. */
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  /* send the rest of the nonce. */
+  WRITE("ahead up the whi", 16);
+  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  UNMOCK(crypto_rand);
+  /* We should get the right reply from the server. */
+  CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
+           "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
+           "te road There is always another ", 64);
+  /* Send the wrong response. */
+  WRITE("not with a bang but a whimper...", 32);
+  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  tt_int_op(-1, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("\x00", 1);
+  tt_assert(TO_CONN(conn)->marked_for_close);
+  /* XXXX Hold-open-until-flushed. */
+  close_closeable_connections();
+  conn = NULL;
+  UNMOCK(control_event_bootstrap_problem);
+
+  /* Okay, this time let's succeed. */
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  tt_int_op(0, ==, connection_ext_or_start_auth(conn));
+  CONTAINS("\x01\x00", 2);
+  WRITE("\x01", 1);
+  WRITE("But when I look ahead up the whi", 32);
+  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  UNMOCK(crypto_rand);
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
+  CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
+           "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
+           "te road There is always another ", 64);
+  /* Send the right response this time. */
+  WRITE("\xab\x39\x17\x32\xdd\x2e\xd9\x68\xcd\x40\xc0\x87\xd1\xb1\xf2\x5b"
+        "\x33\xb3\xcd\x77\xff\x79\xbd\x80\xc2\x07\x4b\xbf\x43\x81\x19\xa2",
+        32);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("\x01", 1);
+  tt_assert(! TO_CONN(conn)->marked_for_close);
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_OPEN);
+
+ done:
+  UNMOCK(connection_write_to_buf_impl_);
+  UNMOCK(crypto_rand);
+  if (conn)
+    connection_free_(TO_CONN(conn));
+#undef WRITE
+}
+
 struct testcase_t extorport_tests[] = {
   { "id_map", test_ext_or_id_map, TT_FORK, NULL, NULL },
   { "write_command", test_ext_or_write_command, TT_FORK, NULL, NULL },
   { "cookie_auth", test_ext_or_cookie_auth, TT_FORK, NULL, NULL },
   { "cookie_auth_testvec", test_ext_or_cookie_auth_testvec, TT_FORK,
     NULL, NULL },
+  { "handshake", test_ext_or_handshake, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
