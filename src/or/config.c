@@ -315,7 +315,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("NoPublish"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCPUs,                     UINT,     "0"),
-  V(NumDirectoryGuards,          UINT,     "3"),
+  V(NumDirectoryGuards,          UINT,     "0"),
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
   VPORT(ORPort,                      LINELIST, NULL),

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Make the default behavior of NumDirectoryGuards be to track
+      NumEntryGuards. Now a user who changes only NumEntryGuards will get
+      the behavior she expects. Fixes bug 9354; bugfix on 0.2.4.8-alpha.
+

@@ -419,14 +419,24 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   return node;
 }
 
+/** Choose how many entry guards or directory guards we'll use. If
+ * <b>for_directory</b> is true, we return how many directory guards to
+ * use; else we return how many entry guards to use. */
+static int
+decide_num_guards(const or_options_t *options, int for_directory)
+{
+  if (for_directory && options->NumDirectoryGuards != 0)
+    return options->NumDirectoryGuards;
+  return options->NumEntryGuards;
+}
+
 /** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
 pick_entry_guards(const or_options_t *options, int for_directory)
 {
   int changed = 0;
-  const int num_needed = for_directory ? options->NumDirectoryGuards :
-    options->NumEntryGuards;
+  const int num_needed = decide_num_guards(options, for_directory);
 
   tor_assert(entry_guards);
 
@@ -966,8 +976,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   int need_capacity = state ? state->need_capacity : 0;
   int preferred_min, consider_exit_family = 0;
   int need_descriptor = !for_directory;
-  const int num_needed = for_directory ? options->NumDirectoryGuards :
-    options->NumEntryGuards;
+  const int num_needed = decide_num_guards(options, for_directory);
 
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
