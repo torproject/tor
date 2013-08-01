@@ -7,6 +7,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "connection.h"
+#include "config.h"
 #include "control.h"
 #include "ext_orport.h"
 #include "main.h"
@@ -145,6 +146,51 @@ test_ext_or_write_command(void *arg)
   tor_free(cp);
   tor_free(buf);
   UNMOCK(connection_write_to_buf_impl_);
+}
+
+static void
+test_ext_or_init_auth(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  const char *fn;
+  char *cp = NULL;
+  struct stat st;
+  char cookie0[32];
+  (void)arg;
+
+  /* Check default filename location */
+  options->DataDirectory = tor_strdup("foo");
+  cp = get_ext_or_auth_cookie_file_name();
+  tt_str_op(cp, ==, "foo"PATH_SEPARATOR"extended_orport_auth_cookie");
+  tor_free(cp);
+
+  /* Shouldn't be initialized already, or our tests will be a bit
+   * meaningless */
+  test_assert(tor_mem_is_zero(ext_or_auth_cookie, 32));
+
+  /* Now make sure we use a temporary file */
+  fn = get_fname("ext_cookie_file");
+  options->ExtORPortCookieAuthFile = tor_strdup(fn);
+  cp = get_ext_or_auth_cookie_file_name();
+  tt_str_op(cp, ==, fn);
+  tor_free(cp);
+
+  tt_int_op(0, ==, init_ext_or_cookie_authentication(1));
+  tt_int_op(ext_or_auth_cookie_is_set, ==, 1);
+  cp = read_file_to_str(fn, RFTS_BIN, &st);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(st.st_size, ==, 64);
+  test_memeq(cp, "! Extended ORPort Auth Cookie !\x0a", 32);
+  test_memeq(cp+32, ext_or_auth_cookie, 32);
+  memcpy(cookie0, ext_or_auth_cookie, 32);
+  test_assert(!tor_mem_is_zero(ext_or_auth_cookie, 32));
+
+  /* Operation should be idempotent. */
+  tt_int_op(0, ==, init_ext_or_cookie_authentication(1));
+  test_memeq(cookie0, ext_or_auth_cookie, 32);
+
+ done:
+  tor_free(cp);
 }
 
 static void
@@ -409,6 +455,7 @@ test_ext_or_handshake(void *arg)
 struct testcase_t extorport_tests[] = {
   { "id_map", test_ext_or_id_map, TT_FORK, NULL, NULL },
   { "write_command", test_ext_or_write_command, TT_FORK, NULL, NULL },
+  { "init_auth", test_ext_or_init_auth, TT_FORK, NULL, NULL },
   { "cookie_auth", test_ext_or_cookie_auth, TT_FORK, NULL, NULL },
   { "cookie_auth_testvec", test_ext_or_cookie_auth_testvec, TT_FORK,
     NULL, NULL },
