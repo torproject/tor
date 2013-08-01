@@ -103,6 +103,9 @@ connection_ext_or_transition(or_connection_t *conn)
 #define EXT_OR_PORT_AUTH_CLIENT_TO_SERVER_CONST \
   "ExtORPort authentication client-to-server hash"
 
+/* Code to indicate cookie authentication */
+#define EXT_OR_AUTHTYPE_SAFECOOKIE 0x01
+
 /** If true, we've set ext_or_auth_cookie to a secret code and stored
  * it to disk. */
 STATIC int ext_or_auth_cookie_is_set = 0;
@@ -190,8 +193,10 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
     return -1;
 
   log_debug(LD_GENERAL, "Client wants us to use %d auth type", authtype[0]);
-  if (authtype[0] != 1) /* '1' is the only auth type supported atm */
+  if (authtype[0] != EXT_OR_AUTHTYPE_SAFECOOKIE) {
+    /* '1' is the only auth type supported atm */
     return -1;
+  }
 
   conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE;
   return 1;
@@ -638,12 +643,17 @@ int
 connection_ext_or_start_auth(or_connection_t *or_conn)
 {
   connection_t *conn = TO_CONN(or_conn);
-  char authtypes[2] = "\x01\x00"; /* We only support authtype '1' for now. */
+  const uint8_t authtypes[] = {
+    /* We only support authtype '1' for now. */
+    EXT_OR_AUTHTYPE_SAFECOOKIE,
+    /* Marks the end of the list. */
+    0
+  };
 
   log_debug(LD_GENERAL,
            "ExtORPort authentication: Sending supported authentication types");
 
-  connection_write_to_buf(authtypes, sizeof(authtypes), conn);
+  connection_write_to_buf((const char *)authtypes, sizeof(authtypes), conn);
   conn->state = EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE;
 
   return 0;
