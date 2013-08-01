@@ -105,11 +105,11 @@ connection_ext_or_transition(or_connection_t *conn)
 
 /** If true, we've set ext_or_auth_cookie to a secret code and stored
  * it to disk. */
-static int ext_or_auth_cookie_is_set = 0;
+STATIC int ext_or_auth_cookie_is_set = 0;
 /** If ext_or_auth_cookie_is_set, a secret cookie that we've stored to disk
  * and which we're using to authenticate controllers.  (If the controller can
  * read it off disk, it has permission to connect.) */
-static char ext_or_auth_cookie[EXT_OR_PORT_AUTH_COOKIE_LEN] = {0};
+STATIC char ext_or_auth_cookie[EXT_OR_PORT_AUTH_COOKIE_LEN] = {0};
 
 /** Helper: Return a newly allocated string containing a path to the
  * file where we store our authentication cookie. */
@@ -198,10 +198,10 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
 }
 
 /** DOCDOC */
-static int
+STATIC int
 handle_client_auth_nonce(const char *client_nonce, size_t client_nonce_len,
                          char **client_hash_out,
-                         char**reply_out, size_t *reply_len_out)
+                         char **reply_out, size_t *reply_len_out)
 {
   char server_hash[EXT_OR_PORT_AUTH_HASH_LEN] = {0};
   char server_nonce[EXT_OR_PORT_AUTH_NONCE_LEN] = {0};

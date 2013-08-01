@@ -27,6 +27,14 @@ STATIC int connection_write_ext_or_command(connection_t *conn,
                                            uint16_t command,
                                            const char *body,
                                            size_t bodylen);
+STATIC int handle_client_auth_nonce(const char *client_nonce,
+                         size_t client_nonce_len,
+                         char **client_hash_out,
+                         char **reply_out, size_t *reply_len_out);
+#ifdef TOR_UNIT_TESTS
+extern char ext_or_auth_cookie[];
+extern int ext_or_auth_cookie_is_set;
+#endif
 #endif
 
 #endif

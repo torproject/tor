@@ -144,9 +144,80 @@ test_ext_or_write_command(void *arg)
   UNMOCK(connection_write_to_buf_impl_);
 }
 
+static void
+test_ext_or_cookie_auth(void *arg)
+{
+  char *reply=NULL, *client_hash=NULL;
+  size_t reply_len=0;
+  char hmac1[32], hmac2[32];
+
+  const char client_nonce[32] =
+    "Who is the third who walks alway";
+  char server_hash_input[] =
+    "ExtORPort authentication server-to-client hash"
+    "Who is the third who walks alway"
+    "................................";
+  char client_hash_input[] =
+    "ExtORPort authentication client-to-server hash"
+    "Who is the third who walks alway"
+    "................................";
+
+  (void)arg;
+
+  tt_int_op(strlen(client_hash_input), ==, 46+32+32);
+  tt_int_op(strlen(server_hash_input), ==, 46+32+32);
+
+  memcpy(ext_or_auth_cookie, "s beside you? When I count, ther", 32);
+  ext_or_auth_cookie_is_set = 1;
+
+  /* For this authentication, the client sends 32 random bytes (ClientNonce)
+   * The server replies with 32 byte ServerHash and 32 byte ServerNonce,
+   * where ServerHash is:
+   * HMAC-SHA256(CookieString,
+   *   "ExtORPort authentication server-to-client hash" | ClientNonce |
+   *    ServerNonce)"
+   * The client must reply with 32-byte ClientHash, which we compute as:
+   *   ClientHash is computed as:
+   *        HMAC-SHA256(CookieString,
+   *           "ExtORPort authentication client-to-server hash" | ClientNonce |
+   *            ServerNonce)
+   */
+
+  /* Wrong length */
+  tt_int_op(-1, ==,
+            handle_client_auth_nonce(client_nonce, 33, &client_hash, &reply,
+                                     &reply_len));
+  tt_int_op(-1, ==,
+            handle_client_auth_nonce(client_nonce, 31, &client_hash, &reply,
+                                     &reply_len));
+
+  /* Now let's try this for real! */
+  tt_int_op(0, ==,
+            handle_client_auth_nonce(client_nonce, 32, &client_hash, &reply,
+                                     &reply_len));
+  tt_int_op(reply_len, ==, 64);
+  tt_ptr_op(reply, !=, NULL);
+  tt_ptr_op(client_hash, !=, NULL);
+  /* Fill in the server nonce into the hash inputs... */
+  memcpy(server_hash_input+46+32, reply+32, 32);
+  memcpy(client_hash_input+46+32, reply+32, 32);
+  /* Check the HMACs are correct... */
+  crypto_hmac_sha256(hmac1, ext_or_auth_cookie, 32, server_hash_input,
+                     46+32+32);
+  crypto_hmac_sha256(hmac2, ext_or_auth_cookie, 32, client_hash_input,
+                     46+32+32);
+  test_memeq(hmac1, reply, 32);
+  test_memeq(hmac2, client_hash, 32);
+
+ done:
+  tor_free(reply);
+  tor_free(client_hash);
+}
+
 struct testcase_t extorport_tests[] = {
   { "id_map", test_ext_or_id_map, TT_FORK, NULL, NULL },
   { "write_command", test_ext_or_write_command, TT_FORK, NULL, NULL },
+  { "cookie_auth", test_ext_or_cookie_auth, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
