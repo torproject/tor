@@ -7,6 +7,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "config.h"
 #include "control.h"
 #include "ext_orport.h"
@@ -344,6 +345,30 @@ ignore_bootstrap_problem(const char *warn, int reason)
   (void)reason;
 }
 
+static int is_reading = 1;
+static int handshake_start_called = 0;
+
+static void
+note_read_stopped(connection_t *conn)
+{
+  (void)conn;
+  is_reading=0;
+}
+static void
+note_read_started(connection_t *conn)
+{
+  (void)conn;
+  is_reading=1;
+}
+static int
+handshake_start(or_connection_t *conn, int receiving)
+{
+  if (!conn || !receiving)
+    TT_FAIL(("Bad arguments to handshake_start"));
+  handshake_start_called = 1;
+  return 0;
+}
+
 static void
 test_ext_or_handshake(void *arg)
 {
@@ -422,6 +447,10 @@ test_ext_or_handshake(void *arg)
   conn = NULL;
   UNMOCK(control_event_bootstrap_problem);
 
+  MOCK(connection_start_reading, note_read_started);
+  MOCK(connection_stop_reading, note_read_stopped);
+  MOCK(connection_tls_start_handshake, handshake_start);
+
   /* Okay, this time let's succeed. */
   conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
   tt_int_op(0, ==, connection_ext_or_start_auth(conn));
@@ -443,6 +472,39 @@ test_ext_or_handshake(void *arg)
   CONTAINS("\x01", 1);
   tt_assert(! TO_CONN(conn)->marked_for_close);
   tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_OPEN);
+
+  /* Now let's run through some messages. */
+  /* First let's send some junk and make sure it's ignored. */
+  WRITE("\xff\xf0\x00\x03""ABC", 7);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  /* Now let's send a USERADDR command. */
+  WRITE("\x00\x01\x00\x0c""1.2.3.4:5678", 16);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  tt_int_op(TO_CONN(conn)->port, ==, 5678);
+  tt_int_op(tor_addr_to_ipv4h(&TO_CONN(conn)->addr), ==, 0x01020304);
+  /* Now let's send a TRANSPORT command. */
+  WRITE("\x00\x02\x00\x07""rfc1149", 11);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  tt_ptr_op(NULL, !=, conn->ext_or_transport);
+  tt_str_op("rfc1149", ==, conn->ext_or_transport);
+  tt_int_op(is_reading,==,1);
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_OPEN);
+  /* DONE */
+  WRITE("\x00\x00\x00\x00", 4);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_FLUSHING);
+  tt_int_op(is_reading,==,0);
+  CONTAINS("\x10\x00\x00\x00", 4);
+  tt_int_op(handshake_start_called,==,0);
+  tt_int_op(0, ==, connection_ext_or_finished_flushing(conn));
+  tt_int_op(is_reading,==,1);
+  tt_int_op(handshake_start_called,==,1);
+  tt_int_op(TO_CONN(conn)->type, ==, CONN_TYPE_OR);
+  /* XXXXX the state is now nonsensical! It should be set to something
+   * neutral (zero?) before we connection_or_change_state; right now
+   * it's EXT_OR_CONN_STATE_FLUSHING */
+  /* tt_int_op(TO_CONN(conn)->state, ==, 0); XXXX */
 
  done:
   UNMOCK(connection_write_to_buf_impl_);

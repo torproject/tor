@@ -1281,8 +1281,8 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
  *
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
-int
-connection_tls_start_handshake(or_connection_t *conn, int receiving)
+MOCK_IMPL(int,
+connection_tls_start_handshake,(or_connection_t *conn, int receiving))
 {
   channel_listener_t *chan_listener;
   channel_t *chan;

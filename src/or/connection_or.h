@@ -45,7 +45,8 @@ void connection_or_close_for_error(or_connection_t *orconn, int flush);
 
 void connection_or_report_broken_states(int severity, int domain);
 
-int connection_tls_start_handshake(or_connection_t *conn, int receiving);
+MOCK_DECL(int,connection_tls_start_handshake,(or_connection_t *conn,
+                                              int receiving));
 int connection_tls_continue_handshake(or_connection_t *conn);
 
 int connection_init_or_handshake_state(or_connection_t *conn,

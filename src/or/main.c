@@ -519,8 +519,8 @@ connection_is_reading(connection_t *conn)
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
-void
-connection_stop_reading(connection_t *conn)
+MOCK_IMPL(void,
+connection_stop_reading,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -544,8 +544,8 @@ connection_stop_reading(connection_t *conn)
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
-void
-connection_start_reading(connection_t *conn)
+MOCK_IMPL(void,
+connection_start_reading,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -584,8 +584,8 @@ connection_is_writing(connection_t *conn)
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
-void
-connection_stop_writing(connection_t *conn)
+MOCK_IMPL(void,
+connection_stop_writing,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -610,8 +610,8 @@ connection_stop_writing(connection_t *conn)
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
-void
-connection_start_writing(connection_t *conn)
+MOCK_IMPL(void,
+connection_start_writing,(connection_t *conn))
 {
   tor_assert(conn);
 
