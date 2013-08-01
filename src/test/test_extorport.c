@@ -147,7 +147,7 @@ test_ext_or_write_command(void *arg)
 static void
 test_ext_or_cookie_auth(void *arg)
 {
-  char *reply=NULL, *client_hash=NULL;
+  char *reply=NULL, *reply2=NULL, *client_hash=NULL, *client_hash2=NULL;
   size_t reply_len=0;
   char hmac1[32], hmac2[32];
 
@@ -209,15 +209,91 @@ test_ext_or_cookie_auth(void *arg)
   test_memeq(hmac1, reply, 32);
   test_memeq(hmac2, client_hash, 32);
 
+  /* Now do it again and make sure that the results are *different* */
+  tt_int_op(0, ==,
+            handle_client_auth_nonce(client_nonce, 32, &client_hash2, &reply2,
+                                     &reply_len));
+  test_memneq(reply2, reply, reply_len);
+  test_memneq(client_hash2, client_hash, 32);
+  /* But that this one checks out too. */
+  memcpy(server_hash_input+46+32, reply2+32, 32);
+  memcpy(client_hash_input+46+32, reply2+32, 32);
+  /* Check the HMACs are correct... */
+  crypto_hmac_sha256(hmac1, ext_or_auth_cookie, 32, server_hash_input,
+                     46+32+32);
+  crypto_hmac_sha256(hmac2, ext_or_auth_cookie, 32, client_hash_input,
+                     46+32+32);
+  test_memeq(hmac1, reply2, 32);
+  test_memeq(hmac2, client_hash2, 32);
+
  done:
   tor_free(reply);
   tor_free(client_hash);
+  tor_free(reply2);
+  tor_free(client_hash2);
+}
+
+static int
+crypto_rand_return_tse_str(char *to, size_t n)
+{
+  if (n != 32) {
+    TT_FAIL(("Asked for %d bytes, not 32", (int)n));
+    return -1;
+  }
+  memcpy(to, "te road There is always another ", 32);
+  return 0;
+}
+
+static void
+test_ext_or_cookie_auth_testvec(void *arg)
+{
+  char *reply=NULL, *client_hash=NULL;
+  size_t reply_len;
+  char *mem_op_hex_tmp=NULL;
+
+  const char client_nonce[] = "But when I look ahead up the whi";
+  (void)arg;
+
+  memcpy(ext_or_auth_cookie, "Gliding wrapt in a brown mantle," , 32);
+  ext_or_auth_cookie_is_set = 1;
+
+  MOCK(crypto_rand, crypto_rand_return_tse_str);
+
+  tt_int_op(0, ==,
+            handle_client_auth_nonce(client_nonce, 32, &client_hash, &reply,
+                                     &reply_len));
+  tt_ptr_op(reply, !=, NULL );
+  tt_ptr_op(reply_len, ==, 64);
+  test_memeq(reply+32, "te road There is always another ", 32);
+  /* HMACSHA256("Gliding wrapt in a brown mantle,"
+   *     "ExtORPort authentication server-to-client hash"
+   *     "But when I look ahead up the write road There is always another ");
+   */
+  test_memeq_hex(reply,
+                 "ec80ed6e546d3b36fdfc22fe1315416b"
+                 "029f1ade7610d910878b62eeb7403821");
+  /* HMACSHA256("Gliding wrapt in a brown mantle,"
+   *     "ExtORPort authentication client-to-server hash"
+   *     "But when I look ahead up the write road There is always another ");
+   * (Both values computed using Python CLI.)
+   */
+  test_memeq_hex(client_hash,
+                 "ab391732dd2ed968cd40c087d1b1f25b"
+                 "33b3cd77ff79bd80c2074bbf438119a2");
+
+ done:
+  UNMOCK(crypto_rand);
+  tor_free(reply);
+  tor_free(client_hash);
+  tor_free(mem_op_hex_tmp);
 }
 
 struct testcase_t extorport_tests[] = {
   { "id_map", test_ext_or_id_map, TT_FORK, NULL, NULL },
   { "write_command", test_ext_or_write_command, TT_FORK, NULL, NULL },
   { "cookie_auth", test_ext_or_cookie_auth, TT_FORK, NULL, NULL },
+  { "cookie_auth_testvec", test_ext_or_cookie_auth_testvec, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
