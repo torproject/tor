@@ -69,5 +69,10 @@ int tor_main(int argc, char *argv[]);
 int do_main_loop(void);
 int tor_init(int argc, char **argv);
 
+#ifdef MAIN_PRIVATE
+STATIC void init_connection_lists(void);
+STATIC void close_closeable_connections(void);
+#endif
+
 #endif
 

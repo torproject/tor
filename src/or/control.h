@@ -85,7 +85,8 @@ void enable_control_logging(void);
 void monitor_owning_controller_process(const char *process_spec);
 
 void control_event_bootstrap(bootstrap_status_t status, int progress);
-void control_event_bootstrap_problem(const char *warn, int reason);
+MOCK_DECL(void, control_event_bootstrap_problem,(const char *warn,
+                                                 int reason));
 
 void control_event_clients_seen(const char *controller_str);
 

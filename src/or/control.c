@@ -4699,8 +4699,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
  * that indicates a problem. <b>warn</b> gives a hint as to why, and
  * <b>reason</b> provides an "or_conn_end_reason" tag.
  */
-void
-control_event_bootstrap_problem(const char *warn, int reason)
+MOCK_IMPL(void,
+control_event_bootstrap_problem, (const char *warn, int reason))
 {
   int status = bootstrap_percent;
   const char *tag, *summary;
