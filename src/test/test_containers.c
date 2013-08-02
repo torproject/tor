@@ -469,6 +469,51 @@ test_container_smartlist_join(void)
   tor_free(joined);
 }
 
+static void
+test_container_smartlist_ints_eq(void *arg)
+{
+  smartlist_t *sl1 = NULL, *sl2 = NULL;
+  int x;
+  (void)arg;
+
+  tt_assert(smartlist_ints_eq(NULL, NULL));
+
+  sl1 = smartlist_new();
+  tt_assert(!smartlist_ints_eq(sl1, NULL));
+  tt_assert(!smartlist_ints_eq(NULL, sl1));
+
+  sl2 = smartlist_new();
+  tt_assert(smartlist_ints_eq(sl1, sl2));
+
+  x = 5;
+  smartlist_add(sl1, tor_memdup(&x, sizeof(int)));
+  smartlist_add(sl2, tor_memdup(&x, sizeof(int)));
+  x = 90;
+  smartlist_add(sl1, tor_memdup(&x, sizeof(int)));
+  smartlist_add(sl2, tor_memdup(&x, sizeof(int)));
+  tt_assert(smartlist_ints_eq(sl1, sl2));
+
+  x = -50;
+  smartlist_add(sl1, tor_memdup(&x, sizeof(int)));
+  tt_assert(! smartlist_ints_eq(sl1, sl2));
+  tt_assert(! smartlist_ints_eq(sl2, sl1));
+  smartlist_add(sl2, tor_memdup(&x, sizeof(int)));
+  tt_assert(smartlist_ints_eq(sl1, sl2));
+
+  *(int*)smartlist_get(sl1, 1) = 101010;
+  tt_assert(! smartlist_ints_eq(sl2, sl1));
+  *(int*)smartlist_get(sl2, 1) = 101010;
+  tt_assert(smartlist_ints_eq(sl1, sl2));
+
+ done:
+  if (sl1)
+    SMARTLIST_FOREACH(sl1, int *, ip, tor_free(ip));
+  if (sl2)
+    SMARTLIST_FOREACH(sl2, int *, ip, tor_free(ip));
+  smartlist_free(sl1);
+  smartlist_free(sl2);
+}
+
 /** Run unit tests for bitarray code */
 static void
 test_container_bitarray(void)
@@ -784,7 +829,7 @@ test_container_order_functions(void)
 }
 
 static void
-test_di_map(void *arg)
+test_container_di_map(void *arg)
 {
   di_digest256_map_t *map = NULL;
   const uint8_t key1[] = "In view of the fact that it was ";
@@ -912,18 +957,22 @@ test_container_fp_pair_map(void)
 #define CONTAINER_LEGACY(name)                                          \
   { #name, legacy_test_helper, 0, &legacy_setup, test_container_ ## name }
 
+#define CONTAINER(name, flags)                                          \
+  { #name, test_container_ ## name, (flags), NULL, NULL }
+
 struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(smartlist_basic),
   CONTAINER_LEGACY(smartlist_strings),
   CONTAINER_LEGACY(smartlist_overlap),
   CONTAINER_LEGACY(smartlist_digests),
   CONTAINER_LEGACY(smartlist_join),
+  CONTAINER(smartlist_ints_eq, 0),
   CONTAINER_LEGACY(bitarray),
   CONTAINER_LEGACY(digestset),
   CONTAINER_LEGACY(strmap),
   CONTAINER_LEGACY(pqueue),
   CONTAINER_LEGACY(order_functions),
-  { "di_map", test_di_map, 0, NULL, NULL },
+  CONTAINER(di_map, 0),
   CONTAINER_LEGACY(fp_pair_map),
   END_OF_TESTCASES
 };
