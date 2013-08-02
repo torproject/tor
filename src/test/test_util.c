@@ -3426,11 +3426,7 @@ test_util_socketpair(void *arg)
     ersatz ? tor_ersatz_socketpair : tor_socketpair;
   int n = get_n_open_sockets();
   tor_socket_t fds[2] = {TOR_INVALID_SOCKET, TOR_INVALID_SOCKET};
-#ifdef _WIN32
-  const int family = AF_INET;
-#else
   const int family = AF_UNIX;
-#endif
 
   tt_int_op(0, ==, tor_socketpair_fn(family, SOCK_STREAM, 0, fds));
   tt_assert(SOCKET_OK(fds[0]));
