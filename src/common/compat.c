@@ -1092,6 +1092,8 @@ tor_open_socket_with_extensions(int domain, int type, int protocol,
       return TOR_INVALID_SOCKET;
     }
   }
+#else
+  (void)cloexec;
 #endif
 
   if (nonblock) {
@@ -1162,6 +1164,8 @@ tor_accept_socket_with_extensions(tor_socket_t sockfd, struct sockaddr *addr,
       return TOR_INVALID_SOCKET;
     }
   }
+#else
+  (void)cloexec;
 #endif
 
   if (nonblock) {
