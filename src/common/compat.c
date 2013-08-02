@@ -1084,10 +1084,12 @@ tor_open_socket_with_extensions(int domain, int type, int protocol,
     return s;
 
 #if defined(FD_CLOEXEC)
-  if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
-    log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
-    tor_close_socket_simple(s);
-    return TOR_INVALID_SOCKET;
+  if (cloexec) {
+    if (fcntl(s, F_SETFD, FD_CLOEXEC) == -1) {
+      log_warn(LD_FS,"Couldn't set FD_CLOEXEC: %s", strerror(errno));
+      tor_close_socket_simple(s);
+      return TOR_INVALID_SOCKET;
+    }
   }
 #endif
 
