@@ -3319,6 +3319,85 @@ test_util_strclear(void *arg)
 #define UTIL_TEST(name, flags)                          \
   { #name, test_util_ ## name, flags, NULL, NULL }
 
+#ifdef FD_CLOEXEC
+#define CAN_CHECK_CLOEXEC
+static int
+fd_is_cloexec(tor_socket_t fd)
+{
+  int flags = fcntl(fd, F_GETFD, 0);
+  return (flags & FD_CLOEXEC) == FD_CLOEXEC;
+}
+#endif
+
+#ifndef _WIN32
+#define CAN_CHECK_NONBLOCK
+static int
+fd_is_nonblocking(tor_socket_t fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  return (flags & O_NONBLOCK) == O_NONBLOCK;
+}
+#endif
+
+static void
+test_util_socket(void *arg)
+{
+  tor_socket_t fd1 = TOR_INVALID_SOCKET;
+  tor_socket_t fd2 = TOR_INVALID_SOCKET;
+  tor_socket_t fd3 = TOR_INVALID_SOCKET;
+  tor_socket_t fd4 = TOR_INVALID_SOCKET;
+  int n = get_n_open_sockets();
+
+  TT_BLATHER(("Starting with %d open sockets.", n));
+
+  (void)arg;
+
+  fd1 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 0, 0);
+  fd2 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 0, 1);
+  tt_assert(SOCKET_OK(fd1));
+  tt_assert(SOCKET_OK(fd2));
+  tt_int_op(get_n_open_sockets(), ==, n + 2);
+  //fd3 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 1, 0);
+  //fd4 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 1, 1);
+  fd3 = tor_open_socket(AF_INET, SOCK_STREAM, 0);
+  fd4 = tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, 0);
+  tt_assert(SOCKET_OK(fd3));
+  tt_assert(SOCKET_OK(fd4));
+  tt_int_op(get_n_open_sockets(), ==, n + 4);
+
+#ifdef CAN_CHECK_CLOEXEC
+  tt_int_op(fd_is_cloexec(fd1), ==, 0);
+  tt_int_op(fd_is_cloexec(fd2), ==, 0);
+  tt_int_op(fd_is_cloexec(fd3), ==, 1);
+  tt_int_op(fd_is_cloexec(fd4), ==, 1);
+#endif
+#ifdef CAN_CHECK_NONBLOCK
+  tt_int_op(fd_is_nonblocking(fd1), ==, 0);
+  tt_int_op(fd_is_nonblocking(fd2), ==, 1);
+  tt_int_op(fd_is_nonblocking(fd3), ==, 0);
+  tt_int_op(fd_is_nonblocking(fd4), ==, 1);
+#endif
+
+  tor_close_socket(fd1);
+  tor_close_socket(fd2);
+  fd1 = fd2 = TOR_INVALID_SOCKET;
+  tt_int_op(get_n_open_sockets(), ==, n + 2);
+  tor_close_socket(fd3);
+  tor_close_socket(fd4);
+  fd3 = fd4 = TOR_INVALID_SOCKET;
+  tt_int_op(get_n_open_sockets(), ==, n);
+
+ done:
+  if (SOCKET_OK(fd1))
+    tor_close_socket(fd1);
+  if (SOCKET_OK(fd2))
+    tor_close_socket(fd2);
+  if (SOCKET_OK(fd3))
+    tor_close_socket(fd3);
+  if (SOCKET_OK(fd4))
+    tor_close_socket(fd4);
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -3375,6 +3454,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_zero_bytes, 0),
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(weak_random, 0),
+  UTIL_TEST(socket, TT_FORK),
   END_OF_TESTCASES
 };
 
