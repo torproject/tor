@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
+#define COMPAT_PRIVATE
 #define CONTROL_PRIVATE
 #define MEMPOOL_PRIVATE
 #define UTIL_PRIVATE
@@ -3398,6 +3399,59 @@ test_util_socket(void *arg)
     tor_close_socket(fd4);
 }
 
+static void *
+socketpair_test_setup(const struct testcase_t *testcase)
+{
+  return testcase->setup_data;
+}
+static int
+socketpair_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  return 1;
+}
+
+static const struct testcase_setup_t socketpair_setup = {
+  socketpair_test_setup, socketpair_test_cleanup
+};
+
+/* Test for socketpair and ersatz_socketpair().  We test them both, since
+ * the latter is a tolerably good way to exersize tor_accept_socket(). */
+static void
+test_util_socketpair(void *arg)
+{
+  const int ersatz = !strcmp(arg, "1");
+  int (*const tor_socketpair_fn)(int, int, int, tor_socket_t[2]) =
+    ersatz ? tor_ersatz_socketpair : tor_socketpair;
+  int n = get_n_open_sockets();
+  tor_socket_t fds[2] = {TOR_INVALID_SOCKET, TOR_INVALID_SOCKET};
+#ifdef _WIN32
+  const int family = AF_INET;
+#else
+  const int family = AF_UNIX;
+#endif
+
+  tt_int_op(0, ==, tor_socketpair_fn(family, SOCK_STREAM, 0, fds));
+  tt_assert(SOCKET_OK(fds[0]));
+  tt_assert(SOCKET_OK(fds[1]));
+  tt_int_op(get_n_open_sockets(), ==, n + 2);
+#ifdef CAN_CHECK_CLOEXEC
+  tt_int_op(fd_is_cloexec(fds[0]), ==, 1);
+  tt_int_op(fd_is_cloexec(fds[1]), ==, 1);
+#endif
+#ifdef CAN_CHECK_NONBLOCK
+  tt_int_op(fd_is_nonblocking(fds[0]), ==, 0);
+  tt_int_op(fd_is_nonblocking(fds[1]), ==, 0);
+#endif
+
+ done:
+  if (SOCKET_OK(fds[0]))
+    tor_close_socket(fds[0]);
+  if (SOCKET_OK(fds[1]))
+    tor_close_socket(fds[1]);
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -3455,6 +3509,10 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(weak_random, 0),
   UTIL_TEST(socket, TT_FORK),
+  { "socketpair", test_util_socketpair, TT_FORK, &socketpair_setup,
+    (void*)"0" },
+  { "socketpair_ersatz", test_util_socketpair, TT_FORK,
+    &socketpair_setup, (void*)"1" },
   END_OF_TESTCASES
 };
 
