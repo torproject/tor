@@ -23,6 +23,7 @@
  * we can also take out the configure check. */
 #define _GNU_SOURCE
 
+#define COMPAT_PRIVATE
 #include "compat.h"
 
 #ifdef _WIN32
@@ -1291,6 +1292,18 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 
   return 0;
 #else
+  return tor_ersatz_socketpair(family, type, protocol, fd);
+#endif
+}
+
+#ifdef NEED_ERSATZ_SOCKETPAIR
+/**
+ * Helper used to implement socketpair on systems that lack it, by
+ * making a direct connection to localhost.
+ */
+STATIC int
+tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
+{
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
      * for now, and really, when localhost is down sometimes, we
@@ -1301,7 +1314,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     tor_socket_t acceptor = -1;
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
-    int size;
+    socklen_t size;
     int saved_errno = -1;
 
     if (protocol
@@ -1384,8 +1397,8 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     if (acceptor != -1)
       tor_close_socket(acceptor);
     return -saved_errno;
-#endif
 }
+#endif
 
 /** Number of extra file descriptors to keep in reserve beyond those that we
  * tell Tor it's allowed to use. */

@@ -8,6 +8,7 @@
 
 #include "orconfig.h"
 #include "torint.h"
+#include "testsupport.h"
 #ifdef _WIN32
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
@@ -736,6 +737,14 @@ char *format_win32_error(DWORD err);
 #define VER_SUITE_SINGLEUSERTS 0x00000100
 #endif
 
+#endif
+
+#ifdef COMPAT_PRIVATE
+#if !defined(HAVE_SOCKETPAIR) || defined(_WIN32) || defined(TOR_UNIT_TESTS)
+#define NEED_ERSATZ_SOCKETPAIR
+STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
+                                   tor_socket_t fd[2]);
+#endif
 #endif
 
 #endif
