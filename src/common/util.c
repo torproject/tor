@@ -4568,7 +4568,8 @@ log_from_handle(HANDLE *pipe, int severity)
  *  <b>handle</b>. Return NULL on error, and set
  *  <b>stream_status_out</b> appropriately. */
 MOCK_IMPL(smartlist_t *,
-tor_get_lines_from_handle,(FILE *handle, enum stream_status *stream_status_out))
+tor_get_lines_from_handle, (FILE *handle,
+                            enum stream_status *stream_status_out))
 {
   enum stream_status stream_status;
   char stdout_buf[400];
