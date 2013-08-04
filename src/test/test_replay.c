@@ -76,13 +76,13 @@ test_replaycache_miss(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   /* poke the bad-parameter error case too */
   result =
     replaycache_add_and_test_internal(1200, NULL, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
  done:
@@ -102,12 +102,12 @@ test_replaycache_hit(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 1);
 
  done:
@@ -127,17 +127,17 @@ test_replaycache_age(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
  done:
@@ -158,12 +158,12 @@ test_replaycache_elapsed(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        (int)strlen(test_buffer), &elapsed);
+        strlen(test_buffer), &elapsed);
   test_eq(result, 1);
   test_eq(elapsed, 100);
 
@@ -184,17 +184,17 @@ test_replaycache_noexpire(void)
 
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 1);
 
  done:
@@ -215,12 +215,12 @@ test_replaycache_scrub(void)
   /* Set up like in test_replaycache_hit() */
   result =
     replaycache_add_and_test_internal(100, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 0);
 
   result =
     replaycache_add_and_test_internal(200, r, test_buffer,
-        (int)strlen(test_buffer), NULL);
+        strlen(test_buffer), NULL);
   test_eq(result, 1);
 
   /*
@@ -257,14 +257,14 @@ test_replaycache_future(void)
   /* Set up like in test_replaycache_hit() */
   result =
     replaycache_add_and_test_internal(100, r, test_buffer,
-        (int)strlen(test_buffer), &elapsed);
+        strlen(test_buffer), &elapsed);
   test_eq(result, 0);
   /* elapsed should still be 0, since it wasn't written */
   test_eq(elapsed, 0);
 
   result =
     replaycache_add_and_test_internal(200, r, test_buffer,
-        (int)strlen(test_buffer), &elapsed);
+        strlen(test_buffer), &elapsed);
   test_eq(result, 1);
   /* elapsed should be the time since the last hit */
   test_eq(elapsed, 100);
@@ -275,7 +275,7 @@ test_replaycache_future(void)
    */
   result =
     replaycache_add_and_test_internal(150, r, test_buffer,
-        (int)strlen(test_buffer), &elapsed);
+        strlen(test_buffer), &elapsed);
   /* We should still get a hit */
   test_eq(result, 1);
   /* ...but it shouldn't let us see a negative elapsed time */
@@ -304,18 +304,18 @@ test_replaycache_realtime(void)
 
   /* This should miss */
   result =
-    replaycache_add_and_test(r, test_buffer, (int)strlen(test_buffer));
+    replaycache_add_and_test(r, test_buffer, strlen(test_buffer));
   test_eq(result, 0);
 
   /* This should hit */
   result =
-    replaycache_add_and_test(r, test_buffer, (int)strlen(test_buffer));
+    replaycache_add_and_test(r, test_buffer, strlen(test_buffer));
   test_eq(result, 1);
 
   /* This should hit and return a small elapsed time */
   result =
     replaycache_add_test_and_elapsed(r, test_buffer,
-                                     (int)strlen(test_buffer), &elapsed);
+                                     strlen(test_buffer), &elapsed);
   test_eq(result, 1);
   test_assert(elapsed >= 0);
   test_assert(elapsed <= 5);

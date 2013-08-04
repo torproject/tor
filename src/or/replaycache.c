@@ -65,7 +65,7 @@ replaycache_new(time_t horizon, time_t interval)
 
 STATIC int
 replaycache_add_and_test_internal(
-    time_t present, replaycache_t *r, const void *data, int len,
+    time_t present, replaycache_t *r, const void *data, size_t len,
     time_t *elapsed)
 {
   int rv = 0;
@@ -73,7 +73,7 @@ replaycache_add_and_test_internal(
   time_t *access_time;
 
   /* sanity check */
-  if (present <= 0 || !r || !data || len <= 0) {
+  if (present <= 0 || !r || !data || len == 0) {
     log_info(LD_BUG, "replaycache_add_and_test_internal() called with stupid"
         " parameters; please fix this.");
     goto done;
@@ -176,7 +176,7 @@ replaycache_scrub_if_needed_internal(time_t present, replaycache_t *r)
  */
 
 int
-replaycache_add_and_test(replaycache_t *r, const void *data, int len)
+replaycache_add_and_test(replaycache_t *r, const void *data, size_t len)
 {
   return replaycache_add_and_test_internal(time(NULL), r, data, len, NULL);
 }
@@ -187,7 +187,7 @@ replaycache_add_and_test(replaycache_t *r, const void *data, int len)
 
 int
 replaycache_add_test_and_elapsed(
-    replaycache_t *r, const void *data, int len, time_t *elapsed)
+    replaycache_t *r, const void *data, size_t len, time_t *elapsed)
 {
   return replaycache_add_and_test_internal(time(NULL), r, data, len, elapsed);
 }
