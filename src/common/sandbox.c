@@ -17,8 +17,7 @@
 #include "torlog.h"
 #include "orconfig.h"
 #include "torint.h"
-
-#define LENGHT(x) (sizeof(x)) / sizeof(x[0])
+#include "util.h"
 
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
@@ -45,7 +44,7 @@
 #include <time.h>
 #include <poll.h>
 
-sandbox_cfg_t *filter_dynamic = NULL;
+static sandbox_cfg_t *filter_dynamic = NULL;
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -136,7 +135,7 @@ sb_rt_sigaction(scmp_filter_ctx ctx)
 #endif
       };
 
-  for (i = 0; i < LENGHT(param); i++) {
+  for (i = 0; i < ARRAY_LENGTH(param); i++) {
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigaction), 1,
         SCMP_CMP(0, SCMP_CMP_EQ, param[i]));
     if (rc)
@@ -323,6 +322,7 @@ sb_fcntl64(scmp_filter_ctx ctx)
 }
 #endif
 
+// allows everything but will keep for now..
 static int
 sb_epoll_ctl(scmp_filter_ctx ctx)
 {
@@ -335,6 +335,11 @@ sb_epoll_ctl(scmp_filter_ctx ctx)
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(epoll_ctl), 1,
       SCMP_CMP(1, SCMP_CMP_EQ, EPOLL_CTL_MOD));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(epoll_ctl), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, EPOLL_CTL_DEL));
   if (rc)
     return rc;
 
@@ -561,13 +566,30 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   return 0;
 }
 
+int
+sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
+{
+  sandbox_cfg_t *elem = NULL;
+
+  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  elem->syscall = SCMP_SYS(openat);
+  elem->pindex = 1;
+  elem->ptype = PARAM_PTR;
+  elem->param = (intptr_t) prot_strdup((char*) com);;
+  elem->prot = 1;
+  elem->next = filter_dynamic;
+  filter_dynamic = elem;
+
+  return 0;
+}
+
 static int
 add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
   int i, rc = 0;
 
   // function pointer
-  for (i = 0; i < LENGHT(filter_func); i++) {
+  for (i = 0; i < ARRAY_LENGTH(filter_func); i++) {
     if ((filter_func[i])(ctx)) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
           "error %d", rc);
