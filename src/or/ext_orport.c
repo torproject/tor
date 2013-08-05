@@ -80,6 +80,7 @@ connection_ext_or_transition(or_connection_t *conn)
   tor_assert(conn->base_.type == CONN_TYPE_EXT_OR);
 
   conn->base_.type = CONN_TYPE_OR;
+  TO_CONN(conn)->state = 0; // set the state to a neutral value
   control_event_or_conn_status(conn, OR_CONN_EVENT_NEW, 0);
   connection_tls_start_handshake(conn, 1);
 }
@@ -474,6 +475,10 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
   /* record the address */
   tor_addr_copy(&conn->addr, &addr);
   conn->port = port;
+  if (conn->address) {
+    tor_free(conn->address);
+  }
+  conn->address = tor_dup_addr(&addr);
 
   return 0;
 }

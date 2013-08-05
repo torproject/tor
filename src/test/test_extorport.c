@@ -505,10 +505,7 @@ test_ext_or_handshake(void *arg)
   tt_int_op(is_reading,==,1);
   tt_int_op(handshake_start_called,==,1);
   tt_int_op(TO_CONN(conn)->type, ==, CONN_TYPE_OR);
-  /* XXXXX the state is now nonsensical! It should be set to something
-   * neutral (zero?) before we connection_or_change_state; right now
-   * it's EXT_OR_CONN_STATE_FLUSHING */
-  /* tt_int_op(TO_CONN(conn)->state, ==, 0); XXXX */
+  tt_int_op(TO_CONN(conn)->state, ==, 0);
 
  done:
   UNMOCK(connection_write_to_buf_impl_);
