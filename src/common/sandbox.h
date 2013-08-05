@@ -66,6 +66,15 @@ typedef struct pfd_elem sandbox_cfg_t;
 typedef int (*sandbox_filter_func_t)(scmp_filter_ctx ctx,
     sandbox_cfg_t *filter);
 
+
+typedef struct {
+  // function pointers associated with filter
+  sandbox_filter_func_t *filter_func;
+
+  // filter function pointer parameters
+  sandbox_cfg_t *filter_dynamic;
+} sandbox_t;
+
 /**
  * Linux 32 bit definitions
  */
