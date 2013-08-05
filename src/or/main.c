@@ -2651,6 +2651,8 @@ sandbox_init_filter()
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-certs"));
   sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-certs.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-consensus"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-consensus"));
@@ -2680,6 +2682,8 @@ sandbox_init_filter()
       get_datadir_fname("unparseable-desc.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unparseable-desc"));
+
+  sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
 
   return cfg;
 }

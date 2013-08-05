@@ -126,7 +126,7 @@ static int filter_nopar_gen[] = {
 };
 
 static int
-sb_rt_sigaction(scmp_filter_ctx ctx)
+sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int i, rc;
   int param[] = { SIGINT, SIGTERM, SIGPIPE, SIGUSR1, SIGUSR2, SIGHUP, SIGCHLD,
@@ -146,19 +146,18 @@ sb_rt_sigaction(scmp_filter_ctx ctx)
 }
 
 static int
-sb_execve(scmp_filter_ctx ctx)
+sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc;
-  sandbox_cfg_t *elem;
+  sandbox_cfg_t *elem = NULL;
 
   // for each dynamic parameter filters
-  elem = filter_dynamic;
-  for (; elem != NULL; elem = elem->next) {
+  for (elem = filter; elem != NULL; elem = elem->next) {
     if (elem->prot == 1 && elem->syscall == SCMP_SYS(execve)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
             SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+        log_err(LD_BUG,"(Sandbox) failed to add execve syscall, received libseccomp "
             "error %d", rc);
         return rc;
       }
@@ -169,14 +168,14 @@ sb_execve(scmp_filter_ctx ctx)
 }
 
 static int
-sb_time(scmp_filter_ctx ctx)
+sb_time(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(time), 1,
        SCMP_CMP(0, SCMP_CMP_EQ, 0));
 }
 
 static int
-sb_accept4(scmp_filter_ctx ctx)
+sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 1,
        SCMP_CMP(0, SCMP_CMP_EQ, 18));
@@ -184,7 +183,7 @@ sb_accept4(scmp_filter_ctx ctx)
 
 #ifdef __NR_mmap2
 static int
-sb_mmap2(scmp_filter_ctx ctx)
+sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -208,19 +207,18 @@ sb_mmap2(scmp_filter_ctx ctx)
 
 // TODO parameters
 static int
-sb_open(scmp_filter_ctx ctx)
+sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc;
-  sandbox_cfg_t *elem;
+  sandbox_cfg_t *elem = NULL;
 
   // for each dynamic parameter filters
-  elem = filter_dynamic;
-  for (; elem != NULL; elem = elem->next) {
+  for (elem = filter; elem != NULL; elem = elem->next) {
     if (elem->prot == 1 && elem->syscall == SCMP_SYS(open)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
             SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
             "error %d", rc);
         return rc;
       }
@@ -232,19 +230,18 @@ sb_open(scmp_filter_ctx ctx)
 
 // TODO parameters
 static int
-sb_openat(scmp_filter_ctx ctx)
+sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc;
-  sandbox_cfg_t *elem;
+  sandbox_cfg_t *elem = NULL;
 
   // for each dynamic parameter filters
-  elem = filter_dynamic;
-  for (; elem != NULL; elem = elem->next) {
+  for (elem = filter; elem != NULL; elem = elem->next) {
     if (elem->prot == 1 && elem->syscall == SCMP_SYS(openat)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1,
             SCMP_CMP(1, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
+        log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received libseccomp "
             "error %d", rc);
         return rc;
       }
@@ -255,7 +252,7 @@ sb_openat(scmp_filter_ctx ctx)
 }
 
 static int
-sb_clock_gettime(scmp_filter_ctx ctx)
+sb_clock_gettime(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(clock_gettime), 1,
      SCMP_CMP(0, SCMP_CMP_EQ, CLOCK_MONOTONIC));
@@ -263,7 +260,7 @@ sb_clock_gettime(scmp_filter_ctx ctx)
 
 // TODO: param not working
 static int
-sb_socket(scmp_filter_ctx ctx)
+sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -288,7 +285,7 @@ sb_socket(scmp_filter_ctx ctx)
 
 // TODO: param not working
 static int
-sb_setsockopt(scmp_filter_ctx ctx)
+sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -303,7 +300,7 @@ sb_setsockopt(scmp_filter_ctx ctx)
 
 #ifdef __NR_fcntl64
 static int
-sb_fcntl64(scmp_filter_ctx ctx)
+sb_fcntl64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -324,7 +321,7 @@ sb_fcntl64(scmp_filter_ctx ctx)
 
 // allows everything but will keep for now..
 static int
-sb_epoll_ctl(scmp_filter_ctx ctx)
+sb_epoll_ctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -351,7 +348,7 @@ sb_epoll_ctl(scmp_filter_ctx ctx)
  * this list.
  */
 static int
-sb_prctl(scmp_filter_ctx ctx)
+sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -367,7 +364,7 @@ sb_prctl(scmp_filter_ctx ctx)
  * does not NEED tobe here.. only occurs before filter
  */
 static int
-sb_mprotect(scmp_filter_ctx ctx)
+sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -383,7 +380,7 @@ sb_mprotect(scmp_filter_ctx ctx)
  * does not NEED tobe here.. only occurs before filter
  */
 static int
-sb_rt_sigprocmask(scmp_filter_ctx ctx)
+sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -399,7 +396,7 @@ sb_rt_sigprocmask(scmp_filter_ctx ctx)
  * does not NEED tobe here.. only occurs before filter
  */
 static int
-sb_flock(scmp_filter_ctx ctx)
+sb_flock(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -415,7 +412,7 @@ sb_flock(scmp_filter_ctx ctx)
  * does not NEED tobe here.. only occurs before filter
  */
 static int
-sb_futex(scmp_filter_ctx ctx)
+sb_futex(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -432,12 +429,12 @@ sb_futex(scmp_filter_ctx ctx)
  * does not NEED tobe here.. only occurs before filter
  */
 static int
-sb_mremap(scmp_filter_ctx ctx)
+sb_mremap(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mremap), 1,
-      SCMP_CMP(1, SCMP_CMP_EQ, MREMAP_MAYMOVE));
+      SCMP_CMP(3, SCMP_CMP_EQ, MREMAP_MAYMOVE));
   if (rc)
     return rc;
 
@@ -445,7 +442,7 @@ sb_mremap(scmp_filter_ctx ctx)
 }
 
 static int
-sb_poll(scmp_filter_ctx ctx)
+sb_poll(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -543,8 +540,9 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
   elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) file);
   elem->prot = 1;
-  elem->next = filter_dynamic;
-  filter_dynamic = elem;
+
+  elem->next = *cfg;
+  *cfg = elem;
 
   return 0;
 }
@@ -560,8 +558,9 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) file);;
   elem->prot = 1;
-  elem->next = filter_dynamic;
-  filter_dynamic = elem;
+
+  elem->next = *cfg;
+  *cfg = elem;
 
   return 0;
 }
@@ -577,8 +576,9 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
   elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) com);;
   elem->prot = 1;
-  elem->next = filter_dynamic;
-  filter_dynamic = elem;
+
+  elem->next = *cfg;
+  *cfg = elem;
 
   return 0;
 }
@@ -590,9 +590,9 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
   // function pointer
   for (i = 0; i < ARRAY_LENGTH(filter_func); i++) {
-    if ((filter_func[i])(ctx)) {
-      log_err(LD_BUG,"(Sandbox) failed to add syscall, received libseccomp "
-          "error %d", rc);
+    if ((filter_func[i])(ctx, cfg)) {
+      log_err(LD_BUG,"(Sandbox) failed to add syscall %d, received libseccomp "
+          "error %d", i, rc);
       return rc;
     }
   }
@@ -745,6 +745,22 @@ install_sigsys_debugging(void)
 
   return 0;
 }
+
+static int register_cfg(sandbox_cfg_t* cfg) {
+  sandbox_cfg_t *elem = NULL;
+
+  if (filter_dynamic == NULL) {
+    filter_dynamic = cfg;
+    return 0;
+  }
+
+  for (elem = filter_dynamic; elem->next != NULL; elem = elem->next);
+
+  elem->next = cfg;
+
+  return 0;
+}
+
 #endif // USE_LIBSECCOMP
 
 #ifdef USE_LIBSECCOMP
@@ -760,6 +776,9 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 
   if (install_syscall_filter(cfg))
     return -2;
+
+  if (register_cfg(cfg))
+    return -3;
 
   return 0;
 }
