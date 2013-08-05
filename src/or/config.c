@@ -5509,6 +5509,13 @@ check_server_ports(const smartlist_t *ports,
              "listening on one.");
     r = -1;
   }
+  if (n_orport_listeners && !n_orport_advertised) {
+    log_warn(LD_CONFIG, "We are listening on an ORPort, but not advertising "
+             "any ORPorts. This will keep us from building a %s "
+             "descriptor, and make us impossible to use.",
+             options->BridgeRelay ? "bridge" : "router");
+    r = -1;
+  }
   if (n_dirport_advertised && !n_dirport_listeners) {
     log_warn(LD_CONFIG, "We are advertising a DirPort, but not actually "
              "listening on one.");
