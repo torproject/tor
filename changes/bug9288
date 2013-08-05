@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix an invalid memory read that occured when a pluggable
-      transport proxy failed its configuration protocol.
-      Fixes bug 9288.
