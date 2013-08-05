@@ -80,11 +80,11 @@ Changes in version 0.2.4.13-alpha - 2013-06-14
     - Relays now treat a changed IPv6 ORPort as sufficient reason to
       publish an updated descriptor. Fixes bug 6026; bugfix on
       0.2.4.1-alpha.
-     - When launching a resolve request on behalf of an AF_UNIX control
-       socket, omit the address field of the new entry connection, used in
-       subsequent controller events, rather than letting tor_dup_addr()
-       set it to "<unknown address type>". Fixes bug 8639; bugfix on
-       0.2.4.12-alpha.
+    - When launching a resolve request on behalf of an AF_UNIX control
+      socket, omit the address field of the new entry connection, used in
+      subsequent controller events, rather than letting tor_dup_addr()
+      set it to "<unknown address type>". Fixes bug 8639; bugfix on
+      0.2.4.12-alpha.
 
   o Minor bugfixes (log messages):
     - Fix a scaling issue in the path bias accounting code that
