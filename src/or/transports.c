@@ -105,7 +105,7 @@ static void managed_proxy_destroy(managed_proxy_t *mp,
                                   int also_terminate_process);
 
 static void handle_finished_proxy(managed_proxy_t *mp);
-static void configure_proxy(managed_proxy_t *mp);
+static int configure_proxy(managed_proxy_t *mp);
 
 static void parse_method_error(const char *line, int is_server_method);
 #define parse_server_method_error(l) parse_method_error(l, 1)
@@ -572,10 +572,8 @@ pt_configure_remaining_proxies(void)
     /* If the proxy is not fully configured, try to configure it
        futher. */
     if (!proxy_configuration_finished(mp))
-      configure_proxy(mp);
-
-    if (proxy_configuration_finished(mp))
-      at_least_a_proxy_config_finished = 1;
+      if (configure_proxy(mp) == 1)
+        at_least_a_proxy_config_finished = 1;
 
   } SMARTLIST_FOREACH_END(mp);
 
@@ -587,10 +585,14 @@ pt_configure_remaining_proxies(void)
     mark_my_descriptor_dirty("configured managed proxies");
 }
 
-/** Attempt to continue configuring managed proxy <b>mp</b>. */
-static void
+/** Attempt to continue configuring managed proxy <b>mp</b>.
+ *  Return 1 if the transport configuration finished, and return 0
+ *  otherwise (if we still have more configuring to do for this
+ *  proxy). */
+static int
 configure_proxy(managed_proxy_t *mp)
 {
+  int configuration_finished = 0;
   smartlist_t *proxy_output = NULL;
   enum stream_status stream_status = 0;
 
@@ -600,7 +602,7 @@ configure_proxy(managed_proxy_t *mp)
       mp->conf_state = PT_PROTO_FAILED_LAUNCH;
       handle_finished_proxy(mp);
     }
-    return;
+    return 0;
   }
 
   tor_assert(mp->conf_state != PT_PROTO_INFANT);
@@ -632,13 +634,17 @@ configure_proxy(managed_proxy_t *mp)
 
  done:
   /* if the proxy finished configuring, exit the loop. */
-  if (proxy_configuration_finished(mp))
+  if (proxy_configuration_finished(mp)) {
     handle_finished_proxy(mp);
+    configuration_finished = 1;
+  }
 
   if (proxy_output) {
     SMARTLIST_FOREACH(proxy_output, char *, cp, tor_free(cp));
     smartlist_free(proxy_output);
   }
+
+  return configuration_finished;
 }
 
 /** Register server managed proxy <b>mp</b> transports to state */
