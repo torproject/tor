@@ -18,5 +18,9 @@ int or_state_load(void);
 int or_state_loaded(void);
 void or_state_free_all(void);
 
+#ifdef STATEFILE_PRIVATE
+STATIC config_line_t *get_transport_in_state_by_name(const char *transport);
+#endif
+
 #endif
 

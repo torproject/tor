@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #define PT_PRIVATE
 #define UTIL_PRIVATE
+#define STATEFILE_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "confparse.h"
@@ -291,10 +292,10 @@ tor_get_lines_from_handle_replacement(STDIN_HANDLE *handle,
   /* Generate some dummy CMETHOD lines the first 5 times. The 6th
      time, send 'CMETHODS DONE' to finish configuring the proxy. */
   if (times_called++ != 5) {
-    smartlist_add_asprintf(retval_sl, "CMETHOD mock%d socks5 127.0.0.1:555%d",
+    smartlist_add_asprintf(retval_sl, "SMETHOD mock%d 127.0.0.1:555%d",
                            times_called, times_called);
   } else {
-    smartlist_add(retval_sl, tor_strdup("CMETHODS DONE"));
+    smartlist_add(retval_sl, tor_strdup("SMETHODS DONE"));
   }
 
   return retval_sl;
@@ -341,6 +342,7 @@ test_pt_configure_proxy(void *arg)
   mp->process_handle = tor_malloc_zero(sizeof(process_handle_t));
   mp->argv = tor_malloc_zero(sizeof(char*)*2);
   mp->argv[0] = tor_strdup("<testcase>");
+  mp->is_server = 1;
 
   /* Test the return value of configure_proxy() by calling it some
      times while it is uninitialized and then finally finalizing its
@@ -361,6 +363,27 @@ test_pt_configure_proxy(void *arg)
   test_assert(retval == 1);
   /* check the mp state */
   test_assert(mp->conf_state == PT_PROTO_COMPLETED);
+
+  { /* check that the transport info were saved properly in the tor state */
+    config_line_t *transport_in_state = NULL;
+    smartlist_t *transport_info_sl = smartlist_new();
+    char *name_of_transport = NULL;
+    char *bindaddr = NULL;
+
+    /* Get the bindaddr for "mock1" and check it against the bindaddr
+       that the mocked tor_get_lines_from_handle() generated. */
+    transport_in_state = get_transport_in_state_by_name("mock1");
+    test_assert(transport_in_state);
+    smartlist_split_string(transport_info_sl, transport_in_state->value,
+                           NULL, 0, 0);
+    name_of_transport = smartlist_get(transport_info_sl, 0);
+    bindaddr = smartlist_get(transport_info_sl, 1);
+    tt_str_op(name_of_transport, ==, "mock1");
+    tt_str_op(bindaddr, ==, "127.0.0.1:5551");
+
+    SMARTLIST_FOREACH(transport_info_sl, char *, cp, tor_free(cp));
+    smartlist_free(transport_info_sl);
+  }
 
  done:
   tor_free(dummy_state);
