@@ -118,25 +118,21 @@ Running gcov for unit test coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -----
-  make clean
-  make CFLAGS='-g -fprofile-arcs -ftest-coverage'
-  ./src/test/test
-  gcov -o src/common src/common/*.[ch]
-  gcov -o src/or src/or/*.[ch]
-  cd ../or; gcov *.[ch]
+   ./configure --enable-coverage
+   make
+   ./src/test/test
+   mkdir coverage-output
+   ./contrib/coverage coverage-output
 -----
 
-Then, look at the .gcov files.  '-' before a line means that the
-compiler generated  no code for that line.  '######' means that the
-line was never reached.  Lines with numbers were called that number
-of times.
+(On OSX, you'll need to start with "--enable-coverage CC=clang".)
+
+Then, look at the .gcov files in coverage-output.  '-' before a line means
+that the compiler generated no code for that line.  '######' means that the
+line was never reached.  Lines with numbers were called that number of times.
 
 If that doesn't work:
    * Try configuring Tor with --disable-gcc-hardening
-   * On recent OSX versions, you might need to add CC=clang to your
-     build line, as in:
-        make CFLAGS='-g -fprofile-arcs -ftest-coverage' CC=clang
-     Their llvm-gcc doesn't work so great for me.
 
 Profiling Tor with oprofile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
