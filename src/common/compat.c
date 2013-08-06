@@ -1225,9 +1225,9 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
      * for now, and really, when localhost is down sometimes, we
      * have other problems too.
      */
-    tor_socket_t listener = -1;
-    tor_socket_t connector = -1;
-    tor_socket_t acceptor = -1;
+    tor_socket_t listener = TOR_INVALID_SOCKET;
+    tor_socket_t connector = TOR_INVALID_SOCKET;
+    tor_socket_t acceptor = TOR_INVALID_SOCKET;
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
     int size;
@@ -1306,11 +1306,11 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   tidy_up_and_fail:
     if (saved_errno < 0)
       saved_errno = errno;
-    if (listener != -1)
+    if (SOCKET_OK(listener))
       tor_close_socket(listener);
-    if (connector != -1)
+    if (SOCKET_OK(connector))
       tor_close_socket(connector);
-    if (acceptor != -1)
+    if (SOCKET_OK(acceptor))
       tor_close_socket(acceptor);
     return -saved_errno;
 #endif
