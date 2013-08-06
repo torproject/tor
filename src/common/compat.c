@@ -1281,7 +1281,6 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       goto tidy_up_and_fail;
     if (size != sizeof(listen_addr))
       goto abort_tidy_up_and_fail;
-    tor_close_socket(listener);
     /* Now check we are talking to ourself by matching port and host on the
        two sockets.  */
     if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
@@ -1292,6 +1291,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
         || listen_addr.sin_port != connect_addr.sin_port) {
       goto abort_tidy_up_and_fail;
     }
+    tor_close_socket(listener);
     fd[0] = connector;
     fd[1] = acceptor;
 
