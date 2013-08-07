@@ -50,6 +50,7 @@ static sandbox_cfg_t *filter_dynamic = NULL;
  * stage 1 general Tor sandbox.
  */
 static int filter_nopar_gen[] = {
+    SCMP_SYS(access),
     SCMP_SYS(brk),
     SCMP_SYS(close),
     SCMP_SYS(clone),
@@ -90,23 +91,22 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(read),
     SCMP_SYS(rename),
     SCMP_SYS(rt_sigreturn),
+    SCMP_SYS(set_robust_list),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
 #endif
     SCMP_SYS(stat),
 #ifdef __NR_stat64
-    SCMP_SYS(stat64),
+    SCMP_SYS(stat64), // TODO
 #endif
+    SCMP_SYS(uname),
     SCMP_SYS(write),
     SCMP_SYS(exit_group),
     SCMP_SYS(exit),
 
     // Not needed..
-//    SCMP_SYS(access),
-//    SCMP_SYS(set_robust_list),
 //    SCMP_SYS(set_thread_area),
 //    SCMP_SYS(set_tid_address),
-//    SCMP_SYS(uname),
 
     // socket syscalls
     SCMP_SYS(bind),
@@ -201,6 +201,34 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     return rc;
   }
 
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
+       SCMP_CMP(3, SCMP_CMP_EQ,MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK));
+  if (rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
+      SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE));
+  if (rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
+      SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS));
+  if (rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_EXEC),
+      SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_DENYWRITE));
+  if (rc) {
+    return rc;
+  }
+
   return 0;
 }
 #endif
@@ -223,6 +251,24 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         return rc;
       }
     }
+  }
+
+  // todo remove when libevent fix
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
+        "error %d", rc);
+    return rc;
+  }
+
+  // problem: required by getaddrinfo
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
+        "error %d", rc);
+    return rc;
   }
 
   return 0;
@@ -315,6 +361,17 @@ sb_fcntl64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc)
     return rc;
 
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fcntl64), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, F_GETFD));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fcntl64), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, F_SETFD),
+      SCMP_CMP(2, SCMP_CMP_EQ, FD_CLOEXEC));
+  if (rc)
+    return rc;
+
   return 0;
 }
 #endif
@@ -373,12 +430,14 @@ sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc)
     return rc;
 
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_NONE));
+  if (rc)
+    return rc;
+
   return 0;
 }
 
-/**
- * does not NEED tobe here.. only occurs before filter
- */
 static int
 sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -386,6 +445,11 @@ sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask), 1,
       SCMP_CMP(0, SCMP_CMP_EQ, SIG_UNBLOCK));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask), 1,
+      SCMP_CMP(0, SCMP_CMP_EQ, SIG_SETMASK));
   if (rc)
     return rc;
 
@@ -408,17 +472,25 @@ sb_flock(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-/**
- * does not NEED tobe here.. only occurs before filter
- */
 static int
 sb_futex(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
+  // can remove
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(futex), 1,
       SCMP_CMP(1, SCMP_CMP_EQ,
           FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(futex), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, FUTEX_WAKE_PRIVATE));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(futex), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, FUTEX_WAIT_PRIVATE));
   if (rc)
     return rc;
 
@@ -605,14 +677,8 @@ add_noparam_filter(scmp_filter_ctx ctx)
 {
   int i, filter_size, rc = 0;
 
-  if (filter_nopar_gen != NULL) {
-    filter_size = sizeof(filter_nopar_gen) / sizeof(filter_nopar_gen[0]);
-  } else {
-    filter_size = 0;
-  }
-
   // add general filters
-  for (i = 0; i < filter_size; i++) {
+  for (i = 0; i < ARRAY_LENGTH(filter_nopar_gen); i++) {
     rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, filter_nopar_gen[i], 0);
     if (rc != 0) {
       log_err(LD_BUG,"(Sandbox) failed to add syscall index %d, "

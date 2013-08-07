@@ -2645,23 +2645,18 @@ sandbox_init_filter()
   sandbox_cfg_t *cfg = sandbox_cfg_new();
 
   // TODO: mem leak
-  sandbox_cfg_allow_openat_filename(&cfg,
-      get_datadir_fname("cached-status"));
+  sandbox_cfg_allow_openat_filename(&cfg, get_datadir_fname("cached-status"));
 
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-certs"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-certs.tmp"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-consensus"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-certs"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-certs.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-consensus"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-consensus"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdesc-consensus"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdesc-consensus.tmp"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-microdescs"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-microdescs"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-microdescs.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
@@ -2670,18 +2665,36 @@ sandbox_init_filter()
       get_datadir_fname("cached-microdescs.new.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-microdesc-consensus"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-descriptors"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-descriptors"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-descriptors.new"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("cached-extrainfo"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("state.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-extrainfo"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("state.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unparseable-desc.tmp"));
-  sandbox_cfg_allow_open_filename(&cfg,
-      get_datadir_fname("unparseable-desc"));
+  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("unparseable-desc"));
+
+  // orport
+  if (server_mode(get_options())) {
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_id_key"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key_ntor"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_id_key.old"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key.old"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key.tmp"));
+
+    sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("fingerprint"));
+
+    sandbox_cfg_allow_open_filename(&cfg, "/etc/resolv.conf");
+  }
 
   sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
 
