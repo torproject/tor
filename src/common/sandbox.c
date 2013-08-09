@@ -104,6 +104,8 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(exit_group),
     SCMP_SYS(exit),
 
+    SCMP_SYS(madvise),
+
     // Not needed..
 //    SCMP_SYS(set_thread_area),
 //    SCMP_SYS(set_tid_address),
@@ -190,6 +192,13 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ),
        SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE));
+  if (rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
+       SCMP_CMP(2, SCMP_CMP_EQ, PROT_NONE),
+       SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE));
   if (rc) {
     return rc;
   }
@@ -427,6 +436,11 @@ sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
   if (rc)
     return rc;
 
@@ -675,7 +689,7 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 static int
 add_noparam_filter(scmp_filter_ctx ctx)
 {
-  int i, filter_size, rc = 0;
+  int i, rc = 0;
 
   // add general filters
   for (i = 0; i < ARRAY_LENGTH(filter_nopar_gen); i++) {

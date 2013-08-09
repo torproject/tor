@@ -571,8 +571,6 @@ spawn_enough_cpuworkers(void)
   if (num_cpuworkers_needed > MAX_CPUWORKERS)
     num_cpuworkers_needed = MAX_CPUWORKERS;
 
-  getchar();
-
   while (num_cpuworkers < num_cpuworkers_needed) {
     if (spawn_cpuworker() < 0) {
       log_warn(LD_GENERAL,"Cpuworker spawn failed. Will try again later.");

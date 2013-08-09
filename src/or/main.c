@@ -2665,9 +2665,16 @@ sandbox_init_filter()
       get_datadir_fname("cached-microdescs.new.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("unverified-microdesc-consensus"));
-  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-descriptors"));
+  sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-descriptors"));
   sandbox_cfg_allow_open_filename(&cfg,
       get_datadir_fname("cached-descriptors.new"));
+  sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-descriptors.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-descriptors.new.tmp"));
+  sandbox_cfg_allow_open_filename(&cfg,
+      get_datadir_fname("cached-descriptors.tmp.tmp"));
   sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("cached-extrainfo"));
   sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("state.tmp"));
   sandbox_cfg_allow_open_filename(&cfg,
@@ -2683,6 +2690,8 @@ sandbox_init_filter()
     sandbox_cfg_allow_open_filename(&cfg,
         get_datadir_fname2("keys", "secret_onion_key_ntor"));
     sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname2("keys", "secret_onion_key_ntor.tmp"));
+    sandbox_cfg_allow_open_filename(&cfg,
         get_datadir_fname2("keys", "secret_id_key.old"));
     sandbox_cfg_allow_open_filename(&cfg,
         get_datadir_fname2("keys", "secret_onion_key.old"));
@@ -2692,8 +2701,16 @@ sandbox_init_filter()
         get_datadir_fname2("keys", "secret_onion_key.tmp"));
 
     sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname("fingerprint"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname("cached-consensus.tmp"));
+    sandbox_cfg_allow_open_filename(&cfg,
+        get_datadir_fname("cached-consensus"));
 
     sandbox_cfg_allow_open_filename(&cfg, "/etc/resolv.conf");
+    sandbox_cfg_allow_open_filename(&cfg, "/dev/srandom");
+    sandbox_cfg_allow_open_filename(&cfg, "/dev/urandom");
+    sandbox_cfg_allow_open_filename(&cfg, "/dev/random");
+
   }
 
   sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
