@@ -37,6 +37,7 @@
 #include <linux/futex.h>
 #include <bits/signum.h>
 
+#include <stdarg.h>
 #include <seccomp.h>
 #include <signal.h>
 #include <unistd.h>
@@ -616,7 +617,7 @@ prot_strdup(char* str)
 }
 
 int
-sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, char fr)
 {
   sandbox_cfg_t *elem = NULL;
 
@@ -630,11 +631,37 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
   elem->next = *cfg;
   *cfg = elem;
 
+  if (fr) tor_free_(file);
+
   return 0;
 }
 
 int
-sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
+sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...)
+{
+  int rc = 0, i;
+
+  va_list ap;
+  va_start(ap, num);
+
+  for (i = 0; i < num; i++) {
+    char *fn = va_arg(ap, char*);
+    char fr = (char) va_arg(ap, int);
+
+    rc = sandbox_cfg_allow_open_filename(cfg, fn, fr);
+    if(rc) {
+      log_err(LD_BUG,"(Sandbox) failed on par %d", i);
+      goto end;
+    }
+  }
+
+ end:
+  va_end(ap);
+  return 0;
+}
+
+int
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, char fr)
 {
   sandbox_cfg_t *elem = NULL;
 
@@ -648,6 +675,32 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   elem->next = *cfg;
   *cfg = elem;
 
+  if (fr) tor_free_(file);
+
+  return 0;
+}
+
+int
+sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, int num, ...)
+{
+  int rc = 0, i;
+
+  va_list ap;
+  va_start(ap, num);
+
+  for (i = 0; i < num; i++) {
+    char *fn = va_arg(ap, char*);
+    char fr = (char) va_arg(ap, int);
+
+    rc = sandbox_cfg_allow_openat_filename(cfg, fn, fr);
+    if(rc) {
+      log_err(LD_BUG,"(Sandbox) failed on par %d", i);
+      goto end;
+    }
+  }
+
+ end:
+  va_end(ap);
   return 0;
 }
 
@@ -666,6 +719,30 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
   elem->next = *cfg;
   *cfg = elem;
 
+  return 0;
+}
+
+int
+sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...)
+{
+  int rc = 0, i;
+
+  va_list ap;
+  va_start(ap, num);
+
+  for (i = 0; i < num; i++) {
+    char *fn = va_arg(ap, char*);
+
+    rc = sandbox_cfg_allow_execve(cfg, fn);
+
+    if(rc) {
+      log_err(LD_BUG,"(Sandbox) failed on par %d", i);
+      goto end;
+    }
+  }
+
+ end:
+  va_end(ap);
   return 0;
 }
 

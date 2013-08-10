@@ -98,9 +98,18 @@ int tor_global_sandbox(void);
 const char* sandbox_intern_string(const char *param);
 
 sandbox_cfg_t * sandbox_cfg_new();
-int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
-int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file);
+
+int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
+    char fr);
+int sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...);
+
+int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
+    char fr);
+int sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, int num, ...);
+
 int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com);
+int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...);
+
 int sandbox_init(sandbox_cfg_t* cfg);
 
 #endif /* SANDBOX_H_ */
