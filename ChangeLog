@@ -1,3 +1,40 @@
+Changes in version 0.2.4.16-rc - 2013-08-10
+  Tor 0.2.4.16-rc is the second release candidate for the Tor 0.2.4.x
+  series. It fixes several crash bugs in the 0.2.4 branch.
+
+  o Major bugfixes:
+    - Fix a bug in the voting algorithm that could yield incorrect results
+      when a non-naming authority declared too many flags. Fixes bug 9200;
+      bugfix on 0.2.0.3-alpha.
+    - Fix an uninitialized read that could in some cases lead to a remote
+      crash while parsing INTRODUCE 1 cells. Bugfix on 0.2.4.1-alpha.
+      Anybody running a hidden service on the experimental 0.2.4.x
+      branch should upgrade. (This is, so far as we know, unrelated to
+      the recent news.)
+    - Avoid an assertion failure when processing DNS replies without the
+      answer types we expected. Fixes bug 9337; bugfix on 0.2.4.7-alpha.
+    - Avoid a crash when using --hash-password. Fixes bug 9295; bugfix on
+      0.2.4.15-rc. Found by stem integration tests.
+
+  o Minor bugfixes:
+    - Fix an invalid memory read that occured when a pluggable
+      transport proxy failed its configuration protocol.
+      Fixes bug 9288; bugfix on 0.2.4.1-alpha.
+    - When evaluating whether to use a connection that we haven't
+      decided is canonical using a recent link protocol version,
+      decide that it's canonical only if it used address _does_
+      match the desired address. Fixes bug 9309; bugfix on
+      0.2.4.4-alpha. Reported by skruffy.
+    - Make the default behavior of NumDirectoryGuards be to track
+      NumEntryGuards. Now a user who changes only NumEntryGuards will get
+      the behavior she expects. Fixes bug 9354; bugfix on 0.2.4.8-alpha.
+    - Fix a spurious compilation warning with some older versions of
+      GCC on FreeBSD. Fixes bug 9254; bugfix on 0.2.4.14-alpha.
+
+  o Minor features:
+    - Update to the July 3 2013 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.4.15-rc - 2013-07-01
   Tor 0.2.4.15-rc is the first release candidate for the Tor 0.2.4.x
   series. It fixes a few smaller bugs, but generally appears stable.
