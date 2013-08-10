@@ -1,4 +1,7 @@
-Changes in version 0.2.4.16-rc - 2013-08-0?
+Changes in version 0.2.4.16-rc - 2013-08-10
+  Tor 0.2.4.16-rc is the second release candidate for the Tor 0.2.4.x
+  series. It fixes several crash bugs in the 0.2.4 branch.
+
   o Major bugfixes:
     - Fix a bug in the voting algorithm that could yield incorrect results
       when a non-naming authority declared too many flags. Fixes bug 9200;
