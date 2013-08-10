@@ -56,8 +56,6 @@ struct rend_intro_cell_s {
       uint16_t auth_len;
       /* Auth data */
       uint8_t *auth_data;
-      /* timestamp */
-      uint32_t timestamp;
       /* Rendezvous point's IP address/port, identity digest and onion key */
       extend_info_t *extend_info;
     } v3;
