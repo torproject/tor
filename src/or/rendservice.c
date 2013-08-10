@@ -1898,8 +1898,8 @@ rend_service_parse_intro_for_v3(
       }
   }
 
-  /* Check that we actually have everything up to the timestamp */
-  if (plaintext_len < (size_t)(ts_offset)) {
+  /* Check that we actually have everything up through the timestamp */
+  if (plaintext_len < (size_t)(ts_offset)+4) {
     if (err_msg_out) {
       tor_asprintf(err_msg_out,
                    "truncated plaintext of encrypted parted of "
@@ -1921,12 +1921,6 @@ rend_service_parse_intro_for_v3(
      */
     memcpy(intro->u.v3.auth_data, buf + 4, intro->u.v3.auth_len);
   }
-
-  /*
-   * Apparently we don't use the timestamp any more, but might as well copy
-   * over just in case we ever care about it.
-   */
-  intro->u.v3.timestamp = ntohl(get_uint32(buf + ts_offset));
 
   /*
    * From here on, the format is as in v2, so we call the v2 parser with

@@ -1,0 +1,8 @@
+  o Major bugfixes:
+
+    - Fix an uninitialized read that could (in some cases) lead to a remote
+      crash while parsing INTRODUCE 1 cells. (This is, so far as we know,
+      unrelated to the recent news.)  Fixes bug XXX; bugfix on
+      0.2.4.1-alpha. Anybody running a hidden service on the experimental
+      0.2.4.x branch should upgrade.
+
