@@ -9,6 +9,8 @@
  * \brief Header file for sandbox.c.
  **/
 
+// TODO: thinking of only having allow_file for multiple syscalls
+
 #ifndef SANDBOX_H_
 #define SANDBOX_H_
 
@@ -109,6 +111,11 @@ int sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, int num, ...);
 
 int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com);
 int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...);
+
+int sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file,
+    char fr);
+int sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg,
+    int num, ...);
 
 int sandbox_init(sandbox_cfg_t* cfg);
 

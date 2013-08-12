@@ -97,16 +97,14 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(sigreturn),
 #endif
     SCMP_SYS(stat),
-#ifdef __NR_stat64
-    SCMP_SYS(stat64), // TODO
-#endif
     SCMP_SYS(uname),
     SCMP_SYS(write),
     SCMP_SYS(exit_group),
     SCMP_SYS(exit),
 
     SCMP_SYS(madvise),
-
+    // getaddrinfo uses this..
+    SCMP_SYS(stat64),
     // Not needed..
 //    SCMP_SYS(set_thread_area),
 //    SCMP_SYS(set_tid_address),
@@ -542,6 +540,31 @@ sb_poll(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+#ifdef __NR_stat64
+static int
+sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc = 0;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    if (elem->prot == 1 && (elem->syscall == SCMP_SYS(open) ||
+        elem->syscall == SCMP_SYS(stat64))) {
+      rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(stat64), 1,
+            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
+            "error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+#endif
+
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
@@ -559,7 +582,8 @@ static sandbox_filter_func_t filter_func[] = {
     sb_flock,
     sb_futex,
     sb_mremap,
-    sb_poll
+    sb_poll,
+    sb_stat64
 };
 
 const char*
@@ -615,6 +639,52 @@ prot_strdup(char* str)
  out:
    return res;
 }
+
+#ifdef __NR_stat64
+int
+sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, char fr)
+{
+  sandbox_cfg_t *elem = NULL;
+
+  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  elem->syscall = SCMP_SYS(stat64);
+  elem->pindex = 0;
+  elem->ptype = PARAM_PTR;
+  elem->param = (intptr_t) prot_strdup((char*) file);
+  elem->prot = 1;
+
+  elem->next = *cfg;
+  *cfg = elem;
+
+  if (fr) tor_free_(file);
+
+  return 0;
+}
+
+int
+sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, int num, ...)
+{
+  int rc = 0, i;
+
+  va_list ap;
+  va_start(ap, num);
+
+  for (i = 0; i < num; i++) {
+    char *fn = va_arg(ap, char*);
+    char fr = (char) va_arg(ap, int);
+
+    rc = sandbox_cfg_allow_stat64_filename(cfg, fn, fr);
+    if(rc) {
+      log_err(LD_BUG,"(Sandbox) failed on par %d", i);
+      goto end;
+    }
+  }
+
+ end:
+  va_end(ap);
+  return 0;
+}
+#endif
 
 int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, char fr)

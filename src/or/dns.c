@@ -24,6 +24,7 @@
 #include "relay.h"
 #include "router.h"
 #include "ht.h"
+#include "../common/sandbox.h"
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/event.h>
 #include <event2/dns.h>
@@ -1477,7 +1478,7 @@ configure_nameservers(int force)
 
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
-    if (stat(conf_fname, &st)) {
+    if (stat(sandbox_intern_string(conf_fname), &st)) {
       log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
       goto err;

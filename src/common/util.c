@@ -1803,7 +1803,7 @@ file_status(const char *fname)
   int r;
   f = tor_strdup(fname);
   clean_name_for_stat(f);
-  r = stat(f, &st);
+  r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {
     if (errno == ENOENT) {
@@ -1853,7 +1853,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   tor_assert(dirname);
   f = tor_strdup(dirname);
   clean_name_for_stat(f);
-  r = stat(f, &st);
+  r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {
     if (errno != ENOENT) {

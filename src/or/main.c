@@ -2672,6 +2672,14 @@ sandbox_init_filter()
       "/dev/urandom", 0
   );
 
+  sandbox_cfg_allow_stat64_filename_array(&cfg, 5,
+      get_datadir_fname(NULL), 1,
+      get_datadir_fname("lock"), 1,
+      get_datadir_fname("state"), 1,
+      get_datadir_fname("router-stability"), 1,
+      get_datadir_fname("cached-extrainfo.new"), 1
+  );
+
   // orport
   if (server_mode(get_options())) {
     sandbox_cfg_allow_open_filename_array(&cfg, 13,
@@ -2688,6 +2696,11 @@ sandbox_init_filter()
         get_datadir_fname("cached-consensus.tmp"), 1,
         "/etc/resolv.conf", 0,
         "/dev/random", 0
+    );
+
+    sandbox_cfg_allow_stat64_filename_array(&cfg, 2,
+        get_datadir_fname("keys"), 1,
+        get_datadir_fname("stats/dirreq-stats"), 1
     );
   }
 
