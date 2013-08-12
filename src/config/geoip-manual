@@ -69,18 +69,10 @@
 # US.  -KL 2012-11-27
 "70.232.245.60","70.232.245.255","1189672252","1189672447","US","United States"
 
-# SE, because previous MaxMind entry 80.67.11.200-80.67.13.255 is SE, and
-# RIR delegation files say entire range 80.67.0.0-80.67.15.255 is SE.
-# -KL 2013-03-07
-"80.67.14.0","80.67.15.255","1346571776","1346572287","SE","Sweden"
-
 # NL, because previous MaxMind entry 81.171.56.0-81.171.80.255 is NL, and
 # RIR delegation files say entire range 81.171.64.0-81.171.127.255 is NL.
 # -KL 2013-03-07
 "81.171.81.0","81.171.81.127","1370181888","1370182015","NL","Netherlands"
-
-# GB, because RIPE NCC says 85.237.192.0-85.237.223.255 is GB.
-"85.237.222.0","85.237.222.255","1441652224","1441652479","GB","United Kingdom"
 
 # BE, because next MaxMind entry 86.39.147.0-86.39.148.31 is BE, and RIR
 # delegation files say entire range 86.39.128.0-86.39.255.255 is BE.
@@ -102,6 +94,10 @@
 # MaxMind entry and say GB for 91.238.214.0-91.238.215.255.
 # -KL 2012-11-27
 "91.238.214.0","91.238.215.255","1542379008","1542379519","GB","United Kingdom"
+
+# US, because ARIN says US for 198.159.0.0-198.159.255.255 and because
+# previous MaxMind entry is US, too.  -KL 2013-08-12
+"98.159.239.0","98.159.239.255","1654648576","1654648831","US","United States"
 
 # NL, because next MaxMind entry 176.56.173.0-176.56.173.63 is NL, and RIR
 # delegation files say 176.56.160.0-176.56.191.255 is NL.  -KL 2013-05-13
@@ -127,6 +123,10 @@
 # delegation files, too.  -KL 2013-05-13
 "185.25.84.0","185.25.87.255","3105444864","3105445887","GB","United Kingdom"
 
+# US, because ARIN says US for 192.238.16.0-192.238.23.255 and because
+# next MaxMind entry is US, too.  -KL 2013-08-12
+"192.238.16.0","192.238.19.255","3236827136","3236828159","US","United States"
+
 # EU, despite neither previous (RU) nor next (UA) MaxMind entry being EU,
 # but because RIR delegation files agree with both previous and next
 # MaxMind entry and say EU for 193.200.150.0-193.200.150.255.
@@ -144,12 +144,9 @@
 "199.101.192.0","199.101.192.255","3345334272","3345334527","US","United States"
 
 # US, because ARIN says 199.255.208.0-199.255.215.255 is US.
-"199.255.213.0","199.255.215.255","3355432192","3355432959","US","United States"
-
-# US, because next MaxMind entry 204.12.162.0-204.12.197.119 is US, and
-# RIR delegation files say 204.12.160.0-204.12.191.255 is US.
-# -KL 2013-05-13
-"204.12.160.0","204.12.161.255","3423379456","3423379967","US","United States"
+# Changed entry start from 199.255.213.0 to 199.255.208.0 on 2013-08-12.
+# -KL 2013-08-12
+"199.255.208.0","199.255.215.255","3355430912","3355432959","US","United States"
 
 # US, because previous MaxMind entry 209.58.176.144-209.59.31.255 is US,
 # and RIR delegation files say 209.59.32.0-209.59.63.255 is US.
