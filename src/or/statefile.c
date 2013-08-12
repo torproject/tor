@@ -4,6 +4,7 @@
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define STATEFILE_PRIVATE
 #include "or.h"
 #include "circuitstats.h"
 #include "config.h"
@@ -449,7 +450,7 @@ or_state_save(time_t now)
 
 /** Return the config line for transport <b>transport</b> in the current state.
  *  Return NULL if there is no config line for <b>transport</b>. */
-static config_line_t *
+STATIC config_line_t *
 get_transport_in_state_by_name(const char *transport)
 {
   or_state_t *or_state = get_or_state();
