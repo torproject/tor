@@ -125,8 +125,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(recvmsg),
     SCMP_SYS(sendto),
     SCMP_SYS(send),
-    SCMP_SYS(setsockopt),
-    SCMP_SYS(socket),
     SCMP_SYS(socketpair),
     SCMP_SYS(recvfrom),
     SCMP_SYS(unlink),
@@ -310,32 +308,30 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-// TODO: param not working
+// TODO: add correct param
 static int
 sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
-  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 4,
-      SCMP_CMP(0, SCMP_CMP_EQ, 1),
-      SCMP_CMP(1, SCMP_CMP_EQ, PF_INET),
-      SCMP_CMP(2, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC),
-      SCMP_CMP(3, SCMP_CMP_EQ, IPPROTO_TCP));
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC),
+      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
   if (rc)
     return rc;
 
-  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 4,
-      SCMP_CMP(0, SCMP_CMP_EQ, 1),
-      SCMP_CMP(1, SCMP_CMP_EQ, PF_NETLINK),
-      SCMP_CMP(2, SCMP_CMP_EQ, SOCK_RAW),
-      SCMP_CMP(3, SCMP_CMP_EQ, 0));
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_NETLINK),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_RAW),
+      SCMP_CMP(2, SCMP_CMP_EQ, 0));
   if (rc)
     return rc;
 
   return 0;
 }
 
-// TODO: param not working
+// TODO: add correct param
 static int
 sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -580,7 +576,10 @@ static sandbox_filter_func_t filter_func[] = {
     sb_futex,
     sb_mremap,
     sb_poll,
-    sb_stat64
+    sb_stat64,
+
+    sb_socket,
+    sb_setsockopt
 };
 
 const char*
