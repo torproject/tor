@@ -372,12 +372,6 @@ handshake_start(or_connection_t *conn, int receiving)
   return 0;
 }
 
-static void
-test_ext_or_handshake(void *arg)
-{
-  or_connection_t *conn=NULL;
-  char b[256];
-
 #define WRITE(s,n)                                                      \
   do {                                                                  \
     write_to_buf((s), (n), TO_CONN(conn)->inbuf);                       \
@@ -391,6 +385,41 @@ test_ext_or_handshake(void *arg)
       test_memeq(b, (s), (n));                                  \
     }                                                           \
   } while (0)
+
+/* Helper: Do a successful Extended ORPort authentication handshake. */
+static void
+do_ext_or_handshake(or_connection_t *conn)
+{
+  char b[256];
+
+  tt_int_op(0, ==, connection_ext_or_start_auth(conn));
+  CONTAINS("\x01\x00", 2);
+  WRITE("\x01", 1);
+  WRITE("But when I look ahead up the whi", 32);
+  MOCK(crypto_rand, crypto_rand_return_tse_str);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  UNMOCK(crypto_rand);
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
+  CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
+           "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
+           "te road There is always another ", 64);
+  /* Send the right response this time. */
+  WRITE("\xab\x39\x17\x32\xdd\x2e\xd9\x68\xcd\x40\xc0\x87\xd1\xb1\xf2\x5b"
+        "\x33\xb3\xcd\x77\xff\x79\xbd\x80\xc2\x07\x4b\xbf\x43\x81\x19\xa2",
+        32);
+  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("\x01", 1);
+  tt_assert(! TO_CONN(conn)->marked_for_close);
+  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_OPEN);
+
+ done: ;
+}
+
+static void
+test_ext_or_handshake(void *arg)
+{
+  or_connection_t *conn=NULL;
+  char b[256];
 
   (void) arg;
   MOCK(connection_write_to_buf_impl_,
@@ -457,25 +486,7 @@ test_ext_or_handshake(void *arg)
 
   /* Okay, this time let's succeed. */
   conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
-  tt_int_op(0, ==, connection_ext_or_start_auth(conn));
-  CONTAINS("\x01\x00", 2);
-  WRITE("\x01", 1);
-  WRITE("But when I look ahead up the whi", 32);
-  MOCK(crypto_rand, crypto_rand_return_tse_str);
-  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
-  UNMOCK(crypto_rand);
-  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
-  CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
-           "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
-           "te road There is always another ", 64);
-  /* Send the right response this time. */
-  WRITE("\xab\x39\x17\x32\xdd\x2e\xd9\x68\xcd\x40\xc0\x87\xd1\xb1\xf2\x5b"
-        "\x33\xb3\xcd\x77\xff\x79\xbd\x80\xc2\x07\x4b\xbf\x43\x81\x19\xa2",
-        32);
-  tt_int_op(0, ==, connection_ext_or_process_inbuf(conn));
-  CONTAINS("\x01", 1);
-  tt_assert(! TO_CONN(conn)->marked_for_close);
-  tt_int_op(TO_CONN(conn)->state, ==, EXT_OR_CONN_STATE_OPEN);
+  do_ext_or_handshake(conn);
 
   /* Now let's run through some messages. */
   /* First let's send some junk and make sure it's ignored. */
@@ -506,12 +517,56 @@ test_ext_or_handshake(void *arg)
   tt_int_op(handshake_start_called,==,1);
   tt_int_op(TO_CONN(conn)->type, ==, CONN_TYPE_OR);
   tt_int_op(TO_CONN(conn)->state, ==, 0);
+  close_closeable_connections();
+  conn = NULL;
+
+  /* Okay, this time let's succeed the handshake but fail the USERADDR
+     command. */
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  do_ext_or_handshake(conn);
+  /* USERADDR command with an extra NUL byte */
+  WRITE("\x00\x01\x00\x0d""1.2.3.4:5678\x00", 17);
+  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  tt_int_op(-1, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  tt_assert(TO_CONN(conn)->marked_for_close);
+  close_closeable_connections();
+  conn = NULL;
+  UNMOCK(control_event_bootstrap_problem);
+
+  /* Now fail the TRANSPORT command. */
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  do_ext_or_handshake(conn);
+  /* TRANSPORT command with an extra NUL byte */
+  WRITE("\x00\x02\x00\x08""rfc1149\x00", 12);
+  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  tt_int_op(-1, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  tt_assert(TO_CONN(conn)->marked_for_close);
+  close_closeable_connections();
+  conn = NULL;
+  UNMOCK(control_event_bootstrap_problem);
+
+  /* Now fail the TRANSPORT command. */
+  conn = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
+  do_ext_or_handshake(conn);
+  /* TRANSPORT command with transport name with symbols (not a
+     C-identifier) */
+  WRITE("\x00\x02\x00\x07""rf*1149", 11);
+  MOCK(control_event_bootstrap_problem, ignore_bootstrap_problem);
+  tt_int_op(-1, ==, connection_ext_or_process_inbuf(conn));
+  CONTAINS("", 0);
+  tt_assert(TO_CONN(conn)->marked_for_close);
+  close_closeable_connections();
+  conn = NULL;
+  UNMOCK(control_event_bootstrap_problem);
 
  done:
   UNMOCK(connection_write_to_buf_impl_);
   UNMOCK(crypto_rand);
   if (conn)
     connection_free_(TO_CONN(conn));
+#undef CONTAINS
 #undef WRITE
 }
 
