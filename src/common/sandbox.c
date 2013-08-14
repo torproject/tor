@@ -9,6 +9,8 @@
  * \brief Code to enable sandboxing.
  **/
 
+#define _LARGEFILE64_SOURCE
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,10 +34,12 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/epoll.h>
 #include <sys/prctl.h>
 #include <linux/futex.h>
 #include <bits/signum.h>
+#include <event2/event.h>
 
 #include <stdarg.h>
 #include <seccomp.h>
@@ -53,6 +57,7 @@ static sandbox_cfg_t *filter_dynamic = NULL;
 static int filter_nopar_gen[] = {
     SCMP_SYS(access),
     SCMP_SYS(brk),
+    SCMP_SYS(clock_gettime),
     SCMP_SYS(close),
     SCMP_SYS(clone),
     SCMP_SYS(epoll_create),
@@ -105,9 +110,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(madvise),
     // getaddrinfo uses this..
     SCMP_SYS(stat64),
-    // Not needed..
-//    SCMP_SYS(set_thread_area),
-//    SCMP_SYS(set_tid_address),
 
     // socket syscalls
     SCMP_SYS(bind),
@@ -263,7 +265,7 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // todo remove when libevent fix
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
-        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY));
+        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_LARGEFILE|O_CLOEXEC));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
@@ -303,13 +305,6 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   }
 
   return 0;
-}
-
-static int
-sb_clock_gettime(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
-{
-  return seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(clock_gettime), 1,
-     SCMP_CMP(0, SCMP_CMP_EQ, CLOCK_MONOTONIC));
 }
 
 // TODO: param not working
@@ -574,7 +569,6 @@ static sandbox_filter_func_t filter_func[] = {
     sb_mmap2,
     sb_open,
     sb_openat,
-    sb_clock_gettime,
     sb_fcntl64,
     sb_epoll_ctl,
     sb_prctl,

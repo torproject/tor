@@ -2647,7 +2647,7 @@ sandbox_init_filter()
   sandbox_cfg_allow_openat_filename(&cfg,
       get_datadir_fname("cached-status"), 1);
 
-  sandbox_cfg_allow_open_filename_array(&cfg, 22,
+  sandbox_cfg_allow_open_filename_array(&cfg, 23,
       get_datadir_fname("cached-certs"), 1,
       get_datadir_fname("cached-certs.tmp"), 1,
       get_datadir_fname("cached-consensus"), 1,
@@ -2669,7 +2669,8 @@ sandbox_init_filter()
       get_datadir_fname("unparseable-desc.tmp"), 1,
       get_datadir_fname("unparseable-desc"), 1,
       "/dev/srandom", 0,
-      "/dev/urandom", 0
+      "/dev/urandom", 0,
+      "/dev/random", 0
   );
 
   sandbox_cfg_allow_stat64_filename_array(&cfg, 5,
@@ -2682,7 +2683,7 @@ sandbox_init_filter()
 
   // orport
   if (server_mode(get_options())) {
-    sandbox_cfg_allow_open_filename_array(&cfg, 13,
+    sandbox_cfg_allow_open_filename_array(&cfg, 12,
         get_datadir_fname2("keys", "secret_id_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key_ntor"), 1,
@@ -2694,8 +2695,7 @@ sandbox_init_filter()
         get_datadir_fname("fingerprint"), 1,
         get_datadir_fname("cached-consensus"), 1,
         get_datadir_fname("cached-consensus.tmp"), 1,
-        "/etc/resolv.conf", 0,
-        "/dev/random", 0
+        "/etc/resolv.conf", 0
     );
 
     sandbox_cfg_allow_stat64_filename_array(&cfg, 2,
@@ -2783,6 +2783,10 @@ tor_main(int argc, char *argv[])
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
       return -1;
     }
+
+    // registering libevent rng
+    evutil_secure_rng_set_urandom_device_file(
+        (char*) sandbox_intern_string("/dev/random"));
   }
 
   switch (get_options()->command) {
