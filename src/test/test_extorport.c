@@ -149,6 +149,18 @@ test_ext_or_write_command(void *arg)
   UNMOCK(connection_write_to_buf_impl_);
 }
 
+static int
+write_bytes_to_file_fail(const char *fname, const char *str, size_t len,
+                         int bin)
+{
+  (void) fname;
+  (void) str;
+  (void) len;
+  (void) bin;
+
+  return -1;
+}
+
 static void
 test_ext_or_init_auth(void *arg)
 {
@@ -177,6 +189,14 @@ test_ext_or_init_auth(void *arg)
   tt_str_op(cp, ==, fn);
   tor_free(cp);
 
+  /* Test the initialization function with a broken
+     write_bytes_to_file(). See if the problem is handled properly. */
+  MOCK(write_bytes_to_file, write_bytes_to_file_fail);
+  tt_int_op(-1, ==, init_ext_or_cookie_authentication(1));
+  tt_int_op(ext_or_auth_cookie_is_set, ==, 0);
+  UNMOCK(write_bytes_to_file);
+
+  /* Now do the actual initialization. */
   tt_int_op(0, ==, init_ext_or_cookie_authentication(1));
   tt_int_op(ext_or_auth_cookie_is_set, ==, 1);
   cp = read_file_to_str(fn, RFTS_BIN, &st);
@@ -193,6 +213,7 @@ test_ext_or_init_auth(void *arg)
 
  done:
   tor_free(cp);
+  ext_orport_free_all();
 }
 
 static void

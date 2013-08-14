@@ -2216,9 +2216,9 @@ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
 
 /** As write_str_to_file, but does not assume a NUL-terminated
  * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
-int
-write_bytes_to_file(const char *fname, const char *str, size_t len,
-                    int bin)
+MOCK_IMPL(int,
+write_bytes_to_file,(const char *fname, const char *str, size_t len,
+                     int bin))
 {
   return write_bytes_to_file_impl(fname, str, len,
                                   OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT));
