@@ -109,6 +109,7 @@
 #include "util.h"
 #include "container.h"
 #include "address.h"
+#include "sandbox.h"
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY

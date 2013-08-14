@@ -9,6 +9,10 @@
  * \brief Code to enable sandboxing.
  **/
 
+/**
+ * Temporarily required for O_LARGEFILE flag. Needs to be removed
+ * with the libevent fix.
+ */
 #define _LARGEFILE64_SOURCE
 
 #include <stdio.h>
@@ -243,7 +247,6 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
-// TODO parameters
 static int
 sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -589,8 +592,7 @@ sandbox_intern_string(const char *param)
     return NULL;
 
   for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
-    if (elem->prot  && elem->ptype == PARAM_PTR
-        && !strncmp(param, (char*)(elem->param), MAX_PARAM_LEN)) {
+    if (elem->prot && !strncmp(param, (char*)(elem->param), MAX_PARAM_LEN)) {
       return (char*)(elem->param);
     }
   }
@@ -643,7 +645,6 @@ sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, char fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(stat64);
   elem->pindex = 0;
-  elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) file);
   elem->prot = 1;
 
@@ -688,7 +689,6 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, char fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(open);
   elem->pindex = 0;
-  elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) file);
   elem->prot = 1;
 
@@ -732,7 +732,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, char fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(openat);
   elem->pindex = 1;
-  elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) file);;
   elem->prot = 1;
 
@@ -776,7 +775,6 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(openat);
   elem->pindex = 1;
-  elem->ptype = PARAM_PTR;
   elem->param = (intptr_t) prot_strdup((char*) com);;
   elem->prot = 1;
 
@@ -1062,7 +1060,6 @@ tor_global_sandbox(void)
 #endif
 }
 
-/** Use <b>fd</b> to log non-survivable sandbox violations. */
 void
 sandbox_set_debugging_fd(int fd)
 {
