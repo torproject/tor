@@ -89,6 +89,7 @@ MOCK_DECL(void, control_event_bootstrap_problem,(const char *warn,
                                                  int reason));
 
 void control_event_clients_seen(const char *controller_str);
+void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */

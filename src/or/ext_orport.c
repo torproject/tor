@@ -633,3 +633,11 @@ connection_ext_or_start_auth(or_connection_t *or_conn)
   return 0;
 }
 
+/** Free any leftover allocated memory of the ext_orport.c subsystem. */
+void
+ext_orport_free_all(void)
+{
+  if (ext_or_auth_cookie) /* Free the auth cookie */
+    tor_free(ext_or_auth_cookie);
+}
+

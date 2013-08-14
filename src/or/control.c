@@ -4750,3 +4750,11 @@ control_event_clients_seen(const char *controller_str)
     "650 CLIENTS_SEEN %s\r\n", controller_str);
 }
 
+/** Free any leftover allocated memory of the control.c subsystem. */
+void
+control_free_all(void)
+{
+  if (authentication_cookie) /* Free the auth cookie */
+    tor_free(authentication_cookie);
+}
+

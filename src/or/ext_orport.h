@@ -21,6 +21,7 @@ int connection_ext_or_process_inbuf(or_connection_t *or_conn);
 
 int init_ext_or_cookie_authentication(int is_enabled);
 char *get_ext_or_auth_cookie_file_name(void);
+void ext_orport_free_all(void);
 
 #ifdef EXT_ORPORT_PRIVATE
 STATIC int connection_write_ext_or_command(connection_t *conn,

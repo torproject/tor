@@ -52,6 +52,7 @@
 #include "routerparse.h"
 #include "statefile.h"
 #include "status.h"
+#include "ext_orport.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>
@@ -2510,6 +2511,8 @@ tor_free_all(int postfork)
   memarea_clear_freelist();
   nodelist_free_all();
   microdesc_free_all();
+  ext_orport_free_all();
+  control_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();
