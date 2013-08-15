@@ -543,7 +543,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     /* XXXX it would be nicer if we had a nicer abstraction to use here,
      * so we could just iterate over the list of services to close, but
      * once again, this isn't critical-path code. */
-    for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
+    TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
       if (!circ->marked_for_close &&
           circ->state == CIRCUIT_STATE_OPEN &&
           (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -2375,7 +2375,7 @@ count_established_intro_points(const char *query)
 {
   int num_ipos = 0;
   circuit_t *circ;
-  for (circ = circuit_get_global_list_(); circ; circ = circ->next) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
     if (!circ->marked_for_close &&
         circ->state == CIRCUIT_STATE_OPEN &&
         (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||

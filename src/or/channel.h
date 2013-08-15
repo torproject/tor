@@ -10,7 +10,6 @@
 #define TOR_CHANNEL_H
 
 #include "or.h"
-#include "tor_queue.h"
 #include "circuitmux.h"
 
 /* Channel handler function pointer typedefs */

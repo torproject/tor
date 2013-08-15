@@ -21,7 +21,6 @@
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
-#include "tor_queue.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
