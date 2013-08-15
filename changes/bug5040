@@ -1,4 +1,8 @@
   o Minor features:
+    - Bridges now track GeoIP information and the number of their
+      users even when pluggable transports are in use. These
+      statistics are reported in their extra-info descriptors like
+      normal bridges do. Resolves ticket 4773.
     - Bridges now track the usage of their pluggable transports and
       report statistics in their extra-info descriptors. Resolves
       ticket 5040.
