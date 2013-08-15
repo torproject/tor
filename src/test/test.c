@@ -1334,7 +1334,8 @@ test_geoip_with_pt(void)
   /* Test the transport history string. */
   s = geoip_get_transport_history();
   tor_assert(s);
-  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,entropy=8,fire=8,google=8");
+  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,"
+             "entropy=8,fire=8,google=8");
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
