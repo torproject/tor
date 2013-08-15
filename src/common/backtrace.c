@@ -132,7 +132,6 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 static int
 install_bt_handler(void)
 {
-  /*XXXX make this idempotent */
   int trap_signals[] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS,
                          SIGIO, -1 };
   int i, rv=0;
@@ -156,33 +155,30 @@ install_bt_handler(void)
 static void
 remove_bt_handler(void)
 {
-  /*XXXX writeme*/
+  /* We don't need to actually free anything at exit here. */
 }
 #endif
 
 #ifdef NO_BACKTRACE_IMPL
-/**DOCDOC */
 void
 log_backtrace(int severity, int domain, const char *msg)
 {
   tor_log(severity, domain, "%s. (Stack trace not available)", msg);
 }
 
-/**DOCDOC*/
 static int
 install_bt_handler(void)
 {
   return 0;
 }
 
-/**DOCDOC*/
 static void
 remove_bt_handler(void)
 {
 }
 #endif
 
-/**DOCDOC*/
+/** Set up code to handle generating error messages on crashes. */
 int
 configure_backtrace_handler(const char *tor_version)
 {
@@ -194,7 +190,8 @@ configure_backtrace_handler(const char *tor_version)
   return install_bt_handler();
 }
 
-/**DOCDOC*/
+/** Perform end-of-process cleanup for code that generates error messages on
+ * crashes.  */
 void
 clean_up_backtrace_handler(void)
 {
