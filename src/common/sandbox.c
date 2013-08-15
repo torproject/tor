@@ -119,15 +119,12 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(bind),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
-    SCMP_SYS(getsockopt),
-    SCMP_SYS(listen),
     SCMP_SYS(recv),
     SCMP_SYS(recvmsg),
+    SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
     SCMP_SYS(send),
-    SCMP_SYS(socketpair),
-    SCMP_SYS(recvfrom),
-    SCMP_SYS(unlink),
+    SCMP_SYS(unlink) // ?
 };
 
 static int
@@ -285,7 +282,6 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-// TODO parameters
 static int
 sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -296,7 +292,10 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   for (elem = filter; elem != NULL; elem = elem->next) {
     if (elem->prot == 1 && elem->syscall == SCMP_SYS(openat)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1,
-            SCMP_CMP(1, SCMP_CMP_EQ, elem->param));
+          SCMP_CMP(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP(1, SCMP_CMP_EQ, elem->param),
+          SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|
+              O_CLOEXEC));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received libseccomp "
             "error %d", rc);
@@ -308,16 +307,35 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-// TODO: add correct param
 static int
 sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
+#ifdef __i386__
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 0);
+  if (rc)
+    return rc;
+#endif
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_FILE),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
+      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
+  if (rc)
+    return rc;
+
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
       SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
       SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC),
       SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
+      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
   if (rc)
     return rc;
 
@@ -331,15 +349,59 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-// TODO: add correct param
+static int
+sb_socketpair(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc = 0;
+
+#ifdef __i386__
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketpair), 0);
+  if (rc)
+    return rc;
+#endif
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketpair), 2,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_FILE),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
 static int
 sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
+#ifdef __i386__
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt), 0);
+  if (rc)
+    return rc;
+#endif
+
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt), 2,
       SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
       SCMP_CMP(2, SCMP_CMP_EQ, SO_REUSEADDR));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+
+static int sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc = 0;
+
+#ifdef __i386__
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt), 0);
+  if (rc)
+    return rc;
+#endif
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_ERROR));
   if (rc)
     return rc;
 
@@ -579,7 +641,9 @@ static sandbox_filter_func_t filter_func[] = {
     sb_stat64,
 
     sb_socket,
-    sb_setsockopt
+    sb_setsockopt,
+    sb_getsockopt,
+    sb_socketpair
 };
 
 const char*
