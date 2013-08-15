@@ -1928,7 +1928,7 @@ getinfo_helper_events(control_connection_t *control_conn,
   if (!strcmp(question, "circuit-status")) {
     circuit_t *circ_;
     smartlist_t *status = smartlist_new();
-    TOR_LIST_FOREACH(circ_, circuit_get_global_list_(), head) {
+    TOR_LIST_FOREACH(circ_, circuit_get_global_list(), head) {
       origin_circuit_t *circ;
       char *circdesc;
       const char *state;

@@ -280,7 +280,7 @@ circuit_get_best(const entry_connection_t *conn,
 
   tor_gettimeofday(&now);
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
@@ -321,7 +321,7 @@ count_pending_general_client_circuits(void)
 
   int count = 0;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     if (circ->marked_for_close ||
         circ->state == CIRCUIT_STATE_OPEN ||
         circ->purpose != CIRCUIT_PURPOSE_C_GENERAL ||
@@ -387,7 +387,7 @@ circuit_expire_building(void)
    * we want to be more lenient with timeouts, in case the
    * user has relocated and/or changed network connections.
    * See bug #3443. */
-  TOR_LIST_FOREACH(next_circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
     if (!CIRCUIT_IS_ORIGIN(next_circ) || /* didn't originate here */
         next_circ->marked_for_close) { /* don't mess with marked circs */
       continue;
@@ -472,7 +472,7 @@ circuit_expire_building(void)
              MAX(circ_times.close_ms*2 + 1000,
                  options->SocksTimeout * 1000));
 
-  TOR_LIST_FOREACH(next_circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
     struct timeval cutoff;
     victim = next_circ;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
@@ -808,7 +808,7 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
                                    get_options()->LongLivedPorts,
                                    conn ? conn->socks_request->port : port);
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
@@ -859,7 +859,7 @@ circuit_predict_and_launch_new(void)
   int flags = 0;
 
   /* First, count how many of each type of circuit we have already. */
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     cpath_build_state_t *build_state;
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
@@ -1083,7 +1083,7 @@ circuit_expire_old_circuits_clientside(void)
     cutoff.tv_sec -= get_options()->CircuitIdleTimeout;
   }
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     if (circ->marked_for_close || !CIRCUIT_IS_ORIGIN(circ))
       continue;
     /* If the circuit has been dirty for too long, and there are no streams
@@ -1166,7 +1166,7 @@ circuit_expire_old_circuits_serverside(time_t now)
   or_circuit_t *or_circ;
   time_t cutoff = now - IDLE_ONE_HOP_CIRC_TIMEOUT;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     if (circ->marked_for_close || CIRCUIT_IS_ORIGIN(circ))
       continue;
     or_circ = TO_OR_CIRCUIT(circ);
@@ -1213,7 +1213,7 @@ circuit_enough_testing_circs(void)
   if (have_performed_bandwidth_test)
     return 1;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     if (!circ->marked_for_close && CIRCUIT_IS_ORIGIN(circ) &&
         circ->purpose == CIRCUIT_PURPOSE_TESTING &&
         circ->state == CIRCUIT_STATE_OPEN)

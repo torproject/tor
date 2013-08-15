@@ -2174,7 +2174,7 @@ pathbias_count_circs_in_states(entry_guard_t *guard,
   int open_circuits = 0;
 
   /* Count currently open circuits. Give them the benefit of the doubt. */
-  TOR_LIST_FOREACH(circ, circuit_get_global_list_(), head) {
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
     origin_circuit_t *ocirc = NULL;
     if (!CIRCUIT_IS_ORIGIN(circ) || /* didn't originate here */
         circ->marked_for_close) /* already counted */
