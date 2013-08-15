@@ -28,7 +28,6 @@ const char tor_git_revision[] = "";
 
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */
-#define BUFFERS_PRIVATE
 #define GEOIP_PRIVATE
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
@@ -42,7 +41,6 @@ long int lround(double x);
 double fabs(double x);
 
 #include "or.h"
-#include "buffers.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "connection_edge.h"
@@ -213,622 +211,6 @@ free_pregenerated_keys(void)
       pregen_keys[idx] = NULL;
     }
   }
-}
-
-typedef struct socks_test_data_t {
-  socks_request_t *req;
-  buf_t *buf;
-} socks_test_data_t;
-
-static void *
-socks_test_setup(const struct testcase_t *testcase)
-{
-  socks_test_data_t *data = tor_malloc(sizeof(socks_test_data_t));
-  (void)testcase;
-  data->buf = buf_new_with_capacity(256);
-  data->req = socks_request_new();
-  config_register_addressmaps(get_options());
-  return data;
-}
-static int
-socks_test_cleanup(const struct testcase_t *testcase, void *ptr)
-{
-  socks_test_data_t *data = ptr;
-  (void)testcase;
-  buf_free(data->buf);
-  socks_request_free(data->req);
-  tor_free(data);
-  return 1;
-}
-
-const struct testcase_setup_t socks_setup = {
-  socks_test_setup, socks_test_cleanup
-};
-
-#define SOCKS_TEST_INIT()                       \
-  socks_test_data_t *testdata = ptr;            \
-  buf_t *buf = testdata->buf;                   \
-  socks_request_t *socks = testdata->req;
-#define ADD_DATA(buf, s)                                        \
-  write_to_buf(s, sizeof(s)-1, buf)
-
-static void
-socks_request_clear(socks_request_t *socks)
-{
-  tor_free(socks->username);
-  tor_free(socks->password);
-  memset(socks, 0, sizeof(socks_request_t));
-}
-
-/** Perform unsupported SOCKS 4 commands */
-static void
-test_socks_4_unsupported_commands(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 4 Send BIND [02] to IP address 2.2.2.2:4369 */
-  ADD_DATA(buf, "\x04\x02\x11\x11\x02\x02\x02\x02\x00");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == -1);
-  test_eq(4, socks->socks_version);
-  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-
- done:
-  ;
-}
-
-/** Perform supported SOCKS 4 commands */
-static void
-test_socks_4_supported_commands(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  test_eq(0, buf_datalen(buf));
-
-  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4370 */
-  ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x03\x00");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(4, socks->socks_version);
-  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_eq(SOCKS_COMMAND_CONNECT, socks->command);
-  test_streq("2.2.2.3", socks->address);
-  test_eq(4370, socks->port);
-  test_assert(socks->got_auth == 0);
-  test_assert(! socks->username);
-
-  test_eq(0, buf_datalen(buf));
-  socks_request_clear(socks);
-
-  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
-  ADD_DATA(buf, "\x04\x01\x11\x12\x02\x02\x02\x04me\x00");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(4, socks->socks_version);
-  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_eq(SOCKS_COMMAND_CONNECT, socks->command);
-  test_streq("2.2.2.4", socks->address);
-  test_eq(4370, socks->port);
-  test_assert(socks->got_auth == 1);
-  test_assert(socks->username);
-  test_eq(2, socks->usernamelen);
-  test_memeq("me", socks->username, 2);
-
-  test_eq(0, buf_datalen(buf));
-  socks_request_clear(socks);
-
-  /* SOCKS 4a Send RESOLVE [F0] request for torproject.org */
-  ADD_DATA(buf, "\x04\xF0\x01\x01\x00\x00\x00\x02me\x00torproject.org\x00");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(4, socks->socks_version);
-  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
-  test_streq("torproject.org", socks->address);
-
-  test_eq(0, buf_datalen(buf));
-
- done:
-  ;
-}
-
-/**  Perform unsupported SOCKS 5 commands */
-static void
-test_socks_5_unsupported_commands(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 5 Send unsupported BIND [02] command */
-  ADD_DATA(buf, "\x05\x02\x00\x01");
-
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                               get_options()->SafeSocks), 0);
-  test_eq(0, buf_datalen(buf));
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-  ADD_DATA(buf, "\x05\x02\x00\x01\x02\x02\x02\x01\x01\x01");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                               get_options()->SafeSocks), -1);
-  /* XXX: shouldn't tor reply 'command not supported' [07]? */
-
-  buf_clear(buf);
-  socks_request_clear(socks);
-
-  /* SOCKS 5 Send unsupported UDP_ASSOCIATE [03] command */
-  ADD_DATA(buf, "\x05\x03\x00\x01\x02");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                               get_options()->SafeSocks), 0);
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(2, socks->reply[1]);
-  ADD_DATA(buf, "\x05\x03\x00\x01\x02\x02\x02\x01\x01\x01");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                               get_options()->SafeSocks), -1);
-  /* XXX: shouldn't tor reply 'command not supported' [07]? */
-
- done:
-  ;
-}
-
-/** Perform supported SOCKS 5 commands */
-static void
-test_socks_5_supported_commands(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  ADD_DATA(buf, "\x05\x01\x00");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks), 0);
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
-  ADD_DATA(buf, "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks), 1);
-  test_streq("2.2.2.2", socks->address);
-  test_eq(4369, socks->port);
-
-  test_eq(0, buf_datalen(buf));
-  socks_request_clear(socks);
-
-  /* SOCKS 5 Send CONNECT [01] to FQDN torproject.org:4369 */
-  ADD_DATA(buf, "\x05\x01\x00");
-  ADD_DATA(buf, "\x05\x01\x00\x03\x0Etorproject.org\x11\x11");
-  test_eq(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks), 1);
-
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-  test_streq("torproject.org", socks->address);
-  test_eq(4369, socks->port);
-
-  test_eq(0, buf_datalen(buf));
-  socks_request_clear(socks);
-
-  /* SOCKS 5 Send RESOLVE [F0] request for torproject.org:4369 */
-  ADD_DATA(buf, "\x05\x01\x00");
-  ADD_DATA(buf, "\x05\xF0\x00\x03\x0Etorproject.org\x01\x02");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-  test_streq("torproject.org", socks->address);
-
-  test_eq(0, buf_datalen(buf));
-  socks_request_clear(socks);
-
-  /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */
-  ADD_DATA(buf, "\x05\x01\x00");
-  ADD_DATA(buf, "\x05\xF1\x00\x01\x02\x02\x02\x05\x01\x03");
-  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-  test_streq("2.2.2.5", socks->address);
-
-  test_eq(0, buf_datalen(buf));
-
- done:
-  ;
-}
-
-/**  Perform SOCKS 5 authentication */
-static void
-test_socks_5_no_authenticate(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /*SOCKS 5 No Authentication */
-  ADD_DATA(buf,"\x05\x01\x00");
-  test_assert(!fetch_from_buf_socks(buf, socks,
-                                    get_options()->TestSocks,
-                                    get_options()->SafeSocks));
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(SOCKS_NO_AUTH, socks->reply[1]);
-
-  test_eq(0, buf_datalen(buf));
-
-  /*SOCKS 5 Send username/password anyway - pretend to be broken */
-  ADD_DATA(buf,"\x01\x02\x01\x01\x02\x01\x01");
-  test_assert(!fetch_from_buf_socks(buf, socks,
-                                    get_options()->TestSocks,
-                                    get_options()->SafeSocks));
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(1, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
-  test_eq(2, socks->usernamelen);
-  test_eq(2, socks->passwordlen);
-
-  test_memeq("\x01\x01", socks->username, 2);
-  test_memeq("\x01\x01", socks->password, 2);
-
- done:
-  ;
-}
-
-/** Perform SOCKS 5 authentication */
-static void
-test_socks_5_authenticate(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 5 Negotiate username/password authentication */
-  ADD_DATA(buf, "\x05\x01\x02");
-
-  test_assert(!fetch_from_buf_socks(buf, socks,
-                                   get_options()->TestSocks,
-                                   get_options()->SafeSocks));
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(SOCKS_USER_PASS, socks->reply[1]);
-  test_eq(5, socks->socks_version);
-
-  test_eq(0, buf_datalen(buf));
-
-  /* SOCKS 5 Send username/password */
-  ADD_DATA(buf, "\x01\x02me\x08mypasswd");
-  test_assert(!fetch_from_buf_socks(buf, socks,
-                                   get_options()->TestSocks,
-                                   get_options()->SafeSocks));
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(1, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
-  test_eq(2, socks->usernamelen);
-  test_eq(8, socks->passwordlen);
-
-  test_memeq("me", socks->username, 2);
-  test_memeq("mypasswd", socks->password, 8);
-
- done:
-  ;
-}
-
-/** Perform SOCKS 5 authentication and send data all in one go */
-static void
-test_socks_5_authenticate_with_data(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 5 Negotiate username/password authentication */
-  ADD_DATA(buf, "\x05\x01\x02");
-
-  test_assert(!fetch_from_buf_socks(buf, socks,
-                                   get_options()->TestSocks,
-                                   get_options()->SafeSocks));
-  test_eq(2, socks->replylen);
-  test_eq(5, socks->reply[0]);
-  test_eq(SOCKS_USER_PASS, socks->reply[1]);
-  test_eq(5, socks->socks_version);
-
-  test_eq(0, buf_datalen(buf));
-
-  /* SOCKS 5 Send username/password */
-  /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
-  ADD_DATA(buf, "\x01\x02me\x03you\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
-  test_assert(fetch_from_buf_socks(buf, socks,
-                                   get_options()->TestSocks,
-                                   get_options()->SafeSocks) == 1);
-  test_eq(5, socks->socks_version);
-  test_eq(2, socks->replylen);
-  test_eq(1, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
-  test_streq("2.2.2.2", socks->address);
-  test_eq(4369, socks->port);
-
-  test_eq(2, socks->usernamelen);
-  test_eq(3, socks->passwordlen);
-  test_memeq("me", socks->username, 2);
-  test_memeq("you", socks->password, 3);
-
- done:
-  ;
-}
-
-/** Perform SOCKS 5 authentication before method negotiated */
-static void
-test_socks_5_auth_before_negotiation(void *ptr)
-{
-  SOCKS_TEST_INIT();
-
-  /* SOCKS 5 Send username/password */
-  ADD_DATA(buf, "\x01\x02me\x02me");
-  test_assert(fetch_from_buf_socks(buf, socks,
-                                   get_options()->TestSocks,
-                                   get_options()->SafeSocks) == -1);
-  test_eq(0, socks->socks_version);
-  test_eq(0, socks->replylen);
-  test_eq(0, socks->reply[0]);
-  test_eq(0, socks->reply[1]);
-
- done:
-  ;
-}
-
-static void
-test_buffer_copy(void *arg)
-{
-  generic_buffer_t *buf=NULL, *buf2=NULL;
-  const char *s;
-  size_t len;
-  char b[256];
-  int i;
-  (void)arg;
-
-  buf = generic_buffer_new();
-  tt_assert(buf);
-
-  /* Copy an empty buffer. */
-  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
-  tt_assert(buf2);
-  tt_int_op(0, ==, generic_buffer_len(buf2));
-
-  /* Now try with a short buffer. */
-  s = "And now comes an act of enormous enormance!";
-  len = strlen(s);
-  generic_buffer_add(buf, s, len);
-  tt_int_op(len, ==, generic_buffer_len(buf));
-  /* Add junk to buf2 so we can test replacing.*/
-  generic_buffer_add(buf2, "BLARG", 5);
-  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
-  tt_int_op(len, ==, generic_buffer_len(buf2));
-  generic_buffer_get(buf2, b, len);
-  test_mem_op(b, ==, s, len);
-  /* Now free buf2 and retry so we can test allocating */
-  generic_buffer_free(buf2);
-  buf2 = NULL;
-  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
-  tt_int_op(len, ==, generic_buffer_len(buf2));
-  generic_buffer_get(buf2, b, len);
-  test_mem_op(b, ==, s, len);
-  /* Clear buf for next test */
-  generic_buffer_get(buf, b, len);
-  tt_int_op(generic_buffer_len(buf),==,0);
-
-  /* Okay, now let's try a bigger buffer. */
-  s = "Quis autem vel eum iure reprehenderit qui in ea voluptate velit "
-    "esse quam nihil molestiae consequatur, vel illum qui dolorem eum "
-    "fugiat quo voluptas nulla pariatur?";
-  len = strlen(s);
-  for (i = 0; i < 256; ++i) {
-    b[0]=i;
-    generic_buffer_add(buf, b, 1);
-    generic_buffer_add(buf, s, len);
-  }
-  tt_int_op(0, ==, generic_buffer_set_to_copy(&buf2, buf));
-  tt_int_op(generic_buffer_len(buf2), ==, generic_buffer_len(buf));
-  for (i = 0; i < 256; ++i) {
-    generic_buffer_get(buf2, b, len+1);
-    tt_int_op((unsigned char)b[0],==,i);
-    test_mem_op(b+1, ==, s, len);
-  }
-
- done:
-  if (buf)
-    generic_buffer_free(buf);
-  if (buf2)
-    generic_buffer_free(buf2);
-}
-
-/** Run unit tests for buffers.c */
-static void
-test_buffers(void)
-{
-  char str[256];
-  char str2[256];
-
-  buf_t *buf = NULL, *buf2 = NULL;
-  const char *cp;
-
-  int j;
-  size_t r;
-
-  /****
-   * buf_new
-   ****/
-  if (!(buf = buf_new()))
-    test_fail();
-
-  //test_eq(buf_capacity(buf), 4096);
-  test_eq(buf_datalen(buf), 0);
-
-  /****
-   * General pointer frobbing
-   */
-  for (j=0;j<256;++j) {
-    str[j] = (char)j;
-  }
-  write_to_buf(str, 256, buf);
-  write_to_buf(str, 256, buf);
-  test_eq(buf_datalen(buf), 512);
-  fetch_from_buf(str2, 200, buf);
-  test_memeq(str, str2, 200);
-  test_eq(buf_datalen(buf), 312);
-  memset(str2, 0, sizeof(str2));
-
-  fetch_from_buf(str2, 256, buf);
-  test_memeq(str+200, str2, 56);
-  test_memeq(str, str2+56, 200);
-  test_eq(buf_datalen(buf), 56);
-  memset(str2, 0, sizeof(str2));
-  /* Okay, now we should be 512 bytes into the 4096-byte buffer.  If we add
-   * another 3584 bytes, we hit the end. */
-  for (j=0;j<15;++j) {
-    write_to_buf(str, 256, buf);
-  }
-  assert_buf_ok(buf);
-  test_eq(buf_datalen(buf), 3896);
-  fetch_from_buf(str2, 56, buf);
-  test_eq(buf_datalen(buf), 3840);
-  test_memeq(str+200, str2, 56);
-  for (j=0;j<15;++j) {
-    memset(str2, 0, sizeof(str2));
-    fetch_from_buf(str2, 256, buf);
-    test_memeq(str, str2, 256);
-  }
-  test_eq(buf_datalen(buf), 0);
-  buf_free(buf);
-  buf = NULL;
-
-  /* Okay, now make sure growing can work. */
-  buf = buf_new_with_capacity(16);
-  //test_eq(buf_capacity(buf), 16);
-  write_to_buf(str+1, 255, buf);
-  //test_eq(buf_capacity(buf), 256);
-  fetch_from_buf(str2, 254, buf);
-  test_memeq(str+1, str2, 254);
-  //test_eq(buf_capacity(buf), 256);
-  assert_buf_ok(buf);
-  write_to_buf(str, 32, buf);
-  //test_eq(buf_capacity(buf), 256);
-  assert_buf_ok(buf);
-  write_to_buf(str, 256, buf);
-  assert_buf_ok(buf);
-  //test_eq(buf_capacity(buf), 512);
-  test_eq(buf_datalen(buf), 33+256);
-  fetch_from_buf(str2, 33, buf);
-  test_eq(*str2, str[255]);
-
-  test_memeq(str2+1, str, 32);
-  //test_eq(buf_capacity(buf), 512);
-  test_eq(buf_datalen(buf), 256);
-  fetch_from_buf(str2, 256, buf);
-  test_memeq(str, str2, 256);
-
-  /* now try shrinking: case 1. */
-  buf_free(buf);
-  buf = buf_new_with_capacity(33668);
-  for (j=0;j<67;++j) {
-    write_to_buf(str,255, buf);
-  }
-  //test_eq(buf_capacity(buf), 33668);
-  test_eq(buf_datalen(buf), 17085);
-  for (j=0; j < 40; ++j) {
-    fetch_from_buf(str2, 255,buf);
-    test_memeq(str2, str, 255);
-  }
-
-  /* now try shrinking: case 2. */
-  buf_free(buf);
-  buf = buf_new_with_capacity(33668);
-  for (j=0;j<67;++j) {
-    write_to_buf(str,255, buf);
-  }
-  for (j=0; j < 20; ++j) {
-    fetch_from_buf(str2, 255,buf);
-    test_memeq(str2, str, 255);
-  }
-  for (j=0;j<80;++j) {
-    write_to_buf(str,255, buf);
-  }
-  //test_eq(buf_capacity(buf),33668);
-  for (j=0; j < 120; ++j) {
-    fetch_from_buf(str2, 255,buf);
-    test_memeq(str2, str, 255);
-  }
-
-  /* Move from buf to buf. */
-  buf_free(buf);
-  buf = buf_new_with_capacity(4096);
-  buf2 = buf_new_with_capacity(4096);
-  for (j=0;j<100;++j)
-    write_to_buf(str, 255, buf);
-  test_eq(buf_datalen(buf), 25500);
-  for (j=0;j<100;++j) {
-    r = 10;
-    move_buf_to_buf(buf2, buf, &r);
-    test_eq(r, 0);
-  }
-  test_eq(buf_datalen(buf), 24500);
-  test_eq(buf_datalen(buf2), 1000);
-  for (j=0;j<3;++j) {
-    fetch_from_buf(str2, 255, buf2);
-    test_memeq(str2, str, 255);
-  }
-  r = 8192; /*big move*/
-  move_buf_to_buf(buf2, buf, &r);
-  test_eq(r, 0);
-  r = 30000; /* incomplete move */
-  move_buf_to_buf(buf2, buf, &r);
-  test_eq(r, 13692);
-  for (j=0;j<97;++j) {
-    fetch_from_buf(str2, 255, buf2);
-    test_memeq(str2, str, 255);
-  }
-  buf_free(buf);
-  buf_free(buf2);
-  buf = buf2 = NULL;
-
-  buf = buf_new_with_capacity(5);
-  cp = "Testing. This is a moderately long Testing string.";
-  for (j = 0; cp[j]; j++)
-    write_to_buf(cp+j, 1, buf);
-  test_eq(0, buf_find_string_offset(buf, "Testing", 7));
-  test_eq(1, buf_find_string_offset(buf, "esting", 6));
-  test_eq(1, buf_find_string_offset(buf, "est", 3));
-  test_eq(39, buf_find_string_offset(buf, "ing str", 7));
-  test_eq(35, buf_find_string_offset(buf, "Testing str", 11));
-  test_eq(32, buf_find_string_offset(buf, "ng ", 3));
-  test_eq(43, buf_find_string_offset(buf, "string.", 7));
-  test_eq(-1, buf_find_string_offset(buf, "shrdlu", 6));
-  test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
-  test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
-  buf_free(buf);
-  buf = NULL;
-
-  /* Try adding a string too long for any freelist. */
-  {
-    char *cp = tor_malloc_zero(65536);
-    buf = buf_new();
-    write_to_buf(cp, 65536, buf);
-    tor_free(cp);
-
-    tt_int_op(buf_datalen(buf), ==, 65536);
-    buf_free(buf);
-    buf = NULL;
-  }
-
- done:
-  if (buf)
-    buf_free(buf);
-  if (buf2)
-    buf_free(buf2);
 }
 
 /** Run unit tests for the onion handshake code. */
@@ -1620,6 +1002,34 @@ test_rend_fns(void)
   tor_free(intro_points_encrypted);
 }
 
+  /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
+   * using ipv4.  Since our fake geoip database is the same between
+   * ipv4 and ipv6, we should get the same result no matter which
+   * address family we pick for each IP. */
+#define SET_TEST_ADDRESS(i) do {                \
+    if ((i) & 1) {                              \
+      SET_TEST_IPV6(i);                         \
+      tor_addr_from_in6(&addr, &in6);           \
+    } else {                                    \
+      tor_addr_from_ipv4h(&addr, (uint32_t) i); \
+    }                                           \
+  } while (0)
+
+  /* Make sure that country ID actually works. */
+#define SET_TEST_IPV6(i) \
+  do {                                                          \
+    set_uint32(in6.s6_addr + 12, htonl((uint32_t) (i)));        \
+  } while (0)
+#define CHECK_COUNTRY(country, val) do {                                \
+    /* test ipv4 country lookup */                                      \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
+    /* test ipv6 country lookup */                                      \
+    SET_TEST_IPV6(val);                                                 \
+    test_streq(country,                                                 \
+               geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
+  } while (0)
+
 /** Run unit tests for GeoIP code. */
 static void
 test_geoip(void)
@@ -1630,7 +1040,8 @@ test_geoip(void)
   const char *bridge_stats_1 =
       "bridge-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "bridge-ips zz=24,xy=8\n"
-      "bridge-ip-versions v4=16,v6=16\n",
+      "bridge-ip-versions v4=16,v6=16\n"
+      "bridge-ip-transports <OR>=24\n",
   *dirreq_stats_1 =
       "dirreq-stats-end 2010-08-12 13:27:30 (86400 s)\n"
       "dirreq-v3-ips ab=8\n"
@@ -1694,21 +1105,6 @@ test_geoip(void)
   test_eq(4, geoip_get_n_countries());
   memset(&in6, 0, sizeof(in6));
 
-  /* Make sure that country ID actually works. */
-#define SET_TEST_IPV6(i) \
-  do {                                                          \
-    set_uint32(in6.s6_addr + 12, htonl((uint32_t) (i)));        \
-  } while (0)
-#define CHECK_COUNTRY(country, val) do {                                \
-    /* test ipv4 country lookup */                                      \
-    test_streq(country,                                                 \
-               geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
-    /* test ipv6 country lookup */                                      \
-    SET_TEST_IPV6(val);                                                 \
-    test_streq(country,                                                 \
-               geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
-  } while (0)
-
   CHECK_COUNTRY("??", 3);
   CHECK_COUNTRY("ab", 32);
   CHECK_COUNTRY("??", 5);
@@ -1721,40 +1117,25 @@ test_geoip(void)
   SET_TEST_IPV6(3);
   test_eq(0, geoip_get_country_by_ipv6(&in6));
 
-#undef CHECK_COUNTRY
-
-  /* Record odd numbered fake-IPs using ipv6, even numbered fake-IPs
-   * using ipv4.  Since our fake geoip database is the same between
-   * ipv4 and ipv6, we should get the same result no matter which
-   * address family we pick for each IP. */
-#define SET_TEST_ADDRESS(i) do {                \
-    if ((i) & 1) {                              \
-      SET_TEST_IPV6(i);                         \
-      tor_addr_from_in6(&addr, &in6);           \
-    } else {                                    \
-      tor_addr_from_ipv4h(&addr, (uint32_t) i); \
-    }                                           \
-  } while (0)
-
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
   /* Put 9 observations in AB... */
   for (i=32; i < 40; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
   }
   SET_TEST_ADDRESS(225);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-7200);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
   /* and 3 observations in XY, several times. */
   for (j=0; j < 10; ++j)
     for (i=52; i < 55; ++i) {
       SET_TEST_ADDRESS(i);
-      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now-3600);
+      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-3600);
     }
   /* and 17 observations in ZZ... */
   for (i=110; i < 127; ++i) {
     SET_TEST_ADDRESS(i);
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   }
   geoip_get_client_history(GEOIP_CLIENT_CONNECT, &s, &v);
   test_assert(s);
@@ -1803,7 +1184,7 @@ test_geoip(void)
   /* Start testing dirreq statistics by making sure that we don't collect
    * dirreq stats without initializing them. */
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
 
@@ -1811,7 +1192,7 @@ test_geoip(void)
    * dirreq-stats history string. */
   geoip_dirreq_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_1, s);
   tor_free(s);
@@ -1820,7 +1201,7 @@ test_geoip(void)
    * don't generate a history string. */
   geoip_dirreq_stats_term();
   SET_TEST_ADDRESS(101);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_assert(!s);
 
@@ -1828,7 +1209,7 @@ test_geoip(void)
    * that we get an all empty history string. */
   geoip_dirreq_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_NETWORKSTATUS, &addr, NULL, now);
   geoip_reset_dirreq_stats(now);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_2, s);
@@ -1855,7 +1236,7 @@ test_geoip(void)
   /* Start testing entry statistics by making sure that we don't collect
    * anything without initializing entry stats. */
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
 
@@ -1863,7 +1244,7 @@ test_geoip(void)
    * entry-stats history string. */
   geoip_entry_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_1, s);
   tor_free(s);
@@ -1872,7 +1253,7 @@ test_geoip(void)
    * don't generate a history string. */
   geoip_entry_stats_term();
   SET_TEST_ADDRESS(101);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   s = geoip_format_entry_stats(now + 86400);
   test_assert(!s);
 
@@ -1880,14 +1261,11 @@ test_geoip(void)
    * that we get an all empty history string. */
   geoip_entry_stats_init(now);
   SET_TEST_ADDRESS(100);
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now);
   geoip_reset_entry_stats(now);
   s = geoip_format_entry_stats(now + 86400);
   test_streq(entry_stats_2, s);
   tor_free(s);
-
-#undef SET_TEST_ADDRESS
-#undef SET_TEST_IPV6
 
   /* Stop collecting entry statistics. */
   geoip_entry_stats_term();
@@ -1897,6 +1275,78 @@ test_geoip(void)
   tor_free(s);
   tor_free(v);
 }
+
+static void
+test_geoip_with_pt(void)
+{
+  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
+  char *s = NULL;
+  int i;
+  tor_addr_t addr;
+  struct in6_addr in6;
+
+  get_options_mutable()->BridgeRelay = 1;
+  get_options_mutable()->BridgeRecordUsageByCountry = 1;
+
+  /* No clients seen yet. */
+  s = geoip_get_transport_history();
+  tor_assert(!s);
+
+  /* 4 connections without a pluggable transport */
+  for (i=0; i < 4; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, NULL, now-7200);
+  }
+
+  /* 9 connections with "alpha" */
+  for (i=4; i < 13; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "alpha", now-7200);
+  }
+
+  /* one connection with "beta" */
+  SET_TEST_ADDRESS(13);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "beta", now-7200);
+
+  /* 14 connections with "charlie" */
+  for (i=14; i < 28; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "charlie", now-7200);
+  }
+
+  /* 131 connections with "ddr" */
+  for (i=28; i < 159; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "ddr", now-7200);
+  }
+
+  /* 8 connections with "entropy" */
+  for (i=159; i < 167; ++i) {
+    SET_TEST_ADDRESS(i);
+    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "entropy", now-7200);
+  }
+
+  /* 2 connections from the same IP with two different transports. */
+  SET_TEST_ADDRESS(++i);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "fire", now-7200);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &addr, "google", now-7200);
+
+  /* Test the transport history string. */
+  s = geoip_get_transport_history();
+  tor_assert(s);
+  test_streq(s, "<OR>=8,alpha=16,beta=8,charlie=16,ddr=136,entropy=8,fire=8,google=8");
+
+  /* Stop collecting entry statistics. */
+  geoip_entry_stats_term();
+  get_options_mutable()->EntryStatistics = 0;
+
+ done:
+  tor_free(s);
+}
+
+#undef SET_TEST_ADDRESS
+#undef SET_TEST_IPV6
+#undef CHECK_COUNTRY
 
 /** Run unit tests for stats code. */
 static void
@@ -2088,8 +1538,6 @@ const struct testcase_setup_t legacy_setup = {
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_ ## name }
 
 static struct testcase_t test_array[] = {
-  ENT(buffers),
-  { "buffer_copy", test_buffer_copy, 0, NULL, NULL },
   ENT(onion_handshake),
   { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
 #ifdef CURVE25519_ENABLED
@@ -2099,29 +1547,14 @@ static struct testcase_t test_array[] = {
   ENT(policies),
   ENT(rend_fns),
   ENT(geoip),
+  FORK(geoip_with_pt),
   FORK(stats),
 
   END_OF_TESTCASES
 };
 
-#define SOCKSENT(name)                                  \
-  { #name, test_socks_##name, TT_FORK, &socks_setup, NULL }
-
-static struct testcase_t socks_tests[] = {
-  SOCKSENT(4_unsupported_commands),
-  SOCKSENT(4_supported_commands),
-
-  SOCKSENT(5_unsupported_commands),
-  SOCKSENT(5_supported_commands),
-  SOCKSENT(5_no_authenticate),
-  SOCKSENT(5_auth_before_negotiation),
-  SOCKSENT(5_authenticate),
-  SOCKSENT(5_authenticate_with_data),
-
-  END_OF_TESTCASES
-};
-
 extern struct testcase_t addr_tests[];
+extern struct testcase_t buffer_tests[];
 extern struct testcase_t crypto_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t util_tests[];
@@ -2136,9 +1569,12 @@ extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
 extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t options_tests[];
+extern struct testcase_t socks_tests[];
+extern struct testcase_t extorport_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
+  { "buffer/", buffer_tests },
   { "socks/", socks_tests },
   { "addr/", addr_tests },
   { "crypto/", crypto_tests },
@@ -2155,6 +1591,7 @@ static struct testgroup_t testgroups[] = {
   { "circuitlist/", circuitlist_tests },
   { "circuitmux/", circuitmux_tests },
   { "options/", options_tests },
+  { "extorport/", extorport_tests },
   END_OF_GROUPS
 };
 

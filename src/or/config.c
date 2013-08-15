@@ -45,6 +45,7 @@
 #include "routerset.h"
 #include "statefile.h"
 #include "transports.h"
+#include "ext_orport.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
@@ -230,6 +231,7 @@ static config_var_t option_vars_[] = {
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
+  VPORT(ExtORPort,               LINELIST, NULL),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
 
@@ -1473,8 +1475,14 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
-  if (init_cookie_authentication(options->CookieAuthentication) < 0) {
-    log_warn(LD_CONFIG,"Error creating cookie authentication file.");
+  if (init_control_cookie_authentication(options->CookieAuthentication) < 0) {
+    log_warn(LD_CONFIG,"Error creating control cookie authentication file.");
+    return -1;
+  }
+
+  /* If we have an ExtORPort, initialize its auth cookie. */
+  if (init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
+    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
     return -1;
   }
 
@@ -5093,6 +5101,27 @@ warn_nonlocal_client_ports(const smartlist_t *ports, const char *portname,
   } SMARTLIST_FOREACH_END(port);
 }
 
+/** Warn for every Extended ORPort port in <b>ports</b> that is on a
+ *  publicly routable address. */
+static void
+warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
+{
+  SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
+    if (port->type != CONN_TYPE_EXT_OR_LISTENER)
+      continue;
+    if (port->is_unix_addr)
+      continue;
+    /* XXX maybe warn even if address is RFC1918? */
+    if (!tor_addr_is_internal(&port->addr, 1)) {
+      log_warn(LD_CONFIG, "You specified a public address '%s' for %sPort. "
+               "This is not advised; this address is supposed to only be "
+               "exposed on localhost so that your pluggable transport "
+               "proxies can connect to it.",
+               fmt_addrport(&port->addr, port->port), portname);
+    }
+  } SMARTLIST_FOREACH_END(port);
+}
+
 /** Given a list of port_cfg_t in <b>ports</b>, warn any controller port there
  * is listening on any non-loopback address.  If <b>forbid</b> is true,
  * then emit a stronger warning and remove the port from the list.
@@ -5193,6 +5222,7 @@ parse_port_config(smartlist_t *out,
   smartlist_t *elts;
   int retval = -1;
   const unsigned is_control = (listener_type == CONN_TYPE_CONTROL_LISTENER);
+  const unsigned is_ext_orport = (listener_type == CONN_TYPE_EXT_OR_LISTENER);
   const unsigned allow_no_options = flags & CL_PORT_NO_OPTIONS;
   const unsigned use_server_options = flags & CL_PORT_SERVER_OPTIONS;
   const unsigned warn_nonlocal = flags & CL_PORT_WARN_NONLOCAL;
@@ -5270,6 +5300,8 @@ parse_port_config(smartlist_t *out,
     if (warn_nonlocal && out) {
       if (is_control)
         warn_nonlocal_controller_ports(out, forbid_nonlocal);
+      else if (is_ext_orport)
+        warn_nonlocal_ext_orports(out, portname);
       else
         warn_nonlocal_client_ports(out, portname, listener_type);
     }
@@ -5543,6 +5575,8 @@ parse_port_config(smartlist_t *out,
   if (warn_nonlocal && out) {
     if (is_control)
       warn_nonlocal_controller_ports(out, forbid_nonlocal);
+    else if (is_ext_orport)
+      warn_nonlocal_ext_orports(out, portname);
     else
       warn_nonlocal_client_ports(out, portname, listener_type);
   }
@@ -5689,6 +5723,14 @@ parse_ports(or_options_t *options, int validate_only,
       goto err;
     }
     if (parse_port_config(ports,
+                          options->ExtORPort_lines, NULL,
+                          "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
+                          "127.0.0.1", 0,
+                          CL_PORT_SERVER_OPTIONS|CL_PORT_WARN_NONLOCAL) < 0) {
+      *msg = tor_strdup("Invalid ExtORPort configuration");
+      goto err;
+    }
+    if (parse_port_config(ports,
                           options->DirPort_lines, options->DirListenAddress,
                           "Dir", CONN_TYPE_DIR_LISTENER,
                           "0.0.0.0", 0,
@@ -5723,6 +5765,8 @@ parse_ports(or_options_t *options, int validate_only,
     !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER);
   options->DNSPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
+  options->ExtORPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER);
 
   if (!validate_only) {
     if (configured_ports) {
@@ -6419,5 +6463,60 @@ config_maybe_load_geoip_files_(const or_options_t *options,
                                    options->GeoIPv6File))
        || !geoip_is_loaded(AF_INET6)))
     config_load_geoip_file_(AF_INET6, options->GeoIPv6File, "geoip6");
+}
+
+/** Initialize cookie authentication (used so far by the ControlPort
+ *  and Extended ORPort).
+ *
+ *  Allocate memory and create a cookie (of length <b>cookie_len</b>)
+ *  in <b>cookie_out</b>.
+ *  Then write it down to <b>fname</b> and prepend it with <b>header</b>.
+ *
+ *  If the whole procedure was successful, set
+ *  <b>cookie_is_set_out</b> to True. */
+int
+init_cookie_authentication(const char *fname, const char *header,
+                           int cookie_len,
+                           uint8_t **cookie_out, int *cookie_is_set_out)
+{
+  char cookie_file_str_len = strlen(header) + cookie_len;
+  char *cookie_file_str = tor_malloc(cookie_file_str_len);
+  int retval = -1;
+
+  /* We don't want to generate a new cookie every time we call
+   * options_act(). One should be enough. */
+  if (*cookie_is_set_out) {
+    retval = 0; /* we are all set */
+    goto done;
+  }
+
+  /* If we've already set the cookie, free it before re-setting
+     it. This can happen if we previously generated a cookie, but
+     couldn't write it to a disk. */
+  if (*cookie_out)
+    tor_free(*cookie_out);
+
+  /* Generate the cookie */
+  *cookie_out = tor_malloc(cookie_len);
+  if (crypto_rand((char *)*cookie_out, cookie_len) < 0)
+    goto done;
+
+  /* Create the string that should be written on the file. */
+  memcpy(cookie_file_str, header, strlen(header));
+  memcpy(cookie_file_str+strlen(header), *cookie_out, cookie_len);
+  if (write_bytes_to_file(fname, cookie_file_str, cookie_file_str_len, 1)) {
+    log_warn(LD_FS,"Error writing auth cookie to %s.", escaped(fname));
+    goto done;
+  }
+
+  /* Success! */
+  log_info(LD_GENERAL, "Generated auth cookie file in '%s'.", escaped(fname));
+  *cookie_is_set_out = 1;
+  retval = 0;
+
+ done:
+  memwipe(cookie_file_str, 0, cookie_file_str_len);
+  tor_free(cookie_file_str);
+  return retval;
 }
 

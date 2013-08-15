@@ -19,6 +19,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "reasons.h"
+#include "ext_orport.h"
 #include "../common/util.h"
 #include "../common/torlog.h"
 #ifdef HAVE_UNISTD_H
@@ -1699,6 +1700,64 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
   } while (res == 0 && want_length <= buflen && buflen >= 2);
 
   return res;
+}
+#endif
+
+/** The size of the header of an Extended ORPort message: 2 bytes for
+ *  COMMAND, 2 bytes for BODYLEN */
+#define EXT_OR_CMD_HEADER_SIZE 4
+
+/** Read <b>buf</b>, which should contain an Extended ORPort message
+ *  from a transport proxy. If well-formed, create and populate
+ *  <b>out</b> with the Extended ORport message. Return 0 if the
+ *  buffer was incomplete, 1 if it was well-formed and -1 if we
+ *  encountered an error while parsing it.  */
+int
+fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
+{
+  char hdr[EXT_OR_CMD_HEADER_SIZE];
+  uint16_t len;
+
+  check();
+  if (buf->datalen < EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  peek_from_buf(hdr, sizeof(hdr), buf);
+  len = ntohs(get_uint16(hdr+2));
+  if (buf->datalen < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  *out = ext_or_cmd_new(len);
+  (*out)->cmd = ntohs(get_uint16(hdr));
+  (*out)->len = len;
+  buf_remove_from_front(buf, EXT_OR_CMD_HEADER_SIZE);
+  fetch_from_buf((*out)->body, len, buf);
+  return 1;
+}
+
+#ifdef USE_BUFFEREVENTS
+/** Read <b>buf</b>, which should contain an Extended ORPort message
+ *  from a transport proxy. If well-formed, create and populate
+ *  <b>out</b> with the Extended ORport message. Return 0 if the
+ *  buffer was incomplete, 1 if it was well-formed and -1 if we
+ *  encountered an error while parsing it.  */
+int
+fetch_ext_or_command_from_evbuffer(struct evbuffer *buf, ext_or_cmd_t **out)
+{
+  char hdr[EXT_OR_CMD_HEADER_SIZE];
+  uint16_t len;
+  size_t buf_len = evbuffer_get_length(buf);
+
+  if (buf_len < EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  evbuffer_copyout(buf, hdr, EXT_OR_CMD_HEADER_SIZE);
+  len = ntohs(get_uint16(hdr+2));
+  if (buf_len < (unsigned)len + EXT_OR_CMD_HEADER_SIZE)
+    return 0;
+  *out = ext_or_cmd_new(len);
+  (*out)->cmd = ntohs(get_uint16(hdr));
+  (*out)->len = len;
+  evbuffer_drain(buf, EXT_OR_CMD_HEADER_SIZE);
+  evbuffer_remove(buf, (*out)->body, len);
+  return 1;
 }
 #endif
 

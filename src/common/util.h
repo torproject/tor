@@ -355,8 +355,9 @@ FILE *fdopen_file(open_file_t *file_data);
 int finish_writing_to_file(open_file_t *file_data);
 int abort_writing_to_file(open_file_t *file_data);
 int write_str_to_file(const char *fname, const char *str, int bin);
-int write_bytes_to_file(const char *fname, const char *str, size_t len,
-                        int bin);
+MOCK_DECL(int,
+write_bytes_to_file,(const char *fname, const char *str, size_t len,
+                     int bin));
 /** An ad-hoc type to hold a string of characters and a count; used by
  * write_chunks_to_file. */
 typedef struct sized_chunk_t {

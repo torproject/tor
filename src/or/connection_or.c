@@ -37,7 +37,7 @@
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
-
+#include "ext_orport.h"
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
 #endif
@@ -74,6 +74,10 @@ static void connection_or_handle_event_cb(struct bufferevent *bufev,
  * with that identity digest.  If there is more than one such connection_t,
  * they form a linked list, with next_with_same_id as the next pointer. */
 static digestmap_t *orconn_identity_map = NULL;
+
+/** Global map between Extended ORPort identifiers and OR
+ *  connections. */
+static digestmap_t *orconn_ext_or_id_map = NULL;
 
 /** If conn is listed in orconn_identity_map, remove it, and clear
  * conn->identity_digest.  Otherwise do nothing. */
@@ -174,6 +178,71 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 #endif
 }
 
+/** Remove the Extended ORPort identifier of <b>conn</b> from the
+ *  global identifier list. Also, clear the identifier from the
+ *  connection itself. */
+void
+connection_or_remove_from_ext_or_id_map(or_connection_t *conn)
+{
+  or_connection_t *tmp;
+  if (!orconn_ext_or_id_map)
+    return;
+  if (!conn->ext_or_conn_id)
+    return;
+
+  tmp = digestmap_remove(orconn_ext_or_id_map, conn->ext_or_conn_id);
+  if (!tor_digest_is_zero(conn->ext_or_conn_id))
+    tor_assert(tmp == conn);
+
+  memset(conn->ext_or_conn_id, 0, EXT_OR_CONN_ID_LEN);
+}
+
+/** Return the connection whose ext_or_id is <b>id</b>. Return NULL if no such
+ * connection is found. */
+or_connection_t *
+connection_or_get_by_ext_or_id(const char *id)
+{
+  if (!orconn_ext_or_id_map)
+    return NULL;
+  return digestmap_get(orconn_ext_or_id_map, id);
+}
+
+/** Deallocate the global Extended ORPort identifier list */
+void
+connection_or_clear_ext_or_id_map(void)
+{
+  digestmap_free(orconn_ext_or_id_map, NULL);
+  orconn_ext_or_id_map = NULL;
+}
+
+/** Creates an Extended ORPort identifier for <b>conn<b/> and deposits
+ *  it into the global list of identifiers. */
+void
+connection_or_set_ext_or_identifier(or_connection_t *conn)
+{
+  char random_id[EXT_OR_CONN_ID_LEN];
+  or_connection_t *tmp;
+
+  if (!orconn_ext_or_id_map)
+    orconn_ext_or_id_map = digestmap_new();
+
+  /* Remove any previous identifiers: */
+  if (conn->ext_or_conn_id && !tor_digest_is_zero(conn->ext_or_conn_id))
+      connection_or_remove_from_ext_or_id_map(conn);
+
+  do {
+    crypto_rand(random_id, sizeof(random_id));
+  } while (digestmap_get(orconn_ext_or_id_map, random_id));
+
+  if (!conn->ext_or_conn_id)
+    conn->ext_or_conn_id = tor_malloc_zero(EXT_OR_CONN_ID_LEN);
+
+  memcpy(conn->ext_or_conn_id, random_id, EXT_OR_CONN_ID_LEN);
+
+  tmp = digestmap_set(orconn_ext_or_id_map, random_id, conn);
+  tor_assert(!tmp);
+}
+
 /**************************************************************/
 
 /** Map from a string describing what a non-open OR connection was doing when
@@ -228,7 +297,7 @@ connection_or_get_state_description(or_connection_t *orconn,
   const char *conn_state;
   char tls_state[256];
 
-  tor_assert(conn->type == CONN_TYPE_OR);
+  tor_assert(conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR);
 
   conn_state = conn_state_to_string(conn->type, conn->state);
   tor_tls_get_state_description(orconn->tls, tls_state, sizeof(tls_state));
@@ -1077,7 +1146,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  conn = or_connection_new(tor_addr_family(&addr));
+  conn = or_connection_new(CONN_TYPE_OR, tor_addr_family(&addr));
 
   /*
    * Set up conn so it's got all the data we need to remember for channels
@@ -1212,8 +1281,8 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
  *
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
-int
-connection_tls_start_handshake(or_connection_t *conn, int receiving)
+MOCK_IMPL(int,
+connection_tls_start_handshake,(or_connection_t *conn, int receiving))
 {
   channel_listener_t *chan_listener;
   channel_t *chan;
@@ -1470,7 +1539,8 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
 int
 connection_or_nonopen_was_started_here(or_connection_t *conn)
 {
-  tor_assert(conn->base_.type == CONN_TYPE_OR);
+  tor_assert(conn->base_.type == CONN_TYPE_OR ||
+             conn->base_.type == CONN_TYPE_EXT_OR);
   if (!conn->tls)
     return 1; /* it's still in proxy states or something */
   if (conn->handshake_state)

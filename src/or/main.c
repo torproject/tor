@@ -10,6 +10,7 @@
  * connections, implements main loop, and drives scheduled events.
  **/
 
+#define MAIN_PRIVATE
 #include "or.h"
 #include "addressmap.h"
 #include "buffers.h"
@@ -51,6 +52,7 @@
 #include "routerparse.h"
 #include "statefile.h"
 #include "status.h"
+#include "ext_orport.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>
@@ -412,6 +414,19 @@ connection_unlink(connection_t *conn)
   connection_free(conn);
 }
 
+/** Initialize the global connection list, closeable connection list,
+ * and active connection list. */
+STATIC void
+init_connection_lists(void)
+{
+  if (!connection_array)
+    connection_array = smartlist_new();
+  if (!closeable_connection_lst)
+    closeable_connection_lst = smartlist_new();
+  if (!active_linked_connection_lst)
+    active_linked_connection_lst = smartlist_new();
+}
+
 /** Schedule <b>conn</b> to be closed. **/
 void
 add_connection_to_closeable_list(connection_t *conn)
@@ -505,8 +520,8 @@ connection_is_reading(connection_t *conn)
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
-void
-connection_stop_reading(connection_t *conn)
+MOCK_IMPL(void,
+connection_stop_reading,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -530,8 +545,8 @@ connection_stop_reading(connection_t *conn)
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
-void
-connection_start_reading(connection_t *conn)
+MOCK_IMPL(void,
+connection_start_reading,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -570,8 +585,8 @@ connection_is_writing(connection_t *conn)
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
-void
-connection_stop_writing(connection_t *conn)
+MOCK_IMPL(void,
+connection_stop_writing,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -596,8 +611,8 @@ connection_stop_writing(connection_t *conn)
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
-void
-connection_start_writing(connection_t *conn)
+MOCK_IMPL(void,
+connection_start_writing,(connection_t *conn))
 {
   tor_assert(conn);
 
@@ -685,7 +700,7 @@ connection_stop_reading_from_linked_conn(connection_t *conn)
 }
 
 /** Close all connections that have been scheduled to get closed. */
-static void
+STATIC void
 close_closeable_connections(void)
 {
   int i;
@@ -2307,12 +2322,7 @@ tor_init(int argc, char *argv[])
   char buf[256];
   int i, quiet = 0;
   time_of_process_start = time(NULL);
-  if (!connection_array)
-    connection_array = smartlist_new();
-  if (!closeable_connection_lst)
-    closeable_connection_lst = smartlist_new();
-  if (!active_linked_connection_lst)
-    active_linked_connection_lst = smartlist_new();
+  init_connection_lists();
   /* Have the log set up with our application name. */
   tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
   log_set_application_name(buf);
@@ -2501,6 +2511,8 @@ tor_free_all(int postfork)
   memarea_clear_freelist();
   nodelist_free_all();
   microdesc_free_all();
+  ext_orport_free_all();
+  control_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

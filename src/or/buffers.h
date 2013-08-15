@@ -53,6 +53,8 @@ int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
 
+int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
+
 #ifdef USE_BUFFEREVENTS
 int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
                                  int linkproto);
@@ -68,6 +70,8 @@ int peek_evbuffer_has_control0_command(struct evbuffer *buf);
 int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
                            const char *data, size_t data_len,
                            int done);
+int fetch_ext_or_command_from_evbuffer(struct evbuffer *buf,
+                                       ext_or_cmd_t **out);
 #endif
 
 #ifdef USE_BUFFEREVENTS
@@ -77,6 +81,8 @@ int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
 #define generic_buffer_get(b,buf,buflen) evbuffer_remove((b),(buf),(buflen))
 #define generic_buffer_clear(b) evbuffer_drain((b), evbuffer_get_length((b)))
 #define generic_buffer_free(b) evbuffer_free((b))
+#define generic_buffer_fetch_ext_or_cmd(b, out) \
+  fetch_ext_or_command_from_evbuffer((b), (out))
 #else
 #define generic_buffer_new() buf_new()
 #define generic_buffer_len(b) buf_datalen((b))
@@ -84,6 +90,8 @@ int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
 #define generic_buffer_get(b,buf,buflen) fetch_from_buf((buf),(buflen),(b))
 #define generic_buffer_clear(b) buf_clear((b))
 #define generic_buffer_free(b) buf_free((b))
+#define generic_buffer_fetch_ext_or_cmd(b, out) \
+  fetch_ext_or_command_from_buf((b), (out))
 #endif
 int generic_buffer_set_to_copy(generic_buffer_t **output,
                                const generic_buffer_t *input);

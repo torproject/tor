@@ -115,7 +115,7 @@ static int authentication_cookie_is_set = 0;
 /** If authentication_cookie_is_set, a secret cookie that we've stored to disk
  * and which we're using to authenticate controllers.  (If the controller can
  * read it off disk, it has permission to connect.) */
-static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
+static uint8_t *authentication_cookie = NULL;
 
 #define SAFECOOKIE_SERVER_TO_CONTROLLER_CONSTANT \
   "Tor safe cookie authentication server-to-controller hash"
@@ -4446,44 +4446,27 @@ get_cookie_file(void)
   }
 }
 
-/** Choose a random authentication cookie and write it to disk.
- * Anybody who can read the cookie from disk will be considered
- * authorized to use the control connection. Return -1 if we can't
- * write the file, or 0 on success. */
+/* Initialize the cookie-based authentication system of the
+ * ControlPort. If <b>enabled</b> is 0, then disable the cookie
+ * authentication system.  */
 int
-init_cookie_authentication(int enabled)
+init_control_cookie_authentication(int enabled)
 {
-  char *fname;
+  char *fname = NULL;
+  int retval;
+
   if (!enabled) {
     authentication_cookie_is_set = 0;
     return 0;
   }
 
-  /* We don't want to generate a new cookie every time we call
-   * options_act(). One should be enough. */
-  if (authentication_cookie_is_set)
-    return 0; /* all set */
-
   fname = get_cookie_file();
-  crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
-  authentication_cookie_is_set = 1;
-  if (write_bytes_to_file(fname, authentication_cookie,
-                          AUTHENTICATION_COOKIE_LEN, 1)) {
-    log_warn(LD_FS,"Error writing authentication cookie to %s.",
-             escaped(fname));
-    tor_free(fname);
-    return -1;
-  }
-#ifndef _WIN32
-  if (get_options()->CookieAuthFileGroupReadable) {
-    if (chmod(fname, 0640)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
-    }
-  }
-#endif
-
+  retval = init_cookie_authentication(fname, "", /* no header */
+                                      AUTHENTICATION_COOKIE_LEN,
+                                      &authentication_cookie,
+                                      &authentication_cookie_is_set);
   tor_free(fname);
-  return 0;
+  return retval;
 }
 
 /** A copy of the process specifier of Tor's owning controller, or
@@ -4699,8 +4682,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
  * that indicates a problem. <b>warn</b> gives a hint as to why, and
  * <b>reason</b> provides an "or_conn_end_reason" tag.
  */
-void
-control_event_bootstrap_problem(const char *warn, int reason)
+MOCK_IMPL(void,
+control_event_bootstrap_problem, (const char *warn, int reason))
 {
   int status = bootstrap_percent;
   const char *tag, *summary;
@@ -4765,5 +4748,13 @@ control_event_clients_seen(const char *controller_str)
 {
   send_control_event(EVENT_CLIENTS_SEEN, 0,
     "650 CLIENTS_SEEN %s\r\n", controller_str);
+}
+
+/** Free any leftover allocated memory of the control.c subsystem. */
+void
+control_free_all(void)
+{
+  if (authentication_cookie) /* Free the auth cookie */
+    tor_free(authentication_cookie);
 }
 

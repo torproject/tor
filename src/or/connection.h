@@ -19,7 +19,7 @@ const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
 dir_connection_t *dir_connection_new(int socket_family);
-or_connection_t *or_connection_new(int socket_family);
+or_connection_t *or_connection_new(int type, int socket_family);
 edge_connection_t *edge_connection_new(int type, int socket_family);
 entry_connection_t *entry_connection_new(int type, int socket_family);
 control_connection_t *control_connection_new(int socket_family);
@@ -130,8 +130,8 @@ int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn, int force);
 int connection_flush(connection_t *conn);
 
-void connection_write_to_buf_impl_(const char *string, size_t len,
-                                   connection_t *conn, int zlib);
+MOCK_DECL(void, connection_write_to_buf_impl_,
+          (const char *string, size_t len, connection_t *conn, int zlib));
 /* DOCDOC connection_write_to_buf */
 static void connection_write_to_buf(const char *string, size_t len,
                                     connection_t *conn);
@@ -212,6 +212,10 @@ void connection_get_rate_limit_totals(uint64_t *read_out,
 void connection_enable_rate_limiting(connection_t *conn);
 #else
 #define connection_type_uses_bufferevent(c) (0)
+#endif
+
+#ifdef CONNECTION_PRIVATE
+STATIC void connection_free_(connection_t *conn);
 #endif
 
 #endif

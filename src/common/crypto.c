@@ -2404,8 +2404,8 @@ crypto_seed_rng(int startup)
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
-int
-crypto_rand(char *to, size_t n)
+MOCK_IMPL(int,
+crypto_rand, (char *to, size_t n))
 {
   int r;
   tor_assert(n < INT_MAX);

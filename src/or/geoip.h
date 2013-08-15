@@ -29,10 +29,12 @@ const char *geoip_db_digest(sa_family_t family);
 country_t geoip_get_country(const char *countrycode);
 
 void geoip_note_client_seen(geoip_client_action_t action,
-                            const tor_addr_t *addr, time_t now);
+                            const tor_addr_t *addr, const char *transport_name,
+                            time_t now);
 void geoip_remove_old_clients(time_t cutoff);
 
 void geoip_note_ns_response(geoip_ns_response_t response);
+char *geoip_get_transport_history(void);
 int geoip_get_client_history(geoip_client_action_t action,
                              char **country_str, char **ipver_str);
 char *geoip_get_request_history(void);

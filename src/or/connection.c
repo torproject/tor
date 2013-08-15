@@ -10,6 +10,7 @@
  * on connections.
  **/
 
+#define CONNECTION_PRIVATE
 #include "or.h"
 #include "buffers.h"
 /*
@@ -33,6 +34,7 @@
 #include "dns.h"
 #include "dnsserv.h"
 #include "entrynodes.h"
+#include "ext_orport.h"
 #include "geoip.h"
 #include "main.h"
 #include "policies.h"
@@ -98,6 +100,7 @@ static smartlist_t *outgoing_addrs = NULL;
 
 #define CASE_ANY_LISTENER_TYPE \
     case CONN_TYPE_OR_LISTENER: \
+    case CONN_TYPE_EXT_OR_LISTENER: \
     case CONN_TYPE_AP_LISTENER: \
     case CONN_TYPE_DIR_LISTENER: \
     case CONN_TYPE_CONTROL_LISTENER: \
@@ -129,6 +132,8 @@ conn_type_to_string(int type)
     case CONN_TYPE_CPUWORKER: return "CPU worker";
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
+    case CONN_TYPE_EXT_OR: return "Extended OR";
+    case CONN_TYPE_EXT_OR_LISTENER: return "Extended OR listener";
     default:
       log_warn(LD_BUG, "unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
@@ -163,6 +168,18 @@ conn_state_to_string(int type, int state)
         case OR_CONN_STATE_OR_HANDSHAKING_V3:
           return "handshaking (Tor, v3 handshake)";
         case OR_CONN_STATE_OPEN: return "open";
+      }
+      break;
+    case CONN_TYPE_EXT_OR:
+      switch (state) {
+        case EXT_OR_CONN_STATE_AUTH_WAIT_AUTH_TYPE:
+          return "waiting for authentication type";
+        case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_NONCE:
+          return "waiting for client nonce";
+        case EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH:
+          return "waiting for client hash";
+        case EXT_OR_CONN_STATE_OPEN: return "open";
+        case EXT_OR_CONN_STATE_FLUSHING: return "flushing final OKAY";
       }
       break;
     case CONN_TYPE_EXIT:
@@ -229,6 +246,7 @@ connection_type_uses_bufferevent(connection_t *conn)
     case CONN_TYPE_DIR:
     case CONN_TYPE_CONTROL:
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
     case CONN_TYPE_CPUWORKER:
       return 1;
     default:
@@ -259,13 +277,17 @@ dir_connection_new(int socket_family)
  * Set active_circuit_pqueue_last_recalibrated to current cell_ewma tick.
  */
 or_connection_t *
-or_connection_new(int socket_family)
+or_connection_new(int type, int socket_family)
 {
   or_connection_t *or_conn = tor_malloc_zero(sizeof(or_connection_t));
   time_t now = time(NULL);
-  connection_init(now, TO_CONN(or_conn), CONN_TYPE_OR, socket_family);
+  tor_assert(type == CONN_TYPE_OR || type == CONN_TYPE_EXT_OR);
+  connection_init(now, TO_CONN(or_conn), type, socket_family);
 
   or_conn->timestamp_last_added_nonpadding = time(NULL);
+
+  if (type == CONN_TYPE_EXT_OR)
+    connection_or_set_ext_or_identifier(or_conn);
 
   return or_conn;
 }
@@ -335,7 +357,8 @@ connection_new(int type, int socket_family)
 {
   switch (type) {
     case CONN_TYPE_OR:
-      return TO_CONN(or_connection_new(socket_family));
+    case CONN_TYPE_EXT_OR:
+      return TO_CONN(or_connection_new(type, socket_family));
 
     case CONN_TYPE_EXIT:
       return TO_CONN(edge_connection_new(type, socket_family));
@@ -377,6 +400,7 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
 
   switch (type) {
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       conn->magic = OR_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_EXIT:
@@ -435,7 +459,7 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
  * necessary, close its socket if necessary, and mark the directory as dirty
  * if <b>conn</b> is an OR or OP connection.
  */
-static void
+STATIC void
 connection_free_(connection_t *conn)
 {
   void *mem;
@@ -445,6 +469,7 @@ connection_free_(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       mem = TO_OR_CONN(conn);
       memlen = sizeof(or_connection_t);
@@ -575,6 +600,13 @@ connection_free_(connection_t *conn)
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
     connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
+  if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
+    connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
+    tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
+    tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
+    tor_free(TO_OR_CONN(conn)->ext_or_transport);
+  }
+
 #ifdef USE_BUFFEREVENTS
   if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bucket_cfg) {
     ev_token_bucket_cfg_free(TO_OR_CONN(conn)->bucket_cfg);
@@ -638,6 +670,7 @@ connection_about_to_close_connection(connection_t *conn)
       connection_dir_about_to_close(TO_DIR_CONN(conn));
       break;
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       connection_or_about_to_close(TO_OR_CONN(conn));
       break;
     case CONN_TYPE_AP:
@@ -1367,6 +1400,9 @@ connection_init_accepted_conn(connection_t *conn,
   connection_start_reading(conn);
 
   switch (conn->type) {
+    case CONN_TYPE_EXT_OR:
+      /* Initiate Extended ORPort authentication. */
+      return connection_ext_or_start_auth(TO_OR_CONN(conn));
     case CONN_TYPE_OR:
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       rv = connection_tls_start_handshake(TO_OR_CONN(conn), 1);
@@ -2873,6 +2909,8 @@ connection_handle_read_impl(connection_t *conn)
   switch (conn->type) {
     case CONN_TYPE_OR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_OR);
+    case CONN_TYPE_EXT_OR_LISTENER:
+      return connection_handle_listener_read(conn, CONN_TYPE_EXT_OR);
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
     case CONN_TYPE_AP_NATD_LISTENER:
@@ -3663,9 +3701,9 @@ connection_flush(connection_t *conn)
  * it all, so we don't end up with many megabytes of controller info queued at
  * once.
  */
-void
-connection_write_to_buf_impl_(const char *string, size_t len,
-                              connection_t *conn, int zlib)
+MOCK_IMPL(void,
+connection_write_to_buf_impl_,(const char *string, size_t len,
+                               connection_t *conn, int zlib))
 {
   /* XXXX This function really needs to return -1 on failure. */
   int r;
@@ -3905,6 +3943,7 @@ int
 connection_is_listener(connection_t *conn)
 {
   if (conn->type == CONN_TYPE_OR_LISTENER ||
+      conn->type == CONN_TYPE_EXT_OR_LISTENER ||
       conn->type == CONN_TYPE_AP_LISTENER ||
       conn->type == CONN_TYPE_AP_TRANS_LISTENER ||
       conn->type == CONN_TYPE_AP_DNS_LISTENER ||
@@ -3927,6 +3966,7 @@ connection_state_is_open(connection_t *conn)
     return 0;
 
   if ((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
+      (conn->type == CONN_TYPE_EXT_OR) ||
       (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
       (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
       (conn->type == CONN_TYPE_CONTROL &&
@@ -4096,6 +4136,8 @@ connection_process_inbuf(connection_t *conn, int package_partial)
   switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_or_process_inbuf(TO_OR_CONN(conn));
+    case CONN_TYPE_EXT_OR:
+      return connection_ext_or_process_inbuf(TO_OR_CONN(conn));
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
       return connection_edge_process_inbuf(TO_EDGE_CONN(conn),
@@ -4156,6 +4198,8 @@ connection_finished_flushing(connection_t *conn)
   switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(TO_OR_CONN(conn));
+    case CONN_TYPE_EXT_OR:
+      return connection_ext_or_finished_flushing(TO_OR_CONN(conn));
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
       return connection_edge_finished_flushing(TO_EDGE_CONN(conn));
@@ -4211,6 +4255,7 @@ connection_reached_eof(connection_t *conn)
 {
   switch (conn->type) {
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       return connection_or_reached_eof(TO_OR_CONN(conn));
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
@@ -4297,6 +4342,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
+    case CONN_TYPE_EXT_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       break;
     case CONN_TYPE_AP:
@@ -4401,6 +4447,10 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR:
       tor_assert(conn->state >= OR_CONN_STATE_MIN_);
       tor_assert(conn->state <= OR_CONN_STATE_MAX_);
+      break;
+    case CONN_TYPE_EXT_OR:
+      tor_assert(conn->state >= EXT_OR_CONN_STATE_MIN_);
+      tor_assert(conn->state <= EXT_OR_CONN_STATE_MAX_);
       break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->state >= EXIT_CONN_STATE_MIN_);
@@ -4534,6 +4584,7 @@ connection_free_all(void)
 
   /* Unlink everything from the identity map. */
   connection_or_clear_identity_map();
+  connection_or_clear_ext_or_id_map();
 
   /* Clear out our list of broken connections */
   clear_broken_connection_map(0);

@@ -1,0 +1,4 @@
+  o Minor features:
+    - Bridges now track the usage of their pluggable transports and
+      report statistics in their extra-info descriptors. Resolves
+      ticket 5040.

@@ -36,12 +36,12 @@ typedef enum watchable_events {
 } watchable_events_t;
 void connection_watch_events(connection_t *conn, watchable_events_t events);
 int connection_is_reading(connection_t *conn);
-void connection_stop_reading(connection_t *conn);
-void connection_start_reading(connection_t *conn);
+MOCK_DECL(void,connection_stop_reading,(connection_t *conn));
+MOCK_DECL(void,connection_start_reading,(connection_t *conn));
 
 int connection_is_writing(connection_t *conn);
-void connection_stop_writing(connection_t *conn);
-void connection_start_writing(connection_t *conn);
+MOCK_DECL(void,connection_stop_writing,(connection_t *conn));
+MOCK_DECL(void,connection_start_writing,(connection_t *conn));
 
 void connection_stop_reading_from_linked_conn(connection_t *conn);
 
@@ -68,6 +68,11 @@ int tor_main(int argc, char *argv[]);
 
 int do_main_loop(void);
 int tor_init(int argc, char **argv);
+
+#ifdef MAIN_PRIVATE
+STATIC void init_connection_lists(void);
+STATIC void close_closeable_connections(void);
+#endif
 
 #endif
 

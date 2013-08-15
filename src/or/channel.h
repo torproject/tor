@@ -84,6 +84,8 @@ struct channel_s {
    * available.
    */
   int (*get_remote_addr)(channel_t *, tor_addr_t *);
+  int (*get_transport_name)(channel_t *chan, char **transport_out);
+
 #define GRD_FLAG_ORIGINAL 1
 #define GRD_FLAG_ADDR_ONLY 2
   /*
