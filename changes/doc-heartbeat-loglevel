@@ -1,0 +1,3 @@
+  o Minor documentation fixes:
+    - Fix the documentation of HeartbeatPeriod to say that the heartbeat
+      message is logged at notice, not at info.
