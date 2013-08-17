@@ -1540,7 +1540,7 @@ is non-zero):
 
 **HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
     Log a heartbeat message every **HeartbeatPeriod** seconds. This is
-    a log level __info__ message, designed to let you know your Tor
+    a log level __notice__ message, designed to let you know your Tor
     server is still alive and doing useful things. Settings this
     to 0 will disable the heartbeat. (Default: 6 hours)
 
