@@ -34,6 +34,7 @@
 #endif
 #include <sys/ucontext.h>
 #include <seccomp.h>
+#include <netdb.h>
 
 /** Security measure for filter string parameter lengths*/
 #define MAX_PARAM_LEN 64
@@ -90,6 +91,9 @@ typedef struct {
 #endif
 
 #endif // __linux__
+
+/** Replacement for getaddrinfo(), using pre-recorded results. */
+int sandbox_getaddrinfo(const char *name, struct addrinfo **res);
 
 /** Use <b>fd</b> to log non-survivable sandbox violations. */
 void sandbox_set_debugging_fd(int fd);

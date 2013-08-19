@@ -14,6 +14,7 @@
 #include "address.h"
 #include "torlog.h"
 #include "container.h"
+#include "sandbox.h"
 
 #ifdef _WIN32
 #include <process.h>
@@ -234,7 +235,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
-    err = getaddrinfo(name, NULL, &hints, &res);
+    err = sandbox_getaddrinfo(name, &res);
     if (!err) {
       best = NULL;
       for (res_p = res; res_p; res_p = res_p->ai_next) {
