@@ -1444,13 +1444,14 @@ configure_nameservers(int force)
   const or_options_t *options;
   const char *conf_fname;
   struct stat st;
-  int r;
+  int r, flags;
   options = get_options();
   conf_fname = options->ServerDNSResolvConfFile;
 #ifndef _WIN32
   if (!conf_fname)
     conf_fname = "/etc/resolv.conf";
 #endif
+  flags = DNS_OPTIONS_ALL;
 
   if (!the_evdns_base) {
     if (!(the_evdns_base = evdns_base_new(tor_libevent_get_base(), 0))) {
@@ -1492,9 +1493,14 @@ configure_nameservers(int force)
       evdns_base_search_clear(the_evdns_base);
       evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
+    if (flags & DNS_OPTION_HOSTSFILE) {
+      flags ^= DNS_OPTION_HOSTSFILE;
+      evdns_base_load_hosts(the_evdns_base,
+          sandbox_intern_string("/etc/resolv.conf"));
+    }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if ((r = evdns_base_resolv_conf_parse(the_evdns_base,
-                                          DNS_OPTIONS_ALL, conf_fname))) {
+    if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
+        sandbox_intern_string(conf_fname)))) {
       log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
                conf_fname, conf_fname, r);
       goto err;
