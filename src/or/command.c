@@ -941,6 +941,16 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
    * trustworthy. */
   (void)my_apparent_addr;
 
+  if (! conn->handshake_state->sent_netinfo) {
+    /* If we were prepared to authenticate, but we never got an AUTH_CHALLENGE
+     * cell, then we would not previously have sent a NETINFO cell. Do so
+     * now. */
+    if (connection_or_send_netinfo(conn) < 0) {
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+  }
+
   if (connection_or_set_state_open(conn)<0) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got good NETINFO cell from %s:%d; but "
            "was unable to make the OR connection become open.",
