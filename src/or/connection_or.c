@@ -2042,6 +2042,12 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   tor_assert(conn->handshake_state);
 
+  if (conn->handshake_state->sent_netinfo) {
+    log_warn(LD_BUG, "Attempted to send an extra netinfo cell on a connection "
+             "where we already sent one.");
+    return 0;
+  }
+
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
@@ -2083,6 +2089,7 @@ connection_or_send_netinfo(or_connection_t *conn)
   }
 
   conn->handshake_state->digest_sent_data = 0;
+  conn->handshake_state->sent_netinfo = 1;
   connection_or_write_cell_to_buf(&cell, conn);
 
   return 0;
