@@ -264,13 +264,13 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   }
 
   // problem: required by getaddrinfo
-//  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
-//        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
-//  if (rc != 0) {
-//    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
-//        "error %d", rc);
-//    return rc;
-//  }
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(1), SCMP_SYS(open), 1,
+        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
+        "error %d", rc);
+    return rc;
+  }
 
   return 0;
 }
@@ -872,6 +872,10 @@ int sandbox_getaddrinfo(const char *name, struct addrinfo **res)
     return -2;
   }
   *res = NULL;
+  *res = (struct addrinfo *) malloc (sizeof(struct addrinfo));
+  if (!res) {
+    return -2;
+  }
 
   if (gethostname(hname, sizeof(hname)) < 0) {
     return -1;
@@ -882,7 +886,7 @@ int sandbox_getaddrinfo(const char *name, struct addrinfo **res)
     return -1;
   }
 
-  *res = sb_addr_info;
+  memcpy(*res, sb_addr_info, sizeof(struct addrinfo));
   return 0;
 }
 
