@@ -2218,7 +2218,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     const tor_cert_t *id_cert=NULL, *link_cert=NULL;
     const digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
-    if (tor_tls_get_my_certs(0, &link_cert, &id_cert))
+    if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
       return -1;
     my_digests = tor_cert_get_id_digests(id_cert);
     their_digests = tor_cert_get_id_digests(conn->handshake_state->id_cert);

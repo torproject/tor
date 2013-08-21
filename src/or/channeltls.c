@@ -1262,8 +1262,8 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
     const int send_versions = !started_here;
     /* If we want to authenticate, send a CERTS cell */
     const int send_certs = !started_here || public_server_mode(get_options());
-    /* If we're a relay that got a connection, ask for authentication. */
-    const int send_chall = !started_here && public_server_mode(get_options());
+    /* If we're a host that got a connection, ask for authentication. */
+    const int send_chall = !started_here;
     /* If our certs cell will authenticate us, we can send a netinfo cell
      * right now. */
     const int send_netinfo = !started_here;
