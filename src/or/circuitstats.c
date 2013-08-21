@@ -26,8 +26,7 @@
 // vary in their own latency. The downside of this is that guards
 // can change frequently, so we'd be building a lot more circuits
 // most likely.
-/* XXXX024 Make this static; add accessor functions. */
-circuit_build_times_t circ_times;
+static circuit_build_times_t circ_times;
 
 #ifdef TOR_UNIT_TESTS
 /** If set, we're running the unit tests: we should avoid clobbering
@@ -36,6 +35,24 @@ static int unit_tests = 0;
 #else
 #define unit_tests 0
 #endif
+
+circuit_build_times_t *
+get_circuit_build_times(void)
+{
+  return &circ_times;
+}
+
+double
+get_circuit_build_close_time(void)
+{
+  return circ_times.close_ms;
+}
+
+double
+get_circuit_build_timeout(void)
+{
+  return circ_times.timeout_ms;
+}
 
 /**
  * This function decides if CBT learning should be disabled. It returns
