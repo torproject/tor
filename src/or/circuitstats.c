@@ -36,24 +36,31 @@ static int unit_tests = 0;
 #define unit_tests 0
 #endif
 
+/** Return a pointer to the data structure describing our current circuit
+ * build time history and computations. */
 const circuit_build_times_t *
 get_circuit_build_times(void)
 {
   return &circ_times;
 }
 
+/** As get_circuit_build_times, but return a mutable pointer. */
 circuit_build_times_t *
 get_circuit_build_times_mutable(void)
 {
   return &circ_times;
 }
 
+/** Return the time to wait before actually closing an under-construction, in
+ * milliseconds. */
 double
 get_circuit_build_close_time_ms(void)
 {
   return circ_times.close_ms;
 }
 
+/** Return the time to wait before giving up on an under-construction circuit,
+ * in milliseconds. */
 double
 get_circuit_build_timeout_ms(void)
 {
