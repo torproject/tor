@@ -658,7 +658,7 @@ sandbox_intern_string(const char *param)
     }
   }
 
-  log_warn(LD_BUG, "(Sandbox) Parameter %s not found", param);
+  log_info(LD_GENERAL, "(Sandbox) Parameter %s not found", param);
   return param;
 }
 
