@@ -17,6 +17,8 @@
 #include "hibernate.h"
 #include "statefile.h"
 
+static void log_accounting(const time_t now, const or_options_t *options);
+
 /** Return the total number of circuits. */
 static int
 count_circuits(void)
@@ -133,7 +135,7 @@ log_heartbeat(time_t now)
   return 0;
 }
 
-void
+static void
 log_accounting(const time_t now, const or_options_t *options)
 {
   or_state_t *state = get_or_state();
@@ -146,9 +148,9 @@ log_accounting(const time_t now, const or_options_t *options)
   format_local_iso_time(end_buf, interval_end);
   remaining = secs_to_uptime(interval_end - now);
 
-  log_notice(LD_HEARTBEAT, "Heartbeat: "
+  log_notice(LD_HEARTBEAT, "Heartbeat: Accounting enabled. "
       "Sent: %s / %s, Received: %s / %s. The "
-      "current accounting period ends on %s. That's %s left to go.",
+      "current accounting interval ends on %s, in %s.",
       acc_sent, acc_max, acc_rcvd, acc_max, end_buf, remaining);
 
   tor_free(acc_rcvd);
@@ -156,3 +158,4 @@ log_accounting(const time_t now, const or_options_t *options)
   tor_free(acc_max);
   tor_free(remaining);
 }
+

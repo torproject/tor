@@ -255,6 +255,7 @@ accounting_get_interval_length(void)
   return (int)(interval_end_time - interval_start_time);
 }
 
+/** Return the time at which the current accounting interval will end. */
 time_t
 accounting_get_end_time(void)
 {

@@ -1,4 +1,4 @@
   o Minor features:
     - Log current accounting state (bytes sent and received + remaining
       time for the current accounting period) in the server's
-      heartbeat message. 
+      heartbeat message. Implements ticket 5526; patch from Peter Retzlaff.
