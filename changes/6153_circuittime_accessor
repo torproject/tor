@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+
+    - Add a set of accessor functions for the circuit timeout data
+      structure. Fixes ticket 6153; patch from "piet".
