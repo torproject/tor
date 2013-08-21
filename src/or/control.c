@@ -4163,16 +4163,13 @@ control_event_newconsensus(const networkstatus_t *consensus)
 
 /** Called when we compute a new circuitbuildtimeout */
 int
-control_event_buildtimeout_set(const circuit_build_times_t *cbt,
-                        buildtimeout_set_event_t type)
+control_event_buildtimeout_set(buildtimeout_set_event_t type,
+                               const char *args)
 {
   const char *type_string = NULL;
-  double qnt;
 
   if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
     return 0;
-
-  qnt = circuit_build_times_quantile_cutoff();
 
   switch (type) {
     case BUILDTIMEOUT_SET_EVENT_COMPUTED:
@@ -4180,15 +4177,12 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
       break;
     case BUILDTIMEOUT_SET_EVENT_RESET:
       type_string = "RESET";
-      qnt = 1.0;
       break;
     case BUILDTIMEOUT_SET_EVENT_SUSPENDED:
       type_string = "SUSPENDED";
-      qnt = 1.0;
       break;
     case BUILDTIMEOUT_SET_EVENT_DISCARD:
       type_string = "DISCARD";
-      qnt = 1.0;
       break;
     case BUILDTIMEOUT_SET_EVENT_RESUME:
       type_string = "RESUME";
@@ -4199,15 +4193,8 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
   }
 
   send_control_event(EVENT_BUILDTIMEOUT_SET, ALL_FORMATS,
-                     "650 BUILDTIMEOUT_SET %s TOTAL_TIMES=%lu "
-                     "TIMEOUT_MS=%lu XM=%lu ALPHA=%f CUTOFF_QUANTILE=%f "
-                     "TIMEOUT_RATE=%f CLOSE_MS=%lu CLOSE_RATE=%f\r\n",
-                     type_string, (unsigned long)cbt->total_build_times,
-                     (unsigned long)cbt->timeout_ms,
-                     (unsigned long)cbt->Xm, cbt->alpha, qnt,
-                     circuit_build_times_timeout_rate(cbt),
-                     (unsigned long)cbt->close_ms,
-                     circuit_build_times_close_rate(cbt));
+                     "650 BUILDTIMEOUT_SET %s %s\r\n",
+                     type_string, args);
 
   return 0;
 }

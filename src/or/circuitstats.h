@@ -40,6 +40,8 @@ void circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
 double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
 double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
+void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
+
 #ifdef CIRCUITSTATS_PRIVATE
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
                                              double quantile);
@@ -64,6 +66,33 @@ void circuitbuild_running_unit_tests(void);
 void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_network_check_live(const circuit_build_times_t *cbt);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
+
+#ifdef CIRCUITSTATS_PRIVATE
+/** Structure for circuit build times history */
+struct circuit_build_times_s{
+  /** The circular array of recorded build times in milliseconds */
+  build_time_t circuit_build_times[CBT_NCIRCUITS_TO_OBSERVE];
+  /** Current index in the circuit_build_times circular array */
+  int build_times_idx;
+  /** Total number of build times accumulated. Max CBT_NCIRCUITS_TO_OBSERVE */
+  int total_build_times;
+  /** Information about the state of our local network connection */
+  network_liveness_t liveness;
+  /** Last time we built a circuit. Used to decide to build new test circs */
+  time_t last_circ_at;
+  /** "Minimum" value of our pareto distribution (actually mode) */
+  build_time_t Xm;
+  /** alpha exponent for pareto dist. */
+  double alpha;
+  /** Have we computed a timeout? */
+  int have_computed_timeout;
+  /** The exact value for that timeout in milliseconds. Stored as a double
+   * to maintain precision from calculations to and from quantile value. */
+  double timeout_ms;
+  /** How long we wait before actually closing the circuit. */
+  double close_ms;
+};
+#endif
 
 #endif
 

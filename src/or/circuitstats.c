@@ -18,6 +18,10 @@
 #undef log
 #include <math.h>
 
+static void cbt_control_event_buildtimeout_set(
+                                  const circuit_build_times_t *cbt,
+                                  buildtimeout_set_event_t type);
+
 #define CBT_BIN_TO_MS(bin) ((bin)*CBT_BIN_WIDTH + (CBT_BIN_WIDTH/2))
 
 /** Global list of circuit build times */
@@ -505,7 +509,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
     cbt->liveness.timeouts_after_firsthop = NULL;
   }
   cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();
-  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
+  cbt_control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 }
 
 /**
@@ -1369,7 +1373,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
                   = circuit_build_times_get_initial_timeout();
   }
 
-  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
+  cbt_control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 
   log_notice(LD_CIRC,
             "Your network connection speed appears to have changed. Resetting "
@@ -1551,7 +1555,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     }
   }
 
-  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_COMPUTED);
+  cbt_control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_COMPUTED);
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
 
@@ -1597,3 +1601,44 @@ circuitbuild_running_unit_tests(void)
 }
 #endif
 
+void
+circuit_build_times_update_last_circ(circuit_build_times_t *cbt)
+{
+  cbt->last_circ_at = approx_time();
+}
+
+static void
+cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                                   buildtimeout_set_event_t type)
+{
+  char *args = NULL;
+  double qnt;
+
+  switch(type) {
+    case BUILDTIMEOUT_SET_EVENT_RESET:
+    case BUILDTIMEOUT_SET_EVENT_SUSPENDED:
+    case BUILDTIMEOUT_SET_EVENT_DISCARD:
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_COMPUTED:
+    case BUILDTIMEOUT_SET_EVENT_RESUME:
+    default:
+      qnt = circuit_build_times_quantile_cutoff();
+      break;
+  }
+
+  tor_asprintf(&args, "TOTAL_TIMES=%lu "
+               "TIMEOUT_MS=%lu XM=%lu ALPHA=%f CUTOFF_QUANTILE=%f "
+               "TIMEOUT_RATE=%f CLOSE_MS=%lu CLOSE_RATE=%f",
+               (unsigned long)cbt->total_build_times,
+               (unsigned long)cbt->timeout_ms,
+               (unsigned long)cbt->Xm, cbt->alpha, qnt,
+               circuit_build_times_timeout_rate(cbt),
+               (unsigned long)cbt->close_ms,
+               circuit_build_times_close_rate(cbt));
+
+  control_event_buildtimeout_set(type, args);
+
+  tor_free(args);
+
+}
