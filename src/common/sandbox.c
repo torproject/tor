@@ -126,7 +126,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
     SCMP_SYS(send),
-    SCMP_SYS(unlink) // ?
+    SCMP_SYS(unlink)
 };
 
 static int
@@ -264,7 +264,7 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   }
 
   // problem: required by getaddrinfo
-  rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(1), SCMP_SYS(open), 1,
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(-1), SCMP_SYS(open), 1,
         SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
