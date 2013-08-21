@@ -15,6 +15,9 @@
 #include "circuitlist.h"
 #include "main.h"
 #include "hibernate.h"
+#include "statefile.h"
+
+static void log_accounting(const time_t now, const or_options_t *options);
 
 /** Return the total number of circuits. */
 static int
@@ -111,6 +114,10 @@ log_heartbeat(time_t now)
          uptime, count_circuits(),bw_sent,bw_rcvd,
          hibernating?" We are currently hibernating.":"");
 
+  if (server_mode(options) && accounting_is_enabled(options) && !hibernating) {
+    log_accounting(now, options);
+  }
+
   if (stats_n_data_cells_packaged && !hibernating)
     log_notice(LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
         100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
@@ -126,5 +133,29 @@ log_heartbeat(time_t now)
   tor_free(bw_rcvd);
 
   return 0;
+}
+
+static void
+log_accounting(const time_t now, const or_options_t *options)
+{
+  or_state_t *state = get_or_state();
+  char *acc_rcvd = bytes_to_usage(state->AccountingBytesReadInInterval);
+  char *acc_sent = bytes_to_usage(state->AccountingBytesWrittenInInterval);
+  char *acc_max = bytes_to_usage(options->AccountingMax);
+  time_t interval_end = accounting_get_end_time();
+  char end_buf[ISO_TIME_LEN + 1];
+  char *remaining = NULL;
+  format_local_iso_time(end_buf, interval_end);
+  remaining = secs_to_uptime(interval_end - now);
+
+  log_notice(LD_HEARTBEAT, "Heartbeat: Accounting enabled. "
+      "Sent: %s / %s, Received: %s / %s. The "
+      "current accounting interval ends on %s, in %s.",
+      acc_sent, acc_max, acc_rcvd, acc_max, end_buf, remaining);
+
+  tor_free(acc_rcvd);
+  tor_free(acc_sent);
+  tor_free(acc_max);
+  tor_free(remaining);
 }
 
