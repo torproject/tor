@@ -678,7 +678,7 @@ origin_circuit_new(void)
 
   init_circuit_base(TO_CIRCUIT(circ));
 
-  get_circuit_build_times()->last_circ_at = approx_time();
+  get_circuit_build_times_mutable()->last_circ_at = approx_time();
 
   return circ;
 }

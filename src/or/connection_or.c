@@ -1749,7 +1749,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
                                               digest_rcvd) < 0)
     return -1;
 
-  circuit_build_times_network_is_live(get_circuit_build_times());
+  circuit_build_times_network_is_live(get_circuit_build_times_mutable());
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
@@ -1783,7 +1783,7 @@ connection_or_launch_v3_or_handshake(or_connection_t *conn)
   tor_assert(connection_or_nonopen_was_started_here(conn));
   tor_assert(tor_tls_received_v3_certificate(conn->tls));
 
-  circuit_build_times_network_is_live(get_circuit_build_times());
+  circuit_build_times_network_is_live(get_circuit_build_times_mutable());
 
   connection_or_change_state(conn, OR_CONN_STATE_OR_HANDSHAKING_V3);
   if (connection_init_or_handshake_state(conn, 1) < 0)
@@ -2016,7 +2016,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
       if (conn->chan)
         channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-      circuit_build_times_network_is_live(get_circuit_build_times());
+      circuit_build_times_network_is_live(get_circuit_build_times_mutable());
       channel_tls_handle_var_cell(var_cell, conn);
       var_cell_free(var_cell);
     } else {
@@ -2032,7 +2032,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
       if (conn->chan)
         channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
 
-      circuit_build_times_network_is_live(get_circuit_build_times());
+      circuit_build_times_network_is_live(get_circuit_build_times_mutable());
       connection_fetch_from_buf(buf, cell_network_size, TO_CONN(conn));
 
       /* retrieve cell info from buf (create the host-order struct from the

@@ -782,14 +782,14 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
           /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(
               get_circuit_build_times())) {
-            circuit_build_times_add_time(get_circuit_build_times(),
+            circuit_build_times_add_time(get_circuit_build_times_mutable(),
                 (build_time_t)timediff);
-            circuit_build_times_set_timeout(get_circuit_build_times());
+            circuit_build_times_set_timeout(get_circuit_build_times_mutable());
           }
 
           if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
             circuit_build_times_network_circ_success(
-                get_circuit_build_times());
+                get_circuit_build_times_mutable());
           }
         }
       }

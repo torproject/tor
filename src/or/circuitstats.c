@@ -36,8 +36,14 @@ static int unit_tests = 0;
 #define unit_tests 0
 #endif
 
-circuit_build_times_t *
+const circuit_build_times_t *
 get_circuit_build_times(void)
+{
+  return &circ_times;
+}
+
+circuit_build_times_t *
+get_circuit_build_times_mutable(void)
 {
   return &circ_times;
 }
@@ -175,7 +181,7 @@ circuit_build_times_min_circs_to_observe(void)
 /** Return true iff <b>cbt</b> has recorded enough build times that we
  * want to start acting on the timeout it implies. */
 int
-circuit_build_times_enough_to_compute(circuit_build_times_t *cbt)
+circuit_build_times_enough_to_compute(const circuit_build_times_t *cbt)
 {
   return cbt->total_build_times >= circuit_build_times_min_circs_to_observe();
 }
@@ -578,7 +584,7 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
  * Return maximum circuit build time
  */
 static build_time_t
-circuit_build_times_max(circuit_build_times_t *cbt)
+circuit_build_times_max(const circuit_build_times_t *cbt)
 {
   int i = 0;
   build_time_t max_build_time = 0;
@@ -619,7 +625,7 @@ circuit_build_times_min(circuit_build_times_t *cbt)
  * The return value must be freed by the caller.
  */
 static uint32_t *
-circuit_build_times_create_histogram(circuit_build_times_t *cbt,
+circuit_build_times_create_histogram(const circuit_build_times_t *cbt,
                                      build_time_t *nbins)
 {
   uint32_t *histogram;
@@ -709,7 +715,7 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
  * the or_state_t state structure.
  */
 void
-circuit_build_times_update_state(circuit_build_times_t *cbt,
+circuit_build_times_update_state(const circuit_build_times_t *cbt,
                                  or_state_t *state)
 {
   uint32_t *histogram;
@@ -1146,7 +1152,7 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
  * Returns true if we need circuits to be built
  */
 int
-circuit_build_times_needs_circuits(circuit_build_times_t *cbt)
+circuit_build_times_needs_circuits(const circuit_build_times_t *cbt)
 {
   /* Return true if < MIN_CIRCUITS_TO_OBSERVE */
   return !circuit_build_times_enough_to_compute(cbt);
@@ -1157,7 +1163,7 @@ circuit_build_times_needs_circuits(circuit_build_times_t *cbt)
  * right now.
  */
 int
-circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
+circuit_build_times_needs_circuits_now(const circuit_build_times_t *cbt)
 {
   return circuit_build_times_needs_circuits(cbt) &&
     approx_time()-cbt->last_circ_at > circuit_build_times_test_frequency();
@@ -1290,7 +1296,7 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
  * in the case of recent liveness changes.
  */
 int
-circuit_build_times_network_check_live(circuit_build_times_t *cbt)
+circuit_build_times_network_check_live(const circuit_build_times_t *cbt)
 {
   if (cbt->liveness.nonlive_timeouts > 0) {
     return 0;

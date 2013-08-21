@@ -239,7 +239,7 @@ or_state_set(or_state_t *new_state)
     ret = -1;
   }
   if (circuit_build_times_parse_state(
-      get_circuit_build_times(),global_state) < 0) {
+      get_circuit_build_times_mutable(),global_state) < 0) {
     ret = -1;
   }
   return ret;

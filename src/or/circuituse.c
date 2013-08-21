@@ -545,7 +545,7 @@ circuit_expire_building(void)
            * was a timeout, and the timeout value needs to reset if we
            * see enough of them. Note this means we also need to avoid
            * double-counting below, too. */
-          circuit_build_times_count_timeout(get_circuit_build_times(),
+          circuit_build_times_count_timeout(get_circuit_build_times_mutable(),
               first_hop_succeeded);
           TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout = 1;
         }
@@ -658,8 +658,9 @@ circuit_expire_building(void)
            * have a timeout. We also want to avoid double-counting
            * already "relaxed" circuits, which are counted above. */
           if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
-            circuit_build_times_count_timeout(get_circuit_build_times(),
-                                              first_hop_succeeded);
+            circuit_build_times_count_timeout(
+                                         get_circuit_build_times_mutable(),
+                                         first_hop_succeeded);
           }
           continue;
         }
@@ -676,10 +677,11 @@ circuit_expire_building(void)
                      (long)(now.tv_sec - victim->timestamp_began.tv_sec),
                      victim->purpose,
                      circuit_purpose_to_string(victim->purpose));
-        } else if (circuit_build_times_count_close(get_circuit_build_times(),
+        } else if (circuit_build_times_count_close(
+                                         get_circuit_build_times_mutable(),
                                          first_hop_succeeded,
                                          victim->timestamp_created.tv_sec)) {
-          circuit_build_times_set_timeout(get_circuit_build_times());
+          circuit_build_times_set_timeout(get_circuit_build_times_mutable());
         }
       }
     }

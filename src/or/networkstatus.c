@@ -1822,7 +1822,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 
-    circuit_build_times_new_consensus_params(get_circuit_build_times(),
+    circuit_build_times_new_consensus_params(get_circuit_build_times_mutable(),
         current_consensus);
   }
 

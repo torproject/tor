@@ -2361,7 +2361,7 @@ channel_do_open_actions(channel_t *chan)
   started_here = channel_is_outgoing(chan);
 
   if (started_here) {
-    circuit_build_times_network_is_live(get_circuit_build_times());
+    circuit_build_times_network_is_live(get_circuit_build_times_mutable());
     rep_hist_note_connect_succeeded(chan->identity_digest, now);
     if (entry_guard_register_connect_status(
           chan->identity_digest, 1, 0, now) < 0) {

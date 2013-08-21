@@ -12,13 +12,14 @@
 #ifndef TOR_CIRCUITSTATS_H
 #define TOR_CIRCUITSTATS_H
 
-circuit_build_times_t *get_circuit_build_times(void);
+const circuit_build_times_t *get_circuit_build_times(void);
+circuit_build_times_t *get_circuit_build_times_mutable(void);
 double get_circuit_build_close_time_ms(void);
 double get_circuit_build_timeout_ms(void);
 
 int circuit_build_times_disabled(void);
-int circuit_build_times_enough_to_compute(circuit_build_times_t *cbt);
-void circuit_build_times_update_state(circuit_build_times_t *cbt,
+int circuit_build_times_enough_to_compute(const circuit_build_times_t *cbt);
+void circuit_build_times_update_state(const circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                     or_state_t *state);
@@ -29,9 +30,9 @@ int circuit_build_times_count_close(circuit_build_times_t *cbt,
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
-int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits(const circuit_build_times_t *cbt);
 
-int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits_now(const circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
 void circuit_build_times_free_timeouts(circuit_build_times_t *cbt);
 void circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
@@ -61,7 +62,7 @@ void circuitbuild_running_unit_tests(void);
 
 /* Network liveness functions */
 void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
-int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
+int circuit_build_times_network_check_live(const circuit_build_times_t *cbt);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
 #endif
