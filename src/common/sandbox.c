@@ -161,8 +161,8 @@ sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
             SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add execve syscall, received libseccomp "
-            "error %d", rc);
+        log_err(LD_BUG,"(Sandbox) failed to add execve syscall, received "
+            "libseccomp error %d", rc);
         return rc;
       }
     }
@@ -256,8 +256,8 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
             SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
-            "error %d", rc);
+        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
+            "libseccomp error %d", rc);
         return rc;
       }
     }
@@ -382,7 +382,8 @@ sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
-static int sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+static int
+sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
 
@@ -608,8 +609,8 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(stat64), 1,
             SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
       if (rc != 0) {
-        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
-            "error %d", rc);
+        log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
+            "libseccomp  error %d", rc);
         return rc;
       }
     }
@@ -730,7 +731,7 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, int num, ...)
     char fr = (char) va_arg(ap, int);
 
     rc = sandbox_cfg_allow_stat64_filename(cfg, fn, fr);
-    if(rc) {
+    if (rc) {
       log_err(LD_BUG,"(Sandbox) failed on par %d", i);
       goto end;
     }
@@ -774,7 +775,7 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...)
     char fr = (char) va_arg(ap, int);
 
     rc = sandbox_cfg_allow_open_filename(cfg, fn, fr);
-    if(rc) {
+    if (rc) {
       log_err(LD_BUG,"(Sandbox) failed on par %d", i);
       goto end;
     }
@@ -817,7 +818,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, int num, ...)
     char fr = (char) va_arg(ap, int);
 
     rc = sandbox_cfg_allow_openat_filename(cfg, fn, fr);
-    if(rc) {
+    if (rc) {
       log_err(LD_BUG,"(Sandbox) failed on par %d", i);
       goto end;
     }
@@ -858,7 +859,7 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...)
 
     rc = sandbox_cfg_allow_execve(cfg, fn);
 
-    if(rc) {
+    if (rc) {
       log_err(LD_BUG,"(Sandbox) failed on par %d", i);
       goto end;
     }
@@ -869,7 +870,8 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...)
   return 0;
 }
 
-int sandbox_getaddrinfo(const char *name, struct addrinfo **res)
+int
+sandbox_getaddrinfo(const char *name, struct addrinfo **res)
 {
   char hname[256];
 
@@ -877,7 +879,7 @@ int sandbox_getaddrinfo(const char *name, struct addrinfo **res)
     return -2;
   }
   *res = NULL;
-  *res = (struct addrinfo *) malloc (sizeof(struct addrinfo));
+  *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
   if (!res) {
     return -2;
   }
@@ -913,7 +915,7 @@ init_addrinfo(void)
   hints.ai_socktype = SOCK_STREAM;
 
   ret = getaddrinfo(hname, NULL, &hints, &sb_addr_info);
-  if(ret) {
+  if (ret) {
     sb_addr_info = NULL;
     return -2;
   }
@@ -1078,7 +1080,9 @@ install_sigsys_debugging(void)
   return 0;
 }
 
-static int register_cfg(sandbox_cfg_t* cfg) {
+static int
+register_cfg(sandbox_cfg_t* cfg)
+{
   sandbox_cfg_t *elem = NULL;
 
   if (filter_dynamic == NULL) {
