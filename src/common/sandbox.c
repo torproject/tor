@@ -531,6 +531,11 @@ sb_flock(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc)
     return rc;
 
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(flock), 1,
+      SCMP_CMP(1, SCMP_CMP_EQ, LOCK_UN));
+  if (rc)
+    return rc;
+
   return 0;
 }
 
