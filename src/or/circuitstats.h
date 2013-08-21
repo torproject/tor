@@ -13,8 +13,8 @@
 #define TOR_CIRCUITSTATS_H
 
 circuit_build_times_t *get_circuit_build_times(void);
-double get_circuit_build_close_time(void);
-double get_circuit_build_timeout(void);
+double get_circuit_build_close_time_ms(void);
+double get_circuit_build_timeout_ms(void);
 
 int circuit_build_times_disabled(void);
 int circuit_build_times_enough_to_compute(circuit_build_times_t *cbt);

@@ -772,7 +772,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          * it off at, we probably had a suspend event along this codepath,
          * and we should discard the value.
          */
-        if (timediff < 0 || timediff > 2*get_circuit_build_close_time()+1000) {
+        if (timediff < 0 ||
+            timediff > 2*get_circuit_build_close_time_ms()+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
                               "Assuming clock jump. Purpose %d (%s)", timediff,
                      circ->base_.purpose,
@@ -2276,7 +2277,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
           entry_guards_changed();
@@ -2302,7 +2303,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     } else if (pathbias_get_use_success_count(guard)/guard->use_attempts
                < pathbias_get_notice_use_rate(options)) {
@@ -2326,7 +2327,7 @@ pathbias_measure_use_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     }
   }
@@ -2382,7 +2383,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
           guard->path_bias_disabled = 1;
           guard->bad_since = approx_time();
           entry_guards_changed();
@@ -2408,7 +2409,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     } else if (pathbias_get_close_success_count(guard)/guard->circ_attempts
                 < pathbias_get_warn_rate(options)) {
@@ -2433,7 +2434,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     } else if (pathbias_get_close_success_count(guard)/guard->circ_attempts
                < pathbias_get_notice_rate(options)) {
@@ -2456,7 +2457,7 @@ pathbias_measure_close_rate(entry_guard_t *guard)
                  tor_lround(guard->unusable_circuits),
                  tor_lround(guard->collapsed_circuits),
                  tor_lround(guard->timeouts),
-                 tor_lround(get_circuit_build_close_time()/1000));
+                 tor_lround(get_circuit_build_close_time_ms()/1000));
       }
     }
   }

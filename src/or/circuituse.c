@@ -442,12 +442,12 @@ circuit_expire_building(void)
    *   RTTs = 4a + 3b + 2c
    *   RTTs = 9h
    */
-  SET_CUTOFF(general_cutoff, get_circuit_build_timeout());
-  SET_CUTOFF(begindir_cutoff, get_circuit_build_timeout());
+  SET_CUTOFF(general_cutoff, get_circuit_build_timeout_ms());
+  SET_CUTOFF(begindir_cutoff, get_circuit_build_timeout_ms());
 
   /* > 3hop circs seem to have a 1.0 second delay on their cannibalized
    * 4th hop. */
-  SET_CUTOFF(fourhop_cutoff, get_circuit_build_timeout() * (10/6.0) + 1000);
+  SET_CUTOFF(fourhop_cutoff, get_circuit_build_timeout_ms() * (10/6.0) + 1000);
 
   /* CIRCUIT_PURPOSE_C_ESTABLISH_REND behaves more like a RELAY cell.
    * Use the stream cutoff (more or less). */
@@ -456,20 +456,20 @@ circuit_expire_building(void)
   /* Be lenient with cannibalized circs. They already survived the official
    * CBT, and they're usually not performance-critical. */
   SET_CUTOFF(cannibalized_cutoff,
-             MAX(get_circuit_build_close_time()*(4/6.0),
+             MAX(get_circuit_build_close_time_ms()*(4/6.0),
                  options->CircuitStreamTimeout * 1000) + 1000);
 
   /* Intro circs have an extra round trip (and are also 4 hops long) */
-  SET_CUTOFF(c_intro_cutoff, get_circuit_build_timeout() * (14/6.0) + 1000);
+  SET_CUTOFF(c_intro_cutoff, get_circuit_build_timeout_ms() * (14/6.0) + 1000);
 
   /* Server intro circs have an extra round trip */
-  SET_CUTOFF(s_intro_cutoff, get_circuit_build_timeout() * (9/6.0) + 1000);
+  SET_CUTOFF(s_intro_cutoff, get_circuit_build_timeout_ms() * (9/6.0) + 1000);
 
-  SET_CUTOFF(close_cutoff, get_circuit_build_close_time());
-  SET_CUTOFF(extremely_old_cutoff, get_circuit_build_close_time()*2 + 1000);
+  SET_CUTOFF(close_cutoff, get_circuit_build_close_time_ms());
+  SET_CUTOFF(extremely_old_cutoff, get_circuit_build_close_time_ms()*2 + 1000);
 
   SET_CUTOFF(hs_extremely_old_cutoff,
-             MAX(get_circuit_build_close_time()*2 + 1000,
+             MAX(get_circuit_build_close_time_ms()*2 + 1000,
                  options->SocksTimeout * 1000));
 
   TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
@@ -552,7 +552,7 @@ circuit_expire_building(void)
         continue;
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
-        const double build_close_ms = get_circuit_build_close_time();
+        const double build_close_ms = get_circuit_build_close_time_ms();
         log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
                  "No circuits are opened. Relaxed timeout for circuit %d "
                  "(a %s %d-hop circuit in state %s with channel state %s) to "

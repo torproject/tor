@@ -43,13 +43,13 @@ get_circuit_build_times(void)
 }
 
 double
-get_circuit_build_close_time(void)
+get_circuit_build_close_time_ms(void)
 {
   return circ_times.close_ms;
 }
 
 double
-get_circuit_build_timeout(void)
+get_circuit_build_timeout_ms(void)
 {
   return circ_times.timeout_ms;
 }
