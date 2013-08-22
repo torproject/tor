@@ -73,8 +73,8 @@ int control_event_server_status(int severity, const char *format, ...)
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
 int control_event_conf_changed(const smartlist_t *elements);
-int control_event_buildtimeout_set(const circuit_build_times_t *cbt,
-                                   buildtimeout_set_event_t type);
+int control_event_buildtimeout_set(buildtimeout_set_event_t type,
+                                   const char *args);
 int control_event_signal(uintptr_t signal);
 
 int init_control_cookie_authentication(int enabled);

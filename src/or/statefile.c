@@ -238,7 +238,8 @@ or_state_set(or_state_t *new_state)
     tor_free(err);
     ret = -1;
   }
-  if (circuit_build_times_parse_state(&circ_times, global_state) < 0) {
+  if (circuit_build_times_parse_state(
+      get_circuit_build_times_mutable(),global_state) < 0) {
     ret = -1;
   }
   return ret;
@@ -405,7 +406,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-  circuit_build_times_update_state(&circ_times, global_state);
+  circuit_build_times_update_state(get_circuit_build_times(), global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

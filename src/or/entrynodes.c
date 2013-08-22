@@ -2279,6 +2279,6 @@ entry_guards_free_all(void)
   clear_bridge_list();
   smartlist_free(bridge_list);
   bridge_list = NULL;
-  circuit_build_times_free_timeouts(&circ_times);
+  circuit_build_times_free_timeouts(get_circuit_build_times_mutable());
 }
 

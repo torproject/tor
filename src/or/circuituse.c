@@ -442,12 +442,12 @@ circuit_expire_building(void)
    *   RTTs = 4a + 3b + 2c
    *   RTTs = 9h
    */
-  SET_CUTOFF(general_cutoff, circ_times.timeout_ms);
-  SET_CUTOFF(begindir_cutoff, circ_times.timeout_ms);
+  SET_CUTOFF(general_cutoff, get_circuit_build_timeout_ms());
+  SET_CUTOFF(begindir_cutoff, get_circuit_build_timeout_ms());
 
   /* > 3hop circs seem to have a 1.0 second delay on their cannibalized
    * 4th hop. */
-  SET_CUTOFF(fourhop_cutoff, circ_times.timeout_ms * (10/6.0) + 1000);
+  SET_CUTOFF(fourhop_cutoff, get_circuit_build_timeout_ms() * (10/6.0) + 1000);
 
   /* CIRCUIT_PURPOSE_C_ESTABLISH_REND behaves more like a RELAY cell.
    * Use the stream cutoff (more or less). */
@@ -456,20 +456,20 @@ circuit_expire_building(void)
   /* Be lenient with cannibalized circs. They already survived the official
    * CBT, and they're usually not performance-critical. */
   SET_CUTOFF(cannibalized_cutoff,
-             MAX(circ_times.close_ms*(4/6.0),
+             MAX(get_circuit_build_close_time_ms()*(4/6.0),
                  options->CircuitStreamTimeout * 1000) + 1000);
 
   /* Intro circs have an extra round trip (and are also 4 hops long) */
-  SET_CUTOFF(c_intro_cutoff, circ_times.timeout_ms * (14/6.0) + 1000);
+  SET_CUTOFF(c_intro_cutoff, get_circuit_build_timeout_ms() * (14/6.0) + 1000);
 
   /* Server intro circs have an extra round trip */
-  SET_CUTOFF(s_intro_cutoff, circ_times.timeout_ms * (9/6.0) + 1000);
+  SET_CUTOFF(s_intro_cutoff, get_circuit_build_timeout_ms() * (9/6.0) + 1000);
 
-  SET_CUTOFF(close_cutoff, circ_times.close_ms);
-  SET_CUTOFF(extremely_old_cutoff, circ_times.close_ms*2 + 1000);
+  SET_CUTOFF(close_cutoff, get_circuit_build_close_time_ms());
+  SET_CUTOFF(extremely_old_cutoff, get_circuit_build_close_time_ms()*2 + 1000);
 
   SET_CUTOFF(hs_extremely_old_cutoff,
-             MAX(circ_times.close_ms*2 + 1000,
+             MAX(get_circuit_build_close_time_ms()*2 + 1000,
                  options->SocksTimeout * 1000));
 
   TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
@@ -545,12 +545,14 @@ circuit_expire_building(void)
            * was a timeout, and the timeout value needs to reset if we
            * see enough of them. Note this means we also need to avoid
            * double-counting below, too. */
-          circuit_build_times_count_timeout(&circ_times, first_hop_succeeded);
+          circuit_build_times_count_timeout(get_circuit_build_times_mutable(),
+              first_hop_succeeded);
           TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout = 1;
         }
         continue;
       } else {
         static ratelim_t relax_timeout_limit = RATELIM_INIT(3600);
+        const double build_close_ms = get_circuit_build_close_time_ms();
         log_fn_ratelim(&relax_timeout_limit, LOG_NOTICE, LD_CIRC,
                  "No circuits are opened. Relaxed timeout for circuit %d "
                  "(a %s %d-hop circuit in state %s with channel state %s) to "
@@ -561,7 +563,8 @@ circuit_expire_building(void)
                  TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
                  circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
-                 (long)circ_times.close_ms, num_live_entry_guards(0));
+                 (long)build_close_ms,
+                 num_live_entry_guards(0));
       }
     }
 
@@ -641,7 +644,7 @@ circuit_expire_building(void)
       }
 
       if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim)) &&
-          circuit_build_times_enough_to_compute(&circ_times)) {
+          circuit_build_times_enough_to_compute(get_circuit_build_times())) {
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
         if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
@@ -655,8 +658,9 @@ circuit_expire_building(void)
            * have a timeout. We also want to avoid double-counting
            * already "relaxed" circuits, which are counted above. */
           if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
-            circuit_build_times_count_timeout(&circ_times,
-                                              first_hop_succeeded);
+            circuit_build_times_count_timeout(
+                                         get_circuit_build_times_mutable(),
+                                         first_hop_succeeded);
           }
           continue;
         }
@@ -673,10 +677,11 @@ circuit_expire_building(void)
                      (long)(now.tv_sec - victim->timestamp_began.tv_sec),
                      victim->purpose,
                      circuit_purpose_to_string(victim->purpose));
-        } else if (circuit_build_times_count_close(&circ_times,
+        } else if (circuit_build_times_count_close(
+                                         get_circuit_build_times_mutable(),
                                          first_hop_succeeded,
                                          victim->timestamp_created.tv_sec)) {
-          circuit_build_times_set_timeout(&circ_times);
+          circuit_build_times_set_timeout(get_circuit_build_times_mutable());
         }
       }
     }
@@ -939,7 +944,7 @@ circuit_predict_and_launch_new(void)
    * we can still build circuits preemptively as needed. */
   if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
       get_options()->LearnCircuitBuildTimeout &&
-      circuit_build_times_needs_circuits_now(&circ_times)) {
+      circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
     flags = CIRCLAUNCH_NEED_CAPACITY;
     log_info(LD_CIRC,
              "Have %d clean circs need another buildtime test circ.", num);
@@ -1075,7 +1080,7 @@ circuit_expire_old_circuits_clientside(void)
   cutoff = now;
 
   if (get_options()->LearnCircuitBuildTimeout &&
-      circuit_build_times_needs_circuits(&circ_times)) {
+      circuit_build_times_needs_circuits(get_circuit_build_times())) {
     /* Circuits should be shorter lived if we need more of them
      * for learning a good build timeout */
     cutoff.tv_sec -= IDLE_TIMEOUT_WHILE_LEARNING;
