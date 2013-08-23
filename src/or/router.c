@@ -2403,20 +2403,13 @@ router_dump_router_to_string(routerinfo_t *router,
   if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
     smartlist_add(chunks, tor_strdup("reject *:*\n"));
   } else if (router->exit_policy) {
-    int i;
-    for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
-      char pbuf[POLICY_BUF_LEN];
-      addr_policy_t *tmpe = smartlist_get(router->exit_policy, i);
-      int result;
-      if (tor_addr_family(&tmpe->addr) == AF_INET6)
-        continue; /* Don't include IPv6 parts of address policy */
-      result = policy_write_item(pbuf, POLICY_BUF_LEN, tmpe, 1);
-      if (result < 0) {
-        log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
-        goto err;
-      }
-      smartlist_add_asprintf(chunks, "%s\n", pbuf);
-    }
+    char *exit_policy = router_dump_exit_policy_to_string(router,1,0);
+
+    if (!exit_policy)
+      goto err;
+
+    smartlist_add_asprintf(chunks, "%s\n", exit_policy);
+    tor_free(exit_policy);
   }
 
   if (router->ipv6_exit_policy) {
@@ -2481,6 +2474,56 @@ router_dump_router_to_string(routerinfo_t *router,
   tor_free(extra_or_address);
 
   return output;
+}
+
+/**
+ * OR only: Given <b>router</b>, produce a string with its exit policy.
+ * If <b>include_ipv4</b> is true, include IPv4 entries.
+ * If <b>include_ipv6</b> is true, include IPv6 entries.
+ */
+char *
+router_dump_exit_policy_to_string(const routerinfo_t *router,
+                                  int include_ipv4,
+                                  int include_ipv6)
+{
+  smartlist_t *exit_policy_strings;
+  char *policy_string = NULL;
+
+  if ((!router->exit_policy) || (router->policy_is_reject_star)) {
+    return tor_strdup("reject *:*");
+  }
+
+  exit_policy_strings = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(router->exit_policy, addr_policy_t *, tmpe) {
+    char *pbuf;
+    int bytes_written_to_pbuf;
+    if ((tor_addr_family(&tmpe->addr) == AF_INET6) && (!include_ipv6)) {
+      continue; /* Don't include IPv6 parts of address policy */
+    }
+    if ((tor_addr_family(&tmpe->addr) == AF_INET) && (!include_ipv4)) {
+      continue; /* Don't include IPv4 parts of address policy */
+    }
+
+    pbuf = tor_malloc(POLICY_BUF_LEN);
+    bytes_written_to_pbuf = policy_write_item(pbuf,POLICY_BUF_LEN, tmpe, 1);
+
+    if (bytes_written_to_pbuf < 0) {
+      log_warn(LD_BUG, "router_dump_exit_policy_to_string ran out of room!");
+      tor_free(pbuf);
+      goto done;
+    }
+
+    smartlist_add(exit_policy_strings,pbuf);
+  } SMARTLIST_FOREACH_END(tmpe);
+
+  policy_string = smartlist_join_strings(exit_policy_strings, "\n", 0, NULL);
+
+ done:
+  SMARTLIST_FOREACH(exit_policy_strings, char *, str, tor_free(str));
+  smartlist_free(exit_policy_strings);
+
+  return policy_string;
 }
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for

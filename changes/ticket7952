@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Make the entire exit policy available from the control port via
+      GETINFO exit-policy/*. Implements enhancement #7952. Patch from
+      "rl1987".
