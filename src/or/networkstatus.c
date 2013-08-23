@@ -1231,7 +1231,7 @@ update_consensus_networkstatus_downloads(time_t now)
     }
 
     if (time_to_download_next_consensus[i] > now)
-      return; /* Wait until the current consensus is older. */
+      continue; /* Wait until the current consensus is older. */
 
     resource = networkstatus_get_flavor_name(i);
 
