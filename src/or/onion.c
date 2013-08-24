@@ -50,7 +50,7 @@ static void onion_queue_entry_remove(onion_queue_t *victim);
  * MAX_ONIONSKIN_CHALLENGE/REPLY_LEN."  Also, make sure that we can pass
  * over-large values via EXTEND2/EXTENDED2, for future-compatibility.*/
 
-/** Return true iff we have room to queue another oninoskin of type
+/** Return true iff we have room to queue another onionskin of type
  * <b>type</b>. */
 static int
 have_room_for_onionskin(uint16_t type)
@@ -727,7 +727,7 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
       cell_out->cell_type = RELAY_COMMAND_EXTEND2;
       ++payload;
       /* Parse the specifiers. We'll only take the first IPv4 and first IPv6
-       * addres, and the node ID, and ignore everything else */
+       * address, and the node ID, and ignore everything else */
       for (i = 0; i < n_specs; ++i) {
         if (eop - payload < 2)
           return -1;
