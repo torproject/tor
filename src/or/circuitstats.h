@@ -69,7 +69,7 @@ void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
 #ifdef CIRCUITSTATS_PRIVATE
 /** Structure for circuit build times history */
-struct circuit_build_times_s{
+struct circuit_build_times_s {
   /** The circular array of recorded build times in milliseconds */
   build_time_t circuit_build_times[CBT_NCIRCUITS_TO_OBSERVE];
   /** Current index in the circuit_build_times circular array */

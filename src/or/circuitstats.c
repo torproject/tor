@@ -1614,7 +1614,7 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
   char *args = NULL;
   double qnt;
 
-  switch(type) {
+  switch (type) {
     case BUILDTIMEOUT_SET_EVENT_RESET:
     case BUILDTIMEOUT_SET_EVENT_SUSPENDED:
     case BUILDTIMEOUT_SET_EVENT_DISCARD:
@@ -1640,5 +1640,5 @@ cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
   control_event_buildtimeout_set(type, args);
 
   tor_free(args);
-
 }
+
