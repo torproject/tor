@@ -96,9 +96,61 @@ void control_event_transport_launched(const char *mode,
 void control_free_all(void);
 
 #ifdef CONTROL_PRIVATE
+/* Recognized asynchronous event types.  It's okay to expand this list
+ * because it is used both as a list of v0 event types, and as indices
+ * into the bitfield to determine which controllers want which events.
+ */
+#define EVENT_MIN_                    0x0001
+#define EVENT_CIRCUIT_STATUS          0x0001
+#define EVENT_STREAM_STATUS           0x0002
+#define EVENT_OR_CONN_STATUS          0x0003
+#define EVENT_BANDWIDTH_USED          0x0004
+#define EVENT_CIRCUIT_STATUS_MINOR    0x0005
+#define EVENT_NEW_DESC                0x0006
+#define EVENT_DEBUG_MSG               0x0007
+#define EVENT_INFO_MSG                0x0008
+#define EVENT_NOTICE_MSG              0x0009
+#define EVENT_WARN_MSG                0x000A
+#define EVENT_ERR_MSG                 0x000B
+#define EVENT_ADDRMAP                 0x000C
+/* Exposed above */
+// #define EVENT_AUTHDIR_NEWDESCS     0x000D
+#define EVENT_DESCCHANGED             0x000E
+/* Exposed above */
+// #define EVENT_NS                   0x000F
+#define EVENT_STATUS_CLIENT           0x0010
+#define EVENT_STATUS_SERVER           0x0011
+#define EVENT_STATUS_GENERAL          0x0012
+#define EVENT_GUARD                   0x0013
+#define EVENT_STREAM_BANDWIDTH_USED   0x0014
+#define EVENT_CLIENTS_SEEN            0x0015
+#define EVENT_NEWCONSENSUS            0x0016
+#define EVENT_BUILDTIMEOUT_SET        0x0017
+#define EVENT_SIGNAL                  0x0018
+#define EVENT_CONF_CHANGED            0x0019
+#define EVENT_TRANSPORT_LAUNCHED      0x0020
+#define EVENT_MAX_                    0x0020
+/* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
+ * different structure. */
+
 /* Used only by control.c and test.c */
 STATIC size_t write_escaped_data(const char *data, size_t len, char **out);
 STATIC size_t read_escaped_data(const char *data, size_t len, char **out);
+/** Flag for event_format_t.  Indicates that we should use the one standard
+    format.  (Other formats previous existed, and are now deprecated)
+ */
+#define ALL_FORMATS 1
+/** Bit field of flags to select how to format a controller event.  Recognized
+ * flag is ALL_FORMATS. */
+typedef int event_format_t;
+
+#ifdef TOR_UNIT_TESTS
+MOCK_DECL(STATIC void,
+send_control_event_string,(uint16_t event, event_format_t which,
+                           const char *msg));
+
+void control_testing_set_global_event_mask(uint64_t mask);
+#endif
 #endif
 
 #endif

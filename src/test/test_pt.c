@@ -7,9 +7,11 @@
 #define PT_PRIVATE
 #define UTIL_PRIVATE
 #define STATEFILE_PRIVATE
+#define CONTROL_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "confparse.h"
+#include "control.h"
 #include "transports.h"
 #include "circuitbuild.h"
 #include "util.h"
@@ -318,6 +320,22 @@ get_or_state_replacement(void)
   return dummy_state;
 }
 
+static int controlevent_n = 0;
+static uint16_t controlevent_event = 0;
+static smartlist_t *controlevent_msgs = NULL;
+
+static void
+send_control_event_string_replacement(uint16_t event, event_format_t which,
+                                      const char *msg)
+{
+  (void) which;
+  ++controlevent_n;
+  controlevent_event = event;
+  if (!controlevent_msgs)
+    controlevent_msgs = smartlist_new();
+  smartlist_add(controlevent_msgs, tor_strdup(msg));
+}
+
 /* Test the configure_proxy() function. */
 static void
 test_pt_configure_proxy(void *arg)
@@ -334,6 +352,10 @@ test_pt_configure_proxy(void *arg)
        tor_process_handle_destroy_replacement);
   MOCK(get_or_state,
        get_or_state_replacement);
+  MOCK(send_control_event_string,
+       send_control_event_string_replacement);
+
+  control_testing_set_global_event_mask(EVENT_TRANSPORT_LAUNCHED);
 
   mp = tor_malloc(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
@@ -364,6 +386,21 @@ test_pt_configure_proxy(void *arg)
   /* check the mp state */
   test_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
+  tt_int_op(controlevent_n, ==, 5);
+  tt_int_op(controlevent_event, ==, EVENT_TRANSPORT_LAUNCHED);
+  tt_int_op(smartlist_len(controlevent_msgs), ==, 5);
+  smartlist_sort_strings(controlevent_msgs);
+  tt_str_op(smartlist_get(controlevent_msgs, 0), ==,
+            "650 TRANSPORT_LAUNCHED server mock1 127.0.0.1 5551\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 1), ==,
+            "650 TRANSPORT_LAUNCHED server mock2 127.0.0.1 5552\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 2), ==,
+            "650 TRANSPORT_LAUNCHED server mock3 127.0.0.1 5553\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 3), ==,
+            "650 TRANSPORT_LAUNCHED server mock4 127.0.0.1 5554\r\n");
+  tt_str_op(smartlist_get(controlevent_msgs, 4), ==,
+            "650 TRANSPORT_LAUNCHED server mock5 127.0.0.1 5555\r\n");
+
   { /* check that the transport info were saved properly in the tor state */
     config_line_t *transport_in_state = NULL;
     smartlist_t *transport_info_sl = smartlist_new();
@@ -389,6 +426,13 @@ test_pt_configure_proxy(void *arg)
   tor_free(dummy_state);
   UNMOCK(tor_get_lines_from_handle);
   UNMOCK(tor_process_handle_destroy);
+  UNMOCK(get_or_state);
+  UNMOCK(send_control_event_string);
+  if (controlevent_msgs) {
+    SMARTLIST_FOREACH(controlevent_msgs, char *, cp, tor_free(cp));
+    smartlist_free(controlevent_msgs);
+    controlevent_msgs = NULL;
+  }
 }
 
 #define PT_LEGACY(name)                                               \

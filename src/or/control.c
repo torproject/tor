@@ -52,41 +52,6 @@
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
 
-/* Recognized asynchronous event types.  It's okay to expand this list
- * because it is used both as a list of v0 event types, and as indices
- * into the bitfield to determine which controllers want which events.
- */
-#define EVENT_MIN_             0x0001
-#define EVENT_CIRCUIT_STATUS   0x0001
-#define EVENT_STREAM_STATUS    0x0002
-#define EVENT_OR_CONN_STATUS   0x0003
-#define EVENT_BANDWIDTH_USED   0x0004
-#define EVENT_CIRCUIT_STATUS_MINOR 0x0005
-#define EVENT_NEW_DESC         0x0006
-#define EVENT_DEBUG_MSG        0x0007
-#define EVENT_INFO_MSG         0x0008
-#define EVENT_NOTICE_MSG       0x0009
-#define EVENT_WARN_MSG         0x000A
-#define EVENT_ERR_MSG          0x000B
-#define EVENT_ADDRMAP          0x000C
-// #define EVENT_AUTHDIR_NEWDESCS 0x000D
-#define EVENT_DESCCHANGED      0x000E
-// #define EVENT_NS               0x000F
-#define EVENT_STATUS_CLIENT    0x0010
-#define EVENT_STATUS_SERVER    0x0011
-#define EVENT_STATUS_GENERAL   0x0012
-#define EVENT_GUARD            0x0013
-#define EVENT_STREAM_BANDWIDTH_USED   0x0014
-#define EVENT_CLIENTS_SEEN     0x0015
-#define EVENT_NEWCONSENSUS     0x0016
-#define EVENT_BUILDTIMEOUT_SET     0x0017
-#define EVENT_SIGNAL           0x0018
-#define EVENT_CONF_CHANGED     0x0019
-#define EVENT_TRANSPORT_LAUNCHED 0x0020
-#define EVENT_MAX_             0x0020
-/* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
- * different structure. */
-
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
  * so that we can decide to skip generating event messages that nobody
@@ -131,15 +96,6 @@ static uint8_t *authentication_cookie = NULL;
 /** What was the last bootstrap phase message we sent? We keep track
  * of this so we can respond to getinfo status/bootstrap-phase queries. */
 static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
-
-/** Flag for event_format_t.  Indicates that we should use the one standard
-    format.
- */
-#define ALL_FORMATS 1
-
-/** Bit field of flags to select how to format a controller event.  Recognized
- * flag is ALL_FORMATS. */
-typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
@@ -594,9 +550,9 @@ send_control_done(control_connection_t *conn)
  *
  * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behave similarly with
  * respect to the EXTENDED_EVENTS feature. */
-static void
-send_control_event_string(uint16_t event, event_format_t which,
-                          const char *msg)
+MOCK_IMPL(STATIC void,
+send_control_event_string,(uint16_t event, event_format_t which,
+                           const char *msg))
 {
   smartlist_t *conns = get_connection_array();
   (void)which;
@@ -4763,3 +4719,11 @@ control_free_all(void)
     tor_free(authentication_cookie);
 }
 
+#ifdef TOR_UNIT_TESTS
+/* For testing: change the value of global_event_mask */
+void
+control_testing_set_global_event_mask(uint64_t mask)
+{
+  global_event_mask = mask;
+}
+#endif
