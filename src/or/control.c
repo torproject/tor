@@ -52,46 +52,13 @@
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
 
-/* Recognized asynchronous event types.  It's okay to expand this list
- * because it is used both as a list of v0 event types, and as indices
- * into the bitfield to determine which controllers want which events.
- */
-#define EVENT_MIN_             0x0001
-#define EVENT_CIRCUIT_STATUS   0x0001
-#define EVENT_STREAM_STATUS    0x0002
-#define EVENT_OR_CONN_STATUS   0x0003
-#define EVENT_BANDWIDTH_USED   0x0004
-#define EVENT_CIRCUIT_STATUS_MINOR 0x0005
-#define EVENT_NEW_DESC         0x0006
-#define EVENT_DEBUG_MSG        0x0007
-#define EVENT_INFO_MSG         0x0008
-#define EVENT_NOTICE_MSG       0x0009
-#define EVENT_WARN_MSG         0x000A
-#define EVENT_ERR_MSG          0x000B
-#define EVENT_ADDRMAP          0x000C
-// #define EVENT_AUTHDIR_NEWDESCS 0x000D
-#define EVENT_DESCCHANGED      0x000E
-// #define EVENT_NS               0x000F
-#define EVENT_STATUS_CLIENT    0x0010
-#define EVENT_STATUS_SERVER    0x0011
-#define EVENT_STATUS_GENERAL   0x0012
-#define EVENT_GUARD            0x0013
-#define EVENT_STREAM_BANDWIDTH_USED   0x0014
-#define EVENT_CLIENTS_SEEN     0x0015
-#define EVENT_NEWCONSENSUS     0x0016
-#define EVENT_BUILDTIMEOUT_SET     0x0017
-#define EVENT_SIGNAL           0x0018
-#define EVENT_CONF_CHANGED     0x0019
-#define EVENT_MAX_             0x0019
-/* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
-
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
  * so that we can decide to skip generating event messages that nobody
  * has interest in without having to walk over the global connection
  * list to find out.
  **/
-typedef uint32_t event_mask_t;
+typedef uint64_t event_mask_t;
 
 /** An event mask of all the events that any controller is interested in
  * receiving. */
@@ -103,7 +70,7 @@ static int disable_log_messages = 0;
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING(e) \
-  (global_event_mask & (1<<(e)))
+  (!! (global_event_mask & (((uint64_t)1)<<(e))))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
@@ -129,15 +96,6 @@ static uint8_t *authentication_cookie = NULL;
 /** What was the last bootstrap phase message we sent? We keep track
  * of this so we can respond to getinfo status/bootstrap-phase queries. */
 static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
-
-/** Flag for event_format_t.  Indicates that we should use the one standard
-    format.
- */
-#define ALL_FORMATS 1
-
-/** Bit field of flags to select how to format a controller event.  Recognized
- * flag is ALL_FORMATS. */
-typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
@@ -592,9 +550,9 @@ send_control_done(control_connection_t *conn)
  *
  * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behave similarly with
  * respect to the EXTENDED_EVENTS feature. */
-static void
-send_control_event_string(uint16_t event, event_format_t which,
-                          const char *msg)
+MOCK_IMPL(STATIC void,
+send_control_event_string,(uint16_t event, event_format_t which,
+                           const char *msg))
 {
   smartlist_t *conns = get_connection_array();
   (void)which;
@@ -958,6 +916,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
   { EVENT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
+  { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { 0, NULL },
 };
 
@@ -4737,6 +4696,21 @@ control_event_clients_seen(const char *controller_str)
     "650 CLIENTS_SEEN %s\r\n", controller_str);
 }
 
+/** A new pluggable transport called <b>transport_name</b> was
+ *  launched on <b>addr</b>:<b>port</b>. <b>mode</b> is either
+ *  "server" or "client" depending on the mode of the pluggable
+ *  transport.
+ *  "650" SP "TRANSPORT_LAUNCHED" SP Mode SP Name SP Address SP Port
+ */
+void
+control_event_transport_launched(const char *mode, const char *transport_name,
+                                 tor_addr_t *addr, uint16_t port)
+{
+  send_control_event(EVENT_TRANSPORT_LAUNCHED, ALL_FORMATS,
+                     "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n",
+                     mode, transport_name, fmt_addr(addr), port);
+}
+
 /** Free any leftover allocated memory of the control.c subsystem. */
 void
 control_free_all(void)
@@ -4745,3 +4719,11 @@ control_free_all(void)
     tor_free(authentication_cookie);
 }
 
+#ifdef TOR_UNIT_TESTS
+/* For testing: change the value of global_event_mask */
+void
+control_testing_set_global_event_mask(uint64_t mask)
+{
+  global_event_mask = mask;
+}
+#endif

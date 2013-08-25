@@ -1,0 +1,4 @@
+  o Minor features:
+    - Implement the TRANSPORT_LAUNCHED control port event that
+      notifies controllers about new launched pluggable
+      transports. Resolves ticket 5609.
