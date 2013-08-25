@@ -29,6 +29,7 @@
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
+#include "scheduler.h"
 
 /* Cell queue structure */
 
@@ -788,6 +789,9 @@ channel_free(channel_t *chan)
             "Freeing channel " U64_FORMAT " at %p",
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
+  /* Get this one out of the scheduler */
+  scheduler_release_channel(chan);
+
   /*
    * Get rid of cmux policy before we do anything, so cmux policies don't
    * see channels in weird half-freed states.
@@ -862,6 +866,9 @@ channel_force_free(channel_t *chan)
   log_debug(LD_CHANNEL,
             "Force-freeing channel " U64_FORMAT " at %p",
             U64_PRINTF_ARG(chan->global_identifier), chan);
+
+  /* Get this one out of the scheduler */
+  scheduler_release_channel(chan);
 
   /*
    * Get rid of cmux policy before we do anything, so cmux policies don't
@@ -1939,6 +1946,18 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
       else if (was_in_id_map && !is_in_id_map)
         channel_remove_from_digest_map(chan);
     }
+  }
+
+  /*
+   * If we're going to a closed/closing state, we don't need scheduling any
+   * more; in CHANNEL_STATE_MAINT we can't accept writes.
+   */
+  if (to_state == CHANNEL_STATE_CLOSING ||
+      to_state == CHANNEL_STATE_CLOSED ||
+      to_state == CHANNEL_STATE_ERROR) {
+    scheduler_release_channel(chan);
+  } else if (to_state == CHANNEL_STATE_MAINT) {
+    scheduler_channel_doesnt_want_writes(chan);
   }
 
   /* Tell circuits if we opened and stuff */

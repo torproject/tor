@@ -25,6 +25,7 @@
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
+#include "scheduler.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -867,6 +868,10 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
      * CHANNEL_STATE_MAINT on this.
      */
     channel_change_state(base_chan, CHANNEL_STATE_OPEN);
+    /* We might have just become writeable; check and tell the scheduler */
+    if (connection_or_num_cells_writeable(conn) > 0) {
+      scheduler_channel_wants_writes(base_chan);
+    }
   } else {
     /*
      * Not open, so from CHANNEL_STATE_OPEN we go to CHANNEL_STATE_MAINT,

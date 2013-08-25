@@ -38,6 +38,8 @@
 #include "router.h"
 #include "routerlist.h"
 #include "ext_orport.h"
+#include "scheduler.h"
+
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
 #endif
@@ -595,6 +597,17 @@ connection_or_flushed_some(or_connection_t *conn)
    * high water mark. */
   datalen = connection_get_outbuf_len(TO_CONN(conn));
   if (datalen < OR_CONN_LOWWATER) {
+    /* Let the scheduler know */
+    scheduler_channel_wants_writes(TLS_CHAN_TO_BASE(conn->chan));
+
+    /*
+     * TODO this will be done from the scheduler, so it will
+     * need a generic way to ask how many cells a channel can
+     * accept and if it still wants writes or not to know how
+     * to account for it in the case that it runs out of cells
+     * to send first.
+     */
+
     while ((conn->chan) && channel_tls_more_to_flush(conn->chan)) {
       /* Compute how many more cells we want at most */
       n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
@@ -614,6 +627,30 @@ connection_or_flushed_some(or_connection_t *conn)
   }
 
   return 0;
+}
+
+/** This is for channeltls.c to ask how many cells we could accept if
+ * they were available. */
+ssize_t
+connection_or_num_cells_writeable(or_connection_t *conn)
+{
+  size_t datalen, cell_network_size;
+  ssize_t n = 0;
+
+  tor_assert(conn);
+
+  /*
+   * If we're under the high water mark, we're potentially
+   * writeable; note this is different from the calculation above
+   * used to trigger when to start writing after we've stopped.
+   */
+  datalen = connection_get_outbuf_len(TO_CONN(conn));
+  if (datalen < OR_CONN_HIGHWATER) {
+    cell_network_size = get_cell_network_size(conn->wide_circ_ids);
+    n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
+  }
+
+  return n;
 }
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on

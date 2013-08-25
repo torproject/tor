@@ -39,6 +39,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "scheduler.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -2868,6 +2869,10 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     log_debug(LD_GENERAL, "Made a circuit active.");
   }
 
+  /* New way: mark this as having waiting cells for the scheduler */
+  scheduler_channel_has_waiting_cells(chan);
+
+  /* TODO remove this once scheduler does it */
   if (!channel_has_queued_writes(chan)) {
     /* There is no data at all waiting to be sent on the outbuf.  Add a
      * cell, so that we can notice when it gets flushed, flushed_some can
