@@ -1826,7 +1826,11 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
                !strcmp(argv[i],"--ignore-missing-torrc") ||
                !strcmp(argv[i],"--quiet") ||
                !strcmp(argv[i],"--hush") ||
-               !strcmp(argv[1],"--version")) {
+               !strcmp(argv[i],"--version") ||
+               !strcmp(argv[i],"-h") ||
+               !strcmp(argv[i],"--help") ||
+               !strcmp(argv[i],"--list-torrc-options") ||
+               !strcmp(argv[i],"--digests")) {
       is_cmdline = 1;
       want_arg = 0;
     } else if (!strcmp(argv[i],"--nt-service") ||
@@ -3830,26 +3834,6 @@ options_init_from_torrc(int argc, char **argv)
     argv = backup_argv;
     argc = backup_argc;
   }
-  if (argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
-    print_usage();
-    exit(0);
-  }
-  if (argc > 1 && !strcmp(argv[1], "--list-torrc-options")) {
-    /* For documenting validating whether we've documented everything. */
-    list_torrc_options();
-    exit(0);
-  }
-
-  if (argc > 1 && (!strcmp(argv[1],"--version"))) {
-    printf("Tor version %s.\n",get_version());
-    exit(0);
-  }
-  if (argc > 1 && (!strcmp(argv[1],"--digests"))) {
-    printf("Tor version %s.\n",get_version());
-    printf("%s", libor_get_digests());
-    printf("%s", tor_get_digests());
-    exit(0);
-  }
 
   /* Go through command-line variables */
   if (!global_cmdline_options) {
@@ -3859,6 +3843,28 @@ options_init_from_torrc(int argc, char **argv)
                                  &cmdline_only_options) < 0) {
       goto err;
     }
+  }
+
+  if (config_line_find(cmdline_only_options, "-h") ||
+      config_line_find(cmdline_only_options, "--help")) {
+    print_usage();
+    exit(0);
+  }
+  if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
+    /* For documenting validating whether we've documented everything. */
+    list_torrc_options();
+    exit(0);
+  }
+
+  if (config_line_find(cmdline_only_options, "--version")) {
+    printf("Tor version %s.\n",get_version());
+    exit(0);
+  }
+  if (config_line_find(cmdline_only_options, "--digests")) {
+    printf("Tor version %s.\n",get_version());
+    printf("%s", libor_get_digests());
+    printf("%s", tor_get_digests());
+    exit(0);
   }
 
   command = CMD_RUN_TOR;
