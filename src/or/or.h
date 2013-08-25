@@ -3400,7 +3400,7 @@ typedef struct {
     CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT, CMD_HASH_PASSWORD,
     CMD_VERIFY_CONFIG, CMD_RUN_UNITTESTS
   } command;
-  const char *command_arg; /**< Argument for command-line option. */
+  char *command_arg; /**< Argument for command-line option. */
 
   config_line_t *Logs; /**< New-style list of configuration lines
                         * for logs */

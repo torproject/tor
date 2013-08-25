@@ -724,6 +724,7 @@ or_options_free(or_options_t *options)
     smartlist_free(options->NodeFamilySets);
   }
   tor_free(options->BridgePassword_AuthDigest_);
+  tor_free(options->command_arg);
   config_free(&options_format, options);
 }
 
@@ -1790,40 +1791,47 @@ options_act(const or_options_t *old_options)
   return 0;
 }
 
-/** Helper: Read a list of configuration options from the command line.
- * If successful, put them in *<b>result</b> and return 0, and return
- * -1 and leave *<b>result</b> alone. */
+/** Helper: Read a list of configuration options from the command line.  If
+ * successful, put them in *<b>result</b>, put the commandline-only options in
+ * *<b>cmdline_result</b>, and return 0; otherwise, return -1 and leave
+ * *<b>result</b> and <b>cmdline_result</b> alone. */
 static int
-config_get_commandlines(int argc, char **argv, config_line_t **result)
+config_get_commandlines(int argc, char **argv, config_line_t **result,
+    config_line_t **cmdline_result)
 {
+  config_line_t *param = NULL;
+
   config_line_t *front = NULL;
   config_line_t **new = &front;
-  char *s;
+
+  config_line_t *front_cmdline = NULL;
+  config_line_t **new_cmdline = &front_cmdline;
+
+  char *s, *arg;
   int i = 1;
 
   while (i < argc) {
     unsigned command = CONFIG_LINE_NORMAL;
     int want_arg = 1;
+    int is_cmdline = 0;
 
     if (!strcmp(argv[i],"-f") ||
         !strcmp(argv[i],"--defaults-torrc") ||
         !strcmp(argv[i],"--hash-password")) {
-      i += 2; /* command-line option with argument. ignore them. */
-      continue;
+      is_cmdline = 1;
     } else if (!strcmp(argv[i],"--list-fingerprint") ||
                !strcmp(argv[i],"--verify-config") ||
                !strcmp(argv[i],"--ignore-missing-torrc") ||
                !strcmp(argv[i],"--quiet") ||
                !strcmp(argv[i],"--hush")) {
-      i += 1; /* command-line option. ignore it. */
-      continue;
+      is_cmdline = 1;
+      want_arg = 0;
     } else if (!strcmp(argv[i],"--nt-service") ||
                !strcmp(argv[i],"-nt-service")) {
-      i += 1;
-      continue;
+      is_cmdline = 1;
+      want_arg = 0;
     }
 
-    *new = tor_malloc_zero(sizeof(config_line_t));
     s = argv[i];
 
     /* Each keyword may be prefixed with one or two dashes. */
@@ -1843,22 +1851,38 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     }
 
     if (want_arg && i == argc-1) {
-      log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
-               argv[i]);
-      config_free_lines(front);
-      return -1;
+      if (!strcmp(argv[i],"--hash-password")) {
+        arg = strdup("");
+      } else {
+        log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
+            argv[i]);
+        config_free_lines(front);
+        config_free_lines(front_cmdline);
+        return -1;
+      }
+    } else {
+      arg = want_arg ? tor_strdup(argv[i+1]) : strdup("");
     }
 
-    (*new)->key = tor_strdup(config_expand_abbrev(&options_format, s, 1, 1));
-    (*new)->value = want_arg ? tor_strdup(argv[i+1]) : tor_strdup("");
-    (*new)->command = command;
-    (*new)->next = NULL;
+    param = tor_malloc_zero(sizeof(config_line_t));
+    param->key = is_cmdline ? tor_strdup(argv[i]) : tor_strdup(s);
+    param->value = arg;
+    param->command = command;
+    param->next = NULL;
     log_debug(LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
-        (*new)->key, (*new)->value);
+        param->key, param->value);
 
-    new = &((*new)->next);
+    if (is_cmdline) {
+      *new_cmdline = param;
+      new_cmdline = &((*new_cmdline)->next);
+    } else {
+      *new = param;
+      new = &((*new)->next);
+    }
+
     i += want_arg ? 2 : 1;
   }
+  *cmdline_result = front_cmdline;
   *result = front;
   return 0;
 }
@@ -3671,26 +3695,26 @@ check_nickname_list(const char *lst, const char *name, char **msg)
  * filename if it doesn't exist.
  */
 static char *
-find_torrc_filename(int argc, char **argv,
+find_torrc_filename(config_line_t *cmd_arg,
                     int defaults_file,
                     int *using_default_fname, int *ignore_missing_torrc)
 {
   char *fname=NULL;
-  int i;
+  config_line_t *p_index;
   const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
   const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
 
   if (defaults_file)
     *ignore_missing_torrc = 1;
 
-  for (i = 1; i < argc; ++i) {
-    if (i < argc-1 && !strcmp(argv[i],fname_opt)) {
+  for (p_index = cmd_arg; p_index; p_index = p_index->next) {
+    if (!strcmp(p_index->key, fname_opt)) {
       if (fname) {
         log_warn(LD_CONFIG, "Duplicate %s options on command line.",
             fname_opt);
         tor_free(fname);
       }
-      fname = expand_filename(argv[i+1]);
+      fname = expand_filename(p_index->value);
 
       {
         char *absfname;
@@ -3700,8 +3724,7 @@ find_torrc_filename(int argc, char **argv,
       }
 
       *using_default_fname = 0;
-      ++i;
-    } else if (ignore_opt && !strcmp(argv[i],ignore_opt)) {
+    } else if (ignore_opt && !strcmp(p_index->key,ignore_opt)) {
       *ignore_missing_torrc = 1;
     }
   }
@@ -3738,7 +3761,7 @@ find_torrc_filename(int argc, char **argv,
  * Return the contents of the file on success, and NULL on failure.
  */
 static char *
-load_torrc_from_disk(int argc, char **argv, int defaults_file)
+load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
 {
   char *fname=NULL;
   char *cf = NULL;
@@ -3746,7 +3769,7 @@ load_torrc_from_disk(int argc, char **argv, int defaults_file)
   int ignore_missing_torrc = 0;
   char **fname_var = defaults_file ? &torrc_defaults_fname : &torrc_fname;
 
-  fname = find_torrc_filename(argc, argv, defaults_file,
+  fname = find_torrc_filename(cmd_arg, defaults_file,
                               &using_default_torrc, &ignore_missing_torrc);
   tor_assert(fname);
   log_debug(LD_CONFIG, "Opening config file \"%s\"", fname);
@@ -3788,12 +3811,14 @@ int
 options_init_from_torrc(int argc, char **argv)
 {
   char *cf=NULL, *cf_defaults=NULL;
-  int i, command;
+  int command;
   int retval = -1;
   static char **backup_argv;
   static int backup_argc;
   char *command_arg = NULL;
   char *errmsg=NULL;
+  config_line_t *cmdline_only_options = NULL;
+  config_line_t *p_index = NULL;
 
   if (argv) { /* first time we're called. save command line args */
     backup_argv = argv;
@@ -3827,20 +3852,20 @@ options_init_from_torrc(int argc, char **argv)
   if (!global_cmdline_options) {
     /* Or we could redo the list every time we pass this place.
      * It does not really matter */
-    if (config_get_commandlines(argc, argv, &global_cmdline_options) < 0) {
+    if (config_get_commandlines(argc, argv, &global_cmdline_options,
+        &cmdline_only_options) < 0) {
       goto err;
     }
   }
 
   command = CMD_RUN_TOR;
-  for (i = 1; i < argc; ++i) {
-    if (!strcmp(argv[i],"--list-fingerprint")) {
+  for (p_index = cmdline_only_options; p_index; p_index = p_index->next) {
+    if (!strcmp(p_index->key,"--list-fingerprint")) {
       command = CMD_LIST_FINGERPRINT;
-    } else if (!strcmp(argv[i],"--hash-password")) {
+    } else if (!strcmp(p_index->key, "--hash-password")) {
       command = CMD_HASH_PASSWORD;
-      command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
-      ++i;
-    } else if (!strcmp(argv[i],"--verify-config")) {
+      command_arg = p_index->value;
+    } else if (!strcmp(p_index->key, "--verify-config")) {
       command = CMD_VERIFY_CONFIG;
     }
   }
@@ -3849,8 +3874,8 @@ options_init_from_torrc(int argc, char **argv)
     cf_defaults = tor_strdup("");
     cf = tor_strdup("");
   } else {
-    cf_defaults = load_torrc_from_disk(argc, argv, 1);
-    cf = load_torrc_from_disk(argc, argv, 0);
+    cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
+    cf = load_torrc_from_disk(cmdline_only_options, 0);
     if (!cf)
       goto err;
   }
@@ -3862,6 +3887,7 @@ options_init_from_torrc(int argc, char **argv)
 
   tor_free(cf);
   tor_free(cf_defaults);
+  config_free_lines(cmdline_only_options);
   if (errmsg) {
     log_warn(LD_CONFIG,"%s", errmsg);
     tor_free(errmsg);
@@ -3896,7 +3922,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->magic_ = OR_OPTIONS_MAGIC;
   options_init(newoptions);
   newoptions->command = command;
-  newoptions->command_arg = command_arg;
+  newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
   for (i = 0; i < 2; ++i) {
     const char *body = i==0 ? cf_defaults : cf;
@@ -3960,7 +3986,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     newoptions->magic_ = OR_OPTIONS_MAGIC;
     options_init(newoptions);
     newoptions->command = command;
-    newoptions->command_arg = command_arg;
+    newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
     /* Assign all options a second time. */
     for (i = 0; i < 2; ++i) {
