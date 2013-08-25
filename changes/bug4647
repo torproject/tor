@@ -6,6 +6,6 @@
       names as command-line options. Fixes bugs 4647 and 9578; bugfix on
       0.0.9pre5.
 
-
-
+    - No longer allow 'tor --hash-password' with no arguments. Fixes bug
+      9573; bugfix on 0.0.9pre5.
 

@@ -1867,7 +1867,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     }
 
     if (want_arg && i == argc-1) {
-      if (!strcmp(argv[i],"--hash-password") || ignore_errors) {
+      if (ignore_errors) {
         arg = strdup("");
       } else {
         log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
