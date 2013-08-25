@@ -96,6 +96,10 @@ int init_cookie_authentication(const char *fname, const char *header,
 
 or_options_t *options_new(void);
 
+int config_parse_commandline(int argc, char **argv, int ignore_errors,
+                             config_line_t **result,
+                             config_line_t **cmdline_result);
+
 void config_register_addressmaps(const or_options_t *options);
 /* XXXX024 move to connection_edge.h */
 int addressmap_register_auto(const char *from, const char *to,

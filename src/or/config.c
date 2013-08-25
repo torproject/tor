@@ -1792,12 +1792,14 @@ options_act(const or_options_t *old_options)
 }
 
 /** Helper: Read a list of configuration options from the command line.  If
- * successful, put them in *<b>result</b>, put the commandline-only options in
- * *<b>cmdline_result</b>, and return 0; otherwise, return -1 and leave
- * *<b>result</b> and <b>cmdline_result</b> alone. */
-static int
-config_get_commandlines(int argc, char **argv, config_line_t **result,
-    config_line_t **cmdline_result)
+ * successful, or if ignore_errors is set, put them in *<b>result</b>, put the
+ * commandline-only options in *<b>cmdline_result</b>, and return 0;
+ * otherwise, return -1 and leave *<b>result</b> and <b>cmdline_result</b>
+ * alone. */
+int
+config_parse_commandline(int argc, char **argv, int ignore_errors,
+                         config_line_t **result,
+                         config_line_t **cmdline_result)
 {
   config_line_t *param = NULL;
 
@@ -1823,7 +1825,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result,
                !strcmp(argv[i],"--verify-config") ||
                !strcmp(argv[i],"--ignore-missing-torrc") ||
                !strcmp(argv[i],"--quiet") ||
-               !strcmp(argv[i],"--hush")) {
+               !strcmp(argv[i],"--hush") ||
+               !strcmp(argv[1],"--version")) {
       is_cmdline = 1;
       want_arg = 0;
     } else if (!strcmp(argv[i],"--nt-service") ||
@@ -1851,7 +1854,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result,
     }
 
     if (want_arg && i == argc-1) {
-      if (!strcmp(argv[i],"--hash-password")) {
+      if (!strcmp(argv[i],"--hash-password") || ignore_errors) {
         arg = strdup("");
       } else {
         log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
@@ -3852,8 +3855,8 @@ options_init_from_torrc(int argc, char **argv)
   if (!global_cmdline_options) {
     /* Or we could redo the list every time we pass this place.
      * It does not really matter */
-    if (config_get_commandlines(argc, argv, &global_cmdline_options,
-        &cmdline_only_options) < 0) {
+    if (config_parse_commandline(argc, argv, 0, &global_cmdline_options,
+                                 &cmdline_only_options) < 0) {
       goto err;
     }
   }

@@ -21,6 +21,7 @@
 #include "circuituse.h"
 #include "command.h"
 #include "config.h"
+#include "confparse.h"
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
@@ -2320,7 +2321,7 @@ int
 tor_init(int argc, char *argv[])
 {
   char buf[256];
-  int i, quiet = 0;
+  int quiet = 0;
   time_of_process_start = time(NULL);
   init_connection_lists();
   /* Have the log set up with our application name. */
@@ -2333,17 +2334,25 @@ tor_init(int argc, char *argv[])
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
 
+  {
   /* We search for the "quiet" option first, since it decides whether we
    * will log anything at all to the command line. */
-  for (i=1;i<argc;++i) {
-    if (!strcmp(argv[i], "--hush"))
-      quiet = 1;
-    if (!strcmp(argv[i], "--quiet"))
-      quiet = 2;
-    /* --version implies --quiet */
-    if (!strcmp(argv[i], "--version"))
-      quiet = 2;
+    config_line_t *opts = NULL, *cmdline_opts = NULL;
+    const config_line_t *cl;
+    (void) config_parse_commandline(argc, argv, 1, &opts, &cmdline_opts);
+    for (cl = cmdline_opts; cl; cl = cl->next) {
+      if (!strcmp(cl->key, "--hush"))
+        quiet = 1;
+      if (!strcmp(cl->key, "--quiet"))
+        quiet = 2;
+      /* --version implies --quiet */
+      if (!strcmp(cl->key, "--version"))
+        quiet = 2;
+    }
+    config_free_lines(opts);
+    config_free_lines(cmdline_opts);
   }
+
  /* give it somewhere to log to initially */
   switch (quiet) {
     case 2:
