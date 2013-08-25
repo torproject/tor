@@ -755,8 +755,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     const int send_versions = !started_here;
     /* If we want to authenticate, send a CERTS cell */
     const int send_certs = !started_here || public_server_mode(get_options());
-    /* If we're a relay that got a connection, ask for authentication. */
-    const int send_chall = !started_here && public_server_mode(get_options());
+    /* If we're a host that got a connection, ask for authentication. */
+    const int send_chall = !started_here;
     /* If our certs cell will authenticate us, we can send a netinfo cell
      * right now. */
     const int send_netinfo = !started_here;
@@ -940,6 +940,16 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently
    * trustworthy. */
   (void)my_apparent_addr;
+
+  if (! conn->handshake_state->sent_netinfo) {
+    /* If we were prepared to authenticate, but we never got an AUTH_CHALLENGE
+     * cell, then we would not previously have sent a NETINFO cell. Do so
+     * now. */
+    if (connection_or_send_netinfo(conn) < 0) {
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
+  }
 
   if (connection_or_set_state_open(conn)<0) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got good NETINFO cell from %s:%d; but "
