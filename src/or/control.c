@@ -84,7 +84,8 @@
 #define EVENT_CONF_CHANGED     0x0019
 #define EVENT_TRANSPORT_LAUNCHED 0x0020
 #define EVENT_MAX_             0x0020
-/* If EVENT_MAX_ ever hits 0x0020, we need to make the mask wider. */
+/* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
+ * different structure. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
@@ -92,7 +93,7 @@
  * has interest in without having to walk over the global connection
  * list to find out.
  **/
-typedef uint32_t event_mask_t;
+typedef uint64_t event_mask_t;
 
 /** An event mask of all the events that any controller is interested in
  * receiving. */
@@ -104,7 +105,7 @@ static int disable_log_messages = 0;
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING(e) \
-  (global_event_mask & (1<<(e)))
+  (!! (global_event_mask & (((uint64_t)1)<<(e))))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
