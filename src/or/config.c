@@ -1791,6 +1791,28 @@ options_act(const or_options_t *old_options)
   return 0;
 }
 
+static const struct {
+  const char *name;
+  int takes_argument;
+} CMDLINE_ONLY_OPTIONS[] = {
+  { "-f",                     1 },
+  { "--defaults-torrc",       1 },
+  { "--hash-password",        1 },
+  { "--list-fingerprint",     0 },
+  { "--verify-config",        0 },
+  { "--ignore-missing-torrc", 0 },
+  { "--quiet",                0 },
+  { "--hush",                 0 },
+  { "--version",              0 },
+  { "-h",                     0 },
+  { "--help",                 0 },
+  { "--list-torrc-options",   0 },
+  { "--digests",              0 },
+  { "--nt-service",           0 },
+  { "-nt-service",            0 },
+  { NULL, 0 },
+};
+
 /** Helper: Read a list of configuration options from the command line.  If
  * successful, or if ignore_errors is set, put them in *<b>result</b>, put the
  * commandline-only options in *<b>cmdline_result</b>, and return 0;
@@ -1816,27 +1838,14 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     unsigned command = CONFIG_LINE_NORMAL;
     int want_arg = 1;
     int is_cmdline = 0;
+    int j;
 
-    if (!strcmp(argv[i],"-f") ||
-        !strcmp(argv[i],"--defaults-torrc") ||
-        !strcmp(argv[i],"--hash-password")) {
-      is_cmdline = 1;
-    } else if (!strcmp(argv[i],"--list-fingerprint") ||
-               !strcmp(argv[i],"--verify-config") ||
-               !strcmp(argv[i],"--ignore-missing-torrc") ||
-               !strcmp(argv[i],"--quiet") ||
-               !strcmp(argv[i],"--hush") ||
-               !strcmp(argv[i],"--version") ||
-               !strcmp(argv[i],"-h") ||
-               !strcmp(argv[i],"--help") ||
-               !strcmp(argv[i],"--list-torrc-options") ||
-               !strcmp(argv[i],"--digests")) {
-      is_cmdline = 1;
-      want_arg = 0;
-    } else if (!strcmp(argv[i],"--nt-service") ||
-               !strcmp(argv[i],"-nt-service")) {
-      is_cmdline = 1;
-      want_arg = 0;
+    for (j = 0; CMDLINE_ONLY_OPTIONS[j].name != NULL; ++j) {
+      if (!strcmp(argv[i], CMDLINE_ONLY_OPTIONS[j].name)) {
+        is_cmdline = 1;
+        want_arg = CMDLINE_ONLY_OPTIONS[j].takes_argument;
+        break;
+      }
     }
 
     s = argv[i];
