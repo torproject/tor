@@ -2326,6 +2326,10 @@ compute_publishserverdescriptor(or_options_t *options)
  * will generate too many circuits and potentially overload the network. */
 #define MIN_MAX_CIRCUIT_DIRTINESS 10
 
+/** Highest allowable value for MaxCircuitDirtiness: prevents time_t
+ * overflows. */
+#define MAX_MAX_CIRCUIT_DIRTINESS (30*24*60*60)
+
 /** Lowest allowable value for CircuitStreamTimeout; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
 #define MIN_CIRCUIT_STREAM_TIMEOUT 10
@@ -2845,6 +2849,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "MaxCircuitDirtiness option is too short; "
              "raising to %d seconds.", MIN_MAX_CIRCUIT_DIRTINESS);
     options->MaxCircuitDirtiness = MIN_MAX_CIRCUIT_DIRTINESS;
+  }
+
+  if (options->MaxCircuitDirtiness > MAX_MAX_CIRCUIT_DIRTINESS) {
+    log_warn(LD_CONFIG, "MaxCircuitDirtiness option is too high; "
+             "setting to %d days.", MAX_MAX_CIRCUIT_DIRTINESS/86400);
+    options->MaxCircuitDirtiness = MAX_MAX_CIRCUIT_DIRTINESS;
   }
 
   if (options->CircuitStreamTimeout &&
@@ -5828,6 +5838,13 @@ check_server_ports(const smartlist_t *ports,
   if (n_orport_advertised && !n_orport_listeners) {
     log_warn(LD_CONFIG, "We are advertising an ORPort, but not actually "
              "listening on one.");
+    r = -1;
+  }
+  if (n_orport_listeners && !n_orport_advertised) {
+    log_warn(LD_CONFIG, "We are listening on an ORPort, but not advertising "
+             "any ORPorts. This will keep us from building a %s "
+             "descriptor, and make us impossible to use.",
+             options->BridgeRelay ? "bridge" : "router");
     r = -1;
   }
   if (n_dirport_advertised && !n_dirport_listeners) {
