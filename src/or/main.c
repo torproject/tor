@@ -2345,10 +2345,10 @@ tor_init(int argc, char *argv[])
         quiet = 1;
       if (!strcmp(cl->key, "--quiet"))
         quiet = 2;
-      /* --version and --help imply --quiet */
-      if (!strcmp(cl->key, "--version") ||
+      /* --version, --digests, and --help imply --quiet */
+      if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help"))
-        quiet = 2;
+        quiet = 1;
     }
     config_free_lines(opts);
     config_free_lines(cmdline_opts);
