@@ -185,14 +185,14 @@ sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
 #ifdef __i386__
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socketcall), 1,
-		  SCMP_CMP(0, SCMP_CMP_EQ, 18));
+      SCMP_CMP(0, SCMP_CMP_EQ, 18));
   if (rc) {
     return rc;
   }
 #endif
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4), 1,
-		  SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC));
+      SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC));
   if (rc) {
     return rc;
   }
