@@ -2647,11 +2647,12 @@ sandbox_init_filter()
   sandbox_cfg_allow_openat_filename(&cfg,
       get_datadir_fname("cached-status"), 1);
 
-  sandbox_cfg_allow_open_filename_array(&cfg, 23,
+  sandbox_cfg_allow_open_filename_array(&cfg, 24,
       get_datadir_fname("cached-certs"), 1,
       get_datadir_fname("cached-certs.tmp"), 1,
       get_datadir_fname("cached-consensus"), 1,
       get_datadir_fname("unverified-consensus"), 1,
+      get_datadir_fname("unverified-consensus.tmp"), 1,
       get_datadir_fname("cached-microdesc-consensus"), 1,
       get_datadir_fname("cached-microdesc-consensus.tmp"), 1,
       get_datadir_fname("cached-microdescs"), 1,
@@ -2683,7 +2684,7 @@ sandbox_init_filter()
 
   // orport
   if (server_mode(get_options())) {
-    sandbox_cfg_allow_open_filename_array(&cfg, 12,
+    sandbox_cfg_allow_open_filename_array(&cfg, 14,
         get_datadir_fname2("keys", "secret_id_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key_ntor"), 1,
@@ -2692,7 +2693,9 @@ sandbox_init_filter()
         get_datadir_fname2("keys", "secret_onion_key.old"), 1,
         get_datadir_fname2("keys", "secret_onion_key_ntor.old"), 1,
         get_datadir_fname2("keys", "secret_onion_key.tmp"), 1,
+        get_datadir_fname2("keys", "secret_id_key.tmp"), 1,
         get_datadir_fname("fingerprint"), 1,
+        get_datadir_fname("fingerprint.tmp"), 1,
         get_datadir_fname("cached-consensus"), 1,
         get_datadir_fname("cached-consensus.tmp"), 1,
         "/etc/resolv.conf", 0
