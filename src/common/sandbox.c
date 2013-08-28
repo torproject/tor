@@ -1138,7 +1138,7 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 #endif // USE_LIBSECCOMP
 
 sandbox_cfg_t*
-sandbox_cfg_new()
+sandbox_cfg_new(void)
 {
   return NULL;
 }

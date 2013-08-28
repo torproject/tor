@@ -46,12 +46,16 @@
  * parameters for open, openat, execve, stat64.
  */
 struct pfd_elem {
-  int syscall;    // syscall associated with parameter
+  /** syscall associated with parameter. */
+  int syscall;
 
-  char pindex;    // parameter index
-  intptr_t param; // parameter value
+  /** parameter index. */
+  char pindex;
+  /** parameter value. */
+  intptr_t param;
 
-  char prot;      // parameter flag (0 = not protected, 1 = protected)
+  /**  parameter flag (0 = not protected, 1 = protected). */
+  char prot;
 
   struct pfd_elem *next;
 };
@@ -101,7 +105,7 @@ void sandbox_set_debugging_fd(int fd);
 const char* sandbox_intern_string(const char *param);
 
 /** Creates an empty sandbox configuration file.*/
-sandbox_cfg_t * sandbox_cfg_new();
+sandbox_cfg_t * sandbox_cfg_new(void);
 
 /**
  * Function used to add a open allowed filename to a supplied configuration.
