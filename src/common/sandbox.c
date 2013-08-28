@@ -669,7 +669,7 @@ sandbox_intern_string(const char *param)
     return NULL;
 
   for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
-    if (elem->prot && !strncmp(param, (char*)(elem->param), MAX_PARAM_LEN)) {
+    if (elem->prot && !strcmp(param, (char*)(elem->param))) {
       return (char*)(elem->param);
     }
   }
@@ -688,10 +688,7 @@ prot_strdup(char* str)
     goto out;
 
   // allocating protected memory region for parameter
-  param_size = 1 + strnlen(str, MAX_PARAM_LEN);
-  if (param_size == MAX_PARAM_LEN) {
-    log_warn(LD_BUG, "(Sandbox) Parameter length too large!");
-  }
+  param_size = 1 + strlen(str);
 
   res = (char*) mmap(NULL, param_size, PROT_READ | PROT_WRITE, MAP_PRIVATE |
       MAP_ANON, -1, 0);
@@ -903,7 +900,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo **res)
     return -1;
   }
 
-  if (strncmp(name, hname, sizeof(hname)) || sb_addr_info == NULL) {
+  if (strcmp(name, hname) || sb_addr_info == NULL) {
     log_err(LD_BUG,"(Sandbox) failed for hname %s!", name);
     return -1;
   }
