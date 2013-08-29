@@ -50,12 +50,12 @@ struct pfd_elem {
   int syscall;
 
   /** parameter index. */
-  char pindex;
+  int pindex;
   /** parameter value. */
   intptr_t param;
 
   /**  parameter flag (0 = not protected, 1 = protected). */
-  char prot;
+  int prot;
 
   struct pfd_elem *next;
 };
@@ -114,7 +114,7 @@ sandbox_cfg_t * sandbox_cfg_new(void);
  * need to be free-ed.
  */
 int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
-    char fr);
+    int fr);
 
 /** Function used to add a series of open allowed filenames to a supplied
  * configuration.
@@ -134,7 +134,7 @@ int sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...);
  * need to be free-ed.
  */
 int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
-    char fr);
+    int fr);
 
 /** Function used to add a series of openat allowed filenames to a supplied
  * configuration.
@@ -173,7 +173,7 @@ int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, int num, ...);
  * need to be free-ed.
  */
 int sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file,
-    char fr);
+    int fr);
 
 /** Function used to add a series of stat64 allowed filenames to a supplied
  * configuration.

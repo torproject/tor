@@ -712,7 +712,7 @@ prot_strdup(char* str)
 
 #ifdef __NR_stat64
 int
-sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, char fr)
+sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
@@ -740,7 +740,7 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, int num, ...)
 
   for (i = 0; i < num; i++) {
     char *fn = va_arg(ap, char*);
-    char fr = (char) va_arg(ap, int);
+    int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_stat64_filename(cfg, fn, fr);
     if (rc) {
@@ -756,7 +756,7 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, int num, ...)
 #endif
 
 int
-sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, char fr)
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
@@ -784,7 +784,7 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...)
 
   for (i = 0; i < num; i++) {
     char *fn = va_arg(ap, char*);
-    char fr = (char) va_arg(ap, int);
+    int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_open_filename(cfg, fn, fr);
     if (rc) {
@@ -799,7 +799,7 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, int num, ...)
 }
 
 int
-sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, char fr)
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
@@ -827,7 +827,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, int num, ...)
 
   for (i = 0; i < num; i++) {
     char *fn = va_arg(ap, char*);
-    char fr = (char) va_arg(ap, int);
+    int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_openat_filename(cfg, fn, fr);
     if (rc) {
