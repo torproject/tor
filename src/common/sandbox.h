@@ -119,11 +119,10 @@ int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
 /** Function used to add a series of open allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param num  number of files.
  *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
  *    the char* specifies the path to the allowed file, 1 tells the function
  *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed.
+ *    be free-ed; the final parameter needs to be <NULL, 0>.
  */
 int sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...);
 
@@ -139,11 +138,10 @@ int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
 /** Function used to add a series of openat allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param num  number of files.
  *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
  *    the char* specifies the path to the allowed file, 1 tells the function
  *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed.
+ *    be free-ed; the final parameter needs to be <NULL, 0>.
  */
 int sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...);
 
@@ -158,11 +156,10 @@ int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com);
 /** Function used to add a series of execve allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param num  number of files.
  *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
  *    the char* specifies the path to the allowed file, 1 tells the function
  *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed.
+ *    be free-ed; the final parameter needs to be <NULL, 0>.
  */
 int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...);
 
@@ -178,11 +175,10 @@ int sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file,
 /** Function used to add a series of stat64 allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param num  number of files.
  *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
  *    the char* specifies the path to the allowed file, 1 tells the function
  *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed.
+ *    be free-ed; the final parameter needs to be <NULL, 0>.
  */
 int sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...);
 
