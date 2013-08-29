@@ -679,14 +679,15 @@ sandbox_intern_string(const char *param)
 }
 
 static int
-prot_strings(sandbox_cfg_t* cfg) {
+prot_strings(sandbox_cfg_t* cfg)
+{
   int ret = 0;
   int pr_mem_size = 0, pr_mem_left = 0;
   char *pr_mem_next = NULL, *pr_mem_base;
   sandbox_cfg_t *el = NULL;
 
   // get total number of bytes required to mmap
-  for(el = cfg; el != NULL; el = el->next) {
+  for (el = cfg; el != NULL; el = el->next) {
     pr_mem_size += strlen((char*) el->param) + 1;
   }
 
@@ -768,7 +769,7 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...)
   va_list ap;
   va_start(ap, cfg);
 
-  while((fn = va_arg(ap, char*)) != NULL) {
+  while ((fn = va_arg(ap, char*)) != NULL) {
     int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_stat64_filename(cfg, fn, fr);
@@ -812,7 +813,7 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
   va_list ap;
   va_start(ap, cfg);
 
-  while((fn = va_arg(ap, char*)) != NULL) {
+  while ((fn = va_arg(ap, char*)) != NULL) {
     int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_open_filename(cfg, fn, fr);
@@ -855,7 +856,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
   va_list ap;
   va_start(ap, cfg);
 
-  while((fn = va_arg(ap, char*)) != NULL) {
+  while ((fn = va_arg(ap, char*)) != NULL) {
     int fr = va_arg(ap, int);
 
     rc = sandbox_cfg_allow_openat_filename(cfg, fn, fr);
@@ -896,7 +897,7 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
   va_list ap;
   va_start(ap, cfg);
 
-  while((fn = va_arg(ap, char*)) != NULL) {
+  while ((fn = va_arg(ap, char*)) != NULL) {
 
     rc = sandbox_cfg_allow_execve(cfg, fn);
     if (rc) {
