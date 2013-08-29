@@ -678,36 +678,65 @@ sandbox_intern_string(const char *param)
   return param;
 }
 
-static char*
-prot_strdup(char* str)
-{
-  int param_size = 0;
-  char *res = NULL;
+static int
+prot_strings(sandbox_cfg_t* cfg) {
+  int ret = 0;
+  int pr_mem_size = 0, pr_mem_left = 0;
+  char *pr_mem_next = NULL, *pr_mem_base;
+  sandbox_cfg_t *el = NULL;
 
-  if (str == NULL)
-    goto out;
+  // get total number of bytes required to mmap
+  for(el = cfg; el != NULL; el = el->next) {
+    pr_mem_size += strlen((char*) el->param) + 1;
+  }
 
-  // allocating protected memory region for parameter
-  param_size = 1 + strlen(str);
-
-  res = (char*) mmap(NULL, param_size, PROT_READ | PROT_WRITE, MAP_PRIVATE |
-      MAP_ANON, -1, 0);
-  if (!res) {
-    log_err(LD_BUG,"(Sandbox) failed allocate protected memory!");
+  // allocate protected memory
+  pr_mem_base = (char*) mmap(NULL, pr_mem_size, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANON, -1, 0);
+  if (pr_mem_base == MAP_FAILED) {
+    log_err(LD_BUG,"(Sandbox) failed allocate protected memory! mmap: %s",
+        strerror(errno));
+    ret = -1;
     goto out;
   }
 
-  // copying from non protected to protected + pointer reassign
-  memcpy(res, str, param_size);
+  pr_mem_next = pr_mem_base;
+  pr_mem_left = pr_mem_size;
+
+  // change el value pointer to protected
+  for (el = cfg; el != NULL; el = el->next) {
+    char *param_val = (char*) el->param;
+    int param_size = strlen(param_val) + 1;
+
+    if (pr_mem_left - param_size >= 0) {
+      // copy to protected
+      memcpy(pr_mem_next, param_val, param_size);
+
+      // re-point el parameter to protected
+      free((char*) el->param);
+      el->param = (intptr_t) pr_mem_next;
+      el->prot = 1;
+
+      // move next available protected memory
+      pr_mem_next += param_size;
+      pr_mem_left -= param_size;
+    } else {
+      log_err(LD_BUG,"(Sandbox) insufficient protected memory!");
+      ret = -2;
+      goto out;
+    }
+  }
 
   // protecting from writes
-  if (mprotect(res, param_size, PROT_READ)) {
-    log_err(LD_BUG,"(Sandbox) failed to protect memory!");
-    return NULL;
+  if (mprotect(pr_mem_base, pr_mem_size, PROT_READ)) {
+    log_err(LD_BUG,"(Sandbox) failed to protect memory! mprotect: %s",
+        strerror(errno));
+    ret = -3;
+    goto out;
   }
 
  out:
-   return res;
+   return ret;
 }
 
 #ifdef __NR_stat64
@@ -719,8 +748,8 @@ sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(stat64);
   elem->pindex = 0;
-  elem->param = (intptr_t) prot_strdup((char*) file);
-  elem->prot = 1;
+  elem->param = (intptr_t) strdup(file);
+  elem->prot = 0;
 
   elem->next = *cfg;
   *cfg = elem;
@@ -763,8 +792,8 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(open);
   elem->pindex = 0;
-  elem->param = (intptr_t) prot_strdup((char*) file);
-  elem->prot = 1;
+  elem->param = (intptr_t) strdup(file);
+  elem->prot = 0;
 
   elem->next = *cfg;
   *cfg = elem;
@@ -806,8 +835,8 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(openat);
   elem->pindex = 1;
-  elem->param = (intptr_t) prot_strdup((char*) file);;
-  elem->prot = 1;
+  elem->param = (intptr_t) strdup(file);
+  elem->prot = 0;
 
   elem->next = *cfg;
   *cfg = elem;
@@ -849,8 +878,8 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
   elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
   elem->syscall = SCMP_SYS(openat);
   elem->pindex = 1;
-  elem->param = (intptr_t) prot_strdup((char*) com);;
-  elem->prot = 1;
+  elem->param = (intptr_t) strdup(com);
+  elem->prot = 0;
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1121,7 +1150,7 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
   if (install_sigsys_debugging())
     return -1;
 
-  if (init_addrinfo()) {
+  if (init_addrinfo() || prot_strings(cfg)) {
     return -4;
   }
 
