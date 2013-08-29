@@ -892,7 +892,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo **res)
   }
   *res = NULL;
   *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
-  if (!res) {
+  if (*res == NULL) {
     return -2;
   }
 

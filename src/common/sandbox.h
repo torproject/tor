@@ -68,10 +68,10 @@ typedef int (*sandbox_filter_func_t)(scmp_filter_ctx ctx,
 
 /** Type that will be used in step 3 in order to manage multiple sandboxes.*/
 typedef struct {
-  // function pointers associated with the filter
+  /** function pointers associated with the filter */
   sandbox_filter_func_t *filter_func;
 
-  // filter function pointer parameters
+  /** filter function pointer parameters */
   sandbox_cfg_t *filter_dynamic;
 } sandbox_t;
 
