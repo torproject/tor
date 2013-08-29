@@ -2789,7 +2789,7 @@ tor_main(int argc, char *argv[])
 
     // registering libevent rng
     evutil_secure_rng_set_urandom_device_file(
-        (char*) sandbox_intern_string("/dev/random"));
+        (char*) sandbox_intern_string("/dev/urandom"));
   }
 
   switch (get_options()->command) {
