@@ -2647,7 +2647,7 @@ sandbox_init_filter()
   sandbox_cfg_allow_openat_filename(&cfg,
       get_datadir_fname("cached-status"), 1);
 
-  sandbox_cfg_allow_open_filename_array(&cfg, 24,
+  sandbox_cfg_allow_open_filename_array(&cfg,
       get_datadir_fname("cached-certs"), 1,
       get_datadir_fname("cached-certs.tmp"), 1,
       get_datadir_fname("cached-consensus"), 1,
@@ -2671,20 +2671,22 @@ sandbox_init_filter()
       get_datadir_fname("unparseable-desc"), 1,
       "/dev/srandom", 0,
       "/dev/urandom", 0,
-      "/dev/random", 0
+      "/dev/random", 0,
+      NULL, 0
   );
 
-  sandbox_cfg_allow_stat64_filename_array(&cfg, 5,
+  sandbox_cfg_allow_stat64_filename_array(&cfg,
       get_datadir_fname(NULL), 1,
       get_datadir_fname("lock"), 1,
       get_datadir_fname("state"), 1,
       get_datadir_fname("router-stability"), 1,
-      get_datadir_fname("cached-extrainfo.new"), 1
+      get_datadir_fname("cached-extrainfo.new"), 1,
+      NULL, 0
   );
 
   // orport
   if (server_mode(get_options())) {
-    sandbox_cfg_allow_open_filename_array(&cfg, 14,
+    sandbox_cfg_allow_open_filename_array(&cfg,
         get_datadir_fname2("keys", "secret_id_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key"), 1,
         get_datadir_fname2("keys", "secret_onion_key_ntor"), 1,
@@ -2698,12 +2700,14 @@ sandbox_init_filter()
         get_datadir_fname("fingerprint.tmp"), 1,
         get_datadir_fname("cached-consensus"), 1,
         get_datadir_fname("cached-consensus.tmp"), 1,
-        "/etc/resolv.conf", 0
+        "/etc/resolv.conf", 0,
+        NULL, 0
     );
 
-    sandbox_cfg_allow_stat64_filename_array(&cfg, 2,
+    sandbox_cfg_allow_stat64_filename_array(&cfg,
         get_datadir_fname("keys"), 1,
-        get_datadir_fname("stats/dirreq-stats"), 1
+        get_datadir_fname("stats/dirreq-stats"), 1,
+        NULL, 0
     );
   }
 
