@@ -521,7 +521,7 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
-static int check_nickname_list(const char **lst, const char *name, char **msg);
+static int check_nickname_list(char **lst, const char *name, char **msg);
 
 static int parse_client_transport_line(const char *line, int validate_only);
 
@@ -3090,7 +3090,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
-  if (check_nickname_list((const char **)&options->MyFamily, "MyFamily", msg))
+  if (check_nickname_list((char **)&options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
@@ -3626,7 +3626,7 @@ get_default_conf_file(int defaults_file)
  * Warn and return -1 on failure.
  */
 static int
-check_nickname_list(const char **lst, const char *name, char **msg)
+check_nickname_list(char **lst, const char *name, char **msg)
 {
   int r = 0;
   smartlist_t *sl;
@@ -3639,7 +3639,7 @@ check_nickname_list(const char **lst, const char *name, char **msg)
   smartlist_split_string(sl, *lst, ",",
     SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
 
-  SMARTLIST_FOREACH(sl, const char *, s,
+  SMARTLIST_FOREACH(sl, char *, s,
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
         // check if first char is dollar
@@ -3670,7 +3670,7 @@ check_nickname_list(const char **lst, const char *name, char **msg)
 
   // Replace the caller's nickname list with a fixed one
   if (changes && r == 0) {
-    const char *newNicknames = smartlist_join_strings(sl, ", ", 0, NULL);
+    char *newNicknames = smartlist_join_strings(sl, ", ", 0, NULL);
     tor_free(*lst);
     *lst = newNicknames;
   }
