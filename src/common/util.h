@@ -365,7 +365,7 @@ typedef struct sized_chunk_t {
   size_t len;
 } sized_chunk_t;
 int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
-                         int bin);
+                         int bin, int no_tempfile);
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
                          int bin);
 int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
