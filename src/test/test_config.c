@@ -509,6 +509,41 @@ test_config_parse_transport_options_line(void *arg)
   }
 }
 
+// Tests if an options with MyFamily fingerprints missing '$' normalises
+// them correctly and also ensure it also works with multiple fingerprints
+static void
+test_config_fix_my_family(void *arg)
+{
+  char *err = NULL;
+  char *family = "$1111111111111111111111111111111111111111, "
+                 "1111111111111111111111111111111111111112, "
+                 "$1111111111111111111111111111111111111113";
+
+  or_options_t* options = options_new();
+  or_options_t* defaults = options_new();
+  options_init(options);
+  options_init(defaults);
+  options->MyFamily = tor_strdup(family);
+
+  options_validate(NULL, options, defaults, 0, &err) ;
+
+  if (err != NULL) {
+    test_fail_msg(err);
+  }
+
+  test_streq(options->MyFamily, "$1111111111111111111111111111111111111111, "
+                                "$1111111111111111111111111111111111111112, "
+                                "$1111111111111111111111111111111111111113");
+
+  done:
+    if (err != NULL) {
+      tor_free(err);
+    }
+
+    or_options_free(options);
+    or_options_free(defaults);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -518,6 +553,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(parse_transport_options_line, 0),
   CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
+  CONFIG_TEST(fix_my_family, 0),
   END_OF_TESTCASES
 };
 
