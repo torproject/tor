@@ -2042,6 +2042,12 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   tor_assert(conn->handshake_state);
 
+  if (conn->handshake_state->sent_netinfo) {
+    log_warn(LD_BUG, "Attempted to send an extra netinfo cell on a connection "
+             "where we already sent one.");
+    return 0;
+  }
+
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
@@ -2083,6 +2089,7 @@ connection_or_send_netinfo(or_connection_t *conn)
   }
 
   conn->handshake_state->digest_sent_data = 0;
+  conn->handshake_state->sent_netinfo = 1;
   connection_or_write_cell_to_buf(&cell, conn);
 
   return 0;
@@ -2211,7 +2218,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     const tor_cert_t *id_cert=NULL, *link_cert=NULL;
     const digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
-    if (tor_tls_get_my_certs(0, &link_cert, &id_cert))
+    if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
       return -1;
     my_digests = tor_cert_get_id_digests(id_cert);
     their_digests = tor_cert_get_id_digests(conn->handshake_state->id_cert);
