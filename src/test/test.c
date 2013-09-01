@@ -44,6 +44,7 @@ double fabs(double x);
 
 #include "or.h"
 #include "buffers.h"
+#include "circuitlist.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "connection_edge.h"
@@ -53,6 +54,7 @@ double fabs(double x);
 #include "torgzip.h"
 #include "mempool.h"
 #include "memarea.h"
+#include "onion.h"
 #include "onion_tap.h"
 #include "policies.h"
 #include "rephist.h"
@@ -932,6 +934,49 @@ test_ntor_handshake(void *arg)
   dimap_free(s_keymap, NULL);
 }
 #endif
+
+/** Run unit tests for the onion queues. */
+static void
+test_onion_queues(void)
+{
+  uint8_t buf1[TAP_ONIONSKIN_CHALLENGE_LEN] = {0};
+  uint8_t buf2[NTOR_ONIONSKIN_LEN] = {0};
+
+  or_circuit_t *circ1 = or_circuit_new(0, NULL);
+  or_circuit_t *circ2 = or_circuit_new(0, NULL);
+
+  create_cell_t *onionskin = NULL;
+  create_cell_t *create1 = tor_malloc_zero(sizeof(create_cell_t));
+  create_cell_t *create2 = tor_malloc_zero(sizeof(create_cell_t));
+
+  create_cell_init(create1, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
+                   TAP_ONIONSKIN_CHALLENGE_LEN, buf1);
+  create_cell_init(create2, CELL_CREATE, ONION_HANDSHAKE_TYPE_NTOR,
+                   NTOR_ONIONSKIN_LEN, buf2);
+
+  test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  test_eq(0, onion_pending_add(circ1, create1));
+  test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+
+  test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  test_eq(0, onion_pending_add(circ2, create2));
+  test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+
+  test_eq_ptr(circ2, onion_next_task(&onionskin));
+  test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+
+  clear_pending_onions();
+  test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+
+ done:
+  ;
+//  circuit_free(circ1);
+//  circuit_free(circ2);
+  /* and free create1 and create2 */
+  /* XXX leaks everything here */
+}
 
 static void
 test_circuit_timeout(void)
@@ -2005,6 +2050,7 @@ static struct testcase_t test_array[] = {
   ENT(buffers),
   { "buffer_copy", test_buffer_copy, 0, NULL, NULL },
   ENT(onion_handshake),
+  ENT(onion_queues),
 #ifdef CURVE25519_ENABLED
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
 #endif
