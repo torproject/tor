@@ -1,4 +1,0 @@
-  o Minor features (usability):
-    - Warn and fail if a server is configured not to advertise any
-      ORPorts at all. (We need *something* to put in our descriptor, or
-      we just won't work.)

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid overflows when the user sets MaxCircuitDirtiness to a
-      ridiculously high value, by imposing a (ridiculously high) 30-day
-      maximum on MaxCircuitDirtiness.
