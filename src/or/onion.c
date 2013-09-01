@@ -135,6 +135,11 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   }
 
   ++ol_entries[onionskin->handshake_type];
+  log_info(LD_OR, "New create (%s). Queues now ntor=%d and tap=%d.",
+    onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
+    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+    ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
+
   circ->onionqueue_entry = tmp;
   TOR_TAILQ_INSERT_TAIL(&ol_list[onionskin->handshake_type], tmp, next);
 
@@ -176,8 +181,13 @@ onion_next_task(create_cell_t **onionskin_out)
  * more manageable. That's probably not good long-term. -RD */
   circ = head->circ;
   if (head->onionskin &&
-      head->onionskin->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
-    --ol_entries[head->onionskin->handshake_type];
+      head->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
+    --ol_entries[head->handshake_type];
+  log_info(LD_OR, "Processing create (%s). Queues now ntor=%d and tap=%d.",
+    head->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
+    ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+    ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
+
   *onionskin_out = head->onionskin;
   head->onionskin = NULL; /* prevent free. */
   circ->onionqueue_entry = NULL;
