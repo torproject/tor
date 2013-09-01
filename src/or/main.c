@@ -2343,6 +2343,8 @@ tor_init(int argc, char *argv[])
     /* --version implies --quiet */
     if (!strcmp(argv[i], "--version"))
       quiet = 2;
+    if (!strcmp(argv[i], "--library-versions"))
+      quiet = 2;
   }
  /* give it somewhere to log to initially */
   switch (quiet) {
@@ -2365,11 +2367,12 @@ tor_init(int argc, char *argv[])
 #else
       "";
 #endif
-    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s "
-               "and OpenSSL %s.", version, bev_str,
+    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s, "
+               "OpenSSL %s and Zlib %s.", version, bev_str,
                get_uname(),
                tor_libevent_get_version_str(),
-               crypto_openssl_get_version_str());
+               crypto_openssl_get_version_str(),
+               tor_zlib_get_version_str());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "

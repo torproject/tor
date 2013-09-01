@@ -68,6 +68,22 @@ is_gzip_supported(void)
   return gzip_is_supported;
 }
 
+/** Return a string representation of the version of the currently running
+ * version of zlib. */
+const char *
+tor_zlib_get_version_str(void)
+{
+  return zlibVersion();
+}
+
+/** Return a string representation of the version of the version of zlib
+* used at compilation. */
+const char *
+tor_zlib_get_header_version_str(void)
+{
+  return ZLIB_VERSION;
+}
+
 /** Return the 'bits' value to tell zlib to use <b>method</b>.*/
 static INLINE int
 method_bits(compress_method_t method)

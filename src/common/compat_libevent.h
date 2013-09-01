@@ -78,6 +78,7 @@ void tor_check_libevent_version(const char *m, int server,
                                 const char **badness_out);
 void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
+const char *tor_libevent_get_header_version_str(void);
 
 #ifdef USE_BUFFEREVENTS
 const struct timeval *tor_libevent_get_one_tick_timeout(void);

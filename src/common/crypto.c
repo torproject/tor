@@ -195,6 +195,24 @@ try_load_engine(const char *path, const char *engine)
 }
 #endif
 
+static char *
+parse_openssl_version_str(const char *raw_version)
+{
+  const char *end_of_version = NULL;
+  /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
+     trim that down. */
+  if (!strcmpstart(raw_version, "OpenSSL ")) {
+    raw_version += strlen("OpenSSL ");
+    end_of_version = strchr(raw_version, ' ');
+  }
+
+  if (end_of_version)
+    return tor_strndup(raw_version,
+                      end_of_version-raw_version);
+  else
+    return tor_strdup(raw_version);
+}
+
 static char *crypto_openssl_version_str = NULL;
 /* Return a human-readable version of the run-time openssl version number. */
 const char *
@@ -202,21 +220,18 @@ crypto_openssl_get_version_str(void)
 {
   if (crypto_openssl_version_str == NULL) {
     const char *raw_version = SSLeay_version(SSLEAY_VERSION);
-    const char *end_of_version = NULL;
-    /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
-       trim that down. */
-    if (!strcmpstart(raw_version, "OpenSSL ")) {
-      raw_version += strlen("OpenSSL ");
-      end_of_version = strchr(raw_version, ' ');
-    }
-
-    if (end_of_version)
-      crypto_openssl_version_str = tor_strndup(raw_version,
-                                               end_of_version-raw_version);
-    else
-      crypto_openssl_version_str = tor_strdup(raw_version);
+    crypto_openssl_version_str = parse_openssl_version_str(raw_version);
   }
   return crypto_openssl_version_str;
+}
+
+/* Return a human-readable version of the compile-time openssl version
+* number. */
+const char *
+crypto_openssl_get_header_version_str(void)
+{
+  //return OPENSSL_VERSION_TEXT;
+  return parse_openssl_version_str(OPENSSL_VERSION_TEXT);
 }
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
