@@ -918,7 +918,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo **res)
   *res = NULL;
 
   for (el = sb_addr_info; el; el = el->next) {
-    if(!strcmp(el->name, name)) {
+    if (!strcmp(el->name, name)) {
       *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
       if (!res) {
         return -2;
@@ -941,7 +941,7 @@ sandbox_add_addrinfo(const char* name)
   sb_addr_info_t *el = NULL;
 
   el = (sb_addr_info_t*) malloc(sizeof(sb_addr_info_t));
-  if(!el) {
+  if (!el) {
     log_err(LD_BUG,"(Sandbox) failed to allocate addr info!");
     ret = -2;
     goto out;
