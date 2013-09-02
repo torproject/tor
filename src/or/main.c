@@ -2639,6 +2639,15 @@ find_flashcard_path(PWCHAR path, size_t size)
 }
 #endif
 
+static void
+init_addrinfo(void) {
+  char hname[256];
+
+  // host name to sandbox
+  gethostname(hname, sizeof(hname));
+  sandbox_add_addrinfo(hname);
+}
+
 static sandbox_cfg_t*
 sandbox_init_filter()
 {
@@ -2712,6 +2721,8 @@ sandbox_init_filter()
   }
 
   sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
+
+  init_addrinfo();
 
   return cfg;
 }

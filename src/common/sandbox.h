@@ -62,6 +62,21 @@ struct pfd_elem {
 /** Typedef to structure used to manage a sandbox configuration. */
 typedef struct pfd_elem sandbox_cfg_t;
 
+/**
+ * Structure used for keeping a linked list of getaddrinfo pre-recorded
+ * results.
+ */
+struct sb_addr_info_el {
+  /** Name of the address info result. */
+  char *name;
+  /** Pre-recorded getaddrinfo result. */
+  struct addrinfo *info;
+  /** Next element in the list. */
+  struct sb_addr_info_el *next;
+};
+/** Typedef to structure used to manage an addrinfo list. */
+typedef struct sb_addr_info_el sb_addr_info_t;
+
 /** Function pointer defining the prototype of a filter function.*/
 typedef int (*sandbox_filter_func_t)(scmp_filter_ctx ctx,
     sandbox_cfg_t *filter);
@@ -92,6 +107,9 @@ typedef struct {
 #endif
 
 #endif // __linux__
+
+/** Pre-calls getaddrinfo in order to pre-record result. */
+int sandbox_add_addrinfo(const char *addr);
 
 /** Replacement for getaddrinfo(), using pre-recorded results. */
 int sandbox_getaddrinfo(const char *name, struct addrinfo **res);

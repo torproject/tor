@@ -54,8 +54,7 @@
 #include <poll.h>
 
 static sandbox_cfg_t *filter_dynamic = NULL;
-
-static struct addrinfo *sb_addr_info= NULL;
+static sb_addr_info_t *sb_addr_info = NULL;
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -914,54 +913,57 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
 int
 sandbox_getaddrinfo(const char *name, struct addrinfo **res)
 {
-  char hname[256];
+  sb_addr_info_t *el;
 
-  if (!res) {
-    return -2;
-  }
   *res = NULL;
-  *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
-  if (*res == NULL) {
-    return -2;
+
+  for (el = sb_addr_info; el; el = el->next) {
+    if(!strcmp(el->name, name)) {
+      *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
+      if (!res) {
+        return -2;
+      }
+
+      memcpy(*res, el->info, sizeof(struct addrinfo));
+
+      return 0;
+    }
   }
 
-  if (gethostname(hname, sizeof(hname)) < 0) {
-    return -1;
-  }
-
-  if (strcmp(name, hname) || sb_addr_info == NULL) {
-    log_err(LD_BUG,"(Sandbox) failed for hname %s!", name);
-    return -1;
-  }
-
-  memcpy(*res, sb_addr_info, sizeof(struct addrinfo));
-  return 0;
+  return -1;
 }
 
-static int
-init_addrinfo(void)
+int
+sandbox_add_addrinfo(const char* name)
 {
   int ret;
   struct addrinfo hints;
-  char hname[256];
+  sb_addr_info_t *el = NULL;
 
-  sb_addr_info = NULL;
-
-  if (gethostname(hname, sizeof(hname)) < 0) {
-    return -1;
+  el = (sb_addr_info_t*) malloc(sizeof(sb_addr_info_t));
+  if(!el) {
+    log_err(LD_BUG,"(Sandbox) failed to allocate addr info!");
+    ret = -2;
+    goto out;
   }
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
-  ret = getaddrinfo(hname, NULL, &hints, &sb_addr_info);
+  ret = getaddrinfo(name, NULL, &hints, &(el->info));
   if (ret) {
-    sb_addr_info = NULL;
-    return -2;
+    log_err(LD_BUG,"(Sandbox) failed to getaddrinfo");
+    ret = -2;
+    goto out;
   }
 
-  return 0;
+  el->name = strdup(name);
+  el->next = sb_addr_info;
+  sb_addr_info = el;
+
+ out:
+  return ret;
 }
 
 static int
@@ -1151,7 +1153,7 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
   if (install_sigsys_debugging())
     return -1;
 
-  if (init_addrinfo() || prot_strings(cfg)) {
+  if (prot_strings(cfg)) {
     return -4;
   }
 
