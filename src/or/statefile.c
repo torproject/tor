@@ -91,8 +91,11 @@ static config_var_t state_vars_[] = {
 #undef VAR
 #undef V
 
-static int or_state_validate(or_state_t *old_options, or_state_t *options,
-                             int from_setconf, char **msg);
+static int or_state_validate(or_state_t *state, char **msg);
+
+static int or_state_validate_cb(void *old_options, void *options,
+                                void *default_options,
+                                int from_setconf, char **msg);
 
 /** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
@@ -110,7 +113,7 @@ static const config_format_t state_format = {
   STRUCT_OFFSET(or_state_t, magic_),
   state_abbrevs_,
   state_vars_,
-  (validate_fn_t)or_state_validate,
+  or_state_validate_cb,
   &state_extra_var,
 };
 
@@ -195,21 +198,27 @@ validate_transports_in_state(or_state_t *state)
   return 0;
 }
 
+static int
+or_state_validate_cb(void *old_state, void *state, void *default_state,
+                     int from_setconf, char **msg)
+{
+  /* We don't use these; only options do. Still, we need to match that
+   * signature. */
+  (void) from_setconf;
+  (void) default_state;
+  (void) old_state;
+
+  return or_state_validate(state, msg);
+}
+
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
  * <b>state</b>.
  */
-/* XXX from_setconf is here because of bug 238 */
 static int
-or_state_validate(or_state_t *old_state, or_state_t *state,
-                  int from_setconf, char **msg)
+or_state_validate(or_state_t *state, char **msg)
 {
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) from_setconf;
-  (void) old_state;
-
   if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
 
@@ -324,7 +333,7 @@ or_state_load(void)
     }
   }
 
-  if (!badstate && or_state_validate(NULL, new_state, 1, &errmsg) < 0)
+  if (!badstate && or_state_validate(new_state, &errmsg) < 0)
     badstate = 1;
 
   if (errmsg) {
