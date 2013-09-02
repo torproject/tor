@@ -24,6 +24,7 @@
 #include "orconfig.h"
 #include "torint.h"
 #include "util.h"
+#include "tor_queue.h"
 
 #if defined(HAVE_SECCOMP_H) && defined(__linux__)
 #define USE_LIBSECCOMP
@@ -156,9 +157,12 @@ sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
-    if (elem->prot == 1 && elem->syscall == SCMP_SYS(execve)) {
+    smp_param_t *param = (smp_param_t*) elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(execve)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
-            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+          SCMP_CMP(0, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add execve syscall, received "
             "libseccomp error %d", rc);
@@ -266,9 +270,12 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
-    if (elem->prot == 1 && elem->syscall == SCMP_SYS(open)) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(open)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
-            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+            SCMP_CMP(0, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
             "libseccomp error %d", rc);
@@ -297,10 +304,13 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
-    if (elem->prot == 1 && elem->syscall == SCMP_SYS(openat)) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(openat)) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1,
           SCMP_CMP(0, SCMP_CMP_EQ, AT_FDCWD),
-          SCMP_CMP(1, SCMP_CMP_EQ, elem->param),
+          SCMP_CMP(1, SCMP_CMP_EQ, param->value),
           SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|
               O_CLOEXEC));
       if (rc != 0) {
@@ -618,10 +628,12 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
-    if (elem->prot == 1 && (elem->syscall == SCMP_SYS(open) ||
-        elem->syscall == SCMP_SYS(stat64))) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && (param->syscall == SCMP_SYS(open)
+        || param->syscall == SCMP_SYS(stat64))) {
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(stat64), 1,
-            SCMP_CMP(0, SCMP_CMP_EQ, elem->param));
+          SCMP_CMP(0, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
             "libseccomp  error %d", rc);
@@ -660,21 +672,23 @@ static sandbox_filter_func_t filter_func[] = {
 };
 
 const char*
-sandbox_intern_string(const char *param)
+sandbox_intern_string(const char *str)
 {
   sandbox_cfg_t *elem;
 
-  if (param == NULL)
+  if (str == NULL)
     return NULL;
 
   for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
-    if (elem->prot && !strcmp(param, (char*)(elem->param))) {
-      return (char*)(elem->param);
+    smp_param_t *param = elem->param;
+
+    if (param->prot && !strcmp(str, (char*)(param->value))) {
+      return (char*)(param->value);
     }
   }
 
-  log_info(LD_GENERAL, "(Sandbox) Parameter %s not found", param);
-  return param;
+  log_info(LD_GENERAL, "(Sandbox) Parameter %s not found", str);
+  return str;
 }
 
 static int
@@ -687,7 +701,7 @@ prot_strings(sandbox_cfg_t* cfg)
 
   // get total number of bytes required to mmap
   for (el = cfg; el != NULL; el = el->next) {
-    pr_mem_size += strlen((char*) el->param) + 1;
+    pr_mem_size += strlen((char*) ((smp_param_t*)el->param)->value) + 1;
   }
 
   // allocate protected memory
@@ -705,7 +719,7 @@ prot_strings(sandbox_cfg_t* cfg)
 
   // change el value pointer to protected
   for (el = cfg; el != NULL; el = el->next) {
-    char *param_val = (char*) el->param;
+    char *param_val = (char*)((smp_param_t *)el->param)->value;
     int param_size = strlen(param_val) + 1;
 
     if (pr_mem_left - param_size >= 0) {
@@ -713,9 +727,9 @@ prot_strings(sandbox_cfg_t* cfg)
       memcpy(pr_mem_next, param_val, param_size);
 
       // re-point el parameter to protected
-      free((char*) el->param);
-      el->param = (intptr_t) pr_mem_next;
-      el->prot = 1;
+      free((char*) ((smp_param_t*)el->param)->value);
+      ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
+      ((smp_param_t*)el->param)->prot = 1;
 
       // move next available protected memory
       pr_mem_next += param_size;
@@ -739,23 +753,46 @@ prot_strings(sandbox_cfg_t* cfg)
    return ret;
 }
 
+static sandbox_cfg_t*
+new_element(int syscall, int index, intptr_t value)
+{
+  smp_param_t *param = NULL;
+
+  sandbox_cfg_t *elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  if (!elem)
+    return NULL;
+
+  elem->param = (smp_param_t*) malloc(sizeof(smp_param_t));
+  if (!elem->param) {
+    free(elem);
+    return NULL;
+  }
+
+  param = elem->param;
+  param->syscall = syscall;
+  param->pindex = index;
+  param->value = value;
+  param->prot = 0;
+
+  return elem;
+}
+
 #ifdef __NR_stat64
 int
 sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
-  elem->syscall = SCMP_SYS(stat64);
-  elem->pindex = 0;
-  elem->param = (intptr_t) strdup(file);
-  elem->prot = 0;
+  elem = new_element(SCMP_SYS(stat64), 0, (intptr_t) strdup(file));
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
 
   elem->next = *cfg;
   *cfg = elem;
 
   if (fr) tor_free_(file);
-
   return 0;
 }
 
@@ -789,11 +826,11 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
-  elem->syscall = SCMP_SYS(open);
-  elem->pindex = 0;
-  elem->param = (intptr_t) strdup(file);
-  elem->prot = 0;
+  elem = new_element(SCMP_SYS(open), 0, (intptr_t) strdup(file));
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -832,11 +869,11 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
-  elem->syscall = SCMP_SYS(openat);
-  elem->pindex = 1;
-  elem->param = (intptr_t) strdup(file);
-  elem->prot = 0;
+  elem = new_element(SCMP_SYS(openat), 1, (intptr_t) strdup(file));
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
 
   elem->next = *cfg;
   *cfg = elem;
@@ -875,11 +912,11 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
-  elem->syscall = SCMP_SYS(openat);
-  elem->pindex = 1;
-  elem->param = (intptr_t) strdup(com);
-  elem->prot = 0;
+  elem = new_element(SCMP_SYS(execve), 1, (intptr_t) strdup(com));
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
 
   elem->next = *cfg;
   *cfg = elem;

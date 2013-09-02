@@ -40,27 +40,48 @@
 #define PARAM_NUM 1
 
 /**
- * Structure used to manage a sandbox configuration.
- *
- * It is implemented as a linked list of parameters. Currently only controls
- * parameters for open, openat, execve, stat64.
+ * Enum used to manage the type of the implementation for general purpose.
  */
-struct pfd_elem {
+typedef enum {
+  /** Libseccomp implementation based on seccomp2*/
+  LIBSECCOMP2 = 0
+} SB_IMPL;
+
+/**
+ *  Configuration parameter structure associated with the LIBSECCOMP2
+ *  implementation.
+ */
+typedef struct smp_param {
   /** syscall associated with parameter. */
   int syscall;
 
   /** parameter index. */
   int pindex;
   /** parameter value. */
-  intptr_t param;
+  intptr_t value;
 
   /**  parameter flag (0 = not protected, 1 = protected). */
   int prot;
+} smp_param_t;
 
-  struct pfd_elem *next;
+/**
+ * Structure used to manage a sandbox configuration.
+ *
+ * It is implemented as a linked list of parameters. Currently only controls
+ * parameters for open, openat, execve, stat64.
+ */
+struct sandbox_cfg_elem {
+  /** Sandbox implementation which dictates the parameter type. */
+  SB_IMPL implem;
+
+  /** Configuration parameter. */
+  void *param;
+
+  /** Next element of the configuration*/
+  struct sandbox_cfg_elem *next;
 };
 /** Typedef to structure used to manage a sandbox configuration. */
-typedef struct pfd_elem sandbox_cfg_t;
+typedef struct sandbox_cfg_elem sandbox_cfg_t;
 
 /**
  * Structure used for keeping a linked list of getaddrinfo pre-recorded
