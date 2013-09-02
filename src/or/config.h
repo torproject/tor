@@ -32,7 +32,11 @@ int resolve_my_address(int warn_severity, const or_options_t *options,
                        const char **method_out, char **hostname_out);
 int is_local_addr(const tor_addr_t *addr);
 void options_init(or_options_t *options);
-char *options_dump(const or_options_t *options, int minimal);
+
+#define OPTIONS_DUMP_MINIMAL 1
+#define OPTIONS_DUMP_DEFAULTS 2
+#define OPTIONS_DUMP_ALL 3
+char *options_dump(const or_options_t *options, int how_to_dump);
 int options_init_from_torrc(int argc, char **argv);
 setopt_err_t options_init_from_string(const char *cf_defaults, const char *cf,
                             int command, const char *command_arg, char **msg);

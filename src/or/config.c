@@ -550,6 +550,9 @@ static int parse_outbound_addresses(or_options_t *options, int validate_only,
                                     char **msg);
 static void config_maybe_load_geoip_files_(const or_options_t *options,
                                            const or_options_t *old_options);
+static int options_validate_cb(void *old_options, void *options,
+                               void *default_options,
+                               int from_setconf, char **msg);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -561,7 +564,7 @@ STATIC config_format_t options_format = {
   STRUCT_OFFSET(or_options_t, magic_),
   option_abbrevs_,
   option_vars_,
-  (validate_fn_t)options_validate,
+  options_validate_cb,
   NULL
 };
 
@@ -2384,6 +2387,14 @@ compute_publishserverdescriptor(or_options_t *options)
  * threshold emit a warning.
  * */
 #define RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT (10)
+
+static int
+options_validate_cb(void *old_options, void *options, void *default_options,
+                    int from_setconf, char **msg)
+{
+  return options_validate(old_options, options, default_options,
+                          from_setconf, msg);
+}
 
 /** Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
