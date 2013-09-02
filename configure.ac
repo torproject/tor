@@ -499,7 +499,7 @@ dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
 tor_openssl_pkg_redhat="openssl"
-tor_openssl_pkg_debian="libssl"
+tor_openssl_pkg_debian="libssl-dev"
 tor_openssl_devpkg_redhat="openssl-devel"
 tor_openssl_devpkg_debian="libssl-dev"
 

@@ -1,0 +1,2 @@
+  o Minor Bugfixes:
+    - Updated configuration advice for installing openssl on Debian. Fixes #9207.
