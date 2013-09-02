@@ -2640,7 +2640,8 @@ find_flashcard_path(PWCHAR path, size_t size)
 #endif
 
 static void
-init_addrinfo(void) {
+init_addrinfo(void)
+{
   char hname[256];
 
   // host name to sandbox

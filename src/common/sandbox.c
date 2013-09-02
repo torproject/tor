@@ -930,6 +930,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo **res)
     }
   }
 
+  log_err(LD_BUG,"(Sandbox) failed to get address %s!", name);
   return -1;
 }
 
@@ -958,7 +959,7 @@ sandbox_add_addrinfo(const char* name)
     goto out;
   }
 
-  el->name = strdup(name);
+  el->name = tor_strdup(name);
   el->next = sb_addr_info;
   sb_addr_info = el;
 
