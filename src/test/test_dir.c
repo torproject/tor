@@ -2364,6 +2364,74 @@ test_dir_fmt_control_ns(void *arg)
   tor_free(s);
 }
 
+static void
+test_dir_http_handling(void *args)
+{
+  (void)args;
+  char *url = NULL;
+
+  /* Parse http url tests: */
+  /* Good headers */
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1\r\n"
+                           "Host: example.com\r\n"
+                           "User-Agent: Mozilla/5.0 (Windows;"
+                           " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
+                           &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.0\r\n", &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  /* Should prepend '/tor/' to url if required */
+  test_eq(parse_http_url("GET /a/b/c.txt HTTP/1.1\r\n"
+                           "Host: example.com\r\n"
+                           "User-Agent: Mozilla/5.0 (Windows;"
+                           " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
+                           &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  /* Bad headers -- no HTTP/1.x*/
+  test_eq(parse_http_url("GET /a/b/c.txt\r\n"
+                           "Host: example.com\r\n"
+                           "User-Agent: Mozilla/5.0 (Windows;"
+                           " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
+                           &url), -1);
+  tt_assert(!url);
+
+  /* Bad headers */
+  test_eq(parse_http_url("GET /a/b/c.txt\r\n"
+                           "Host: example.com\r\n"
+                           "User-Agent: Mozilla/5.0 (Windows;"
+                           " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
+                           &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.\r", &url), -1);
+  tt_assert(!url);
+
+ done:
+  tor_free(url);
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
 
@@ -2386,6 +2454,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(v2_dir, TT_FORK),
   DIR(fmt_control_ns, 0),
+  DIR(http_handling, 0),
   END_OF_TESTCASES
 };
 

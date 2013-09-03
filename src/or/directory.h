@@ -118,5 +118,10 @@ download_status_mark_impossible(download_status_t *dl)
 
 int download_status_get_n_failures(const download_status_t *dls);
 
+#ifdef TOR_UNIT_TESTS
+/* Used only by directory.c and test_dir.c */
+STATIC int parse_http_url(const char *headers, char **url);
+#endif
+
 #endif
 
