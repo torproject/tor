@@ -4,6 +4,7 @@ import binascii
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +18,13 @@ class UnexpectedSuccess(Exception):
 class UnexpectedFailure(Exception):
     pass
 
+def contents(fn):
+    f = open(fn)
+    try:
+        return f.read()
+    finally:
+        f.close()
+
 def run_tor(args, failure=False):
     p = subprocess.Popen([TOR] + args, stdout=subprocess.PIPE)
     output, _ = p.communicate()
@@ -26,6 +34,10 @@ def run_tor(args, failure=False):
     elif not result and failure:
         raise UnexpectedSuccess()
     return output
+
+def spaceify_fp(fp):
+    for i in xrange(0, len(fp), 4):
+        yield fp[i:i+4]
 
 def lines(s):
     out = s.split("\n")
@@ -108,7 +120,123 @@ class CmdlineTests(unittest.TestCase):
         actual = hashlib.sha1(open(main_c).read()).hexdigest()
         self.assertEquals(digest, actual)
 
+    def test_dump_options(self):
+        default_torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc.write("SocksPort 9999")
+        torrc.close()
+        default_torrc.write("SafeLogging 0")
+        default_torrc.close()
+        out_sh = out_nb = out_fl = None
+        opts = [ "-f", torrc.name,
+                 "--defaults-torrc", default_torrc.name ]
+        try:
+            out_sh = run_tor(["--dump-config", "short"]+opts)
+            out_nb = run_tor(["--dump-config", "non-builtin"]+opts)
+            out_fl = run_tor(["--dump-config", "full"]+opts)
+            out_nr = run_tor(["--dump-config", "bliznert"]+opts,
+                             failure=True)
+
+            out_verif = run_tor(["--verify-config"]+opts)
+        finally:
+            os.unlink(torrc.name)
+            os.unlink(default_torrc.name)
+
+        self.assertEquals(len(lines(out_sh)), 2)
+        self.assert_(lines(out_sh)[0].startswith("DataDirectory "))
+        self.assertEquals(lines(out_sh)[1:],
+            [ "SocksPort 9999" ])
+
+        self.assertEquals(len(lines(out_nb)), 2)
+        self.assertEquals(lines(out_nb),
+            [ "SafeLogging 0",
+              "SocksPort 9999" ])
+
+        out_fl = lines(out_fl)
+        self.assert_(len(out_fl) > 100)
+        self.assertIn("SocksPort 9999", out_fl)
+        self.assertIn("SafeLogging 0", out_fl)
+        self.assertIn("ClientOnly 0", out_fl)
+
+        self.assert_(out_verif.endswith("Configuration was valid\n"))
+
+    def test_list_fingerprint(self):
+        tmpdir = tempfile.mkdtemp(prefix='ttca_')
+        torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc.write("ORPort 9999\n")
+        torrc.write("DataDirectory %s\n"%tmpdir)
+        torrc.write("Nickname tippi")
+        torrc.close()
+        opts = ["-f", torrc.name]
+        try:
+            out = run_tor(["--list-fingerprint"]+opts)
+            fp = contents(os.path.join(tmpdir, "fingerprint"))
+        finally:
+            os.unlink(torrc.name)
+            shutil.rmtree(tmpdir)
+
+        out = lines(out)
+        lastlog = strip_log_junk(out[-2])
+        lastline = out[-1]
+        fp = fp.strip()
+        nn_fp = fp.split()[0]
+        space_fp = " ".join(spaceify_fp(fp.split()[1]))
+        self.assertEquals(lastlog,
+              "Your Tor server's identity key fingerprint is '%s'"%fp)
+        self.assertEquals(lastline, "tippi %s"%space_fp)
+        self.assertEquals(nn_fp, "tippi")
+
+    def test_list_options(self):
+        out = lines(run_tor(["--list-torrc-options"]))
+        self.assert_(len(out)>100)
+        self.assert_(out[0] <= 'AccountingMax')
+        self.assert_("UseBridges" in out)
+        self.assert_("SocksPort" in out)
+
+    def test_cmdline_args(self):
+        default_torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc.write("SocksPort 9999\n")
+        torrc.write("SocksPort 9998\n")
+        torrc.write("ORPort 9000\n")
+        torrc.write("ORPort 9001\n")
+        torrc.write("Nickname eleventeen\n")
+        torrc.write("ControlPort 9500\n")
+        torrc.close()
+        default_torrc.write("")
+        default_torrc.close()
+        out_sh = out_nb = out_fl = None
+        opts = [ "-f", torrc.name,
+                 "--defaults-torrc", default_torrc.name,
+                 "--dump-config", "short" ]
+        try:
+            out_1 = run_tor(opts)
+            out_2 = run_tor(opts+["+ORPort", "9003",
+                                  "SocksPort", "9090",
+                                  "/ControlPort",
+                                  "/TransPort",
+                                  "+ExtORPort", "9005"])
+        finally:
+            os.unlink(torrc.name)
+            os.unlink(default_torrc.name)
+
+        out_1 = [ l for l in lines(out_1) if not l.startswith("DataDir") ]
+        out_2 = [ l for l in lines(out_2) if not l.startswith("DataDir") ]
+
+        self.assertEquals(out_1,
+                          ["ControlPort 9500",
+                           "Nickname eleventeen",
+                           "ORPort 9000",
+                           "ORPort 9001",
+                           "SocksPort 9999",
+                           "SocksPort 9998"])
+        self.assertEquals(out_2,
+                          ["ExtORPort 9005",
+                           "Nickname eleventeen",
+                           "ORPort 9000",
+                           "ORPort 9001",
+                           "ORPort 9003",
+                           "SocksPort 9090"])
 
 if __name__ == '__main__':
-
     unittest.main()
