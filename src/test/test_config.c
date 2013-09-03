@@ -4,6 +4,8 @@
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
+
+#define CONFIG_PRIVATE
 #include "or.h"
 #include "addressmap.h"
 #include "config.h"
@@ -515,12 +517,14 @@ static void
 test_config_fix_my_family(void *arg)
 {
   char *err = NULL;
-  char *family = "$1111111111111111111111111111111111111111, "
-                 "1111111111111111111111111111111111111112, "
-                 "$1111111111111111111111111111111111111113";
+  const char *family = "$1111111111111111111111111111111111111111, "
+                       "1111111111111111111111111111111111111112, "
+                       "$1111111111111111111111111111111111111113";
 
   or_options_t* options = options_new();
   or_options_t* defaults = options_new();
+  (void) arg;
+
   options_init(options);
   options_init(defaults);
   options->MyFamily = tor_strdup(family);
@@ -528,7 +532,7 @@ test_config_fix_my_family(void *arg)
   options_validate(NULL, options, defaults, 0, &err) ;
 
   if (err != NULL) {
-    test_fail_msg(err);
+    TT_FAIL(("options_validate failed: %s", err));
   }
 
   test_streq(options->MyFamily, "$1111111111111111111111111111111111111111, "
