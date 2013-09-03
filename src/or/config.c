@@ -521,7 +521,7 @@ static int options_transition_affects_workers(
       const or_options_t *old_options, const or_options_t *new_options);
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
-static int check_nickname_list(const char *lst, const char *name, char **msg);
+static int check_nickname_list(char **lst, const char *name, char **msg);
 
 static int parse_client_transport_line(const char *line, int validate_only);
 
@@ -3100,7 +3100,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
-  if (check_nickname_list(options->MyFamily, "MyFamily", msg))
+  if (check_nickname_list(&options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
@@ -3631,31 +3631,63 @@ get_default_conf_file(int defaults_file)
 }
 
 /** Verify whether lst is a string containing valid-looking comma-separated
- * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
+ * nicknames, or NULL. Will normalise <b>lst</b> to prefix '$' to any nickname
+ * or fingerprint that needs it. Return 0 on success.
+ * Warn and return -1 on failure.
  */
 static int
-check_nickname_list(const char *lst, const char *name, char **msg)
+check_nickname_list(char **lst, const char *name, char **msg)
 {
   int r = 0;
   smartlist_t *sl;
+  int changes = 0;
 
-  if (!lst)
+  if (!*lst)
     return 0;
   sl = smartlist_new();
 
-  smartlist_split_string(sl, lst, ",",
+  smartlist_split_string(sl, *lst, ",",
     SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
 
-  SMARTLIST_FOREACH(sl, const char *, s,
+  SMARTLIST_FOREACH_BEGIN(sl, char *, s)
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
+        // check if first char is dollar
+        if (s[0] != '$') {
+          // Try again but with a dollar symbol prepended
+          char *prepended;
+          tor_asprintf(&prepended, "$%s", s);
+
+          if (is_legal_nickname_or_hexdigest(prepended)) {
+            // The nickname is valid when it's prepended, swap the current
+            // version with a prepended one
+            tor_free(s);
+            SMARTLIST_REPLACE_CURRENT(sl, s, prepended);
+            changes = 1;
+            continue;
+          }
+
+          // Still not valid, free and fallback to error message
+          tor_free(prepended);
+        }
+
         tor_asprintf(msg, "Invalid nickname '%s' in %s line", s, name);
         r = -1;
         break;
       }
-    });
+    }
+  SMARTLIST_FOREACH_END(s);
+
+  // Replace the caller's nickname list with a fixed one
+  if (changes && r == 0) {
+    char *newNicknames = smartlist_join_strings(sl, ", ", 0, NULL);
+    tor_free(*lst);
+    *lst = newNicknames;
+  }
+
   SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
   smartlist_free(sl);
+
   return r;
 }
 

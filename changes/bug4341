@@ -1,0 +1,2 @@
+o Minor bugfix:
+    - Config now handles fingerprints which are missing their initial '$'
