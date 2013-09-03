@@ -1387,7 +1387,7 @@ directory_send_command(dir_connection_t *conn,
  * so it does. Return 0.
  * Otherwise, return -1.
  */
-static int
+STATIC int
 parse_http_url(const char *headers, char **url)
 {
   char *s, *start, *tmp;
@@ -1414,6 +1414,13 @@ parse_http_url(const char *headers, char **url)
         start = tmp;
       }
     }
+  }
+
+  /* Check if the header is well formed (next sequence
+  * should be HTTP/1.X\r\n). Assumes we're supporting 1.0? */
+  char *e = (char *)eat_whitespace_no_nl(s);
+  if (strcmpstart(e, "HTTP/1.") || !(*(e+8) == '\r')) {
+   return -1;
   }
 
   if (s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */

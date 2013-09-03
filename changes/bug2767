@@ -1,0 +1,2 @@
+  o Minor bugfixes:
+    - No longer accepting malformed http headers when parsing urls from headers, replies with Bad Request(400). Fixes #2767.
