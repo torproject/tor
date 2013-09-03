@@ -54,6 +54,7 @@
 #include <time.h>
 #include <poll.h>
 
+static int sandbox_active = 0;
 static sandbox_cfg_t *filter_dynamic = NULL;
 static sb_addr_info_t *sb_addr_info = NULL;
 
@@ -948,7 +949,8 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_getaddrinfo(const char *name, struct addrinfo **res)
+sandbox_getaddrinfo(const char *name, struct addrinfo hints,
+    struct addrinfo **res)
 {
   sb_addr_info_t *el;
 
@@ -956,18 +958,31 @@ sandbox_getaddrinfo(const char *name, struct addrinfo **res)
 
   for (el = sb_addr_info; el; el = el->next) {
     if (!strcmp(el->name, name)) {
-      *res = (struct addrinfo *)malloc(sizeof(struct addrinfo));
+      *res = (struct addrinfo *) malloc(sizeof(struct addrinfo));
       if (!res) {
         return -2;
       }
 
       memcpy(*res, el->info, sizeof(struct addrinfo));
-
       return 0;
     }
   }
 
+  if (!sandbox_active) {
+    if (getaddrinfo(name, NULL, &hints, res)) {
+      log_err(LD_BUG,"(Sandbox) getaddrinfo failed!");
+      return -1;
+    }
+
+    return 0;
+  }
+
+  // getting here means something went wrong
   log_err(LD_BUG,"(Sandbox) failed to get address %s!", name);
+  if (*res) {
+    free(*res);
+    res = NULL;
+  }
   return -1;
 }
 
@@ -1069,7 +1084,14 @@ install_syscall_filter(sandbox_cfg_t* cfg)
     goto end;
   }
 
-  rc = seccomp_load(ctx);
+  // loading the seccomp2 filter
+  if((rc = seccomp_load(ctx))) {
+    log_err(LD_BUG, "(Sandbox) failed to load!");
+    goto end;
+  }
+
+  // marking the sandbox as active
+  sandbox_active = 1;
 
  end:
   seccomp_release(ctx);
