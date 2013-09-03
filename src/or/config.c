@@ -3090,7 +3090,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
   }
-  if (check_nickname_list((char **)&options->MyFamily, "MyFamily", msg))
+  if (check_nickname_list(&options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     routerset_t *rs = routerset_new();
@@ -3639,15 +3639,14 @@ check_nickname_list(char **lst, const char *name, char **msg)
   smartlist_split_string(sl, *lst, ",",
     SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
 
-  SMARTLIST_FOREACH(sl, char *, s,
+  SMARTLIST_FOREACH_BEGIN(sl, char *, s)
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
         // check if first char is dollar
         if (s[0] != '$') {
           // Try again but with a dollar symbol prepended
-          char *prepended = tor_malloc(strlen(s)+2);
-          strcpy(prepended, "$");
-          strcat(prepended, s);
+          char *prepended;
+          tor_asprintf(&prepended, "$%s", s);
 
           if (is_legal_nickname_or_hexdigest(prepended)) {
             // The nickname is valid when it's prepended, swap the current
@@ -3666,7 +3665,8 @@ check_nickname_list(char **lst, const char *name, char **msg)
         r = -1;
         break;
       }
-    });
+    }
+  SMARTLIST_FOREACH_END(s);
 
   // Replace the caller's nickname list with a fixed one
   if (changes && r == 0) {
