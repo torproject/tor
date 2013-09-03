@@ -2380,7 +2380,15 @@ test_dir_http_handling(void *args)
   test_streq(url, "/tor/a/b/c.txt");
   tor_free(url);
 
-  /* Should prepends '/tor/' to url if required */
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.0\r\n", &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url), 0);
+  test_streq(url, "/tor/a/b/c.txt");
+  tor_free(url);
+
+  /* Should prepend '/tor/' to url if required */
   test_eq(parse_http_url("GET /a/b/c.txt HTTP/1.1\r\n"
                            "Host: example.com\r\n"
                            "User-Agent: Mozilla/5.0 (Windows;"
@@ -2388,6 +2396,14 @@ test_dir_http_handling(void *args)
                            &url), 0);
   test_streq(url, "/tor/a/b/c.txt");
   tor_free(url);
+
+  /* Bad headers -- no HTTP/1.x*/
+  test_eq(parse_http_url("GET /a/b/c.txt\r\n"
+                           "Host: example.com\r\n"
+                           "User-Agent: Mozilla/5.0 (Windows;"
+                           " U; Windows NT 6.1; en-US; rv:1.9.1.5)\r\n",
+                           &url), -1);
+  tt_assert(!url);
 
   /* Bad headers */
   test_eq(parse_http_url("GET /a/b/c.txt\r\n"
@@ -2397,10 +2413,23 @@ test_dir_http_handling(void *args)
                            &url), -1);
   tt_assert(!url);
 
-  /* TODO: more http handling tests */
+  test_eq(parse_http_url("GET /tor/a/b/c.txt", &url), -1);
+  tt_assert(!url);
 
-  done:
-    ;
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url), -1);
+  tt_assert(!url);
+
+  test_eq(parse_http_url("GET /tor/a/b/c.txt HTTP/1.\r", &url), -1);
+  tt_assert(!url);
+
+ done:
+  tor_free(url);
 }
 
 #define DIR_LEGACY(name)                                                   \

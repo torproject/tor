@@ -1417,10 +1417,16 @@ parse_http_url(const char *headers, char **url)
   }
 
   /* Check if the header is well formed (next sequence
-  * should be HTTP/1.X\r\n). Assumes we're supporting 1.0? */
+   * should be HTTP/1.X\r\n). Assumes we're supporting 1.0? */
   char *e = (char *)eat_whitespace_no_nl(s);
-  if (strcmpstart(e, "HTTP/1.") || !(*(e+8) == '\r')) {
-   return -1;
+  {
+    unsigned minor_ver;
+    char ch;
+    if (2 != tor_sscanf(e, "HTTP/1.%u%c", &minor_ver, &ch)) {
+      return -1;
+    }
+    if (ch != '\r')
+      return -1;
   }
 
   if (s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
