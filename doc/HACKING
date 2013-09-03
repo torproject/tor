@@ -133,6 +133,7 @@ line was never reached.  Lines with numbers were called that number of times.
 
 If that doesn't work:
    * Try configuring Tor with --disable-gcc-hardening
+   * You might need to run 'make clean' after you run './configure'.
 
 Profiling Tor with oprofile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
