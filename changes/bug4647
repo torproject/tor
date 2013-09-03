@@ -9,3 +9,10 @@
     - No longer allow 'tor --hash-password' with no arguments. Fixes bug
       9573; bugfix on 0.0.9pre5.
 
+  o Minor features:
+
+    - Support a --dump-config optoin to dump some or all of the configured
+      options. Mainly useful for debugging the command-line option parsing
+      code.
+
+

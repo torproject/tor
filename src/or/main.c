@@ -2343,10 +2343,12 @@ tor_init(int argc, char *argv[])
     for (cl = cmdline_opts; cl; cl = cl->next) {
       if (!strcmp(cl->key, "--hush"))
         quiet = 1;
-      if (!strcmp(cl->key, "--quiet"))
+      if (!strcmp(cl->key, "--quiet") ||
+          !strcmp(cl->key, "--dump-config"))
         quiet = 2;
-      /* --version, --digests, and --help imply --quiet */
+      /* --version, --digests, and --help imply --husth */
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
+          !strcmp(cl->key, "--list-torrc-options") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help"))
         quiet = 1;
     }
@@ -2597,7 +2599,7 @@ do_list_fingerprint(void)
   const char *nickname = get_options()->Nickname;
   if (!server_mode(get_options())) {
     log_err(LD_GENERAL,
-            "Clients don't have long-term identity keys. Exiting.\n");
+            "Clients don't have long-term identity keys. Exiting.");
     return -1;
   }
   tor_assert(nickname);
@@ -2633,6 +2635,34 @@ do_hash_password(void)
                 key);
   base16_encode(output, sizeof(output), key, sizeof(key));
   printf("16:%s\n",output);
+}
+
+/** Entry point for configuration dumping: write the configuration to
+ * stdout. */
+static int
+do_dump_config(void)
+{
+  const or_options_t *options = get_options();
+  const char *arg = options->command_arg;
+  int how;
+  char *opts;
+  if (!strcmp(arg, "short")) {
+    how = OPTIONS_DUMP_MINIMAL;
+  } else if (!strcmp(arg, "non-builtin")) {
+    how = OPTIONS_DUMP_DEFAULTS;
+  } else if (!strcmp(arg, "full")) {
+    how = OPTIONS_DUMP_ALL;
+  } else {
+    printf("%s is not a recognized argument to --dump-config. "
+           "Please select 'short', 'non-builtin', or 'full'", arg);
+    return -1;
+  }
+
+  opts = options_dump(options, how);
+  printf("%s", opts);
+  tor_free(opts);
+
+  return 0;
 }
 
 #if defined (WINCE)
@@ -2751,6 +2781,9 @@ tor_main(int argc, char *argv[])
   case CMD_VERIFY_CONFIG:
     printf("Configuration was valid\n");
     result = 0;
+    break;
+  case CMD_DUMP_CONFIG:
+    result = do_dump_config();
     break;
   case CMD_RUN_UNITTESTS: /* only set by test.c */
   default:

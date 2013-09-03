@@ -1801,6 +1801,7 @@ static const struct {
   { "-f",                     1 },
   { "--defaults-torrc",       1 },
   { "--hash-password",        1 },
+  { "--dump-config",          1 },
   { "--list-fingerprint",     0 },
   { "--verify-config",        0 },
   { "--ignore-missing-torrc", 0 },
@@ -2268,10 +2269,29 @@ options_init(or_options_t *options)
  * include options that are the same as Tor's defaults.
  */
 char *
-options_dump(const or_options_t *options, int minimal)
+options_dump(const or_options_t *options, int how_to_dump)
 {
-  return config_dump(&options_format, global_default_options,
-                     options, minimal, 0);
+  const or_options_t *use_defaults;
+  int minimal;
+  switch (how_to_dump) {
+    case OPTIONS_DUMP_MINIMAL:
+      use_defaults = global_default_options;
+      minimal = 1;
+      break;
+    case OPTIONS_DUMP_DEFAULTS:
+      use_defaults = NULL;
+      minimal = 1;
+      break;
+    case OPTIONS_DUMP_ALL:
+      use_defaults = NULL;
+      minimal = 0;
+      break;
+    default:
+      log_warn(LD_BUG, "Bogus value for how_to_dump==%d", how_to_dump);
+      return NULL;
+  }
+
+  return config_dump(&options_format, use_defaults, options, minimal, 0);
 }
 
 /** Return 0 if every element of sl is a string holding a decimal
@@ -3893,6 +3913,9 @@ options_init_from_torrc(int argc, char **argv)
       command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(p_index->key, "--hash-password")) {
       command = CMD_HASH_PASSWORD;
+      command_arg = p_index->value;
+    } else if (!strcmp(p_index->key, "--dump-config")) {
+      command = CMD_DUMP_CONFIG;
       command_arg = p_index->value;
     } else if (!strcmp(p_index->key, "--verify-config")) {
       command = CMD_VERIFY_CONFIG;
@@ -6119,7 +6142,7 @@ write_configuration_file(const char *fname, const or_options_t *options)
       return -1;
   }
 
-  if (!(new_conf = options_dump(options, 1))) {
+  if (!(new_conf = options_dump(options, OPTIONS_DUMP_MINIMAL))) {
     log_warn(LD_BUG, "Couldn't get configuration string");
     goto err;
   }

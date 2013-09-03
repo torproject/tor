@@ -1074,8 +1074,8 @@ config_dump(const config_format_t *fmt, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, 1, &msg) < 0) {
-      log_err(LD_BUG, "Failed to validate default config.");
+    if (fmt->validate_fn(NULL, defaults_tmp, defaults_tmp, 1, &msg) < 0) {
+      log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
       tor_assert(0);
     }

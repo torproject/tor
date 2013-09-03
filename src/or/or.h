@@ -3398,7 +3398,7 @@ typedef struct {
   /** What should the tor process actually do? */
   enum {
     CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT, CMD_HASH_PASSWORD,
-    CMD_VERIFY_CONFIG, CMD_RUN_UNITTESTS
+    CMD_VERIFY_CONFIG, CMD_RUN_UNITTESTS, CMD_DUMP_CONFIG
   } command;
   char *command_arg; /**< Argument for command-line option. */
 

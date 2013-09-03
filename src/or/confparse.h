@@ -71,7 +71,7 @@ typedef struct config_var_description_t {
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,int,char**);
+typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
