@@ -110,6 +110,12 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   onion_queue_t *tmp;
   time_t now = time(NULL);
 
+  if (onionskin->handshake_type > MAX_ONION_HANDSHAKE_TYPE) {
+    log_warn(LD_BUG, "Handshake %d out of range! Dropping.",
+             onionskin->handshake_type);
+    return -1;
+  }
+
   tmp = tor_malloc_zero(sizeof(onion_queue_t));
   tmp->circ = circ;
   tmp->handshake_type = onionskin->handshake_type;
@@ -176,12 +182,12 @@ onion_next_task(create_cell_t **onionskin_out)
     return NULL; /* no onions pending, we're done */
 
   tor_assert(head->circ);
+  tor_assert(head->handshake_type <= MAX_ONION_HANDSHAKE_TYPE);
 //  tor_assert(head->circ->p_chan); /* make sure it's still valid */
 /* XXX I only commented out the above line to make the unit tests
  * more manageable. That's probably not good long-term. -RD */
   circ = head->circ;
-  if (head->onionskin &&
-      head->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
+  if (head->onionskin)
     --ol_entries[head->handshake_type];
   log_info(LD_OR, "Processing create (%s). Queues now ntor=%d and tap=%d.",
     head->handshake_type == ONION_HANDSHAKE_TYPE_NTOR ? "ntor" : "tap",
@@ -224,14 +230,20 @@ onion_pending_remove(or_circuit_t *circ)
 static void
 onion_queue_entry_remove(onion_queue_t *victim)
 {
+  if (victim->handshake_type > MAX_ONION_HANDSHAKE_TYPE) {
+    log_warn(LD_BUG, "Handshake %d out of range! Dropping.",
+             victim->handshake_type);
+    /* XXX leaks */
+    return;
+  }
+
   TOR_TAILQ_REMOVE(&ol_list[victim->handshake_type], victim, next);
 
   if (victim->circ)
     victim->circ->onionqueue_entry = NULL;
 
-  if (victim->onionskin &&
-      victim->onionskin->handshake_type <= MAX_ONION_HANDSHAKE_TYPE)
-    --ol_entries[victim->onionskin->handshake_type];
+  if (victim->onionskin)
+    --ol_entries[victim->handshake_type];
 
   tor_free(victim->onionskin);
   tor_free(victim);
