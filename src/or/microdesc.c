@@ -213,7 +213,6 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     if (fd < 0) {
       log_warn(LD_DIR, "Couldn't append to journal in %s: %s",
                cache->journal_fname, strerror(errno));
-      return NULL;
     }
   }
 
@@ -238,11 +237,11 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
       if (size < 0) {
         /* we already warned in dump_microdescriptor */
         abort_writing_to_file(open_file);
-        smartlist_clear(added);
-        return added;
+        fd = -1;
+      } else {
+        md->saved_location = SAVED_IN_JOURNAL;
+        cache->journal_len += size;
       }
-      md->saved_location = SAVED_IN_JOURNAL;
-      cache->journal_len += size;
     } else {
       md->saved_location = where;
     }
