@@ -1313,9 +1313,9 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
      * for now, and really, when localhost is down sometimes, we
      * have other problems too.
      */
-    tor_socket_t listener = -1;
-    tor_socket_t connector = -1;
-    tor_socket_t acceptor = -1;
+    tor_socket_t listener = TOR_INVALID_SOCKET;
+    tor_socket_t connector = TOR_INVALID_SOCKET;
+    tor_socket_t acceptor = TOR_INVALID_SOCKET;
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
     socklen_t size;
@@ -1369,7 +1369,6 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
       goto tidy_up_and_fail;
     if (size != sizeof(listen_addr))
       goto abort_tidy_up_and_fail;
-    tor_close_socket(listener);
     /* Now check we are talking to ourself by matching port and host on the
        two sockets.  */
     if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
@@ -1380,6 +1379,7 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
         || listen_addr.sin_port != connect_addr.sin_port) {
       goto abort_tidy_up_and_fail;
     }
+    tor_close_socket(listener);
     fd[0] = connector;
     fd[1] = acceptor;
 
@@ -1394,11 +1394,11 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
   tidy_up_and_fail:
     if (saved_errno < 0)
       saved_errno = errno;
-    if (listener != -1)
+    if (SOCKET_OK(listener))
       tor_close_socket(listener);
-    if (connector != -1)
+    if (SOCKET_OK(connector))
       tor_close_socket(connector);
-    if (acceptor != -1)
+    if (SOCKET_OK(acceptor))
       tor_close_socket(acceptor);
     return -saved_errno;
 }
