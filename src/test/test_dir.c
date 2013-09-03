@@ -2367,8 +2367,8 @@ test_dir_fmt_control_ns(void *arg)
 static void
 test_dir_http_handling(void *args)
 {
-  (void)args;
   char *url = NULL;
+  (void)args;
 
   /* Parse http url tests: */
   /* Good headers */
