@@ -217,8 +217,21 @@ decide_next_handshake_type(void)
   if (!ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
     return ONION_HANDSHAKE_TYPE_TAP; /* no ntors? try tap */
 
-  if (!ol_entries[ONION_HANDSHAKE_TYPE_TAP])
+  if (!ol_entries[ONION_HANDSHAKE_TYPE_TAP]) {
+
+    /* Nick wants us to prioritize new tap requests when there aren't
+     * any in the queue and we've processed k ntor cells since the last
+     * tap cell. This strategy is maybe a good idea, since it starves tap
+     * less in the case where tap is rare, or maybe a poor idea, since it
+     * makes the new tap cell unfairly jump in front of ntor cells that
+     * got here first. In any case this edge case will only become relevant
+     * once tap is rare. We should reevaluate whether we like this decision
+     * once tap gets more rare. */
+    if (ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
+      ++recently_chosen_ntors;
+
     return ONION_HANDSHAKE_TYPE_NTOR; /* no taps? try ntor */
+  }
 
   /* They both have something queued. Pick ntor if we haven't done that
    * too much lately. */
