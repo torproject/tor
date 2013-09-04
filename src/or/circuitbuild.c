@@ -147,7 +147,7 @@ static void pathbias_count_success(origin_circuit_t *circ);
  *  3. If we are a directory authority
  *  4. If we fail to write circuit build time history to our state file.
  */
-static int
+int
 circuit_build_times_disabled(void)
 {
   if (unit_tests) {
