@@ -64,8 +64,6 @@ int rep_hist_circbuilding_dormant(time_t now);
 void note_crypto_pk_op(pk_op_t operation);
 void dump_pk_ops(int severity);
 
-void rep_hist_free_all(void);
-
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
 void rep_hist_exit_stats_term(void);
@@ -97,6 +95,12 @@ void rep_hist_reset_conn_stats(time_t now);
 char *rep_hist_format_conn_stats(time_t now);
 time_t rep_hist_conn_stats_write(time_t now);
 void rep_hist_conn_stats_term(void);
+
+void rep_hist_note_circuit_handshake_requested(uint16_t type);
+void rep_hist_note_circuit_handshake_completed(uint16_t type);
+void rep_hist_log_circuit_handshake_stats(time_t now);
+
+void rep_hist_free_all(void);
 
 #endif
 
