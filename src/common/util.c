@@ -2191,11 +2191,12 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
 }
 
 /** Given a smartlist of sized_chunk_t, write them to a file
- * <b>fname</b>, overwriting or creating the file as necessary. 
+ * <b>fname</b>, overwriting or creating the file as necessary.
  * If <b>no_tempfile</b> is 0 then the file will be written
  * atomically. */
 int
-write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin, int no_tempfile)
+write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin,
+                    int no_tempfile)
 {
   int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
 
