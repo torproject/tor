@@ -49,6 +49,7 @@ TOR_TAILQ_HEAD(onion_queue_head_t, onion_queue_t)
 /** Number of entries of each type currently in each element of ol_list[]. */
 static int ol_entries[MAX_ONION_HANDSHAKE_TYPE+1];
 
+static int num_ntors_per_tap(void);
 static void onion_queue_entry_remove(onion_queue_t *victim);
 
 /* XXXX024 Check lengths vs MAX_ONIONSKIN_{CHALLENGE,REPLY}_LEN.
@@ -66,27 +67,49 @@ have_room_for_onionskin(uint16_t type)
   const or_options_t *options = get_options();
   int num_cpus;
   uint64_t tap_usec, ntor_usec;
+  uint64_t ntor_during_tap_usec, tap_during_ntor_usec;
+
   /* If we've got fewer than 50 entries, we always have room for one more. */
   if (ol_entries[type] < 50)
     return 1;
   num_cpus = get_num_cpus(options);
   /* Compute how many microseconds we'd expect to need to clear all
-   * onionskins in the current queue. */
+   * onionskins in various combinations of the queues. */
+
+  /* How long would it take to process all the TAP cells in the queue? */
   tap_usec  = estimated_usec_for_onionskins(
                                     ol_entries[ONION_HANDSHAKE_TYPE_TAP],
                                     ONION_HANDSHAKE_TYPE_TAP) / num_cpus;
+
+  /* How long would it take to process all the NTor cells in the queue? */
   ntor_usec = estimated_usec_for_onionskins(
                                     ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+                                    ONION_HANDSHAKE_TYPE_NTOR) / num_cpus;
+
+  /* How long would it take to process the tap cells that we expect to
+   * process while draining the ntor queue? */
+  tap_during_ntor_usec  = estimated_usec_for_onionskins(
+    MIN(ol_entries[ONION_HANDSHAKE_TYPE_TAP],
+        ol_entries[ONION_HANDSHAKE_TYPE_NTOR] / num_ntors_per_tap()),
+                                    ONION_HANDSHAKE_TYPE_TAP) / num_cpus;
+
+  /* How long would it take to process the ntor cells that we expect to
+   * process while draining the tap queue? */
+  ntor_during_tap_usec  = estimated_usec_for_onionskins(
+    MIN(ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
+        ol_entries[ONION_HANDSHAKE_TYPE_TAP] * num_ntors_per_tap()),
                                     ONION_HANDSHAKE_TYPE_NTOR) / num_cpus;
 
   /* See whether that exceeds MaxOnionQueueDelay. If so, we can't queue
    * this. */
   if (type == ONION_HANDSHAKE_TYPE_NTOR &&
-      ntor_usec / 1000 > (uint64_t)options->MaxOnionQueueDelay)
+      (ntor_usec + tap_during_ntor_usec) / 1000 >
+       (uint64_t)options->MaxOnionQueueDelay)
     return 0;
 
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
-      (tap_usec + ntor_usec) / 1000 > (uint64_t)options->MaxOnionQueueDelay)
+      (tap_usec + ntor_during_tap_usec) / 1000 >
+       (uint64_t)options->MaxOnionQueueDelay)
     return 0;
 
 #ifdef CURVE25519_ENABLED
@@ -173,7 +196,7 @@ static int
 num_ntors_per_tap(void)
 {
 #define DEFAULT_NUM_NTORS_PER_TAP 10
-#define MIN_NUM_NTORS_PER_TAP 0
+#define MIN_NUM_NTORS_PER_TAP 1
 #define MAX_NUM_NTORS_PER_TAP 100000
 
   return networkstatus_get_param(NULL, "NumNTorsPerTAP",
