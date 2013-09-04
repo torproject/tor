@@ -195,6 +195,9 @@ try_load_engine(const char *path, const char *engine)
 }
 #endif
 
+/* Returns a trimmed and human-readable version of an openssl version string
+* <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
+* May 2012' and this will parse them into a form similar to '1.0.0b' */
 static char *
 parse_openssl_version_str(const char *raw_version)
 {
@@ -225,13 +228,17 @@ crypto_openssl_get_version_str(void)
   return crypto_openssl_version_str;
 }
 
+static char *crypto_openssl_header_version_str = NULL;
 /* Return a human-readable version of the compile-time openssl version
 * number. */
 const char *
 crypto_openssl_get_header_version_str(void)
 {
-  //return OPENSSL_VERSION_TEXT;
-  return parse_openssl_version_str(OPENSSL_VERSION_TEXT);
+  if (crypto_openssl_header_version_str == NULL) {
+    crypto_openssl_header_version_str =
+                        parse_openssl_version_str(OPENSSL_VERSION_TEXT);
+  }
+  return crypto_openssl_header_version_str;
 }
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
@@ -3114,6 +3121,7 @@ crypto_global_cleanup(void)
   }
 #endif
   tor_free(crypto_openssl_version_str);
+  tor_free(crypto_openssl_header_version_str);
   return 0;
 }
 
