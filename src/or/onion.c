@@ -165,6 +165,42 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   return 0;
 }
 
+/** Return a fairness parameter, to prefer processing NTOR style
+ * handshakes but still slowly drain the TAP queue so we don't starve
+ * it entirely. */
+static int
+num_ntors_per_tap(void)
+{
+#define NUM_NTORS_PER_TAP 5
+  return NUM_NTORS_PER_TAP;
+}
+
+/** Choose which onion queue we'll pull from next. If one is empty choose
+ * the other; if they both have elements, load balance across them but
+ * favoring NTOR. */
+static uint16_t
+decide_next_handshake_type(void)
+{
+  /* The number of times we've chosen ntor lately when both were available. */
+  static int recently_chosen_ntors = 0;
+
+  if (!ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
+    return ONION_HANDSHAKE_TYPE_TAP; /* no ntors? try tap */
+
+  if (!ol_entries[ONION_HANDSHAKE_TYPE_TAP])
+    return ONION_HANDSHAKE_TYPE_NTOR; /* no taps? try ntor */
+
+  /* They both have something queued. Pick ntor if we haven't done that
+   * too much lately. */
+  if (++recently_chosen_ntors <= num_ntors_per_tap()) {
+    return ONION_HANDSHAKE_TYPE_NTOR;
+  }
+
+  /* Else, it's time to let tap have its turn. */
+  recently_chosen_ntors = 0;
+  return ONION_HANDSHAKE_TYPE_TAP;
+}
+
 /** Remove the highest priority item from ol_list[] and return it, or
  * return NULL if the lists are empty.
  */
@@ -172,11 +208,8 @@ or_circuit_t *
 onion_next_task(create_cell_t **onionskin_out)
 {
   or_circuit_t *circ;
-
-  /* skip ol_list[ONION_HANDSHAKE_TYPE_FAST] since we know it'll be empty */
-  onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list[ONION_HANDSHAKE_TYPE_NTOR]);
-  if (!head)
-    head = TOR_TAILQ_FIRST(&ol_list[ONION_HANDSHAKE_TYPE_TAP]);
+  uint16_t handshake_to_choose = decide_next_handshake_type();
+  onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list[handshake_to_choose]);
 
   if (!head)
     return NULL; /* no onions pending, we're done */
