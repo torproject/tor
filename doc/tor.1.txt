@@ -191,6 +191,15 @@ GENERAL OPTIONS
     any pluggable transport proxy that tries to launch __transport__. +
     (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache)
 
+**ExtORPort** \['address':]__port__|**auto**
+    Open this port to listen for Extended ORPort connections from your
+    pluggable transports.
+
+**ExtORPortCookieAuthFile** __Path__::
+    If set, this option overrides the default location and file name
+    for the Extended ORPort's cookie file -- the cookie file is needed
+    for pluggable transports to communicate through the Extended ORPort.
+
 **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
