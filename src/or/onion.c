@@ -14,6 +14,7 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "cpuworker.h"
+#include "networkstatus.h"
 #include "onion.h"
 #include "onion_fast.h"
 #include "onion_ntor.h"
@@ -171,8 +172,14 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 static int
 num_ntors_per_tap(void)
 {
-#define NUM_NTORS_PER_TAP 5
-  return NUM_NTORS_PER_TAP;
+#define DEFAULT_NUM_NTORS_PER_TAP 10
+#define MIN_NUM_NTORS_PER_TAP 0
+#define MAX_NUM_NTORS_PER_TAP 100000
+
+  return networkstatus_get_param(NULL, "NumNTorsPerTAP",
+                                 DEFAULT_NUM_NTORS_PER_TAP,
+                                 MIN_NUM_NTORS_PER_TAP,
+                                 MAX_NUM_NTORS_PER_TAP);
 }
 
 /** Choose which onion queue we'll pull from next. If one is empty choose
