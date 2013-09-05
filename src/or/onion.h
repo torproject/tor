@@ -15,6 +15,7 @@
 struct create_cell_t;
 int onion_pending_add(or_circuit_t *circ, struct create_cell_t *onionskin);
 or_circuit_t *onion_next_task(struct create_cell_t **onionskin_out);
+int onion_num_pending(uint16_t handshake_type);
 void onion_pending_remove(or_circuit_t *circ);
 void clear_pending_onions(void);
 
@@ -99,6 +100,9 @@ typedef struct extended_cell_t {
   created_cell_t created_cell;
 } extended_cell_t;
 
+void create_cell_init(create_cell_t *cell_out, uint8_t cell_type,
+                      uint16_t handshake_type, uint16_t handshake_len,
+                      const uint8_t *onionskin);
 int create_cell_parse(create_cell_t *cell_out, const cell_t *cell_in);
 int created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in);
 int extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
