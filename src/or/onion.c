@@ -212,7 +212,7 @@ static uint16_t
 decide_next_handshake_type(void)
 {
   /* The number of times we've chosen ntor lately when both were available. */
-  static unsigned int recently_chosen_ntors = 0;
+  static int recently_chosen_ntors = 0;
 
   if (!ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
     return ONION_HANDSHAKE_TYPE_TAP; /* no ntors? try tap */
@@ -227,7 +227,8 @@ decide_next_handshake_type(void)
      * got here first. In any case this edge case will only become relevant
      * once tap is rare. We should reevaluate whether we like this decision
      * once tap gets more rare. */
-    if (ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
+    if (ol_entries[ONION_HANDSHAKE_TYPE_NTOR] &&
+        recently_chosen_ntors <= num_ntors_per_tap())
       ++recently_chosen_ntors;
 
     return ONION_HANDSHAKE_TYPE_NTOR; /* no taps? try ntor */
