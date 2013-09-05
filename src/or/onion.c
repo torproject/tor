@@ -226,7 +226,8 @@ decide_next_handshake_type(void)
      * got here first. In any case this edge case will only become relevant
      * once tap is rare. We should reevaluate whether we like this decision
      * once tap gets more rare. */
-    if (ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
+    if (ol_entries[ONION_HANDSHAKE_TYPE_NTOR] &&
+        recently_chosen_ntors <= num_ntors_per_tap())
       ++recently_chosen_ntors;
 
     return ONION_HANDSHAKE_TYPE_NTOR; /* no taps? try ntor */
