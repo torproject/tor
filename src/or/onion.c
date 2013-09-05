@@ -212,7 +212,7 @@ static uint16_t
 decide_next_handshake_type(void)
 {
   /* The number of times we've chosen ntor lately when both were available. */
-  static int recently_chosen_ntors = 0;
+  static unsigned int recently_chosen_ntors = 0;
 
   if (!ol_entries[ONION_HANDSHAKE_TYPE_NTOR])
     return ONION_HANDSHAKE_TYPE_TAP; /* no ntors? try tap */
