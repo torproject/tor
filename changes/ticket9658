@@ -1,0 +1,4 @@
+  o Minor features:
+    - Track how many "TAP" and "NTor" circuit handshake requests we get,
+      and how many we complete, and log it every hour to help relay
+      operators follow trends in network load. Addresses ticket 9658.

@@ -1353,6 +1353,11 @@ run_scheduled_events(time_t now)
         next_time_to_write_stats_files = next_write;
     }
     time_to_write_stats_files = next_time_to_write_stats_files;
+
+    /* Also commandeer this opportunity to log how our circuit handshake
+     * stats have been doing. */
+    if (public_server_mode(options))
+      rep_hist_log_circuit_handshake_stats(now);
   }
 
   /* 1h. Check whether we should write bridge statistics to disk.

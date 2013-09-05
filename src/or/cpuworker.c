@@ -19,9 +19,11 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "cpuworker.h"
 #include "main.h"
 #include "onion.h"
+#include "rephist.h"
 #include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */
@@ -682,6 +684,9 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
       tor_free(onionskin);
       return -1;
     }
+
+    if (connection_or_digest_is_known_relay(circ->p_chan->identity_digest))
+      rep_hist_note_circuit_handshake_completed(onionskin->handshake_type);
 
     should_time = should_time_request(onionskin->handshake_type);
     memset(&req, 0, sizeof(req));

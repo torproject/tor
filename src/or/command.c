@@ -29,6 +29,7 @@
 #include "hibernate.h"
 #include "nodelist.h"
 #include "onion.h"
+#include "rephist.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -277,6 +278,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
 
   if (create_cell->handshake_type != ONION_HANDSHAKE_TYPE_FAST) {
     /* hand it off to the cpuworkers, and then return. */
+    if (connection_or_digest_is_known_relay(chan->identity_digest))
+      rep_hist_note_circuit_handshake_requested(create_cell->handshake_type);
     if (assign_onionskin_to_cpuworker(NULL, circ, create_cell) < 0) {
       log_debug(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
