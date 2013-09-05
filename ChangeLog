@@ -1,5 +1,17 @@
 Changes in version 0.2.4.17-rc - 2013-09-0x
+
+  o Major features:
+    - Relays now process the new "NTor" circuit-level handshake requests
+      with higher priority than the old "TAP" circuit-level handshake
+      requests. We still process some TAP requests to not totally starve
+      0.2.3 clients when NTor becomes popular. A new consensus parameter
+      "NumNTorsPerTAP" lets us tune the balance later if we need to.
+      Implements ticket 9574.
+
   o Major bugfixes:
+    - If the circuit build timeout logic is disabled (via the consensus,
+      or because we are an authority), then don't build testing circuits.
+      Fixes bug 9657; bugfix on 0.2.2.14-alpha.
     - Bridges now send AUTH_CHALLENGE cells during their v3 handshakes;
       previously they did not, which prevented them from receiving
       successful connections from relays for self-test or bandwidth
@@ -11,6 +23,12 @@ Changes in version 0.2.4.17-rc - 2013-09-0x
       the future, do not decline to consider whether to download the
       next microdescriptor networkstatus. Fixes bug 9564; bugfix on
       0.2.3.14-alpha.
+
+  o Minor bugfixes:
+    - Avoid double-closing the listener socket in our socketpair
+      replacement (used on Windows) in the case where the addresses on
+      our opened sockets don't match what we expected. Fixes bug 9400;
+      bugfix on every released Tor version. Found by Coverity.
 
   o Minor fixes (config options):
     - Avoid overflows when the user sets MaxCircuitDirtiness to a

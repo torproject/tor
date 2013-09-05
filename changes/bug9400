@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-
-    - Avoid double-closing the listener socket in our socketpair replacement
-      (used on Windows) in the case where the addresses on our opened
-      sockets don't match what we expected. Fixes bug 9400; bugfix on
-      every released Tor version. Found by Coverity.
-
