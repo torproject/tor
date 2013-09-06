@@ -728,7 +728,7 @@ prot_strings(sandbox_cfg_t* cfg)
       memcpy(pr_mem_next, param_val, param_size);
 
       // re-point el parameter to protected
-      tor_free((char*) ((smp_param_t*)el->param)->value);
+      free((char*)((smp_param_t*)el->param)->value);
       ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
       ((smp_param_t*)el->param)->prot = 1;
 
@@ -949,7 +949,7 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_getaddrinfo(const char *name, struct addrinfo hints,
+sandbox_getaddrinfo(const char *name, const struct addrinfo *hints,
     struct addrinfo **res)
 {
   sb_addr_info_t *el;
@@ -969,7 +969,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo hints,
   }
 
   if (!sandbox_active) {
-    if (getaddrinfo(name, NULL, &hints, res)) {
+    if (getaddrinfo(name, NULL, hints, res)) {
       log_err(LD_BUG,"(Sandbox) getaddrinfo failed!");
       return -1;
     }

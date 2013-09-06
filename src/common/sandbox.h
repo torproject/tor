@@ -133,7 +133,7 @@ typedef struct {
 int sandbox_add_addrinfo(const char *addr);
 
 /** Replacement for getaddrinfo(), using pre-recorded results. */
-int sandbox_getaddrinfo(const char *name, struct addrinfo hints,
+int sandbox_getaddrinfo(const char *name, const struct addrinfo *hints,
     struct addrinfo **res);
 
 /** Use <b>fd</b> to log non-survivable sandbox violations. */
