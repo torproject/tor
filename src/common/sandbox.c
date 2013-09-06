@@ -784,7 +784,7 @@ sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(stat64), 0, (intptr_t) strdup(file));
+  elem = new_element(SCMP_SYS(stat64), 0, (intptr_t) tor_strdup(file));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -827,7 +827,7 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(open), 0, (intptr_t) strdup(file));
+  elem = new_element(SCMP_SYS(open), 0, (intptr_t) tor_strdup(file));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -870,7 +870,7 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(openat), 1, (intptr_t) strdup(file));
+  elem = new_element(SCMP_SYS(openat), 1, (intptr_t) tor_strdup(file));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -913,7 +913,7 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(execve), 1, (intptr_t) strdup(com));
+  elem = new_element(SCMP_SYS(execve), 1, (intptr_t) tor_strdup(com));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
