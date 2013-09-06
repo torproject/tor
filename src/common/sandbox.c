@@ -54,8 +54,11 @@
 #include <time.h>
 #include <poll.h>
 
+/**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
+/** Holds the parameter list configuration for the sandbox.*/
 static sandbox_cfg_t *filter_dynamic = NULL;
+/** Holds a list of pre-recorded results from getaddrinfo().*/
 static sb_addr_info_t *sb_addr_info = NULL;
 
 /** Variable used for storing all syscall numbers that will be allowed with the
@@ -130,6 +133,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(unlink)
 };
 
+/**
+ * Function responsible for setting up the rt_sigaction syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -150,6 +157,10 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return rc;
 }
 
+/**
+ * Function responsible for setting up the execve syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -175,6 +186,10 @@ sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the time syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_time(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -182,6 +197,10 @@ sb_time(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
        SCMP_CMP(0, SCMP_CMP_EQ, 0));
 }
 
+/**
+ * Function responsible for setting up the accept4 syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -205,6 +224,10 @@ sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 #ifdef __NR_mmap2
+/**
+ * Function responsible for setting up the mmap2 syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -263,6 +286,10 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
+/**
+ * Function responsible for setting up the open syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -285,7 +312,6 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     }
   }
 
-  // problem: required by getaddrinfo
   rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(-1), SCMP_SYS(open), 1,
         SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
   if (rc != 0) {
@@ -297,6 +323,10 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the openat syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -325,6 +355,10 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the socket syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -367,6 +401,10 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the socketpair syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_socketpair(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -387,6 +425,10 @@ sb_socketpair(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the setsockopt syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -407,6 +449,10 @@ sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the getsockopt syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -428,6 +474,10 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 #ifdef __NR_fcntl64
+/**
+ * Function responsible for setting up the fcntl64 syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_fcntl64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -459,7 +509,12 @@ sb_fcntl64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
-// allows everything but will keep for now..
+/**
+ * Function responsible for setting up the epoll_ctl syscall for
+ * the seccomp filter sandbox.
+ *
+ *  Note: basically allows everything but will keep for now..
+ */
 static int
 sb_epoll_ctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -484,8 +539,11 @@ sb_epoll_ctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * If multiple filters need to be added, seccomp needs to be whitelisted in
- * this list.
+ * Function responsible for setting up the fcntl64 syscall for
+ * the seccomp filter sandbox.
+ *
+ * NOTE: if multiple filters need to be added, the PR_SECCOMP parameter needs
+ * to be whitelisted in this function.
  */
 static int
 sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
@@ -501,7 +559,11 @@ sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * does not NEED tobe here.. only occurs before filter
+ * Function responsible for setting up the fcntl64 syscall for
+ * the seccomp filter sandbox.
+ *
+ * NOTE: does not NEED to be here.. currently only occurs before filter; will
+ * keep just in case for the future.
  */
 static int
 sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
@@ -526,6 +588,10 @@ sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the rt_sigprocmask syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -545,7 +611,10 @@ sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * does not NEED tobe here.. only occurs before filter
+ * Function responsible for setting up the flock syscall for
+ * the seccomp filter sandbox.
+ *
+ *  NOTE: does not need to be here, occurs before filter is applied.
  */
 static int
 sb_flock(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
@@ -565,6 +634,10 @@ sb_flock(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the futex syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_futex(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -591,7 +664,10 @@ sb_futex(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * does not NEED tobe here.. only occurs before filter
+ * Function responsible for setting up the mremap syscall for
+ * the seccomp filter sandbox.
+ *
+ *  NOTE: so far only occurs before filter is applied.
  */
 static int
 sb_mremap(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
@@ -606,6 +682,10 @@ sb_mremap(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+/**
+ * Function responsible for setting up the poll syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_poll(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -621,6 +701,10 @@ sb_poll(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 #ifdef __NR_stat64
+/**
+ * Function responsible for setting up the stat64 syscall for
+ * the seccomp filter sandbox.
+ */
 static int
 sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -647,6 +731,10 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif
 
+/**
+ * Array of function pointers responsible for filtering different syscalls at
+ * a parameter level.
+ */
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
@@ -692,6 +780,12 @@ sandbox_intern_string(const char *str)
   return str;
 }
 
+/**
+ * Protects all the strings in the sandbox's parameter list configuration. It
+ * works by calculating the total amount of memory required by the parameter
+ * list, allocating the memory using mmap, and protecting it from writes with
+ * mprotect().
+ */
 static int
 prot_strings(sandbox_cfg_t* cfg)
 {
@@ -754,6 +848,12 @@ prot_strings(sandbox_cfg_t* cfg)
    return ret;
 }
 
+/**
+ * Auxiliary function used in order to allocate a sandbox_cfg_t element and set
+ * it's values according the the parameter list. All elements are initialised
+ * with the 'prot' field set to false, as the pointer is not protected at this
+ * point.
+ */
 static sandbox_cfg_t*
 new_element(int syscall, int index, intptr_t value)
 {
@@ -1019,6 +1119,10 @@ sandbox_add_addrinfo(const char* name)
   return ret;
 }
 
+/**
+ * Function responsible for going through the parameter syscall filters and
+ * call each function pointer in the list.
+ */
 static int
 add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
@@ -1036,6 +1140,10 @@ add_param_filter(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   return 0;
 }
 
+/**
+ * Function responsible of loading the libseccomp syscall filters which do not
+ * have parameter filtering.
+ */
 static int
 add_noparam_filter(scmp_filter_ctx ctx)
 {
@@ -1085,7 +1193,7 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   }
 
   // loading the seccomp2 filter
-  if((rc = seccomp_load(ctx))) {
+  if ((rc = seccomp_load(ctx))) {
     log_err(LD_BUG, "(Sandbox) failed to load!");
     goto end;
   }
@@ -1183,6 +1291,11 @@ install_sigsys_debugging(void)
   return 0;
 }
 
+/**
+ * Function responsible of registering the sandbox_cfg_t list of parameter
+ * syscall filters to the existing parameter list. This is used for incipient
+ * multiple-sandbox support.
+ */
 static int
 register_cfg(sandbox_cfg_t* cfg)
 {
@@ -1239,34 +1352,6 @@ sandbox_init(sandbox_cfg_t* cfg)
 {
 #if defined(USE_LIBSECCOMP)
   return initialise_libseccomp_sandbox(cfg);
-
-#elif defined(_WIN32)
-  log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
-      "currently disabled.");
-  return 0;
-
-#elif defined(TARGET_OS_MAC)
-  log_warn(LD_BUG,"Mac OSX sandboxing is not implemented. The feature is "
-      "currently disabled");
-  return 0;
-#else
-  log_warn(LD_BUG,"Sandboxing is not implemented for your platform. The "
-      "feature is currently disabled");
-  return 0;
-#endif
-}
-
-/**
- * Enables the stage 1 general sandbox. It applies a syscall filter which does
- * not restrict any Tor features. The filter is representative for the whole
- * application.
- */
-int
-tor_global_sandbox(void)
-{
-
-#if defined(USE_LIBSECCOMP)
-  return initialise_libseccomp_sandbox(NULL);
 
 #elif defined(_WIN32)
   log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
