@@ -728,7 +728,7 @@ prot_strings(sandbox_cfg_t* cfg)
       memcpy(pr_mem_next, param_val, param_size);
 
       // re-point el parameter to protected
-      free((char*) ((smp_param_t*)el->param)->value);
+      tor_free((char*) ((smp_param_t*)el->param)->value);
       ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
       ((smp_param_t*)el->param)->prot = 1;
 
@@ -759,13 +759,13 @@ new_element(int syscall, int index, intptr_t value)
 {
   smp_param_t *param = NULL;
 
-  sandbox_cfg_t *elem = (sandbox_cfg_t*) malloc(sizeof(sandbox_cfg_t));
+  sandbox_cfg_t *elem = (sandbox_cfg_t*) tor_malloc(sizeof(sandbox_cfg_t));
   if (!elem)
     return NULL;
 
-  elem->param = (smp_param_t*) malloc(sizeof(smp_param_t));
+  elem->param = (smp_param_t*) tor_malloc(sizeof(smp_param_t));
   if (!elem->param) {
-    free(elem);
+    tor_free(elem);
     return NULL;
   }
 
@@ -793,7 +793,7 @@ sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem->next = *cfg;
   *cfg = elem;
 
-  if (fr) tor_free_(file);
+  if (fr) tor_free(file);
   return 0;
 }
 
@@ -836,7 +836,7 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem->next = *cfg;
   *cfg = elem;
 
-  if (fr) tor_free_(file);
+  if (fr) tor_free(file);
 
   return 0;
 }
@@ -879,7 +879,7 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem->next = *cfg;
   *cfg = elem;
 
-  if (fr) tor_free_(file);
+  if (fr) tor_free(file);
 
   return 0;
 }
@@ -958,7 +958,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo hints,
 
   for (el = sb_addr_info; el; el = el->next) {
     if (!strcmp(el->name, name)) {
-      *res = (struct addrinfo *) malloc(sizeof(struct addrinfo));
+      *res = (struct addrinfo *) tor_malloc(sizeof(struct addrinfo));
       if (!res) {
         return -2;
       }
@@ -980,7 +980,7 @@ sandbox_getaddrinfo(const char *name, struct addrinfo hints,
   // getting here means something went wrong
   log_err(LD_BUG,"(Sandbox) failed to get address %s!", name);
   if (*res) {
-    free(*res);
+    tor_free(*res);
     res = NULL;
   }
   return -1;
@@ -993,7 +993,7 @@ sandbox_add_addrinfo(const char* name)
   struct addrinfo hints;
   sb_addr_info_t *el = NULL;
 
-  el = (sb_addr_info_t*) malloc(sizeof(sb_addr_info_t));
+  el = (sb_addr_info_t*) tor_malloc(sizeof(sb_addr_info_t));
   if (!el) {
     log_err(LD_BUG,"(Sandbox) failed to allocate addr info!");
     ret = -2;
