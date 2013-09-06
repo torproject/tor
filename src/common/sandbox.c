@@ -696,7 +696,7 @@ static int
 prot_strings(sandbox_cfg_t* cfg)
 {
   int ret = 0;
-  int pr_mem_size = 0, pr_mem_left = 0;
+  size_t pr_mem_size = 0, pr_mem_left = 0;
   char *pr_mem_next = NULL, *pr_mem_base;
   sandbox_cfg_t *el = NULL;
 
@@ -721,7 +721,7 @@ prot_strings(sandbox_cfg_t* cfg)
   // change el value pointer to protected
   for (el = cfg; el != NULL; el = el->next) {
     char *param_val = (char*)((smp_param_t *)el->param)->value;
-    int param_size = strlen(param_val) + 1;
+    size_t param_size = strlen(param_val) + 1;
 
     if (pr_mem_left - param_size >= 0) {
       // copy to protected
