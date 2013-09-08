@@ -53,6 +53,7 @@ double fabs(double x);
 #include "mempool.h"
 #include "memarea.h"
 #include "onion.h"
+#include "onion_ntor.h"
 #include "onion_tap.h"
 #include "policies.h"
 #include "rephist.h"
