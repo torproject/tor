@@ -29,7 +29,6 @@
 #define USE_LIBSECCOMP
 #endif
 
-
 /**
  * Linux definitions
  */

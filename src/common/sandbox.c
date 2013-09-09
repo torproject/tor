@@ -1480,3 +1480,4 @@ sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
   return 0;
 }
 #endif
+
