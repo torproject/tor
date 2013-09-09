@@ -103,6 +103,7 @@ void smartlist_uniq(smartlist_t *sl,
 void smartlist_sort_strings(smartlist_t *sl);
 void smartlist_sort_digests(smartlist_t *sl);
 void smartlist_sort_digests256(smartlist_t *sl);
+void smartlist_sort_pointers(smartlist_t *sl);
 
 char *smartlist_get_most_frequent_string(smartlist_t *sl);
 char *smartlist_get_most_frequent_digest256(smartlist_t *sl);

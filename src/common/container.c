@@ -727,6 +727,26 @@ smartlist_uniq_strings(smartlist_t *sl)
   smartlist_uniq(sl, compare_string_ptrs_, tor_free_);
 }
 
+/** Helper: compare two pointers. */
+static int
+compare_ptrs_(const void **_a, const void **_b)
+{
+  const void *a = *_a, *b = *_b;
+  if (a<b)
+    return -1;
+  else if (a==b)
+    return 0;
+  else
+    return 1;
+}
+
+/** Sort <b>sl</b> in ascending order of the pointers it contains. */
+void
+smartlist_sort_pointers(smartlist_t *sl)
+{
+  smartlist_sort(sl, compare_ptrs_);
+}
+
 /* Heap-based priority queue implementation for O(lg N) insert and remove.
  * Recall that the heap property is that, for every index I, h[I] <
  * H[LEFT_CHILD[I]] and h[I] < H[RIGHT_CHILD[I]].

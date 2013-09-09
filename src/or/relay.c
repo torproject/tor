@@ -2271,14 +2271,18 @@ update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
   assert_cmux_ok_paranoid(chan);
 }
 
-/** Remove all circuits from the cmux on <b>chan</b>. */
+/** Remove all circuits from the cmux on <b>chan</b>.
+ *
+ * If <b>circuits_out</b> is non-NULL, add all detached circuits to
+ * <b>circuits_out</b>.
+ **/
 void
-channel_unlink_all_circuits(channel_t *chan)
+channel_unlink_all_circuits(channel_t *chan, smartlist_t *circuits_out)
 {
   tor_assert(chan);
   tor_assert(chan->cmux);
 
-  circuitmux_detach_all_circuits(chan->cmux);
+  circuitmux_detach_all_circuits(chan->cmux, circuits_out);
   chan->num_n_circuits = 0;
   chan->num_p_circuits = 0;
 }

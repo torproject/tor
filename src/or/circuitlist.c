@@ -1144,12 +1144,58 @@ void
 circuit_unlink_all_from_channel(channel_t *chan, int reason)
 {
   circuit_t *circ;
+  smartlist_t *detached = smartlist_new();
 
-  channel_unlink_all_circuits(chan);
+#define DEBUG_CIRCUIT_UNLINK_ALL
 
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  channel_unlink_all_circuits(chan, detached);
+
+#ifdef DEBUG_CIRCUIT_UNLINK_ALL
+  {
+    smartlist_t *detached_2 = smartlist_new();
+    int mismatch = 0, badlen = 0;
+
+    TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+      if (circ->n_chan == chan ||
+          (!CIRCUIT_IS_ORIGIN(circ) &&
+           TO_OR_CIRCUIT(circ)->p_chan == chan)) {
+        smartlist_add(detached_2, circ);
+      }
+    }
+
+    if (smartlist_len(detached) != smartlist_len(detached_2)) {
+       log_warn(LD_BUG, "List of detached circuits had the wrong length! "
+                "(got %d, should have gotten %d)",
+                (int)smartlist_len(detached),
+                (int)smartlist_len(detached_2));
+       badlen = 1;
+    }
+    smartlist_sort_pointers(detached);
+    smartlist_sort_pointers(detached_2);
+
+    SMARTLIST_FOREACH(detached, circuit_t *, c,
+        if (c != smartlist_get(detached_2, c_sl_idx))
+          mismatch = 1;
+    );
+
+    if (mismatch)
+      log_warn(LD_BUG, "Mismatch in list of detached circuits.");
+
+    if (badlen || mismatch) {
+      smartlist_free(detached);
+      detached = detached_2;
+    } else {
+      log_notice(LD_CIRC, "List of %d circuits was as expected.",
+                (int)smartlist_len(detached));
+      smartlist_free(detached_2);
+    }
+  }
+#endif
+
+  SMARTLIST_FOREACH_BEGIN(detached, circuit_t *, circ) {
     int mark = 0;
     if (circ->n_chan == chan) {
+
       circuit_set_n_circid_chan(circ, 0, NULL);
       mark = 1;
 
@@ -1165,9 +1211,16 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
         mark = 1;
       }
     }
-    if (mark && !circ->marked_for_close)
+    if (!mark) {
+      log_warn(LD_BUG, "Circuit on detached list which I had no reason "
+          "to mark");
+      continue;
+    }
+    if (!circ->marked_for_close)
       circuit_mark_for_close(circ, reason);
-  }
+  } SMARTLIST_FOREACH_END(circ);
+
+  smartlist_free(detached);
 }
 
 /** Return a circ such that

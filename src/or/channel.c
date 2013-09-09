@@ -800,7 +800,7 @@ channel_free(channel_t *chan)
 
   /* Get rid of cmux */
   if (chan->cmux) {
-    circuitmux_detach_all_circuits(chan->cmux);
+    circuitmux_detach_all_circuits(chan->cmux, NULL);
     circuitmux_mark_destroyed_circids_usable(chan->cmux, chan);
     circuitmux_free(chan->cmux);
     chan->cmux = NULL;
@@ -2860,7 +2860,7 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
               channel_state_to_string(curr->state), curr->state);
     /* Detach circuits early so they can find the channel */
     if (curr->cmux) {
-      circuitmux_detach_all_circuits(curr->cmux);
+      circuitmux_detach_all_circuits(curr->cmux, NULL);
     }
     channel_unregister(curr);
     if (mark_for_close) {
