@@ -830,7 +830,10 @@ prot_strings(sandbox_cfg_t* cfg)
       memcpy(pr_mem_next, param_val, param_size);
 
       // re-point el parameter to protected
-      free((char*)((smp_param_t*)el->param)->value);
+      {
+        void *old_val = ((smp_param_t*)el->param)->value;
+        tor_free(old_val);
+      }
       ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
       ((smp_param_t*)el->param)->prot = 1;
 
