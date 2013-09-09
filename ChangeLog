@@ -1,3 +1,57 @@
+Changes in version 0.2.4.17-rc - 2013-09-05
+  Tor 0.2.4.17-rc is the third release candidate for the Tor 0.2.4.x
+  series. It adds an emergency step to help us tolerate the massive
+  influx of users: 0.2.4 clients using the new (faster and safer) "NTor"
+  circuit-level handshakes now effectively jump the queue compared to
+  the 0.2.3 clients using "TAP" handshakes. This release also fixes a
+  big bug hindering bridge reachability tests.
+
+  o Major features:
+    - Relays now process the new "NTor" circuit-level handshake requests
+      with higher priority than the old "TAP" circuit-level handshake
+      requests. We still process some TAP requests to not totally starve
+      0.2.3 clients when NTor becomes popular. A new consensus parameter
+      "NumNTorsPerTAP" lets us tune the balance later if we need to.
+      Implements ticket 9574.
+
+  o Major bugfixes:
+    - If the circuit build timeout logic is disabled (via the consensus,
+      or because we are an authority), then don't build testing circuits.
+      Fixes bug 9657; bugfix on 0.2.2.14-alpha.
+    - Bridges now send AUTH_CHALLENGE cells during their v3 handshakes;
+      previously they did not, which prevented them from receiving
+      successful connections from relays for self-test or bandwidth
+      testing. Also, when a relay is extending a circuit to a bridge,
+      it needs to send a NETINFO cell, even when the bridge hasn't sent
+      an AUTH_CHALLENGE cell. Fixes bug 9546; bugfix on 0.2.3.6-alpha.
+    - If the time to download the next old-style networkstatus is in
+      the future, do not decline to consider whether to download the
+      next microdescriptor networkstatus. Fixes bug 9564; bugfix on
+      0.2.3.14-alpha.
+
+  o Minor bugfixes:
+    - Avoid double-closing the listener socket in our socketpair()
+      replacement (used on Windows) in the case where the addresses on
+      our opened sockets don't match what we expected. Fixes bug 9400;
+      bugfix on 0.0.2pre7. Found by Coverity.
+
+  o Minor fixes (config options):
+    - Avoid overflows when the user sets MaxCircuitDirtiness to a
+      ridiculously high value, by imposing a (ridiculously high) 30-day
+      maximum on MaxCircuitDirtiness.
+    - Fix the documentation of HeartbeatPeriod to say that the heartbeat
+      message is logged at notice, not at info.
+    - Warn and fail if a server is configured not to advertise any
+      ORPorts at all. (We need *something* to put in our descriptor,
+      or we just won't work.)
+
+  o Minor features:
+    - Track how many "TAP" and "NTor" circuit handshake requests we get,
+      and how many we complete, and log it every hour to help relay
+      operators follow trends in network load. Addresses ticket 9658.
+    - Update to the August 7 2013 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.4.16-rc - 2013-08-10
   Tor 0.2.4.16-rc is the second release candidate for the Tor 0.2.4.x
   series. It fixes several crash bugs in the 0.2.4 branch.
