@@ -85,6 +85,8 @@ struct sandbox_cfg_elem {
   /** Next element of the configuration*/
   struct sandbox_cfg_elem *next;
 };
+/** Typedef to structure used to manage a sandbox configuration. */
+typedef struct sandbox_cfg_elem sandbox_cfg_t;
 
 /**
  * Structure used for keeping a linked list of getaddrinfo pre-recorded
@@ -131,9 +133,6 @@ typedef struct {
 #endif
 
 #endif // USE_LIBSECCOMP
-
-/** Typedef to structure used to manage a sandbox configuration. */
-typedef struct sandbox_cfg_elem sandbox_cfg_t;
 
 #ifdef USE_LIBSECCOMP
 /** Pre-calls getaddrinfo in order to pre-record result. */
