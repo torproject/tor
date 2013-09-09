@@ -2804,8 +2804,10 @@ tor_main(int argc, char *argv[])
     }
 
     // registering libevent rng
+#ifdef HAVE_EVUTIL_SECURE_RNG_SET_URANDOM_DEVICE_FILE
     evutil_secure_rng_set_urandom_device_file(
         (char*) sandbox_intern_string("/dev/urandom"));
+#endif
   }
 
   switch (get_options()->command) {
