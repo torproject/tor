@@ -26,10 +26,6 @@
 #include "util.h"
 #include "tor_queue.h"
 
-#if defined(HAVE_SECCOMP_H) && defined(__linux__)
-#define USE_LIBSECCOMP
-#endif
-
 #define DEBUGGING_CLOSE
 
 #if defined(USE_LIBSECCOMP)
@@ -1083,10 +1079,14 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_getaddrinfo(const char *name, const struct addrinfo *hints,
-    struct addrinfo **res)
+sandbox_getaddrinfo(const char *name, const char *servname,
+                    const struct addrinfo *hints,
+                    struct addrinfo **res)
 {
   sb_addr_info_t *el;
+
+  if (servname != NULL)
+    return -1;
 
   *res = NULL;
 
@@ -1386,21 +1386,24 @@ sandbox_cfg_new(void)
 }
 
 int
-sandbox_init(sandbox_cfg_t* cfg)
+sandbox_init(sandbox_cfg_t *cfg)
 {
 #if defined(USE_LIBSECCOMP)
   return initialise_libseccomp_sandbox(cfg);
 
 #elif defined(_WIN32)
+  (void)cfg;
   log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
       "currently disabled.");
   return 0;
 
 #elif defined(TARGET_OS_MAC)
+  (void)cfg;
   log_warn(LD_BUG,"Mac OSX sandboxing is not implemented. The feature is "
       "currently disabled");
   return 0;
 #else
+  (void)cfg;
   log_warn(LD_BUG,"Sandboxing is not implemented for your platform. The "
       "feature is currently disabled");
   return 0;
@@ -1417,3 +1420,63 @@ sandbox_set_debugging_fd(int fd)
 #endif
 }
 
+#ifndef USE_LIBSECCOMP
+int
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
+                                int fr)
+{
+  (void)cfg; (void)file; (void)fr;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
+{
+  (void)cfg;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
+                                  int fr)
+{
+  (void)cfg; (void)file; (void)fr;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
+{
+  (void)cfg;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
+{
+  (void)cfg; (void)com;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
+{
+  (void)cfg;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file,
+                                int fr)
+{
+  (void)cfg; (void)file; (void)fr;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
+{
+  (void)cfg;
+  return 0;
+}
+#endif

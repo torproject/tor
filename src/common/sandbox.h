@@ -12,6 +12,9 @@
 #ifndef SANDBOX_H_
 #define SANDBOX_H_
 
+#include "orconfig.h"
+#include "torint.h"
+
 #ifndef SYS_SECCOMP
 
 /**
@@ -22,12 +25,15 @@
 
 #endif
 
-#include "torint.h"
+#if defined(HAVE_SECCOMP_H) && defined(__linux__)
+#define USE_LIBSECCOMP
+#endif
+
 
 /**
  * Linux definitions
  */
-#ifdef __linux__
+#ifdef USE_LIBSECCOMP
 
 #ifndef __USE_GNU
 #define __USE_GNU
@@ -80,8 +86,6 @@ struct sandbox_cfg_elem {
   /** Next element of the configuration*/
   struct sandbox_cfg_elem *next;
 };
-/** Typedef to structure used to manage a sandbox configuration. */
-typedef struct sandbox_cfg_elem sandbox_cfg_t;
 
 /**
  * Structure used for keeping a linked list of getaddrinfo pre-recorded
@@ -127,22 +131,38 @@ typedef struct {
 
 #endif
 
-#endif // __linux__
+#endif // USE_LIBSECCOMP
 
+/** Typedef to structure used to manage a sandbox configuration. */
+typedef struct sandbox_cfg_elem sandbox_cfg_t;
+
+#ifdef USE_LIBSECCOMP
 /** Pre-calls getaddrinfo in order to pre-record result. */
 int sandbox_add_addrinfo(const char *addr);
 
+struct addrinfo;
 /** Replacement for getaddrinfo(), using pre-recorded results. */
-int sandbox_getaddrinfo(const char *name, const struct addrinfo *hints,
-    struct addrinfo **res);
+int sandbox_getaddrinfo(const char *name, const char *servname,
+                        const struct addrinfo *hints,
+                        struct addrinfo **res);
+#else
+#define sandbox_getaddrinfo(name, servname, hints, res)  \
+  getaddrinfo((name),(servname), (hints),(res))
+#define sandbox_add_addrinfo(name) \
+  ((void)(name))
+#endif
 
 /** Use <b>fd</b> to log non-survivable sandbox violations. */
 void sandbox_set_debugging_fd(int fd);
 
+#ifdef USE_LIBSECCOMP
 /** Returns a registered protected string used with the sandbox, given that
  * it matches the parameter.
  */
 const char* sandbox_intern_string(const char *param);
+#else
+#define sandbox_intern_string(s) (s)
+#endif
 
 /** Creates an empty sandbox configuration file.*/
 sandbox_cfg_t * sandbox_cfg_new(void);
