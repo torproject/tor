@@ -204,12 +204,12 @@ int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com);
 int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...);
 
 /**
- * Function used to add a stat64 allowed filename to a supplied configuration.
+ * Function used to add a stat/stat64 allowed filename to a configuration.
  * The (char*) specifies the path to the allowed file, fr = 1 tells the
  * function that the char* needs to be free-ed, 0 means the pointer does not
  * need to be free-ed.
  */
-int sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file,
+int sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file,
     int fr);
 
 /** Function used to add a series of stat64 allowed filenames to a supplied
@@ -220,7 +220,7 @@ int sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file,
  *    that the char* needs to be free-ed, 0 means the pointer does not need to
  *    be free-ed; the final parameter needs to be <NULL, 0>.
  */
-int sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...);
+int sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...);
 
 /** Function used to initialise a sandbox configuration.*/
 int sandbox_init(sandbox_cfg_t* cfg);

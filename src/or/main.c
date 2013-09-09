@@ -2650,7 +2650,7 @@ init_addrinfo(void)
 }
 
 static sandbox_cfg_t*
-sandbox_init_filter()
+sandbox_init_filter(void)
 {
   sandbox_cfg_t *cfg = sandbox_cfg_new();
 
@@ -2685,7 +2685,7 @@ sandbox_init_filter()
       NULL, 0
   );
 
-  sandbox_cfg_allow_stat64_filename_array(&cfg,
+  sandbox_cfg_allow_stat_filename_array(&cfg,
       get_datadir_fname(NULL), 1,
       get_datadir_fname("lock"), 1,
       get_datadir_fname("state"), 1,
@@ -2714,7 +2714,7 @@ sandbox_init_filter()
         NULL, 0
     );
 
-    sandbox_cfg_allow_stat64_filename_array(&cfg,
+    sandbox_cfg_allow_stat_filename_array(&cfg,
         get_datadir_fname("keys"), 1,
         get_datadir_fname("stats/dirreq-stats"), 1,
         NULL, 0

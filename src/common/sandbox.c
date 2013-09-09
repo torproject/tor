@@ -118,8 +118,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(exit),
 
     SCMP_SYS(madvise),
+#ifdef __NR_stat64
     // getaddrinfo uses this..
     SCMP_SYS(stat64),
+#endif
 
     // socket syscalls
     SCMP_SYS(bind),
@@ -741,10 +743,14 @@ static sandbox_filter_func_t filter_func[] = {
     sb_execve,
     sb_time,
     sb_accept4,
+#ifdef __NR_mmap2
     sb_mmap2,
+#endif
     sb_open,
     sb_openat,
+#ifdef __NR_fcntl64
     sb_fcntl64,
+#endif
     sb_epoll_ctl,
     sb_prctl,
     sb_mprotect,
@@ -752,7 +758,9 @@ static sandbox_filter_func_t filter_func[] = {
     sb_futex,
     sb_mremap,
     sb_poll,
+#ifdef __NR_stat64
     sb_stat64,
+#endif
 
     sb_socket,
     sb_setsockopt,
@@ -879,12 +887,17 @@ new_element(int syscall, int index, intptr_t value)
 }
 
 #ifdef __NR_stat64
+#define SCMP_stat SCMP_SYS(stat64)
+#else
+#define SCMP_stat SCMP_SYS(stat)
+#endif
+
 int
-sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
+sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file, int fr)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(stat64), 0, (intptr_t) tor_strdup(file));
+  elem = new_element(SCMP_stat, 0, (intptr_t) tor_strdup(file));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -898,7 +911,7 @@ sandbox_cfg_allow_stat64_filename(sandbox_cfg_t **cfg, char *file, int fr)
 }
 
 int
-sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...)
+sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
 {
   int rc = 0;
   char *fn = NULL;
@@ -909,9 +922,9 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...)
   while ((fn = va_arg(ap, char*)) != NULL) {
     int fr = va_arg(ap, int);
 
-    rc = sandbox_cfg_allow_stat64_filename(cfg, fn, fr);
+    rc = sandbox_cfg_allow_stat_filename(cfg, fn, fr);
     if (rc) {
-      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_stat64_filename_array fail");
+      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_stat_filename_array fail");
       goto end;
     }
   }
@@ -920,7 +933,6 @@ sandbox_cfg_allow_stat64_filename_array(sandbox_cfg_t **cfg, ...)
   va_end(ap);
   return 0;
 }
-#endif
 
 int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
