@@ -61,6 +61,9 @@ static sandbox_cfg_t *filter_dynamic = NULL;
 /** Holds a list of pre-recorded results from getaddrinfo().*/
 static sb_addr_info_t *sb_addr_info = NULL;
 
+#undef SCMP_CMP
+#define SCMP_CMP(a,b,c) ((struct scmp_arg_cmp){(a),(b),(c),0})
+
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
  */
