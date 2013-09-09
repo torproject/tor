@@ -191,7 +191,7 @@ int sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...);
  * function that the char* needs to be free-ed, 0 means the pointer does not
  * need to be free-ed.
  */
-int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, char *com);
+int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com);
 
 /** Function used to add a series of execve allowed filenames to a supplied
  * configuration.
