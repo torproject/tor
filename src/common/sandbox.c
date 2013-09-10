@@ -588,11 +588,6 @@ sb_mprotect(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     return rc;
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
-      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
-  if (rc)
-    return rc;
-
-  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 1,
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_NONE));
   if (rc)
     return rc;
@@ -810,7 +805,7 @@ sandbox_intern_string(const char *str)
  * mprotect().
  */
 static int
-prot_strings(sandbox_cfg_t* cfg)
+prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 {
   int ret = 0;
   size_t pr_mem_size = 0, pr_mem_left = 0;
@@ -868,6 +863,48 @@ prot_strings(sandbox_cfg_t* cfg)
         strerror(errno));
     ret = -3;
     goto out;
+  }
+
+  /*
+   * Setting sandbox restrictions so the string memory cannot be tampered with
+   */
+  // no mremap of the protected base address
+  ret = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(mremap), 1,
+      SCMP_CMP(0, SCMP_CMP_EQ, (intptr_t) pr_mem_base));
+  if (ret) {
+    log_err(LD_BUG,"(Sandbox) mremap protected memory filter fail!");
+    return ret;
+  }
+
+  // no munmap of the protected base address
+  ret = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(munmap), 1,
+        SCMP_CMP(0, SCMP_CMP_EQ, (intptr_t) pr_mem_base));
+  if (ret) {
+    log_err(LD_BUG,"(Sandbox) munmap protected memory filter fail!");
+    return ret;
+  }
+
+  /*
+   * Allow mprotect with PROT_READ|PROT_WRITE because openssl uses it, but
+   * never over the memory region used by the protected strings.
+   *
+   * PROT_READ|PROT_WRITE was originally fully allowed in sb_mprotect(), but
+   * had to be removed due to limitation of libseccomp regarding intervals.
+   */
+  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
+      SCMP_CMP(0, SCMP_CMP_LT, (intptr_t) pr_mem_base),
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
+  if (ret) {
+    log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (LT)!");
+    return ret;
+  }
+
+  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
+        SCMP_CMP(0, SCMP_CMP_GT, (intptr_t) pr_mem_base + pr_mem_size),
+        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
+  if (ret) {
+    log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (GT)!");
+    return ret;
   }
 
  out:
@@ -1216,6 +1253,11 @@ install_syscall_filter(sandbox_cfg_t* cfg)
     goto end;
   }
 
+  // protectign sandbox parameter strings
+  if ((rc = prot_strings(ctx, cfg))) {
+    goto end;
+  }
+
   // add parameter filters
   if ((rc = add_param_filter(ctx, cfg))) {
     log_err(LD_BUG, "(Sandbox) failed to add param filters!");
@@ -1361,10 +1403,6 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 {
   if (install_sigsys_debugging())
     return -1;
-
-  if (prot_strings(cfg)) {
-    return -4;
-  }
 
   if (install_syscall_filter(cfg))
     return -2;
