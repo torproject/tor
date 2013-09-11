@@ -29,6 +29,11 @@
 #define USE_LIBSECCOMP
 #endif
 
+struct sandbox_cfg_elem;
+
+/** Typedef to structure used to manage a sandbox configuration. */
+typedef struct sandbox_cfg_elem sandbox_cfg_t;
+
 /**
  * Linux definitions
  */
@@ -85,8 +90,6 @@ struct sandbox_cfg_elem {
   /** Next element of the configuration*/
   struct sandbox_cfg_elem *next;
 };
-/** Typedef to structure used to manage a sandbox configuration. */
-typedef struct sandbox_cfg_elem sandbox_cfg_t;
 
 /**
  * Structure used for keeping a linked list of getaddrinfo pre-recorded
