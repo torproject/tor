@@ -129,12 +129,19 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(bind),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
-    SCMP_SYS(recv),
     SCMP_SYS(recvmsg),
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
-    SCMP_SYS(send),
     SCMP_SYS(unlink)
+
+    /*
+     * These syscalls are not required on x86_64 and not supported with
+     * some libseccomp versions (eg: 1.0.1)
+     */
+#if defined(__i386)
+    SCMP_SYS(recv),
+    SCMP_SYS(send),
+#endif
 };
 
 /**
