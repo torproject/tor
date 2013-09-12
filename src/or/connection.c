@@ -2552,10 +2552,10 @@ static uint32_t global_relayed_read_emptied = 0,
 /** Helper: convert given <b>tvnow</b> time value to milliseconds since
  * midnight. */
 static uint32_t
-msec_since_midnight(struct timeval tvnow)
+msec_since_midnight(const struct timeval *tvnow)
 {
-  return (uint32_t)(((tvnow.tv_sec % 86400L) * 1000L) +
-         ((uint32_t)tvnow.tv_usec / (uint32_t)1000L));
+  return (uint32_t)(((tvnow->tv_sec % 86400L) * 1000L) +
+         ((uint32_t)tvnow->tv_usec / (uint32_t)1000L));
 }
 
 /** Check if a bucket which had <b>tokens_before</b> tokens and which got
@@ -2565,7 +2565,7 @@ msec_since_midnight(struct timeval tvnow)
 void
 connection_buckets_note_empty_ts(uint32_t *timestamp_var,
                                  int tokens_before, size_t tokens_removed,
-                                 struct timeval tvnow)
+                                 const struct timeval *tvnow)
 {
   if (tokens_before > 0 && (uint32_t)tokens_before <= tokens_removed)
     *timestamp_var = msec_since_midnight(tvnow);
@@ -2600,20 +2600,20 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     tor_gettimeofday_cached(&tvnow);
     if (connection_counts_as_relayed_traffic(conn, now)) {
       connection_buckets_note_empty_ts(&global_relayed_read_emptied,
-                         global_relayed_read_bucket, num_read, tvnow);
+                         global_relayed_read_bucket, num_read, &tvnow);
       connection_buckets_note_empty_ts(&global_relayed_write_emptied,
-                         global_relayed_write_bucket, num_written, tvnow);
+                         global_relayed_write_bucket, num_written, &tvnow);
     }
     connection_buckets_note_empty_ts(&global_read_emptied,
-                       global_read_bucket, num_read, tvnow);
+                       global_read_bucket, num_read, &tvnow);
     connection_buckets_note_empty_ts(&global_write_emptied,
-                       global_write_bucket, num_written, tvnow);
+                       global_write_bucket, num_written, &tvnow);
     if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       connection_buckets_note_empty_ts(&or_conn->read_emptied_time,
-                         or_conn->read_bucket, num_read, tvnow);
+                         or_conn->read_bucket, num_read, &tvnow);
       connection_buckets_note_empty_ts(&or_conn->write_emptied_time,
-                         or_conn->write_bucket, num_written, tvnow);
+                         or_conn->write_bucket, num_written, &tvnow);
     }
   }
 
@@ -2732,7 +2732,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
 uint32_t
 bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
                     int tokens_after, int milliseconds_elapsed,
-                    struct timeval tvnow)
+                    const struct timeval *tvnow)
 {
   uint32_t result = 0, refilled;
   if (tokens_before <= 0 && tokens_after > tokens_before) {
@@ -2801,20 +2801,20 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
     tor_gettimeofday_cached(&tvnow);
     global_read_empty_time = bucket_millis_empty(prev_global_read,
                              global_read_emptied, global_read_bucket,
-                             milliseconds_elapsed, tvnow);
+                             milliseconds_elapsed, &tvnow);
     global_write_empty_time = bucket_millis_empty(prev_global_write,
                               global_write_emptied, global_write_bucket,
-                              milliseconds_elapsed, tvnow);
+                              milliseconds_elapsed, &tvnow);
     control_event_tb_empty("GLOBAL", global_read_empty_time,
                            global_write_empty_time, milliseconds_elapsed);
     relay_read_empty_time = bucket_millis_empty(prev_relay_read,
                             global_relayed_read_emptied,
                             global_relayed_read_bucket,
-                            milliseconds_elapsed, tvnow);
+                            milliseconds_elapsed, &tvnow);
     relay_write_empty_time = bucket_millis_empty(prev_relay_write,
                              global_relayed_write_emptied,
                              global_relayed_write_bucket,
-                             milliseconds_elapsed, tvnow);
+                             milliseconds_elapsed, &tvnow);
     control_event_tb_empty("RELAY", relay_read_empty_time,
                            relay_write_empty_time, milliseconds_elapsed);
   }
@@ -2854,11 +2854,11 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
         conn_read_empty_time = bucket_millis_empty(prev_conn_read,
                                or_conn->read_emptied_time,
                                or_conn->read_bucket,
-                               milliseconds_elapsed, tvnow);
+                               milliseconds_elapsed, &tvnow);
         conn_write_empty_time = bucket_millis_empty(prev_conn_write,
                                 or_conn->write_emptied_time,
                                 or_conn->write_bucket,
-                                milliseconds_elapsed, tvnow);
+                                milliseconds_elapsed, &tvnow);
         control_event_tb_empty(bucket, conn_read_empty_time,
                                conn_write_empty_time,
                                milliseconds_elapsed);

@@ -21,7 +21,7 @@ help_test_bucket_note_empty(uint32_t expected_msec_since_midnight,
   tvnow.tv_sec = msec_since_epoch / 1000;
   tvnow.tv_usec = (msec_since_epoch % 1000) * 1000;
   connection_buckets_note_empty_ts(&timestamp_var, tokens_before,
-                                   tokens_removed, tvnow);
+                                   tokens_removed, &tvnow);
   tt_int_op(expected_msec_since_midnight, ==, timestamp_var);
 
  done:
@@ -57,20 +57,20 @@ test_cntev_bucket_millis_empty(void *arg)
   tvnow.tv_usec = 200000;
 
   /* Bucket has not been refilled. */
-  tt_int_op(0, ==, bucket_millis_empty(0, 42120, 0, 100, tvnow));
-  tt_int_op(0, ==, bucket_millis_empty(-10, 42120, -10, 100, tvnow));
+  tt_int_op(0, ==, bucket_millis_empty(0, 42120, 0, 100, &tvnow));
+  tt_int_op(0, ==, bucket_millis_empty(-10, 42120, -10, 100, &tvnow));
 
   /* Bucket was not empty. */
-  tt_int_op(0, ==, bucket_millis_empty(10, 42120, 20, 100, tvnow));
+  tt_int_op(0, ==, bucket_millis_empty(10, 42120, 20, 100, &tvnow));
 
   /* Bucket has been emptied 80 msec ago and has just been refilled. */
-  tt_int_op(80, ==, bucket_millis_empty(-20, 42120, -10, 100, tvnow));
-  tt_int_op(80, ==, bucket_millis_empty(-10, 42120, 0, 100, tvnow));
-  tt_int_op(80, ==, bucket_millis_empty(0, 42120, 10, 100, tvnow));
+  tt_int_op(80, ==, bucket_millis_empty(-20, 42120, -10, 100, &tvnow));
+  tt_int_op(80, ==, bucket_millis_empty(-10, 42120, 0, 100, &tvnow));
+  tt_int_op(80, ==, bucket_millis_empty(0, 42120, 10, 100, &tvnow));
 
   /* Bucket has been emptied 180 msec ago, last refill was 100 msec ago
    * which was insufficient to make it positive, so cap msec at 100. */
-  tt_int_op(100, ==, bucket_millis_empty(0, 42020, 1, 100, tvnow));
+  tt_int_op(100, ==, bucket_millis_empty(0, 42020, 1, 100, &tvnow));
 
   /* 1970-01-02 00:00:00:050000 */
   tvnow.tv_sec = 86400;
@@ -78,7 +78,7 @@ test_cntev_bucket_millis_empty(void *arg)
 
   /* Last emptied 30 msec before midnight, tvnow is 50 msec after
    * midnight, that's 80 msec in total. */
-  tt_int_op(80, ==, bucket_millis_empty(0, 86400000 - 30, 1, 100, tvnow));
+  tt_int_op(80, ==, bucket_millis_empty(0, 86400000 - 30, 1, 100, &tvnow));
 
  done:
   ;
