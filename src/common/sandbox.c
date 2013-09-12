@@ -15,6 +15,9 @@
  */
 #define _LARGEFILE64_SOURCE
 
+/** Malloc mprotect limit in bytes. */
+#define MALLOC_MP_LIM 1048576
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -49,6 +52,10 @@
 #include <fcntl.h>
 #include <time.h>
 #include <poll.h>
+
+// TODO: remove test
+static void *test_buf_base = NULL;
+static int test_buf_len = 0;
 
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
@@ -817,9 +824,9 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     pr_mem_size += strlen((char*) ((smp_param_t*)el->param)->value) + 1;
   }
 
-  // allocate protected memory
-  pr_mem_base = (char*) mmap(NULL, pr_mem_size, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANON, -1, 0);
+  // allocate protected memory with MALLOC_MP_LIM canary
+  pr_mem_base = (char*) mmap(NULL, MALLOC_MP_LIM + pr_mem_size,
+      PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
   if (pr_mem_base == MAP_FAILED) {
     log_err(LD_BUG,"(Sandbox) failed allocate protected memory! mmap: %s",
         strerror(errno));
@@ -827,7 +834,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     goto out;
   }
 
-  pr_mem_next = pr_mem_base;
+  pr_mem_next = pr_mem_base + MALLOC_MP_LIM;
   pr_mem_left = pr_mem_size;
 
   // change el value pointer to protected
@@ -857,8 +864,12 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     }
   }
 
+  // TODO: remove, test
+  test_buf_base = pr_mem_base;
+  test_buf_len = pr_mem_size;
+
   // protecting from writes
-  if (mprotect(pr_mem_base, pr_mem_size, PROT_READ)) {
+  if (mprotect(pr_mem_base, MALLOC_MP_LIM + pr_mem_size, PROT_READ)) {
     log_err(LD_BUG,"(Sandbox) failed to protect memory! mprotect: %s",
         strerror(errno));
     ret = -3;
@@ -890,9 +901,13 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
    *
    * PROT_READ|PROT_WRITE was originally fully allowed in sb_mprotect(), but
    * had to be removed due to limitation of libseccomp regarding intervals.
+   *
+   * There is a restriction on how much you can mprotect with R|W up to the
+   * size of the canary.
    */
   ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
       SCMP_CMP(0, SCMP_CMP_LT, (intptr_t) pr_mem_base),
+      SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (LT)!");
@@ -900,8 +915,10 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   }
 
   ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
-        SCMP_CMP(0, SCMP_CMP_GT, (intptr_t) pr_mem_base + pr_mem_size),
-        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
+      SCMP_CMP(0, SCMP_CMP_GT, (intptr_t) pr_mem_base + pr_mem_size +
+          MALLOC_MP_LIM),
+      SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (GT)!");
     return ret;
