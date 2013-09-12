@@ -4085,7 +4085,7 @@ format_cell_stats(char **event_string, circuit_t *circ,
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     smartlist_add_asprintf(event_parts, "ID=%lu",
                  (unsigned long)ocirc->global_identifier);
-  } else {
+  } else if (TO_OR_CIRCUIT(circ)->p_chan) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     smartlist_add_asprintf(event_parts, "InboundQueue=%lu",
                  (unsigned long)or_circ->p_circ_id);
