@@ -53,10 +53,6 @@
 #include <time.h>
 #include <poll.h>
 
-// TODO: remove test
-static void *test_buf_base = NULL;
-static int test_buf_len = 0;
-
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
 /** Holds the parameter list configuration for the sandbox.*/
@@ -863,10 +859,6 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       goto out;
     }
   }
-
-  // TODO: remove, test
-  test_buf_base = pr_mem_base;
-  test_buf_len = pr_mem_size;
 
   // protecting from writes
   if (mprotect(pr_mem_base, MALLOC_MP_LIM + pr_mem_size, PROT_READ)) {
