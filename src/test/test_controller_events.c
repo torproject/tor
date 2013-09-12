@@ -158,28 +158,32 @@ test_cntev_append_cell_stats(void *arg)
          (CELL_COMMAND_MAX_ + 1) * sizeof(uint64_t));
 
   /* All array entries empty. */
-  append_cell_stats_by_command(event_parts, key, include_if_non_zero,
-                               number_to_include);
+  append_cell_stats_by_command(event_parts, key,
+                               (const uint64_t *) include_if_non_zero,
+                               (const uint64_t *) number_to_include);
   tt_int_op(0, ==, smartlist_len(event_parts));
 
   /* There's a RELAY cell to include, but the corresponding field in
    * include_if_non_zero is still zero. */
   number_to_include[CELL_RELAY] = 1;
-  append_cell_stats_by_command(event_parts, key, include_if_non_zero,
-                               number_to_include);
+  append_cell_stats_by_command(event_parts, key,
+                               (const uint64_t *) include_if_non_zero,
+                               (const uint64_t *) number_to_include);
   tt_int_op(0, ==, smartlist_len(event_parts));
 
   /* Now include single RELAY cell. */
   include_if_non_zero[CELL_RELAY] = 2;
-  append_cell_stats_by_command(event_parts, key, include_if_non_zero,
-                               number_to_include);
+  append_cell_stats_by_command(event_parts, key,
+                               (const uint64_t *) include_if_non_zero,
+                               (const uint64_t *) number_to_include);
   tt_str_op("Z=relay:1", ==, smartlist_pop_last(event_parts));
 
   /* Add four CREATE cells. */
   include_if_non_zero[CELL_CREATE] = 3;
   number_to_include[CELL_CREATE] = 4;
-  append_cell_stats_by_command(event_parts, key, include_if_non_zero,
-                               number_to_include);
+  append_cell_stats_by_command(event_parts, key,
+                               (const uint64_t *) include_if_non_zero,
+                               (const uint64_t *) number_to_include);
   tt_str_op("Z=create:4,relay:1", ==, smartlist_pop_last(event_parts));
 
  done:

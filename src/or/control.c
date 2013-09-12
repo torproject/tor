@@ -4048,13 +4048,14 @@ sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
  * key:value pairs with lower-case command strings as keys and cell
  * numbers or total waiting times as values.  A key:value pair is included
  * if the entry in <code>include_if_non_zero</code> is not zero, but with
- * the (possibly zero) entry from <code>number_to_include</code>.  If no
+ * the (possibly zero) entry from <code>number_to_include</code>.  Both
+ * arrays are expected to have a length of CELL_COMMAND_MAX_ + 1.  If no
  * entry in <code>include_if_non_zero</code> is positive, no string will
  * be added to <code>event_parts</code>. */
 void
 append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
-                             uint64_t *include_if_non_zero,
-                             uint64_t *number_to_include)
+                             const uint64_t *include_if_non_zero,
+                             const uint64_t *number_to_include)
 {
   smartlist_t *key_value_strings = smartlist_new();
   int i;
@@ -4092,14 +4093,14 @@ format_cell_stats(char **event_string, circuit_t *circ,
     smartlist_add_asprintf(event_parts, "InboundConn="U64_FORMAT,
                  U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "InboundAdded",
-                                 cell_stats->added_cells_appward,
-                                 cell_stats->added_cells_appward);
+                 (const uint64_t *) cell_stats->added_cells_appward,
+                 (const uint64_t *) cell_stats->added_cells_appward);
     append_cell_stats_by_command(event_parts, "InboundRemoved",
-                                 cell_stats->removed_cells_appward,
-                                 cell_stats->removed_cells_appward);
+                 (const uint64_t *) cell_stats->removed_cells_appward,
+                 (const uint64_t *) cell_stats->removed_cells_appward);
     append_cell_stats_by_command(event_parts, "InboundTime",
-                                 cell_stats->removed_cells_appward,
-                                 cell_stats->total_time_appward);
+                 (const uint64_t *) cell_stats->removed_cells_appward,
+                 (const uint64_t *) cell_stats->total_time_appward);
   }
   if (circ->n_chan) {
     smartlist_add_asprintf(event_parts, "OutboundQueue=%lu",
@@ -4107,14 +4108,14 @@ format_cell_stats(char **event_string, circuit_t *circ,
     smartlist_add_asprintf(event_parts, "OutboundConn="U64_FORMAT,
                  U64_PRINTF_ARG(circ->n_chan->global_identifier));
     append_cell_stats_by_command(event_parts, "OutboundAdded",
-                                 cell_stats->added_cells_exitward,
-                                 cell_stats->added_cells_exitward);
+                 (const uint64_t *) cell_stats->added_cells_exitward,
+                 (const uint64_t *) cell_stats->added_cells_exitward);
     append_cell_stats_by_command(event_parts, "OutboundRemoved",
-                                 cell_stats->removed_cells_exitward,
-                                 cell_stats->removed_cells_exitward);
+                 (const uint64_t *) cell_stats->removed_cells_exitward,
+                 (const uint64_t *) cell_stats->removed_cells_exitward);
     append_cell_stats_by_command(event_parts, "OutboundTime",
-                                 cell_stats->removed_cells_exitward,
-                                 cell_stats->total_time_exitward);
+                 (const uint64_t *) cell_stats->removed_cells_exitward,
+                 (const uint64_t *) cell_stats->total_time_exitward);
   }
   *event_string = smartlist_join_strings(event_parts, " ", 0, NULL);
   SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));

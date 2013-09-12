@@ -120,8 +120,8 @@ void sum_up_cell_stats_by_command(circuit_t *circ,
                                   cell_stats_t *cell_stats);
 void append_cell_stats_by_command(smartlist_t *event_parts,
                                   const char *key,
-                                  uint64_t *include_if_non_zero,
-                                  uint64_t *number_to_include);
+                                  const uint64_t *include_if_non_zero,
+                                  const uint64_t *number_to_include);
 void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
 #endif
