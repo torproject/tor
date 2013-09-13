@@ -109,6 +109,7 @@ typedef struct crypto_dh_t crypto_dh_t;
 
 /* global state */
 const char * crypto_openssl_get_version_str(void);
+const char * crypto_openssl_get_header_version_str(void);
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
                        const char *accelPath);

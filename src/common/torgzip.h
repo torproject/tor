@@ -32,6 +32,12 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
 int is_gzip_supported(void);
 
+const char *
+tor_zlib_get_version_str(void);
+
+const char *
+tor_zlib_get_header_version_str(void);
+
 compress_method_t detect_compression_method(const char *in, size_t in_len);
 
 /** Return values from tor_zlib_process; see that function's documentation for

@@ -196,6 +196,27 @@ try_load_engine(const char *path, const char *engine)
 }
 #endif
 
+/* Returns a trimmed and human-readable version of an openssl version string
+* <b>raw_version</b>. They are usually in the form of 'OpenSSL 1.0.0b 10
+* May 2012' and this will parse them into a form similar to '1.0.0b' */
+static char *
+parse_openssl_version_str(const char *raw_version)
+{
+  const char *end_of_version = NULL;
+  /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
+     trim that down. */
+  if (!strcmpstart(raw_version, "OpenSSL ")) {
+    raw_version += strlen("OpenSSL ");
+    end_of_version = strchr(raw_version, ' ');
+  }
+
+  if (end_of_version)
+    return tor_strndup(raw_version,
+                      end_of_version-raw_version);
+  else
+    return tor_strdup(raw_version);
+}
+
 static char *crypto_openssl_version_str = NULL;
 /* Return a human-readable version of the run-time openssl version number. */
 const char *
@@ -203,21 +224,22 @@ crypto_openssl_get_version_str(void)
 {
   if (crypto_openssl_version_str == NULL) {
     const char *raw_version = SSLeay_version(SSLEAY_VERSION);
-    const char *end_of_version = NULL;
-    /* The output should be something like "OpenSSL 1.0.0b 10 May 2012. Let's
-       trim that down. */
-    if (!strcmpstart(raw_version, "OpenSSL ")) {
-      raw_version += strlen("OpenSSL ");
-      end_of_version = strchr(raw_version, ' ');
-    }
-
-    if (end_of_version)
-      crypto_openssl_version_str = tor_strndup(raw_version,
-                                               end_of_version-raw_version);
-    else
-      crypto_openssl_version_str = tor_strdup(raw_version);
+    crypto_openssl_version_str = parse_openssl_version_str(raw_version);
   }
   return crypto_openssl_version_str;
+}
+
+static char *crypto_openssl_header_version_str = NULL;
+/* Return a human-readable version of the compile-time openssl version
+* number. */
+const char *
+crypto_openssl_get_header_version_str(void)
+{
+  if (crypto_openssl_header_version_str == NULL) {
+    crypto_openssl_header_version_str =
+                        parse_openssl_version_str(OPENSSL_VERSION_TEXT);
+  }
+  return crypto_openssl_header_version_str;
 }
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
@@ -3100,6 +3122,7 @@ crypto_global_cleanup(void)
   }
 #endif
   tor_free(crypto_openssl_version_str);
+  tor_free(crypto_openssl_header_version_str);
   return 0;
 }
 

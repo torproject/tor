@@ -2351,9 +2351,10 @@ tor_init(int argc, char *argv[])
       if (!strcmp(cl->key, "--quiet") ||
           !strcmp(cl->key, "--dump-config"))
         quiet = 2;
-      /* --version, --digests, and --help imply --husth */
+      /* --version, --digests, and --help imply --hush */
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "--list-torrc-options") ||
+          !strcmp(cl->key, "--library-versions") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help"))
         quiet = 1;
     }
@@ -2382,11 +2383,12 @@ tor_init(int argc, char *argv[])
 #else
       "";
 #endif
-    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s "
-               "and OpenSSL %s.", version, bev_str,
+    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s, "
+               "OpenSSL %s and Zlib %s.", version, bev_str,
                get_uname(),
                tor_libevent_get_version_str(),
-               crypto_openssl_get_version_str());
+               crypto_openssl_get_version_str(),
+               tor_zlib_get_version_str());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "

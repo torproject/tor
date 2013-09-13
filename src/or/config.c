@@ -46,6 +46,7 @@
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
+#include "torgzip.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
@@ -1808,6 +1809,7 @@ static const struct {
   { "--quiet",                0 },
   { "--hush",                 0 },
   { "--version",              0 },
+  { "--library-versions",     0 },
   { "-h",                     0 },
   { "--help",                 0 },
   { "--list-torrc-options",   0 },
@@ -3932,10 +3934,27 @@ options_init_from_torrc(int argc, char **argv)
     printf("Tor version %s.\n",get_version());
     exit(0);
   }
+
   if (config_line_find(cmdline_only_options, "--digests")) {
     printf("Tor version %s.\n",get_version());
     printf("%s", libor_get_digests());
     printf("%s", tor_get_digests());
+    exit(0);
+  }
+
+  if (config_line_find(cmdline_only_options, "--library-versions")) {
+    printf("Tor version %s. \n", get_version());
+    printf("Library versions\tCompiled\t\tRuntime\n");
+    printf("Libevent\t\t%-15s\t\t%s\n",
+                      tor_libevent_get_header_version_str(),
+                      tor_libevent_get_version_str());
+    printf("OpenSSL \t\t%-15s\t\t%s\n",
+                      crypto_openssl_get_header_version_str(),
+                      crypto_openssl_get_version_str());
+    printf("Zlib    \t\t%-15s\t\t%s\n",
+                      tor_zlib_get_header_version_str(),
+                      tor_zlib_get_version_str());
+    //TODO: Hex versions?
     exit(0);
   }
 

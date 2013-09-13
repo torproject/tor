@@ -415,6 +415,14 @@ tor_check_libevent_version(const char *m, int server,
 #define HEADER_VERSION _EVENT_VERSION
 #endif
 
+/** Return a string representation of the version of Libevent that was used
+* at compilation time. */
+const char *
+tor_libevent_get_header_version_str(void)
+{
+  return HEADER_VERSION;
+}
+
 /** See whether the headers we were built against differ from the library we
  * linked against so much that we're likely to crash.  If so, warn the
  * user. */
