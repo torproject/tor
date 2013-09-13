@@ -46,7 +46,7 @@ COMMAND-LINE OPTIONS
     configuration file, and by those on the command line. (Default:
     @CONFDIR@/torrc-defaults.)
 
-**--hash-password**::
+**--hash-password** __PASSWORD__::
     Generates a hashed password for control port access.
 
 **--list-fingerprint**::

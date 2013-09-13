@@ -71,7 +71,7 @@ typedef struct config_var_description_t {
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
-typedef int (*validate_fn_t)(void*,void*,int,char**);
+typedef int (*validate_fn_t)(void*,void*,void*,int,char**);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -103,6 +103,8 @@ void *config_new(const config_format_t *fmt);
 void config_line_append(config_line_t **lst,
                         const char *key, const char *val);
 config_line_t *config_lines_dup(const config_line_t *inp);
+const config_line_t *config_line_find(const config_line_t *lines,
+                                      const char *key);
 void config_free(const config_format_t *fmt, void *options);
 int config_lines_eq(config_line_t *a, config_line_t *b);
 int config_count_key(const config_line_t *a, const char *key);

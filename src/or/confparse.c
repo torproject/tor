@@ -79,6 +79,21 @@ config_line_append(config_line_t **lst,
   (*lst) = newline;
 }
 
+/** Return the line in <b>lines</b> whose key is exactly <b>key</b>, or NULL
+ * if no such key exists. For handling commandline-only options only; other
+ * options should be looked up in the appropriate data structure. */
+const config_line_t *
+config_line_find(const config_line_t *lines,
+                 const char *key)
+{
+  const config_line_t *cl;
+  for (cl = lines; cl; cl = cl->next) {
+    if (!strcmp(cl->key, key))
+      return cl;
+  }
+  return NULL;
+}
+
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
@@ -1059,8 +1074,8 @@ config_dump(const config_format_t *fmt, const void *default_options,
 
   /* XXX use a 1 here so we don't add a new log line while dumping */
   if (default_options == NULL) {
-    if (fmt->validate_fn(NULL, defaults_tmp, 1, &msg) < 0) {
-      log_err(LD_BUG, "Failed to validate default config.");
+    if (fmt->validate_fn(NULL, defaults_tmp, defaults_tmp, 1, &msg) < 0) {
+      log_err(LD_BUG, "Failed to validate default config: %s", msg);
       tor_free(msg);
       tor_assert(0);
     }
