@@ -542,5 +542,7 @@ STATIC int format_helper_exit_status(unsigned char child_state,
 
 const char *libor_get_digests(void);
 
+#define ARRAY_LENGTH(x) (sizeof(x)) / sizeof(x[0])
+
 #endif
 

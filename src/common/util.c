@@ -24,6 +24,7 @@
 #include "torint.h"
 #include "container.h"
 #include "address.h"
+#include "../common/sandbox.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -1799,7 +1800,7 @@ file_status(const char *fname)
   int r;
   f = tor_strdup(fname);
   clean_name_for_stat(f);
-  r = stat(f, &st);
+  r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {
     if (errno == ENOENT) {
@@ -1849,7 +1850,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   tor_assert(dirname);
   f = tor_strdup(dirname);
   clean_name_for_stat(f);
-  r = stat(f, &st);
+  r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {
     if (errno != ENOENT) {
@@ -3039,6 +3040,7 @@ smartlist_t *
 tor_listdir(const char *dirname)
 {
   smartlist_t *result;
+  const char *prot_dname = sandbox_intern_string(dirname);
 #ifdef _WIN32
   char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
@@ -3082,7 +3084,7 @@ tor_listdir(const char *dirname)
 #else
   DIR *d;
   struct dirent *de;
-  if (!(d = opendir(dirname)))
+  if (!(d = opendir(prot_dname)))
     return NULL;
 
   result = smartlist_new();

@@ -56,6 +56,7 @@
 #include "../common/util.h"
 #include "container.h"
 #include "compat.h"
+#include "sandbox.h"
 
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
 #error "We require OpenSSL >= 0.9.8"
@@ -2349,7 +2350,7 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   return 0;
 #else
   for (i = 0; filenames[i]; ++i) {
-    fd = open(filenames[i], O_RDONLY, 0);
+    fd = open(sandbox_intern_string(filenames[i]), O_RDONLY, 0);
     if (fd<0) continue;
     log_info(LD_CRYPTO, "Reading entropy from \"%s\"", filenames[i]);
     n = read_all(fd, (char*)out, out_len, 0);

@@ -402,7 +402,13 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS(event_get_version event_get_version_number event_get_method event_set_log_callback evdns_set_outgoing_bind_address event_base_loopexit)
+AC_CHECK_FUNCS([event_get_version \
+                event_get_version_number \
+                event_get_method \
+                event_set_log_callback \
+                evdns_set_outgoing_bind_address \
+                evutil_secure_rng_set_urandom_device_file \
+                event_base_loopexit])
 AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])

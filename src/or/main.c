@@ -2655,6 +2655,95 @@ find_flashcard_path(PWCHAR path, size_t size)
 }
 #endif
 
+static void
+init_addrinfo(void)
+{
+  char hname[256];
+
+  // host name to sandbox
+  gethostname(hname, sizeof(hname));
+  sandbox_add_addrinfo(hname);
+}
+
+static sandbox_cfg_t*
+sandbox_init_filter(void)
+{
+  sandbox_cfg_t *cfg = sandbox_cfg_new();
+
+  sandbox_cfg_allow_openat_filename(&cfg,
+      get_datadir_fname("cached-status"), 1);
+
+  sandbox_cfg_allow_open_filename_array(&cfg,
+      get_datadir_fname("cached-certs"), 1,
+      get_datadir_fname("cached-certs.tmp"), 1,
+      get_datadir_fname("cached-consensus"), 1,
+      get_datadir_fname("unverified-consensus"), 1,
+      get_datadir_fname("unverified-consensus.tmp"), 1,
+      get_datadir_fname("cached-microdesc-consensus"), 1,
+      get_datadir_fname("cached-microdesc-consensus.tmp"), 1,
+      get_datadir_fname("cached-microdescs"), 1,
+      get_datadir_fname("cached-microdescs.tmp"), 1,
+      get_datadir_fname("cached-microdescs.new"), 1,
+      get_datadir_fname("cached-microdescs.new.tmp"), 1,
+      get_datadir_fname("unverified-microdesc-consensus"), 1,
+      get_datadir_fname("cached-descriptors"), 1,
+      get_datadir_fname("cached-descriptors.new"), 1,
+      get_datadir_fname("cached-descriptors.tmp"), 1,
+      get_datadir_fname("cached-descriptors.new.tmp"), 1,
+      get_datadir_fname("cached-descriptors.tmp.tmp"), 1,
+      get_datadir_fname("cached-extrainfo"), 1,
+      get_datadir_fname("state.tmp"), 1,
+      get_datadir_fname("unparseable-desc.tmp"), 1,
+      get_datadir_fname("unparseable-desc"), 1,
+      "/dev/srandom", 0,
+      "/dev/urandom", 0,
+      "/dev/random", 0,
+      NULL, 0
+  );
+
+  sandbox_cfg_allow_stat_filename_array(&cfg,
+      get_datadir_fname(NULL), 1,
+      get_datadir_fname("lock"), 1,
+      get_datadir_fname("state"), 1,
+      get_datadir_fname("router-stability"), 1,
+      get_datadir_fname("cached-extrainfo.new"), 1,
+      NULL, 0
+  );
+
+  // orport
+  if (server_mode(get_options())) {
+    sandbox_cfg_allow_open_filename_array(&cfg,
+        get_datadir_fname2("keys", "secret_id_key"), 1,
+        get_datadir_fname2("keys", "secret_onion_key"), 1,
+        get_datadir_fname2("keys", "secret_onion_key_ntor"), 1,
+        get_datadir_fname2("keys", "secret_onion_key_ntor.tmp"), 1,
+        get_datadir_fname2("keys", "secret_id_key.old"), 1,
+        get_datadir_fname2("keys", "secret_onion_key.old"), 1,
+        get_datadir_fname2("keys", "secret_onion_key_ntor.old"), 1,
+        get_datadir_fname2("keys", "secret_onion_key.tmp"), 1,
+        get_datadir_fname2("keys", "secret_id_key.tmp"), 1,
+        get_datadir_fname("fingerprint"), 1,
+        get_datadir_fname("fingerprint.tmp"), 1,
+        get_datadir_fname("cached-consensus"), 1,
+        get_datadir_fname("cached-consensus.tmp"), 1,
+        "/etc/resolv.conf", 0,
+        NULL, 0
+    );
+
+    sandbox_cfg_allow_stat_filename_array(&cfg,
+        get_datadir_fname("keys"), 1,
+        get_datadir_fname("stats/dirreq-stats"), 1,
+        NULL, 0
+    );
+  }
+
+  sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
+
+  init_addrinfo();
+
+  return cfg;
+}
+
 /** Main entry point for the Tor process.  Called from main(). */
 /* This function is distinct from main() only so we can link main.c into
  * the unittest binary without conflicting with the unittests' main. */
@@ -2723,10 +2812,18 @@ tor_main(int argc, char *argv[])
     return -1;
 
   if (get_options()->Sandbox) {
-    if (tor_global_sandbox()) {
+    sandbox_cfg_t* cfg = sandbox_init_filter();
+
+    if (sandbox_init(cfg)) {
       log_err(LD_BUG,"Failed to create syscall sandbox filter");
       return -1;
     }
+
+    // registering libevent rng
+#ifdef HAVE_EVUTIL_SECURE_RNG_SET_URANDOM_DEVICE_FILE
+    evutil_secure_rng_set_urandom_device_file(
+        (char*) sandbox_intern_string("/dev/urandom"));
+#endif
   }
 
   switch (get_options()->command) {

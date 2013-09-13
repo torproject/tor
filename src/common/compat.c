@@ -110,6 +110,7 @@
 #include "util.h"
 #include "container.h"
 #include "address.h"
+#include "sandbox.h"
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
@@ -126,6 +127,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
 {
   int fd;
 #ifdef O_CLOEXEC
+  path = sandbox_intern_string(path);
   fd = open(path, flags|O_CLOEXEC, mode);
   if (fd >= 0)
     return fd;
