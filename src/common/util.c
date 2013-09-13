@@ -3040,7 +3040,6 @@ smartlist_t *
 tor_listdir(const char *dirname)
 {
   smartlist_t *result;
-  const char *prot_dname = sandbox_intern_string(dirname);
 #ifdef _WIN32
   char *pattern=NULL;
   TCHAR tpattern[MAX_PATH] = {0};
@@ -3082,6 +3081,7 @@ tor_listdir(const char *dirname)
   FindClose(handle);
   tor_free(pattern);
 #else
+  const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;
   struct dirent *de;
   if (!(d = opendir(prot_dname)))
