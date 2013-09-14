@@ -1862,22 +1862,20 @@ rep_hist_note_used_port(time_t now, uint16_t port)
   add_predicted_port(now, port);
 }
 
-/** For this long after we've seen a request for a given port, assume that
- * we'll want to make connections to the same port in the future.  */
-#define PREDICTED_CIRCS_RELEVANCE_TIME (60*60)
-
 /** Return a newly allocated pointer to a list of uint16_t * for ports that
  * are likely to be asked for in the near future.
  */
 smartlist_t *
 rep_hist_get_predicted_ports(time_t now)
 {
+  int predicted_circs_relevance_time;
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
+  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
 
   /* clean out obsolete entries */
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
-    if (pp->time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
+    if (pp->time + predicted_circs_relevance_time < now) {
       log_debug(LD_CIRC, "Expiring predicted port %d", pp->port);
 
       rephist_total_alloc -= sizeof(predicted_port_t);
@@ -1944,14 +1942,17 @@ int
 rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                 int *need_capacity)
 {
+  int predicted_circs_relevance_time;
+  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
+
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;
     predicted_internal_uptime_time = now;
     predicted_internal_capacity_time = now;
   }
-  if (predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+  if (predicted_internal_time + predicted_circs_relevance_time < now)
     return 0; /* too long ago */
-  if (predicted_internal_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now)
+  if (predicted_internal_uptime_time + predicted_circs_relevance_time >= now)
     *need_uptime = 1;
   // Always predict that we need capacity.
   *need_capacity = 1;
@@ -1963,8 +1964,11 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 int
 any_predicted_circuits(time_t now)
 {
+  int predicted_circs_relevance_time;
+  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
+
   return smartlist_len(predicted_ports_list) ||
-         predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now;
+         predicted_internal_time + predicted_circs_relevance_time >= now;
 }
 
 /** Return 1 if we have no need for circuits currently, else return 0. */
