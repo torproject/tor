@@ -523,6 +523,10 @@ GENERAL OPTIONS
     following the Tor specification. Otherwise, they are logged with severity
     \'info'. (Default: 0)
 
+**PredictedCircsRelevanceTime** __NUM__::
+    Set how long we will make connections to a port after seeing a request for
+    that port. (Default: 1 hour)
+
 **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect
     on Windows; instead you should use the --service command-line option.
