@@ -582,8 +582,12 @@ static or_options_t *global_default_options = NULL;
 static char *torrc_fname = NULL;
 /** Name of the most recently read torrc-defaults file.*/
 static char *torrc_defaults_fname;
-/** Configuration Options set by command line. */
+/** Configuration options set by command line. */
 static config_line_t *global_cmdline_options = NULL;
+/** Non-configuration options set by the command line */
+static config_line_t *global_cmdline_only_options = NULL;
+/** Boolean: Have we parsed the command line? */
+static int have_parsed_cmdline = 0;
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
 /** List of port_cfg_t for all configured ports. */
@@ -744,6 +748,9 @@ config_free_all(void)
 
   config_free_lines(global_cmdline_options);
   global_cmdline_options = NULL;
+
+  config_free_lines(global_cmdline_only_options);
+  global_cmdline_only_options = NULL;
 
   if (configured_ports) {
     SMARTLIST_FOREACH(configured_ports,
@@ -3894,30 +3901,22 @@ options_init_from_torrc(int argc, char **argv)
   char *cf=NULL, *cf_defaults=NULL;
   int command;
   int retval = -1;
-  static char **backup_argv;
-  static int backup_argc;
   char *command_arg = NULL;
   char *errmsg=NULL;
-  config_line_t *cmdline_only_options = NULL;
   config_line_t *p_index = NULL;
-
-  if (argv) { /* first time we're called. save command line args */
-    backup_argv = argv;
-    backup_argc = argc;
-  } else { /* we're reloading. need to clean up old options first. */
-    argv = backup_argv;
-    argc = backup_argc;
-  }
+  config_line_t *cmdline_only_options = NULL;
 
   /* Go through command-line variables */
-  if (!global_cmdline_options) {
+  if (! have_parsed_cmdline) {
     /* Or we could redo the list every time we pass this place.
      * It does not really matter */
     if (config_parse_commandline(argc, argv, 0, &global_cmdline_options,
-                                 &cmdline_only_options) < 0) {
+                                 &global_cmdline_only_options) < 0) {
       goto err;
     }
+    have_parsed_cmdline = 1;
   }
+  cmdline_only_options = global_cmdline_only_options;
 
   if (config_line_find(cmdline_only_options, "-h") ||
       config_line_find(cmdline_only_options, "--help")) {
@@ -3990,7 +3989,6 @@ options_init_from_torrc(int argc, char **argv)
 
   tor_free(cf);
   tor_free(cf_defaults);
-  config_free_lines(cmdline_only_options);
   if (errmsg) {
     log_warn(LD_CONFIG,"%s", errmsg);
     tor_free(errmsg);
