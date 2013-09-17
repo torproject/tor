@@ -941,15 +941,8 @@ new_element(int syscall, int index, intptr_t value)
 {
   smp_param_t *param = NULL;
 
-  sandbox_cfg_t *elem = (sandbox_cfg_t*) tor_malloc(sizeof(sandbox_cfg_t));
-  if (!elem)
-    return NULL;
-
-  elem->param = (smp_param_t*) tor_malloc(sizeof(smp_param_t));
-  if (!elem->param) {
-    tor_free(elem);
-    return NULL;
-  }
+  sandbox_cfg_t *elem = tor_malloc(sizeof(sandbox_cfg_t));
+  elem->param = tor_malloc(sizeof(smp_param_t));
 
   param = elem->param;
   param->syscall = syscall;
@@ -1148,12 +1141,10 @@ sandbox_getaddrinfo(const char *name, const char *servname,
 
   for (el = sb_addr_info; el; el = el->next) {
     if (!strcmp(el->name, name)) {
-      *res = (struct addrinfo *) tor_malloc(sizeof(struct addrinfo));
-      if (!res) {
-        return -2;
-      }
+      *res = tor_malloc(sizeof(struct addrinfo));
 
       memcpy(*res, el->info, sizeof(struct addrinfo));
+      /* XXXX What if there are multiple items in the list? */
       return 0;
     }
   }
@@ -1183,12 +1174,7 @@ sandbox_add_addrinfo(const char* name)
   struct addrinfo hints;
   sb_addr_info_t *el = NULL;
 
-  el = (sb_addr_info_t*) tor_malloc(sizeof(sb_addr_info_t));
-  if (!el) {
-    log_err(LD_BUG,"(Sandbox) failed to allocate addr info!");
-    ret = -2;
-    goto out;
-  }
+  el = tor_malloc(sizeof(sb_addr_info_t));
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
