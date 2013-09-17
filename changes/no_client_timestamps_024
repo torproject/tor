@@ -1,0 +1,5 @@
+  o Minor features (security):
+    - Clients no longer send timestamps in their NETINFO cells.  These were
+      not used for anything, and they provided one small way for clients
+      to be distinguished from each other as they moved from network to
+      network or behind NAT.
