@@ -1184,6 +1184,7 @@ sandbox_add_addrinfo(const char* name)
   if (ret) {
     log_err(LD_BUG,"(Sandbox) failed to getaddrinfo");
     ret = -2;
+    tor_free(el);
     goto out;
   }
 
