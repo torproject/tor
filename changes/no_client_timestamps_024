@@ -10,3 +10,5 @@
     - Stop sending timestamps in AUTHENTICATE cells. This is not such
       a big deal from a security point of view, but it achieves no actual
       good purpose, and isn't needed. Implements part of proposal 222.
+    - Reduce down accuracy of timestamps in hidden service descriptors.
+      Implements part of proposal 222.

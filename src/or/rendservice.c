@@ -593,6 +593,7 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
+  d->timestamp -= d->timestamp % 3600; /* Round down to nearest hour */
   d->intro_nodes = smartlist_new();
   /* Support intro protocols 2 and 3. */
   d->protocols = (1 << 2) + (1 << 3);
