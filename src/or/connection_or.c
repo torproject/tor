@@ -2287,19 +2287,11 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   if (server)
     return V3_AUTH_FIXED_PART_LEN; // ptr-out
 
-  /* Time: 8 octets. */
-  {
-    uint64_t now = time(NULL);
-    if ((time_t)now < 0)
-      return -1;
-    set_uint32(ptr, htonl((uint32_t)(now>>32)));
-    set_uint32(ptr+4, htonl((uint32_t)now));
-    ptr += 8;
-  }
-
-  /* Nonce: 16 octets. */
-  crypto_rand((char*)ptr, 16);
-  ptr += 16;
+  /* 8 octets were reserved for the current time, but we're trying to get out
+   * of the habit of sending time around willynilly.  Fortunately, nothing
+   * checks it.  That's followed by 16 bytes of nonce. */
+  crypto_rand((char*)ptr, 24);
+  ptr += 24;
 
   tor_assert(ptr - out == V3_AUTH_BODY_LEN);
 
