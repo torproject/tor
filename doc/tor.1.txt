@@ -358,7 +358,8 @@ GENERAL OPTIONS
 
 **DisableDebuggerAttachment** **0**|**1**::
    If set to 1, Tor will attempt to prevent basic debugging attachment attempts
-   by other processes. It has no impact for users who wish to attach if they
+   by other processes. This may also keep Tor from generating core files if
+   it crashes. It has no impact for users who wish to attach if they
    have CAP_SYS_PTRACE or if they are root.  We believe that this feature
    works on modern Gnu/Linux distributions, and that it may also work on *BSD
    systems (untested).  Some modern Gnu/Linux systems such as Ubuntu have the
