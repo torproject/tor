@@ -1,0 +1,4 @@
+  o Bugfixes (performance):
+    - Set the listen() backlog limit to the largest actually supported
+      on the system, not to the value in a header file. Fixes bug 9716;
+      bugfix on every released Tor.
