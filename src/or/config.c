@@ -393,6 +393,7 @@ static config_var_t option_vars_[] = {
   V(SSLKeyLifetime,              INTERVAL, "0"),
   OBSOLETE("StatusFetchPeriod"),
   V(StrictNodes,                 BOOL,     "0"),
+  V(Support022HiddenServices,    AUTOBOOL, "auto"),
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),

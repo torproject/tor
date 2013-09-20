@@ -372,7 +372,8 @@ GENERAL OPTIONS
 
 **DisableDebuggerAttachment** **0**|**1**::
    If set to 1, Tor will attempt to prevent basic debugging attachment attempts
-   by other processes. It has no impact for users who wish to attach if they
+   by other processes. This may also keep Tor from generating core files if
+   it crashes. It has no impact for users who wish to attach if they
    have CAP_SYS_PTRACE or if they are root.  We believe that this feature
    works on modern Gnu/Linux distributions, and that it may also work on *BSD
    systems (untested).  Some modern Gnu/Linux systems such as Ubuntu have the
@@ -1355,6 +1356,15 @@ The following options are useful only for clients (that is, if
     prevent your Tor client from bootstrapping.  If this option is negative,
     Tor will use a default value chosen by the directory
     authorities. (Default: -1.)
+
+**Support022HiddenServices** **0**|**1**|**auto**::
+    Tor hidden services running versions before 0.2.3.x required clients to
+    send timestamps, which can potentially be used to distinguish clients
+    whose view of the current time is skewed. If this option is set to 0, we
+    do not send this timestamp, and hidden services on obsolete Tor versions
+    will not work.  If this option is set to 1, we send the timestamp.  If
+    this optoin is "auto", we take a recommendation from the latest consensus
+    document. (Default: auto)
 
 
 SERVER OPTIONS
