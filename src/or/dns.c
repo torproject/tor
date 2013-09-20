@@ -1493,11 +1493,13 @@ configure_nameservers(int force)
       evdns_base_search_clear(the_evdns_base);
       evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
+#if defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP)
     if (flags & DNS_OPTION_HOSTSFILE) {
       flags ^= DNS_OPTION_HOSTSFILE;
       evdns_base_load_hosts(the_evdns_base,
-          sandbox_intern_string("/etc/resolv.conf"));
+          sandbox_intern_string("/etc/hosts"));
     }
+#endif
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
     if ((r = evdns_base_resolv_conf_parse(the_evdns_base, flags,
         sandbox_intern_string(conf_fname)))) {
