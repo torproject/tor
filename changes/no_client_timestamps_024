@@ -3,7 +3,7 @@
       not used for anything, and they provided one small way for clients
       to be distinguished from each other as they moved from network to
       network or behind NAT. Implements part of proposal 222.
-    - Clients now round timestamps in INTRODUCE2 cells down to the nearest
+    - Clients now round timestamps in INTRODUCE cells down to the nearest
       10 minutes.  If a new Support022HiddenServices option is set to 0,
       or if it's set to "auto" and the feature is disabled in the consensus,
       the timestamp is sent as 0 instead. Implements part of proposal 222.
