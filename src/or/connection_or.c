@@ -2051,8 +2051,9 @@ connection_or_send_netinfo(or_connection_t *conn)
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
-  /* Timestamp. */
-  set_uint32(cell.payload, htonl((uint32_t)now));
+  /* Timestamp, if we're a relay. */
+  if (public_server_mode(get_options()) || ! conn->is_outgoing)
+    set_uint32(cell.payload, htonl((uint32_t)now));
 
   /* Their address. */
   out = cell.payload + 4;
