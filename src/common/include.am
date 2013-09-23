@@ -74,6 +74,7 @@ LIBOR_A_SOURCES = \
   src/common/util_codedigest.c				\
   src/common/util_process.c				\
   src/common/sandbox.c					\
+  src/common/workqueue.c				\
   src/ext/csiphash.c					\
   src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
@@ -137,6 +138,7 @@ COMMONHEADERS = \
   src/common/tortls.h				\
   src/common/util.h				\
   src/common/util_process.h			\
+  src/common/workqueue.h			\
   $(libor_mempool_header)
 
 noinst_HEADERS+= $(COMMONHEADERS)
