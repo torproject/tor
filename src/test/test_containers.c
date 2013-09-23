@@ -901,12 +901,12 @@ test_container_fp_pair_map(void)
   memset(fp6.second, 0x62, DIGEST_LEN);
 
   v = fp_pair_map_set(map, &fp1, (void*)99);
-  test_eq(v, NULL);
+  tt_ptr_op(v, ==, NULL);
   test_assert(!fp_pair_map_isempty(map));
   v = fp_pair_map_set(map, &fp2, (void*)101);
-  test_eq(v, NULL);
+  tt_ptr_op(v, ==, NULL);
   v = fp_pair_map_set(map, &fp1, (void*)100);
-  test_eq(v, (void*)99);
+  tt_ptr_op(v, ==, (void*)99);
   test_eq_ptr(fp_pair_map_get(map, &fp1), (void*)100);
   test_eq_ptr(fp_pair_map_get(map, &fp2), (void*)101);
   test_eq_ptr(fp_pair_map_get(map, &fp3), NULL);
