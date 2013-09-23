@@ -70,30 +70,25 @@ tor_get_thread_id(void)
   return (unsigned long)GetCurrentThreadId();
 }
 
-tor_cond_t *
-tor_cond_new(void)
+int
+tor_cond_init(tor_cond_t *cond)
 {
-  tor_cond_t *cond = tor_malloc(sizeof(tor_cond_t));
+  memset(cond, 0, sizeof(tor_cond_t));
   if (InitializeCriticalSectionAndSpinCount(&cond->lock, SPIN_COUNT)==0) {
-    tor_free(cond);
-    return NULL;
+    return -1;
   }
   if ((cond->event = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL) {
     DeleteCriticalSection(&cond->lock);
-    tor_free(cond);
-    return NULL;
+    return -1;
   }
   cond->n_waiting = cond->n_to_wake = cond->generation = 0;
-  return cond;
+  return 0;
 }
 void
-tor_cond_free(tor_cond_t *cond)
+tor_cond_uninit(tor_cond_t *cond)
 {
-  if (!cond)
-    return;
   DeleteCriticalSection(&cond->lock);
   CloseHandle(cond->event);
-  mm_free(cond);
 }
 
 static void

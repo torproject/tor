@@ -74,6 +74,8 @@ typedef struct tor_cond_t {
 
 tor_cond_t *tor_cond_new(void);
 void tor_cond_free(tor_cond_t *cond);
+int tor_cond_init(tor_cond_t *cond);
+void tor_cond_uninit(tor_cond_t *cond);
 int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,
                   const struct timeval *tv);
 void tor_cond_signal_one(tor_cond_t *cond);

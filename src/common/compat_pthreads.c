@@ -148,28 +148,23 @@ tor_get_thread_id(void)
 
 /* Conditions. */
 
-/** Return a newly allocated condition, with nobody waiting on it. */
-tor_cond_t *
-tor_cond_new(void)
+int
+tor_cond_init(tor_cond_t *cond)
 {
-  tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
+  memset(cond, 0, sizeof(tor_cond_t));
   if (pthread_cond_init(&cond->cond, NULL)) {
-    tor_free(cond);
-    return NULL;
+    return -1;
   }
-  return cond;
+  return 0;
 }
 /** Release all resources held by <b>cond</b>. */
 void
-tor_cond_free(tor_cond_t *cond)
+tor_cond_uninit(tor_cond_t *cond)
 {
-  if (!cond)
-    return;
   if (pthread_cond_destroy(&cond->cond)) {
     log_warn(LD_GENERAL,"Error freeing condition: %s", strerror(errno));
     return;
   }
-  tor_free(cond);
 }
 /** Wait until one of the tor_cond_signal functions is called on <b>cond</b>.
  * All waiters on the condition must wait holding the same <b>mutex</b>.
