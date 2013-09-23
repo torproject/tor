@@ -250,7 +250,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
     if (rend_client_should_send_timestamp()) {
-      time_t now = (uint32_t)time(NULL);
+      uint32_t now = (uint32_t)time(NULL);
       now += 300;
       now -= now % 600;
       set_uint32(tmp+v3_shift+1, htonl(now));
