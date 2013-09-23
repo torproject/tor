@@ -393,6 +393,10 @@ fi
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
 
+AM_CONDITIONAL(THREADS_WIN32, test "$enable_threads" = "yes" && test "$bwin32" = "true")
+AM_CONDITIONAL(THREADS_PTHREADS, test "$enable_threads" = "yes" && test "$bwin32" = "false")
+AM_CONDITIONAL(THREADS_NONE, test "$enable_threads" != "yes")
+
 dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.

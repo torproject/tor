@@ -36,9 +36,6 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#if defined(HAVE_PTHREAD_H) && !defined(_WIN32)
-#include <pthread.h>
-#endif
 #include <stdarg.h>
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
@@ -642,60 +639,9 @@ char **get_environment(void);
 
 int get_total_system_memory(size_t *mem_out);
 
-int spawn_func(void (*func)(void *), void *data);
-void spawn_exit(void) ATTR_NORETURN;
-
-#if defined(_WIN32)
-#define USE_WIN32_THREADS
-#elif defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_CREATE)
-#define USE_PTHREADS
-#else
-#error "No threading system was found"
-#endif
-
 int compute_num_cpus(void);
 
-/* Because we use threads instead of processes on most platforms (Windows,
- * Linux, etc), we need locking for them.  On platforms with poor thread
- * support or broken gethostbyname_r, these functions are no-ops. */
-
-/** A generic lock structure for multithreaded builds. */
-typedef struct tor_mutex_t {
-#if defined(USE_WIN32_THREADS)
-  /** Windows-only: on windows, we implement locks with CRITICAL_SECTIONS. */
-  CRITICAL_SECTION mutex;
-#elif defined(USE_PTHREADS)
-  /** Pthreads-only: with pthreads, we implement locks with
-   * pthread_mutex_t. */
-  pthread_mutex_t mutex;
-#else
-  /** No-threads only: Dummy variable so that tor_mutex_t takes up space. */
-  int _unused;
-#endif
-} tor_mutex_t;
-
 int tor_mlockall(void);
-
-tor_mutex_t *tor_mutex_new(void);
-void tor_mutex_init(tor_mutex_t *m);
-void tor_mutex_acquire(tor_mutex_t *m);
-void tor_mutex_release(tor_mutex_t *m);
-void tor_mutex_free(tor_mutex_t *m);
-void tor_mutex_uninit(tor_mutex_t *m);
-unsigned long tor_get_thread_id(void);
-void tor_threads_init(void);
-
-void set_main_thread(void);
-int in_main_thread(void);
-
-#if 0
-typedef struct tor_cond_t tor_cond_t;
-tor_cond_t *tor_cond_new(void);
-void tor_cond_free(tor_cond_t *cond);
-int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex);
-void tor_cond_signal_one(tor_cond_t *cond);
-void tor_cond_signal_all(tor_cond_t *cond);
-#endif
 
 /** Macros for MIN/MAX.  Never use these when the arguments could have
  * side-effects.
@@ -741,6 +687,9 @@ STATIC int tor_ersatz_socketpair(int family, int type, int protocol,
                                    tor_socket_t fd[2]);
 #endif
 #endif
+
+/* This needs some of the declarations above so we include it here. */
+#include "compat_threads.h"
 
 #endif
 
