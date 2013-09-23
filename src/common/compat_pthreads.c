@@ -148,10 +148,6 @@ tor_get_thread_id(void)
 
 /* Conditions. */
 
-/** Cross-platform condition implementation. */
-struct tor_cond_t {
-  pthread_cond_t cond;
-};
 /** Return a newly allocated condition, with nobody waiting on it. */
 tor_cond_t *
 tor_cond_new(void)
@@ -177,11 +173,25 @@ tor_cond_free(tor_cond_t *cond)
 }
 /** Wait until one of the tor_cond_signal functions is called on <b>cond</b>.
  * All waiters on the condition must wait holding the same <b>mutex</b>.
- * Returns 0 on success, negative on failure. */
+ * Returns 0 on success, -1 on failure, 1 on timeout. */
 int
-tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
+tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
 {
-  return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
+  if (tv == NULL) {
+    return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
+  } else {
+    struct timespec ts;
+    int r;
+    ts.tv_sec = tv->tv_sec;
+    ts.tv_nsec = tv->tv_usec * 1000;
+    r = pthread_cond_timedwait(&cond->cond, &mutex->mutex, &ts);
+    if (r == 0)
+      return 0;
+    else if (r == ETIMEDOUT)
+      return 1;
+    else
+      return -1;
+  }
 }
 /** Wake up one of the waiters on <b>cond</b>. */
 void

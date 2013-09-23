@@ -70,17 +70,20 @@ tor_get_thread_id(void)
   return (unsigned long)GetCurrentThreadId();
 }
 
-static DWORD cond_event_tls_index;
-struct tor_cond_t {
-  CRITICAL_SECTION mutex;
-  smartlist_t *events;
-};
 tor_cond_t *
 tor_cond_new(void)
 {
-  tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
-  InitializeCriticalSection(&cond->mutex);
-  cond->events = smartlist_new();
+  tor_cond_t *cond = tor_malloc(sizeof(tor_cond_t));
+  if (InitializeCriticalSectionAndSpinCount(&cond->lock, SPIN_COUNT)==0) {
+    tor_free(cond);
+    return NULL;
+  }
+  if ((cond->event = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL) {
+    DeleteCriticalSection(&cond->lock);
+    tor_free(cond);
+    return NULL;
+  }
+  cond->n_waiting = cond->n_to_wake = cond->generation = 0;
   return cond;
 }
 void
@@ -88,74 +91,103 @@ tor_cond_free(tor_cond_t *cond)
 {
   if (!cond)
     return;
-  DeleteCriticalSection(&cond->mutex);
-  /* XXXX notify? */
-  smartlist_free(cond->events);
-  tor_free(cond);
+  DeleteCriticalSection(&cond->lock);
+  CloseHandle(cond->event);
+  mm_free(cond);
 }
-int
-tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
+
+static void
+tor_cond_signal_impl(tor_cond_t *cond, int broadcast)
 {
-  HANDLE event;
-  int r;
-  tor_assert(cond);
-  tor_assert(mutex);
-  event = TlsGetValue(cond_event_tls_index);
-  if (!event) {
-    event = CreateEvent(0, FALSE, FALSE, NULL);
-    TlsSetValue(cond_event_tls_index, event);
-  }
-  EnterCriticalSection(&cond->mutex);
-
-  tor_assert(WaitForSingleObject(event, 0) == WAIT_TIMEOUT);
-  tor_assert(!smartlist_contains(cond->events, event));
-  smartlist_add(cond->events, event);
-
-  LeaveCriticalSection(&cond->mutex);
-
-  tor_mutex_release(mutex);
-  r = WaitForSingleObject(event, INFINITE);
-  tor_mutex_acquire(mutex);
-
-  switch (r) {
-    case WAIT_OBJECT_0: /* we got the mutex normally. */
-      break;
-    case WAIT_ABANDONED: /* holding thread exited. */
-    case WAIT_TIMEOUT: /* Should never happen. */
-      tor_assert(0);
-      break;
-    case WAIT_FAILED:
-      log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
-  }
+  EnterCriticalSection(&cond->lock);
+  if (broadcast)
+    cond->n_to_wake = cond->n_waiting;
+  else
+    ++cond->n_to_wake;
+  cond->generation++;
+  SetEvent(cond->event);
+  LeaveCriticalSection(&cond->lock);
   return 0;
 }
 void
 tor_cond_signal_one(tor_cond_t *cond)
 {
-  HANDLE event;
-  tor_assert(cond);
-
-  EnterCriticalSection(&cond->mutex);
-
-  if ((event = smartlist_pop_last(cond->events)))
-    SetEvent(event);
-
-  LeaveCriticalSection(&cond->mutex);
+  tor_cond_signal_impl(cond, 0);
 }
 void
 tor_cond_signal_all(tor_cond_t *cond)
 {
-  tor_assert(cond);
+  tor_cond_signal_impl(cond, 1);
+}
 
-  EnterCriticalSection(&cond->mutex);
-  SMARTLIST_FOREACH(cond->events, HANDLE, event, SetEvent(event));
-  smartlist_clear(cond->events);
-  LeaveCriticalSection(&cond->mutex);
+int
+tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock, const struct timeval *tv)
+{
+  CRITICAL_SECTION *lock = &lock->mutex;
+  int generation_at_start;
+  int waiting = 1;
+  int result = -1;
+  DWORD ms = INFINITE, ms_orig = INFINITE, startTime, endTime;
+  if (tv)
+    ms_orig = ms = evutil_tv_to_msec_(tv);
+
+  EnterCriticalSection(&cond->lock);
+  ++cond->n_waiting;
+  generation_at_start = cond->generation;
+  LeaveCriticalSection(&cond->lock);
+
+  LeaveCriticalSection(lock);
+
+  startTime = GetTickCount();
+  do {
+    DWORD res;
+    res = WaitForSingleObject(cond->event, ms);
+    EnterCriticalSection(&cond->lock);
+    if (cond->n_to_wake &&
+        cond->generation != generation_at_start) {
+      --cond->n_to_wake;
+      --cond->n_waiting;
+      result = 0;
+      waiting = 0;
+      goto out;
+    } else if (res != WAIT_OBJECT_0) {
+      result = (res==WAIT_TIMEOUT) ? 1 : -1;
+      --cond->n_waiting;
+      waiting = 0;
+      goto out;
+    } else if (ms != INFINITE) {
+      endTime = GetTickCount();
+      if (startTime + ms_orig <= endTime) {
+        result = 1; /* Timeout */
+        --cond->n_waiting;
+        waiting = 0;
+        goto out;
+      } else {
+        ms = startTime + ms_orig - endTime;
+      }
+    }
+    /* If we make it here, we are still waiting. */
+    if (cond->n_to_wake == 0) {
+      /* There is nobody else who should wake up; reset
+       * the event. */
+      ResetEvent(cond->event);
+    }
+  out:
+    LeaveCriticalSection(&cond->lock);
+  } while (waiting);
+
+  EnterCriticalSection(lock);
+
+  EnterCriticalSection(&cond->lock);
+  if (!cond->n_waiting)
+    ResetEvent(cond->event);
+  LeaveCriticalSection(&cond->lock);
+
+  return result;
 }
 
 void
 tor_threads_init(void)
 {
-  cond_event_tls_index = TlsAlloc();
   set_main_thread();
 }
