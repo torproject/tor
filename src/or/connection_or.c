@@ -1229,6 +1229,16 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
 
 /** Mark orconn for close and transition the associated channel, if any, to
  * the closing state.
+ *
+ * It's safe to call this and connection_or_close_for_error() any time, and
+ * channel layer will treat it as a connection closing for reasons outside
+ * its control, like the remote end closing it.  It can also be a local
+ * reason that's specific to connection_t/or_connection_t rather than
+ * the channel mechanism, such as expiration of old connections in
+ * run_connection_housekeeping().  If you want to close a channel_t
+ * from somewhere that logically works in terms of generic channels
+ * rather than connections, use channel_mark_for_close(); see also
+ * the comment on that function in channel.c.
  */
 
 void

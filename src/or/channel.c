@@ -1295,11 +1295,10 @@ channel_closed(channel_t *chan)
   if (chan->state == CHANNEL_STATE_CLOSED ||
       chan->state == CHANNEL_STATE_ERROR) return;
 
-  if (chan->reason_for_closing == CHANNEL_CLOSE_FOR_ERROR) {
-    /* Inform any pending (not attached) circs that they should
-     * give up. */
-    circuit_n_chan_done(chan, 0);
-  }
+  /* Inform any pending (not attached) circs that they should
+   * give up. */
+  circuit_n_chan_done(chan, 0);
+
   /* Now close all the attached circuits on it. */
   circuit_unlink_all_from_channel(chan, END_CIRC_REASON_CHANNEL_CLOSED);
 
