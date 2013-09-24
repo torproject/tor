@@ -8,20 +8,20 @@
 
 typedef struct replyqueue_s replyqueue_t;
 typedef struct threadpool_s threadpool_t;
-
+typedef struct workqueue_entry_s workqueue_entry_t;
 
 #define WQ_CMD_RUN    0
 #define WQ_CMD_CANCEL 1
 
-#define WQ_RPL_QUEUE    0
-#define WQ_RPL_NOQUEUE  1
-#define WQ_RPL_ERROR    2
-#define WQ_RPL_SHUTDOWN 3
+#define WQ_RPL_REPLY    0
+#define WQ_RPL_ERROR    1
+#define WQ_RPL_SHUTDOWN 2
 
-void *threadpool_queue_work(threadpool_t *pool,
-                            int (*fn)(int, void *, void *),
-                            void (*reply_fn)(void *),
-                            void *arg);
+workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
+                                         int (*fn)(void *, void *),
+                                         void (*reply_fn)(void *),
+                                         void *arg);
+int workqueue_entry_cancel(workqueue_entry_t *pending_work);
 int threadpool_start_threads(threadpool_t *pool, int n);
 threadpool_t *threadpool_new(int n_threads,
                              replyqueue_t *replyqueue,

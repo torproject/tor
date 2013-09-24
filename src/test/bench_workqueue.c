@@ -64,7 +64,7 @@ mark_handled(int serial)
 }
 
 static int
-workqueue_do_rsa(int cmd, void *state, void *work)
+workqueue_do_rsa(void *state, void *work)
 {
   rsa_work_t *rw = work;
   state_t *st = state;
@@ -74,16 +74,11 @@ workqueue_do_rsa(int cmd, void *state, void *work)
 
   tor_assert(st->magic == 13371337);
 
-  if (cmd == WQ_CMD_CANCEL) {
-    tor_free(work);
-    return WQ_RPL_NOQUEUE;
-  }
-
   len = crypto_pk_private_sign(rsa, (char*)sig, 256,
                                (char*)rw->msg, rw->msglen);
   if (len < 0) {
-    tor_free(work);
-    return WQ_RPL_NOQUEUE;
+    rw->msglen = 0;
+    return WQ_RPL_ERROR;
   }
 
   memset(rw->msg, 0, sizeof(rw->msg));
@@ -93,12 +88,12 @@ workqueue_do_rsa(int cmd, void *state, void *work)
 
   mark_handled(rw->serial);
 
-  return WQ_RPL_QUEUE;
+  return WQ_RPL_REPLY;
 }
 
 #if 0
 static int
-workqueue_do_shutdown(int cmd, void *state, void *work)
+workqueue_do_shutdown(void *state, void *work)
 {
   (void)state;
   (void)work;
@@ -110,7 +105,7 @@ workqueue_do_shutdown(int cmd, void *state, void *work)
 #endif
 
 static int
-workqueue_do_ecdh(int cmd, void *state, void *work)
+workqueue_do_ecdh(void *state, void *work)
 {
   ecdh_work_t *ew = work;
   uint8_t output[CURVE25519_OUTPUT_LEN];
@@ -118,16 +113,11 @@ workqueue_do_ecdh(int cmd, void *state, void *work)
 
   tor_assert(st->magic == 13371337);
 
-  if (cmd == WQ_CMD_CANCEL) {
-    tor_free(work);
-    return WQ_RPL_NOQUEUE;
-  }
-
   curve25519_handshake(output, &st->ecdh, &ew->u.pk);
   memcpy(ew->u.msg, output, CURVE25519_OUTPUT_LEN);
   ++st->n_handled;
   mark_handled(ew->serial);
-  return WQ_RPL_QUEUE;
+  return WQ_RPL_REPLY;
 }
 
 static void *
