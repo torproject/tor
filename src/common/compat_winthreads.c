@@ -49,6 +49,12 @@ tor_mutex_init(tor_mutex_t *m)
   InitializeCriticalSection(&m->mutex);
 }
 void
+tor_mutex_init_for_cond(tor_mutex_t *m)
+{
+  InitializeCriticalSection(&m->mutex);
+}
+
+void
 tor_mutex_uninit(tor_mutex_t *m)
 {
   DeleteCriticalSection(&m->mutex);

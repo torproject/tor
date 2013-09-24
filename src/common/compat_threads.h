@@ -47,6 +47,7 @@ typedef struct tor_mutex_t {
 
 tor_mutex_t *tor_mutex_new(void);
 void tor_mutex_init(tor_mutex_t *m);
+void tor_mutex_init_for_cond(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);

@@ -96,6 +96,22 @@ tor_mutex_init(tor_mutex_t *mutex)
     tor_fragile_assert();
   }
 }
+
+/** As tor_mutex_init, but initialize a mutex suitable for use with a
+ * condition variable. */
+void
+tor_mutex_init_for_cond(tor_mutex_t *mutex)
+{
+  int err;
+  if (PREDICT_UNLIKELY(!threads_initialized))
+    tor_threads_init();
+  err = pthread_mutex_init(&mutex->mutex, NULL);
+  if (PREDICT_UNLIKELY(err)) {
+    log_err(LD_GENERAL, "Error %d creating a mutex.", err);
+    tor_fragile_assert();
+  }
+}
+
 /** Wait until <b>m</b> is free, then acquire it. */
 void
 tor_mutex_acquire(tor_mutex_t *m)
