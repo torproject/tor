@@ -97,10 +97,10 @@ tor_mutex_init(tor_mutex_t *mutex)
   }
 }
 
-/** As tor_mutex_init, but initialize a mutex suitable for use with a
- * condition variable. */
+/** As tor_mutex_init, but initialize a mutex suitable that may be
+ * non-reentrant, if the OS supports that. */
 void
-tor_mutex_init_for_cond(tor_mutex_t *mutex)
+tor_mutex_init_nonreentrant(tor_mutex_t *mutex)
 {
   int err;
   if (PREDICT_UNLIKELY(!threads_initialized))

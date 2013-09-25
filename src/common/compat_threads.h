@@ -46,14 +46,18 @@ typedef struct tor_mutex_t {
 
 
 tor_mutex_t *tor_mutex_new(void);
+tor_mutex_t *tor_mutex_new_nonreentrant(void);
 void tor_mutex_init(tor_mutex_t *m);
-void tor_mutex_init_for_cond(tor_mutex_t *m);
+void tor_mutex_init_nonreentrant(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);
 void tor_mutex_uninit(tor_mutex_t *m);
 unsigned long tor_get_thread_id(void);
 void tor_threads_init(void);
+
+/** Conditions need nonreentrant mutexes with pthreads. */
+#define tor_mutex_init_for_cond(m) tor_mutex_init_nonreentrant(m)
 
 void set_main_thread(void);
 int in_main_thread(void);

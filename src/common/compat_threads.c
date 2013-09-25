@@ -30,6 +30,15 @@ tor_mutex_new(void)
   tor_mutex_init(m);
   return m;
 }
+/** Return a newly allocated, ready-for-use mutex.  This one might be
+ * non-reentrant, if that's faster. */
+tor_mutex_t *
+tor_mutex_new_nonreentrant(void)
+{
+  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
+  tor_mutex_init_nonreentrant(m);
+  return m;
+}
 /** Release all storage and system resources held by <b>m</b>. */
 void
 tor_mutex_free(tor_mutex_t *m)
