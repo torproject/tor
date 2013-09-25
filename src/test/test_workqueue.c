@@ -249,8 +249,10 @@ help(void)
      "    -N <items>    Run this many items of work\n"
      "    -T <threads>  Use this many threads\n"
      "    -I <inflight> Have no more than this many requests queued at once\n"
-     "    -L <lowwater> Add items whenever fewer than this many are pending.\n"
-     "    -R <ratio>    Make one out of this many items be a slow (RSA) one");
+     "    -L <lowwater> Add items whenever fewer than this many are pending\n"
+     "    -R <ratio>    Make one out of this many items be a slow (RSA) one\n"
+     "    --no-{eventfd2,eventfd,pipe2,pipe,socketpair}\n"
+     "                  Disable one of the alert_socket backends.");
 }
 
 int
@@ -261,6 +263,7 @@ main(int argc, char **argv)
   int i;
   tor_libevent_cfg evcfg;
   struct event *ev;
+  uint32_t as_flags = 0;
 
   for (i = 1; i < argc; ++i) {
     if (!strcmp(argv[i], "-v")) {
@@ -275,6 +278,16 @@ main(int argc, char **argv)
       opt_n_lowwater = atoi(argv[++i]);
     } else if (!strcmp(argv[i], "-R") && i+1<argc) {
       opt_ratio_rsa = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "--no-eventfd2")) {
+      as_flags |= ASOCKS_NOEVENTFD2;
+    } else if (!strcmp(argv[i], "--no-eventfd")) {
+      as_flags |= ASOCKS_NOEVENTFD;
+    } else if (!strcmp(argv[i], "--no-pipe2")) {
+      as_flags |= ASOCKS_NOPIPE2;
+    } else if (!strcmp(argv[i], "--no-pipe")) {
+      as_flags |= ASOCKS_NOPIPE;
+    } else if (!strcmp(argv[i], "--no-socketpair")) {
+      as_flags |= ASOCKS_NOSOCKETPAIR;
     } else if (!strcmp(argv[i], "-h")) {
       help();
       return 0;
@@ -294,7 +307,7 @@ main(int argc, char **argv)
   crypto_global_init(1, NULL, NULL);
   crypto_seed_rng(1);
 
-  rq = replyqueue_new();
+  rq = replyqueue_new(as_flags);
   tor_assert(rq);
   tp = threadpool_new(opt_n_threads,
                       rq, new_state, free_state, NULL);

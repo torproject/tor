@@ -102,7 +102,14 @@ typedef struct alert_sockets_s {
   int (*drain_fn)(tor_socket_t read_fd);
 } alert_sockets_t;
 
-int alert_sockets_create(alert_sockets_t *socks_out);
+/* Flags to disable one or more alert_sockets backends. */
+#define ASOCKS_NOEVENTFD2   (1u<<0)
+#define ASOCKS_NOEVENTFD    (1u<<1)
+#define ASOCKS_NOPIPE2      (1u<<2)
+#define ASOCKS_NOPIPE       (1u<<3)
+#define ASOCKS_NOSOCKETPAIR (1u<<4)
+
+int alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags);
 void alert_sockets_close(alert_sockets_t *socks);
 
 #endif

@@ -40,7 +40,7 @@ threadpool_t *threadpool_new(int n_threads,
                              void *arg);
 replyqueue_t *threadpool_get_replyqueue(threadpool_t *tp);
 
-replyqueue_t *replyqueue_new(void);
+replyqueue_t *replyqueue_new(uint32_t alertsocks_flags);
 tor_socket_t replyqueue_get_socket(replyqueue_t *rq);
 void replyqueue_process(replyqueue_t *queue);
 

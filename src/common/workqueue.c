@@ -397,12 +397,12 @@ threadpool_get_replyqueue(threadpool_t *tp)
  * IO-centric event loop, it needs to get woken up with means other than a
  * condition variable. */
 replyqueue_t *
-replyqueue_new(void)
+replyqueue_new(uint32_t alertsocks_flags)
 {
   replyqueue_t *rq;
 
   rq = tor_malloc_zero(sizeof(replyqueue_t));
-  if (alert_sockets_create(&rq->alert) < 0) {
+  if (alert_sockets_create(&rq->alert, alertsocks_flags) < 0) {
     tor_free(rq);
     return NULL;
   }
