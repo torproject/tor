@@ -164,6 +164,7 @@ tor_get_thread_id(void)
 
 /* Conditions. */
 
+/** Initialize an already-allocated condition variable. */
 int
 tor_cond_init(tor_cond_t *cond)
 {
@@ -173,7 +174,9 @@ tor_cond_init(tor_cond_t *cond)
   }
   return 0;
 }
-/** Release all resources held by <b>cond</b>. */
+
+/** Release all resources held by <b>cond</b>, but do not free <b>cond</b>
+ * itself. */
 void
 tor_cond_uninit(tor_cond_t *cond)
 {
@@ -183,7 +186,11 @@ tor_cond_uninit(tor_cond_t *cond)
   }
 }
 /** Wait until one of the tor_cond_signal functions is called on <b>cond</b>.
- * All waiters on the condition must wait holding the same <b>mutex</b>.
+ * (If <b>tv</b> is set, and that amount of time passes with no signal to
+ * <b>cond</b>, return anyway.  All waiters on the condition must wait holding
+ * the same <b>mutex</b>.  All signallers should hold that mutex.  The mutex
+ * needs to have been allocated with tor_mutex_init_for_cond().
+ *
  * Returns 0 on success, -1 on failure, 1 on timeout. */
 int
 tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)

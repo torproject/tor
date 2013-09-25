@@ -6,15 +6,21 @@
 
 #include "compat.h"
 
+/** A replyqueue is used to tell the main thread about the outcome of
+ * work that we queued for the the workers. */
 typedef struct replyqueue_s replyqueue_t;
+/** A thread-pool manages starting threads and passing work to them. */
 typedef struct threadpool_s threadpool_t;
+/** A workqueue entry represents a request that has been passed to a thread
+ * pool. */
 typedef struct workqueue_entry_s workqueue_entry_t;
 
-#define WQ_CMD_RUN    0
-#define WQ_CMD_CANCEL 1
-
+/** Possible return value from a work function: indicates success. */
 #define WQ_RPL_REPLY    0
+/** Possible return value from a work function: indicates fatal error */
 #define WQ_RPL_ERROR    1
+/** Possible return value from a work function: indicates thread is shutting
+ * down. */
 #define WQ_RPL_SHUTDOWN 2
 
 workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
@@ -22,7 +28,7 @@ workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
                                          void (*reply_fn)(void *),
                                          void *arg);
 int threadpool_queue_for_all(threadpool_t *pool,
-                             void *(*dup_fn)(void *),
+                             void *(*dup_fn)(const void *),
                              int (*fn)(void *, void *),
                              void (*reply_fn)(void *),
                              void *arg);

@@ -82,15 +82,23 @@ int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
 
-/** DOCDOC */
+/** Helper type used to manage waking up the main thread while it's in
+ * the libevent main loop.  Used by the work queue code. */
 typedef struct alert_sockets_s {
-  /*XXX needs a better name */
+  /* XXXX This structure needs a better name. */
+  /** Socket that the main thread should listen for EV_READ events on.
+   * Note that this socket may be a regular fd on a non-Windows platform.
+   */
   tor_socket_t read_fd;
+  /** Socket to use when alerting the main thread. */
   tor_socket_t write_fd;
+  /** Function to alert the main thread */
   int (*alert_fn)(tor_socket_t write_fd);
+  /** Function to make the main thread no longer alerted. */
   int (*drain_fn)(tor_socket_t read_fd);
 } alert_sockets_t;
 
 int alert_sockets_create(alert_sockets_t *socks_out);
+void alert_sockets_close(alert_sockets_t *socks);
 
 #endif
