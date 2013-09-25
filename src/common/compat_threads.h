@@ -82,4 +82,15 @@ int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
 
+/** DOCDOC */
+typedef struct alert_sockets_s {
+  /*XXX needs a better name */
+  tor_socket_t read_fd;
+  tor_socket_t write_fd;
+  int (*alert_fn)(tor_socket_t write_fd);
+  int (*drain_fn)(tor_socket_t read_fd);
+} alert_sockets_t;
+
+int alert_sockets_create(alert_sockets_t *socks_out);
+
 #endif

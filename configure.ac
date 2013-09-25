@@ -407,6 +407,7 @@ AC_CHECK_FUNCS(
         backtrace \
         backtrace_symbols_fd \
         clock_gettime \
+	eventfd \
         flock \
         ftime \
         getaddrinfo \
@@ -421,6 +422,8 @@ AC_CHECK_FUNCS(
         localtime_r \
         lround \
         memmem \
+	pipe \
+	pipe2 \
         prctl \
         rint \
         sigaction \
@@ -962,6 +965,7 @@ AC_CHECK_HEADERS(
         netinet/in6.h \
         pwd.h \
         stdint.h \
+	sys/eventfd.h \
         sys/file.h \
         sys/ioctl.h \
         sys/limits.h \
