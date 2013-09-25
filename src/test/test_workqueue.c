@@ -18,15 +18,18 @@
 #include <event.h>
 #endif
 
+static int opt_verbose = 0;
+static int opt_n_threads = 8;
+static int opt_n_items = 10000;
+static int opt_n_inflight = 1000;
+static int opt_n_lowwater = 250;
+static int opt_ratio_rsa = 5;
+
 #ifdef TRACK_RESPONSES
 tor_mutex_t bitmap_mutex;
 int handled_len;
 bitarray_t *handled;
 #endif
-
-#define N_ITEMS 10000
-#define N_INFLIGHT 1000
-#define RELAUNCH_AT 250
 
 typedef struct state_s {
   int magic;
@@ -174,7 +177,9 @@ handle_reply(void *arg)
 static int
 add_work(threadpool_t *tp)
 {
-  int add_rsa = tor_weak_random_range(&weak_rng, 5) == 0;
+  int add_rsa =
+    opt_ratio_rsa == 0 ||
+    tor_weak_random_range(&weak_rng, opt_ratio_rsa) == 0;
   if (add_rsa) {
     rsa_work_t *w = tor_malloc_zero(sizeof(*w));
     w->serial = n_sent++;
@@ -206,10 +211,11 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
   if (old_r == n_received)
     return;
 
-  printf("%d / %d\n", n_received, n_sent);
+  if (opt_verbose)
+    printf("%d / %d\n", n_received, n_sent);
 #ifdef TRACK_RESPONSES
   tor_mutex_acquire(&bitmap_mutex);
-  for (i = 0; i < N_ITEMS; ++i) {
+  for (i = 0; i < opt_n_items; ++i) {
     if (bitarray_is_set(received, i))
       putc('o', stdout);
     else if (bitarray_is_set(handled, i))
@@ -221,8 +227,8 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
   tor_mutex_release(&bitmap_mutex);
 #endif
 
-  if (n_sent - n_received < RELAUNCH_AT) {
-    while (n_sent < n_received + N_INFLIGHT && n_sent < N_ITEMS) {
+  if (n_sent - n_received < opt_n_lowwater) {
+    while (n_sent < n_received + opt_n_inflight && n_sent < opt_n_items) {
       if (! add_work(tp)) {
         puts("Couldn't add work.");
         tor_event_base_loopexit(tor_libevent_get_base(), NULL);
@@ -230,9 +236,21 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     }
   }
 
-  if (n_received == n_sent && n_sent >= N_ITEMS) {
+  if (n_received == n_sent && n_sent >= opt_n_items) {
     tor_event_base_loopexit(tor_libevent_get_base(), NULL);
   }
+}
+
+static void
+help(void)
+{
+  puts(
+     "Options:\n"
+     "    -N <items>    Run this many items of work\n"
+     "    -T <threads>  Use this many threads\n"
+     "    -I <inflight> Have no more than this many requests queued at once\n"
+     "    -L <lowwater> Add items whenever fewer than this many are pending.\n"
+     "    -R <ratio>    Make one out of this many items be a slow (RSA) one");
 }
 
 int
@@ -244,8 +262,33 @@ main(int argc, char **argv)
   tor_libevent_cfg evcfg;
   struct event *ev;
 
-  (void)argc;
-  (void)argv;
+  for (i = 1; i < argc; ++i) {
+    if (!strcmp(argv[i], "-v")) {
+      opt_verbose = 1;
+    } else if (!strcmp(argv[i], "-T") && i+1<argc) {
+      opt_n_threads = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "-N") && i+1<argc) {
+      opt_n_items = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "-I") && i+1<argc) {
+      opt_n_inflight = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "-L") && i+1<argc) {
+      opt_n_lowwater = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "-R") && i+1<argc) {
+      opt_ratio_rsa = atoi(argv[++i]);
+    } else if (!strcmp(argv[i], "-h")) {
+      help();
+      return 0;
+    } else {
+      help();
+      return 1;
+    }
+  }
+  if (opt_n_threads < 1 ||
+      opt_n_items < 1 || opt_n_inflight < 1 || opt_n_lowwater < 0 ||
+      opt_ratio_rsa < 0) {
+    help();
+    return 1;
+  }
 
   init_logging(1);
   crypto_global_init(1, NULL, NULL);
@@ -253,7 +296,7 @@ main(int argc, char **argv)
 
   rq = replyqueue_new();
   tor_assert(rq);
-  tp = threadpool_new(16,
+  tp = threadpool_new(opt_n_threads,
                       rq, new_state, free_state, NULL);
   tor_assert(tp);
 
@@ -269,20 +312,31 @@ main(int argc, char **argv)
   event_add(ev, NULL);
 
 #ifdef TRACK_RESPONSES
-  handled = bitarray_init_zero(N_ITEMS);
-  received = bitarray_init_zero(N_ITEMS);
+  handled = bitarray_init_zero(opt_n_items);
+  received = bitarray_init_zero(opt_n_items);
   tor_mutex_init(&bitmap_mutex);
-  handled_len = N_ITEMS;
+  handled_len = opt_n_items;
 #endif
 
-  for (i = 0; i < N_INFLIGHT; ++i) {
+  for (i = 0; i < opt_n_inflight; ++i) {
     if (! add_work(tp)) {
       puts("Couldn't add work.");
       return 1;
     }
   }
 
+  {
+    struct timeval limit = { 30, 0 };
+    tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+  }
+
   event_base_loop(tor_libevent_get_base(), 0);
 
-  return 0;
+  if (n_sent != opt_n_items || n_received != n_sent) {
+    puts("FAIL");
+    return 1;
+  } else {
+    puts("OK");
+    return 0;
+  }
 }
