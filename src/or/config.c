@@ -2837,7 +2837,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
-  if (options->PredictedCircsRelevanceTime > 
+  if (options->PredictedCircsRelevanceTime >
       MAX_PREDICTED_CIRCS_RELEVANCE) {
     log_warn(LD_CONFIG, "PredictedCircsRelevanceTime is too large; "
              "clipping to %ds.", MAX_PREDICTED_CIRCS_RELEVANCE);
