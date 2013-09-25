@@ -46,6 +46,7 @@ src_test_test_SOURCES = \
 	src/test/test_routerkeys.c \
 	src/test/test_scheduler.c \
 	src/test/test_socks.c \
+	src/test/test_threads.c \
 	src/test/test_util.c \
 	src/test/test_config.c \
 	src/test/test_hs.c \

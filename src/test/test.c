@@ -1297,6 +1297,7 @@ extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t entrynodes_tests[];
+extern struct testcase_t thread_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t controller_event_tests[];
 extern struct testcase_t logging_tests[];
@@ -1323,6 +1324,7 @@ static struct testgroup_t testgroups[] = {
   { "container/", container_tests },
   { "util/", util_tests },
   { "util/logging/", logging_tests },
+  { "util/thread/", thread_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "dir/", dir_tests },
