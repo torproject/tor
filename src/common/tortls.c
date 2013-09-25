@@ -1241,12 +1241,15 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
    * version.  Once some version of OpenSSL does TLS1.1 and TLS1.2
    * renegotiation properly, we can turn them back on when built with
    * that version. */
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V(1,0,1,'e')
 #ifdef SSL_OP_NO_TLSv1_2
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_2);
 #endif
 #ifdef SSL_OP_NO_TLSv1_1
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_1);
 #endif
+#endif
+
   /* Disable TLS tickets if they're supported.  We never want to use them;
    * using them can make our perfect forward secrecy a little worse, *and*
    * create an opportunity to fingerprint us (since it's unusual to use them

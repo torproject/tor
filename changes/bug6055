@@ -1,0 +1,6 @@
+  o Major enhancements:
+    - Re-enable TLS 1.1 and 1.2 when built with OpenSSL 1.0.1e or later.
+      (OpenSSL before 1.0.1 didn't have TLS 1.1 or 1.2. OpenSSL from 1.0.1
+      through 1.0.1d had bugs that prevented renegotiation from working
+      with TLS 1.1 or 1.2, so we disabled them to solve bug 6033.) Fix for
+      issue #6055.
