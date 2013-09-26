@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define _GNU_SOURCE
+
 #include "orconfig.h"
 #define _GNU_SOURCE
 #include <stdlib.h>
@@ -15,11 +17,11 @@
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>
 #endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
 #endif
 
 /** Return a newly allocated, ready-for-use mutex. */
