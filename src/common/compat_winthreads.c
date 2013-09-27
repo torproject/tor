@@ -53,7 +53,7 @@ tor_mutex_init(tor_mutex_t *m)
   InitializeCriticalSection(&m->mutex);
 }
 void
-tor_mutex_init_nonreentrant(tor_mutex_t *m)
+tor_mutex_init_nonrecursive(tor_mutex_t *m)
 {
   InitializeCriticalSection(&m->mutex);
 }
