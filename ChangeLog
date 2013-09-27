@@ -1576,7 +1576,7 @@ Changes in version 0.2.4.1-alpha - 2012-09-05
   o Minor features (code security and spec conformance):
     - Clear keys and key-derived material left on the stack in
       rendservice.c and rendclient.c. Check return value of
-      crypto_pk_write_private_key_to_string() in end_service_load_keys().
+      crypto_pk_write_private_key_to_string() in rend_service_load_keys().
       These fixes should make us more forward-secure against cold-boot
       attacks and the like. Fixes bug 2385.
     - Reject EXTEND cells sent to nonexistent streams. According to the
