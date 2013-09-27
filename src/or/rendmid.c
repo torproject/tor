@@ -111,7 +111,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
 
   /* Now, set up this circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
-  memcpy(circ->rend_token, pk_digest, DIGEST_LEN);
+  circuit_set_intro_point_digest(circ, (uint8_t *)pk_digest);
 
   log_info(LD_REND,
            "Established introduction point on circuit %u for service %s",
@@ -251,7 +251,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   }
 
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_POINT_WAITING);
-  memcpy(circ->rend_token, request, REND_COOKIE_LEN);
+  circuit_set_rendezvous_cookie(circ, request);
 
   base16_encode(hexid,9,(char*)request,4);
 
@@ -327,7 +327,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_ESTABLISHED);
   circuit_change_purpose(TO_CIRCUIT(rend_circ),
                          CIRCUIT_PURPOSE_REND_ESTABLISHED);
-  memset(circ->rend_token, 0, REND_COOKIE_LEN);
+  circuit_set_rendezvous_cookie(circ, NULL);
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;

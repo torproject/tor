@@ -43,6 +43,8 @@ origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                          const char *digest, uint8_t purpose);
 or_circuit_t *circuit_get_rendezvous(const char *cookie);
 or_circuit_t *circuit_get_intro_point(const char *digest);
+void circuit_set_rendezvous_cookie(or_circuit_t *circ, const uint8_t *cookie);
+void circuit_set_intro_point_digest(or_circuit_t *circ, const uint8_t *digest);
 origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
                                               extend_info_t *info, int flags);
 void circuit_mark_all_unused_circs(void);
