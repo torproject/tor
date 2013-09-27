@@ -199,9 +199,12 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
     return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
   } else {
     struct timespec ts;
+    struct timeval tvnow, tvsum;
     int r;
-    ts.tv_sec = tv->tv_sec;
-    ts.tv_nsec = tv->tv_usec * 1000;
+    gettimeofday(&tvnow, NULL);
+    timeradd(tv, &tvnow, &tvsum);
+    ts.tv_sec = tvsum.tv_sec;
+    ts.tv_nsec = tvsum.tv_usec * 1000;
     r = pthread_cond_timedwait(&cond->cond, &mutex->mutex, &ts);
     if (r == 0)
       return 0;
