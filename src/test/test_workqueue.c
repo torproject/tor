@@ -36,6 +36,7 @@ typedef struct state_s {
   int n_handled;
   crypto_pk_t *rsa;
   curve25519_secret_key_t ecdh;
+  int is_shutdown;
 } state_t;
 
 typedef struct rsa_work_s {
@@ -94,18 +95,15 @@ workqueue_do_rsa(void *state, void *work)
   return WQ_RPL_REPLY;
 }
 
-#if 0
 static int
 workqueue_do_shutdown(void *state, void *work)
 {
   (void)state;
   (void)work;
-  (void)cmd;
   crypto_pk_free(((state_t*)state)->rsa);
   tor_free(state);
   return WQ_RPL_SHUTDOWN;
 }
-#endif
 
 static int
 workqueue_do_ecdh(void *state, void *work)
@@ -197,6 +195,20 @@ add_work(threadpool_t *tp)
   }
 }
 
+static int shutting_down = 0;
+static int n_shutdowns_done = 0;
+
+static void
+shutdown_reply(void *arg)
+{
+  (void)arg;
+  tor_assert(shutting_down);
+  ++n_shutdowns_done;
+  if (n_shutdowns_done == opt_n_threads) {
+    tor_event_base_loopexit(tor_libevent_get_base(), NULL);
+  }
+}
+
 static void
 replysock_readable_cb(tor_socket_t sock, short what, void *arg)
 {
@@ -236,8 +248,9 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     }
   }
 
-  if (n_received == n_sent && n_sent >= opt_n_items) {
-    tor_event_base_loopexit(tor_libevent_get_base(), NULL);
+  if (shutting_down == 0 && n_received == n_sent && n_sent >= opt_n_items) {
+    shutting_down = 1;
+    threadpool_queue_for_all(tp, NULL, workqueue_do_shutdown, shutdown_reply, NULL);
   }
 }
 
@@ -345,7 +358,8 @@ main(int argc, char **argv)
 
   event_base_loop(tor_libevent_get_base(), 0);
 
-  if (n_sent != opt_n_items || n_received != n_sent) {
+  if (n_sent != opt_n_items || n_received != n_sent ||
+      n_shutdowns_done != opt_n_threads) {
     puts("FAIL");
     return 1;
   } else {
