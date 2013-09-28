@@ -32,7 +32,7 @@ int threadpool_queue_for_all(threadpool_t *pool,
                              int (*fn)(void *, void *),
                              void (*reply_fn)(void *),
                              void *arg);
-int workqueue_entry_cancel(workqueue_entry_t *pending_work);
+void *workqueue_entry_cancel(workqueue_entry_t *pending_work);
 threadpool_t *threadpool_new(int n_threads,
                              replyqueue_t *replyqueue,
                              void *(*new_thread_state_fn)(void*),

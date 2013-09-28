@@ -119,27 +119,29 @@ workqueue_entry_free(workqueue_entry_t *ent)
  * executed in the main thread; that will cause undefined behavior (probably,
  * a crash).
  *
- * If the work is cancelled, this function return 1. It is the caller's
- * responsibility to free any storage in the work function's arguments.
+ * If the work is cancelled, this function return the argument passed to the
+ * work function. It is the caller's responsibility to free this storage.
  *
  * This function will have no effect if the worker thread has already executed
- * or begun to execute the work item.  In that case, it will return 0.
+ * or begun to execute the work item.  In that case, it will return NULL.
  */
-int
+void *
 workqueue_entry_cancel(workqueue_entry_t *ent)
 {
   int cancelled = 0;
+  void *result = NULL;
   tor_mutex_acquire(&ent->on_thread->lock);
   if (ent->pending) {
     TOR_TAILQ_REMOVE(&ent->on_thread->work, ent, next_work);
     cancelled = 1;
+    result = ent->arg;
   }
   tor_mutex_release(&ent->on_thread->lock);
 
   if (cancelled) {
     tor_free(ent);
   }
-  return cancelled;
+  return result;
 }
 
 /**
