@@ -1488,7 +1488,6 @@ AC_CONFIG_FILES([
         contrib/tor.logrotate
         contrib/tor.sh
         contrib/torctl
-        contrib/torify
         src/config/torrc.sample
 ])
 

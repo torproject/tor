@@ -12,8 +12,8 @@
 # part of the source distribution, so that people without asciidoc can
 # just use the .1 and .html files.
 
-regular_mans = doc/tor doc/tor-gencert doc/tor-resolve doc/torify
-all_mans = $(regular_mans) doc/tor-fw-helper
+regular_mans = doc/tor doc/tor-gencert doc/tor-resolve
+all_mans = $(regular_mans) doc/torify doc/tor-fw-helper
 
 if USE_ASCIIDOC
 if USE_FW_HELPER
@@ -55,13 +55,11 @@ $(man_in) :
 doc/tor.1.in: doc/tor.1.txt
 doc/tor-gencert.1.in: doc/tor-gencert.1.txt
 doc/tor-resolve.1.in: doc/tor-resolve.1.txt
-doc/torify.1.in: doc/torify.1.txt
 doc/tor-fw-helper.1.in: doc/tor-fw-helper.1.txt
 
 doc/tor.html.in: doc/tor.1.txt
 doc/tor-gencert.html.in: doc/tor-gencert.1.txt
 doc/tor-resolve.html.in: doc/tor-resolve.1.txt
-doc/torify.html.in: doc/torify.1.txt
 doc/tor-fw-helper.html.in: doc/tor-fw-helper.1.txt
 
 # use ../config.status to swap all machine-specific magic strings
@@ -76,13 +74,13 @@ $(asciidoc_product) :
 doc/tor.html: doc/tor.html.in
 doc/tor-gencert.html: doc/tor-gencert.html.in
 doc/tor-resolve.html: doc/tor-resolve.html.in
-doc/torify.html: doc/torify.html.in
+doc/torify.html: doc/torify.1.txt
 doc/tor-fw-helper.html: doc/tor-fw-helper.html.in
 
 doc/tor.1: doc/tor.1.in
 doc/tor-gencert.1: doc/tor-gencert.1.in
 doc/tor-resolve.1: doc/tor-resolve.1.in
-doc/torify.1: doc/torify.1.in
+doc/torify.1: doc/torify.1.txt
 doc/tor-fw-helper.1: doc/tor-fw-helper.1.in
 
 CLEANFILES+= $(asciidoc_product) config.log
