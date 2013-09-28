@@ -1258,6 +1258,24 @@ test_stats(void *arg)
   tor_free(s);
 }
 
+
+static void *
+passthrough_test_setup(const struct testcase_t *testcase)
+{
+  return testcase->setup_data;
+}
+static int
+passthrough_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  return 1;
+}
+
+const struct testcase_setup_t passthrough_setup = {
+  passthrough_test_setup, passthrough_test_cleanup
+};
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \

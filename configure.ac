@@ -437,7 +437,7 @@ AC_CHECK_FUNCS(
         sysconf \
 	sysctl \
         uname \
-        usleep \
+	usleep \
         vasprintf \
 	_vscprintf
 )

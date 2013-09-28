@@ -144,11 +144,159 @@ test_threads_basic(void *arg)
     tor_mutex_free(thread_test_start2_);
 }
 
-#define THREAD_TEST(name) \
+typedef struct cv_testinfo_s {
+  tor_cond_t *cond;
+  tor_mutex_t *mutex;
+  int value;
+  int addend;
+  int shutdown;
+  int n_shutdown;
+  int n_wakeups;
+  int n_timeouts;
+  int n_threads;
+  const struct timeval *tv;
+} cv_testinfo_t;
+
+static cv_testinfo_t *
+cv_testinfo_new(void)
+{
+  cv_testinfo_t *i = tor_malloc_zero(sizeof(*i));
+  i->cond = tor_cond_new();
+  i->mutex = tor_mutex_new_nonrecursive();
+  return i;
+}
+
+static void
+cv_testinfo_free(cv_testinfo_t *i)
+{
+  if (!i)
+    return;
+  tor_cond_free(i->cond);
+  tor_mutex_free(i->mutex);
+  tor_free(i);
+}
+
+static void cv_test_thr_fn_(void *arg) ATTR_NORETURN;
+
+static void
+cv_test_thr_fn_(void *arg)
+{
+  cv_testinfo_t *i = arg;
+  int tid, r;
+
+  tor_mutex_acquire(i->mutex);
+  tid = i->n_threads++;
+  tor_mutex_release(i->mutex);
+  (void) tid;
+  
+  tor_mutex_acquire(i->mutex);
+  while (1) {
+    if (i->addend) {
+      i->value += i->addend;
+      i->addend = 0;
+    }
+
+    if (i->shutdown) {
+      ++i->n_shutdown;
+      i->shutdown = 0;
+      tor_mutex_release(i->mutex);
+      spawn_exit();
+    }
+    r = tor_cond_wait(i->cond, i->mutex, i->tv);
+    ++i->n_wakeups;
+    if (r == 1) {
+      ++i->n_timeouts;
+      tor_mutex_release(i->mutex);
+      spawn_exit();
+    }
+  }
+}
+
+static void
+test_threads_conditionvar(void *arg)
+{
+  cv_testinfo_t *ti=NULL;
+  const struct timeval msec100 = { 0, 100*1000 };
+  const int timeout = !strcmp(arg, "tv");
+
+  ti = cv_testinfo_new();
+  if (timeout) {
+    ti->tv = &msec100;
+  }
+  spawn_func(cv_test_thr_fn_, ti);
+  spawn_func(cv_test_thr_fn_, ti);
+  spawn_func(cv_test_thr_fn_, ti);
+  spawn_func(cv_test_thr_fn_, ti);
+
+  tor_mutex_acquire(ti->mutex);
+  ti->addend = 7;
+  ti->shutdown = 1;
+  tor_cond_signal_one(ti->cond);
+  tor_mutex_release(ti->mutex);
+
+#define SPIN()                                  \
+  while (1) {                                   \
+    tor_mutex_acquire(ti->mutex);               \
+    if (ti->addend == 0) {                      \
+      break;                                    \
+    }                                           \
+    tor_mutex_release(ti->mutex);               \
+  }
+
+  SPIN();
+
+  ti->addend = 30;
+  ti->shutdown = 1;
+  tor_cond_signal_all(ti->cond);
+  tor_mutex_release(ti->mutex);
+  SPIN();
+
+  ti->addend = 1000;
+  if (! timeout) ti->shutdown = 1;
+  tor_cond_signal_one(ti->cond);
+  tor_mutex_release(ti->mutex);
+  SPIN();
+  ti->addend = 300;
+  if (! timeout) ti->shutdown = 1;
+  tor_cond_signal_all(ti->cond);
+  tor_mutex_release(ti->mutex);
+
+  SPIN();
+  tor_mutex_release(ti->mutex);
+
+  tt_int_op(ti->value, ==, 1337);
+  if (!timeout) {
+    tt_int_op(ti->n_shutdown, ==, 4);
+  } else {
+#ifdef _WIN32
+    Sleep(500); /* msec */
+#elif defined(HAVE_USLEEP)
+    usleep(500*1000); /* usec */
+#else
+    {
+      struct tv = { 0, 500*1000 };
+      select(0, NULL, NULL, NULL, &tv);
+    }
+#endif
+    tor_mutex_acquire(ti->mutex);
+    tt_int_op(ti->n_shutdown, ==, 2);
+    tt_int_op(ti->n_timeouts, ==, 2);
+    tor_mutex_release(ti->mutex);
+  }
+
+ done:
+  cv_testinfo_free(ti);
+}
+
+#define THREAD_TEST(name)                                               \
   { #name, test_threads_##name, TT_FORK, NULL, NULL }
 
 struct testcase_t thread_tests[] = {
   THREAD_TEST(basic),
+  { "conditionvar", test_threads_conditionvar, TT_FORK,
+    &passthrough_setup, (void*)"no-tv" },
+  { "conditionvar_timeout", test_threads_conditionvar, TT_FORK,
+    &passthrough_setup, (void*)"tv" },
   END_OF_TESTCASES
 };
 

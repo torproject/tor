@@ -4646,23 +4646,6 @@ test_util_socket(void *arg)
     tor_close_socket(fd4);
 }
 
-static void *
-socketpair_test_setup(const struct testcase_t *testcase)
-{
-  return testcase->setup_data;
-}
-static int
-socketpair_test_cleanup(const struct testcase_t *testcase, void *ptr)
-{
-  (void)testcase;
-  (void)ptr;
-  return 1;
-}
-
-static const struct testcase_setup_t socketpair_setup = {
-  socketpair_test_setup, socketpair_test_cleanup
-};
-
 /* Test for socketpair and ersatz_socketpair().  We test them both, since
  * the latter is a tolerably good way to exersize tor_accept_socket(). */
 static void
@@ -4837,10 +4820,10 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(weak_random, 0),
   UTIL_TEST(socket, TT_FORK),
-  { "socketpair", test_util_socketpair, TT_FORK, &socketpair_setup,
+  { "socketpair", test_util_socketpair, TT_FORK, &passthrough_setup,
     (void*)"0" },
   { "socketpair_ersatz", test_util_socketpair, TT_FORK,
-    &socketpair_setup, (void*)"1" },
+    &passthrough_setup, (void*)"1" },
   UTIL_TEST(max_mem, 0),
   UTIL_TEST(hostname_validation, 0),
   UTIL_TEST(ipv4_validation, 0),
