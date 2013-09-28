@@ -21,6 +21,10 @@ static char *thread1_name_ = NULL;
 /** The name of thread2 for the thread test */
 static char *thread2_name_ = NULL;
 
+static int thread_fns_failed = 0;
+
+static unsigned long thread_fn_tid1, thread_fn_tid2;
+
 static void thread_test_func_(void* _s) ATTR_NORETURN;
 
 /** How many iterations have the threads in the unit test run? */
@@ -42,10 +46,12 @@ thread_test_func_(void* _s)
     m = thread_test_start1_;
     cp = &thread1_name_;
     count = &t1_count;
+    thread_fn_tid1 = tor_get_thread_id();
   } else {
     m = thread_test_start2_;
     cp = &thread2_name_;
     count = &t2_count;
+    thread_fn_tid2 = tor_get_thread_id();
   }
 
   tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
@@ -61,6 +67,8 @@ thread_test_func_(void* _s)
   }
   tor_mutex_acquire(thread_test_mutex_);
   strmap_set(thread_test_strmap_, s, *cp);
+  if (in_main_thread())
+    ++thread_fns_failed;
   tor_mutex_release(thread_test_mutex_);
 
   tor_mutex_release(m);
@@ -80,7 +88,10 @@ test_threads_basic(void *arg)
   tv.tv_sec=0;
   tv.tv_usec=100*1000;
 #endif
-  (void)arg;
+  (void) arg;
+
+  set_main_thread();
+
   thread_test_mutex_ = tor_mutex_new();
   thread_test_start1_ = tor_mutex_new();
   thread_test_start2_ = tor_mutex_new();
@@ -130,6 +141,9 @@ test_threads_basic(void *arg)
                       strmap_get(thread_test_strmap_, "last to run")) ||
               !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
                       strmap_get(thread_test_strmap_, "last to run")));
+
+  tt_int_op(thread_fns_failed, ==, 0);
+  tt_int_op(thread_fn_tid1, !=, thread_fn_tid2);
 
  done:
   tor_free(s1);
@@ -188,7 +202,7 @@ cv_test_thr_fn_(void *arg)
   tid = i->n_threads++;
   tor_mutex_release(i->mutex);
   (void) tid;
-  
+
   tor_mutex_acquire(i->mutex);
   while (1) {
     if (i->addend) {
@@ -299,4 +313,3 @@ struct testcase_t thread_tests[] = {
     &passthrough_setup, (void*)"tv" },
   END_OF_TESTCASES
 };
-
