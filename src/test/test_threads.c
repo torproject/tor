@@ -313,3 +313,4 @@ struct testcase_t thread_tests[] = {
     &passthrough_setup, (void*)"tv" },
   END_OF_TESTCASES
 };
+

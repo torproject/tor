@@ -240,3 +240,4 @@ tor_threads_init(void)
     set_main_thread();
   }
 }
+

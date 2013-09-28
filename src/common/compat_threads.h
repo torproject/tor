@@ -44,7 +44,6 @@ typedef struct tor_mutex_t {
 #endif
 } tor_mutex_t;
 
-
 tor_mutex_t *tor_mutex_new(void);
 tor_mutex_t *tor_mutex_new_nonrecursive(void);
 void tor_mutex_init(tor_mutex_t *m);
@@ -113,3 +112,4 @@ int alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags);
 void alert_sockets_close(alert_sockets_t *socks);
 
 #endif
+

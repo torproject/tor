@@ -1258,7 +1258,6 @@ test_stats(void *arg)
   tor_free(s);
 }
 
-
 static void *
 passthrough_test_setup(const struct testcase_t *testcase)
 {

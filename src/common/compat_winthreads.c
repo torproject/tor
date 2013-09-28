@@ -33,7 +33,6 @@ spawn_func(void (*func)(void *), void *data)
   return 0;
 }
 
-
 /** End the current thread/process.
  */
 void
@@ -45,7 +44,6 @@ spawn_exit(void)
   tor_assert(0);
   _exit(0);
 }
-
 
 void
 tor_mutex_init(tor_mutex_t *m)
@@ -195,3 +193,4 @@ tor_threads_init(void)
 {
   set_main_thread();
 }
+

@@ -293,9 +293,12 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     add_n_work_items(tp, n_to_send);
   }
 
-  if (shutting_down == 0 && n_received+n_successful_cancel == n_sent && n_sent >= opt_n_items) {
+  if (shutting_down == 0 &&
+      n_received+n_successful_cancel == n_sent &&
+      n_sent >= opt_n_items) {
     shutting_down = 1;
-    threadpool_queue_for_all(tp, NULL, workqueue_do_shutdown, shutdown_reply, NULL);
+    threadpool_queue_for_all(tp, NULL,
+                             workqueue_do_shutdown, shutdown_reply, NULL);
   }
 }
 
@@ -416,3 +419,4 @@ main(int argc, char **argv)
     return 0;
   }
 }
+
