@@ -747,7 +747,7 @@ connection_dir_request_failed(dir_connection_t *conn)
              conn->base_.address);
   } else if (conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     log_info(LD_DIR, "Giving up on downloading microdescriptors from "
-             " directory server at '%s'; will retry", conn->base_.address);
+             "directory server at '%s'; will retry", conn->base_.address);
     connection_dir_download_routerdesc_failed(conn);
   }
 }
