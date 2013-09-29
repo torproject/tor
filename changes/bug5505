@@ -1,0 +1,5 @@
+  o Minor fixes (build):
+    - Stop preprocessing the "torify" script with autoconf, since
+      it no longer refers to LOCALSTATEDIR. Fixes bug 5505; patch
+      from Guilhem.
+
