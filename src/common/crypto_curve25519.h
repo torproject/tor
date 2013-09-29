@@ -57,6 +57,8 @@ int curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
                                       char **tag_out,
                                       const char *fname);
 
+int curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong);
+
 #ifdef CRYPTO_CURVE25519_PRIVATE
 STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
                            const uint8_t *basepoint);

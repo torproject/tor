@@ -52,8 +52,12 @@ LIBDONNA=
 endif
 endif
 
+LIBDONNA += $(LIBED25519_REF10)
+
 if CURVE25519_ENABLED
-libcrypto_extra_source=src/common/crypto_curve25519.c
+libcrypto_extra_source = \
+	src/common/crypto_curve25519.c \
+	src/common/crypto_ed25519.c
 endif
 
 LIBOR_A_SOURCES = \
@@ -110,6 +114,7 @@ COMMONHEADERS = \
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
+  src/common/crypto_ed25519.h			\
   src/common/di_ops.h				\
   src/common/memarea.h				\
   src/common/linux_syscalls.inc			\

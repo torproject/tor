@@ -77,5 +77,7 @@ ED25519_REF10_HDRS = \
 	src/ext/ed25519/ref10/sqrtm1.h
 
 noinst_HEADERS += $(ED25519_REF10_HDRS)
-noinst_LIBRARIES += src/ext/ed25519/ref10/libed25519_ref10.a
+
+LIBED25519_REF10=src/ext/ed25519/ref10/libed25519_ref10.a
+noinst_LIBRARIES += $(LIBED25519_REF10)
 

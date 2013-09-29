@@ -63,6 +63,34 @@ curve25519_public_key_is_ok(const curve25519_public_key_t *key)
   return !safe_mem_is_zero(key->public_key, CURVE25519_PUBKEY_LEN);
 }
 
+/**
+ * Generate CURVE25519_SECKEY_LEN random bytes in <b>out</b>. If
+ * <b>extra_strong</b> is true, this key is possibly going to get used more
+ * than once, so use a better-than-usual RNG. Return 0 on success, -1 on
+ * failure.
+ *
+ * This function does not adjust the output of the RNG at all; the will caller
+ * will need to clear or set the appropriate bits to make curve25519 work.
+ */
+int
+curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong)
+{
+  uint8_t k_tmp[CURVE25519_SECKEY_LEN];
+
+  if (crypto_rand((char*)out, CURVE25519_SECKEY_LEN) < 0)
+    return -1;
+  if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
+    /* If they asked for extra-strong entropy and we have some, use it as an
+     * HMAC key to improve not-so-good entropy rather than using it directly,
+     * just in case the extra-strong entropy is less amazing than we hoped. */
+    crypto_hmac_sha256((char*) out,
+                       (const char *)k_tmp, sizeof(k_tmp),
+                       (const char *)out, CURVE25519_SECKEY_LEN);
+  }
+  memwipe(k_tmp, 0, sizeof(k_tmp));
+  return 0;
+}
+
 /** Generate a new keypair and return the secret key.  If <b>extra_strong</b>
  * is true, this key is possibly going to get used more than once, so
  * use a better-than-usual RNG. Return 0 on success, -1 on failure. */
@@ -70,19 +98,9 @@ int
 curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
                                int extra_strong)
 {
-  uint8_t k_tmp[CURVE25519_SECKEY_LEN];
-
-  if (crypto_rand((char*)key_out->secret_key, CURVE25519_SECKEY_LEN) < 0)
+  if (curve25519_rand_seckey_bytes(key_out->secret_key, extra_strong) < 0)
     return -1;
-  if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
-    /* If they asked for extra-strong entropy and we have some, use it as an
-     * HMAC key to improve not-so-good entropy rather than using it directly,
-     * just in case the extra-strong entropy is less amazing than we hoped. */
-    crypto_hmac_sha256((char *)key_out->secret_key,
-                    (const char *)k_tmp, sizeof(k_tmp),
-                    (const char *)key_out->secret_key, CURVE25519_SECKEY_LEN);
-  }
-  memwipe(k_tmp, 0, sizeof(k_tmp));
+
   key_out->secret_key[0] &= 248;
   key_out->secret_key[31] &= 127;
   key_out->secret_key[31] |= 64;
