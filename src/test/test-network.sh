@@ -1,9 +1,30 @@
 #! /bin/sh
 
-# NOTE: Requires Chutney in $CHUTNEY_PATH.
+until [ -z $1 ]
+do
+  case $1 in
+    --chutney-path)
+      export CHUTNEY_PATH="$2"
+      shift
+    ;;
+    --tor-path)
+      export TOR_DIR="$2"
+      shift
+    ;;
+    --flavo?r|--network-flavo?r)
+      export NETWORK_FLAVOUR="$2"
+      shift
+    ;;
+    *)
+      echo "Sorry, I don't know what to do with '$1'."
+      exit 2
+    ;;
+  esac
+  shift
+done
 
-TOR_DIR=$(pwd)/src/or
-NETWORK_FLAVOUR=basic
+TOR_DIR="${TOR_DIR:-$PWD}"
+NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-basic}
 CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 myname=$(basename $0)
 
@@ -12,7 +33,8 @@ myname=$(basename $0)
     exit 1
 }
 cd "$CHUTNEY_PATH"
-PATH=$TOR_DIR:$PATH             # For picking up the right tor binary.
+# For picking up the right tor binaries.
+PATH="$TOR_DIR/src/or:$TOR_DIR/src/tools:$PATH"
 ./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
 
 # Sleep some, waiting for the network to bootstrap.
