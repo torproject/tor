@@ -745,7 +745,7 @@ circuit_expire_building(void)
 
     if (victim->n_chan)
       log_info(LD_CIRC,
-               "Abandoning circ %u %s:%d (state %d,%d:%s, purpose %d, "
+               "Abandoning circ %u %s:%u (state %d,%d:%s, purpose %d, "
                "len %d)", TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                channel_get_canonical_remote_descr(victim->n_chan),
                (unsigned)victim->n_circ_id,
@@ -755,7 +755,7 @@ circuit_expire_building(void)
                TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len);
     else
       log_info(LD_CIRC,
-               "Abandoning circ %u %d (state %d,%d:%s, purpose %d, len %d)",
+               "Abandoning circ %u %u (state %d,%d:%s, purpose %d, len %d)",
                TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                (unsigned)victim->n_circ_id,
                TO_ORIGIN_CIRCUIT(victim)->has_opened,
