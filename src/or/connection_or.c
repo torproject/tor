@@ -1160,6 +1160,16 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
 
 /** Mark orconn for close and transition the associated channel, if any, to
  * the closing state.
+ *
+ * It's safe to call this and connection_or_close_for_error() any time, and
+ * channel layer will treat it as a connection closing for reasons outside
+ * its control, like the remote end closing it.  It can also be a local
+ * reason that's specific to connection_t/or_connection_t rather than
+ * the channel mechanism, such as expiration of old connections in
+ * run_connection_housekeeping().  If you want to close a channel_t
+ * from somewhere that logically works in terms of generic channels
+ * rather than connections, use channel_mark_for_close(); see also
+ * the comment on that function in channel.c.
  */
 
 void
@@ -2051,8 +2061,9 @@ connection_or_send_netinfo(or_connection_t *conn)
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
-  /* Timestamp. */
-  set_uint32(cell.payload, htonl((uint32_t)now));
+  /* Timestamp, if we're a relay. */
+  if (public_server_mode(get_options()) || ! conn->is_outgoing)
+    set_uint32(cell.payload, htonl((uint32_t)now));
 
   /* Their address. */
   out = cell.payload + 4;
@@ -2286,19 +2297,11 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   if (server)
     return V3_AUTH_FIXED_PART_LEN; // ptr-out
 
-  /* Time: 8 octets. */
-  {
-    uint64_t now = time(NULL);
-    if ((time_t)now < 0)
-      return -1;
-    set_uint32(ptr, htonl((uint32_t)(now>>32)));
-    set_uint32(ptr+4, htonl((uint32_t)now));
-    ptr += 8;
-  }
-
-  /* Nonce: 16 octets. */
-  crypto_rand((char*)ptr, 16);
-  ptr += 16;
+  /* 8 octets were reserved for the current time, but we're trying to get out
+   * of the habit of sending time around willynilly.  Fortunately, nothing
+   * checks it.  That's followed by 16 bytes of nonce. */
+  crypto_rand((char*)ptr, 24);
+  ptr += 24;
 
   tor_assert(ptr - out == V3_AUTH_BODY_LEN);
 
