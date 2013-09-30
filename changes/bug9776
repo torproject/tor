@@ -1,5 +1,0 @@
-   o Normal bugfixes:
-     - Always call circuit_n_chan_done(chan, 0) from channel_closed(), so we
-       can't leak pending circuits in some cases where
-       run_connection_housekeeping() calls connection_or_close_normally().
-       Fixes bug #9776; bugfix on 0.2.4.17.
