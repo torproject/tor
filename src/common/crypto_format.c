@@ -9,6 +9,7 @@
 #endif
 #include "crypto.h"
 #include "crypto_curve25519.h"
+#include "crypto_ed25519.h"
 #include "util.h"
 #include "torlog.h"
 
@@ -41,5 +42,26 @@ curve25519_public_from_base64(curve25519_public_key_t *pkey,
   } else {
     return -1;
   }
+}
+
+/** Try to decode the string <b>input</b> into an ed25519 public key. On
+ * success, store the value in <b>pkey</b> and return 0. Otherwise return
+ * -1. */
+int
+ed25519_public_from_base64(ed25519_public_key_t *pkey,
+                           const char *input)
+{
+  return digest256_from_base64((char*)pkey->pubkey, input);
+}
+
+/** Encode the public key <b>pkey</b> into the buffer at <b>output</b>,
+ * which must have space for ED25519_BASE64_LEN bytes of encoded key,
+ * plus one byte for a terminating NUL.  Return 0 on success, -1 on failure.
+ */
+int
+ed25519_public_to_base64(char *output,
+                         const ed25519_public_key_t *pkey)
+{
+  return digest256_to_base64(output, (const char *)pkey->pubkey);
 }
 

@@ -1341,12 +1341,33 @@ test_crypto_ed25519_test_vectors(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
-/* XXX
-     Check known values for secret->public, for public,msg->signature.
- */
-
-
 #endif
+
+static void
+test_crypto_ed25519_encode(void *arg)
+{
+  char buf[ED25519_BASE64_LEN+1];
+  ed25519_keypair_t kp;
+  ed25519_public_key_t pk;
+  char *mem_op_hex_tmp = NULL;
+  (void) arg;
+
+  /* Test roundtrip. */
+  tt_int_op(0, ==, ed25519_keypair_generate(&kp, 0));
+  tt_int_op(0, ==, ed25519_public_to_base64(buf, &kp.pubkey));
+  tt_int_op(ED25519_BASE64_LEN, ==, strlen(buf));
+  tt_int_op(0, ==, ed25519_public_from_base64(&pk, buf));
+  test_memeq(kp.pubkey.pubkey, pk.pubkey, ED25519_PUBKEY_LEN);
+
+  /* Test known value. */
+  tt_int_op(0, ==, ed25519_public_from_base64(&pk,
+                             "lVIuIctLjbGZGU5wKMNXxXlSE3cW4kaqkqm04u6pxvM"));
+  test_memeq_hex(pk.pubkey,
+         "95522e21cb4b8db199194e7028c357c57952137716e246aa92a9b4e2eea9c6f3");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
 
 static void
 test_crypto_siphash(void *arg)
@@ -1487,6 +1508,7 @@ struct testcase_t crypto_tests[] = {
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
   { "ed25519_simple", test_crypto_ed25519_simple, 0, NULL, NULL },
   { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
+  { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
 #endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES

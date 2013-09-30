@@ -69,8 +69,15 @@ int ed25519_checksig_batch(int *okay_out,
                            int n_checkable);
 #endif
 
+#define ED25519_BASE64_LEN 43
+
+int ed25519_public_from_base64(ed25519_public_key_t *pkey,
+                               const char *input);
+int ed25519_public_to_base64(char *output,
+                             const ed25519_public_key_t *pkey);
+
 /* XXXX write secret keys to disk, load secret keys from disk, read encrypted,
- * write encrypted. serialize public. parse public. */
+ * write encrypted. */
 
 #endif
 
