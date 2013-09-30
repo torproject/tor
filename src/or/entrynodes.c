@@ -363,7 +363,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
         entry->can_retry = 1;
       }
       entry->is_dir_cache = node->rs &&
-        node->rs->version_supports_microdesc_cache;
+                            node->rs->version_supports_microdesc_cache;
       if (get_options()->UseBridges && node_is_a_configured_bridge(node))
         entry->is_dir_cache = 1;
       return NULL;
