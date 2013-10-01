@@ -12,6 +12,7 @@ EXTRA_DIST+= \
 	contrib/tor.ico				\
 	contrib/tor.nsi.in			\
 	contrib/tor.sh				\
+	contrib/torify				\
 	contrib/torctl
 
 bin_SCRIPTS+= contrib/torify
