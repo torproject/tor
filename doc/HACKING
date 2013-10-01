@@ -135,6 +135,13 @@ If that doesn't work:
    * Try configuring Tor with --disable-gcc-hardening
    * You might need to run 'make clean' after you run './configure'.
 
+Running integration tests
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We have the beginnings of a set of scripts to run integration tests using
+Chutney. To try them, set CHUTNEY_DIR to your chutney source directory, and
+run "make test-network".
+
 Profiling Tor with oprofile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
