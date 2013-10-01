@@ -1171,9 +1171,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
   if (get_min_log_level() >= LOG_INFO &&
       get_min_log_level() != old_min_log_level) {
-    log_warn(LD_GENERAL, "Your log may contain sensitive information - you're "
-             "logging above \"notice\". Please log safely. Don't log unless "
-             "it serves an important reason. Overwrite the log afterwards.");
+    log_warn(LD_GENERAL, "Your log may contain sensitive information: you're "
+             "logging more than \"notice\". Please log safely. Don't log "
+             "unless it serves an important reason, and overwrite the log "
+             "afterwards.");
   }
 
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
