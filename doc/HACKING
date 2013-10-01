@@ -139,7 +139,7 @@ Running integration tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We have the beginnings of a set of scripts to run integration tests using
-Chutney. To try them, set CHUTNEY_DIR to your chutney source directory, and
+Chutney. To try them, set CHUTNEY_PATH to your chutney source directory, and
 run "make test-network".
 
 Profiling Tor with oprofile
