@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - When evaluating whether to use a connection that we haven't
-      decided is canonical using a recent link protocol version,
-      decide that it's canonical only if it used address _does_
-      match the desired address. Fixes bug 9309; bugfix on
-      0.2.4.4-alpha. Reported by skruffy.

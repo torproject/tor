@@ -1,4 +1,0 @@
-   o Normal bugfixes:
-     - Close any circuit that has 10% more cells queued than the spec permits
-       and warn when the queue length exceeds that threshold.  Fixes bug
-       #9063; bugfix on 0.2.4.12.
