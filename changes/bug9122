@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - When receiving a new configuration file via the control port's
-      LOADCONF command, do not treat the defaults file as absent.
-      Fixes bug 9122; bugfix on 0.2.3.9-alpha.

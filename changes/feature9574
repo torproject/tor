@@ -1,7 +1,0 @@
-  o Major features:
-    - Relays now process the new "NTor" circuit-level handshake requests
-      with higher priority than the old "TAP" circuit-level handshake
-      requests. We still process some TAP requests to not totally starve
-      0.2.3 clients when NTor becomes popular. A new consensus parameter
-      "NumNTorsPerTAP" lets us tune the balance later if we need to.
-      Implements ticket 9574.

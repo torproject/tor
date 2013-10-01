@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Limit hidden service descriptors to at most ten introduction
-      points, to slow one kind of guard enumeration. Fixes bug 9002;
-      bugfix on 0.1.1.11-alpha.

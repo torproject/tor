@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Avoid using character buffers when constructing most directory
-      objects: this approach was unweildy and error-prone.  Instead,
-      build smartlists of strings, and concatenate them when done.
-

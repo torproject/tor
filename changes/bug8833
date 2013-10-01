@@ -1,3 +1,0 @@
-  o Major bugfixes (directory authority):
-    - Fix a crash bug when building a consensus using an older consensus as
-      its basis. Fixes bug 8833. Bugfix on 0.2.4.12-alpha.

@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - If the circuit build timeout logic is disabled (via the consensus,
-      or because we are an authority), then don't build testing circuits.
-      Fixes bug 9657; bugfix on 0.2.2.14-alpha.
-

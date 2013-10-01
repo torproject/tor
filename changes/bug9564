@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - If the time to download the next old-style networkstatus is in
-      the future, do not decline to consider whether to download the
-      next microdescriptor networkstatus. Fixes bug 9564. Bugfix on
-      0.2.3.14-alpha.

@@ -1,6 +1,0 @@
-  o Minor features (authority):
-    - Add a "ignoring-advertised-bws" boolean to our flag-thresholds
-      lines to describe whether we have enough measured bandwidths to
-      ignore advertised bandwidth claims. Closes ticket 8711.
-      
-    

@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory leak):
-    - Fix a memory leak that would occur whenever a configuration
-      option changed. Fixes bug #8718; bugfix on 0.2.3.3-alpha.

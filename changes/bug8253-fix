@@ -1,6 +1,0 @@
- o Minor bugfixes (log messages)
-   - Fix a scaling issue in the path bias accounting code that resulted in
-     "Bug:" log messages from either pathbias_scale_close_rates() or
-     pathbias_count_build_success(). This represents a bugfix on a previous
-     bugfix: The original fix attempted in 0.2.4.10-alpha was incomplete.
-     Fixes bug 8235; bugfix on 0.2.4.1-alpha.

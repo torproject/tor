@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a spurious compilation warning with some older versions of
-      GCC on FreeBSD. Fixes bug 9254; bugfix on 0.2.4.14-alpha.
-
