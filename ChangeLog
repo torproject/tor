@@ -1,4 +1,4 @@
-Changes in version 0.2.5.1-alpha - 2012-10-02
+Changes in version 0.2.5.1-alpha - 2013-10-02
   Tor 0.2.5.1-alpha introduces experimental support for syscall sandboxing
   on Linux, allows bridges that offer pluggable transports to report usage
   statistics, fixes many issues to make testing easier, and provides
