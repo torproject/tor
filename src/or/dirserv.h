@@ -51,6 +51,7 @@ int list_server_status_v1(smartlist_t *routers, char **router_status_out,
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_t *private_key);
 char *dirserv_get_flag_thresholds_line(void);
+void dirserv_compute_bridge_flag_thresholds(routerlist_t *rl);
 
 int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);
