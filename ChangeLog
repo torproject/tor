@@ -46,6 +46,10 @@ Changes in version 0.2.5.1-alpha - 2012-10-0?
     - If we are unable to save a microdescriptor to the journal, do not
       drop it from memory and then reattempt downloading it. Fixes bug
       9645; bugfix on 0.2.2.6-alpha.
+    - The new channel code sometimes lost track of in-progress circuits,
+      causing long-running clients to stop building new circuits. The
+      fix is to always call circuit_n_chan_done(chan, 0) from
+      channel_closed(). Fixes bug 9776; bugfix on 0.2.4.17-rc.
 
   o Build features:
     - Tor now builds each source file in two modes: a mode that avoids
@@ -70,6 +74,21 @@ Changes in version 0.2.5.1-alpha - 2012-10-0?
       the destroy-cell-tracking code to fix bug 7912.
     - Unit tests for failing cases of the TAP onion handshake.
     - More unit tests for address-manipulation functions.
+
+  o Minor features (protecting client timestamps):
+    - Clients no longer send timestamps in their NETINFO cells. These were
+      not used for anything, and they provided one small way for clients
+      to be distinguished from each other as they moved from network to
+      network or behind NAT. Implements part of proposal 222.
+    - Clients now round timestamps in INTRODUCE cells down to the nearest
+      10 minutes. If a new Support022HiddenServices option is set to 0, or
+      if it's set to "auto" and the feature is disabled in the consensus,
+      the timestamp is sent as 0 instead. Implements part of proposal 222.
+    - Stop sending timestamps in AUTHENTICATE cells. This is not such
+      a big deal from a security point of view, but it achieves no actual
+      good purpose, and isn't needed. Implements part of proposal 222.
+    - Reduce down accuracy of timestamps in hidden service descriptors.
+      Implements part of proposal 222.
 
   o Minor features (config options):
     - Config (torrc) lines now handle fingerprints which are missing
@@ -113,6 +132,7 @@ Changes in version 0.2.5.1-alpha - 2012-10-0?
       make it go faster on register-starved hosts. This improves our
       handshake performance by about 6% on i386 hosts without nacl.
       Closes ticket 8109.
+    - Update to the September 4 2013 Maxmind GeoLite Country database.
 
   o Minor bugfixes:
     - Set the listen() backlog limit to the largest actually supported
