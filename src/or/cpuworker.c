@@ -152,8 +152,7 @@ typedef struct cpuworker_reply_t {
 } cpuworker_reply_t;
 
 typedef struct cpuworker_job_u {
-  uint64_t chan_id;
-  uint32_t circ_id;
+  or_circuit_t *circ;
   union {
     cpuworker_request_t request;
     cpuworker_reply_t reply;
@@ -297,16 +296,13 @@ cpuworker_log_onionskin_overhead(int severity, int onionskin_type,
          onionskin_type_name, (unsigned)overhead, relative_overhead*100);
 }
 
-/** */
+/** Handle a reply from the worker threads. */
 static void
 cpuworker_onion_handshake_replyfn(void *work_)
 {
   cpuworker_job_t *job = work_;
   cpuworker_reply_t rpl;
-  uint64_t chan_id;
-  circid_t circ_id;
-  channel_t *p_chan = NULL;
-  circuit_t *circ = NULL;
+  or_circuit_t *circ = NULL;
 
   --total_pending_tasks;
 
@@ -338,46 +334,40 @@ cpuworker_onion_handshake_replyfn(void *work_)
       }
     }
   }
-  /* Find the circ it was talking about */
-  chan_id = job->chan_id;
-  circ_id = job->circ_id;
 
-  p_chan = channel_find_by_global_id(chan_id);
-
-  if (p_chan)
-    circ = circuit_get_by_circid_channel(circ_id, p_chan);
+  circ = job->circ;
 
   log_debug(LD_OR,
-            "Unpacking cpuworker reply %p, chan_id is " U64_FORMAT
-            ", circ_id is %u, p_chan=%p, circ=%p, success=%d",
-            job, U64_PRINTF_ARG(chan_id), (unsigned)circ_id,
-            p_chan, circ, rpl.success);
+            "Unpacking cpuworker reply %p, circ=%p, success=%d",
+            job, circ, rpl.success);
+
+  if (circ->base_.magic == DEAD_CIRCUIT_MAGIC) { 
+    /* The circuit was supposed to get freed while the reply was
+     * pending. Instead, it got left for us to free so that we wouldn't freak
+     * out when the job->circ field wound up pointing to nothing. */
+    log_debug(LD_OR, "Circuit died while reply was pending. Freeing memory.");
+    circ->base_.magic = 0;
+    tor_free(circ);
+    goto done_processing;
+  }
+
+  circ->workqueue_entry = NULL;
 
   if (rpl.success == 0) {
     log_debug(LD_OR,
               "decoding onionskin failed. "
               "(Old key or bad software.) Closing.");
     if (circ)
-      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
     goto done_processing;
   }
-  if (!circ) {
-    /* This happens because somebody sends us a destroy cell and the
-     * circuit goes away, while the cpuworker is working. This is also
-     * why our tag doesn't include a pointer to the circ, because we'd
-     * never know if it's still valid.
-     */
-    log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
-    goto done_processing;
-  }
-  tor_assert(! CIRCUIT_IS_ORIGIN(circ));
-  TO_OR_CIRCUIT(circ)->workqueue_entry = NULL;
-  if (onionskin_answer(TO_OR_CIRCUIT(circ),
+
+  if (onionskin_answer(circ,
                        &rpl.created_cell,
                        (const char*)rpl.keys,
                        rpl.rend_auth_material) < 0) {
     log_warn(LD_OR,"onionskin_answer failed. Closing.");
-    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     goto done_processing;
   }
   log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
@@ -527,8 +517,7 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
     tor_gettimeofday(&req.started_at);
 
   job = tor_malloc_zero(sizeof(cpuworker_job_t));
-  job->chan_id = circ->p_chan->global_identifier;
-  job->circ_id = circ->p_circ_id;
+  job->circ = circ;
   memcpy(&job->u.request, &req, sizeof(req));
   memwipe(&req, 0, sizeof(req));
 
@@ -542,8 +531,9 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
     tor_free(job);
     return -1;
   }
-  log_debug(LD_OR, "Queued task %p (qe=%p, chanid="U64_FORMAT", circid=%u)",
-            job, queue_entry, U64_PRINTF_ARG(job->chan_id), job->circ_id);
+
+  log_debug(LD_OR, "Queued task %p (qe=%p, circ=%p)",
+            job, queue_entry, job->circ);
 
   circ->workqueue_entry = queue_entry;
 
