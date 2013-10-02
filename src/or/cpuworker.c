@@ -310,79 +310,78 @@ cpuworker_onion_handshake_replyfn(void *work_)
 
   --total_pending_tasks;
 
-  if (1) {
-    /* Could avoid this, but doesn't matter. */
-    memcpy(&rpl, &job->u.reply, sizeof(rpl));
+  /* Could avoid this, but doesn't matter. */
+  memcpy(&rpl, &job->u.reply, sizeof(rpl));
 
-    tor_assert(rpl.magic == CPUWORKER_REPLY_MAGIC);
+  tor_assert(rpl.magic == CPUWORKER_REPLY_MAGIC);
 
-    if (rpl.timed && rpl.success &&
-        rpl.handshake_type <= MAX_ONION_HANDSHAKE_TYPE) {
-      /* Time how long this request took. The handshake_type check should be
-         needless, but let's leave it in to be safe. */
-      struct timeval tv_end, tv_diff;
-      int64_t usec_roundtrip;
-      tor_gettimeofday(&tv_end);
-      timersub(&tv_end, &rpl.started_at, &tv_diff);
-      usec_roundtrip = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
-      if (usec_roundtrip >= 0 &&
-          usec_roundtrip < MAX_BELIEVABLE_ONIONSKIN_DELAY) {
-        ++onionskins_n_processed[rpl.handshake_type];
-        onionskins_usec_internal[rpl.handshake_type] += rpl.n_usec;
-        onionskins_usec_roundtrip[rpl.handshake_type] += usec_roundtrip;
-        if (onionskins_n_processed[rpl.handshake_type] >= 500000) {
-          /* Scale down every 500000 handshakes.  On a busy server, that's
-           * less impressive than it sounds. */
-          onionskins_n_processed[rpl.handshake_type] /= 2;
-          onionskins_usec_internal[rpl.handshake_type] /= 2;
-          onionskins_usec_roundtrip[rpl.handshake_type] /= 2;
-        }
+  if (rpl.timed && rpl.success &&
+      rpl.handshake_type <= MAX_ONION_HANDSHAKE_TYPE) {
+    /* Time how long this request took. The handshake_type check should be
+       needless, but let's leave it in to be safe. */
+    struct timeval tv_end, tv_diff;
+    int64_t usec_roundtrip;
+    tor_gettimeofday(&tv_end);
+    timersub(&tv_end, &rpl.started_at, &tv_diff);
+    usec_roundtrip = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+    if (usec_roundtrip >= 0 &&
+        usec_roundtrip < MAX_BELIEVABLE_ONIONSKIN_DELAY) {
+      ++onionskins_n_processed[rpl.handshake_type];
+      onionskins_usec_internal[rpl.handshake_type] += rpl.n_usec;
+      onionskins_usec_roundtrip[rpl.handshake_type] += usec_roundtrip;
+      if (onionskins_n_processed[rpl.handshake_type] >= 500000) {
+        /* Scale down every 500000 handshakes.  On a busy server, that's
+         * less impressive than it sounds. */
+        onionskins_n_processed[rpl.handshake_type] /= 2;
+        onionskins_usec_internal[rpl.handshake_type] /= 2;
+        onionskins_usec_roundtrip[rpl.handshake_type] /= 2;
       }
     }
-    /* Find the circ it was talking about */
-    chan_id = job->chan_id;
-    circ_id = job->circ_id;
-
-    p_chan = channel_find_by_global_id(chan_id);
-
-    if (p_chan)
-      circ = circuit_get_by_circid_channel(circ_id, p_chan);
-
-    log_debug(LD_OR,
-              "Unpacking cpuworker reply %p, chan_id is " U64_FORMAT
-              ", circ_id is %u, p_chan=%p, circ=%p, success=%d",
-              job, U64_PRINTF_ARG(chan_id), (unsigned)circ_id,
-              p_chan, circ, rpl.success);
-
-    if (rpl.success == 0) {
-      log_debug(LD_OR,
-                "decoding onionskin failed. "
-                "(Old key or bad software.) Closing.");
-      if (circ)
-        circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
-      goto done_processing;
-    }
-    if (!circ) {
-      /* This happens because somebody sends us a destroy cell and the
-       * circuit goes away, while the cpuworker is working. This is also
-       * why our tag doesn't include a pointer to the circ, because we'd
-       * never know if it's still valid.
-       */
-      log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
-      goto done_processing;
-    }
-    tor_assert(! CIRCUIT_IS_ORIGIN(circ));
-    TO_OR_CIRCUIT(circ)->workqueue_entry = NULL;
-    if (onionskin_answer(TO_OR_CIRCUIT(circ),
-                         &rpl.created_cell,
-                         (const char*)rpl.keys,
-                         rpl.rend_auth_material) < 0) {
-      log_warn(LD_OR,"onionskin_answer failed. Closing.");
-      circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
-      goto done_processing;
-    }
-    log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
   }
+  /* Find the circ it was talking about */
+  chan_id = job->chan_id;
+  circ_id = job->circ_id;
+
+  p_chan = channel_find_by_global_id(chan_id);
+
+  if (p_chan)
+    circ = circuit_get_by_circid_channel(circ_id, p_chan);
+
+  log_debug(LD_OR,
+            "Unpacking cpuworker reply %p, chan_id is " U64_FORMAT
+            ", circ_id is %u, p_chan=%p, circ=%p, success=%d",
+            job, U64_PRINTF_ARG(chan_id), (unsigned)circ_id,
+            p_chan, circ, rpl.success);
+
+  if (rpl.success == 0) {
+    log_debug(LD_OR,
+              "decoding onionskin failed. "
+              "(Old key or bad software.) Closing.");
+    if (circ)
+      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+    goto done_processing;
+  }
+  if (!circ) {
+    /* This happens because somebody sends us a destroy cell and the
+     * circuit goes away, while the cpuworker is working. This is also
+     * why our tag doesn't include a pointer to the circ, because we'd
+     * never know if it's still valid.
+     */
+    log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
+    goto done_processing;
+  }
+  tor_assert(! CIRCUIT_IS_ORIGIN(circ));
+  TO_OR_CIRCUIT(circ)->workqueue_entry = NULL;
+  if (onionskin_answer(TO_OR_CIRCUIT(circ),
+                       &rpl.created_cell,
+                       (const char*)rpl.keys,
+                       rpl.rend_auth_material) < 0) {
+    log_warn(LD_OR,"onionskin_answer failed. Closing.");
+    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+    goto done_processing;
+  }
+  log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
+
 
  done_processing:
   memwipe(&rpl, 0, sizeof(rpl));
@@ -408,56 +407,54 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
   tor_assert(req.magic == CPUWORKER_REQUEST_MAGIC);
   memset(&rpl, 0, sizeof(rpl));
 
-  if (1) {
-      const create_cell_t *cc = &req.create_cell;
-      created_cell_t *cell_out = &rpl.created_cell;
-      struct timeval tv_start = {0,0}, tv_end;
-      int n;
-      rpl.timed = req.timed;
-      rpl.started_at = req.started_at;
-      rpl.handshake_type = cc->handshake_type;
-      if (req.timed)
-        tor_gettimeofday(&tv_start);
-      n = onion_skin_server_handshake(cc->handshake_type,
-                                      cc->onionskin, cc->handshake_len,
-                                      onion_keys,
-                                      cell_out->reply,
-                                      rpl.keys, CPATH_KEY_MATERIAL_LEN,
-                                      rpl.rend_auth_material);
-      if (n < 0) {
-        /* failure */
-        log_debug(LD_OR,"onion_skin_server_handshake failed.");
-        memset(&rpl, 0, sizeof(rpl));
-        rpl.success = 0;
-      } else {
-        /* success */
-        log_debug(LD_OR,"onion_skin_server_handshake succeeded.");
-        cell_out->handshake_len = n;
-        switch (cc->cell_type) {
-        case CELL_CREATE:
-          cell_out->cell_type = CELL_CREATED; break;
-        case CELL_CREATE2:
-          cell_out->cell_type = CELL_CREATED2; break;
-        case CELL_CREATE_FAST:
-          cell_out->cell_type = CELL_CREATED_FAST; break;
-        default:
-          tor_assert(0);
-          return WQ_RPL_SHUTDOWN;
-        }
-        rpl.success = 1;
-      }
-      rpl.magic = CPUWORKER_REPLY_MAGIC;
-      if (req.timed) {
-        struct timeval tv_diff;
-        int64_t usec;
-        tor_gettimeofday(&tv_end);
-        timersub(&tv_end, &tv_start, &tv_diff);
-        usec = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
-        if (usec < 0 || usec > MAX_BELIEVABLE_ONIONSKIN_DELAY)
-          rpl.n_usec = MAX_BELIEVABLE_ONIONSKIN_DELAY;
-        else
-          rpl.n_usec = (uint32_t) usec;
-      }
+  const create_cell_t *cc = &req.create_cell;
+  created_cell_t *cell_out = &rpl.created_cell;
+  struct timeval tv_start = {0,0}, tv_end;
+  int n;
+  rpl.timed = req.timed;
+  rpl.started_at = req.started_at;
+  rpl.handshake_type = cc->handshake_type;
+  if (req.timed)
+    tor_gettimeofday(&tv_start);
+  n = onion_skin_server_handshake(cc->handshake_type,
+                                  cc->onionskin, cc->handshake_len,
+                                  onion_keys,
+                                  cell_out->reply,
+                                  rpl.keys, CPATH_KEY_MATERIAL_LEN,
+                                  rpl.rend_auth_material);
+  if (n < 0) {
+    /* failure */
+    log_debug(LD_OR,"onion_skin_server_handshake failed.");
+    memset(&rpl, 0, sizeof(rpl));
+    rpl.success = 0;
+  } else {
+    /* success */
+    log_debug(LD_OR,"onion_skin_server_handshake succeeded.");
+    cell_out->handshake_len = n;
+    switch (cc->cell_type) {
+    case CELL_CREATE:
+      cell_out->cell_type = CELL_CREATED; break;
+    case CELL_CREATE2:
+      cell_out->cell_type = CELL_CREATED2; break;
+    case CELL_CREATE_FAST:
+      cell_out->cell_type = CELL_CREATED_FAST; break;
+    default:
+      tor_assert(0);
+      return WQ_RPL_SHUTDOWN;
+    }
+    rpl.success = 1;
+  }
+  rpl.magic = CPUWORKER_REPLY_MAGIC;
+  if (req.timed) {
+    struct timeval tv_diff;
+    int64_t usec;
+    tor_gettimeofday(&tv_end);
+    timersub(&tv_end, &tv_start, &tv_diff);
+    usec = ((int64_t)tv_diff.tv_sec)*1000000 + tv_diff.tv_usec;
+    if (usec < 0 || usec > MAX_BELIEVABLE_ONIONSKIN_DELAY)
+      rpl.n_usec = MAX_BELIEVABLE_ONIONSKIN_DELAY;
+    else
+      rpl.n_usec = (uint32_t) usec;
   }
 
   memcpy(&job->u.reply, &rpl, sizeof(rpl));
@@ -499,58 +496,57 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   cpuworker_request_t req;
   int should_time;
 
-  if (1) {
-    if (!circ->p_chan) {
-      log_info(LD_OR,"circ->p_chan gone. Failing circ.");
+  if (!circ->p_chan) {
+    log_info(LD_OR,"circ->p_chan gone. Failing circ.");
+    tor_free(onionskin);
+    return -1;
+  }
+
+  if (total_pending_tasks >= max_pending_tasks) {
+    log_debug(LD_OR,"No idle cpuworkers. Queuing.");
+    if (onion_pending_add(circ, onionskin) < 0) {
       tor_free(onionskin);
       return -1;
     }
-
-    if (total_pending_tasks >= max_pending_tasks) {
-      log_debug(LD_OR,"No idle cpuworkers. Queuing.");
-      if (onion_pending_add(circ, onionskin) < 0) {
-        tor_free(onionskin);
-        return -1;
-      }
-      return 0;
-    }
-
-    if (connection_or_digest_is_known_relay(circ->p_chan->identity_digest))
-      rep_hist_note_circuit_handshake_assigned(onionskin->handshake_type);
-
-    should_time = should_time_request(onionskin->handshake_type);
-    memset(&req, 0, sizeof(req));
-    req.magic = CPUWORKER_REQUEST_MAGIC;
-    req.timed = should_time;
-
-    memcpy(&req.create_cell, onionskin, sizeof(create_cell_t));
-
-    tor_free(onionskin);
-
-    if (should_time)
-      tor_gettimeofday(&req.started_at);
-
-    job = tor_malloc_zero(sizeof(cpuworker_job_t));
-    job->chan_id = circ->p_chan->global_identifier;
-    job->circ_id = circ->p_circ_id;
-    memcpy(&job->u.request, &req, sizeof(req));
-    memwipe(&req, 0, sizeof(req));
-
-    ++total_pending_tasks;
-    queue_entry = threadpool_queue_work(threadpool,
-                                        cpuworker_onion_handshake_threadfn,
-                                        cpuworker_onion_handshake_replyfn,
-                                        job);
-    if (!queue_entry) {
-      log_warn(LD_BUG, "Couldn't queue work on threadpool");
-      tor_free(job);
-      return -1;
-    }
-    log_debug(LD_OR, "Queued task %p (qe=%p, chanid="U64_FORMAT", circid=%u)",
-              job, queue_entry, U64_PRINTF_ARG(job->chan_id), job->circ_id);
-
-    circ->workqueue_entry = queue_entry;
+    return 0;
   }
+
+  if (connection_or_digest_is_known_relay(circ->p_chan->identity_digest))
+    rep_hist_note_circuit_handshake_assigned(onionskin->handshake_type);
+
+  should_time = should_time_request(onionskin->handshake_type);
+  memset(&req, 0, sizeof(req));
+  req.magic = CPUWORKER_REQUEST_MAGIC;
+  req.timed = should_time;
+
+  memcpy(&req.create_cell, onionskin, sizeof(create_cell_t));
+
+  tor_free(onionskin);
+
+  if (should_time)
+    tor_gettimeofday(&req.started_at);
+
+  job = tor_malloc_zero(sizeof(cpuworker_job_t));
+  job->chan_id = circ->p_chan->global_identifier;
+  job->circ_id = circ->p_circ_id;
+  memcpy(&job->u.request, &req, sizeof(req));
+  memwipe(&req, 0, sizeof(req));
+
+  ++total_pending_tasks;
+  queue_entry = threadpool_queue_work(threadpool,
+                                      cpuworker_onion_handshake_threadfn,
+                                      cpuworker_onion_handshake_replyfn,
+                                      job);
+  if (!queue_entry) {
+    log_warn(LD_BUG, "Couldn't queue work on threadpool");
+    tor_free(job);
+    return -1;
+  }
+  log_debug(LD_OR, "Queued task %p (qe=%p, chanid="U64_FORMAT", circid=%u)",
+            job, queue_entry, U64_PRINTF_ARG(job->chan_id), job->circ_id);
+
+  circ->workqueue_entry = queue_entry;
+
   return 0;
 }
 
