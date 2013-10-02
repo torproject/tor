@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Use a doubly-linked list to implement the global circuit list.
-      Fix for ticket 9108. Patch from Marek Majkowski.

@@ -1,3 +1,192 @@
+Changes in version 0.2.5.1-alpha - 2012-10-0?
+  Tor 0.2.5.1-alpha [...]
+
+  This is the first alpha release in a new series, so expect there to
+  be bugs. Users who would rather test out a more stable branch should
+  stay with 0.2.4.x for now.
+
+  o Major features (security):
+    - Use the seccomp2 syscall filtering facility on Linux to limit
+      which system calls Tor can invoke. This is an experimental,
+      Linux-only feature to provide defense-in-depth against unknown
+      attacks. To try turning it on, set "Sandbox 1" in your torrc
+      file. Please be ready to report bugs. We hope to add support
+      for better sandboxing in the future, including more fine-grained
+      filters, better division of responsibility, and support for more
+      platforms. This work has been done by Cristian-Matei Toader for
+      Google Summer of Code.
+    - Re-enable TLS 1.1 and 1.2 when built with OpenSSL 1.0.1e or later.
+      Resolves ticket 6055. (OpenSSL before 1.0.1 didn't have TLS 1.1 or
+      1.2, and OpenSSL from 1.0.1 through 1.0.1d had bugs that prevented
+      renegotiation from working with TLS 1.1 or 1.2, so we had disabled
+      them to solve bug 6033.)
+
+  o Major features (other):
+    - Add support for passing arguments to managed pluggable transport
+      proxies. Implements ticket 3594.
+    - Bridges now track GeoIP information and the number of their users
+      even when pluggable transports are in use, and report usage
+      statistics in their extra-info descriptors. Resolves tickets 4773
+      and 5040.
+    - Make testing Tor networks bootstrap better: lower directory fetch
+      retry schedules and maximum interval without directory requests,
+      and raise maximum download tries. Implements ticket 6752.
+    - Add make target 'test-network' to run tests on a Chutney network.
+      Implements ticket 8530.
+    - The ntor handshake is now on-by-default, no matter what the
+      directory authorities recommend. Implements ticket 8561.
+
+  o Major bugfixes:
+    - Instead of writing destroy cells directly to outgoing connection
+      buffers, queue them and intersperse them with other outgoing cells.
+      This can prevent a set of resource starvation conditions where too
+      many pending destroy cells prevent data cells from actually getting
+      delivered. Reported by "oftc_must_be_destroyed". Fixes bug 7912;
+      bugfix on 0.2.0.1-alpha.
+    - If we are unable to save a microdescriptor to the journal, do not
+      drop it from memory and then reattempt downloading it. Fixes bug
+      9645; bugfix on 0.2.2.6-alpha.
+
+  o Build features:
+    - Tor now builds each source file in two modes: a mode that avoids
+      exposing identifiers needlessly, and another mode that exposes
+      more identifiers for testing. This lets the compiler do better at
+      optimizing the production code, while enabling us to take more
+      radical measures to let the unit tests test things.
+    - The production builds no longer include functions used only in
+      the unit tests; all functions exposed from a module only for
+      unit-testing are now static in production builds.
+    - Add an --enable-coverage configuration option to make the unit
+      tests (and a new src/or/tor-cov target) to build with gcov test
+      coverage support.
+
+  o Testing:
+    - We now have rudimentary function mocking support that our unit
+      tests can use to test functions in isolation. Function mocking
+      lets the tests temporarily replace a function's dependencies with
+      stub functions, so that the tests can check the function without
+      invoking the other functions it calls.
+    - Add more unit tests for the <circid,channel>->circuit map, and
+      the destroy-cell-tracking code to fix bug 7912.
+    - Unit tests for failing cases of the TAP onion handshake.
+    - More unit tests for address-manipulation functions.
+
+  o Minor features (config options):
+    - Config (torrc) lines now handle fingerprints which are missing
+      their initial '$'. Resolves ticket 4341; improvement over 0.0.9pre5.
+    - Support a --dump-config option to print some or all of the
+      configured options. Mainly useful for debugging the command-line
+      option parsing code. Helps resolve ticket 4647.
+    - Raise awareness of safer logging: notify user of potentially
+      unsafe config options, like logging more verbosely than severity
+      "notice" or setting SafeLogging to 0. Resolves ticket 5584.
+    - Add a new configuration option TestingV3AuthVotingStartOffset
+      that bootstraps a network faster by changing the timing for
+      consensus votes. Addresses ticket 8532.
+    - Add a new torrc option "ServerTransportOptions" that allows
+      bridge operators to pass configuration parameters to their
+      pluggable transports. Resolves ticket 8929.
+    - The config (torrc) file now accepts bandwidth and space limits in
+      bits as well as bytes. (Anywhere that you can say "2 Kilobytes",
+      you can now say "16 kilobits", and so on.) Resolves ticket 9214.
+      Patch by CharlieB.
+
+  o Minor features (build):
+    - Add support for `--library-versions` flag. Implements ticket 6384.
+    - Return the "unexpected sendme" warnings to a warn severity, but make
+      them rate limited, to help diagnose ticket 8093.
+    - Detect a missing asciidoc, and warn the user about it, during
+      configure rather than at build time. Fixes issue 6506. Patch from
+      Arlo Breault.
+
+  o Minor features (other):
+    - Use the SOCK_NONBLOCK socket type, if supported, to open nonblocking
+      sockets in a single system call. Implements ticket 5129.
+    - Log current accounting state (bytes sent and received + remaining
+      time for the current accounting period) in the relay's heartbeat
+      message. Implements ticket 5526; patch from Peter Retzlaff.
+    - Implement the TRANSPORT_LAUNCHED control port event that
+      notifies controllers about new launched pluggable
+      transports. Resolves ticket 5609.
+    - If we're using the pure-C 32-bit curve25519_donna implementation
+      of curve25519, build it with the -fomit-frame-pointer option to
+      make it go faster on register-starved hosts. This improves our
+      handshake performance by about 6% on i386 hosts without nacl.
+      Closes ticket 8109.
+
+  o Minor bugfixes:
+    - Set the listen() backlog limit to the largest actually supported
+      on the system, not to the value in a header file. Fixes bug 9716;
+      bugfix on every released Tor.
+    - No longer accept malformed http headers when parsing urls from
+      headers. Now we reply with Bad Request ("400"). Fixes bug 2767;
+      bugfix on 0.0.6pre1.
+    - In munge_extrainfo_into_routerinfo(), check the return value of
+      memchr(). This would have been a serious issue if we ever passed
+      it a non-extrainfo. Fixes bug 8791; bugfix on 0.2.0.6-alpha. Patch
+      from Arlo Breault.
+    - On the chance that somebody manages to build Tor on a
+      platform where time_t is unsigned, correct the way that
+      microdesc_add_to_cache() handles negative time arguments.
+      Fixes bug 8042; bugfix on 0.2.3.1-alpha.
+    - Reject relative control socket paths and emit a warning. Previously,
+      single-component control socket paths would be rejected, but Tor
+      would not log why it could not validate the config. Fixes bug 9258;
+      bugfix on 0.2.3.16-alpha.
+
+  o Minor bugfixes (command line):
+    - Use a single command-line parser for parsing torrc options on the
+      command line and for finding special command-line options to avoid
+      inconsistent behavior for torrc option arguments that have the same
+      names as command-line options. Fixes bugs 4647 and 9578; bugfix on
+      0.0.9pre5.
+    - No longer allow 'tor --hash-password' with no arguments. Fixes bug
+      9573; bugfix on 0.0.9pre5.
+
+  o Minor fixes (build, auxiliary programs):
+    - Stop preprocessing the "torify" script with autoconf, since
+      it no longer refers to LOCALSTATEDIR. Fixes bug 5505; patch
+      from Guilhem.
+    - The tor-fw-helper program now follows the standard convention and
+      exits with status code "0" on success. Fixes bug 9030; bugfix on
+      0.2.3.1-alpha. Patch by Arlo Breault.
+    - Corrected ./configure advice for what openssl dev package you should
+      install on Debian. Fixes bug 9207; bugfix on 0.2.0.1-alpha.
+
+  o Minor code improvements:
+    - Remove constants and tests for PKCS1 padding; it's insecure and
+      shouldn't be used for anything new. Fixes bug 8792; patch
+      from Arlo Breault.
+    - Remove instances of strcpy() from the unit tests. They weren't
+      hurting anything, since they were only in the unit tests, but it's
+      embarassing to have strcpy() in the code at all, and some analysis
+      tools don't like it. Fixes bug 8790; bugfix on 0.2.3.6-alpha and
+      0.2.3.8-alpha. Patch from Arlo Breault.
+
+  o Removed features:
+    - Remove migration code from when we renamed the "cached-routers"
+      file to "cached-descriptors" back in 0.2.0.8-alpha. This
+      incidentally resolves ticket 6502 by cleaning up the related code
+      a bit. Patch from Akshay Hebbar.
+
+  o Code simplification and refactoring:
+    - Extract the common duplicated code for creating a subdirectory
+      of the data directory and writing to a file in it. Fixes ticket
+      4282; patch from Peter Retzlaff.
+    - Since OpenSSL 0.9.7, the i2d_*() functions support allocating output
+      buffer. Avoid calling twice: i2d_RSAPublicKey(), i2d_DHparams(),
+      i2d_X509(), and i2d_PublicKey(). Resolves ticket 5170.
+    - Add a set of accessor functions for the circuit timeout data
+      structure. Fixes ticket 6153; patch from "piet".
+    - Clean up exit paths from connection_listener_new(). Closes ticket
+      8789. Patch from Arlo Breault.
+    - Since we rely on OpenSSL 0.9.8 now, we can use EVP_PKEY_cmp()
+      and drop our own custom pkey_eq() implementation. Fixes bug 9043.
+    - Use a doubly-linked list to implement the global circuit list.
+      Resolves ticket 9108. Patch from Marek Majkowski.
+    - Remove contrib/id_to_fp.c since it wasn't used anywhere.
+
+
 Changes in version 0.2.4.17-rc - 2013-09-05
   Tor 0.2.4.17-rc is the third release candidate for the Tor 0.2.4.x
   series. It adds an emergency step to help us tolerate the massive

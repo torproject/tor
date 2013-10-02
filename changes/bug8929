@@ -1,4 +1,0 @@
-  o Minor features:
-    - Add a new torrc option "ServerTransportOptions" that allows
-      bridge operators to pass configuration parameters to their
-      pluggable transports. Resolves ticket 8929.

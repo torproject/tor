@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Reject relative control socket paths and emit a warning.
-      Previously single-component control socket paths would be rejected,
-      but Tor would not log why it could not validate the config.
-      Now we reject all relative control socket paths and print a warning.
-      Fixes bug 9047; bugfix on 0.2.2.6-alpha.

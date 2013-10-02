@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - If we are unable to save a microdescriptor to the journal, do not
-      drop it from memory and then reattempt downloading it. Fixes bug
-      9645; bugfix on 0.2.2.6-alpha.
-

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Since OpenSSL 0.9.8 we can use EVP_PKEY_cmp instead of
-      implementing the same thing as pkey_eq. Fixes #9043.

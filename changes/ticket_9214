@@ -1,6 +1,0 @@
-  o Minor features:
-    - Accept bandwidth and space limits in bits as well as bytes.
-      (Anywhere in the configuration file that you can say "2 Kilobytes",
-      you can now say "16 kilobits", and so on.) Resolves ticket 9214.
-      Patch by CharlieB.
-

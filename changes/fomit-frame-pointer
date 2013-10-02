@@ -1,6 +1,0 @@
-  o Minor features (performance):
-    - If we're using the pure-C 32-bit curve25519_donna implementation
-      of curve25519, build it with the -fomit-frame-pointer option to
-      make it go faster on register-starved hosts. This improves our
-      handshake performance by about 6% on i386 hosts without nacl.
-      Closes ticket 8109.

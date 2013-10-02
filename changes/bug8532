@@ -1,4 +1,0 @@
-  o Minor features
-    - Add support for offsetting the voting interval in order to
-      bootstrap a network faster by adding configuration option
-      TestingV3AuthVotingStartOffset. Addresses #8532.

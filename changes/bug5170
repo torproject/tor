@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove contrib/id_to_fp.c since it wasn't used anywhere.
-    - Since OpenSSL 0.9.7 i2d_* functions support allocating output
-      buffer. Avoid calling twice: i2d_RSAPublicKey, i2d_DHparams,
-      i2d_X509, i2d_PublicKey. Fixes #5170.

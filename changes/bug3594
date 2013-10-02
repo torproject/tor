@@ -1,3 +1,0 @@
-  o Major bugfixes:
-    - Add support for passing arguments to managed pluggable transport
-      proxies. Implements ticket #3594.

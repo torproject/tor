@@ -1,3 +1,0 @@
-  o Enhancements
-    - Add make target 'test-network' running tests on a Chutney
-      network.

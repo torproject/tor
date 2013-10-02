@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Added optional parameter to contrib/coverage script to specify directory
-      to put gcov files in, and added reset-gcov target to top-level makefile.
-      Fixes bug #9267.

@@ -1,3 +1,0 @@
-  o Minor features:
-    - Use the SOCK_NONBLOCK socket type, if supported, to open nonblocking 
-      sockets in a single system call. Implements ticket #5129.

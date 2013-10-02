@@ -1,2 +1,0 @@
-  o Minor features:
-    - Add support for `--library-versions` flag. Implements ticket #6384.

@@ -1,3 +1,0 @@
-  o Major features:
-    - The ntor handshake is now on-by-default, no matter what the
-      directory authorities recommend. Implements ticket 8561.

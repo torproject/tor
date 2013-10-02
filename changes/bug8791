@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - In the function munge_extrainfo_into_routerinfo(), check the return
-      value of memchr(). This would have been a serious issue if we ever
-      passed a non-extrainfo to munge_extrainfo_into_routerinfo. Fixes
-      bug 8791; bugfix on 0.2.0.6-alpha. Patch from Arlo Breault.

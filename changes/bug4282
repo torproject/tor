@@ -1,4 +1,0 @@
-  o Code simplifications and refactoring:
-    - Extract the common duplicated code for creating a subdirectory
-      of the data directory and writing to a file in it. Fixes ticket
-      4282; patch from Peter Retzlaff.

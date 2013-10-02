@@ -1,4 +1,0 @@
-  o Removed code
-    - Remove constants and tests for PKCS1 padding; it's insecure and
-      shouldn't be used for anything new. Fixes bug #8792; patch
-      from Arlo Breault.
