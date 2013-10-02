@@ -1,5 +1,9 @@
-Changes in version 0.2.5.1-alpha - 2012-10-0?
-  Tor 0.2.5.1-alpha [...]
+Changes in version 0.2.5.1-alpha - 2012-10-02
+  Tor 0.2.5.1-alpha introduces experimental support for syscall sandboxing
+  on Linux, allows bridges that offer pluggable transports to report usage
+  statistics, fixes many issues to make testing easier, and provides
+  a pile of minor features and bugfixes that have been waiting for a
+  release of the new branch.
 
   This is the first alpha release in a new series, so expect there to
   be bugs. Users who would rather test out a more stable branch should
