@@ -29,7 +29,6 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
-#include "cpuworker.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dns.h"
@@ -130,7 +129,6 @@ conn_type_to_string(int type)
     case CONN_TYPE_AP: return "Socks";
     case CONN_TYPE_DIR_LISTENER: return "Directory listener";
     case CONN_TYPE_DIR: return "Directory";
-    case CONN_TYPE_CPUWORKER: return "CPU worker";
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
     case CONN_TYPE_EXT_OR: return "Extended OR";
@@ -213,12 +211,6 @@ conn_state_to_string(int type, int state)
         case DIR_CONN_STATE_SERVER_WRITING: return "writing";
       }
       break;
-    case CONN_TYPE_CPUWORKER:
-      switch (state) {
-        case CPUWORKER_STATE_IDLE: return "idle";
-        case CPUWORKER_STATE_BUSY_ONION: return "busy with onion";
-      }
-      break;
     case CONN_TYPE_CONTROL:
       switch (state) {
         case CONTROL_CONN_STATE_OPEN: return "open (protocol v1)";
@@ -248,7 +240,6 @@ connection_type_uses_bufferevent(connection_t *conn)
     case CONN_TYPE_CONTROL:
     case CONN_TYPE_OR:
     case CONN_TYPE_EXT_OR:
-    case CONN_TYPE_CPUWORKER:
       return 1;
     default:
       return 0;
@@ -2436,7 +2427,6 @@ connection_mark_all_noncontrol_connections(void)
     if (conn->marked_for_close)
       continue;
     switch (conn->type) {
-      case CONN_TYPE_CPUWORKER:
       case CONN_TYPE_CONTROL_LISTENER:
       case CONN_TYPE_CONTROL:
         break;
@@ -4530,8 +4520,6 @@ connection_process_inbuf(connection_t *conn, int package_partial)
                                            package_partial);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(TO_DIR_CONN(conn));
-    case CONN_TYPE_CPUWORKER:
-      return connection_cpu_process_inbuf(conn);
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(TO_CONTROL_CONN(conn));
     default:
@@ -4591,8 +4579,6 @@ connection_finished_flushing(connection_t *conn)
       return connection_edge_finished_flushing(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
       return connection_dir_finished_flushing(TO_DIR_CONN(conn));
-    case CONN_TYPE_CPUWORKER:
-      return connection_cpu_finished_flushing(conn);
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(TO_CONTROL_CONN(conn));
     default:
@@ -4648,8 +4634,6 @@ connection_reached_eof(connection_t *conn)
       return connection_edge_reached_eof(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
       return connection_dir_reached_eof(TO_DIR_CONN(conn));
-    case CONN_TYPE_CPUWORKER:
-      return connection_cpu_reached_eof(conn);
     case CONN_TYPE_CONTROL:
       return connection_control_reached_eof(TO_CONTROL_CONN(conn));
     default:
@@ -4855,10 +4839,6 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->purpose >= DIR_PURPOSE_MIN_);
       tor_assert(conn->purpose <= DIR_PURPOSE_MAX_);
       break;
-    case CONN_TYPE_CPUWORKER:
-      tor_assert(conn->state >= CPUWORKER_STATE_MIN_);
-      tor_assert(conn->state <= CPUWORKER_STATE_MAX_);
-      break;
     case CONN_TYPE_CONTROL:
       tor_assert(conn->state >= CONTROL_CONN_STATE_MIN_);
       tor_assert(conn->state <= CONTROL_CONN_STATE_MAX_);
@@ -4959,9 +4939,7 @@ proxy_type_to_string(int proxy_type)
 }
 
 /** Call connection_free_() on every connection in our array, and release all
- * storage held by connection.c. This is used by cpuworkers and dnsworkers
- * when they fork, so they don't keep resources held open (especially
- * sockets).
+ * storage held by connection.c.
  *
  * Don't do the checks in connection_free(), because they will
  * fail.

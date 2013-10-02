@@ -108,6 +108,7 @@ workqueue_entry_free(workqueue_entry_t *ent)
 {
   if (!ent)
     return;
+  memset(ent, 0xf0, sizeof(*ent));
   tor_free(ent);
 }
 
@@ -310,7 +311,7 @@ threadpool_queue_work(threadpool_t *pool,
  */
 int
 threadpool_queue_for_all(threadpool_t *pool,
-                         void *(*dup_fn)(const void *),
+                         void *(*dup_fn)(void *),
                          int (*fn)(void *, void *),
                          void (*reply_fn)(void *),
                          void *arg)
@@ -444,6 +445,7 @@ replyqueue_process(replyqueue_t *queue)
     workqueue_entry_t *work = TOR_TAILQ_FIRST(&queue->answers);
     TOR_TAILQ_REMOVE(&queue->answers, work, next_work);
     tor_mutex_release(&queue->lock);
+    work->on_thread = NULL;
 
     work->reply_fn(work->arg);
     workqueue_entry_free(work);

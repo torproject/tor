@@ -28,7 +28,7 @@ workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
                                          void (*reply_fn)(void *),
                                          void *arg);
 int threadpool_queue_for_all(threadpool_t *pool,
-                             void *(*dup_fn)(const void *),
+                             void *(*dup_fn)(void *),
                              int (*fn)(void *, void *),
                              void (*reply_fn)(void *),
                              void *arg);

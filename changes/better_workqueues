@@ -1,0 +1,10 @@
+  o Major features:
+    - Refactor the CPU worker implementation for better performance by
+      avoiding the kernel and lengthening pipelines. The original
+      implementation used sockets to transfer data from the main thread
+      to the worker threads, and didn't allow any thread to be assigned
+      more than a single piece of work at once. The new implementation
+      avoids communications overhead by making requests in shared
+      memory, avoiding kernel IO where possible, and keeping more
+      request in flight at once. Resolves issue #9682.
+

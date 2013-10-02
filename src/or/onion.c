@@ -295,6 +295,8 @@ onion_pending_remove(or_circuit_t *circ)
   victim = circ->onionqueue_entry;
   if (victim)
     onion_queue_entry_remove(victim);
+
+  cpuworker_cancel_circ_handshake(circ);
 }
 
 /** Remove a queue entry <b>victim</b> from the queue, unlinking it from
@@ -339,25 +341,25 @@ clear_pending_onions(void)
 
 /* ============================================================ */
 
-/** Fill in a server_onion_keys_t object at <b>keys</b> with all of the keys
+/** Return a new server_onion_keys_t object with all of the keys
  * and other info we might need to do onion handshakes.  (We make a copy of
  * our keys for each cpuworker to avoid race conditions with the main thread,
  * and to avoid locking) */
-void
-setup_server_onion_keys(server_onion_keys_t *keys)
+server_onion_keys_t *
+server_onion_keys_new(void)
 {
-  memset(keys, 0, sizeof(server_onion_keys_t));
+  server_onion_keys_t *keys = tor_malloc_zero(sizeof(server_onion_keys_t));
   memcpy(keys->my_identity, router_get_my_id_digest(), DIGEST_LEN);
   dup_onion_keys(&keys->onion_key, &keys->last_onion_key);
   keys->curve25519_key_map = construct_ntor_key_map();
   keys->junk_keypair = tor_malloc_zero(sizeof(curve25519_keypair_t));
   curve25519_keypair_generate(keys->junk_keypair, 0);
+  return keys;
 }
 
-/** Release all storage held in <b>keys</b>, but do not free <b>keys</b>
- * itself (as it's likely to be stack-allocated.) */
+/** Release all storage held in <b>keys</b>. */
 void
-release_server_onion_keys(server_onion_keys_t *keys)
+server_onion_keys_free(server_onion_keys_t *keys)
 {
   if (! keys)
     return;
@@ -366,7 +368,8 @@ release_server_onion_keys(server_onion_keys_t *keys)
   crypto_pk_free(keys->last_onion_key);
   ntor_key_map_free(keys->curve25519_key_map);
   tor_free(keys->junk_keypair);
-  memset(keys, 0, sizeof(server_onion_keys_t));
+  memwipe(keys, 0, sizeof(server_onion_keys_t));
+  tor_free(keys);
 }
 
 /** Release whatever storage is held in <b>state</b>, depending on its
