@@ -45,6 +45,9 @@ struct channel_s {
   /* Should we expect to see this channel in the channel lists? */
   unsigned char registered:1;
 
+  /** has this channel ever been open? */
+  unsigned int has_been_open:1;
+
   /** Why did we close?
    */
   enum {
