@@ -2141,6 +2141,15 @@ The following options are used for running a testing Tor network.
     Try this often to download a v3 authority certificate before giving up.
     Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
+**TestingDirAuthVoteGuard** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes and
+    address patterns of nodes to vote Guard for regardless of their
+    uptime and bandwidth. See the **ExcludeNodes** option for more
+    information on how to specify nodes.
+ +
+    In order for this option to have any effect, **TestingTorNetwork**
+    has to be set.
+
 SIGNALS
 -------
 
