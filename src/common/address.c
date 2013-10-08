@@ -1188,6 +1188,8 @@ get_interface_addresses_raw(int severity)
   result = smartlist_new();
   for (i = ifa; i; i = i->ifa_next) {
     tor_addr_t tmp;
+    if ((i->ifa_flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING))
+      continue;
     if (!i->ifa_addr)
       continue;
     if (i->ifa_addr->sa_family != AF_INET &&
