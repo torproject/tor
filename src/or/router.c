@@ -236,7 +236,7 @@ get_server_identity_key(void)
 int
 server_identity_key_is_set(void)
 {
-  return server_identitykey != NULL;
+  return server_mode(get_options()) && server_identitykey != NULL;
 }
 
 /** Set the current client identity key to <b>k</b>.
