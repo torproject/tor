@@ -2762,11 +2762,7 @@ onionskin_answer(or_circuit_t *circ,
  * number of endpoints that would give something away about our destination.
  *
  * If the routerlist <b>nodes</b> doesn't have enough routers
- * to handle the desired path length, return as large a path length as
- * is feasible, except if it's less than 2, in which case return -1.
- * XXX ^^ I think this behavior is a hold-over from back when we had only a
- *     few relays in the network, and certainly back before guards existed.
- *     We should very likely get rid of it. -RD
+ * to handle the desired path length, return -1.
  */
 static int
 new_route_len(uint8_t purpose, extend_info_t *exit, smartlist_t *nodes)
@@ -2787,17 +2783,11 @@ new_route_len(uint8_t purpose, extend_info_t *exit, smartlist_t *nodes)
   log_debug(LD_CIRC,"Chosen route length %d (%d/%d routers suitable).",
             routelen, num_acceptable_routers, smartlist_len(nodes));
 
-  if (num_acceptable_routers < 2) {
-    log_info(LD_CIRC,
-             "Not enough acceptable routers (%d). Discarding this circuit.",
-             num_acceptable_routers);
-    return -1;
-  }
-
   if (num_acceptable_routers < routelen) {
-    log_info(LD_CIRC,"Not enough routers: cutting routelen from %d to %d.",
-             routelen, num_acceptable_routers);
-    routelen = num_acceptable_routers;
+    log_info(LD_CIRC,
+             "Not enough acceptable routers (%d/%d). Discarding this circuit.",
+             num_acceptable_routers, routelen);
+    return -1;
   }
 
   return routelen;
