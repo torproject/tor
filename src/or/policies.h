@@ -12,10 +12,11 @@
 #ifndef TOR_POLICIES_H
 #define TOR_POLICIES_H
 
-/* (length of "accept 255.255.255.255/255.255.255.255:65535-65535\n" plus a
- * NUL.)
+/* (length of
+ * "accept6 [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]/128:65535-65535\n"
+ * plus a terminating NUL, rounded up to a nice number.)
  */
-#define POLICY_BUF_LEN 52
+#define POLICY_BUF_LEN 72
 
 int firewall_is_fascist_or(void);
 int fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port);
