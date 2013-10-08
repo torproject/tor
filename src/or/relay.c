@@ -1103,6 +1103,7 @@ connection_edge_process_relay_cell_not_open(
           control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_STATUS, 0);
           break;
         case DIR_PURPOSE_FETCH_SERVERDESC:
+        case DIR_PURPOSE_FETCH_MICRODESC:
           control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
                                   count_loading_descriptors_progress());
           break;
