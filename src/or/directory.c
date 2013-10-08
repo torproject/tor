@@ -1639,8 +1639,9 @@ load_downloaded_routers(const char *body, smartlist_t *which,
 
   added = router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
                                   descriptor_digests, buf);
-  control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
-                          count_loading_descriptors_progress());
+  if (general)
+    control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                            count_loading_descriptors_progress());
   return added;
 }
 
