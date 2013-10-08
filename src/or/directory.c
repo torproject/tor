@@ -2125,6 +2125,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         /* Mark remaining ones as failed. */
         dir_microdesc_download_failed(which, status_code);
       }
+      control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                              count_loading_descriptors_progress());
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
       smartlist_free(mds);
