@@ -232,7 +232,8 @@ get_server_identity_key(void)
   return server_identitykey;
 }
 
-/** Return true iff the server identity key has been set. */
+/** Return true iff we are a server and the server identity key
+ * has been set. */
 int
 server_identity_key_is_set(void)
 {
