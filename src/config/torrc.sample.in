@@ -120,12 +120,9 @@
 ## is per month)
 #AccountingStart month 3 15:00
 
-## Administrative contact information for this relay or bridge. This line
-## can be used to contact you if your relay or bridge is misconfigured or
-## something else goes wrong. Note that we archive and publish all
-## descriptors containing these lines and that Google indexes them, so
-## spammers might also collect them. You may want to obscure the fact that
-## it's an email address and/or generate a new address for this purpose.
+## Contact info to be published in the directory, so we can contact you
+## if your relay is misconfigured or something else goes wrong. Google
+## indexes this, so spammers might also collect it.
 #ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one:
 #ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>
