@@ -940,6 +940,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_TB_EMPTY, "TB_EMPTY" },
   { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
+  { EVENT_HS_DESC, "HS_DESC" },
   { 0, NULL },
 };
 
@@ -1549,7 +1550,7 @@ munge_extrainfo_into_routerinfo(const char *ri_body,
   outp += router_sig-ri_body;
 
   for (i=0; i < 2; ++i) {
-    const char *kwd = i?"\nwrite-history ":"\nread-history ";
+    const char *kwd = i ? "\nwrite-history " : "\nread-history ";
     const char *cp, *eol;
     if (!(cp = tor_memstr(ei_body, ei_len, kwd)))
       continue;
@@ -4996,6 +4997,95 @@ control_event_transport_launched(const char *mode, const char *transport_name,
   send_control_event(EVENT_TRANSPORT_LAUNCHED, ALL_FORMATS,
                      "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n",
                      mode, transport_name, fmt_addr(addr), port);
+}
+
+/** Convert rendezvous auth type to string for HS_DESC control events
+ */
+const char *
+rend_auth_type_to_string(rend_auth_type_t auth_type)
+{
+  const char *str;
+
+  switch (auth_type) {
+    case REND_NO_AUTH:
+      str = "NO_AUTH";
+      break;
+    case REND_BASIC_AUTH:
+      str = "BASIC_AUTH";
+      break;
+    case REND_STEALTH_AUTH:
+      str = "STEALTH_AUTH";
+      break;
+    default:
+      str = "UNKNOWN";
+  }
+
+  return str;
+}
+
+/** send HS_DESC requested event.
+ *
+ * <b>rend_query</b> is used to fetch requested onion address and auth type.
+ * <b>hs_dir</b> is the description of contacting hs directory.
+ * <b>desc_id_base32</b> is the ID of requested hs descriptor.
+ */
+void
+control_event_hs_descriptor_requested(const rend_data_t *rend_query,
+                                      const char *hs_dir,
+                                      const char *desc_id_base32)
+{
+  tor_assert(hs_dir);
+  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+                     "650 HS_DESC REQUESTED %s %s %s %s\r\n",
+                     rend_query->onion_address,
+                     rend_auth_type_to_string(rend_query->auth_type),
+                     hs_dir,
+                     desc_id_base32);
+}
+
+/** send HS_DESC event after got response from hs directory.
+ *
+ * NOTE: this is an internal function used by following functions:
+ * control_event_hs_descriptor_received
+ * control_event_hs_descriptor_failed
+ *
+ * So do not call this function directly.
+ */
+void
+control_event_hs_descriptor_receive_end(const char *action,
+                                        const rend_data_t *rend_query,
+                                        const char *hs_dir)
+{
+  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+                     "650 HS_DESC %s %s %s %s\r\n",
+                     action,
+                     rend_query->onion_address,
+                     rend_auth_type_to_string(rend_query->auth_type),
+                     hs_dir);
+}
+
+/** send HS_DESC RECEIVED event
+ *
+ * called when a we successfully received a hidden service descriptor.
+ */
+void
+control_event_hs_descriptor_received(const rend_data_t *rend_query,
+                                     const char *hs_dir)
+{
+  tor_assert(hs_dir);
+  control_event_hs_descriptor_receive_end("RECEIVED", rend_query, hs_dir);
+}
+
+/** send HS_DESC FAILED event
+ *
+ * called when request for hidden service descriptor returned failure.
+ */
+void
+control_event_hs_descriptor_failed(const rend_data_t *rend_query,
+                                   const char *hs_dir)
+{
+  tor_assert(hs_dir);
+  control_event_hs_descriptor_receive_end("FAILED", rend_query, hs_dir);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */
