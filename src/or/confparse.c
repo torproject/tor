@@ -392,7 +392,7 @@ config_assign_value(const config_format_t *fmt, void *options,
               "Interval in '%s %s' is malformed or out of bounds.",
               c->key, c->value);
           SMARTLIST_FOREACH(csv_str, char *, cp, tor_free(cp));
-          smartlist_clear(csv_str);
+          smartlist_free(csv_str);
           return -1;
         }
         csv_int = tor_malloc_zero(sizeof(int));
@@ -401,7 +401,7 @@ config_assign_value(const config_format_t *fmt, void *options,
       }
     SMARTLIST_FOREACH_END(str);
     SMARTLIST_FOREACH(csv_str, char *, cp, tor_free(cp));
-    smartlist_clear(csv_str);
+    smartlist_free(csv_str);
     break;
 
   case CONFIG_TYPE_LINELIST:
