@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 12 September 2012 for Tor 0.2.4.3-alpha.
+## Last updated 9 October 2012 for Tor 0.2.5.2-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
