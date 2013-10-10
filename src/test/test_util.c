@@ -2312,6 +2312,7 @@ test_util_exit_status(void *ptr)
   n = format_helper_exit_status(0xFF, -0x80000000, hex_errno);
   test_streq("FF/-80000000\n", hex_errno);
   test_eq(n, strlen(hex_errno));
+  test_eq(n, HEX_ERRNO_SIZE);
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0x7F, 0, hex_errno);
