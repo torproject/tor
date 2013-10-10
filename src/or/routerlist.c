@@ -241,6 +241,27 @@ get_cert_list(const char *id_digest)
   return cl;
 }
 
+/** Release all space held by a cert_list_t */
+static void
+cert_list_free(cert_list_t *cl)
+{
+  if (!cl)
+    return;
+
+  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
+                    authority_cert_free(cert));
+  smartlist_free(cl->certs);
+  dsmap_free(cl->dl_status_map, tor_free_);
+  tor_free(cl);
+}
+
+/** Wrapper for cert_list_free so we can pass it to digestmap_free */
+static void
+cert_list_free_(void *cl)
+{
+  cert_list_free(cl);
+}
+
 /** Reload the cached v3 key certificates from the cached-certs file in
  * the data directory. Return 0 on success, -1 on failure. */
 int
@@ -3284,13 +3305,7 @@ routerlist_free_all(void)
   smartlist_free(fallback_dir_servers);
   trusted_dir_servers = fallback_dir_servers = NULL;
   if (trusted_dir_certs) {
-    DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
-      SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-                        authority_cert_free(cert));
-      smartlist_free(cl->certs);
-      tor_free(cl);
-    } DIGESTMAP_FOREACH_END;
-    digestmap_free(trusted_dir_certs, NULL);
+    digestmap_free(trusted_dir_certs, cert_list_free_);
     trusted_dir_certs = NULL;
   }
 }
