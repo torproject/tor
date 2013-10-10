@@ -3448,10 +3448,10 @@ format_hex_number_sigsafe(unsigned int x, char *buf, int buf_len)
  * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler
  * safe.
  *
- * <b>hex_errno</b> must have at least HEX_ERRNO_SIZE bytes available.
+ * <b>hex_errno</b> must have at least HEX_ERRNO_SIZE+1 bytes available.
  *
  * The format of <b>hex_errno</b> is: "CHILD_STATE/ERRNO\n", left-padded
- * with spaces. Note that there is no trailing \0. CHILD_STATE indicates where
+ * with spaces. CHILD_STATE indicates where
  * in the processs of starting the child process did the failure occur (see
  * CHILD_STATE_* macros for definition), and SAVED_ERRNO is the value of
  * errno when the failure occurred.
@@ -3529,8 +3529,8 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   left -= written;
   cur += written;
 
-  /* Check that we have enough space left for a newline */
-  if (left <= 0)
+  /* Check that we have enough space left for a newline and a NUL */
+  if (left <= 1)
     goto err;
 
   /* Emit the newline and NUL */
@@ -3786,7 +3786,7 @@ tor_spawn_background(const char *const filename, const char **argv,
      this is used for printing out the error message */
   unsigned char child_state = CHILD_STATE_INIT;
 
-  char hex_errno[HEX_ERRNO_SIZE];
+  char hex_errno[HEX_ERRNO_SIZE + 1];
 
   static int max_fd = -1;
 
