@@ -3412,7 +3412,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
    * Count how many chars of space we have left, and keep a pointer into the
    * current point in the buffer.
    */
-  left = HEX_ERRNO_SIZE;
+  left = HEX_ERRNO_SIZE+1;
   cur = hex_errno;
 
   /* Emit child_state */
@@ -3712,7 +3712,7 @@ tor_spawn_background(const char *const filename, const char **argv,
      this is used for printing out the error message */
   unsigned char child_state = CHILD_STATE_INIT;
 
-  char hex_errno[HEX_ERRNO_SIZE + 1];
+  char hex_errno[HEX_ERRNO_SIZE + 2]; /* + 1 should be sufficient actually */
 
   static int max_fd = -1;
 
