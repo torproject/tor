@@ -2355,8 +2355,10 @@ tor_init(int argc, char *argv[])
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "--list-torrc-options") ||
           !strcmp(cl->key, "--library-versions") ||
-          !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help"))
-        quiet = 1;
+          !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
+        if (quiet < 1)
+          quiet = 1;
+      }
     }
     config_free_lines(opts);
     config_free_lines(cmdline_opts);

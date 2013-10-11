@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When a command-line option such as --version or --help that ordinarily
+      implies --hush appears on the command line along with --quiet, obey
+      --quiet. Previously, we obeyed --quiet only if it appeared later on the
+      command line. Fixes bug 9578; bugfix on 0.2.5.1-alpha.
+
