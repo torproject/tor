@@ -1,4 +1,4 @@
-TESTS+= src/test/test
+TESTS += src/test/test
 
 noinst_PROGRAMS+= src/test/bench
 if UNITTESTS_ENABLED
@@ -75,5 +75,10 @@ src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	-I"$(top_srcdir)/src/or"
 
+endif
+
+check-local:
+if USEPYTHON
+	$(PYTHON) src/test/test_cmdline_args.py
 endif
 

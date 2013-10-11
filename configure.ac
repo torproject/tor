@@ -183,6 +183,13 @@ AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
 
+AC_ARG_VAR(PYTHON)
+AC_CHECK_PROGS(PYTHON, [python python2 python3])
+if test "x$PYTHON" = "x"; then
+  AC_MSG_WARN([Python unavailable; some tests will not be run.])
+fi
+AM_CONDITIONAL(USEPYTHON, [test "x$PYTHON" != "x"])
+
 ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
 AC_C_FLEXIBLE_ARRAY_MEMBER
 ], [
