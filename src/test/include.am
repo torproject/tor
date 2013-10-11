@@ -87,9 +87,9 @@ endif
 
 check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
-	$(PYTHON) src/test/test_cmdline_args.py $(CMDLINE_TEST_TOR) "${top_srcdir}"
+	$(PYTHON) $(top_srcdir)/src/test/test_cmdline_args.py $(CMDLINE_TEST_TOR) "${top_srcdir}"
 if CURVE25519_ENABLED
-	$(PYTHON) src/test/ntor_ref.py test-tor
-	$(PYTHON) src/test/ntor_ref.py self-test
+	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py test-tor
+	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py self-test
 endif
 endif
