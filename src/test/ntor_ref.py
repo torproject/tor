@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright 2012-2013, The Tor Project, Inc
 # See LICENSE for licensing information
 
@@ -27,7 +28,13 @@ commands:
 """
 
 import binascii
-import curve25519
+try:
+    import curve25519
+except ImportError:
+    curve25519 = None
+    print "SKIPPING: No Python curve25519 module installed"
+    import sys
+    sys.exit(0)
 import hashlib
 import hmac
 import subprocess
@@ -286,6 +293,7 @@ def demo(node_id="iToldYouAboutStairs.", server_key=PrivateKey()):
     assert len(skeys) == 72
     assert len(ckeys) == 72
     assert skeys == ckeys
+    print "OK"
 
 # ======================================================================
 def timing():
@@ -368,13 +376,15 @@ def test_tor():
     assert c_keys == s_keys
     assert len(c_keys) == 90
 
-    print "We just interoperated."
+    print "OK"
 
 # ======================================================================
 
 if __name__ == '__main__':
     import sys
-    if sys.argv[1] == 'gen_kdf_vectors':
+    if len(sys.argv) < 2:
+        print __doc__
+    elif sys.argv[1] == 'gen_kdf_vectors':
         kdf_vectors()
     elif sys.argv[1] == 'timing':
         timing()

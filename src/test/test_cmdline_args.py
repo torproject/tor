@@ -6,11 +6,20 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
-TOR = "./src/or/tor-cov"
-TOPDIR = "."
+TOR = "./src/or/tor"
+TOP_SRCDIR = "."
+
+if len(sys.argv) > 1:
+    TOR = sys.argv[1]
+    del sys.argv[1]
+
+if len(sys.argv) > 1:
+    TOP_SRCDIR = sys.argv[1]
+    del sys.argv[1]
 
 class UnexpectedSuccess(Exception):
     pass
@@ -110,7 +119,7 @@ class CmdlineTests(unittest.TestCase):
         self.assertEquals(hashlib.sha1(inp).digest(), hashed)
 
     def test_digests(self):
-        main_c = os.path.join(TOPDIR, "src", "or", "main.c")
+        main_c = os.path.join(TOP_SRCDIR, "src", "or", "main.c")
 
         if os.stat(TOR).st_mtime < os.stat(main_c).st_mtime:
             self.skipTest(TOR+" not up to date")

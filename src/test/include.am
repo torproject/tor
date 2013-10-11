@@ -74,11 +74,22 @@ src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	-I"$(top_srcdir)/src/or"
-
+NTOR_TEST_DEPS=src/test/test-ntor-cl
+else
+NTOR_TEST_DEPS=
 endif
 
-check-local:
+if COVERAGE_ENABLED
+CMDLINE_TEST_TOR = ./src/or/tor-cov
+else
+CMDLINE_TEST_TOR = ./src/or/tor
+endif
+
+check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
-	$(PYTHON) src/test/test_cmdline_args.py
+	$(PYTHON) src/test/test_cmdline_args.py $(CMDLINE_TEST_TOR) "${top_srcdir}"
+if CURVE25519_ENABLED
+	$(PYTHON) src/test/ntor_ref.py test-tor
+	$(PYTHON) src/test/ntor_ref.py self-test
 endif
-
+endif
