@@ -743,6 +743,9 @@ channel_init(channel_t *chan)
 
   /* Timestamp it */
   channel_timestamp_created(chan);
+
+  /* It hasn't been open yet. */
+  chan->has_been_open = 0;
 }
 
 /**
@@ -1294,7 +1297,8 @@ channel_closed(channel_t *chan)
 
   /* Inform any pending (not attached) circs that they should
    * give up. */
-  circuit_n_chan_done(chan, 0);
+  if (! chan->has_been_open)
+    circuit_n_chan_done(chan, 0);
 
   /* Now close all the attached circuits on it. */
   circuit_unlink_all_from_channel(chan, END_CIRC_REASON_CHANNEL_CLOSED);
@@ -1935,6 +1939,7 @@ channel_change_state(channel_t *chan, channel_state_t to_state)
   /* Tell circuits if we opened and stuff */
   if (to_state == CHANNEL_STATE_OPEN) {
     channel_do_open_actions(chan);
+    chan->has_been_open = 1;
 
     /* Check for queued cells to process */
     if (! TOR_SIMPLEQ_EMPTY(&chan->incoming_queue))

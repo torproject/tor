@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Correctly log long IPv6 exit policy, instead of truncating them
+      or reporting an error. Fixes bug 9596; bugfix on 0.2.4.7-alpha.
+
