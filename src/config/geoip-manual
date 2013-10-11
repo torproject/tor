@@ -60,13 +60,10 @@
 
 # US, because ARIN says 199.255.208.0-199.255.215.255 is US.
 # Changed entry start from 199.255.213.0 to 199.255.208.0 on 2013-08-12.
-# -KL 2013-08-12
-"199.255.208.0","199.255.215.255","3355430912","3355432959","US","United States"
-
-# US, because previous MaxMind entry 209.58.176.144-209.59.31.255 is US,
-# and RIR delegation files say 209.59.32.0-209.59.63.255 is US.
-# -KL 2012-11-27
-"209.59.32.0","209.59.63.255","3510312960","3510321151","US","United States"
+# Split up into 199.255.208.0-199.255.209.127 and
+# 199.255.210.0-199.255.215.255 on 2013-10-11. -KL 2013-10-11
+"199.255.208.0","199.255.209.127","3355430912","3355431295","US","United States"
+"199.255.210.0","199.255.215.255","3355431424","3355432959","US","United States"
 
 # EU, despite neither previous (RU) nor next (SE) MaxMind entry being EU,
 # but because RIR delegation files agree with previous MaxMind entry and
