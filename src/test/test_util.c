@@ -102,6 +102,112 @@ test_util_read_file_eof_zero_bytes(void *arg)
   test_util_read_until_eof_impl("tor_test_fifo_empty", 0, 10000);
 }
 
+/* Test the basic expected behaviour for write_chunks_to_file.
+ * NOTE: This will need to be updated if we ever change the tempfile location
+ * or extension */
+static void
+test_util_write_chunks_to_file(void *arg)
+{
+  char *fname = NULL;
+  char *tempname = NULL;
+  char *str = NULL;
+  int r;
+  int fd = -1;
+  struct stat st;
+
+  /* These should be two different sizes to ensure the data is different
+   * between the data file and the temp file's 'known string' */
+  int temp_str_len = 1024;
+  int data_str_len = 512;
+  char *data_str = tor_malloc(data_str_len);
+  char *temp_str = tor_malloc(temp_str_len);
+
+  smartlist_t *chunks = smartlist_new();
+  sized_chunk_t c = {data_str, data_str_len/2};
+  sized_chunk_t c2 = {data_str + data_str_len/2, data_str_len/2};
+  (void)arg;
+
+  crypto_rand(temp_str, temp_str_len);
+  crypto_rand(data_str, data_str_len);
+
+  // Ensure it can write multiple chunks
+
+  smartlist_add(chunks, &c);
+  smartlist_add(chunks, &c2);
+
+  /*
+  * Check if it writes using a tempfile
+  */
+  fname = tor_strdup(get_fname("write_chunks_with_tempfile"));
+  tor_asprintf(&tempname, "%s.tmp", fname);
+
+  // write a known string to a file where the tempfile will be
+  r = write_bytes_to_file(tempname, temp_str, temp_str_len, 1);
+  tt_int_op(r, ==, 0);
+
+  // call write_chunks_to_file
+  r = write_chunks_to_file(fname, chunks, 1, 0);
+  tt_int_op(r, ==, 0);
+
+  // assert the file has been written (expected size)
+  str = read_file_to_str(fname, RFTS_BIN, &st);
+  tt_assert(str != NULL);
+  tt_int_op(st.st_size, ==, data_str_len);
+  test_mem_op(data_str, ==, str, data_str_len);
+  tor_free(str);
+  close(fd);
+
+  // assert that the tempfile is removed (should not leave artifacts)
+  str = read_file_to_str(tempname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+  tt_assert(str == NULL);
+
+  // Remove old testfile for second test
+  r = unlink(fname);
+  tt_int_op(r, ==, 0);
+  tor_free(fname);
+  tor_free(tempname);
+
+  /*
+  *  Check if it skips using a tempfile with flags
+  */
+  fname = tor_strdup(get_fname("write_chunks_with_no_tempfile"));
+  tor_asprintf(&tempname, "%s.tmp", fname);
+
+  // write a known string to a file where the tempfile will be
+  r = write_bytes_to_file(tempname, temp_str, temp_str_len, 1);
+  tt_int_op(r, ==, 0);
+
+  // call write_chunks_to_file with no_tempfile = true
+  r = write_chunks_to_file(fname, chunks, 1, 1);
+  tt_int_op(r, ==, 0);
+
+  // assert the file has been written (expected size)
+  str = read_file_to_str(fname, RFTS_BIN, &st);
+  tt_assert(str != NULL);
+  tt_int_op(st.st_size, ==, data_str_len);
+  test_mem_op(data_str, ==, str, data_str_len);
+  tor_free(str);
+  close(fd);
+
+  // assert the tempfile still contains the known string
+  str = read_file_to_str(tempname, RFTS_BIN, &st);
+  tt_assert(str != NULL);
+  tt_int_op(st.st_size, ==, temp_str_len);
+  test_mem_op(temp_str, ==, str, temp_str_len);
+
+ done:
+  unlink(fname);
+  unlink(tempname);
+  smartlist_free(chunks);
+  tor_free(fname);
+  tor_free(tempname);
+  tor_free(str);
+  tor_free(data_str);
+  tor_free(temp_str);
+  if (fd >= 0)
+    close(fd);
+}
+
 static void
 test_util_time(void)
 {
@@ -3503,6 +3609,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_tiny_limit, 0),
   UTIL_TEST(read_file_eof_two_loops, 0),
   UTIL_TEST(read_file_eof_zero_bytes, 0),
+  UTIL_TEST(write_chunks_to_file, 0),
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(weak_random, 0),
   UTIL_TEST(socket, TT_FORK),

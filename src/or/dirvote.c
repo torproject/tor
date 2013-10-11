@@ -3143,7 +3143,7 @@ dirvote_compute_consensuses(void)
     });
 
   votefile = get_datadir_fname("v3-status-votes");
-  write_chunks_to_file(votefile, votestrings, 0);
+  write_chunks_to_file(votefile, votestrings, 0, 0);
   tor_free(votefile);
   SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
   smartlist_free(votestrings);

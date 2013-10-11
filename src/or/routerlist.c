@@ -449,7 +449,7 @@ trusted_dirs_flush_certs_to_disk(void)
   } DIGESTMAP_FOREACH_END;
 
   filename = get_datadir_fname("cached-certs");
-  if (write_chunks_to_file(filename, chunks, 0)) {
+  if (write_chunks_to_file(filename, chunks, 0, 0)) {
     log_warn(LD_FS, "Error writing certificates to disk.");
   }
   tor_free(filename);
@@ -1069,7 +1069,7 @@ router_rebuild_store(int flags, desc_store_t *store)
       smartlist_add(chunk_list, c);
   } SMARTLIST_FOREACH_END(sd);
 
-  if (write_chunks_to_file(fname_tmp, chunk_list, 1)<0) {
+  if (write_chunks_to_file(fname_tmp, chunk_list, 1, 1)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }

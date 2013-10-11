@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+
+    - Added additional argument to write_chunks_to_file to optionally skip
+      using a temp file to do non-atomic writes. Implements ticket #1376.
