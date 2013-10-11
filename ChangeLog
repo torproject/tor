@@ -1120,8 +1120,7 @@ Changes in version 0.2.4.7-alpha - 2012-12-24
       network connection drastically changes. Should help with bug 3443.
 
   o Major features (IPv6):
-    - Tor now has (alpha) support for exiting to IPv6 addresses. To
-      enable it as an exit node, make sure that you have IPv6
+    - Relays can now exit to IPv6 addresses: make sure that you have IPv6
       connectivity, then set the IPv6Exit flag to 1. Also make sure your
       exit policy reads as you would like: the address * applies to all
       address families, whereas *4 is IPv4 address only, and *6 is IPv6
@@ -1591,7 +1590,7 @@ Changes in version 0.2.4.3-alpha - 2012-09-22
       than it ran through the part of the loop before it had made its
       choice. Addresses ticket 6538.
     - Disable the use of Guard nodes when in Tor2WebMode. Guard usage
-      by tor2web clients allows hidden services to identity tor2web
+      by tor2web clients allows hidden services to identify tor2web
       clients through their repeated selection of the same rendezvous
       and introduction point circuit endpoints (their guards). Resolves
       ticket 6888.
