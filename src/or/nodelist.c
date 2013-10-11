@@ -25,6 +25,8 @@
 static void nodelist_drop_node(node_t *node, int remove_from_ht);
 static void node_free(node_t *node);
 static void update_router_have_minimum_dir_info(void);
+static double get_frac_paths_needed_for_circs(const or_options_t *options,
+                                              const networkstatus_t *ns);
 
 /** A nodelist_t holds a node_t object for every router we're "willing to use
  * for something".  Specifically, it should hold a node_t for every node that
@@ -1317,7 +1319,7 @@ count_usable_descriptors(int *num_present, int *num_usable,
             md ? "microdesc" : "desc", exit_only ? " exits" : "s");
 }
 
-/** Return an extimate of which fraction of usable paths through the Tor
+/** Return an estimate of which fraction of usable paths through the Tor
  * network we have available for use. */
 static double
 compute_frac_paths_available(const networkstatus_t *consensus,
@@ -1372,13 +1374,14 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   if (f_myexit < f_exit)
     f_exit = f_myexit;
 
-  tor_asprintf(status_out,
-               "%d%% of guards bw, "
-               "%d%% of midpoint bw, and "
-               "%d%% of exit bw",
-               (int)(f_guard*100),
-               (int)(f_mid*100),
-               (int)(f_exit*100));
+  if (status_out)
+    tor_asprintf(status_out,
+                 "%d%% of guards bw, "
+                 "%d%% of midpoint bw, and "
+                 "%d%% of exit bw",
+                 (int)(f_guard*100),
+                 (int)(f_mid*100),
+                 (int)(f_exit*100));
 
   return f_guard * f_mid * f_exit;
 }
@@ -1391,19 +1394,19 @@ count_loading_descriptors_progress(void)
 {
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
+  const or_options_t *options = get_options();
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
-  double fraction;
+  double paths, fraction;
 
   if (!consensus)
     return 0; /* can't count descriptors if we have no list of them */
 
-  count_usable_descriptors(&num_present, &num_usable, NULL,
-                           consensus, get_options(), now, NULL, 0);
+  paths = compute_frac_paths_available(consensus, options, now,
+                                       &num_present, &num_usable,
+                                       NULL);
 
-  if (num_usable == 0)
-    return 0; /* don't div by 0 */
-  fraction = num_present / (num_usable/4.);
+  fraction = paths / get_frac_paths_needed_for_circs(options,consensus);
   if (fraction > 1.0)
     return 0; /* it's not the number of descriptors holding us back */
   return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS + (int)
