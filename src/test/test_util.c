@@ -103,43 +103,42 @@ test_util_read_file_eof_zero_bytes(void *arg)
 }
 
 /* Test the basic expected behaviour for write_chunks_to_file.
-* NOTE: This will need to be updated if we ever change the tempfile location
-* or extension */
+ * NOTE: This will need to be updated if we ever change the tempfile location
+ * or extension */
 static void
 test_util_write_chunks_to_file(void *arg)
 {
-  char *fname;
-  char *tempname;
-  char *str;
-  char *data_str;
-  char *temp_str;
+  char *fname = NULL;
+  char *tempname = NULL;
+  char *str = NULL;
   int r;
   int fd = -1;
-  size_t sz = 999999;
-  (void)arg;
+  struct stat st;
 
   /* These should be two different sizes to ensure the data is different
-  * between the data file and the temp file's 'known string' */
+   * between the data file and the temp file's 'known string' */
   int temp_str_len = 1024;
   int data_str_len = 512;
-  temp_str = tor_malloc(temp_str_len);
-  data_str = tor_malloc(data_str_len);
-  crypto_rand(temp_str, temp_str_len);
-  crypto_rand(data_str, data_str_len);
-  tt_assert(temp_str != NULL);
-  tt_assert(data_str != NULL);
+  char *data_str = tor_malloc(data_str_len);
+  char *temp_str = tor_malloc(temp_str_len);
 
-  // Ensure it can write multiple chunks
   smartlist_t *chunks = smartlist_new();
   sized_chunk_t c = {data_str, data_str_len/2};
   sized_chunk_t c2 = {data_str + data_str_len/2, data_str_len/2};
+  (void)arg;
+
+  crypto_rand(temp_str, temp_str_len);
+  crypto_rand(data_str, data_str_len);
+
+  // Ensure it can write multiple chunks
+
   smartlist_add(chunks, &c);
   smartlist_add(chunks, &c2);
 
   /*
   * Check if it writes using a tempfile
   */
-  fname = tor_strdup("tor_test_write_chunks_to_file_with_tempfile");
+  fname = tor_strdup(get_fname("write_chunks_with_tempfile"));
   tor_asprintf(&tempname, "%s.tmp", fname);
 
   // write a known string to a file where the tempfile will be
@@ -151,19 +150,15 @@ test_util_write_chunks_to_file(void *arg)
   tt_int_op(r, ==, 0);
 
   // assert the file has been written (expected size)
-  fd = open(fname, O_RDONLY|O_BINARY);
-  tt_int_op(fd, >=, 0);
-  str = read_file_to_str_until_eof(fd, data_str_len*2, &sz);
+  str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(sz, ==, data_str_len);
-  test_mem_op(data_str, ==, str, sz);
+  tt_int_op(st.st_size, ==, data_str_len);
+  test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
   close(fd);
 
   // assert that the tempfile is removed (should not leave artifacts)
-  fd = open(tempname, O_RDONLY|O_BINARY);
-  tt_int_op(fd, <, 0); // This might be untrue
-  str = read_file_to_str_until_eof(fd, temp_str_len*2, &sz);
+  str = read_file_to_str(tempname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   tt_assert(str == NULL);
 
   // Remove old testfile for second test
@@ -175,7 +170,7 @@ test_util_write_chunks_to_file(void *arg)
   /*
   *  Check if it skips using a tempfile with flags
   */
-  fname = tor_strdup("tor_test_write_chunks_to_file_with_no_tempfile");
+  fname = tor_strdup(get_fname("write_chunks_with_no_tempfile"));
   tor_asprintf(&tempname, "%s.tmp", fname);
 
   // write a known string to a file where the tempfile will be
@@ -187,34 +182,30 @@ test_util_write_chunks_to_file(void *arg)
   tt_int_op(r, ==, 0);
 
   // assert the file has been written (expected size)
-  fd = open(fname, O_RDONLY|O_BINARY);
-  tt_int_op(fd, >=, 0);
-  str = read_file_to_str_until_eof(fd, data_str_len*2, &sz);
+  str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(sz, ==, data_str_len);
-  test_mem_op(data_str, ==, str, sz);
+  tt_int_op(st.st_size, ==, data_str_len);
+  test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
   close(fd);
 
   // assert the tempfile still contains the known string
-  fd = open(tempname, O_RDONLY|O_BINARY);
-  tt_int_op(fd, >=, 0); // This might be untrue
-  str = read_file_to_str_until_eof(fd, temp_str_len*2, &sz);
+  str = read_file_to_str(tempname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(sz, ==, temp_str_len);
-  test_mem_op(temp_str, ==, str, sz);
+  tt_int_op(st.st_size, ==, temp_str_len);
+  test_mem_op(temp_str, ==, str, temp_str_len);
 
-  done:
-    unlink(fname);
-    unlink(tempname);
-    smartlist_free(chunks);
-    tor_free(fname);
-    tor_free(tempname);
-    tor_free(str);
-    tor_free(data_str);
-    tor_free(temp_str);
-    if (fd >= 0)
-      close(fd);
+ done:
+  unlink(fname);
+  unlink(tempname);
+  smartlist_free(chunks);
+  tor_free(fname);
+  tor_free(tempname);
+  tor_free(str);
+  tor_free(data_str);
+  tor_free(temp_str);
+  if (fd >= 0)
+    close(fd);
 }
 
 static void

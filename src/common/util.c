@@ -2196,12 +2196,12 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
  * atomically. */
 int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin,
-                    int no_tempfile)
+                     int no_tempfile)
 {
   int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
 
   if (no_tempfile) {
-    // O_APPEND stops write_chunks_to_file from using tempfiles
+    /* O_APPEND stops write_chunks_to_file from using tempfiles */
     flags |= O_APPEND;
   }
   return write_chunks_to_file_impl(fname, chunks, flags);
