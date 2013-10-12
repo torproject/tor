@@ -349,7 +349,7 @@ control_event_guard_deferred(void)
  * Else, put the one we pick at the end of the list. */
 static const node_t *
 add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
-                   int for_directory)
+                   int for_discovery, int for_directory)
 {
   const node_t *node;
   entry_guard_t *entry;
@@ -408,6 +408,18 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
    * this guard. For details, see the Jan 2010 or-dev thread. */
   entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
   entry->chosen_by_version = tor_strdup(VERSION);
+
+  /* Are we picking this guard because all of our current guards are
+   * down so we need another one (for_discovery is 1), or because we
+   * decided we need more variety in our guard list (for_discovery is 0)?
+   *
+   * Currently we hack this behavior into place by setting "made_contact"
+   * for guards of the latter variety, so we'll be willing to use any of
+   * them right off the bat.
+   */
+  if (!for_discovery)
+    entry->made_contact = 1;
+
   ((node_t*)node)->using_as_guard = 1;
   if (prepend)
     smartlist_insert(entry_guards, 0, entry);
@@ -441,7 +453,7 @@ pick_entry_guards(const or_options_t *options, int for_directory)
   tor_assert(entry_guards);
 
   while (num_live_entry_guards(for_directory) < num_needed) {
-    if (!add_an_entry_guard(NULL, 0, 0, for_directory))
+    if (!add_an_entry_guard(NULL, 0, 0, 0, for_directory))
       break;
     changed = 1;
   }
@@ -874,7 +886,7 @@ entry_guards_set_from_config(const or_options_t *options)
 
   /* Next, the rest of EntryNodes */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
-    add_an_entry_guard(node, 0, 0, 0);
+    add_an_entry_guard(node, 0, 0, 1, 0);
     if (smartlist_len(entry_guards) > options->NumEntryGuards * 10)
       break;
   } SMARTLIST_FOREACH_END(node);
@@ -1058,7 +1070,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
        * be a long time til we get it. -RD */
-      node = add_an_entry_guard(NULL, 0, 0, for_directory);
+      node = add_an_entry_guard(NULL, 0, 0, 1, for_directory);
       if (node) {
         entry_guards_changed();
         /* XXX we start over here in case the new node we added shares
@@ -2136,7 +2148,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       tor_assert(node);
       rewrite_node_address_for_bridge(bridge, node);
-      add_an_entry_guard(node, 1, 1, 0);
+      add_an_entry_guard(node, 1, 1, 0, 0);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));

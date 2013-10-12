@@ -1,0 +1,11 @@
+  o Minor bugfixes:
+    - If the guard we choose first doesn't answer, we would try the
+      second guard, but once we connected to the second guard we would
+      abandon it and retry the first one, slowing down bootstrapping.
+      The fix is to treat all our initially chosen guards as acceptable
+      to use. Fixes bug 9946; bugfix on 0.1.1.11-alpha.
+
+  o Major bugfixes:
+    - Stop trying to fetch all our directory information from our first
+      guard. Discovered while fixing bug 9946; bugfix on 0.2.4.8-alpha.
+
