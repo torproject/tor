@@ -125,7 +125,9 @@ static void scheduler_evt_callback(evutil_socket_t fd,
                                    short events, void *arg);
 static int scheduler_more_work(void);
 static void scheduler_retrigger(void);
+#if 0
 static void scheduler_trigger(void);
+#endif
 
 /* Scheduler function implementations */
 
@@ -349,6 +351,7 @@ scheduler_run(void)
 
 /** Trigger the scheduling event so we run the scheduler later */
 
+#if 0
 static void
 scheduler_trigger(void)
 {
@@ -361,6 +364,7 @@ scheduler_trigger(void)
 
   evtimer_add(run_sched_ev, &run_sched_tv);
 }
+#endif
 
 /** Mark a channel as ready to accept writes */
 
