@@ -117,7 +117,6 @@ static smartlist_t *channels_pending = NULL;
  */
 
 static struct event *run_sched_ev = NULL;
-static struct timeval run_sched_tv;
 
 /* Scheduler static function declarations */
 
@@ -300,13 +299,7 @@ static void
 scheduler_retrigger(void)
 {
   tor_assert(run_sched_ev);
-
-  if (!evtimer_pending(run_sched_ev, NULL)) {
-    log_debug(LD_SCHED, "Retriggering scheduler event");
-
-    event_del(run_sched_ev);
-    evtimer_add(run_sched_ev, &run_sched_tv);
-  }
+  event_active(run_sched_ev, EV_TIMEOUT, 1);
 }
 
 /** Notify the scheduler of a channel being closed */
@@ -362,10 +355,7 @@ scheduler_trigger(void)
 
   tor_assert(run_sched_ev);
 
-  run_sched_tv.tv_sec = 0;
-  run_sched_tv.tv_usec = 0;
-
-  evtimer_add(run_sched_ev, &run_sched_tv);
+  event_add(run_sched_ev, EV_TIMEOUT, 1);
 }
 #endif
 
