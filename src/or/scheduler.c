@@ -168,6 +168,9 @@ scheduler_free_all(void)
 static void
 scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
 {
+  (void)fd;
+  (void)events;
+  (void)arg;
   log_debug(LD_SCHED, "Scheduler event callback called");
 
   tor_assert(run_sched_ev);
