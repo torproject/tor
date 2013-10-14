@@ -3258,6 +3258,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     smartlist_free(options_sl);
   }
 
+  /* If we are a bridge with a pluggable transport proxy but no
+     Extended ORPort, inform the user that she is missing out. */
+  if (server_mode(options) && options->ServerTransportPlugin &&
+      !options->ExtORPort_lines) {
+    log_notice(LD_CONFIG, "We are a bridge with a pluggable transport "
+               "proxy but the Extended ORPort is disabled. The "
+               "Extended ORPort helps Tor communicate with the pluggable "
+               "transport proxy. Please enable it using the ExtORPort "
+               "torrc option.");
+  }
+
   if (options->ConstrainedSockets) {
     /* If the user wants to constrain socket buffer use, make sure the desired
      * limit is between MIN|MAX_TCPSOCK_BUFFER in k increments. */
