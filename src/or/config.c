@@ -43,6 +43,7 @@
 #include "util.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "scheduler.h"
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
@@ -1040,6 +1041,14 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     if (running_tor && !libevent_initialized) {
       init_libevent(options);
       libevent_initialized = 1;
+
+      /*
+       * Initialize the scheduler - this has to come after
+       * options_init_from_torrc() sets up libevent - why yes, that seems
+       * completely sensible to hide the libevent setup in the option parsing
+       * code!  It also needs to happen before init_keys(), so it needs to
+       * happen here too.  How yucky. */
+      scheduler_init();
     }
 
     /* Adjust the port configuration so we can launch listeners. */

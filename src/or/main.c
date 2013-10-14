@@ -2456,14 +2456,6 @@ tor_init(int argc, char *argv[])
     log_warn(LD_NET, "Problem initializing libevent RNG.");
   }
 
-  /*
-   * Initialize the scheduler - this has to come after
-   * options_init_from_torrc() sets up libevent - why yes, that seems
-   * completely sensible to hide the libevent setup in the option parsing
-   * code!
-   */
-  scheduler_init();
-
   return 0;
 }
 
