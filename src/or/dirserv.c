@@ -26,6 +26,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "routerset.h"
 
 /**
  * \file dirserv.c
@@ -2704,6 +2705,11 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_possible_guard = (wfu >= guard_wfu && tk >= guard_tk) ? 1 : 0;
   } else {
     rs->is_possible_guard = 0;
+  }
+  if (options->TestingTorNetwork &&
+      routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
+                                      rs, 0)) {
+    rs->is_possible_guard = 1;
   }
 
   rs->is_bad_directory = listbaddirs && node->is_bad_directory;
