@@ -1,4 +1,0 @@
-  o Minor features:
-    - Generate bootstrapping status update events correctly for fetching
-      microdescriptors. Fixes bug 9927.
-

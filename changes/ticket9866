@@ -1,3 +1,0 @@
-  o Documentation:
-    - Add anchors to the manpage so we can link to the documentation for 
-      specific options. Resolves ticket 9866.

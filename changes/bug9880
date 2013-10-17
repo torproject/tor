@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-
-    - When closing a channel that has already been open, do not close
-      pending circuits that were waiting to connect to the same relay.
-      Fixes bug 9880; bugfix on 0.2.5.1-alpha. Thanks to skruffy for
-      finding this bug.  (Bug was merged to 0.2.4 branch but not released
-      in any 0.2.4 version)
-
