@@ -8,6 +8,7 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#include "container.h"
 #include "crypto.h"
 #include "crypto_curve25519.h"
 #include "util.h"
@@ -127,69 +128,132 @@ curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
   return 0;
 }
 
+/** DOCDOC */
+int
+crypto_write_tagged_contents_to_file(const char *fname,
+                                     const char *typestring,
+                                     const char *tag,
+                                     const uint8_t *data,
+                                     size_t datalen)
+{
+  char header[32];
+  smartlist_t *chunks = smartlist_new();
+  sized_chunk_t ch0, ch1;
+  int r = -1;
+
+  memset(header, 0, sizeof(header));
+  if (tor_snprintf(header, sizeof(header),
+                   "== %s: %s ==", typestring, tag) < 0)
+    goto end;
+  ch0.bytes = header;
+  ch0.len = 32;
+  ch1.bytes = (const char*) data;
+  ch1.len = datalen;
+  smartlist_add(chunks, &ch0);
+  smartlist_add(chunks, &ch1);
+
+  r = write_chunks_to_file(fname, chunks, 1, 0);
+
+ end:
+  smartlist_free(chunks);
+  return r;
+}
+
+/** DOCDOC */
+ssize_t
+crypto_read_tagged_contents_from_file(const char *fname,
+                                      const char *typestring,
+                                      char **tag_out,
+                                      uint8_t *data_out,
+                                      ssize_t data_out_len)
+{
+  char prefix[33];
+  char *content = NULL;
+  struct stat st;
+  ssize_t r = -1;
+
+  *tag_out = NULL;
+  st.st_size = 0;
+  content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+  if (! content)
+    goto end;
+  if (st.st_size < 32 || st.st_size > 32 + data_out_len)
+    goto end;
+
+  memcpy(prefix, content, 32);
+  prefix[32] = 0;
+  /* Check type, extract tag. */
+  if (strcmpstart(prefix, "== ") || strcmpend(prefix, " ==") ||
+      ! tor_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix)))
+    goto end;
+
+  if (strcmpstart(prefix+3, typestring) ||
+      3+strlen(typestring) >= 32 ||
+      strcmpstart(prefix+3+strlen(typestring), ": "))
+    goto end;
+
+  *tag_out = tor_strndup(prefix+5+strlen(typestring),
+                         strlen(prefix)-8-strlen(typestring));
+
+  memcpy(data_out, content+32, st.st_size-32);
+  r = st.st_size - 32;
+
+ end:
+  if (content)
+    memwipe(content, 0, st.st_size);
+  tor_free(content);
+  return r;
+}
+
+/** DOCDOC */
 int
 curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
                                  const char *fname,
                                  const char *tag)
 {
-  char contents[32 + CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
+  uint8_t contents[CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
   int r;
 
-  memset(contents, 0, sizeof(contents));
-  tor_snprintf(contents, sizeof(contents), "== c25519v1: %s ==", tag);
-  tor_assert(strlen(contents) <= 32);
-  memcpy(contents+32, keypair->seckey.secret_key, CURVE25519_SECKEY_LEN);
-  memcpy(contents+32+CURVE25519_SECKEY_LEN,
+  memcpy(contents, keypair->seckey.secret_key, CURVE25519_SECKEY_LEN);
+  memcpy(contents+CURVE25519_SECKEY_LEN,
          keypair->pubkey.public_key, CURVE25519_PUBKEY_LEN);
 
-  r = write_bytes_to_file(fname, contents, sizeof(contents), 1);
+  r = crypto_write_tagged_contents_to_file(fname,
+                                           "c25519v1",
+                                           tag,
+                                           contents,
+                                           sizeof(contents));
 
   memwipe(contents, 0, sizeof(contents));
   return r;
 }
 
+/** DOCDOC */
 int
 curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
                                   char **tag_out,
                                   const char *fname)
 {
-  char prefix[33];
-  char *content;
-  struct stat st;
+  uint8_t content[CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN];
+  ssize_t len;
   int r = -1;
 
-  *tag_out = NULL;
-
-  st.st_size = 0;
-  content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (! content)
-    goto end;
-  if (st.st_size != 32 + CURVE25519_SECKEY_LEN + CURVE25519_PUBKEY_LEN)
+  len = crypto_read_tagged_contents_from_file(fname, "c25519v1", tag_out,
+                                              content, sizeof(content));
+  if (len != sizeof(content))
     goto end;
 
-  memcpy(prefix, content, 32);
-  prefix[32] = '\0';
-  if (strcmpstart(prefix, "== c25519v1: ") ||
-      strcmpend(prefix, " =="))
-    goto end;
-
-  *tag_out = tor_strndup(prefix+strlen("== c25519v1: "),
-                         strlen(prefix) - strlen("== c25519v1:  =="));
-
-  memcpy(keypair_out->seckey.secret_key, content+32, CURVE25519_SECKEY_LEN);
+  memcpy(keypair_out->seckey.secret_key, content, CURVE25519_SECKEY_LEN);
   curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
   if (tor_memneq(keypair_out->pubkey.public_key,
-                 content + 32 + CURVE25519_SECKEY_LEN,
+                 content + CURVE25519_SECKEY_LEN,
                  CURVE25519_PUBKEY_LEN))
     goto end;
 
   r = 0;
 
  end:
-  if (content) {
-    memwipe(content, 0, (size_t) st.st_size);
-    tor_free(content);
-  }
+  memwipe(content, 0, sizeof(content));
   if (r != 0) {
     memset(keypair_out, 0, sizeof(*keypair_out));
     tor_free(*tag_out);

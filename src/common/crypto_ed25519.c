@@ -161,3 +161,63 @@ ed25519_checksig_batch(int *okay_out,
   return res;
 }
 
+/** DOCDOC */
+int
+ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
+                             const char *filename,
+                             const char *tag)
+{
+  return crypto_write_tagged_contents_to_file(filename,
+                                              "ed25519v1-secret",
+                                              tag,
+                                              seckey->seckey,
+                                              sizeof(seckey->seckey));
+}
+
+/** DOCDOC */
+int
+ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
+                              char **tag_out,
+                              const char *filename)
+{
+  ssize_t len;
+
+  len = crypto_read_tagged_contents_from_file(filename, "ed25519v1-secret",
+                                              tag_out, seckey_out->seckey,
+                                              sizeof(seckey_out->seckey));
+  if (len != sizeof(seckey_out->seckey))
+    return -1;
+
+  return 0;
+}
+
+/** DOCDOC */
+int
+ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
+                             const char *filename,
+                             const char *tag)
+{
+  return crypto_write_tagged_contents_to_file(filename,
+                                              "ed25519v1-public",
+                                              tag,
+                                              pubkey->pubkey,
+                                              sizeof(pubkey->pubkey));
+}
+
+/** DOCDOC */
+int
+ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
+                              char **tag_out,
+                              const char *filename)
+{
+  ssize_t len;
+
+  len = crypto_read_tagged_contents_from_file(filename, "ed25519v1-public",
+                                              tag_out, pubkey_out->pubkey,
+                                              sizeof(pubkey_out->pubkey));
+  if (len != sizeof(pubkey_out->pubkey))
+    return -1;
+
+  return 0;
+}
+

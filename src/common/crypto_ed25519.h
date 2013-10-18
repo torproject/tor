@@ -76,8 +76,21 @@ int ed25519_public_from_base64(ed25519_public_key_t *pkey,
 int ed25519_public_to_base64(char *output,
                              const ed25519_public_key_t *pkey);
 
-/* XXXX write secret keys to disk, load secret keys from disk, read encrypted,
- * write encrypted. */
+/* XXXX read encrypted, write encrypted. */
+
+int ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
+                                 const char *filename,
+                                 const char *tag);
+int ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
+                                  char **tag_out,
+                                  const char *filename);
+int ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
+                                 const char *filename,
+                                 const char *tag);
+int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
+                                  char **tag_out,
+                                  const char *filename);
+
 
 #endif
 
