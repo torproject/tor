@@ -3396,6 +3396,51 @@ tor_join_win_cmdline(const char *argv[])
   return joined_argv;
 }
 
+/* As format_{hex,dex}_number_sigsafe, but takes a <b>radix</b> argument
+ * in range 2..16 inclusive. */
+static int
+format_number_sigsafe(unsigned long x, char *buf, int buf_len,
+                      unsigned int radix)
+{
+  unsigned long tmp;
+  int len;
+  char *cp;
+
+  /* NOT tor_assert. This needs to be safe to run from within a signal handler,
+   * and from within the 'tor_assert() has failed' code. */
+  if (radix < 2 || radix > 16)
+    return 0;
+
+  /* Count how many digits we need. */
+  tmp = x;
+  len = 1;
+  while (tmp >= radix) {
+    tmp /= radix;
+    ++len;
+  }
+
+  /* Not long enough */
+  if (!buf || len >= buf_len)
+    return 0;
+
+  cp = buf + len;
+  *cp = '\0';
+  do {
+    unsigned digit = x % radix;
+    tor_assert(cp > buf);
+    --cp;
+    *cp = "0123456789ABCDEF"[digit];
+    x /= radix;
+  } while (x);
+
+  /* NOT tor_assert; see above. */
+  if (cp != buf) {
+    abort();
+  }
+
+  return len;
+}
+
 /**
  * Helper function to output hex numbers from within a signal handler.
  *
@@ -3418,78 +3463,16 @@ tor_join_win_cmdline(const char *argv[])
  * arbitrary C functions.
  */
 int
-format_hex_number_sigsafe(unsigned int x, char *buf, int buf_len)
+format_hex_number_sigsafe(unsigned long x, char *buf, int buf_len)
 {
-  int len;
-  unsigned int tmp;
-  char *cur;
-
-  /* Sanity check */
-  if (!buf || buf_len <= 1)
-    return 0;
-
-  /* How many chars do we need for x? */
-  if (x > 0) {
-    len = 0;
-    tmp = x;
-    while (tmp > 0) {
-      tmp >>= 4;
-      ++len;
-    }
-  } else {
-    len = 1;
-  }
-
-  /* Bail if we would go past the end of the buffer */
-  if (len+1 > buf_len)
-    return 0;
-
-  /* Point to last one */
-  cur = buf + len - 1;
-
-  /* Convert x to hex */
-  do {
-    *cur-- = "0123456789ABCDEF"[x & 0xf];
-    x >>= 4;
-  } while (x != 0 && cur >= buf);
-
-  buf[len] = '\0';
-
-  /* Return len */
-  return len;
+  return format_number_sigsafe(x, buf, buf_len, 16);
 }
 
 /** As format_hex_number_sigsafe, but format the number in base 10. */
 int
 format_dec_number_sigsafe(unsigned long x, char *buf, int buf_len)
 {
-  int len;
-  unsigned long tmp;
-  char *cp;
-
-  tmp = x;
-  len = 1;
-  while (tmp > 9) {
-    tmp /= 10;
-    ++len;
-  }
-
-  if (len >= buf_len)
-    return 0;
-
-  cp = buf + len;
-  *cp = '\0';
-  do {
-    unsigned digit = x % 10;
-    tor_assert(cp > buf);
-    --cp;
-    *cp = '0' + digit;
-    x /= 10;
-  } while (x);
-
-  tor_assert(cp == buf);
-
-  return len;
+  return format_number_sigsafe(x, buf, buf_len, 10);
 }
 
 #ifndef _WIN32
