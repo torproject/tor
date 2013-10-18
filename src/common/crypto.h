@@ -282,8 +282,9 @@ int digest256_from_base64(char *digest, const char *d64);
 
 /** Length of RFC2440-style S2K specifier: the first 8 bytes are a salt, the
  * 9th describes how much iteration to do. */
-#define S2K_SPECIFIER_LEN 9
-void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
+#define S2K_RFC2440_SPECIFIER_LEN 9
+void secret_to_key_rfc2440(
+                   char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);
 
 /** OpenSSL-based utility functions. */

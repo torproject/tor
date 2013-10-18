@@ -3008,7 +3008,7 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
  * Does not support <b>key_out_len</b> &gt; DIGEST_LEN.
  */
 void
-secret_to_key(char *key_out, size_t key_out_len, const char *secret,
+secret_to_key_rfc2440(char *key_out, size_t key_out_len, const char *secret,
               size_t secret_len, const char *s2k_specifier)
 {
   crypto_digest_t *d;

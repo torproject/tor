@@ -708,7 +708,7 @@ test_crypto_s2k(void)
   buf3 = tor_malloc(65536);
   memset(buf3, 0, 65536);
 
-  secret_to_key(buf+9, 20, "", 0, buf);
+  secret_to_key_rfc2440(buf+9, 20, "", 0, buf);
   crypto_digest(buf2+9, buf3, 1024);
   test_memeq(buf, buf2, 29);
 
@@ -716,7 +716,7 @@ test_crypto_s2k(void)
   memcpy(buf2,"vrbacrda",8);
   buf[8] = 96;
   buf2[8] = 96;
-  secret_to_key(buf+9, 20, "12345678", 8, buf);
+  secret_to_key_rfc2440(buf+9, 20, "12345678", 8, buf);
   for (i = 0; i < 65536; i += 16) {
     memcpy(buf3+i, "vrbacrda12345678", 16);
   }

@@ -993,7 +993,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
 
 /** Decode the hashed, base64'd passwords stored in <b>passwords</b>.
  * Return a smartlist of acceptable passwords (unterminated strings of
- * length S2K_SPECIFIER_LEN+DIGEST_LEN) on success, or NULL on failure.
+ * length S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN) on success, or NULL on
+ * failure.
  */
 smartlist_t *
 decode_hashed_passwords(config_line_t *passwords)
@@ -1009,16 +1010,17 @@ decode_hashed_passwords(config_line_t *passwords)
 
     if (!strcmpstart(hashed, "16:")) {
       if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))<0
-          || strlen(hashed+3) != (S2K_SPECIFIER_LEN+DIGEST_LEN)*2) {
+          || strlen(hashed+3) != (S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN)*2) {
         goto err;
       }
     } else {
         if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
-            != S2K_SPECIFIER_LEN+DIGEST_LEN) {
+            != S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN) {
           goto err;
         }
     }
-    smartlist_add(sl, tor_memdup(decoded, S2K_SPECIFIER_LEN+DIGEST_LEN));
+    smartlist_add(sl,
+                  tor_memdup(decoded, S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN));
   }
 
   return sl;
@@ -1171,8 +1173,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     } else {
       SMARTLIST_FOREACH(sl, char *, expected,
       {
-        secret_to_key(received,DIGEST_LEN,password,password_len,expected);
-        if (tor_memeq(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
+        secret_to_key_rfc2440(received,DIGEST_LEN,
+                              password,password_len,expected);
+        if (tor_memeq(expected + S2K_RFC2440_SPECIFIER_LEN,
+                      received, DIGEST_LEN))
           goto ok;
       });
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
