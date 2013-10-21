@@ -158,11 +158,28 @@ fi])
 AC_ARG_ENABLE(bufferevents,
      AS_HELP_STRING(--enable-bufferevents, use Libevent's buffered IO.))
 
+AC_ARG_ENABLE(tool-name-check,
+     AS_HELP_STRING(--disable-tool-name-check, check for sanely named toolchain when cross-compiling))
+
 dnl check for the correct "ar" when cross-compiling
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
 AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL([AR], [ar], [ar])])
 AC_PROG_AR
+
+dnl Check whether the above macro has settled for a simply named tool even
+dnl though we're cross compiling. We must do this before running AC_PROG_CC,
+dnl because that will find any cc on the system, not only the cross-compiler,
+dnl and then verify that a binary built with this compiler runs on the
+dnl build system. It will then come to the false conclusion that we're not
+dnl cross-compiling.
+if test x$enable_tool_name_check != xno; then
+    if test x$ac_tool_warned = xyes; then
+        AC_MSG_ERROR([We are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
+	elif test "x$ac_ct_AR" != x -a x$cross_compiling = xmaybe; then
+		AC_MSG_ERROR([We think we are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
+	fi
+fi
 
 AC_PROG_CC
 AC_PROG_CPP

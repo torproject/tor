@@ -1,0 +1,7 @@
+  o Minor features (build):
+
+    - Assume that a user using configure --host wants to cross-
+      compile and error if we cannot find a properly named tool-
+      chain. Add --disable-tool-name-check to enable the user
+      to build nevertheless. Addresses ticket 9869. Patch by
+      Benedikt Gollatz.
