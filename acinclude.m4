@@ -43,6 +43,8 @@ AC_DEFUN([TOR_DEFINE_CODEPATH],
 ])
 
 dnl 1:flags
+dnl 2:also try to link (yes: non-empty string)
+dnl   will set yes or no in $tor_can_link_$1 (as modified by AS_VAR_PUSHDEF)
 AC_DEFUN([TOR_CHECK_CFLAGS], [
   AS_VAR_PUSHDEF([VAR],[tor_cv_cflags_$1])
   AC_CACHE_CHECK([whether the compiler accepts $1], VAR, [
@@ -51,6 +53,13 @@ AC_DEFUN([TOR_CHECK_CFLAGS], [
     AC_TRY_COMPILE([], [return 0;],
                    [AS_VAR_SET(VAR,yes)],
                    [AS_VAR_SET(VAR,no)])
+    if test x$2 != x; then
+      AS_VAR_PUSHDEF([can_link],[tor_can_link_$1])
+      AC_TRY_LINK([], [return 0;],
+                  [AS_VAR_SET(can_link,yes)],
+                  [AS_VAR_SET(can_link,no)])
+      AS_VAR_POPDEF([can_link])
+    fi
     CFLAGS="$tor_saved_CFLAGS"
   ])
   if test x$VAR = xyes; then

@@ -589,7 +589,16 @@ if test x$enable_gcc_hardening != xno; then
     if test x$have_clang = xyes; then
         TOR_CHECK_CFLAGS(-Qunused-arguments)
     fi
-    TOR_CHECK_CFLAGS(-fstack-protector-all)
+    TOR_CHECK_CFLAGS(-fstack-protector-all, also_link)
+    AS_VAR_PUSHDEF([can_compile], [tor_cv_cflags_-fstack-protector-all])
+    AS_VAR_PUSHDEF([can_link], [tor_can_link_-fstack-protector-all])
+    AS_VAR_IF(can_compile, [yes],
+        AS_VAR_IF(can_link, [yes],
+                  [],
+                  AC_MSG_ERROR([We tried to build with stack protection; it looks like your compiler supports it but your libc does not provide it. Are you missing libssp? (You can --disable-gcc-hardening to ignore this error.)]))
+        )
+    AS_VAR_POPDEF([can_link])
+    AS_VAR_POPDEF([can_compile])
     TOR_CHECK_CFLAGS(-Wstack-protector)
     TOR_CHECK_CFLAGS(-fwrapv)
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
