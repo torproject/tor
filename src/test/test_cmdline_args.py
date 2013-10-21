@@ -163,9 +163,9 @@ class CmdlineTests(unittest.TestCase):
 
         out_fl = lines(out_fl)
         self.assert_(len(out_fl) > 100)
-        self.assertIn("SocksPort 9999", out_fl)
-        self.assertIn("SafeLogging 0", out_fl)
-        self.assertIn("ClientOnly 0", out_fl)
+        self.assert_("SocksPort 9999" in out_fl)
+        self.assert_("SafeLogging 0" in out_fl)
+        self.assert_("ClientOnly 0" in out_fl)
 
         self.assert_(out_verif.endswith("Configuration was valid\n"))
 
