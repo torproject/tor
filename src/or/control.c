@@ -3141,6 +3141,30 @@ handle_control_usefeature(control_connection_t *conn,
   return 0;
 }
 
+/** Implementation for the DROPGUARDS command. */
+static int
+handle_control_dropguards(control_connection_t *conn,
+                          uint32_t len,
+                          const char *body)
+{
+  smartlist_t *args;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  args = smartlist_new();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
+  if (smartlist_len(args)) {
+    connection_printf_to_buf(conn, "512 Too many arguments to DROPGUARDS\r\n");
+  } else {
+    remove_all_entry_guards();
+    send_control_done(conn);
+  }
+
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -3439,6 +3463,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "AUTHCHALLENGE")) {
     if (handle_control_authchallenge(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "DROPGUARDS")) {
+    if (handle_control_dropguards(conn, cmd_data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",

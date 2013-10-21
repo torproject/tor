@@ -598,6 +598,25 @@ remove_dead_entry_guards(time_t now)
   return changed ? 1 : 0;
 }
 
+/** Remove all currently listed entry guards. So new ones will be chosen. */
+void
+remove_all_entry_guards(void)
+{
+  char dbuf[HEX_DIGEST_LEN+1];
+
+  while (smartlist_len(entry_guards)) {
+    entry_guard_t *entry = smartlist_get(entry_guards, 0);
+    base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
+    log_info(LD_CIRC, "Entry guard '%s' (%s) has been dropped.",
+             entry->nickname, dbuf);
+    control_event_guard(entry->nickname, entry->identity, "DROPPED");
+    entry_guard_free(entry);
+    smartlist_del(entry_guards, 0);
+  }
+  log_entry_guards(LOG_INFO);
+  entry_guards_changed();
+}
+
 /** A new directory or router-status has arrived; update the down/listed
  * status of the entry guards.
  *

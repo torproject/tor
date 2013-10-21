@@ -77,6 +77,8 @@ int num_live_entry_guards(int for_directory);
 
 #endif
 
+void remove_all_entry_guards(void);
+
 void entry_guards_compute_status(const or_options_t *options, time_t now);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         int mark_relay_status, time_t now);
