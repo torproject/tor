@@ -211,7 +211,8 @@ GENERAL OPTIONS
 
 [[DisableNetwork]] **DisableNetwork** **0**|**1**::
     When this option is set, we don't listen for or accept any connections
-    other than controller connections, and we don't make any outbound
+    other than controller connections, and we close (and don't reattempt)
+    any outbound
     connections.  Controllers sometimes use this option to avoid using
     the network until Tor is fully configured. (Default: 0)
 
