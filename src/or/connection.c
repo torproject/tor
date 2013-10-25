@@ -334,7 +334,6 @@ control_connection_new(int socket_family)
     tor_malloc_zero(sizeof(control_connection_t));
   connection_init(time(NULL),
                   TO_CONN(control_conn), CONN_TYPE_CONTROL, socket_family);
-  log_notice(LD_CONTROL, "New control connection opened.");
   return control_conn;
 }
 
@@ -1377,11 +1376,17 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
         TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
     }
+    if (new_type == CONN_TYPE_CONTROL) {
+      log_notice(LD_CONTROL, "New control connection opened from %s.",
+                 fmt_and_decorate_addr(&addr));
+    }
 
   } else if (conn->socket_family == AF_UNIX) {
     /* For now only control ports can be Unix domain sockets
      * and listeners at the same time */
     tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
+    tor_assert(new_type == CONN_TYPE_CONTROL);
+    log_notice(LD_CONTROL, "New control connection opened.");
 
     newconn = connection_new(new_type, conn->socket_family);
     newconn->s = news;

@@ -1,0 +1,3 @@
+  o Minor features:
+    - When receiving a new controller connection, log the origin address.
+      Resolves ticket 9698; patch from "sigpipe".
