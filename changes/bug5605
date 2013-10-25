@@ -1,2 +1,5 @@
 o Minor Bugfixes:
-    - No longer writing control ports to file if updating reversible options fail. Fixes #5605.
+  - No longer writing control ports to file if updating reversible
+    options fail. Fixes bug 5605; bugfix on 0.2.2.26-beta.  Patch from
+    Ryman.
+
