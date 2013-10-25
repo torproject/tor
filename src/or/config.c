@@ -1129,9 +1129,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
   }
 
-  /* Write control ports to disk as appropriate */
-  control_ports_write_to_file();
-
   if (directory_caches_v2_dir_info(options)) {
     char *fn = NULL;
     tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-status",
@@ -1329,6 +1326,9 @@ options_act(const or_options_t *old_options)
       warned_debugger_attach = 1;
     }
   }
+
+  /* Write control ports to disk as appropriate */
+  control_ports_write_to_file();
 
   if (running_tor && !have_lockfile()) {
     if (try_locking(options, 1) < 0)

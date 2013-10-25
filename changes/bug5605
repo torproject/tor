@@ -1,0 +1,2 @@
+o Minor Bugfixes:
+    - No longer writing control ports to file if updating reversible options fail. Fixes #5605.
