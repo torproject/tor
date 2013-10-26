@@ -1766,22 +1766,16 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
 int
 transport_is_needed(const char *transport_name)
 {
-  int retval;
-  smartlist_t *needed_transports = NULL;
-
   if (!bridge_list)
     return 0;
 
-  needed_transports = smartlist_new();
-
   SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
-    if (bridge->transport_name)
-      smartlist_add(needed_transports, bridge->transport_name);
+    if (bridge->transport_name &&
+        !strcmp(bridge->transport_name, transport_name))
+      return 1;
   } SMARTLIST_FOREACH_END(bridge);
 
-  retval = smartlist_string_isin(needed_transports, transport_name);
-  smartlist_free(needed_transports);
-  return retval;
+  return 0;
 }
 
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
