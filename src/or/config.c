@@ -4220,7 +4220,8 @@ parse_bridge_line(const char *line, int validate_only)
  * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
  * isn't.
  *
- * If <b>validate_only</b> is 0, and the line is well-formed:
+ * If <b>validate_only</b> is 0, the line is well-formed, and the
+ * transport is needed by some bridge:
  * - If it's an external proxy line, add the transport described in the line to
  * our internal transport list.
  * - If it's a managed proxy line, launch the managed proxy. */
