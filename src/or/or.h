@@ -880,6 +880,7 @@ typedef enum {
 #define CELL_AUTH_CHALLENGE 130
 #define CELL_AUTHENTICATE 131
 #define CELL_AUTHORIZE 132
+#define CELL_COMMAND_MAX_ 132
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
@@ -1136,6 +1137,21 @@ typedef struct insertion_time_queue_t {
   struct insertion_time_elem_t *last; /**< Last element in queue. */
 } insertion_time_queue_t;
 
+/** Number of cells with the same command consecutively added to a circuit
+ * queue; used for cell statistics only if CELL_STATS events are enabled. */
+typedef struct insertion_command_elem_t {
+  struct insertion_command_elem_t *next; /**< Next element in queue. */
+  /** Which command did these consecutively added cells have? */
+  uint8_t command;
+  unsigned counter; /**< How many cells were inserted? */
+} insertion_command_elem_t;
+
+/** Queue of insertion commands. */
+typedef struct insertion_command_queue_t {
+  struct insertion_command_elem_t *first; /**< First element in queue. */
+  struct insertion_command_elem_t *last; /**< Last element in queue. */
+} insertion_command_queue_t;
+
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
@@ -1143,6 +1159,8 @@ typedef struct cell_queue_t {
   TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
   int n; /**< The number of cells in the queue. */
   insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
+ /** Commands of inserted cells. */
+  insertion_command_queue_t *insertion_commands;
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -1279,6 +1297,14 @@ typedef struct connection_t {
 
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
+
+  /** Bytes read since last call to control_event_conn_bandwidth_used().
+   * Only used if we're configured to emit CONN_BW events. */
+  uint32_t n_read_conn_bw;
+
+  /** Bytes written since last call to control_event_conn_bandwidth_used().
+   * Only used if we're configured to emit CONN_BW events. */
+  uint32_t n_written_conn_bw;
 } connection_t;
 
 /** Subtype of connection_t; used for a listener socket. */
@@ -1522,6 +1548,12 @@ typedef struct or_connection_t {
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
+  /** Last emptied read token bucket in msec since midnight; only used if
+   * TB_EMPTY events are enabled. */
+  uint32_t read_emptied_time;
+  /** Last emptied write token bucket in msec since midnight; only used if
+   * TB_EMPTY events are enabled. */
+  uint32_t write_emptied_time;
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
@@ -2785,6 +2817,19 @@ typedef struct {
 
 struct create_cell_t;
 
+/** Entry in the cell stats list of a circuit; used only if CELL_STATS
+ * events are enabled. */
+typedef struct testing_cell_stats_entry_t {
+  uint8_t command; /**< cell command number. */
+  /** Waiting time in centiseconds if this event is for a removed cell,
+   * or 0 if this event is for adding a cell to the queue.  22 bits can
+   * store more than 11 hours, enough to assume that a circuit with this
+   * delay would long have been closed. */
+  unsigned int waiting_time:22;
+  unsigned int removed:1; /**< 0 for added to, 1 for removed from queue. */
+  unsigned int exitward:1; /**< 0 for app-ward, 1 for exit-ward. */
+} testing_cell_stats_entry_t;
+
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
@@ -2918,6 +2963,11 @@ typedef struct circuit_t {
    * cells to n_conn.  NULL if we have no cells pending, or if we're not
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_chan;
+
+  /** Various statistics about cells being added to or removed from this
+   * circuit's queues; used only if CELL_STATS events are enabled and
+   * cleared after being sent to control port. */
+  smartlist_t *testing_cell_stats;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2988,6 +3038,17 @@ typedef struct origin_circuit_t {
   /** Linked list of AP streams (or EXIT streams if hidden service)
    * associated with this circuit. */
   edge_connection_t *p_streams;
+
+  /** Bytes read from any attached stream since last call to
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_read_circ_bw;
+
+  /** Bytes written to any attached stream since last call to
+   * control_event_circ_bandwidth_used().  Only used if we're configured
+   * to emit CIRC_BW events. */
+  uint32_t n_written_circ_bw;
+
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.
    */
@@ -4068,6 +4129,15 @@ typedef struct {
   /** Relays in a testing network which should be voted Guard
    * regardless of uptime and bandwidth. */
   routerset_t *TestingDirAuthVoteGuard;
+
+  /** Enable CONN_BW events.  Only altered on testing networks. */
+  int TestingEnableConnBwEvent;
+
+  /** Enable CELL_STATS events.  Only altered on testing networks. */
+  int TestingEnableCellStatsEvent;
+
+  /** Enable TB_EMPTY events.  Only altered on testing networks. */
+  int TestingEnableTbEmptyEvent;
 
   /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
    * count of how many client addresses have contacted us so that we can help
