@@ -110,7 +110,9 @@ struct channel_s {
   int (*matches_extend_info)(channel_t *, extend_info_t *);
   /** Check if this channel matches a target address when extending */
   int (*matches_target)(channel_t *, const tor_addr_t *);
-  /** Write a cell to an open channel */
+  /* Ask the lower layer how many cells can be written */
+  int (*num_cells_writeable)(channel_t *);
+  /* Write a cell to an open channel */
   int (*write_cell)(channel_t *, cell_t *);
   /** Write a packed cell to an open channel */
   int (*write_packed_cell)(channel_t *, packed_cell_t *);
@@ -464,6 +466,9 @@ void channel_listener_dump_statistics(channel_listener_t *chan_l,
                                       int severity);
 void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
                                                 int severity);
+
+/* Flow control queries */
+int channel_num_cells_writeable(channel_t *chan);
 
 /* Timestamp queries */
 time_t channel_when_created(channel_t *chan);

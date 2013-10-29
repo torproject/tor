@@ -324,6 +324,7 @@ void
 scheduler_run(void)
 {
   smartlist_t *tmp = NULL;
+  int n_cells;
 
   log_debug(LD_SCHED, "We have a chance to run the scheduler");
 
@@ -337,9 +338,18 @@ scheduler_run(void)
   channels_pending = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(tmp, channel_t *, chan) {
-    log_debug(LD_SCHED,
-              "Scheduler saw pending channel " U64_FORMAT " at %p",
-              U64_PRINTF_ARG(chan->global_identifier), chan);
+    n_cells = channel_num_cells_writeable(chan);
+    if (n_cells > 0) {
+      log_debug(LD_SCHED,
+                "Scheduler saw pending channel " U64_FORMAT " at %p with "
+                "%d cells writeable",
+                U64_PRINTF_ARG(chan->global_identifier), chan, n_cells);
+    } else {
+      log_info(LD_SCHED,
+               "Scheduler saw pending channel " U64_FORMAT " at %p with "
+               "no cells writeable",
+               U64_PRINTF_ARG(chan->global_identifier), chan);
+    }
   } SMARTLIST_FOREACH_END(chan);
 
   smartlist_free(tmp);

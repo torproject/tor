@@ -68,6 +68,7 @@ channel_tls_matches_extend_info_method(channel_t *chan,
                                        extend_info_t *extend_info);
 static int channel_tls_matches_target_method(channel_t *chan,
                                              const tor_addr_t *target);
+static int channel_tls_num_cells_writeable_method(channel_t *chan);
 static int channel_tls_write_cell_method(channel_t *chan,
                                          cell_t *cell);
 static int channel_tls_write_packed_cell_method(channel_t *chan,
@@ -124,6 +125,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->is_canonical = channel_tls_is_canonical_method;
   chan->matches_extend_info = channel_tls_matches_extend_info_method;
   chan->matches_target = channel_tls_matches_target_method;
+  chan->num_cells_writeable = channel_tls_num_cells_writeable_method;
   chan->write_cell = channel_tls_write_cell_method;
   chan->write_packed_cell = channel_tls_write_packed_cell_method;
   chan->write_var_cell = channel_tls_write_var_cell_method;
@@ -671,6 +673,34 @@ channel_tls_matches_target_method(channel_t *chan,
   }
 
   return tor_addr_eq(&(tlschan->conn->real_addr), target);
+}
+
+/**
+ * Tell the upper layer how many cells we can accept to write
+ *
+ * This implements the num_cells_writeable method for channel_tls_t; it
+ * returns an estimate of the number of cells we can accept with
+ * channel_tls_write_*_cell().
+ */
+
+static int
+channel_tls_num_cells_writeable_method(channel_t *chan)
+{
+  size_t outbuf_len;
+  int n;
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+  size_t cell_network_size;
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  cell_network_size = get_cell_network_size(tlschan->conn->wide_circ_ids);
+  outbuf_len = connection_get_outbuf_len(TO_CONN(tlschan->conn));
+  /* Get the number of cells */
+  n = CEIL_DIV(OR_CONN_HIGHWATER - outbuf_len, cell_network_size);
+  if (n < 0) n = 0;
+
+  return n;
 }
 
 /**

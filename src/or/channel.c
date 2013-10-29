@@ -3826,6 +3826,40 @@ channel_mark_outgoing(channel_t *chan)
   chan->is_incoming = 0;
 }
 
+/************************
+ * Flow control queries *
+ ***********************/
+
+/*
+ * Estimate the number of writeable cells
+ *
+ * Ask the lower layer for an estimate of how many cells it can accept, and
+ * then subtract the length of our outgoing_queue, if any, to produce an
+ * estimate of the number of cells this channel can accept for writes.
+ */
+
+int
+channel_num_cells_writeable(channel_t *chan)
+{
+  int result;
+
+  tor_assert(chan);
+  tor_assert(chan->num_cells_writeable);
+
+  if (chan->state == CHANNEL_STATE_OPEN) {
+    /* Query lower layer */
+    result = chan->num_cells_writeable(chan);
+    /* Subtract cell queue length, if any */
+    result -= chan_cell_queue_len(&chan->outgoing_queue);
+    if (result < 0) result = 0;
+  } else {
+    /* No cells are writeable in any other state */
+    result = 0;
+  }
+
+  return result;
+}
+
 /*********************
  * Timestamp updates *
  ********************/

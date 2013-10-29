@@ -576,14 +576,6 @@ connection_or_process_inbuf(or_connection_t *conn)
   return ret;
 }
 
-/** When adding cells to an OR connection's outbuf, keep adding until the
- * outbuf is at least this long, or we run out of cells. */
-#define OR_CONN_HIGHWATER (32*1024)
-
-/** Add cells to an OR connection's outbuf whenever the outbuf's data length
- * drops below this size. */
-#define OR_CONN_LOWWATER (16*1024)
-
 /** Called whenever we have flushed some data on an or_conn: add more data
  * from active circuits. */
 int
