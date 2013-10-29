@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix an always-true assertion in pluggable transports code. Fixes
+      issue 10046. Found by dcb.

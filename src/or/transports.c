@@ -552,7 +552,7 @@ pt_configure_remaining_proxies(void)
   assert_unconfigured_count_ok();
 
   SMARTLIST_FOREACH_BEGIN(tmp,  managed_proxy_t *, mp) {
-    tor_assert(mp->conf_state != PT_PROTO_BROKEN ||
+    tor_assert(mp->conf_state != PT_PROTO_BROKEN &&
                mp->conf_state != PT_PROTO_FAILED_LAUNCH);
 
     if (mp->got_hup) {
