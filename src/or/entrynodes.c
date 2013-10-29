@@ -1801,6 +1801,23 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
   } SMARTLIST_FOREACH_END(bridge);
 }
 
+/** Return True if we have a bridge that uses a transport with name
+ *  <b>transport_name</b>. */
+int
+transport_is_needed(const char *transport_name)
+{
+  if (!bridge_list)
+    return 0;
+
+  SMARTLIST_FOREACH_BEGIN(bridge_list, const bridge_info_t *, bridge) {
+    if (bridge->transport_name &&
+        !strcmp(bridge->transport_name, transport_name))
+      return 1;
+  } SMARTLIST_FOREACH_END(bridge);
+
+  return 0;
+}
+
 /** Register the bridge information in <b>bridge_line</b> to the
  *  bridge subsystem. Steals reference of <b>bridge_line</b>. */
 void

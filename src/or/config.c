@@ -4568,7 +4568,8 @@ parse_bridge_line(const char *line)
  * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
  * isn't.
  *
- * If <b>validate_only</b> is 0, and the line is well-formed:
+ * If <b>validate_only</b> is 0, the line is well-formed, and the
+ * transport is needed by some bridge:
  * - If it's an external proxy line, add the transport described in the line to
  * our internal transport list.
  * - If it's a managed proxy line, launch the managed proxy. */
@@ -4590,7 +4591,8 @@ parse_client_transport_line(const char *line, int validate_only)
   int is_managed=0;
   char **proxy_argv=NULL;
   char **tmp=NULL;
-  int proxy_argc,i;
+  int proxy_argc, i;
+  int is_useless_proxy=1;
 
   int line_length;
 
@@ -4612,11 +4614,16 @@ parse_client_transport_line(const char *line, int validate_only)
   smartlist_split_string(transport_list, transports, ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
+    /* validate transport names */
     if (!string_is_C_identifier(transport_name)) {
       log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
                transport_name);
       goto err;
     }
+
+    /* see if we actually need the transports provided by this proxy */
+    if (!validate_only && transport_is_needed(transport_name))
+      is_useless_proxy = 0;
   } SMARTLIST_FOREACH_END(transport_name);
 
   /* field2 is either a SOCKS version or "exec" */
@@ -4635,9 +4642,15 @@ parse_client_transport_line(const char *line, int validate_only)
   }
 
   if (is_managed) { /* managed */
-    if (!validate_only) {  /* if we are not just validating, use the
-                             rest of the line as the argv of the proxy
-                             to be launched */
+    if (!validate_only && is_useless_proxy) {
+      log_warn(LD_GENERAL, "Pluggable transport proxy (%s) does not provide "
+               "any needed transports and will not be launched.", line);
+    }
+
+    /* If we are not just validating, use the rest of the line as the
+       argv of the proxy to be launched. Also, make sure that we are
+       only launching proxies that contribute useful transports.  */
+    if (!validate_only && !is_useless_proxy) {
       proxy_argc = line_length-2;
       tor_assert(proxy_argc > 0);
       proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
