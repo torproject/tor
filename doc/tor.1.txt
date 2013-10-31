@@ -1646,7 +1646,7 @@ is non-zero):
     What EC group should we try to use for incoming TLS connections?
     P224 is faster, but makes us stand out more. Has no effect if
     we're a client, or if our OpenSSL version lacks support for ECDHE.
-    (Default: P224 for public servers; P256 for bridges.)
+    (Default: P256)
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     When this option is enabled, Tor writes statistics on the mean time that
