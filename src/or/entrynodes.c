@@ -13,6 +13,7 @@
  **/
 
 #include "or.h"
+#include "circpathbias.h"
 #include "circuitbuild.h"
 #include "circuitstats.h"
 #include "config.h"

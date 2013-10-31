@@ -11,6 +11,7 @@
 #define CIRCUITLIST_PRIVATE
 #include "or.h"
 #include "channel.h"
+#include "circpathbias.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
