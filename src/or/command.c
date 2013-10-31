@@ -499,6 +499,7 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
   log_debug(LD_OR,"Received for circID %u.",(unsigned)cell->circ_id);
 
   reason = (uint8_t)cell->payload[0];
+  circ->received_destroy = 1;
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
