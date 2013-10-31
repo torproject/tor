@@ -1446,6 +1446,12 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 #error
 #endif])], have_gcc43=yes, have_gcc43=no)
 
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
+#error
+#endif])], have_gcc46=yes, have_gcc46=no)
+
+
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
@@ -1494,12 +1500,20 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
   if test x$have_gcc43 = xyes ; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Wextra -Warray-bounds -Wlogical-op"
+    CFLAGS="$CFLAGS -Wextra -Warray-bounds"
+  fi
+
+  if test x$have_gcc46 = xyes ; then
+    # This warning was added in gcc 4.3, but it appears to generate
+    # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
+    CFLAGS="$CFLAGS -Wlogical-op"
   fi
 
   if test x$have_shorten64_flag = xyes ; then
     CFLAGS="$CFLAGS -Wshorten-64-to-32"
   fi
+
+
 
 ##This will break the world on some 64-bit architectures
 # CFLAGS="$CFLAGS -Winline"
