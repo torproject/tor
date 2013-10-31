@@ -30,6 +30,11 @@ Users bounce their TCP streams -- web traffic, ftp, ssh, etc. -- around the
 network, and recipients, observers, and even the relays themselves have
 difficulty tracking the source of the stream.
 
+By default, **tor** will only act as a client only.  To help the network
+by providing bandwidth as a relay, change the **ORPort** configuration
+option -- see below.  Please also consult the documentation on the Tor
+Project's website.
+
 COMMAND-LINE OPTIONS
 --------------------
 [[opt-h]] **-h**, **-help**::
