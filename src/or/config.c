@@ -236,7 +236,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("FallbackNetworkstatusFile"),
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
-  V(FastFirstHopPK,              BOOL,     "1"),
+  V(FastFirstHopPK,              AUTOBOOL, "auto"),
   V(FetchDirInfoEarly,           BOOL,     "0"),
   V(FetchDirInfoExtraEarly,      BOOL,     "0"),
   V(FetchServerDescriptors,      BOOL,     "1"),

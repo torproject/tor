@@ -663,16 +663,18 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
 
   if (!circ->cpath->extend_info->onion_key)
     return 1; /* our hand is forced: only a create_fast will work. */
-  if (!options->FastFirstHopPK)
-    return 0; /* we prefer to avoid create_fast */
   if (public_server_mode(options)) {
     /* We're a server, and we know an onion key. We can choose.
      * Prefer to blend our circuit into the other circuits we are
      * creating on behalf of others. */
     return 0;
   }
+  if (options->FastFirstHopPK == -1) {
+    /* option is "auto", so look at the consensus. */
+    return networkstatus_get_param(NULL, "usecreatefast", 1, 0, 1);
+  }
 
-  return 1;
+  return options->FastFirstHopPK;
 }
 
 /** Return true if <b>circ</b> is the type of circuit we want to count
