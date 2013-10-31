@@ -1,14 +1,54 @@
+/* Copyright (c) 2001 Matej Pfajfar.
+ * Copyright (c) 2001-2004, Roger Dingledine.
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007-2013, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
+#include "or.h"
+#include "channel.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "circuitstats.h"
+#include "connection_edge.h"
+#include "config.h"
+#include "entrynodes.h"
+#include "networkstatus.h"
+#include "relay.h"
 
-static void pathbias_count_build_success(origin_circuit_t *circ);
 static void pathbias_count_successful_close(origin_circuit_t *circ);
 static void pathbias_count_collapse(origin_circuit_t *circ);
 static void pathbias_count_use_failed(origin_circuit_t *circ);
 static void pathbias_measure_use_rate(entry_guard_t *guard);
 static void pathbias_measure_close_rate(entry_guard_t *guard);
 static void pathbias_scale_use_rates(entry_guard_t *guard);
+static void pathbias_scale_close_rates(entry_guard_t *guard);
+static int entry_guard_inc_circ_attempt_count(entry_guard_t *guard);
+
+/** Increment the number of times we successfully extended a circuit to
+ * <b>guard</b>, first checking if the failure rate is high enough that
+ * we should eliminate the guard. Return -1 if the guard looks no good;
+ * return 0 if the guard looks fine.
+ */
+static int
+entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
+{
+  entry_guards_changed();
+
+  pathbias_measure_close_rate(guard);
+
+  if (guard->path_bias_disabled)
+    return -1;
+
+  pathbias_scale_close_rates(guard);
+  guard->circ_attempts++;
+
+  log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
+           guard->circ_successes, guard->circ_attempts, guard->nickname,
+           hex_str(guard->identity, DIGEST_LEN));
+  return 0;
+}
 
 /** The minimum number of circuit attempts before we start
   * thinking about warning about path bias and dropping guards */
@@ -349,7 +389,7 @@ pathbias_should_count(origin_circuit_t *circ)
  *
  * Also check for several potential error cases for bug #6475.
  */
-static int
+int
 pathbias_count_build_attempt(origin_circuit_t *circ)
 {
 #define CIRC_ATTEMPT_NOTICE_INTERVAL (600)
@@ -435,7 +475,7 @@ pathbias_count_build_attempt(origin_circuit_t *circ)
  *
  * Also check for several potential error cases for bug #6475.
  */
-static void
+void
 pathbias_count_build_success(origin_circuit_t *circ)
 {
 #define SUCCESS_NOTICE_INTERVAL (600)

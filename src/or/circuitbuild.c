@@ -41,7 +41,6 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "crypto.h"
-#include "connection_edge.h"
 
 #ifndef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
@@ -58,7 +57,6 @@ static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
-static int entry_guard_inc_circ_attempt_count(entry_guard_t *guard);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -1075,30 +1073,6 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
     cpath->b_crypto = tmp_crypto;
   }
 
-  return 0;
-}
-
-/** Increment the number of times we successfully extended a circuit to
- * <b>guard</b>, first checking if the failure rate is high enough that
- * we should eliminate the guard. Return -1 if the guard looks no good;
- * return 0 if the guard looks fine.
- */
-static int
-entry_guard_inc_circ_attempt_count(entry_guard_t *guard)
-{
-  entry_guards_changed();
-
-  pathbias_measure_close_rate(guard);
-
-  if (guard->path_bias_disabled)
-    return -1;
-
-  pathbias_scale_close_rates(guard);
-  guard->circ_attempts++;
-
-  log_info(LD_CIRC, "Got success count %f/%f for guard %s ($%s)",
-           guard->circ_successes, guard->circ_attempts, guard->nickname,
-           hex_str(guard->identity, DIGEST_LEN));
   return 0;
 }
 
