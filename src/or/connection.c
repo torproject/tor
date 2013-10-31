@@ -2684,6 +2684,9 @@ connection_consider_empty_read_buckets(connection_t *conn)
 {
   const char *reason;
 
+  if (!connection_is_rate_limited(conn))
+    return; /* Always okay. */
+
   if (global_read_bucket <= 0) {
     reason = "global read bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
@@ -2695,9 +2698,6 @@ connection_consider_empty_read_buckets(connection_t *conn)
     reason = "connection read bucket exhausted. Pausing.";
   } else
     return; /* all good, no need to stop it */
-
-  if (!connection_is_rate_limited(conn))
-    return; /* Always okay. */
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
   conn->read_blocked_on_bw = 1;
