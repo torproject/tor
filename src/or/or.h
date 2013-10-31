@@ -2785,6 +2785,9 @@ typedef struct circuit_t {
    * allowing n_streams to add any more cells. (OR circuit only.) */
   unsigned int streams_blocked_on_p_chan : 1;
 
+  /** True iff this circuit has received a DESTROY cell in either direction */
+  unsigned int received_destroy : 1;
+
   uint8_t state; /**< Current status of this circuit. */
   uint8_t purpose; /**< Why are we creating this circuit? */
 
