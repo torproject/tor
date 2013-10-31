@@ -14,6 +14,7 @@
 #include "addressmap.h"
 #include "buffers.h"
 #include "channel.h"
+#include "circpathbias.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
