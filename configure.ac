@@ -1494,7 +1494,7 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
   if test x$have_gcc43 = xyes ; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Wextra -Warray-bounds"
+    CFLAGS="$CFLAGS -Wextra -Warray-bounds -Wlogical-op"
   fi
 
   if test x$have_shorten64_flag = xyes ; then
