@@ -1344,10 +1344,8 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       nid = NID_secp224r1;
     else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
       nid = NID_X9_62_prime256v1;
-    else if (flags & TOR_TLS_CTX_IS_PUBLIC_SERVER)
-      nid = NID_X9_62_prime256v1;
     else
-      nid = NID_secp224r1;
+      nid = NID_X9_62_prime256v1;
     /* Use P-256 for ECDHE. */
     ec_key = EC_KEY_new_by_curve_name(nid);
     if (ec_key != NULL) /*XXXX Handle errors? */
