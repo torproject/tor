@@ -1,0 +1,7 @@
+  o Minor features (controller):
+    - Extend ORCONN controller event by ID parameter and add four new
+      controller event types CONN_BW, CIRC_BW, CELL_STATS, and TB_EMPTY
+      that shall help understand connection and circuit usage.  The new
+      events are emitted in private Tor networks only.  Implements
+      proposal 218.  Resolves ticket #7359.
+
