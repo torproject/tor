@@ -18,16 +18,16 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-__tor__ is a connection-oriented anonymizing communication
+Tor is a connection-oriented anonymizing communication
 service. Users choose a source-routed path through a set of nodes, and
 negotiate a "virtual circuit" through the network, in which each node
 knows its predecessor and successor, but no others. Traffic flowing down
 the circuit is unwrapped by a symmetric key at each node, which reveals
 the downstream node. +
 
-Basically __tor__ provides a distributed network of servers ("onion routers").
-Users bounce their TCP streams -- web traffic, ftp, ssh, etc -- around the
-routers, and recipients, observers, and even the routers themselves have
+Basically, Tor provides a distributed network of servers or relays ("onion routers").
+Users bounce their TCP streams -- web traffic, ftp, ssh, etc. -- around the
+network, and recipients, observers, and even the relays themselves have
 difficulty tracking the source of the stream.
 
 COMMAND-LINE OPTIONS
