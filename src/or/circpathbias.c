@@ -1535,3 +1535,4 @@ pathbias_scale_use_rates(entry_guard_t *guard)
     entry_guards_changed();
   }
 }
+
