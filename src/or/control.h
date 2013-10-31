@@ -50,6 +50,13 @@ int control_event_or_conn_status(or_connection_t *conn,
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 int control_event_stream_bandwidth(edge_connection_t *edge_conn);
 int control_event_stream_bandwidth_used(void);
+int control_event_circ_bandwidth_used(void);
+int control_event_conn_bandwidth(connection_t *conn);
+int control_event_conn_bandwidth_used(void);
+int control_event_circuit_cell_stats(void);
+int control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
+                           uint32_t write_empty_time,
+                           int milliseconds_elapsed);
 void control_event_logmsg(int severity, uint32_t domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
@@ -128,6 +135,10 @@ void control_free_all(void);
 #define EVENT_BUILDTIMEOUT_SET        0x0017
 #define EVENT_SIGNAL                  0x0018
 #define EVENT_CONF_CHANGED            0x0019
+#define EVENT_CONN_BW                 0x001A
+#define EVENT_CELL_STATS              0x001B
+#define EVENT_TB_EMPTY                0x001C
+#define EVENT_CIRC_BANDWIDTH_USED     0x001D
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_MAX_                    0x0020
 /* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
@@ -151,6 +162,30 @@ send_control_event_string,(uint16_t event, event_format_t which,
 
 void control_testing_set_global_event_mask(uint64_t mask);
 #endif
+
+/** Helper structure: temporarily stores cell statistics for a circuit. */
+typedef struct cell_stats_t {
+  /** Number of cells added in app-ward direction by command. */
+  uint64_t added_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells added in exit-ward direction by command. */
+  uint64_t added_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in app-ward direction by command. */
+  uint64_t removed_cells_appward[CELL_COMMAND_MAX_ + 1];
+  /** Number of cells removed in exit-ward direction by command. */
+  uint64_t removed_cells_exitward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in app-ward direction by command. */
+  uint64_t total_time_appward[CELL_COMMAND_MAX_ + 1];
+  /** Total waiting time of cells in exit-ward direction by command. */
+  uint64_t total_time_exitward[CELL_COMMAND_MAX_ + 1];
+} cell_stats_t;
+void sum_up_cell_stats_by_command(circuit_t *circ,
+                                  cell_stats_t *cell_stats);
+void append_cell_stats_by_command(smartlist_t *event_parts,
+                                  const char *key,
+                                  const uint64_t *include_if_non_zero,
+                                  const uint64_t *number_to_include);
+void format_cell_stats(char **event_string, circuit_t *circ,
+                       cell_stats_t *cell_stats);
 #endif
 
 #endif

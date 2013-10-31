@@ -53,6 +53,33 @@ static void command_process_created_cell(cell_t *cell, channel_t *chan);
 static void command_process_relay_cell(cell_t *cell, channel_t *chan);
 static void command_process_destroy_cell(cell_t *cell, channel_t *chan);
 
+/** Convert the cell <b>command</b> into a lower-case, human-readable
+ * string. */
+const char *
+cell_command_to_string(uint8_t command)
+{
+  switch (command) {
+    case CELL_PADDING: return "padding";
+    case CELL_CREATE: return "create";
+    case CELL_CREATED: return "created";
+    case CELL_RELAY: return "relay";
+    case CELL_DESTROY: return "destroy";
+    case CELL_CREATE_FAST: return "create_fast";
+    case CELL_CREATED_FAST: return "created_fast";
+    case CELL_VERSIONS: return "versions";
+    case CELL_NETINFO: return "netinfo";
+    case CELL_RELAY_EARLY: return "relay_early";
+    case CELL_CREATE2: return "create2";
+    case CELL_CREATED2: return "created2";
+    case CELL_VPADDING: return "vpadding";
+    case CELL_CERTS: return "certs";
+    case CELL_AUTH_CHALLENGE: return "auth_challenge";
+    case CELL_AUTHENTICATE: return "authenticate";
+    case CELL_AUTHORIZE: return "authorize";
+    default: return "unrecognized";
+  }
+}
+
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
  * <b>cell</b> that just arrived on <b>conn</b>. Increment <b>*time</b>

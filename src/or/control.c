@@ -19,6 +19,7 @@
 #include "circuitlist.h"
 #include "circuitstats.h"
 #include "circuituse.h"
+#include "command.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
@@ -190,6 +191,20 @@ log_severity_to_event(int severity)
   }
 }
 
+/** Helper: clear bandwidth counters of all origin circuits. */
+static void
+clear_circ_bw_fields(void)
+{
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
+    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+  }
+}
+
 /** Set <b>global_event_mask*</b> to the bitwise OR of each live control
  * connection's event_mask field. */
 void
@@ -215,8 +230,8 @@ control_update_global_event_mask(void)
    * we want to hear...*/
   control_adjust_event_log_severity();
 
-  /* ...then, if we've started logging stream bw, clear the appropriate
-   * fields. */
+  /* ...then, if we've started logging stream or circ bw, clear the
+   * appropriate fields. */
   if (! (old_mask & EVENT_STREAM_BANDWIDTH_USED) &&
       (new_mask & EVENT_STREAM_BANDWIDTH_USED)) {
     SMARTLIST_FOREACH(conns, connection_t *, conn,
@@ -226,6 +241,10 @@ control_update_global_event_mask(void)
         edge_conn->n_written = edge_conn->n_read = 0;
       }
     });
+  }
+  if (! (old_mask & EVENT_CIRC_BANDWIDTH_USED) &&
+      (new_mask & EVENT_CIRC_BANDWIDTH_USED)) {
+    clear_circ_bw_fields();
   }
 }
 
@@ -916,6 +935,10 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
   { EVENT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
+  { EVENT_CONN_BW, "CONN_BW" },
+  { EVENT_CELL_STATS, "CELL_STATS" },
+  { EVENT_TB_EMPTY, "TB_EMPTY" },
+  { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { 0, NULL },
 };
@@ -3834,17 +3857,17 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   }
   ncircs += connection_or_get_num_circuits(conn);
   if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
-    tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",
-                 reason ? " " : "", ncircs);
+    tor_snprintf(ncircs_buf, sizeof(ncircs_buf), " NCIRCS=%d", ncircs);
   }
 
   orconn_target_get_name(name, sizeof(name), conn);
   send_control_event(EVENT_OR_CONN_STATUS, ALL_FORMATS,
-                              "650 ORCONN %s %s %s%s%s\r\n",
+                              "650 ORCONN %s %s%s%s%s ID="U64_FORMAT"\r\n",
                               name, status,
-                              reason ? "REASON=" : "",
+                              reason ? " REASON=" : "",
                               orconn_end_reason_to_control_string(reason),
-                              ncircs_buf);
+                              ncircs_buf,
+                              U64_PRINTF_ARG(conn->base_.global_identifier));
 
   return 0;
 }
@@ -3855,6 +3878,8 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 int
 control_event_stream_bandwidth(edge_connection_t *edge_conn)
 {
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
   if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
     if (!edge_conn->n_read && !edge_conn->n_written)
       return 0;
@@ -3865,6 +3890,12 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
                        (unsigned long)edge_conn->n_read,
                        (unsigned long)edge_conn->n_written);
 
+    circ = circuit_get_by_edge_conn(edge_conn);
+    if (circ && CIRCUIT_IS_ORIGIN(circ)) {
+      ocirc = TO_ORIGIN_CIRCUIT(circ);
+      ocirc->n_read_circ_bw += edge_conn->n_read;
+      ocirc->n_written_circ_bw += edge_conn->n_written;
+    }
     edge_conn->n_written = edge_conn->n_read = 0;
   }
 
@@ -3899,6 +3930,235 @@ control_event_stream_bandwidth_used(void)
     SMARTLIST_FOREACH_END(conn);
   }
 
+  return 0;
+}
+
+/** A second or more has elapsed: tell any interested control connections
+ * how much bandwidth origin circuits have used. */
+int
+control_event_circ_bandwidth_used(void)
+{
+  circuit_t *circ;
+  origin_circuit_t *ocirc;
+  if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
+    return 0;
+
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
+    if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
+      continue;
+    send_control_event(EVENT_CIRC_BANDWIDTH_USED, ALL_FORMATS,
+                       "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu\r\n",
+                       ocirc->global_identifier,
+                       (unsigned long)ocirc->n_read_circ_bw,
+                       (unsigned long)ocirc->n_written_circ_bw);
+    ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
+  }
+
+  return 0;
+}
+
+/** Print out CONN_BW event for a single OR/DIR/EXIT <b>conn</b> and reset
+  * bandwidth counters. */
+int
+control_event_conn_bandwidth(connection_t *conn)
+{
+  const char *conn_type_str;
+  if (!get_options()->TestingEnableConnBwEvent ||
+      !EVENT_IS_INTERESTING(EVENT_CONN_BW))
+    return 0;
+  if (!conn->n_read_conn_bw && !conn->n_written_conn_bw)
+    return 0;
+  switch (conn->type) {
+    case CONN_TYPE_OR:
+      conn_type_str = "OR";
+      break;
+    case CONN_TYPE_DIR:
+      conn_type_str = "DIR";
+      break;
+    case CONN_TYPE_EXIT:
+      conn_type_str = "EXIT";
+      break;
+    default:
+      return 0;
+  }
+  send_control_event(EVENT_CONN_BW, ALL_FORMATS,
+                     "650 CONN_BW ID="U64_FORMAT" TYPE=%s "
+                     "READ=%lu WRITTEN=%lu\r\n",
+                     U64_PRINTF_ARG(conn->global_identifier),
+                     conn_type_str,
+                     (unsigned long)conn->n_read_conn_bw,
+                     (unsigned long)conn->n_written_conn_bw);
+  conn->n_written_conn_bw = conn->n_read_conn_bw = 0;
+  return 0;
+}
+
+/** A second or more has elapsed: tell any interested control
+ * connections how much bandwidth connections have used. */
+int
+control_event_conn_bandwidth_used(void)
+{
+  if (get_options()->TestingEnableConnBwEvent &&
+      EVENT_IS_INTERESTING(EVENT_CONN_BW)) {
+    SMARTLIST_FOREACH(get_connection_array(), connection_t *, conn,
+                      control_event_conn_bandwidth(conn));
+  }
+  return 0;
+}
+
+/** Helper: iterate over cell statistics of <b>circ</b> and sum up added
+ * cells, removed cells, and waiting times by cell command and direction.
+ * Store results in <b>cell_stats</b>.  Free cell statistics of the
+ * circuit afterwards. */
+void
+sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
+{
+  memset(cell_stats, 0, sizeof(cell_stats_t));
+  SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
+                          testing_cell_stats_entry_t *, ent) {
+    tor_assert(ent->command <= CELL_COMMAND_MAX_);
+    if (!ent->removed && !ent->exitward) {
+      cell_stats->added_cells_appward[ent->command] += 1;
+    } else if (!ent->removed && ent->exitward) {
+      cell_stats->added_cells_exitward[ent->command] += 1;
+    } else if (!ent->exitward) {
+      cell_stats->removed_cells_appward[ent->command] += 1;
+      cell_stats->total_time_appward[ent->command] += ent->waiting_time * 10;
+    } else {
+      cell_stats->removed_cells_exitward[ent->command] += 1;
+      cell_stats->total_time_exitward[ent->command] += ent->waiting_time * 10;
+    }
+    tor_free(ent);
+  } SMARTLIST_FOREACH_END(ent);
+  smartlist_free(circ->testing_cell_stats);
+  circ->testing_cell_stats = NULL;
+}
+
+/** Helper: append a cell statistics string to <code>event_parts</code>,
+ * prefixed with <code>key</code>=.  Statistics consist of comma-separated
+ * key:value pairs with lower-case command strings as keys and cell
+ * numbers or total waiting times as values.  A key:value pair is included
+ * if the entry in <code>include_if_non_zero</code> is not zero, but with
+ * the (possibly zero) entry from <code>number_to_include</code>.  Both
+ * arrays are expected to have a length of CELL_COMMAND_MAX_ + 1.  If no
+ * entry in <code>include_if_non_zero</code> is positive, no string will
+ * be added to <code>event_parts</code>. */
+void
+append_cell_stats_by_command(smartlist_t *event_parts, const char *key,
+                             const uint64_t *include_if_non_zero,
+                             const uint64_t *number_to_include)
+{
+  smartlist_t *key_value_strings = smartlist_new();
+  int i;
+  for (i = 0; i <= CELL_COMMAND_MAX_; i++) {
+    if (include_if_non_zero[i] > 0) {
+      smartlist_add_asprintf(key_value_strings, "%s:"U64_FORMAT,
+                             cell_command_to_string(i),
+                             U64_PRINTF_ARG(number_to_include[i]));
+    }
+  }
+  if (smartlist_len(key_value_strings) > 0) {
+    char *joined = smartlist_join_strings(key_value_strings, ",", 0, NULL);
+    smartlist_add_asprintf(event_parts, "%s=%s", key, joined);
+    SMARTLIST_FOREACH(key_value_strings, char *, cp, tor_free(cp));
+    tor_free(joined);
+  }
+  smartlist_free(key_value_strings);
+}
+
+/** Helper: format <b>cell_stats</b> for <b>circ</b> for inclusion in a
+ * CELL_STATS event and write result string to <b>event_string</b>. */
+void
+format_cell_stats(char **event_string, circuit_t *circ,
+                  cell_stats_t *cell_stats)
+{
+  smartlist_t *event_parts = smartlist_new();
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    smartlist_add_asprintf(event_parts, "ID=%lu",
+                 (unsigned long)ocirc->global_identifier);
+  } else if (TO_OR_CIRCUIT(circ)->p_chan) {
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+    smartlist_add_asprintf(event_parts, "InboundQueue=%lu",
+                 (unsigned long)or_circ->p_circ_id);
+    smartlist_add_asprintf(event_parts, "InboundConn="U64_FORMAT,
+                 U64_PRINTF_ARG(or_circ->p_chan->global_identifier));
+    append_cell_stats_by_command(event_parts, "InboundAdded",
+                                 cell_stats->added_cells_appward,
+                                 cell_stats->added_cells_appward);
+    append_cell_stats_by_command(event_parts, "InboundRemoved",
+                                 cell_stats->removed_cells_appward,
+                                 cell_stats->removed_cells_appward);
+    append_cell_stats_by_command(event_parts, "InboundTime",
+                                 cell_stats->removed_cells_appward,
+                                 cell_stats->total_time_appward);
+  }
+  if (circ->n_chan) {
+    smartlist_add_asprintf(event_parts, "OutboundQueue=%lu",
+                     (unsigned long)circ->n_circ_id);
+    smartlist_add_asprintf(event_parts, "OutboundConn="U64_FORMAT,
+                 U64_PRINTF_ARG(circ->n_chan->global_identifier));
+    append_cell_stats_by_command(event_parts, "OutboundAdded",
+                                 cell_stats->added_cells_exitward,
+                                 cell_stats->added_cells_exitward);
+    append_cell_stats_by_command(event_parts, "OutboundRemoved",
+                                 cell_stats->removed_cells_exitward,
+                                 cell_stats->removed_cells_exitward);
+    append_cell_stats_by_command(event_parts, "OutboundTime",
+                                 cell_stats->removed_cells_exitward,
+                                 cell_stats->total_time_exitward);
+  }
+  *event_string = smartlist_join_strings(event_parts, " ", 0, NULL);
+  SMARTLIST_FOREACH(event_parts, char *, cp, tor_free(cp));
+  smartlist_free(event_parts);
+}
+
+/** A second or more has elapsed: tell any interested control connection
+ * how many cells have been processed for a given circuit. */
+int
+control_event_circuit_cell_stats(void)
+{
+  circuit_t *circ;
+  cell_stats_t *cell_stats;
+  char *event_string;
+  if (!get_options()->TestingEnableCellStatsEvent ||
+      !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
+    return 0;
+  cell_stats = tor_malloc(sizeof(cell_stats_t));;
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+    if (!circ->testing_cell_stats)
+      continue;
+    sum_up_cell_stats_by_command(circ, cell_stats);
+    format_cell_stats(&event_string, circ, cell_stats);
+    send_control_event(EVENT_CELL_STATS, ALL_FORMATS,
+                       "650 CELL_STATS %s\r\n", event_string);
+    tor_free(event_string);
+  }
+  tor_free(cell_stats);
+  return 0;
+}
+
+/** Tokens in <b>bucket</b> have been refilled: the read bucket was empty
+ * for <b>read_empty_time</b> millis, the write bucket was empty for
+ * <b>write_empty_time</b> millis, and buckets were last refilled
+ * <b>milliseconds_elapsed</b> millis ago.  Only emit TB_EMPTY event if
+ * either read or write bucket have been empty before. */
+int
+control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
+                       uint32_t write_empty_time,
+                       int milliseconds_elapsed)
+{
+  if (get_options()->TestingEnableTbEmptyEvent &&
+      EVENT_IS_INTERESTING(EVENT_TB_EMPTY) &&
+      (read_empty_time > 0 || write_empty_time > 0)) {
+    send_control_event(EVENT_TB_EMPTY, ALL_FORMATS,
+                       "650 TB_EMPTY %s READ=%d WRITTEN=%d "
+                       "LAST=%d\r\n",
+                       bucket, read_empty_time, write_empty_time,
+                       milliseconds_elapsed);
+  }
   return 0;
 }
 

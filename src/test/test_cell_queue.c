@@ -56,9 +56,11 @@ test_cq_manip(void *arg)
           "once-ler lerkim, sed do barbaloot tempor gluppitus ut labore et "
           "truffula magna aliqua.",
           sizeof(cell.payload));
-  cell_queue_append_packed_copy(&cq, &cell, 1 /*wide*/, 0 /*stats*/);
+  cell_queue_append_packed_copy(NULL /*circ*/, &cq, 0 /*exitward*/, &cell,
+                                1 /*wide*/, 0 /*stats*/);
   cell.circ_id = 0x2013;
-  cell_queue_append_packed_copy(&cq, &cell, 0 /*wide*/, 0 /*stats*/);
+  cell_queue_append_packed_copy(NULL /*circ*/, &cq, 0 /*exitward*/, &cell,
+                                0 /*wide*/, 0 /*stats*/);
   tt_int_op(cq.n, ==, 2);
 
   pc_tmp = cell_queue_pop(&cq);

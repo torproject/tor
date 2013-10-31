@@ -18,6 +18,7 @@
  * part of a subclass (channel_tls_t).
  */
 #define TOR_CHANNEL_INTERNAL_
+#define CONNECTION_PRIVATE
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -2589,6 +2590,35 @@ record_num_bytes_transferred(connection_t *conn,
 #endif
 
 #ifndef USE_BUFFEREVENTS
+/** Last time at which the global or relay buckets were emptied in msec
+ * since midnight. */
+static uint32_t global_relayed_read_emptied = 0,
+                global_relayed_write_emptied = 0,
+                global_read_emptied = 0,
+                global_write_emptied = 0;
+
+/** Helper: convert given <b>tvnow</b> time value to milliseconds since
+ * midnight. */
+static uint32_t
+msec_since_midnight(const struct timeval *tvnow)
+{
+  return (uint32_t)(((tvnow->tv_sec % 86400L) * 1000L) +
+         ((uint32_t)tvnow->tv_usec / (uint32_t)1000L));
+}
+
+/** Check if a bucket which had <b>tokens_before</b> tokens and which got
+ * <b>tokens_removed</b> tokens removed at timestamp <b>tvnow</b> has run
+ * out of tokens, and if so, note the milliseconds since midnight in
+ * <b>timestamp_var</b> for the next TB_EMPTY event. */
+void
+connection_buckets_note_empty_ts(uint32_t *timestamp_var,
+                                 int tokens_before, size_t tokens_removed,
+                                 const struct timeval *tvnow)
+{
+  if (tokens_before > 0 && (uint32_t)tokens_before <= tokens_removed)
+    *timestamp_var = msec_since_midnight(tvnow);
+}
+
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
  * onto <b>conn</b>. Decrement buckets appropriately. */
 static void
@@ -2610,6 +2640,30 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
+
+  /* If one or more of our token buckets ran dry just now, note the
+   * timestamp for TB_EMPTY events. */
+  if (get_options()->TestingEnableTbEmptyEvent) {
+    struct timeval tvnow;
+    tor_gettimeofday_cached(&tvnow);
+    if (connection_counts_as_relayed_traffic(conn, now)) {
+      connection_buckets_note_empty_ts(&global_relayed_read_emptied,
+                         global_relayed_read_bucket, num_read, &tvnow);
+      connection_buckets_note_empty_ts(&global_relayed_write_emptied,
+                         global_relayed_write_bucket, num_written, &tvnow);
+    }
+    connection_buckets_note_empty_ts(&global_read_emptied,
+                       global_read_bucket, num_read, &tvnow);
+    connection_buckets_note_empty_ts(&global_write_emptied,
+                       global_write_bucket, num_written, &tvnow);
+    if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+      or_connection_t *or_conn = TO_OR_CONN(conn);
+      connection_buckets_note_empty_ts(&or_conn->read_emptied_time,
+                         or_conn->read_bucket, num_read, &tvnow);
+      connection_buckets_note_empty_ts(&or_conn->write_emptied_time,
+                         or_conn->write_bucket, num_written, &tvnow);
+    }
+  }
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= (int)num_read;
@@ -2717,6 +2771,28 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
   }
 }
 
+/** Helper: return the time in milliseconds since <b>last_empty_time</b>
+ * when a bucket ran empty that previously had <b>tokens_before</b> tokens
+ * now has <b>tokens_after</b> tokens after refilling at timestamp
+ * <b>tvnow</b>, capped at <b>milliseconds_elapsed</b> milliseconds since
+ * last refilling that bucket.  Return 0 if the bucket has not been empty
+ * since the last refill or has not been refilled. */
+uint32_t
+bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
+                    int tokens_after, int milliseconds_elapsed,
+                    const struct timeval *tvnow)
+{
+  uint32_t result = 0, refilled;
+  if (tokens_before <= 0 && tokens_after > tokens_before) {
+    refilled = msec_since_midnight(tvnow);
+    result = (uint32_t)((refilled + 86400L * 1000L - last_empty_time) %
+             (86400L * 1000L));
+    if (result > (uint32_t)milliseconds_elapsed)
+      result = (uint32_t)milliseconds_elapsed;
+  }
+  return result;
+}
+
 /** Time has passed; increment buckets appropriately. */
 void
 connection_bucket_refill(int milliseconds_elapsed, time_t now)
@@ -2724,6 +2800,12 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
   const or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
   int bandwidthrate, bandwidthburst, relayrate, relayburst;
+
+  int prev_global_read = global_read_bucket;
+  int prev_global_write = global_write_bucket;
+  int prev_relay_read = global_relayed_read_bucket;
+  int prev_relay_write = global_relayed_write_bucket;
+  struct timeval tvnow; /*< Only used if TB_EMPTY events are enabled. */
 
   bandwidthrate = (int)options->BandwidthRate;
   bandwidthburst = (int)options->BandwidthBurst;
@@ -2759,12 +2841,42 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                   milliseconds_elapsed,
                                   "global_relayed_write_bucket");
 
+  /* If buckets were empty before and have now been refilled, tell any
+   * interested controllers. */
+  if (get_options()->TestingEnableTbEmptyEvent) {
+    uint32_t global_read_empty_time, global_write_empty_time,
+             relay_read_empty_time, relay_write_empty_time;
+    tor_gettimeofday_cached(&tvnow);
+    global_read_empty_time = bucket_millis_empty(prev_global_read,
+                             global_read_emptied, global_read_bucket,
+                             milliseconds_elapsed, &tvnow);
+    global_write_empty_time = bucket_millis_empty(prev_global_write,
+                              global_write_emptied, global_write_bucket,
+                              milliseconds_elapsed, &tvnow);
+    control_event_tb_empty("GLOBAL", global_read_empty_time,
+                           global_write_empty_time, milliseconds_elapsed);
+    relay_read_empty_time = bucket_millis_empty(prev_relay_read,
+                            global_relayed_read_emptied,
+                            global_relayed_read_bucket,
+                            milliseconds_elapsed, &tvnow);
+    relay_write_empty_time = bucket_millis_empty(prev_relay_write,
+                             global_relayed_write_emptied,
+                             global_relayed_write_bucket,
+                             milliseconds_elapsed, &tvnow);
+    control_event_tb_empty("RELAY", relay_read_empty_time,
+                           relay_write_empty_time, milliseconds_elapsed);
+  }
+
   /* refill the per-connection buckets */
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       int orbandwidthrate = or_conn->bandwidthrate;
       int orbandwidthburst = or_conn->bandwidthburst;
+
+      int prev_conn_read = or_conn->read_bucket;
+      int prev_conn_write = or_conn->write_bucket;
+
       if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->read_bucket,
                                         orbandwidthrate,
@@ -2778,6 +2890,27 @@ connection_bucket_refill(int milliseconds_elapsed, time_t now)
                                         orbandwidthburst,
                                         milliseconds_elapsed,
                                         "or_conn->write_bucket");
+      }
+
+      /* If buckets were empty before and have now been refilled, tell any
+       * interested controllers. */
+      if (get_options()->TestingEnableTbEmptyEvent) {
+        char *bucket;
+        uint32_t conn_read_empty_time, conn_write_empty_time;
+        tor_asprintf(&bucket, "ORCONN ID="U64_FORMAT,
+                     U64_PRINTF_ARG(or_conn->base_.global_identifier));
+        conn_read_empty_time = bucket_millis_empty(prev_conn_read,
+                               or_conn->read_emptied_time,
+                               or_conn->read_bucket,
+                               milliseconds_elapsed, &tvnow);
+        conn_write_empty_time = bucket_millis_empty(prev_conn_write,
+                                or_conn->write_emptied_time,
+                                or_conn->write_bucket,
+                                milliseconds_elapsed, &tvnow);
+        control_event_tb_empty(bucket, conn_read_empty_time,
+                               conn_write_empty_time,
+                               milliseconds_elapsed);
+        tor_free(bucket);
       }
     }
 
@@ -3189,14 +3322,37 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
      /* change *max_to_read */
     *max_to_read = at_most - n_read;
 
-    /* Update edge_conn->n_read */
+    /* Update edge_conn->n_read and ocirc->n_read_circ_bw */
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      circuit_t *circ = circuit_get_by_edge_conn(edge_conn);
+      origin_circuit_t *ocirc;
+
       /* Check for overflow: */
       if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_read > n_read))
         edge_conn->n_read += (int)n_read;
       else
         edge_conn->n_read = UINT32_MAX;
+
+      if (circ && CIRCUIT_IS_ORIGIN(circ)) {
+        ocirc = TO_ORIGIN_CIRCUIT(circ);
+        if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_read_circ_bw > n_read))
+          ocirc->n_read_circ_bw += (int)n_read;
+        else
+          ocirc->n_read_circ_bw = UINT32_MAX;
+      }
+    }
+
+    /* If CONN_BW events are enabled, update conn->n_read_conn_bw for
+     * OR/DIR/EXIT connections, checking for overflow. */
+    if (get_options()->TestingEnableConnBwEvent &&
+       (conn->type == CONN_TYPE_OR ||
+        conn->type == CONN_TYPE_DIR ||
+        conn->type == CONN_TYPE_EXIT)) {
+      if (PREDICT_LIKELY(UINT32_MAX - conn->n_read_conn_bw > n_read))
+        conn->n_read_conn_bw += (int)n_read;
+      else
+        conn->n_read_conn_bw = UINT32_MAX;
     }
   }
 
@@ -3636,12 +3792,34 @@ connection_handle_write_impl(connection_t *conn, int force)
 
   if (n_written && conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    circuit_t *circ = circuit_get_by_edge_conn(edge_conn);
+    origin_circuit_t *ocirc;
 
     /* Check for overflow: */
     if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_written > n_written))
       edge_conn->n_written += (int)n_written;
     else
       edge_conn->n_written = UINT32_MAX;
+
+    if (circ && CIRCUIT_IS_ORIGIN(circ)) {
+      ocirc = TO_ORIGIN_CIRCUIT(circ);
+      if (PREDICT_LIKELY(UINT32_MAX - ocirc->n_written_circ_bw > n_written))
+        ocirc->n_written_circ_bw += (int)n_written;
+      else
+        ocirc->n_written_circ_bw = UINT32_MAX;
+    }
+  }
+
+  /* If CONN_BW events are enabled, update conn->n_written_conn_bw for
+   * OR/DIR/EXIT connections, checking for overflow. */
+  if (n_written && get_options()->TestingEnableConnBwEvent &&
+     (conn->type == CONN_TYPE_OR ||
+      conn->type == CONN_TYPE_DIR ||
+      conn->type == CONN_TYPE_EXIT)) {
+    if (PREDICT_LIKELY(UINT32_MAX - conn->n_written_conn_bw > n_written))
+      conn->n_written_conn_bw += (int)n_written;
+    else
+      conn->n_written_conn_bw = UINT32_MAX;
   }
 
   connection_buckets_decrement(conn, approx_time(), n_read, n_written);

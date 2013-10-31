@@ -216,6 +216,15 @@ void connection_enable_rate_limiting(connection_t *conn);
 
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);
+
+/* Used only by connection.c and test*.c */
+uint32_t bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
+                             int tokens_after, int milliseconds_elapsed,
+                             const struct timeval *tvnow);
+void connection_buckets_note_empty_ts(uint32_t *timestamp_var,
+                                      int tokens_before,
+                                      size_t tokens_removed,
+                                      const struct timeval *tvnow);
 #endif
 
 #endif

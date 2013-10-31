@@ -1872,7 +1872,7 @@ circuitmux_append_destroy_cell(channel_t *chan,
   cell.command = CELL_DESTROY;
   cell.payload[0] = (uint8_t) reason;
 
-  cell_queue_append_packed_copy(&cmux->destroy_cell_queue, &cell,
+  cell_queue_append_packed_copy(NULL, &cmux->destroy_cell_queue, 0, &cell,
                                 chan->wide_circ_ids, 0);
 
   /* Destroy entering the queue, update counters */

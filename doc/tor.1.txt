@@ -2061,6 +2061,9 @@ The following options are used for running a testing Tor network.
        TestingDescriptorMaxDownloadTries 80
        TestingMicrodescMaxDownloadTries 80
        TestingCertMaxDownloadTries 80
+       TestingEnableConnBwEvent 1
+       TestingEnableCellStatsEvent 1
+       TestingEnableTbEmptyEvent 1
 
 [[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
     Like V3AuthVotingInterval, but for initial voting interval before the first
@@ -2154,6 +2157,22 @@ The following options are used for running a testing Tor network.
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
+
+[[TestingEnableConnBwEvent]] **TestingEnableConnBwEvent** **0**|**1**::
+    If this option is set, then Tor controllers may register for CONN_BW
+    events.  Changing this requires that **TestingTorNetwork** is set.
+    (Default: 0)
+
+[[TestingEnableCellStatsEvent]] **TestingEnableCellStatsEvent** **0**|**1**::
+    If this option is set, then Tor controllers may register for CELL_STATS
+    events.  Changing this requires that **TestingTorNetwork** is set.
+    (Default: 0)
+
+[[TestingEnableTbEmptyEvent]] **TestingEnableTbEmptyEvent** **0**|**1**::
+    If this option is set, then Tor controllers may register for TB_EMPTY
+    events.  Changing this requires that **TestingTorNetwork** is set.
+    (Default: 0)
+
 
 SIGNALS
 -------

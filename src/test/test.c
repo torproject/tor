@@ -1620,6 +1620,7 @@ extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t extorport_tests[];
+extern struct testcase_t controller_event_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1641,6 +1642,7 @@ static struct testgroup_t testgroups[] = {
   { "circuitmux/", circuitmux_tests },
   { "options/", options_tests },
   { "extorport/", extorport_tests },
+  { "control/", controller_event_tests },
   END_OF_GROUPS
 };
 
