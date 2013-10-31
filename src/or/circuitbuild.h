@@ -57,16 +57,6 @@ const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 const node_t *choose_good_entry_server(uint8_t purpose,
                                        cpath_build_state_t *state);
-double pathbias_get_extreme_rate(const or_options_t *options);
-double pathbias_get_extreme_use_rate(const or_options_t *options);
-int pathbias_get_dropguards(const or_options_t *options);
-void pathbias_count_timeout(origin_circuit_t *circ);
-int pathbias_check_close(origin_circuit_t *circ, int reason);
-int pathbias_check_probe_response(circuit_t *circ, const cell_t *cell);
-void pathbias_count_use_attempt(origin_circuit_t *circ);
-void pathbias_mark_use_success(origin_circuit_t *circ);
-void pathbias_mark_use_rollback(origin_circuit_t *circ);
-const char *pathbias_state_to_string(path_state_t state);
 
 #endif
 
