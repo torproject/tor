@@ -2204,7 +2204,9 @@ cell_command_queue_pop(uint8_t *command, cell_queue_t *queue)
 }
 
 /** Append a newly allocated copy of <b>cell</b> to the end of the
- * <b>exitward</b> (or app-ward) <b>queue</b> of <b>circ</b>. */
+ * <b>exitward</b> (or app-ward) <b>queue</b> of <b>circ</b>.  If
+ * <b>use_stats</b> is true, record statistics about the cell.
+ */
 void
 cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
                               int exitward, const cell_t *cell,
@@ -2244,7 +2246,7 @@ cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
   }
   /* Remember that we added a cell to the queue, and remember the cell
    * command. */
-  if (get_options()->TestingEnableCellStatsEvent) {
+  if (get_options()->TestingEnableCellStatsEvent && circ) {
     testing_cell_stats_entry_t *ent =
                       tor_malloc_zero(sizeof(testing_cell_stats_entry_t));
     ent->command = cell->command;
