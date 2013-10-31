@@ -1,0 +1,3 @@
+  o Major bugfixes:
+    - Do not apply connection_consider_empty_read/write_buckets to
+      cpuworker connections.
