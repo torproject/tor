@@ -913,58 +913,6 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
   }
 }
 
-/**
- * Flush cells from a channel_tls_t
- *
- * Try to flush up to about num_cells cells, and return how many we flushed.
- */
-
-ssize_t
-channel_tls_flush_some_cells(channel_tls_t *chan, ssize_t num_cells)
-{
-  ssize_t flushed = 0;
-
-  tor_assert(chan);
-
-  if (flushed >= num_cells) goto done;
-
-  /*
-   * If channel_tls_t ever buffers anything below the channel_t layer, flush
-   * that first here.
-   */
-
-  flushed += channel_flush_some_cells(TLS_CHAN_TO_BASE(chan),
-                                      num_cells - flushed);
-
-  /*
-   * If channel_tls_t ever buffers anything below the channel_t layer, check
-   * how much we actually got and push it on down here.
-   */
-
- done:
-  return flushed;
-}
-
-/**
- * Check if a channel_tls_t has anything to flush
- *
- * Return true if there is any more to flush on this channel (cells in queue
- * or active circuits).
- */
-
-int
-channel_tls_more_to_flush(channel_tls_t *chan)
-{
-  tor_assert(chan);
-
-  /*
-   * If channel_tls_t ever buffers anything below channel_t, the
-   * check for that should go here first.
-   */
-
-  return channel_more_to_flush(TLS_CHAN_TO_BASE(chan));
-}
-
 #ifdef KEEP_TIMING_STATS
 
 /**

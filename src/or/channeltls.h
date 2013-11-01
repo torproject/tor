@@ -40,8 +40,6 @@ channel_t * channel_tls_to_base(channel_tls_t *tlschan);
 channel_tls_t * channel_tls_from_base(channel_t *chan);
 
 /* Things for connection_or.c to call back into */
-ssize_t channel_tls_flush_some_cells(channel_tls_t *chan, ssize_t num_cells);
-int channel_tls_more_to_flush(channel_tls_t *chan);
 void channel_tls_handle_cell(cell_t *cell, or_connection_t *conn);
 void channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
                                                or_connection_t *conn,
