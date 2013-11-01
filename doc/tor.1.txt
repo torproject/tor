@@ -1140,15 +1140,17 @@ The following options are useful only for clients (that is, if
     the node "foo". Disabled by default since attacking websites and exit
     relays can use it to manipulate your path selection. (Default: 0)
 
-[[FastFirstHopPK]] **FastFirstHopPK** **0**|**1**::
+[[FastFirstHopPK]] **FastFirstHopPK** **0**|**1**|**auto**::
     When this option is disabled, Tor uses the public key step for the first
     hop of creating circuits. Skipping it is generally safe since we have
     already used TLS to authenticate the relay and to establish forward-secure
-    keys. Turning this option off makes circuit building slower. +
+    keys. Turning this option off makes circuit building a little
+    slower. Setting this option to "auto" takes advice from the authorities
+    in the latest consensus about whether to use this feature.  +
  +
     Note that Tor will always use the public key step for the first hop if it's
     operating as a relay, and it will never use the public key step if it
-    doesn't yet know the onion key of the first hop. (Default: 1)
+    doesn't yet know the onion key of the first hop. (Default: auto)
 
 [[TransPort]] **TransPort**  \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for transparent proxy connections.  Set this to
