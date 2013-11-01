@@ -581,9 +581,7 @@ connection_or_process_inbuf(or_connection_t *conn)
 int
 connection_or_flushed_some(or_connection_t *conn)
 {
-  size_t datalen, temp;
-  ssize_t n, flushed;
-  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
+  size_t datalen;
 
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
@@ -591,31 +589,6 @@ connection_or_flushed_some(or_connection_t *conn)
   if (datalen < OR_CONN_LOWWATER) {
     /* Let the scheduler know */
     scheduler_channel_wants_writes(TLS_CHAN_TO_BASE(conn->chan));
-
-    /*
-     * TODO this will be done from the scheduler, so it will
-     * need a generic way to ask how many cells a channel can
-     * accept and if it still wants writes or not to know how
-     * to account for it in the case that it runs out of cells
-     * to send first.
-     */
-
-    while ((conn->chan) && channel_tls_more_to_flush(conn->chan)) {
-      /* Compute how many more cells we want at most */
-      n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
-      /* Bail out if we don't want any more */
-      if (n <= 0) break;
-      /* We're still here; try to flush some more cells */
-      flushed = channel_tls_flush_some_cells(conn->chan, n);
-      /* Bail out if it says it didn't flush anything */
-      if (flushed <= 0) break;
-      /* How much in the outbuf now? */
-      temp = connection_get_outbuf_len(TO_CONN(conn));
-      /* Bail out if we didn't actually increase the outbuf size */
-      if (temp <= datalen) break;
-      /* Update datalen for the next iteration */
-      datalen = temp;
-    }
   }
 
   return 0;

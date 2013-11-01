@@ -325,17 +325,14 @@ scheduler_run(void)
 {
   smartlist_t *tmp = NULL;
   int n_cells;
+  ssize_t flushed, flushed_this_time;
 
   log_debug(LD_SCHED, "We have a chance to run the scheduler");
 
-  /*
-   * TODO make this work properly
-   *
-   * For now, just empty the pending list and log that we saw stuff in it
-   */
-
   tmp = channels_pending;
   channels_pending = smartlist_new();
+
+  /* For now, just run the old scheduler on all the chans in the list */
 
   SMARTLIST_FOREACH_BEGIN(tmp, channel_t *, chan) {
     n_cells = channel_num_cells_writeable(chan);
@@ -344,6 +341,13 @@ scheduler_run(void)
                 "Scheduler saw pending channel " U64_FORMAT " at %p with "
                 "%d cells writeable",
                 U64_PRINTF_ARG(chan->global_identifier), chan, n_cells);
+
+      flushed = 0;
+      while (flushed < n_cells) {
+        flushed_this_time = channel_flush_some_cells(chan, n_cells - flushed);
+        if (flushed_this_time <= 0) break;
+        flushed += flushed_this_time;
+      }
     } else {
       log_info(LD_SCHED,
                "Scheduler saw pending channel " U64_FORMAT " at %p with "
