@@ -1269,12 +1269,15 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
    * version.  Once some version of OpenSSL does TLS1.1 and TLS1.2
    * renegotiation properly, we can turn them back on when built with
    * that version. */
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V(1,0,1,'e')
 #ifdef SSL_OP_NO_TLSv1_2
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_2);
 #endif
 #ifdef SSL_OP_NO_TLSv1_1
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_1);
 #endif
+#endif
+
   /* Disable TLS tickets if they're supported.  We never want to use them;
    * using them can make our perfect forward secrecy a little worse, *and*
    * create an opportunity to fingerprint us (since it's unusual to use them
@@ -1369,10 +1372,8 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       nid = NID_secp224r1;
     else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
       nid = NID_X9_62_prime256v1;
-    else if (flags & TOR_TLS_CTX_IS_PUBLIC_SERVER)
-      nid = NID_X9_62_prime256v1;
     else
-      nid = NID_secp224r1;
+      nid = NID_X9_62_prime256v1;
     /* Use P-256 for ECDHE. */
     ec_key = EC_KEY_new_by_curve_name(nid);
     if (ec_key != NULL) /*XXXX Handle errors? */

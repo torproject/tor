@@ -1,0 +1,8 @@
+  o Minor bugfixes (performance, fingerprinting):
+    - Our default TLS ecdhe groups were backwards: we meant to be using
+      P224 for relays (for performance win) and P256 for bridges (since
+      it is more common in the wild). Instead we had it backwards. After
+      reconsideration, we decided that the default should be P256 on all
+      hosts, since its security is probably better, and since P224 is
+      reportedly used quite little in the wild.  Found by "skruffy" on
+      IRC. Fix for bug 9780; bugfix on 0.2.4.8-alpha.
