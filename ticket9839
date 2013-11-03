@@ -1,0 +1,3 @@
+  o Documentation:
+    - Update manpage to describe some of the files one could find
+      in data directory. Fixes bug 9839.
