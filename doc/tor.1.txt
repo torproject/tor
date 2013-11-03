@@ -45,6 +45,10 @@ COMMAND-LINE OPTIONS
     options. (Default: $HOME/.torrc, or @CONFDIR@/torrc if that file is not
     found)
 
+[[opt-allow-missing-torrc]] **--allow-missing-torrc**::
+    Do not require that configuration file specified by **-f** exist if 
+    default torrc can be accessed.
+
 [[opt-defaults-torrc]] **--defaults-torrc** __FILE__::
     Specify a file in which to find default values for Tor options.  The
     contents of this file are overridden by those in the regular

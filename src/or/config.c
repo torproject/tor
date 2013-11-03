@@ -1816,6 +1816,7 @@ static const struct {
   int takes_argument;
 } CMDLINE_ONLY_OPTIONS[] = {
   { "-f",                     1 },
+  { "--allow-missing-torrc",  0 },
   { "--defaults-torrc",       1 },
   { "--hash-password",        1 },
   { "--dump-config",          1 },
@@ -4016,8 +4017,13 @@ options_init_from_torrc(int argc, char **argv)
   } else {
     cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
     cf = load_torrc_from_disk(cmdline_only_options, 0);
-    if (!cf)
-      goto err;
+    if (!cf) {
+      if (config_line_find(cmdline_only_options, "--allow-missing-torrc")) {
+        cf = tor_strdup("");
+      } else {
+        goto err;
+      }
+    }
   }
 
   retval = options_init_from_string(cf_defaults, cf, command, command_arg,
