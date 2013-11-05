@@ -77,6 +77,53 @@ static smartlist_t *finished_listeners = NULL;
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
 
+/*
+ * Channel global byte/cell counters, for statistics and for scheduler high
+ * /low-water marks.
+ */
+
+/*
+ * Total number of cells ever given to any channel with the
+ * channel_write_*_cell() functions.
+ */
+
+static uint64_t n_channel_cells_queued = 0;
+
+/*
+ * Total number of cells ever passed to a channel lower layer with the
+ * write_*_cell() methods.
+ */
+
+static uint64_t n_channel_cells_passed_to_lower_layer = 0;
+
+/*
+ * Current number of cells in all channel queues; should be
+ * n_channel_cells_queued - n_channel_cells_passed_to_lower_layer.
+ */
+
+static uint64_t n_channel_cells_in_queues = 0;
+
+/*
+ * Total number of bytes for all cells ever queued to a channel and
+ * counted in n_channel_cells_queued.
+ */
+
+static uint64_t n_channel_bytes_queued = 0;
+
+/*
+ * Total number of bytes for all cells ever passed to a channel lower layer
+ * and counted in n_channel_cells_passed_to_lower_layer.
+ */
+
+static uint64_t n_channel_bytes_passed_to_lower_layer = 0;
+
+/*
+ * Current number of bytes in all channel queues; should be
+ * n_channel_bytes_queued - n_channel_bytes_passed_to_lower_layer.
+ */
+
+static uint64_t n_channel_bytes_in_queues = 0;
+
 /* Digest->channel map
  *
  * Similar to the one used in connection_or.c, this maps from the identity
@@ -124,6 +171,8 @@ cell_queue_entry_new_var(var_cell_t *var_cell);
 static int is_destroy_cell(channel_t *chan,
                            const cell_queue_entry_t *q, circid_t *circid_out);
 
+static void channel_assert_counter_consistency(void);
+
 /* Functions to maintain the digest map */
 static void channel_add_to_digest_map(channel_t *chan);
 static void channel_remove_from_digest_map(channel_t *chan);
@@ -141,6 +190,8 @@ channel_free_list(smartlist_t *channels, int mark_for_close);
 static void
 channel_listener_free_list(smartlist_t *channels, int mark_for_close);
 static void channel_listener_force_free(channel_listener_t *chan_l);
+static size_t channel_get_cell_queue_entry_size(channel_t *chan,
+                                                cell_queue_entry_t *q);
 static void
 channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q);
 
@@ -1673,6 +1724,34 @@ cell_queue_entry_new_var(var_cell_t *var_cell)
 }
 
 /**
+ * Ask how big the cell contained in a cell_queue_entry_t is
+ */
+
+static size_t
+channel_get_cell_queue_entry_size(channel_t *chan, cell_queue_entry_t *q)
+{
+  tor_assert(chan);
+  tor_assert(q);
+
+  switch (q->type) {
+    case CELL_QUEUE_FIXED:
+      return get_cell_network_size(chan->wide_circ_ids);
+      break;
+    case CELL_QUEUE_VAR:
+      tor_assert(q->u.var.var_cell);
+      return get_var_cell_header_size(chan->wide_circ_ids) +
+        q->u.var.var_cell->payload_len;
+      break;
+    case CELL_QUEUE_PACKED:
+      return get_cell_network_size(chan->wide_circ_ids);
+      break;
+    default:
+      tor_assert(1);
+      return 0;
+  }
+}
+
+/**
  * Write to a channel based on a cell_queue_entry_t
  *
  * Given a cell_queue_entry_t filled out by the caller, try to send the cell
@@ -1684,6 +1763,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
 {
   int result = 0, sent = 0;
   cell_queue_entry_t *tmp = NULL;
+  size_t cell_bytes;
 
   tor_assert(chan);
   tor_assert(q);
@@ -1699,6 +1779,9 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
       channel_note_destroy_not_pending(chan, circ_id);
     }
   }
+
+  /* For statistical purposes, figure out how big this cell is */
+  cell_bytes = channel_get_cell_queue_entry_size(chan, q);
 
   /* Can we send it right out?  If so, try */
   if (TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue) &&
@@ -1733,6 +1816,13 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
       channel_timestamp_drained(chan);
       /* Update the counter */
       ++(chan->n_cells_xmitted);
+      chan->n_bytes_xmitted += cell_bytes;
+      /* Update global counters */
+      ++n_channel_cells_queued;
+      ++n_channel_cells_passed_to_lower_layer;
+      n_channel_bytes_queued += cell_bytes;
+      n_channel_bytes_passed_to_lower_layer += cell_bytes;
+      channel_assert_counter_consistency();
     }
   }
 
@@ -1744,6 +1834,12 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
      */
     tmp = cell_queue_entry_dup(q);
     TOR_SIMPLEQ_INSERT_TAIL(&chan->outgoing_queue, tmp, next);
+    /* Update global counters */
+    ++n_channel_cells_queued;
+    ++n_channel_cells_in_queues;
+    n_channel_bytes_queued += cell_bytes;
+    n_channel_bytes_in_queues += cell_bytes;
+    channel_assert_counter_consistency();
     /* Try to process the queue? */
     if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
   }
@@ -2136,6 +2232,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   unsigned int unlimited = 0;
   ssize_t flushed = 0;
   cell_queue_entry_t *q = NULL;
+  size_t cell_size;
 
   tor_assert(chan);
   tor_assert(chan->write_cell);
@@ -2151,6 +2248,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
            NULL != (q = TOR_SIMPLEQ_FIRST(&chan->outgoing_queue))) {
 
       if (1) {
+        /* Figure out how big it is for statistical purposes */
+        cell_size = channel_get_cell_queue_entry_size(chan, q);
         /*
          * Okay, we have a good queue entry, try to give it to the lower
          * layer.
@@ -2163,6 +2262,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                chan->n_bytes_xmitted += cell_size;
                 cell_queue_entry_free(q, 1);
                 q = NULL;
               }
@@ -2186,6 +2286,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                chan->n_bytes_xmitted += cell_size;
                 cell_queue_entry_free(q, 1);
                 q = NULL;
               }
@@ -2209,6 +2310,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 ++flushed;
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
+                chan->n_bytes_xmitted += cell_size;
                 cell_queue_entry_free(q, 1);
                 q = NULL;
               }
@@ -2237,7 +2339,18 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
         }
 
         /* if q got NULLed out, we used it and should remove the queue entry */
-        if (!q) TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
+        if (!q) {
+          TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
+          /*
+           * ...and we handed a cell off to the lower layer, so we should
+           * update the counters.
+           */
+          ++n_channel_cells_passed_to_lower_layer;
+          --n_channel_cells_in_queues;
+          n_channel_bytes_passed_to_lower_layer += cell_size;
+          n_channel_bytes_in_queues -= cell_size;
+          channel_assert_counter_consistency();
+        }
         /* No cell removed from list, so we can't go on any further */
         else break;
       }
@@ -2560,8 +2673,9 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
   /* Timestamp for receiving */
   channel_timestamp_recv(chan);
 
-  /* Update the counter */
+  /* Update the counters */
   ++(chan->n_cells_recved);
+  chan->n_bytes_recved += get_cell_network_size(chan->wide_circ_ids);
 
   /* If we don't need to queue we can just call cell_handler */
   if (!need_to_queue) {
@@ -2615,6 +2729,8 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 
   /* Update the counter */
   ++(chan->n_cells_recved);
+  chan->n_bytes_recved += get_var_cell_header_size(chan->wide_circ_ids) +
+    var_cell->payload_len;
 
   /* If we don't need to queue we can just call cell_handler */
   if (!need_to_queue) {
@@ -2662,6 +2778,19 @@ packed_cell_is_destroy(channel_t *chan,
     }
   }
   return 0;
+}
+
+/**
+ * Assert that the global channel stats counters are internally consistent
+ */
+
+static void
+channel_assert_counter_consistency(void)
+{
+  tor_assert(n_channel_cells_queued ==
+      (n_channel_cells_in_queues + n_channel_cells_passed_to_lower_layer));
+  tor_assert(n_channel_bytes_queued ==
+      (n_channel_bytes_in_queues + n_channel_bytes_passed_to_lower_layer));
 }
 
 /** DOCDOC */
@@ -2745,6 +2874,19 @@ void
 channel_dumpstats(int severity)
 {
   if (all_channels && smartlist_len(all_channels) > 0) {
+    tor_log(severity, LD_GENERAL,
+        "Channels have queued " U64_FORMAT " bytes in " U64_FORMAT " cells, "
+        "and handed " U64_FORMAT " bytes in " U64_FORMAT " cells to the lower"
+        " layer.",
+        U64_PRINTF_ARG(n_channel_bytes_queued),
+        U64_PRINTF_ARG(n_channel_cells_queued),
+        U64_PRINTF_ARG(n_channel_bytes_passed_to_lower_layer),
+        U64_PRINTF_ARG(n_channel_cells_passed_to_lower_layer));
+    tor_log(severity, LD_GENERAL,
+        "There are currently " U64_FORMAT " bytes in " U64_FORMAT " cells "
+        "in channel queues.",
+        U64_PRINTF_ARG(n_channel_bytes_in_queues),
+        U64_PRINTF_ARG(n_channel_cells_in_queues));
     tor_log(severity, LD_GENERAL,
         "Dumping statistics about %d channels:",
         smartlist_len(all_channels));
@@ -3388,12 +3530,22 @@ channel_dump_statistics(channel_t *chan, int severity)
   /* Describe counters and rates */
   tor_log(severity, LD_GENERAL,
       " * Channel " U64_FORMAT " has received "
-      U64_FORMAT " cells and transmitted " U64_FORMAT,
+      U64_FORMAT " bytes in " U64_FORMAT " cells and transmitted "
+      U64_FORMAT " bytes in " U64_FORMAT " cells",
       U64_PRINTF_ARG(chan->global_identifier),
+      U64_PRINTF_ARG(chan->n_bytes_recved),
       U64_PRINTF_ARG(chan->n_cells_recved),
+      U64_PRINTF_ARG(chan->n_bytes_xmitted),
       U64_PRINTF_ARG(chan->n_cells_xmitted));
   if (now > chan->timestamp_created &&
       chan->timestamp_created > 0) {
+    if (chan->n_bytes_recved > 0) {
+      avg = (double)(chan->n_bytes_recved) / age;
+      tor_log(severity, LD_GENERAL,
+          " * Channel " U64_FORMAT " has averaged %f "
+          "bytes received per second",
+          U64_PRINTF_ARG(chan->global_identifier), avg);
+    }
     if (chan->n_cells_recved > 0) {
       avg = (double)(chan->n_cells_recved) / age;
       if (avg >= 1.0) {
@@ -3408,6 +3560,13 @@ channel_dump_statistics(channel_t *chan, int severity)
             "seconds between received cells",
             U64_PRINTF_ARG(chan->global_identifier), interval);
       }
+    }
+    if (chan->n_bytes_xmitted > 0) {
+      avg = (double)(chan->n_bytes_xmitted) / age;
+      tor_log(severity, LD_GENERAL,
+          " * Channel " U64_FORMAT " has averaged %f "
+          "bytes transmitted per second",
+          U64_PRINTF_ARG(chan->global_identifier), avg);
     }
     if (chan->n_cells_xmitted > 0) {
       avg = (double)(chan->n_cells_xmitted) / age;

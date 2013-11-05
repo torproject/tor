@@ -200,8 +200,8 @@ struct channel_s {
   uint64_t dirreq_id;
 
   /** Channel counters for cell channels */
-  uint64_t n_cells_recved;
-  uint64_t n_cells_xmitted;
+  uint64_t n_cells_recved, n_bytes_recved;
+  uint64_t n_cells_xmitted, n_bytes_xmitted;
 };
 
 struct channel_listener_s {
