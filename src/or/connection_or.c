@@ -583,6 +583,9 @@ connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen;
 
+  /* The channel will want to update its estimated queue size */
+  channel_update_xmit_queue_size(TLS_CHAN_TO_BASE(conn->chan));
+
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   datalen = connection_get_outbuf_len(TO_CONN(conn));

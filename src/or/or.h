@@ -1529,6 +1529,12 @@ typedef struct or_connection_t {
   /** Last emptied write token bucket in msec since midnight; only used if
    * TB_EMPTY events are enabled. */
   uint32_t write_emptied_time;
+
+  /*
+   * Count the number of bytes flushed out on this orconn, and the number of
+   * bytes TLS actually sent - used for overhead estimation for scheduling.
+   */
+  uint64_t bytes_xmitted, bytes_xmitted_by_tls;
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)

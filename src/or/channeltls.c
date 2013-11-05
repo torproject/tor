@@ -55,6 +55,7 @@ static void channel_tls_common_init(channel_tls_t *tlschan);
 static void channel_tls_close_method(channel_t *chan);
 static const char * channel_tls_describe_transport_method(channel_t *chan);
 static void channel_tls_free_method(channel_t *chan);
+static double channel_tls_get_overhead_estimate_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
 static int
@@ -69,6 +70,7 @@ channel_tls_matches_extend_info_method(channel_t *chan,
 static int channel_tls_matches_target_method(channel_t *chan,
                                              const tor_addr_t *target);
 static int channel_tls_num_cells_writeable_method(channel_t *chan);
+static size_t channel_tls_num_bytes_queued_method(channel_t *chan);
 static int channel_tls_write_cell_method(channel_t *chan,
                                          cell_t *cell);
 static int channel_tls_write_packed_cell_method(channel_t *chan,
@@ -118,6 +120,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
   chan->free = channel_tls_free_method;
+  chan->get_overhead_estimate = channel_tls_get_overhead_estimate_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
   chan->get_remote_descr = channel_tls_get_remote_descr_method;
   chan->get_transport_name = channel_tls_get_transport_name_method;
@@ -125,6 +128,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->is_canonical = channel_tls_is_canonical_method;
   chan->matches_extend_info = channel_tls_matches_extend_info_method;
   chan->matches_target = channel_tls_matches_target_method;
+  chan->num_bytes_queued = channel_tls_num_bytes_queued_method;
   chan->num_cells_writeable = channel_tls_num_cells_writeable_method;
   chan->write_cell = channel_tls_write_cell_method;
   chan->write_packed_cell = channel_tls_write_packed_cell_method;
@@ -438,6 +442,40 @@ channel_tls_free_method(channel_t *chan)
 }
 
 /**
+ * Get an estimate of the average TLS overhead for the upper layer
+ */
+
+static double
+channel_tls_get_overhead_estimate_method(channel_t *chan)
+{
+  double overhead = 1.0f;
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  /* Just return 1.0f if we don't have sensible data */
+  if (tlschan->conn->bytes_xmitted > 0 &&
+      tlschan->conn->bytes_xmitted_by_tls >=
+      tlschan->conn->bytes_xmitted) {
+    overhead = ((double)(tlschan->conn->bytes_xmitted_by_tls)) /
+      ((double)(tlschan->conn->bytes_xmitted));
+
+    /*
+     * Never estimate more than 2.0; otherwise we get silly large estimates
+     * at the very start of a new TLS connection.
+     */
+    if (overhead > 2.0f) overhead = 2.0f;
+  }
+
+  log_debug(LD_CHANNEL,
+            "Estimated overhead ratio for TLS chan " U64_FORMAT " is %f",
+            U64_PRINTF_ARG(chan->global_identifier), overhead);
+
+  return overhead;
+}
+
+/**
  * Get the remote address of a channel_tls_t
  *
  * This implements the get_remote_addr method for channel_tls_t; copy the
@@ -673,6 +711,22 @@ channel_tls_matches_target_method(channel_t *chan,
   }
 
   return tor_addr_eq(&(tlschan->conn->real_addr), target);
+}
+
+/**
+ * Tell the upper layer how many bytes we have queued and not yet
+ * sent.
+ */
+
+static size_t
+channel_tls_num_bytes_queued_method(channel_t *chan)
+{
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  return connection_get_outbuf_len(TO_CONN(tlschan->conn));
 }
 
 /**

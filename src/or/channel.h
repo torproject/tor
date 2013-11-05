@@ -79,6 +79,11 @@ struct channel_s {
   /* Methods implemented by the lower layer */
 
   /**
+   * Ask the lower layer for an estimate of the average overhead for
+   * transmissions on this channel.
+   */
+  double (*get_overhead_estimate)(channel_t *);
+  /*
    * Ask the underlying transport what the remote endpoint address is, in
    * a tor_addr_t.  This is optional and subclasses may leave this NULL.
    * If they implement it, they should write the address out to the
@@ -110,6 +115,8 @@ struct channel_s {
   int (*matches_extend_info)(channel_t *, extend_info_t *);
   /** Check if this channel matches a target address when extending */
   int (*matches_target)(channel_t *, const tor_addr_t *);
+  /* Ask the lower layer how many bytes it has queued but not yet sent */
+  size_t (*num_bytes_queued)(channel_t *);
   /* Ask the lower layer how many cells can be written */
   int (*num_cells_writeable)(channel_t *);
   /* Write a cell to an open channel */
@@ -202,6 +209,14 @@ struct channel_s {
   /** Channel counters for cell channels */
   uint64_t n_cells_recved, n_bytes_recved;
   uint64_t n_cells_xmitted, n_bytes_xmitted;
+
+  /** Our current contribution to the scheduler's total xmit queue */
+  uint64_t bytes_queued_for_xmit;
+
+  /** Number of bytes in this channel's cell queue; does not include
+   * lower-layer queueing.
+   */
+  uint64_t bytes_in_queue;
 };
 
 struct channel_listener_s {
@@ -460,6 +475,7 @@ unsigned int channel_num_circuits(channel_t *chan);
 void channel_set_circid_type(channel_t *chan, crypto_pk_t *identity_rcvd,
                              int consider_identity);
 void channel_timestamp_client(channel_t *chan);
+void channel_update_xmit_queue_size(channel_t *chan);
 
 const char * channel_listener_describe_transport(channel_listener_t *chan_l);
 void channel_listener_dump_statistics(channel_listener_t *chan_l,
