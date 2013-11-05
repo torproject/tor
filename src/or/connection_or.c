@@ -1195,6 +1195,11 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
                "your pluggable transport proxy stopped running.",
                fmt_addrport(&TO_CONN(conn)->addr, TO_CONN(conn)->port),
                transport_name, transport_name);
+
+      control_event_bootstrap_problem(
+                                "Can't connect to bridge",
+                                END_OR_CONN_REASON_NO_ROUTE);
+
     } else {
       log_warn(LD_GENERAL, "Tried to connect to '%s' through a proxy, but "
                "the proxy address could not be found.",
