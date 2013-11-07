@@ -60,6 +60,10 @@ def strip_log_junk(line):
         return ""+line
     return m.group(2).strip()
 
+def randstring(entropy_bytes):
+    s = os.urandom(entropy_bytes)
+    return binascii.b2a_hex(s)
+
 class CmdlineTests(unittest.TestCase):
 
     def test_version(self):
@@ -246,6 +250,18 @@ class CmdlineTests(unittest.TestCase):
                            "ORPort 9001",
                            "ORPort 9003",
                            "SocksPort 9090"])
+
+    def test_missing_torrc(self):
+        fname = "nonexistent_file_"+randstring(8)
+        out = run_tor(["-f", fname, "--verify-config"], failure=True)
+        ln = [ strip_log_junk(l) for l in lines(out) ]
+        self.assert_("Unable to open configuration file" in ln[-2])
+        self.assert_("Reading config failed" in ln[-1])
+
+        out = run_tor(["-f", fname, "--verify-config", "--ignore-missing-torrc"])
+        ln = [ strip_log_junk(l) for l in lines(out) ]
+        self.assert_(", using reasonable defaults" in ln[-2])
+        self.assert_("Configuration was valid" in ln[-1])
 
 if __name__ == '__main__':
     unittest.main()

@@ -55,6 +55,11 @@ COMMAND-LINE OPTIONS
     configuration file, and by those on the command line. (Default:
     @CONFDIR@/torrc-defaults.)
 
+[[opt-ignore-missing-torrc]] **--ignore-missing-torrc**::
+    Specifies that Tor should treat a missing torrc file as though it
+    were empty. Ordinarily, Tor does this for missing default torrc files,
+    but not for those specified on the command line.
+
 [[opt-hash-password]] **--hash-password** __PASSWORD__::
     Generates a hashed password for control port access.
 
