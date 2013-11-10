@@ -622,7 +622,7 @@ The following options are useful only for clients (that is, if
 [[Bridge]] **Bridge** [__transport__] __IP__:__ORPort__ [__fingerprint__]::
     When set along with UseBridges, instructs Tor to use the relay at
     "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
-    is provided (using the same format as for DirServer), we will verify that
+    is provided (using the same format as for DirAuthority), we will verify that
     the relay running at that location has the right fingerprint. We also use
     fingerprint to look up the bridge descriptor at the bridge authority, if
     it's provided and if UpdateBridgesFromAuthority is set too.  +
@@ -2007,7 +2007,8 @@ The following options are used for running a testing Tor network.
 [[TestingTorNetwork]] **TestingTorNetwork** **0**|**1**::
     If set to 1, Tor adjusts default values of the configuration options below,
     so that it is easier to set up a testing Tor network. May only be set if
-    non-default set of DirServers is set. Cannot be unset while Tor is running.
+    non-default set of DirAuthorities is set. Cannot be unset while Tor is
+    running.
     (Default: 0) +
 
        ServerDNSAllowBrokenConfig 1
