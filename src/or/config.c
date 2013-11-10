@@ -3182,8 +3182,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         (options->AlternateDirAuthority &&
          options->AlternateBridgeAuthority))) {
     REJECT("TestingTorNetwork may only be configured in combination with "
-           "a non-default set of DirAuthority or both of AlternateDirAuthority "
-           "and AlternateBridgeAuthority configured.");
+           "a non-default set of DirAuthority or both of "
+           "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   }
 
   if (options->AllowSingleHopExits && !options->DirAuthorities) {
