@@ -3358,8 +3358,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         (options->AlternateDirAuthority &&
          options->AlternateBridgeAuthority))) {
     REJECT("TestingTorNetwork may only be configured in combination with "
-           "a non-default set of DirServer or both of AlternateDirAuthority "
-           "and AlternateBridgeAuthority configured.");
+           "a non-default set of DirAuthority or both of "
+           "AlternateDirAuthority and AlternateBridgeAuthority configured.");
   }
 
   if (options->AllowSingleHopExits && !options->DirAuthorities) {
@@ -5035,7 +5035,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 1) {
-    log_warn(LD_CONFIG, "No arguments on DirServer line.");
+    log_warn(LD_CONFIG, "No arguments on DirAuthority line.");
     goto err;
   }
 
@@ -5063,7 +5063,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
       char *portstring = flag + strlen("orport=");
       or_port = (uint16_t) tor_parse_long(portstring, 10, 1, 65535, &ok, NULL);
       if (!ok)
-        log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.",
+        log_warn(LD_CONFIG, "Invalid orport '%s' on DirAuthority line.",
                  portstring);
     } else if (!strcmpstart(flag, "weight=")) {
       int ok;
@@ -5077,13 +5077,13 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
       char *idstr = flag + strlen("v3ident=");
       if (strlen(idstr) != HEX_DIGEST_LEN ||
           base16_decode(v3_digest, DIGEST_LEN, idstr, HEX_DIGEST_LEN)<0) {
-        log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirServer line",
+        log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirAuthority line",
                  flag);
       } else {
         type |= V3_DIRINFO|EXTRAINFO_DIRINFO|MICRODESC_DIRINFO;
       }
     } else {
-      log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
+      log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirAuthority line",
                flag);
     }
     tor_free(flag);
@@ -5095,23 +5095,23 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     type &= ~V2_DIRINFO;
 
   if (smartlist_len(items) < 2) {
-    log_warn(LD_CONFIG, "Too few arguments to DirServer line.");
+    log_warn(LD_CONFIG, "Too few arguments to DirAuthority line.");
     goto err;
   }
   addrport = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
   if (addr_port_lookup(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
-    log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
+    log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s'", addrport);
     goto err;
   }
   if (!dir_port) {
-    log_warn(LD_CONFIG, "Missing port in DirServer address '%s'",addrport);
+    log_warn(LD_CONFIG, "Missing port in DirAuthority address '%s'",addrport);
     goto err;
   }
 
   fingerprint = smartlist_join_strings(items, "", 0, NULL);
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
-    log_warn(LD_CONFIG, "Key digest '%s' for DirServer is wrong length %d.",
+    log_warn(LD_CONFIG, "Key digest '%s' for DirAuthority is wrong length %d.",
              fingerprint, (int)strlen(fingerprint));
     goto err;
   }
@@ -5124,7 +5124,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     goto err;
   }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
-    log_warn(LD_CONFIG, "Unable to decode DirServer key digest.");
+    log_warn(LD_CONFIG, "Unable to decode DirAuthority key digest.");
     goto err;
   }
 
