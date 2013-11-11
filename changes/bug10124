@@ -1,0 +1,3 @@
+  o Documentation:
+    - Replace remaining references to DirServer in man page and
+      log entries. Resolves ticket 10124.
