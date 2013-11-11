@@ -64,6 +64,12 @@ def randstring(entropy_bytes):
     s = os.urandom(entropy_bytes)
     return binascii.b2a_hex(s)
 
+def findLineContaining(lines, s):
+    for ln in lines:
+        if s in ln:
+            return True
+    return False
+
 class CmdlineTests(unittest.TestCase):
 
     def test_version(self):
@@ -260,7 +266,7 @@ class CmdlineTests(unittest.TestCase):
 
         out = run_tor(["-f", fname, "--verify-config", "--ignore-missing-torrc"])
         ln = [ strip_log_junk(l) for l in lines(out) ]
-        self.assert_(", using reasonable defaults" in ln[-2])
+        self.assert_(findLineContaining(ln, ", using reasonable defaults"))
         self.assert_("Configuration was valid" in ln[-1])
 
 if __name__ == '__main__':
