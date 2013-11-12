@@ -484,6 +484,7 @@ void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
                                                 int severity);
 
 /* Flow control queries */
+uint64_t channel_get_global_queue_estimate(void);
 int channel_num_cells_writeable(channel_t *chan);
 
 /* Timestamp queries */

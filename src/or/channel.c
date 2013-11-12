@@ -4036,6 +4036,16 @@ channel_mark_outgoing(channel_t *chan)
  ***********************/
 
 /*
+ * Get the latest estimate for the total queue size of all open channels
+ */
+
+uint64_t
+channel_get_global_queue_estimate(void)
+{
+  return estimated_total_queue_size;
+}
+
+/*
  * Estimate the number of writeable cells
  *
  * Ask the lower layer for an estimate of how many cells it can accept, and
