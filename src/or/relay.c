@@ -2871,16 +2871,6 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 
   /* New way: mark this as having waiting cells for the scheduler */
   scheduler_channel_has_waiting_cells(chan);
-
-  /* TODO remove this once scheduler does it */
-  if (!channel_has_queued_writes(chan)) {
-    /* There is no data at all waiting to be sent on the outbuf.  Add a
-     * cell, so that we can notice when it gets flushed, flushed_some can
-     * get called, and we can start putting more data onto the buffer then.
-     */
-    log_debug(LD_GENERAL, "Primed a buffer.");
-    channel_flush_from_first_active_circuit(chan, 1);
-  }
 }
 
 /** Append an encoded value of <b>addr</b> to <b>payload_out</b>, which must
