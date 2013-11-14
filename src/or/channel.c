@@ -175,6 +175,7 @@ static cell_queue_entry_t *
 cell_queue_entry_new_fixed(cell_t *cell);
 static cell_queue_entry_t *
 cell_queue_entry_new_var(var_cell_t *var_cell);
+static int chan_cell_queue_len(const chan_cell_queue_t *queue);
 static int is_destroy_cell(channel_t *chan,
                            const cell_queue_entry_t *q, circid_t *circid_out);
 
@@ -2218,6 +2219,7 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
   unsigned int unlimited = 0;
   ssize_t flushed = 0;
   int num_cells_from_circs, clamped_num_cells;
+  int q_len_before, q_len_after;
 
   tor_assert(chan);
 
@@ -2243,14 +2245,44 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
           clamped_num_cells = (int)(num_cells - flushed);
         }
       }
+
+      /*
+       * Keep track of the change in queue size; we have to count cells
+       * channel_flush_from_first_active_circuit() writes out directly,
+       * but not double-count ones we might get later in
+       * channel_flush_some_cells_from_outgoing_queue()
+       */
+      q_len_before = chan_cell_queue_len(&(chan->outgoing_queue));
+
       /* Try to get more cells from any active circuits */
       num_cells_from_circs = channel_flush_from_first_active_circuit(
           chan, clamped_num_cells);
 
-      /* If it claims we got some, process the queue again */
+      q_len_after = chan_cell_queue_len(&(chan->outgoing_queue));
+
+      /*
+       * If it claims we got some, adjust the flushed counter and consider
+       * processing the queue again
+       */
       if (num_cells_from_circs > 0) {
-        flushed += channel_flush_some_cells_from_outgoing_queue(chan,
-          (unlimited ? -1 : num_cells - flushed));
+        /*
+         * Adjust flushed by the number of cells counted in
+         * num_cells_from_circs that didn't go to the cell queue.
+         */
+
+        if (q_len_after > q_len_before) {
+          num_cells_from_circs -= (q_len_after - q_len_before);
+          if (num_cells_from_circs < 0) num_cells_from_circs = 0;
+        }
+
+        flushed += num_cells_from_circs;
+
+        /* Now process the queue if necessary */
+
+        if (q_len_after > q_len_before && num_cells < flushed) {
+          flushed += channel_flush_some_cells_from_outgoing_queue(chan,
+            (unlimited ? -1 : num_cells - flushed));
+        }
       }
     }
   }
