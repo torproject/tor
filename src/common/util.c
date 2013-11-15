@@ -1232,6 +1232,18 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
   return mdiff;
 }
 
+/**
+ * Converts timeval to milliseconds.
+ */
+int64_t
+tv_to_msec(const struct timeval *tv)
+{
+  int64_t conv = ((int64_t)tv->tv_sec)*1000L;
+  /* Round ghetto-style */
+  conv += ((int64_t)tv->tv_usec+500)/1000L;
+  return conv;
+}
+
 /** Yield true iff <b>y</b> is a leap-year. */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */

@@ -2149,15 +2149,19 @@ void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
                               int wide_circ_ids)
 {
+  struct timeval now;
   packed_cell_t *copy = packed_cell_copy(cell, wide_circ_ids);
+  tor_gettimeofday_cached(&now);
+  copy->inserted_time = (uint32_t)tv_to_msec(&now);
+
   /* Remember the time when this cell was put in the queue. */
+  /*XXXX This may be obsoleted by inserted_time */
   if (get_options()->CellStatistics) {
-    struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
     if (!it_pool)
       it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
-    tor_gettimeofday_cached(&now);
+
 #define SECONDS_IN_A_DAY 86400L
     added = (uint32_t)(((now.tv_sec % SECONDS_IN_A_DAY) * 100L)
             + ((uint32_t)now.tv_usec / (uint32_t)10000L));
