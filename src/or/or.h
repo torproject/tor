@@ -1077,7 +1077,12 @@ typedef struct var_cell_t {
 typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_MAX_NETWORK_SIZE]; /**< Cell as packed for network. */
+  uint32_t inserted_time; /**< Time (in milliseconds since epoch, with high
+                           * bits truncated) when this cell was inserted. */
 } packed_cell_t;
+
+/* XXXX This next structure may be obsoleted by inserted_time in
+ * packed_cell_t */
 
 /** Number of cells added to a circuit queue including their insertion
  * time on 10 millisecond detail; used for buffer statistics. */
