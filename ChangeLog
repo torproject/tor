@@ -2,10 +2,34 @@ Changes in version 0.2.4.18-rc - 2013-10-??
   Tor 0.2.4.18-rc is the fourth release candidate for the Tor 0.2.4.x
   series. [...]
 
+  o Major enhancements:
+    - Re-enable TLS 1.1 and 1.2 when built with OpenSSL 1.0.1e or later.
+      (OpenSSL before 1.0.1 didn't have TLS 1.1 or 1.2. OpenSSL from 1.0.1
+      through 1.0.1d had bugs that prevented renegotiation from working
+      with TLS 1.1 or 1.2, so we disabled them to solve bug 6033.) Fix for
+      issue #6055.
+
   o Major bugfixes:
     - Stop trying to bootstrap all our directory information from
       only our first guard. Discovered while fixing bug 9946; bugfix
       on 0.2.4.8-alpha.
+    - No longer stop reading or writing on cpuworker connections when
+      our rate limiting buckets go empty. Now we should handle circuit
+      handshake requests more promptly. Resolves bug 9731.
+
+  o Minor bugfixes:
+    - If we are unable to save a microdescriptor to the journal, do not
+      drop it from memory and then reattempt downloading it. Fixes bug
+      9645; bugfix on 0.2.2.6-alpha.
+
+  o Minor bugfixes (performance, fingerprinting):
+    - Our default TLS ecdhe groups were backwards: we meant to be using
+      P224 for relays (for performance win) and P256 for bridges (since
+      it is more common in the wild). Instead we had it backwards. After
+      reconsideration, we decided that the default should be P256 on all
+      hosts, since its security is probably better, and since P224 is
+      reportedly used quite little in the wild.  Found by "skruffy" on
+      IRC. Fix for bug 9780; bugfix on 0.2.4.8-alpha.
 
   o Minor bugfixes (on 0.2.4.x):
     - Correctly log long IPv6 exit policies, instead of truncating them
