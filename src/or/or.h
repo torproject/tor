@@ -2564,6 +2564,9 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
+  /** Temporary field used during circuits_handle_oom. */
+  uint32_t age_tmp;
+
   /** For storage while n_conn is pending
     * (state CIRCUIT_STATE_OR_WAIT). When defined, it is always
     * length ONIONSKIN_CHALLENGE_LEN. */

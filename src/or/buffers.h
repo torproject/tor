@@ -25,6 +25,9 @@ size_t buf_datalen(const buf_t *buf);
 size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);
 
+uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
+size_t buf_get_total_allocation(void);
+
 int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
                 int *socket_error);
 int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
