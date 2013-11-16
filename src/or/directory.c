@@ -1415,12 +1415,23 @@ http_set_address_origin(const char *headers, connection_t *conn)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
     struct in_addr in;
-    if (!tor_inet_aton(fwd, &in) || is_internal_IP(ntohl(in.s_addr), 0)) {
-      log_debug(LD_DIR, "Ignoring unrecognized or internal IP %s",
+    if (!tor_inet_aton(fwd, &in)) {
+      log_debug(LD_DIR, "Ignoring unrecognized IP %s",
                 escaped(fwd));
       tor_free(fwd);
       return;
     }
+
+    tor_addr_t toraddr;
+    toraddr.family = AF_INET;
+    toraddr.addr.in_addr = in;
+
+    if (tor_addr_is_internal(&toraddr,0)) {
+      log_debug(LD_DIR, "Ignoring local IP %s", escaped(fwd));
+      tor_free(fwd);
+      return;
+    }
+
     tor_free(conn->address);
     conn->address = tor_strdup(fwd);
     tor_free(fwd);

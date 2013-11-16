@@ -214,7 +214,6 @@ int tor_addr_port_parse(int severity, const char *addrport,
 int tor_addr_hostname_is_local(const char *name);
 
 /* IPv4 helpers */
-int is_internal_IP(uint32_t ip, int for_listening);
 int addr_port_lookup(int severity, const char *addrport, char **address,
                     uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,

@@ -1421,19 +1421,6 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
  * XXXX024 IPv6 deprecate some of these.
  */
 
-/** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
- * or reserved for local networks by RFC 1918.
- */
-int
-is_internal_IP(uint32_t ip, int for_listening)
-{
-  tor_addr_t myaddr;
-  myaddr.family = AF_INET;
-  myaddr.addr.in_addr.s_addr = htonl(ip);
-
-  return tor_addr_is_internal(&myaddr, for_listening);
-}
-
 /** Given an address of the form "ip:port", try to divide it into its
  * ip and port portions, setting *<b>address_out</b> to a newly
  * allocated string holding the address portion and *<b>port_out</b>

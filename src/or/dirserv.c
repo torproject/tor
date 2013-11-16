@@ -533,7 +533,12 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
              ri->address);
     return -1;
   }
-  if (is_internal_IP(ntohl(iaddr.s_addr), 0)) {
+
+  tor_addr_t toraddr;
+  toraddr.family = AF_INET;
+  toraddr.addr.in_addr = iaddr;
+
+  if (tor_addr_is_internal(&toraddr, 0)) {
     log_info(LD_DIRSERV,
              "Router %s published internal IP address '%s'. Refusing.",
              router_describe(ri), ri->address);
