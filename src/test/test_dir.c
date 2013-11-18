@@ -1248,7 +1248,6 @@ test_a_networkstatus(
   /* Parse certificates and keys. */
   cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
   test_assert(cert1);
-  test_assert(cert1->is_cross_certified);
   cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2, NULL);
   test_assert(cert2);
   cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);

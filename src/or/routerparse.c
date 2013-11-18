@@ -386,7 +386,7 @@ static token_rule_t dir_footer_token_table[] = {
   T1("dir-key-published",K_DIR_KEY_PUBLISHED,        CONCAT_ARGS, NO_OBJ),   \
   T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
   T1("dir-signing-key",  K_DIR_SIGNING_KEY,          NO_ARGS,     NEED_KEY ),\
-  T01("dir-key-crosscert", K_DIR_KEY_CROSSCERT,       NO_ARGS,    NEED_OBJ ),\
+  T1("dir-key-crosscert", K_DIR_KEY_CROSSCERT,       NO_ARGS,     NEED_OBJ ),\
   T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,                       \
                                                      NO_ARGS,     NEED_OBJ), \
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
@@ -1728,7 +1728,6 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
       log_debug(LD_DIR, "We already checked the signature on this "
                 "certificate; no need to do so again.");
       found = 1;
-      cert->is_cross_certified = old_cert->is_cross_certified;
     }
   }
   if (!found) {
@@ -1737,18 +1736,14 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
       goto err;
     }
 
-    if ((tok = find_opt_by_keyword(tokens, K_DIR_KEY_CROSSCERT))) {
-      /* XXXX Once all authorities generate cross-certified certificates,
-       * make this field mandatory. */
-      if (check_signature_token(cert->cache_info.identity_digest,
-                                DIGEST_LEN,
-                                tok,
-                                cert->signing_key,
-                                CST_NO_CHECK_OBJTYPE,
-                                "key cross-certification")) {
-        goto err;
-      }
-      cert->is_cross_certified = 1;
+    tok = find_by_keyword(tokens, K_DIR_KEY_CROSSCERT);
+    if (check_signature_token(cert->cache_info.identity_digest,
+                              DIGEST_LEN,
+                              tok,
+                              cert->signing_key,
+                              CST_NO_CHECK_OBJTYPE,
+                              "key cross-certification")) {
+      goto err;
     }
   }
 

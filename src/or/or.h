@@ -2670,9 +2670,6 @@ typedef struct authority_cert_t {
   uint32_t addr;
   /** This authority's directory port. */
   uint16_t dir_port;
-  /** True iff this certificate was cross-certified by signing the identity
-   * key with the signing key. */
-  uint8_t is_cross_certified;
 } authority_cert_t;
 
 /** Bitfield enum type listing types of information that directory authorities
