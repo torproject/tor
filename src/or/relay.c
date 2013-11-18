@@ -2222,7 +2222,6 @@ cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
   /*XXXX This may be obsoleted by inserted_time */
   if ((get_options()->CellStatistics ||
       get_options()->TestingEnableCellStatsEvent) && use_stats) {
-    struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
     if (!it_pool)
