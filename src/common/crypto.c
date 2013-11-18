@@ -318,10 +318,16 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_engine("3DES-CBC", ENGINE_get_cipher_engine(NID_des_ede3_cbc));
       log_engine("AES-128-ECB", ENGINE_get_cipher_engine(NID_aes_128_ecb));
       log_engine("AES-128-CBC", ENGINE_get_cipher_engine(NID_aes_128_cbc));
+#ifdef NID_aes_128_ctr
       log_engine("AES-128-CTR", ENGINE_get_cipher_engine(NID_aes_128_ctr));
+#endif
+#ifdef NID_aes_128_gcm
       log_engine("AES-128-GCM", ENGINE_get_cipher_engine(NID_aes_128_gcm));
+#endif
       log_engine("AES-256-CBC", ENGINE_get_cipher_engine(NID_aes_256_cbc));
+#ifdef NID_aes_256_gcm
       log_engine("AES-256-GCM", ENGINE_get_cipher_engine(NID_aes_256_gcm));
+#endif
 
 #endif
     } else {
