@@ -1737,8 +1737,6 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     }
 
     tok = find_by_keyword(tokens, K_DIR_KEY_CROSSCERT);
-    /* XXXX Once all authorities generate cross-certified certificates,
-     * make this field mandatory. */
     if (check_signature_token(cert->cache_info.identity_digest,
                               DIGEST_LEN,
                               tok,
