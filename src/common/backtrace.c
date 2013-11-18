@@ -1,13 +1,14 @@
 /* Copyright (c) 2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define __USE_GNU
+#define _GNU_SOURCE 1
+
 #include "orconfig.h"
 #include "backtrace.h"
 #include "compat.h"
 #include "util.h"
 #include "torlog.h"
-
-#define __USE_GNU
 
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
