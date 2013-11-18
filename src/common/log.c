@@ -87,12 +87,12 @@ should_log_function_name(log_domain_mask_t domain, int severity)
     case LOG_DEBUG:
     case LOG_INFO:
       /* All debugging messages occur in interesting places. */
-      return 1;
+      return (domain & LD_NOFUNCNAME) == 0;
     case LOG_NOTICE:
     case LOG_WARN:
     case LOG_ERR:
       /* We care about places where bugs occur. */
-      return (domain == LD_BUG);
+      return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
     default:
       /* Call assert, not tor_assert, since tor_assert calls log on failure. */
       assert(0); return 0;
@@ -441,6 +441,126 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   va_start(ap,format);
   logv(severity, domain, NULL, NULL, format, ap);
   va_end(ap);
+}
+
+/** Maximum number of fds that will get notifications if we crash */
+#define MAX_SIGSAFE_FDS 8
+/** Array of fds to log crash-style warnings to. */
+static int sigsafe_log_fds[MAX_SIGSAFE_FDS] = { STDERR_FILENO };
+/** The number of elements used in sigsafe_log_fds */
+static int n_sigsafe_log_fds = 1;
+
+/** Write <b>s</b> to each element of sigsafe_log_fds. Return 0 on success, -1
+ * on failure. */
+static int
+tor_log_err_sigsafe_write(const char *s)
+{
+  int i;
+  ssize_t r;
+  size_t len = strlen(s);
+  int err = 0;
+  for (i=0; i < n_sigsafe_log_fds; ++i) {
+    r = write(sigsafe_log_fds[i], s, len);
+    err += (r != (ssize_t)len);
+  }
+  return err ? -1 : 0;
+}
+
+/** Given a list of string arguments ending with a NULL, writes them
+ * to our logs and to stderr (if possible).  This function is safe to call
+ * from within a signal handler. */
+void
+tor_log_err_sigsafe(const char *m, ...)
+{
+  va_list ap;
+  const char *x;
+  char timebuf[32];
+  time_t now = time(NULL);
+
+  if (!m)
+    return;
+  if (log_time_granularity >= 2000) {
+    int g = log_time_granularity / 1000;
+    now -= now % g;
+  }
+  timebuf[0] = '\0';
+  format_dec_number_sigsafe(now, timebuf, sizeof(timebuf));
+  tor_log_err_sigsafe_write("\n=========================================="
+                             "================== T=");
+  tor_log_err_sigsafe_write(timebuf);
+  tor_log_err_sigsafe_write("\n");
+  tor_log_err_sigsafe_write(m);
+  va_start(ap, m);
+  while ((x = va_arg(ap, const char*))) {
+    tor_log_err_sigsafe_write(x);
+  }
+  va_end(ap);
+}
+
+/** Set *<b>out</b> to a pointer to an array of the fds to log errors to from
+ * inside a signal handler. Return the number of elements in the array. */
+int
+tor_log_get_sigsafe_err_fds(const int **out)
+{
+  *out = sigsafe_log_fds;
+  return n_sigsafe_log_fds;
+}
+
+/** Helper function; return true iff the <b>n</b>-element array <b>array</b>
+ * contains <b>item</b>. */
+static int
+int_array_contains(const int *array, int n, int item)
+{
+  int j;
+  for (j = 0; j < n; ++j) {
+    if (array[j] == item)
+      return 1;
+  }
+  return 0;
+}
+
+/** Function to call whenever the list of logs changes to get ready to log
+ * from signal handlers. */
+void
+tor_log_update_sigsafe_err_fds(void)
+{
+  const logfile_t *lf;
+  int found_real_stderr = 0;
+
+  LOCK_LOGS();
+  /* Reserve the first one for stderr. This is safe because when we daemonize,
+   * we dup2 /dev/null to stderr, */
+  sigsafe_log_fds[0] = STDERR_FILENO;
+  n_sigsafe_log_fds = 1;
+
+  for (lf = logfiles; lf; lf = lf->next) {
+     /* Don't try callback to the control port, or syslogs: We can't
+      * do them from a signal handler. Don't try stdout: we always do stderr.
+      */
+    if (lf->is_temporary || lf->is_syslog ||
+        lf->callback || lf->seems_dead || lf->fd < 0)
+      continue;
+    if (lf->severities->masks[SEVERITY_MASK_IDX(LOG_ERR)] &
+        (LD_BUG|LD_GENERAL)) {
+      if (lf->fd == STDERR_FILENO)
+        found_real_stderr = 1;
+      /* Avoid duplicates */
+      if (int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, lf->fd))
+        continue;
+      sigsafe_log_fds[n_sigsafe_log_fds++] = lf->fd;
+      if (n_sigsafe_log_fds == MAX_SIGSAFE_FDS)
+        break;
+    }
+  }
+
+  if (!found_real_stderr &&
+      int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, STDOUT_FILENO)) {
+    /* Don't use a virtual stderr when we're also logging to stdout. */
+    assert(n_sigsafe_log_fds >= 2); /* Don't use assert inside log functions*/
+    sigsafe_log_fds[0] = sigsafe_log_fds[--n_sigsafe_log_fds];
+  }
+
+  UNLOCK_LOGS();
 }
 
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
@@ -1140,22 +1260,6 @@ get_min_log_level(void)
         min = i;
   }
   return min;
-}
-
-/** Return the fd of a file log that is receiving ERR messages, or -1 if
- * no such log exists. */
-int
-get_err_logging_fd(void)
-{
-  const logfile_t *lf;
-  for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->is_temporary || lf->is_syslog || !lf->filename ||
-        lf->callback || lf->seems_dead || lf->fd < 0)
-      continue;
-    if (lf->severities->masks[LOG_ERR] & LD_GENERAL)
-      return lf->fd;
-  }
-  return -1;
 }
 
 /** Switch all logs to output at most verbose level. */

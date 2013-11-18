@@ -13,6 +13,7 @@
 #define MAIN_PRIVATE
 #include "or.h"
 #include "addressmap.h"
+#include "backtrace.h"
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -2330,13 +2331,14 @@ handle_signals(int is_parent)
 int
 tor_init(int argc, char *argv[])
 {
-  char buf[256];
+  char progname[256];
   int quiet = 0;
+
   time_of_process_start = time(NULL);
   init_connection_lists();
   /* Have the log set up with our application name. */
-  tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
-  log_set_application_name(buf);
+  tor_snprintf(progname, sizeof(progname), "Tor %s", get_version());
+  log_set_application_name(progname);
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -2838,6 +2840,8 @@ tor_main(int argc, char *argv[])
     if (setdeppolicy) setdeppolicy(1); /* PROCESS_DEP_ENABLE */
   }
 #endif
+
+  configure_backtrace_handler(get_version());
 
   update_approx_time(time(NULL));
   tor_threads_init();

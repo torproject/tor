@@ -1621,6 +1621,8 @@ extern struct testcase_t options_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t controller_event_tests[];
+extern struct testcase_t logging_tests[];
+extern struct testcase_t backtrace_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1630,6 +1632,7 @@ static struct testgroup_t testgroups[] = {
   { "crypto/", crypto_tests },
   { "container/", container_tests },
   { "util/", util_tests },
+  { "util/logging/", logging_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "dir/", dir_tests },

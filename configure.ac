@@ -326,6 +326,8 @@ dnl exports strlcpy without defining it in a header.
 AC_CHECK_FUNCS(
         _NSGetEnviron \
         accept4 \
+        backtrace \
+        backtrace_symbols_fd \
         clock_gettime \
         flock \
         ftime \
@@ -343,6 +345,7 @@ AC_CHECK_FUNCS(
         memmem \
         prctl \
         rint \
+        sigaction \
         socketpair \
         strlcat \
         strlcpy \
@@ -629,6 +632,9 @@ if test x$enable_linker_hardening != xno; then
     TOR_CHECK_LDFLAGS(-z relro -z now, "$all_ldflags_for_check", "$all_libs_for_check")
 fi
 
+# For backtrace support
+TOR_CHECK_LDFLAGS(-rdynamic)
+
 dnl ------------------------------------------------------
 dnl Now see if we have a -fomit-frame-pointer compiler option.
 
@@ -841,6 +847,7 @@ dnl These headers are not essential
 AC_CHECK_HEADERS(
         arpa/inet.h \
         crt_externs.h \
+        execinfo.h \
         grp.h \
         ifaddrs.h \
         inttypes.h \
@@ -968,6 +975,8 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(pid_t)
 
 AC_CHECK_TYPES([uint, u_char, ssize_t])
+
+AC_PC_FROM_UCONTEXT([/bin/true])
 
 dnl used to include sockaddr_storage, but everybody has that.
 AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,

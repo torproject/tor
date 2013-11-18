@@ -1161,8 +1161,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     goto rollback;
   }
 
-  sandbox_set_debugging_fd(get_err_logging_fd());
-
  commit:
   r = 0;
   if (logs_marked) {
@@ -1172,6 +1170,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     add_callback_log(severity, control_event_logmsg);
     control_adjust_event_log_severity();
     tor_free(severity);
+    tor_log_update_sigsafe_err_fds();
   }
   if (get_min_log_level() >= LOG_INFO &&
       get_min_log_level() != old_min_log_level) {
