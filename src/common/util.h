@@ -48,13 +48,13 @@
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) STMT_BEGIN                                     \
-    if (PREDICT_UNLIKELY(!(expr))) {                                    \
-      log_err(LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.",      \
-          SHORT_FILE__, __LINE__, __func__, #expr);                     \
-      fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
-              SHORT_FILE__, __LINE__, __func__, #expr);                 \
-      abort();                                                          \
-    } STMT_END
+  if (PREDICT_UNLIKELY(!(expr))) {                                      \
+    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
+    abort();                                                            \
+  } STMT_END
+
+void tor_assertion_failed_(const char *fname, unsigned int line,
+                           const char *func, const char *expr);
 
 /* If we're building with dmalloc, we want all of our memory allocation
  * functions to take an extra file/line pair of arguments.  If not, not.
@@ -524,7 +524,8 @@ int32_t tor_weak_random_range(tor_weak_rng_t *rng, int32_t top);
  * <b>n</b> */
 #define tor_weak_random_one_in_n(rng, n) (0==tor_weak_random_range((rng),(n)))
 
-int format_hex_number_sigsafe(unsigned int x, char *buf, int max_len);
+int format_hex_number_sigsafe(unsigned long x, char *buf, int max_len);
+int format_dec_number_sigsafe(unsigned long x, char *buf, int max_len);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */

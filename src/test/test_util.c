@@ -2779,6 +2779,56 @@ test_util_format_hex_number(void *ptr)
 }
 
 /**
+ * Test for format_hex_number_sigsafe()
+ */
+
+static void
+test_util_format_dec_number(void *ptr)
+{
+  int i, len;
+  char buf[33];
+  const struct {
+    const char *str;
+    unsigned int x;
+  } test_data[] = {
+    {"0", 0},
+    {"1", 1},
+    {"1234", 1234},
+    {"12345678", 12345678},
+    {"99999999",  99999999},
+    {"100000000", 100000000},
+    {"4294967295", 4294967295u},
+#if UINT_MAX > 0xffffffff
+    {"18446744073709551615", 18446744073709551615u },
+#endif
+    {NULL, 0}
+  };
+
+  (void)ptr;
+
+  for (i = 0; test_data[i].str != NULL; ++i) {
+    len = format_dec_number_sigsafe(test_data[i].x, buf, sizeof(buf));
+    test_neq(len, 0);
+    test_eq(len, strlen(buf));
+    test_streq(buf, test_data[i].str);
+
+    len = format_dec_number_sigsafe(test_data[i].x, buf,
+                                    (int)(strlen(test_data[i].str) + 1));
+    test_eq(len, strlen(buf));
+    test_streq(buf, test_data[i].str);
+  }
+
+  test_eq(4, format_dec_number_sigsafe(7331, buf, 5));
+  test_streq(buf, "7331");
+  test_eq(0, format_dec_number_sigsafe(7331, buf, 4));
+  test_eq(1, format_dec_number_sigsafe(0, buf, 2));
+  test_eq(0, format_dec_number_sigsafe(0, buf, 1));
+
+ done:
+  return;
+}
+
+/**
  * Test that we can properly format a Windows command line
  */
 static void
@@ -3598,6 +3648,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
   UTIL_TEST(format_hex_number, 0),
+  UTIL_TEST(format_dec_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
   UTIL_TEST(split_lines, 0),
   UTIL_TEST(n_bits_set, 0),

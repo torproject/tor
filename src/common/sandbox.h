@@ -153,9 +153,6 @@ int sandbox_getaddrinfo(const char *name, const char *servname,
   ((void)(name))
 #endif
 
-/** Use <b>fd</b> to log non-survivable sandbox violations. */
-void sandbox_set_debugging_fd(int fd);
-
 #ifdef USE_LIBSECCOMP
 /** Returns a registered protected string used with the sandbox, given that
  * it matches the parameter.
