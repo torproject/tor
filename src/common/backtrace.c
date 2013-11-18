@@ -24,7 +24,7 @@
 
 #ifdef HAVE_CYGWIN_SIGNAL_H
 #include <cygwin/signal.h>
-#elif HAVE_SYS_UCONTEXT_H
+#elif defined(HAVE_SYS_UCONTEXT_H)
 #include <sys/ucontext.h>
 #elif defined(HAVE_UCONTEXT_H)
 #include <ucontext.h>
