@@ -10,7 +10,6 @@
 #include "backtrace.h"
 #include "torlog.h"
 
-
 /* -1: no crash.
  *  0: crash with a segmentation fault.
  *  1x: crash with an assertion failure. */
