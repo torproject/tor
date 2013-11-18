@@ -307,12 +307,22 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
                  " setting default ciphers.");
         ENGINE_set_default(e, ENGINE_METHOD_ALL);
       }
+      /* Log, if available, the intersection of the set of algorithms
+         used by Tor and the set of algorithms available in the engine */
       log_engine("RSA", ENGINE_get_default_RSA());
       log_engine("DH", ENGINE_get_default_DH());
+      log_engine("ECDH", ENGINE_get_default_ECDH());
+      log_engine("ECDSA", ENGINE_get_default_ECDSA());
       log_engine("RAND", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
-      log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
-      log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+      log_engine("3DES-CBC", ENGINE_get_cipher_engine(NID_des_ede3_cbc));
+      log_engine("AES-128-ECB", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+      log_engine("AES-128-CBC", ENGINE_get_cipher_engine(NID_aes_128_cbc));
+      log_engine("AES-128-CTR", ENGINE_get_cipher_engine(NID_aes_128_ctr));
+      log_engine("AES-128-GCM", ENGINE_get_cipher_engine(NID_aes_128_gcm));
+      log_engine("AES-256-CBC", ENGINE_get_cipher_engine(NID_aes_256_cbc));
+      log_engine("AES-256-GCM", ENGINE_get_cipher_engine(NID_aes_256_gcm));
+
 #endif
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");

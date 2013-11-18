@@ -1,0 +1,4 @@
+  o Minor features:
+    - When logging OpenSSL engine status at startup, log the status of
+      more engines. Fixes ticket 10043; patch from Joshua Datko.
+
