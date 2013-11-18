@@ -21,11 +21,13 @@
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#ifdef HAVE_UCONTEXT_H
-#include <ucontext.h>
-#endif
-#ifdef HAVE_SYS_UCONTEXT_H
+
+#ifdef HAVE_CYGWIN_SIGNAL_H
+#include <cygwin/signal.h>
+#elif HAVE_SYS_UCONTEXT_H
 #include <sys/ucontext.h>
+#elif defined(HAVE_UCONTEXT_H)
+#include <ucontext.h>
 #endif
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
