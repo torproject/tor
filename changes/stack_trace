@@ -1,6 +1,8 @@
   o Major features:
-    - On some platforms (currently, recent OSX versions, and glibc-based
-      platforms that support the ELF format), Tor can now dump
-      stack traces when an assertion fails. By default, traces are dumped
-      to stderr, and to a stack_dump file in the DataDirectory. 
+    - On some platforms (currently: recent OSX versions, glibc-based
+      platforms that support the ELF format, and a few other
+      Unix-like operating systems), Tor can now dump stack traces
+      when a crash occurs or an assertion fails. By default, traces
+      are dumped to stderr (if possible) and to any logs that are
+      reporting errors.
 
