@@ -13,9 +13,9 @@
 #include "crypto_curve25519.h"
 #endif
 
-extern const char AUTHORITY_SIGNKEY_1[];
-extern const char AUTHORITY_SIGNKEY_1_DIGEST[];
-extern const char AUTHORITY_SIGNKEY_1_DIGEST256[];
+extern const char AUTHORITY_SIGNKEY_3[];
+extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
+extern const char AUTHORITY_SIGNKEY_A_DIGEST256[];
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
@@ -519,20 +519,20 @@ test_crypto_digests(void)
 
   k = crypto_pk_new();
   test_assert(k);
-  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_1, -1);
+  r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3, -1);
   test_assert(!r);
 
   r = crypto_pk_get_digest(k, digest);
   test_assert(r == 0);
   test_memeq(hex_str(digest, DIGEST_LEN),
-             AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
+             AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
 
   r = crypto_pk_get_all_digests(k, &pkey_digests);
 
   test_memeq(hex_str(pkey_digests.d[DIGEST_SHA1], DIGEST_LEN),
-             AUTHORITY_SIGNKEY_1_DIGEST, HEX_DIGEST_LEN);
+             AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
   test_memeq(hex_str(pkey_digests.d[DIGEST_SHA256], DIGEST256_LEN),
-             AUTHORITY_SIGNKEY_1_DIGEST256, HEX_DIGEST256_LEN);
+             AUTHORITY_SIGNKEY_A_DIGEST256, HEX_DIGEST256_LEN);
  done:
   crypto_pk_free(k);
 }
