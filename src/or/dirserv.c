@@ -1957,6 +1957,10 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
 
   /* Now, fill in the arrays. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
+    if (options->BridgeAuthoritativeDir &&
+        node->ri &&
+        node->ri->purpose != ROUTER_PURPOSE_BRIDGE)
+      continue;
     if (router_counts_toward_thresholds(node, now, omit_as_sybil,
                                         require_mbw)) {
       routerinfo_t *ri = node->ri;
@@ -2069,6 +2073,21 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
   tor_free(bandwidths_excluding_exits_kb);
   tor_free(tks);
   tor_free(wfus);
+}
+
+/* Use dirserv_compute_performance_thresholds() to compute the thresholds
+ * for the status flags, specifically for bridges.
+ *
+ * This is only called by a Bridge Authority from
+ * networkstatus_getinfo_by_purpose().
+ */
+void
+dirserv_compute_bridge_flag_thresholds(routerlist_t *rl)
+{
+
+  digestmap_t *omit_as_sybil = digestmap_new();
+  dirserv_compute_performance_thresholds(rl, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 }
 
 /** Measured bandwidth cache entry */

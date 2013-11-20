@@ -2171,9 +2171,17 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   char *status = networkstatus_getinfo_by_purpose("bridge", now);
   const or_options_t *options = get_options();
   char *fname = NULL;
+  char *thresholds = NULL, *thresholds_and_status = NULL;
+  routerlist_t *rl = router_get_routerlist();
+  dirserv_compute_bridge_flag_thresholds(rl);
+  thresholds = dirserv_get_flag_thresholds_line();
+  tor_asprintf(&thresholds_and_status, "flag-thresholds %s\n%s",
+               thresholds, status);
   tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
                options->DataDirectory);
-  write_str_to_file(fname,status,0);
+  write_str_to_file(fname,thresholds_and_status,0);
+  tor_free(thresholds);
+  tor_free(thresholds_and_status);
   tor_free(fname);
   tor_free(status);
 }

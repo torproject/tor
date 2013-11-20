@@ -1,0 +1,6 @@
+  o Minor Feature
+
+    - Assign status flags to bridges based on thresholds calculated
+      over all bridges. Fixes bug 9859.
+    - Add threshold cutoffs to the networkstatus document created by
+      the Bridge Authority. Fixes bug 1117.
