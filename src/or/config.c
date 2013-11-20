@@ -2616,10 +2616,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
   }
 
-  if (options->MaxMemInCellQueues < (500 << 20)) {
-    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 500 MB for now. "
+  if (options->MaxMemInCellQueues < (256 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 256 MB for now. "
              "Ideally, have it as large as you can afford.");
-    options->MaxMemInCellQueues = (500 << 20);
+    options->MaxMemInCellQueues = (256 << 20);
   }
 
   options->AllowInvalid_ = 0;
