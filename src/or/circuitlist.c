@@ -1373,7 +1373,8 @@ marked_circuit_free_cells(circuit_t *circ)
     cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_conn_cells);
 }
 
-/** DOCDOC */
+/** Aggressively free buffer contents on all the buffers of all streams in the
+ * list starting at <b>stream</b>. Return the number of bytes recovered. */
 static size_t
 marked_circuit_streams_free_bytes(edge_connection_t *stream)
 {
@@ -1392,7 +1393,8 @@ marked_circuit_streams_free_bytes(edge_connection_t *stream)
   return result;
 }
 
-/** DOCDOC */
+/** Aggressively free buffer contents on all the buffers of all streams on
+ * circuit <b>c</b>. Return the number of bytes recovered. */
 static size_t
 marked_circuit_free_stream_bytes(circuit_t *c)
 {
@@ -1439,7 +1441,9 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   return age;
 }
 
-/** DOCDOC*/
+/** Return the age in milliseconds of the oldest buffer chunk on any stream in
+ * the linked list <b>stream</b>, where age is taken in milliseconds before
+ * the time <b>now</b> (in truncated milliseconds since the epoch). */
 static uint32_t
 circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
 {
@@ -1461,8 +1465,9 @@ circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
   return age;
 }
 
-/** DOCDOC
- */
+/** Return the age in milliseconds of the oldest buffer chunk on any stream
+ * attached to the circuit <b>c</b>, where age is taken in milliseconds before
+ * the time <b>now</b> (in truncated milliseconds since the epoch). */
 static uint32_t
 circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 {
@@ -1475,7 +1480,9 @@ circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
   }
 }
 
-/** DATA */
+/** Return the age of the oldest cell or stream buffer chunk on the circuit
+ * <b>c</b>, where age is taken in milliseconds before the time <b>now</b> (in
+ * truncated milliseconds since the epoch). */
 static uint32_t
 circuit_max_queued_item_age(const circuit_t *c, uint32_t now)
 {
