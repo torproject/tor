@@ -3075,9 +3075,8 @@ typedef struct {
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
 
-  uint64_t MaxMemInCellQueues; /**< If we have more memory than this allocated
-                                * for circuit cell queues, run the OOM handler
-                                */
+  uint64_t MaxMemInQueues; /**< If we have more memory than this allocated
+                            * for queues and buffers, run the OOM handler */
 
   /** @name port booleans
    *

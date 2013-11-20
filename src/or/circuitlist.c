@@ -1512,11 +1512,11 @@ circuits_compare_by_oldest_queued_item_(const void **a_, const void **b_)
     return -1;
 }
 
-#define FRACTION_OF_CELLS_TO_RETAIN_ON_OOM 0.90
+#define FRACTION_OF_DATA_TO_RETAIN_ON_OOM 0.90
 
 /** We're out of memory for cells, having allocated <b>current_allocation</b>
  * bytes' worth.  Kill the 'worst' circuits until we're under
- * FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM of our maximum usage. */
+ * FRACTION_OF_DATA_TO_RETAIN_ON_OOM of our maximum usage. */
 void
 circuits_handle_oom(size_t current_allocation)
 {
@@ -1530,11 +1530,11 @@ circuits_handle_oom(size_t current_allocation)
   uint32_t now_ms;
   log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
              "over-long queues. (This behavior is controlled by "
-             "MaxMemInCellQueues.)");
+             "MaxMemInQueues.)");
 
   {
-    size_t mem_target = (size_t)(get_options()->MaxMemInCellQueues *
-                                 FRACTION_OF_CELLS_TO_RETAIN_ON_OOM);
+    size_t mem_target = (size_t)(get_options()->MaxMemInQueues *
+                                 FRACTION_OF_DATA_TO_RETAIN_ON_OOM);
     if (current_allocation <= mem_target)
       return;
     mem_to_recover = current_allocation - mem_target;
