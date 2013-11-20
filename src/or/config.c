@@ -3670,10 +3670,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
              "EntryNodes will be ignored.");
 
-  if (options->MaxMemInQueues < (500 << 20)) {
-    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 500 MB for now. "
+  if (options->MaxMemInQueues < (256 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 256 MB for now. "
              "Ideally, have it as large as you can afford.");
-    options->MaxMemInQueues = (500 << 20);
+    options->MaxMemInQueues = (256 << 20);
   }
 
   options->_AllowInvalid = 0;
