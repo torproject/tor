@@ -1414,20 +1414,11 @@ http_set_address_origin(const char *headers, connection_t *conn)
   if (!fwd)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
-    struct in_addr in;
-    if (!tor_inet_aton(fwd, &in)) {
-      log_debug(LD_DIR, "Ignoring unrecognized IP %s",
-                escaped(fwd));
-      tor_free(fwd);
-      return;
-    }
-
     tor_addr_t toraddr;
-    toraddr.family = AF_INET;
-    toraddr.addr.in_addr = in;
+    tor_addr_parse(&toraddr,fwd);
 
     if (tor_addr_is_internal(&toraddr,0)) {
-      log_debug(LD_DIR, "Ignoring local IP %s", escaped(fwd));
+      log_debug(LD_DIR, "Ignoring local/internal IP %s", escaped(fwd));
       tor_free(fwd);
       return;
     }

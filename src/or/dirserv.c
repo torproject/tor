@@ -535,8 +535,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   }
 
   tor_addr_t toraddr;
-  toraddr.family = AF_INET;
-  toraddr.addr.in_addr = iaddr;
+  tor_addr_from_in(&toraddr,&iaddr);
 
   if (tor_addr_is_internal(&toraddr, 0)) {
     log_info(LD_DIRSERV,

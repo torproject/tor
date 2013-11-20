@@ -2104,8 +2104,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
              "local interface. Using that.", fmt_addr32(addr));
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else { /* resolved hostname into addr */
-      myaddr.family = AF_INET;
-      myaddr.addr.in_addr.s_addr = htonl(addr);
+      tor_addr_from_ipv4h(&myaddr, addr);
 
       if (!explicit_hostname &&
           tor_addr_is_internal(&myaddr, 0)) {
@@ -2142,8 +2141,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
    * out if it is and we don't want that.
    */
 
-  myaddr.family = AF_INET;
-  myaddr.addr.in_addr.s_addr = htonl(addr);
+  tor_addr_from_ipv4h(&myaddr,addr);
 
   addr_string = tor_dup_ip(addr);
   if (tor_addr_is_internal(&myaddr, 0)) {
