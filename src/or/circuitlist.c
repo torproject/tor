@@ -1373,6 +1373,36 @@ marked_circuit_free_cells(circuit_t *circ)
     cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_conn_cells);
 }
 
+/** DOCDOC */
+static size_t
+marked_circuit_streams_free_bytes(edge_connection_t *stream)
+{
+  size_t result = 0;
+  for ( ; stream; stream = stream->next_stream) {
+    connection_t *conn = TO_CONN(stream);
+    if (conn->inbuf) {
+      result += buf_allocation(conn->inbuf);
+      buf_clear(conn->inbuf);
+    }
+    if (conn->outbuf) {
+      result += buf_allocation(conn->outbuf);
+      buf_clear(conn->outbuf);
+    }
+  }
+  return result;
+}
+
+/** DOCDOC */
+static size_t
+marked_circuit_free_stream_bytes(circuit_t *c)
+{
+  if (CIRCUIT_IS_ORIGIN(c)) {
+    return marked_circuit_streams_free_bytes(TO_ORIGIN_CIRCUIT(c)->p_streams);
+  } else {
+    return marked_circuit_streams_free_bytes(TO_OR_CIRCUIT(c)->n_streams);
+  }
+}
+
 /** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
 static size_t
 n_cells_in_circ_queues(const circuit_t *c)
@@ -1486,7 +1516,8 @@ circuits_handle_oom(size_t current_allocation)
   /* Let's hope there's enough slack space for this allocation here... */
   smartlist_t *circlist = smartlist_new();
   circuit_t *circ;
-  size_t n_cells_removed=0, n_cells_to_remove;
+  size_t mem_to_recover;
+  size_t mem_recovered=0;
   int n_circuits_killed=0;
   struct timeval now;
   uint32_t now_ms;
@@ -1497,11 +1528,9 @@ circuits_handle_oom(size_t current_allocation)
   {
     size_t mem_target = (size_t)(get_options()->MaxMemInCellQueues *
                                  FRACTION_OF_CELLS_TO_RETAIN_ON_OOM);
-    size_t mem_to_recover;
     if (current_allocation <= mem_target)
       return;
     mem_to_recover = current_allocation - mem_target;
-    n_cells_to_remove = CEIL_DIV(mem_to_recover, packed_cell_mem_cost());
   }
 
   tor_gettimeofday_cached(&now);
@@ -1522,21 +1551,26 @@ circuits_handle_oom(size_t current_allocation)
    * them, and reclaim their storage aggressively. */
   SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
     size_t n = n_cells_in_circ_queues(circ);
+    size_t freed;
     if (! circ->marked_for_close) {
       circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     }
     marked_circuit_free_cells(circ);
+    freed = marked_circuit_free_stream_bytes(circ);
 
     ++n_circuits_killed;
-    n_cells_removed += n;
-    if (n_cells_removed >= n_cells_to_remove)
+
+    mem_recovered += n * packed_cell_mem_cost();
+    mem_recovered += freed;
+
+    if (mem_recovered >= mem_to_recover)
       break;
   } SMARTLIST_FOREACH_END(circ);
 
   clean_cell_pool(); /* In case this helps. */
 
   log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
-             U64_PRINTF_ARG(n_cells_removed * packed_cell_mem_cost()),
+             U64_PRINTF_ARG(mem_recovered),
              n_circuits_killed);
 
   smartlist_free(circlist);
