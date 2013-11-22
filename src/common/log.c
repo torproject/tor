@@ -474,7 +474,7 @@ tor_log_err_sigsafe(const char *m, ...)
 {
   va_list ap;
   const char *x;
-  char timebuf[32];
+  char timebuf[33];
   time_t now = time(NULL);
 
   if (!m)
@@ -483,8 +483,10 @@ tor_log_err_sigsafe(const char *m, ...)
     int g = log_time_granularity / 1000;
     now -= now % g;
   }
-  timebuf[0] = '\0';
-  format_dec_number_sigsafe(now, timebuf, sizeof(timebuf));
+  timebuf[0] = now < 0 ? '-' : ' ';
+  if (now < 0) now = -now;
+  timebuf[1] = '\0';
+  format_dec_number_sigsafe(now, timebuf+1, sizeof(timebuf)-1);
   tor_log_err_sigsafe_write("\n=========================================="
                              "================== T=");
   tor_log_err_sigsafe_write(timebuf);
