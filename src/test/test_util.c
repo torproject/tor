@@ -112,7 +112,6 @@ test_util_write_chunks_to_file(void *arg)
   char *tempname = NULL;
   char *str = NULL;
   int r;
-  int fd = -1;
   struct stat st;
 
   /* These should be two different sizes to ensure the data is different
@@ -155,7 +154,6 @@ test_util_write_chunks_to_file(void *arg)
   tt_int_op(st.st_size, ==, data_str_len);
   test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
-  close(fd);
 
   // assert that the tempfile is removed (should not leave artifacts)
   str = read_file_to_str(tempname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
@@ -187,7 +185,6 @@ test_util_write_chunks_to_file(void *arg)
   tt_int_op(st.st_size, ==, data_str_len);
   test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
-  close(fd);
 
   // assert the tempfile still contains the known string
   str = read_file_to_str(tempname, RFTS_BIN, &st);
@@ -204,8 +201,6 @@ test_util_write_chunks_to_file(void *arg)
   tor_free(str);
   tor_free(data_str);
   tor_free(temp_str);
-  if (fd >= 0)
-    close(fd);
 }
 
 static void
