@@ -731,11 +731,13 @@ test_crypto_aes_iv(void *arg)
   /* Decrypt with the wrong key. */
   decrypted_size = crypto_cipher_decrypt_with_iv(key2, decrypted2, 4095,
                                              encrypted1, encrypted_size);
+  test_eq(decrypted_size, 4095);
   test_memneq(plain, decrypted2, decrypted_size);
   /* Alter the initialization vector. */
   encrypted1[0] += 42;
   decrypted_size = crypto_cipher_decrypt_with_iv(key1, decrypted1, 4095,
                                              encrypted1, encrypted_size);
+  test_eq(decrypted_size, 4095);
   test_memneq(plain, decrypted2, 4095);
   /* Special length case: 1. */
   encrypted_size = crypto_cipher_encrypt_with_iv(key1, encrypted1, 16 + 1,
