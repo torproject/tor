@@ -31,6 +31,7 @@ const char tor_git_revision[] = "";
 #define GEOIP_PRIVATE
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
+#define CIRCUITLIST_PRIVATE
 
 /*
  * Linux doesn't provide lround in math.h by default, but mac os does...
@@ -426,10 +427,12 @@ test_onion_queues(void)
 
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
   test_eq(0, onion_pending_add(circ1, create1));
+  create1 = NULL;
   test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
 
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
   test_eq(0, onion_pending_add(circ2, create2));
+  create2 = NULL;
   test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
 
   test_eq_ptr(circ2, onion_next_task(&onionskin));
@@ -441,11 +444,10 @@ test_onion_queues(void)
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
 
  done:
-  ;
-//  circuit_free(circ1);
-//  circuit_free(circ2);
-  /* and free create1 and create2 */
-  /* XXX leaks everything here */
+  circuit_free(TO_CIRCUIT(circ1));
+  circuit_free(TO_CIRCUIT(circ2));
+  tor_free(create1);
+  tor_free(create2);
 }
 
 static void
