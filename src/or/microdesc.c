@@ -475,7 +475,8 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
                "By my count, I'm at "I64_FORMAT
                ", but I should be at "I64_FORMAT,
                I64_PRINTF_ARG(off), I64_PRINTF_ARG(off_real));
-      off = off_real;
+      if (off_real >= 0)
+        off = off_real;
     }
     if (md->saved_location != SAVED_IN_CACHE) {
       tor_free(md->body);
