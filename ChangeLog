@@ -995,7 +995,7 @@ Changes in version 0.2.4.7-alpha - 2012-12-24
       "FallbackNetworkstatus" option, since we never got it working well
       enough to use it. Closes bug 572.
     - If we have no circuits open, use a relaxed timeout (the
-      95-percentile cutoff) until a circuit succeeds. This heuristic
+      95th-percentile cutoff) until a circuit succeeds. This heuristic
       should allow Tor to succeed at building circuits even when the
       network connection drastically changes. Should help with bug 3443.
 
