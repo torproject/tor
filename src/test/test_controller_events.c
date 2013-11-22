@@ -105,9 +105,10 @@ test_cntev_sum_up_cell_stats(void *arg)
 {
   or_circuit_t *or_circ;
   circuit_t *circ;
-  cell_stats_t *cell_stats;
+  cell_stats_t *cell_stats = NULL;
   (void)arg;
 
+  /* This circuit is fake. */
   or_circ = tor_malloc_zero(sizeof(or_circuit_t));
   or_circ->base_.magic = OR_CIRCUIT_MAGIC;
   or_circ->base_.purpose = CIRCUIT_PURPOSE_OR;
@@ -139,7 +140,8 @@ test_cntev_sum_up_cell_stats(void *arg)
   tt_int_op(1, ==, cell_stats->removed_cells_exitward[CELL_RELAY]);
 
  done:
-  ;
+  tor_free(cell_stats);
+  tor_free(or_circ);
 }
 
 static void
@@ -193,10 +195,10 @@ test_cntev_append_cell_stats(void *arg)
 static void
 test_cntev_format_cell_stats(void *arg)
 {
-  char *event_string;
+  char *event_string = NULL;
   origin_circuit_t *ocirc;
   or_circuit_t *or_circ;
-  cell_stats_t *cell_stats;
+  cell_stats_t *cell_stats = NULL;
   channel_tls_t *n_chan, *p_chan;
   (void)arg;
 
@@ -214,12 +216,14 @@ test_cntev_format_cell_stats(void *arg)
   cell_stats = tor_malloc_zero(sizeof(cell_stats_t));
   format_cell_stats(&event_string, TO_CIRCUIT(ocirc), cell_stats);
   tt_str_op("ID=2 OutboundQueue=3 OutboundConn=1", ==, event_string);
+  tor_free(event_string);
 
   /* Origin circuit had 4 RELAY cells added to its exitward queue. */
   cell_stats->added_cells_exitward[CELL_RELAY] = 4;
   format_cell_stats(&event_string, TO_CIRCUIT(ocirc), cell_stats);
   tt_str_op("ID=2 OutboundQueue=3 OutboundConn=1 OutboundAdded=relay:4",
             ==, event_string);
+  tor_free(event_string);
 
   /* Origin circuit also had 5 CREATE2 cells added to its exitward
    * queue. */
@@ -227,6 +231,7 @@ test_cntev_format_cell_stats(void *arg)
   format_cell_stats(&event_string, TO_CIRCUIT(ocirc), cell_stats);
   tt_str_op("ID=2 OutboundQueue=3 OutboundConn=1 OutboundAdded=relay:4,"
             "create2:5", ==, event_string);
+  tor_free(event_string);
 
   /* Origin circuit also had 7 RELAY cells removed from its exitward queue
    * which together spent 6 msec in the queue. */
@@ -236,6 +241,7 @@ test_cntev_format_cell_stats(void *arg)
   tt_str_op("ID=2 OutboundQueue=3 OutboundConn=1 OutboundAdded=relay:4,"
             "create2:5 OutboundRemoved=relay:7 OutboundTime=relay:6",
             ==, event_string);
+  tor_free(event_string);
 
   p_chan = tor_malloc_zero(sizeof(channel_tls_t));
   p_chan->base_.global_identifier = 2;
@@ -248,17 +254,21 @@ test_cntev_format_cell_stats(void *arg)
   or_circ->base_.n_circ_id = 9;
   or_circ->base_.n_chan = &(n_chan->base_);
 
+  tor_free(cell_stats);
+
   /* OR circuit was idle. */
   cell_stats = tor_malloc_zero(sizeof(cell_stats_t));
   format_cell_stats(&event_string, TO_CIRCUIT(or_circ), cell_stats);
   tt_str_op("InboundQueue=8 InboundConn=2 OutboundQueue=9 OutboundConn=1",
             ==, event_string);
+  tor_free(event_string);
 
   /* OR circuit had 3 RELAY cells added to its appward queue. */
   cell_stats->added_cells_appward[CELL_RELAY] = 3;
   format_cell_stats(&event_string, TO_CIRCUIT(or_circ), cell_stats);
   tt_str_op("InboundQueue=8 InboundConn=2 InboundAdded=relay:3 "
             "OutboundQueue=9 OutboundConn=1", ==, event_string);
+  tor_free(event_string);
 
   /* OR circuit had 7 RELAY cells removed from its appward queue which
    * together spent 6 msec in the queue. */
@@ -270,7 +280,8 @@ test_cntev_format_cell_stats(void *arg)
             "OutboundQueue=9 OutboundConn=1", ==, event_string);
 
  done:
-  ;
+  tor_free(cell_stats);
+  tor_free(event_string);
 }
 
 #define TEST(name, flags)                                               \
