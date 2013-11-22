@@ -2066,8 +2066,10 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     open_flags &= ~O_EXCL;
     new_file->rename_on_close = 1;
   }
+#if O_BINARY != 0
   if (open_flags & O_BINARY)
     new_file->binary = 1;
+#endif
 
   new_file->fd = tor_open_cloexec(open_name, open_flags, mode);
   if (new_file->fd < 0) {
