@@ -1,0 +1,4 @@
+  o Minor bugfixes (build):
+    - Restore the ability to compile Tor with V2_HANDSHAKE_SERVER
+      turned off. Fixes bug 4677; bugfix on 0.2.3.2-alpha. Patch
+      from "piet".
