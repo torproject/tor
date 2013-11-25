@@ -1390,6 +1390,21 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   return NULL;
 }
 
+/** Invoked when a TLS state changes: log the change at severity 'debug' */
+static void
+tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
+{
+  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
+            ssl, SSL_state_string_long(ssl), type, val);
+}
+
+/* Return the name of the negotiated ciphersuite in use on <b>tls</b> */
+const char *
+tor_tls_get_ciphersuite_name(tor_tls_t *tls)
+{
+  return SSL_get_cipher(tls->ssl);
+}
+
 #ifdef V2_HANDSHAKE_SERVER
 
 /* Here's the old V2 cipher list we sent from 0.2.1.1-alpha up to
@@ -1456,13 +1471,6 @@ prune_v2_cipher_list(void)
   *outp = 0;
 
   v2_cipher_list_pruned = 1;
-}
-
-/* Return the name of the negotiated ciphersuite in use on <b>tls</b> */
-const char *
-tor_tls_get_ciphersuite_name(tor_tls_t *tls)
-{
-  return SSL_get_cipher(tls->ssl);
 }
 
 /** Examine the client cipher list in <b>ssl</b>, and determine what kind of
@@ -1563,56 +1571,6 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
   return tor_tls_classify_client_ciphers(ssl, session->ciphers) >= CIPHERS_V2;
 }
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
-/** Callback to get invoked on a server after we've read the list of ciphers
- * the client supports, but before we pick our own ciphersuite.
- *
- * We can't abuse an info_cb for this, since by the time one of the
- * client_hello info_cbs is called, we've already picked which ciphersuite to
- * use.
- *
- * Technically, this function is an abuse of this callback, since the point of
- * a session_secret_cb is to try to set up and/or verify a shared-secret for
- * authentication on the fly.  But as long as we return 0, we won't actually be
- * setting up a shared secret, and all will be fine.
- */
-static int
-tor_tls_session_secret_cb(SSL *ssl, void *secret, int *secret_len,
-                          STACK_OF(SSL_CIPHER) *peer_ciphers,
-                          SSL_CIPHER **cipher, void *arg)
-{
-  (void) secret;
-  (void) secret_len;
-  (void) peer_ciphers;
-  (void) cipher;
-  (void) arg;
-
-  if (tor_tls_classify_client_ciphers(ssl, peer_ciphers) ==
-       CIPHERS_UNRESTRICTED) {
-    SSL_set_cipher_list(ssl, UNRESTRICTED_SERVER_CIPHER_LIST);
-  }
-
-  SSL_set_session_secret_cb(ssl, NULL, NULL);
-
-  return 0;
-}
-static void
-tor_tls_setup_session_secret_cb(tor_tls_t *tls)
-{
-  SSL_set_session_secret_cb(tls->ssl, tor_tls_session_secret_cb, NULL);
-}
-#else
-#define tor_tls_setup_session_secret_cb(tls) STMT_NIL
-#endif
-
-/** Invoked when a TLS state changes: log the change at severity 'debug' */
-static void
-tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
-{
-  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
-            ssl, SSL_state_string_long(ssl), type, val);
-}
-
 /** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
  * changes state. We use this:
  * <ul><li>To alter the state of the handshake partway through, so we
@@ -1670,6 +1628,48 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     }
   }
 }
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
+/** Callback to get invoked on a server after we've read the list of ciphers
+ * the client supports, but before we pick our own ciphersuite.
+ *
+ * We can't abuse an info_cb for this, since by the time one of the
+ * client_hello info_cbs is called, we've already picked which ciphersuite to
+ * use.
+ *
+ * Technically, this function is an abuse of this callback, since the point of
+ * a session_secret_cb is to try to set up and/or verify a shared-secret for
+ * authentication on the fly.  But as long as we return 0, we won't actually be
+ * setting up a shared secret, and all will be fine.
+ */
+static int
+tor_tls_session_secret_cb(SSL *ssl, void *secret, int *secret_len,
+                          STACK_OF(SSL_CIPHER) *peer_ciphers,
+                          SSL_CIPHER **cipher, void *arg)
+{
+  (void) secret;
+  (void) secret_len;
+  (void) peer_ciphers;
+  (void) cipher;
+  (void) arg;
+
+  if (tor_tls_classify_client_ciphers(ssl, peer_ciphers) ==
+       CIPHERS_UNRESTRICTED) {
+    SSL_set_cipher_list(ssl, UNRESTRICTED_SERVER_CIPHER_LIST);
+  }
+
+  SSL_set_session_secret_cb(ssl, NULL, NULL);
+
+  return 0;
+}
+static void
+tor_tls_setup_session_secret_cb(tor_tls_t *tls)
+{
+  SSL_set_session_secret_cb(tls->ssl, tor_tls_session_secret_cb, NULL);
+}
+#else
+#define tor_tls_setup_session_secret_cb(tls) STMT_NIL
 #endif
 
 /** Explain which ciphers we're missing. */
