@@ -1630,7 +1630,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 }
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0) && defined(V2_HANDSHAKE_SERVER)
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
 /** Callback to get invoked on a server after we've read the list of ciphers
  * the client supports, but before we pick our own ciphersuite.
  *
