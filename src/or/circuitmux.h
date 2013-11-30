@@ -57,6 +57,9 @@ struct circuitmux_policy_s {
   /* Choose a circuit */
   circuit_t * (*pick_active_circuit)(circuitmux_t *cmux,
                                      circuitmux_policy_data_t *pol_data);
+  /* Optional: channel comparator for use by the scheduler */
+  int (*cmp_cmux)(circuitmux_t *cmux_1, circuitmux_policy_data_t *pol_data_1,
+                  circuitmux_t *cmux_2, circuitmux_policy_data_t *pol_data_2);
 };
 
 /*
@@ -147,6 +150,9 @@ void circuitmux_append_destroy_cell(channel_t *chan,
                                     uint8_t reason);
 void circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux,
                                               channel_t *chan);
+
+/* Optional interchannel comparisons for scheduling */
+int circuitmux_compare_muxes(circuitmux_t *cmux_1, circuitmux_t *cmux_2);
 
 #endif /* TOR_CIRCUITMUX_H */
 
