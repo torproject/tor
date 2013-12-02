@@ -139,6 +139,7 @@ static time_t queue_heuristic_timestamp = 0;
 
 /* Scheduler static function declarations */
 
+static int scheduler_compare_channels(const void **c1_v, const void **c2_v);
 static void scheduler_evt_callback(evutil_socket_t fd,
                                    short events, void *arg);
 static int scheduler_more_work(void);
@@ -177,6 +178,52 @@ scheduler_free_all(void)
   if (channels_pending) {
     smartlist_free(channels_pending);
     channels_pending = NULL;
+  }
+}
+
+/**
+ * Comparison function to use when sorting pending channels
+ */
+
+static int
+scheduler_compare_channels(const void **c1_v, const void **c2_v)
+{
+  channel_t *c1 = NULL, *c2 = NULL;
+  /* These are a workaround for -Wbad-function-cast throwing a fit */
+  const circuitmux_policy_t *p1, *p2;
+  uintptr_t p1_i, p2_i;
+
+  tor_assert(c1_v);
+  tor_assert(c2_v);
+
+  c1 = (channel_t *)(*c1_v);
+  c2 = (channel_t *)(*c2_v);
+
+  tor_assert(c1);
+  tor_assert(c2);
+
+  if (c1 != c2) {
+    if (circuitmux_get_policy(c1->cmux) ==
+        circuitmux_get_policy(c2->cmux)) {
+      /* Same cmux policy, so use the mux comparison */
+      return circuitmux_compare_muxes(c1->cmux, c2->cmux);
+    } else {
+      /*
+       * Different policies; not important to get this edge case perfect
+       * because the current code never actually gives different channels
+       * different cmux policies anyway.  Just use this arbitrary but
+       * definite choice.
+       */
+      p1 = circuitmux_get_policy(c1->cmux);
+      p2 = circuitmux_get_policy(c2->cmux);
+      p1_i = (uintptr_t)p1;
+      p2_i = (uintptr_t)p2;
+
+      return (p1_i < p2_i) ? -1 : 1;
+    }
+  } else {
+    /* c1 == c2, so always equal */
+    return 0;
   }
 }
 
@@ -362,9 +409,11 @@ scheduler_run(void)
     channels_pending = smartlist_new();
 
     /*
-     * For now, just run the old scheduler on all the chans in the list, until
-     * we hit the high-water mark.  TODO real channel priority API
+     * UGLY HACK: sort the list on each invocation
+     *
+     * TODO smarter data structures
      */
+    smartlist_sort(tmp, scheduler_compare_channels);
 
     SMARTLIST_FOREACH_BEGIN(tmp, channel_t *, chan) {
       if (scheduler_get_queue_heuristic() <= SCHED_Q_HIGH_WATER) {
