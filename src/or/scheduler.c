@@ -435,7 +435,8 @@ scheduler_run(void)
           log_debug(LD_SCHED,
                     "Scheduler flushed %d cells onto pending channel "
                     U64_FORMAT " at %p",
-                    flushed, U64_PRINTF_ARG(chan->global_identifier), chan);
+                    (int)flushed, U64_PRINTF_ARG(chan->global_identifier),
+                    chan);
         } else {
           log_info(LD_SCHED,
                    "Scheduler saw pending channel " U64_FORMAT " at %p with "
