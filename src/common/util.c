@@ -3803,7 +3803,7 @@ tor_spawn_background(const char *const filename, const char **argv,
                  TRUE,          // handles are inherited
   /*(TODO: set CREATE_NEW CONSOLE/PROCESS_GROUP to make GetExitCodeProcess()
    * work?) */
-                 0,             // creation flags
+                 CREATE_NO_WINDOW,             // creation flags
                  (env==NULL) ? NULL : env->windows_environment_block,
                  NULL,          // use parent's current directory
                  &siStartInfo,  // STARTUPINFO pointer

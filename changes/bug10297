@@ -1,0 +1,4 @@
+  o Minor features:
+    - Spawn background processes using the CREATE_NO_WINDOW flag on
+      Windows, in order to prevent a console window from appearing.
+      Resolves ticket 10297.
