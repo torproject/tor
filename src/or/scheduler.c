@@ -24,12 +24,13 @@
 #define SCHED_Q_HIGH_WATER (2 * SCHED_Q_LOW_WATER)
 
 /*
- * Write scheduling works by keeping track of lists of channels that can
+ * Write scheduling works by keeping track of which channels can
  * accept cells, and have cells to write.  From the scheduler's perspective,
  * a channel can be in four possible states:
  *
  * 1.) Not open for writes, no cells to send
- *     - Not much to do here, and the channel will appear in neither list.
+ *     - Not much to do here, and the channel will have scheduler_state ==
+ *       SCHED_CHAN_IDLE
  *     - Transitions from:
  *       - Open for writes/has cells by simultaneously draining all circuit
  *         queues and filling the output buffer.
@@ -41,7 +42,8 @@
  *
  * 2.) Open for writes, no cells to send
  *     - Not much here either; this will be the state an idle but open channel
- *       can be expected to settle in.
+ *       can be expected to settle in.  It will have scheduler_state ==
+ *       SCHED_CHAN_WAITING_FOR_CELLS
  *     - Transitions from:
  *       - Not open for writes/no cells by flushing some of the output
  *         buffer.
@@ -55,6 +57,7 @@
  * 3.) Not open for writes, cells to send
  *     - This is the state of a busy circuit limited by output bandwidth;
  *       cells have piled up in the circuit queues waiting to be relayed.
+ *       The channel will have scheduler_state == SCHED_CHAN_WAITING_TO_WRITE.
  *     - Transitions from:
  *       - Not open for writes/no cells by arrival of cells on an attached
  *         circuit
@@ -66,7 +69,8 @@
  *
  * 4.) Open for writes, cells to send
  *     - This connection is ready to relay some cells and waiting for
- *       the scheduler to choose it
+ *       the scheduler to choose it.  The channel will have scheduler_state ==
+ *       SCHED_CHAN_PENDING.
  *     - Transitions from:
  *       - Not open for writes/has cells by the connection_or_flushed_some()
  *         path
@@ -91,28 +95,10 @@
 /* Scheduler global data structures */
 
 /*
- * We keep lists of channels that either have cells queued, can accept
- * writes, or both (states 2, 3 and 4 above) - no explicit list of state
- * 1 channels is kept, so we don't have to worry about registering new
- * channels here or anything.  The scheduler will learn about them when
- * it needs to.  We can check how many channels in state 4 in O(1), so
- * the test whether we have anything to do in scheduler_run() is fast
- * and there's no harm in calling it opportunistically whenever we get
- * the chance.
- *
- * Note that it takes time O(n) to search for a channel in these smartlists
- * or move one; I don't think the number of channels on a relay will be large
- * enough for this to be a severe problem, but this would benefit from using
- * a doubly-linked list rather than smartlist_t, together with a hash map from
- * channel identifiers to pointers to list entries, so we can perform those
- * operations in O(log(n)).
+ * We keep a list of channels that are pending - i.e, have cells to write
+ * and can accept them to send.  The enum scheduler_state in channel_t
+ * is reserved for our use.
  */
-
-/* List of channels that can write but have no cells (state 2 above) */
-static smartlist_t *channels_waiting_for_cells = NULL;
-
-/* List of channels with cells waiting to write (state 3 above) */
-static smartlist_t *channels_waiting_to_write = NULL;
 
 /* List of channels that can write and have cells (pending work) */
 static smartlist_t *channels_pending = NULL;
@@ -163,16 +149,6 @@ scheduler_free_all(void)
     event_del(run_sched_ev);
     tor_event_free(run_sched_ev);
     run_sched_ev = NULL;
-  }
-
-  if (channels_waiting_for_cells) {
-    smartlist_free(channels_waiting_for_cells);
-    channels_waiting_for_cells = NULL;
-  }
-
-  if (channels_waiting_to_write) {
-    smartlist_free(channels_waiting_to_write);
-    channels_waiting_to_write = NULL;
   }
 
   if (channels_pending) {
@@ -255,19 +231,18 @@ void
 scheduler_channel_doesnt_want_writes(channel_t *chan)
 {
   tor_assert(chan);
-  tor_assert(channels_waiting_for_cells);
-  tor_assert(channels_waiting_to_write);
+
   tor_assert(channels_pending);
 
   /* If it's already in pending, we can put it in waiting_to_write */
-  if (smartlist_contains(channels_pending, chan)) {
+  if (chan->scheduler_state == SCHED_CHAN_PENDING) {
     /*
      * It's in channels_pending, so it shouldn't be in any of
      * the other lists.  It can't write any more, so it goes to
      * channels_waiting_to_write.
      */
     smartlist_remove(channels_pending, chan);
-    smartlist_add(channels_waiting_to_write, chan);
+    chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from pending "
               "to waiting_to_write",
@@ -278,8 +253,8 @@ scheduler_channel_doesnt_want_writes(channel_t *chan)
      * either not in any of the lists (nothing to do) or it's already in
      * waiting_for_cells (remove it, can't write any more).
      */
-    if (smartlist_contains(channels_waiting_for_cells, chan)) {
-      smartlist_remove(channels_waiting_for_cells, chan);
+    if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
+      chan->scheduler_state = SCHED_CHAN_IDLE;
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p left waiting_for_cells",
                 U64_PRINTF_ARG(chan->global_identifier), chan);
@@ -295,18 +270,16 @@ scheduler_channel_has_waiting_cells(channel_t *chan)
   int became_pending = 0;
 
   tor_assert(chan);
-  tor_assert(channels_waiting_for_cells);
-  tor_assert(channels_waiting_to_write);
   tor_assert(channels_pending);
 
   /* First, check if this one also writeable */
-  if (smartlist_contains(channels_waiting_for_cells, chan)) {
+  if (chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS) {
     /*
      * It's in channels_waiting_for_cells, so it shouldn't be in any of
      * the other lists.  It has waiting cells now, so it goes to
      * channels_pending.
      */
-    smartlist_remove(channels_waiting_for_cells, chan);
+    chan->scheduler_state = SCHED_CHAN_PENDING;
     smartlist_add(channels_pending, chan);
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_for_cells "
@@ -319,9 +292,9 @@ scheduler_channel_has_waiting_cells(channel_t *chan)
      * either not in any of the lists (we add it to waiting_to_write)
      * or it's already in waiting_to_write or pending (we do nothing)
      */
-    if (!(smartlist_contains(channels_waiting_to_write, chan) ||
-          smartlist_contains(channels_pending, chan))) {
-      smartlist_add(channels_waiting_to_write, chan);
+    if (!(chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE ||
+          chan->scheduler_state == SCHED_CHAN_PENDING)) {
+      chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p entered waiting_to_write",
                 U64_PRINTF_ARG(chan->global_identifier), chan);
@@ -346,8 +319,6 @@ scheduler_init(void)
   run_sched_ev = tor_event_new(tor_libevent_get_base(), -1,
                                0, scheduler_evt_callback, NULL);
 
-  channels_waiting_for_cells = smartlist_new();
-  channels_waiting_to_write = smartlist_new();
   channels_pending = smartlist_new();
   queue_heuristic = 0;
   queue_heuristic_timestamp = approx_time();
@@ -379,14 +350,13 @@ void
 scheduler_release_channel(channel_t *chan)
 {
   tor_assert(chan);
-
-  tor_assert(channels_waiting_for_cells);
-  tor_assert(channels_waiting_to_write);
   tor_assert(channels_pending);
 
-  smartlist_remove(channels_waiting_for_cells, chan);
-  smartlist_remove(channels_waiting_to_write, chan);
-  smartlist_remove(channels_pending, chan);
+  if (chan->scheduler_state == SCHED_CHAN_PENDING) {
+    smartlist_remove(channels_pending, chan);
+  }
+
+  chan->scheduler_state = SCHED_CHAN_IDLE;
 }
 
 /** Run the scheduling algorithm if necessary */
@@ -432,6 +402,13 @@ scheduler_run(void)
             flushed += flushed_this_time;
           }
 
+          if (flushed < n_cells) {
+            /* We ran out of cells to flush */
+            chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
+          } else {
+            /* TODO get this right */
+          }
+
           log_debug(LD_SCHED,
                     "Scheduler flushed %d cells onto pending channel "
                     U64_FORMAT " at %p",
@@ -442,10 +419,13 @@ scheduler_run(void)
                    "Scheduler saw pending channel " U64_FORMAT " at %p with "
                    "no cells writeable",
                    U64_PRINTF_ARG(chan->global_identifier), chan);
+          /* Put it back to WAITING_TO_WRITE */
+          chan->scheduler_state = SCHED_CHAN_WAITING_TO_WRITE;
         }
       } else {
         /* Not getting it this round; put it back on the list */
         smartlist_add(channels_pending, chan);
+        /* It states in SCHED_CHAN_PENDING */
       }
     } SMARTLIST_FOREACH_END(chan);
 
@@ -486,18 +466,15 @@ scheduler_channel_wants_writes(channel_t *chan)
   int became_pending = 0;
 
   tor_assert(chan);
-  tor_assert(channels_waiting_for_cells);
-  tor_assert(channels_waiting_to_write);
   tor_assert(channels_pending);
 
   /* If it's already in waiting_to_write, we can put it in pending */
-  if (smartlist_contains(channels_waiting_to_write, chan)) {
+  if (chan->scheduler_state == SCHED_CHAN_WAITING_TO_WRITE) {
     /*
-     * It's in channels_waiting_to_write, so it shouldn't be in any of
-     * the other lists.  It can write now, so it goes to channels_pending.
+     * It can write now, so it goes to channels_pending.
      */
-    smartlist_remove(channels_waiting_to_write, chan);
     smartlist_add(channels_pending, chan);
+    chan->scheduler_state = SCHED_CHAN_PENDING;
     log_debug(LD_SCHED,
               "Channel " U64_FORMAT " at %p went from waiting_to_write "
               "to pending",
@@ -505,13 +482,12 @@ scheduler_channel_wants_writes(channel_t *chan)
     became_pending = 1;
   } else {
     /*
-     * It's not in waiting_to_write, so it can't become pending; it's
-     * either not in any of the lists (we add it to waiting_for_cells)
-     * or it's already in waiting_for_cells or pending (we do nothing)
+     * It's not in SCHED_CHAN_WAITING_TO_WRITE, so it can't become pending;
+     * it's either idle and goes to WAITING_FOR_CELLS, or it's a no-op.
      */
-    if (!(smartlist_contains(channels_waiting_for_cells, chan) ||
-          smartlist_contains(channels_pending, chan))) {
-      smartlist_add(channels_waiting_for_cells, chan);
+    if (!(chan->scheduler_state == SCHED_CHAN_WAITING_FOR_CELLS ||
+          chan->scheduler_state == SCHED_CHAN_PENDING)) {
+      chan->scheduler_state = SCHED_CHAN_WAITING_FOR_CELLS;
       log_debug(LD_SCHED,
                 "Channel " U64_FORMAT " at %p entered waiting_for_cells",
                 U64_PRINTF_ARG(chan->global_identifier), chan);

@@ -806,6 +806,9 @@ channel_init(channel_t *chan)
 
   /* It hasn't been open yet. */
   chan->has_been_open = 0;
+
+  /* Scheduler state is idle */
+  chan->scheduler_state = SCHED_CHAN_IDLE;
 }
 
 /**

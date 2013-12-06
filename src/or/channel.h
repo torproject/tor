@@ -57,6 +57,29 @@ struct channel_s {
     CHANNEL_CLOSE_FOR_ERROR
   } reason_for_closing;
 
+  /** State variable for use by the scheduler */
+  enum {
+    /*
+     * The channel is not open, or it has a full output buffer but no queued
+     * cells.
+     */
+    SCHED_CHAN_IDLE = 0,
+    /*
+     * The channel has space on its output buffer to write, but no queued
+     * cells.
+     */
+    SCHED_CHAN_WAITING_FOR_CELLS,
+    /*
+     * The scheduler has queued cells but no output buffer space to write.
+     */
+    SCHED_CHAN_WAITING_TO_WRITE,
+    /*
+     * The scheduler has both queued cells and output buffer space, and is
+     * eligible for the scheduler loop.
+     */
+    SCHED_CHAN_PENDING
+  } scheduler_state;
+
   /** Timestamps for both cell channels and listeners */
   time_t timestamp_created; /* Channel created */
   time_t timestamp_active; /* Any activity */
