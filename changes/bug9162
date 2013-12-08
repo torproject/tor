@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Fix a get_configured_bridge_by_addr_port_digest() function so
+      that it would return a bridge with given address and port even
+      if bridge digest is not specified by caller.  Fixes bug 9162;
+      bugfix on 0.2.0.3-alpha.  Based on a patch from "rl1987".
+

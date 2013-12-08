@@ -1657,7 +1657,8 @@ get_configured_bridge_by_orports_digest(const char *digest,
 
 /** If we have a bridge configured whose digest matches <b>digest</b>, or a
  * bridge with no known digest whose address matches <b>addr</b>:<b>/port</b>,
- * return that bridge.  Else return NULL. */
+ * return that bridge.  Else return NULL. If <b>digest</b> is NULL, check for
+ * address/port matches only. */
 static bridge_info_t *
 get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
                                           uint16_t port,
@@ -1667,7 +1668,7 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
     return NULL;
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
-      if (tor_digest_is_zero(bridge->identity) &&
+      if ((tor_digest_is_zero(bridge->identity) || digest == NULL) &&
           !tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
           bridge->port == port)
         return bridge;
