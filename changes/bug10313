@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Fixed an erroneous pointer comparison that would have allowed
+      compilers to remove a bounds check in channeltls.c. The fix
+      was to remove the check entirely, since it was impossible for
+      the code to overflow the bounds. Noticed by Jared L
+      Wong. Fixes bug 10313 and 9980. Bugfix on 0.2.0.10-alpha.
+
+
