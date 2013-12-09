@@ -1435,12 +1435,14 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   my_addr_ptr = (uint8_t*) cell->payload + 6;
   end = cell->payload + CELL_PAYLOAD_SIZE;
   cp = cell->payload + 6 + my_addr_len;
-  if (cp >= end) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Addresses too long in netinfo cell; closing connection.");
-    connection_or_close_for_error(chan->conn, 0);
-    return;
-  } else if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
+
+  /* We used to check:
+   *    if (my_addr_len >= CELL_PAYLOAD_SIZE - 6) {
+   *
+   * This is actually never going to happen, since my_addr_len is at most 255,
+   * and CELL_PAYLOAD_LEN - 6 is 503.  So we know that cp is < end. */
+
+  if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
     tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
     tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
