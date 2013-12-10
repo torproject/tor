@@ -3,8 +3,14 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.4.19 - 2013-11-2x
-  The Tor 0.2.4 release series is dedicated to [...]
+Changes in version 0.2.4.19 - 2013-12-11
+  The Tor 0.2.4 release series is dedicated to the memory of Aaron Swartz
+  (1986-2013). Aaron worked on diverse projects including helping to guide
+  Creative Commons, playing a key role in stopping SOPA/PIPA, bringing
+  transparency to the U.S government's PACER documents, and contributing
+  design and development for Tor and Tor2Web. Aaron was one of the latest
+  martyrs in our collective fight for civil liberties and human rights,
+  and his death is all the more painful because he was one of us.
 
   Tor 0.2.4.19, the first stable release in the 0.2.4 branch, features
   a new circuit handshake and link encryption that use ECC to provide
