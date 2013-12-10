@@ -13,16 +13,16 @@ Changes in version 0.2.4.19 - 2013-12-11
   creation requests; uses "directory guards" to reduce client enumeration
   risks; makes bridges collect and report statistics about the pluggable
   transports they support; cleans up and improves our geoip database;
-  gets much closer to ipv6 support for clients, bridges, and relays; makes
+  gets much closer to IPv6 support for clients, bridges, and relays; makes
   directory authorities use measured bandwidths rather than advertised
   ones when computing flags and thresholds; disables client-side DNS
   caching to reduce tracking risks; and fixes a big bug in bridge
-  reachability testing. This new release introduces two new design
+  reachability testing. This release introduces two new design
   abstractions in the code: a new "channel" abstraction between circuits
   and or_connections to allow for implementing alternate relay-to-relay
   transports, and a new "circuitmux" abstraction storing the queue of
-  circuits for a channel. It also includes many stability, security,
-  and privacy fixes.
+  circuits for a channel. The release also includes many stability,
+  security, and privacy fixes.
 
 
 Changes in version 0.2.4.18-rc - 2013-11-16
