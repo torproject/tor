@@ -6,4 +6,7 @@
     - Fix another possibly undefined pointer operations in tor_memmem
       fallback implementation. Another case of bug #10363; bugfix on
       0.1.1.1-alpha.
+    - Fix another possibly undefined pointer operations in the eventdns
+      fallback implementation. Another case of bug #10363; bugfix on
+      0.1.2.1-alpha.
 
