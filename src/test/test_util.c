@@ -1045,6 +1045,10 @@ test_util_strmisc(void)
     test_assert(!tor_memmem(haystack, 4, "cde", 3));
     haystack = "ababcad";
     test_eq_ptr(tor_memmem(haystack, 7, "abc", 3), haystack + 2);
+    test_eq_ptr(tor_memmem(haystack, 7, "ad", 2), haystack + 5);
+    test_eq_ptr(tor_memmem(haystack, 7, "cad", 3), haystack + 4);
+    test_assert(!tor_memmem(haystack, 7, "dadad", 5));
+    test_assert(!tor_memmem(haystack, 7, "abcdefghij", 10));
     /* memstr */
     test_eq_ptr(tor_memstr(haystack, 7, "abc"), haystack + 2);
     test_eq_ptr(tor_memstr(haystack, 7, "cad"), haystack + 4);

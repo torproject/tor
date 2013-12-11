@@ -3,4 +3,7 @@
       that could, under unlucky circumstances, have led to a pointer
       overflow. Fixes bug #10363; bugfixes on 0.2.0.10-alpha and
       0.2.3.6-alpha. Reported by "bobnomnom".
+    - Fix another possibly undefined pointer operations in tor_memmem
+      fallback implementation. Another case of bug #10363; bugfix on
+      0.1.1.1-alpha.
 
