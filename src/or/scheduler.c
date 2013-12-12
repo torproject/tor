@@ -580,6 +580,30 @@ scheduler_channel_wants_writes(channel_t *chan)
 }
 
 /**
+ * Notify the scheduler that a channel's position in the pqueue may have
+ * changed
+ */
+
+void
+scheduler_touch_channel(channel_t *chan)
+{
+  tor_assert(chan);
+
+  if (chan->scheduler_state == SCHED_CHAN_PENDING) {
+    /* Remove and re-add it */
+    smartlist_pqueue_remove(channels_pending,
+                            scheduler_compare_channels,
+                            STRUCT_OFFSET(channel_t, sched_heap_idx),
+                            chan);
+    smartlist_pqueue_add(channels_pending,
+                         scheduler_compare_channels,
+                         STRUCT_OFFSET(channel_t, sched_heap_idx),
+                         chan);
+  }
+  /* else no-op, since it isn't in the queue */
+}
+
+/**
  * Notify the scheduler of a queue size adjustment, to recalculate the
  * queue heuristic.
  */

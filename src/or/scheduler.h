@@ -30,5 +30,8 @@ void scheduler_release_channel(channel_t *chan);
 /* Notify scheduler of queue size adjustments */
 void scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj);
 
+/* Notify scheduler that a channel's queue position may have changed */
+void scheduler_touch_channel(channel_t *chan);
+
 #endif /* !defined(TOR_SCHEDULER_H) */
 
