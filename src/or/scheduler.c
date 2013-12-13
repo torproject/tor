@@ -360,8 +360,8 @@ scheduler_retrigger(void)
 
 /** Notify the scheduler of a channel being closed */
 
-void
-scheduler_release_channel(channel_t *chan)
+MOCK_IMPL(void,
+scheduler_release_channel,(channel_t *chan))
 {
   tor_assert(chan);
   tor_assert(channels_pending);
