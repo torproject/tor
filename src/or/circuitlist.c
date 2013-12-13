@@ -302,8 +302,8 @@ channel_note_destroy_pending(channel_t *chan, circid_t id)
 
 /** Called to indicate that a DESTROY is no longer pending on <b>chan</b> with
  * circuit ID <b>id</b> -- typically, because it has been sent. */
-void
-channel_note_destroy_not_pending(channel_t *chan, circid_t id)
+MOCK_IMPL(void, channel_note_destroy_not_pending,
+          (channel_t *chan, circid_t id))
 {
   circuit_t *circ = circuit_get_by_circid_channel_even_if_marked(id,chan);
   if (circ) {
