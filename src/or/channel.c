@@ -1741,25 +1741,28 @@ cell_queue_entry_new_var(var_cell_t *var_cell)
 static size_t
 channel_get_cell_queue_entry_size(channel_t *chan, cell_queue_entry_t *q)
 {
+  size_t rv = 0;
+
   tor_assert(chan);
   tor_assert(q);
 
   switch (q->type) {
     case CELL_QUEUE_FIXED:
-      return get_cell_network_size(chan->wide_circ_ids);
+      rv = get_cell_network_size(chan->wide_circ_ids);
       break;
     case CELL_QUEUE_VAR:
       tor_assert(q->u.var.var_cell);
-      return get_var_cell_header_size(chan->wide_circ_ids) +
-        q->u.var.var_cell->payload_len;
+      rv = get_var_cell_header_size(chan->wide_circ_ids) +
+           q->u.var.var_cell->payload_len;
       break;
     case CELL_QUEUE_PACKED:
-      return get_cell_network_size(chan->wide_circ_ids);
+      rv = get_cell_network_size(chan->wide_circ_ids);
       break;
     default:
       tor_assert(1);
-      return 0;
   }
+
+  return rv;
 }
 
 /**
@@ -2309,6 +2312,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   ssize_t flushed = 0;
   cell_queue_entry_t *q = NULL;
   size_t cell_size;
+  int free_q = 0, handed_off = 0;
 
   tor_assert(chan);
   tor_assert(chan->write_cell);
@@ -2322,6 +2326,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   if (chan->state == CHANNEL_STATE_OPEN) {
     while ((unlimited || num_cells > flushed) &&
            NULL != (q = TOR_SIMPLEQ_FIRST(&chan->outgoing_queue))) {
+      free_q = 0;
+      handed_off = 0;
 
       if (1) {
         /* Figure out how big it is for statistical purposes */
@@ -2339,8 +2345,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
                 chan->n_bytes_xmitted += cell_size;
-                cell_queue_entry_free(q, 1);
-                q = NULL;
+                free_q = 1;
+                handed_off = 1;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2351,8 +2357,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              cell_queue_entry_free(q, 0);
-              q = NULL;
+              free_q = 1;
+              handed_off = 0;
             }
             break;
          case CELL_QUEUE_PACKED:
@@ -2363,8 +2369,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
                 chan->n_bytes_xmitted += cell_size;
-                cell_queue_entry_free(q, 1);
-                q = NULL;
+                free_q = 1;
+                handed_off = 1;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2375,8 +2381,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              cell_queue_entry_free(q, 0);
-              q = NULL;
+              free_q = 1;
+              handed_off = 0;
             }
             break;
          case CELL_QUEUE_VAR:
@@ -2387,8 +2393,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                 channel_timestamp_xmit(chan);
                 ++(chan->n_cells_xmitted);
                 chan->n_bytes_xmitted += cell_size;
-                cell_queue_entry_free(q, 1);
-                q = NULL;
+                free_q = 1;
+                handed_off = 1;
               }
               /* Else couldn't write it; leave it on the queue */
             } else {
@@ -2399,8 +2405,8 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                        "(global ID " U64_FORMAT ").",
                        chan, U64_PRINTF_ARG(chan->global_identifier));
               /* Throw it away */
-              cell_queue_entry_free(q, 0);
-              q = NULL;
+              free_q = 1;
+              handed_off = 0;
             }
             break;
           default:
@@ -2410,12 +2416,16 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
                      "(global ID " U64_FORMAT "; ignoring it."
                      "  Someone should fix this.",
                      q->type, chan, U64_PRINTF_ARG(chan->global_identifier));
-            cell_queue_entry_free(q, 0);
-            q = NULL;
+            free_q = 1;
+            handed_off = 0;
         }
 
-        /* if q got NULLed out, we used it and should remove the queue entry */
-        if (!q) {
+        /*
+         * if free_q is set, we used it and should remove the queue entry;
+         * we have to do the free down here so TOR_SIMPLEQ_REMOVE_HEAD isn't
+         * accessing freed memory
+         */
+        if (free_q) {
           TOR_SIMPLEQ_REMOVE_HEAD(&chan->outgoing_queue, next);
           /*
            * ...and we handed a cell off to the lower layer, so we should
@@ -2428,6 +2438,9 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
           channel_assert_counter_consistency();
           /* Update the channel's queue size too */
           chan->bytes_in_queue -= cell_size;
+          /* Finally, free q */
+          cell_queue_entry_free(q, handed_off);
+          q = NULL;
         }
         /* No cell removed from list, so we can't go on any further */
         else break;
