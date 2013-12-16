@@ -69,9 +69,10 @@ typedef struct workerthread_s {
   tor_cond_t condition;
   /** Queue of pending work that we have to do. */
   TOR_TAILQ_HEAD(, workqueue_entry_s) work;
-  /** True iff this thread is currently in its loop. */
+  /** True iff this thread is currently in its loop. (Not currently used.) */
   unsigned is_running;
-  /** True iff this thread has crashed or is shut down for some reason. */
+  /** True iff this thread has crashed or is shut down for some reason. (Not
+   * currently used.) */
   unsigned is_shut_down;
   /** True if we're waiting for more elements to get added to the queue. */
   unsigned waiting;
@@ -190,6 +191,7 @@ worker_thread_main(void *thread_)
     /* TODO: support an idle-function */
 
     /* Okay. Now, wait till somebody has work for us. */
+    /* XXXX we could just omit waiting and instead */
     thread->waiting = 1;
     if (tor_cond_wait(&thread->condition, &thread->lock, NULL) < 0) {
       /* XXXX ERROR */
