@@ -64,7 +64,7 @@ ns_detached_signatures_t *networkstatus_parse_detached_signatures(
 
 smartlist_t *microdescs_parse_from_string(const char *s, const char *eos,
                                           int allow_annotations,
-                                          int copy_body);
+                                          saved_location_t where);
 
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    const char **end_of_string);
