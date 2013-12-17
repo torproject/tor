@@ -154,11 +154,10 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
 {
   smartlist_t *descriptors, *added;
   const int allow_annotations = (where != SAVED_NOWHERE);
-  const int copy_body = (where != SAVED_IN_CACHE);
 
   descriptors = microdescs_parse_from_string(s, eos,
                                              allow_annotations,
-                                             copy_body);
+                                             where);
   if (listed_at > 0) {
     SMARTLIST_FOREACH(descriptors, microdesc_t *, md,
                       md->last_listed = listed_at);
