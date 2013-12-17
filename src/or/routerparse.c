@@ -4240,12 +4240,17 @@ find_start_of_next_microdesc(const char *s, const char *eos)
 
 /** Parse as many microdescriptors as are found from the string starting at
  * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
- * annotations we recognize and ignore ones we don't.  If <b>copy_body</b> is
- * true, then strdup the bodies of the microdescriptors.  Return all newly
+ * annotations we recognize and ignore ones we don't.
+ *
+ * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
+ * descriptor in the body field of each microdesc_t.
+ *
+ * Return all newly
  * parsed microdescriptors in a newly allocated smartlist_t. */
 smartlist_t *
 microdescs_parse_from_string(const char *s, const char *eos,
-                             int allow_annotations, int copy_body)
+                             int allow_annotations,
+                             saved_location_t where)
 {
   smartlist_t *tokens;
   smartlist_t *result;
@@ -4254,6 +4259,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
   const char *start = s;
   const char *start_of_next_microdesc;
   int flags = allow_annotations ? TS_ANNOTATIONS_OK : 0;
+  const int copy_body = (where != SAVED_IN_CACHE);
 
   directory_token_t *tok;
 
@@ -4283,6 +4289,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
       tor_assert(cp);
 
       md->bodylen = start_of_next_microdesc - cp;
+      md->saved_location = where;
       if (copy_body)
         md->body = tor_memdup_nulterm(cp, md->bodylen);
       else
