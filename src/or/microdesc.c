@@ -406,6 +406,26 @@ should_rebuild_md_cache(microdesc_cache_t *cache)
     return 0;
 }
 
+/**
+ * Mark <b>md</b> as having no body, and release any storage previously held
+ * by its body.
+ */
+static void
+microdesc_wipe_body(microdesc_t *md)
+{
+  if (!md)
+    return;
+
+  if (md->saved_location != SAVED_IN_CACHE)
+    tor_free(md->body);
+
+  md->off = 0;
+  md->saved_location = SAVED_NOWHERE;
+  md->body = NULL;
+  md->bodylen = 0;
+  md->no_save = 1;
+}
+
 /** Regenerate the main cache file for <b>cache</b>, clear the journal file,
  * and update every microdesc_t in the cache with pointers to its new
  * location.  If <b>force</b> is true, do this unconditionally.  If
@@ -454,12 +474,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 
     size = dump_microdescriptor(fd, md, &annotation_len);
     if (size < 0) {
-      if (md->saved_location != SAVED_IN_CACHE)
-        tor_free(md->body);
-      md->saved_location = SAVED_NOWHERE;
-      md->off = 0;
-      md->bodylen = 0;
-      md->no_save = 1;
+      microdesc_wipe_body(md);
 
       /* rewind, in case it was a partial write. */
       tor_fd_setpos(fd, off);
@@ -497,11 +512,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     HT_FOREACH(mdp, microdesc_map, &cache->map) {
       microdesc_t *md = *mdp;
       if (md->saved_location == SAVED_IN_CACHE) {
-        md->off = 0;
-        md->saved_location = SAVED_NOWHERE;
-        md->body = NULL;
-        md->bodylen = 0;
-        md->no_save = 1;
+        microdesc_wipe_body(md);
       }
     }
     return -1;
