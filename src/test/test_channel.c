@@ -18,7 +18,9 @@
 static int test_chan_accept_cells = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
+static int test_doesnt_want_writes_count = 0;
 static double test_overhead_estimate = 1.0f;
+static int test_releases_count = 0;
 
 static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
@@ -32,8 +34,10 @@ static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void make_fake_cell(cell_t *c);
 static void make_fake_var_cell(var_cell_t *c);
 static channel_t * new_fake_channel(void);
+static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 static void scheduler_release_channel_mock(channel_t *ch);
 
+static void test_channel_lifecycle(void *arg);
 static void test_channel_multi(void *arg);
 static void test_channel_queue_size(void *arg);
 static void test_channel_write(void *arg);
@@ -191,12 +195,121 @@ new_fake_channel(void)
 }
 
 static void
+scheduler_channel_doesnt_want_writes_mock(channel_t *ch)
+{
+  (void)ch;
+
+  /* Increment counter */
+  ++test_doesnt_want_writes_count;
+
+  return;
+}
+
+static void
 scheduler_release_channel_mock(channel_t *ch)
 {
   (void)ch;
 
   /* Increment counter */
   ++test_releases_count;
+
+  return;
+}
+
+static void
+test_channel_lifecycle(void *arg)
+{
+  channel_t *ch1 = NULL, *ch2 = NULL;
+  cell_t *cell = NULL;
+  int old_count, init_doesnt_want_writes_count;
+  int init_releases_count;
+
+  (void)arg;
+
+  /* Mock these for the whole lifecycle test */
+  MOCK(scheduler_channel_doesnt_want_writes,
+       scheduler_channel_doesnt_want_writes_mock);
+  MOCK(scheduler_release_channel,
+       scheduler_release_channel_mock);
+
+  /* Cache some initial counter values */
+  init_doesnt_want_writes_count = test_doesnt_want_writes_count;
+  init_releases_count = test_releases_count;
+
+  /* Accept cells to lower layer */
+  test_chan_accept_cells = 1;
+  /* Use default overhead factor */
+  test_overhead_estimate = 1.0f;
+
+  ch1 = new_fake_channel();
+  test_assert(ch1);
+  /* Start it off in OPENING */
+  ch1->state = CHANNEL_STATE_OPENING;
+
+  /* Try to register it */
+  channel_register(ch1);
+  test_assert(ch1->registered);
+
+  /* Try to write a cell through (should queue) */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  old_count = test_cells_written;
+  channel_write_cell(ch1, cell);
+  test_eq(old_count, test_cells_written);
+
+  /* Move it to OPEN and flush */
+  channel_change_state(ch1, CHANNEL_STATE_OPEN);
+
+  /* Queue should drain */
+  test_eq(old_count + 1, test_cells_written);
+
+  /* Get another one */
+  ch2 = new_fake_channel();
+  test_assert(ch2);
+  ch2->state = CHANNEL_STATE_OPENING;
+
+  /* Register */
+  channel_register(ch2);
+  test_assert(ch2->registered);
+
+  /* Check counters */
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count);
+  test_eq(test_releases_count, init_releases_count);
+
+  /* Move ch1 to MAINT */
+  channel_change_state(ch1, CHANNEL_STATE_MAINT);
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count + 1);
+  test_eq(test_releases_count, init_releases_count);
+
+  /* Move ch2 to OPEN */
+  channel_change_state(ch2, CHANNEL_STATE_OPEN);
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count + 1);
+  test_eq(test_releases_count, init_releases_count);
+
+  /* Move ch1 back to OPEN */
+  channel_change_state(ch1, CHANNEL_STATE_OPEN);
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count + 1);
+  test_eq(test_releases_count, init_releases_count);
+
+  /* Mark ch2 for close */
+  channel_mark_for_close(ch2);
+  test_eq(ch2->state, CHANNEL_STATE_CLOSING);
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count + 1);
+  test_eq(test_releases_count, init_releases_count + 1);
+
+  /* Shut down channels */
+  channel_free_all();
+  ch1 = ch2 = NULL;
+  test_eq(test_doesnt_want_writes_count, init_doesnt_want_writes_count + 1);
+  /* channel_free() calls scheduler_release_channel() */
+  test_eq(test_releases_count, init_releases_count + 4);
+
+ done:
+  tor_free(ch1);
+  tor_free(ch2);
+
+  UNMOCK(scheduler_channel_doesnt_want_writes);
+  UNMOCK(scheduler_release_channel);
 
   return;
 }
@@ -563,6 +676,7 @@ test_channel_write(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
+  { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "multi", test_channel_multi, TT_FORK, NULL, NULL },
   { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
   { "write", test_channel_write, TT_FORK, NULL, NULL },
