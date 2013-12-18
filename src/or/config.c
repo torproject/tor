@@ -1684,10 +1684,14 @@ options_act(const or_options_t *old_options)
     time_t now = time(NULL);
     int print_notice = 0;
 
-    /* If we aren't acting as a server, we can't collect stats anyway. */
+    /* Only collect directory-request statistics on relays and bridges. */
     if (!server_mode(options)) {
-      options->CellStatistics = 0;
       options->DirReqStatistics = 0;
+    }
+
+    /* Only collect other relay-only statistics on relays. */
+    if (!public_server_mode(options)) {
+      options->CellStatistics = 0;
       options->EntryStatistics = 0;
       options->ExitPortStatistics = 0;
     }
