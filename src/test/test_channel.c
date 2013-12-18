@@ -18,11 +18,13 @@
 static int test_chan_accept_cells = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
+static double test_overhead_estimate = 1.0f;
 
 static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
 static void chan_test_close(channel_t *ch);
 static size_t chan_test_num_bytes_queued(channel_t *ch);
+static int chan_test_num_cells_writeable(channel_t *ch);
 static int chan_test_write_cell(channel_t *ch, cell_t *cell);
 static int chan_test_write_packed_cell(channel_t *ch,
                                        packed_cell_t *packed_cell);
@@ -31,6 +33,7 @@ static void make_fake_cell(cell_t *c);
 static void make_fake_var_cell(var_cell_t *c);
 static channel_t * new_fake_channel(void);
 static void scheduler_release_channel_mock(channel_t *ch);
+static void test_channel_queue_size(void *arg);
 static void test_channel_write(void *arg);
 
 static void
@@ -52,6 +55,15 @@ chan_test_close(channel_t *ch)
   return;
 }
 
+static double
+chan_test_get_overhead_estimate(channel_t *ch)
+{
+  test_assert(ch);
+
+ done:
+  return test_overhead_estimate;
+}
+
 static size_t
 chan_test_num_bytes_queued(channel_t *ch)
 {
@@ -59,6 +71,15 @@ chan_test_num_bytes_queued(channel_t *ch)
 
  done:
   return 0;
+}
+
+static int
+chan_test_num_cells_writeable(channel_t *ch)
+{
+  test_assert(ch);
+
+ done:
+  return 32;
 }
 
 static int
@@ -156,7 +177,9 @@ new_fake_channel(void)
   channel_init(chan);
 
   chan->close = chan_test_close;
+  chan->get_overhead_estimate = chan_test_get_overhead_estimate;
   chan->num_bytes_queued = chan_test_num_bytes_queued;
+  chan->num_cells_writeable = chan_test_num_cells_writeable;
   chan->write_cell = chan_test_write_cell;
   chan->write_packed_cell = chan_test_write_packed_cell;
   chan->write_var_cell = chan_test_write_var_cell;
@@ -172,6 +195,125 @@ scheduler_release_channel_mock(channel_t *ch)
 
   /* Increment counter */
   ++test_releases_count;
+
+  return;
+}
+
+static void
+test_channel_queue_size(void *arg)
+{
+  channel_t *ch = NULL;
+  cell_t *cell = NULL;
+  int n, old_count;
+  uint64_t global_queue_estimate;
+
+  (void)arg;
+
+  ch = new_fake_channel();
+  test_assert(ch);
+
+  /* Initial queue size update */
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
+
+  /* Test the call-through to our fake lower layer */
+  n = channel_num_cells_writeable(ch);
+  /* chan_test_num_cells_writeable() always returns 32 */
+  test_eq(n, 32);
+
+  /*
+   * Now we queue some cells and check that channel_num_cells_writeable()
+   * adjusts properly
+   */
+
+  /* tell it not to accept cells */
+  test_chan_accept_cells = 0;
+  /* ...and keep it from trying to flush the queue */
+  ch->state = CHANNEL_STATE_MAINT;
+
+  /* Get a fresh cell */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+
+  old_count = test_cells_written;
+  channel_write_cell(ch, cell);
+  /* Assert that it got queued, not written through, correctly */
+  test_eq(test_cells_written, old_count);
+
+  /* Now check chan_test_num_cells_writeable() again */
+  n = channel_num_cells_writeable(ch);
+  test_eq(n, 0); /* Should return 0 since we're in CHANNEL_STATE_MAINT */
+
+  /* Update queue size estimates */
+  channel_update_xmit_queue_size(ch);
+  /* One cell, times an overhead factor of 1.0 */
+  test_eq(ch->bytes_queued_for_xmit, 512);
+  /* Try a different overhead factor */
+  test_overhead_estimate = 0.5f;
+  /* This one should be ignored since it's below 1.0 */
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 512);
+  /* Now try a larger one */
+  test_overhead_estimate = 2.0f;
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 1024);
+  /* Go back to 1.0 */
+  test_overhead_estimate = 1.0f;
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 512);
+  /* Check the global estimate too */
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 512);
+
+  /* Go to open */
+  old_count = test_cells_written;
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+
+  /*
+   * It should try to write, but we aren't accepting cells right now, so
+   * it'll requeue
+   */
+  test_eq(test_cells_written, old_count);
+
+  /* Check the queue size again */
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 512);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 512);
+
+  /*
+   * Now the cell is in the queue, and we're open, so we should get 31
+   * writeable cells.
+   */
+  n = channel_num_cells_writeable(ch);
+  test_eq(n, 31);
+
+  /* Accept cells again */
+  test_chan_accept_cells = 1;
+  /* ...and re-process the queue */
+  old_count = test_cells_written;
+  channel_flush_cells(ch);
+  test_eq(test_cells_written, old_count + 1);
+
+  /* Should have 32 writeable now */
+  n = channel_num_cells_writeable(ch);
+  test_eq(n, 32);
+
+  /* Should have queue size estimate of zero */
+  channel_update_xmit_queue_size(ch);
+  test_eq(ch->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
+
+  /* Okay, now we're done with this one */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+  channel_mark_for_close(ch);
+  UNMOCK(scheduler_release_channel);
+
+ done:
+  tor_free(ch);
 
   return;
 }
@@ -289,6 +431,7 @@ test_channel_write(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
+  { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
   { "write", test_channel_write, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
