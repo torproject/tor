@@ -235,8 +235,8 @@ scheduler_evt_callback(evutil_socket_t fd, short events, void *arg)
 
 /** Mark a channel as no longer ready to accept writes */
 
-void
-scheduler_channel_doesnt_want_writes(channel_t *chan)
+MOCK_IMPL(void,
+scheduler_channel_doesnt_want_writes,(channel_t *chan))
 {
   tor_assert(chan);
 
