@@ -33,6 +33,8 @@ static void make_fake_cell(cell_t *c);
 static void make_fake_var_cell(var_cell_t *c);
 static channel_t * new_fake_channel(void);
 static void scheduler_release_channel_mock(channel_t *ch);
+
+static void test_channel_multi(void *arg);
 static void test_channel_queue_size(void *arg);
 static void test_channel_write(void *arg);
 
@@ -195,6 +197,136 @@ scheduler_release_channel_mock(channel_t *ch)
 
   /* Increment counter */
   ++test_releases_count;
+
+  return;
+}
+
+static void
+test_channel_multi(void *arg)
+{
+  channel_t *ch1 = NULL, *ch2 = NULL;
+  uint64_t global_queue_estimate;
+  cell_t *cell = NULL;
+
+  (void)arg;
+
+  /* Accept cells to lower layer */
+  test_chan_accept_cells = 1;
+  /* Use default overhead factor */
+  test_overhead_estimate = 1.0f;
+
+  ch1 = new_fake_channel();
+  test_assert(ch1);
+  ch2 = new_fake_channel();
+  test_assert(ch2);
+
+  /* Initial queue size update */
+  channel_update_xmit_queue_size(ch1);
+  test_eq(ch1->bytes_queued_for_xmit, 0);
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch2->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
+
+  /* Queue some cells, check queue estimates */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch1, cell);
+
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch2, cell);
+
+  channel_update_xmit_queue_size(ch1);
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch1->bytes_queued_for_xmit, 0);
+  test_eq(ch2->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
+
+  /* Stop accepting cells at lower layer */
+  test_chan_accept_cells = 0;
+
+  /* Queue some cells and check queue estimates */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch1, cell);
+
+  channel_update_xmit_queue_size(ch1);
+  test_eq(ch1->bytes_queued_for_xmit, 512);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 512);
+
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch2, cell);
+
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch2->bytes_queued_for_xmit, 512);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 1024);
+
+  /* Allow cells through again */
+  test_chan_accept_cells = 1;
+
+  /* Flush chan 2 */
+  channel_flush_cells(ch2);
+
+  /* Update and check queue sizes */
+  channel_update_xmit_queue_size(ch1);
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch1->bytes_queued_for_xmit, 512);
+  test_eq(ch2->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 512);
+
+  /* Flush chan 1 */
+  channel_flush_cells(ch1);
+
+  /* Update and check queue sizes */
+  channel_update_xmit_queue_size(ch1);
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch1->bytes_queued_for_xmit, 0);
+  test_eq(ch2->bytes_queued_for_xmit, 0);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
+
+  /* Now block again */
+  test_chan_accept_cells = 0;
+
+  /* Queue some cells */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch1, cell);
+
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch2, cell);
+
+  /* Check the estimates */
+  channel_update_xmit_queue_size(ch1);
+  channel_update_xmit_queue_size(ch2);
+  test_eq(ch1->bytes_queued_for_xmit, 512);
+  test_eq(ch2->bytes_queued_for_xmit, 512);
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 1024);
+
+  /* Now close channel 2; it should be subtracted from the global queue */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+  channel_mark_for_close(ch2);
+  UNMOCK(scheduler_release_channel);
+
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 512);
+
+  /* Now free everything */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+  channel_free_all();
+  UNMOCK(scheduler_release_channel);
+
+ done:
+  tor_free(ch1);
+  tor_free(ch2);
 
   return;
 }
@@ -431,6 +563,7 @@ test_channel_write(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
+  { "multi", test_channel_multi, TT_FORK, NULL, NULL },
   { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
   { "write", test_channel_write, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
