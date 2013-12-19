@@ -169,8 +169,8 @@ log_engine(const char *fn, ENGINE *e)
     const char *name, *id;
     name = ENGINE_get_name(e);
     id = ENGINE_get_id(e);
-    log_notice(LD_CRYPTO, "Using OpenSSL engine %s [%s] for %s",
-        name?name:"?", id?id:"?", fn);
+    log_notice(LD_CRYPTO, "Default OpenSSL engine for %s is %s [%s]",
+               fn, name?name:"?", id?id:"?");
   } else {
     log_info(LD_CRYPTO, "Using default implementation for %s", fn);
   }
@@ -288,13 +288,20 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       }
       log_engine("RSA", ENGINE_get_default_RSA());
       log_engine("DH", ENGINE_get_default_DH());
-      log_engine("RAND", ENGINE_get_default_RAND());
+      log_engine("RAND (which we will not use)", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
 #endif
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
+    }
+
+    if (RAND_get_rand_method() != RAND_SSLeay()) {
+      log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
+                 "a replacement the OpenSSL RNG. Resetting it to the default "
+                 "implementation.");
+      RAND_set_rand_method(RAND_SSLeay());
     }
 
     evaluate_evp_for_aes(-1);

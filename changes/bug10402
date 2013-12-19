@@ -1,0 +1,11 @@
+  o Major bugfixes:
+    - Do not allow OpenSSL engines to replace the PRNG, even when
+      HardwareAccel is set. The only default builtin PRNG engine uses
+      the Intel RDRAND instruction to replace the entire PRNG, and
+      ignores all attempts to seed it with more entropy. That's
+      cryptographically stupid: the right response to a new alleged
+      entropy source is never to discard all previously used entropy
+      sources. Fixes bug 10402; works around behavior introduced in
+      OpenSSL 1.0.0. Diagnosis and investigation thanks to "coderman"
+      and "rl1987".
+
