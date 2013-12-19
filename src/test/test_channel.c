@@ -37,6 +37,7 @@ static channel_t * new_fake_channel(void);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 static void scheduler_release_channel_mock(channel_t *ch);
 
+static void test_channel_flush(void *arg);
 static void test_channel_lifecycle(void *arg);
 static void test_channel_multi(void *arg);
 static void test_channel_queue_size(void *arg);
@@ -212,6 +213,65 @@ scheduler_release_channel_mock(channel_t *ch)
 
   /* Increment counter */
   ++test_releases_count;
+
+  return;
+}
+
+static void
+test_channel_flush(void *arg)
+{
+  channel_t *ch = NULL;
+  cell_t *cell = NULL;
+  packed_cell_t *p_cell = NULL;
+  var_cell_t *v_cell = NULL;
+  int init_count;
+
+  (void)arg;
+
+  init_cell_pool();
+
+  ch = new_fake_channel();
+  test_assert(ch);
+
+  /* Cache the original count */
+  init_count = test_cells_written;
+
+  /* Stop accepting so we can queue some */
+  test_chan_accept_cells = 0;
+
+  /* Queue a regular cell */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch, cell);
+  /* It should be queued, so assert that we didn't write it */
+  test_eq(test_cells_written, init_count);
+
+  /* Queue a var cell */
+  v_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
+  make_fake_var_cell(v_cell);
+  channel_write_var_cell(ch, v_cell);
+  /* It should be queued, so assert that we didn't write it */
+  test_eq(test_cells_written, init_count);
+
+  /* Try a packed cell now */
+  p_cell = packed_cell_new();
+  test_assert(p_cell);
+  channel_write_packed_cell(ch, p_cell);
+  /* It should be queued, so assert that we didn't write it */
+  test_eq(test_cells_written, init_count);
+
+  /* Now allow writes through again */
+  test_chan_accept_cells = 1;
+
+  /* ...and flush */
+  channel_flush_cells(ch);
+
+  /* All three should have gone through */
+  test_eq(test_cells_written, init_count + 3);
+
+ done:
+  tor_free(ch);
+  free_cell_pool();
 
   return;
 }
@@ -676,6 +736,7 @@ test_channel_write(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
+  { "flush", test_channel_flush, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "multi", test_channel_multi, TT_FORK, NULL, NULL },
   { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
