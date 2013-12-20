@@ -34,7 +34,7 @@
 #include "address.h"
 
 #define IDENTITY_KEY_BITS 3072
-#define SIGNING_KEY_BITS 1024
+#define SIGNING_KEY_BITS 2048
 #define DEFAULT_LIFETIME 12
 
 /* These globals are set via command line options. */
