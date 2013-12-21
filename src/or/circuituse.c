@@ -828,7 +828,7 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
       cpath_build_state_t *build_state = origin_circ->build_state;
       if (build_state->is_internal || build_state->onehop_tunnel)
         continue;
-      if (!origin_circ->unusable_for_new_conns)
+      if (origin_circ->unusable_for_new_conns)
         continue;
 
       exitnode = build_state_get_exit_node(build_state);
