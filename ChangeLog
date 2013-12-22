@@ -1,4 +1,14 @@
-Changes in version 0.2.4.20 - 201?-??-??
+Changes in version 0.2.4.20 - 2013-12-22
+  Tor 0.2.4.20 fixes potentially poor random number generation for users
+  who 1) use OpenSSL 1.0.0 or later, 2) set "HardwareAccel 1" in their
+  torrc file, 3) have "Sandy Bridge" or "Ivy Bridge" Intel processors,
+  and 4) have no state file in their DataDirectory (as would happen on
+  first start). Users who generated relay or hidden service identity
+  keys in such a situation should discard them and generate new ones.
+
+  This release also fixes a logic error that caused Tor clients to build
+  many more preemptive circuits than they actually need.
+
   o Major bugfixes:
     - Do not allow OpenSSL engines to replace the PRNG, even when
       HardwareAccel is set. The only default builtin PRNG engine uses
