@@ -61,6 +61,11 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
+static void connection_ap_handshake_socks_resolved_addr(
+                                            entry_connection_t *conn,
+                                            const tor_addr_t *answer,
+                                            int ttl,
+                                            time_t expires);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -1156,17 +1161,13 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     }
 
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
-      uint32_t answer;
-      struct in_addr in;
+      tor_addr_t answer;
       /* Reply to resolves immediately if we can. */
-      if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
-        /* leave it in network order */
-        answer = in.s_addr;
+      if (tor_addr_parse(&answer, socks->address) >= 0) {/* is it an IP? */
         /* remember _what_ is supposed to have been resolved. */
         strlcpy(socks->address, orig_address, sizeof(socks->address));
-        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
-                                               (uint8_t*)&answer,
-                                               -1,map_expires);
+        connection_ap_handshake_socks_resolved_addr(conn, &answer, -1,
+                                                    map_expires);
         connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -2058,6 +2059,35 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
                                  "error=yes", 0);
   }
 }
+
+/**
+ * As connection_ap_handshake_socks_resolved, but take a tor_addr_t to send
+ * as the answer.
+ */
+static void
+connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
+                                            const tor_addr_t *answer,
+                                            int ttl,
+                                            time_t expires)
+{
+  if (tor_addr_family(answer) == AF_INET) {
+    uint32_t a = tor_addr_to_ipv4n(answer); /* network order */
+    connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
+                                           (uint8_t*)&a,
+                                           ttl, expires);
+  } else if (tor_addr_family(answer) == AF_INET6) {
+    const uint8_t *a = tor_addr_to_in6_addr8(answer);
+    connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV6,16,
+                                           a,
+                                           ttl, expires);
+  } else {
+    log_warn(LD_BUG, "Got called with address of unexpected family %d",
+             tor_addr_family(answer));
+    connection_ap_handshake_socks_resolved(conn,
+                                           RESOLVED_TYPE_ERROR,0,NULL,-1,-1);
+  }
+}
+
 
 /** Send an answer to an AP connection that has requested a DNS lookup via
  * SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or -1
