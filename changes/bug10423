@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - If we fail to dump a previously cached microdescriptor to disk, avoid
-      freeing duplicate data later on. Fix for bug 10423; bugfix on
-      0.2.4.13-alpha. Spotted by "bobnomnom".
