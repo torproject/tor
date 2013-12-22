@@ -24,6 +24,8 @@ Changes in version 0.2.4.20 - 2013-12-22
       sources. Fixes bug 10402; works around behavior introduced in
       OpenSSL 1.0.0. Diagnosis and investigation thanks to "coderman"
       and "rl1987".
+    - Fix assertion failure when AutomapHostsOnResolve yields an IPv6
+      address. Fixes bug 10465; bugfix on 0.2.4.7-alpha.
     - Avoid launching spurious extra circuits when a stream is pending.
       This fixes a bug where any circuit that _wasn't_ unusable for new
       streams would be treated as if it were, causing extra circuits to

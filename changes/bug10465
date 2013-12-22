@@ -1,3 +1,0 @@
-  o Major bugfixes:
-    - Fix assertion failure when AutomapHostsOnResolve yields an IPv6
-      address. Fixes bug 10465; bugfix on 0.2.4.7-alpha.
