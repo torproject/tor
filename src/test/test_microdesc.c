@@ -240,8 +240,53 @@ test_md_cache(void *data)
   tor_free(fn);
 }
 
+static const char truncated_md[] =
+  "@last-listed 2013-08-08 19:02:59\n"
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAM91vLFNaM+gGhnRIdz2Cm/Kl7Xz0cOobIdVzhS3cKUJfk867hCuTipS\n"
+  "NveLBzNopvgXKruAAzEj3cACxk6Q8lv5UWOGCD1UolkgsWSE62RBjap44g+oc9J1\n"
+  "RI9968xOTZw0VaBQg9giEILNXl0djoikQ+5tQRUvLDDa67gpa5Q1AgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "family @\n";
+
+static void
+test_md_cache_broken(void *data)
+{
+  or_options_t *options;
+  char *fn=NULL;
+  microdesc_cache_t *mc = NULL;
+
+  (void)data;
+
+  options = get_options_mutable();
+  tt_assert(options);
+  options->DataDirectory = tor_strdup(get_fname("md_datadir_test2"));
+
+#ifdef _WIN32
+  tt_int_op(0, ==, mkdir(options->DataDirectory));
+#else
+  tt_int_op(0, ==, mkdir(options->DataDirectory, 0700));
+#endif
+
+  tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs",
+               options->DataDirectory);
+
+  write_str_to_file(fn, truncated_md, 1);
+
+  mc = get_microdesc_cache();
+  tt_assert(mc);
+
+ done:
+  if (options)
+    tor_free(options->DataDirectory);
+  tor_free(fn);
+  microdesc_free_all();
+}
+
 struct testcase_t microdesc_tests[] = {
   { "cache", test_md_cache, TT_FORK, NULL, NULL },
+  { "broken_cache", test_md_cache_broken, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
