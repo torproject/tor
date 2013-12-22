@@ -1,3 +1,64 @@
+Changes in version 0.2.4.20 - 2013-12-22
+  Tor 0.2.4.20 fixes potentially poor random number generation for users
+  who 1) use OpenSSL 1.0.0 or later, 2) set "HardwareAccel 1" in their
+  torrc file, 3) have "Sandy Bridge" or "Ivy Bridge" Intel processors,
+  and 4) have no state file in their DataDirectory (as would happen on
+  first start). Users who generated relay or hidden service identity
+  keys in such a situation should discard them and generate new ones.
+
+  This release also fixes a logic error that caused Tor clients to build
+  many more preemptive circuits than they actually need.
+
+  o Major bugfixes:
+    - Do not allow OpenSSL engines to replace the PRNG, even when
+      HardwareAccel is set. The only default builtin PRNG engine uses
+      the Intel RDRAND instruction to replace the entire PRNG, and
+      ignores all attempts to seed it with more entropy. That's
+      cryptographically stupid: the right response to a new alleged
+      entropy source is never to discard all previously used entropy
+      sources. Fixes bug 10402; works around behavior introduced in
+      OpenSSL 1.0.0. Diagnosis and investigation thanks to "coderman"
+      and "rl1987".
+    - Avoid launching spurious extra circuits when a stream is pending.
+      This fixes a bug where any circuit that _wasn't_ unusable for new
+      streams would be treated as if it were, causing extra circuits to
+      be launched. Fixes bug 10456; bugfix on 0.2.4.12-alpha.
+
+  o Minor bugfixes:
+    - Avoid a crash bug when starting with a corrupted microdescriptor
+      cache file. Fixes bug 10406; bugfix on 0.2.2.6-alpha.
+    - If we fail to dump a previously cached microdescriptor to disk, avoid
+      freeing duplicate data later on. Fixes bug 10423; bugfix on
+      0.2.4.13-alpha. Spotted by "bobnomnom".
+
+
+Changes in version 0.2.4.19 - 2013-12-11
+  The Tor 0.2.4 release series is dedicated to the memory of Aaron Swartz
+  (1986-2013). Aaron worked on diverse projects including helping to guide
+  Creative Commons, playing a key role in stopping SOPA/PIPA, bringing
+  transparency to the U.S government's PACER documents, and contributing
+  design and development for Tor and Tor2Web. Aaron was one of the latest
+  martyrs in our collective fight for civil liberties and human rights,
+  and his death is all the more painful because he was one of us.
+
+  Tor 0.2.4.19, the first stable release in the 0.2.4 branch, features
+  a new circuit handshake and link encryption that use ECC to provide
+  better security and efficiency; makes relays better manage circuit
+  creation requests; uses "directory guards" to reduce client enumeration
+  risks; makes bridges collect and report statistics about the pluggable
+  transports they support; cleans up and improves our geoip database;
+  gets much closer to IPv6 support for clients, bridges, and relays; makes
+  directory authorities use measured bandwidths rather than advertised
+  ones when computing flags and thresholds; disables client-side DNS
+  caching to reduce tracking risks; and fixes a big bug in bridge
+  reachability testing. This release introduces two new design
+  abstractions in the code: a new "channel" abstraction between circuits
+  and or_connections to allow for implementing alternate relay-to-relay
+  transports, and a new "circuitmux" abstraction storing the queue of
+  circuits for a channel. The release also includes many stability,
+  security, and privacy fixes.
+
+
 Changes in version 0.2.4.18-rc - 2013-11-16
   Tor 0.2.4.18-rc is the fourth release candidate for the Tor 0.2.4.x
   series. It takes a variety of fixes from the 0.2.5.x branch to improve
