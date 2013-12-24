@@ -14,6 +14,7 @@
 #include "router.h"
 #include "circuitlist.h"
 #include "main.h"
+#include "rephist.h"
 #include "hibernate.h"
 
 /** Return the total number of circuits. */
@@ -120,6 +121,11 @@ log_heartbeat(time_t now)
     double overhead = ( r - 1.0 ) * 100.0;
     log_notice(LD_HEARTBEAT, "TLS write overhead: %.f%%", overhead);
   }
+
+  /* Also commandeer this opportunity to log how our circuit handshake
+   * stats have been doing. */
+  if (public_server_mode(options))
+    rep_hist_log_circuit_handshake_stats(now);
 
   tor_free(uptime);
   tor_free(bw_sent);

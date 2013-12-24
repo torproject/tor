@@ -3042,7 +3042,7 @@ rep_hist_log_circuit_handshake_stats(time_t now)
 {
   (void)now;
   /* XXX024 maybe quiet this log message before 0.2.4 goes stable for real */
-  log_notice(LD_HIST, "Circuit handshake stats since last time: "
+  log_notice(LD_HEARTBEAT, "Circuit handshake stats since last time: "
              "%d/%d TAP, %d/%d NTor.",
              onion_handshakes_completed[ONION_HANDSHAKE_TYPE_TAP],
              onion_handshakes_requested[ONION_HANDSHAKE_TYPE_TAP],
