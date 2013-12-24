@@ -1208,6 +1208,14 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
   tor_assert(chan);
   tor_assert(chan->conn);
 
+  if ((cell->payload_len % 2) == 1) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a VERSION cell with odd payload length %d; "
+           "closing connection.",cell->payload_len);
+    connection_or_close_for_error(chan->conn, 0);
+    return;
+  }
+
   started_here = connection_or_nonopen_was_started_here(chan->conn);
 
   if (chan->conn->link_proto != 0 ||
