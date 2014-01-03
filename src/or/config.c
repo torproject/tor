@@ -83,6 +83,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
   { "DirServer", "DirAuthority", 0, 0}, /* XXXX024 later, make this warn? */
   { "MaxConn", "ConnLimit", 0, 1},
+  { "MaxMemInCellQueues", "MaxMemInQueues", 0, 0},
   { "ORBindAddress", "ORListenAddress", 0, 0},
   { "DirBindAddress", "DirListenAddress", 0, 0},
   { "SocksBindAddress", "SocksListenAddress", 0, 0},
@@ -299,7 +300,7 @@ static config_var_t option_vars_[] = {
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
   V(MaxClientCircuitsPending,    UINT,     "32"),
-  V(MaxMemInCellQueues,          MEMUNIT,  "8 GB"),
+  V(MaxMemInQueues,              MEMUNIT,  "8 GB"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
@@ -2616,10 +2617,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
   }
 
-  if (options->MaxMemInCellQueues < (500 << 20)) {
-    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 500 MB for now. "
+  if (options->MaxMemInQueues < (256 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 256 MB for now. "
              "Ideally, have it as large as you can afford.");
-    options->MaxMemInCellQueues = (500 << 20);
+    options->MaxMemInQueues = (256 << 20);
   }
 
   options->AllowInvalid_ = 0;

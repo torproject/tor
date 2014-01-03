@@ -1513,6 +1513,38 @@ marked_circuit_free_cells(circuit_t *circ)
     cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_chan_cells);
 }
 
+/** Aggressively free buffer contents on all the buffers of all streams in the
+ * list starting at <b>stream</b>. Return the number of bytes recovered. */
+static size_t
+marked_circuit_streams_free_bytes(edge_connection_t *stream)
+{
+  size_t result = 0;
+  for ( ; stream; stream = stream->next_stream) {
+    connection_t *conn = TO_CONN(stream);
+    if (conn->inbuf) {
+      result += buf_allocation(conn->inbuf);
+      buf_clear(conn->inbuf);
+    }
+    if (conn->outbuf) {
+      result += buf_allocation(conn->outbuf);
+      buf_clear(conn->outbuf);
+    }
+  }
+  return result;
+}
+
+/** Aggressively free buffer contents on all the buffers of all streams on
+ * circuit <b>c</b>. Return the number of bytes recovered. */
+static size_t
+marked_circuit_free_stream_bytes(circuit_t *c)
+{
+  if (CIRCUIT_IS_ORIGIN(c)) {
+    return marked_circuit_streams_free_bytes(TO_ORIGIN_CIRCUIT(c)->p_streams);
+  } else {
+    return marked_circuit_streams_free_bytes(TO_OR_CIRCUIT(c)->n_streams);
+  }
+}
+
 /** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
 static size_t
 n_cells_in_circ_queues(const circuit_t *c)
@@ -1551,20 +1583,68 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   return age;
 }
 
-/** Temporary variable for circuits_compare_by_oldest_queued_cell_ This is a
- * kludge to work around the fact that qsort doesn't provide a way for
- * comparison functions to take an extra argument. */
-static uint32_t circcomp_now_tmp;
+/** Return the age in milliseconds of the oldest buffer chunk on any stream in
+ * the linked list <b>stream</b>, where age is taken in milliseconds before
+ * the time <b>now</b> (in truncated milliseconds since the epoch). */
+static uint32_t
+circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
+{
+  uint32_t age = 0, age2;
+  for (; stream; stream = stream->next_stream) {
+    const connection_t *conn = TO_CONN(stream);
+    if (conn->outbuf) {
+      age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now);
+      if (age2 > age)
+        age = age2;
+    }
+    if (conn->inbuf) {
+      age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now);
+      if (age2 > age)
+        age = age2;
+    }
+  }
 
-/** Helper to sort a list of circuit_t by age of oldest cell, in descending
- * order. Requires that circcomp_now_tmp is set correctly. */
+  return age;
+}
+
+/** Return the age in milliseconds of the oldest buffer chunk on any stream
+ * attached to the circuit <b>c</b>, where age is taken in milliseconds before
+ * the time <b>now</b> (in truncated milliseconds since the epoch). */
+static uint32_t
+circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
+{
+  if (CIRCUIT_IS_ORIGIN(c)) {
+    return circuit_get_streams_max_data_age(
+                           TO_ORIGIN_CIRCUIT((circuit_t*)c)->p_streams, now);
+  } else {
+    return circuit_get_streams_max_data_age(
+                           TO_OR_CIRCUIT((circuit_t*)c)->n_streams, now);
+  }
+}
+
+/** Return the age of the oldest cell or stream buffer chunk on the circuit
+ * <b>c</b>, where age is taken in milliseconds before the time <b>now</b> (in
+ * truncated milliseconds since the epoch). */
+static uint32_t
+circuit_max_queued_item_age(const circuit_t *c, uint32_t now)
+{
+  uint32_t cell_age = circuit_max_queued_cell_age(c, now);
+  uint32_t data_age = circuit_max_queued_data_age(c, now);
+  if (cell_age > data_age)
+    return cell_age;
+  else
+    return data_age;
+}
+
+/** Helper to sort a list of circuit_t by age of oldest item, in descending
+ * order. */
 static int
-circuits_compare_by_oldest_queued_cell_(const void **a_, const void **b_)
+circuits_compare_by_oldest_queued_item_(const void **a_, const void **b_)
 {
   const circuit_t *a = *a_;
   const circuit_t *b = *b_;
-  uint32_t age_a = circuit_max_queued_cell_age(a, circcomp_now_tmp);
-  uint32_t age_b = circuit_max_queued_cell_age(b, circcomp_now_tmp);
+  uint32_t age_a = a->age_tmp;
+  uint32_t age_b = b->age_tmp;
 
   if (age_a < age_b)
     return 1;
@@ -1574,66 +1654,72 @@ circuits_compare_by_oldest_queued_cell_(const void **a_, const void **b_)
     return -1;
 }
 
-#define FRACTION_OF_CELLS_TO_RETAIN_ON_OOM 0.90
+#define FRACTION_OF_DATA_TO_RETAIN_ON_OOM 0.90
 
 /** We're out of memory for cells, having allocated <b>current_allocation</b>
  * bytes' worth.  Kill the 'worst' circuits until we're under
- * FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM of our maximum usage. */
+ * FRACTION_OF_DATA_TO_RETAIN_ON_OOM of our maximum usage. */
 void
 circuits_handle_oom(size_t current_allocation)
 {
   /* Let's hope there's enough slack space for this allocation here... */
   smartlist_t *circlist = smartlist_new();
   circuit_t *circ;
-  size_t n_cells_removed=0, n_cells_to_remove;
+  size_t mem_to_recover;
+  size_t mem_recovered=0;
   int n_circuits_killed=0;
   struct timeval now;
+  uint32_t now_ms;
   log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
              "over-long queues. (This behavior is controlled by "
-             "MaxMemInCellQueues.)");
+             "MaxMemInQueues.)");
 
   {
-    size_t mem_target = (size_t)(get_options()->MaxMemInCellQueues *
-                                 FRACTION_OF_CELLS_TO_RETAIN_ON_OOM);
-    size_t mem_to_recover;
+    size_t mem_target = (size_t)(get_options()->MaxMemInQueues *
+                                 FRACTION_OF_DATA_TO_RETAIN_ON_OOM);
     if (current_allocation <= mem_target)
       return;
     mem_to_recover = current_allocation - mem_target;
-    n_cells_to_remove = CEIL_DIV(mem_to_recover, packed_cell_mem_cost());
   }
+
+  tor_gettimeofday_cached(&now);
+  now_ms = (uint32_t)tv_to_msec(&now);
 
   /* This algorithm itself assumes that you've got enough memory slack
    * to actually run it. */
-  for (circ = global_circuitlist; circ; circ = circ->next)
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    circ->age_tmp = circuit_max_queued_item_age(circ, now_ms);
     smartlist_add(circlist, circ);
-
-  /* Set circcomp_now_tmp so that the sort can work. */
-  tor_gettimeofday_cached(&now);
-  circcomp_now_tmp = (uint32_t)tv_to_msec(&now);
+  }
 
   /* This is O(n log n); there are faster algorithms we could use instead.
    * Let's hope this doesn't happen enough to be in the critical path. */
-  smartlist_sort(circlist, circuits_compare_by_oldest_queued_cell_);
+  smartlist_sort(circlist, circuits_compare_by_oldest_queued_item_);
 
   /* Okay, now the worst circuits are at the front of the list. Let's mark
    * them, and reclaim their storage aggressively. */
   SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
     size_t n = n_cells_in_circ_queues(circ);
+    size_t freed;
     if (! circ->marked_for_close) {
       circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     }
     marked_circuit_free_cells(circ);
+    freed = marked_circuit_free_stream_bytes(circ);
 
     ++n_circuits_killed;
-    n_cells_removed += n;
-    if (n_cells_removed >= n_cells_to_remove)
+
+    mem_recovered += n * packed_cell_mem_cost();
+    mem_recovered += freed;
+
+    if (mem_recovered >= mem_to_recover)
       break;
   } SMARTLIST_FOREACH_END(circ);
 
   clean_cell_pool(); /* In case this helps. */
 
   log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
-             U64_PRINTF_ARG(n_cells_removed * packed_cell_mem_cost()),
+             U64_PRINTF_ARG(mem_recovered),
              n_circuits_killed);
 
   smartlist_free(circlist);
