@@ -62,6 +62,8 @@ static int parse_socks_client(const uint8_t *data, size_t datalen,
                               int state, char **reason,
                               ssize_t *drain_out);
 
+#define DEBUG_CHUNK_ALLOC
+
 /* Chunk manipulation functions */
 
 /** A single chunk on a buffer or in a freelist. */
@@ -69,6 +71,9 @@ typedef struct chunk_t {
   struct chunk_t *next; /**< The next chunk on the buffer or freelist. */
   size_t datalen; /**< The number of bytes stored in this chunk */
   size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
+#ifdef DEBUG_CHUNK_ALLOC
+  size_t DBG_alloc;
+#endif
   char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
   uint32_t inserted_time; /**< Timestamp in truncated ms since epoch
                            * when this chunk was inserted. */
@@ -179,6 +184,9 @@ chunk_free_unchecked(chunk_t *chunk)
   } else {
     if (freelist)
       ++freelist->n_free;
+#ifdef DEBUG_CHUNK_ALLOC
+    tor_assert(alloc  == chunk->DBG_alloc);
+#endif
     tor_assert(total_bytes_allocated_in_chunks >= alloc);
     total_bytes_allocated_in_chunks -= alloc;
     tor_free(chunk);
@@ -207,6 +215,9 @@ chunk_new_with_alloc_size(size_t alloc)
     else
       ++n_freelist_miss;
     ch = tor_malloc(alloc);
+#ifdef DEBUG_CHUNK_ALLOC
+    ch->DBG_alloc = alloc;
+#endif
     total_bytes_allocated_in_chunks += alloc;
   }
   ch->next = NULL;
@@ -221,6 +232,9 @@ chunk_free_unchecked(chunk_t *chunk)
 {
   if (!chunk)
     return;
+#ifdef DEBUG_CHUNK_ALLOC
+  tor_assert(CHUNK_ALLOC_SIZE(chunk->memlen) == chunk->DBG_alloc);
+#endif
   tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
   total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
   tor_free(chunk);
@@ -232,6 +246,9 @@ chunk_new_with_alloc_size(size_t alloc)
   ch = tor_malloc(alloc);
   ch->next = NULL;
   ch->datalen = 0;
+#ifdef DEBUG_CHUNK_ALLOC
+  ch->DBG_alloc = alloc;
+#endif
   ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);
   total_bytes_allocated_in_chunks += alloc;
   ch->data = &ch->mem[0];
@@ -251,6 +268,10 @@ chunk_grow(chunk_t *chunk, size_t sz)
   chunk = tor_realloc(chunk, CHUNK_ALLOC_SIZE(sz));
   chunk->memlen = sz;
   chunk->data = chunk->mem + offset;
+#ifdef DEBUG_CHUNK_ALLOC
+  tor_assert(chunk->DBG_alloc == CHUNK_ALLOC_SIZE(memlen_orig));
+  chunk->DBG_alloc = CHUNK_ALLOC_SIZE(sz);
+#endif
   total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(sz) - CHUNK_ALLOC_SIZE(memlen_orig);
   return chunk;
 }
@@ -315,6 +336,9 @@ buf_shrink_freelists(int free_all)
       *chp = NULL;
       while (chunk) {
         chunk_t *next = chunk->next;
+#ifdef DEBUG_CHUNK_ALLOC
+        tor_assert(chunk->DBG_alloc == CHUNK_ALLOC_SIZE(chunk->memlen));
+#endif
         tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
         total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
         total_freed += CHUNK_ALLOC_SIZE(chunk->memlen);
@@ -588,6 +612,9 @@ chunk_copy(const chunk_t *in_chunk)
 {
   chunk_t *newch = tor_memdup(in_chunk, CHUNK_ALLOC_SIZE(in_chunk->memlen));
   total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(in_chunk->memlen);
+#ifdef DEBUG_CHUNK_ALLOC
+  newch->DBG_alloc = CHUNK_ALLOC_SIZE(in_chunk->memlen);
+#endif
   newch->next = NULL;
   if (in_chunk->data) {
     off_t offset = in_chunk->data - in_chunk->mem;
