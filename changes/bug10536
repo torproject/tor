@@ -1,0 +1,6 @@
+
+  o Minor bugfixes:
+    - Reject 0-lenth EXTEND2 cells more expicitly. Previously our code would
+      reject them a bit later than it should have. This bug is
+      harmless. Fixes bug 10536; bugfix on 0.2.4.8-alpha. Reported by
+      "cypherpunks".

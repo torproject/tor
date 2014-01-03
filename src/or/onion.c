@@ -860,14 +860,17 @@ extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
     }
   case RELAY_COMMAND_EXTEND2:
     {
-      uint8_t n_specs = *payload, spectype, speclen;
+      uint8_t n_specs, spectype, speclen;
       int i;
       int found_ipv4 = 0, found_ipv6 = 0, found_id = 0;
       tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
       tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
 
+      if (payload_length == 0)
+        return -1;
+
       cell_out->cell_type = RELAY_COMMAND_EXTEND2;
-      ++payload;
+      n_specs = *payload++;
       /* Parse the specifiers. We'll only take the first IPv4 and first IPv6
        * address, and the node ID, and ignore everything else */
       for (i = 0; i < n_specs; ++i) {
