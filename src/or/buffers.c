@@ -245,12 +245,13 @@ static INLINE chunk_t *
 chunk_grow(chunk_t *chunk, size_t sz)
 {
   off_t offset;
+  size_t memlen_orig = chunk->memlen;
   tor_assert(sz > chunk->memlen);
   offset = chunk->data - chunk->mem;
   chunk = tor_realloc(chunk, CHUNK_ALLOC_SIZE(sz));
   chunk->memlen = sz;
   chunk->data = chunk->mem + offset;
-  total_bytes_allocated_in_chunks += (sz - chunk->memlen);
+  total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(sz) - CHUNK_ALLOC_SIZE(memlen_orig);
   return chunk;
 }
 
@@ -331,10 +332,11 @@ buf_shrink_freelists(int free_all)
       }
       // tor_assert(!n_to_free);
       freelists[i].cur_length = new_length;
+      tor_assert(orig_n_to_skip == new_length);
       log_info(LD_MM, "Cleaned freelist for %d-byte chunks: original "
-               "length %d, kept %d, dropped %d.",
+               "length %d, kept %d, dropped %d. New length is %d",
                (int)freelists[i].alloc_size, orig_length,
-               orig_n_to_skip, orig_n_to_free);
+               orig_n_to_skip, orig_n_to_free, new_length);
     }
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
@@ -580,6 +582,7 @@ static chunk_t *
 chunk_copy(const chunk_t *in_chunk)
 {
   chunk_t *newch = tor_memdup(in_chunk, CHUNK_ALLOC_SIZE(in_chunk->memlen));
+  total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(in_chunk->memlen);
   newch->next = NULL;
   if (in_chunk->data) {
     off_t offset = in_chunk->data - in_chunk->mem;
