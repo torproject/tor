@@ -423,9 +423,10 @@ struct buf_t {
  *
  * If <b>nulterminate</b> is true, ensure that there is a 0 byte in
  * buf->head->mem right after all the data. */
-static void
+STATIC void
 buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
 {
+  /* XXXX nothing uses nulterminate; remove it. */
   chunk_t *dest, *src;
   size_t capacity;
   if (!buf->head)
@@ -497,6 +498,20 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
   check();
 }
 
+#ifdef TOR_UNIT_TESTS
+void
+buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz)
+{
+  if (!buf || !buf->head) {
+    *cp = NULL;
+    *sz = 0;
+  } else {
+    *cp = buf->head->data;
+    *sz = buf->head->datalen;
+  }
+}
+#endif
+
 /** Resize buf so it won't hold extra memory that we haven't been
  * using lately.
  */
@@ -549,6 +564,12 @@ buf_new(void)
   buf->magic = BUFFER_MAGIC;
   buf->default_chunk_size = 4096;
   return buf;
+}
+
+size_t
+buf_get_default_chunk_size(const buf_t *buf)
+{
+  return buf->default_chunk_size;
 }
 
 /** Remove all data from <b>buf</b>. */

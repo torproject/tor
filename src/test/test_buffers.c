@@ -193,7 +193,120 @@ test_buffers_basic(void *arg)
     buf_free(buf);
   if (buf2)
     buf_free(buf2);
+  buf_shrink_freelists(1);
 }
+
+static void
+test_buffer_pullup(void *arg)
+{
+  buf_t *buf;
+  char *stuff, *tmp;
+  const char *cp;
+  size_t sz;
+  (void)arg;
+  stuff = tor_malloc(16384);
+  tmp = tor_malloc(16384);
+
+  /* Note: this test doesn't check the nulterminate argument to buf_pullup,
+     since nothing actually uses it.  We should remove it some time. */
+
+  buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
+
+  tt_assert(buf);
+  tt_int_op(buf_get_default_chunk_size(buf), ==, 4096);
+
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+
+  /* There are a bunch of cases for pullup.  One is the trivial case. Let's
+     mess around with an empty buffer. */
+  buf_pullup(buf, 16, 1);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, ==, NULL);
+  tt_ptr_op(sz, ==, 0);
+
+  /* Let's make sure nothing got allocated */
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+
+  /* Case 1: everything puts into the first chunk with some moving. */
+
+  /* Let's add some data. */
+  crypto_rand(stuff, 16384);
+  write_to_buf(stuff, 3000, buf);
+  write_to_buf(stuff+3000, 3000, buf);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(sz, <=, 4096);
+
+  /* Make room for 3000 bytes in the first chunk, so that the pullup-move code
+   * can get tested. */
+  tt_int_op(fetch_from_buf(tmp, 3000, buf), ==, 3000);
+  test_memeq(tmp, stuff, 3000);
+  buf_pullup(buf, 2048, 0);
+  assert_buf_ok(buf);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(sz, >=, 2048);
+  test_memeq(cp, stuff+3000, 2048);
+  tt_int_op(3000, ==, buf_datalen(buf));
+  tt_int_op(fetch_from_buf(tmp, 3000, buf), ==, 0);
+  test_memeq(tmp, stuff+3000, 2048);
+
+  buf_free(buf);
+
+  /* Now try the large-chunk case. */
+  buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
+  write_to_buf(stuff, 4000, buf);
+  write_to_buf(stuff+4000, 4000, buf);
+  write_to_buf(stuff+8000, 4000, buf);
+  write_to_buf(stuff+12000, 4000, buf);
+  tt_int_op(buf_datalen(buf), ==, 16000);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(sz, <=, 4096);
+
+  buf_pullup(buf, 12500, 0);
+  assert_buf_ok(buf);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(sz, >=, 12500);
+  test_memeq(cp, stuff, 12500);
+  tt_int_op(buf_datalen(buf), ==, 16000);
+
+  fetch_from_buf(tmp, 12400, buf);
+  test_memeq(tmp, stuff, 12400);
+  tt_int_op(buf_datalen(buf), ==, 3600);
+  fetch_from_buf(tmp, 3500, buf);
+  test_memeq(tmp, stuff+12400, 3500);
+  fetch_from_buf(tmp, 100, buf);
+  test_memeq(tmp, stuff+15900, 10);
+
+  buf_free(buf);
+
+  /* Make sure that the pull-up-whole-buffer case works */
+  buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
+  write_to_buf(stuff, 4000, buf);
+  write_to_buf(stuff+4000, 4000, buf);
+  fetch_from_buf(tmp, 100, buf); /* dump 100 bytes from first chunk */
+  buf_pullup(buf, 16000, 0); /* Way too much. */
+  assert_buf_ok(buf);
+  buf_get_first_chunk_data(buf, &cp, &sz);
+  tt_ptr_op(cp, !=, NULL);
+  tt_int_op(sz, ==, 7900);
+  test_memeq(cp, stuff+100, 7900);
+
+  buf_free(buf);
+  buf = NULL;
+
+  buf_shrink_freelists(1);
+
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+ done:
+  buf_free(buf);
+  buf_shrink_freelists(1);
+  tor_free(stuff);
+  tor_free(tmp);
+}
+
 static void
 test_buffer_copy(void *arg)
 {
@@ -257,6 +370,7 @@ test_buffer_copy(void *arg)
     generic_buffer_free(buf);
   if (buf2)
     generic_buffer_free(buf2);
+  buf_shrink_freelists(1);
 }
 
 static void
@@ -331,12 +445,40 @@ test_buffer_ext_or_cmd(void *arg)
   ext_or_cmd_free(cmd);
   generic_buffer_free(buf);
   tor_free(tmp);
+  buf_shrink_freelists(1);
+}
+
+static void
+test_buffer_allocation_tracking(void *arg)
+{
+  buf_t *buf1 = NULL, *buf2 = NULL;
+
+  (void)arg;
+
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+
+  buf1 = buf_new();
+  tt_assert(buf1);
+  buf2 = buf_new();
+  tt_assert(buf2);
+
+  //xXXXXXX buf_add
+
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+
+ done:
+  buf_free(buf1);
+  buf_free(buf2);
+  buf_shrink_freelists(1);
 }
 
 struct testcase_t buffer_tests[] = {
-  { "basic", test_buffers_basic, 0, NULL, NULL },
-  { "copy", test_buffer_copy, 0, NULL, NULL },
-  { "ext_or_cmd", test_buffer_ext_or_cmd, 0, NULL, NULL },
+  { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
+  { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
+  { "pullup", test_buffer_pullup, TT_FORK, NULL, NULL },
+  { "ext_or_cmd", test_buffer_ext_or_cmd, TT_FORK, NULL, NULL },
+  { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
