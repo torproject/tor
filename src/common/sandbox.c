@@ -250,6 +250,7 @@ static int
 sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
+  (void)filter;
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2), 2,
        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ),
@@ -405,6 +406,14 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
       SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
+      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
+  if (rc)
+    return rc;
+
+
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 3,
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
       SCMP_CMP(1, SCMP_CMP_EQ, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
       SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
   if (rc)
@@ -504,6 +513,7 @@ static int
 sb_fcntl64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
+  (void) filter;
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fcntl64), 1,
       SCMP_CMP(1, SCMP_CMP_EQ, F_GETFL));

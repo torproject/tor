@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix compilation warnings and startup issues when running with
+      libseccomp-2.1.0. Fixes bug 10563.
