@@ -451,10 +451,13 @@ test_buffer_ext_or_cmd(void *arg)
 static void
 test_buffer_allocation_tracking(void *arg)
 {
+  char *junk = tor_malloc(16384);
   buf_t *buf1 = NULL, *buf2 = NULL;
+  int i;
 
   (void)arg;
 
+  crypto_rand(junk, 16384);
   tt_int_op(buf_get_total_allocation(), ==, 0);
 
   buf1 = buf_new();
@@ -462,8 +465,49 @@ test_buffer_allocation_tracking(void *arg)
   buf2 = buf_new();
   tt_assert(buf2);
 
-  //xXXXXXX buf_add
+  tt_int_op(buf_allocation(buf1), ==, 0);
+  tt_int_op(buf_get_total_allocation(), ==, 0);
 
+  write_to_buf(junk, 4000, buf1);
+  write_to_buf(junk, 4000, buf1);
+  write_to_buf(junk, 4000, buf1);
+  write_to_buf(junk, 4000, buf1);
+  tt_int_op(buf_allocation(buf1), ==, 16384);
+  fetch_from_buf(junk, 100, buf1);
+  tt_int_op(buf_allocation(buf1), ==, 16384); /* still 4 4k chunks */
+
+  tt_int_op(buf_get_total_allocation(), ==, 16384);
+
+  fetch_from_buf(junk, 4096, buf1); /* drop a 1k chunk... */
+  tt_int_op(buf_allocation(buf1), ==, 3*4096); /* now 3 4k chunks */
+
+  tt_int_op(buf_get_total_allocation(), ==, 16384); /* that chunk went onto
+                                                       the freelist. */
+
+  write_to_buf(junk, 4000, buf2);
+  tt_int_op(buf_allocation(buf2), ==, 4096); /* another 4k chunk. */
+  tt_int_op(buf_get_total_allocation(), ==, 16384); /* that chunk came from
+                                                       the freelist. */
+  write_to_buf(junk, 4000, buf2);
+  tt_int_op(buf_allocation(buf2), ==, 8192); /* another 4k chunk. */
+  tt_int_op(buf_get_total_allocation(), ==, 5*4096); /* that chunk was new. */
+
+
+  /* Make a really huge buffer */
+  for (i = 0; i < 1000; ++i) {
+    write_to_buf(junk, 4000, buf2);
+  }
+  tt_int_op(buf_allocation(buf2), >=, 4008000);
+  tt_int_op(buf_get_total_allocation(), >=, 4008000);
+  buf_free(buf2);
+  buf2 = NULL;
+
+  tt_int_op(buf_get_total_allocation(), <, 4008000);
+  buf_shrink_freelists(1);
+  tt_int_op(buf_get_total_allocation(), ==, buf_allocation(buf1));
+  buf_free(buf1);
+  buf1 = NULL;
+  buf_shrink_freelists(1);
   tt_int_op(buf_get_total_allocation(), ==, 0);
 
  done:
