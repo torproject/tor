@@ -516,6 +516,78 @@ test_buffer_allocation_tracking(void *arg)
   buf_shrink_freelists(1);
 }
 
+static void
+test_buffer_time_tracking(void *arg)
+{
+  buf_t *buf=NULL, *buf2=NULL;
+  struct timeval tv0;
+  const time_t START = 1389288246;
+  const uint32_t START_MSEC = (uint32_t) ((uint64_t)START * 1000);
+  int i;
+  char tmp[4096];
+  (void)arg;
+
+  crypto_rand(tmp, sizeof(tmp));
+
+  tv0.tv_sec = START;
+  tv0.tv_usec = 0;
+
+  buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
+  tt_assert(buf);
+
+  /* Empty buffer means the timestamp is 0. */
+  tt_int_op(0, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC));
+  tt_int_op(0, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
+
+  tor_gettimeofday_cache_set(&tv0);
+  write_to_buf("ABCDEFG", 7, buf);
+  tt_int_op(1000, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
+
+  buf2 = buf_copy(buf);
+  tt_assert(buf2);
+  tt_int_op(1234, ==, buf_get_oldest_chunk_timestamp(buf2, START_MSEC+1234));
+
+  /* Now add more bytes; enough to overflow the first chunk. */
+  tv0.tv_usec += 123 * 1000;
+  tor_gettimeofday_cache_set(&tv0);
+  for (i = 0; i < 600; ++i)
+    write_to_buf("ABCDEFG", 7, buf);
+  tt_int_op(4207, ==, buf_datalen(buf));
+
+  /* The oldest bytes are still in the front. */
+  tt_int_op(2000, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2000));
+
+  /* Once those bytes are dropped, the chunk is still on the first
+   * timestamp. */
+  fetch_from_buf(tmp, 100, buf);
+  tt_int_op(2000, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2000));
+
+  /* But once we discard the whole first chunk, we get the data in the second
+   * chunk. */
+  fetch_from_buf(tmp, 4000, buf);
+  tt_int_op(107, ==, buf_datalen(buf));
+  tt_int_op(2000, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2123));
+
+  /* This time we'll be grabbing a chunk from the freelist, and making sure
+     its time gets updated */
+  tv0.tv_sec += 5;
+  tv0.tv_usec = 617*1000;
+  tor_gettimeofday_cache_set(&tv0);
+  for (i = 0; i < 600; ++i)
+    write_to_buf("ABCDEFG", 7, buf);
+  tt_int_op(4307, ==, buf_datalen(buf));
+
+  tt_int_op(2000, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+2123));
+  fetch_from_buf(tmp, 4000, buf);
+  fetch_from_buf(tmp, 306, buf);
+  tt_int_op(0, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+5617));
+  tt_int_op(383, ==, buf_get_oldest_chunk_timestamp(buf, START_MSEC+6000));
+
+ done:
+  buf_free(buf);
+  buf_free(buf2);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -523,6 +595,7 @@ struct testcase_t buffer_tests[] = {
   { "ext_or_cmd", test_buffer_ext_or_cmd, TT_FORK, NULL, NULL },
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
+  { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

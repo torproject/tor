@@ -626,7 +626,9 @@ tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
 }
 #endif
 
-#if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,1,1)
+
+#if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,1,1) \
+  && !defined(TOR_UNIT_TESTS)
 void
 tor_gettimeofday_cached(struct timeval *tv)
 {
@@ -659,5 +661,15 @@ tor_gettimeofday_cache_clear(void)
 {
   cached_time_hires.tv_sec = 0;
 }
+
+#ifdef TOR_UNIT_TESTS
+/** For testing: force-update the cached time to a given value. */
+void
+tor_gettimeofday_cache_set(const struct timeval *tv)
+{
+  tor_assert(tv);
+  memcpy(&cached_time_hires, tv, sizeof(*tv));
+}
+#endif
 #endif
 
