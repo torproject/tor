@@ -276,12 +276,14 @@ preferred_chunk_size(size_t target)
 }
 
 /** Remove from the freelists most chunks that have not been used since the
- * last call to buf_shrink_freelists(). */
-void
+ * last call to buf_shrink_freelists().   Return the amount of memory
+ * freed. */
+size_t
 buf_shrink_freelists(int free_all)
 {
 #ifdef ENABLE_BUF_FREELISTS
   int i;
+  size_t total_freed = 0;
   disable_control_logging();
   for (i = 0; freelists[i].alloc_size; ++i) {
     int slack = freelists[i].slack;
@@ -315,6 +317,7 @@ buf_shrink_freelists(int free_all)
         chunk_t *next = chunk->next;
         tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
         total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
+        total_freed += CHUNK_ALLOC_SIZE(chunk->memlen);
         tor_free(chunk);
         chunk = next;
         --n_to_free;
@@ -343,8 +346,10 @@ buf_shrink_freelists(int free_all)
   }
  done:
   enable_control_logging();
+  return total_freed;
 #else
   (void) free_all;
+  return 0;
 #endif
 }
 
