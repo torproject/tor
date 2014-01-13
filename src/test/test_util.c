@@ -1027,6 +1027,8 @@ test_util_strmisc(void)
   test_eq(0L,   tor_parse_long("10",-2,0,100,NULL,NULL));
   test_eq(68284L, tor_parse_long("10abc",16,0,70000,NULL,NULL));
   test_eq(68284L, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
+  test_eq(0, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
+  test_eq(i, 0);
 
   /* Test parse_ulong */
   test_eq(0UL, tor_parse_ulong("",10,0,100,NULL,NULL));
@@ -1038,6 +1040,8 @@ test_util_strmisc(void)
   test_eq(0UL, tor_parse_ulong("8",8,0,100,NULL,NULL));
   test_eq(50UL, tor_parse_ulong("50",10,50,100,NULL,NULL));
   test_eq(0UL, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("50",-1,50,100,&i,NULL));
+  test_eq(0, i);
 
   /* Test parse_uint64 */
   test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
@@ -1049,6 +1053,9 @@ test_util_strmisc(void)
   test_streq(cp, "");
   test_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
+  test_eq(0, i);
+  test_assert(U64_LITERAL(0) ==
+              tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
   test_eq(0, i);
 
   {
