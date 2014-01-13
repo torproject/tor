@@ -1664,7 +1664,7 @@ n_cells_in_circ_queues(const circuit_t *c)
  * This function will return incorrect results if the oldest cell queued on
  * the circuit is older than 2**32 msec (about 49 days) old.
  */
-static uint32_t
+STATIC uint32_t
 circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
 {
   uint32_t age = 0;
@@ -1711,7 +1711,7 @@ circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
 /** Return the age in milliseconds of the oldest buffer chunk on any stream
  * attached to the circuit <b>c</b>, where age is taken in milliseconds before
  * the time <b>now</b> (in truncated milliseconds since the epoch). */
-static uint32_t
+STATIC uint32_t
 circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 {
   if (CIRCUIT_IS_ORIGIN(c)) {
@@ -1726,7 +1726,7 @@ circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 /** Return the age of the oldest cell or stream buffer chunk on the circuit
  * <b>c</b>, where age is taken in milliseconds before the time <b>now</b> (in
  * truncated milliseconds since the epoch). */
-static uint32_t
+STATIC uint32_t
 circuit_max_queued_item_age(const circuit_t *c, uint32_t now)
 {
   uint32_t cell_age = circuit_max_queued_cell_age(c, now);

@@ -76,7 +76,6 @@ dummy_origin_circuit_new(int n_cells)
   return TO_CIRCUIT(circ);
 }
 
-#if 0
 static void
 add_bytes_to_buf(generic_buffer_t *buf, size_t n_bytes)
 {
@@ -91,18 +90,34 @@ add_bytes_to_buf(generic_buffer_t *buf, size_t n_bytes)
 }
 
 static edge_connection_t *
-dummy_edge_conn_new(int type, size_t in_bytes, size_t out_bytes)
+dummy_edge_conn_new(circuit_t *circ,
+                    int type, size_t in_bytes, size_t out_bytes)
 {
-  edge_connection_t *conn = edge_connection_new(type, AF_INET);
+  edge_connection_t *conn;
+
+  if (type == CONN_TYPE_EXIT)
+    conn = edge_connection_new(type, AF_INET);
+  else
+    conn = ENTRY_TO_EDGE_CONN(entry_connection_new(type, AF_INET));
 
   /* We add these bytes directly to the buffers, to avoid all the
    * edge connection read/write machinery. */
   add_bytes_to_buf(TO_CONN(conn)->inbuf, in_bytes);
   add_bytes_to_buf(TO_CONN(conn)->outbuf, out_bytes);
 
+  conn->on_circuit = circ;
+  if (type == CONN_TYPE_EXIT) {
+    or_circuit_t *oc  = TO_OR_CIRCUIT(circ);
+    conn->next_stream = oc->n_streams;
+    oc->n_streams = conn;
+  } else {
+    origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+    conn->next_stream = oc->p_streams;
+    oc->p_streams = conn;
+  }
+
   return conn;
 }
-#endif
 
 /** Run unit tests for buffers.c */
 static void
@@ -192,8 +207,142 @@ test_oom_circbuf(void *arg)
   UNMOCK(circuit_mark_for_close_);
 }
 
+/** Run unit tests for buffers.c */
+static void
+test_oom_streambuf(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  circuit_t *c1 = NULL, *c2 = NULL, *c3 = NULL, *c4 = NULL, *c5 = NULL;
+  struct timeval tv = { 1389641159, 0 };
+  uint32_t tvms;
+  int i;
+
+  (void) arg;
+
+  MOCK(circuit_mark_for_close_, circuit_mark_for_close_dummy_);
+  init_cell_pool();
+
+  /* Far too low for real life. */
+  options->MaxMemInQueues = 81*packed_cell_mem_cost() + 4096 * 34;
+  options->CellStatistics = 0;
+
+  tt_int_op(cell_queues_check_size(), ==, 0); /* We don't start out OOM. */
+  tt_int_op(cell_queues_get_total_allocation(), ==, 0);
+  tt_int_op(buf_get_total_allocation(), ==, 0);
+
+  /* Start all circuits with a bit of data queued in cells */
+  tv.tv_usec = 500*1000; /* go halfway into the second. */
+  tor_gettimeofday_cache_set(&tv);
+  c1 = dummy_or_circuit_new(10,10);
+  tv.tv_usec = 510*1000;
+  tor_gettimeofday_cache_set(&tv);
+  c2 = dummy_origin_circuit_new(20);
+  tv.tv_usec = 520*1000;
+  tor_gettimeofday_cache_set(&tv);
+  c3 = dummy_or_circuit_new(20,20);
+  tv.tv_usec = 530*1000;
+  tor_gettimeofday_cache_set(&tv);
+  c4 = dummy_or_circuit_new(0,0);
+  tt_int_op(cell_queues_get_total_allocation(), ==,
+            packed_cell_mem_cost() * 80);
+
+  tv.tv_usec = 600*1000;
+  tor_gettimeofday_cache_set(&tv);
+
+  /* Add some connections to c1...c4. */
+  for (i = 0; i < 4; ++i) {
+    edge_connection_t *ec;
+    /* link it to a circuit */
+    tv.tv_usec += 10*1000;
+    tor_gettimeofday_cache_set(&tv);
+    ec = dummy_edge_conn_new(c1, CONN_TYPE_EXIT, 1000, 1000);
+    tt_assert(ec);
+    tv.tv_usec += 10*1000;
+    tor_gettimeofday_cache_set(&tv);
+    ec = dummy_edge_conn_new(c2, CONN_TYPE_AP, 1000, 1000);
+    tt_assert(ec);
+    tv.tv_usec += 10*1000;
+    tor_gettimeofday_cache_set(&tv);
+    ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000); /* Yes, 4 twice*/
+    tt_assert(ec);
+    tv.tv_usec += 10*1000;
+    tor_gettimeofday_cache_set(&tv);
+    ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000);
+    tt_assert(ec);
+  }
+
+  tv.tv_sec += 1;
+  tv.tv_usec = 0;
+  tvms = (uint32_t) tv_to_msec(&tv);
+
+  tt_int_op(circuit_max_queued_cell_age(c1, tvms), ==, 500);
+  tt_int_op(circuit_max_queued_cell_age(c2, tvms), ==, 490);
+  tt_int_op(circuit_max_queued_cell_age(c3, tvms), ==, 480);
+  tt_int_op(circuit_max_queued_cell_age(c4, tvms), ==, 0);
+
+  tt_int_op(circuit_max_queued_data_age(c1, tvms), ==, 390);
+  tt_int_op(circuit_max_queued_data_age(c2, tvms), ==, 380);
+  tt_int_op(circuit_max_queued_data_age(c3, tvms), ==, 0);
+  tt_int_op(circuit_max_queued_data_age(c4, tvms), ==, 370);
+
+  tt_int_op(circuit_max_queued_item_age(c1, tvms), ==, 500);
+  tt_int_op(circuit_max_queued_item_age(c2, tvms), ==, 490);
+  tt_int_op(circuit_max_queued_item_age(c3, tvms), ==, 480);
+  tt_int_op(circuit_max_queued_item_age(c4, tvms), ==, 370);
+
+  tt_int_op(cell_queues_get_total_allocation(), ==,
+            packed_cell_mem_cost() * 80);
+  tt_int_op(buf_get_total_allocation(), ==, 4096*16*2);
+
+  /* Now give c4 a very old buffer of modest size */
+  {
+    edge_connection_t *ec;
+    tv.tv_sec -= 1;
+    tv.tv_usec = 0;
+    tor_gettimeofday_cache_set(&tv);
+    ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000);
+    tt_assert(ec);
+  }
+  tt_int_op(buf_get_total_allocation(), ==, 4096*17*2);
+  tt_int_op(circuit_max_queued_item_age(c4, tvms), ==, 1000);
+
+  tt_int_op(cell_queues_check_size(), ==, 0);
+
+  /* And run over the limit. */
+  tv.tv_usec = 800*1000;
+  tor_gettimeofday_cache_set(&tv);
+  c5 = dummy_or_circuit_new(0,5);
+
+  tt_int_op(cell_queues_get_total_allocation(), ==,
+            packed_cell_mem_cost() * 85);
+  tt_int_op(buf_get_total_allocation(), ==, 4096*17*2);
+
+  tt_int_op(cell_queues_check_size(), ==, 1); /* We are now OOM */
+
+  /* C4 should have died. */
+  tt_assert(! c1->marked_for_close);
+  tt_assert(! c2->marked_for_close);
+  tt_assert(! c3->marked_for_close);
+  tt_assert(c4->marked_for_close);
+  tt_assert(! c5->marked_for_close);
+
+  tt_int_op(cell_queues_get_total_allocation(), ==,
+            packed_cell_mem_cost() * 85);
+  tt_int_op(buf_get_total_allocation(), ==, 4096*8*2);
+
+ done:
+  circuit_free(c1);
+  circuit_free(c2);
+  circuit_free(c3);
+  circuit_free(c4);
+  circuit_free(c5);
+
+  UNMOCK(circuit_mark_for_close_);
+}
+
 struct testcase_t oom_tests[] = {
   { "circbuf", test_oom_circbuf, TT_FORK, NULL, NULL },
+  { "streambuf", test_oom_streambuf, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
