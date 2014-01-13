@@ -1435,9 +1435,9 @@ circuit_mark_all_dirty_circs_as_unusable(void)
  *   - If circ->rend_splice is set (we are the midpoint of a joined
  *     rendezvous stream), then mark the other circuit to close as well.
  */
-void
-circuit_mark_for_close_(circuit_t *circ, int reason, int line,
-                        const char *file)
+MOCK_IMPL(void,
+circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
+                          const char *file))
 {
   int orig_reason = reason; /* Passed to the controller */
   assert_circuit_ok(circ);
