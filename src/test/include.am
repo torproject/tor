@@ -32,6 +32,7 @@ src_test_test_SOURCES = \
 	src/test/test_introduce.c \
 	src/test/test_logging.c \
 	src/test/test_microdesc.c \
+	src/test/test_oom.c \
 	src/test/test_options.c \
 	src/test/test_pt.c \
 	src/test/test_replay.c \
