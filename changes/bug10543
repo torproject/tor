@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - If all nodes with the Exit flag have been disabled with the ExitNodes
+      flag, consider nodes which can exit to other ports as well.  Fixes bug
+      10543; bugfix on 0.2.4.10-alpha.
+
