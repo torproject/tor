@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Check return code on spawn_func() in cpuworker code, so that we don't
+      think we've spawned a nonworking cpuworker and write junk to it
+      forever. Fix for bug 4345; bugfix on all released Tor versions.
+      Found by "skruffy".
+
