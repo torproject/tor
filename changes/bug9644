@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a small memory leak on exit. (We weren't freeing directory
-      authority certificate download statuses.) Fixes bug 9644; bugfix
-      on 0.2.4.13-alpha.

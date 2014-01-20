@@ -1,7 +1,0 @@
-  o Minor features:
-    - Improve the circuit queue out-of-memory handler. Previously, when
-      we ran low on memory, we'd close whichever circuits had the most
-      queued cells. Now, we close those that have the *oldest* queued
-      cells, on the theory that those are most responsible for us
-      running low on memory. Based on analysis from a forthcoming paper
-      by Jansen, Tschorsch, Johnson, and Scheuermann. Fixes bug 9093.

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When examining list of network interfaces to find our address, do
-      not consider non-running or disabled network interfaces. Fixes bug
-      9904; bugfix on 0.2.3.11-alpha. Patch from "hantwister".

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix an assertion failure that would occur when disabling the
-      ORPort setting on a running Tor process while accounting was
-      enabled. Fixes bug 6979; bugfix on 0.2.2.18-alpha.
