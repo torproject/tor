@@ -8,7 +8,7 @@ sub nChanges {
     local *F;
     # requires perl 5.8.  Avoids shell issues if we ever get a changes
     # file named by the parents of Little Johnny Tables.
-    open F, "-|", "git", "log", "--pretty=format:%H", $branches, "--", $fname
+    open F, "-|", "git", "log", "--no-merges", "--pretty=format:%H", $branches, "--", $fname
 	or die "$!";
     my @changes = <F>;
     return scalar @changes
@@ -19,7 +19,7 @@ my $look_for_type = "merged";
 if (! @ARGV) {
     print <<EOF
 Usage:
-   findMergedChanges.pl [--merged/--unmerged/--weird/--list] [--branch=<branchname] changes/*
+   findMergedChanges.pl [--merged/--unmerged/--weird/--list] [--branch=<branchname] [--head=<branchname>] changes/*
 
 A change is "merged" if it has ever been merged to release-0.2.4 and it has had
 no subsequent changes in master.
@@ -37,6 +37,7 @@ EOF
 }
 
 my $target_branch = "origin/release-0.2.4";
+my $head = "origin/master";
 
 while (@ARGV and $ARGV[0] =~ /^--/) {
     my $flag = shift @ARGV;
@@ -44,6 +45,8 @@ while (@ARGV and $ARGV[0] =~ /^--/) {
 	$look_for_type = $1;
     } elsif ($flag =~ /^--branch=(\S+)/) {
         $target_branch = $1;
+    } elsif ($flag =~ /^--head=(\S+)/) {
+        $head = $1;
     } else {
 	die "Unrecognized flag $flag";
     }
@@ -51,7 +54,7 @@ while (@ARGV and $ARGV[0] =~ /^--/) {
 
 for my $changefile (@ARGV) {
     my $n_merged = nChanges($target_branch, $changefile);
-    my $n_postmerged = nChanges("${target_branch}..origin/master", $changefile);
+    my $n_postmerged = nChanges("${target_branch}..${head}", $changefile);
     my $type;
 
     if ($n_merged != 0 and $n_postmerged == 0) {
