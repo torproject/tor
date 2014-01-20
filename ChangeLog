@@ -4,6 +4,7 @@ ALSO IN 0.2.4.18-rc
   o Major bugfixes:
     - Do not apply connection_consider_empty_read/write_buckets to
       non-rate-limited connections.
+      (This was #9731.)
   o Documentation:
     - Add anchors to the manpage so we can link to the documentation for
       specific options. Resolves ticket 9866.
