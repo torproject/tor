@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Avoid launching spurious extra circuits when a stream is pending.
-      This fixes a bug where any circuit that _wasn't_ unusable for new
-      streams would be treated as if it were, causing extra circuits to
-      be launched. Fixes bug 10456; bugfix on 0.2.4.12-alpha.
-

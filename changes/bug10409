@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a crash bug when starting with a corrupted microdescriptor
-      cache file. Fix for bug 10406; bugfix on 0.2.2.6-alpha.

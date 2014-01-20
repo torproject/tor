@@ -74,12 +74,38 @@ ALSO IN 0.2.4.18-rc
 ==============================
 ALSO IN 0.2.4.19:
 
+  (Nothing, since 0.2.4.19 is the same as 0.2.4.18-rc)
 
 ==============================
 ALSO IN 0.2.4.20:
 
+  o Major bugfixes:
+    - Do not allow OpenSSL engines to replace the PRNG, even when
+      HardwareAccel is set. The only default builtin PRNG engine uses
+      the Intel RDRAND instruction to replace the entire PRNG, and
+      ignores all attempts to seed it with more entropy. That's
+      cryptographically stupid: the right response to a new alleged
+      entropy source is never to discard all previously used entropy
+      sources. Fixes bug 10402; works around behavior introduced in
+      OpenSSL 1.0.0. Diagnosis and investigation thanks to "coderman"
+      and "rl1987".
 
+  o Minor bugfixes:
+    - Avoid a crash bug when starting with a corrupted microdescriptor
+      cache file. Fix for bug 10406; bugfix on 0.2.2.6-alpha.
+  o Minor bugfixes:
+    - If we fail to dump a previously cached microdescriptor to disk, avoid
+      freeing duplicate data later on. Fix for bug 10423; bugfix on
+      0.2.4.13-alpha. Spotted by "bobnomnom".
+  o Major bugfixes:
+    - Avoid launching spurious extra circuits when a stream is pending.
+      This fixes a bug where any circuit that _wasn't_ unusable for new
+      streams would be treated as if it were, causing extra circuits to
+      be launched. Fixes bug 10456; bugfix on 0.2.4.12-alpha.
 
+  o Major bugfixes:
+    - Fix assertion failure when AutomapHostsOnResolve yields an IPv6
+      address. Fixes bug 10465; bugfix on 0.2.4.7-alpha.
 
 ==============================
 
