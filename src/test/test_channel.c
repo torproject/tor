@@ -22,6 +22,7 @@ static int test_chan_accept_cells = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
 static int test_doesnt_want_writes_count = 0;
+static int test_has_waiting_cells_count = 0;
 static double test_overhead_estimate = 1.0f;
 static int test_releases_count = 0;
 
@@ -206,6 +207,31 @@ new_fake_channel(void)
   return chan;
 }
 
+/**
+ * Counter query for scheduler_channel_has_waiting_cells_mock()
+ */
+
+int
+get_mock_scheduler_has_waiting_cells_count(void)
+{
+  return test_has_waiting_cells_count;
+}
+
+/**
+ * Mock for scheduler_channel_has_waiting_cells()
+ */
+
+void
+scheduler_channel_has_waiting_cells_mock(channel_t *ch)
+{
+  (void)ch;
+
+  /* Increment counter */
+  ++test_has_waiting_cells_count;
+
+  return;
+}
+
 static void
 scheduler_channel_doesnt_want_writes_mock(channel_t *ch)
 {
@@ -216,6 +242,20 @@ scheduler_channel_doesnt_want_writes_mock(channel_t *ch)
 
   return;
 }
+
+/**
+ * Counter query for scheduler_release_channel_mock()
+ */
+
+int
+get_mock_scheduler_release_channel_count(void)
+{
+  return test_releases_count;
+}
+
+/**
+ * Mock for scheduler_release_channel()
+ */
 
 void
 scheduler_release_channel_mock(channel_t *ch)
