@@ -120,7 +120,7 @@ Running gcov for unit test coverage
 -----
    ./configure --enable-coverage
    make
-   ./src/test/test
+   make check
    mkdir coverage-output
    ./contrib/coverage coverage-output
 -----
@@ -134,6 +134,20 @@ line was never reached.  Lines with numbers were called that number of times.
 If that doesn't work:
    * Try configuring Tor with --disable-gcc-hardening
    * You might need to run 'make clean' after you run './configure'.
+
+If you make changes to Tor and want to get another set of coverage results,
+you can run "make reset-gcov" to clear the intermediary gcov output.
+
+If you have two different "coverage-output" directories, and you want to see
+a meaningful diff between them, you can run:
+
+-----
+   ./contrib/cov-diff coverage-output1 coverage-output2 | less
+-----
+
+In this diff, any lines that were visited at least once will have coverage
+"1".  This lets you inspect what you (probably) really want to know: which
+untested lines were changed?  Are there any new untested lines?
 
 Running integration tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
