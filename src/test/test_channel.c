@@ -35,7 +35,6 @@ static int chan_test_write_packed_cell(channel_t *ch,
                                        packed_cell_t *packed_cell);
 static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
-static void scheduler_release_channel_mock(channel_t *ch);
 
 static void test_channel_flush(void *arg);
 static void test_channel_lifecycle(void *arg);
@@ -218,7 +217,7 @@ scheduler_channel_doesnt_want_writes_mock(channel_t *ch)
   return;
 }
 
-static void
+void
 scheduler_release_channel_mock(channel_t *ch)
 {
   (void)ch;

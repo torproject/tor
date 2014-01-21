@@ -13,4 +13,7 @@ void make_fake_cell(cell_t *c);
 void make_fake_var_cell(var_cell_t *c);
 channel_t * new_fake_channel(void);
 
+/* Also exposes some a mock used by both test_channel.c and test_relay.c */
+void scheduler_release_channel_mock(channel_t *ch);
+
 #endif /* !defined(TOR_FAKECHANS_H) */
