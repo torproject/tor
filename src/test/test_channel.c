@@ -13,7 +13,10 @@
 #include "relay.h"
 /* For init/free stuff */
 #include "scheduler.h"
+
+/* Test suite stuff */
 #include "test.h"
+#include "fakechans.h"
 
 static int test_chan_accept_cells = 0;
 static int test_cells_written = 0;
@@ -31,9 +34,6 @@ static int chan_test_write_cell(channel_t *ch, cell_t *cell);
 static int chan_test_write_packed_cell(channel_t *ch,
                                        packed_cell_t *packed_cell);
 static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
-static void make_fake_cell(cell_t *c);
-static void make_fake_var_cell(var_cell_t *c);
-static channel_t * new_fake_channel(void);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 static void scheduler_release_channel_mock(channel_t *ch);
 
@@ -150,7 +150,11 @@ chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell)
   return rv;
 }
 
-static void
+/**
+ * Fill out c with a new fake cell for test suite use
+ */
+
+void
 make_fake_cell(cell_t *c)
 {
   test_assert(c != NULL);
@@ -163,7 +167,11 @@ make_fake_cell(cell_t *c)
   return;
 }
 
-static void
+/**
+ * Fill out c with a new fake var_cell for test suite use
+ */
+
+void
 make_fake_var_cell(var_cell_t *c)
 {
   test_assert(c != NULL);
@@ -177,7 +185,11 @@ make_fake_var_cell(var_cell_t *c)
   return;
 }
 
-static channel_t *
+/**
+ * Set up a new fake channel for the test suite
+ */
+
+channel_t *
 new_fake_channel(void)
 {
   channel_t *chan = tor_malloc_zero(sizeof(channel_t));
@@ -491,6 +503,17 @@ test_channel_multi(void *arg)
 
   global_queue_estimate = channel_get_global_queue_estimate();
   test_eq(global_queue_estimate, 512);
+
+  /*
+   * Since the fake channels aren't registered, channel_free_all() can't
+   * see them properly.
+   */
+  MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+  channel_mark_for_close(ch1);
+  UNMOCK(scheduler_release_channel);
+
+  global_queue_estimate = channel_get_global_queue_estimate();
+  test_eq(global_queue_estimate, 0);
 
   /* Now free everything */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
