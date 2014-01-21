@@ -275,8 +275,8 @@ scheduler_channel_doesnt_want_writes,(channel_t *chan))
 
 /** Mark a channel as having waiting cells */
 
-void
-scheduler_channel_has_waiting_cells(channel_t *chan)
+MOCK_IMPL(void,
+scheduler_channel_has_waiting_cells,(channel_t *chan))
 {
   int became_pending = 0;
 
