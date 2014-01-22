@@ -506,7 +506,7 @@ channel_t * channel_next_with_digest(channel_t *chan);
  */
 
 const char * channel_describe_transport(channel_t *chan);
-void channel_dump_statistics(channel_t *chan, int severity);
+MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
 const char * channel_get_actual_remote_address(channel_t *chan);

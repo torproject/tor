@@ -3450,8 +3450,8 @@ chan_cell_queue_len(const chan_cell_queue_t *queue)
  * Dump statistics for one channel to the log
  */
 
-void
-channel_dump_statistics(channel_t *chan, int severity)
+MOCK_IMPL(void,
+channel_dump_statistics, (channel_t *chan, int severity))
 {
   double avg, interval, age;
   time_t now = time(NULL);
