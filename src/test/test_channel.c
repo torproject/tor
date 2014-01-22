@@ -34,7 +34,11 @@ static double test_overhead_estimate = 1.0f;
 static int test_releases_count = 0;
 static circuitmux_t *test_target_cmux = NULL;
 static unsigned int test_cmux_cells = 0;
+static channel_t *dump_statistics_mock_target = NULL;
+static int dump_statistics_mock_matches = 0;
 
+static void chan_test_channel_dump_statistics_mock(
+    channel_t *chan, int severity);
 static int chan_test_channel_flush_from_first_active_circuit_mock(
     channel_t *chan, int max);
 static unsigned int chan_test_circuitmux_num_cells_mock(circuitmux_t *cmux);
@@ -55,6 +59,7 @@ static int chan_test_write_packed_cell(channel_t *ch,
 static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 
+static void test_channel_dumpstats(void *arg);
 static void test_channel_flush(void *arg);
 static void test_channel_flushmux(void *arg);
 static void test_channel_incoming(void *arg);
@@ -71,6 +76,26 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
   (void)circid;
 
   ++test_destroy_not_pending_calls;
+}
+
+/**
+ * Mock for channel_dump_statistics(); if the channel matches the
+ * target, bump a counter - otherwise ignore.
+ */
+
+static void
+chan_test_channel_dump_statistics_mock(channel_t *chan, int severity)
+{
+  test_assert(chan != NULL);
+
+  (void)severity;
+
+  if (chan != NULL && chan == dump_statistics_mock_target) {
+    ++dump_statistics_mock_matches;
+  }
+
+ done:
+  return;
 }
 
 /**
@@ -410,6 +435,75 @@ scheduler_release_channel_mock(channel_t *ch)
 
   /* Increment counter */
   ++test_releases_count;
+
+  return;
+}
+
+/**
+ * Test for channel_dumpstats()
+ */
+
+static void
+test_channel_dumpstats(void *arg)
+{
+  channel_t *ch = NULL;
+
+  (void)arg;
+
+  /* Mock these for duration of the test */
+  MOCK(scheduler_channel_doesnt_want_writes,
+       scheduler_channel_doesnt_want_writes_mock);
+  MOCK(scheduler_release_channel,
+       scheduler_release_channel_mock);
+
+  /* Set up a new fake channel */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->cmux = circuitmux_alloc();
+
+  /* Try to register it */
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Set up mock */
+  dump_statistics_mock_target = ch;
+  dump_statistics_mock_matches = 0;
+  MOCK(channel_dump_statistics,
+       chan_test_channel_dump_statistics_mock);
+
+  /* Call channel_dumpstats() */
+  channel_dumpstats(LOG_DEBUG);
+
+  /* Assert that we hit the mock */
+  test_eq(dump_statistics_mock_matches, 1);
+
+  /* Close the channel */
+  channel_mark_for_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+
+  /* Try again and hit the finished channel */
+  channel_dumpstats(LOG_DEBUG);
+  test_eq(dump_statistics_mock_matches, 2);
+
+  channel_run_cleanup();
+  ch = NULL;
+
+  /* Now we should hit nothing */
+  channel_dumpstats(LOG_DEBUG);
+  test_eq(dump_statistics_mock_matches, 2);
+
+  /* Unmock */
+  UNMOCK(channel_dump_statistics);
+  dump_statistics_mock_target = NULL;
+  dump_statistics_mock_matches = 0;
+
+ done:
+  tor_free(ch);
+
+  UNMOCK(scheduler_channel_doesnt_want_writes);
+  UNMOCK(scheduler_release_channel);
 
   return;
 }
@@ -1429,6 +1523,7 @@ test_channel_write(void *arg)
 }
 
 struct testcase_t channel_tests[] = {
+  { "dumpstats", test_channel_dumpstats, TT_FORK, NULL, NULL },
   { "flush", test_channel_flush, TT_FORK, NULL, NULL },
   { "flushmux", test_channel_flushmux, TT_FORK, NULL, NULL },
   { "incoming", test_channel_incoming, TT_FORK, NULL, NULL },
