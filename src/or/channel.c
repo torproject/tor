@@ -109,7 +109,7 @@ static uint64_t n_channel_bytes_in_queues = 0;
  * transmit overhead*
  */
 
-static uint64_t estimated_total_queue_size = 0;
+STATIC uint64_t estimated_total_queue_size = 0;
 
 /* Digest->channel map
  *
