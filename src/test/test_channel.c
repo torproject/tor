@@ -24,6 +24,8 @@
 extern uint64_t estimated_total_queue_size;
 
 static int test_chan_accept_cells = 0;
+static int test_chan_fixed_cells_recved = 0;
+static int test_chan_var_cells_recved = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
 static int test_doesnt_want_writes_count = 0;
@@ -33,6 +35,10 @@ static int test_releases_count = 0;
 
 static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
+static void chan_test_cell_handler(channel_t *ch,
+                                   cell_t *cell);
+static void chan_test_var_cell_handler(channel_t *ch,
+                                       var_cell_t *var_cell);
 static void chan_test_close(channel_t *ch);
 static void chan_test_error(channel_t *ch);
 static void chan_test_finish_close(channel_t *ch);
@@ -45,6 +51,7 @@ static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 
 static void test_channel_flush(void *arg);
+static void test_channel_incoming(void *arg);
 static void test_channel_lifecycle(void *arg);
 static void test_channel_multi(void *arg);
 static void test_channel_queue_size(void *arg);
@@ -58,6 +65,42 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
   (void)circid;
 
   ++test_destroy_not_pending_calls;
+}
+
+/*
+ * Handle an incoming fixed-size cell for unit tests
+ */
+
+static void
+chan_test_cell_handler(channel_t *ch,
+                       cell_t *cell)
+{
+  test_assert(ch);
+  test_assert(cell);
+
+  tor_free(cell);
+  ++test_chan_fixed_cells_recved;
+
+ done:
+  return;
+}
+
+/*
+ * Handle an incoming variable-size cell for unit tests
+ */
+
+static void
+chan_test_var_cell_handler(channel_t *ch,
+                           var_cell_t *var_cell)
+{
+  test_assert(ch);
+  test_assert(var_cell);
+
+  tor_free(var_cell);
+  ++test_chan_var_cells_recved;
+
+ done:
+  return;
 }
 
 static void
@@ -364,6 +407,85 @@ test_channel_flush(void *arg)
  done:
   tor_free(ch);
   free_cell_pool();
+
+  return;
+}
+
+static void
+test_channel_incoming(void *arg)
+{
+  channel_t *ch = NULL;
+  cell_t *cell = NULL;
+  var_cell_t *var_cell = NULL;
+  int old_count;
+
+  (void)arg;
+
+  /* Mock these for duration of the test */
+  MOCK(scheduler_channel_doesnt_want_writes,
+       scheduler_channel_doesnt_want_writes_mock);
+  MOCK(scheduler_release_channel,
+       scheduler_release_channel_mock);
+
+  /* Accept cells to lower layer */
+  test_chan_accept_cells = 1;
+  /* Use default overhead factor */
+  test_overhead_estimate = 1.0f;
+
+  ch = new_fake_channel();
+  test_assert(ch);
+  /* Start it off in OPENING */
+  ch->state = CHANNEL_STATE_OPENING;
+  /* We'll need a cmux */
+  ch->cmux = circuitmux_alloc();
+
+  /* Install incoming cell handlers */
+  channel_set_cell_handlers(ch,
+                            chan_test_cell_handler,
+                            chan_test_var_cell_handler);
+  /* Test cell handler getters */
+  test_eq(channel_get_cell_handler(ch), chan_test_cell_handler);
+  test_eq(channel_get_var_cell_handler(ch), chan_test_var_cell_handler);
+
+  /* Try to register it */
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Open it */
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_eq(ch->state, CHANNEL_STATE_OPEN);
+
+  /* Receive a fixed cell */
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  old_count = test_chan_fixed_cells_recved;
+  channel_queue_cell(ch, cell);
+  cell = NULL;
+  test_eq(test_chan_fixed_cells_recved, old_count + 1);
+
+  /* Receive a variable-size cell */
+  var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
+  make_fake_var_cell(var_cell);
+  old_count = test_chan_var_cells_recved;
+  channel_queue_var_cell(ch, var_cell);
+  var_cell = NULL;
+  test_eq(test_chan_var_cells_recved, old_count + 1);
+
+  /* Close it */
+  channel_mark_for_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+  channel_run_cleanup();
+  ch = NULL;
+
+ done:
+  tor_free(ch);
+  tor_free(cell);
+  tor_free(var_cell);
+
+  UNMOCK(scheduler_channel_doesnt_want_writes);
+  UNMOCK(scheduler_release_channel);
 
   return;
 }
@@ -1169,6 +1291,7 @@ test_channel_write(void *arg)
 
 struct testcase_t channel_tests[] = {
   { "flush", test_channel_flush, TT_FORK, NULL, NULL },
+  { "incoming", test_channel_incoming, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK, NULL, NULL },
   { "multi", test_channel_multi, TT_FORK, NULL, NULL },
