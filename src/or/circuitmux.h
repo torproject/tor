@@ -120,7 +120,7 @@ int circuitmux_is_circuit_attached(circuitmux_t *cmux, circuit_t *circ);
 int circuitmux_is_circuit_active(circuitmux_t *cmux, circuit_t *circ);
 unsigned int circuitmux_num_cells_for_circuit(circuitmux_t *cmux,
                                               circuit_t *circ);
-unsigned int circuitmux_num_cells(circuitmux_t *cmux);
+MOCK_DECL(unsigned int, circuitmux_num_cells, (circuitmux_t *cmux));
 unsigned int circuitmux_num_circuits(circuitmux_t *cmux);
 unsigned int circuitmux_num_active_circuits(circuitmux_t *cmux);
 
