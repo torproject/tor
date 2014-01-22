@@ -7,6 +7,7 @@
 #include "channel.h"
 /* For channel_note_destroy_not_pending */
 #include "circuitlist.h"
+#include "circuitmux.h"
 /* For var_cell_free */
 #include "connection_or.h"
 /* For packed_cell stuff */
@@ -30,6 +31,8 @@ static int test_releases_count = 0;
 static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
 static void chan_test_close(channel_t *ch);
+static void chan_test_error(channel_t *ch);
+static void chan_test_finish_close(channel_t *ch);
 static size_t chan_test_num_bytes_queued(channel_t *ch);
 static int chan_test_num_cells_writeable(channel_t *ch);
 static int chan_test_write_cell(channel_t *ch, cell_t *cell);
@@ -58,6 +61,40 @@ static void
 chan_test_close(channel_t *ch)
 {
   test_assert(ch);
+
+ done:
+  return;
+}
+
+/*
+ * Close a channel through the error path
+ */
+
+static void
+chan_test_error(channel_t *ch)
+{
+  test_assert(ch);
+  test_assert(!(ch->state == CHANNEL_STATE_CLOSING ||
+                ch->state == CHANNEL_STATE_ERROR ||
+                ch->state == CHANNEL_STATE_CLOSED));
+
+  channel_close_for_error(ch);
+
+ done:
+  return;
+}
+
+/*
+ * Finish closing a channel from CHANNEL_STATE_CLOSING
+ */
+
+static void
+chan_test_finish_close(channel_t *ch)
+{
+  test_assert(ch);
+  test_assert(ch->state == CHANNEL_STATE_CLOSING);
+
+  channel_closed(ch);
 
  done:
   return;
@@ -328,6 +365,12 @@ test_channel_flush(void *arg)
   return;
 }
 
+/**
+ * Normal channel lifecycle test:
+ *
+ * OPENING->OPEN->MAINT->OPEN->CLOSING->CLOSED
+ */
+
 static void
 test_channel_lifecycle(void *arg)
 {
@@ -419,6 +462,166 @@ test_channel_lifecycle(void *arg)
  done:
   tor_free(ch1);
   tor_free(ch2);
+
+  UNMOCK(scheduler_channel_doesnt_want_writes);
+  UNMOCK(scheduler_release_channel);
+
+  return;
+}
+
+/**
+ * Weird channel lifecycle test:
+ *
+ * OPENING->CLOSING->CLOSED
+ * OPENING->OPEN->CLOSING->ERROR
+ * OPENING->OPEN->MAINT->CLOSING->CLOSED
+ * OPENING->OPEN->MAINT->CLOSING->ERROR
+ */
+
+static void
+test_channel_lifecycle_2(void *arg)
+{
+  channel_t *ch = NULL;
+
+  (void)arg;
+
+  /* Mock these for the whole lifecycle test */
+  MOCK(scheduler_channel_doesnt_want_writes,
+       scheduler_channel_doesnt_want_writes_mock);
+  MOCK(scheduler_release_channel,
+       scheduler_release_channel_mock);
+
+  /* Accept cells to lower layer */
+  test_chan_accept_cells = 1;
+  /* Use default overhead factor */
+  test_overhead_estimate = 1.0f;
+
+  ch = new_fake_channel();
+  test_assert(ch);
+  /* Start it off in OPENING */
+  ch->state = CHANNEL_STATE_OPENING;
+  /* The full lifecycle test needs a cmux */
+  ch->cmux = circuitmux_alloc();
+
+  /* Try to register it */
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Try to close it */
+  channel_mark_for_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+
+  /* Finish closing it */
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+  channel_run_cleanup();
+  ch = NULL;
+
+  /* Now try OPENING->OPEN->CLOSING->ERROR */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->state = CHANNEL_STATE_OPENING;
+  ch->cmux = circuitmux_alloc();
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Finish opening it */
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+
+  /* Error exit from lower layer */
+  chan_test_error(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_ERROR);
+  channel_run_cleanup();
+  ch = NULL;
+
+  /* OPENING->OPEN->MAINT->CLOSING->CLOSED close from maintenance state */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->state = CHANNEL_STATE_OPENING;
+  ch->cmux = circuitmux_alloc();
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Finish opening it */
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_eq(ch->state, CHANNEL_STATE_OPEN);
+
+  /* Go to maintenance state */
+  channel_change_state(ch, CHANNEL_STATE_MAINT);
+  test_eq(ch->state, CHANNEL_STATE_MAINT);
+
+  /* Lower layer close */
+  channel_mark_for_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+
+  /* Finish */
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+  channel_run_cleanup();
+  ch = NULL;
+
+  /*
+   * OPENING->OPEN->MAINT->CLOSING->CLOSED lower-layer close during
+   * maintenance state
+   */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->state = CHANNEL_STATE_OPENING;
+  ch->cmux = circuitmux_alloc();
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Finish opening it */
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_eq(ch->state, CHANNEL_STATE_OPEN);
+
+  /* Go to maintenance state */
+  channel_change_state(ch, CHANNEL_STATE_MAINT);
+  test_eq(ch->state, CHANNEL_STATE_MAINT);
+
+  /* Lower layer close */
+  channel_close_from_lower_layer(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+
+  /* Finish */
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+  channel_run_cleanup();
+  ch = NULL;
+
+  /* OPENING->OPEN->MAINT->CLOSING->ERROR */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->state = CHANNEL_STATE_OPENING;
+  ch->cmux = circuitmux_alloc();
+  channel_register(ch);
+  test_assert(ch->registered);
+
+  /* Finish opening it */
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_eq(ch->state, CHANNEL_STATE_OPEN);
+
+  /* Go to maintenance state */
+  channel_change_state(ch, CHANNEL_STATE_MAINT);
+  test_eq(ch->state, CHANNEL_STATE_MAINT);
+
+  /* Lower layer close */
+  chan_test_error(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+
+  /* Finish */
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_ERROR);
+  channel_run_cleanup();
+  ch = NULL;
+
+  /* Shut down channels */
+  channel_free_all();
+
+ done:
+  tor_free(ch);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
@@ -924,6 +1127,7 @@ test_channel_write(void *arg)
 struct testcase_t channel_tests[] = {
   { "flush", test_channel_flush, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
+  { "lifecycle_2", test_channel_lifecycle_2, TT_FORK, NULL, NULL },
   { "multi", test_channel_multi, TT_FORK, NULL, NULL },
   { "queue_impossible", test_channel_queue_impossible, TT_FORK, NULL, NULL },
   { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
