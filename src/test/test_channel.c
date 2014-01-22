@@ -32,7 +32,12 @@ static int test_doesnt_want_writes_count = 0;
 static int test_has_waiting_cells_count = 0;
 static double test_overhead_estimate = 1.0f;
 static int test_releases_count = 0;
+static circuitmux_t *test_target_cmux = NULL;
+static unsigned int test_cmux_cells = 0;
 
+static int chan_test_channel_flush_from_first_active_circuit_mock(
+    channel_t *chan, int max);
+static unsigned int chan_test_circuitmux_num_cells_mock(circuitmux_t *cmux);
 static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
 static void chan_test_cell_handler(channel_t *ch,
@@ -51,6 +56,7 @@ static int chan_test_write_var_cell(channel_t *ch, var_cell_t *var_cell);
 static void scheduler_channel_doesnt_want_writes_mock(channel_t *ch);
 
 static void test_channel_flush(void *arg);
+static void test_channel_flushmux(void *arg);
 static void test_channel_incoming(void *arg);
 static void test_channel_lifecycle(void *arg);
 static void test_channel_multi(void *arg);
@@ -65,6 +71,62 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
   (void)circid;
 
   ++test_destroy_not_pending_calls;
+}
+
+/**
+ * If the target cmux is the cmux for chan, make fake cells up to the
+ * target number of cells and write them to chan.  Otherwise, invoke
+ * the real channel_flush_from_first_active_circuit().
+ */
+
+static int
+chan_test_channel_flush_from_first_active_circuit_mock(channel_t *chan,
+                                                       int max)
+{
+  int result = 0, c = 0;
+  packed_cell_t *cell = NULL;
+
+  test_assert(chan != NULL);
+  if (test_target_cmux != NULL &&
+      test_target_cmux == chan->cmux) {
+    while (c <= max && test_cmux_cells > 0) {
+      cell = packed_cell_new();
+      channel_write_packed_cell(chan, cell);
+      ++c;
+      --test_cmux_cells;
+    }
+    result = c;
+  } else {
+    result = channel_flush_from_first_active_circuit__real(chan, max);
+  }
+
+ done:
+  return result;
+}
+
+/**
+ * If we have a target cmux set and this matches it, lie about how
+ * many cells we have according to the number indicated; otherwise
+ * pass to the real circuitmux_num_cells().
+ */
+
+static unsigned int
+chan_test_circuitmux_num_cells_mock(circuitmux_t *cmux)
+{
+  unsigned int result = 0;
+
+  test_assert(cmux != NULL);
+  if (cmux != NULL) {
+    if (cmux == test_target_cmux) {
+      result = test_cmux_cells;
+    } else {
+      result = circuitmux_num_cells__real(cmux);
+    }
+  }
+
+ done:
+
+  return result;
 }
 
 /*
@@ -406,6 +468,61 @@ test_channel_flush(void *arg)
 
  done:
   tor_free(ch);
+  free_cell_pool();
+
+  return;
+}
+
+/**
+ * Channel flush tests that require cmux mocking
+ */
+
+static void
+test_channel_flushmux(void *arg)
+{
+  channel_t *ch = NULL;
+  int old_count;
+  ssize_t result;
+
+  (void)arg;
+
+  init_cell_pool();
+
+  /* Install mocks we need for this test */
+  MOCK(channel_flush_from_first_active_circuit,
+       chan_test_channel_flush_from_first_active_circuit_mock);
+  MOCK(circuitmux_num_cells,
+       chan_test_circuitmux_num_cells_mock);
+
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->cmux = circuitmux_alloc();
+
+  old_count = test_cells_written;
+
+  test_target_cmux = ch->cmux;
+  test_cmux_cells = 1;
+
+  /* Enable cell acceptance */
+  test_chan_accept_cells = 1;
+
+  result = channel_flush_some_cells(ch, 1);
+
+  test_eq(result, 1);
+  test_eq(test_cells_written, old_count + 1);
+  test_eq(test_cmux_cells, 0);
+
+  test_target_cmux = NULL;
+  test_cmux_cells = 0;
+
+ done:
+  tor_free(ch);
+
+  UNMOCK(channel_flush_from_first_active_circuit);
+  UNMOCK(circuitmux_num_cells);
+
+  test_chan_accept_cells = 0;
+
   free_cell_pool();
 
   return;
@@ -1291,6 +1408,7 @@ test_channel_write(void *arg)
 
 struct testcase_t channel_tests[] = {
   { "flush", test_channel_flush, TT_FORK, NULL, NULL },
+  { "flushmux", test_channel_flushmux, TT_FORK, NULL, NULL },
   { "incoming", test_channel_incoming, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "lifecycle_2", test_channel_lifecycle_2, TT_FORK, NULL, NULL },
