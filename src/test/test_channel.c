@@ -481,7 +481,7 @@ static void
 test_channel_flushmux(void *arg)
 {
   channel_t *ch = NULL;
-  int old_count;
+  int old_count, q_len_before, q_len_after;
   ssize_t result;
 
   (void)arg;
@@ -511,6 +511,28 @@ test_channel_flushmux(void *arg)
   test_eq(result, 1);
   test_eq(test_cells_written, old_count + 1);
   test_eq(test_cmux_cells, 0);
+
+  /* Now try it without accepting to force them into the queue */
+  test_chan_accept_cells = 0;
+  test_cmux_cells = 1;
+  q_len_before = chan_cell_queue_len(&(ch->outgoing_queue));
+
+  result = channel_flush_some_cells(ch, 1);
+
+  /* We should not have actually flushed any */
+  test_eq(result, 0);
+  test_eq(test_cells_written, old_count + 1);
+  /* But we should have gotten to the fake cellgen loop */
+  test_eq(test_cmux_cells, 0);
+  /* ...and we should have a queued cell */
+  q_len_after = chan_cell_queue_len(&(ch->outgoing_queue));
+  test_eq(q_len_after, q_len_before + 1);
+
+  /* Now accept cells again and drain the queue */
+  test_chan_accept_cells = 1;
+  channel_flush_cells(ch);
+  test_eq(test_cells_written, old_count + 2);
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 0);
 
   test_target_cmux = NULL;
   test_cmux_cells = 0;
