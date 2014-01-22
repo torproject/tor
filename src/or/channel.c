@@ -2263,7 +2263,8 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
 
         /* Now process the queue if necessary */
 
-        if (q_len_after > q_len_before && num_cells < flushed) {
+        if ((q_len_after > q_len_before) &&
+            (unlimited || (flushed < num_cells))) {
           flushed += channel_flush_some_cells_from_outgoing_queue(chan,
             (unlimited ? -1 : num_cells - flushed));
         }
