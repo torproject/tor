@@ -354,6 +354,34 @@ void channel_set_cmux_policy_everywhere(circuitmux_policy_t *pol);
 
 #ifdef TOR_CHANNEL_INTERNAL_
 
+#ifdef CHANNEL_PRIVATE_
+/* Cell queue structure (here rather than channel.c for test suite use) */
+
+typedef struct cell_queue_entry_s cell_queue_entry_t;
+struct cell_queue_entry_s {
+  TOR_SIMPLEQ_ENTRY(cell_queue_entry_s) next;
+  enum {
+    CELL_QUEUE_FIXED,
+    CELL_QUEUE_VAR,
+    CELL_QUEUE_PACKED
+  } type;
+  union {
+    struct {
+      cell_t *cell;
+    } fixed;
+    struct {
+      var_cell_t *var_cell;
+    } var;
+    struct {
+      packed_cell_t *packed_cell;
+    } packed;
+  } u;
+};
+
+/* Cell queue functions for benefit of test suite */
+STATIC int chan_cell_queue_len(const chan_cell_queue_t *queue);
+#endif
+
 /* Channel operations for subclasses and internal use only */
 
 /* Initialize a newly allocated channel - do this first in subclass

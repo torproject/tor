@@ -13,6 +13,9 @@
 
 #define TOR_CHANNEL_INTERNAL_
 
+/* This one's for stuff only channel.c and the test suite should see */
+#define CHANNEL_PRIVATE_
+
 #include "or.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -30,29 +33,6 @@
 #include "router.h"
 #include "routerlist.h"
 #include "scheduler.h"
-
-/* Cell queue structure */
-
-typedef struct cell_queue_entry_s cell_queue_entry_t;
-struct cell_queue_entry_s {
-  TOR_SIMPLEQ_ENTRY(cell_queue_entry_s) next;
-  enum {
-    CELL_QUEUE_FIXED,
-    CELL_QUEUE_VAR,
-    CELL_QUEUE_PACKED
-  } type;
-  union {
-    struct {
-      cell_t *cell;
-    } fixed;
-    struct {
-      var_cell_t *var_cell;
-    } var;
-    struct {
-      packed_cell_t *packed_cell;
-    } packed;
-  } u;
-};
 
 /* Global lists of channels */
 
@@ -175,7 +155,6 @@ static cell_queue_entry_t *
 cell_queue_entry_new_fixed(cell_t *cell);
 static cell_queue_entry_t *
 cell_queue_entry_new_var(var_cell_t *var_cell);
-static int chan_cell_queue_len(const chan_cell_queue_t *queue);
 static int is_destroy_cell(channel_t *chan,
                            const cell_queue_entry_t *q, circid_t *circid_out);
 
@@ -1751,9 +1730,8 @@ channel_get_cell_queue_entry_size(channel_t *chan, cell_queue_entry_t *q)
       rv = get_cell_network_size(chan->wide_circ_ids);
       break;
     case CELL_QUEUE_VAR:
-      tor_assert(q->u.var.var_cell);
       rv = get_var_cell_header_size(chan->wide_circ_ids) +
-           q->u.var.var_cell->payload_len;
+           (q->u.var.var_cell ? q->u.var.var_cell->payload_len : 0);
       break;
     case CELL_QUEUE_PACKED:
       rv = get_cell_network_size(chan->wide_circ_ids);
@@ -3455,7 +3433,7 @@ channel_listener_describe_transport(channel_listener_t *chan_l)
 /**
  * Return the number of entries in <b>queue</b>
  */
-static int
+STATIC int
 chan_cell_queue_len(const chan_cell_queue_t *queue)
 {
   int r = 0;
