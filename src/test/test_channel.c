@@ -2,6 +2,7 @@
 /* See LICENSE for licensing information */
 
 #define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_PRIVATE_
 #include "or.h"
 #include "channel.h"
 /* For channel_note_destroy_not_pending */
@@ -566,6 +567,129 @@ test_channel_multi(void *arg)
   return;
 }
 
+/**
+ * Check some hopefully-impossible edge cases in the channel queue we
+ * can only trigger by doing evil things to the queue directly.
+ */
+
+static void
+test_channel_queue_impossible(void *arg)
+{
+  channel_t *ch = NULL;
+  cell_t *cell = NULL;
+  packed_cell_t *packed_cell = NULL;
+  var_cell_t *var_cell = NULL;
+  int old_count;
+  cell_queue_entry_t *q = NULL;
+
+  (void)arg;
+
+  init_cell_pool();
+
+  packed_cell = packed_cell_new();
+  test_assert(packed_cell);
+
+  ch = new_fake_channel();
+  test_assert(ch);
+
+  /* We test queueing here; tell it not to accept cells */
+  test_chan_accept_cells = 0;
+  /* ...and keep it from trying to flush the queue */
+  ch->state = CHANNEL_STATE_MAINT;
+
+  /* Cache the cell written count */
+  old_count = test_cells_written;
+
+  /* Assert that the queue is initially empty */
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 0);
+
+  /* Get a fresh cell and write it to the channel*/
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  channel_write_cell(ch, cell);
+
+  /* Now it should be queued */
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)),1);
+  q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
+  test_assert(q);
+  if (q) {
+    test_eq(q->type, CELL_QUEUE_FIXED);
+    test_eq(q->u.fixed.cell, cell);
+  }
+  /* Do perverse things to it */
+  tor_free(q->u.fixed.cell);
+  q->u.fixed.cell = NULL;
+
+  /*
+   * Now change back to open with channel_change_state() and assert that it
+   * gets thrown away properly.
+   */
+  test_chan_accept_cells = 1;
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_assert(test_cells_written == old_count);
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 0);
+
+  /* Same thing but for a var_cell */
+
+  test_chan_accept_cells = 0;
+  ch->state = CHANNEL_STATE_MAINT;
+  var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
+  make_fake_var_cell(var_cell);
+  channel_write_var_cell(ch, var_cell);
+
+  /* Check that it's queued */
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 1);
+  q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
+  test_assert(q);
+  if (q) {
+    test_eq(q->type, CELL_QUEUE_VAR);
+    test_eq(q->u.var.var_cell, var_cell);
+  }
+
+  /* Remove the cell from the queue entry */
+  tor_free(q->u.var.var_cell);
+  q->u.var.var_cell = NULL;
+
+  /* Let it drain and check that the bad entry is discarded */
+  test_chan_accept_cells = 1;
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_assert(test_cells_written == old_count);
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 0);
+
+  /* Same thing with a packed_cell */
+
+  test_chan_accept_cells = 0;
+  ch->state = CHANNEL_STATE_MAINT;
+  packed_cell = packed_cell_new();
+  test_assert(packed_cell);
+  channel_write_packed_cell(ch, packed_cell);
+
+  /* Check that it's queued */
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 1);
+  q = TOR_SIMPLEQ_FIRST(&(ch->outgoing_queue));
+  test_assert(q);
+  if (q) {
+    test_eq(q->type, CELL_QUEUE_PACKED);
+    test_eq(q->u.packed.packed_cell, packed_cell);
+  }
+
+  /* Remove the cell from the queue entry */
+  packed_cell_free(q->u.packed.packed_cell);
+  q->u.packed.packed_cell = NULL;
+
+  /* Let it drain and check that the bad entry is discarded */
+  test_chan_accept_cells = 1;
+  channel_change_state(ch, CHANNEL_STATE_OPEN);
+  test_assert(test_cells_written == old_count);
+  test_eq(chan_cell_queue_len(&(ch->outgoing_queue)), 0);
+
+ done:
+  tor_free(ch);
+  free_cell_pool();
+
+  return;
+}
+
 static void
 test_channel_queue_size(void *arg)
 {
@@ -801,6 +925,7 @@ struct testcase_t channel_tests[] = {
   { "flush", test_channel_flush, TT_FORK, NULL, NULL },
   { "lifecycle", test_channel_lifecycle, TT_FORK, NULL, NULL },
   { "multi", test_channel_multi, TT_FORK, NULL, NULL },
+  { "queue_impossible", test_channel_queue_impossible, TT_FORK, NULL, NULL },
   { "queue_size", test_channel_queue_size, TT_FORK, NULL, NULL },
   { "write", test_channel_write, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
