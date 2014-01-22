@@ -20,6 +20,9 @@
 #include "test.h"
 #include "fakechans.h"
 
+/* This comes from channel.c */
+extern uint64_t estimated_total_queue_size;
+
 static int test_chan_accept_cells = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
@@ -400,6 +403,8 @@ test_channel_lifecycle(void *arg)
   test_assert(ch1);
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
+  /* We'll need a cmux */
+  ch1->cmux = circuitmux_alloc();
 
   /* Try to register it */
   channel_register(ch1);
@@ -422,6 +427,7 @@ test_channel_lifecycle(void *arg)
   ch2 = new_fake_channel();
   test_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
+  ch2->cmux = circuitmux_alloc();
 
   /* Register */
   channel_register(ch2);
@@ -784,6 +790,10 @@ test_channel_queue_impossible(void *arg)
   var_cell_t *var_cell = NULL;
   int old_count;
   cell_queue_entry_t *q = NULL;
+  uint64_t global_queue_estimate;
+
+  /* Cache the global queue size (see below) */
+  global_queue_estimate = channel_get_global_queue_estimate();
 
   (void)arg;
 
@@ -889,6 +899,13 @@ test_channel_queue_impossible(void *arg)
  done:
   tor_free(ch);
   free_cell_pool();
+
+  /*
+   * Doing that meant that we couldn't correctly adjust the queue size
+   * for the var cell, so manually reset the global queue size estimate
+   * so the next test doesn't break if we run with --no-fork.
+   */
+  estimated_total_queue_size = global_queue_estimate;
 
   return;
 }
