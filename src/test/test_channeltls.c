@@ -100,7 +100,7 @@ test_channeltls_num_bytes_queued(void *arg)
     0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
   channel_tls_t *tlschan = NULL;
   size_t len;
-  int fake_outbuf = 0;
+  int fake_outbuf = 0, n;
 
   (void)arg;
 
@@ -141,6 +141,15 @@ test_channeltls_num_bytes_queued(void *arg)
   MOCK(buf_datalen, tlschan_buf_datalen_mock);
   len = ch->num_bytes_queued(ch);
   test_eq(len, tlschan_buf_datalen_mock_size);
+  /*
+   * We also cover num_cells_writeable here; since wide_circ_ids = 0 on
+   * the fake tlschans, cell_network_size returns 512, and so with
+   * tlschan_buf_datalen_mock_size == 1024, we should be able to write
+   * ceil((OR_CONN_HIGHWATER - 1024) / 512) = ceil(OR_CONN_HIGHWATER / 512)
+   * - 2 cells.
+   */
+  n = ch->num_cells_writeable(ch);
+  test_eq(n, CEIL_DIV(OR_CONN_HIGHWATER, 512) - 2);
   UNMOCK(buf_datalen);
   tlschan_buf_datalen_mock_target = NULL;
   tlschan_buf_datalen_mock_size = 0;
