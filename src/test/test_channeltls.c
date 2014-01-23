@@ -6,6 +6,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #include "or.h"
 #include "address.h"
+#include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
 #include "connection_or.h"
@@ -20,9 +21,11 @@
 
 /* The channeltls unit tests */
 static void test_channeltls_create(void *arg);
+static void test_channeltls_num_bytes_queued(void *arg);
 static void test_channeltls_overhead_estimate(void *arg);
 
 /* Mocks used by channeltls unit tests */
+static size_t tlschan_buf_datalen_mock(const buf_t *buf);
 static or_connection_t * tlschan_connection_or_connect_mock(
     const tor_addr_t *addr,
     uint16_t port,
@@ -35,6 +38,8 @@ static void tlschan_fake_close_method(channel_t *chan);
 
 /* Flags controlling behavior of channeltls unit test mocks */
 static int tlschan_local = 0;
+static const buf_t * tlschan_buf_datalen_mock_target = NULL;
+static size_t tlschan_buf_datalen_mock_size = 0;
 
 /* Thing to cast to fake tor_tls_t * to appease assert_connection_ok() */
 static int fake_tortls = 0; /* Bleh... */
@@ -65,6 +70,84 @@ test_channeltls_create(void *arg)
   /* Try connecting */
   ch = channel_tls_connect(&test_addr, 567, test_digest);
   test_assert(ch != NULL);
+
+ done:
+  if (ch) {
+    MOCK(scheduler_release_channel, scheduler_release_channel_mock);
+    /*
+     * Use fake close method that doesn't try to do too much to fake
+     * orconn
+     */
+    ch->close = tlschan_fake_close_method;
+    channel_mark_for_close(ch);
+    tor_free(ch);
+    UNMOCK(scheduler_release_channel);
+  }
+
+  UNMOCK(connection_or_connect);
+  UNMOCK(is_local_addr);
+
+  return;
+}
+
+static void
+test_channeltls_num_bytes_queued(void *arg)
+{
+  tor_addr_t test_addr;
+  channel_t *ch = NULL;
+  const char test_digest[DIGEST_LEN] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
+  channel_tls_t *tlschan = NULL;
+  size_t len;
+  int fake_outbuf = 0;
+
+  (void)arg;
+
+  /* Set up a fake address to fake-connect to */
+  test_addr.family = AF_INET;
+  test_addr.addr.in_addr.s_addr = htonl(0x01020304);
+
+  /* For this test we always want the address to be treated as non-local */
+  tlschan_local = 0;
+  /* Install is_local_addr() mock */
+  MOCK(is_local_addr, tlschan_is_local_addr_mock);
+
+  /* Install mock for connection_or_connect() */
+  MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
+
+  /* Try connecting */
+  ch = channel_tls_connect(&test_addr, 567, test_digest);
+  test_assert(ch != NULL);
+
+  /*
+   * Next, we have to test ch->num_bytes_queued, which is
+   * channel_tls_num_bytes_queued_method.  We can't mock
+   * connection_get_outbuf_len() directly because it's static INLINE
+   * in connection.h, but we can mock buf_datalen().  Note that
+   * if bufferevents ever work, this will break with them enabled.
+   */
+
+  test_assert(ch->num_bytes_queued != NULL);
+  tlschan = BASE_CHAN_TO_TLS(ch);
+  test_assert(tlschan != NULL);
+  if (TO_CONN(tlschan->conn)->outbuf == NULL) {
+    /* We need an outbuf to make sure buf_datalen() gets called */
+    fake_outbuf = 1;
+    TO_CONN(tlschan->conn)->outbuf = buf_new();
+  }
+  tlschan_buf_datalen_mock_target = TO_CONN(tlschan->conn)->outbuf;
+  tlschan_buf_datalen_mock_size = 1024;
+  MOCK(buf_datalen, tlschan_buf_datalen_mock);
+  len = ch->num_bytes_queued(ch);
+  test_eq(len, tlschan_buf_datalen_mock_size);
+  UNMOCK(buf_datalen);
+  tlschan_buf_datalen_mock_target = NULL;
+  tlschan_buf_datalen_mock_size = 0;
+  if (fake_outbuf) {
+    buf_free(TO_CONN(tlschan->conn)->outbuf);
+    TO_CONN(tlschan->conn)->outbuf = NULL;
+  }
 
  done:
   if (ch) {
@@ -159,6 +242,16 @@ test_channeltls_overhead_estimate(void *arg)
   return;
 }
 
+static size_t
+tlschan_buf_datalen_mock(const buf_t *buf)
+{
+  if (buf != NULL && buf == tlschan_buf_datalen_mock_target) {
+    return tlschan_buf_datalen_mock_size;
+  }else {
+    return buf_datalen__real(buf);
+  }
+}
+
 static or_connection_t *
 tlschan_connection_or_connect_mock(const tor_addr_t *addr,
                                    uint16_t port,
@@ -221,6 +314,8 @@ tlschan_is_local_addr_mock(const tor_addr_t *addr)
 
 struct testcase_t channeltls_tests[] = {
   { "create", test_channeltls_create, TT_FORK, NULL, NULL },
+  { "num_bytes_queued", test_channeltls_num_bytes_queued,
+    TT_FORK, NULL, NULL },
   { "overhead_estimate", test_channeltls_overhead_estimate,
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
