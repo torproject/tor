@@ -559,8 +559,8 @@ buf_clear(buf_t *buf)
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
-size_t
-buf_datalen(const buf_t *buf)
+MOCK_IMPL(size_t,
+buf_datalen, (const buf_t *buf))
 {
   return buf->datalen;
 }
