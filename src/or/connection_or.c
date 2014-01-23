@@ -1174,10 +1174,10 @@ connection_or_notify_error(or_connection_t *conn,
  *
  * Return the launched conn, or NULL if it failed.
  */
-or_connection_t *
-connection_or_connect(const tor_addr_t *_addr, uint16_t port,
-                      const char *id_digest,
-                      channel_tls_t *chan)
+
+MOCK_IMPL(or_connection_t *,
+connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
+                        const char *id_digest, channel_tls_t *chan))
 {
   or_connection_t *conn;
   const or_options_t *options = get_options();
