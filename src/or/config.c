@@ -2259,8 +2259,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 /** Return true iff <b>addr</b> is judged to be on the same network as us, or
  * on a private network.
  */
-int
-is_local_addr(const tor_addr_t *addr)
+MOCK_IMPL(int,
+is_local_addr, (const tor_addr_t *addr))
 {
   if (tor_addr_is_internal(addr, 0))
     return 1;
