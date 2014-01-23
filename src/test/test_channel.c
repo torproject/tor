@@ -29,6 +29,7 @@ static int test_chan_var_cells_recved = 0;
 static int test_cells_written = 0;
 static int test_destroy_not_pending_calls = 0;
 static int test_doesnt_want_writes_count = 0;
+static int test_dumpstats_calls = 0;
 static int test_has_waiting_cells_count = 0;
 static double test_overhead_estimate = 1.0f;
 static int test_releases_count = 0;
@@ -46,11 +47,15 @@ static void channel_note_destroy_not_pending_mock(channel_t *ch,
                                                   circid_t circid);
 static void chan_test_cell_handler(channel_t *ch,
                                    cell_t *cell);
+static const char * chan_test_describe_transport(channel_t *ch);
+static void chan_test_dumpstats(channel_t *ch, int severity);
 static void chan_test_var_cell_handler(channel_t *ch,
                                        var_cell_t *var_cell);
 static void chan_test_close(channel_t *ch);
 static void chan_test_error(channel_t *ch);
 static void chan_test_finish_close(channel_t *ch);
+static const char * chan_test_get_remote_descr(channel_t *ch, int flags);
+static int chan_test_is_canonical(channel_t *ch, int req);
 static size_t chan_test_num_bytes_queued(channel_t *ch);
 static int chan_test_num_cells_writeable(channel_t *ch);
 static int chan_test_write_cell(channel_t *ch, cell_t *cell);
@@ -76,6 +81,15 @@ channel_note_destroy_not_pending_mock(channel_t *ch,
   (void)circid;
 
   ++test_destroy_not_pending_calls;
+}
+
+static const char *
+chan_test_describe_transport(channel_t *ch)
+{
+  test_assert(ch != NULL);
+
+ done:
+  return "Fake channel for unit tests";
 }
 
 /**
@@ -173,6 +187,23 @@ chan_test_cell_handler(channel_t *ch,
 }
 
 /*
+ * Fake transport-specific stats call
+ */
+
+static void
+chan_test_dumpstats(channel_t *ch, int severity)
+{
+  test_assert(ch != NULL);
+
+  (void)severity;
+
+  ++test_dumpstats_calls;
+
+ done:
+  return;
+}
+
+/*
  * Handle an incoming variable-size cell for unit tests
  */
 
@@ -233,6 +264,16 @@ chan_test_finish_close(channel_t *ch)
   return;
 }
 
+static const char *
+chan_test_get_remote_descr(channel_t *ch, int flags)
+{
+  test_assert(ch);
+  test_eq(flags & ~(GRD_FLAG_ORIGINAL | GRD_FLAG_ADDR_ONLY), 0);
+
+ done:
+  return "Fake channel for unit tests; no real endpoint";
+}
+
 static double
 chan_test_get_overhead_estimate(channel_t *ch)
 {
@@ -240,6 +281,17 @@ chan_test_get_overhead_estimate(channel_t *ch)
 
  done:
   return test_overhead_estimate;
+}
+
+static int
+chan_test_is_canonical(channel_t *ch, int req)
+{
+  test_assert(ch != NULL);
+  test_assert(req == 0 || req == 1);
+
+ done:
+  /* Fake channels are always canonical */
+  return 1;
 }
 
 static size_t
@@ -440,13 +492,16 @@ scheduler_release_channel_mock(channel_t *ch)
 }
 
 /**
- * Test for channel_dumpstats()
+ * Test for channel_dumpstats() and limited test for
+ * channel_dump_statistics()
  */
 
 static void
 test_channel_dumpstats(void *arg)
 {
   channel_t *ch = NULL;
+  cell_t *cell = NULL;
+  int old_count;
 
   (void)arg;
 
@@ -499,7 +554,62 @@ test_channel_dumpstats(void *arg)
   dump_statistics_mock_target = NULL;
   dump_statistics_mock_matches = 0;
 
+  /* Now make another channel */
+  ch = new_fake_channel();
+  test_assert(ch);
+  ch->cmux = circuitmux_alloc();
+  channel_register(ch);
+  test_assert(ch->registered);
+  /* Lie about its age so dumpstats gets coverage for rate calculations */
+  ch->timestamp_created = time(NULL) - 30;
+  test_assert(ch->timestamp_created > 0);
+  test_assert(time(NULL) > ch->timestamp_created);
+
+  /* Put cells through it both ways to make the counters non-zero */
+  cell = tor_malloc_zero(sizeof(*cell));
+  make_fake_cell(cell);
+  test_chan_accept_cells = 1;
+  old_count = test_cells_written;
+  channel_write_cell(ch, cell);
+  cell = NULL;
+  test_eq(test_cells_written, old_count + 1);
+  test_assert(ch->n_bytes_xmitted > 0);
+  test_assert(ch->n_cells_xmitted > 0);
+
+  /* Receive path */
+  channel_set_cell_handlers(ch,
+                            chan_test_cell_handler,
+                            chan_test_var_cell_handler);
+  test_eq(channel_get_cell_handler(ch), chan_test_cell_handler);
+  test_eq(channel_get_var_cell_handler(ch), chan_test_var_cell_handler);
+  cell = tor_malloc_zero(sizeof(cell_t));
+  make_fake_cell(cell);
+  old_count = test_chan_fixed_cells_recved;
+  channel_queue_cell(ch, cell);
+  cell = NULL;
+  test_eq(test_chan_fixed_cells_recved, old_count + 1);
+  test_assert(ch->n_bytes_recved > 0);
+  test_assert(ch->n_cells_recved > 0);
+
+  /* Test channel_dump_statistics */
+  ch->describe_transport = chan_test_describe_transport;
+  ch->dumpstats = chan_test_dumpstats;
+  ch->get_remote_descr = chan_test_get_remote_descr;
+  ch->is_canonical = chan_test_is_canonical;
+  old_count = test_dumpstats_calls;
+  channel_dump_statistics(ch, LOG_DEBUG);
+  test_eq(test_dumpstats_calls, old_count + 1);
+
+  /* Close the channel */
+  channel_mark_for_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSING);
+  chan_test_finish_close(ch);
+  test_eq(ch->state, CHANNEL_STATE_CLOSED);
+  channel_run_cleanup();
+  ch = NULL;
+
  done:
+  tor_free(cell);
   tor_free(ch);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
