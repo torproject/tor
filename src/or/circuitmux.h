@@ -108,7 +108,8 @@ void circuitmux_free(circuitmux_t *cmux);
 
 /* Policy control */
 void circuitmux_clear_policy(circuitmux_t *cmux);
-const circuitmux_policy_t * circuitmux_get_policy(circuitmux_t *cmux);
+MOCK_DECL(const circuitmux_policy_t *,
+          circuitmux_get_policy, (circuitmux_t *cmux));
 void circuitmux_set_policy(circuitmux_t *cmux,
                            const circuitmux_policy_t *pol);
 
@@ -152,7 +153,8 @@ void circuitmux_mark_destroyed_circids_usable(circuitmux_t *cmux,
                                               channel_t *chan);
 
 /* Optional interchannel comparisons for scheduling */
-int circuitmux_compare_muxes(circuitmux_t *cmux_1, circuitmux_t *cmux_2);
+MOCK_DECL(int, circuitmux_compare_muxes,
+          (circuitmux_t *cmux_1, circuitmux_t *cmux_2));
 
 #endif /* TOR_CIRCUITMUX_H */
 

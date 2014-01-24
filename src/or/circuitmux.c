@@ -621,8 +621,8 @@ circuitmux_clear_policy(circuitmux_t *cmux)
  * Return the policy currently installed on a circuitmux_t
  */
 
-const circuitmux_policy_t *
-circuitmux_get_policy(circuitmux_t *cmux)
+MOCK_IMPL(const circuitmux_policy_t *,
+circuitmux_get_policy, (circuitmux_t *cmux))
 {
   tor_assert(cmux);
 
@@ -1961,8 +1961,8 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
  * support the cmp_cmux method, return 0.
  */
 
-int
-circuitmux_compare_muxes(circuitmux_t *cmux_1, circuitmux_t *cmux_2)
+MOCK_IMPL(int,
+circuitmux_compare_muxes, (circuitmux_t *cmux_1, circuitmux_t *cmux_2))
 {
   const circuitmux_policy_t *policy;
 
