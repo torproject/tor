@@ -15,6 +15,7 @@
 #define TOR_CHANNEL_INTERNAL_
 #include "or.h"
 #include "compat_libevent.h"
+#define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
 /* Test suite stuff */
@@ -134,8 +135,44 @@ test_scheduler_initfree(void *arg)
   return;
 }
 
+static void
+test_scheduler_queue_heuristic(void *arg)
+{
+  time_t now = approx_time();
+  uint64_t qh;
+
+  (void)arg;
+
+  queue_heuristic = 0;
+  queue_heuristic_timestamp = 0;
+
+  /* Not yet inited case */
+  scheduler_update_queue_heuristic(now - 180);
+  test_eq(queue_heuristic, 0);
+  test_eq(queue_heuristic_timestamp, now - 180);
+
+  queue_heuristic = 1000000000L;
+  queue_heuristic_timestamp = now - 120;
+
+  scheduler_update_queue_heuristic(now - 119);
+  test_eq(queue_heuristic, 500000000L);
+  test_eq(queue_heuristic_timestamp, now - 119);
+
+  scheduler_update_queue_heuristic(now - 116);
+  test_eq(queue_heuristic, 62500000L);
+  test_eq(queue_heuristic_timestamp, now - 116);
+
+  qh = scheduler_get_queue_heuristic();
+  test_eq(qh, 0);
+
+ done:
+  return;
+}
+
 struct testcase_t scheduler_tests[] = {
   { "initfree", test_scheduler_initfree, TT_FORK, NULL, NULL },
+  { "queue_heuristic", test_scheduler_queue_heuristic,
+    TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
