@@ -617,11 +617,14 @@ static int
 directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 {
   smartlist_t *responsible_dirs = smartlist_new();
+  smartlist_t *usable_responsible_dirs = smartlist_new();
+  const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
-  int tor2web_mode = get_options()->Tor2webMode;
+  const int tor2web_mode = options->Tor2webMode;
+  int excluded_some;
   tor_assert(desc_id);
   tor_assert(rend_query);
   /* Determine responsible dirs. Even if we can't get all we want,
@@ -642,16 +645,32 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
                             dir, desc_id_base32, rend_query, 0, 0);
       const node_t *node = node_get_by_id(dir->identity_digest);
       if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
-          !node || !node_has_descriptor(node))
-      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+          !node || !node_has_descriptor(node)) {
+        SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+        continue;
+      }
+      if (! routerset_contains_node(options->ExcludeNodes, node)) {
+        smartlist_add(usable_responsible_dirs, dir);
+      }
   });
 
-  hs_dir = smartlist_choose(responsible_dirs);
+  excluded_some =
+    smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
+
+  hs_dir = smartlist_choose(usable_responsible_dirs);
+  if (! hs_dir && ! options->StrictNodes)
+    hs_dir = smartlist_choose(responsible_dirs);
+
   smartlist_free(responsible_dirs);
+  smartlist_free(usable_responsible_dirs);
   if (!hs_dir) {
     log_info(LD_REND, "Could not pick one of the responsible hidden "
                       "service directories, because we requested them all "
                       "recently without success.");
+    if (options->StrictNodes && excluded_some) {
+      log_info(LD_REND, "There are others that we could have tried, but "
+               "they are all excluded, and StrictNodes is set.");
+    }
     return 0;
   }
 
