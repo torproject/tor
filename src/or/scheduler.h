@@ -18,7 +18,7 @@
 /* Set up and shut down the scheduler from main.c */
 void scheduler_free_all(void);
 void scheduler_init(void);
-void scheduler_run(void);
+MOCK_DECL(void, scheduler_run, (void));
 
 /* Mark channels as having cells or wanting/not wanting writes */
 MOCK_DECL(void,scheduler_channel_doesnt_want_writes,(channel_t *chan));
