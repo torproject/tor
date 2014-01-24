@@ -109,27 +109,27 @@
  */
 
 /* Pqueue of channels that can write and have cells (pending work) */
-static smartlist_t *channels_pending = NULL;
+STATIC smartlist_t *channels_pending = NULL;
 
 /*
  * This event runs the scheduler from its callback, and is manually
  * activated whenever a channel enters open for writes/cells to send.
  */
 
-static struct event *run_sched_ev = NULL;
+STATIC struct event *run_sched_ev = NULL;
 
 /*
  * Queue heuristic; this is not the queue size, but an 'effective queuesize'
  * that ages out contributions from stalled channels.
  */
 
-static uint64_t queue_heuristic = 0;
+STATIC uint64_t queue_heuristic = 0;
 
 /*
  * Timestamp for last queue heuristic update
  */
 
-static time_t queue_heuristic_timestamp = 0;
+STATIC time_t queue_heuristic_timestamp = 0;
 
 /* Scheduler static function declarations */
 
