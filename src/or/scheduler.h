@@ -34,5 +34,12 @@ void scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj);
 /* Notify scheduler that a channel's queue position may have changed */
 void scheduler_touch_channel(channel_t *chan);
 
+/* Things only scheduler.c and its test suite should see */
+
+#ifdef SCHEDULER_PRIVATE_
+STATIC uint64_t scheduler_get_queue_heuristic(void);
+STATIC void scheduler_update_queue_heuristic(time_t now);
+#endif
+
 #endif /* !defined(TOR_SCHEDULER_H) */
 

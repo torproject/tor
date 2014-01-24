@@ -12,6 +12,7 @@
 #include "channel.h"
 
 #include "compat_libevent.h"
+#define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
 #ifdef HAVE_EVENT2_EVENT_H
@@ -141,8 +142,6 @@ static void scheduler_retrigger(void);
 #if 0
 static void scheduler_trigger(void);
 #endif
-static uint64_t scheduler_get_queue_heuristic(void);
-static void scheduler_update_queue_heuristic(time_t now);
 
 /* Scheduler function implementations */
 
@@ -642,7 +641,7 @@ scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj)
  * Query the current value of the queue heuristic
  */
 
-static uint64_t
+STATIC uint64_t
 scheduler_get_queue_heuristic(void)
 {
   time_t now = approx_time();
@@ -656,7 +655,7 @@ scheduler_get_queue_heuristic(void)
  * Adjust the queue heuristic value to the present time
  */
 
-static void
+STATIC void
 scheduler_update_queue_heuristic(time_t now)
 {
   time_t diff;
