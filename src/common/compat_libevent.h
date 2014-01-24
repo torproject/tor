@@ -72,7 +72,7 @@ typedef struct tor_libevent_cfg {
 } tor_libevent_cfg;
 
 void tor_libevent_initialize(tor_libevent_cfg *cfg);
-struct event_base *tor_libevent_get_base(void);
+MOCK_DECL(struct event_base *, tor_libevent_get_base, (void));
 const char *tor_libevent_get_method(void);
 void tor_check_libevent_version(const char *m, int server,
                                 const char **badness_out);
