@@ -1312,6 +1312,7 @@ extern struct testcase_t router_tests[];
 extern struct testcase_t channel_tests[];
 extern struct testcase_t channeltls_tests[];
 extern struct testcase_t relay_tests[];
+extern struct testcase_t scheduler_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1347,6 +1348,7 @@ static struct testgroup_t testgroups[] = {
   { "channel/", channel_tests },
   { "channeltls/", channeltls_tests },
   { "relay/" , relay_tests },
+  { "scheduler/", scheduler_tests },
   END_OF_GROUPS
 };
 
