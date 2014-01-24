@@ -134,7 +134,6 @@ STATIC time_t queue_heuristic_timestamp = 0;
 
 /* Scheduler static function declarations */
 
-static int scheduler_compare_channels(const void *c1_v, const void *c2_v);
 static void scheduler_evt_callback(evutil_socket_t fd,
                                    short events, void *arg);
 static int scheduler_more_work(void);
@@ -168,7 +167,7 @@ scheduler_free_all(void)
  * Comparison function to use when sorting pending channels
  */
 
-static int
+STATIC int
 scheduler_compare_channels(const void *c1_v, const void *c2_v)
 {
   channel_t *c1 = NULL, *c2 = NULL;

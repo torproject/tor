@@ -37,6 +37,7 @@ void scheduler_touch_channel(channel_t *chan);
 /* Things only scheduler.c and its test suite should see */
 
 #ifdef SCHEDULER_PRIVATE_
+STATIC int scheduler_compare_channels(const void *c1_v, const void *c2_v);
 STATIC uint64_t scheduler_get_queue_heuristic(void);
 STATIC void scheduler_update_queue_heuristic(time_t now);
 #endif
