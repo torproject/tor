@@ -1,86 +1,6 @@
 Changes in version 0.2.5.2 - 2013-01-??
 
-ALSO IN 0.2.4.18-rc
-  o Major bugfixes:
-    - Do not apply connection_consider_empty_read/write_buckets to
-      non-rate-limited connections.
-      (This was #9731.)
-  o Documentation:
-    - Add anchors to the manpage so we can link to the documentation for
-      specific options. Resolves ticket 9866.
-  o Documentation fixes:
-    - Clarify the usage and risks of ContactInfo. Resolves ticket 9854.
-
-  o Documentation:
-    - Replace remaining references to DirServer in man page and
-      log entries. Resolves ticket 10124.
-  o Minor bugfixes:
-    - Fix an assertion failure that would occur when disabling the
-      ORPort setting on a running Tor process while accounting was
-      enabled. Fixes bug 6979; bugfix on 0.2.2.18-alpha.
-  o Minor features:
-    - Improve the circuit queue out-of-memory handler. Previously, when
-      we ran low on memory, we'd close whichever circuits had the most
-      queued cells. Now, we close those that have the *oldest* queued
-      cells, on the theory that those are most responsible for us
-      running low on memory. Based on analysis from a forthcoming paper
-      by Jansen, Tschorsch, Johnson, and Scheuermann. Fixes bug 9093.
-  o Minor bugfixes:
-    - Correctly log long IPv6 exit policy, instead of truncating them
-      or reporting an error. Fixes bug 9596; bugfix on 0.2.4.7-alpha.
-  o Minor bugfixes:
-    - Fix a small memory leak on exit. (We weren't freeing directory
-      authority certificate download statuses.) Fixes bug 9644; bugfix
-      on 0.2.4.13-alpha.
-  o Minor bugfixes (performance, fingerprinting):
-    - Our default TLS ecdhe groups were backwards: we meant to be using
-      P224 for relays (for performance win) and P256 for bridges (since
-      it is more common in the wild). Instead we had it backwards. After
-      reconsideration, we decided that the default should be P256 on all
-      hosts, since its security is probably better, and since P224 is
-      reportedly used quite little in the wild.  Found by "skruffy" on
-      IRC. Fix for bug 9780; bugfix on 0.2.4.8-alpha.
-  o Minor bugfixes:
-    - When closing a channel that has already been open, do not close
-      pending circuits that were waiting to connect to the same relay.
-      Fixes bug 9880; bugfix on 0.2.5.1-alpha. Thanks to skruffy for
-      finding this bug.  (Bug was merged to 0.2.4 branch but not released
-      in any 0.2.4 version)
-  o Minor bugfixes:
-    - When examining list of network interfaces to find our address, do
-      not consider non-running or disabled network interfaces. Fixes bug
-      9904; bugfix on 0.2.3.11-alpha. Patch from "hantwister".
-  o Minor features:
-    - Generate bootstrapping status update events correctly for fetching
-      microdescriptors. Fixes bug 9927.
-  o Minor bugfixes:
-    - Avoid an off-by-one error when checking buffer boundaries when
-      formatting the exit status of a pluggable transport helper.
-      This is probably not an exploitable bug, but better safe than
-      sorry. Fixes bug 9928; bugfix on 0.2.3.18-rc. Bug found by
-      Pedro Ribeiro.
-  o Minor bugfixes:
-    - If the guard we choose first doesn't answer, we would try the
-      second guard, but once we connected to the second guard we would
-      abandon it and retry the first one, slowing down bootstrapping.
-      The fix is to treat all our initially chosen guards as acceptable
-      to use. Fixes bug 9946; bugfix on 0.1.1.11-alpha.
-
-  o Major bugfixes:
-    - Stop trying to fetch all our directory information from our first
-      guard. Discovered while fixing bug 9946; bugfix on 0.2.4.8-alpha.
-
-  o Minor features:
-    - Update to the October 2 2013 Maxmind GeoLite Country database.
-==============================
-ALSO IN 0.2.4.19:
-
-  (Nothing, since 0.2.4.19 is the same as 0.2.4.18-rc)
-
-==============================
-ALSO IN 0.2.4.20:
-
-  o Major bugfixes:
+  o Major bugfixes (new since 0.2.5.1-alpha, also in 0.2.4.20):
     - Do not allow OpenSSL engines to replace the PRNG, even when
       HardwareAccel is set. The only default builtin PRNG engine uses
       the Intel RDRAND instruction to replace the entire PRNG, and
@@ -90,25 +10,83 @@ ALSO IN 0.2.4.20:
       sources. Fixes bug 10402; works around behavior introduced in
       OpenSSL 1.0.0. Diagnosis and investigation thanks to "coderman"
       and "rl1987".
-
-  o Minor bugfixes:
-    - Avoid a crash bug when starting with a corrupted microdescriptor
-      cache file. Fix for bug 10406; bugfix on 0.2.2.6-alpha.
-  o Minor bugfixes:
-    - If we fail to dump a previously cached microdescriptor to disk, avoid
-      freeing duplicate data later on. Fix for bug 10423; bugfix on
-      0.2.4.13-alpha. Spotted by "bobnomnom".
-  o Major bugfixes:
+    - Fix assertion failure when AutomapHostsOnResolve yields an IPv6
+      address. Fixes bug 10465; bugfix on 0.2.4.7-alpha.
     - Avoid launching spurious extra circuits when a stream is pending.
       This fixes a bug where any circuit that _wasn't_ unusable for new
       streams would be treated as if it were, causing extra circuits to
       be launched. Fixes bug 10456; bugfix on 0.2.4.12-alpha.
 
-  o Major bugfixes:
-    - Fix assertion failure when AutomapHostsOnResolve yields an IPv6
-      address. Fixes bug 10465; bugfix on 0.2.4.7-alpha.
+  o Major bugfixes (new since 0.2.5.1-alpha, also in 0.2.4.18-rc):
+    - No longer stop reading or writing on cpuworker connections when
+      our rate limiting buckets go empty. Now we should handle circuit
+      handshake requests more promptly. Resolves bug 9731.
+    - Stop trying to bootstrap all our directory information from
+      only our first guard. Discovered while fixing bug 9946; bugfix
+      on 0.2.4.8-alpha.
 
-==============================
+  o Minor bugfixes (new since 0.2.5.1-alpha, also in 0.2.4.20):
+    - Avoid a crash bug when starting with a corrupted microdescriptor
+      cache file. Fixes bug 10406; bugfix on 0.2.2.6-alpha.
+    - If we fail to dump a previously cached microdescriptor to disk, avoid
+      freeing duplicate data later on. Fixes bug 10423; bugfix on
+      0.2.4.13-alpha. Spotted by "bobnomnom".
+
+  o Minor bugfixes on 0.2.4.x (new since 0.2.5.1-alpha, also in 0.2.4.18-rc):
+    - Correctly log long IPv6 exit policies, instead of truncating them
+      or reporting an error. Fixes bug 9596; bugfix on 0.2.4.7-alpha.
+    - Our default TLS ecdhe groups were backwards: we meant to be using
+      P224 for relays (for performance win) and P256 for bridges (since
+      it is more common in the wild). Instead we had it backwards. After
+      reconsideration, we decided that the default should be P256 on all
+      hosts, since its security is probably better, and since P224 is
+      reportedly used quite little in the wild.  Found by "skruffy" on
+      IRC. Fix for bug 9780; bugfix on 0.2.4.8-alpha.
+    - Free directory authority certificate download statuses on exit
+      rather than leaking them. Fixes bug 9644; bugfix on 0.2.4.13-alpha.
+
+  o Minor bugfixes on 0.2.3.x (new since 0.2.5.1-alpha, also in 0.2.4.18-rc):
+    - If the guard we choose first doesn't answer, we would try the
+      second guard, but once we connected to the second guard we would
+      abandon it and retry the first one, slowing down bootstrapping.
+      The fix is to treat all our initially chosen guards as acceptable
+      to use. Fixes bug 9946; bugfix on 0.1.1.11-alpha.
+    - Fix an assertion failure that would occur when disabling the
+      ORPort setting on a running Tor process while accounting was
+      enabled. Fixes bug 6979; bugfix on 0.2.2.18-alpha.
+    - When examining the list of network interfaces to find our address,
+      do not consider non-running or disabled network interfaces. Fixes
+      bug 9904; bugfix on 0.2.3.11-alpha. Patch from "hantwister".
+    - Avoid an off-by-one error when checking buffer boundaries when
+      formatting the exit status of a pluggable transport helper.
+      This is probably not an exploitable bug, but better safe than
+      sorry. Fixes bug 9928; bugfix on 0.2.3.18-rc. Bug found by
+      Pedro Ribeiro.
+
+  o Minor bugfixes:
+    - When closing a channel that has already been open, do not close
+      pending circuits that were waiting to connect to the same relay.
+      Fixes bug 9880; bugfix on 0.2.5.1-alpha. Thanks to skruffy for
+      finding this bug.
+
+  o Minor features (new since 0.2.5.1-alpha, also in 0.2.4.18-rc):
+    - Improve the circuit queue out-of-memory handler. Previously, when
+      we ran low on memory, we'd close whichever circuits had the most
+      queued cells. Now, we close those that have the *oldest* queued
+      cells, on the theory that those are most responsible for us
+      running low on memory. Based on analysis from a forthcoming paper
+      by Jansen, Tschorsch, Johnson, and Scheuermann. Fixes bug 9093.
+    - Generate bootstrapping status update events correctly when fetching
+      microdescriptors. Fixes bug 9927.
+    - Update to the October 2 2013 Maxmind GeoLite Country database.
+
+  o Documentation fixes (new since 0.2.5.1-alpha, also in 0.2.4.18-rc):
+    - Clarify the usage and risks of setting the ContactInfo torrc line
+      for your relay or bridge. Resolves ticket 9854.
+    - Add anchors to the manpage so we can link to the html version of
+      the documentation for specific options. Resolves ticket 9866.
+    - Replace remaining references to DirServer in man page and
+      log entries. Resolves ticket 10124.
 
 
 Changes in version 0.2.4.20 - 2013-12-22
