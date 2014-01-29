@@ -56,7 +56,6 @@ void dirserv_compute_bridge_flag_thresholds(routerlist_t *rl);
 int directory_fetches_from_authorities(const or_options_t *options);
 int directory_fetches_dir_info_early(const or_options_t *options);
 int directory_fetches_dir_info_later(const or_options_t *options);
-int directory_caches_v2_dir_info(const or_options_t *options);
 int directory_caches_unknown_auth_certs(const or_options_t *options);
 int directory_caches_dir_info(const or_options_t *options);
 int directory_permits_begindir_requests(const or_options_t *options);
@@ -68,18 +67,12 @@ void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);
 cached_dir_t *dirserv_get_consensus(const char *flavor_name);
-void dirserv_set_cached_networkstatus_v2(const char *directory,
-                                         const char *identity,
-                                         time_t published);
 void dirserv_set_cached_consensus_networkstatus(const char *consensus,
                                                 const char *flavor_name,
                                                 const digests_t *digests,
                                                 time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 void dirserv_clear_old_v1_info(time_t now);
-void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
-void dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
-                                               const char *key);
 int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                                         const char **msg,
                                         int for_unencrypted_conn,
@@ -136,7 +129,6 @@ STATIC int dirserv_query_measured_bw_cache_kb(const char *node_id,
                                               long *bw_out,
                                               time_t *as_of_out);
 STATIC int dirserv_has_measured_bw(const char *node_id);
-STATIC cached_dir_t *generate_v2_networkstatus_opinion(void);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

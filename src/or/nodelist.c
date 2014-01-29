@@ -213,7 +213,7 @@ void
 nodelist_set_consensus(networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
-  int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  int authdir = authdir_mode_v3(options);
   int client = !server_mode(options);
 
   init_nodelist();
@@ -1333,7 +1333,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *myexits= smartlist_new();
   double f_guard, f_mid, f_exit, f_myexit;
   int np, nu; /* Ignored */
-  const int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  const int authdir = authdir_mode_v3(options);
 
   count_usable_descriptors(num_present_out, num_usable_out,
                            mid, consensus, options, now, NULL, 0);

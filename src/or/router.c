@@ -933,7 +933,6 @@ init_keys(void)
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_server_identity_key(), digest);
   type = ((options->V1AuthoritativeDir ? V1_DIRINFO : NO_DIRINFO) |
-          (options->V2AuthoritativeDir ? V2_DIRINFO : NO_DIRINFO) |
           (options->V3AuthoritativeDir ?
                (V3_DIRINFO|MICRODESC_DIRINFO|EXTRAINFO_DIRINFO) : NO_DIRINFO) |
           (options->BridgeAuthoritativeDir ? BRIDGE_DIRINFO : NO_DIRINFO) |
@@ -1260,14 +1259,6 @@ authdir_mode_v1(const or_options_t *options)
 {
   return authdir_mode(options) && options->V1AuthoritativeDir != 0;
 }
-/** Return true iff we believe ourselves to be a v2 authoritative
- * directory server.
- */
-int
-authdir_mode_v2(const or_options_t *options)
-{
-  return authdir_mode(options) && options->V2AuthoritativeDir != 0;
-}
 /** Return true iff we believe ourselves to be a v3 authoritative
  * directory server.
  */
@@ -1276,12 +1267,11 @@ authdir_mode_v3(const or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-/** Return true iff we are a v1, v2, or v3 directory authority. */
+/** Return true iff we are a v1 or v3 directory authority. */
 int
 authdir_mode_any_main(const or_options_t *options)
 {
   return options->V1AuthoritativeDir ||
-         options->V2AuthoritativeDir ||
          options->V3AuthoritativeDir;
 }
 /** Return true if we believe ourselves to be any kind of
