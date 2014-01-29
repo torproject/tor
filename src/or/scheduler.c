@@ -167,8 +167,8 @@ scheduler_free_all(void)
  * Comparison function to use when sorting pending channels
  */
 
-STATIC int
-scheduler_compare_channels(const void *c1_v, const void *c2_v)
+MOCK_IMPL(STATIC int,
+scheduler_compare_channels, (const void *c1_v, const void *c2_v))
 {
   channel_t *c1 = NULL, *c2 = NULL;
   /* These are a workaround for -Wbad-function-cast throwing a fit */
