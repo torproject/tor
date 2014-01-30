@@ -3682,11 +3682,9 @@ routerlist_remove_old_routers(void)
           digestset_add(retain, rs->descriptor_digest));
   }
 
-  /* If we have a consensus,
-   * we should consider pruning current routers that are too old and that
-   * nobody recommends.  (If we don't have a consensus or enough v2
-   * networkstatuses, then we should get more before we decide to kill
-   * routers.) */
+  /* If we have a consensus, we should consider pruning current routers that
+   * are too old and that nobody recommends.  (If we don't have a consensus,
+   * then we should get one before we decide to kill routers.) */
 
   if (consensus) {
     cutoff = now - ROUTER_MAX_AGE;

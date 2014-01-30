@@ -56,9 +56,6 @@ static time_t the_directory_is_dirty = 1;
 /** Do we need to regenerate the v1 runningrouters document when somebody
  * asks for it? */
 static time_t runningrouters_is_dirty = 1;
-/** Do we need to regenerate our v2 networkstatus document when somebody asks
- * for it? */
-static time_t the_v2_networkstatus_is_dirty = 1;
 
 /** Most recently generated encoded signed v1 directory. (v1 auth dirservers
  * only.) */
@@ -929,8 +926,6 @@ directory_set_dirty(void)
     if (!runningrouters_is_dirty)
       runningrouters_is_dirty = now;
   }
-  if (!the_v2_networkstatus_is_dirty)
-    the_v2_networkstatus_is_dirty = now;
 }
 
 /**
@@ -1477,7 +1472,7 @@ dirserv_clear_old_v1_info(time_t now)
   }
 }
 
-/** Helper: If we're an authority for the right directory version (v1 or v2)
+/** Helper: If we're an authority for the right directory version (v1)
  * (based on <b>auth_type</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
  * failure.  If we're a cache, simply return cache_src.

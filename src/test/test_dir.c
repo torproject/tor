@@ -1065,7 +1065,8 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->addr, 0x99008801);
     test_eq(rs->or_port, 443);
     test_eq(rs->dir_port, 8000);
-    test_eq(vrs->flags, U64_LITERAL(80)); // no flags except "running"
+    /* no flags except "running" (16) and "v2dir" (64) */
+    test_eq(vrs->flags, U64_LITERAL(80));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5",
@@ -1090,7 +1091,8 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     test_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     test_eq(rs->ipv6_orport, 4711);
     if (voter == 1) {
-      test_eq(vrs->flags, U64_LITERAL(190)); // all except "authority","v2dir"
+      /* all except "authority" (1) and "v2dir" (64) */
+      test_eq(vrs->flags, U64_LITERAL(190));
     } else {
       /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) - v2dir(256) */
       test_eq(vrs->flags, U64_LITERAL(718));

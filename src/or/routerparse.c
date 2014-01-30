@@ -339,7 +339,7 @@ static token_rule_t extrainfo_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens recognized in the body part of v2 and v3 networkstatus
+/** List of tokens recognized in the body part of v3 networkstatus
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
   T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
@@ -461,8 +461,7 @@ static token_rule_t networkstatus_consensus_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens recognized in the footer of v1/v2 directory/networkstatus
- * footers. */
+/** List of tokens recognized in the footer of v1 directory footers. */
 static token_rule_t networkstatus_vote_footer_token_table[] = {
   T01("directory-footer",    K_DIRECTORY_FOOTER,    NO_ARGS,   NO_OBJ ),
   T01("bandwidth-weights",   K_BW_WEIGHTS,          ARGS,      NO_OBJ ),

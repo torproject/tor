@@ -4677,8 +4677,6 @@ typedef enum {
   GEOIP_CLIENT_CONNECT = 0,
   /** We've served a networkstatus consensus as a directory server. */
   GEOIP_CLIENT_NETWORKSTATUS = 1,
-  /** We've served a v2 networkstatus consensus as a directory server. */
-  GEOIP_CLIENT_NETWORKSTATUS_V2 = 2,
 } geoip_client_action_t;
 /** Indicates either a positive reply or a reason for rejectng a network
  * status request that will be included in geoip statistics. */
