@@ -2540,13 +2540,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("Cannot use TransTPROXY without any valid TransPort or "
              "TransListenAddress.");
     }
-    /* Friendly suggestion about running as root initially. */
-    if (!options->User) {
-      log_warn(LD_CONFIG,
-               "You have enabled TransTPROXY but have not specified the "
-               "\"User\" option. TransTPROXY will not function without "
-               "root privileges.");
-    }
   }
 #else
   if (options->TransPort_set || options->TransTPROXY)
