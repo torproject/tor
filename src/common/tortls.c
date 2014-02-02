@@ -694,7 +694,7 @@ tor_tls_create_certificate(crypto_pk_t *rsa,
   if (pkey)
     EVP_PKEY_free(pkey);
   if (serial_number)
-    BN_free(serial_number);
+    BN_clear_free(serial_number);
   if (name)
     X509_NAME_free(name);
   if (name_issuer)

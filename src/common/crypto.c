@@ -486,7 +486,7 @@ crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
     r = NULL;
   done:
     if (e)
-      BN_free(e);
+      BN_clear_free(e);
     if (r)
       RSA_free(r);
   }
@@ -1922,7 +1922,7 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
 
   /* If the space is occupied, free the previous TLS DH prime */
   if (dh_param_p_tls) {
-    BN_free(dh_param_p_tls);
+    BN_clear_free(dh_param_p_tls);
     dh_param_p_tls = NULL;
   }
 
@@ -2084,8 +2084,8 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
-    BN_free(dh->dh->pub_key);
-    BN_free(dh->dh->priv_key);
+    BN_clear_free(dh->dh->pub_key);
+    BN_clear_free(dh->dh->priv_key);
     dh->dh->pub_key = dh->dh->priv_key = NULL;
     goto again;
   }
@@ -2147,10 +2147,10 @@ tor_check_dh_key(int severity, BIGNUM *bn)
     log_fn(severity, LD_CRYPTO, "DH key must be at most p-2.");
     goto err;
   }
-  BN_free(x);
+  BN_clear_free(x);
   return 0;
  err:
-  BN_free(x);
+  BN_clear_free(x);
   s = BN_bn2hex(bn);
   log_fn(severity, LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
   OPENSSL_free(s);
@@ -2209,7 +2209,7 @@ crypto_dh_compute_secret(int severity, crypto_dh_t *dh,
  done:
   crypto_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
-    BN_free(pubkey_bn);
+    BN_clear_free(pubkey_bn);
   if (secret_tmp) {
     memwipe(secret_tmp, 0, secret_tmp_len);
     tor_free(secret_tmp);
@@ -3118,11 +3118,11 @@ crypto_global_cleanup(void)
   ERR_free_strings();
 
   if (dh_param_p)
-    BN_free(dh_param_p);
+    BN_clear_free(dh_param_p);
   if (dh_param_p_tls)
-    BN_free(dh_param_p_tls);
+    BN_clear_free(dh_param_p_tls);
   if (dh_param_g)
-    BN_free(dh_param_g);
+    BN_clear_free(dh_param_g);
 
 #ifndef DISABLE_ENGINES
   ENGINE_cleanup();
