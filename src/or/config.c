@@ -408,6 +408,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
   VPORT(TransPort,                   LINELIST, NULL),
+  V(TransTPROXY,                 BOOL,     "0"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
@@ -2530,10 +2531,20 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "undefined, and there aren't any hidden services configured.  "
         "Tor will still run, but probably won't do anything.");
 
-#ifndef USE_TRANSPARENT
-  /* XXXX024 I think we can remove this TransListenAddress */
-  if (options->TransPort_set || options->TransListenAddress)
-    REJECT("TransPort and TransListenAddress are disabled in this build.");
+#ifdef USE_TRANSPARENT
+  if (options->TransTPROXY) {
+#ifndef __linux__
+    REJECT("TransTPROXY is a Linux-specific feature.")
+#endif
+    if (!options->TransPort_set) {
+      REJECT("Cannot use TransTPROXY without any valid TransPort or "
+             "TransListenAddress.");
+    }
+  }
+#else
+  if (options->TransPort_set || options->TransTPROXY)
+    REJECT("TransPort, TransListenAddress, and TransTPROXY are disabled "
+           "in this build.");
 #endif
 
   if (options->TokenBucketRefillInterval <= 0

@@ -1035,6 +1035,21 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
     make_socket_reuseable(s);
 
+#if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
+    if (options->TransTPROXY && type == CONN_TYPE_AP_TRANS_LISTENER) {
+      int one = 1;
+      if (setsockopt(s, SOL_IP, IP_TRANSPARENT, &one, sizeof(one)) < 0) {
+        const char *extra = "";
+        int e = tor_socket_errno(s);
+        if (e == EPERM)
+          extra = "TransTPROXY requires root privileges or similar"
+            " capabilities.";
+        log_warn(LD_NET, "Error setting IP_TRANSPARENT flag: %s.%s",
+                 tor_socket_strerror(e), extra);
+      }
+    }
+#endif
+
 #ifdef IPV6_V6ONLY
     if (listensockaddr->sa_family == AF_INET6) {
 #ifdef _WIN32

@@ -1183,6 +1183,19 @@ The following options are useful only for clients (that is, if
     compatibility, TransListenAddress is only allowed when TransPort is just
     a port number.)
 
+[[TransTPROXY]] **TransTPROXY** **0**|**1**::
+    TransTPROXY may only be enabled when there is transparent proxy listener
+    enabled and only for Linux.
+ +
+    Set this 1 if you wish to be able to use the TPROXY linux module to
+    transparently proxy connections that are configured using the TransPort
+    option. This setting lets the listener on the TransPort accept connections
+    for all addresses, even when the TransListenAddress is configured for an
+    internal address. Detailed information on how to configure the TPROXY
+    feature can be found in the Linux kernel source tree in the file  
+    Documentation/networking/tproxy.txt.
+    (Default: 0)
+
 [[NATDPort]] **NATDPort** \['address':]__port__|**auto** [_isolation flags_]::
     Open this port to listen for connections from old versions of ipfw (as
     included in old versions of FreeBSD, etc) using the NATD protocol.
