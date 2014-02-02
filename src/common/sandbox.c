@@ -475,6 +475,14 @@ sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc)
     return rc;
 
+#ifdef IP_TRANSPARENT
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt), 2,
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_IP),
+      SCMP_CMP(2, SCMP_CMP_EQ, IP_TRANSPARENT));
+  if (rc)
+    return rc;
+#endif
+
   return 0;
 }
 
