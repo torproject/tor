@@ -25,13 +25,10 @@ static void
 send_control_event_string_replacement(uint16_t event, event_format_t which,
                                       const char *msg)
 {
-  int msg_len;
-
   (void) event;
   (void) which;
-  msg_len = strlen(msg);
-  received_msg = tor_malloc_zero(msg_len+1);
-  strncpy(received_msg, msg, msg_len);
+  tor_free(received_msg);
+  received_msg = tor_strdup(msg);
 }
 
 /** Make sure each hidden service descriptor async event generation
@@ -67,7 +64,6 @@ test_hs_desc_event(void *arg)
   test_assert(received_msg);
   test_streq(received_msg, expected_msg);
   tor_free(received_msg);
-  received_msg = NULL;
 
   /* test received event */
   rend_query.auth_type = 1;
@@ -77,7 +73,6 @@ test_hs_desc_event(void *arg)
   test_assert(received_msg);
   test_streq(received_msg, expected_msg);
   tor_free(received_msg);
-  received_msg = NULL;
 
   /* test failed event */
   rend_query.auth_type = 2;
@@ -87,7 +82,6 @@ test_hs_desc_event(void *arg)
   test_assert(received_msg);
   test_streq(received_msg, expected_msg);
   tor_free(received_msg);
-  received_msg = NULL;
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
@@ -97,14 +91,10 @@ test_hs_desc_event(void *arg)
   test_assert(received_msg);
   test_streq(received_msg, expected_msg);
   tor_free(received_msg);
-  received_msg = NULL;
 
  done:
   UNMOCK(send_control_event_string);
-  if (received_msg) {
-    tor_free(received_msg);
-    received_msg = NULL;
-  }
+  tor_free(received_msg);
 }
 
 struct testcase_t hs_tests[] = {
