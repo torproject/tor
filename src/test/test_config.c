@@ -358,6 +358,8 @@ static void
 bad_bridge_line_test(const char *string)
 {
   bridge_line_t *bridge_line = parse_bridge_line(string);
+  if (bridge_line)
+    TT_FAIL(("%s was supposed to fail, but it didn't.", string));
   test_assert(!bridge_line);
 
  done:
