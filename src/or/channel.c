@@ -2197,8 +2197,8 @@ channel_listener_change_state(channel_listener_t *chan_l,
 
 #define MAX_CELLS_TO_GET_FROM_CIRCUITS_FOR_UNLIMITED 256
 
-ssize_t
-channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
+MOCK_IMPL(ssize_t,
+channel_flush_some_cells, (channel_t *chan, ssize_t num_cells))
 {
   unsigned int unlimited = 0;
   ssize_t flushed = 0;
