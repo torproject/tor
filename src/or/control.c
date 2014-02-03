@@ -3181,22 +3181,13 @@ connection_control_reached_eof(control_connection_t *conn)
 static void
 lost_owning_controller(const char *owner_type, const char *loss_manner)
 {
-  int shutdown_slowly = server_mode(get_options());
-
-  log_notice(LD_CONTROL, "Owning controller %s has %s -- %s.",
-             owner_type, loss_manner,
-             shutdown_slowly ? "shutting down" : "exiting now");
+  log_notice(LD_CONTROL, "Owning controller %s has %s -- exiting now.",
+             owner_type, loss_manner);
 
   /* XXXX Perhaps this chunk of code should be a separate function,
    * called here and by process_signal(SIGINT). */
-
-  if (!shutdown_slowly) {
-    tor_cleanup();
-    exit(0);
-  }
-  /* XXXX This will close all listening sockets except control-port
-   * listeners.  Perhaps we should close those too. */
-  hibernate_begin_shutdown();
+  tor_cleanup();
+  exit(0);
 }
 
 /** Called when <b>conn</b> is being freed. */
