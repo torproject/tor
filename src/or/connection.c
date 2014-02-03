@@ -1036,7 +1036,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     make_socket_reuseable(s);
 
 #if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
-    if (options->TransTPROXY && type == CONN_TYPE_AP_TRANS_LISTENER) {
+    if (options->TransProxyType_parsed == TPT_TPROXY &&
+        type == CONN_TYPE_AP_TRANS_LISTENER) {
       int one = 1;
       if (setsockopt(s, SOL_IP, IP_TRANSPARENT, &one, sizeof(one)) < 0) {
         const char *extra = "";

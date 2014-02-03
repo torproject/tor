@@ -3498,8 +3498,10 @@ typedef struct {
   config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
   config_line_t *TransPort_lines;
-  int TransTPROXY; /** < Boolean: are we going to listen for all destinations
-                    * on the TransPort_lines are required for TPROXY? */
+  const char *TransProxyType; /**< What kind of transparent proxy
+                               * implementation are we using? */
+  /** Parsed value of TransProxyType. */
+  enum { TPT_DEFAULT, TPT_TPROXY } TransProxyType_parsed;
   config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
                             * connections. */
   config_line_t *ControlPort_lines; /**< Ports to listen on for control

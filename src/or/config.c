@@ -408,7 +408,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
   VPORT(TransPort,                   LINELIST, NULL),
-  V(TransTPROXY,                 BOOL,     "0"),
+  V(TransProxyType,              STRING,   "default"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
@@ -2517,19 +2517,30 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "undefined, and there aren't any hidden services configured.  "
         "Tor will still run, but probably won't do anything.");
 
+  options->TransProxyType_parsed = TPT_DEFAULT;
 #ifdef USE_TRANSPARENT
-  if (options->TransTPROXY) {
+  if (options->TransProxyType) {
+    if (!strcasecmp(options->TransProxyType, "default")) {
+      options->TransProxyType_parsed = TPT_DEFAULT;
+    } else if (!strcasecmp(options->TransProxyType, "tproxy")) {
 #ifndef __linux__
-    REJECT("TransTPROXY is a Linux-specific feature.")
+      REJECT("TPROXY is a Linux-specific feature.");
+#else
+      options->TransProxyType_parsed = TPT_TPROXY;
 #endif
-    if (!options->TransPort_set) {
-      REJECT("Cannot use TransTPROXY without any valid TransPort or "
+    } else {
+      REJECT("Unrecognized value for TransProxyType");
+    }
+
+    if (strcasecmp(options->TransProxyType, "default") &&
+        !options->TransPort_set) {
+      REJECT("Cannot use TransProxyType without any valid TransPort or "
              "TransListenAddress.");
     }
   }
 #else
-  if (options->TransPort_set || options->TransTPROXY)
-    REJECT("TransPort, TransListenAddress, and TransTPROXY are disabled "
+  if (options->TransPort_set)
+    REJECT("TransPort and TransListenAddress are disabled "
            "in this build.");
 #endif
 
