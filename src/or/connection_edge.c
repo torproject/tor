@@ -1435,6 +1435,29 @@ connection_ap_get_original_destination(entry_connection_t *conn,
     return -1;
   }
 
+#ifdef __FreeBSD__
+  if (get_options()->TransProxyType_parsed == TPT_IPFW) {
+    /* ipfw(8) is used and in this case getsockname returned the original
+       destination */
+    if (proxy_sa->sa_family == AF_INET) {
+      struct sockaddr_in *dest_addr4 = (struct sockaddr_in *)proxy_sa;
+      tor_addr_from_ipv4n(&addr, dest_addr4->sin_addr.s_addr);
+      req->port = ntohs(dest_addr4->sin_port);
+    } else if (proxy_sa->sa_family == AF_INET6) {
+      struct sockaddr_in6 *dest_addr6 = (struct sockaddr_in6 *)proxy_sa;
+      tor_addr_from_in6(&addr, &dest_addr6->sin6_addr);
+      req->port = ntohs(dest_addr6->sin6_port);
+    } else {
+      tor_fragile_assert();
+      return -1;
+    }
+
+    tor_addr_to_str(req->address, &addr, sizeof(req->address), 0);
+
+    return 0;
+  }
+#endif
+
   memset(&pnl, 0, sizeof(pnl));
   pnl.proto           = IPPROTO_TCP;
   pnl.direction       = PF_OUT;

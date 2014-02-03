@@ -1196,7 +1196,7 @@ The following options are useful only for clients (that is, if
     compatibility, TransListenAddress is only allowed when TransPort is just
     a port number.)
 
-[[TransProxyType]] **TransProxyTYpe** **default**|**TPROXY**::
+[[TransProxyType]] **TransProxyTYpe** **default**|**TPROXY**|**ipfw**::
     TransProxyType may only be enabled when there is transparent proxy listener
     enabled.
  +
@@ -1208,8 +1208,10 @@ The following options are useful only for clients (that is, if
     feature can be found in the Linux kernel source tree in the file
     Documentation/networking/tproxy.txt.
  +
-    Set this to "default", or leave it unconfigured, to use regular IPTables
-    on Linux, or to use pf on the *BSD operating systems.
+    Set this option to "ipfw" to use the FreeBSD ipfw interface.
+ +
+    Set this option to "default", or leave it unconfigured, to use regular
+    IPTables on Linux, or to use pf on the *BSD operating systems.
  +
     (Default: "default".)
 
