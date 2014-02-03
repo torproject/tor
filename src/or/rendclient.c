@@ -26,6 +26,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "control.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,
@@ -694,6 +695,9 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
            (rend_query->auth_type == REND_NO_AUTH ? "[none]" :
             escaped_safe_str_client(descriptor_cookie_base64)),
            routerstatus_describe(hs_dir));
+  control_event_hs_descriptor_requested(rend_query,
+                                        routerstatus_describe(hs_dir),
+                                        desc_id_base32);
   return 1;
 }
 

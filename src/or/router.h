@@ -132,6 +132,7 @@ const char *routerstatus_get_description(char *buf, const routerstatus_t *rs);
 const char *extend_info_get_description(char *buf, const extend_info_t *ei);
 const char *router_describe(const routerinfo_t *ri);
 const char *node_describe(const node_t *node);
+const char *node_describe_by_id(const char *id_digest);
 const char *routerstatus_describe(const routerstatus_t *ri);
 const char *extend_info_describe(const extend_info_t *ei);
 

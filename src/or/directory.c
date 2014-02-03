@@ -1599,17 +1599,17 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   char *body;
   char *headers;
   char *reason = NULL;
-  size_t body_len=0, orig_len=0;
+  size_t body_len = 0, orig_len = 0;
   int status_code;
-  time_t date_header=0;
+  time_t date_header = 0;
   long delta;
   compress_method_t compression;
   int plausible;
-  int skewed=0;
+  int skewed = 0;
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
-  int was_compressed=0;
+  int was_compressed = 0;
   time_t now = time(NULL);
   int src_code;
 
@@ -2143,6 +2143,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
+    #define SEND_HS_DESC_FAILED_EVENT() ( \
+      control_event_hs_descriptor_failed(conn->rend_data, \
+                                         node_describe_by_id( \
+                                             conn->identity_digest)) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
@@ -2155,6 +2159,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                      "Retrying at another directory.");
             /* We'll retry when connection_about_to_close_connection()
              * cleans this dir conn up. */
+            SEND_HS_DESC_FAILED_EVENT();
             break;
           case -1:
             /* We already have a v0 descriptor here. Ignoring this one
@@ -2167,6 +2172,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             /* success. notify pending connections about this. */
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
                      "descriptor.");
+            control_event_hs_descriptor_received(conn->rend_data,
+                                                 node_describe_by_id(
+                                                     conn->identity_digest));
             conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
             rend_client_desc_trynow(conn->rend_data->onion_address);
             break;
@@ -2177,12 +2185,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
          * connection_about_to_close_connection() cleans this conn up. */
         log_info(LD_REND,"Fetching v2 rendezvous descriptor failed: "
                          "Retrying at another directory.");
+        SEND_HS_DESC_FAILED_EVENT();
         break;
       case 400:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
                  "http status 400 (%s). Dirserver didn't like our "
                  "v2 rendezvous query? Retrying at another directory.",
                  escaped(reason));
+        SEND_HS_DESC_FAILED_EVENT();
         break;
       default:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
@@ -2191,6 +2201,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Retrying at another directory.",
                  status_code, escaped(reason), conn->base_.address,
                  conn->base_.port);
+        SEND_HS_DESC_FAILED_EVENT();
         break;
     }
   }
