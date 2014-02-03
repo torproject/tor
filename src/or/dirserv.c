@@ -524,20 +524,17 @@ dirserv_free_fingerprint_list(void)
 static int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
-  struct in_addr iaddr;
+  tor_addr_t addr;
   if (get_options()->DirAllowPrivateAddresses)
     return 0; /* whatever it is, we're fine with it */
-  if (!tor_inet_aton(ri->address, &iaddr)) {
-    log_info(LD_DIRSERV,"Router %s published non-IP address '%s'. Refusing.",
+  if (tor_addr_parse(&addr, ri->address) != AF_INET) {
+    log_info(LD_DIRSERV,"Router %s published non-IPv4 address '%s'. Refusing.",
              router_describe(ri),
              ri->address);
     return -1;
   }
 
-  tor_addr_t toraddr;
-  tor_addr_from_in(&toraddr,&iaddr);
-
-  if (tor_addr_is_internal(&toraddr, 0)) {
+  if (tor_addr_is_internal(&addr, 0)) {
     log_info(LD_DIRSERV,
              "Router %s published internal IP address '%s'. Refusing.",
              router_describe(ri), ri->address);

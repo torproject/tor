@@ -2108,22 +2108,22 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 
       if (!explicit_hostname &&
           tor_addr_is_internal(&myaddr, 0)) {
-        uint32_t interface_ip;
+        tor_addr_t interface_ip;
 
         log_fn(notice_severity, LD_CONFIG, "Guessed local hostname '%s' "
                "resolves to a private IP address (%s). Trying something "
                "else.", hostname, fmt_addr32(addr));
 
-        if (get_interface_address(warn_severity, &interface_ip)) {
+        if (get_interface_address6(warn_severity, AF_INET, &interface_ip)<0) {
           log_fn(warn_severity, LD_CONFIG,
                  "Could not get local interface IP address. Too bad.");
-        } else if (tor_addr_is_internal(&myaddr, 0)) {
+        } else if (tor_addr_is_internal(&interface_ip, 0)) {
           log_fn(notice_severity, LD_CONFIG,
                  "Interface IP address '%s' is a private address too. "
-                 "Ignoring.", fmt_addr32(interface_ip));
+                 "Ignoring.", fmt_addr(&interface_ip));
         } else {
           from_interface = 1;
-          addr = interface_ip;
+          addr = tor_addr_to_ipv4h(&interface_ip);
           log_fn(notice_severity, LD_CONFIG,
                  "Learned IP address '%s' for local interface."
                  " Using that.", fmt_addr32(addr));
