@@ -30,11 +30,12 @@ commands:
 import binascii
 try:
     import curve25519
+    curve25519mod = curve25519.keys
 except ImportError:
     curve25519 = None
-    print "SKIPPING: No Python curve25519 module installed"
-    import sys
-    sys.exit(0)
+    import slownacl_curve25519
+    curve25519mod = slownacl_curve25519
+
 import hashlib
 import hmac
 import subprocess
@@ -74,17 +75,17 @@ T_VERIFY = PROTOID + ":verify"
 def H_mac(msg): return H(msg, tweak=T_MAC)
 def H_verify(msg): return H(msg, tweak=T_VERIFY)
 
-class PrivateKey(curve25519.keys.Private):
-    """As curve25519.keys.Private, but doesn't regenerate its public key
+class PrivateKey(curve25519mod.Private):
+    """As curve25519mod.Private, but doesn't regenerate its public key
        every time you ask for it.
     """
     def __init__(self):
-        curve25519.keys.Private.__init__(self)
+        curve25519mod.Private.__init__(self)
         self._memo_public = None
 
     def get_public(self):
         if self._memo_public is None:
-            self._memo_public = curve25519.keys.Private.get_public(self)
+            self._memo_public = curve25519mod.Private.get_public(self)
 
         return self._memo_public
 
@@ -184,7 +185,7 @@ def server(seckey_b, my_node_id, message, keyBytes=72):
     badness = (keyid(seckey_b.get_public()) !=
                message[NODE_ID_LENGTH:NODE_ID_LENGTH+H_LENGTH])
 
-    pubkey_X = curve25519.keys.Public(message[NODE_ID_LENGTH+H_LENGTH:])
+    pubkey_X = curve25519mod.Public(message[NODE_ID_LENGTH+H_LENGTH:])
     seckey_y = PrivateKey()
     pubkey_Y = seckey_y.get_public()
     pubkey_B = seckey_b.get_public()
@@ -247,7 +248,7 @@ def client_part2(seckey_x, msg, node_id, pubkey_B, keyBytes=72):
     """
     assert len(msg) == G_LENGTH + H_LENGTH
 
-    pubkey_Y = curve25519.keys.Public(msg[:G_LENGTH])
+    pubkey_Y = curve25519mod.Public(msg[:G_LENGTH])
     their_auth = msg[G_LENGTH:]
 
     pubkey_X = seckey_x.get_public()
