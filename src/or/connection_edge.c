@@ -1439,15 +1439,7 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   if (get_options()->TransProxyType_parsed == TPT_IPFW) {
     /* ipfw(8) is used and in this case getsockname returned the original
        destination */
-    if (proxy_sa->sa_family == AF_INET) {
-      struct sockaddr_in *dest_addr4 = (struct sockaddr_in *)proxy_sa;
-      tor_addr_from_ipv4n(&addr, dest_addr4->sin_addr.s_addr);
-      req->port = ntohs(dest_addr4->sin_port);
-    } else if (proxy_sa->sa_family == AF_INET6) {
-      struct sockaddr_in6 *dest_addr6 = (struct sockaddr_in6 *)proxy_sa;
-      tor_addr_from_in6(&addr, &dest_addr6->sin6_addr);
-      req->port = ntohs(dest_addr6->sin6_port);
-    } else {
+    if (tor_addr_from_sockaddr(&addr, proxy_sa, &req->port) < 0) {
       tor_fragile_assert();
       return -1;
     }
