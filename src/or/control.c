@@ -5002,7 +5002,12 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
                                       const char *hs_dir,
                                       const char *desc_id_base32)
 {
-  tor_assert(hs_dir);
+  if (!hs_dir || !rend_query || !desc_id_base32) {
+    log_warn(LD_BUG, "Called with rend_query==%p, "
+             "hs_dir==%p, desc_id_base32==%p",
+             rend_query, hs_dir, desc_id_base32);
+    return;
+  }
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
                      rend_query->onion_address,
@@ -5024,6 +5029,11 @@ control_event_hs_descriptor_receive_end(const char *action,
                                         const rend_data_t *rend_query,
                                         const char *hs_dir)
 {
+  if (!action || !rend_query || !hs_dir) {
+    log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
+             "hs_dir==%p", action, rend_query, hs_dir);
+    return;
+  }
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC %s %s %s %s\r\n",
                      action,
@@ -5040,7 +5050,11 @@ void
 control_event_hs_descriptor_received(const rend_data_t *rend_query,
                                      const char *hs_dir)
 {
-  tor_assert(hs_dir);
+  if (!rend_query || !hs_dir) {
+    log_warn(LD_BUG, "Called with rend_query==%p, hs_dir==%p",
+             rend_query, hs_dir);
+    return;
+  }
   control_event_hs_descriptor_receive_end("RECEIVED", rend_query, hs_dir);
 }
 
@@ -5052,7 +5066,11 @@ void
 control_event_hs_descriptor_failed(const rend_data_t *rend_query,
                                    const char *hs_dir)
 {
-  tor_assert(hs_dir);
+  if (!rend_query || !hs_dir) {
+    log_warn(LD_BUG, "Called with rend_query==%p, hs_dir==%p",
+             rend_query, hs_dir);
+    return;
+  }
   control_event_hs_descriptor_receive_end("FAILED", rend_query, hs_dir);
 }
 
