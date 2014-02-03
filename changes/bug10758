@@ -1,0 +1,4 @@
+  o Removed code
+    - Remove all code that existed to support the v2 directory system:
+      There are no longer any v2 directory authorities. Resolves
+      bug 10758.

@@ -215,7 +215,7 @@ static config_var_t option_vars_[] = {
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
-  V(DisableV2DirectoryInfo_,     BOOL,     "0"),
+  OBSOLETE("DisableV2DirectoryInfo_"),
   V(DynamicDHGroups,             BOOL,     "0"),
   VPORT(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
@@ -248,7 +248,7 @@ static config_var_t option_vars_[] = {
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
-  V(FetchV2Networkstatus,        BOOL,     "0"),
+  OBSOLETE("FetchV2Networkstatus"),
   V(GeoIPExcludeUnknown,         AUTOBOOL, "auto"),
 #ifdef _WIN32
   V(GeoIPFile,                   FILENAME, "<default>"),
@@ -419,7 +419,7 @@ static config_var_t option_vars_[] = {
   V(User,                        STRING,   NULL),
   V(UserspaceIOCPBuffers,        BOOL,     "0"),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
-  VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
+  OBSOLETE("V2AuthoritativeDirectory"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
   V(TestingV3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "5 minutes"),
@@ -982,7 +982,7 @@ consider_adding_dir_servers(const or_options_t *options,
     if (!options->AlternateBridgeAuthority)
       type |= BRIDGE_DIRINFO;
     if (!options->AlternateDirAuthority)
-      type |= V1_DIRINFO | V2_DIRINFO | V3_DIRINFO | EXTRAINFO_DIRINFO |
+      type |= V1_DIRINFO | V3_DIRINFO | EXTRAINFO_DIRINFO |
         MICRODESC_DIRINFO;
     if (!options->AlternateHSAuthority)
       type |= HIDSERV_DIRINFO;
@@ -1134,20 +1134,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
               options->DataDirectory);
     goto done;
     /* No need to roll back, since you can't change the value. */
-  }
-
-  if (directory_caches_v2_dir_info(options)) {
-    char *fn = NULL;
-    tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-status",
-                 options->DataDirectory);
-    if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK,
-                          options->User) < 0) {
-      tor_asprintf(msg,
-                "Couldn't access/create private data directory \"%s\"", fn);
-      tor_free(fn);
-      goto done;
-    }
-    tor_free(fn);
   }
 
   /* Bail out at this point if we're not going to be a client or server:
@@ -2378,9 +2364,9 @@ compute_publishserverdescriptor(or_options_t *options)
       if (options->BridgeRelay)
         *auth |= BRIDGE_DIRINFO;
       else
-        *auth |= V2_DIRINFO | V3_DIRINFO;
+        *auth |= V3_DIRINFO;
     else if (!strcasecmp(string, "v2"))
-      *auth |= V2_DIRINFO;
+      /* obsolete */;
     else if (!strcasecmp(string, "v3"))
       *auth |= V3_DIRINFO;
     else if (!strcasecmp(string, "bridge"))
@@ -2552,10 +2538,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
   }
 
-  if (options->DisableV2DirectoryInfo_ && ! authdir_mode(options)) {
-    REJECT("DisableV2DirectoryInfo_ set, but we aren't an authority.");
-  }
-
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
@@ -2613,7 +2595,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->DownloadExtraInfo = 1;
     }
     if (!(options->BridgeAuthoritativeDir || options->HSAuthoritativeDir ||
-          options->V1AuthoritativeDir || options->V2AuthoritativeDir ||
+          options->V1AuthoritativeDir ||
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
              "(Bridge/HS/V1/V2/V3)AuthoritativeDir is set.");
@@ -2826,7 +2808,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if ((options->BridgeRelay
         || options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
       && (options->PublishServerDescriptor_
-          & (V1_DIRINFO|V2_DIRINFO|V3_DIRINFO))) {
+          & (V1_DIRINFO|V3_DIRINFO))) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
@@ -5037,8 +5019,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
-  dirinfo_type_t type = V2_DIRINFO;
-  int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
+  dirinfo_type_t type = 0;
+  int is_not_hidserv_authority = 0;
   double weight = 1.0;
 
   items = smartlist_new();
@@ -5066,8 +5048,6 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
       is_not_hidserv_authority = 1;
     } else if (!strcasecmp(flag, "bridge")) {
       type |= BRIDGE_DIRINFO;
-    } else if (!strcasecmp(flag, "no-v2")) {
-      is_not_v2_authority = 1;
     } else if (!strcasecmpstart(flag, "orport=")) {
       int ok;
       char *portstring = flag + strlen("orport=");
@@ -5101,8 +5081,6 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   }
   if (is_not_hidserv_authority)
     type &= ~HIDSERV_DIRINFO;
-  if (is_not_v2_authority)
-    type &= ~V2_DIRINFO;
 
   if (smartlist_len(items) < 2) {
     log_warn(LD_CONFIG, "Too few arguments to DirAuthority line.");

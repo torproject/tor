@@ -32,18 +32,6 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
-/* For tracking v2 networkstatus documents.  Only caches do this now. */
-
-/** Map from descriptor digest of routers listed in the v2 networkstatus
- * documents to download_status_t* */
-static digestmap_t *v2_download_status_map = NULL;
-/** Global list of all of the current v2 network_status documents that we know
- * about.  This list is kept sorted by published_on. */
-static smartlist_t *networkstatus_v2_list = NULL;
-/** True iff any member of networkstatus_v2_list has changed since the last
- * time we called download_status_map_update_from_v2_networkstatus() */
-static int networkstatus_v2_list_has_changed = 0;
-
 /** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
 /** Map from lowercase nickname to (void*)1 for all names that are listed
@@ -88,11 +76,6 @@ typedef struct consensus_waiting_for_certs_t {
 static consensus_waiting_for_certs_t
        consensus_waiting_for_certs[N_CONSENSUS_FLAVORS];
 
-/** The last time we tried to download a networkstatus, or 0 for "never".  We
- * use this to rate-limit download attempts for directory caches (including
- * mirrors).  Clients don't use this now. */
-static time_t last_networkstatus_download_attempted = 0;
-
 /** A time before which we shouldn't try to replace the current consensus:
  * this will be at some point after the next consensus becomes valid, but
  * before the current consensus becomes invalid. */
@@ -107,7 +90,6 @@ static int have_warned_about_old_version = 0;
  * listed by the authorities. */
 static int have_warned_about_new_version = 0;
 
-static void download_status_map_update_from_v2_networkstatus(void);
 static void routerstatus_list_update_named_server_map(void);
 
 /** Forget that we've warned about anything networkstatus-related, so we will
@@ -131,86 +113,9 @@ void
 networkstatus_reset_download_failures(void)
 {
   int i;
-  const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
-  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
-    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
-         if (!router_get_by_descriptor_digest(rs->descriptor_digest))
-           rs->need_to_mirror = 1;
-    } SMARTLIST_FOREACH_END(rs);
-  } SMARTLIST_FOREACH_END(ns);
 
   for (i=0; i < N_CONSENSUS_FLAVORS; ++i)
     download_status_reset(&consensus_dl_status[i]);
-  if (v2_download_status_map) {
-    digestmap_iter_t *iter;
-    digestmap_t *map = v2_download_status_map;
-    const char *key;
-    void *val;
-    download_status_t *dls;
-    for (iter = digestmap_iter_init(map); !digestmap_iter_done(iter);
-         iter = digestmap_iter_next(map, iter) ) {
-      digestmap_iter_get(iter, &key, &val);
-      dls = val;
-      download_status_reset(dls);
-    }
-  }
-}
-
-/** Repopulate our list of network_status_t objects from the list cached on
- * disk.  Return 0 on success, -1 on failure. */
-int
-router_reload_v2_networkstatus(void)
-{
-  smartlist_t *entries;
-  struct stat st;
-  char *s;
-  char *filename = get_datadir_fname("cached-status");
-  int maybe_delete = !directory_caches_v2_dir_info(get_options());
-  time_t now = time(NULL);
-  if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_new();
-
-  entries = tor_listdir(filename);
-  if (!entries) { /* dir doesn't exist */
-    tor_free(filename);
-    return 0;
-  } else if (!smartlist_len(entries) && maybe_delete) {
-    rmdir(filename);
-    tor_free(filename);
-    smartlist_free(entries);
-    return 0;
-  }
-  tor_free(filename);
-  SMARTLIST_FOREACH_BEGIN(entries, const char *, fn) {
-      char buf[DIGEST_LEN];
-      if (maybe_delete) {
-        filename = get_datadir_fname2("cached-status", fn);
-        remove_file_if_very_old(filename, now);
-        tor_free(filename);
-        continue;
-      }
-      if (strlen(fn) != HEX_DIGEST_LEN ||
-          base16_decode(buf, sizeof(buf), fn, strlen(fn))) {
-        log_info(LD_DIR,
-                 "Skipping cached-status file with unexpected name \"%s\"",fn);
-        continue;
-      }
-      filename = get_datadir_fname2("cached-status", fn);
-      s = read_file_to_str(filename, 0, &st);
-      if (s) {
-        if (router_set_networkstatus_v2(s, st.st_mtime, NS_FROM_CACHE,
-                                        NULL)<0) {
-          log_warn(LD_FS, "Couldn't load networkstatus from \"%s\"",filename);
-        }
-        tor_free(s);
-      }
-      tor_free(filename);
-  } SMARTLIST_FOREACH_END(fn);
-  SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
-  smartlist_free(entries);
-  networkstatus_v2_list_clean(time(NULL));
-  routers_update_all_from_networkstatus(time(NULL), 2);
-  return 0;
 }
 
 /** Read every cached v3 consensus networkstatus from the disk. */
@@ -301,26 +206,6 @@ routerstatus_free(routerstatus_t *rs)
     return;
   tor_free(rs->exitsummary);
   tor_free(rs);
-}
-
-/** Free all storage held by the networkstatus object <b>ns</b>. */
-void
-networkstatus_v2_free(networkstatus_v2_t *ns)
-{
-  if (!ns)
-    return;
-  tor_free(ns->source_address);
-  tor_free(ns->contact);
-  if (ns->signing_key)
-    crypto_pk_free(ns->signing_key);
-  tor_free(ns->client_versions);
-  tor_free(ns->server_versions);
-  if (ns->entries) {
-    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-                      routerstatus_free(rs));
-    smartlist_free(ns->entries);
-  }
-  tor_free(ns);
 }
 
 /** Free all storage held in <b>sig</b> */
@@ -647,285 +532,9 @@ networkstatus_get_cache_filename(const char *identity_digest)
   return get_datadir_fname2("cached-status", fp);
 }
 
-/** Helper for smartlist_sort: Compare two networkstatus objects by
- * publication date. */
-static int
-compare_networkstatus_v2_published_on_(const void **_a, const void **_b)
-{
-  const networkstatus_v2_t *a = *_a, *b = *_b;
-  if (a->published_on < b->published_on)
-    return -1;
-  else if (a->published_on > b->published_on)
-    return 1;
-  else
-    return 0;
-}
-
-/** Add the parsed v2 networkstatus in <b>ns</b> (with original document in
- * <b>s</b>) to the disk cache (and the in-memory directory server cache) as
- * appropriate. */
-static int
-add_networkstatus_to_cache(const char *s,
-                           v2_networkstatus_source_t source,
-                           networkstatus_v2_t *ns)
-{
-  if (source != NS_FROM_CACHE) {
-    char *fn = networkstatus_get_cache_filename(ns->identity_digest);
-    if (write_str_to_file(fn, s, 0)<0) {
-      log_notice(LD_FS, "Couldn't write cached network status to \"%s\"", fn);
-    }
-    tor_free(fn);
-  }
-
-  if (directory_caches_v2_dir_info(get_options()))
-    dirserv_set_cached_networkstatus_v2(s,
-                                        ns->identity_digest,
-                                        ns->published_on);
-
-  return 0;
-}
-
 /** How far in the future do we allow a network-status to get before removing
  * it? (seconds) */
 #define NETWORKSTATUS_ALLOW_SKEW (24*60*60)
-
-/** Given a string <b>s</b> containing a network status that we received at
- * <b>arrived_at</b> from <b>source</b>, try to parse it, see if we want to
- * store it, and put it into our cache as necessary.
- *
- * If <b>source</b> is NS_FROM_DIR or NS_FROM_CACHE, do not replace our
- * own networkstatus_t (if we're an authoritative directory server).
- *
- * If <b>source</b> is NS_FROM_CACHE, do not write our networkstatus_t to the
- * cache.
- *
- * If <b>requested_fingerprints</b> is provided, it must contain a list of
- * uppercased identity fingerprints.  Do not update any networkstatus whose
- * fingerprint is not on the list; after updating a networkstatus, remove its
- * fingerprint from the list.
- *
- * Return 0 on success, -1 on failure.
- *
- * Callers should make sure that routers_update_all_from_networkstatus() is
- * invoked after this function succeeds.
- */
-int
-router_set_networkstatus_v2(const char *s, time_t arrived_at,
-                            v2_networkstatus_source_t source,
-                            smartlist_t *requested_fingerprints)
-{
-  networkstatus_v2_t *ns;
-  int i, found;
-  time_t now;
-  int skewed = 0;
-  dir_server_t *trusted_dir = NULL;
-  const char *source_desc = NULL;
-  char fp[HEX_DIGEST_LEN+1];
-  char published[ISO_TIME_LEN+1];
-
-  if (!directory_caches_v2_dir_info(get_options()))
-    return 0; /* Don't bother storing it. */
-
-  ns = networkstatus_v2_parse_from_string(s);
-  if (!ns) {
-    log_warn(LD_DIR, "Couldn't parse network status.");
-    return -1;
-  }
-  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
-  if (!(trusted_dir =
-        router_get_trusteddirserver_by_digest(ns->identity_digest)) ||
-      !(trusted_dir->type & V2_DIRINFO)) {
-    log_info(LD_DIR, "Network status was signed, but not by an authoritative "
-             "directory we recognize.");
-    source_desc = fp;
-  } else {
-    source_desc = trusted_dir->description;
-  }
-  now = time(NULL);
-  if (arrived_at > now)
-    arrived_at = now;
-
-  ns->received_on = arrived_at;
-
-  format_iso_time(published, ns->published_on);
-
-  if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
-    char dbuf[64];
-    long delta = now - ns->published_on;
-    format_time_interval(dbuf, sizeof(dbuf), delta);
-    log_warn(LD_GENERAL, "Network status from %s was published %s in the "
-             "future (%s UTC). Check your time and date settings! "
-             "Not caching.",
-             source_desc, dbuf, published);
-    control_event_general_status(LOG_WARN,
-                       "CLOCK_SKEW MIN_SKEW=%ld SOURCE=NETWORKSTATUS:%s:%d",
-                       delta, ns->source_address, ns->source_dirport);
-    skewed = 1;
-  }
-
-  if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_new();
-
-  if ( (source == NS_FROM_DIR_BY_FP || source == NS_FROM_DIR_ALL) &&
-       router_digest_is_me(ns->identity_digest)) {
-    /* Don't replace our own networkstatus when we get it from somebody else.*/
-    networkstatus_v2_free(ns);
-    return 0;
-  }
-
-  if (requested_fingerprints) {
-    if (smartlist_contains_string(requested_fingerprints, fp)) {
-      smartlist_string_remove(requested_fingerprints, fp);
-    } else {
-      if (source != NS_FROM_DIR_ALL) {
-        char *requested =
-          smartlist_join_strings(requested_fingerprints," ",0,NULL);
-        log_warn(LD_DIR,
-               "We received a network status with a fingerprint (%s) that we "
-               "never requested. (We asked for: %s.) Dropping.",
-               fp, requested);
-        tor_free(requested);
-        return 0;
-      }
-    }
-  }
-
-  if (!trusted_dir) {
-    if (!skewed) {
-      /* We got a non-trusted networkstatus, and we're a directory cache.
-       * This means that we asked an authority, and it told us about another
-       * authority we didn't recognize. */
-      log_info(LD_DIR,
-               "We do not recognize authority (%s) but we are willing "
-               "to cache it.", fp);
-      add_networkstatus_to_cache(s, source, ns);
-      networkstatus_v2_free(ns);
-    }
-    return 0;
-  }
-
-  found = 0;
-  for (i=0; i < smartlist_len(networkstatus_v2_list); ++i) {
-    networkstatus_v2_t *old_ns = smartlist_get(networkstatus_v2_list, i);
-
-    if (tor_memeq(old_ns->identity_digest, ns->identity_digest, DIGEST_LEN)) {
-      if (tor_memeq(old_ns->networkstatus_digest,
-                  ns->networkstatus_digest, DIGEST_LEN)) {
-        /* Same one we had before. */
-        networkstatus_v2_free(ns);
-        tor_assert(trusted_dir);
-        log_info(LD_DIR,
-                 "Not replacing network-status from %s (published %s); "
-                 "we already have it.",
-                 trusted_dir->description, published);
-        if (old_ns->received_on < arrived_at) {
-          if (source != NS_FROM_CACHE) {
-            char *fn;
-            fn = networkstatus_get_cache_filename(old_ns->identity_digest);
-            /* We use mtime to tell when it arrived, so update that. */
-            touch_file(fn);
-            tor_free(fn);
-          }
-          old_ns->received_on = arrived_at;
-        }
-        download_status_failed(&trusted_dir->v2_ns_dl_status, 0);
-        return 0;
-      } else if (old_ns->published_on >= ns->published_on) {
-        char old_published[ISO_TIME_LEN+1];
-        format_iso_time(old_published, old_ns->published_on);
-        tor_assert(trusted_dir);
-        log_info(LD_DIR,
-                 "Not replacing network-status from %s (published %s);"
-                 " we have a newer one (published %s) for this authority.",
-                 trusted_dir->description, published,
-                 old_published);
-        networkstatus_v2_free(ns);
-        download_status_failed(&trusted_dir->v2_ns_dl_status, 0);
-        return 0;
-      } else {
-        networkstatus_v2_free(old_ns);
-        smartlist_set(networkstatus_v2_list, i, ns);
-        found = 1;
-        break;
-      }
-    }
-  }
-
-  if (source != NS_FROM_CACHE && trusted_dir) {
-    download_status_reset(&trusted_dir->v2_ns_dl_status);
-  }
-
-  if (!found)
-    smartlist_add(networkstatus_v2_list, ns);
-
-/** Retain any routerinfo mentioned in a V2 networkstatus for at least this
- * long. */
-#define V2_NETWORKSTATUS_ROUTER_LIFETIME (3*60*60)
-
-  {
-    time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
-    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
-      signed_descriptor_t *sd =
-        router_get_by_descriptor_digest(rs->descriptor_digest);
-      if (sd) {
-        if (sd->last_listed_as_valid_until < live_until)
-          sd->last_listed_as_valid_until = live_until;
-      } else {
-        rs->need_to_mirror = 1;
-      }
-    } SMARTLIST_FOREACH_END(rs);
-  }
-
-  log_info(LD_DIR, "Setting networkstatus %s %s (published %s)",
-           source == NS_FROM_CACHE?"cached from":
-           ((source == NS_FROM_DIR_BY_FP || source == NS_FROM_DIR_ALL) ?
-             "downloaded from":"generated for"),
-           trusted_dir->description, published);
-  networkstatus_v2_list_has_changed = 1;
-
-  smartlist_sort(networkstatus_v2_list,
-                 compare_networkstatus_v2_published_on_);
-
-  if (!skewed)
-    add_networkstatus_to_cache(s, source, ns);
-
-  return 0;
-}
-
-/** Remove all very-old network_status_t objects from memory and from the
- * disk cache. */
-void
-networkstatus_v2_list_clean(time_t now)
-{
-  int i;
-  if (!networkstatus_v2_list)
-    return;
-
-  for (i = 0; i < smartlist_len(networkstatus_v2_list); ++i) {
-    networkstatus_v2_t *ns = smartlist_get(networkstatus_v2_list, i);
-    char *fname = NULL;
-    if (ns->published_on + MAX_NETWORKSTATUS_AGE > now)
-      continue;
-    /* Okay, this one is too old.  Remove it from the list, and delete it
-     * from the cache. */
-    smartlist_del(networkstatus_v2_list, i--);
-    fname = networkstatus_get_cache_filename(ns->identity_digest);
-    if (file_status(fname) == FN_FILE) {
-      log_info(LD_DIR, "Removing too-old networkstatus in %s", fname);
-      unlink(fname);
-    }
-    tor_free(fname);
-    if (directory_caches_v2_dir_info(get_options())) {
-      dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
-    }
-    networkstatus_v2_free(ns);
-  }
-
-  /* And now go through the directory cache for any cached untrusted
-   * networkstatuses and other network info. */
-  dirserv_clear_old_networkstatuses(now - MAX_NETWORKSTATUS_AGE);
-  dirserv_clear_old_v1_info(now);
-}
 
 /** Helper for bsearching a list of routerstatus_t pointers: compare a
  * digest in the key to the identity digest of a routerstatus_t. */
@@ -946,22 +555,6 @@ compare_digest_to_vote_routerstatus_entry(const void *_key,
   const char *key = _key;
   const vote_routerstatus_t *vrs = *_member;
   return tor_memcmp(key, vrs->status.identity_digest, DIGEST_LEN);
-}
-
-/** As networkstatus_v2_find_entry, but do not return a const pointer */
-routerstatus_t *
-networkstatus_v2_find_mutable_entry(networkstatus_v2_t *ns, const char *digest)
-{
-  return smartlist_bsearch(ns->entries, digest,
-                           compare_digest_to_routerstatus_entry);
-}
-
-/** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
- * NULL if none was found. */
-const routerstatus_t *
-networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
-{
-  return networkstatus_v2_find_mutable_entry(ns, digest);
 }
 
 /** As networkstatus_find_entry, but do not return a const pointer */
@@ -991,15 +584,6 @@ networkstatus_vote_find_entry_idx(networkstatus_t *ns,
   return smartlist_bsearch_idx(ns->routerstatus_list, digest,
                                compare_digest_to_routerstatus_entry,
                                found_out);
-}
-
-/** Return a list of the v2 networkstatus documents. */
-const smartlist_t *
-networkstatus_get_v2_list(void)
-{
-  if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_new();
-  return networkstatus_v2_list;
 }
 
 /** As router_get_consensus_status_by_descriptor_digest, but does not return
@@ -1046,8 +630,6 @@ router_get_dl_status_by_descriptor_digest(const char *d)
   if ((rs = router_get_mutable_consensus_status_by_descriptor_digest(
                                               current_ns_consensus, d)))
     return &rs->dl_status;
-  if (v2_download_status_map)
-    return digestmap_get(v2_download_status_map, d);
 
   return NULL;
 }
@@ -1112,72 +694,6 @@ networkstatus_nickname_is_unnamed(const char *nickname)
 /** How frequently do non-authority directory caches re-download fresh
  * networkstatus documents? */
 #define NONAUTHORITY_NS_CACHE_INTERVAL (60*60)
-
-/** We are a directory server, and so cache network_status documents.
- * Initiate downloads as needed to update them.  For v2 authorities,
- * this means asking each trusted directory for its network-status.
- * For caches, this means asking a random v2 authority for all
- * network-statuses.
- */
-static void
-update_v2_networkstatus_cache_downloads(time_t now)
-{
-  int authority = authdir_mode_v2(get_options());
-  int interval =
-    authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
-  const smartlist_t *trusted_dir_servers = router_get_trusted_dir_servers();
-
-  if (last_networkstatus_download_attempted + interval >= now)
-    return;
-
-  last_networkstatus_download_attempted = now;
-
-  if (authority) {
-    /* An authority launches a separate connection for everybody. */
-    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ds)
-      {
-         char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
-         tor_addr_t addr;
-         if (!(ds->type & V2_DIRINFO))
-           continue;
-         if (router_digest_is_me(ds->digest))
-           continue;
-         tor_addr_from_ipv4h(&addr, ds->addr);
-         /* Is this quite sensible with IPv6 or multiple addresses? */
-         if (connection_get_by_type_addr_port_purpose(
-                CONN_TYPE_DIR, &addr, ds->dir_port,
-                DIR_PURPOSE_FETCH_V2_NETWORKSTATUS)) {
-           /* XXX the above dir_port won't be accurate if we're
-            * doing a tunneled conn. In that case it should be or_port.
-            * How to guess from here? Maybe make the function less general
-            * and have it know that it's looking for dir conns. -RD */
-           /* Only directory caches download v2 networkstatuses, and they
-            * don't use tunneled connections.  I think it's okay to ignore
-            * this. */
-           continue;
-         }
-         strlcpy(resource, "fp/", sizeof(resource));
-         base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
-         strlcat(resource, ".z", sizeof(resource));
-         directory_initiate_command_routerstatus(
-               &ds->fake_status, DIR_PURPOSE_FETCH_V2_NETWORKSTATUS,
-               ROUTER_PURPOSE_GENERAL,
-               DIRIND_ONEHOP,
-               resource,
-               NULL, 0 /* No payload. */,
-               0 /* No I-M-S. */);
-      }
-    SMARTLIST_FOREACH_END(ds);
-  } else {
-    /* A non-authority cache launches one connection to a random authority. */
-    /* (Check whether we're currently fetching network-status objects.) */
-    if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                        DIR_PURPOSE_FETCH_V2_NETWORKSTATUS))
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_V2_NETWORKSTATUS,
-                                   ROUTER_PURPOSE_GENERAL, "all.z",
-                                   PDS_RETRY_IF_NO_SERVERS);
-  }
-}
 
 /** Return true iff, given the options listed in <b>options</b>, <b>flavor</b>
  *  is the flavor of a consensus networkstatus that we would like to fetch. */
@@ -1397,8 +913,6 @@ update_networkstatus_downloads(time_t now)
   const or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (authdir_mode_any_main(options) || options->FetchV2Networkstatus)
-    update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
   update_certificate_downloads(now);
 }
@@ -1505,7 +1019,6 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_named != b->is_named ||
          a->is_unnamed != b->is_unnamed ||
          a->is_valid != b->is_valid ||
-         a->is_v2_dir != b->is_v2_dir ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
          a->is_bad_directory != b->is_bad_directory ||
@@ -1900,9 +1413,6 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
   networkstatus_t *consensus = networkstatus_get_reasonably_live_consensus(now,
                                                                      FLAV_NS);
 
-  if (networkstatus_v2_list_has_changed)
-    download_status_map_update_from_v2_networkstatus();
-
   if (!consensus || dir_version < 3) /* nothing more we should do */
     return;
 
@@ -1957,35 +1467,6 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
   }
 }
 
-/** Update v2_download_status_map to contain an entry for every router
- * descriptor listed in the v2 networkstatuses. */
-static void
-download_status_map_update_from_v2_networkstatus(void)
-{
-  digestmap_t *dl_status;
-  if (!networkstatus_v2_list)
-    return;
-  if (!v2_download_status_map)
-    v2_download_status_map = digestmap_new();
-
-  dl_status = digestmap_new();
-  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
-    SMARTLIST_FOREACH_BEGIN(ns->entries, const routerstatus_t *, rs) {
-      const char *d = rs->descriptor_digest;
-      download_status_t *s;
-      if (digestmap_get(dl_status, d))
-        continue;
-      if (!(s = digestmap_remove(v2_download_status_map, d))) {
-        s = tor_malloc_zero(sizeof(download_status_t));
-      }
-      digestmap_set(dl_status, d, s);
-    } SMARTLIST_FOREACH_END(rs);
-  } SMARTLIST_FOREACH_END(ns);
-  digestmap_free(v2_download_status_map, tor_free_);
-  v2_download_status_map = dl_status;
-  networkstatus_v2_list_has_changed = 0;
-}
-
 /** Update our view of the list of named servers from the most recently
  * retrieved networkstatus consensus. */
 static void
@@ -2017,14 +1498,11 @@ void
 routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
 {
-  dir_server_t *ds;
   const or_options_t *options = get_options();
-  int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  int authdir = authdir_mode_v3(options);
   networkstatus_t *ns = current_consensus;
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
-  if (!networkstatus_v2_list)
-    networkstatus_v2_list = smartlist_new();
 
   routers_sort_by_identity(routers);
 
@@ -2034,11 +1512,6 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                router->cache_info.identity_digest, DIGEST_LEN),
   {
   }) {
-    /* We have a routerstatus for this router. */
-    const char *digest = router->cache_info.identity_digest;
-
-    ds = router_get_fallback_dirserver_by_digest(digest);
-
     /* Is it the same descriptor, or only the same identity? */
     if (tor_memeq(router->cache_info.signed_descriptor_digest,
                 rs->descriptor_digest, DIGEST_LEN)) {
@@ -2056,29 +1529,10 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
           dirserv_should_launch_reachability_test(router, old_router);
       }
     }
-    if (rs->is_flagged_running && ds) {
-      download_status_reset(&ds->v2_ns_dl_status);
-    }
     if (reset_failures) {
       download_status_reset(&rs->dl_status);
     }
   } SMARTLIST_FOREACH_JOIN_END(rs, router);
-
-  /* Now update last_listed_as_valid_until from v2 networkstatuses. */
-  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
-    time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
-    SMARTLIST_FOREACH_JOIN(ns->entries, const routerstatus_t *, rs,
-                         routers, routerinfo_t *, ri,
-                         tor_memcmp(rs->identity_digest,
-                                ri->cache_info.identity_digest, DIGEST_LEN),
-                         STMT_NIL) {
-      if (tor_memeq(ri->cache_info.signed_descriptor_digest,
-                  rs->descriptor_digest, DIGEST_LEN)) {
-        if (live_until > ri->cache_info.last_listed_as_valid_until)
-          ri->cache_info.last_listed_as_valid_until = live_until;
-      }
-    } SMARTLIST_FOREACH_JOIN_END(rs, ri);
-  } SMARTLIST_FOREACH_END(ns);
 
   router_dir_info_changed();
 }
@@ -2398,15 +1852,6 @@ void
 networkstatus_free_all(void)
 {
   int i;
-  if (networkstatus_v2_list) {
-    SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-                      networkstatus_v2_free(ns));
-    smartlist_free(networkstatus_v2_list);
-    networkstatus_v2_list = NULL;
-  }
-
-  digestmap_free(v2_download_status_map, tor_free_);
-  v2_download_status_map = NULL;
   networkstatus_vote_free(current_ns_consensus);
   networkstatus_vote_free(current_md_consensus);
   current_md_consensus = current_ns_consensus = NULL;

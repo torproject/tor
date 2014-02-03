@@ -1747,39 +1747,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     tor_free(url);
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
-    if (directory_permits_controller_requests(get_options())) {
-      size_t len=0;
-      char *cp;
-      smartlist_t *status_list = smartlist_new();
-      dirserv_get_networkstatus_v2(status_list,
-                                   question+strlen("dir/status/"));
-      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
-      cp = *answer = tor_malloc(len+1);
-      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
-          memcpy(cp, d->dir, d->dir_len);
-          cp += d->dir_len;
-        });
-      *cp = '\0';
-      smartlist_free(status_list);
-    } else {
-      smartlist_t *fp_list = smartlist_new();
-      smartlist_t *status_list = smartlist_new();
-      dirserv_get_networkstatus_v2_fingerprints(
-                             fp_list, question+strlen("dir/status/"));
-      SMARTLIST_FOREACH(fp_list, const char *, fp, {
-          char *s;
-          char *fname = networkstatus_get_cache_filename(fp);
-          s = read_file_to_str(fname, 0, NULL);
-          if (s)
-            smartlist_add(status_list, s);
-          tor_free(fname);
-        });
-      SMARTLIST_FOREACH(fp_list, char *, fp, tor_free(fp));
-      smartlist_free(fp_list);
-      *answer = smartlist_join_strings(status_list, "", 0, NULL);
-      SMARTLIST_FOREACH(status_list, char *, s, tor_free(s));
-      smartlist_free(status_list);
-    }
+    *answer = tor_strdup("");
   } else if (!strcmp(question, "dir/status-vote/current/consensus")) { /* v3 */
     if (directory_caches_dir_info(get_options())) {
       const cached_dir_t *consensus = dirserv_get_consensus("ns");

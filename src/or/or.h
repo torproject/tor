@@ -407,9 +407,6 @@ typedef enum {
 /** A connection to a directory server: set after a rendezvous
  * descriptor is downloaded. */
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
-/** A connection to a directory server: download one or more v2
- * network-status objects */
-#define DIR_PURPOSE_FETCH_V2_NETWORKSTATUS 5
 /** A connection to a directory server: download one or more server
  * descriptors. */
 #define DIR_PURPOSE_FETCH_SERVERDESC 6
@@ -2036,9 +2033,7 @@ typedef struct signed_descriptor_t {
    * routerlist->old_routers? -1 for none. */
   int routerlist_index;
   /** The valid-until time of the most recent consensus that listed this
-   * descriptor, or a bit after the publication time of the most recent v2
-   * networkstatus that listed it.  0 for "never listed in a consensus or
-   * status, so far as we know." */
+   * descriptor.  0 for "never listed in a consensus, so far as we know." */
   time_t last_listed_as_valid_until;
   /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
@@ -2175,10 +2170,6 @@ typedef struct routerstatus_t {
   unsigned int is_unnamed:1; /**< True iff "nickname" belongs to another
                               * router. */
   unsigned int is_valid:1; /**< True iff this router isn't invalid. */
-  unsigned int is_v2_dir:1; /**< True iff this router can serve directory
-                             * information with v2 of the directory
-                             * protocol. (All directory caches cache v1
-                             * directories.)  */
   unsigned int is_possible_guard:1; /**< True iff this router would be a good
                                      * choice as an entry guard. */
   unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
@@ -2215,12 +2206,6 @@ typedef struct routerstatus_t {
   /* ---- The fields below aren't derived from the networkstatus; they
    * hold local information only. */
 
-  /** True if we, as a directory mirror, want to download the corresponding
-   * routerinfo from the authority who gave us this routerstatus.  (That is,
-   * if we don't have the routerinfo, and if we haven't already tried to get it
-   * from this authority.)  Applies in v2 networkstatus document only.
-   */
-  unsigned int need_to_mirror:1;
   time_t last_dir_503_at; /**< When did this router last tell us that it
                            * was too busy to serve directory info? */
   download_status_t dl_status;
@@ -2384,44 +2369,6 @@ typedef struct node_t {
   time_t last_reachable6;       /* IPv6. */
 
 } node_t;
-
-/** Contents of a v2 (non-consensus, non-vote) network status object. */
-typedef struct networkstatus_v2_t {
-  /** When did we receive the network-status document? */
-  time_t received_on;
-
-  /** What was the digest of the document? */
-  char networkstatus_digest[DIGEST_LEN];
-
-  /* These fields come from the actual network-status document.*/
-  time_t published_on; /**< Declared publication date. */
-
-  char *source_address; /**< Canonical directory server hostname. */
-  uint32_t source_addr; /**< Canonical directory server IP. */
-  uint16_t source_dirport; /**< Canonical directory server dirport. */
-
-  unsigned int binds_names:1; /**< True iff this directory server binds
-                               * names. */
-  unsigned int recommends_versions:1; /**< True iff this directory server
-                                       * recommends client and server software
-                                       * versions. */
-  unsigned int lists_bad_exits:1; /**< True iff this directory server marks
-                                   * malfunctioning exits as bad. */
-  /** True iff this directory server marks malfunctioning directories as
-   * bad. */
-  unsigned int lists_bad_directories:1;
-
-  char identity_digest[DIGEST_LEN]; /**< Digest of signing key. */
-  char *contact; /**< How to contact directory admin? (may be NULL). */
-  crypto_pk_t *signing_key; /**< Key used to sign this directory. */
-  char *client_versions; /**< comma-separated list of recommended client
-                          * versions. */
-  char *server_versions; /**< comma-separated list of recommended server
-                          * versions. */
-
-  smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
-                         * sorted by identity_digest. */
-} networkstatus_v2_t;
 
 /** Linked list of microdesc hash lines for a single router in a directory
  * vote.
@@ -2686,8 +2633,6 @@ typedef enum {
   /** Serves/signs v1 directory information: Big lists of routers, and short
    * routerstatus documents. */
   V1_DIRINFO      = 1 << 0,
-  /** Serves/signs v2 directory information: i.e. v2 networkstatus documents */
-  V2_DIRINFO      = 1 << 1,
   /** Serves/signs v3 directory information: votes, consensuses, certs */
   V3_DIRINFO      = 1 << 2,
   /** Serves hidden service descriptors. */
@@ -3593,8 +3538,6 @@ typedef struct {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 1 directories? */
-  int V2AuthoritativeDir; /**< Boolean: is this an authoritative directory
-                           * for version 2 directories? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
   int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
@@ -3649,8 +3592,6 @@ typedef struct {
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /**< and hidden service descriptors? */
-  int FetchV2Networkstatus; /**< Do we fetch v2 networkstatus documents when
-                             * we don't need to? */
   int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
   int VoteOnHidServDirectoriesV2; /**< As a directory authority, vote on
@@ -4284,16 +4225,6 @@ typedef struct {
   /** Fraction: */
   double PathsNeededToBuildCircuits;
 
-  /** Do we serve v2 directory info at all?  This is a temporary option, since
-   * we'd like to disable v2 directory serving entirely, but we need a way to
-   * make it temporarily disableable, in order to do fast testing and be
-   * able to turn it back on if it turns out to be non-workable.
-   *
-   * XXXX025 Make this always-on, or always-off.  Right now, it's only
-   * enableable for authorities.
-   */
-  int DisableV2DirectoryInfo_;
-
   /** What expiry time shall we place on our SSL certs? "0" means we
    * should guess a suitable value. */
   int SSLKeyLifetime;
@@ -4805,11 +4736,6 @@ typedef struct microdesc_cache_t microdesc_cache_t;
 
 /********************************* networkstatus.c *********************/
 
-/** Location where we found a v2 networkstatus. */
-typedef enum {
-  NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
-} v2_networkstatus_source_t;
-
 /** Possible statuses of a version of Tor, given opinions from the directory
  * servers. */
 typedef enum version_status_t {
@@ -5010,8 +4936,6 @@ typedef struct dir_server_t {
   /** What kind of authority is this? (Bitfield.) */
   dirinfo_type_t type;
 
-  download_status_t v2_ns_dl_status; /**< Status of downloading this server's
-                               * v2 network status. */
   time_t addr_current_at; /**< When was the document that we derived the
                            * address information from published? */
 

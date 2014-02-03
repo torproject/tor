@@ -1458,8 +1458,6 @@ run_scheduled_events(time_t now)
 
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */
-    /* purge obsolete entries */
-    networkstatus_v2_list_clean(now);
     /* Remove dead routers. */
     routerlist_remove_old_routers();
   }
@@ -1947,9 +1945,6 @@ do_main_loop(void)
   if (trusted_dirs_reload_certs()) {
     log_warn(LD_DIR,
              "Couldn't load all cached v3 certificates. Starting anyway.");
-  }
-  if (router_reload_v2_networkstatus()) {
-    return -1;
   }
   if (router_reload_consensus_networkstatus()) {
     return -1;
