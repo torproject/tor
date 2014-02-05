@@ -696,7 +696,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
             escaped_safe_str_client(descriptor_cookie_base64)),
            routerstatus_describe(hs_dir));
   control_event_hs_descriptor_requested(rend_query,
-                                        routerstatus_describe(hs_dir),
+                                        hs_dir->identity_digest,
                                         desc_id_base32);
   return 1;
 }
