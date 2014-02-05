@@ -1626,7 +1626,6 @@ extern struct testcase_t controller_event_tests[];
 extern struct testcase_t logging_tests[];
 extern struct testcase_t backtrace_tests[];
 extern struct testcase_t hs_tests[];
-extern struct testcase_t router_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1651,7 +1650,6 @@ static struct testgroup_t testgroups[] = {
   { "extorport/", extorport_tests },
   { "control/", controller_event_tests },
   { "hs/", hs_tests },
-  { "router/", router_tests },
   END_OF_GROUPS
 };
 
