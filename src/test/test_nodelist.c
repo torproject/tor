@@ -30,11 +30,42 @@ test_nodelist_node_get_verbose_nickname_by_id_null_node(void *arg)
   return;
 }
 
+/** For routers without named flag, get_verbose_nickname should return
+ * "Fingerprint~Nickname"
+ */
+static void
+test_nodelist_node_get_verbose_nickname_not_named(void *arg)
+{
+  node_t mock_node;
+  routerstatus_t mock_rs;
+
+  char vname[MAX_VERBOSE_NICKNAME_LEN+1];
+
+  (void) arg;
+
+  memset(&mock_node, 0, sizeof(node_t));
+  memset(&mock_rs, 0, sizeof(routerstatus_t));
+
+  /* verbose nickname should use ~ instead of = for unnamed routers */
+  strncpy(mock_rs.nickname, "TestOR", 6);
+  mock_node.rs = &mock_rs;
+  strncpy(mock_node.identity,
+          "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
+          "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
+          DIGEST_LEN);
+  node_get_verbose_nickname(&mock_node, vname);
+  test_streq(vname, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
+
+ done:
+  return;
+}
+
 #define NODE(name, flags) \
   { #name, test_nodelist_##name, (flags), NULL, NULL }
 
 struct testcase_t nodelist_tests[] = {
   NODE(node_get_verbose_nickname_by_id_null_node, TT_FORK),
+  NODE(node_get_verbose_nickname_not_named, TT_FORK),
   END_OF_TESTCASES
 };
 
