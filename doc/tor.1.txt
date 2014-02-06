@@ -1763,7 +1763,8 @@ if DirPort is non-zero):
 [[DirPort]] **DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  This option can occur
-    more than once. (Default: 0)
+    more than once, but only one advertised DirPort is supported: all
+    but one DirPort must have the **NoAdvertise** flag set. (Default: 0)
 +
     The same flags are supported here as are supported by ORPort.
 
