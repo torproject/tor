@@ -121,6 +121,9 @@ log_heartbeat(time_t now)
     log_notice(LD_HEARTBEAT, "TLS write overhead: %.f%%", overhead);
   }
 
+  if (public_server_mode(options))
+    rep_hist_log_circuit_handshake_stats(now);
+
   tor_free(uptime);
   tor_free(bw_sent);
   tor_free(bw_rcvd);
