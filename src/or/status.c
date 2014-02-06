@@ -15,6 +15,7 @@
 #include "circuitlist.h"
 #include "main.h"
 #include "hibernate.h"
+#include "rephist.h"
 
 /** Return the total number of circuits. */
 static int
