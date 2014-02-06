@@ -622,6 +622,11 @@ connection_or_about_to_close(or_connection_t *or_conn)
   /* Tell the controlling channel we're closed */
   if (or_conn->chan) {
     channel_closed(TLS_CHAN_TO_BASE(or_conn->chan));
+    /*
+     * NULL this out because the channel might hang around a little
+     * longer before channel_run_cleanup() gets it.
+     */
+    or_conn->chan->conn = NULL;
     or_conn->chan = NULL;
   }
 

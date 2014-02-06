@@ -1,0 +1,4 @@
+ o Bugfixes
+   - Null out orconn->chan->conn when closing orconn in case orconn is freed
+     before channel_run_cleanup() gets to orconn->chan, and handle the null
+     conn edge case correctly in channel_tls_t methods.  Fixes bug #9602.
