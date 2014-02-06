@@ -709,7 +709,7 @@ circuit_free_cpath(crypt_path_t *cpath)
   if (!cpath)
     return;
 
-  /* it's a doubly linked list, so we have to notice when we've
+  /* it's a circular list, so we have to notice when we've
    * gone through it once. */
   while (cpath->next && cpath->next != head) {
     victim = cpath;
@@ -718,6 +718,14 @@ circuit_free_cpath(crypt_path_t *cpath)
   }
 
   circuit_free_cpath_node(cpath);
+}
+
+/** Remove all the items in the cpath on <b>circ</b>.*/
+void
+circuit_clear_cpath(origin_circuit_t *circ)
+{
+  circuit_free_cpath(circ->cpath);
+  circ->cpath = NULL;
 }
 
 /** Release all storage held by circuits. */
