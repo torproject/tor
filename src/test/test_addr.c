@@ -899,7 +899,7 @@ test_addr_sockaddr_to_str(void *arg)
   struct sockaddr_in6 sin6;
   struct sockaddr_storage ss;
 #ifdef HAVE_SYS_UN_H
-  struct sockaddr_un sun;
+  struct sockaddr_un s_un;
 #endif
 #define CHECK(sa, s) do {                                       \
     v = tor_sockaddr_to_str((const struct sockaddr*) &(sa));    \
@@ -919,10 +919,10 @@ test_addr_sockaddr_to_str(void *arg)
   CHECK(sin, "127.128.128.1:1234");
 
 #ifdef HAVE_SYS_UN_H
-  memset(&sun,0,sizeof(sun));
-  sun.sun_family = AF_UNIX;
-  strlcpy(sun.sun_path, "/here/is/a/path", sizeof(sun.sun_path));
-  CHECK(sun, "unix:/here/is/a/path");
+  memset(&s_un,0,sizeof(s_un));
+  s_un.sun_family = AF_UNIX;
+  strlcpy(s_un.sun_path, "/here/is/a/path", sizeof(s_un.sun_path));
+  CHECK(s_un, "unix:/here/is/a/path");
 #endif
 
   memset(&sin6,0,sizeof(sin6));

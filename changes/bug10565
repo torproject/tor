@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix compilation on Solaris 9, which didn't like us to have an
+      identifier namd "sun". Fixes bug 10565; bugfix in 0.2.5.1-alpha.
