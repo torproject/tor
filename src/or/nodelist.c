@@ -1331,7 +1331,8 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *mid    = smartlist_new();
   smartlist_t *exits  = smartlist_new();
   smartlist_t *myexits= smartlist_new();
-  double f_guard, f_mid, f_exit, f_myexit;
+  smartlist_t *myexits_unflagged = smartlist_new();
+  double f_guard, f_mid, f_exit, f_myexit, f_myexit_unflagged;
   int np, nu; /* Ignored */
   const int authdir = authdir_mode_v3(options);
 
@@ -1352,20 +1353,42 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     });
   }
 
+  /* All nodes with exit flag */
   count_usable_descriptors(&np, &nu, exits, consensus, options, now,
                            NULL, 1);
+  /* All nodes with exit flag in ExitNodes option */
   count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
                            options->ExitNodes, 1);
+  /* Now compute the nodes in the ExitNodes option where which we don't know
+   * what their exit policy is, or we know it permits something. */
+  count_usable_descriptors(&np, &nu, myexits_unflagged,
+                           consensus, options, now,
+                           options->ExitNodes, 0);
+  SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
+    if (node_has_descriptor(node) && node_exit_policy_rejects_all(node))
+      SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
+  } SMARTLIST_FOREACH_END(node);
 
   f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD);
   f_mid   = frac_nodes_with_descriptors(mid,    WEIGHT_FOR_MID);
   f_exit  = frac_nodes_with_descriptors(exits,  WEIGHT_FOR_EXIT);
   f_myexit= frac_nodes_with_descriptors(myexits,WEIGHT_FOR_EXIT);
+  f_myexit_unflagged=
+            frac_nodes_with_descriptors(myexits_unflagged,WEIGHT_FOR_EXIT);
+
+  /* If our ExitNodes list has eliminated every possible Exit node, and there
+   * were some possible Exit nodes, then instead consider nodes that permit
+   * exiting to some ports. */
+  if (smartlist_len(myexits) == 0 &&
+      smartlist_len(myexits_unflagged)) {
+    f_myexit = f_myexit_unflagged;
+  }
 
   smartlist_free(guards);
   smartlist_free(mid);
   smartlist_free(exits);
   smartlist_free(myexits);
+  smartlist_free(myexits_unflagged);
 
   /* This is a tricky point here: we don't want to make it easy for a
    * directory to trickle exits to us until it learns which exits we have
