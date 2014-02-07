@@ -874,6 +874,32 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
   memcpy(dest, src, sizeof(tor_addr_t));
 }
 
+/** Copy a tor_addr_t from <b>src</b> to <b>dest</b>, taking extra case to
+ * copy only the well-defined portions. Used for computing hashes of
+ * addresses.
+ */
+void
+tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src)
+{
+  tor_assert(src != dest);
+  tor_assert(src);
+  tor_assert(dest);
+  memset(dest, 0, sizeof(tor_addr_t));
+  dest->family = src->family;
+  switch (tor_addr_family(src))
+    {
+    case AF_INET:
+      dest->addr.in_addr.s_addr = src->addr.in_addr.s_addr;
+      break;
+    case AF_INET6:
+      memcpy(dest->addr.in6_addr.s6_addr, src->addr.in6_addr.s6_addr, 16);
+    case AF_UNSPEC:
+      break;
+    default:
+      tor_fragile_assert();
+    }
+}
+
 /** Given two addresses <b>addr1</b> and <b>addr2</b>, return 0 if the two
  * addresses are equivalent under the mask mbits, less than 0 if addr1
  * precedes addr2, and greater than 0 otherwise.
@@ -995,19 +1021,17 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   }
 }
 
-/** Return a hash code based on the address addr */
-unsigned int
+/** Return a hash code based on the address addr. DOCDOC extra */
+uint64_t
 tor_addr_hash(const tor_addr_t *addr)
 {
   switch (tor_addr_family(addr)) {
   case AF_INET:
-    return tor_addr_to_ipv4h(addr);
+    return siphash24g(&addr->addr.in_addr.s_addr, 4);
   case AF_UNSPEC:
     return 0x4e4d5342;
-  case AF_INET6: {
-    const uint32_t *u = tor_addr_to_in6_addr32(addr);
-    return u[0] + u[1] + u[2] + u[3];
-    }
+  case AF_INET6:
+    return siphash24g(&addr->addr.in6_addr.s6_addr, 16);
   default:
     tor_fragile_assert();
     return 0;

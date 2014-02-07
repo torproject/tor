@@ -1004,7 +1004,7 @@ strmap_entries_eq(const strmap_entry_t *a, const strmap_entry_t *b)
 static INLINE unsigned int
 strmap_entry_hash(const strmap_entry_t *a)
 {
-  return ht_string_hash(a->key);
+  return (unsigned) siphash24g(a->key, strlen(a->key));
 }
 
 /** Helper: compare digestmap_entry_t objects by key value. */
@@ -1018,13 +1018,7 @@ digestmap_entries_eq(const digestmap_entry_t *a, const digestmap_entry_t *b)
 static INLINE unsigned int
 digestmap_entry_hash(const digestmap_entry_t *a)
 {
-#if SIZEOF_INT != 8
-  const uint32_t *p = (const uint32_t*)a->key;
-  return p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4];
-#else
-  const uint64_t *p = (const uint64_t*)a->key;
-  return p[0] ^ p[1];
-#endif
+  return (unsigned) siphash24g(a->key, DIGEST_LEN);
 }
 
 HT_PROTOTYPE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,

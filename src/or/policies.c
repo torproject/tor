@@ -597,21 +597,25 @@ policy_eq(policy_map_ent_t *a, policy_map_ent_t *b)
 
 /** Return a hashcode for <b>ent</b> */
 static unsigned int
-policy_hash(policy_map_ent_t *ent)
+policy_hash(const policy_map_ent_t *ent)
 {
-  addr_policy_t *a = ent->policy;
-  unsigned int r;
-  if (a->is_private)
-    r = 0x1234abcd;
-  else
-    r = tor_addr_hash(&a->addr);
-  r += a->prt_min << 8;
-  r += a->prt_max << 16;
-  r += a->maskbits;
-  if (a->policy_type == ADDR_POLICY_REJECT)
-    r ^= 0xffffffff;
+  const addr_policy_t *a = ent->policy;
+  addr_policy_t aa;
+  memset(&aa, 0, sizeof(aa));
 
-  return r;
+  aa.prt_min = a->prt_min;
+  aa.prt_max = a->prt_max;
+  aa.maskbits = a->maskbits;
+  aa.policy_type = a->policy_type;
+  aa.is_private = a->is_private;
+
+  if (a->is_private) {
+    aa.is_private = 1;
+  } else {
+    tor_addr_copy_tight(&aa.addr, &a->addr);
+  }
+
+  return (unsigned) siphash24g(&aa, sizeof(aa));
 }
 
 HT_PROTOTYPE(policy_map, policy_map_ent_t, node, policy_hash,

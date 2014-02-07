@@ -95,12 +95,7 @@ typedef struct channel_idmap_entry_s {
 static INLINE unsigned
 channel_idmap_hash(const channel_idmap_entry_t *ent)
 {
-  const unsigned *a = (const unsigned *)ent->digest;
-#if SIZEOF_INT == 4
-  return a[0] ^ a[1] ^ a[2] ^ a[3] ^ a[4];
-#elif SIZEOF_INT == 8
-  return a[0] ^ a[1];
-#endif
+  return (unsigned) siphash24g(ent->digest, DIGEST_LEN);
 }
 
 static INLINE int

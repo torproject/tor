@@ -486,10 +486,12 @@ static HT_HEAD(clientmap, clientmap_entry_t) client_history =
 static INLINE unsigned
 clientmap_entry_hash(const clientmap_entry_t *a)
 {
-  unsigned h = tor_addr_hash(&a->addr);
+  unsigned h = (unsigned) tor_addr_hash(&a->addr);
+
   if (a->transport_name)
-    h += ht_string_hash(a->transport_name);
-  return ht_improve_hash(h);
+    h += (unsigned) siphash24g(a->transport_name, strlen(a->transport_name));
+
+  return h;
 }
 /** Hashtable helper: compare two clientmap_entry_t values for equality. */
 static INLINE int
