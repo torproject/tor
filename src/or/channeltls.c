@@ -287,8 +287,8 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   if (is_local_addr(&(TO_CONN(orconn)->addr))) channel_mark_local(chan);
   channel_mark_incoming(chan);
 
-  /* If we got one, we should register it */
-  if (chan) channel_register(chan);
+  /* Register it */
+  channel_register(chan);
 
   return chan;
 }
