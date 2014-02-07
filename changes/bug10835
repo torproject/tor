@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Fix a segmentation fault in our benchmark code when running with
+      Fedora's OpenSSL package, or any other OpenSSL that provides
+      ECDH but not P224. Fixes bug 10835; bugfix on 0.2.4.8-alpha.
