@@ -47,9 +47,9 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
   memset(&mock_rs, 0, sizeof(routerstatus_t));
 
   /* verbose nickname should use ~ instead of = for unnamed routers */
-  strncpy(mock_rs.nickname, "TestOR", 6);
+  strlcpy(mock_rs.nickname, "TestOR", sizeof(mock_rs.nickname));
   mock_node.rs = &mock_rs;
-  strncpy(mock_node.identity,
+  memcpy(mock_node.identity,
           "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA"
           "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
           DIGEST_LEN);
