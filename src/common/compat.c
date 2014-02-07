@@ -2248,6 +2248,12 @@ tor_pthread_helper_fn(void *_data)
   func(arg);
   return NULL;
 }
+/**
+ * A pthread attribute to make threads start detached.
+ */
+static pthread_attr_t attr_detached;
+/** True iff we've called tor_threads_init() */
+static int threads_initialized = 0;
 #endif
 
 /** Minimalist interface to run a void function in the background.  On
@@ -2271,12 +2277,12 @@ spawn_func(void (*func)(void *), void *data)
 #elif defined(USE_PTHREADS)
   pthread_t thread;
   tor_pthread_data_t *d;
+  if (PREDICT_UNLIKELY(!threads_initialized))
+    tor_threads_init();
   d = tor_malloc(sizeof(tor_pthread_data_t));
   d->data = data;
   d->func = func;
-  if (pthread_create(&thread,NULL,tor_pthread_helper_fn,d))
-    return -1;
-  if (pthread_detach(thread))
+  if (pthread_create(&thread,&attr_detached,tor_pthread_helper_fn,d))
     return -1;
   return 0;
 #else
@@ -2633,8 +2639,6 @@ tor_get_thread_id(void)
  * "reentrant" mutexes (i.e., once we can re-lock if we're already holding
  * them.) */
 static pthread_mutexattr_t attr_reentrant;
-/** True iff we've called tor_threads_init() */
-static int threads_initialized = 0;
 /** Initialize <b>mutex</b> so it can be locked.  Every mutex must be set
  * up with tor_mutex_init() or tor_mutex_new(); not both. */
 void
@@ -2778,6 +2782,8 @@ tor_threads_init(void)
   if (!threads_initialized) {
     pthread_mutexattr_init(&attr_reentrant);
     pthread_mutexattr_settype(&attr_reentrant, PTHREAD_MUTEX_RECURSIVE);
+    tor_assert(0==pthread_attr_init(&attr_detached));
+    tor_assert(0==pthread_attr_setdetachstate(&attr_detached, 1));
     threads_initialized = 1;
     set_main_thread();
   }
