@@ -57,6 +57,9 @@ static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+#ifdef CURVE25519_ENABLED
+static int circuits_can_use_ntor(void);
+#endif
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -269,21 +272,74 @@ circuit_rep_hist_note_result(origin_circuit_t *circ)
   } while (hop!=circ->cpath);
 }
 
+#ifdef CURVE25519_ENABLED
+/** Return 1 iff at least one node in circ's cpath supports ntor. */
+static int
+circuit_cpath_supports_ntor(const origin_circuit_t *circ)
+{
+  crypt_path_t *head = circ->cpath, *cpath = circ->cpath;
+
+  cpath = head;
+  do {
+    if (cpath->extend_info &&
+        !tor_mem_is_zero(
+            (const char*)cpath->extend_info->curve25519_onion_key.public_key,
+            CURVE25519_PUBKEY_LEN))
+      return 1;
+
+    cpath = cpath->next;
+  } while (cpath != head);
+
+  return 0;
+}
+#else
+#define circuit_cpath_supports_ntor(circ) 0
+#endif
+
 /** Pick all the entries in our cpath. Stop and return 0 when we're
  * happy, or return -1 if an error occurs. */
 static int
 onion_populate_cpath(origin_circuit_t *circ)
 {
-  int r;
- again:
-  r = onion_extend_cpath(circ);
-  if (r < 0) {
-    log_info(LD_CIRC,"Generating cpath hop failed.");
-    return -1;
+  int n_tries = 0;
+#ifdef CURVE25519_ENABLED
+  const int using_ntor = circuits_can_use_ntor();
+#else
+  const int using_ntor = 0;
+#endif
+
+#define MAX_POPULATE_ATTEMPTS 32
+
+  while (1) {
+    int r = onion_extend_cpath(circ);
+    if (r < 0) {
+      log_info(LD_CIRC,"Generating cpath hop failed.");
+      return -1;
+    }
+    if (r == 1) {
+      /* This circuit doesn't need/shouldn't be forced to have an ntor hop */
+      if (circ->build_state->desired_path_len <= 1 || ! using_ntor)
+        return 0;
+
+      /* This circuit has an ntor hop. great! */
+      if (circuit_cpath_supports_ntor(circ))
+        return 0;
+
+      /* No node in the circuit supports ntor.  Have we already tried too many
+       * times? */
+      if (++n_tries >= MAX_POPULATE_ATTEMPTS)
+        break;
+
+      /* Clear the path and retry */
+      circuit_clear_cpath(circ);
+    }
   }
-  if (r == 0)
-    goto again;
-  return 0; /* if r == 1 */
+  log_warn(LD_CIRC, "I tried for %d times, but I couldn't build a %d-hop "
+           "circuit with at least one node that supports ntor.",
+           MAX_POPULATE_ATTEMPTS,
+           circ->build_state->desired_path_len);
+
+  return -1;
 }
 
 /** Create and return a new origin circuit. Initialize its purpose and
@@ -1946,6 +2002,9 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
 
 /** Choose a suitable next hop in the cpath <b>head_ptr</b>,
  * based on <b>state</b>. Append the hop info to head_ptr.
+ *
+ * Return 1 if the path is complete, 0 if we successfully added a hop,
+ * and -1 on error.
  */
 static int
 onion_extend_cpath(origin_circuit_t *circ)
