@@ -2916,29 +2916,6 @@ node_describe(const node_t *node)
   return node_get_description(buf, node);
 }
 
-/** Return a human-readable description of the node whose identity is
- * <b>identity_digest</b>. If node_get_by_id() returns NULL, base 16 encoding
- * of <b>identity_digest</b> is returned instead.
- *
- * This function is not thread-safe.  Each call to this function invalidates
- * previous values returned by this function.
- */
-const char *
-node_describe_by_id(const char *identity_digest)
-{
-  static char buf[NODE_DESC_BUF_LEN];
-  const node_t *node = NULL;
-
-  node = node_get_by_id(identity_digest);
-  if (!node) {
-    buf[0] = '$';
-    base16_encode(buf+1, HEX_DIGEST_LEN+1, identity_digest, DIGEST_LEN);
-    return buf;
-  } else {
-    return node_get_description(buf, node);
-  }
-}
-
 /** Return a human-readable description of the routerstatus_t <b>rs</b>.
  *
  * This function is not thread-safe.  Each call to this function invalidates

@@ -646,7 +646,7 @@ node_get_purpose(const node_t *node)
 
 /** Compute the verbose ("extended") nickname of <b>node</b> and store it
  * into the MAX_VERBOSE_NICKNAME_LEN+1 character buffer at
- * <b>verbose_nickname_out</b> */
+ * <b>verbose_name_out</b> */
 void
 node_get_verbose_nickname(const node_t *node,
                           char *verbose_name_out)
@@ -660,6 +660,25 @@ node_get_verbose_nickname(const node_t *node,
     return;
   verbose_name_out[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
   strlcpy(verbose_name_out+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
+}
+
+/** Compute the verbose ("extended") nickname of node with
+ * given <b>id_digest</b> and store it into the MAX_VERBOSE_NICKNAME_LEN+1
+ * character buffer at <b>verbose_name_out</b>
+ *
+ * If node_get_by_id() returns NULL, base 16 encoding of
+ * <b>id_digest</b> is returned instead. */
+void
+node_get_verbose_nickname_by_id(const char *id_digest,
+                                char *verbose_name_out)
+{
+  const node_t *node = node_get_by_id(id_digest);
+  if (!node) {
+    verbose_name_out[0] = '$';
+    base16_encode(verbose_name_out+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
+  } else {
+    node_get_verbose_nickname(node, verbose_name_out);
+  }
 }
 
 /** Return true iff it seems that <b>node</b> allows circuits to exit

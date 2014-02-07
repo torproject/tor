@@ -2145,8 +2145,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
     #define SEND_HS_DESC_FAILED_EVENT() ( \
       control_event_hs_descriptor_failed(conn->rend_data, \
-                                         node_describe_by_id( \
-                                             conn->identity_digest)) )
+                                         conn->identity_digest) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
@@ -2173,8 +2172,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
                      "descriptor.");
             control_event_hs_descriptor_received(conn->rend_data,
-                                                 node_describe_by_id(
-                                                     conn->identity_digest));
+                                                 conn->identity_digest);
             conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
             rend_client_desc_trynow(conn->rend_data->onion_address);
             break;

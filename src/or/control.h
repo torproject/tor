@@ -100,6 +100,7 @@ void control_event_transport_launched(const char *mode,
                                       const char *transport_name,
                                       tor_addr_t *addr, uint16_t port);
 const char *rend_auth_type_to_string(rend_auth_type_t auth_type);
+MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_event_hs_descriptor_requested(const rend_data_t *rend_query,
                                            const char *desc_id_base32,
                                            const char *hs_dir);

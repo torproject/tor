@@ -39,7 +39,7 @@ src_test_test_SOURCES = \
 	src/test/test_util.c \
 	src/test/test_config.c \
 	src/test/test_hs.c \
-	src/test/test_router.c \
+	src/test/test_nodelist.c \
 	src/ext/tinytest.c
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)

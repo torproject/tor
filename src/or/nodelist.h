@@ -33,6 +33,8 @@ void nodelist_assert_ok(void);
 const node_t *node_get_by_nickname(const char *nickname, int warn_if_unnamed);
 void node_get_verbose_nickname(const node_t *node,
                                char *verbose_name_out);
+void node_get_verbose_nickname_by_id(const char *id_digest,
+                                char *verbose_name_out);
 int node_is_named(const node_t *node);
 int node_is_dir(const node_t *node);
 int node_has_descriptor(const node_t *node);

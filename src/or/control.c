@@ -4991,6 +4991,21 @@ rend_auth_type_to_string(rend_auth_type_t auth_type)
   return str;
 }
 
+/** Return a longname the node whose identity is <b>id_digest</b>. If
+ * node_get_by_id() returns NULL, base 16 encoding of <b>id_digest</b> is
+ * returned instead.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+MOCK_IMPL(const char *,
+node_describe_longname_by_id,(const char *id_digest))
+{
+  static char longname[MAX_VERBOSE_NICKNAME_LEN+1];
+  node_get_verbose_nickname_by_id(id_digest, longname);
+  return longname;
+}
+
 /** send HS_DESC requested event.
  *
  * <b>rend_query</b> is used to fetch requested onion address and auth type.
@@ -4999,20 +5014,21 @@ rend_auth_type_to_string(rend_auth_type_t auth_type)
  */
 void
 control_event_hs_descriptor_requested(const rend_data_t *rend_query,
-                                      const char *hs_dir,
+                                      const char *id_digest,
                                       const char *desc_id_base32)
 {
-  if (!hs_dir || !rend_query || !desc_id_base32) {
+  if (!id_digest || !rend_query || !desc_id_base32) {
     log_warn(LD_BUG, "Called with rend_query==%p, "
-             "hs_dir==%p, desc_id_base32==%p",
-             rend_query, hs_dir, desc_id_base32);
+             "id_digest==%p, desc_id_base32==%p",
+             rend_query, id_digest, desc_id_base32);
     return;
   }
+
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
                      rend_query->onion_address,
                      rend_auth_type_to_string(rend_query->auth_type),
-                     hs_dir,
+                     node_describe_longname_by_id(id_digest),
                      desc_id_base32);
 }
 
@@ -5027,19 +5043,20 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 void
 control_event_hs_descriptor_receive_end(const char *action,
                                         const rend_data_t *rend_query,
-                                        const char *hs_dir)
+                                        const char *id_digest)
 {
-  if (!action || !rend_query || !hs_dir) {
+  if (!action || !rend_query || !id_digest) {
     log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
-             "hs_dir==%p", action, rend_query, hs_dir);
+             "id_digest==%p", action, rend_query, id_digest);
     return;
   }
+
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC %s %s %s %s\r\n",
                      action,
                      rend_query->onion_address,
                      rend_auth_type_to_string(rend_query->auth_type),
-                     hs_dir);
+                     node_describe_longname_by_id(id_digest));
 }
 
 /** send HS_DESC RECEIVED event
@@ -5048,14 +5065,14 @@ control_event_hs_descriptor_receive_end(const char *action,
  */
 void
 control_event_hs_descriptor_received(const rend_data_t *rend_query,
-                                     const char *hs_dir)
+                                     const char *id_digest)
 {
-  if (!rend_query || !hs_dir) {
-    log_warn(LD_BUG, "Called with rend_query==%p, hs_dir==%p",
-             rend_query, hs_dir);
+  if (!rend_query || !id_digest) {
+    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
+             rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", rend_query, hs_dir);
+  control_event_hs_descriptor_receive_end("RECEIVED", rend_query, id_digest);
 }
 
 /** send HS_DESC FAILED event
@@ -5064,14 +5081,14 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_query,
-                                   const char *hs_dir)
+                                   const char *id_digest)
 {
-  if (!rend_query || !hs_dir) {
-    log_warn(LD_BUG, "Called with rend_query==%p, hs_dir==%p",
-             rend_query, hs_dir);
+  if (!rend_query || !id_digest) {
+    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
+             rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", rend_query, hs_dir);
+  control_event_hs_descriptor_receive_end("FAILED", rend_query, id_digest);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */
