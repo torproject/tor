@@ -31,6 +31,11 @@ typedef struct curve25519_keypair_t {
 } curve25519_keypair_t;
 
 #ifdef CURVE25519_ENABLED
+/* These functions require that we actually know how to use curve25519 keys.
+ * The other data structures and functions in this header let us parse them,
+ * store them, and move them around.
+ */
+
 int curve25519_public_key_is_ok(const curve25519_public_key_t *);
 
 int curve25519_secret_key_generate(curve25519_secret_key_t *key_out,
