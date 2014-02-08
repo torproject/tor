@@ -422,7 +422,7 @@ def write_geoip_file(filename, metadata, the_tree, dump_item, fmt_item):
 
     build_epoch = metadata[0].map['build_epoch'].int_val()
     fobj.write("# Last updated based on %s Maxmind GeoLite2 Country\n"%
-               time.strftime('%B %d %Y', time.gmtime(build_epoch)))
+               time.strftime('%B %-d %Y', time.gmtime(build_epoch)))
 
     unwritten = None
     for entry in entries:
