@@ -53,6 +53,7 @@ static void channel_tls_common_init(channel_tls_t *tlschan);
 
 static void channel_tls_close_method(channel_t *chan);
 static const char * channel_tls_describe_transport_method(channel_t *chan);
+static void channel_tls_free_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
 static const char *
@@ -112,6 +113,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
+  chan->free = channel_tls_free_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
   chan->get_remote_descr = channel_tls_get_remote_descr_method;
   chan->has_queued_writes = channel_tls_has_queued_writes_method;
@@ -381,6 +383,30 @@ channel_tls_describe_transport_method(channel_t *chan)
   }
 
   return rv;
+}
+
+/**
+ * Free a channel_tls_t
+ *
+ * This is called by the generic channel layer when freeing a channel_tls_t;
+ * this happens either on a channel which has already reached
+ * CHANNEL_STATE_CLOSED or CHANNEL_STATE_ERROR from channel_run_cleanup() or
+ * on shutdown from channel_free_all().  In the latter case we might still
+ * have an orconn active (which connection_free_all() will get to later),
+ * so we should null out its channel pointer now.
+ */
+
+static void
+channel_tls_free_method(channel_t *chan)
+{
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+
+  if (tlschan->conn) {
+    tlschan->conn->chan = NULL;
+    tlschan->conn = NULL;
+  }
 }
 
 /**
