@@ -1391,35 +1391,43 @@ get_pf_socket(void)
 }
 #endif
 
-/** Fetch the original destination address and port from a
- * system-specific interface and put them into a
- * socks_request_t as if they came from a socks request.
- *
- * Return -1 if an error prevents fetching the destination,
- * else return 0.
- */
-static int
-connection_ap_get_original_destination(entry_connection_t *conn,
-                                       socks_request_t *req)
+static int 
+destination_from_socket(entry_connection_t *conn, socks_request_t *req)
 {
-#ifdef TRANS_NETFILTER
-  /* Linux 2.4+ */
   struct sockaddr_storage orig_dst;
   socklen_t orig_dst_len = sizeof(orig_dst);
   tor_addr_t addr;
 
+#ifdef TRANS_NETFILTER
   if (getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IP, SO_ORIGINAL_DST,
                  (struct sockaddr*)&orig_dst, &orig_dst_len) < 0) {
     int e = tor_socket_errno(ENTRY_TO_CONN(conn)->s);
     log_warn(LD_NET, "getsockopt() failed: %s", tor_socket_strerror(e));
     return -1;
   }
+#elif defined(TRANS_PF)
+  if (getsockname(ENTRY_TO_CONN(conn)->s, (struct sockaddr*)&orig_dst,
+                  &orig_dst_len) < 0) {
+    int e = tor_socket_errno(ENTRY_TO_CONN(conn)->s);
+    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+    return -1;
+  }
+#else
+  (void)conn;
+  (void)req;
+  log_warn(LD_BUG, "Unable to determine destination from socket.");
+  return -1;
+#endif
 
   tor_addr_from_sockaddr(&addr, (struct sockaddr*)&orig_dst, &req->port);
   tor_addr_to_str(req->address, &addr, sizeof(req->address), 1);
 
   return 0;
-#elif defined(TRANS_PF)
+}
+
+static int
+destination_from_pf(entry_connection_t *conn, socks_request_t *req)
+{
   struct sockaddr_storage proxy_addr;
   socklen_t proxy_addr_len = sizeof(proxy_addr);
   struct sockaddr *proxy_sa = (struct sockaddr*) &proxy_addr;
@@ -1496,6 +1504,36 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   req->port = ntohs(pnl.rdport);
 
   return 0;
+}
+
+
+/** Fetch the original destination address and port from a
+ * system-specific interface and put them into a
+ * socks_request_t as if they came from a socks request.
+ *
+ * Return -1 if an error prevents fetching the destination,
+ * else return 0.
+ */
+static int
+connection_ap_get_original_destination(entry_connection_t *conn,
+                                       socks_request_t *req)
+{
+#ifdef TRANS_NETFILTER
+  return destination_from_socket(conn, req);
+#elif defined(TRANS_PF)
+  const or_options_t *options = get_options();
+
+  if (options->TransProxyType_parsed == TPT_PF_DIVERT)
+    return destination_from_socket(conn, req);
+
+  if (options->TransProxyType_parsed == TPT_DEFAULT)
+    return destination_from_pf(conn, req);
+
+  (void)conn;
+  (void)req;
+  log_warn(LD_BUG, "Proxy destination determination mechanism %s unknown.",
+           options->TransProxyType);
+  return -1;
 #else
   (void)conn;
   (void)req;

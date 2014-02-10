@@ -3461,7 +3461,12 @@ typedef struct {
   const char *TransProxyType; /**< What kind of transparent proxy
                                * implementation are we using? */
   /** Parsed value of TransProxyType. */
-  enum { TPT_DEFAULT, TPT_TPROXY, TPT_IPFW } TransProxyType_parsed;
+  enum {
+    TPT_DEFAULT,
+    TPT_PF_DIVERT,
+    TPT_IPFW,
+    TPT_TPROXY,
+  } TransProxyType_parsed;
   config_line_t *NATDPort_lines; /**< Ports to listen on for transparent natd
                             * connections. */
   config_line_t *ControlPort_lines; /**< Ports to listen on for control
