@@ -2040,10 +2040,6 @@ static size_t total_cells_allocated = 0;
 /** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
 
-/** Memory pool to allocate insertion_time_elem_t objects used for cell
- * statistics. */
-static mp_pool_t *it_pool = NULL;
-
 /** Allocate structures to hold cells. */
 void
 init_cell_pool(void)
@@ -2061,10 +2057,6 @@ free_cell_pool(void)
   if (cell_pool) {
     mp_pool_destroy(cell_pool);
     cell_pool = NULL;
-  }
-  if (it_pool) {
-    mp_pool_destroy(it_pool);
-    it_pool = NULL;
   }
 }
 
@@ -2154,36 +2146,6 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
   tor_gettimeofday_cached(&now);
   copy->inserted_time = (uint32_t)tv_to_msec(&now);
 
-  /* Remember the time when this cell was put in the queue. */
-  /*XXXX This may be obsoleted by inserted_time */
-  if (get_options()->CellStatistics) {
-    uint32_t added;
-    insertion_time_queue_t *it_queue = queue->insertion_times;
-    if (!it_pool)
-      it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
-
-#define SECONDS_IN_A_DAY 86400L
-    added = (uint32_t)(((now.tv_sec % SECONDS_IN_A_DAY) * 100L)
-            + ((uint32_t)now.tv_usec / (uint32_t)10000L));
-    if (!it_queue) {
-      it_queue = tor_malloc_zero(sizeof(insertion_time_queue_t));
-      queue->insertion_times = it_queue;
-    }
-    if (it_queue->last && it_queue->last->insertion_time == added) {
-      it_queue->last->counter++;
-    } else {
-      insertion_time_elem_t *elem = mp_pool_get(it_pool);
-      elem->next = NULL;
-      elem->insertion_time = added;
-      elem->counter = 1;
-      if (it_queue->last) {
-        it_queue->last->next = elem;
-        it_queue->last = elem;
-      } else {
-        it_queue->first = it_queue->last = elem;
-      }
-    }
-  }
   cell_queue_append(queue, copy);
 }
 
@@ -2200,14 +2162,6 @@ cell_queue_clear(cell_queue_t *queue)
   }
   queue->head = queue->tail = NULL;
   queue->n = 0;
-  if (queue->insertion_times) {
-    while (queue->insertion_times->first) {
-      insertion_time_elem_t *elem = queue->insertion_times->first;
-      queue->insertion_times->first = elem->next;
-      mp_pool_release(elem);
-    }
-    tor_free(queue->insertion_times);
-  }
 }
 
 /** Extract and return the cell at the head of <b>queue</b>; return NULL if
@@ -2232,9 +2186,7 @@ cell_queue_pop(cell_queue_t *queue)
 size_t
 packed_cell_mem_cost(void)
 {
-  return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD +
-    get_options()->CellStatistics ?
-    (sizeof(insertion_time_elem_t)+MP_POOL_ITEM_OVERHEAD) : 0;
+  return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD;
 }
 
 /** Check whether we've got too much space used for cells.  If so,
@@ -2413,35 +2365,14 @@ channel_flush_from_first_active_circuit(channel_t *chan, int max)
 
     /* Calculate the exact time that this cell has spent in the queue. */
     if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
+      uint32_t msec_waiting;
       struct timeval tvnow;
-      uint32_t flushed;
-      uint32_t cell_waiting_time;
-      insertion_time_queue_t *it_queue = queue->insertion_times;
+      or_circ = TO_OR_CIRCUIT(circ);
       tor_gettimeofday_cached(&tvnow);
-      flushed = (uint32_t)((tvnow.tv_sec % SECONDS_IN_A_DAY) * 100L +
-                 (uint32_t)tvnow.tv_usec / (uint32_t)10000L);
-      if (!it_queue || !it_queue->first) {
-        log_info(LD_GENERAL, "Cannot determine insertion time of cell. "
-                             "Looks like the CellStatistics option was "
-                             "recently enabled.");
-      } else {
-        insertion_time_elem_t *elem = it_queue->first;
-        or_circ = TO_OR_CIRCUIT(circ);
-        cell_waiting_time =
-            (uint32_t)((flushed * 10L + SECONDS_IN_A_DAY * 1000L -
-                        elem->insertion_time * 10L) %
-                       (SECONDS_IN_A_DAY * 1000L));
-#undef SECONDS_IN_A_DAY
-        elem->counter--;
-        if (elem->counter < 1) {
-          it_queue->first = elem->next;
-          if (elem == it_queue->last)
-            it_queue->last = NULL;
-          mp_pool_release(elem);
-        }
-        or_circ->total_cell_waiting_time += cell_waiting_time;
-        or_circ->processed_cells++;
-      }
+      msec_waiting = ((uint32_t)tv_to_msec(&tvnow)) - cell->inserted_time;
+
+      or_circ->total_cell_waiting_time += msec_waiting;
+      or_circ->processed_cells++;
     }
 
     /* If we just flushed our queue and this circuit is used for a
