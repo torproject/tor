@@ -514,6 +514,22 @@ connection_free_(connection_t *conn)
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
     tor_free(or_conn->nickname);
+    if (or_conn->chan) {
+      /* Owww, this shouldn't happen, but... */
+      log_info(LD_CHANNEL,
+               "Freeing orconn at %p, saw channel %p with ID "
+               U64_FORMAT " left un-NULLed",
+               or_conn, TLS_CHAN_TO_BASE(or_conn->chan),
+               U64_PRINTF_ARG(
+                 TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier));
+      if (!(TLS_CHAN_TO_BASE(or_conn->chan)->state == CHANNEL_STATE_CLOSED ||
+            TLS_CHAN_TO_BASE(or_conn->chan)->state == CHANNEL_STATE_ERROR)) {
+        channel_close_for_error(TLS_CHAN_TO_BASE(or_conn->chan));
+      }
+
+      or_conn->chan->conn = NULL;
+      or_conn->chan = NULL;
+    }
   }
   if (conn->type == CONN_TYPE_AP) {
     entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
@@ -926,6 +942,27 @@ make_socket_reuseable(tor_socket_t sock)
 #endif
 }
 
+/** Max backlog to pass to listen.  We start at */
+static int listen_limit = INT_MAX;
+
+/* Listen on <b>fd</b> with appropriate backlog. Return as for listen. */
+static int
+tor_listen(tor_socket_t fd)
+{
+  int r;
+
+  if ((r = listen(fd, listen_limit)) < 0) {
+    if (listen_limit == SOMAXCONN)
+      return r;
+    if ((r = listen(fd, SOMAXCONN)) == 0) {
+      listen_limit = SOMAXCONN;
+      log_warn(LD_NET, "Setting listen backlog to INT_MAX connections "
+               "didn't work, but SOMAXCONN did. Lowering backlog limit.");
+    }
+  }
+  return r;
+}
+
 /** Bind a new non-blocking socket listening to the socket described
  * by <b>listensockaddr</b>.
  *
@@ -1009,7 +1046,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 
     if (is_tcp) {
-      if (listen(s,SOMAXCONN) < 0) {
+      if (tor_listen(s) < 0) {
         log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
                  tor_socket_strerror(tor_socket_errno(s)));
         tor_close_socket(s);

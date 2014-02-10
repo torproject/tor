@@ -1,0 +1,4 @@
+  o Minor features (security):
+    - Always clear OpenSSL bignums before freeing them--even bignums
+      that don't contain secrets. Resolves ticket 10793. Patch by
+      Florent Daigniere.
