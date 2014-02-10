@@ -731,13 +731,15 @@ connection_ap_process_end_not_open(
 
   if (rh->length > 0) {
     if (reason == END_STREAM_REASON_TORPROTOCOL ||
-        reason == END_STREAM_REASON_INTERNAL ||
         reason == END_STREAM_REASON_DESTROY) {
-      /* All three of these reasons could mean a failed tag
+      /* Both of these reasons could mean a failed tag
        * hit the exit and it complained. Do not probe.
        * Fail the circuit. */
       circ->path_state = PATH_STATE_USE_FAILED;
       return -END_CIRC_REASON_TORPROTOCOL;
+    } else if (reason == END_STREAM_REASON_INTERNAL) {
+      /* We can't infer success or failure, since older Tors report
+       * ENETUNREACH as END_STREAM_REASON_INTERNAL. */
     } else {
       /* Path bias: If we get a valid reason code from the exit,
        * it wasn't due to tagging.
