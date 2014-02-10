@@ -30,7 +30,7 @@ typedef enum {
   DIRIND_ONEHOP=0,
   /** Connect over a multi-hop anonymizing Tor circuit */
   DIRIND_ANONYMOUS=1,
-  /** Conncet to the DirPort directly */
+  /** Connect to the DirPort directly */
   DIRIND_DIRECT_CONN,
   /** Connect over a multi-hop anonymizing Tor circuit to our dirport */
   DIRIND_ANON_DIRPORT,
