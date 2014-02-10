@@ -1121,48 +1121,12 @@ typedef struct packed_cell_t {
                            * bits truncated) when this cell was inserted. */
 } packed_cell_t;
 
-/* XXXX This next structure may be obsoleted by inserted_time in
- * packed_cell_t */
-
-/** Number of cells added to a circuit queue including their insertion
- * time on 10 millisecond detail; used for buffer statistics. */
-typedef struct insertion_time_elem_t {
-  struct insertion_time_elem_t *next; /**< Next element in queue. */
-  uint32_t insertion_time; /**< When were cells inserted (in 10 ms steps
-                             * starting at 0:00 of the current day)? */
-  unsigned counter; /**< How many cells were inserted? */
-} insertion_time_elem_t;
-
-/** Queue of insertion times. */
-typedef struct insertion_time_queue_t {
-  struct insertion_time_elem_t *first; /**< First element in queue. */
-  struct insertion_time_elem_t *last; /**< Last element in queue. */
-} insertion_time_queue_t;
-
-/** Number of cells with the same command consecutively added to a circuit
- * queue; used for cell statistics only if CELL_STATS events are enabled. */
-typedef struct insertion_command_elem_t {
-  struct insertion_command_elem_t *next; /**< Next element in queue. */
-  /** Which command did these consecutively added cells have? */
-  uint8_t command;
-  unsigned counter; /**< How many cells were inserted? */
-} insertion_command_elem_t;
-
-/** Queue of insertion commands. */
-typedef struct insertion_command_queue_t {
-  struct insertion_command_elem_t *first; /**< First element in queue. */
-  struct insertion_command_elem_t *last; /**< Last element in queue. */
-} insertion_command_queue_t;
-
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
   /** Linked list of packed_cell_t*/
   TOR_SIMPLEQ_HEAD(cell_simpleq, packed_cell_t) head;
   int n; /**< The number of cells in the queue. */
-  insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
- /** Commands of inserted cells. */
-  insertion_command_queue_t *insertion_commands;
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
