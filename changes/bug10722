@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Consider non-excluded hidden service directory servers before
+      excluded ones. Do not consider excluded hidden service directory
+      servers at all if StrictNodes was set.  (Previously, we would
+      sometimes decide to connect to those servers, and then realize
+      before we initiated a connection that we had excluded them.)
+      Fix for bug #10722. Bugfix on 0.2.0.10-alpha. Reported by
+      "mr-4".
