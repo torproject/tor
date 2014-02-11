@@ -3542,8 +3542,6 @@ typedef struct {
                            * for version 1 directories? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
-  int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
-                           * handle hidden service requests? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
@@ -3746,9 +3744,6 @@ typedef struct {
 
   /** If set, use these bridge authorities and not the default one. */
   config_line_t *AlternateBridgeAuthority;
-
-  /** If set, use these HS authorities and not the default ones. */
-  config_line_t *AlternateHSAuthority;
 
   char *MyFamily; /**< Declared family for this OR. */
   config_line_t *NodeFamilies; /**< List of config lines for

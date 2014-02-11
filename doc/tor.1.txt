@@ -331,12 +331,10 @@ GENERAL OPTIONS
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
     separated by spaces, and determine what kind of an authority this directory
-    is. By default, every authority is authoritative for current ("v2")-style
-    directories, unless the "no-v2" flag is given. If the "v1" flags is
+    is. By default, an authority is not authoritative any directory style
+    or version, unless an appropriate flag is given. If the "v1" flag is
     provided, Tor will use this server as an authority for old-style (v1)
-    directories as well. (Only directory mirrors care about this.) Tor will
-    use this server as an authority for hidden service information if the "hs"
-    flag is set, or if the "v1" flag is set and the "no-hs" flag is **not** set.
+    directories as well. (Only directory mirrors care about this.)
     Tor will use this authority as a bridge authoritative directory if the
     "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
     given port when opening encrypted tunnels to the dirserver. If a flag
@@ -365,17 +363,14 @@ GENERAL OPTIONS
 
 [[AlternateDirAuthority]] **AlternateDirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
 
-[[AlternateHSAuthority]] **AlternateHSAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__ +
-
 [[AlternateBridgeAuthority]] **AlternateBridgeAuthority** [__nickname__] [**flags**] __address__:__port__ __ fingerprint__::
     These options behave as DirAuthority, but they replace fewer of the
     default directory authorities. Using
     AlternateDirAuthority replaces the default Tor directory authorities, but
-    leaves the default hidden service authorities and bridge authorities in
-    place.  Similarly, AlternateHSAuthority replaces the default hidden
-    service authorities, but not the directory or bridge authorities; and
+    leaves the default bridge authorities in
+    place.  Similarly,
     AlternateBridgeAuthority replaces the default bridge authority,
-    but leaves the directory and hidden service authorities alone.
+    but leaves the directory authorities alone.
 
 [[DisableAllSwap]] **DisableAllSwap** **0**|**1**::
     If set to 1, Tor will attempt to lock all current and future memory pages,
@@ -1793,11 +1788,6 @@ if DirPort is non-zero):
     has been registered with the dirserver. Naming dirservers will refuse to
     accept or publish descriptors that contradict a registered binding. See
     **approved-routers** in the **FILES** section below.
-
-[[HSAuthoritativeDir]] **HSAuthoritativeDir** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor also
-    accepts and serves v0 hidden service descriptors,
-    which are produced and used by Tor 0.2.1.x and older. (Default: 0)
 
 [[HidServDirectoryV2]] **HidServDirectoryV2** **0**|**1**::
     When this option is set, Tor accepts and serves v2 hidden service

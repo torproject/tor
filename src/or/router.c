@@ -935,8 +935,7 @@ init_keys(void)
   type = ((options->V1AuthoritativeDir ? V1_DIRINFO : NO_DIRINFO) |
           (options->V3AuthoritativeDir ?
                (V3_DIRINFO|MICRODESC_DIRINFO|EXTRAINFO_DIRINFO) : NO_DIRINFO) |
-          (options->BridgeAuthoritativeDir ? BRIDGE_DIRINFO : NO_DIRINFO) |
-          (options->HSAuthoritativeDir ? HIDSERV_DIRINFO : NO_DIRINFO));
+          (options->BridgeAuthoritativeDir ? BRIDGE_DIRINFO : NO_DIRINFO));
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
