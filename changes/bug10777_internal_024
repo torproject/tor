@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - Do not treat END_STREAM_REASON_INTERNAL as indicating a definite
+      circuit failure, since it could also indicate an ENETUNREACH
+      error. Fixes part of bug 10777; bugfix on 0.2.4.8-alpha.
