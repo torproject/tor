@@ -875,6 +875,7 @@ test_policies(void)
   {
     int i;
     char *policy = NULL;
+    short_policy_t *parsed;
     smartlist_t *chunks = smartlist_new();
     smartlist_add(chunks, tor_strdup("accept "));
     for (i=1; i<10000; ++i)
@@ -883,8 +884,9 @@ test_policies(void)
     policy = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
-    tt_ptr_op(NULL, ==, parse_short_policy(policy));/* shouldn't be accepted */
-    tor_free(policy); /* could leak. */
+    parsed = parse_short_policy(policy);/* shouldn't be accepted */
+    tor_free(policy);
+    tt_ptr_op(NULL, ==, parsed);
   }
 
   /* truncation ports */

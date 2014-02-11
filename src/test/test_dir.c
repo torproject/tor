@@ -1230,7 +1230,8 @@ test_a_networkstatus(
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   int idx, n_rs, n_vrs;
-  char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL, *cp;
+  char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL,
+    *cp=NULL;
   smartlist_t *votes = smartlist_new();
 
   /* For generating the two other consensuses. */
@@ -1648,6 +1649,7 @@ test_a_networkstatus(
   }
 
  done:
+  tor_free(cp);
   smartlist_free(votes);
   tor_free(v1_text);
   tor_free(v2_text);

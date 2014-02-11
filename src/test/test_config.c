@@ -247,6 +247,7 @@ test_config_write_to_data_subdir(void *arg)
 {
   or_options_t* options = get_options_mutable();
   char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
+  char *cp = NULL;
   const char* subdir = "test_stats";
   const char* fname = "test_file";
   const char* str =
@@ -280,17 +281,23 @@ test_config_write_to_data_subdir(void *arg)
   // Content of file after write attempt should be
   // equal to the original string.
   test_assert(!write_to_data_subdir(subdir, fname, str, NULL));
-  test_streq(read_file_to_str(filepath, 0, NULL), str);
+  cp = read_file_to_str(filepath, 0, NULL);
+  test_streq(cp, str);
+  tor_free(cp);
 
   // A second write operation should overwrite the old content.
   test_assert(!write_to_data_subdir(subdir, fname, str, NULL));
-  test_streq(read_file_to_str(filepath, 0, NULL), str);
+  cp = read_file_to_str(filepath, 0, NULL);
+  test_streq(cp, str);
+  tor_free(cp);
+
 
  done:
   (void) unlink(filepath);
   rmdir(options->DataDirectory);
   tor_free(datadir);
   tor_free(filepath);
+  tor_free(cp);
 }
 
 /* Test helper function: Make sure that a bridge line gets parsed
