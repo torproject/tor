@@ -584,15 +584,6 @@ GENERAL OPTIONS
     This is useful when running on flash memory or other media that support
     only a limited number of writes. (Default: 0)
 
-[[TunnelDirConns]] **TunnelDirConns** **0**|**1**::
-    If non-zero, when a directory server we contact supports it, we will build
-    a one-hop circuit and make an encrypted connection via its ORPort.
-    (Default: 1)
-
-[[PreferTunneledDirConns]] **PreferTunneledDirConns** **0**|**1**::
-    If non-zero, we will avoid directory servers that don't support tunneled
-    directory connections, when possible. (Default: 1)
-
 [[CircuitPriorityHalflife]] **CircuitPriorityHalflife** __NUM1__::
     If this value is set, we override the default algorithm for choosing which
     circuit's cell to deliver or relay next. When the value is 0, we

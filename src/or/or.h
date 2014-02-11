@@ -3897,10 +3897,6 @@ typedef struct {
                                         * testing our DNS server. */
   int EnforceDistinctSubnets; /**< If true, don't allow multiple routers in the
                                * same network zone in the same circuit. */
-  int TunnelDirConns; /**< If true, use BEGIN_DIR rather than BEGIN when
-                       * possible. */
-  int PreferTunneledDirConns; /**< If true, avoid dirservers that don't
-                               * support BEGIN_DIR, when possible. */
   int PortForwarding; /**< If true, use NAT-PMP or UPnP to automatically
                        * forward the DirPort and ORPort on the NAT device */
   char *PortForwardingHelper; /** < Filename or full path of the port
@@ -4983,8 +4979,6 @@ typedef struct dir_server_t {
 /** This node is to be chosen as a directory guard, so don't choose any
  * node that's currently a guard. */
 #define PDS_FOR_GUARD (1<<5)
-
-#define PDS_PREFER_TUNNELED_DIR_CONNS_ (1<<16)
 
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/

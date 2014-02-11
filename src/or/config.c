@@ -354,7 +354,7 @@ static config_var_t option_vars_[] = {
   V(OptimisticData,              AUTOBOOL, "auto"),
   V(PortForwarding,              BOOL,     "0"),
   V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
-  V(PreferTunneledDirConns,      BOOL,     "1"),
+  OBSOLETE("PreferTunneledDirConns"),
   V(ProtocolWarnings,            BOOL,     "0"),
   V(PublishServerDescriptor,     CSV,      "1"),
   V(PublishHidServDescriptors,   BOOL,     "1"),
@@ -409,7 +409,7 @@ static config_var_t option_vars_[] = {
   V(TransListenAddress,          LINELIST, NULL),
   VPORT(TransPort,                   LINELIST, NULL),
   V(TransProxyType,              STRING,   "default"),
-  V(TunnelDirConns,              BOOL,     "1"),
+  OBSOLETE("TunnelDirConns"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
   V(UseEntryGuards,              BOOL,     "1"),
@@ -3213,8 +3213,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->UseBridges && !options->Bridges)
     REJECT("If you set UseBridges, you must specify at least one bridge.");
-  if (options->UseBridges && !options->TunnelDirConns)
-    REJECT("If you set UseBridges, you must set TunnelDirConns.");
 
   for (cl = options->Bridges; cl; cl = cl->next) {
       bridge_line_t *bridge_line = parse_bridge_line(cl->value);
@@ -3337,15 +3335,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv6,
                                  AF_INET6, 1, msg)<0)
     return -1;
-
-  if (options->PreferTunneledDirConns && !options->TunnelDirConns)
-    REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
-
-  if ((options->Socks4Proxy || options->Socks5Proxy) &&
-      !options->HTTPProxy && !options->PreferTunneledDirConns)
-    REJECT("When Socks4Proxy or Socks5Proxy is configured, "
-           "PreferTunneledDirConns and TunnelDirConns must both be "
-           "set to 1, or HTTPProxy must be configured.");
 
   if (options->AutomapHostsSuffixes) {
     SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,

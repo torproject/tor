@@ -1,0 +1,6 @@
+  o Removed code:
+    - The TunnelDirConns and PreferTunnelledDirConns options no longer
+      exist; tunneled directory connections have been available since
+      0.1.2.5-alpha, and turning them off is not a good idea. This is a
+      brute-force fix for 10849, where "TunnelDirConns 0" would break
+      hidden services.
