@@ -331,8 +331,8 @@ GENERAL OPTIONS
     and port, with the specified key fingerprint. This option can be repeated
     many times, for multiple authoritative directory servers. Flags are
     separated by spaces, and determine what kind of an authority this directory
-    is. By default, every authority is authoritative for current ("v2")-style
-    directories, unless the "no-v2" flag is given. If the "v1" flags is
+    is. By default, an authority is not authoritative any directory style
+    or version, unless an appropriate flag is given. If the "v1" flag is
     provided, Tor will use this server as an authority for old-style (v1)
     directories as well. (Only directory mirrors care about this.)
     Tor will use this authority as a bridge authoritative directory if the
