@@ -1,7 +1,7 @@
   - Minor bugfixes:
 
-    - Treat ENETUNRECH at an exit node as a NOROUTE error, not an
-      INTERNAL error, since it can apparently happen when trying to
-      connect to the wrong sort of netblocks. Fixes a part of bug 10777;
-      bugfix on 0.1.0.1-rc.
+    - Treat ENETUNREACH, EACCES, and EPERM at an exit node as a
+      NOROUTE error, not an INTERNAL error, since they can apparently
+      happen when trying to connect to the wrong sort of
+      netblocks. Fixes a part of bug 10777; bugfix on 0.1.0.1-rc.
 
