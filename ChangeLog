@@ -1,3 +1,29 @@
+Changes in version 0.2.4.21 - 2014-02-1?
+
+  o Minor features:
+    - Always clear OpenSSL bignums before freeing them -- even bignums
+      that don't contain secrets. Resolves ticket 10793. Patch by
+      Florent Daigniere.
+
+  o Minor bugfixes:
+    - Set the listen() backlog limit to the largest actually supported
+      on the system, not to the value in a header file. Fixes bug 9716;
+      bugfix on every released Tor.
+    - Avoid a segfault on SIGUSR1, where we had freed a connection but did
+      not entirely remove it from the connection lists. Fixes bug 9602;
+      bugfix on 0.2.4.4-alpha.
+    - Fix a segmentation fault in our benchmark code when running with
+      Fedora's OpenSSL package, or any other OpenSSL that provides
+      ECDH but not P224. Fixes bug 10835; bugfix on 0.2.4.8-alpha.
+    - Move log message about circuit handshake counts into the heartbeat
+      message where it belongs, instead of logging it once per hour
+      unconditionally. Fixes bug 10485; bugfix on 0.2.4.17-rc.
+
+  o Documentation fixes:
+    - Document that all but one DirPort entry must have the NoAdvertise
+      flag set. Fixes bug 10470; bugfix on 0.2.3.3-alpha / 0.2.3.16-alpha.
+
+
 Changes in version 0.2.4.20 - 2013-12-22
   Tor 0.2.4.20 fixes potentially poor random number generation for users
   who 1) use OpenSSL 1.0.0 or later, 2) set "HardwareAccel 1" in their
