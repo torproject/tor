@@ -1,0 +1,7 @@
+  o Removed code:
+
+    - Remove code for designating authorities as "Hidden service
+      authorities". There has been no use of hidden service authorities
+      since 0.2.2.1-alpha, when we stopped uploading or downloading v0
+      hidden service descriptors. Fixes bug 10881; part of a fix for bug
+      10841.

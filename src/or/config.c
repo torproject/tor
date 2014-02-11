@@ -137,7 +137,7 @@ static config_var_t option_vars_[] = {
   V(AllowSingleHopExits,         BOOL,     "0"),
   V(AlternateBridgeAuthority,    LINELIST, NULL),
   V(AlternateDirAuthority,       LINELIST, NULL),
-  V(AlternateHSAuthority,        LINELIST, NULL),
+  OBSOLETE("AlternateHSAuthority"),
   V(AssumeReachable,             BOOL,     "0"),
   V(AuthDirBadDir,               LINELIST, NULL),
   V(AuthDirBadDirCCs,            CSV,      ""),
@@ -276,7 +276,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
   V(HidServAuth,                 LINELIST, NULL),
-  V(HSAuthoritativeDir,          BOOL,     "0"),
+  OBSOLETE("HSAuthoritativeDir"),
   OBSOLETE("HSAuthorityRecordStats"),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
@@ -904,8 +904,7 @@ validate_dir_servers(or_options_t *options, or_options_t *old_options)
   config_line_t *cl;
 
   if (options->DirAuthorities &&
-      (options->AlternateDirAuthority || options->AlternateBridgeAuthority ||
-       options->AlternateHSAuthority)) {
+      (options->AlternateDirAuthority || options->AlternateBridgeAuthority)) {
     log_warn(LD_CONFIG,
              "You cannot set both DirAuthority and Alternate*Authority.");
     return -1;
@@ -941,9 +940,6 @@ validate_dir_servers(or_options_t *options, or_options_t *old_options)
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
-  for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 1)<0)
-      return -1;
   for (cl = options->FallbackDir; cl; cl = cl->next)
     if (parse_dir_fallback_line(cl->value, 1)<0)
       return -1;
@@ -966,9 +962,7 @@ consider_adding_dir_servers(const or_options_t *options,
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
     !config_lines_eq(options->AlternateDirAuthority,
-                     old_options->AlternateDirAuthority) ||
-    !config_lines_eq(options->AlternateHSAuthority,
-                     old_options->AlternateHSAuthority);
+                     old_options->AlternateDirAuthority);
 
   if (!need_to_update)
     return 0; /* all done */
@@ -984,8 +978,6 @@ consider_adding_dir_servers(const or_options_t *options,
     if (!options->AlternateDirAuthority)
       type |= V1_DIRINFO | V3_DIRINFO | EXTRAINFO_DIRINFO |
         MICRODESC_DIRINFO;
-    if (!options->AlternateHSAuthority)
-      type |= HIDSERV_DIRINFO;
     add_default_trusted_dir_authorities(type);
   }
   if (!options->FallbackDir)
@@ -998,9 +990,6 @@ consider_adding_dir_servers(const or_options_t *options,
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
-      return -1;
-  for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->FallbackDir; cl; cl = cl->next)
@@ -2605,11 +2594,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "extra-info documents. Setting DownloadExtraInfo.");
       options->DownloadExtraInfo = 1;
     }
-    if (!(options->BridgeAuthoritativeDir || options->HSAuthoritativeDir ||
+    if (!(options->BridgeAuthoritativeDir ||
           options->V1AuthoritativeDir ||
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
-             "(Bridge/HS/V1/V3)AuthoritativeDir is set.");
+             "(Bridge/V1/V3)AuthoritativeDir is set.");
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
       dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL);
@@ -2628,10 +2617,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->FetchDirInfoExtraEarly && !options->FetchDirInfoEarly)
     REJECT("FetchDirInfoExtraEarly requires that you also set "
            "FetchDirInfoEarly");
-
-  if (options->HSAuthoritativeDir && proxy_mode(options))
-    REJECT("Running as authoritative v0 HS directory, but also configured "
-           "as a client.");
 
   if (options->ConnLimit <= 0) {
     tor_asprintf(msg,
@@ -5031,7 +5016,6 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
   dirinfo_type_t type = 0;
-  int is_not_hidserv_authority = 0;
   double weight = 1.0;
 
   items = smartlist_new();
@@ -5052,11 +5036,11 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     if (TOR_ISDIGIT(flag[0]))
       break;
     if (!strcasecmp(flag, "v1")) {
-      type |= (V1_DIRINFO | HIDSERV_DIRINFO);
-    } else if (!strcasecmp(flag, "hs")) {
-      type |= HIDSERV_DIRINFO;
-    } else if (!strcasecmp(flag, "no-hs")) {
-      is_not_hidserv_authority = 1;
+      type |= V1_DIRINFO;
+    } else if (!strcasecmp(flag, "hs") ||
+               !strcasecmp(flag, "no-hs")) {
+      log_warn(LD_CONFIG, "The DirAuthority options 'hs' and 'no-hs' are "
+               "obsolete; you don't need them any more.");
     } else if (!strcasecmp(flag, "bridge")) {
       type |= BRIDGE_DIRINFO;
     } else if (!strcasecmp(flag, "no-v2")) {
@@ -5093,8 +5077,6 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     tor_free(flag);
     smartlist_del_keeporder(items, 0);
   }
-  if (is_not_hidserv_authority)
-    type &= ~HIDSERV_DIRINFO;
 
   if (smartlist_len(items) < 2) {
     log_warn(LD_CONFIG, "Too few arguments to DirAuthority line.");

@@ -155,8 +155,6 @@ authdir_type_to_string(dirinfo_type_t auth)
     smartlist_add(lst, (void*)"V3");
   if (auth & BRIDGE_DIRINFO)
     smartlist_add(lst, (void*)"Bridge");
-  if (auth & HIDSERV_DIRINFO)
-    smartlist_add(lst, (void*)"Hidden service");
   if (smartlist_len(lst)) {
     result = smartlist_join_strings(lst, ", ", 0, NULL);
   } else {
@@ -3172,32 +3170,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-  if (options->HSAuthoritativeDir && !strcmpstart(url,"/tor/rendezvous/")) {
-    /* rendezvous descriptor fetch */
-    const char *descp;
-    size_t desc_len;
-    const char *query = url+strlen("/tor/rendezvous/");
-
-    log_info(LD_REND, "Handling rendezvous descriptor get");
-    switch (rend_cache_lookup_desc(query, 0, &descp, &desc_len)) {
-      case 1: /* valid */
-        write_http_response_header_impl(conn, desc_len,
-                                        "application/octet-stream",
-                                        NULL, NULL, 0);
-        note_request("/tor/rendezvous?/", desc_len);
-        /* need to send descp separately, because it may include NULs */
-        connection_write_to_buf(descp, desc_len, TO_CONN(conn));
-        break;
-      case 0: /* well-formed but not present */
-        write_http_status_line(conn, 404, "Not found");
-        break;
-      case -1: /* not well-formed */
-        write_http_status_line(conn, 400, "Bad request");
-        break;
-    }
-    goto done;
-  }
-
   if (options->BridgeAuthoritativeDir &&
       options->BridgePassword_AuthDigest_ &&
       connection_dir_is_encrypted(conn) &&
@@ -3393,22 +3365,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
                "(\"%s\").",
                conn->base_.address, msg);
       write_http_status_line(conn, 400, msg);
-    }
-    goto done;
-  }
-
-  if (options->HSAuthoritativeDir &&
-      !strcmpstart(url,"/tor/rendezvous/publish")) {
-    /* rendezvous descriptor post */
-    log_info(LD_REND, "Handling rendezvous descriptor post.");
-    if (rend_cache_store(body, body_len, 1, NULL) < 0) {
-      log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
-             "Rejected rend descriptor (length %d) from %s.",
-             (int)body_len, conn->base_.address);
-      write_http_status_line(conn, 400,
-                             "Invalid v0 service descriptor rejected");
-    } else {
-      write_http_status_line(conn, 200, "Service descriptor (v0) stored");
     }
     goto done;
   }
