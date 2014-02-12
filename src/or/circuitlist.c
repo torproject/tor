@@ -1589,9 +1589,11 @@ circuits_handle_oom(size_t current_allocation)
   buf_shrink_freelists(1); /* This is necessary to actually release buffer
                               chunks. */
 
-  log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
+  log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits; "
+             "%d circuits remain alive.",
              U64_PRINTF_ARG(mem_recovered),
-             n_circuits_killed);
+             n_circuits_killed,
+             smartlist_len(circlist) - n_circuits_killed);
 
   smartlist_free(circlist);
 }
