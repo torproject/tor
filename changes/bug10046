@@ -1,3 +1,4 @@
   o Minor bugfixes:
-    - Fix an always-true assertion in pluggable transports code. Fixes
-      issue 10046. Found by dcb.
+    - Fix an always-true assertion in pluggable transports code so it
+      actually checks what it was trying to check. Fixes bug 10046;
+      bugfix on 0.2.3.9-alpha. Found by "dcb".

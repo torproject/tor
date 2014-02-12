@@ -1,3 +1,7 @@
-  o Minor features:
-    - Avoid using circuit paths if no node in the path supports the ntor
-      circuit extension handshake. Implements ticket 9777.
+  o Major features:
+    - When we choose a path for a 3-hop circuit, make sure it contains
+      at least one relay that supports the NTor circuit extension
+      handshake. Otherwise, there is a chance that we're building
+      a circuit that's worth attacking by an adversary who finds
+      breaking 1024-bit crypto doable, and that chance changes the game
+      theory. Implements ticket 9777.

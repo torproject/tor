@@ -1,4 +1,3 @@
   o Minor features:
-    - Implement the HS_DESC async control event that notifies controller on
-      activities related to hidden service descriptors. Partly resolves
-      ticket 8510.
+    - Add a new "HS_DESC" controller event that reports activities
+      related to hidden service descriptors. Resolves ticket 8510.

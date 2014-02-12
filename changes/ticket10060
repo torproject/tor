@@ -1,5 +1,5 @@
   o Minor features:
-    - Adding --allow-missing-torrc commandline option that allows Tor to
-      run if configuration file specified by -f is not available.
+    - Add an --allow-missing-torrc commandline option that tells Tor to
+      run even if the configuration file specified by -f is not available.
       Implements ticket 10060.
 

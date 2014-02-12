@@ -1,4 +1,5 @@
-  o Minor bugfixes:
-    - Suppress a warning that votes and signatures cannot be uploaded to
-      other directory authorities if there's only one directory authority
-      in the network. Bugfix on 0.2.2.26-beta. Resolves ticket 10842.
+  o Minor bugfixes (log messages):
+    - Suppress a warning where, if there's only one directory authority
+      in the network, we would complain that votes and signatures cannot
+      be uploaded to other directory authorities. Fixes bug 10842;
+      bugfix on 0.2.2.26-beta.

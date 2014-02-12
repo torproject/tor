@@ -1,12 +1,4 @@
-<<<<<<< HEAD
   o Minor bugfixes:
     - Turn "circuit handshake stats since last time" log messages into a
       heartbeat message. Fixes bug 10485; bugfix on 0.2.4.17-rc.
 
-||||||| merged common ancestors
-=======
-  o Minor bugfixes:
-    - Move message about circuit handshake counts into the heartbeat
-      message where it belongs, instead of logging it once per hour
-      unconditionally. Fixes bug 10485; bugfix on 0.2.4.17-rc.
->>>>>>> origin/maint-0.2.4

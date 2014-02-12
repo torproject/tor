@@ -1,6 +1,8 @@
   o Minor bugfixes:
-    - Fix a get_configured_bridge_by_addr_port_digest() function so
-      that it would return a bridge with given address and port even
-      if bridge digest is not specified by caller.  Fixes bug 9162;
-      bugfix on 0.2.0.3-alpha.  Based on a patch from "rl1987".
+    - Fix a bug where the first connection works to a bridge that uses a
+      pluggable transport with client-side parameters, but we don't send
+      the client-side parameters on subsequent connections. (We don't
+      use any pluggable transports with client-side parameters yet,
+      but ScrambleSuit will soon become the first one.) Fixes bug 9162;
+      bugfix on 0.2.0.3-alpha. Based on a patch from "rl1987".
 

@@ -2,4 +2,4 @@
     - Clients now reject any directory authority certificates lacking
       a dir-key-crosscert element. These have been included since
       0.2.1.9-alpha, so there's no real reason for them to be optional
-      any longer. Completes proposal 157.
+      any longer. Completes proposal 157. Resolves ticket 10162.

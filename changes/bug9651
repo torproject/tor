@@ -1,3 +1,5 @@
   o Minor features:
-    - Warn when the Extended ORPort should be set, but it isn't. Resolves
-      ticket 9651.
+    - When ServerTransportPlugin is set on a bridge, Tor can write more
+      useful statistics about bridge use in its extrainfo descriptors,
+      but only if the Extended ORPort ("ExtORPort") is set too. Add a
+      log message to inform the user in this case. Resolves ticket 9651.

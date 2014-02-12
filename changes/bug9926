@@ -1,6 +1,6 @@
-  o Minor bugfixes:
+  o Code simplification and refactoring:
     - Remove some old fallback code designed to keep Tor clients working
-      in a network with only two working nodes. Elsewhere in the code we
+      in a network with only two working relays. Elsewhere in the code we
       have long since stopped supporting such networks, so there wasn't
-      much point in keeping it around. Fixes bug 9926.
+      much point in keeping it around. Addresses ticket 9926.
 

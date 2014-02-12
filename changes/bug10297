@@ -1,4 +1,5 @@
   o Minor features:
-    - Spawn background processes using the CREATE_NO_WINDOW flag on
-      Windows, in order to prevent a console window from appearing.
-      Resolves ticket 10297.
+    - On Windows, spawn background processes using the CREATE_NO_WINDOW
+      flag. Now Tor Browser Bundle 3.5 with pluggable transports enabled
+      doesn't pop up a blank console window. (In Tor Browser Bundle 2.x,
+      Vidalia set this option for us.) Implements ticket 10297.

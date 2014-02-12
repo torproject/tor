@@ -1,4 +1,5 @@
   o Minor features (controller):
-    - New DROPGUARDS command to forget all current entry guards. Not
-      recommended for ordinary use, since replacing guards too frequently
-      makes several attacks easier. Resolves ticket #9934; patch from "ra".
+    - New "DROPGUARDS" controller command to forget all current entry
+      guards. Not recommended for ordinary use, since replacing guards
+      too frequently makes several attacks easier. Resolves ticket 9934;
+      patch from "ra".

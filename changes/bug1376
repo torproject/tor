@@ -1,4 +1,3 @@
-  o Minor bugfixes:
-
-    - Added additional argument to write_chunks_to_file to optionally skip
-      using a temp file to do non-atomic writes. Implements ticket #1376.
+  o Code simplification and refactoring: 
+    - Previously we used two temporary files when writing descriptors to
+      disk; now we only use one. Implements ticket 1376.

@@ -1,3 +1,5 @@
-  o Minor features:
-    - Don't launch pluggable transport proxies that contribute
-      transports we don't need. Resolves ticket 5018.
+  o Major features:
+    - Don't launch pluggable transport proxies if we don't have any
+      bridges configured that would use them. Now we can list many
+      pluggable transports, and Tor will dynamically start one when it
+      hears a bridge address that needs it. Resolves ticket 5018.

@@ -1,6 +1,7 @@
-  o Minor features:
-    - Stop sending the CREATE_FAST cells by default; instead, use a
-      parameter in the consensus to decide whether to use
-      CREATE_FAST. This can improve security on connections where
-      Tor's circuit handshake is stronger than the available TLS
-      connection security levels. Implements proposal 221.
+  o Major features:
+    - Clients now look at the "usecreatefast" consensus parameter to
+      decide whether to use CREATE_FAST or CREATE cells for the first hop
+      of their circuit. This approach can improve security on connections
+      where Tor's circuit handshake is stronger than the available TLS
+      connection security levels, but the tradeoff is more computational
+      load on guard relays. Implements proposal 221. Resolves ticket 9386.

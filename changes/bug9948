@@ -1,6 +1,4 @@
   o Minor features (build):
-
-    - Check in configure whether we can link an executable when
-      stack protection is enabled so we can warn the user about a
-      potentially missing libssp. Addresses ticket 9948. Patch
-      from Benedikt Gollatz. 
+    - If we run ./configure and the compiler recognizes -fstack-protector
+      but the linker rejects it, warn the user about a potentially missing
+      libssp package. Addresses ticket 9948. Patch from Benedikt Gollatz.
