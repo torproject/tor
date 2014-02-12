@@ -132,3 +132,17 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 	return (v0 ^ v1) ^ (v2 ^ v3);
 }
 
+
+static int the_siphash_key_is_set = 0;
+static struct sipkey the_siphash_key;
+
+uint64_t siphash24g(const void *src, unsigned long src_sz) {
+	return siphash24(src, src_sz, &the_siphash_key);
+}
+
+void siphash_set_global_key(const struct sipkey *key)
+{
+	the_siphash_key.k0 = key->k0;
+	the_siphash_key.k1 = key->k1;
+	the_siphash_key_is_set = 1;
+}
