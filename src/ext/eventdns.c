@@ -3014,7 +3014,8 @@ resolv_conf_parse_line(char *const start, int flags) {
 
 	if (!strcmp(first_token, "nameserver") && (flags & DNS_OPTION_NAMESERVERS)) {
 		const char *const nameserver = NEXT_TOKEN;
-		evdns_nameserver_ip_add(nameserver);
+		if (nameserver)
+			evdns_nameserver_ip_add(nameserver);
 	} else if (!strcmp(first_token, "domain") && (flags & DNS_OPTION_SEARCH)) {
 		const char *const domain = NEXT_TOKEN;
 		if (domain) {
