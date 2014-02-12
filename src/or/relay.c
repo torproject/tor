@@ -2205,7 +2205,8 @@ static int
 cell_queues_check_size(void)
 {
   size_t alloc = total_cells_allocated * packed_cell_mem_cost();
-  if (alloc >= get_options()->MaxMemInCellQueues) {
+  alloc += buf_get_total_allocation();
+  if (alloc >= get_options()->MaxMemInQueues) {
     circuits_handle_oom(alloc);
     return 1;
   }

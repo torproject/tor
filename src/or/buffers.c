@@ -70,6 +70,8 @@ typedef struct chunk_t {
   size_t datalen; /**< The number of bytes stored in this chunk */
   size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
   char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
+  uint32_t inserted_time; /**< Timestamp in truncated ms since epoch
+                           * when this chunk was inserted. */
   char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
                 * this chunk. */
 } chunk_t;
@@ -141,6 +143,9 @@ static chunk_freelist_t freelists[] = {
  * could help with? */
 static uint64_t n_freelist_miss = 0;
 
+/** DOCDOC */
+static size_t total_bytes_allocated_in_chunks = 0;
+
 static void assert_freelist_ok(chunk_freelist_t *fl);
 
 /** Return the freelist to hold chunks of size <b>alloc</b>, or NULL if
@@ -174,6 +179,8 @@ chunk_free_unchecked(chunk_t *chunk)
   } else {
     if (freelist)
       ++freelist->n_free;
+    tor_assert(total_bytes_allocated_in_chunks >= alloc);
+    total_bytes_allocated_in_chunks -= alloc;
     tor_free(chunk);
   }
 }
@@ -200,6 +207,7 @@ chunk_new_with_alloc_size(size_t alloc)
     else
       ++n_freelist_miss;
     ch = tor_malloc(alloc);
+    total_bytes_allocated_in_chunks += alloc;
   }
   ch->next = NULL;
   ch->datalen = 0;
@@ -211,6 +219,10 @@ chunk_new_with_alloc_size(size_t alloc)
 static void
 chunk_free_unchecked(chunk_t *chunk)
 {
+  if (!chunk)
+    return;
+  tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
+  total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
   tor_free(chunk);
 }
 static INLINE chunk_t *
@@ -221,6 +233,7 @@ chunk_new_with_alloc_size(size_t alloc)
   ch->next = NULL;
   ch->datalen = 0;
   ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);
+  total_bytes_allocated_in_chunks += alloc;
   ch->data = &ch->mem[0];
   return ch;
 }
@@ -232,11 +245,13 @@ static INLINE chunk_t *
 chunk_grow(chunk_t *chunk, size_t sz)
 {
   off_t offset;
+  size_t memlen_orig = chunk->memlen;
   tor_assert(sz > chunk->memlen);
   offset = chunk->data - chunk->mem;
   chunk = tor_realloc(chunk, CHUNK_ALLOC_SIZE(sz));
   chunk->memlen = sz;
   chunk->data = chunk->mem + offset;
+  total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(sz) - CHUNK_ALLOC_SIZE(memlen_orig);
   return chunk;
 }
 
@@ -261,12 +276,14 @@ preferred_chunk_size(size_t target)
 }
 
 /** Remove from the freelists most chunks that have not been used since the
- * last call to buf_shrink_freelists(). */
-void
+ * last call to buf_shrink_freelists().   Return the amount of memory
+ * freed. */
+size_t
 buf_shrink_freelists(int free_all)
 {
 #ifdef ENABLE_BUF_FREELISTS
   int i;
+  size_t total_freed = 0;
   disable_control_logging();
   for (i = 0; freelists[i].alloc_size; ++i) {
     int slack = freelists[i].slack;
@@ -298,6 +315,9 @@ buf_shrink_freelists(int free_all)
       *chp = NULL;
       while (chunk) {
         chunk_t *next = chunk->next;
+        tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
+        total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
+        total_freed += CHUNK_ALLOC_SIZE(chunk->memlen);
         tor_free(chunk);
         chunk = next;
         --n_to_free;
@@ -315,18 +335,21 @@ buf_shrink_freelists(int free_all)
       }
       // tor_assert(!n_to_free);
       freelists[i].cur_length = new_length;
+      tor_assert(orig_n_to_skip == new_length);
       log_info(LD_MM, "Cleaned freelist for %d-byte chunks: original "
-               "length %d, kept %d, dropped %d.",
+               "length %d, kept %d, dropped %d. New length is %d",
                (int)freelists[i].alloc_size, orig_length,
-               orig_n_to_skip, orig_n_to_free);
+               orig_n_to_skip, orig_n_to_free, new_length);
     }
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
  done:
   enable_control_logging();
+  return total_freed;
 #else
   (void) free_all;
+  return 0;
 #endif
 }
 
@@ -531,7 +554,7 @@ buf_allocation(const buf_t *buf)
   size_t total = 0;
   const chunk_t *chunk;
   for (chunk = buf->head; chunk; chunk = chunk->next) {
-    total += chunk->memlen;
+    total += CHUNK_ALLOC_SIZE(chunk->memlen);
   }
   return total;
 }
@@ -564,6 +587,7 @@ static chunk_t *
 chunk_copy(const chunk_t *in_chunk)
 {
   chunk_t *newch = tor_memdup(in_chunk, CHUNK_ALLOC_SIZE(in_chunk->memlen));
+  total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(in_chunk->memlen);
   newch->next = NULL;
   if (in_chunk->data) {
     off_t offset = in_chunk->data - in_chunk->mem;
@@ -599,6 +623,7 @@ static chunk_t *
 buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 {
   chunk_t *chunk;
+  struct timeval now;
   if (CHUNK_ALLOC_SIZE(capacity) < buf->default_chunk_size) {
     chunk = chunk_new_with_alloc_size(buf->default_chunk_size);
   } else if (capped && CHUNK_ALLOC_SIZE(capacity) > MAX_CHUNK_ALLOC) {
@@ -606,6 +631,10 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   } else {
     chunk = chunk_new_with_alloc_size(preferred_chunk_size(capacity));
   }
+
+  tor_gettimeofday_cached(&now);
+  chunk->inserted_time = (uint32_t)tv_to_msec(&now);
+
   if (buf->tail) {
     tor_assert(buf->head);
     buf->tail->next = chunk;
@@ -616,6 +645,26 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   }
   check();
   return chunk;
+}
+
+/** Return the age of the oldest chunk in the buffer <b>buf</b>, in
+ * milliseconds.  Requires the current time, in truncated milliseconds since
+ * the epoch, as its input <b>now</b>.
+ */
+uint32_t
+buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now)
+{
+  if (buf->head) {
+    return now - buf->head->inserted_time;
+  } else {
+    return 0;
+  }
+}
+
+size_t
+buf_get_total_allocation(void)
+{
+  return total_bytes_allocated_in_chunks;
 }
 
 /** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into

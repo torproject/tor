@@ -2825,6 +2825,9 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
+  /** Temporary field used during circuits_handle_oom. */
+  uint32_t age_tmp;
+
   /** For storage while n_chan is pending (state CIRCUIT_STATE_CHAN_WAIT). */
   struct create_cell_t *n_chan_create_cell;
 
@@ -3478,9 +3481,8 @@ typedef struct {
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
 
-  uint64_t MaxMemInCellQueues; /**< If we have more memory than this allocated
-                                * for circuit cell queues, run the OOM handler
-                                */
+  uint64_t MaxMemInQueues; /**< If we have more memory than this allocated
+                            * for queues and buffers, run the OOM handler */
 
   /** @name port booleans
    *

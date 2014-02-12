@@ -20,12 +20,15 @@ void buf_free(buf_t *buf);
 void buf_clear(buf_t *buf);
 buf_t *buf_copy(const buf_t *buf);
 void buf_shrink(buf_t *buf);
-void buf_shrink_freelists(int free_all);
+size_t buf_shrink_freelists(int free_all);
 void buf_dump_freelist_sizes(int severity);
 
 size_t buf_datalen(const buf_t *buf);
 size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);
+
+uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
+size_t buf_get_total_allocation(void);
 
 int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
                 int *socket_error);
