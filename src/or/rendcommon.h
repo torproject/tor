@@ -39,13 +39,9 @@ void rend_cache_clean_v2_descs_as_dir(time_t now);
 void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
-int rend_cache_lookup_desc(const char *query, int version, const char **desc,
-                           size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
-int rend_cache_store(const char *desc, size_t desc_len, int published,
-                     const char *service_id);
 int rend_cache_store_v2_desc_as_client(const char *desc,
                                        const rend_data_t *rend_query);
 int rend_cache_store_v2_desc_as_dir(const char *desc);

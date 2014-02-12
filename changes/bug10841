@@ -1,0 +1,6 @@
+  o Removed code
+    - Remove all code for hidden service authorities to accept and serve
+      version 0 descriptors and left-over code for hidden services and
+      hidden service clients to upload and fetch version 0 descriptors.
+      Version 0 descriptors are not in use anymore since 0.2.2.1-alpha.
+      Fixes the rest of bug 10841.

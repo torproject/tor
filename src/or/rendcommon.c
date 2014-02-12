@@ -843,7 +843,7 @@ void
 rend_cache_purge(void)
 {
   if (rend_cache) {
-    log_info(LD_REND, "Purging client/v0-HS-authority HS descriptor cache");
+    log_info(LD_REND, "Purging HS descriptor cache");
     strmap_free(rend_cache, rend_cache_entry_free_);
   }
   rend_cache = strmap_new();
@@ -954,27 +954,6 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
   return 1;
 }
 
-/** <b>query</b> is a base32'ed service id. If it's malformed, return -1.
- * Else look it up.
- *   - If it is found, point *desc to it, and write its length into
- *     *desc_len, and return 1.
- *   - If it is not found, return 0.
- * Note: calls to rend_cache_clean or rend_cache_store may invalidate
- * *desc.
- */
-int
-rend_cache_lookup_desc(const char *query, int version, const char **desc,
-                       size_t *desc_len)
-{
-  rend_cache_entry_t *e;
-  int r;
-  r = rend_cache_lookup_entry(query,version,&e);
-  if (r <= 0) return r;
-  *desc = e->desc;
-  *desc_len = e->len;
-  return 1;
-}
-
 /** Lookup the v2 service descriptor with base32-encoded <b>desc_id</b> and
  * copy the pointer to it to *<b>desc</b>.  Return 1 on success, 0 on
  * well-formed-but-not-found, and -1 on failure.
@@ -1005,118 +984,6 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
 /* Do not allow more than this many introduction points in a hidden service
  * descriptor */
 #define MAX_INTRO_POINTS 10
-
-/** Parse *desc, calculate its service id, and store it in the cache.
- * If we have a newer v0 descriptor with the same ID, ignore this one.
- * If we have an older descriptor with the same ID, replace it.
- * If we are acting as client due to the published flag and have any v2
- * descriptor with the same ID, reject this one in order to not get
- * confused with having both versions for the same service.
- *
- * Return -2 if it's malformed or otherwise rejected; return -1 if we
- * already have a v2 descriptor here; return 0 if it's the same or older
- * than one we've already got; return 1 if it's novel.
- *
- * The published flag tells us if we store the descriptor
- * in our role as directory (1) or if we cache it as client (0).
- *
- * If <b>service_id</b> is non-NULL and the descriptor is not for that
- * service ID, reject it.  <b>service_id</b> must be specified if and
- * only if <b>published</b> is 0 (we fetched this descriptor).
- */
-int
-rend_cache_store(const char *desc, size_t desc_len, int published,
-                 const char *service_id)
-{
-  rend_cache_entry_t *e;
-  rend_service_descriptor_t *parsed;
-  char query[REND_SERVICE_ID_LEN_BASE32+1];
-  char key[REND_SERVICE_ID_LEN_BASE32+2]; /* 0<query>\0 */
-  time_t now;
-  tor_assert(rend_cache);
-  parsed = rend_parse_service_descriptor(desc,desc_len);
-  if (!parsed) {
-    log_warn(LD_PROTOCOL,"Couldn't parse service descriptor.");
-    return -2;
-  }
-  if (rend_get_service_id(parsed->pk, query)<0) {
-    log_warn(LD_BUG,"Couldn't compute service ID.");
-    rend_service_descriptor_free(parsed);
-    return -2;
-  }
-  if ((service_id != NULL) && strcmp(query, service_id)) {
-    log_warn(LD_REND, "Received service descriptor for service ID %s; "
-             "expected descriptor for service ID %s.",
-             query, safe_str(service_id));
-    rend_service_descriptor_free(parsed);
-    return -2;
-  }
-  now = time(NULL);
-  if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Service descriptor %s is too old.",
-           safe_str_client(query));
-    rend_service_descriptor_free(parsed);
-    return -2;
-  }
-  if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Service descriptor %s is too far in the future.",
-           safe_str_client(query));
-    rend_service_descriptor_free(parsed);
-    return -2;
-  }
-  /* Do we have a v2 descriptor and fetched this descriptor as a client? */
-  tor_snprintf(key, sizeof(key), "2%s", query);
-  if (!published && strmap_get_lc(rend_cache, key)) {
-    log_info(LD_REND, "We already have a v2 descriptor for service %s.",
-             safe_str_client(query));
-    rend_service_descriptor_free(parsed);
-    return -1;
-  }
-  if (parsed->intro_nodes &&
-      smartlist_len(parsed->intro_nodes) > MAX_INTRO_POINTS) {
-    log_warn(LD_REND, "Found too many introduction points on a hidden "
-             "service descriptor for %s. This is probably a (misguided) "
-             "attempt to improve reliability, but it could also be an "
-             "attempt to do a guard enumeration attack. Rejecting.",
-             safe_str_client(query));
-    rend_service_descriptor_free(parsed);
-    return -2;
-  }
-  tor_snprintf(key, sizeof(key), "0%s", query);
-  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
-  if (e && e->parsed->timestamp > parsed->timestamp) {
-    log_info(LD_REND,"We already have a newer service descriptor %s with the "
-             "same ID and version.",
-             safe_str_client(query));
-    rend_service_descriptor_free(parsed);
-    return 0;
-  }
-  if (e && e->len == desc_len && tor_memeq(desc,e->desc,desc_len)) {
-    log_info(LD_REND,"We already have this service descriptor %s.",
-             safe_str_client(query));
-    e->received = time(NULL);
-    rend_service_descriptor_free(parsed);
-    return 0;
-  }
-  if (!e) {
-    e = tor_malloc_zero(sizeof(rend_cache_entry_t));
-    strmap_set_lc(rend_cache, key, e);
-  } else {
-    rend_service_descriptor_free(e->parsed);
-    tor_free(e->desc);
-  }
-  e->received = time(NULL);
-  e->parsed = parsed;
-  e->len = desc_len;
-  e->desc = tor_malloc(desc_len);
-  memcpy(e->desc, desc, desc_len);
-
-  log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
-            safe_str_client(query), (int)desc_len);
-  return 1;
-}
 
 /** Parse the v2 service descriptor(s) in <b>desc</b> and store it/them to the
  * local rend cache. Don't attempt to decrypt the included list of introduction
@@ -1239,12 +1106,10 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
  *
  * If we have a newer v2 descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
- * If we have any v0 descriptor with the same ID, reject this one in order
- * to not get confused with having both versions for the same service.
  * If the descriptor's service ID does not match
  * <b>rend_query</b>-\>onion_address, reject it.
- * Return -2 if it's malformed or otherwise rejected; return -1 if we
- * already have a v0 descriptor here; return 0 if it's the same or older
+ * Return -2 if it's malformed or otherwise rejected;
+ * return 0 if it's the same or older
  * than one we've already got; return 1 if it's novel.
  */
 int
@@ -1358,14 +1223,6 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_warn(LD_REND, "Service descriptor with service ID %s is too far in "
                       "the future.", safe_str_client(service_id));
     retval = -2;
-    goto err;
-  }
-  /* Do we have a v0 descriptor? */
-  tor_snprintf(key, sizeof(key), "0%s", service_id);
-  if (strmap_get_lc(rend_cache, key)) {
-    log_info(LD_REND, "We already have a v0 descriptor for service ID %s.",
-             safe_str_client(service_id));
-    retval = -1;
     goto err;
   }
   /* Do we already have a newer descriptor? */
