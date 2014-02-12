@@ -260,8 +260,23 @@ crypto_force_rand_ssleay(void)
   return 0;
 }
 
-/** Initialize the parts of the crypto library that don't depend on
- * settings or options.  Return 0 on success, -1 on failure.
+/** Set up the siphash key if we haven't already done so. */
+int
+crypto_init_siphash_key(void)
+{
+  static int have_seeded_siphash = 0;
+  struct sipkey key;
+  if (have_seeded_siphash)
+    return 0;
+
+  if (crypto_rand((char*) &key, sizeof(key)) < 0)
+    return -1;
+  siphash_set_global_key(&key);
+  have_seeded_siphash = 1;
+  return 0;
+}
+
+/** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
 crypto_early_init(void)
@@ -294,6 +309,8 @@ crypto_early_init(void)
     crypto_force_rand_ssleay();
 
     if (crypto_seed_rng(1) < 0)
+      return -1;
+    if (crypto_init_siphash_key() < 0)
       return -1;
   }
   return 0;
@@ -379,7 +396,6 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 
     evaluate_evp_for_aes(-1);
     evaluate_ctr_for_aes();
-
   }
   return 0;
 }

@@ -31,6 +31,9 @@
 
 #include "torint.h"
 #include "siphash.h"
+/* for tor_assert */
+#include "util.h"
+/* for memcpy */
 #include <string.h>
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
@@ -137,11 +140,13 @@ static int the_siphash_key_is_set = 0;
 static struct sipkey the_siphash_key;
 
 uint64_t siphash24g(const void *src, unsigned long src_sz) {
+	tor_assert(the_siphash_key_is_set);
 	return siphash24(src, src_sz, &the_siphash_key);
 }
 
 void siphash_set_global_key(const struct sipkey *key)
 {
+	tor_assert(! the_siphash_key_is_set);
 	the_siphash_key.k0 = key->k0;
 	the_siphash_key.k1 = key->k1;
 	the_siphash_key_is_set = 1;

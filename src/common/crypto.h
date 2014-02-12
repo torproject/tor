@@ -257,6 +257,7 @@ uint64_t crypto_rand_uint64(uint64_t max);
 double crypto_rand_double(void);
 struct tor_weak_rng_t;
 void crypto_seed_weak_rng(struct tor_weak_rng_t *rng);
+int crypto_init_siphash_key(void);
 
 char *crypto_random_hostname(int min_rand_len, int max_rand_len,
                              const char *prefix, const char *suffix);
