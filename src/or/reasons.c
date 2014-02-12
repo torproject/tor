@@ -179,7 +179,7 @@ errno_to_stream_end_reason(int e)
     S_CASE(ENETUNREACH):
     S_CASE(EHOSTUNREACH):
     E_CASE(EACCES):
-    E_CASE(EPERM):
+    case EPERM:
       return END_STREAM_REASON_NOROUTE;
     S_CASE(ECONNREFUSED):
       return END_STREAM_REASON_CONNECTREFUSED;
