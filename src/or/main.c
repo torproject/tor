@@ -2329,6 +2329,13 @@ tor_init(int argc, char *argv[])
   /* Have the log set up with our application name. */
   tor_snprintf(progname, sizeof(progname), "Tor %s", get_version());
   log_set_application_name(progname);
+
+  /* Set up the crypto nice and early */
+  if (crypto_early_init() < 0) {
+    log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
+    return 1;
+  }
+
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
