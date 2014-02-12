@@ -1675,6 +1675,17 @@ circuits_handle_oom(size_t current_allocation)
              "MaxMemInQueues.)");
 
   {
+    const size_t recovered = buf_shrink_freelists(1);
+    if (recovered >= current_allocation) {
+      log_warn(LD_BUG, "We somehow recovered more memory from freelists "
+               "than we thought we had allocated");
+      current_allocation = 0;
+    } else {
+      current_allocation -= recovered;
+    }
+  }
+
+  {
     size_t mem_target = (size_t)(get_options()->MaxMemInQueues *
                                  FRACTION_OF_DATA_TO_RETAIN_ON_OOM);
     if (current_allocation <= mem_target)
@@ -1717,6 +1728,8 @@ circuits_handle_oom(size_t current_allocation)
   } SMARTLIST_FOREACH_END(circ);
 
   clean_cell_pool(); /* In case this helps. */
+  buf_shrink_freelists(1); /* This is necessary to actually release buffer
+                              chunks. */
 
   log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
              U64_PRINTF_ARG(mem_recovered),
