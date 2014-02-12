@@ -15,9 +15,8 @@ Changes in version 0.2.4.21 - 2014-02-1?
     - Fix a segmentation fault in our benchmark code when running with
       Fedora's OpenSSL package, or any other OpenSSL that provides
       ECDH but not P224. Fixes bug 10835; bugfix on 0.2.4.8-alpha.
-    - Move log message about circuit handshake counts into the heartbeat
-      message where it belongs, instead of logging it once per hour
-      unconditionally. Fixes bug 10485; bugfix on 0.2.4.17-rc.
+    - Turn "circuit handshake stats since last time" log messages into a
+      heartbeat message. Fixes bug 10485; bugfix on 0.2.4.17-rc.
 
   o Documentation fixes:
     - Document that all but one DirPort entry must have the NoAdvertise
