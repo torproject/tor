@@ -31,6 +31,7 @@
 
 #include "torint.h"
 #include "siphash.h"
+#include <string.h>
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
 	__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -73,6 +74,11 @@
 	HALF_ROUND(v0,v1,v2,v3,13,16);		\
 	HALF_ROUND(v2,v1,v0,v3,17,21);
 
+#if (defined(__i386) || defined(__i386__) || defined(_M_IX86) ||	\
+     defined(__x86_64) || defined(__x86_64__) ||			\
+     defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))
+#   define UNALIGNED_OK 1
+#endif
 
 uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *key) {
 	uint64_t k0 = key->k0;
@@ -89,7 +95,13 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 	uint64_t v3 = k1 ^ 0x7465646279746573ULL;
 
 	while (src_sz >= 8) {
+#ifdef UNALIGNED_OK
 		uint64_t mi = _le64toh(*in);
+#else
+		uint64_t mi;
+		memcpy(&mi, in, 8);
+		mi = _le64toh(mi);
+#endif
 		in += 1; src_sz -= 8;
 		v3 ^= mi;
 		DOUBLE_ROUND(v0,v1,v2,v3);
@@ -101,7 +113,11 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 	case 7: pt[6] = m[6];
 	case 6: pt[5] = m[5];
 	case 5: pt[4] = m[4];
+#ifdef UNALIGNED_OK
 	case 4: *((uint32_t*)&pt[0]) = *((uint32_t*)&m[0]); break;
+#else
+	case 4: pt[3] = m[3];
+#endif
 	case 3: pt[2] = m[2];
 	case 2: pt[1] = m[1];
 	case 1: pt[0] = m[0];
@@ -115,3 +131,4 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *k
 	DOUBLE_ROUND(v0,v1,v2,v3);
 	return (v0 ^ v1) ^ (v2 ^ v3);
 }
+
