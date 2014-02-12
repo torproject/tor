@@ -29,7 +29,8 @@
     Jean-Philippe Aumasson (https://131002.net/siphash/siphash24.c)
 */
 
-#include <stdint.h>
+#include "torint.h"
+#include "siphash.h"
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
 	__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -58,7 +59,6 @@
 
 #endif
 
-
 #define ROTATE(x, b) (uint64_t)( ((x) << (b)) | ( (x) >> (64 - (b))) )
 
 #define HALF_ROUND(a,b,c,d,s,t)			\
@@ -74,12 +74,14 @@
 	HALF_ROUND(v2,v1,v0,v3,17,21);
 
 
-uint64_t siphash24(const void *src, unsigned long src_sz, const char key[16]) {
-	const uint64_t *_key = (uint64_t *)key;
-	uint64_t k0 = _le64toh(_key[0]);
-	uint64_t k1 = _le64toh(_key[1]);
+uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *key) {
+	uint64_t k0 = key->k0;
+	uint64_t k1 = key->k1;
 	uint64_t b = (uint64_t)src_sz << 56;
 	const uint64_t *in = (uint64_t*)src;
+
+        uint64_t t;
+        uint8_t *pt, *m;
 
 	uint64_t v0 = k0 ^ 0x736f6d6570736575ULL;
 	uint64_t v1 = k1 ^ 0x646f72616e646f6dULL;
@@ -94,7 +96,7 @@ uint64_t siphash24(const void *src, unsigned long src_sz, const char key[16]) {
 		v0 ^= mi;
 	}
 
-	uint64_t t = 0; uint8_t *pt = (uint8_t *)&t; uint8_t *m = (uint8_t *)in;
+	t = 0; pt = (uint8_t*)&t; m = (uint8_t*)in;
 	switch (src_sz) {
 	case 7: pt[6] = m[6];
 	case 6: pt[5] = m[5];

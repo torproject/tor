@@ -61,6 +61,7 @@ LIBOR_A_SOURCES = \
   src/common/util.c					\
   src/common/util_codedigest.c				\
   src/common/sandbox.c					\
+  src/ext/csiphash.c					\
   $(libor_extra_source)
 
 LIBOR_CRYPTO_A_SOURCES = \
