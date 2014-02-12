@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+
+    - Log only one message when we start logging in an unsafe
+      way. Previously, we would log as many messages as we had
+      problems. Fix for #9870; bugfix on 0.2.5.1-alpha.
