@@ -32,6 +32,7 @@
 #include "rephist.h"
 #include "routerlist.h"
 #include "routerset.h"
+
 #include "ht.h"
 
 /********* START VARIABLES **********/
@@ -45,6 +46,9 @@ static smartlist_t *circuits_pending_chans = NULL;
 
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
+//static void circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
+//                                   const uint8_t *token);
+static void circuit_clear_rend_token(or_circuit_t *circ);
 
 /********* END VARIABLES ************/
 
@@ -756,6 +760,8 @@ circuit_free(circuit_t *circ)
     crypto_cipher_free(ocirc->n_crypto);
     crypto_digest_free(ocirc->n_digest);
 
+    circuit_clear_rend_token(ocirc);
+
     if (ocirc->rend_splice) {
       or_circuit_t *other = ocirc->rend_splice;
       tor_assert(other->base_.magic == OR_CIRCUIT_MAGIC);
@@ -1230,21 +1236,118 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
   return NULL;
 }
 
-/** Return the first OR circuit in the global list whose purpose is
- * <b>purpose</b>, and whose rend_token is the <b>len</b>-byte
- * <b>token</b>. */
+/** Map from rendezvous cookie to or_circuit_t */
+static digestmap_t *rend_cookie_map = NULL;
+
+/** Map from introduction point digest to or_circuit_t */
+static digestmap_t *intro_digest_map = NULL;
+
+/** Return the OR circuit whose purpose is <b>purpose</b>, and whose
+ * rend_token is the REND_TOKEN_LEN-byte <b>token</b>. If <b>is_rend_circ</b>,
+ * look for rendezvous point circuits; otherwise look for introduction point
+ * circuits. */
 static or_circuit_t *
-circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
-                                      size_t len)
+circuit_get_by_rend_token_and_purpose(uint8_t purpose, int is_rend_circ,
+                                      const char *token)
 {
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
-    if (! circ->marked_for_close &&
-        circ->purpose == purpose &&
-        tor_memeq(TO_OR_CIRCUIT(circ)->rend_token, token, len))
-      return TO_OR_CIRCUIT(circ);
+  or_circuit_t *circ;
+  digestmap_t *map = is_rend_circ ? rend_cookie_map : intro_digest_map;
+
+  if (!map)
+    return NULL;
+
+  circ = digestmap_get(map, token);
+  if (!circ ||
+      circ->base_.purpose != purpose ||
+      circ->base_.marked_for_close)
+    return NULL;
+
+  if (!circ->rendinfo ||
+      ! bool_eq(circ->rendinfo->is_rend_circ, is_rend_circ) ||
+      tor_memneq(circ->rendinfo->rend_token, token, REND_TOKEN_LEN)) {
+    char *t = tor_strdup(hex_str(token, REND_TOKEN_LEN));
+    log_warn(LD_BUG, "Wanted a circuit with %s:%d, but lookup returned %s:%d",
+             safe_str(t), is_rend_circ,
+             safe_str(hex_str(circ->rendinfo->rend_token, REND_TOKEN_LEN)),
+             (int)circ->rendinfo->is_rend_circ);
+    tor_free(t);
+    return NULL;
   }
-  return NULL;
+
+  return circ;
+}
+
+/** Clear the rendezvous cookie or introduction point key digest that's
+ * configured on <b>circ</b>, if any, and remove it from any such maps. */
+static void
+circuit_clear_rend_token(or_circuit_t *circ)
+{
+  or_circuit_t *found_circ;
+  digestmap_t *map;
+
+  if (!circ || !circ->rendinfo)
+    return;
+
+  map = circ->rendinfo->is_rend_circ ? rend_cookie_map : intro_digest_map;
+
+  if (!map) {
+    log_warn(LD_BUG, "Tried to clear rend token on circuit, but found no map");
+    return;
+  }
+
+  found_circ = digestmap_get(map, circ->rendinfo->rend_token);
+  if (found_circ == circ) {
+    /* Great, this is the right one. */
+    digestmap_remove(map, circ->rendinfo->rend_token);
+  } else if (found_circ) {
+    log_warn(LD_BUG, "Tried to clear rend token on circuit, but "
+             "it was already replaced in the map.");
+  } else {
+    log_warn(LD_BUG, "Tried to clear rend token on circuit, but "
+             "it not in the map at all.");
+  }
+
+  tor_free(circ->rendinfo); /* Sets it to NULL too */
+}
+
+/** Set the rendezvous cookie (if is_rend_circ), or the introduction point
+ * digest (if ! is_rend_circ) of <b>circ</b> to the REND_TOKEN_LEN-byte value
+ * in <b>token</b>, and add it to the appropriate map.  If it previously had a
+ * token, clear it.  If another circuit previously had the same
+ * cookie/intro-digest, mark that circuit and remove it from the map. */
+static void
+circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
+                       const uint8_t *token)
+{
+  digestmap_t **map_p, *map;
+  or_circuit_t *found_circ;
+
+  /* Find the right map, creating it as needed */
+  map_p = is_rend_circ ? &rend_cookie_map : &intro_digest_map;
+
+  if (!*map_p)
+    *map_p = digestmap_new();
+
+  map = *map_p;
+
+  /* If this circuit already has a token, we need to remove that. */
+  if (circ->rendinfo)
+    circuit_clear_rend_token(circ);
+
+  found_circ = digestmap_get(map, (const char *)token);
+  if (found_circ) {
+    tor_assert(found_circ != circ);
+    circuit_clear_rend_token(found_circ);
+    if (! found_circ->base_.marked_for_close)
+      circuit_mark_for_close(TO_CIRCUIT(found_circ), END_CIRC_REASON_FINISHED);
+  }
+
+  /* Now set up the rendinfo */
+  circ->rendinfo = tor_malloc(sizeof(*circ->rendinfo));
+  memcpy(circ->rendinfo->rend_token, token, REND_TOKEN_LEN);
+  circ->rendinfo->is_rend_circ = is_rend_circ ? 1 : 0;
+
+  digestmap_set(map, (const char *)token, circ);
 }
 
 /** Return the circuit waiting for a rendezvous with the provided cookie.
@@ -1255,7 +1358,7 @@ circuit_get_rendezvous(const char *cookie)
 {
   return circuit_get_by_rend_token_and_purpose(
                                      CIRCUIT_PURPOSE_REND_POINT_WAITING,
-                                     cookie, REND_COOKIE_LEN);
+                                     1, cookie);
 }
 
 /** Return the circuit waiting for intro cells of the given digest.
@@ -1265,8 +1368,23 @@ or_circuit_t *
 circuit_get_intro_point(const char *digest)
 {
   return circuit_get_by_rend_token_and_purpose(
-                                     CIRCUIT_PURPOSE_INTRO_POINT, digest,
-                                     DIGEST_LEN);
+                                     CIRCUIT_PURPOSE_INTRO_POINT, 0, digest);
+}
+
+/** Set the rendezvous cookie of <b>circ</b> to <b>cookie</b>.  If another
+ * circuit previously had that cookie, mark it. */
+void
+circuit_set_rendezvous_cookie(or_circuit_t *circ, const uint8_t *cookie)
+{
+  circuit_set_rend_token(circ, 1, cookie);
+}
+
+/** Set the intro point key digest of <b>circ</b> to <b>cookie</b>.  If another
+ * circuit previously had that intro point digest, mark it. */
+void
+circuit_set_intro_point_digest(or_circuit_t *circ, const uint8_t *digest)
+{
+  circuit_set_rend_token(circ, 0, digest);
 }
 
 /** Return a circuit that is open, is CIRCUIT_PURPOSE_C_GENERAL,
