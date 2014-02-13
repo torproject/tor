@@ -1,4 +1,11 @@
-Changes in version 0.2.5.2 - 2013-02-13
+Changes in version 0.2.5.2-alpha - 2013-02-13
+  Tor 0.2.5.2-alpha includes all the fixes from 0.2.4.18-rc and 0.2.4.20,
+  like the "poor random number generation" fix and the "building too many
+  circuits" fix. It also further improves security against potential
+  adversaries who find breaking 1024-bit crypto doable, and launches
+  pluggable transports on demand (which gets us closer to integrating
+  pluggable transport support by default -- not to be confused with Tor
+  bundles enabling pluggable transports and bridges by default).
 
   o Major features (client security):
     - When we choose a path for a 3-hop circuit, make sure it contains
@@ -84,7 +91,7 @@ Changes in version 0.2.5.2 - 2013-02-13
   o Minor features (security):
     - Always clear OpenSSL bignums before freeing them -- even bignums
       that don't contain secrets. Resolves ticket 10793. Patch by
-      Florent Daigniere.
+      Florent Daignière.
 
   o Minor features (config options and command line):
     - Add an --allow-missing-torrc commandline option that tells Tor to
