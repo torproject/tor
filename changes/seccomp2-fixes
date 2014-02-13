@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix compilation warnings and startup issues when running with
-      "Sandbox 1" and libseccomp-2.1.0. Fixes bug 10563; bugfix on
-      0.2.5.1-alpha.

@@ -1,4 +1,0 @@
-  o Documentation fixes:
-    - Document that all but one DirPort entry must have the NoAdvertise
-      flag set. Fixes bug 10470; bugfix on 0.2.3.3-alpha / 0.2.3.16-alpha.
-

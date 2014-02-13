@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Report bootstrapping progress correctly when we're downloading
-      microdescriptors. We had updated our "do we have enough microdescs
-      to begin building circuits?" logic most recently in 0.2.4.10-alpha
-      (see bug 5956), but we left the bootstrap status event logic at
-      "how far through getting 1/4 of them are we?" Fixes bug 9958;
-      bugfix on 0.2.2.36, which is where they diverged (see bug 5343).
-

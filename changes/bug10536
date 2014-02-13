@@ -1,5 +1,0 @@
-
-  o Code simplification and refactoring:
-    - Reject 0-length EXTEND2 cells more explicitly. Fixes bug 10536;
-      bugfix on 0.2.4.8-alpha. Reported by "cypherpunks".
-

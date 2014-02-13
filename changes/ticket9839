@@ -1,3 +1,0 @@
-  o Documentation:
-    - Update manpage to describe some of the files you can expect to
-      find in Tor's DataDirectory. Addresses ticket 9839.

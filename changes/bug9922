@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix a bug where clients using bridges would report themselves
-      as 50% bootstrapped even without a live consensus document.
-      Fixes bug 9922; bugfix on 0.2.1.1-alpha.
-

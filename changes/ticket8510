@@ -1,3 +1,0 @@
-  o Minor features:
-    - Add a new "HS_DESC" controller event that reports activities
-      related to hidden service descriptors. Resolves ticket 8510.

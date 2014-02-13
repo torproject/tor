@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - When receiving a VERSIONS cell with an odd number of bytes, close
-      the connection immediately since the cell is malformed. Fixes bug
-      10365; bugfix on 0.2.0.10-alpha. Spotted by "bobnomnom"; fix by
-      "rl1987".
-
-

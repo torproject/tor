@@ -1,4 +1,0 @@
-  o Minor features:
-    - If Python is installed, "make check" now runs extra tests beyond
-      the unit test scripts.
-

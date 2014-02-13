@@ -1,6 +1,0 @@
-  o Minor features:
-    - Add support for the TPROXY transparent proxying facility on Linux.
-      See documentation for the new TransProxyType option for more
-      details. Implementation by "thomo". Closes ticket 10582.
-
-

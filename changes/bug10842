@@ -1,5 +1,0 @@
-  o Minor bugfixes (log messages):
-    - Suppress a warning where, if there's only one directory authority
-      in the network, we would complain that votes and signatures cannot
-      be uploaded to other directory authorities. Fixes bug 10842;
-      bugfix on 0.2.2.26-beta.

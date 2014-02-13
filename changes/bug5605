@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - If changing a config option via "setconf" fails in a recoverable
-      way, we used to nonetheless write our new control ports to the
-      file described by the "ControlPortWriteToFile" option. Now we only
-      write out that file if we successfully switch to the new config
-      option. Fixes bug 5605; bugfix on 0.2.2.26-beta. Patch from "Ryman".
-

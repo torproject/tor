@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Fix a bug where the first connection works to a bridge that uses a
-      pluggable transport with client-side parameters, but we don't send
-      the client-side parameters on subsequent connections. (We don't
-      use any pluggable transports with client-side parameters yet,
-      but ScrambleSuit will soon become the first one.) Fixes bug 9162;
-      bugfix on 0.2.0.3-alpha. Based on a patch from "rl1987".
-

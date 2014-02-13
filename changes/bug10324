@@ -1,4 +1,0 @@
-  o Tool changes:
-    - Make the "tor-gencert" tool used by directory authority operators
-      create 2048-bit signing keys by default (rather than 1024-bit, since
-      1024-bit is uncomfortably small these days). Addresses ticket 10324.

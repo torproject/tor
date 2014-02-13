@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Turn "circuit handshake stats since last time" log messages into a
-      heartbeat message. Fixes bug 10485; bugfix on 0.2.4.17-rc.
-

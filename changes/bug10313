@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Remove an erroneous (but impossible and thus harmless) pointer
-      comparison that would have allowed compilers to skip a bounds
-      check in channeltls.c. Fixes bugs 10313 and 9980; bugfix on
-      0.2.0.10-alpha. Noticed by Jared L Wong and David Fifield.
-

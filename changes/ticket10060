@@ -1,5 +1,0 @@
-  o Minor features:
-    - Add an --allow-missing-torrc commandline option that tells Tor to
-      run even if the configuration file specified by -f is not available.
-      Implements ticket 10060.
-

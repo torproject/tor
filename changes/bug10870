@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Remove data structures which were introduced to implement the
-      CellStatistics option: they are now redundant with the addition
-      of a timestamp to the regular packed_cell_t data structure, which
-      we did in 0.2.4.18-rc in order to resolve ticket 9093. Implements
-      ticket 10870.

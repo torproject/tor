@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a segfault on SIGUSR1, where we had freed a connection but did
-      not entirely remove it from the connection lists. Fixes bug 9602;
-      bugfix on 0.2.4.4-alpha.

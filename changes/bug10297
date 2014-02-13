@@ -1,5 +1,0 @@
-  o Minor features:
-    - On Windows, spawn background processes using the CREATE_NO_WINDOW
-      flag. Now Tor Browser Bundle 3.5 with pluggable transports enabled
-      doesn't pop up a blank console window. (In Tor Browser Bundle 2.x,
-      Vidalia set this option for us.) Implements ticket 10297.

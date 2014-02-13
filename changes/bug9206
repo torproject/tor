@@ -1,6 +1,0 @@
-  o Minor features (testing):
-    - When bootstrapping a test network, sometimes very few relays get
-      the Guard flag. Now a new option "TestingDirAuthVoteGuard" can
-      specify a set of relays which should be voted Guard regardless of
-      their uptime or bandwidth. Addresses ticket 9206.
-

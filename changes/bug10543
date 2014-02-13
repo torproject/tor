@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - If we set the ExitNodes option but it doesn't include any nodes
-      that have the Exit flag, we would choose not to bootstrap. Now we
-      bootstrap so long as ExitNodes includes nodes which can exit to
-      some port. Fixes bug 10543; bugfix on 0.2.4.10-alpha.
-
