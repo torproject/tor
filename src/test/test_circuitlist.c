@@ -161,8 +161,93 @@ test_clist_maps(void *arg)
   UNMOCK(circuitmux_detach_circuit);
 }
 
+static void
+test_rend_token_maps(void *arg)
+{
+  or_circuit_t *c1, *c2, *c3, *c4;
+  const uint8_t tok1[REND_TOKEN_LEN] = "The cat can't tell y";
+  const uint8_t tok2[REND_TOKEN_LEN] = "ou its name, and it ";
+  const uint8_t tok3[REND_TOKEN_LEN] = "doesn't really care.";
+  /* -- Adapted from a quote by Fredrik Lundh. */
+
+  (void)arg;
+  (void)tok1; //xxxx
+  c1 = or_circuit_new(0, NULL);
+  c2 = or_circuit_new(0, NULL);
+  c3 = or_circuit_new(0, NULL);
+  c4 = or_circuit_new(0, NULL);
+
+  tt_int_op(strlen((char*)tok1), ==, REND_TOKEN_LEN);
+
+  /* No maps; nothing there. */
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok1));
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok1));
+
+  circuit_set_rendezvous_cookie(c1, tok1);
+  circuit_set_intro_point_digest(c2, tok2);
+
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok3));
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok3));
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok2));
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok1));
+
+  /* Without purpose set, we don't get the circuits */
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok1));
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok2));
+
+  c1->base_.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
+  c2->base_.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
+
+  /* Okay, make sure they show up now. */
+  tt_ptr_op(c1, ==, circuit_get_rendezvous(tok1));
+  tt_ptr_op(c2, ==, circuit_get_intro_point(tok2));
+
+  /* Two items at the same place with the same token. */
+  c3->base_.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
+  circuit_set_rendezvous_cookie(c3, tok2);
+  tt_ptr_op(c2, ==, circuit_get_intro_point(tok2));
+  tt_ptr_op(c3, ==, circuit_get_rendezvous(tok2));
+
+  /* Marking a circuit makes it not get returned any more */
+  circuit_mark_for_close(TO_CIRCUIT(c1), END_CIRC_REASON_FINISHED);
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok1));
+  circuit_free(TO_CIRCUIT(c1));
+  c1 = NULL;
+
+  /* Freeing a circuit makes it not get returned any more. */
+  circuit_free(TO_CIRCUIT(c2));
+  c2 = NULL;
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok2));
+
+  /* c3 -- are you still there? */
+  tt_ptr_op(c3, ==, circuit_get_rendezvous(tok2));
+  /* Change its cookie.  This never happens in Tor per se, but hey. */
+  c3->base_.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
+  circuit_set_intro_point_digest(c3, tok3);
+
+  tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok2));
+  tt_ptr_op(c3, ==, circuit_get_intro_point(tok3));
+
+  /* Now replace c3 with c4. */
+  c4->base_.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
+  circuit_set_intro_point_digest(c4, tok3);
+
+  tt_ptr_op(c4, ==, circuit_get_intro_point(tok3));
+
+  tt_ptr_op(c3->rendinfo, ==, NULL);
+  tt_ptr_op(c4->rendinfo, !=, NULL);
+  test_mem_op(c4->rendinfo, ==, tok3, REND_TOKEN_LEN);
+
+ done:
+  circuit_free(TO_CIRCUIT(c1));
+  circuit_free(TO_CIRCUIT(c2));
+  circuit_free(TO_CIRCUIT(c3));
+  circuit_free(TO_CIRCUIT(c4));
+}
+
 struct testcase_t circuitlist_tests[] = {
   { "maps", test_clist_maps, TT_FORK, NULL, NULL },
+  { "rend_token_maps", test_rend_token_maps, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
