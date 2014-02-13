@@ -1354,21 +1354,22 @@ circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
  * Return NULL if no such circuit is found.
  */
 or_circuit_t *
-circuit_get_rendezvous(const char *cookie)
+circuit_get_rendezvous(const uint8_t *cookie)
 {
   return circuit_get_by_rend_token_and_purpose(
                                      CIRCUIT_PURPOSE_REND_POINT_WAITING,
-                                     1, cookie);
+                                     1, (const char*)cookie);
 }
 
 /** Return the circuit waiting for intro cells of the given digest.
  * Return NULL if no such circuit is found.
  */
 or_circuit_t *
-circuit_get_intro_point(const char *digest)
+circuit_get_intro_point(const uint8_t *digest)
 {
   return circuit_get_by_rend_token_and_purpose(
-                                     CIRCUIT_PURPOSE_INTRO_POINT, 0, digest);
+                                     CIRCUIT_PURPOSE_INTRO_POINT, 0,
+                                     (const char *)digest);
 }
 
 /** Set the rendezvous cookie of <b>circ</b> to <b>cookie</b>.  If another
