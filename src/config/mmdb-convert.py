@@ -380,6 +380,7 @@ def fmt_item_ipv6(entry):
 
 IPV4_MAPPED_IPV6_PREFIX = "0"*80 + "1"*16
 IPV6_6TO4_PREFIX = "0010000000000010"
+TEREDO_IPV6_PREFIX = "0010000000000001" + "0"*16
 
 def dump_item_ipv6(entries, prefix, val):
     """Dump the information for an IPv6 address prefix to entries, where
@@ -391,7 +392,8 @@ def dump_item_ipv6(entries, prefix, val):
     """
     if prefix.startswith(IPV4_PREFIX) or \
        prefix.startswith(IPV4_MAPPED_IPV6_PREFIX) or \
-       prefix.startswith(IPV6_6TO4_PREFIX):
+       prefix.startswith(IPV6_6TO4_PREFIX) or \
+       prefix.startswith(TEREDO_IPV6_PREFIX):
         return
     v = int(prefix, 2)
     shift = 128 - len(prefix)
