@@ -26,8 +26,6 @@ void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
                              const uint8_t *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
-rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
-                                                         size_t len);
 int rend_get_service_id(crypto_pk_t *pk, char *out);
 void rend_encoded_v2_service_descriptor_free(
                                rend_encoded_v2_service_descriptor_t *desc);
