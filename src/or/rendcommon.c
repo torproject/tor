@@ -918,12 +918,10 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
  *
  * If we have a newer descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
- * Return -2 if we are not acting as hidden service directory;
- * return -1 if the descriptor(s) were not parsable; return 0 if all
- * descriptors are the same or older than those we've already got;
- * return a positive number for the number of novel stored descriptors.
+ *
+ * Return an appropriate rend_cache_store_status_t.
  */
-int
+rend_cache_store_status_t
 rend_cache_store_v2_desc_as_dir(const char *desc)
 {
   rend_service_descriptor_t *parsed;
@@ -943,7 +941,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     /* Cannot store descs, because we are (currently) not acting as
      * hidden service directory. */
     log_info(LD_REND, "Cannot store descs: Not acting as hs dir");
-    return -2;
+    return RCS_NOTDIR;
   }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                           &intro_size, &encoded_size,
@@ -1019,11 +1017,11 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   }
   if (!number_parsed) {
     log_info(LD_REND, "Could not parse any descriptor.");
-    return -1;
+    return RCS_BADDESC;
   }
   log_info(LD_REND, "Parsed %d and added %d descriptor%s.",
            number_parsed, number_stored, number_stored != 1 ? "s" : "");
-  return number_stored;
+  return RCS_OKAY;
 }
 
 /** Parse the v2 service descriptor in <b>desc</b>, decrypt the included list
@@ -1035,11 +1033,10 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
  * If we have an older descriptor with the same ID, replace it.
  * If the descriptor's service ID does not match
  * <b>rend_query</b>-\>onion_address, reject it.
- * Return -2 if it's malformed or otherwise rejected;
- * return 0 if it's the same or older
- * than one we've already got; return 1 if it's novel.
+ *
+ * Return an appropriate rend_cache_store_status_t.
  */
-int
+rend_cache_store_status_t
 rend_cache_store_v2_desc_as_client(const char *desc,
                                    const rend_data_t *rend_query)
 {
@@ -1068,7 +1065,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   char key[REND_SERVICE_ID_LEN_BASE32+2];
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   rend_cache_entry_t *e;
-  int retval;
+  rend_cache_store_status_t retval = RCS_BADDESC;
   tor_assert(rend_cache);
   tor_assert(desc);
   /* Parse the descriptor. */
@@ -1076,20 +1073,17 @@ rend_cache_store_v2_desc_as_client(const char *desc,
                                        &intro_size, &encoded_size,
                                        &next_desc, desc) < 0) {
     log_warn(LD_REND, "Could not parse descriptor.");
-    retval = -2;
     goto err;
   }
   /* Compute service ID from public key. */
   if (rend_get_service_id(parsed->pk, service_id)<0) {
     log_warn(LD_REND, "Couldn't compute service ID.");
-    retval = -2;
     goto err;
   }
   if (strcmp(rend_query->onion_address, service_id)) {
     log_warn(LD_REND, "Received service descriptor for service ID %s; "
              "expected descriptor for service ID %s.",
              service_id, safe_str(rend_query->onion_address));
-    retval = -2;
     goto err;
   }
   /* Decode/decrypt introduction points. */
@@ -1121,7 +1115,6 @@ rend_cache_store_v2_desc_as_client(const char *desc,
       log_warn(LD_REND, "Failed to parse introduction points. Either the "
                "service has published a corrupt descriptor or you have "
                "provided invalid authorization data.");
-      retval = -2;
       goto err;
     } else if (n_intro_points > MAX_INTRO_POINTS) {
       log_warn(LD_REND, "Found too many introduction points on a hidden "
@@ -1129,7 +1122,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
                "attempt to improve reliability, but it could also be an "
                "attempt to do a guard enumeration attack. Rejecting.",
                safe_str_client(rend_query->onion_address));
-      retval = -2;
+
       goto err;
     }
   } else {
@@ -1142,14 +1135,12 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
     log_warn(LD_REND, "Service descriptor with service ID %s is too old.",
              safe_str_client(service_id));
-    retval = -2;
     goto err;
   }
   /* Is descriptor too far in the future? */
   if (parsed->timestamp > now + REND_CACHE_MAX_SKEW) {
     log_warn(LD_REND, "Service descriptor with service ID %s is too far in "
                       "the future.", safe_str_client(service_id));
-    retval = -2;
     goto err;
   }
   /* Do we already have a newer descriptor? */
@@ -1159,16 +1150,14 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_info(LD_REND, "We already have a newer service descriptor for "
                       "service ID %s with the same desc ID and version.",
              safe_str_client(service_id));
-    retval = 0;
-    goto err;
+    goto okay;
   }
   /* Do we already have this descriptor? */
   if (e && !strcmp(desc, e->desc)) {
     log_info(LD_REND,"We already have this service descriptor %s.",
              safe_str_client(service_id));
     e->received = time(NULL);
-    retval = 0;
-    goto err;
+    goto okay;
   }
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
@@ -1184,7 +1173,10 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   e->len = encoded_size;
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str_client(service_id), (int)encoded_size);
-  return 1;
+  return RCS_OKAY;
+
+ okay:
+  retval = RCS_OKAY;
 
  err:
   rend_service_descriptor_free(parsed);

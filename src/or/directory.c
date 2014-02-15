@@ -2094,13 +2094,15 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     switch (status_code) {
       case 200:
         switch (rend_cache_store_v2_desc_as_client(body, conn->rend_data)) {
-          case -2:
+          case RCS_BADDESC:
+          case RCS_NOTDIR: /* Impossible */
             log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
                      "Retrying at another directory.");
             /* We'll retry when connection_about_to_close_connection()
              * cleans this dir conn up. */
             SEND_HS_DESC_FAILED_EVENT();
             break;
+          case RCS_OKAY:
           default:
             /* success. notify pending connections about this. */
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
@@ -3241,19 +3243,20 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       connection_dir_is_encrypted(conn) &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     switch (rend_cache_store_v2_desc_as_dir(body)) {
-      case -2:
+      case RCS_NOTDIR:
         log_info(LD_REND, "Rejected v2 rend descriptor (length %d) from %s "
                  "since we're not currently a hidden service directory.",
                  (int)body_len, conn->base_.address);
         write_http_status_line(conn, 503, "Currently not acting as v2 "
                                "hidden service directory");
         break;
-      case -1:
+      case RCS_BADDESC:
         log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
                  (int)body_len, conn->base_.address);
         write_http_status_line(conn, 400,
                                "Invalid v2 service descriptor rejected");
         break;
+      case RCS_OKAY:
       default:
         write_http_status_line(conn, 200, "Service descriptor (v2) stored");
         log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");

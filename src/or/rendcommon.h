@@ -40,9 +40,17 @@ int rend_valid_service_id(const char *query);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
-int rend_cache_store_v2_desc_as_client(const char *desc,
+/** Return value from rend_cache_store_v2_desc_as_{dir,client}. */
+typedef enum {
+  RCS_NOTDIR = -2, /**< We're not a directory */
+  RCS_BADDESC = -1, /**< This descriptor is no good. */
+  RCS_OKAY = 0 /**< All worked as expected */
+} rend_cache_store_status_t;
+
+rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
+rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
                                        const rend_data_t *rend_query);
-int rend_cache_store_v2_desc_as_dir(const char *desc);
+
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                uint8_t period, rend_auth_type_t auth_type,
