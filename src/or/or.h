@@ -400,13 +400,10 @@ typedef enum {
 #define CONTROL_CONN_STATE_NEEDAUTH 2
 #define CONTROL_CONN_STATE_MAX_ 2
 
-#define DIR_PURPOSE_MIN_ 3
-/** A connection to a directory server: download a rendezvous
- * descriptor. */
-#define DIR_PURPOSE_FETCH_RENDDESC 3
-/** A connection to a directory server: set after a rendezvous
+#define DIR_PURPOSE_MIN_ 4
+/** A connection to a directory server: set after a v2 rendezvous
  * descriptor is downloaded. */
-#define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
+#define DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 4
 /** A connection to a directory server: download one or more server
  * descriptors. */
 #define DIR_PURPOSE_FETCH_SERVERDESC 6
@@ -415,9 +412,6 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_EXTRAINFO 7
 /** A connection to a directory server: upload a server descriptor. */
 #define DIR_PURPOSE_UPLOAD_DIR 8
-/** A connection to a directory server: upload a rendezvous
- * descriptor. */
-#define DIR_PURPOSE_UPLOAD_RENDDESC 9
 /** A connection to a directory server: upload a v3 networkstatus vote. */
 #define DIR_PURPOSE_UPLOAD_VOTE 10
 /** A connection to a directory server: upload a v3 consensus signature */
@@ -451,7 +445,6 @@ typedef enum {
  * directory server. */
 #define DIR_PURPOSE_IS_UPLOAD(p)                \
   ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
-   (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||          \
    (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
    (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
 
@@ -2599,8 +2592,6 @@ typedef enum {
   V1_DIRINFO      = 1 << 0,
   /** Serves/signs v3 directory information: votes, consensuses, certs */
   V3_DIRINFO      = 1 << 2,
-  /** Serves hidden service descriptors. */
-  HIDSERV_DIRINFO = 1 << 3,
   /** Serves bridge descriptors. */
   BRIDGE_DIRINFO  = 1 << 4,
   /** Serves extrainfo documents. */
