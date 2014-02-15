@@ -132,6 +132,9 @@ crypto_get_rsa_padding(int padding)
 }
 
 /** Boolean: has OpenSSL's crypto been initialized? */
+static int crypto_early_initialized_ = 0;
+
+/** Boolean: has OpenSSL's crypto been initialized? */
 static int crypto_global_initialized_ = 0;
 
 /** Log all pending crypto errors at level <b>severity</b>.  Use
@@ -242,15 +245,46 @@ crypto_openssl_get_header_version_str(void)
   return crypto_openssl_header_version_str;
 }
 
+/** Make sure that openssl is using its default PRNG. Return 1 if we had to
+ * adjust it; 0 otherwise. */
+static int
+crypto_force_rand_ssleay(void)
+{
+  if (RAND_get_rand_method() != RAND_SSLeay()) {
+    log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
+               "a replacement the OpenSSL RNG. Resetting it to the default "
+               "implementation.");
+    RAND_set_rand_method(RAND_SSLeay());
+    return 1;
+  }
+  return 0;
+}
+
+/** Set up the siphash key if we haven't already done so. */
+int
+crypto_init_siphash_key(void)
+{
+  static int have_seeded_siphash = 0;
+  struct sipkey key;
+  if (have_seeded_siphash)
+    return 0;
+
+  if (crypto_rand((char*) &key, sizeof(key)) < 0)
+    return -1;
+  siphash_set_global_key(&key);
+  have_seeded_siphash = 1;
+  return 0;
+}
+
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
-crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
+crypto_early_init(void)
 {
-  if (!crypto_global_initialized_) {
+  if (!crypto_early_initialized_) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
-    crypto_global_initialized_ = 1;
+
     setup_openssl_threading();
 
     if (SSLeay() == OPENSSL_VERSION_NUMBER &&
@@ -271,6 +305,26 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
                  "or later.",
                  crypto_openssl_get_version_str());
     }
+
+    crypto_force_rand_ssleay();
+
+    if (crypto_seed_rng(1) < 0)
+      return -1;
+    if (crypto_init_siphash_key() < 0)
+      return -1;
+  }
+  return 0;
+}
+
+/** Initialize the crypto library.  Return 0 on success, -1 on failure.
+ */
+int
+crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
+{
+  if (!crypto_global_initialized_) {
+    crypto_early_init();
+
+    crypto_global_initialized_ = 1;
 
     if (useAccel > 0) {
 #ifdef DISABLE_ENGINES
@@ -335,17 +389,13 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
 
-    if (RAND_get_rand_method() != RAND_SSLeay()) {
-      log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
-                 "a replacement the OpenSSL RNG. Resetting it to the default "
-                 "implementation.");
-      RAND_set_rand_method(RAND_SSLeay());
+    if (crypto_force_rand_ssleay()) {
+      if (crypto_seed_rng(1) < 0)
+        return -1;
     }
 
     evaluate_evp_for_aes(-1);
     evaluate_ctr_for_aes();
-
-    return crypto_seed_rng(1);
   }
   return 0;
 }

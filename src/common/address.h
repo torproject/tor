@@ -167,7 +167,7 @@ int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
  * "exactly". */
 #define tor_addr_eq(a,b) (0==tor_addr_compare((a),(b),CMP_EXACT))
 
-unsigned int tor_addr_hash(const tor_addr_t *addr);
+uint64_t tor_addr_hash(const tor_addr_t *addr);
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
@@ -192,6 +192,7 @@ const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
                              int decorate);
 int tor_addr_parse(tor_addr_t *addr, const char *src);
 void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
+void tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 /** Set <b>dest</b> to the IPv4 address encoded in <b>v4addr</b> in host
  * order. */

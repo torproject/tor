@@ -86,6 +86,7 @@ ht_string_hash(const char *s)
 }
 #endif
 
+#if 0
 /** Basic string hash function, from Python's str.__hash__() */
 static INLINE unsigned
 ht_string_hash(const char *s)
@@ -100,6 +101,7 @@ ht_string_hash(const char *s)
   h ^= (unsigned)(cp-(const unsigned char*)s);
   return h;
 }
+#endif
 
 #ifndef HT_NO_CACHE_HASH_VALUES
 #define HT_SET_HASH_(elm, field, hashfn)        \

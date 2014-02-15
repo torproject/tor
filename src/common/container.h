@@ -7,6 +7,7 @@
 #define TOR_CONTAINER_H
 
 #include "util.h"
+#include "siphash.h"
 
 /** A resizeable list of pointers, with associated helpful functionality.
  *
@@ -620,11 +621,11 @@ typedef struct {
 static INLINE void
 digestset_add(digestset_t *set, const char *digest)
 {
-  const uint32_t *p = (const uint32_t *)digest;
-  const uint32_t d1 = p[0] + (p[1]>>16);
-  const uint32_t d2 = p[1] + (p[2]>>16);
-  const uint32_t d3 = p[2] + (p[3]>>16);
-  const uint32_t d4 = p[3] + (p[0]>>16);
+  const uint64_t x = siphash24g(digest, 20);
+  const uint32_t d1 = (uint32_t) x;
+  const uint32_t d2 = (uint32_t)( (x>>16) + x);
+  const uint32_t d3 = (uint32_t)( (x>>32) + x);
+  const uint32_t d4 = (uint32_t)( (x>>48) + x);
   bitarray_set(set->ba, BIT(d1));
   bitarray_set(set->ba, BIT(d2));
   bitarray_set(set->ba, BIT(d3));
@@ -636,11 +637,11 @@ digestset_add(digestset_t *set, const char *digest)
 static INLINE int
 digestset_contains(const digestset_t *set, const char *digest)
 {
-  const uint32_t *p = (const uint32_t *)digest;
-  const uint32_t d1 = p[0] + (p[1]>>16);
-  const uint32_t d2 = p[1] + (p[2]>>16);
-  const uint32_t d3 = p[2] + (p[3]>>16);
-  const uint32_t d4 = p[3] + (p[0]>>16);
+  const uint64_t x = siphash24g(digest, 20);
+  const uint32_t d1 = (uint32_t) x;
+  const uint32_t d2 = (uint32_t)( (x>>16) + x);
+  const uint32_t d3 = (uint32_t)( (x>>32) + x);
+  const uint32_t d4 = (uint32_t)( (x>>48) + x);
   return bitarray_is_set(set->ba, BIT(d1)) &&
          bitarray_is_set(set->ba, BIT(d2)) &&
          bitarray_is_set(set->ba, BIT(d3)) &&

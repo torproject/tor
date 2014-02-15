@@ -45,12 +45,7 @@ struct microdesc_cache_t {
 static INLINE unsigned int
 microdesc_hash_(microdesc_t *md)
 {
-  unsigned *d = (unsigned*)md->digest;
-#if SIZEOF_INT == 4
-  return d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6] ^ d[7];
-#else
-  return d[0] ^ d[1] ^ d[2] ^ d[3];
-#endif
+  return (unsigned) siphash24g(md->digest, sizeof(md->digest));
 }
 
 /** Helper: compares <b>a</b> and </b> for equality for hash-table purposes. */

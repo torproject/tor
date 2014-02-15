@@ -239,7 +239,7 @@ cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 static INLINE unsigned int
 cached_resolve_hash(cached_resolve_t *a)
 {
-  return ht_string_hash(a->address);
+  return (unsigned) siphash24g((const uint8_t*)a->address, strlen(a->address));
 }
 
 HT_PROTOTYPE(cache_map, cached_resolve_t, node, cached_resolve_hash,

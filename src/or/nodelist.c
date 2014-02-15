@@ -43,14 +43,7 @@ typedef struct nodelist_t {
 static INLINE unsigned int
 node_id_hash(const node_t *node)
 {
-#if SIZEOF_INT == 4
-  const uint32_t *p = (const uint32_t*)node->identity;
-  return p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4];
-#elif SIZEOF_INT == 8
-  const uint64_t *p = (const uint32_t*)node->identity;
-  const uint32_t *p32 = (const uint32_t*)node->identity;
-  return p[0] ^ p[1] ^ p32[4];
-#endif
+  return (unsigned) siphash24g(node->identity, DIGEST_LEN);
 }
 
 static INLINE unsigned int
