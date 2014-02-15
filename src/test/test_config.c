@@ -291,7 +291,6 @@ test_config_write_to_data_subdir(void *arg)
   test_streq(cp, str);
   tor_free(cp);
 
-
  done:
   (void) unlink(filepath);
   rmdir(options->DataDirectory);
