@@ -472,64 +472,74 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 #define DECLARE_TYPED_DIGESTMAP_FNS(prefix, maptype, valtype)           \
   typedef struct maptype maptype;                                       \
   typedef struct prefix##iter_t prefix##iter_t;                         \
-  static INLINE maptype* prefix##new(void)                              \
+  ATTR_UNUSED static INLINE maptype*                                    \
+  prefix##new(void)                                                     \
   {                                                                     \
     return (maptype*)digestmap_new();                                   \
   }                                                                     \
-  static INLINE digestmap_t* prefix##to_digestmap(maptype *map)         \
+  ATTR_UNUSED static INLINE digestmap_t*                                \
+  prefix##to_digestmap(maptype *map)                                    \
   {                                                                     \
     return (digestmap_t*)map;                                           \
   }                                                                     \
-  static INLINE valtype* prefix##get(maptype *map, const char *key)     \
+  ATTR_UNUSED static INLINE valtype*                                    \
+  prefix##get(maptype *map, const char *key)     \
   {                                                                     \
     return (valtype*)digestmap_get((digestmap_t*)map, key);             \
   }                                                                     \
-  static INLINE valtype* prefix##set(maptype *map, const char *key,     \
-                                     valtype *val)                      \
+  ATTR_UNUSED static INLINE valtype*                                    \
+  prefix##set(maptype *map, const char *key, valtype *val)              \
   {                                                                     \
     return (valtype*)digestmap_set((digestmap_t*)map, key, val);        \
   }                                                                     \
-  static INLINE valtype* prefix##remove(maptype *map, const char *key)  \
+  ATTR_UNUSED static INLINE valtype*                                    \
+  prefix##remove(maptype *map, const char *key)                         \
   {                                                                     \
     return (valtype*)digestmap_remove((digestmap_t*)map, key);          \
   }                                                                     \
-  static INLINE void prefix##free(maptype *map, void (*free_val)(void*)) \
+  ATTR_UNUSED static INLINE void                                        \
+  prefix##free(maptype *map, void (*free_val)(void*))                   \
   {                                                                     \
     digestmap_free((digestmap_t*)map, free_val);                        \
   }                                                                     \
-  static INLINE int prefix##isempty(maptype *map)                       \
+  ATTR_UNUSED static INLINE int                                         \
+  prefix##isempty(maptype *map)                                         \
   {                                                                     \
     return digestmap_isempty((digestmap_t*)map);                        \
   }                                                                     \
-  static INLINE int prefix##size(maptype *map)                          \
+  ATTR_UNUSED static INLINE int                                         \
+  prefix##size(maptype *map)                                            \
   {                                                                     \
     return digestmap_size((digestmap_t*)map);                           \
   }                                                                     \
-  static INLINE prefix##iter_t *prefix##iter_init(maptype *map)         \
+  ATTR_UNUSED static INLINE                                             \
+  prefix##iter_t *prefix##iter_init(maptype *map)                       \
   {                                                                     \
     return (prefix##iter_t*) digestmap_iter_init((digestmap_t*)map);    \
   }                                                                     \
-  static INLINE prefix##iter_t *prefix##iter_next(maptype *map,         \
-                                                  prefix##iter_t *iter) \
+  ATTR_UNUSED static INLINE                                             \
+  prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter) \
   {                                                                     \
     return (prefix##iter_t*) digestmap_iter_next(                       \
                        (digestmap_t*)map, (digestmap_iter_t*)iter);     \
   }                                                                     \
-  static INLINE prefix##iter_t *prefix##iter_next_rmv(maptype *map,     \
-                                                  prefix##iter_t *iter) \
+  ATTR_UNUSED static INLINE prefix##iter_t*                             \
+  prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter)             \
   {                                                                     \
     return (prefix##iter_t*) digestmap_iter_next_rmv(                   \
                        (digestmap_t*)map, (digestmap_iter_t*)iter);     \
   }                                                                     \
-  static INLINE void prefix##iter_get(prefix##iter_t *iter,             \
-                                      const char **keyp,                \
-                                      valtype **valp)                   \
+  ATTR_UNUSED static INLINE void                                        \
+  prefix##iter_get(prefix##iter_t *iter,                                \
+                   const char **keyp,                                   \
+                   valtype **valp)                                      \
   {                                                                     \
     void *v;                                                            \
     digestmap_iter_get((digestmap_iter_t*) iter, keyp, &v);             \
     *valp = v;                                                          \
   }                                                                     \
-  static INLINE int prefix##iter_done(prefix##iter_t *iter)             \
+  ATTR_UNUSED static INLINE int                                         \
+  prefix##iter_done(prefix##iter_t *iter)                               \
   {                                                                     \
     return digestmap_iter_done((digestmap_iter_t*)iter);                \
   }

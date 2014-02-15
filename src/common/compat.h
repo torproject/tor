@@ -169,6 +169,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
  *
  * #define ATTR_NONNULL(x) __attribute__((nonnull x)) */
 #define ATTR_NONNULL(x)
+#define ATTR_UNUSED __attribute__ ((unused))
 
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be true.
@@ -192,6 +193,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_MALLOC
 #define ATTR_NORETURN
 #define ATTR_NONNULL(x)
+#define ATTR_UNUSED
 #define PREDICT_LIKELY(exp) (exp)
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif
