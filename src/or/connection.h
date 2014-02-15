@@ -178,7 +178,6 @@ connection_get_outbuf_len(connection_t *conn)
 connection_t *connection_get_by_global_id(uint64_t id);
 
 connection_t *connection_get_by_type(int type);
-connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_addr_port_purpose(int type,
                                                    const tor_addr_t *addr,
                                                    uint16_t port, int purpose);

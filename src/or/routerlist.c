@@ -130,16 +130,6 @@ static smartlist_t *warned_nicknames = NULL;
  * download is low. */
 static time_t last_descriptor_download_attempted = 0;
 
-/** When we last computed the weights to use for bandwidths on directory
- * requests, what were the total weighted bandwidth, and our share of that
- * bandwidth?  Used to determine what fraction of directory requests we should
- * expect to see.
- *
- * @{ */
-static uint64_t sl_last_total_weighted_bw = 0,
-  sl_last_weighted_bw_of_me = 0;
-/**@}*/
-
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
@@ -1270,38 +1260,6 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
   return choice;
 }
 
-/** Try to determine which fraction ofv3 directory requests aimed at
- * caches will be sent to us. Set
- * *<b>v3_share_out</b> to the fraction of v3 protocol shares we
- * expect to see.  Return 0 on success, negative on failure. */
-/* XXXX This function is unused. */
-int
-router_get_my_share_of_directory_requests(double *v3_share_out)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  const routerstatus_t *rs;
-  const int pds_flags = PDS_ALLOW_SELF|PDS_IGNORE_FASCISTFIREWALL;
-  *v3_share_out = 0.0;
-  if (!me)
-    return -1;
-  rs = router_get_consensus_status_by_id(me->cache_info.identity_digest);
-  if (!rs)
-    return -1;
-
-  /* Calling for side effect */
-  /* XXXX This is a bit of a kludge */
-  {
-    sl_last_total_weighted_bw = 0;
-    router_pick_directory_server(V3_DIRINFO, pds_flags);
-    if (sl_last_total_weighted_bw != 0) {
-      *v3_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
-        U64_TO_DBL(sl_last_total_weighted_bw);
-    }
-  }
-
-  return 0;
-}
-
 /** Return the dir_server_t for the directory authority whose identity
  * key hashes to <b>digest</b>, or NULL if no such authority is known.
  */
@@ -1944,8 +1902,7 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
   if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0)
     return NULL;
 
-  scale_array_elements_to_u64(bandwidths, smartlist_len(sl),
-                              &sl_last_total_weighted_bw);
+  scale_array_elements_to_u64(bandwidths, smartlist_len(sl), NULL);
 
   {
     int idx = choose_array_element_by_weight(bandwidths,
@@ -2054,7 +2011,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
   // Cycle through smartlist and total the bandwidth.
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0, is_me = 0;
+    int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
     double weight = 1;
     is_exit = node->is_exit && ! node->is_bad_exit;
     is_guard = node->is_possible_guard;
@@ -2077,7 +2034,6 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       /* We can't use this one. */
       continue;
     }
-    is_me = router_digest_is_me(node->identity);
 
     if (is_guard && is_exit) {
       weight = (is_dir ? Wdb*Wd : Wd);
@@ -2096,8 +2052,6 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       weight = 0.0;
 
     bandwidths[node_sl_idx].dbl = weight*this_bw + 0.5;
-    if (is_me)
-      sl_last_weighted_bw_of_me = (uint64_t) bandwidths[node_sl_idx].dbl;
   } SMARTLIST_FOREACH_END(node);
 
   log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
@@ -2179,7 +2133,6 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
   bitarray_t *fast_bits;
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
-  int me_idx = -1;
 
   // This function does not support WEIGHT_FOR_DIR
   // or WEIGHT_FOR_MID
@@ -2212,9 +2165,6 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
     int is_known = 1;
     uint32_t this_bw = 0;
     i = node_sl_idx;
-
-    if (router_digest_is_me(node->identity))
-      me_idx = node_sl_idx;
 
     is_exit = node->is_exit;
     is_guard = node->is_possible_guard;
@@ -2319,7 +2269,6 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
     if (guard_weight <= 0.0)
       guard_weight = 0.0;
 
-    sl_last_weighted_bw_of_me = 0;
     for (i=0; i < (unsigned)smartlist_len(sl); i++) {
       tor_assert(bandwidths[i].dbl >= 0.0);
 
@@ -2332,8 +2281,6 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
       else if (is_exit)
         bandwidths[i].dbl *= exit_weight;
 
-      if (i == (unsigned) me_idx)
-        sl_last_weighted_bw_of_me = (uint64_t) bandwidths[i].dbl;
     }
   }
 
@@ -2352,8 +2299,7 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
             guard_weight, (int)(rule == WEIGHT_FOR_GUARD));
 #endif
 
-  scale_array_elements_to_u64(bandwidths, smartlist_len(sl),
-                              &sl_last_total_weighted_bw);
+  scale_array_elements_to_u64(bandwidths, smartlist_len(sl), NULL);
 
   {
     int idx = choose_array_element_by_weight(bandwidths,

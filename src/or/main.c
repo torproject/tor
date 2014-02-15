@@ -1202,16 +1202,6 @@ run_scheduled_events(time_t now)
    */
   consider_hibernation(now);
 
-#if 0
-  {
-    static time_t nl_check_time = 0;
-    if (nl_check_time <= now) {
-      nodelist_assert_ok();
-      nl_check_time = now + 30;
-    }
-  }
-#endif
-
   /* 0b. If we've deferred a signewnym, make sure it gets handled
    * eventually. */
   if (signewnym_is_pending &&

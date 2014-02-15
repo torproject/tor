@@ -4164,22 +4164,6 @@ connection_dir_get_by_purpose_and_resource(int purpose,
   return NULL;
 }
 
-/** Return an open, non-marked connection of a given type and purpose, or NULL
- * if no such connection exists. */
-connection_t *
-connection_get_by_type_purpose(int type, int purpose)
-{
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == type &&
-        !conn->marked_for_close &&
-        (purpose == conn->purpose))
-      return conn;
-  });
-  return NULL;
-}
-
 /** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int
 connection_is_listener(connection_t *conn)

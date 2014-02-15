@@ -83,7 +83,6 @@ int rend_service_intro_established(origin_circuit_t *circuit,
 void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
 int rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                            size_t request_len);
-void rend_service_compact_intro(rend_intro_cell_t *request);
 int rend_service_decrypt_intro(rend_intro_cell_t *request,
                                crypto_pk_t *key,
                                char **err_msg_out);

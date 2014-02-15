@@ -2040,14 +2040,6 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   return rs;
 }
 
-/** Helper to sort a smartlist of pointers to routerstatus_t */
-int
-compare_routerstatus_entries(const void **_a, const void **_b)
-{
-  const routerstatus_t *a = *_a, *b = *_b;
-  return fast_memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
-}
-
 int
 compare_vote_routerstatus_entries(const void **_a, const void **_b)
 {

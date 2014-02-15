@@ -1301,15 +1301,6 @@ directory_permits_begindir_requests(const or_options_t *options)
   return options->BridgeRelay != 0 || options->DirPort_set;
 }
 
-/** Return 1 if we want to allow controllers to ask us directory
- * requests via the controller interface, which doesn't require
- * having any separate port open. */
-int
-directory_permits_controller_requests(const or_options_t *options)
-{
-  return options->DirPort_set;
-}
-
 /** Return 1 if we have no need to fetch new descriptors. This generally
  * happens when we're not a dir cache and we haven't built any circuits
  * lately.
@@ -1455,21 +1446,6 @@ dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
                                  new_networkstatus);
   if (old_networkstatus)
     cached_dir_decref(old_networkstatus);
-}
-
-/** Remove any v1 info from the directory cache that was published
- * too long ago. */
-void
-dirserv_clear_old_v1_info(time_t now)
-{
-  if (cached_directory &&
-      cached_directory->published < (now - MAX_V1_DIRECTORY_AGE)) {
-    cached_dir_decref(cached_directory);
-    cached_directory = NULL;
-  }
-  if (cached_runningrouters.published < (now - MAX_V1_RR_AGE)) {
-    clear_cached_dir(&cached_runningrouters);
-  }
 }
 
 /** Helper: If we're an authority for the right directory version (v1)

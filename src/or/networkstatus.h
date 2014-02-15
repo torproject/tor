@@ -25,7 +25,6 @@ int networkstatus_check_consensus_signature(networkstatus_t *consensus,
 int networkstatus_check_document_signature(const networkstatus_t *consensus,
                                            document_signature_t *sig,
                                            const authority_cert_t *cert);
-char *networkstatus_get_cache_filename(const char *identity_digest);
 int compare_digest_to_routerstatus_entry(const void *_key,
                                          const void **_member);
 int compare_digest_to_vote_routerstatus_entry(const void *_key,

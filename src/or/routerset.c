@@ -358,39 +358,6 @@ routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
   }
 }
 
-#if 0
-/** Add to <b>target</b> every node_t from <b>source</b> except:
- *
- * 1) Don't add it if <b>include</b> is non-empty and the relay isn't in
- * <b>include</b>; and
- * 2) Don't add it if <b>exclude</b> is non-empty and the relay is
- * excluded in a more specific fashion by <b>exclude</b>.
- * 3) If <b>running_only</b>, don't add non-running routers.
- */
-void
-routersets_get_node_disjunction(smartlist_t *target,
-                           const smartlist_t *source,
-                           const routerset_t *include,
-                           const routerset_t *exclude, int running_only)
-{
-  SMARTLIST_FOREACH(source, const node_t *, node, {
-    int include_result;
-    if (running_only && !node->is_running)
-      continue;
-    if (!routerset_is_empty(include))
-      include_result = routerset_contains_node(include, node);
-    else
-      include_result = 1;
-
-    if (include_result) {
-      int exclude_result = routerset_contains_node(exclude, node);
-      if (include_result >= exclude_result)
-        smartlist_add(target, (void*)node);
-    }
-  });
-}
-#endif
-
 /** Remove every node_t from <b>lst</b> that is in <b>routerset</b>. */
 void
 routerset_subtract_nodes(smartlist_t *lst, const routerset_t *routerset)

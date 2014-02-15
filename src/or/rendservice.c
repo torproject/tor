@@ -1503,27 +1503,6 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   return rp;
 }
 
-/** Remove unnecessary parts from a rend_intro_cell_t - the ciphertext if
- * already decrypted, the plaintext too if already parsed
- */
-
-void
-rend_service_compact_intro(rend_intro_cell_t *request)
-{
-  if (!request) return;
-
-  if ((request->plaintext && request->plaintext_len > 0) ||
-       request->parsed) {
-    tor_free(request->ciphertext);
-    request->ciphertext_len = 0;
-  }
-
-  if (request->parsed) {
-    tor_free(request->plaintext);
-    request->plaintext_len = 0;
-  }
-}
-
 /** Free a parsed INTRODUCE1 or INTRODUCE2 cell that was allocated by
  * rend_service_parse_intro().
  */

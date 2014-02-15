@@ -51,7 +51,6 @@ void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 
-int compare_routerstatus_entries(const void **_a, const void **_b);
 int compare_vote_routerstatus_entries(const void **_a, const void **_b);
 int networkstatus_verify_bw_weights(networkstatus_t *ns, int);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,

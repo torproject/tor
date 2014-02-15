@@ -522,16 +522,6 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
     return -2;
 }
 
-/** Helper: return a newly allocated string containing the name of the filename
- * where we plan to cache the network status with the given identity digest. */
-char *
-networkstatus_get_cache_filename(const char *identity_digest)
-{
-  char fp[HEX_DIGEST_LEN+1];
-  base16_encode(fp, HEX_DIGEST_LEN+1, identity_digest, DIGEST_LEN);
-  return get_datadir_fname2("cached-status", fp);
-}
-
 /** How far in the future do we allow a network-status to get before removing
  * it? (seconds) */
 #define NETWORKSTATUS_ALLOW_SKEW (24*60*60)

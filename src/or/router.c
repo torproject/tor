@@ -1664,18 +1664,6 @@ router_is_me(const routerinfo_t *router)
   return router_digest_is_me(router->cache_info.identity_digest);
 }
 
-/** Return true iff <b>fp</b> is a hex fingerprint of my identity digest. */
-int
-router_fingerprint_is_me(const char *fp)
-{
-  char digest[DIGEST_LEN];
-  if (strlen(fp) == HEX_DIGEST_LEN &&
-      base16_decode(digest, sizeof(digest), fp, HEX_DIGEST_LEN) == 0)
-    return router_digest_is_me(digest);
-
-  return 0;
-}
-
 /** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
 const routerinfo_t *
@@ -1860,12 +1848,6 @@ router_rebuild_descriptor(int force)
       ri->ipv6_exit_policy = parse_short_policy(p_tmp);
     tor_free(p_tmp);
   }
-
-#if 0
-  /* XXXX NM NM I belive this is safe to remove */
-  if (authdir_mode(options))
-    ri->is_valid = ri->is_named = 1; /* believe in yourself */
-#endif
 
   if (options->MyFamily && ! options->BridgeRelay) {
     smartlist_t *family;
