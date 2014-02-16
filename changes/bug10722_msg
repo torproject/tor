@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Log an improved message when excluding hidden service directory
+      nodes prevents a hidden service from working.
+      Improves on our fix for bug #10722, which was a bugfix on
+      0.2.0.10-alpha.

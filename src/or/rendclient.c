@@ -668,8 +668,9 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
                       "service directories, because we requested them all "
                       "recently without success.");
     if (options->StrictNodes && excluded_some) {
-      log_info(LD_REND, "There are others that we could have tried, but "
-               "they are all excluded, and StrictNodes is set.");
+      log_warn(LD_REND, "Could not pick a hidden service directory for the "
+               "requested hidden service: they are all either down or "
+               "excluded, and StrictNodes is set.");
     }
     return 0;
   }
