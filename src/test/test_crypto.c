@@ -1189,16 +1189,16 @@ test_crypto_siphash(void *arg)
 
   const struct sipkey K = { U64_LITERAL(0x0706050403020100),
                             U64_LITERAL(0x0f0e0d0c0b0a0908) };
-  uint8_t IN[64];
+  uint8_t input[64];
   int i, j;
 
   (void)arg;
 
   for (i = 0; i < 64; ++i)
-    IN[i] = i;
+    input[i] = i;
 
   for (i = 0; i < 64; ++i) {
-    uint64_t r = siphash24(IN, i, &K);
+    uint64_t r = siphash24(input, i, &K);
     for (j = 0; j < 8; ++j) {
       tt_int_op( (r >> (j*8)) & 0xff, ==, VECTORS[i][j]);
     }
