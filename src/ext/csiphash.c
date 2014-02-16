@@ -58,7 +58,11 @@
 	__BYTE_ORDER == __LITTLE_ENDIAN
 #    define _le64toh(x) ((uint64_t)(x))
 #  else
-#    define _le64toh(x) le64toh(x)
+#    if defined(__OpenBSD__)
+#      define _le64toh(x) letoh64(x)
+#    else
+#      define _le64toh(x) le64toh(x)
+#    endif
 #  endif
 
 #endif
